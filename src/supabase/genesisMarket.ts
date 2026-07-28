@@ -1,5 +1,6 @@
 import { getSupabase } from '@/supabase/client';
 import { createPlayer, overallFromAttributes } from '@/entities/player';
+import { withSpecialistDefaults } from '@/entities/specialistAttrs';
 import type {
   PlayerArchetype,
   PlayerAttributes,
@@ -101,24 +102,35 @@ export type GenesisMarketPlayerRow = {
   updated_at: string | null;
 };
 
-function attrsFromRow(attributes: Record<string, unknown> | null | undefined): PlayerAttributes {
+function attrsFromRow(
+  attributes: Record<string, unknown> | null | undefined,
+  pos?: string,
+): PlayerAttributes {
   const a = attributes && typeof attributes === 'object' ? attributes : {};
-  const num = (k: keyof PlayerAttributes, d: number) => {
-    const v = a[k as string];
+  const num = (k: string, d: number) => {
+    const v = a[k];
     return typeof v === 'number' && Number.isFinite(v) ? v : d;
   };
-  return {
-    passe: num('passe', 70),
-    marcacao: num('marcacao', 70),
-    velocidade: num('velocidade', 70),
-    drible: num('drible', 70),
-    finalizacao: num('finalizacao', 70),
-    fisico: num('fisico', 70),
-    tatico: num('tatico', 70),
-    mentalidade: num('mentalidade', 70),
-    confianca: num('confianca', 70),
-    fairPlay: num('fairPlay', 70),
-  };
+  // `withSpecialistDefaults` respeita cabeceio/bolaParada/penalti se a linha já
+  // os tiver; senão deriva — backfill dos 168 genesis salvos antes deles.
+  return withSpecialistDefaults(
+    {
+      passe: num('passe', 70),
+      marcacao: num('marcacao', 70),
+      velocidade: num('velocidade', 70),
+      drible: num('drible', 70),
+      finalizacao: num('finalizacao', 70),
+      fisico: num('fisico', 70),
+      tatico: num('tatico', 70),
+      mentalidade: num('mentalidade', 70),
+      confianca: num('confianca', 70),
+      fairPlay: num('fairPlay', 70),
+      cabeceio: num('cabeceio', NaN),
+      bolaParada: num('bolaParada', NaN),
+      penalti: num('penalti', NaN),
+    },
+    pos,
+  );
 }
 
 const GENESIS_ARCHETYPE: Record<string, PlayerArchetype> = {
@@ -209,7 +221,7 @@ export function mergeGenesisRowWithSavedPlayer(
 
 /** Converte uma linha do catálogo em entidade de jogo (motor + GameSpirit). */
 export function genesisRowToPlayerEntity(row: GenesisMarketPlayerRow): PlayerEntity {
-  const attrs = attrsFromRow(row.attributes);
+  const attrs = attrsFromRow(row.attributes, row.pos);
   const archRaw = row.archetype?.trim().toLowerCase() ?? '';
   const archetype = GENESIS_ARCHETYPE[archRaw] ?? 'profissional';
   const zone = GENESIS_ZONE[row.zone?.trim().toLowerCase() ?? ''] ?? undefined;
@@ -297,7 +309,7 @@ export async function fetchGenesisMarketPlayerRowsOrdered(): Promise<GenesisMark
 }
 
 export function genesisRowToAuctionCard(row: GenesisMarketPlayerRow, ordinal: number): MockAuctionPlayer {
-  const attrs = attrsFromRow(row.attributes);
+  const attrs = attrsFromRow(row.attributes, row.pos);
   const ovr =
     row.mint_overall != null && Number.isFinite(row.mint_overall)
       ? Math.round(row.mint_overall)

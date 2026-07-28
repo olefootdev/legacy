@@ -18,6 +18,7 @@ import { managerScoreToday } from '@/systems/managerScore/managerScore';
 import { roundOf } from '@/match/legendsCup/legendsCupModel';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { HeroCinematic } from '@/components/home/HeroCinematic';
+import { HomeImageSlider } from '@/components/home/HomeImageSlider';
 import { NextMatchCard } from '@/components/home/NextMatchCard';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import { localCrestUrl } from '@/settings/crestUrl';
@@ -25,6 +26,8 @@ import { LegendsRail, type LegendMini } from '@/components/home/LegendsRail';
 import { ManagerDesk } from '@/components/home/ManagerDesk';
 import { InheritanceModule } from '@/components/home/InheritanceModule';
 import { ManagerOfDay } from '@/components/home/ManagerOfDay';
+import { ReferralInvite } from '@/components/home/ReferralInvite';
+import { DivisionRanking } from '@/components/home/DivisionRanking';
 import { RankingTop10 } from '@/components/home/RankingTop10';
 import { LastGlobalChampion } from '@/components/home/LastGlobalChampion';
 import { fetchListedLegacyPlayerRows, legacyPortraitImageUrl } from '@/supabase/legacyPlayers';
@@ -238,6 +241,22 @@ export function Home() {
     : null;
   const leader = rankedEntries[0] ?? null;
 
+  // ── Ranking da DIVISÃO do manager ────────────────────────────────────────
+  // Mesmo dado do ranking geral, recortado pela divisão em que ele compete —
+  // que é onde promoção e rebaixamento realmente acontecem. rankedEntries já
+  // vem ordenado por score, então filtrar preserva a ordem.
+  const myDivision = myEntry?.division ?? null;
+  const divisionEntries = useMemo(
+    () => (myDivision != null ? rankedEntries.filter((r) => r.division === myDivision) : []),
+    [rankedEntries, myDivision],
+  );
+  const divisionTop10 = useMemo(
+    () => divisionEntries.slice(0, 10).map((r) => ({ entryId: r.entryId, team: r.team, points: r.points, isMe: r.isMe })),
+    [divisionEntries],
+  );
+  const myDivisionRankIdx = useMemo(() => divisionEntries.findIndex((r) => r.isMe), [divisionEntries]);
+  const myDivisionRank = myDivisionRankIdx >= 0 ? myDivisionRankIdx + 1 : null;
+
   // ── Mesa do Manager — pendências reais do elenco ─────────────────────────
   const suspendedCount = useMemo(
     () => Object.values(players).filter((p) => (playerHealth?.[p.id]?.suspendedMatches ?? 0) > 0).length,
@@ -302,6 +321,10 @@ export function Home() {
           cupSublabel={cupSublabel}
         />
 
+        {/* Slider de destaques — logo abaixo do hero. Placeholders até existir
+            uma fonte real de imagem (slot de admin ou tabela de campanhas). */}
+        <HomeImageSlider />
+
         {/* No topo agora — líder real do ranking (#1) */}
         {leader ? (
           <ManagerOfDay clubName={leader.team} points={leader.points} overall={leader.overall} />
@@ -341,21 +364,23 @@ export function Home() {
           <InheritanceModule legend={inheritance.legend} jewel={inheritance.jewel} />
         ) : null}
 
+        {/* Ranking da minha divisão — Top 10 da divisão + posição do manager.
+            Some sozinho se a liga ainda não classificou o clube. */}
+        <DivisionRanking
+          division={myDivision}
+          top={divisionTop10}
+          myRow={myRow}
+          myRank={myDivisionRank}
+          divisionSize={divisionEntries.length}
+        />
+
         {/* A Resenha — pulso do mundo via feed real de mercado */}
         <section aria-label="A Resenha">
-          <div className="mb-2.5 flex items-center gap-2">
-            <span
-              aria-hidden
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ background: 'var(--color-success)', boxShadow: '0 0 0 3px rgba(0,200,81,0.18)' }}
-            />
-            <h2 className="font-impact uppercase text-white" style={{ fontSize: '13px', letterSpacing: '0.02em' }}>
-              A Resenha
-            </h2>
+          <div className="mb-2.5">
+            <h2 className="ole-eyebrow-poster">A Resenha</h2>
           </div>
           <div
-            className="border border-[var(--color-border)] bg-dark-gray p-3 sm:p-4"
-            style={{ borderRadius: 'var(--radius-md)' }}
+            className="ole-poster p-3 sm:p-4"
           >
             <MarketActivityFeed activities={marketActivities} maxVisible={5} />
             <div className="mt-2 border-t border-white/5 pt-1">
@@ -370,6 +395,10 @@ export function Home() {
             </div>
           </div>
         </section>
+
+        {/* Indicação — o link de convite do manager, abaixo da Resenha.
+            Some sozinha se o manager ainda não tem código de indicação. */}
+        <ReferralInvite />
       </div>
 
     </div>

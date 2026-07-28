@@ -1,0 +1,30 @@
+{
+  // REVELA compila separado do jogo, mas resolve `@/*` para o MESMO src/.
+  // Ver revela/vite.config.ts: código compartilhado é lido, não copiado.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    // Sem `strict` de propósito: o grafo puxa src/ do jogo pelo alias `@`, e
+    // aquele código não é strict-clean. Ligar aqui reportaria centenas de erros
+    // que não são do REVELA. Mesma configuração do tsconfig.json da raiz.
+    "allowJs": true,
+    "allowImportingTsExtensions": true,
+    "useDefineForClassFields": false,
+    "experimentalDecorators": true,
+    "paths": {
+      "@/*": ["../src/*"],
+      "~revela/*": ["./src/*"]
+    },
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}

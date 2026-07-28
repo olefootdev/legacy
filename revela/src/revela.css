@@ -1,0 +1,404 @@
+/**
+ * OLEFOOT REVELA — Design Tokens
+ *
+ * Evolução do DS da Olefoot, não um sistema novo. As cores de marca são as
+ * MESMAS do jogo (#FDE100 / #0D0D0D) — o que muda é a linguagem de composição:
+ * pôster, sombra dura sem blur, tipografia monumental.
+ *
+ * DOIS UNIVERSOS, UMA MARCA
+ *   REVELA  → amarelo, Anton gritado, adesivo, energia, futuro
+ *   LENDAS  → preto, serifa editorial, silêncio, espaço, legado
+ * O contraste entre os dois é a assinatura. Não misturar as duas gramáticas
+ * dentro da mesma seção.
+ *
+ * TIPOGRAFIA — 4 famílias, papéis que não se cruzam:
+ *   Anton     → display. Manchete, número grande, nome de time, OVR, rank.
+ *   Oswald    → rótulo. Eyebrow, CTA, nav, chip, meta. SEMPRE caixa alta + tracking.
+ *   Playfair  → nome próprio de atleta, nota de card e citação. Só isso.
+ *   Inter     → texto corrido, descrição, dado funcional.
+ * Anton nunca em parágrafo. Playfair nunca em número pequeno de tabela.
+ */
+
+/* @import vem antes de qualquer regra — exigência do CSS, não estilo. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,800;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import 'tailwindcss';
+
+/* Anton é o único arquivo de fonte que existe de verdade em public/fonts/.
+   NÃO importar src/styles/fonts.css aqui: aquele arquivo declara 12 @font-face
+   apontando pra .woff2 que nunca foram baixados (Inter, Oswald, Montserrat) —
+   o jogo só não quebra porque puxa as mesmas famílias do Google em paralelo.
+   Aqui declaramos o que existe local e buscamos o resto do Google. */
+@font-face {
+  font-family: 'Anton';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/anton-latin.woff2') format('woff2');
+}
+
+@theme {
+  /* ── Marca (idênticas ao jogo — não inventar cor) ──────────────────────── */
+  --color-rev-yellow: #fde100;
+  --color-rev-yellow-deep: #c9b000;
+  --color-rev-black: #0d0d0d;
+
+  /* ── Superfícies ───────────────────────────────────────────────────────── */
+  --color-rev-surface: #141414;
+  --color-rev-surface-hi: #1a1a1a;
+  --color-rev-bone: #edebe4; /* texto sobre preto */
+  --color-rev-cream: #f2ecdc; /* fundo da Torcida */
+  --color-rev-paper: #f5f1e6;
+  --color-rev-resenha: #15130c; /* editorial neutro */
+
+  /* ── Estado (função, nunca decoração) ──────────────────────────────────── */
+  --color-rev-success: #22c55e;
+  --color-rev-warning: #f59e0b;
+  --color-rev-danger: #ef4444;
+
+  /* ── Categoria de card — cada uma existe porque significa uma coisa ────── */
+  --color-rev-talent: #fde100; /* revelação  */
+  --color-rev-verified: #22c55e; /* verificado */
+  --color-rev-scout: #f59e0b; /* avaliado pelo OLE SCOUT */
+  --color-rev-legend: #edebe4; /* lenda      */
+  --color-rev-special: #b98a3e; /* edição especial */
+
+  /* Divisões da Liga Global — a única família cromática funcional extra. */
+  --color-rev-ouro: #fde100;
+  --color-rev-prata: #edebe4;
+  --color-rev-bronze: #b98a3e;
+  --color-rev-bronze-deep: #8a6a34;
+
+  /* ── Tipografia ────────────────────────────────────────────────────────── */
+  --font-display: 'Anton', 'Arial Narrow Bold', Impact, sans-serif;
+  --font-label: 'Oswald', 'Inter', system-ui, sans-serif;
+  --font-editorial: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* ── Sombra dura — a assinatura do REVELA. Zero blur, sempre. ──────────── */
+  --shadow-rev-sm: 5px 5px 0 rgba(13, 13, 13, 0.9);
+  --shadow-rev-md: 8px 8px 0 rgba(13, 13, 13, 0.9);
+  --shadow-rev-lg: 12px 12px 0 rgba(13, 13, 13, 0.9);
+  --shadow-rev-light: 8px 8px 0 rgba(237, 235, 228, 0.16);
+
+  /* ── Raio ──────────────────────────────────────────────────────────────── */
+  --radius-rev-btn: 6px;
+  --radius-rev-card: 14px;
+  --radius-rev-card-lg: 20px;
+  --radius-rev-pill: 999px;
+
+  /* ── Motion — esportivo: rápido, preciso, sem balé ─────────────────────── */
+  --ease-rev: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-rev-micro: 160ms;
+  --dur-rev-base: 320ms;
+  --dur-rev-slow: 520ms;
+}
+
+:root {
+  /* Ritmo de seção — uma régua só pra página inteira. */
+  --rev-pad-y: clamp(44px, 6vw, 90px);
+  --rev-pad-x: clamp(16px, 4vw, 54px);
+  --rev-container: 1280px;
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--color-rev-black);
+  color: var(--color-rev-bone);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* O REVELA é uma coluna vertical de pôsteres. Rolagem lateral é sempre bug. */
+  overflow-x: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  /* ── Estrutura ─────────────────────────────────────────────────────────── */
+  .rev-section {
+    padding: var(--rev-pad-y) var(--rev-pad-x);
+  }
+  .rev-container {
+    max-width: var(--rev-container);
+    margin-inline: auto;
+    width: 100%;
+  }
+
+  /* ── Tipografia ────────────────────────────────────────────────────────── */
+  .rev-display {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    line-height: 0.88;
+    letter-spacing: -0.01em;
+  }
+  /* Manchete de pôster: o texto encosta na viewport de propósito. */
+  .rev-hero-type {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    line-height: 0.86;
+    letter-spacing: -0.02em;
+    font-size: clamp(46px, 8.8vw, 132px);
+  }
+  .rev-label {
+    font-family: var(--font-label);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+  }
+  .rev-editorial {
+    font-family: var(--font-editorial);
+    font-style: italic;
+    font-weight: 700;
+    line-height: 1.02;
+  }
+
+  /* Eyebrow: risco amarelo + rótulo. Abre toda seção. */
+  .rev-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-label);
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+  }
+  .rev-eyebrow::before {
+    content: '';
+    width: 34px;
+    height: 3px;
+    background: var(--color-rev-yellow);
+    flex: none;
+  }
+  .rev-eyebrow[data-on='yellow']::before {
+    background: var(--color-rev-black);
+  }
+
+  /* ── Marca ─────────────────────────────────────────────────────────────── */
+  /**
+   * A logo entra como MÁSCARA, não como <img>.
+   *
+   * Assim a cor vem de `currentColor` e a mesma marca serve nos dois universos:
+   * preta sobre o amarelo do topbar, clara sobre o preto do rodapé. Com <img>
+   * seria preciso ou um segundo arquivo ou `filter: invert()` — um duplica o
+   * ativo, o outro é gambiarra que quebra se a logo deixar de ser silhueta.
+   *
+   * O arquivo é o `olefoot-black.svg` que já existia em public/brand: 4 KB
+   * vetoriais contra 136 KB do PNG, e sem o "TM", que em 22px de altura vira
+   * um borrão em vez de um símbolo.
+   */
+  .rev-logo {
+    display: block;
+    /* 947.9 × 178.6 do viewBox. A altura manda; a largura acompanha. */
+    aspect-ratio: 947.9 / 178.6;
+    background-color: currentColor;
+    -webkit-mask: url('/brand/olefoot-black.svg') no-repeat center / contain;
+    mask: url('/brand/olefoot-black.svg') no-repeat center / contain;
+  }
+
+  /* ── Botão ─────────────────────────────────────────────────────────────── */
+  .rev-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    /* 44px é o mínimo de toque; a página é mobile-first. */
+    min-height: 44px;
+    padding: 0 22px;
+    border-radius: var(--radius-rev-btn);
+    font-family: var(--font-label);
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    border: 2px solid var(--color-rev-black);
+    background: var(--color-rev-black);
+    color: var(--color-rev-yellow);
+    cursor: pointer;
+    transition:
+      transform var(--dur-rev-micro) var(--ease-rev),
+      box-shadow var(--dur-rev-micro) var(--ease-rev),
+      background var(--dur-rev-micro) var(--ease-rev);
+  }
+  .rev-btn:hover:not(:disabled) {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-rev-sm);
+  }
+  .rev-btn:active:not(:disabled) {
+    transform: translate(0, 0);
+    box-shadow: none;
+  }
+  .rev-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .rev-btn[data-variant='outline'] {
+    background: transparent;
+    color: var(--color-rev-black);
+  }
+  .rev-btn[data-variant='yellow'] {
+    background: var(--color-rev-yellow);
+    color: var(--color-rev-black);
+    border-color: var(--color-rev-black);
+  }
+  /* Sobre fundo escuro a borda preta some — o contorno vira claro. */
+  .rev-btn[data-on='dark'][data-variant='outline'] {
+    border-color: var(--color-rev-yellow);
+    color: var(--color-rev-yellow);
+  }
+  .rev-btn[data-on='dark']:hover:not(:disabled) {
+    box-shadow: var(--shadow-rev-light);
+  }
+
+  /* ── Card pôster ───────────────────────────────────────────────────────── */
+  .rev-poster {
+    border: 3px solid var(--color-rev-black);
+    box-shadow: var(--shadow-rev-md);
+    background: var(--color-rev-surface);
+    border-radius: var(--radius-rev-card);
+    overflow: hidden;
+  }
+  .rev-poster[data-on='dark'] {
+    border-color: var(--color-rev-bone);
+    box-shadow: var(--shadow-rev-light);
+  }
+  /* Trilho amarelo: marca que aquilo ali é identidade, não decoração. */
+  .rev-rail {
+    border-left: 4px solid var(--color-rev-yellow);
+  }
+
+  /* ── Adesivo de status ─────────────────────────────────────────────────── */
+  .rev-sticker {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    border-radius: 4px;
+    font-family: var(--font-label);
+    text-transform: uppercase;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    white-space: nowrap;
+  }
+
+  /* ── Chip de filtro ────────────────────────────────────────────────────── */
+  .rev-chip {
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: var(--radius-rev-pill);
+    border: 2px solid currentColor;
+    font-family: var(--font-label);
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    background: transparent;
+    cursor: pointer;
+    transition: all var(--dur-rev-micro) var(--ease-rev);
+  }
+
+  /* Trilho horizontal com snap — Descoberta e Top 10. */
+  .rev-rail-scroll {
+    display: flex;
+    gap: 18px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    padding-bottom: 18px;
+  }
+  .rev-rail-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  .rev-rail-scroll > * {
+    scroll-snap-align: start;
+    flex: none;
+  }
+
+}
+
+@layer utilities {
+  .rev-focus:focus-visible {
+    outline: 3px solid var(--color-rev-yellow);
+    outline-offset: 3px;
+  }
+  .rev-focus[data-on='yellow']:focus-visible {
+    outline-color: var(--color-rev-black);
+  }
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────────── */
+@keyframes revPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.82);
+  }
+}
+
+@keyframes revFloat {
+  0%,
+  100% {
+    transform: translateY(-12px);
+  }
+  50% {
+    transform: translateY(12px);
+  }
+}
+
+@keyframes revMarq {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes revToast {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  12%,
+  88% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+}
+
+.rev-anim-pulse {
+  animation: revPulse 1.5s ease-in-out infinite;
+}
+.rev-anim-float {
+  animation: revFloat 6.5s ease-in-out infinite;
+}
+.rev-anim-marq {
+  animation: revMarq 26s linear infinite;
+}
+.rev-anim-toast {
+  animation: revToast 2.4s var(--ease-rev) forwards;
+}

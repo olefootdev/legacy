@@ -1,4 +1,5 @@
 import { createPlayer, overallFromAttributes } from './player';
+import { withSpecialistDefaults } from './specialistAttrs';
 import { applyScoutBonusToNpcAttrs } from '@/systems/staffBenefits';
 import type { ManagerProspectContractGames } from '@/playerContracts/playerContracts';
 import { contractFieldsForManagerProspectTier } from '@/playerContracts/playerContracts';
@@ -105,18 +106,21 @@ export function clampAttrsToCreationCap(attrs: PlayerAttributes, pos?: string): 
 
 export function baseAttrsForPosition(pos: string): PlayerAttributes {
   const mid = 58;
-  const base: PlayerAttributes = {
-    passe: mid,
-    marcacao: mid,
-    velocidade: mid,
-    drible: mid,
-    finalizacao: mid,
-    fisico: mid,
-    tatico: mid,
-    mentalidade: mid,
-    confianca: mid,
-    fairPlay: 78,
-  };
+  const base: PlayerAttributes = withSpecialistDefaults(
+    {
+      passe: mid,
+      marcacao: mid,
+      velocidade: mid,
+      drible: mid,
+      finalizacao: mid,
+      fisico: mid,
+      tatico: mid,
+      mentalidade: mid,
+      confianca: mid,
+      fairPlay: 78,
+    },
+    pos,
+  );
   const p = pos.toUpperCase();
   if (p === 'GOL') {
     return {

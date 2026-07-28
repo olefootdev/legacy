@@ -38,14 +38,12 @@ export function RankingTop10({
   return (
     <section
       aria-label="Ranking de clubes"
-      className="overflow-hidden border border-[var(--color-border)] bg-dark-gray"
+      className="ole-poster overflow-hidden"
       style={{ borderRadius: 'var(--radius-md)' }}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4">
         <div>
-          <h2 className="font-impact uppercase text-white" style={{ fontSize: '18px', lineHeight: 0.9 }}>
-            Ranking de Clubes
-          </h2>
+          <h2 className="ole-eyebrow-poster" style={{ fontSize: '16px' }}>Ranking de Clubes</h2>
           <span
             className="mt-0.5 block font-display font-black uppercase"
             style={{ fontSize: '9px', letterSpacing: '0.16em', color: '#C7A64E' }}

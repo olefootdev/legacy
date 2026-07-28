@@ -48,6 +48,7 @@ import { uploadImageToPinataViaServer } from '@/media/pinataUploadClient';
 import { portraitFocusStyle } from '@/supabase/legacyPlayers';
 import { PortraitFocusEditor } from '@/admin/components/PortraitFocusEditor';
 import { GACHA_POSITIONS, positionLabelPt } from '@/entities/positionLabels';
+import type { PlayerAttributes } from '@/entities/types';
 import { calibrateLegendAttrs, weightedOverall, keyAttrsForPosition } from '@/admin/legendAttrCalibration';
 
 const PHASE_LABEL: Record<LegendPhase, string> = {
@@ -65,6 +66,7 @@ function emptyAttrs() {
   return {
     passe: 70, marcacao: 70, velocidade: 70, drible: 70, finalizacao: 70,
     fisico: 70, tatico: 70, mentalidade: 70, confianca: 70, fairPlay: 70,
+    cabeceio: 70, bolaParada: 70, penalti: 70,
   };
 }
 
@@ -912,7 +914,9 @@ function PhaseEditor({
               Atributos (0-99)
               {/* OVR PONDERADO — o mesmo que o game mostra (era média simples aqui). */}
               <span className="rounded bg-neon-yellow/15 px-2 py-0.5 font-display text-sm font-black text-neon-yellow tabular-nums">
-                OVR {weightedOverall(phase.entity.attrs, phase.entity.pos)}
+                {/* O DTO da lenda não carrega os especialistas; o OVR só usa os 10
+                    do ofício, então o cast é seguro (weightedOverall ignora o resto). */}
+                OVR {weightedOverall(phase.entity.attrs as unknown as PlayerAttributes, phase.entity.pos)}
               </span>
             </legend>
 

@@ -1,4 +1,5 @@
 import { ovrWeightsForPos } from './ovrWeights';
+import { withSpecialistDefaults } from './specialistAttrs';
 import type {
   PlayerArchetype,
   PlayerAttributes,
@@ -170,19 +171,22 @@ export function createPlayer(partial: {
   legacyTeamBooster?: Record<string, number>;
   legacyTaughtAttributes?: string[];
 }): PlayerEntity {
-  const base: PlayerAttributes = {
-    passe: 72,
-    marcacao: 70,
-    velocidade: 78,
-    drible: 70,
-    finalizacao: 72,
-    fisico: 74,
-    tatico: 72,
-    mentalidade: 75,
-    confianca: 78,
-    fairPlay: 80,
-    ...partial.attrs,
-  };
+  const base: PlayerAttributes = withSpecialistDefaults(
+    {
+      passe: 72,
+      marcacao: 70,
+      velocidade: 78,
+      drible: 70,
+      finalizacao: 72,
+      fisico: 74,
+      tatico: 72,
+      mentalidade: 75,
+      confianca: 78,
+      fairPlay: 80,
+      ...partial.attrs,
+    },
+    partial.pos,
+  );
   const archetype = partial.archetype ?? defaultArchetypeForSeed(partial.name);
   const behavior: PlayerBehavior = partial.behavior ?? 'equilibrado';
   const mintOvr = overallFromAttributes(base, partial.pos);

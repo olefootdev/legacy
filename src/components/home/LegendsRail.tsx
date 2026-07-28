@@ -23,9 +23,7 @@ export function LegendsRail({ legends }: { legends: LegendMini[] }) {
   return (
     <section aria-label="Lendas em destaque">
       <div className="mb-2.5 flex items-center justify-between">
-        <h2 className="font-impact uppercase text-white" style={{ fontSize: '13px', letterSpacing: '0.02em' }}>
-          Lendas em destaque
-        </h2>
+        <h2 className="ole-eyebrow-poster">Lendas em destaque</h2>
         <Link
           to="/mercado/transfer"
           className="font-display font-black uppercase text-neon-yellow"
@@ -37,7 +35,7 @@ export function LegendsRail({ legends }: { legends: LegendMini[] }) {
 
       {legends.length === 0 ? (
         <div
-          className="border border-[var(--color-border)] bg-dark-gray px-4 py-6 text-center"
+          className="ole-poster px-4 py-6 text-center"
           style={{ borderRadius: 'var(--radius-md)' }}
         >
           <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}>

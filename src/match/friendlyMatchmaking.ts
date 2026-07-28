@@ -379,6 +379,7 @@ function generateSyntheticSquad(prefix: string, ovr: number): PlayerEntity[] {
       attrs: {
         passe: lvl, marcacao: lvl, velocidade: lvl, drible: lvl, finalizacao: lvl,
         fisico: lvl, tatico: lvl, mentalidade: lvl, confianca: lvl, fairPlay: lvl,
+        cabeceio: lvl, bolaParada: lvl, penalti: lvl,
       },
       fatigue: 0,
       injuryRisk: 0,

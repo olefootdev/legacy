@@ -64,6 +64,16 @@ export interface PlayerAttributes {
   mentalidade: number;
   confianca: number;
   fairPlay: number;
+  // ── Atributos ESPECIALISTAS ────────────────────────────────────────────────
+  // Situacionais: decidem QUEM marca cada tipo de lance (cabeça no escanteio,
+  // falta, pênalti), não o OVR. Peso ZERO no rating por construção — ver
+  // `deriveSpecialistAttrs` (backfill) e `CoreAttrKey` (chaves que entram no OVR).
+  /** Jogo aéreo — cabeceio no escanteio, disputa alta. O zagueirão e o centroavante. */
+  cabeceio: number;
+  /** Bola parada com os pés — falta direta e cobrança de escanteio. */
+  bolaParada: number;
+  /** Frieza na cobrança de pênalti. */
+  penalti: number;
 }
 
 export interface PlayerEntity {

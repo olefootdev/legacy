@@ -52,6 +52,9 @@ export const PLAYER_SEASON_ATTR_LABELS: Record<keyof PlayerAttributes, string> =
   mentalidade: 'Mentalidade',
   confianca: 'Confiança',
   fairPlay: 'Fair play',
+  cabeceio: 'Cabeceio',
+  bolaParada: 'Bola parada',
+  penalti: 'Pênalti',
 };
 
 const TRAINING_TYPE_LABELS: Record<string, string> = {

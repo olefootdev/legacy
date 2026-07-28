@@ -209,6 +209,55 @@ export async function persistPlayers(
 }
 
 /**
+ * Grava os GOLS de cada jogador de uma partida ao vivo — a base da artilharia real.
+ *
+ * O motor já sabe quem marcou (scoutTallies). Aqui só persistimos o que ele sabe,
+ * uma linha por (partida, jogador). A chave (match_id, player_id) torna a gravação
+ * IDEMPOTENTE: refinalizar a mesma partida reescreve com o mesmo valor, nunca soma
+ * duas vezes. A artilharia é `sum(goals)` por jogador, lida por RPC público.
+ *
+ * Só entram jogadores com UUID real (talentos, lendas, criados no wizard) — os ids
+ * legados genéricos ('ole-fc-…') são compartilhados entre plantéis e colidiriam no
+ * placar. Mesmo filtro que `persistPlayers`.
+ *
+ * Só o time do MANAGER é atribuível: o adversário é sintético, sem jogador no banco.
+ */
+export async function persistPlayerGoals(
+  localClubId: string,
+  matchId: string,
+  clubName: string,
+  scorers: Array<{ playerId: string; name: string; pos: string; goals: number; assists: number }>,
+  season = 'current',
+) {
+  const sb = getSupabase();
+  if (!sb) return;
+  const clubId = await resolvePersistClubId(sb, localClubId);
+  if (!clubId) return;
+  const rows = scorers
+    .filter((s) => s.goals > 0 && isUuidString(s.playerId))
+    .map((s) => ({
+      match_id: matchId,
+      player_id: s.playerId,
+      season,
+      club_id: clubId,
+      club_name: clubName,
+      name: s.name,
+      pos: s.pos,
+      goals: s.goals,
+      assists: s.assists ?? 0,
+    }));
+  if (rows.length === 0) return;
+  try {
+    const { error } = await sb
+      .from('player_match_goals')
+      .upsert(rows as never, { onConflict: 'match_id,player_id' });
+    if (error) console.warn('[matchPersistence] persistPlayerGoals error:', error.message);
+  } catch (e) {
+    console.warn('[matchPersistence] persistPlayerGoals exception:', e);
+  }
+}
+
+/**
  * Grava um jogador do plantel em `public.players` (RLS: `club_id` = `profiles.club_id` do utilizador).
  * O `localClubId` do save (`ole-fc`, …) é mapeado para o `club_id` UUID do perfil quando necessário.
  */

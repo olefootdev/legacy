@@ -260,7 +260,7 @@ import {
   appendTeamGoalScoredHome,
 } from '@/match/impactLedger';
 import type { FormationSchemeId } from '@/match-engine/types';
-import { queueMatchEvents, finalizeMatch, persistPlayers } from '@/supabase/matchPersistence';
+import { queueMatchEvents, finalizeMatch, persistPlayers, persistPlayerGoals } from '@/supabase/matchPersistence';
 import { makeInboxItem } from './inboxItem';
 import { buildPostMatchStaffInboxItem } from './postMatchStaffInbox';
 import { defaultShopCatalog, findShopItem, normalizeShopCatalog, shopEffectNeedsPlayer } from './shopCatalog';
@@ -2115,6 +2115,20 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           scoutTop3: lastRow.scoutTop3,
         };
         void finalizeMatch(lm.supabaseMatchId, lm.homeScore, lm.awayScore, postData);
+        // Artilharia real: persiste quem marcou (o motor já sabe, via scoutTallies).
+        // Fire-and-forget, igual ao persistPlayers — nunca bloqueia o fim da partida.
+        void persistPlayerGoals(
+          state.club.id,
+          lm.supabaseMatchId,
+          state.club.name,
+          Object.values(rawTallies).map((t) => ({
+            playerId: t.playerId,
+            name: t.name,
+            pos: t.pos,
+            goals: t.goals,
+            assists: t.assists,
+          })),
+        );
       }
       void persistPlayers(state.club.id, playerPersistPayload);
 

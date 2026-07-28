@@ -126,6 +126,128 @@
 
   /* Letterbox cinema — bandas pretas para zoom dramático. */
   --letterbox-h:    72px;
+
+  /* ═══ REVELA — a linguagem de pôster que nasceu em revela.olefoot.com ═════
+   * Trazida pro jogo em 2026-07-23 a pedido do fundador, pra que o portal e o
+   * game não pareçam produtos diferentes. Marca já era a mesma (#FDE100,
+   * #0D0D0D, Anton); o que faltava era a COMPOSIÇÃO.
+   *
+   * ⚠️ A SOMBRA PRECISOU INVERTER. No portal ela é preta e cai sobre amarelo —
+   * por isso salta. Aqui o fundo é preto, e sombra preta sobre preto não
+   * existe. Verificado num modelo antes de aplicar. Use a clara em superfície
+   * escura e a escura só sobre amarelo. */
+  --shadow-poster:        5px 5px 0 rgba(237, 235, 228, 0.13);
+  --shadow-poster-strong: 8px 8px 0 rgba(237, 235, 228, 0.18);
+  --shadow-poster-dark:   6px 6px 0 rgba(13, 13, 13, 0.85);
+
+  /* Superfícies do REVELA. `paper` é o creme da Torcida — o terceiro universo,
+   * usado com parcimônia pra quebrar a alternância amarelo/preto. */
+  --color-poster-surface: #141414;
+  --color-poster-paper:   #F2ECDC;
+  --color-poster-editorial: #15130C;
+
+  --radius-poster: 14px;
+  --radius-poster-lg: 20px;
+
+  /* Eyebrow: risco amarelo + rótulo. Abre toda seção no portal. */
+  --eyebrow-rule-w: 30px;
+  --eyebrow-rule-h: 3px;
+
+  /* Trilho de identidade — marca o que é "de alguém", não decoração. */
+  --rail-w: 3px;
+}
+
+@layer components {
+  /* ═══ REVELA — primitivos de pôster ═══════════════════════════════════════
+   * Três peças que dão ao jogo a mesma gramática do portal. Elas não mudam
+   * layout: entram em cima do que já existe. */
+
+  /**
+   * Bloco de pôster: raio maior, sombra dura CLARA (ver a nota nos tokens) e
+   * borda amarela discreta. Substitui o card cinza sem mexer no conteúdo.
+   */
+  .ole-poster {
+    background: var(--color-poster-surface);
+    border: 2px solid rgba(253, 225, 0, 0.16);
+    border-radius: var(--radius-poster);
+    box-shadow: var(--shadow-poster);
+  }
+  /* Sobre amarelo a lógica se inverte: borda e sombra viram pretas. */
+  .ole-poster[data-on='yellow'] {
+    background: transparent;
+    border-color: #0d0d0d;
+    box-shadow: var(--shadow-poster-dark);
+  }
+
+  /**
+   * Trilho de identidade — 3px amarelos à esquerda. Marca o que pertence a
+   * alguém (um clube, um atleta, uma lenda), nunca decoração genérica.
+   */
+  .ole-rail {
+    border-left: var(--rail-w) solid var(--color-neon-yellow);
+  }
+
+  /**
+   * Eyebrow de PÔSTER — risco sólido só à esquerda, título em Anton.
+   *
+   * ⚠️ NÃO confundir com `.ole-eyebrow`, que já existe neste arquivo e é outra
+   * coisa: centralizado, linha fina dos dois lados, assinatura do olefoot.com,
+   * usado em 26 telas. Este aqui é a gramática do portal REVELA — assimétrico,
+   * pesado, abrindo bloco de dado. Dois nomes porque são duas ideias.
+   */
+  .ole-eyebrow-poster {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-family: var(--font-impact);
+    text-transform: uppercase;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    color: #fff;
+  }
+  .ole-eyebrow-poster::before {
+    content: '';
+    flex: none;
+    width: var(--eyebrow-rule-w);
+    height: var(--eyebrow-rule-h);
+    background: var(--color-neon-yellow);
+  }
+  .ole-eyebrow-poster[data-on='yellow'] {
+    color: #0d0d0d;
+  }
+  .ole-eyebrow-poster[data-on='yellow']::before {
+    background: #0d0d0d;
+  }
+
+  /**
+   * Seção sangrada: escapa da coluna de 672px e pinta a largura toda, como as
+   * seções do portal. É o que cria o ritmo de pôster em vez de fila de cards.
+   * A margem negativa cancela o padding do container pai (px-3 / sm:px-4).
+   */
+  .ole-bleed {
+    margin-inline: calc(var(--spacing) * -3);
+    padding-inline: calc(var(--spacing) * 3);
+  }
+  @media (min-width: 640px) {
+    .ole-bleed {
+      margin-inline: calc(var(--spacing) * -4);
+      padding-inline: calc(var(--spacing) * 4);
+    }
+  }
+
+  /**
+   * Full-bleed de VIEWPORT: escapa da coluna de 672px INTEIRA e ocupa 100vw,
+   * independente da largura do container. Diferente do `.ole-bleed`, que só
+   * cancela o padding — este vai de borda a borda da tela.
+   *
+   * A margem `calc(50% - 50vw)` puxa o elemento pra fora do container centrado.
+   * O overflow-x-hidden do wrapper da Home contém a scrollbar; sem ele, os 100vw
+   * poderiam gerar rolagem lateral.
+   */
+  .ole-full-bleed {
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+  }
 }
 
 @layer utilities {

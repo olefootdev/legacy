@@ -21,7 +21,8 @@ export function ManagerOfDay({
       className="relative flex flex-col justify-end overflow-hidden p-5"
       style={{
         minHeight: 220,
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 'var(--radius-poster)',
+        boxShadow: 'var(--shadow-poster)',
         border: '1px solid rgba(199,166,78,0.4)',
         background: 'linear-gradient(160deg,#171307,#0f0d08 60%,#0c0c0c)',
       }}

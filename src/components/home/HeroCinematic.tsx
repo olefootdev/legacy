@@ -39,7 +39,8 @@ export function HeroCinematic({
       aria-label="Cockpit do manager"
       className="relative flex flex-col justify-end overflow-hidden"
       style={{
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 'var(--radius-poster)',
+        boxShadow: 'var(--shadow-poster-strong)',
         minHeight: 'min(78vw, 420px)',
         padding: '18px 16px',
       }}
@@ -63,13 +64,6 @@ export function HeroCinematic({
         className="absolute inset-0"
         style={{ background: 'radial-gradient(72% 55% at 74% 20%, rgba(253,225,0,0.18), transparent 60%)' }}
       />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute select-none font-impact leading-[0.7] text-white/[0.05]"
-        style={{ top: '-2%', right: '2%', fontSize: 'min(42vw, 210px)' }}
-      >
-        10
-      </span>
       <div
         aria-hidden
         className="absolute inset-0"

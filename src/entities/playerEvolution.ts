@@ -1,5 +1,6 @@
 import type { PlayerAttributes, PlayerEntity } from './types';
 import { overallFromAttributes } from './player';
+import { withSpecialistDefaults } from './specialistAttrs';
 import { MANAGER_PROSPECT_EVOLVED_MAX_OVR, scaleAttrsToMaxOvr } from './managerProspect';
 import { evolvePositionKnowledgePostMatch } from '@/gamespirit/legacy/positionKnowledgeTypes';
 import type { PositionActionKey, KnowledgeZoneKey } from '@/gamespirit/legacy/positionKnowledgeTypes';
@@ -53,7 +54,11 @@ function clampEvolutionRate(n: number): number {
 
 /** Garante `mintOverall` e `evolutionRate` coerentes (save legado / migração). */
 export function ensureMintOverall(player: PlayerEntity): PlayerEntity {
-  const ovr = overallFromAttributes(player.attrs, player.pos);
+  // Backfill dos atributos especialistas: TODO jogador hidratado (save legado do
+  // localStorage) passa por aqui, então é o ponto único que garante cabeceio/
+  // bolaParada/penalti preenchidos em quem foi salvo antes deles existirem.
+  const attrs = withSpecialistDefaults(player.attrs as unknown as Record<string, number>, player.pos);
+  const ovr = overallFromAttributes(attrs, player.pos);
   const mint =
     player.mintOverall != null && Number.isFinite(player.mintOverall)
       ? Math.round(player.mintOverall)
@@ -62,7 +67,7 @@ export function ensureMintOverall(player: PlayerEntity): PlayerEntity {
     player.evolutionRate != null && Number.isFinite(player.evolutionRate)
       ? clampEvolutionRate(player.evolutionRate)
       : 1;
-  return { ...player, mintOverall: mint, evolutionRate: rate };
+  return { ...player, attrs, mintOverall: mint, evolutionRate: rate };
 }
 
 /** Reduz atributos se OVR atual exceder o tecto de evolução. */

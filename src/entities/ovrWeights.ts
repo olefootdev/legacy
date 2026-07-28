@@ -19,9 +19,13 @@
  * (npm run test:ovr-weights). Sem isso, a escala do OVR deixa de ser comparável
  * entre posições — que era justamente o bug.
  */
-import type { PlayerAttributes } from './types';
+import type { CoreAttrKey } from './specialistAttrs';
 
-export type OvrWeights = Record<keyof PlayerAttributes, number>;
+// Só as chaves que ENTRAM no OVR. Os atributos especialistas (cabeceio,
+// bolaParada, penalti) ficam de fora por construção — assim adicioná-los a
+// PlayerAttributes NÃO obriga a listar peso pra eles aqui nem no espelho SQL
+// `revela_ovr`, e o invariante "cada perfil soma 1.0" continua valendo.
+export type OvrWeights = Record<CoreAttrKey, number>;
 
 /** Universais — valem o mesmo pra qualquer posição (somam 0.22). */
 const UNIVERSAL = { mentalidade: 0.08, confianca: 0.08, fairPlay: 0.06 } as const;

@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Shield } from 'lucide-react';
+import { Shield } from 'lucide-react';
 
 function fmtCountdown(ms: number): string {
   if (ms <= 0) return '00:00';
@@ -88,25 +88,20 @@ export function NextMatchCard({
   const verLigaCta = (
     <Link
       to="/competicao/standings"
-      className="inline-flex min-h-[44px] items-center gap-1.5 border border-neon-yellow/40 bg-neon-yellow/[0.08] px-6 py-2.5 font-display font-black uppercase text-neon-yellow transition-colors hover:bg-neon-yellow/[0.16]"
+      className="inline-flex min-h-[44px] items-center border border-neon-yellow/40 bg-neon-yellow/[0.08] px-6 py-2.5 font-display font-black uppercase text-neon-yellow transition-colors hover:bg-neon-yellow/[0.16]"
       style={{ fontSize: '10px', letterSpacing: '0.18em', borderRadius: 'var(--radius-sm)' }}
     >
       Ver Liga
-      <ChevronRight className="h-4 w-4" aria-hidden />
     </Link>
   );
 
   return (
     <section
       aria-label="Próxima partida"
-      className="border border-[var(--color-border)] bg-dark-gray p-4"
-      style={{ borderRadius: 'var(--radius-md)' }}
+      className="ole-poster p-4"
     >
       <div className="flex items-center justify-between">
-        <span
-          className="font-display font-black uppercase text-white/45"
-          style={{ fontSize: '9px', letterSpacing: '0.2em' }}
-        >
+        <span className="ole-eyebrow-poster" style={{ fontSize: '12px' }}>
           Próxima partida
         </span>
         {opponentName ? (

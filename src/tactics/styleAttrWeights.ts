@@ -55,6 +55,9 @@ export function styleAttrWeights(style: TeamTacticalStyle | NormalizedTacticalSt
   const raw: StyleAttrWeights = {
     passe: 0, marcacao: 0, velocidade: 0, drible: 0, finalizacao: 0,
     fisico: 0, tatico: 0, mentalidade: 0, confianca: 0, fairPlay: 0,
+    // Especialistas: o estilo tático não os move (bola parada/cabeceio evoluem
+    // por outra via). Peso 0, igual a mentalidade/confiança/fairPlay.
+    cabeceio: 0, bolaParada: 0, penalti: 0,
   };
   for (const axis of Object.keys(AXIS_TO_ATTR) as (keyof typeof AXIS_TO_ATTR)[]) {
     const frac = norm[axis] ?? 0;

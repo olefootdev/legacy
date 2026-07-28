@@ -19,7 +19,8 @@ export function InheritanceModule({ legend, jewel }: { legend: HeirFigure; jewel
       aria-label="Herança"
       className="relative overflow-hidden"
       style={{
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 'var(--radius-poster)',
+        boxShadow: 'var(--shadow-poster)',
         border: '1px solid rgba(199,166,78,0.35)',
         background: 'linear-gradient(120deg, rgba(199,166,78,0.09), rgba(253,225,0,0.05))',
       }}

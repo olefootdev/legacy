@@ -1,5 +1,6 @@
 import { getSupabase } from '@/supabase/client';
 import { createPlayer, overallFromAttributes } from '@/entities/player';
+import { withSpecialistDefaults } from '@/entities/specialistAttrs';
 import type {
   PlayerAttributes,
   PlayerEntity,
@@ -93,28 +94,38 @@ export function legacyPortraitFocusStyle(
   return portraitFocusStyle(row.portrait_focus_x, row.portrait_focus_y, row.portrait_zoom);
 }
 
-function attrsFromRow(attributes: Record<string, unknown> | null | undefined): PlayerAttributes {
+function attrsFromRow(
+  attributes: Record<string, unknown> | null | undefined,
+  pos?: string,
+): PlayerAttributes {
   const a = attributes && typeof attributes === 'object' ? attributes : {};
-  const num = (k: keyof PlayerAttributes, d: number) => {
-    const v = (a as Record<string, unknown>)[k as string];
+  const num = (k: string, d: number) => {
+    const v = (a as Record<string, unknown>)[k];
     return typeof v === 'number' && Number.isFinite(v) ? v : d;
   };
-  return {
-    passe: num('passe', 70),
-    marcacao: num('marcacao', 70),
-    velocidade: num('velocidade', 70),
-    drible: num('drible', 70),
-    finalizacao: num('finalizacao', 70),
-    fisico: num('fisico', 70),
-    tatico: num('tatico', 70),
-    mentalidade: num('mentalidade', 70),
-    confianca: num('confianca', 70),
-    fairPlay: num('fairPlay', 70),
-  };
+  // Backfill dos especialistas nas lendas/legacy carregadas do banco (ver genesisMarket).
+  return withSpecialistDefaults(
+    {
+      passe: num('passe', 70),
+      marcacao: num('marcacao', 70),
+      velocidade: num('velocidade', 70),
+      drible: num('drible', 70),
+      finalizacao: num('finalizacao', 70),
+      fisico: num('fisico', 70),
+      tatico: num('tatico', 70),
+      mentalidade: num('mentalidade', 70),
+      confianca: num('confianca', 70),
+      fairPlay: num('fairPlay', 70),
+      cabeceio: num('cabeceio', NaN),
+      bolaParada: num('bolaParada', NaN),
+      penalti: num('penalti', NaN),
+    },
+    pos,
+  );
 }
 
 export function legacyRowToPlayerEntity(row: LegacyPlayerRow): PlayerEntity {
-  const attrs = attrsFromRow(row.attributes);
+  const attrs = attrsFromRow(row.attributes, row.pos);
   const sf = row.strong_foot?.trim().toLowerCase();
   const strongFoot: PlayerStrongFoot | undefined =
     sf === 'right' || sf === 'left' || sf === 'both' ? sf : undefined;

@@ -1,0 +1,36 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "olefoot-revela",
+  "compatibility_date": "2026-04-13",
+  // O Worker existe só pra injetar as meta tags de compartilhamento por rota
+  // (ver worker.ts). Sem ele, todo link do REVELA mostraria o mesmo preview.
+  "main": "./worker.ts",
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.25
+  },
+  "assets": {
+    "directory": "./dist",
+    // O binding faz o Worker servir os arquivos; o SPA fallback continua valendo
+    // pras rotas de cliente (/t/..., /lenda/...).
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // ⚠️ SEM ISTO O WORKER NÃO RODA NA HOME.
+    // Por padrão, quando existe um arquivo pro caminho pedido, o Cloudflare o
+    // serve direto e nem invoca o Worker. Como `/` casa com o index.html, a home
+    // saía sem as tags injetadas — enquanto /t/<slug>, que não casa com arquivo
+    // nenhum, funcionava. Levava a um bug bem chato de enxergar: "funciona no
+    // perfil, não funciona na home".
+    // A lista é restrita de propósito: só as rotas que precisam de meta tag.
+    // `true` faria cada imagem e cada .js passarem pelo Worker à toa.
+    "run_worker_first": ["/", "/t/*", "/lenda/*", "/playervip/*"]
+  },
+  "vars": {
+    // Preenchidos no deploy a partir do .env da raiz (ver npm run deploy:revela).
+    // A anon key já é pública — ela viaja no bundle do front. Não é segredo.
+    "SUPABASE_URL": "",
+    "SUPABASE_ANON_KEY": ""
+  }
+  // Domínio: apontar revela.olefoot.com para este Worker no painel Cloudflare
+  // (Workers & Pages → olefoot-revela → Settings → Domains & Routes).
+}

@@ -30,6 +30,7 @@ const mkPlayer = (id: string, pos: string, ovr = 75): PlayerEntity => ({
   attrs: {
     passe: ovr, marcacao: ovr, velocidade: ovr, drible: ovr, finalizacao: ovr,
     fisico: ovr, tatico: ovr, mentalidade: ovr, confianca: ovr, fairPlay: 70,
+    cabeceio: ovr, bolaParada: ovr, penalti: ovr,
   },
   fatigue: 30, injuryRisk: 20, outForMatches: 0, evolutionXp: 0,
 });

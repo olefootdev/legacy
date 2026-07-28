@@ -2,6 +2,7 @@ import type { FormationSchemeId } from '@/match-engine/types';
 import type { PlayingStylePresetId } from '@/tactics/playingStyle';
 import type { PlayerEntity } from '@/entities/types';
 import { generatePlayerId } from '@/entities/player';
+import { withSpecialistDefaults } from '@/entities/specialistAttrs';
 import { randomBrazilianName } from '@/entities/nameGenerator';
 
 export type BotTeamId = 'bot-ole-fc' | 'bot-antros-sc' | 'bot-hexa-team' | 'bot-for-peace';
@@ -108,7 +109,7 @@ export function generateBotSquad(botTeam: BotTeamDefinition): Record<string, Pla
         : `${botTeam.shortName} ${pos} ${playerIndex}`;
 
       // Atributos balanceados por posição
-      const attrs = generateAttributesForPosition(pos, ovr);
+      const attrs = withSpecialistDefaults(generateAttributesForPosition(pos, ovr), pos);
 
       squad[playerId] = {
         id: playerId,
