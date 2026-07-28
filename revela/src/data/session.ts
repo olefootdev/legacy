@@ -19,6 +19,28 @@ export const GAME_URL = 'https://game.olefoot.com';
 
 /** Chave própria do REVELA — nunca escrever na do jogo. */
 const REF_KEY = 'olefoot-revela-ref';
+/**
+ * Cópia DURÁVEL do código (localStorage) — o `sessionStorage` acima morre ao
+ * fechar a aba. O atleta que chega por um link de indicação, cadastra, e volta
+ * depois pra ir ao jogo tem que levar o crédito da rede junto: `signupUrl()`
+ * manda ele pro `/cadastro/<código>` do jogo, que é a via que o jogo já usa pra
+ * creditar quem indicou (save_onboarding_profile). Sem durabilidade, o código se
+ * perdia entre "cadastrou" e "entrou no jogo".
+ */
+const REF_KEY_DURABLE = 'olefoot-revela-ref-durable';
+
+function persistRef(code: string): void {
+  try {
+    sessionStorage.setItem(REF_KEY, code);
+  } catch {
+    /* modo privado */
+  }
+  try {
+    localStorage.setItem(REF_KEY_DURABLE, code);
+  } catch {
+    /* modo privado */
+  }
+}
 
 export interface RevelaSession {
   userId: string;
@@ -88,11 +110,7 @@ export function captureReferralFromUrl(): string | null {
   const raw = new URLSearchParams(window.location.search).get('ref');
   const code = raw ? normalizeReferralCode(raw) : null;
   if (code) {
-    try {
-      sessionStorage.setItem(REF_KEY, code);
-    } catch {
-      /* modo privado: seguimos sem persistir */
-    }
+    persistRef(code);
     return code;
   }
   return readReferral();
@@ -108,16 +126,18 @@ export function captureReferralFromUrl(): string | null {
 export function rememberReferral(raw: string): void {
   const code = normalizeReferralCode(raw);
   if (!code) return;
-  try {
-    sessionStorage.setItem(REF_KEY, code);
-  } catch {
-    /* modo privado: segue sem persistir */
-  }
+  persistRef(code);
 }
 
 export function readReferral(): string | null {
   try {
-    return sessionStorage.getItem(REF_KEY);
+    const s = sessionStorage.getItem(REF_KEY);
+    if (s) return s;
+  } catch {
+    /* segue pro durável */
+  }
+  try {
+    return localStorage.getItem(REF_KEY_DURABLE);
   } catch {
     return null;
   }
@@ -127,4 +147,50 @@ export function readReferral(): string | null {
 export function signupUrl(): string {
   const code = readReferral();
   return code ? `${GAME_URL}/cadastro/${code}` : `${GAME_URL}/cadastro`;
+}
+
+/* ══ Cadastro pendente de claim ═══════════════════════════════════════════════
+ *
+ * O talento recém-enviado precisa virar dono da conta (passo 2). O `talentId`
+ * vinha SÓ em estado React: um refresh na tela de sucesso, ou o fluxo de
+ * "confirme seu e-mail", perdiam o id e o atleta ficava sem como reivindicar o
+ * próprio cadastro. Aqui persistimos em localStorage (sobrevive a refresh E ao
+ * fechar a aba) até o claim fechar. */
+const PENDING_KEY = 'olefoot-revela-pending-talent';
+
+export interface PendingTalent {
+  id: string;
+  slug: string;
+  phone: string;
+  apelido: string;
+}
+
+export function savePendingTalent(t: PendingTalent): void {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(t));
+  } catch {
+    /* modo privado: segue sem persistir (o claim inline ainda funciona) */
+  }
+}
+
+export function readPendingTalent(): PendingTalent | null {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return null;
+    const t = JSON.parse(raw) as Partial<PendingTalent>;
+    if (t && typeof t.id === 'string' && typeof t.phone === 'string') {
+      return { id: t.id, slug: t.slug ?? '', phone: t.phone, apelido: t.apelido ?? '' };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingTalent(): void {
+  try {
+    localStorage.removeItem(PENDING_KEY);
+  } catch {
+    /* nada a fazer */
+  }
 }

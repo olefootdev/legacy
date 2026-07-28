@@ -22,7 +22,13 @@ import { Eyebrow } from '../components/primitives';
 import { Field } from '../components/AuthSheet';
 import { CATEGORIAS, PES, SETORES, SITUACOES } from '../data/posicoes';
 import { submitTalent, type SubmitFailure } from '../data/revelaApi';
-import { readReferral } from '../data/session';
+import {
+  readReferral,
+  savePendingTalent,
+  readPendingTalent,
+  clearPendingTalent,
+  type PendingTalent,
+} from '../data/session';
 import { uploadFotoTalento } from '../data/upload';
 import { ContaDoAtleta } from '../components/ContaDoAtleta';
 
@@ -37,7 +43,6 @@ const JORNADA = [
 ];
 
 const FALHA: Record<SubmitFailure, string> = {
-  auth_required: 'Sessão expirada. Recarrega a página e tenta de novo.',
   invalid_name: 'Escreve teu nome completo.',
   invalid_pos: 'Escolhe a posição em que você joga.',
   invalid_phone: 'Confere o WhatsApp — precisa do DDD.',
@@ -87,18 +92,26 @@ export function OnboardingPage({
   const [subindoFoto, setSubindoFoto] = useState(false);
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [enviado, setEnviado] = useState<{ id: string; slug: string } | null>(null);
+  // Init preguiçoso do cadastro pendente: um refresh na tela de sucesso (ou o
+  // fluxo de confirmar e-mail) volta direto pro claim em vez de perder o id.
+  const [enviado, setEnviado] = useState<PendingTalent | null>(() => readPendingTalent());
 
   const set = (k: keyof Ficha) => (v: string) => setF((p) => ({ ...p, [k]: v }));
 
   const idade = f.ano.length === 4 ? new Date().getFullYear() - Number(f.ano) : null;
-  const menorDeIdade = idade != null && idade < 18 && idade > 5;
+  // Menor = QUALQUER idade < 18 (igual ao servidor, que exige responsável pra
+  // todo < 18). Antes o `> 5` deixava criança/ano-futuro passar sem o bloco do
+  // responsável e o servidor recusava — beco sem saída.
+  const menorDeIdade = idade != null && idade < 18;
+  // Ano fora de faixa sã (futuro, ou idade absurda) não deixa avançar.
+  const anoInvalido = idade != null && (idade < 4 || idade > 80);
   const telDigitos = f.telefone.replace(/\D/g, '');
   const respTelDigitos = f.respTel.replace(/\D/g, '');
 
   const podeAvancar = useMemo(() => {
     if (tela === 0) {
       if (f.nome.trim().length < 3 || f.pos === '') return false;
+      if (anoInvalido) return false;
       // Sem responsável, menor de idade não passa daqui.
       if (menorDeIdade && (f.respNome.trim().length < 3 || respTelDigitos.length < 10)) return false;
       return true;
@@ -108,7 +121,7 @@ export function OnboardingPage({
       return f.temAgente !== 'sim' || f.agente.trim().length >= 2;
     }
     return telDigitos.length >= 10;
-  }, [tela, f.nome, f.pos, f.temAgente, f.agente, menorDeIdade, f.respNome, respTelDigitos, telDigitos]);
+  }, [tela, f.nome, f.pos, f.temAgente, f.agente, menorDeIdade, anoInvalido, f.respNome, respTelDigitos, telDigitos]);
 
   async function escolherFoto(file: File) {
     setSubindoFoto(true);
@@ -156,7 +169,14 @@ export function OnboardingPage({
 
     setBusy(false);
     if (res.ok && res.slug && res.id) {
-      setEnviado({ id: res.id, slug: res.slug });
+      const pend: PendingTalent = {
+        id: res.id,
+        slug: res.slug,
+        phone: telDigitos,
+        apelido: f.apelido.trim() || f.nome.trim(),
+      };
+      savePendingTalent(pend); // sobrevive a refresh / confirmar e-mail
+      setEnviado(pend);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       onNote('Cadastro enviado', 'O OLE SCOUT vai analisar.', 'green');
       return;
@@ -165,11 +185,13 @@ export function OnboardingPage({
   }
 
   if (enviado) {
+    // apelido/telefone vêm do cadastro PERSISTIDO — não do form (que o refresh
+    // zera). É o que faz o claim sobreviver a um F5 na tela de sucesso.
     return (
       <Enviado
-        apelido={f.apelido || f.nome}
+        apelido={enviado.apelido || 'Craque'}
         talentId={enviado.id}
-        telefone={telDigitos}
+        telefone={enviado.phone}
         onNote={onNote}
       />
     );
@@ -813,6 +835,7 @@ function Enviado({
               talentId={talentId}
               telefone={telefone}
               onPronto={() => {
+                clearPendingTalent(); // claim fechou — não precisa mais ressuscitar
                 setComConta(true);
                 onNote('Perfil garantido', 'O cadastro agora é seu.', 'green');
                 window.scrollTo({ top: 0, behavior: 'smooth' });

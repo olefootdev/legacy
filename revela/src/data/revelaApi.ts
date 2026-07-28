@@ -162,8 +162,9 @@ export interface SubmitTalentInput {
   referralCode?: string;
 }
 
+// Sem `auth_required`: o submit é anônimo (grant pra anon desde a v2), então o
+// RPC nunca retorna isso. Deixar no tipo era código morto que enganava a leitura.
 export type SubmitFailure =
-  | 'auth_required'
   | 'invalid_name'
   | 'invalid_pos'
   | 'invalid_phone'
@@ -180,7 +181,6 @@ export interface SubmitResult {
 }
 
 const SUBMIT_FAILURES: readonly SubmitFailure[] = [
-  'auth_required',
   'invalid_name',
   'invalid_pos',
   'invalid_phone',
