@@ -24,6 +24,8 @@ import { getSupabase } from '@/supabase/client';
 import { fetchMyOlefootBalance, spendMyOlefoot } from '@/wallet/olefoot';
 import { DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP } from '@/entities/managerProspect';
 import { overallFromAttributes } from '@/entities/player';
+import { isUuidString } from '@/supabase/matchPersistence';
+import type { SnapshotPlayer, LineupSnapshot } from '@/match/globalSectorModel';
 import { expCostToOlefoot, managerProspectContractPremiumExp } from '@/playerContracts/playerContracts';
 import {
   buildContractNudges,
@@ -58,10 +60,11 @@ export function useGlobalConsequencesSync() {
   useEffect(() => {
     if (!club || !players || Object.keys(players).length === 0) return;
     const timer = setTimeout(() => {
-      syncTeamStatus(players as Record<string, PlayerEntity>, playerHealth, engagementScore);
+      syncTeamStatus(players as Record<string, PlayerEntity>, playerHealth, engagementScore, lineup ?? {});
     }, 2000);
     return () => clearTimeout(timer);
-  }, [playerHealth, players, club, engagementScore]);
+    // `lineup` nas deps: trocar a escalação (não só o elenco) re-sincroniza o snapshot.
+  }, [playerHealth, players, club, engagementScore, lineup]);
 
   // ── Nudge in-app: contrato vencido / a vencer → item de inbox acionável ────
   useEffect(() => {
@@ -537,6 +540,40 @@ function generateInboxNotifications(
 }
 
 /**
+ * Snapshot dos 11 TITULARES pro tick calcular força por SETOR (ataque real ×
+ * defesa real) em vez do OVR borrado. `id` só vai como UUID real (pra artilharia
+ * ser gravável); elenco legado entra com id null (conta no placar, sem autor).
+ */
+function buildLineupSnapshot(
+  lineup: Record<string, string>,
+  players: Record<string, PlayerEntity>,
+): LineupSnapshot | null {
+  const starters: SnapshotPlayer[] = [];
+  for (const pid of Object.values(lineup)) {
+    const p = players[pid];
+    if (!p) continue;
+    const a = p.attrs;
+    starters.push({
+      id: isUuidString(p.id) ? p.id : null,
+      name: p.name,
+      pos: p.pos,
+      finalizacao: a.finalizacao,
+      drible: a.drible,
+      velocidade: a.velocidade,
+      passe: a.passe,
+      marcacao: a.marcacao,
+      fisico: a.fisico,
+      cabeceio: a.cabeceio,
+      bolaParada: a.bolaParada,
+      penalti: a.penalti,
+      confianca: a.confianca,
+    });
+  }
+  if (starters.length === 0) return null;
+  return { v: 1, formation: '', players: starters };
+}
+
+/**
  * Sincroniza available_player_count + engagement_score para o Supabase.
  * A Edge Function usa estes valores para WO (< 11 = derrota 3x0) e buff de engajamento.
  */
@@ -544,6 +581,7 @@ async function syncTeamStatus(
   players: Record<string, PlayerEntity>,
   playerHealth: Record<string, PlayerHealth>,
   engagementScore: number,
+  lineup: Record<string, string>,
 ) {
   const sb = getSupabase();
   if (!sb) return;
@@ -593,4 +631,22 @@ async function syncTeamStatus(
       overall: teamOverall,
     })
     .eq('id', team.id);
+
+  // Snapshot da escalação em UPDATE SEPARADO e resiliente: se a migration
+  // (20260724160000) ainda não foi aplicada, a coluna não existe e este update
+  // falha — mas NÃO pode derrubar o sync principal acima. Loga e segue.
+  try {
+    const snapshot = buildLineupSnapshot(lineup, players);
+    if (snapshot) {
+      const { error } = await sb
+        .from('global_league_teams')
+        .update({ lineup_snapshot: snapshot })
+        .eq('id', team.id);
+      if (error) {
+        console.warn('[globalSync] lineup_snapshot não gravou (migration aplicada?):', error.message);
+      }
+    }
+  } catch (e) {
+    console.warn('[globalSync] lineup_snapshot exceção:', e);
+  }
 }
