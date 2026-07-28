@@ -96,7 +96,9 @@ function generateMatchEvents(ctx: SimulationContext): EventCandidate[] {
       type: 'goal',
       side: 'home',
       minute,
-      playerName: `Jogador ${Math.floor(Math.random() * 11) + 1}`,
+      // Sim otimista local — SEM autor inventado. O artilheiro real vem do
+      // servidor (global-league-tick, motor por setor) e substitui isto.
+      playerName: undefined,
     });
   }
 
@@ -106,7 +108,9 @@ function generateMatchEvents(ctx: SimulationContext): EventCandidate[] {
       type: 'goal',
       side: 'away',
       minute,
-      playerName: `Jogador ${Math.floor(Math.random() * 11) + 1}`,
+      // Sim otimista local — SEM autor inventado. O artilheiro real vem do
+      // servidor (global-league-tick, motor por setor) e substitui isto.
+      playerName: undefined,
     });
   }
 
@@ -119,7 +123,9 @@ function generateMatchEvents(ctx: SimulationContext): EventCandidate[] {
       type: 'yellow_card',
       side: Math.random() < 0.5 ? 'home' : 'away',
       minute: Math.floor(Math.random() * 90) + 1,
-      playerName: `Jogador ${Math.floor(Math.random() * 11) + 1}`,
+      // Sim otimista local — SEM autor inventado. O artilheiro real vem do
+      // servidor (global-league-tick, motor por setor) e substitui isto.
+      playerName: undefined,
     });
   }
 
@@ -128,7 +134,9 @@ function generateMatchEvents(ctx: SimulationContext): EventCandidate[] {
       type: 'red_card',
       side: Math.random() < 0.5 ? 'home' : 'away',
       minute: Math.floor(Math.random() * 90) + 1,
-      playerName: `Jogador ${Math.floor(Math.random() * 11) + 1}`,
+      // Sim otimista local — SEM autor inventado. O artilheiro real vem do
+      // servidor (global-league-tick, motor por setor) e substitui isto.
+      playerName: undefined,
     });
   }
 
@@ -138,7 +146,9 @@ function generateMatchEvents(ctx: SimulationContext): EventCandidate[] {
       type: 'injury',
       side: Math.random() < 0.5 ? 'home' : 'away',
       minute: Math.floor(Math.random() * 90) + 1,
-      playerName: `Jogador ${Math.floor(Math.random() * 11) + 1}`,
+      // Sim otimista local — SEM autor inventado. O artilheiro real vem do
+      // servidor (global-league-tick, motor por setor) e substitui isto.
+      playerName: undefined,
     });
   }
 

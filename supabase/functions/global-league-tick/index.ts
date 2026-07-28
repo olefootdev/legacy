@@ -18,6 +18,15 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+// Motor por setor — CÓPIA EXATA de src/match/globalSectorModel.ts (Deno não
+// importa de src/). Paridade garantida por `npm run test:sector-parity`.
+import {
+  computeSectors,
+  sectorsToLambda,
+  pickGoalType,
+  pickScorer,
+  type LineupSnapshot,
+} from './_sectorModel.ts';
 
 const ROUND_INTERVAL_MS = 5 * 60 * 1000;
 const SIM_DURATION_MS = 90_000;
@@ -148,6 +157,7 @@ interface TeamRow {
   suspension_rounds_remaining: number; // rodadas de suspensão pendentes
   available_player_count: number; // jogadores disponíveis (synced pelo cliente)
   available_player_count_updated_at?: string; // timestamp do último sync
+  lineup_snapshot?: LineupSnapshot | null; // os 11 reais (synced) → força por setor
   engagement_score?: number; // 0-100 — buff de engajamento do manager
   rivalry_encounters?: Record<string, number>; // teamId → nº de confrontos na temporada
   all_time_points?: number; all_time_matches_played?: number;
@@ -211,6 +221,30 @@ function poissonGoals(expected: number): number {
   let k = 0; let p = 1;
   do { k++; p *= Math.random(); } while (p > L && k < 8);
   return k - 1;
+}
+
+// Snapshot vale só se tem os 11 e foi sincronizado nas últimas 72h (mesma janela
+// de confiança do available_player_count). Senão → null → o fixture cai no
+// fallback por overall agregado. Ninguém é punido por não ter snapshot.
+const SNAPSHOT_TTL_MS = 72 * 60 * 60 * 1000;
+function freshSnapshot(team: TeamRow | undefined | null): LineupSnapshot | null {
+  if (!team) return null;
+  const snap = team.lineup_snapshot as LineupSnapshot | null | undefined;
+  if (!snap || !Array.isArray(snap.players) || snap.players.length === 0) return null;
+  const ts = team.available_player_count_updated_at ? Date.parse(team.available_player_count_updated_at) : NaN;
+  if (!Number.isFinite(ts) || Date.now() - ts > SNAPSHOT_TTL_MS) return null;
+  return snap;
+}
+
+// Manchete do gol por tipo de lance — o zagueiro de cabeça, o batedor na falta,
+// o cobrador no pênalti. Mata o "time marca!" sem autor.
+function goalText(team: string, name: string, type: string): string {
+  switch (type) {
+    case 'header': return `⚽ GOL de cabeça! ${name} sobe e marca para o ${team}!`;
+    case 'free_kick': return `⚽ GOL de falta! ${name} cobra com categoria para o ${team}!`;
+    case 'penalty': return `⚽ GOL de pênalti! ${name} bate firme para o ${team}!`;
+    default: return `⚽ GOL! ${name} marca para o ${team}!`;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -762,7 +796,7 @@ function applyCompetitionReset(teams: TeamRow[]): TeamRow[] {
   }));
 }
 
-function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kickoffMs: number, opts?: { isRivalry?: boolean }) {
+function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kickoffMs: number, opts?: { isRivalry?: boolean; homeSnap?: LineupSnapshot | null; awaySnap?: LineupSnapshot | null }) {
   const isRivalry = opts?.isRivalry ?? false;
   // Rivalidade: probabilidades aumentadas
   const yellowProb = isRivalry ? 0.25 : 0.15;
@@ -780,8 +814,26 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
   // ninguém, ele AMPLIFICA. Espelha o derby do client (contextFactors 1.15×
   // e o derby_mult 1.12 do quick plan Python).
   const derbyGoalMult = isRivalry ? 1.12 : 1.0;
-  const homeExpected = Math.max(0.2, 1.4 + diff / OVR_GOAL_SENSITIVITY) * derbyGoalMult;
-  const awayExpected = Math.max(0.2, 1.4 - diff / OVR_GOAL_SENSITIVITY) * derbyGoalMult;
+
+  // MOTOR POR SETOR: se AMBOS os times têm escalação real sincronizada, o placar
+  // sai dos 11 reais (ataque × defesa, meio decide a posse). Senão — manager
+  // passivo sem snapshot fresco — cai no cálculo antigo por overall agregado,
+  // pra ninguém jogar 0×0 por falta de sync.
+  const homeSnap = opts?.homeSnap ?? null;
+  const awaySnap = opts?.awaySnap ?? null;
+  let homeExpected: number;
+  let awayExpected: number;
+  if (homeSnap && awaySnap) {
+    const lam = sectorsToLambda({
+      home: computeSectors(homeSnap.players),
+      away: computeSectors(awaySnap.players),
+    });
+    homeExpected = lam.home * derbyGoalMult;
+    awayExpected = lam.away * derbyGoalMult;
+  } else {
+    homeExpected = Math.max(0.2, 1.4 + diff / OVR_GOAL_SENSITIVITY) * derbyGoalMult;
+    awayExpected = Math.max(0.2, 1.4 - diff / OVR_GOAL_SENSITIVITY) * derbyGoalMult;
+  }
   const homeGoals = poissonGoals(homeExpected);
   const awayGoals = poissonGoals(awayExpected);
   const events: any[] = [];
@@ -795,13 +847,26 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
       timestamp_ms: kickoffMs + 1000,
     });
   }
+  const scorers: Array<{ side: 'home' | 'away'; playerId: string | null; name: string; pos: string; type: string; minute: number }> = [];
   const placeGoal = (side: 'home' | 'away', i: number, total: number) => {
     const minute = Math.max(1, Math.min(90, Math.floor((90 / (total + 1)) * (i + 1) + (Math.random() - 0.5) * 8)));
     const teamName = side === 'home' ? fx.home_team_name : fx.away_team_name;
+    // Artilheiro POR TIPO DE LANCE quando há elenco real: cabeça, falta, pênalti,
+    // jogada aberta — todo o campo participa (ver _sectorModel).
+    const snap = side === 'home' ? homeSnap : awaySnap;
+    let text = `⚽ GOL! ${teamName} marca!`;
+    if (snap && snap.players.length > 0) {
+      const type = pickGoalType(Math.random);
+      const s = pickScorer(snap.players, type, Math.random);
+      if (s) {
+        scorers.push({ side, playerId: s.playerId, name: s.name, pos: s.pos, type, minute });
+        text = goalText(teamName, s.name, type);
+      }
+    }
     events.push({
       id: `evt_${fx.id}_${side}_g${i}_${kickoffMs}`,
       fixture_id: fx.id, event_type: 'goal', minute, side,
-      text: `⚽ GOL! ${teamName} marca!`, highlight: true,
+      text, highlight: true,
       timestamp_ms: kickoffMs + minute * 1000,
     });
   };
@@ -869,7 +934,7 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
     });
   }
   events.sort((a, b) => (a.minute as number) - (b.minute as number));
-  return { score_home: homeGoals, score_away: awayGoals, events, injured_side, home_yellow, away_yellow, home_red, away_red };
+  return { score_home: homeGoals, score_away: awayGoals, events, injured_side, home_yellow, away_yellow, home_red, away_red, scorers };
 }
 
 function updateTeamRow(team: TeamRow, gf: number, ga: number, isPlayoff: boolean, accrueDaily = false): TeamRow {
@@ -1638,6 +1703,8 @@ Deno.serve(async (req: Request) => {
   const fixturesUpdated: FixtureRow[] = [];
   const eventsToInsert: any[] = [];
   const teamDelta = new Map<string, { gf: number; ga: number }>();
+  // Artilharia da Liga Global: acumula gols por (fixture, jogador) → global_fixture_goals.
+  const fixtureGoalRows = new Map<string, Record<string, unknown>>();
   const newInjuries = new Map<string, { modifier: number; rounds: number }>();
   const yellowsThisRound = new Map<string, number>(); // teamId → amarelos nesta rodada
   const redsThisRound = new Map<string, number>(); // teamId → vermelhos nesta rodada
@@ -1705,7 +1772,27 @@ Deno.serve(async (req: Request) => {
 
     const effH = home ? effectiveOverall(home) : fx.home_overall;
     const effA = away ? effectiveOverall(away) : fx.away_overall;
-    const sim = simulateFixture(fx, effH, effA, now, { isRivalry });
+    const homeSnap = freshSnapshot(home);
+    const awaySnap = freshSnapshot(away);
+    const sim = simulateFixture(fx, effH, effA, now, { isRivalry, homeSnap, awaySnap });
+    // Grava a artilharia: agrega gols por jogador REAL (UUID). Sem UUID (elenco
+    // legado) o gol conta no placar mas não tem autor gravável.
+    for (const sc of sim.scorers) {
+      if (!sc.playerId) continue;
+      const teamId = sc.side === 'home' ? fx.home_team_id : fx.away_team_id;
+      const key = `${fx.id}|${sc.playerId}`;
+      const existing = fixtureGoalRows.get(key);
+      if (existing) {
+        existing.goals = (existing.goals as number) + 1;
+      } else {
+        const tr = teamById.get(teamId);
+        fixtureGoalRows.set(key, {
+          fixture_id: fx.id, player_id: sc.playerId, season: 'current',
+          team_id: teamId, club_name: tr?.club_name ?? null,
+          name: sc.name, pos: sc.pos, goals: 1, assists: 0,
+        });
+      }
+    }
     fixturesUpdated.push({ ...fx, score_home: sim.score_home, score_away: sim.score_away, status: 'finished', kickoff_ms: now, finished_at_ms: now + SIM_DURATION_MS, wo_home: false, wo_away: false });
     for (const ev of sim.events) eventsToInsert.push(ev);
     const ha = teamDelta.get(fx.home_team_id) ?? { gf: 0, ga: 0 }; ha.gf += sim.score_home; ha.ga += sim.score_away; teamDelta.set(fx.home_team_id, ha);
@@ -1729,6 +1816,14 @@ Deno.serve(async (req: Request) => {
   }
   if (fixturesUpdated.length > 0) await supabase.from('global_league_fixtures').upsert(fixturesUpdated as any, { onConflict: 'id' });
   if (eventsToInsert.length > 0) await supabase.from('global_league_events').upsert(eventsToInsert as any, { onConflict: 'id' });
+  // Artilharia da Liga Global (best-effort: se a migration não foi aplicada, loga
+  // e segue — nunca derruba a rodada).
+  if (fixtureGoalRows.size > 0) {
+    const { error: goalErr } = await supabase
+      .from('global_fixture_goals')
+      .upsert(Array.from(fixtureGoalRows.values()) as any, { onConflict: 'fixture_id,player_id' });
+    if (goalErr) console.warn('[tick] global_fixture_goals upsert (migration aplicada?):', goalErr.message);
+  }
   if (teamById.size > 0) {
     // Construir mapa de confrontos desta rodada para atualizar rivalry_encounters
     const encountersThisRound = new Map<string, string[]>(); // teamId → [opponentIds]
