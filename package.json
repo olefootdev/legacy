@@ -76,6 +76,7 @@
     "test:liga-ole": "tsx scripts/test-liga-ole.ts",
     "test:ovr-weights": "tsx scripts/test-ovr-weights.ts",
     "test:revela-ovr": "tsx scripts/test-revela-ovr.ts",
+    "test:global-sector": "tsx scripts/test-global-sector.ts",
     "test:revela-share": "tsx scripts/test-revela-share.ts",
     "test:legends-cup": "tsx scripts/test-legends-cup.ts",
     "test:legends-cup-reducer": "tsx scripts/test-legends-cup-reducer.ts",

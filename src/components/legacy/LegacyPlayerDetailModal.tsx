@@ -23,6 +23,13 @@ const ATTR_LABELS: Array<[keyof PlayerAttributes, string]> = [
   ['fairPlay', 'Fair Play'],
 ];
 
+/** Atributos especialistas — mostrados num bloco à parte (bola parada / cabeça / pênalti). */
+const SPECIALIST_LABELS: Array<[keyof PlayerAttributes, string]> = [
+  ['cabeceio', 'Cabeceio'],
+  ['bolaParada', 'Bola parada'],
+  ['penalti', 'Pênalti'],
+];
+
 function fmtBrl(cents: number): string {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 }
@@ -204,6 +211,17 @@ export function LegacyPlayerDetailModal({
                     </h3>
                     <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
                       {ATTR_LABELS.map(([key, label]) => (
+                        <StatBar key={key} label={label} value={entity.attrs[key] ?? 0} />
+                      ))}
+                    </div>
+
+                    {/* Especialistas — bola parada, cabeça, pênalti. Bloco à parte
+                        porque não entram no OVR: decidem quem marca cada lance. */}
+                    <h4 className="mb-3 mt-6 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-amber-300/70">
+                      <Sparkles className="h-3.5 w-3.5" /> Especialista
+                    </h4>
+                    <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
+                      {SPECIALIST_LABELS.map(([key, label]) => (
                         <StatBar key={key} label={label} value={entity.attrs[key] ?? 0} />
                       ))}
                     </div>

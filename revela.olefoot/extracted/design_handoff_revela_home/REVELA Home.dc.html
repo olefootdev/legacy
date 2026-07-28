@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,800;1,500;1,600;1,700;1,800;1,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:#0D0D0D;color:#0D0D0D;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#0D0D0D;color:#FDE100}
+  image-slot{--is-bg:#e6cf00}
+  @keyframes revPulse{0%,100%{opacity:1}50%{opacity:.3}}
+  @keyframes revFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  @keyframes revToast{0%{transform:translateY(24px);opacity:0}12%{transform:translateY(0);opacity:1}88%{transform:translateY(0);opacity:1}100%{transform:translateY(-10px);opacity:0}}
+  @keyframes revMarq{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+  @keyframes revMarqR{0%{transform:translateX(-50%)}100%{transform:translateX(0)}}
+  .rev-rail{scrollbar-width:thin;scrollbar-color:#0D0D0D transparent}
+  .rev-rail::-webkit-scrollbar{height:8px}
+  .rev-rail::-webkit-scrollbar-thumb{background:#0D0D0D;border-radius:4px}
+  .rev-rail::-webkit-scrollbar-track{background:rgba(0,0,0,.1)}
+</style>
+</helmet>
+
+<div style="position:relative;max-width:100%;overflow:hidden;background:#FDE100">
+
+<!-- ============ NAV ============ -->
+<header style="position:sticky;top:0;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px clamp(16px,4vw,54px);background:rgba(253,225,0,.92);backdrop-filter:blur(10px);border-bottom:2px solid #0D0D0D">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="font-family:Anton;font-size:24px;letter-spacing:.02em;color:#0D0D0D;line-height:1">OLEFOOT</div>
+    <div style="font-family:Oswald;font-weight:700;font-size:11px;letter-spacing:.26em;color:#FDE100;background:#0D0D0D;padding:5px 9px 4px;border-radius:3px">REVELA</div>
+  </div>
+  <nav style="display:flex;align-items:center;gap:clamp(14px,2.4vw,30px);font-family:Oswald;font-weight:600;font-size:13px;letter-spacing:.14em;color:#0D0D0D">
+    <a href="#descoberta" style-hover="opacity:.55">DESCOBRIR</a>
+    <a href="#torcida" style-hover="opacity:.55">TORCIDA</a>
+    <a href="#wall" style-hover="opacity:.55">REVEAL WALL</a>
+    <a href="#legends" style-hover="opacity:.55">LENDAS</a>
+    <a href="#resenha" style-hover="opacity:.55">RESENHA</a>
+  </nav>
+  <button style="font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.14em;color:#FDE100;background:#0D0D0D;border:none;padding:11px 20px;border-radius:4px;cursor:pointer" style-hover="transform:translateY(-1px)">CRIAR PERFIL</button>
+</header>
+
+<!-- ============ HERO — LIVING POSTER ============ -->
+<section style="position:relative;padding:clamp(20px,3vw,40px) clamp(16px,4vw,54px) 0;min-height:88vh;display:flex;flex-direction:column">
+  <div aria-hidden="true" style="position:absolute;top:clamp(60px,10vw,120px);left:-1vw;font-family:Anton;font-size:min(40vw,560px);line-height:.72;color:rgba(13,13,13,.06);pointer-events:none;user-select:none;z-index:0;letter-spacing:-.02em">REVELA</div>
+
+  <div style="position:relative;z-index:2;flex:1;display:grid;grid-template-columns:1.15fr .85fr;gap:clamp(20px,3vw,48px);align-items:center;max-width:1440px;margin:0 auto;width:100%;padding-bottom:40px">
+    <!-- LEFT: type + cta -->
+    <div style="min-width:0;position:relative;z-index:3">
+      <div style="display:inline-flex;align-items:center;gap:9px;background:#0D0D0D;color:#FDE100;padding:7px 13px;border-radius:40px;margin-bottom:clamp(14px,2vw,24px)">
+        <span style="width:8px;height:8px;border-radius:50%;background:#FDE100;animation:revPulse 1.5s ease-in-out infinite"></span>
+        <span style="font-family:Oswald;font-weight:600;font-size:11px;letter-spacing:.24em">A NOVA CENA DO FUTEBOL · AO VIVO</span>
+      </div>
+      <h1 style="font-family:Anton;font-size:clamp(48px,8.8vw,132px);line-height:.9;letter-spacing:-.02em;margin:0;color:#0D0D0D;text-transform:uppercase">Descubra<br>quem está<br><span style="position:relative;display:inline-block">chegando<span style="color:#0D0D0D">.</span><span style="position:absolute;left:0;bottom:6%;width:100%;height:14%;background:#0D0D0D;z-index:-1;opacity:.0"></span></span></h1>
+      <p style="font-family:Oswald;font-weight:500;font-size:clamp(15px,1.6vw,20px);letter-spacing:.02em;line-height:1.4;color:#0D0D0D;max-width:38ch;margin:clamp(16px,2vw,26px) 0 clamp(20px,2.6vw,32px)">Novos talentos. Novas histórias.<br><span style="font-weight:700">O próximo nome pode estar aqui.</span></p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:clamp(22px,3vw,38px)">
+        <button style="font-family:Oswald;font-weight:700;font-size:14px;letter-spacing:.12em;color:#FDE100;background:#0D0D0D;border:2px solid #0D0D0D;padding:15px 28px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;gap:9px" style-hover="transform:translate(-2px,-2px);box-shadow:5px 5px 0 rgba(13,13,13,.25)">EXPLORAR TALENTOS <span>→</span></button>
+        <button style="font-family:Oswald;font-weight:600;font-size:14px;letter-spacing:.12em;color:#0D0D0D;background:transparent;border:2px solid #0D0D0D;padding:15px 24px;border-radius:5px;cursor:pointer" style-hover="background:#0D0D0D;color:#FDE100">COMO FUNCIONA</button>
+      </div>
+      <div style="display:flex;gap:clamp(18px,3vw,40px);align-items:flex-end">
+        <div><div style="font-family:Anton;font-size:clamp(30px,4vw,48px);color:#0D0D0D;line-height:.9;font-variant-numeric:tabular-nums">{{ totalRevFmt }}</div><div style="font-family:Oswald;font-weight:600;font-size:11px;letter-spacing:.16em;color:rgba(13,13,13,.6);margin-top:5px">TALENTOS REVELADOS</div></div>
+        <div style="width:2px;height:42px;background:#0D0D0D"></div>
+        <div><div style="font-family:Anton;font-size:clamp(30px,4vw,48px);color:#0D0D0D;line-height:.9;font-variant-numeric:tabular-nums">1.247</div><div style="font-family:Oswald;font-weight:600;font-size:11px;letter-spacing:.16em;color:rgba(13,13,13,.6);margin-top:5px">CLUBES NA CENA</div></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: player poster + stickers -->
+    <div style="position:relative;justify-self:center;width:min(100%,400px);z-index:2">
+      <!-- sticker: OVR -->
+      <div style="position:absolute;top:-22px;left:-26px;z-index:5;background:#0D0D0D;color:#FDE100;border-radius:14px;padding:12px 16px 10px;text-align:center;transform:rotate(-8deg);box-shadow:6px 6px 0 rgba(13,13,13,.18)">
+        <div style="font-family:Playfair Display;font-style:italic;font-weight:800;font-size:38px;line-height:.85">86</div>
+        <div style="font-family:Oswald;font-weight:700;font-size:9px;letter-spacing:.24em">OVR</div>
+      </div>
+      <!-- sticker: HOT -->
+      <div style="position:absolute;top:38%;right:-20px;z-index:5;background:#EF4444;color:#fff;font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.2em;padding:8px 14px;border-radius:6px;transform:rotate(7deg);box-shadow:4px 4px 0 rgba(13,13,13,.2)">● EM ALTA</div>
+      <!-- sticker: supporters -->
+      <div style="position:absolute;bottom:66px;left:-30px;z-index:5;background:#FDE100;border:2px solid #0D0D0D;color:#0D0D0D;border-radius:40px;padding:8px 15px;transform:rotate(-4deg);display:flex;align-items:center;gap:7px;box-shadow:4px 4px 0 rgba(13,13,13,.15)">
+        <span style="font-family:Anton;font-size:18px;font-variant-numeric:tabular-nums">{{ heroSupFmt }}</span>
+        <span style="font-family:Oswald;font-weight:700;font-size:9px;letter-spacing:.16em">NA TORCIDA</span>
+      </div>
+
+      <div style="position:relative;border-radius:16px;overflow:hidden;border:3px solid #0D0D0D;background:#141414;box-shadow:14px 14px 0 rgba(13,13,13,.9);animation:revFloat 6.5s ease-in-out infinite">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(13,13,13,.92));z-index:2;pointer-events:none"></div>
+        <div style="position:relative;aspect-ratio:4/5;width:100%">
+          <image-slot id="rev-hero-player" shape="rect" fit="cover" placeholder="CRAQUE EM DESTAQUE"></image-slot>
+        </div>
+        <div style="position:absolute;top:14px;right:14px;z-index:3;font-family:Oswald;font-weight:700;font-size:10px;letter-spacing:.2em;color:#0D0D0D;background:#FDE100;padding:5px 10px 4px;border-radius:4px">CARD READY</div>
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:3;padding:20px 18px;border-left:4px solid #FDE100">
+          <div style="font-family:Oswald;font-weight:600;font-size:11px;letter-spacing:.22em;color:#FDE100;margin-bottom:2px">ATA · GRÊMIO · BRASIL</div>
+          <div style="font-family:Anton;font-size:clamp(28px,3.4vw,40px);line-height:.9;color:#fff;text-transform:uppercase;letter-spacing:.01em">Enzo Martins</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MARQUEE ============ -->
+<div style="background:#0D0D0D;color:#FDE100;overflow:hidden;padding:14px 0;border-top:2px solid #0D0D0D;position:relative;z-index:3">
+  <div style="display:flex;white-space:nowrap;width:max-content;animation:revMarq 26s linear infinite;font-family:Anton;font-size:clamp(20px,2.4vw,30px);letter-spacing:.02em;text-transform:uppercase">
+    <span>REVELAR ✱ DESCOBRIR ✱ APOIAR ✱ ACOMPANHAR ✱ RECONHECER ✱ REVELAR ✱ DESCOBRIR ✱ APOIAR ✱ ACOMPANHAR ✱ RECONHECER ✱&nbsp;</span>
+    <span>REVELAR ✱ DESCOBRIR ✱ APOIAR ✱ ACOMPANHAR ✱ RECONHECER ✱ REVELAR ✱ DESCOBRIR ✱ APOIAR ✱ ACOMPANHAR ✱ RECONHECER ✱&nbsp;</span>
+  </div>
+</div>
+
+<!-- ============ DESCOBERTA — HORIZONTAL RAIL ============ -->
+<section id="descoberta" style="background:#FDE100;padding:clamp(44px,6vw,84px) 0 clamp(40px,5vw,70px)">
+  <div style="max-width:1440px;margin:0 auto;padding:0 clamp(16px,4vw,54px)">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:clamp(24px,3vw,40px)">
+      <h2 style="font-family:Anton;font-size:clamp(34px,6vw,84px);line-height:.86;margin:0;color:#0D0D0D;text-transform:uppercase;max-width:16ch">Você ainda não<br>conhece esses nomes.</h2>
+      <div style="display:flex;align-items:center;gap:10px;font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.16em;color:rgba(13,13,13,.65)">ARRASTE · PASSE O MOUSE · REVELE <span style="font-size:20px">→</span></div>
+    </div>
+  </div>
+  <div class="rev-rail" style="display:flex;gap:clamp(14px,1.6vw,22px);overflow-x:auto;padding:6px clamp(16px,4vw,54px) 22px;scroll-snap-type:x mandatory">
+    <sc-for list="{{ talents }}" as="p" hint-placeholder-count="6">
+      <div onMouseEnter="{{ p.onEnter }}" onMouseLeave="{{ p.onLeave }}" style="flex:none;width:clamp(230px,24vw,286px);scroll-snap-align:start">
+        <div style="position:relative;border-radius:14px;overflow:hidden;border:3px solid #0D0D0D;background:#0D0D0D;box-shadow:8px 8px 0 rgba(13,13,13,.9);cursor:pointer;transition:transform .3s ease,box-shadow .3s ease" style-hover="transform:translate(-3px,-3px);box-shadow:12px 12px 0 rgba(13,13,13,.9)">
+          <div style="position:relative;aspect-ratio:3/4;width:100%">
+            <image-slot id="{{ p.slot }}" shape="rect" fit="cover" placeholder="FOTO"></image-slot>
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 42%,rgba(13,13,13,.96));pointer-events:none;z-index:2"></div>
+            <div style="position:absolute;top:10px;left:10px;z-index:3;text-align:center;background:#0D0D0D;border-radius:10px;padding:6px 11px 5px">
+              <div style="font-family:Playfair Display;font-style:italic;font-weight:800;font-size:22px;color:#FDE100;line-height:.85">{{ p.ovr }}</div>
+              <div style="font-family:Oswald;font-weight:700;font-size:8px;letter-spacing:.16em;color:rgba(245,241,230,.7)">OVR</div>
+            </div>
+            <span style="position:absolute;top:12px;right:12px;z-index:3;font-family:Oswald;font-weight:700;font-size:10px;letter-spacing:.16em;padding:5px 10px 4px;border-radius:4px;color:{{ p.stFg }};background:{{ p.stBg }}">{{ p.status }}</span>
+            <div style="position:absolute;left:0;right:0;bottom:0;z-index:3;padding:14px;border-left:4px solid #FDE100">
+              <div style="font-family:Oswald;font-weight:600;font-size:10px;letter-spacing:.2em;color:#FDE100">{{ p.meta }}</div>
+              <div style="font-family:Anton;font-size:22px;line-height:.94;color:#fff;text-transform:uppercase">{{ p.name }}</div>
+            </div>
+            <!-- HOVER REVEAL -->
+            <div style="position:absolute;inset:0;z-index:4;padding:16px 15px;display:flex;flex-direction:column;justify-content:flex-end;background:linear-gradient(180deg,rgba(253,225,0,.14),rgba(13,13,13,.5) 45%,rgba(13,13,13,.97));backdrop-filter:blur(1px);transition:opacity .34s;{{ p.overlayStyle }}">
+              <div style="font-family:Oswald;font-weight:600;font-size:10px;letter-spacing:.2em;color:#FDE100">{{ p.meta }}</div>
+              <div style="font-family:Anton;font-size:24px;line-height:.92;color:#fff;text-transform:uppercase;margin-bottom:14px">{{ p.name }}</div>
+              <sc-for list="{{ p.bars }}" as="b" hint-placeholder-count="3">
+                <div style="margin-bottom:9px">
+                  <div style="display:flex;justify-content:space-between;font-family:Oswald;font-weight:600;font-size:10px;letter-spacing:.12em;color:rgba(245,241,230,.85);margin-bottom:4px"><span>{{ b.k }}</span><span style="font-family:Playfair Display;font-style:italic;font-weight:700;color:#FDE100;font-size:14px">{{ b.v }}</span></div>
+                  <div style="height:5px;border-radius:3px;background:rgba(245,241,230,.18);overflow:hidden"><div style="height:100%;background:#FDE100;border-radius:3px;transition:width .8s cubic-bezier(.2,.7,.2,1);width:{{ b.w }}%"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 13px;background:#0D0D0D;position:relative;z-index:5">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-family:Anton;font-size:16px;color:#FDE100;font-variant-numeric:tabular-nums">{{ p.count }}</span>
+              <span style="font-family:Oswald;font-weight:600;font-size:9px;letter-spacing:.12em;color:rgba(245,241,230,.6)">NA TORCIDA</span>
+            </div>
+            <button onClick="{{ p.onApoiar }}" style="font-family:Oswald;font-weight:700;font-size:11px;letter-spacing:.12em;padding:9px 14px;border-radius:5px;cursor:pointer;border:2px solid;transition:all .2s;color:{{ p.apoiarFg }};background:{{ p.apoiarBg }};border-color:{{ p.apoiarBd }}">{{ p.apoiarLabel }}</button>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:clamp(22px,3vw,38px) clamp(16px,4vw,54px) 0">
+    <button style="font-family:Oswald;font-weight:700;font-size:15px;letter-spacing:.12em;color:#FDE100;background:#0D0D0D;border:2px solid #0D0D0D;padding:16px 32px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:10px" style-hover="transform:translate(-2px,-2px);box-shadow:5px 5px 0 rgba(13,13,13,.25)">CRIAR PERFIL DE JOGO <span>→</span></button>
+    <div style="font-family:Oswald;font-weight:500;font-size:12px;letter-spacing:.06em;color:rgba(13,13,13,.6)">É de graça. O próximo nome pode ser o seu.</div>
+  </div>
+</section>
+
+<!-- ============ TORCIDA DIGITAL (mais apoiados) ============ -->
+<section id="torcida" style="background:#F2ECDC;padding:clamp(46px,6vw,86px) clamp(16px,4vw,54px)">
+  <div style="max-width:1200px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><span style="width:36px;height:4px;background:#0D0D0D"></span><span style="font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.26em;color:rgba(13,13,13,.6)">A VOZ DA TORCIDA · REFERENCIAR</span></div>
+    <h2 style="font-family:Anton;font-size:clamp(34px,6vw,80px);line-height:.86;margin:0 0 8px;color:#0D0D0D;text-transform:uppercase">Os mais apoiados<br>da semana</h2>
+    <p style="font-family:Oswald;font-weight:500;font-size:15px;letter-spacing:.02em;color:rgba(13,13,13,.6);margin:0 0 clamp(26px,3vw,40px);max-width:52ch">Cada apoio é uma pessoa dizendo "eu vi esse jogador antes de todo mundo". A torcida digital move quem chega ao topo.</p>
+    <div style="border:3px solid #0D0D0D;border-radius:14px;overflow:hidden;background:#fff">
+      <sc-for list="{{ ranking }}" as="r" hint-placeholder-count="5">
+        <div style="display:grid;grid-template-columns:64px 1fr auto;align-items:center;gap:clamp(12px,2.4vw,28px);padding:clamp(14px,2vw,20px) clamp(14px,2.6vw,28px);border-bottom:2px solid rgba(13,13,13,.1);background:{{ r.rowBg }};transition:background .2s" style-hover="background:#FDE100">
+          <div style="font-family:Anton;font-size:clamp(34px,4vw,52px);color:{{ r.rankColor }};line-height:.8;font-variant-numeric:tabular-nums">{{ r.rank }}</div>
+          <div style="min-width:0">
+            <div style="font-family:Anton;font-size:clamp(19px,2.4vw,28px);color:#0D0D0D;line-height:.98;text-transform:uppercase">{{ r.name }}</div>
+            <div style="font-family:Oswald;font-weight:600;font-size:10.5px;letter-spacing:.14em;color:rgba(13,13,13,.55);margin-top:4px">{{ r.meta }} · <span style="color:{{ r.trendColor }}">{{ r.trend }}</span></div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:Playfair Display;font-style:italic;font-weight:800;font-size:clamp(20px,2.4vw,30px);color:#0D0D0D;font-variant-numeric:tabular-nums;line-height:.9">{{ r.count }}</div>
+            <div style="font-family:Oswald;font-weight:600;font-size:9px;letter-spacing:.14em;color:rgba(13,13,13,.5)">APOIADORES</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ROAD TO CARD ============ -->
+<section style="background:#0D0D0D;color:#FDE100;padding:clamp(46px,6vw,88px) clamp(16px,4vw,54px);position:relative;overflow:hidden">
+  <div aria-hidden="true" style="position:absolute;right:-3vw;top:-6%;font-family:Anton;font-size:min(34vw,380px);line-height:.7;color:rgba(253,225,0,.05);pointer-events:none;z-index:0">CARD</div>
+  <div style="position:relative;z-index:2;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,4vw,60px);align-items:center">
+    <div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><span style="width:36px;height:4px;background:#FDE100"></span><span style="font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.26em;color:rgba(245,241,230,.6)">O PROJETO OLEFOOT</span></div>
+      <h2 style="font-family:Anton;font-size:clamp(38px,6vw,88px);line-height:.84;margin:0 0 16px;color:#FDE100;text-transform:uppercase">Como<br>funciona</h2>
+      <p style="font-family:Oswald;font-weight:500;font-size:16px;letter-spacing:.02em;line-height:1.45;color:rgba(245,241,230,.75);max-width:42ch;margin:0 0 26px">A Olefoot existe com o objetivo de criar novas oportunidades no futebol usando tecnologias de ponta.</p>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="font-family:Anton;font-size:clamp(44px,5.6vw,72px);color:#FDE100;line-height:.8">2018</div>
+        <div style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.16em;color:rgba(245,241,230,.6);max-width:14ch">Desde 2018 no mercado</div>
+      </div>
+    </div>
+    <div style="background:#141414;border:2px solid rgba(253,225,0,.25);border-radius:16px;padding:clamp(20px,3vw,32px)">
+      <sc-for list="{{ road }}" as="m" hint-placeholder-count="7">
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid rgba(245,241,230,.08)">
+          <div style="flex:none;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:Anton;font-size:15px;color:#0D0D0D;background:#FDE100">{{ m.n }}</div>
+          <div style="font-family:Oswald;font-weight:600;font-size:15px;letter-spacing:.03em;color:#F5F1E6">{{ m.label }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- ============ REVEAL WALL ============ -->
+<section id="wall" style="background:#FDE100;padding:clamp(46px,6vw,88px) clamp(16px,4vw,54px)">
+  <div style="max-width:1440px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:clamp(26px,3vw,44px)">
+      <span style="font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.28em;color:rgba(13,13,13,.6)">OLEFOOT REVEAL WALL</span>
+      <h2 style="font-family:Anton;font-size:clamp(36px,6.5vw,96px);line-height:.84;margin:8px 0 0;color:#0D0D0D;text-transform:uppercase">Uma geração<br>inteira surgindo.</h2>
+      <p style="font-family:Oswald;font-weight:500;font-size:15px;letter-spacing:.02em;color:rgba(13,13,13,.62);margin:14px auto 0;max-width:46ch">Passe o mouse e revele os rostos. Cada tile é uma história começando agora.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(110px,15vw,168px),1fr));gap:10px">
+      <sc-for list="{{ wall }}" as="w" hint-placeholder-count="12">
+        <div style="position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;border:2px solid #0D0D0D;background:#0D0D0D">
+          <image-slot id="{{ w.slot }}" shape="rect" fit="cover" placeholder="•"></image-slot>
+          <div style="position:absolute;inset:0;z-index:3;background:#FDE100;display:flex;flex-direction:column;justify-content:space-between;padding:11px;transition:opacity .3s ease;cursor:pointer" style-hover="opacity:0">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-family:Oswald;font-weight:700;font-size:9px;letter-spacing:.14em;color:#0D0D0D"><span>{{ w.pos }}</span><span style="font-family:Anton;font-size:16px;letter-spacing:0">{{ w.ovr }}</span></div>
+            <div style="font-family:Anton;font-size:clamp(15px,1.6vw,20px);line-height:.9;color:#0D0D0D;text-transform:uppercase">{{ w.name }}</div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;z-index:2;padding:9px;background:linear-gradient(180deg,transparent,rgba(13,13,13,.9));pointer-events:none">
+            <div style="font-family:Anton;font-size:14px;color:#fff;text-transform:uppercase;line-height:.9">{{ w.name }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LEGENDS — EDITORIAL / ETERNAL ============ -->
+<section id="legends" style="background:#0D0D0D;color:#EDEBE4;padding:clamp(44px,6vw,88px) clamp(16px,4vw,54px) clamp(56px,8vw,110px);position:relative;overflow:hidden">
+  <div style="position:relative;z-index:2;max-width:1360px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:clamp(40px,5vw,72px)">
+      <div style="display:inline-flex;align-items:center;gap:12px;margin-bottom:18px"><span style="width:36px;height:2px;background:#FDE100"></span><span style="font-family:Oswald;font-weight:500;font-size:12px;letter-spacing:.32em;color:rgba(237,235,228,.55)">O MUSEU VIVO · RECONHECER</span><span style="width:36px;height:2px;background:#FDE100"></span></div>
+      <h2 style="font-family:Playfair Display;font-style:italic;font-weight:800;font-size:clamp(40px,7vw,96px);line-height:.98;margin:0;letter-spacing:-.02em">Lendas que fizeram<br>a história</h2>
+      <p style="font-family:Playfair Display;font-style:italic;font-weight:500;font-size:clamp(17px,2vw,24px);color:rgba(237,235,228,.6);margin:20px auto 0;max-width:34ch">"O futebol arte é o futebol que faz a torcida sonhar."</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:clamp(20px,2.6vw,36px)">
+      <sc-for list="{{ legends }}" as="l" hint-placeholder-count="3">
+        <div style="position:relative;border-radius:6px;overflow:hidden;background:#0a0a0a;transition:transform .5s ease" style-hover="transform:translateY(-8px)">
+          <div style="position:relative;aspect-ratio:3/4;width:100%;filter:grayscale(1) contrast(1.08)">
+            <image-slot id="{{ l.slot }}" shape="rect" fit="cover" placeholder="RETRATO B&amp;W"></image-slot>
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(10,10,10,.98));pointer-events:none;z-index:2"></div>
+          </div>
+          <div style="position:absolute;top:16px;left:16px;z-index:3;font-family:Oswald;font-weight:500;font-size:10px;letter-spacing:.28em;color:rgba(237,235,228,.7);border:1px solid rgba(237,235,228,.4);padding:5px 11px 4px;border-radius:2px">LENDA · {{ l.ovr }} OVR</div>
+          <div style="position:absolute;left:0;right:0;bottom:0;z-index:3;padding:26px 22px">
+            <div style="font-family:Oswald;font-weight:400;font-size:10.5px;letter-spacing:.28em;color:rgba(237,235,228,.6);margin-bottom:6px">{{ l.era }}</div>
+            <div style="font-family:Playfair Display;font-style:italic;font-weight:800;font-size:clamp(30px,3.4vw,42px);line-height:.98;color:#fff;letter-spacing:-.02em">{{ l.name }}</div>
+            <div style="width:28px;height:2px;background:#FDE100;margin:14px 0 12px"></div>
+            <div style="font-family:Inter;font-weight:400;font-size:12.5px;line-height:1.5;color:rgba(237,235,228,.62)">{{ l.honor }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- ============ O GAME — CRIE O SEU TIME (BUILDER) ============ -->
+<section id="game" style="background:#FDE100;color:#0D0D0D;padding:clamp(48px,6vw,90px) clamp(16px,4vw,54px)">
+  <div style="max-width:1180px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:clamp(22px,3vw,38px)">
+      <span style="font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.3em;color:rgba(13,13,13,.6)">O JOGO · DO TALENTO À LENDA</span>
+      <h2 style="font-family:Anton;font-size:clamp(40px,7.5vw,110px);line-height:.84;margin:8px 0 0;text-transform:uppercase">Crie o seu time</h2>
+      <p style="font-family:Oswald;font-weight:500;font-size:clamp(15px,1.8vw,20px);letter-spacing:.02em;color:rgba(13,13,13,.7);margin:14px auto 0;max-width:54ch">Monte seu XI com <b>revelações e lendas</b>, confirme e compartilhe. O REVELA vira Game — e sua história entra em campo.</p>
+    </div>
+
+    <div style="background:#0D0D0D;color:#EDEBE4;border:3px solid #0D0D0D;border-radius:20px;box-shadow:12px 12px 0 rgba(13,13,13,.9);overflow:hidden">
+      <!-- STEP BAR -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:16px clamp(16px,2.4vw,28px);border-bottom:1px solid rgba(245,241,230,.1);font-family:Oswald;font-weight:700;font-size:11px;letter-spacing:.16em">
+        <sc-for list="{{ steps }}" as="s" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:{{ s.fg }};background:{{ s.bg }};border:2px solid {{ s.bd }}">{{ s.n }}</span>
+            <span style="color:{{ s.txt }}">{{ s.label }}</span>
+          </div>
+          <span style="color:rgba(245,241,230,.2)">—</span>
+        </sc-for>
+      </div>
+
+      <!-- STEP 1 · CADASTRO -->
+      <sc-if value="{{ isRegister }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:clamp(26px,4vw,52px) clamp(20px,4vw,48px);max-width:480px;margin:0 auto">
+          <div style="text-align:center;margin-bottom:26px">
+            <div style="font-family:Oswald;font-weight:700;font-size:11px;letter-spacing:.28em;color:rgba(253,225,0,.8)">CADASTRO RÁPIDO</div>
+            <h3 style="font-family:Anton;font-size:clamp(28px,4vw,44px);color:#FDE100;text-transform:uppercase;line-height:.9;margin:8px 0 10px">Antes de escalar</h3>
+            <p style="font-family:Inter;font-size:14px;line-height:1.5;color:rgba(237,235,228,.6);margin:0">Só nome e telefone. Assim seu time fica salvo pra quando você entrar no Game.</p>
+          </div>
+          <label style="display:block;font-family:Oswald;font-weight:600;font-size:11px;letter-spacing:.18em;color:rgba(237,235,228,.6);margin-bottom:7px">SEU NOME</label>
+          <input value="{{ mgrName }}" onChange="{{ onName }}" placeholder="Como te chamam em campo?" style="width:100%;background:#141414;border:2px solid rgba(253,225,0,.25);color:#fff;padding:14px 16px;border-radius:9px;font-family:Oswald;font-size:15px;margin-bottom:18px;outline:none" style-focus="border-color:#FDE100">
+          <label style="display:block;font-family:Oswald;font-weight:600;font-size:11px;letter-spacing:.18em;color:rgba(237,235,228,.6);margin-bottom:7px">TELEFONE (WHATSAPP)</label>
+          <input value="{{ mgrPhone }}" onChange="{{ onPhone }}" placeholder="(00) 00000-0000" inputMode="tel" style="width:100%;background:#141414;border:2px solid rgba(253,225,0,.25);color:#fff;padding:14px 16px;border-radius:9px;font-family:Oswald;font-size:15px;outline:none" style-focus="border-color:#FDE100">
+          <sc-if value="{{ mgrErr }}" hint-placeholder-val="{{ false }}"><div style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.06em;color:#EF4444;margin-top:12px">{{ mgrErr }}</div></sc-if>
+          <button onClick="{{ onRegister }}" style="width:100%;margin-top:22px;font-family:Oswald;font-weight:700;font-size:15px;letter-spacing:.12em;color:#0D0D0D;background:#FDE100;border:none;padding:16px;border-radius:9px;cursor:pointer" style-hover="transform:translateY(-2px)">COMEÇAR A MONTAR →</button>
+          <div style="font-family:Inter;font-size:11px;color:rgba(237,235,228,.4);text-align:center;margin-top:14px">Seus dados ficam só na Olefoot. Sem spam.</div>
+        </div>
+      </sc-if>
+
+      <!-- STEP 2 · ESCALAÇÃO -->
+      <sc-if value="{{ isBuild }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:clamp(16px,2.4vw,26px)">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:18px">
+            <input value="{{ teamName }}" onChange="{{ onTeamName }}" placeholder="Dê um nome ao seu time" style="flex:1;min-width:200px;background:#141414;border:2px solid rgba(253,225,0,.25);color:#fff;padding:13px 16px;border-radius:9px;font-family:Anton;font-size:18px;letter-spacing:.02em;text-transform:uppercase;outline:none" style-focus="border-color:#FDE100">
+            <div style="display:flex;gap:6px;background:#141414;padding:4px;border-radius:9px;flex-wrap:wrap">
+              <sc-for list="{{ formations }}" as="f" hint-placeholder-count="4">
+                <button onClick="{{ f.onClick }}" style="font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.08em;padding:8px 13px;border-radius:6px;border:none;cursor:pointer;transition:all .2s;color:{{ f.fg }};background:{{ f.bg }}">{{ f.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(16px,2vw,24px);align-items:start">
+            <!-- PITCH -->
+            <div>
+              <div style="position:relative;aspect-ratio:3/4;background:radial-gradient(ellipse at 50% 40%,#132a16,#0a1a0c);border:3px solid #0D0D0D;border-radius:16px;overflow:hidden">
+                <div style="position:absolute;inset:12px;border:2px solid rgba(253,225,0,.16);border-radius:8px"></div>
+                <div style="position:absolute;left:12px;right:12px;top:50%;height:2px;background:rgba(253,225,0,.16)"></div>
+                <div style="position:absolute;left:50%;top:50%;width:26%;aspect-ratio:1;border:2px solid rgba(253,225,0,.16);border-radius:50%;transform:translate(-50%,-50%)"></div>
+                <div style="position:absolute;top:12px;left:28%;right:28%;height:12%;border:2px solid rgba(253,225,0,.13);border-top:none"></div>
+                <div style="position:absolute;bottom:12px;left:28%;right:28%;height:12%;border:2px solid rgba(253,225,0,.13);border-bottom:none"></div>
+                <sc-for list="{{ lineup }}" as="s" hint-placeholder-count="11">
+                  <div onClick="{{ s.onClick }}" style="position:absolute;top:{{ s.top }}%;left:{{ s.left }}%;transform:translate(-50%,-50%);z-index:2;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+                    <div style="width:clamp(30px,8vw,46px);height:clamp(30px,8vw,46px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Oswald;font-weight:{{ s.numWeight }};font-size:{{ s.numSize }};background:{{ s.tokenBg }};border:{{ s.tokenBd }};color:{{ s.tokenFg }};box-shadow:{{ s.ring }}">{{ s.num }}</div>
+                    <div style="font-family:Oswald;font-weight:700;font-size:8px;letter-spacing:.04em;padding:2px 6px;border-radius:20px;background:{{ s.pillBg }};color:{{ s.nameC }};white-space:nowrap;max-width:76px;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
+                  </div>
+                </sc-for>
+                <div style="position:absolute;top:11px;left:13px;z-index:3;font-family:Oswald;font-weight:700;font-size:10px;letter-spacing:.16em;color:rgba(253,225,0,.85)">{{ formationLabel }}</div>
+                <div style="position:absolute;top:11px;right:13px;z-index:3;font-family:Oswald;font-weight:700;font-size:10px;letter-spacing:.14em;color:rgba(253,225,0,.85)">{{ filledCount }}/11</div>
+              </div>
+              <div style="font-family:Oswald;font-weight:600;font-size:11px;letter-spacing:.06em;color:rgba(237,235,228,.55);text-align:center;margin-top:10px">{{ selHint }}</div>
+            </div>
+
+            <!-- POOL -->
+            <div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+                <sc-for list="{{ poolFilters }}" as="pf" hint-placeholder-count="7">
+                  <button onClick="{{ pf.onClick }}" style="font-family:Oswald;font-weight:700;font-size:10.5px;letter-spacing:.1em;padding:7px 11px;border-radius:20px;border:2px solid rgba(245,241,230,.14);cursor:pointer;transition:all .2s;color:{{ pf.fg }};background:{{ pf.bg }};border-color:{{ pf.bd }}">{{ pf.label }}</button>
+                </sc-for>
+              </div>
+              <div class="rev-rail" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px;max-height:clamp(340px,52vh,520px);overflow-y:auto;padding-right:4px">
+                <sc-for list="{{ pool }}" as="p" hint-placeholder-count="10">
+                  <button onClick="{{ p.onClick }}" style="display:flex;align-items:center;gap:9px;text-align:left;padding:9px 11px;border-radius:10px;cursor:pointer;transition:all .18s;background:{{ p.cardBg }};border:{{ p.cardBd }}">
+                    <div style="flex:none;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:Oswald;font-weight:700;font-size:15px;color:{{ p.ovrFg }};background:{{ p.ovrBg }}">{{ p.ovr }}</div>
+                    <div style="min-width:0;flex:1">
+                      <div style="font-family:Oswald;font-weight:600;font-size:13px;color:#EDEBE4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</div>
+                      <div style="display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:7px;height:7px;border-radius:50%;background:{{ p.dot }}"></span><span style="font-family:Oswald;font-weight:600;font-size:9px;letter-spacing:.12em;color:rgba(237,235,228,.5)">{{ p.pos }} · {{ p.typeLabel }}</span></div>
+                    </div>
+                    <span style="font-family:Oswald;font-weight:700;font-size:14px;color:{{ p.checkC }}">{{ p.check }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:20px;padding-top:18px;border-top:1px solid rgba(245,241,230,.1)">
+            <div style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.1em;color:rgba(237,235,228,.55)">TÉCNICO: <span style="color:#FDE100">{{ mgrName }}</span> · {{ filledCount }}/11 ESCALADOS</div>
+            <button onClick="{{ onConfirm }}" style="font-family:Oswald;font-weight:700;font-size:15px;letter-spacing:.12em;padding:15px 30px;border-radius:9px;border:none;cursor:{{ confirmCursor }};transition:all .2s;color:{{ confirmFg }};background:{{ confirmBg }}" style-hover="transform:translateY(-2px)">CONFIRMAR TIME →</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- STEP 3 · COMPARTILHAR -->
+      <sc-if value="{{ isShare }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(18px,2.4vw,30px);padding:clamp(18px,2.4vw,30px)">
+          <!-- POSTER -->
+          <div style="border:2px solid rgba(253,225,0,.3);border-radius:16px;overflow:hidden;background:#0f0f0f">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#FDE100;color:#0D0D0D">
+              <span style="font-family:Anton;font-size:15px;letter-spacing:.02em">OLEFOOT REVELA</span>
+              <span style="font-family:Oswald;font-weight:700;font-size:10px;letter-spacing:.2em">MEU XI</span>
+            </div>
+            <div style="padding:18px 18px 22px">
+              <div style="font-family:Anton;font-size:clamp(26px,3.6vw,40px);color:#FDE100;text-transform:uppercase;line-height:.9">{{ teamNameShow }}</div>
+              <div style="font-family:Oswald;font-weight:600;font-size:11px;letter-spacing:.14em;color:rgba(237,235,228,.6);margin:6px 0 16px">{{ formationLabel }} · TÉCNICO {{ mgrNameUpper }}</div>
+              <div style="position:relative;aspect-ratio:3/4;background:radial-gradient(ellipse at 50% 40%,#132a16,#0a1a0c);border-radius:12px;overflow:hidden">
+                <div style="position:absolute;inset:10px;border:2px solid rgba(253,225,0,.14);border-radius:6px"></div>
+                <div style="position:absolute;left:10px;right:10px;top:50%;height:2px;background:rgba(253,225,0,.14)"></div>
+                <div style="position:absolute;left:50%;top:50%;width:24%;aspect-ratio:1;border:2px solid rgba(253,225,0,.14);border-radius:50%;transform:translate(-50%,-50%)"></div>
+                <sc-for list="{{ lineup }}" as="s" hint-placeholder-count="11">
+                  <div style="position:absolute;top:{{ s.top }}%;left:{{ s.left }}%;transform:translate(-50%,-50%);z-index:2;display:flex;flex-direction:column;align-items:center;gap:3px">
+                    <div style="width:clamp(26px,6.5vw,38px);height:clamp(26px,6.5vw,38px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Oswald;font-weight:{{ s.numWeight }};font-size:13px;background:{{ s.tokenBg }};border:{{ s.tokenBd2 }};color:{{ s.tokenFg }}">{{ s.num }}</div>
+                    <div style="font-family:Oswald;font-weight:700;font-size:7.5px;letter-spacing:.02em;padding:1px 5px;border-radius:20px;background:{{ s.pillBg }};color:{{ s.nameC }};white-space:nowrap;max-width:64px;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <!-- SHARE PANEL -->
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div>
+              <div style="font-family:Oswald;font-weight:700;font-size:11px;letter-spacing:.28em;color:rgba(253,225,0,.8)">TIME CONFIRMADO</div>
+              <h3 style="font-family:Anton;font-size:clamp(26px,3.6vw,42px);color:#FDE100;text-transform:uppercase;line-height:.9;margin:6px 0 8px">Marca a gente!</h3>
+              <p style="font-family:Inter;font-size:13.5px;line-height:1.55;color:rgba(237,235,228,.62);margin:0">Poste o seu XI e marca <b style="color:#fff">@olefootgame</b> no post. A gente reposta os times mais criativos da semana.</p>
+            </div>
+            <a href="https://instagram.com/olefootgame" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-radius:12px;background:linear-gradient(90deg,#141414,#1c1508);border:2px solid rgba(253,225,0,.3);text-decoration:none" style-hover="border-color:#FDE100">
+              <span style="font-family:Anton;font-size:clamp(18px,2.4vw,24px);color:#fff">@olefootgame</span>
+              <span style="font-family:Oswald;font-weight:700;font-size:11px;letter-spacing:.16em;color:#FDE100">SEGUIR →</span>
+            </a>
+            <div style="padding:14px 16px;border-radius:12px;background:#141414;border:1px solid rgba(245,241,230,.1)">
+              <div style="font-family:Oswald;font-weight:700;font-size:10px;letter-spacing:.2em;color:rgba(237,235,228,.5);margin-bottom:8px">LEGENDA PRONTA</div>
+              <div style="font-family:Inter;font-size:13px;line-height:1.55;color:#EDEBE4">{{ caption }}</div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button onClick="{{ onCopy }}" style="flex:1;min-width:130px;font-family:Oswald;font-weight:700;font-size:13px;letter-spacing:.1em;color:#0D0D0D;background:#FDE100;border:none;padding:14px;border-radius:9px;cursor:pointer" style-hover="transform:translateY(-2px)">COPIAR LEGENDA</button>
+              <button onClick="{{ onShare }}" style="flex:1;min-width:130px;font-family:Oswald;font-weight:700;font-size:13px;letter-spacing:.1em;color:#FDE100;background:transparent;border:2px solid rgba(253,225,0,.4);padding:12px;border-radius:9px;cursor:pointer" style-hover="border-color:#FDE100">COMPARTILHAR</button>
+              <button onClick="{{ onLike }}" style="flex:none;font-family:Oswald;font-weight:700;font-size:13px;letter-spacing:.08em;padding:12px 16px;border-radius:9px;cursor:pointer;transition:all .2s;color:{{ likeFg }};background:{{ likeBg }};border:2px solid {{ likeBd }}">{{ likeLabel }} {{ likes }}</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px;padding:12px 14px;border-radius:10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3)">
+              <span style="font-family:Oswald;font-weight:700;color:#22C55E">✓</span>
+              <span style="font-family:Inter;font-size:12.5px;line-height:1.45;color:rgba(237,235,228,.72)">{{ mgrName }}, seu telefone e o time <b style="color:#fff">{{ teamNameShow }}</b> já ficam salvos pro seu Game.</span>
+            </div>
+            <button onClick="{{ onEdit }}" style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.14em;color:rgba(237,235,228,.6);background:transparent;border:none;cursor:pointer;text-align:left;padding:4px 0" style-hover="color:#FDE100">← EDITAR TIME</button>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TOP 10 CLUBES (HORIZONTAL) ============ -->
+<section id="ranking-game" style="background:#0D0D0D;color:#EDEBE4;padding:clamp(44px,6vw,80px) clamp(16px,4vw,54px)">
+  <div style="max-width:1440px;margin:0 auto">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:clamp(22px,3vw,36px)">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><span style="width:36px;height:4px;background:#FDE100"></span><span style="font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.26em;color:rgba(237,235,228,.55)">O CAMPEONATO AO VIVO</span></div>
+        <h2 style="font-family:Anton;font-size:clamp(34px,5.5vw,72px);line-height:.86;margin:0;text-transform:uppercase">Top 10 clubes</h2>
+      </div>
+      <div style="display:flex;gap:6px;background:#141414;padding:5px;border-radius:10px">
+        <sc-for list="{{ top10Tabs }}" as="tb" hint-placeholder-count="3">
+          <button onClick="{{ tb.onClick }}" style="font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.14em;padding:10px 18px;border-radius:7px;border:none;cursor:pointer;transition:all .2s;color:{{ tb.fg }};background:{{ tb.bg }}">{{ tb.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div class="rev-rail" style="display:flex;gap:12px;overflow-x:auto;padding:4px 0 18px;scroll-snap-type:x mandatory">
+      <sc-for list="{{ top10 }}" as="r" hint-placeholder-count="10">
+        <div style="flex:none;width:clamp(160px,20vw,200px);scroll-snap-align:start;border-radius:14px;border:2px solid {{ r.cardBd }};background:{{ r.cardBg }};color:{{ r.cardFg }};padding:18px 16px;display:flex;flex-direction:column;justify-content:space-between;min-height:150px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between">
+            <div style="font-family:Anton;font-size:clamp(40px,4.6vw,58px);line-height:.72;color:{{ r.rankColor }}">{{ r.rank }}</div>
+            <div style="font-family:Oswald;font-weight:700;font-size:10px;letter-spacing:.14em;color:{{ r.trendColor }}">{{ r.trend }}</div>
+          </div>
+          <div>
+            <div style="font-family:Anton;font-size:clamp(17px,2vw,21px);line-height:.94;text-transform:uppercase;margin-bottom:8px">{{ r.name }}</div>
+            <div style="display:flex;align-items:baseline;gap:5px"><span style="font-family:Oswald;font-weight:700;font-size:22px;color:{{ r.ptsColor }};font-variant-numeric:tabular-nums">{{ r.pts }}</span><span style="font-family:Oswald;font-weight:600;font-size:9px;letter-spacing:.14em;color:{{ r.ptsLabelColor }}">PTS</span></div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- ============ A RESENHA — NEUTRAL EDITORIAL ============ -->
+<section id="resenha" style="background:#15130C;color:#EDEBE4;padding:clamp(46px,6vw,84px) clamp(16px,4vw,54px);border-top:1px solid rgba(245,240,230,.08)">
+  <div style="max-width:1360px;margin:0 auto">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:clamp(26px,3vw,42px)">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><span style="width:34px;height:3px;background:#FDE100"></span><span style="font-family:Oswald;font-weight:500;font-size:12px;letter-spacing:.28em;color:rgba(237,235,228,.55)">ONDE PASSADO E FUTURO SE ENCONTRAM</span></div>
+        <h2 style="font-family:Playfair Display;font-style:italic;font-weight:800;font-size:clamp(38px,5.5vw,72px);line-height:.98;margin:0;letter-spacing:-.02em">A Resenha</h2>
+      </div>
+      <div style="font-family:Inter;font-size:14px;line-height:1.5;color:rgba(237,235,228,.55);max-width:38ch">Rankings, campeões, competições e histórias — o futebol contado por quem respira futebol.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:clamp(16px,2vw,24px)">
+      <div style="position:relative;border-radius:12px;overflow:hidden;border:1px solid rgba(245,240,230,.1);min-height:320px;background:#0f0e09">
+        <div style="position:absolute;inset:0"><image-slot id="rev-resenha-hero" shape="rect" fit="cover" placeholder="CAPA DA RESENHA"></image-slot></div>
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 28%,rgba(15,14,9,.97));z-index:2;pointer-events:none"></div>
+        <div style="position:relative;z-index:3;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding:clamp(22px,3vw,34px)">
+          <span style="font-family:Oswald;font-weight:700;font-size:10px;letter-spacing:.22em;color:#0D0D0D;background:#FDE100;padding:5px 10px 4px;border-radius:3px;width:max-content;margin-bottom:14px">CAPA DA SEMANA</span>
+          <h3 style="font-family:Playfair Display;font-style:italic;font-weight:800;font-size:clamp(24px,3vw,40px);line-height:1.04;margin:0 0 10px;color:#fff">O garoto de Caxias que virou o assunto da semana</h3>
+          <p style="font-family:Inter;font-size:14px;line-height:1.55;color:rgba(237,235,228,.62);max-width:48ch;margin:0">Três gols em quatro jogos, +1.9k apoiadores em 48h e um scout do sub-20 de olho.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <sc-for list="{{ resenha }}" as="c" hint-placeholder-count="4">
+          <div style="display:flex;gap:14px;align-items:center;padding:15px 16px;border-radius:10px;border:1px solid rgba(245,240,230,.1);background:#0f0e09;transition:border-color .2s,transform .2s;cursor:pointer" style-hover="border-color:#FDE100;transform:translateX(5px)">
+            <div style="font-family:Playfair Display;font-style:italic;font-weight:800;font-size:30px;color:#FDE100;line-height:1;flex:none;width:34px;text-align:center">{{ c.icon }}</div>
+            <div style="min-width:0">
+              <div style="font-family:Oswald;font-weight:600;font-size:10px;letter-spacing:.2em;color:rgba(237,235,228,.5);margin-bottom:3px">{{ c.tag }}</div>
+              <div style="font-family:Playfair Display;font-style:italic;font-weight:700;font-size:17px;line-height:1.15;color:#EDEBE4">{{ c.title }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ AS 3 DIVISÕES ============ -->
+<section id="divisoes" style="background:#0D0D0D;color:#EDEBE4;padding:clamp(48px,6vw,90px) clamp(16px,4vw,54px);position:relative;overflow:hidden">
+  <div aria-hidden="true" style="position:absolute;left:-2vw;bottom:-6%;font-family:Anton;font-size:min(30vw,320px);line-height:.7;color:rgba(245,240,230,.03);pointer-events:none;z-index:0">LIGA</div>
+  <div style="position:relative;z-index:2;max-width:1360px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:clamp(28px,3.5vw,48px)">
+      <span style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.3em;color:rgba(237,235,228,.55)">UMA LIGA. TRÊS DIVISÕES. UM CAMINHO.</span>
+      <h2 style="font-family:Anton;font-size:clamp(36px,6.5vw,96px);line-height:.84;margin:8px 0 0;text-transform:uppercase">Suba as divisões<br>da <span style="color:#FDE100">Olefoot</span></h2>
+      <p style="font-family:Oswald;font-weight:500;font-size:15px;letter-spacing:.02em;color:rgba(237,235,228,.6);margin:14px auto 0;max-width:50ch">Todo talento começa na base. Ponto a ponto, jogo a jogo, o seu clube sobe até a elite onde as lendas comandam.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(clamp(240px,28vw,300px),1fr));gap:clamp(14px,1.8vw,22px);align-items:end">
+      <sc-for list="{{ divisions }}" as="d" hint-placeholder-count="3">
+        <div style="border:2px solid {{ d.border }};border-radius:14px;overflow:hidden;background:{{ d.cardBg }};color:{{ d.fg }};transition:transform .3s ease" style-hover="transform:translateY(-8px)">
+          <div style="height:8px;background:{{ d.accent }}"></div>
+          <div style="padding:clamp(20px,2.4vw,30px)">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+              <div>
+                <div style="font-family:Oswald;font-weight:700;font-size:11px;letter-spacing:.22em;color:{{ d.tagFg }};margin-bottom:6px">{{ d.tagline }}</div>
+                <div style="font-family:Playfair Display;font-style:italic;font-weight:800;font-size:clamp(26px,3vw,38px);line-height:.95;color:{{ d.fg }}">{{ d.name }}</div>
+              </div>
+              <div style="font-family:Anton;font-size:clamp(42px,5vw,68px);line-height:.7;color:{{ d.numColor }}">{{ d.tier }}</div>
+            </div>
+            <div style="width:36px;height:3px;background:{{ d.accent }};margin:16px 0"></div>
+            <div style="font-family:Oswald;font-weight:700;font-size:13px;letter-spacing:.14em;color:{{ d.fg }};margin-bottom:10px">{{ d.clubs }}</div>
+            <p style="font-family:Inter;font-size:13px;line-height:1.55;color:{{ d.descFg }};margin:0 0 16px">{{ d.desc }}</p>
+            <div style="font-family:Oswald;font-weight:600;font-size:11px;letter-spacing:.14em;color:{{ d.moveFg }}">{{ d.move }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GAME CTA ============ -->
+<section style="position:relative;overflow:hidden;background:#FDE100;color:#0D0D0D;padding:clamp(60px,9vw,124px) clamp(16px,4vw,54px)">
+  <div aria-hidden="true" style="position:absolute;inset:0;overflow:hidden;z-index:0;opacity:.07">
+    <div style="position:absolute;white-space:nowrap;top:50%;left:0;transform:translateY(-50%);font-family:Anton;font-size:min(30vw,320px);color:#0D0D0D;text-transform:uppercase">ENTRE EM CAMPO · ENTRE EM CAMPO · </div>
+  </div>
+  <div style="position:relative;z-index:2;max-width:1000px;margin:0 auto;text-align:center">
+    <div style="font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.3em;margin-bottom:18px">VOCÊ DESCOBRIU. VOCÊ APOIOU. AGORA…</div>
+    <h2 style="font-family:Anton;font-size:clamp(52px,10vw,150px);line-height:.82;margin:0 0 18px;text-transform:uppercase">Entre<br>em campo.</h2>
+    <p style="font-family:Oswald;font-weight:500;font-size:clamp(16px,2vw,22px);letter-spacing:.02em;color:rgba(13,13,13,.72);max-width:42ch;margin:0 auto 34px">Comande o clube, dispute torneios e escreva a próxima história ao lado dos nomes que você revelou.</p>
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+      <button style="font-family:Oswald;font-weight:700;font-size:15px;letter-spacing:.12em;color:#FDE100;background:#0D0D0D;border:2px solid #0D0D0D;padding:17px 36px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:10px" style-hover="transform:translate(-2px,-2px);box-shadow:6px 6px 0 rgba(13,13,13,.25)">● JOGAR AGORA <span>→</span></button>
+      <button style="font-family:Oswald;font-weight:600;font-size:15px;letter-spacing:.12em;color:#0D0D0D;background:transparent;border:2px solid #0D0D0D;padding:17px 30px;border-radius:6px;cursor:pointer" style-hover="background:#0D0D0D;color:#FDE100">CRIAR MEU PERFIL</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer style="padding:clamp(34px,4vw,56px) clamp(16px,4vw,54px);background:#0D0D0D;color:#EDEBE4">
+  <div style="max-width:1360px;margin:0 auto;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:20px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="font-family:Anton;font-size:20px;letter-spacing:.02em;color:#EDEBE4">OLEFOOT</div>
+      <div style="font-family:Oswald;font-weight:700;font-size:10px;letter-spacing:.26em;color:#0D0D0D;background:#FDE100;padding:4px 9px 3px;border-radius:3px">REVELA</div>
+    </div>
+    <div style="font-family:Playfair Display;font-style:italic;font-size:15px;color:rgba(237,235,228,.5);text-align:center">"Eu descobri esse jogador antes de todo mundo."</div>
+    <div style="font-family:Oswald;font-weight:500;font-size:11px;letter-spacing:.18em;color:rgba(237,235,228,.4)">© 2026 · A NOVA CENA DO FUTEBOL</div>
+  </div>
+</footer>
+
+<!-- TOAST -->
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:50%;bottom:34px;transform:translateX(-50%);z-index:100;display:flex;align-items:center;gap:13px;background:#0D0D0D;border:2px solid #FDE100;border-radius:10px;padding:13px 20px;box-shadow:0 20px 50px -12px rgba(0,0,0,.9);animation:revToast 2.2s ease forwards">
+    <span style="font-family:Anton;font-size:24px;color:#FDE100">+1</span>
+    <div>
+      <div style="font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.14em;color:#FDE100">VOCÊ ESTÁ NA TORCIDA</div>
+      <div style="font-family:Inter;font-size:11.5px;color:rgba(237,235,228,.7)">{{ toast }} avançou no Road to Card</div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ note }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:50%;bottom:34px;transform:translateX(-50%);z-index:100;display:flex;align-items:center;gap:11px;background:#0D0D0D;border:2px solid #22C55E;border-radius:10px;padding:13px 20px;box-shadow:0 20px 50px -12px rgba(0,0,0,.9);animation:revToast 2.4s ease forwards">
+    <span style="font-family:Oswald;font-weight:700;font-size:16px;color:#22C55E">✓</span>
+    <span style="font-family:Oswald;font-weight:600;font-size:12.5px;letter-spacing:.06em;color:#EDEBE4">{{ note }}</span>
+  </div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { mounted:false, hovered:null, sup:{}, done:{}, heroSup:0, totalRev:0, toast:null, rankTab:'mes',
+    gameStep:'register', mgrName:'', mgrPhone:'', mgrErr:'', teamName:'', formation:'433', slotAssign:{}, selSlot:null, poolFilter:'all', liked:false, note:null };
+
+  _stickers = {
+    NEW:      { bg:'#F5F1E6', fg:'#0D0D0D' },
+    RISING:   { bg:'#FDE100', fg:'#0D0D0D' },
+    HOT:      { bg:'#EF4444', fg:'#ffffff' },
+    VERIFICADO:{ bg:'#22C55E', fg:'#052e12' },
+    SCOUTED:  { bg:'#0D0D0D', fg:'#FDE100' },
+    'CARD READY':{ bg:'#FDE100', fg:'#0D0D0D' },
+  };
+
+  _talents = [
+    { id:'enzo', slot:'rev-t-4', name:'Enzo Martins', meta:'ATA · GRÊMIO', ovr:86, status:'HOT', base:5610, tilt:-1.4, offset:0, bars:[{k:'RITMO',v:88},{k:'FINAL.',v:85},{k:'DRIBLE',v:79}] },
+    { id:'bianca', slot:'rev-t-2', name:'Bianca Rocha', meta:'MEI · CORINTHIANS', ovr:81, status:'VERIFICADO', base:4102, tilt:1.2, offset:22, bars:[{k:'PASSE',v:86},{k:'VISÃO',v:83},{k:'CHUTE',v:74}] },
+    { id:'diego', slot:'rev-t-5', name:'Diego Muralha', meta:'GOL · FLAMENGO', ovr:82, status:'RISING', base:3301, tilt:-1, offset:8, bars:[{k:'REFLEXO',v:87},{k:'MÃOS',v:84},{k:'PÉS',v:70}] },
+    { id:'lucas', slot:'rev-t-1', name:'Lucas Andrade', meta:'PON · SANTOS', ovr:84, status:'CARD READY', base:2847, tilt:1.6, offset:26, bars:[{k:'RITMO',v:89},{k:'DRIBLE',v:85},{k:'FINAL.',v:78}] },
+    { id:'yuri', slot:'rev-t-6', name:'Yuri Nakamura', meta:'VOL · PALMEIRAS', ovr:80, status:'SCOUTED', base:2210, tilt:-1.5, offset:12, bars:[{k:'DESARME',v:83},{k:'PASSE',v:80},{k:'FÔLEGO',v:85}] },
+    { id:'kaique', slot:'rev-t-3', name:'Kaique Silva', meta:'ZAG · CRUZEIRO', ovr:79, status:'NEW', base:1934, tilt:1.1, offset:30, bars:[{k:'MARC.',v:84},{k:'FÍSICO',v:82},{k:'SAÍDA',v:71}] },
+  ];
+
+  _road = ['Criação de perfil','Validação de Conta','Revisão pelo OLE SCOUT','Divulgação na Plataforma','Criação de CARD DIGITAL','Compartilhar com os amigos','Bem-vindo ao time'];
+
+  _wall = [
+    {name:'Théo Lima',pos:'ATA',slot:'rev-w-1'},{name:'Ravi Souza',pos:'MEI',slot:'rev-w-2'},
+    {name:'Ana Beatriz',pos:'PON',slot:'rev-w-3'},{name:'Caio Vieira',pos:'ZAG',slot:'rev-w-4'},
+    {name:'Nina Alves',pos:'GOL',slot:'rev-w-5'},{name:'Pedro Hzk',pos:'VOL',slot:'rev-w-6'},
+    {name:'Léo Campos',pos:'LAT',slot:'rev-w-7'},{name:'Duda Reis',pos:'MEI',slot:'rev-w-8'},
+    {name:'Ian Moretti',pos:'ATA',slot:'rev-w-9'},{name:'Rafa Luz',pos:'PON',slot:'rev-w-10'},
+    {name:'Bruno Sato',pos:'ZAG',slot:'rev-w-11'},{name:'Isa Prado',pos:'MEI',slot:'rev-w-12'},
+  ];
+
+  _legends = [
+    { slot:'rev-l-1', name:'Pelé', era:'O REI · 1956–1977', honor:'Tricampeão do mundo · 1958 · 1962 · 1970. 1.283 gols em uma vida de futebol arte.', ovr:99 },
+    { slot:'rev-l-2', name:'Garrincha', era:'A ALEGRIA DO POVO · 1953–1972', honor:'Bicampeão do mundo. O drible que fez o estádio inteiro rir e chorar.', ovr:97 },
+    { slot:'rev-l-3', name:'Sócrates', era:'O DOUTOR · 1974–1989', honor:'Líder da Democracia Corintiana. Genialidade dentro e fora de campo.', ovr:95 },
+  ];
+
+  _resenha = [
+    { icon:'1', tag:'RANKING · SUB-20', title:'Os 10 nomes que vão explodir no returno' },
+    { icon:'2', tag:'CAMPEÕES · COPA REVELA', title:'Meninos do Nordeste levam o inédito' },
+    { icon:'3', tag:'OPINIÃO', title:'Por que apoiar cedo muda tudo pra base' },
+    { icon:'4', tag:'EM ASCENSÃO', title:'A goleira que zerou o gráfico de apoio' },
+  ];
+
+  _formations = {
+    '433': { label:'4-3-3', slots:[ {pos:'GOL',top:90,left:50},{pos:'ZAG',top:68,left:34},{pos:'ZAG',top:68,left:66},{pos:'LAT',top:66,left:12},{pos:'LAT',top:66,left:88},{pos:'MEI',top:46,left:28},{pos:'MEI',top:46,left:50},{pos:'MEI',top:46,left:72},{pos:'ATA',top:20,left:25},{pos:'ATA',top:20,left:50},{pos:'ATA',top:20,left:75} ] },
+    '442': { label:'4-4-2', slots:[ {pos:'GOL',top:90,left:50},{pos:'LAT',top:68,left:12},{pos:'ZAG',top:68,left:38},{pos:'ZAG',top:68,left:62},{pos:'LAT',top:68,left:88},{pos:'MEI',top:45,left:14},{pos:'MEI',top:45,left:38},{pos:'MEI',top:45,left:62},{pos:'MEI',top:45,left:86},{pos:'ATA',top:20,left:36},{pos:'ATA',top:20,left:64} ] },
+    '352': { label:'3-5-2', slots:[ {pos:'GOL',top:90,left:50},{pos:'ZAG',top:70,left:26},{pos:'ZAG',top:70,left:50},{pos:'ZAG',top:70,left:74},{pos:'LAT',top:47,left:8},{pos:'MEI',top:47,left:30},{pos:'MEI',top:47,left:50},{pos:'MEI',top:47,left:70},{pos:'LAT',top:47,left:92},{pos:'ATA',top:20,left:36},{pos:'ATA',top:20,left:64} ] },
+    '4231': { label:'4-2-3-1', slots:[ {pos:'GOL',top:90,left:50},{pos:'LAT',top:72,left:12},{pos:'ZAG',top:72,left:38},{pos:'ZAG',top:72,left:62},{pos:'LAT',top:72,left:88},{pos:'VOL',top:54,left:36},{pos:'VOL',top:54,left:64},{pos:'MEI',top:33,left:24},{pos:'MEI',top:33,left:50},{pos:'MEI',top:33,left:76},{pos:'ATA',top:14,left:50} ] },
+  };
+
+  _pool = [
+    {id:'enzo',name:'Enzo Martins',pos:'ATA',ovr:86,type:'T'},
+    {id:'lucas',name:'Lucas Andrade',pos:'PON',ovr:84,type:'T'},
+    {id:'rafa',name:'Rafa Luz',pos:'PON',ovr:80,type:'T'},
+    {id:'theo',name:'Théo Lima',pos:'ATA',ovr:78,type:'T'},
+    {id:'bianca',name:'Bianca Rocha',pos:'MEI',ovr:81,type:'T'},
+    {id:'duda',name:'Duda Reis',pos:'MEI',ovr:79,type:'T'},
+    {id:'ravi',name:'Ravi Souza',pos:'MEI',ovr:76,type:'T'},
+    {id:'yuri',name:'Yuri Nakamura',pos:'VOL',ovr:80,type:'T'},
+    {id:'kaique',name:'Kaique Silva',pos:'ZAG',ovr:79,type:'T'},
+    {id:'caio',name:'Caio Vieira',pos:'ZAG',ovr:76,type:'T'},
+    {id:'bruno',name:'Bruno Sato',pos:'ZAG',ovr:75,type:'T'},
+    {id:'leo',name:'Léo Campos',pos:'LAT',ovr:77,type:'T'},
+    {id:'diego',name:'Diego Muralha',pos:'GOL',ovr:82,type:'T'},
+    {id:'nina',name:'Nina Alves',pos:'GOL',ovr:74,type:'T'},
+    {id:'pele',name:'Pelé',pos:'ATA',ovr:99,type:'L'},
+    {id:'garrincha',name:'Garrincha',pos:'PON',ovr:97,type:'L'},
+    {id:'socrates',name:'Sócrates',pos:'MEI',ovr:95,type:'L'},
+    {id:'calberto',name:'Carlos Alberto',pos:'LAT',ovr:94,type:'L'},
+  ];
+
+  _likesBase = 128;
+
+  _top10 = {
+    mes: [['Fúria FC',2840],['Leões do Vale',2790],['Real Caxias',2710],['Guará United',2655],['Meninos de Ouro',2600],['Vila Nova SC',2540],['Atlético Sul',2495],['Cruz de Malta',2430],['Estrela do Norte',2380],['Dragões FC',2325]],
+    semana: [['Meninos de Ouro',720],['Fúria FC',695],['Dragões FC',680],['Guará United',655],['Vila Nova SC',640],['Real Caxias',625],['Serra Azul',610],['Leões do Vale',600],['Praia Grande AC',585],['Atlético Sul',560]],
+    diario: [['Dragões FC',148],['Serra Azul',142],['Fúria FC',139],['Praia Grande AC',131],['Meninos de Ouro',128],['Guará United',120],['Vila Nova SC',117],['Real Caxias',112],['Estrela do Norte',108],['Cruz de Malta',102]],
+  };
+  _rankTabs = [ { key:'mes', label:'MÊS' }, { key:'semana', label:'SEMANA' }, { key:'diario', label:'DIÁRIO' } ];
+
+  _divisions = [
+    { tier:'01', name:'Série Ouro', tagline:'A ELITE', clubs:'32 CLUBES', desc:'Onde as lendas comandam e os campeões da Olefoot são coroados.', move:'↓ 4 CLUBES DESCEM', role:'ouro' },
+    { tier:'02', name:'Série Prata', tagline:'A ASCENSÃO', clubs:'64 CLUBES', desc:'Talentos verificados brigando ponto a ponto pra chegar à elite.', move:'↑ SOBE  ·  ↓ DESCE', role:'prata' },
+    { tier:'03', name:'Série Bronze', tagline:'A BASE', clubs:'CLUBES ILIMITADOS', desc:'Todo novo talento começa aqui. A porta de entrada da cena.', move:'↑ 8 CLUBES SOBEM', role:'bronze' },
+  ];
+
+  setRank(key){ this.setState({ rankTab:key }); }
+
+  _surname(n){ const p=(n||'').trim().split(' '); return (p.length>1?p[p.length-1]:p[0]||'').toUpperCase(); }
+  _group(pos){ if(pos==='GOL')return 'GOL'; if(pos==='ZAG'||pos==='LAT')return 'DEF'; if(pos==='VOL'||pos==='MEI')return 'MEI'; return 'ATA'; }
+  _caption(){ const s=this.state; const fl=this._formations[s.formation].label; const tn=(s.teamName||'').trim()||'Meu Time'; return 'Montei meu XI na @olefootgame! ⚡ '+tn+' — '+fl+'. Do novo talento à lenda no mesmo time. Vem revelar o próximo craque. #OlefootRevela'; }
+  _save(){ try{ localStorage.setItem('olefoot_revela_manager', JSON.stringify({ name:this.state.mgrName, phone:this.state.mgrPhone, teamName:this.state.teamName, formation:this.state.formation })); }catch(e){} }
+  onRegister(){ const name=(this.state.mgrName||'').trim(); const phone=(this.state.mgrPhone||'').replace(/\D/g,''); if(name.length<2){ this.setState({mgrErr:'Digite seu nome pra continuar.'}); return; } if(phone.length<10){ this.setState({mgrErr:'Telefone inválido — inclua o DDD.'}); return; } this.setState({mgrErr:'', gameStep:'build'}); this._save(); }
+  setFormation(k){ this.setState({ formation:k, slotAssign:{}, selSlot:null }); }
+  slotClick(i){ this.setState(s=>{ if(s.selSlot===i){ const a={...s.slotAssign}; delete a[i]; return { slotAssign:a, selSlot:null }; } return { selSlot:i }; }); }
+  poolClick(pid){ this.setState(s=>{ const a={...s.slotAssign}; Object.keys(a).forEach(k=>{ if(a[k]===pid) delete a[k]; }); const slots=this._formations[s.formation].slots; let target=s.selSlot; if(target==null||a[target]){ target=null; for(let i=0;i<slots.length;i++){ if(!a[i]){ target=i; break; } } } if(target==null) return { slotAssign:a, selSlot:null }; a[target]=pid; let next=null; for(let i=0;i<slots.length;i++){ if(!a[i]){ next=i; break; } } return { slotAssign:a, selSlot:next }; }); }
+  onConfirm(){ if(!((this.state.teamName||'').trim() && Object.keys(this.state.slotAssign).length>0)) return; this.setState({ gameStep:'share' }); this._save(); }
+  _note(msg){ this.setState({ note:msg }); clearTimeout(this._nt); this._nt=setTimeout(()=>this.setState({note:null}),2400); }
+  onCopy(){ const txt=this._caption(); try{ navigator.clipboard && navigator.clipboard.writeText(txt); }catch(e){} this._note('Legenda copiada! Marca a gente no post.'); }
+  onShare(){ const txt=this._caption(); if(navigator.share){ navigator.share({ text:txt }).catch(()=>{}); } else { this.onCopy(); } }
+
+  componentDidMount(){
+    setTimeout(()=>this.setState({ mounted:true }), 160);
+    this._ramp('heroSup', 5610, 1500);
+    this._ramp('totalRev', 12480, 1800);
+    try{ const raw=localStorage.getItem('olefoot_revela_manager'); if(raw){ const d=JSON.parse(raw)||{}; const patch={}; if(d.name)patch.mgrName=d.name; if(d.phone)patch.mgrPhone=d.phone; if(d.teamName)patch.teamName=d.teamName; if(d.formation&&this._formations[d.formation])patch.formation=d.formation; if(d.name&&(''+(d.phone||'')).replace(/\D/g,'').length>=10)patch.gameStep='build'; this.setState(patch); } }catch(e){}
+  }
+  componentWillUnmount(){ clearTimeout(this._t); clearTimeout(this._nt); }
+
+  _ramp(key, target, dur){
+    const start = performance.now();
+    const step = (t)=>{ const p = Math.min(1,(t-start)/dur); const e = 1-Math.pow(1-p,3);
+      this.setState({ [key]: Math.round(target*e) }); if(p<1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+  _fmt(n){ return (n||0).toLocaleString('pt-BR'); }
+
+  apoiar(p){
+    this.setState(s => {
+      if (s.done[p.id]) return null;
+      return { done:{...s.done,[p.id]:true}, sup:{...s.sup,[p.id]:(s.sup[p.id]||0)+1}, toast:p.name };
+    });
+    clearTimeout(this._t); this._t = setTimeout(()=>this.setState({ toast:null }), 2200);
+  }
+
+  renderVals(){
+    const { mounted, hovered, sup, done, heroSup, totalRev, toast, rankTab,
+      gameStep, mgrName, mgrPhone, mgrErr, teamName, formation, slotAssign, selSlot, poolFilter, liked, note } = this.state;
+
+    const talents = this._talents.map(p => {
+      const st = this._stickers[p.status] || this._stickers.NEW;
+      const supported = !!done[p.id];
+      const total = p.base + (sup[p.id]||0);
+      const show = hovered===p.id;
+      return {
+        ...p, stBg:st.bg, stFg:st.fg,
+        count:this._fmt(total),
+        onEnter:()=>this.setState({ hovered:p.id }),
+        onLeave:()=>this.setState({ hovered:null }),
+        onApoiar:()=>this.apoiar(p),
+        apoiarLabel: supported ? '✓ NA TORCIDA' : 'APOIAR',
+        apoiarBg: supported ? '#22C55E' : '#FDE100',
+        apoiarFg: '#0D0D0D',
+        apoiarBd: supported ? '#22C55E' : '#FDE100',
+        overlayStyle: show ? 'opacity:1;pointer-events:auto' : 'opacity:0;pointer-events:none',
+        bars: p.bars.map(x => ({ ...x, w: (mounted && show) ? x.v : 0 })),
+      };
+    });
+
+    const ranked = [...this._talents]
+      .map(p => ({ p, total: p.base + (sup[p.id]||0) }))
+      .sort((a,b)=> b.total - a.total).slice(0,5);
+    const trends = ['↑ EM ALTA','↑ +12','→ ESTÁVEL','↑ +4','↓ -2'];
+    const rankColors = ['#0D0D0D','#0D0D0D','#0D0D0D','rgba(13,13,13,.4)','rgba(13,13,13,.4)'];
+    const ranking = ranked.map((r,i)=>({
+      rank: i+1, name:r.p.name, meta:r.p.meta+' · OVR '+r.p.ovr,
+      count:this._fmt(r.total), trend:trends[i]||'',
+      trendColor: (trends[i]||'').startsWith('↓') ? '#c0392b' : '#0f8a3c',
+      rankColor: rankColors[i]||'rgba(13,13,13,.4)',
+      rowBg: i===0 ? 'rgba(253,225,0,.35)' : '#fff',
+    }));
+
+    const road = this._road.map((label,i)=>({ n:i+1, label }));
+
+    const rkTrends = ['▲ LÍDER','▲ +3','▲ +1','—','▲ +2','▼ -1','—','▲ +4','▼ -2','—'];
+    const top10 = this._top10[rankTab].map((a,i)=>{
+      const isTop = i===0;
+      return {
+        rank:i+1, name:a[0], pts:this._fmt(a[1]),
+        rankColor: isTop ? '#0D0D0D' : (i<3 ? '#FDE100' : 'rgba(245,241,230,.4)'),
+        cardBg: isTop ? '#FDE100' : '#141414',
+        cardFg: isTop ? '#0D0D0D' : '#EDEBE4',
+        cardBd: isTop ? '#FDE100' : 'rgba(245,241,230,.12)',
+        ptsColor: isTop ? '#0D0D0D' : '#FDE100',
+        ptsLabelColor: isTop ? 'rgba(13,13,13,.55)' : 'rgba(245,241,230,.45)',
+        trend: rkTrends[i]||'',
+        trendColor: isTop ? 'rgba(13,13,13,.6)' : ((rkTrends[i]||'').startsWith('▼') ? '#EF4444' : 'rgba(34,197,94,.9)'),
+      };
+    });
+    const top10Tabs = this._rankTabs.map(t => ({
+      ...t, onClick:()=>this.setRank(t.key),
+      bg: t.key===rankTab ? '#FDE100' : 'transparent',
+      fg: t.key===rankTab ? '#0D0D0D' : 'rgba(245,241,230,.6)',
+    }));
+
+    const divTheme = {
+      ouro:   { accent:'#FDE100', cardBg:'#141207', border:'rgba(253,225,0,.5)', fg:'#FDE100', numColor:'rgba(253,225,0,.28)', tagFg:'rgba(253,225,0,.75)', descFg:'rgba(237,235,228,.6)', moveFg:'rgba(237,235,228,.5)' },
+      prata:  { accent:'#F2ECDC', cardBg:'#16150f', border:'rgba(242,236,220,.35)', fg:'#F2ECDC', numColor:'rgba(242,236,220,.22)', tagFg:'rgba(242,236,220,.7)', descFg:'rgba(237,235,228,.6)', moveFg:'rgba(237,235,228,.5)' },
+      bronze: { accent:'#8a6a34', cardBg:'#121110', border:'rgba(138,106,52,.5)', fg:'#EDEBE4', numColor:'rgba(138,106,52,.4)', tagFg:'#b98a3e', descFg:'rgba(237,235,228,.5)', moveFg:'rgba(237,235,228,.45)' },
+    };
+    const divisions = this._divisions.map(d => ({ ...d, ...divTheme[d.role] }));
+
+    // ---- TEAM BUILDER ----
+    const isRegister = gameStep==='register', isBuild = gameStep==='build', isShare = gameStep==='share';
+    const stepNum = isShare ? 3 : (isBuild ? 2 : 1);
+    const steps = [ {n:'1',label:'CADASTRO'}, {n:'2',label:'ESCALAÇÃO'}, {n:'3',label:'COMPARTILHAR'} ].map((s,i)=>{
+      const on = (i+1) <= stepNum;
+      return { ...s, bg: on?'#FDE100':'transparent', fg: on?'#0D0D0D':'rgba(245,241,230,.5)', bd: on?'#FDE100':'rgba(245,241,230,.25)', txt: on?'#FDE100':'rgba(245,241,230,.45)' };
+    });
+
+    const poolById = {}; this._pool.forEach(p=>poolById[p.id]=p);
+    const slots = this._formations[formation].slots;
+    const assignedIds = Object.values(slotAssign);
+    const filledCount = Object.keys(slotAssign).filter(k=>slotAssign[k]).length;
+
+    const lineup = slots.map((s,i)=>{
+      const pid = slotAssign[i]; const p = pid?poolById[pid]:null; const sel = selSlot===i; const legend = p && p.type==='L';
+      return {
+        top:s.top, left:s.left, onClick:()=>this.slotClick(i),
+        num: p ? p.ovr : s.pos, numWeight: p?700:600, numSize: p?'15px':'9px',
+        name: p ? this._surname(p.name) : '',
+        tokenBg: p ? (legend?'#0D0D0D':'#FDE100') : 'rgba(13,13,13,.55)',
+        tokenBd: sel ? '3px solid #22C55E' : (p ? (legend?'2px solid #F2ECDC':'2px solid #0D0D0D') : '2px dashed rgba(253,225,0,.4)'),
+        tokenBd2: p ? (legend?'2px solid #F2ECDC':'2px solid #0D0D0D') : '2px dashed rgba(253,225,0,.4)',
+        tokenFg: p ? (legend?'#F2ECDC':'#0D0D0D') : 'rgba(245,241,230,.65)',
+        ring: sel ? '0 0 0 4px rgba(34,197,94,.25)' : 'none',
+        pillBg: p ? 'rgba(13,13,13,.9)' : 'transparent',
+        nameC: p ? (legend?'#F2ECDC':'#FDE100') : 'transparent',
+      };
+    });
+
+    const fmatch = (p)=>{ if(poolFilter==='all')return true; if(poolFilter==='L'||poolFilter==='T')return p.type===poolFilter; return this._group(p.pos)===poolFilter; };
+    const pool = this._pool.filter(fmatch).map(p=>{
+      const assigned = assignedIds.includes(p.id);
+      return { ...p, onClick:()=>this.poolClick(p.id),
+        typeLabel: p.type==='L'?'LENDA':'REVELAÇÃO',
+        dot: p.type==='L'?'#F2ECDC':'#FDE100',
+        ovrBg: p.type==='L'?'#F2ECDC':'#FDE100', ovrFg:'#0D0D0D',
+        cardBg: assigned?'rgba(253,225,0,.14)':'#141414',
+        cardBd: assigned?'2px solid #FDE100':'2px solid rgba(245,241,230,.1)',
+        check: assigned?'✓':'', checkC: assigned?'#FDE100':'transparent',
+      };
+    });
+    const poolFilters = [['all','TODOS'],['T','REVELAÇÕES'],['L','LENDAS'],['GOL','GOL'],['DEF','DEF'],['MEI','MEI'],['ATA','ATA']].map(([k,l])=>({
+      key:k, label:l, onClick:()=>this.setState({poolFilter:k}),
+      bg: k===poolFilter?'#FDE100':'transparent', fg: k===poolFilter?'#0D0D0D':'rgba(245,241,230,.65)', bd: k===poolFilter?'#FDE100':'rgba(245,241,230,.14)',
+    }));
+    const selPos = selSlot!=null ? slots[selSlot].pos : null;
+    const selHint = selSlot!=null ? ('Vaga '+selPos+' selecionada — toque num jogador da lista') : 'Toque numa vaga do campo e depois num jogador';
+    const canConfirm = (teamName||'').trim().length>0 && filledCount>0;
+    const formationLabel = this._formations[formation].label;
+    const formations = Object.keys(this._formations).map(k=>({
+      key:k, label:this._formations[k].label, onClick:()=>this.setFormation(k),
+      bg: k===formation?'#FDE100':'transparent', fg: k===formation?'#0D0D0D':'rgba(245,241,230,.7)',
+    }));
+    const wall = this._pool.filter(p=>p.type==='T').sort((a,b)=>b.ovr-a.ovr).slice(0,11).map((p,i)=>({ name:p.name, pos:p.pos, ovr:p.ovr, slot:'rev-w-'+(i+1) }));
+
+    const teamNameShow = (teamName||'').trim() ? teamName : 'MEU TIME';
+    const likes = this._likesBase + (liked?1:0);
+
+    return {
+      talents, ranking, road,
+      wall, legends: this._legends, resenha: this._resenha,
+      top10, top10Tabs, divisions,
+      heroSupFmt: this._fmt(heroSup), totalRevFmt: this._fmt(totalRev),
+      toast, note,
+      isRegister, isBuild, isShare, steps,
+      mgrName: mgrName||'', mgrPhone: mgrPhone||'', mgrErr, mgrNameUpper:(mgrName||'').toUpperCase(),
+      teamName: teamName||'', teamNameShow, formation, formationLabel, formations,
+      lineup, pool, poolFilters, selHint, filledCount,
+      confirmBg: canConfirm?'#FDE100':'rgba(245,241,230,.12)',
+      confirmFg: canConfirm?'#0D0D0D':'rgba(245,241,230,.4)',
+      confirmCursor: canConfirm?'pointer':'not-allowed',
+      caption: this._caption(), likes,
+      likeLabel: liked?'♥ CURTIDO':'♡ CURTIR',
+      likeBg: liked?'#EF4444':'transparent', likeFg: liked?'#fff':'rgba(245,241,230,.7)', likeBd: liked?'#EF4444':'rgba(245,241,230,.2)',
+      onName:(e)=>this.setState({mgrName:e.target.value}),
+      onPhone:(e)=>this.setState({mgrPhone:e.target.value}),
+      onTeamName:(e)=>this.setState({teamName:e.target.value}),
+      onRegister:()=>this.onRegister(),
+      onConfirm: canConfirm ? ()=>this.onConfirm() : ()=>{},
+      onEdit:()=>this.setState({gameStep:'build'}),
+      onLike:()=>this.setState(s=>({liked:!s.liked})),
+      onCopy:()=>this.onCopy(),
+      onShare:()=>this.onShare(),
+    };
+  }
+}
+</script>
+</body>
+</html>

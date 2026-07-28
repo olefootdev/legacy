@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,800;1,500;1,600;1,700;1,800;1,900&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:#0D0D0D;color:#EDEBE4;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  a{color:#FDE100;text-decoration:none}
+  a:hover{color:#fff}
+  ::selection{background:#FDE100;color:#0D0D0D}
+  image-slot{--is-bg:#141414}
+  @keyframes revPulse{0%,100%{opacity:1}50%{opacity:.35}}
+  @keyframes revFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  @keyframes revToast{0%{transform:translateY(20px);opacity:0}12%{transform:translateY(0);opacity:1}88%{transform:translateY(0);opacity:1}100%{transform:translateY(-8px);opacity:0}}
+  @keyframes revMarq{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+  .rev-scroll::-webkit-scrollbar{height:6px}
+  .rev-scroll::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+</style>
+</helmet>
+
+<div style="max-width:100%;overflow:hidden;position:relative">
+
+<!-- ============ NAV ============ -->
+<header style="position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px clamp(18px,4vw,54px);background:rgba(13,13,13,.82);backdrop-filter:blur(14px);border-bottom:1px solid rgba(245,240,230,.08)">
+  <div style="display:flex;align-items:center;gap:14px">
+    <div style="font-family:Oswald;font-weight:700;font-size:22px;letter-spacing:.14em;color:#EDEBE4;line-height:1">OLEFOOT</div>
+    <div style="font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.28em;color:#0D0D0D;background:#FDE100;padding:4px 9px 3px;border-radius:3px">REVELA</div>
+  </div>
+  <nav style="display:flex;align-items:center;gap:clamp(14px,2.4vw,32px);font-family:Oswald;font-weight:500;font-size:13px;letter-spacing:.16em">
+    <a href="#talentos" style="color:rgba(237,235,228,.72)">TALENTOS</a>
+    <a href="#apoiados" style="color:rgba(237,235,228,.72)">RANKING</a>
+    <a href="#legends" style="color:rgba(237,235,228,.72)">LENDAS</a>
+    <a href="#resenha" style="color:rgba(237,235,228,.72)">RESENHA</a>
+  </nav>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.16em;color:#EDEBE4;background:transparent;border:1px solid rgba(245,240,230,.24);padding:9px 16px;border-radius:4px;cursor:pointer" style-hover="border-color:#FDE100;color:#FDE100">ENTRAR</button>
+    <button style="font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.16em;color:#0D0D0D;background:#FDE100;border:none;padding:10px 18px;border-radius:4px;cursor:pointer" style-hover="background:#fff">CADASTRAR</button>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section style="position:relative;padding:clamp(40px,6vw,84px) clamp(18px,4vw,54px) clamp(48px,6vw,90px);border-bottom:1px solid rgba(245,240,230,.08);overflow:hidden">
+  <div aria-hidden="true" style="position:absolute;top:-6%;left:-2%;font-family:'Playfair Display',serif;font-style:italic;font-weight:900;font-size:min(46vw,640px);line-height:.8;color:rgba(253,225,0,.04);pointer-events:none;user-select:none;white-space:nowrap;z-index:0">Revela</div>
+  <div style="position:relative;z-index:2;display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(28px,5vw,72px);align-items:center;max-width:1360px;margin:0 auto">
+
+    <div style="min-width:0">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:22px">
+        <span style="width:9px;height:9px;border-radius:50%;background:#FDE100;animation:revPulse 1.6s ease-in-out infinite"></span>
+        <span style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.3em;color:rgba(237,235,228,.6)">A NOVA GERAÇÃO DO FUTEBOL · AO VIVO</span>
+      </div>
+      <h1 style="font-family:Oswald;font-weight:700;font-size:clamp(38px,6.4vw,88px);line-height:.94;letter-spacing:-.01em;margin:0 0 8px;color:#EDEBE4">DESCUBRA QUEM<br>ESTÁ <span style="color:#FDE100">CHEGANDO.</span></h1>
+      <p style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500;font-size:clamp(18px,2vw,26px);line-height:1.35;color:rgba(237,235,228,.66);max-width:34ch;margin:14px 0 30px">Reconheça quem fez história. Aposte no futuro. Jogue com os dois.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:34px">
+        <button style="font-family:Oswald;font-weight:700;font-size:14px;letter-spacing:.14em;color:#0D0D0D;background:#FDE100;border:none;padding:15px 26px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;gap:9px" style-hover="background:#fff;transform:translateY(-2px)">EXPLORAR TALENTOS <span style="font-size:15px">→</span></button>
+        <button style="font-family:Oswald;font-weight:600;font-size:14px;letter-spacing:.14em;color:#EDEBE4;background:transparent;border:1px solid rgba(245,240,230,.28);padding:15px 24px;border-radius:5px;cursor:pointer" style-hover="border-color:#FDE100;color:#FDE100">COMO FUNCIONA</button>
+      </div>
+      <div style="display:flex;gap:clamp(20px,3vw,44px)">
+        <div><div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:clamp(26px,3.2vw,40px);color:#FDE100;line-height:1;font-variant-numeric:tabular-nums">{{ totalRevFmt }}</div><div style="font-family:Oswald;font-weight:500;font-size:11px;letter-spacing:.2em;color:rgba(237,235,228,.5);margin-top:7px">TALENTOS REVELADOS</div></div>
+        <div style="width:1px;background:rgba(245,240,230,.12)"></div>
+        <div><div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:clamp(26px,3.2vw,40px);color:#EDEBE4;line-height:1;font-variant-numeric:tabular-nums">1.247</div><div style="font-family:Oswald;font-weight:500;font-size:11px;letter-spacing:.2em;color:rgba(237,235,228,.5);margin-top:7px">CLUBES ATIVOS</div></div>
+        <div style="width:1px;background:rgba(245,240,230,.12)"></div>
+        <div><div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:clamp(26px,3.2vw,40px);color:#22C55E;line-height:1">∞</div><div style="font-family:Oswald;font-weight:500;font-size:11px;letter-spacing:.2em;color:rgba(237,235,228,.5);margin-top:7px">MEMÓRIA ATIVA</div></div>
+      </div>
+    </div>
+
+    <!-- HERO FEATURED CARD -->
+    <div style="position:relative;justify-self:center;width:min(100%,420px);animation:revFloat 6s ease-in-out infinite">
+      <div style="position:relative;border-radius:14px;overflow:hidden;border:1px solid rgba(245,240,230,.1);background:#141414;box-shadow:0 40px 90px -30px rgba(0,0,0,.9)">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(253,225,0,.12),transparent 30%,transparent 55%,rgba(13,13,13,.94));z-index:2;pointer-events:none"></div>
+        <div style="position:relative;aspect-ratio:3/4;width:100%">
+          <image-slot id="rev-hero-player" shape="rect" fit="cover" placeholder="RETRATO DO CRAQUE"></image-slot>
+        </div>
+        <div style="position:absolute;top:16px;left:16px;z-index:3;display:flex;flex-direction:column;gap:7px">
+          <span style="font-family:Oswald;font-weight:700;font-size:11px;letter-spacing:.22em;color:#0D0D0D;background:#FDE100;padding:5px 10px 4px;border-radius:3px;width:max-content">● TALENTO EM ASCENSÃO</span>
+        </div>
+        <div style="position:absolute;top:14px;right:14px;z-index:3;text-align:center;background:rgba(13,13,13,.6);border:1px solid rgba(253,225,0,.4);border-radius:9px;padding:8px 12px 6px;backdrop-filter:blur(4px)">
+          <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:34px;color:#FDE100;line-height:.9">86</div>
+          <div style="font-family:Oswald;font-weight:600;font-size:9px;letter-spacing:.24em;color:rgba(237,235,228,.7);margin-top:2px">OVR</div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:3;padding:20px;border-left:3px solid #FDE100">
+          <div style="font-family:Oswald;font-weight:500;font-size:11px;letter-spacing:.24em;color:rgba(237,235,228,.62);margin-bottom:2px">ATA · GRÊMIO · BRA</div>
+          <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:clamp(30px,3.6vw,42px);line-height:.98;letter-spacing:-.02em;color:#fff">Enzo Martins</div>
+          <div style="display:flex;gap:8px;margin-top:14px">
+            <div style="flex:1;background:rgba(20,20,20,.7);border:1px solid rgba(245,240,230,.1);border-radius:6px;padding:8px 10px;text-align:center"><div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:19px;color:#EDEBE4">88</div><div style="font-family:Oswald;font-size:9px;letter-spacing:.16em;color:rgba(237,235,228,.5)">RITMO</div></div>
+            <div style="flex:1;background:rgba(20,20,20,.7);border:1px solid rgba(245,240,230,.1);border-radius:6px;padding:8px 10px;text-align:center"><div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:19px;color:#EDEBE4">85</div><div style="font-family:Oswald;font-size:9px;letter-spacing:.16em;color:rgba(237,235,228,.5)">FINAL.</div></div>
+            <div style="flex:1;background:rgba(20,20,20,.7);border:1px solid rgba(245,240,230,.1);border-radius:6px;padding:8px 10px;text-align:center"><div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:19px;color:#EDEBE4">79</div><div style="font-family:Oswald;font-size:9px;letter-spacing:.16em;color:rgba(237,235,228,.5)">DRIBLE</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="position:absolute;bottom:-18px;right:-10px;z-index:4;display:flex;align-items:center;gap:9px;background:#0D0D0D;border:1px solid rgba(253,225,0,.35);border-radius:40px;padding:9px 16px 8px;box-shadow:0 12px 30px -8px rgba(0,0,0,.8)">
+        <span style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:20px;color:#FDE100;font-variant-numeric:tabular-nums">{{ heroSupFmt }}</span>
+        <span style="font-family:Oswald;font-weight:500;font-size:10px;letter-spacing:.18em;color:rgba(237,235,228,.62)">APOIADORES</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 REs CONCEITO ============ -->
+<section style="padding:clamp(30px,4vw,52px) clamp(18px,4vw,54px);border-bottom:1px solid rgba(245,240,230,.08);background:#0f0f0f">
+  <div style="max-width:1360px;margin:0 auto">
+    <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:26px">
+      <span style="display:inline-block;width:34px;height:3px;background:#FDE100;transform:translateY(-4px)"></span>
+      <span style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.28em;color:rgba(237,235,228,.55)">O ESPÍRITO DE QUEM AMA FUTEBOL</span>
+      <span style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:clamp(20px,2.4vw,30px);color:#EDEBE4">Os 5 REs da Olefoot</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:rgba(245,240,230,.08);border:1px solid rgba(245,240,230,.08);border-radius:10px;overflow:hidden">
+      <sc-for list="{{ res }}" as="r" hint-placeholder-count="5">
+        <div style="background:#0D0D0D;padding:22px 20px;position:relative" style-hover="background:#141207">
+          <div style="font-family:Oswald;font-weight:700;font-size:12px;letter-spacing:.2em;color:#FDE100;margin-bottom:12px">{{ r.n }}</div>
+          <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:23px;color:#fff;margin-bottom:8px">{{ r.title }}</div>
+          <div style="font-family:Inter;font-size:12.5px;line-height:1.5;color:rgba(237,235,228,.55)">{{ r.desc }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TALENTOS EM ASCENSÃO ============ -->
+<section id="talentos" style="padding:clamp(44px,6vw,80px) clamp(18px,4vw,54px);border-bottom:1px solid rgba(245,240,230,.08)">
+  <div style="max-width:1360px;margin:0 auto">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:34px">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><span style="display:inline-block;width:34px;height:3px;background:#FDE100"></span><span style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.28em;color:rgba(237,235,228,.55)">REVELAR · O FUTURO CHEGANDO</span></div>
+        <h2 style="font-family:Oswald;font-weight:700;font-size:clamp(30px,4.2vw,54px);line-height:.98;margin:0;color:#EDEBE4">TALENTOS EM <span style="color:#FDE100">ASCENSÃO</span></h2>
+      </div>
+      <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:16px;color:rgba(237,235,228,.55);max-width:30ch;text-align:right">Passe o mouse. Descubra o jogo dele. Apoie antes de todo mundo.</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:clamp(14px,1.6vw,22px)">
+      <sc-for list="{{ talents }}" as="p" hint-placeholder-count="6">
+        <div onMouseEnter="{{ p.onEnter }}" onMouseLeave="{{ p.onLeave }}" style="position:relative;border-radius:12px;overflow:hidden;border:1px solid rgba(245,240,230,.1);background:#141414;cursor:pointer;transition:transform .3s ease,border-color .3s ease" style-hover="transform:translateY(-6px);border-color:rgba(253,225,0,.5)">
+          <div style="position:relative;aspect-ratio:4/5;width:100%">
+            <image-slot id="{{ p.slot }}" shape="rect" fit="cover" placeholder="FOTO"></image-slot>
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(13,13,13,.96));pointer-events:none;z-index:2"></div>
+            <span style="position:absolute;top:12px;left:12px;z-index:3;font-family:Oswald;font-weight:700;font-size:9.5px;letter-spacing:.18em;padding:4px 8px 3px;border-radius:3px;color:{{ p.badgeFg }};background:{{ p.badgeBg }}">{{ p.status }}</span>
+            <div style="position:absolute;top:10px;right:12px;z-index:3;text-align:center">
+              <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:26px;color:#FDE100;line-height:.9;text-shadow:0 2px 8px rgba(0,0,0,.7)">{{ p.ovr }}</div>
+              <div style="font-family:Oswald;font-weight:600;font-size:8px;letter-spacing:.2em;color:rgba(237,235,228,.8)">OVR</div>
+            </div>
+            <div style="position:absolute;left:0;right:0;bottom:0;z-index:3;padding:14px 14px 14px;border-left:3px solid #FDE100">
+              <div style="font-family:Oswald;font-weight:500;font-size:10px;letter-spacing:.2em;color:rgba(237,235,228,.62)">{{ p.meta }}</div>
+              <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:23px;line-height:1.02;color:#fff">{{ p.name }}</div>
+            </div>
+            <!-- HOVER ATTR REVEAL -->
+            <div style="position:absolute;left:0;right:0;bottom:0;z-index:4;padding:16px 14px;background:linear-gradient(180deg,rgba(13,13,13,.4),rgba(13,13,13,.97));backdrop-filter:blur(2px);transition:transform .34s cubic-bezier(.2,.7,.2,1),opacity .3s;{{ p.overlayStyle }}">
+              <div style="font-family:Oswald;font-weight:500;font-size:10px;letter-spacing:.2em;color:rgba(237,235,228,.6);margin-bottom:2px">{{ p.meta }}</div>
+              <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:22px;color:#fff;margin-bottom:12px">{{ p.name }}</div>
+              <sc-for list="{{ p.bars }}" as="b" hint-placeholder-count="3">
+                <div style="margin-bottom:9px">
+                  <div style="display:flex;justify-content:space-between;font-family:Oswald;font-size:10px;letter-spacing:.14em;color:rgba(237,235,228,.7);margin-bottom:4px"><span>{{ b.k }}</span><span style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;color:#FDE100;font-size:13px">{{ b.v }}</span></div>
+                  <div style="height:4px;border-radius:3px;background:rgba(245,240,230,.14);overflow:hidden"><div style="height:100%;background:#FDE100;border-radius:3px;transition:width .8s cubic-bezier(.2,.7,.2,1);width:{{ b.w }}%"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;position:relative;z-index:5">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:17px;color:#EDEBE4;font-variant-numeric:tabular-nums">{{ p.count }}</span>
+              <span style="font-family:Oswald;font-weight:500;font-size:9.5px;letter-spacing:.14em;color:rgba(237,235,228,.5)">APOIADORES</span>
+            </div>
+            <button onClick="{{ p.onApoiar }}" style="font-family:Oswald;font-weight:700;font-size:11px;letter-spacing:.14em;padding:9px 15px;border-radius:5px;cursor:pointer;border:1px solid;transition:all .2s;color:{{ p.apoiarFg }};background:{{ p.apoiarBg }};border-color:{{ p.apoiarBd }}">{{ p.apoiarLabel }}</button>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- ============ OS MAIS APOIADOS ============ -->
+<section id="apoiados" style="padding:clamp(44px,6vw,80px) clamp(18px,4vw,54px);border-bottom:1px solid rgba(245,240,230,.08);background:#0f0f0f">
+  <div style="max-width:1120px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><span style="display:inline-block;width:34px;height:3px;background:#FDE100"></span><span style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.28em;color:rgba(237,235,228,.55)">REFERENCIAR · A VOZ DA TORCIDA</span></div>
+    <h2 style="font-family:Oswald;font-weight:700;font-size:clamp(30px,4.2vw,54px);line-height:.98;margin:0 0 30px;color:#EDEBE4">OS MAIS <span style="color:#FDE100">APOIADOS</span></h2>
+    <div style="border:1px solid rgba(245,240,230,.1);border-radius:12px;overflow:hidden">
+      <sc-for list="{{ ranking }}" as="r" hint-placeholder-count="5">
+        <div style="display:grid;grid-template-columns:56px 1fr auto auto;align-items:center;gap:clamp(12px,2vw,26px);padding:16px clamp(14px,2.4vw,26px);border-bottom:1px solid rgba(245,240,230,.07);background:{{ r.rowBg }};transition:background .2s" style-hover="background:rgba(253,225,0,.05)">
+          <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:clamp(28px,3vw,40px);color:{{ r.rankColor }};line-height:1;font-variant-numeric:tabular-nums">{{ r.rank }}</div>
+          <div style="min-width:0">
+            <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:clamp(17px,2vw,23px);color:#fff;line-height:1.1">{{ r.name }}</div>
+            <div style="font-family:Oswald;font-weight:500;font-size:10.5px;letter-spacing:.16em;color:rgba(237,235,228,.5);margin-top:3px">{{ r.meta }}</div>
+          </div>
+          <div style="text-align:right;display:none" data-wide="1">
+            <div style="font-family:Oswald;font-weight:600;font-size:10px;letter-spacing:.14em;color:{{ r.trendColor }}">{{ r.trend }}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:clamp(18px,2vw,24px);color:#FDE100;font-variant-numeric:tabular-nums;line-height:1">{{ r.count }}</div>
+            <div style="font-family:Oswald;font-weight:500;font-size:9px;letter-spacing:.16em;color:rgba(237,235,228,.45)">APOIADORES</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LEGENDS ============ -->
+<section id="legends" style="padding:clamp(50px,7vw,96px) clamp(18px,4vw,54px);border-bottom:1px solid rgba(245,240,230,.08);position:relative;overflow:hidden">
+  <div aria-hidden="true" style="position:absolute;right:-2%;top:8%;font-family:'Playfair Display',serif;font-style:italic;font-weight:900;font-size:min(30vw,340px);line-height:.8;color:rgba(245,240,230,.03);pointer-events:none;z-index:0">Lendas</div>
+  <div style="position:relative;z-index:2;max-width:1360px;margin:0 auto">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:36px">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><span style="display:inline-block;width:34px;height:3px;background:#FDE100"></span><span style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.28em;color:rgba(237,235,228,.55)">RECONHECER · O MUSEU VIVO</span></div>
+        <h2 style="font-family:Oswald;font-weight:700;font-size:clamp(30px,4.2vw,54px);line-height:.98;margin:0;color:#EDEBE4">LENDAS QUE FIZERAM<br>A <span style="color:#FDE100">HISTÓRIA</span></h2>
+      </div>
+      <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:17px;line-height:1.4;color:rgba(237,235,228,.6);max-width:32ch;text-align:right">"O futebol arte é o futebol que faz a torcida sonhar."</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:clamp(16px,2vw,26px)">
+      <sc-for list="{{ legends }}" as="l" hint-placeholder-count="3">
+        <div style="position:relative;border-radius:12px;overflow:hidden;border:1px solid rgba(245,240,230,.12);background:#0a0a0a;transition:transform .3s,border-color .3s" style-hover="transform:translateY(-6px);border-color:rgba(245,240,230,.4)">
+          <div style="position:relative;aspect-ratio:3/4;width:100%;filter:grayscale(1) contrast(1.08)">
+            <image-slot id="{{ l.slot }}" shape="rect" fit="cover" placeholder="RETRATO B&amp;W"></image-slot>
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 38%,rgba(10,10,10,.97));pointer-events:none;z-index:2"></div>
+          </div>
+          <div style="position:absolute;top:14px;left:14px;z-index:3;font-family:Oswald;font-weight:700;font-size:10px;letter-spacing:.24em;color:#0a0a0a;background:#EDEBE4;padding:5px 10px 4px;border-radius:3px">LENDA</div>
+          <div style="position:absolute;top:12px;right:14px;z-index:3;text-align:center;background:rgba(10,10,10,.55);border:1px solid rgba(245,240,230,.3);border-radius:8px;padding:6px 10px 4px">
+            <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:26px;color:#EDEBE4;line-height:.9">{{ l.ovr }}</div>
+            <div style="font-family:Oswald;font-weight:600;font-size:8px;letter-spacing:.2em;color:rgba(237,235,228,.65)">OVR</div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;z-index:3;padding:20px;border-left:3px solid #EDEBE4">
+            <div style="font-family:Oswald;font-weight:500;font-size:10.5px;letter-spacing:.24em;color:rgba(237,235,228,.6);margin-bottom:3px">{{ l.era }}</div>
+            <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:clamp(26px,3vw,34px);line-height:.98;color:#fff;margin-bottom:6px">{{ l.name }}</div>
+            <div style="font-family:Oswald;font-weight:500;font-size:10px;letter-spacing:.18em;color:#FDE100">{{ l.honor }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- ============ A RESENHA ============ -->
+<section id="resenha" style="padding:clamp(44px,6vw,80px) clamp(18px,4vw,54px);border-bottom:1px solid rgba(245,240,230,.08);background:#0f0f0f">
+  <div style="max-width:1360px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><span style="display:inline-block;width:34px;height:3px;background:#FDE100"></span><span style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.28em;color:rgba(237,235,228,.55)">RESENHA · ONDE O FUTEBOL ACONTECE</span></div>
+    <h2 style="font-family:Oswald;font-weight:700;font-size:clamp(30px,4.2vw,54px);line-height:.98;margin:0 0 32px;color:#EDEBE4">A <span style="color:#FDE100">RESENHA</span></h2>
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:clamp(16px,2vw,24px)">
+      <div style="position:relative;border-radius:12px;overflow:hidden;border:1px solid rgba(245,240,230,.1);min-height:300px;background:#141414;border-left:3px solid #FDE100">
+        <div style="position:absolute;inset:0"><image-slot id="rev-resenha-hero" shape="rect" fit="cover" placeholder="CAPA DA RESENHA"></image-slot></div>
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(13,13,13,.96));z-index:2;pointer-events:none"></div>
+        <div style="position:relative;z-index:3;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding:clamp(20px,3vw,32px)">
+          <span style="font-family:Oswald;font-weight:700;font-size:10px;letter-spacing:.22em;color:#0D0D0D;background:#FDE100;padding:4px 9px 3px;border-radius:3px;width:max-content;margin-bottom:14px">EM ALTA</span>
+          <h3 style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:clamp(24px,3vw,38px);line-height:1.05;margin:0 0 10px;color:#fff">O garoto de Caxias que virou o assunto da semana</h3>
+          <p style="font-family:Inter;font-size:14px;line-height:1.55;color:rgba(237,235,228,.62);max-width:46ch;margin:0">Três gols em quatro jogos, +1.9k apoiadores em 48h e um scout do sub-20 de olho. A resenha é essa: futebol contado por quem ama.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <sc-for list="{{ resenha }}" as="c" hint-placeholder-count="4">
+          <div style="display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:10px;border:1px solid rgba(245,240,230,.1);background:#0D0D0D;transition:border-color .2s,transform .2s;cursor:pointer" style-hover="border-color:rgba(253,225,0,.4);transform:translateX(4px)">
+            <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:30px;color:rgba(253,225,0,.85);line-height:1;flex:none;width:38px">{{ c.icon }}</div>
+            <div style="min-width:0">
+              <div style="font-family:Oswald;font-weight:600;font-size:10px;letter-spacing:.2em;color:rgba(237,235,228,.5);margin-bottom:3px">{{ c.tag }}</div>
+              <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:17px;line-height:1.15;color:#EDEBE4">{{ c.title }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA FINAL ============ -->
+<section style="position:relative;overflow:hidden;background:#FDE100;color:#0D0D0D;padding:clamp(56px,8vw,110px) clamp(18px,4vw,54px)">
+  <div aria-hidden="true" style="position:absolute;inset:0;overflow:hidden;z-index:0;opacity:.09">
+    <div style="position:absolute;white-space:nowrap;top:50%;left:0;transform:translateY(-50%);font-family:'Playfair Display',serif;font-style:italic;font-weight:900;font-size:min(28vw,300px);color:#0D0D0D;animation:revMarq 22s linear infinite">Entre em campo · Entre em campo · </div>
+  </div>
+  <div style="position:relative;z-index:2;max-width:1000px;margin:0 auto;text-align:center">
+    <div style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.3em;margin-bottom:18px">RESPONSÁVEL · O JOGO CONTINUA NO GAME</div>
+    <h2 style="font-family:Oswald;font-weight:700;font-size:clamp(40px,7vw,92px);line-height:.92;margin:0 0 18px">AGORA ENTRE<br>EM CAMPO.</h2>
+    <p style="font-family:'Playfair Display',serif;font-style:italic;font-weight:600;font-size:clamp(18px,2.2vw,26px);color:rgba(13,13,13,.72);max-width:40ch;margin:0 auto 34px">Você descobriu o talento. Agora comande o clube, dispute torneios e escreva a próxima história.</p>
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+      <button style="font-family:Oswald;font-weight:700;font-size:15px;letter-spacing:.14em;color:#FDE100;background:#0D0D0D;border:none;padding:17px 34px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:10px" style-hover="transform:translateY(-2px)">● JOGAR AGORA <span>→</span></button>
+      <button style="font-family:Oswald;font-weight:600;font-size:15px;letter-spacing:.14em;color:#0D0D0D;background:transparent;border:1.5px solid #0D0D0D;padding:17px 30px;border-radius:6px;cursor:pointer" style-hover="background:#0D0D0D;color:#FDE100">CRIAR MEU PERFIL</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer style="padding:clamp(34px,4vw,56px) clamp(18px,4vw,54px);background:#0D0D0D">
+  <div style="max-width:1360px;margin:0 auto;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:20px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="font-family:Oswald;font-weight:700;font-size:18px;letter-spacing:.14em;color:#EDEBE4">OLEFOOT</div>
+      <div style="font-family:Oswald;font-weight:700;font-size:10px;letter-spacing:.28em;color:#0D0D0D;background:#FDE100;padding:3px 8px 2px;border-radius:3px">REVELA</div>
+    </div>
+    <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:15px;color:rgba(237,235,228,.5)">"Eu descobri esse jogador antes de todo mundo."</div>
+    <div style="font-family:Oswald;font-weight:500;font-size:11px;letter-spacing:.18em;color:rgba(237,235,228,.4)">© 2026 · O MUSEU VIVO DO FUTEBOL</div>
+  </div>
+</footer>
+
+<!-- TOAST -->
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:50%;bottom:34px;transform:translateX(-50%);z-index:100;display:flex;align-items:center;gap:13px;background:#0D0D0D;border:1px solid rgba(253,225,0,.5);border-left:3px solid #FDE100;border-radius:8px;padding:13px 20px;box-shadow:0 20px 50px -12px rgba(0,0,0,.9);animation:revToast 2.2s ease forwards">
+    <span style="font-family:'Playfair Display',serif;font-style:italic;font-weight:800;font-size:22px;color:#FDE100">+1</span>
+    <div>
+      <div style="font-family:Oswald;font-weight:600;font-size:12px;letter-spacing:.16em;color:#fff">APOIO REGISTRADO</div>
+      <div style="font-family:Inter;font-size:11.5px;color:rgba(237,235,228,.6)">{{ toast }} avançou no Road to Card</div>
+    </div>
+  </div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { mounted:false, hovered:null, sup:{}, done:{}, heroSup:0, totalRev:0, toast:null };
+
+  _talents = [
+    { id:'lucas', slot:'rev-t-1', name:'Lucas Andrade', meta:'PON · SANTOS · BRA', ovr:84, status:'TALENTO', cat:'talent', base:2847, bars:[{k:'RITMO',v:89},{k:'DRIBLE',v:85},{k:'FINAL.',v:78}] },
+    { id:'bianca', slot:'rev-t-2', name:'Bianca Rocha', meta:'MEI · CORINTHIANS · BRA', ovr:81, status:'VERIFICADO', cat:'verified', base:4102, bars:[{k:'PASSE',v:86},{k:'VISÃO',v:83},{k:'CHUTE',v:74}] },
+    { id:'kaique', slot:'rev-t-3', name:'Kaique Silva', meta:'ZAG · CRUZEIRO · BRA', ovr:79, status:'SCOUT', cat:'scout', base:1934, bars:[{k:'MARC.',v:84},{k:'FÍSICO',v:82},{k:'SAÍDA',v:71}] },
+    { id:'enzo', slot:'rev-t-4', name:'Enzo Martins', meta:'ATA · GRÊMIO · BRA', ovr:86, status:'TALENTO', cat:'talent', base:5610, bars:[{k:'RITMO',v:88},{k:'FINAL.',v:85},{k:'DRIBLE',v:79}] },
+    { id:'diego', slot:'rev-t-5', name:'Diego Muralha', meta:'GOL · FLAMENGO · BRA', ovr:82, status:'VERIFICADO', cat:'verified', base:3301, bars:[{k:'REFLEXO',v:87},{k:'MÃOS',v:84},{k:'JOGO PÉS',v:70}] },
+    { id:'yuri', slot:'rev-t-6', name:'Yuri Nakamura', meta:'VOL · PALMEIRAS · BRA', ovr:80, status:'SCOUT', cat:'scout', base:2210, bars:[{k:'DESARME',v:83},{k:'PASSE',v:80},{k:'FÔLEGO',v:85}] },
+  ];
+
+  _res = [
+    { n:'RE · 01', title:'Revelar', desc:'Novos talentos ganham perfil, atributos e um palco antes de todo mundo.' },
+    { n:'RE · 02', title:'Referenciar', desc:'Scouts e torcida referenciam quem merece atenção. A voz do futebol vira dado.' },
+    { n:'RE · 03', title:'Reconhecer', desc:'As lendas seguem vivas no museu. Passado e futuro no mesmo campo.' },
+    { n:'RE · 04', title:'Resenha', desc:'Rankings, campeões e histórias contadas por quem respira futebol.' },
+    { n:'RE · 05', title:'Responsável', desc:'Apoiar é acreditar, não apostar. Comunidade, respeito e jogo limpo.' },
+  ];
+
+  _legends = [
+    { slot:'rev-l-1', name:'Pelé', era:'O REI · 1956–1977', honor:'TRI MUNDIAL · 1958 · 1962 · 1970', ovr:99 },
+    { slot:'rev-l-2', name:'Garrincha', era:'A ALEGRIA · 1953–1972', honor:'BI MUNDIAL · DRIBLE ETERNO', ovr:97 },
+    { slot:'rev-l-3', name:'Sócrates', era:'O DOUTOR · 1974–1989', honor:'DEMOCRACIA CORINTIANA · GÊNIO', ovr:95 },
+  ];
+
+  _resenha = [
+    { icon:'#1', tag:'RANKING · SUB-20', title:'Os 10 nomes que vão explodir no returno' },
+    { icon:'⚑', tag:'CAMPEÕES · COPA REVELA', title:'Meninos do Nordeste levam o inédito' },
+    { icon:'★', tag:'RESENHA · OPINIÃO', title:'Por que apoiar cedo muda tudo pra base' },
+    { icon:'▲', tag:'EM ASCENSÃO', title:'A goleira que zerou o gráfico de apoio' },
+  ];
+
+  componentDidMount(){
+    setTimeout(()=>this.setState({ mounted:true }), 140);
+    this._ramp('heroSup', 5610, 1400);
+    this._ramp('totalRev', 12480, 1700);
+  }
+  componentWillUnmount(){ clearTimeout(this._t); }
+
+  _ramp(key, target, dur){
+    const start = performance.now();
+    const step = (t)=>{ const p = Math.min(1,(t-start)/dur); const e = 1-Math.pow(1-p,3);
+      this.setState({ [key]: Math.round(target*e) }); if(p<1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+  _fmt(n){ return (n||0).toLocaleString('pt-BR'); }
+
+  apoiar(p){
+    this.setState(s => {
+      if (s.done[p.id]) return null;
+      return { done:{...s.done,[p.id]:true}, sup:{...s.sup,[p.id]:(s.sup[p.id]||0)+1}, toast:p.name };
+    });
+    clearTimeout(this._t); this._t = setTimeout(()=>this.setState({ toast:null }), 2200);
+  }
+
+  _badge(cat){
+    if (cat==='verified') return { bg:'#22C55E', fg:'#052e12' };
+    if (cat==='scout') return { bg:'#F59E0B', fg:'#3a2400' };
+    return { bg:'#FDE100', fg:'#0D0D0D' };
+  }
+
+  renderVals(){
+    const { mounted, hovered, sup, done, heroSup, totalRev, toast } = this.state;
+
+    const talents = this._talents.map(p => {
+      const b = this._badge(p.cat);
+      const supported = !!done[p.id];
+      const total = p.base + (sup[p.id]||0);
+      const show = hovered===p.id;
+      return {
+        ...p, badgeBg:b.bg, badgeFg:b.fg,
+        count:this._fmt(total),
+        onEnter:()=>this.setState({ hovered:p.id }),
+        onLeave:()=>this.setState({ hovered:null }),
+        onApoiar:()=>this.apoiar(p),
+        apoiarLabel: supported ? '✓ APOIANDO' : 'APOIAR',
+        apoiarBg: supported ? 'rgba(34,197,94,.14)' : '#FDE100',
+        apoiarFg: supported ? '#22C55E' : '#0D0D0D',
+        apoiarBd: supported ? 'rgba(34,197,94,.5)' : '#FDE100',
+        overlayStyle: show ? 'opacity:1;transform:translateY(0);pointer-events:auto' : 'opacity:0;transform:translateY(14px);pointer-events:none',
+        bars: p.bars.map(x => ({ ...x, w: (mounted && show) ? x.v : 0 })),
+      };
+    });
+
+    const ranked = [...this._talents]
+      .map(p => ({ p, total: p.base + (sup[p.id]||0) }))
+      .sort((a,b)=> b.total - a.total)
+      .slice(0,5);
+    const trends = ['↑ EM ALTA','↑ +12','→ ESTÁVEL','↑ +4','↓ -2'];
+    const rankColors = ['#FDE100','#EDEBE4','#F59E0B','rgba(237,235,228,.6)','rgba(237,235,228,.6)'];
+    const ranking = ranked.map((r,i)=>({
+      rank: i+1, name:r.p.name, meta:r.p.meta+' · OVR '+r.p.ovr,
+      count:this._fmt(r.total), trend:trends[i]||'',
+      trendColor: (trends[i]||'').startsWith('↓') ? '#EF4444' : '#22C55E',
+      rankColor: rankColors[i]||'rgba(237,235,228,.6)',
+      rowBg: i===0 ? 'rgba(253,225,0,.06)' : 'transparent',
+    }));
+
+    return {
+      talents, ranking,
+      res: this._res, legends: this._legends, resenha: this._resenha,
+      heroSupFmt: this._fmt(heroSup), totalRevFmt: this._fmt(totalRev),
+      toast,
+    };
+  }
+}
+</script>
+</body>
+</html>
