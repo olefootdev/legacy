@@ -3036,6 +3036,26 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (next === state.players) return state;
       return { ...state, players: next };
     }
+    case 'EVOLVE_SPECIALIST_BY_LANCE': {
+      const bumps = action.bumps ?? [];
+      if (bumps.length === 0) return state;
+      const clamp = (n: number) => Math.max(1, Math.min(99, Math.round(n)));
+      let changed = false;
+      const players = { ...state.players };
+      for (const b of bumps) {
+        const p = players[b.playerId];
+        if (!p) continue; // jogador não está no plantel local — ignora
+        const attrs = { ...p.attrs };
+        // +1 no especialista por gol daquele lance. Evolui QUEM FAZ: o zagueiro
+        // que cabeceia sobe cabeceio, o batedor sobe bola parada, o cobrador pênalti.
+        if (b.header) attrs.cabeceio = clamp(attrs.cabeceio + b.header);
+        if (b.freeKick) attrs.bolaParada = clamp(attrs.bolaParada + b.freeKick);
+        if (b.penalty) attrs.penalti = clamp(attrs.penalti + b.penalty);
+        players[b.playerId] = { ...p, attrs };
+        changed = true;
+      }
+      return changed ? { ...state, players } : state;
+    }
     case 'SET_AUTO_RENEW_CONTRACT': {
       const pl = state.players[action.playerId];
       if (!pl) return state;

@@ -934,6 +934,16 @@ export type GameAction =
       type: 'APPLY_CONTRACT_DECREMENT_FOR_PLAYED';
       playerIds: string[];
     }
+  | {
+      /**
+       * Evolução POR LANCE ("evolui fazendo"): cada gol de cabeça / falta / pênalti
+       * do jogador REAL na Liga Global sobe o especialista correspondente
+       * (cabeceio / bolaParada / penalti). Disparado por useGlobalConsequencesSync,
+       * uma vez por rodada finalizada (dedupe via lastProcessedGlobalRound).
+       */
+      type: 'EVOLVE_SPECIALIST_BY_LANCE';
+      bumps: Array<{ playerId: string; header?: number; freeKick?: number; penalty?: number }>;
+    }
   | { type: 'SET_AUTO_RENEW_CONTRACT'; playerId: string; enabled: boolean }
   | { type: 'CLAIM_SEASON_CHAMPION_PRIZE'; ole: number; exp: number; division: number }
   | { type: 'CLAIM_KO_PRIZE'; exp: number; stage: string }

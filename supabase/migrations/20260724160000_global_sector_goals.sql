@@ -51,6 +51,13 @@ create table if not exists public.global_fixture_goals (
 create index if not exists global_fixture_goals_leaderboard_idx
   on public.global_fixture_goals (season, player_id);
 
+-- Detalhe por TIPO DE LANCE — alimenta a evolução "evolui fazendo" (cabeça sobe
+-- cabeceio, falta sobe bola parada, pênalti sobe pênalti). `add if not exists`
+-- pra esta migration ser re-aplicável sem erro.
+alter table public.global_fixture_goals add column if not exists goals_header     int not null default 0;
+alter table public.global_fixture_goals add column if not exists goals_free_kick  int not null default 0;
+alter table public.global_fixture_goals add column if not exists goals_penalty    int not null default 0;
+
 -- Só o Edge Function (service role) escreve; a leitura pública é pelo RPC. RLS
 -- ligada e SEM policy = anon/authenticated não leem a tabela crua.
 alter table public.global_fixture_goals enable row level security;
@@ -111,3 +118,36 @@ grant execute on function public.revela_top_scorers(int, text) to anon, authenti
 comment on function public.revela_top_scorers(int, text) is
   'Artilharia REAL somando gol ao vivo (player_match_goals) + gol de Liga Global '
   '(global_fixture_goals) por jogador. Sem PII (só nome de jogador, já público).';
+
+-- ── 5. Evolução por lance: gols por tipo dos MEUS jogadores numa partida ─────
+-- O cliente chama isto ao processar uma rodada finalizada e sobe o especialista
+-- de quem marcou de cabeça/falta/pênalti. SECURITY DEFINER, mas devolve SÓ os
+-- jogadores do PRÓPRIO clube (filtro por club_id do auth.uid()) — nada de elenco
+-- alheio. Nenhuma coluna de PII sai.
+create or replace function public.my_fixture_lance_goals(p_fixture_id text)
+returns jsonb
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'playerId', g.player_id,
+    'header',   g.goals_header,
+    'freeKick', g.goals_free_kick,
+    'penalty',  g.goals_penalty
+  )), '[]'::jsonb)
+  from public.global_fixture_goals g
+  where g.fixture_id = p_fixture_id
+    and (g.goals_header > 0 or g.goals_free_kick > 0 or g.goals_penalty > 0)
+    and g.player_id in (
+      select p.id from public.players p
+      where p.club_id = (select club_id from public.profiles where id = auth.uid())
+    );
+$$;
+
+grant execute on function public.my_fixture_lance_goals(text) to authenticated;
+
+comment on function public.my_fixture_lance_goals(text) is
+  'Gols por tipo de lance dos jogadores do PRÓPRIO clube numa partida da Liga '
+  'Global. Alimenta a evolução dos especialistas ("evolui fazendo").';

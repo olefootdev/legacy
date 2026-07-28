@@ -1781,16 +1781,24 @@ Deno.serve(async (req: Request) => {
       if (!sc.playerId) continue;
       const teamId = sc.side === 'home' ? fx.home_team_id : fx.away_team_id;
       const key = `${fx.id}|${sc.playerId}`;
+      // Coluna do lance → alimenta a evolução "evolui fazendo" no cliente.
+      const lanceCol = sc.type === 'header' ? 'goals_header'
+        : sc.type === 'free_kick' ? 'goals_free_kick'
+        : sc.type === 'penalty' ? 'goals_penalty' : null;
       const existing = fixtureGoalRows.get(key);
       if (existing) {
         existing.goals = (existing.goals as number) + 1;
+        if (lanceCol) existing[lanceCol] = ((existing[lanceCol] as number) ?? 0) + 1;
       } else {
         const tr = teamById.get(teamId);
-        fixtureGoalRows.set(key, {
+        const row: Record<string, unknown> = {
           fixture_id: fx.id, player_id: sc.playerId, season: 'current',
           team_id: teamId, club_name: tr?.club_name ?? null,
           name: sc.name, pos: sc.pos, goals: 1, assists: 0,
-        });
+          goals_header: 0, goals_free_kick: 0, goals_penalty: 0,
+        };
+        if (lanceCol) row[lanceCol] = 1;
+        fixtureGoalRows.set(key, row);
       }
     }
     fixturesUpdated.push({ ...fx, score_home: sim.score_home, score_away: sim.score_away, status: 'finished', kickoff_ms: now, finished_at_ms: now + SIM_DURATION_MS, wo_home: false, wo_away: false });

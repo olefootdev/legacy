@@ -280,6 +280,12 @@ export function useGlobalConsequencesSync() {
       players as Record<string, PlayerEntity>, playerHealth,
       { opponentName: opponentTeam?.clubName, rivalryCount },
     );
+
+    // Evolução POR LANCE: sobe o especialista de quem marcou de cabeça/falta/
+    // pênalti nesta partida da Liga Global. Fire-and-forget; se o RPC não existe
+    // (migration não aplicada), erra em silêncio. Idempotente pela guarda de
+    // rodada acima (roda uma vez por rodada).
+    void applyLanceEvolution(myFixture.id);
   }, [globalLeagueMVP, club, managerProfile, lineup, players, playerHealth, lastProcessedRound]);
 }
 
@@ -537,6 +543,20 @@ function generateInboxNotifications(
   if (inboxItems.length > 0) {
     dispatchGame({ type: 'PUSH_INBOX_ITEMS', items: inboxItems });
   }
+}
+
+/**
+ * Puxa os gols POR LANCE dos MEUS jogadores nesta partida da Liga Global e
+ * dispara a evolução dos especialistas. O RPC `my_fixture_lance_goals` só devolve
+ * os jogadores do próprio clube (SECURITY DEFINER filtra por club_id).
+ */
+async function applyLanceEvolution(fixtureId: string) {
+  const sb = getSupabase();
+  if (!sb) return;
+  const { data, error } = await sb.rpc('my_fixture_lance_goals', { p_fixture_id: fixtureId });
+  if (error || !Array.isArray(data) || data.length === 0) return;
+  const bumps = data as Array<{ playerId: string; header?: number; freeKick?: number; penalty?: number }>;
+  dispatchGame({ type: 'EVOLVE_SPECIALIST_BY_LANCE', bumps });
 }
 
 /**
