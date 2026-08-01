@@ -24,6 +24,7 @@ import {
 import { Home } from './pages/Home';
 import { LegendPage } from './pages/LegendPage';
 import { OnboardingPage } from './pages/OnboardingPage';
+import { ShortLink } from './pages/ShortLink';
 import { TalentPage } from './pages/TalentPage';
 import { Footer, Nav } from './sections/Top';
 
@@ -68,6 +69,10 @@ export default function App() {
             funcionando se apontarem pra este domínio. A estrutura de divulgação
             do playervip fica de pé; só a casca mudou. */}
         <Route path="/playervip/:slug" element={<LegendPage onNote={push} />} />
+        {/* O link CURTO do jogador: revela.olefoot.com/<handle>. Menos específico
+            que as rotas acima (/comecar, /t/... vencem), mais que o catch-all.
+            Resolve o @ → perfil + indicação, ou trata como código de indicação. */}
+        <Route path="/:short" element={<ShortLink />} />
         <Route path="*" element={<Home session={session} requireAuth={requireAuth} onNote={push} />} />
       </Routes>
 

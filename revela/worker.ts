@@ -64,44 +64,70 @@ async function metaParaRota(url: URL, env: Env): Promise<Meta | null> {
   const partes = url.pathname.split('/').filter(Boolean);
 
   if (partes.length === 2 && partes[0] === 't') {
-    const t = await rpc<TalentRow>(env, 'revela_get_talent', { p_slug: partes[1] });
-    if (!t) return { ...FALLBACK, url: `${base}/t/${partes[1]}` };
-
-    const onde = [t.club, t.uf].filter(Boolean).join(' · ');
-    const apoios =
-      t.supporters > 0
-        ? ` ${t.supporters} ${t.supporters === 1 ? 'pessoa acredita' : 'pessoas acreditam'} nele.`
-        : ' Seja o primeiro a acreditar.';
-
-    return {
-      // O título é o que aparece em negrito no preview. Nome + posição + nota
-      // responde "quem é esse?" sem a pessoa abrir o link.
-      title: `${t.name} · ${t.pos}${t.overall != null ? ` · ${t.overall} OVR` : ''} | ${SITE}`,
-      description: `${onde ? `${onde}.` : ''}${apoios}`.trim(),
-      image: paraCompartilhar(t.portrait),
-      url: `${base}/t/${t.slug}`,
-    };
+    return metaDeTalento(env, base, partes[1]);
   }
 
   if (partes.length === 2 && (partes[0] === 'lenda' || partes[0] === 'playervip')) {
-    const lendas = (await rpc<LegendRow[]>(env, 'revela_list_legends', { p_limit: 60 })) ?? [];
-    const doAtleta = lendas.filter((l) => slugDoAtleta(l) === partes[1].toLowerCase());
-    if (doAtleta.length === 0) return { ...FALLBACK, url: `${base}/lenda/${partes[1]}` };
+    return metaDeLenda(env, base, partes[1]);
+  }
 
-    const melhor = doAtleta.sort((a, b) => (b.overall ?? 0) - (a.overall ?? 0))[0];
-    const nome = nomeDoAtleta(melhor.name);
-    const fases = doAtleta.length > 1 ? ` ${doAtleta.length} fases da carreira, ${doAtleta.length} cartas.` : '';
+  // Link CURTO: revela.olefoot.com/<handle-ou-código>. É o que o crawler pede
+  // quando o jogador posta o link dele — sem isto, o preview seria o da home.
+  if (partes.length === 1) {
+    const seg = partes[0];
+    // Código de indicação cru (MAIÚSCULO 6-8) redireciona pra home no cliente,
+    // então o preview é o da home.
+    if (/^[A-Z0-9]{6,8}$/.test(seg)) return { ...FALLBACK, url: `${base}/${seg}` };
 
-    return {
-      title: `${nome} · Lenda Olefoot${melhor.overall != null ? ` · ${melhor.overall} OVR` : ''} | ${SITE}`,
-      description: `${melhor.tagline ?? melhor.title ?? ''}${fases}`.trim() || FALLBACK.description,
-      image: paraCompartilhar(melhor.portrait),
-      url: `${base}/lenda/${partes[1]}`,
-    };
+    const r = await rpc<{ found: boolean; kind?: string; slug?: string }>(
+      env,
+      'revela_resolve_handle',
+      { p_handle: seg },
+    );
+    if (r?.found && r.kind === 'talent' && r.slug) return metaDeTalento(env, base, r.slug);
+    if (r?.found && r.kind === 'legend' && r.slug) return metaDeLenda(env, base, r.slug);
+    return { ...FALLBACK, url: `${base}/${seg}` };
   }
 
   // Home e resto: tags padrão, mas com canônica da rota.
   return { ...FALLBACK, url: `${base}${url.pathname}` };
+}
+
+async function metaDeTalento(env: Env, base: string, slug: string): Promise<Meta> {
+  const t = await rpc<TalentRow>(env, 'revela_get_talent', { p_slug: slug });
+  if (!t) return { ...FALLBACK, url: `${base}/t/${slug}` };
+
+  const onde = [t.club, t.uf].filter(Boolean).join(' · ');
+  const apoios =
+    t.supporters > 0
+      ? ` ${t.supporters} ${t.supporters === 1 ? 'pessoa acredita' : 'pessoas acreditam'} nele.`
+      : ' Seja o primeiro a acreditar.';
+
+  return {
+    // Nome + posição + nota responde "quem é esse?" sem a pessoa abrir o link.
+    // Canônica em /t/<slug> mesmo vindo do link curto — evita conteúdo duplicado.
+    title: `${t.name} · ${t.pos}${t.overall != null ? ` · ${t.overall} OVR` : ''} | ${SITE}`,
+    description: `${onde ? `${onde}.` : ''}${apoios}`.trim(),
+    image: paraCompartilhar(t.portrait),
+    url: `${base}/t/${t.slug}`,
+  };
+}
+
+async function metaDeLenda(env: Env, base: string, slug: string): Promise<Meta> {
+  const lendas = (await rpc<LegendRow[]>(env, 'revela_list_legends', { p_limit: 60 })) ?? [];
+  const doAtleta = lendas.filter((l) => slugDoAtleta(l) === slug.toLowerCase());
+  if (doAtleta.length === 0) return { ...FALLBACK, url: `${base}/lenda/${slug}` };
+
+  const melhor = doAtleta.sort((a, b) => (b.overall ?? 0) - (a.overall ?? 0))[0];
+  const nome = nomeDoAtleta(melhor.name);
+  const fases = doAtleta.length > 1 ? ` ${doAtleta.length} fases da carreira, ${doAtleta.length} cartas.` : '';
+
+  return {
+    title: `${nome} · Lenda Olefoot${melhor.overall != null ? ` · ${melhor.overall} OVR` : ''} | ${SITE}`,
+    description: `${melhor.tagline ?? melhor.title ?? ''}${fases}`.trim() || FALLBACK.description,
+    image: paraCompartilhar(melhor.portrait),
+    url: `${base}/lenda/${slug}`,
+  };
 }
 
 /* ══ Supabase ══════════════════════════════════════════════════════════════ */

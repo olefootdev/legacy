@@ -18,12 +18,12 @@
     // ⚠️ SEM ISTO O WORKER NÃO RODA NA HOME.
     // Por padrão, quando existe um arquivo pro caminho pedido, o Cloudflare o
     // serve direto e nem invoca o Worker. Como `/` casa com o index.html, a home
-    // saía sem as tags injetadas — enquanto /t/<slug>, que não casa com arquivo
-    // nenhum, funcionava. Levava a um bug bem chato de enxergar: "funciona no
-    // perfil, não funciona na home".
-    // A lista é restrita de propósito: só as rotas que precisam de meta tag.
-    // `true` faria cada imagem e cada .js passarem pelo Worker à toa.
-    "run_worker_first": ["/", "/t/*", "/lenda/*", "/playervip/*"]
+    // saía sem as tags injetadas.
+    // Agora roda em `/*` por causa do LINK CURTO revela.olefoot.com/<handle>: o
+    // crawler pede o handle solto, e sem o Worker o preview seria o da home. O
+    // Worker devolve asset não-HTML intocado (guard de content-type em worker.ts),
+    // então o custo é um hop a mais por request — o preço do link curto com preview.
+    "run_worker_first": ["/*"]
   },
   "vars": {
     // Preenchidos no deploy a partir do .env da raiz (ver npm run deploy:revela).

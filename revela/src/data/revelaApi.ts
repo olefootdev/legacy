@@ -32,6 +32,20 @@ export async function fetchTalent(slug: string): Promise<Talent | null> {
   return rpc<Talent>('revela_get_talent', { p_slug: slug });
 }
 
+/** Resolução do link curto revela.olefoot.com/<handle>. */
+export interface ResolvedHandle {
+  found: boolean;
+  kind?: 'talent' | 'legend';
+  slug?: string;
+  /** Código de indicação do dono (pra creditar a rede). Null se ele ainda não é manager. */
+  refCode?: string | null;
+}
+
+export async function resolveHandle(handle: string): Promise<ResolvedHandle> {
+  const res = await rpc<ResolvedHandle>('revela_resolve_handle', { p_handle: handle });
+  return res ?? { found: false };
+}
+
 /** Um talento no ranking "Em Alta da Semana" (crescimento nos últimos 7 dias). */
 export interface RisingTalent {
   id: string;
