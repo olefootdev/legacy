@@ -32,6 +32,31 @@ export async function fetchTalent(slug: string): Promise<Talent | null> {
   return rpc<Talent>('revela_get_talent', { p_slug: slug });
 }
 
+/** Um talento no ranking "Em Alta da Semana" (crescimento nos últimos 7 dias). */
+export interface RisingTalent {
+  id: string;
+  slug: string;
+  name: string;
+  pos: string;
+  club: string | null;
+  uf: string | null;
+  portrait: string | null;
+  overall: number | null;
+  carded: boolean;
+  supporters: number;
+  weeklyGain: number;
+}
+
+/**
+ * "Em Alta da Semana" — ranking JUSTO por quem mais cresceu (não por total), pra
+ * o novato poder liderar. Vazio quando ninguém ganhou apoiador na semana — a
+ * seção some sozinha (nunca finge movimento).
+ */
+export async function fetchWeeklyRising(limit = 8): Promise<RisingTalent[]> {
+  const rows = await rpc<RisingTalent[]>('revela_weekly_rising', { p_limit: limit });
+  return rows ?? [];
+}
+
 export async function fetchLegends(limit = 12): Promise<Legend[]> {
   const rows = await rpc<Legend[]>('revela_list_legends', { p_limit: limit });
   return rows ?? [];

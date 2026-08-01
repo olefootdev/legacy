@@ -19,6 +19,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ATTR_LABEL, AttrBar, Eyebrow, Portrait, ptBr } from '../components/primitives';
 import { fetchMySupports, fetchTalent, supportTalent } from '../data/revelaApi';
 import { GAME_URL, signupUrl } from '../data/session';
+import { computeSelos, selosUnlocked } from '../data/selos';
 import type { Talent } from '../data/types';
 
 /** Onde o atleta está nos 7 passos do "Como Funciona". */
@@ -344,6 +345,9 @@ export function TalentPage({
                 ))}
               </div>
             </div>
+
+            {/* Selos de Craque — conquistas colecionáveis derivadas do estado. */}
+            <SelosBlock talent={talent} />
           </div>
         </div>
       </section>
@@ -378,4 +382,44 @@ export function TalentPage({
 
 function primeiroNome(nome: string): string {
   return nome.trim().split(/\s+/)[0] ?? nome;
+}
+
+/**
+ * SELOS DE CRAQUE — as conquistas do talento. Desbloqueado brilha (prova social
+ * pra quem visita); bloqueado fica fosco com a meta ("faltam X apoiadores"), o
+ * que puxa o talento a completar a estante.
+ */
+function SelosBlock({ talent }: { talent: Talent }) {
+  const selos = computeSelos(talent);
+  const feitos = selosUnlocked(selos);
+  return (
+    <div className="mt-10">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="rev-label text-[10px]" style={{ color: 'rgba(237,235,228,.5)' }}>
+          Selos de craque
+        </span>
+        <span className="rev-label text-[10px]" style={{ color: 'var(--color-rev-yellow)' }}>
+          {feitos} de {selos.length}
+        </span>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {selos.map((s) => (
+          <span
+            key={s.id}
+            title={s.unlocked ? s.label : s.hint}
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold"
+            style={
+              s.unlocked
+                ? { background: 'rgba(253,225,0,.12)', color: 'var(--color-rev-yellow)', border: '1px solid rgba(253,225,0,.45)' }
+                : { background: 'transparent', color: 'rgba(237,235,228,.32)', border: '1px solid rgba(237,235,228,.14)' }
+            }
+          >
+            <span style={{ filter: s.unlocked ? 'none' : 'grayscale(1) opacity(.5)' }}>{s.icon}</span>
+            {s.label}
+            {!s.unlocked && <span aria-hidden style={{ opacity: 0.6 }}>🔒</span>}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
 }

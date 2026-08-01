@@ -20,6 +20,7 @@ import {
   ptBr,
 } from '../components/primitives';
 import type { CardStatus, Talent } from '../data/types';
+import type { RisingTalent } from '../data/revelaApi';
 
 /** Status derivado do estado real do talento — nada é decorativo. */
 function statusOf(t: Talent, rankBySupporters: number): CardStatus {
@@ -436,3 +437,81 @@ function EmptyInvite({
 }
 
 export { EmptyInvite };
+
+/* ══ 4. Em Alta da Semana ═══════════════════════════════════════════════════
+ *
+ * Ranking JUSTO: por crescimento nos últimos 7 dias, não por total. Some sozinho
+ * quando ninguém cresceu na semana — nunca finge movimento. O prêmio da mecânica
+ * é este palco: aparecer aqui É a recompensa.
+ */
+export function EmAlta({ rising }: { rising: RisingTalent[] }) {
+  if (rising.length === 0) return null;
+  return (
+    <section className="rev-section" style={{ background: 'var(--color-rev-black)' }}>
+      <div className="rev-container">
+        <Eyebrow>Em alta essa semana</Eyebrow>
+        <h2
+          className="rev-display mt-4 max-w-[18ch]"
+          style={{ fontSize: 'clamp(30px,5.2vw,64px)', color: 'var(--color-rev-bone)' }}
+        >
+          Quem mais cresceu nos últimos 7 dias.
+        </h2>
+        <p className="mt-4 max-w-[48ch] text-[15px]" style={{ color: 'rgba(237,235,228,.6)' }}>
+          Não é quem tem mais torcida — é quem mais correu atrás dela essa semana. Zera toda
+          segunda: o novato pode liderar.
+        </p>
+
+        <div
+          className="rev-rail-scroll mt-8"
+          style={rising.length < 3 ? { justifyContent: 'center', overflowX: 'visible', flexWrap: 'wrap' } : undefined}
+        >
+          {rising.map((t, i) => (
+            <RisingCard key={t.id} t={t} rank={i + 1} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RisingCard({ t, rank }: { t: RisingTalent; rank: number }) {
+  return (
+    <article className="rev-poster relative" style={{ width: 'clamp(196px,20vw,236px)' }}>
+      <Link to={`/t/${t.slug}`} className="rev-focus relative block" data-on="dark">
+        <Portrait src={t.portrait} alt={t.name} ratio="3 / 4" width={260} />
+
+        <div className="absolute left-2.5 top-2.5">
+          <OvrBadge value={t.overall} />
+        </div>
+        {/* Posição no ranking da semana. */}
+        <div
+          className="absolute right-2.5 top-2.5 grid place-items-center rev-editorial"
+          style={{
+            minWidth: 30, height: 30, padding: '0 8px', borderRadius: 8,
+            background: rank === 1 ? 'var(--color-rev-yellow)' : 'rgba(13,13,13,.72)',
+            color: rank === 1 ? '#0D0D0D' : 'var(--color-rev-bone)',
+            border: rank === 1 ? 'none' : '1px solid rgba(237,235,228,.25)',
+            fontSize: 15,
+          }}
+        >
+          #{rank}
+        </div>
+
+        <div
+          className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-3"
+          style={{ background: 'linear-gradient(to top, rgba(13,13,13,.97) 40%, transparent)' }}
+        >
+          <p className="rev-editorial text-[18px]" style={{ color: 'var(--color-rev-bone)' }}>
+            {t.name}
+          </p>
+          <span
+            className="inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
+            style={{ background: 'rgba(34,197,94,.16)', color: '#4ade80', border: '1px solid rgba(34,197,94,.35)' }}
+          >
+            ↑ +{t.weeklyGain} {t.weeklyGain === 1 ? 'apoiador' : 'apoiadores'} essa semana
+          </span>
+        </div>
+      </Link>
+    </article>
+  );
+}

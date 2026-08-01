@@ -16,12 +16,14 @@ import {
   fetchMySupports,
   fetchTalents,
   fetchTopClubs,
+  fetchWeeklyRising,
   supportTalent,
+  type RisingTalent,
 } from '../data/revelaApi';
 import { byAthlete, isLegend, type AthleteLegend } from '../data/legends';
 import type { ClubRank, DivisionCount, Talent } from '../data/types';
 import { GameCta, Hero, Marquee } from '../sections/Top';
-import { Discovery, RevealWall, Torcida } from '../sections/Talents';
+import { Discovery, EmAlta, RevealWall, Torcida } from '../sections/Talents';
 import { ComoFunciona } from '../sections/Journey';
 import { Legends, Resenha } from '../sections/Legends';
 import { Divisoes, TopClubs } from '../sections/League';
@@ -41,6 +43,7 @@ export function Home({
   const [legends, setLegends] = useState<AthleteLegend[]>([]);
   const [clubs, setClubs] = useState<ClubRank[]>([]);
   const [divisions, setDivisions] = useState<DivisionCount[]>([]);
+  const [rising, setRising] = useState<RisingTalent[]>([]);
   const [supported, setSupported] = useState<Set<string>>(new Set());
 
   /* ── Carga inicial ─────────────────────────────────────────────────────── */
@@ -50,14 +53,19 @@ export function Home({
     // Pede o catálogo INTEIRO de lendas (60), não 12: o agrupamento por atleta
     // acontece depois, e cortar antes esconderia gente. Hoje são 25 cartas de
     // 11 atletas — pedindo 12 cartas, quatro atletas nunca apareceriam.
-    void Promise.all([fetchTalents(40), fetchLegends(60), fetchTopClubs(10), fetchDivisions()]).then(
-      ([t, l, c, d]) => {
-        setTalents(t);
-        setLegends(byAthlete(l.filter(isLegend)));
-        setClubs(c);
-        setDivisions(d);
-      },
-    );
+    void Promise.all([
+      fetchTalents(40),
+      fetchLegends(60),
+      fetchTopClubs(10),
+      fetchDivisions(),
+      fetchWeeklyRising(8),
+    ]).then(([t, l, c, d, r]) => {
+      setTalents(t);
+      setLegends(byAthlete(l.filter(isLegend)));
+      setClubs(c);
+      setDivisions(d);
+      setRising(r);
+    });
   }, []);
 
   /* ── Apoios da conta ───────────────────────────────────────────────────── */
@@ -135,6 +143,7 @@ export function Home({
         <Marquee />
 
         <Discovery talents={discovery} supported={supported} onSupport={handleSupport} />
+        <EmAlta rising={rising} />
         <Torcida talents={talents} />
         <ComoFunciona />
         <RevealWall talents={talents} />
