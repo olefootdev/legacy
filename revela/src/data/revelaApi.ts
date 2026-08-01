@@ -165,6 +165,8 @@ export interface SubmitTalentInput {
   pos: string;
   /** Obrigatório: sem conta, o WhatsApp é a identidade do cadastro. */
   contactPhone: string;
+  /** @username OBRIGATÓRIO — vira revela.olefoot.com/<handle> (perfil + indicação). */
+  handle: string;
   nickname?: string;
   category?: string;
   strongFoot?: string;
@@ -193,9 +195,23 @@ export type SubmitFailure =
   | 'invalid_name'
   | 'invalid_pos'
   | 'invalid_phone'
+  | 'handle_invalid'
+  | 'handle_taken'
   | 'guardian_required'
   | 'already_submitted'
   | 'offline';
+
+/** Disponibilidade do @username (confirmação em tempo real no cadastro). */
+export type HandleStatus = 'ok' | 'invalid' | 'reserved' | 'taken' | 'offline';
+
+export async function checkHandle(handle: string): Promise<HandleStatus> {
+  const res = await rpc<{ ok: boolean; reason?: string }>('revela_check_handle', {
+    p_handle: handle,
+  });
+  if (!res) return 'offline';
+  if (res.ok) return 'ok';
+  return (res.reason as HandleStatus) ?? 'invalid';
+}
 
 /** Mesma razão do SupportResult acima: uma forma só, sem união discriminada. */
 export interface SubmitResult {
@@ -209,6 +225,8 @@ const SUBMIT_FAILURES: readonly SubmitFailure[] = [
   'invalid_name',
   'invalid_pos',
   'invalid_phone',
+  'handle_invalid',
+  'handle_taken',
   'guardian_required',
   'already_submitted',
   'offline',
@@ -232,6 +250,7 @@ export async function submitTalent(input: SubmitTalentInput): Promise<SubmitResu
       p_name: input.name,
       p_pos: input.pos,
       p_contact_phone: input.contactPhone,
+      p_handle: input.handle,
       p_nickname: input.nickname ?? null,
       p_category: input.category ?? null,
       p_strong_foot: input.strongFoot ?? null,

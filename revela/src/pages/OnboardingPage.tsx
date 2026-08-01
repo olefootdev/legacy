@@ -16,12 +16,12 @@
  * checagem — tela pode ser contornada, e aqui o assunto é proteção de menor
  * (LGPD art. 14).
  */
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '../components/primitives';
 import { Field } from '../components/AuthSheet';
 import { CATEGORIAS, PES, SETORES, SITUACOES } from '../data/posicoes';
-import { submitTalent, type SubmitFailure } from '../data/revelaApi';
+import { checkHandle, submitTalent, type HandleStatus, type SubmitFailure } from '../data/revelaApi';
 import {
   readReferral,
   savePendingTalent,
@@ -46,13 +46,21 @@ const FALHA: Record<SubmitFailure, string> = {
   invalid_name: 'Escreve teu nome completo.',
   invalid_pos: 'Escolhe a posição em que você joga.',
   invalid_phone: 'Confere o WhatsApp — precisa do DDD.',
+  handle_invalid: 'Escolhe um nome de usuário válido (3–20, letras, números e _).',
+  handle_taken: 'Esse nome de usuário já foi pego. Escolhe outro.',
   guardian_required: 'Menor de 18 precisa do nome e do telefone do responsável.',
   already_submitted: 'Já existe um cadastro com esse WhatsApp.',
   offline: 'Não deu pra enviar agora. Tenta de novo em instantes.',
 };
 
+/** Normaliza o @ enquanto o jogador digita: minúsculo, só a-z 0-9 _, até 20. */
+export function normalizeHandle(raw: string): string {
+  return raw.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20);
+}
+
 interface Ficha {
   apelido: string;
+  handle: string;
   nome: string;
   categoria: string;
   pos: string;
@@ -75,7 +83,7 @@ interface Ficha {
 }
 
 const VAZIA: Ficha = {
-  apelido: '', nome: '', categoria: '', pos: '', pe: '', ano: '', altura: '',
+  apelido: '', handle: '', nome: '', categoria: '', pos: '', pe: '', ano: '', altura: '',
   respNome: '', respTel: '', situacao: '', temAgente: '', agente: '',
   clube: '', cidade: '', uf: '', sonho: '', video: '', instagram: '', tiktok: '',
   telefone: '',
@@ -95,8 +103,29 @@ export function OnboardingPage({
   // Init preguiçoso do cadastro pendente: um refresh na tela de sucesso (ou o
   // fluxo de confirmar e-mail) volta direto pro claim em vez de perder o id.
   const [enviado, setEnviado] = useState<PendingTalent | null>(() => readPendingTalent());
+  // Disponibilidade do @username, confirmada em tempo real (debounced).
+  const [handleStatus, setHandleStatus] = useState<HandleStatus | 'checking' | 'empty'>('empty');
 
   const set = (k: keyof Ficha) => (v: string) => setF((p) => ({ ...p, [k]: v }));
+
+  // Confirma o @ enquanto digita: cedo o "muito curto", depois checa unicidade
+  // no servidor. `cancelled` descarta resposta velha se o handle mudou no meio.
+  useEffect(() => {
+    const h = f.handle;
+    if (h.length === 0) return setHandleStatus('empty');
+    if (h.length < 3) return setHandleStatus('invalid');
+    setHandleStatus('checking');
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void checkHandle(h).then((s) => {
+        if (!cancelled) setHandleStatus(s);
+      });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [f.handle]);
 
   const idade = f.ano.length === 4 ? new Date().getFullYear() - Number(f.ano) : null;
   // Menor = QUALQUER idade < 18 (igual ao servidor, que exige responsável pra
@@ -111,6 +140,8 @@ export function OnboardingPage({
   const podeAvancar = useMemo(() => {
     if (tela === 0) {
       if (f.nome.trim().length < 3 || f.pos === '') return false;
+      // @username OBRIGATÓRIO e confirmado disponível pra passar daqui.
+      if (handleStatus !== 'ok') return false;
       if (anoInvalido) return false;
       // Sem responsável, menor de idade não passa daqui.
       if (menorDeIdade && (f.respNome.trim().length < 3 || respTelDigitos.length < 10)) return false;
@@ -121,7 +152,7 @@ export function OnboardingPage({
       return f.temAgente !== 'sim' || f.agente.trim().length >= 2;
     }
     return telDigitos.length >= 10;
-  }, [tela, f.nome, f.pos, f.temAgente, f.agente, menorDeIdade, anoInvalido, f.respNome, respTelDigitos, telDigitos]);
+  }, [tela, f.nome, f.pos, f.temAgente, f.agente, handleStatus, menorDeIdade, anoInvalido, f.respNome, respTelDigitos, telDigitos]);
 
   async function escolherFoto(file: File) {
     setSubindoFoto(true);
@@ -146,6 +177,7 @@ export function OnboardingPage({
       name: f.nome.trim(),
       pos: f.pos,
       contactPhone: telDigitos,
+      handle: f.handle,
       nickname: f.apelido.trim() || undefined,
       category: f.categoria || undefined,
       strongFoot: f.pe || undefined,
@@ -255,7 +287,7 @@ export function OnboardingPage({
             }}
           >
             {tela === 0 && (
-              <Tela1 f={f} set={set} idade={idade} menorDeIdade={menorDeIdade} respTelDigitos={respTelDigitos} />
+              <Tela1 f={f} set={set} idade={idade} menorDeIdade={menorDeIdade} respTelDigitos={respTelDigitos} handleStatus={handleStatus} />
             )}
             {tela === 1 && <Tela2 f={f} set={set} setF={setF} />}
             {tela === 2 && (
@@ -324,16 +356,82 @@ export function OnboardingPage({
   );
 }
 
+/* ══ @username — o endereço/indicação do jogador, confirmado ao vivo ════════ */
+
+const HANDLE_FEEDBACK: Record<string, { text: string; tone: 'dim' | 'ok' | 'bad' }> = {
+  empty: { text: 'Letras, números e _ — tipo breno11. Vira o teu link.', tone: 'dim' },
+  checking: { text: 'Conferindo…', tone: 'dim' },
+  ok: { text: 'disponível ✓', tone: 'ok' },
+  invalid: { text: 'Mínimo 3 — só letras, números e _.', tone: 'bad' },
+  reserved: { text: 'Esse nome é reservado. Escolhe outro.', tone: 'bad' },
+  taken: { text: 'Já foi pego. Bota um número, tipo breno11.', tone: 'bad' },
+  offline: { text: 'Sem conexão pra conferir agora.', tone: 'dim' },
+};
+
+function HandleField({
+  value,
+  onChange,
+  status,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  status: HandleStatus | 'checking' | 'empty';
+}) {
+  const fb = HANDLE_FEEDBACK[status] ?? HANDLE_FEEDBACK.empty;
+  const cor =
+    fb.tone === 'ok' ? 'var(--color-rev-success)' : fb.tone === 'bad' ? 'var(--color-rev-danger)' : 'rgba(237,235,228,.4)';
+  const borda =
+    status === 'ok' ? 'var(--color-rev-success)' : fb.tone === 'bad' ? 'var(--color-rev-danger)' : 'rgba(255,255,255,.1)';
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="rev-label text-[10px]" style={{ color: 'rgba(237,235,228,.5)' }}>
+        Nome de usuário
+      </span>
+      <div
+        className="flex items-center overflow-hidden"
+        style={{ border: `2px solid ${borda}`, background: '#0f0f0f', borderRadius: 'var(--radius-rev-btn)', minHeight: 46 }}
+      >
+        <span style={{ paddingLeft: 14, color: 'rgba(237,235,228,.38)', fontSize: 14, whiteSpace: 'nowrap' }}>
+          revela.olefoot.com/
+        </span>
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="breno11"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: '0 14px 0 1px',
+            background: 'transparent',
+            border: 0,
+            outline: 'none',
+            color: 'var(--color-rev-bone)',
+            fontFamily: 'var(--font-sans)',
+            fontSize: 15,
+          }}
+        />
+      </div>
+      <p className="text-[12px]" style={{ color: cor }}>
+        {status === 'ok' ? `revela.olefoot.com/${value} está ${fb.text}` : fb.text}
+      </p>
+    </label>
+  );
+}
+
 /* ══ Tela 1 — Quem é você ══════════════════════════════════════════════════ */
 
 function Tela1({
-  f, set, idade, menorDeIdade, respTelDigitos,
+  f, set, idade, menorDeIdade, respTelDigitos, handleStatus,
 }: {
   f: Ficha;
   set: (k: keyof Ficha) => (v: string) => void;
   idade: number | null;
   menorDeIdade: boolean;
   respTelDigitos: string;
+  handleStatus: HandleStatus | 'checking' | 'empty';
 }) {
   const [setorAberto, setSetorAberto] = useState<string | null>(null);
   const setorAtual = setorAberto ?? SETORES.find((s) => s.posicoes.some((p) => p.code === f.pos))?.id ?? null;
@@ -352,6 +450,8 @@ function Tela1({
           É o nome que vai no card e no teu link. Sem apelido, usamos o nome.
         </p>
       </div>
+
+      <HandleField value={f.handle} onChange={(v) => set('handle')(normalizeHandle(v))} status={handleStatus} />
 
       <Field label="Nome completo" value={f.nome} onChange={set('nome')} autoComplete="name" />
 
