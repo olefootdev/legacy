@@ -93,4 +93,18 @@ export const SITUACOES = [
   { code: 'escolinha', nome: 'Escolinha', descricao: 'Formação, base inicial' },
   { code: 'junior', nome: 'Júnior', descricao: 'Categoria de base de clube' },
   { code: 'profissional', nome: 'Profissional', descricao: 'Contrato profissional' },
+  // Ex-atleta: entra pelo mesmo funil, mas NÃO está em atividade. É o que
+  // separa "pode ser observado por clube" de "está aqui pelo legado" — e é a
+  // situação que a vitrine precisa saber pra não anunciar disponibilidade que
+  // não existe.
+  { code: 'lenda', nome: 'Lenda', descricao: 'Ex-atleta, fora de atividade' },
 ] as const;
+
+/** Situações em que o atleta está EM ATIVIDADE (logo, observável por clube). */
+export const SITUACOES_EM_ATIVIDADE: readonly string[] = ['escolinha', 'junior', 'profissional'];
+
+/** O atleta está disponível pra ser observado/contratado? */
+export function estaEmAtividade(situacao: string | null | undefined): boolean {
+  if (!situacao) return true; // sem informação, não afirma indisponibilidade
+  return SITUACOES_EM_ATIVIDADE.includes(situacao);
+}

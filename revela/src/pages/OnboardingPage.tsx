@@ -16,12 +16,13 @@
  * checagem — tela pode ser contornada, e aqui o assunto é proteção de menor
  * (LGPD art. 14).
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '../components/primitives';
 import { Field } from '../components/AuthSheet';
 import { CATEGORIAS, PES, SETORES, SITUACOES } from '../data/posicoes';
 import { checkHandle, submitTalent, type HandleStatus, type SubmitFailure } from '../data/revelaApi';
+import { Turnstile, turnstileAtivo } from '../components/Turnstile';
 import {
   readReferral,
   savePendingTalent,
@@ -99,6 +100,10 @@ export function OnboardingPage({
   const [foto, setFoto] = useState<{ url: string; preview: string } | null>(null);
   const [subindoFoto, setSubindoFoto] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** Token do desafio anti-bot. `null` = ainda não resolvido ou expirou. */
+  const [desafio, setDesafio] = useState<string | null>(null);
+  // Estável: o widget se recria se a callback mudar de identidade a cada render.
+  const receberDesafio = useCallback((t: string | null) => setDesafio(t), []);
   const [erro, setErro] = useState<string | null>(null);
   // Init preguiçoso do cadastro pendente: um refresh na tela de sucesso (ou o
   // fluxo de confirmar e-mail) volta direto pro claim em vez de perder o id.
@@ -197,6 +202,7 @@ export function OnboardingPage({
       tiktokUrl: f.tiktok.trim() || undefined,
       photoUrl: foto?.url,
       referralCode: readReferral() ?? undefined,
+      turnstileToken: desafio ?? undefined,
     });
 
     setBusy(false);
@@ -308,6 +314,10 @@ export function OnboardingPage({
               </p>
             )}
 
+            {/* Desafio anti-bot — só na última tela, que é onde o envio acontece.
+                Não renderiza nada quando o widget não está configurado. */}
+            {tela === 2 ? <Turnstile onToken={receberDesafio} /> : null}
+
             <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
               {tela > 0 ? (
                 <button
@@ -338,12 +348,14 @@ export function OnboardingPage({
                 <button
                   type="button"
                   onClick={enviar}
-                  disabled={!podeAvancar || busy || subindoFoto}
+                  // Com o desafio ligado, envio só depois de resolvido — senão o
+                  // gate não gateia nada.
+                  disabled={!podeAvancar || busy || subindoFoto || (turnstileAtivo && !desafio)}
                   className="rev-btn rev-focus"
                   data-variant="yellow"
                   data-on="dark"
                 >
-                  {busy ? 'Enviando…' : 'Enviar cadastro →'}
+                  {busy ? 'Enviando…' : turnstileAtivo && !desafio ? 'Confirme que é você' : 'Enviar cadastro →'}
                 </button>
               )}
             </div>
@@ -945,10 +957,89 @@ function Enviado({
 
           <Jornada ate={comConta ? 2 : 1} />
 
+          {/* ── Seguir a Olefoot no Instagram ────────────────────────────
+              Convite, não pedágio: o cadastro já está enviado quando isto
+              aparece, e nada aqui depende do clique. A API do Instagram não
+              permite seguir alguém programaticamente — os scopes da Instagram
+              Platform cobrem publicação, comentários, mensagens e insights, e
+              nenhum toca em follow — e automatizar por fora derruba a conta
+              oficial. Então o que resta é o honesto: pedir, e deixar a pessoa
+              decidir. Copy do fundador — nada é prometido em troca, o que evita
+              dívida que o perfil teria de pagar depois.
+
+              No celular o bloco EMPILHA. A versão de três colunas (ícone ·
+              texto · botão) espremia a frase em cinco linhas dentro de 375px. */}
+          <a
+            href="https://instagram.com/olefootgame"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rev-focus mt-8 flex flex-col gap-4 px-5 py-5 transition-colors sm:flex-row sm:items-center"
+            style={{
+              borderRadius: 12,
+              background: 'rgba(237,235,228,.05)',
+              border: '1px solid rgba(253,225,0,.28)',
+            }}
+          >
+            <span className="flex min-w-0 flex-1 items-center gap-3.5">
+              <span
+                aria-hidden
+                className="grid shrink-0 place-items-center"
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 11,
+                  background: 'var(--color-rev-yellow)',
+                  color: '#0D0D0D',
+                }}
+              >
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="5" />
+                  <circle cx="12" cy="12" r="4" />
+                  <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none" />
+                </svg>
+              </span>
+              <span className="min-w-0">
+                <span
+                  className="block text-[14px] leading-snug"
+                  style={{ color: 'rgba(237,235,228,.75)' }}
+                >
+                  Opa jogador, dá uma moral pra gente lá no Instagram. Siga{' '}
+                  <strong style={{ color: 'var(--color-rev-bone)' }}>@olefootgame</strong>
+                </span>
+              </span>
+            </span>
+            <span
+              aria-hidden
+              className="rev-btn shrink-0 justify-center"
+              data-variant="yellow"
+              data-on="dark"
+              style={{ minHeight: 40, padding: '0 18px' }}
+            >
+              Clique para seguir
+            </span>
+          </a>
+
+          {/* O destino de quem acabou de se cadastrar é o PRÓPRIO cadastro.
+              Antes daqui os dois botões levavam pra vitrine e pra home — o
+              atleta mandava a ficha e sumia, sem lugar pra ver em que pé está.
+              Quem ainda não fechou a conta continua sem esse caminho: o painel
+              depende de sessão, e mandar pra lá sem conta é dar de cara com um
+              pedido de login. */}
           <div className="mt-10 flex flex-wrap gap-3">
-            <Link to="/#descobrir" className="rev-btn rev-focus" data-variant="yellow" data-on="dark">
-              Ver quem já está na vitrine
-            </Link>
+            {comConta ? (
+              <Link
+                to="/meu-perfil"
+                className="rev-btn rev-focus"
+                data-variant="yellow"
+                data-on="dark"
+              >
+                Acompanhar meu cadastro →
+              </Link>
+            ) : (
+              <Link to="/#descobrir" className="rev-btn rev-focus" data-variant="yellow" data-on="dark">
+                Ver quem já está na vitrine
+              </Link>
+            )}
             <Link to="/" className="rev-btn rev-focus" data-variant="outline" data-on="dark">
               Voltar pro início
             </Link>
