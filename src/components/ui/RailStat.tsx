@@ -1,10 +1,17 @@
 import type { ReactNode } from 'react';
 
-const SERIF = 'var(--font-serif-hero)';
-
 /**
- * Stat card do padrão DS: rail 3px à esquerda (cor = intenção), label display
- * em dourado e número grande em serifa itálica. Reusado em Treino/Staff/Academia.
+ * Stat card do DS: trilho amarelo de 3px à esquerda, rótulo e número grande.
+ * Reusado em Treino / Staff / Academia.
+ *
+ * ── 2026-08-01 ─────────────────────────────────────────────────────────────
+ * Duas correções:
+ *   1. o número era serifa itálica — que no layer final é assinatura de nome
+ *      de lenda, nunca de número. Virou Anton tabular.
+ *   2. o valor era 32px fixo dentro de um box com `overflow-hidden`, então
+ *      "10.000.000 EXP" aparecia na tela cortado como "10.000.0". Agora o
+ *      tamanho é fluido e o texto quebra em vez de sumir — número cortado é
+ *      pior que número pequeno: mente sobre o saldo.
  */
 export function RailStat({
   label,
@@ -18,10 +25,24 @@ export function RailStat({
   rail?: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] py-3.5 pl-[18px] pr-3">
+    <div className="ole-poster relative min-w-0 overflow-hidden py-3.5 pl-[18px] pr-3">
       <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: rail }} aria-hidden />
-      <div className="font-display text-[10px] font-semibold uppercase tracking-[0.13em] text-neon-yellow">{label}</div>
-      <div className="mt-1 italic leading-none text-white" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '32px' }}>
+      <div
+        className="font-display font-semibold uppercase text-neon-yellow"
+        style={{ fontSize: '10px', letterSpacing: '0.13em' }}
+      >
+        {label}
+      </div>
+      <div
+        className="mt-1 font-impact tabular-nums leading-none text-white"
+        style={{
+          // Escala baixa no mobile de propósito: em três colunas de ~110px um
+          // saldo de 10.000.000 precisa caber numa linha só. Número quebrado em
+          // duas linhas ou cortado pelo overflow mente sobre o saldo.
+          fontSize: 'clamp(15px, 4.2vw, 30px)',
+          overflowWrap: 'anywhere',
+        }}
+      >
         {value}
       </div>
       {hint && <div className="mt-1 text-[10px] text-white/40">{hint}</div>}

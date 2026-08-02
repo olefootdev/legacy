@@ -1,18 +1,25 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { cn } from '@/lib/utils';
 
 /**
- * Cartão de seção para páginas de hub (MarketHub, ClubHub, CompetitionHub,
- * HelpHub). Padrão Legacy Tech:
- *  - SEM ícones pequenos: trilho lateral colorido substitui o icone-em-box
- *  - Eyebrow uppercase
- *  - Título grande (26px black uppercase)
- *  - Descrição clara
- *  - CTA texto-claro dominante (sem icone)
+ * Cartão de seção dos hubs (ClubHub, MarketHub, CompetitionHub, HelpHub).
  *
- * Wrapper inline em MarketHub foi extraído pra cá em Sprint B.
+ * ── Alinhado ao layer final (2026-08-01) ───────────────────────────────────
+ * A versão anterior ("Legacy Tech") pintava o trilho lateral com uma cor
+ * DIFERENTE por categoria — e as páginas usavam esmeralda, violeta, ciano,
+ * fúcsia, âmbar. Isso contraria a linguagem em dois pontos:
+ *
+ *   1. o trilho amarelo de 3px é assinatura de PERTENCIMENTO, não legenda de
+ *      categoria — quando cada card tem a sua cor, o trilho não significa nada;
+ *   2. hierarquia no layer final vem de UMA cor: o que importa fica amarelo, o
+ *      resto fica escuro. Cinco cores diferentes dão peso igual a tudo, que é o
+ *      mesmo que não dar peso a nada.
+ *
+ * Agora: trilho sempre amarelo, superfície `.ole-poster` (sombra dura clara,
+ * raio 14px) e título em Anton. Para destacar UM card do hub existe
+ * `destaque` — ele inverte pra bloco amarelo, do mesmo jeito que o líder do
+ * ranking na Home.
  */
 export function HubSectionCard({
   to,
@@ -20,10 +27,10 @@ export function HubSectionCard({
   title,
   description,
   cta,
-  rail,
   delay = 0,
   meta,
   badge,
+  destaque = false,
   external = false,
   onClick,
 }: {
@@ -33,95 +40,104 @@ export function HubSectionCard({
   title: ReactNode;
   description: ReactNode;
   cta: ReactNode;
-  /** Tailwind bg-* class para o trilho lateral (raridade/categoria). */
-  rail: string;
   delay?: number;
   /** Linha extra acima do CTA (ex.: "10 ativos · 3 favoritos"). */
   meta?: ReactNode;
   /** Badge no canto superior direito (ex.: "NOVO", "BETA", contador). */
   badge?: ReactNode;
+  /** Inverte pra bloco amarelo. Use em NO MÁXIMO um card por hub. */
+  destaque?: boolean;
   /** Link externo (abre em nova aba). */
   external?: boolean;
   onClick?: () => void;
 }) {
-  const className =
-    'group relative isolate block h-full overflow-hidden border border-white/[0.05] transition-all duration-300 hover:border-white/15 hover:-translate-y-1';
-  const style = {
-    borderRadius: 'var(--radius-card)',
-    background: 'var(--color-panel-elevated)',
-    boxShadow: 'var(--shadow-card)',
-  } as const;
+  const className = [
+    'group relative isolate block h-full overflow-hidden transition-transform duration-300 hover:-translate-y-1',
+    destaque ? '' : 'ole-poster ole-rail',
+  ].join(' ');
+
+  const style = destaque
+    ? ({
+        borderRadius: 'var(--radius-poster)',
+        background: 'var(--color-neon-yellow)',
+        boxShadow: 'var(--shadow-poster-dark)',
+        borderLeft: 'var(--rail-w) solid var(--color-deep-black)',
+      } as const)
+    : ({ borderRadius: 'var(--radius-poster)' } as const);
+
+  const tinta = destaque ? 'var(--color-deep-black)' : '#fff';
+  const tintaFraca = destaque ? 'rgba(13,13,13,0.62)' : 'rgba(237,235,228,0.55)';
+  const tintaEyebrow = destaque ? 'rgba(13,13,13,0.6)' : 'rgba(237,235,228,0.5)';
 
   const inner = (
-    <>
-      {/* Trilho lateral colorido — substitui o icone-em-box pequeno */}
-      <span aria-hidden className={cn('absolute left-0 top-0 h-full w-[3px]', rail)} />
-
-      <div className="relative flex h-full flex-col gap-5 p-6 pl-7">
-        {/* Linha superior: eyebrow + badge opcional */}
-        <div className="flex items-start justify-between gap-3">
-          <span
-            className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80"
-            style={{ fontFamily: 'var(--font-ui)' }}
-          >
-            {eyebrow}
-          </span>
-          {badge ? (
-            <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-white/8 px-2.5 py-1 font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/85">
-              {badge}
-            </span>
-          ) : null}
-        </div>
-
-        {/* Título grande */}
-        <h3
-          className="font-display text-[26px] font-black uppercase leading-[0.95] tracking-tight text-white transition-colors group-hover:text-neon-yellow"
-          style={{ letterSpacing: '0.005em' }}
+    <div className="relative flex h-full flex-col gap-4 p-5 pl-6">
+      <div className="flex items-start justify-between gap-3">
+        <span
+          className="font-display font-black uppercase"
+          style={{ fontSize: '10px', letterSpacing: '0.22em', color: tintaEyebrow }}
         >
-          {title}
-        </h3>
-
-        {/* Descrição clara */}
-        <p className="text-[13px] leading-relaxed text-white/55">{description}</p>
-
-        {/* Meta opcional */}
-        {meta ? (
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
-            {meta}
-          </p>
-        ) : null}
-
-        {/* CTA texto-claro */}
-        <div className="mt-auto pt-2 border-t border-[var(--color-divider-yellow)]">
+          {eyebrow}
+        </span>
+        {badge ? (
           <span
-            className="inline-flex items-center bg-neon-yellow px-6 py-3 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all group-hover:bg-white group-hover:scale-[1.02]"
+            className="inline-flex items-center rounded font-display font-black uppercase"
             style={{
-              fontFamily: 'var(--font-display)',
-              borderRadius: 'var(--radius-sm)',
+              padding: '4px 8px',
+              fontSize: '9px',
+              letterSpacing: '0.14em',
+              background: destaque ? 'var(--color-deep-black)' : 'var(--color-neon-yellow)',
+              color: destaque ? '#fff' : 'var(--color-deep-black)',
             }}
           >
-            {cta}
+            {badge}
           </span>
-        </div>
+        ) : null}
       </div>
-    </>
+
+      <h3
+        className="font-impact uppercase transition-colors"
+        style={{ fontSize: 'clamp(22px,5vw,30px)', lineHeight: 0.9, letterSpacing: '-0.01em', color: tinta }}
+      >
+        {title}
+      </h3>
+
+      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.55, color: tintaFraca }}>
+        {description}
+      </p>
+
+      {meta ? (
+        <p
+          className="font-display font-bold uppercase"
+          style={{ fontSize: '10px', letterSpacing: '0.16em', color: tintaEyebrow }}
+        >
+          {meta}
+        </p>
+      ) : null}
+
+      <div className="mt-auto pt-1">
+        <span
+          className="inline-flex items-center font-display font-black uppercase"
+          style={{
+            minHeight: 42,
+            padding: '0 18px',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '11px',
+            letterSpacing: '0.14em',
+            background: destaque ? 'var(--color-deep-black)' : 'var(--color-neon-yellow)',
+            color: destaque ? '#fff' : 'var(--color-deep-black)',
+            boxShadow: destaque ? '5px 5px 0 rgba(13,13,13,0.28)' : '5px 5px 0 rgba(237,235,228,0.14)',
+          }}
+        >
+          {cta}
+        </span>
+      </div>
+    </div>
   );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay }}
-    >
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
       {external ? (
-        <a
-          href={to}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={className}
-          style={style}
-          onClick={onClick}
-        >
+        <a href={to} target="_blank" rel="noopener noreferrer" className={className} style={style} onClick={onClick}>
           {inner}
         </a>
       ) : (
