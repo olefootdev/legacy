@@ -27,20 +27,20 @@ const VARIANT_STYLES: Record<NonNullable<StoreFeaturedBoxesProps['variant']>, {
     glow: 'shadow-[0_0_24px_rgba(234,255,0,0.08)]',
   },
   rising: {
-    badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40',
+    badge: 'bg-[var(--color-success)]/20 text-[var(--color-success)] border-[var(--color-success)]/40',
     glow: 'shadow-[0_0_24px_rgba(16,185,129,0.08)]',
   },
   drop: {
-    badge: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-400/40',
+    badge: 'bg-neon-yellow/20 text-neon-yellow border-neon-yellow/40',
     glow: 'shadow-[0_0_24px_rgba(217,70,239,0.08)]',
   },
 };
 
 const RARITY_GRADIENT: Record<ShopRarity, string> = {
-  comum:  'from-slate-700/50 via-slate-800/40 to-black',
-  raro:   'from-cyan-500/25 via-cyan-700/20 to-black',
-  epico:  'from-fuchsia-500/25 via-fuchsia-700/20 to-black',
-  mitico: 'from-amber-500/30 via-orange-700/25 to-black',
+  comum:  'from-white/[0.05] to-black',
+  raro:   'from-neon-yellow/[0.07] to-black',
+  epico:  'from-neon-yellow/[0.13] to-black',
+  mitico: 'from-neon-yellow/25 to-black',
 };
 
 const RARITY_LABEL: Record<ShopRarity, string> = {
@@ -128,7 +128,7 @@ export function StoreFeaturedBoxes({
 
                 <div className="flex flex-wrap items-center gap-1.5 border-t border-white/5 pt-2">
                   {item.priceBroCents != null && item.priceBroCents > 0 ? (
-                    <span className="rounded-lg border border-cyan-500/30 bg-cyan-950/50 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-200">
+                    <span className="rounded-lg border border-white/15 bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-bold text-white/80">
                       {formatBro(item.priceBroCents)} BRO
                     </span>
                   ) : null}

@@ -120,9 +120,9 @@ export function DepositModal({
             </div>
           )}
           {quote.status === 'error' && (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-200/90">Nossa cotação</p>
-              <p className="text-xs text-amber-100/90 mt-1">{quote.message}</p>
+            <div className="rounded-xl border border-neon-yellow/30 bg-neon-yellow/10 px-3 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-neon-yellow">Nossa cotação</p>
+              <p className="text-xs text-white/75 mt-1">{quote.message}</p>
             </div>
           )}
           {quote.status === 'ok' && (
@@ -185,7 +185,7 @@ export function DepositModal({
               />
             </div>
             {numericAmount !== null && numericAmount < MIN_BRL && (
-              <p className="text-[10px] text-rose-300 mt-1">Mínimo de R$ {MIN_BRL.toFixed(2)}</p>
+              <p className="text-[10px] text-[var(--color-danger)] mt-1">Mínimo de R$ {MIN_BRL.toFixed(2)}</p>
             )}
           </div>
 

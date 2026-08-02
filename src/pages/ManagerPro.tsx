@@ -119,7 +119,7 @@ export function ManagerPro() {
           <div className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
             MANAGER · PRO
           </div>
-          <h1 className="ole-headline-italic text-neon-yellow mt-1" style={{ fontSize: 'clamp(32px, 6vw, 48px)' }}>
+          <h1 className="mt-1 font-impact uppercase text-neon-yellow" style={{ fontSize: 'clamp(32px, 6vw, 48px)', lineHeight: 0.9 }}>
             Vendas dos teus cards
           </h1>
         </div>
@@ -130,18 +130,18 @@ export function ManagerPro() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-start gap-3 border border-amber-500/35 bg-amber-500/[0.08] p-4"
+          className="flex items-start gap-3 border border-neon-yellow/35 bg-neon-yellow/[0.08] p-4"
         >
-          <Lock className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden />
+          <Lock className="mt-0.5 h-5 w-5 shrink-0 text-neon-yellow" aria-hidden />
           <div className="min-w-0 flex-1">
-            <p className="font-display text-xs font-black uppercase tracking-wider text-amber-200">
+            <p className="font-display text-xs font-black uppercase tracking-wider text-neon-yellow">
               {vStatus === 'pending'
                 ? 'Em análise pelo Admin'
                 : vStatus === 'rejected'
                 ? 'Verificação rejeitada — ajusta e reenvia'
                 : 'Modo prévia — conta não verificada'}
             </p>
-            <p className="mt-1 text-[12px] leading-snug text-amber-100/80">
+            <p className="mt-1 text-[12px] leading-snug text-neon-yellow/80">
               {vStatus === 'pending'
                 ? 'Aguarda a aprovação. Assim que liberada, o saldo real e o botão de saque ficam ativos.'
                 : 'Podes ver os teus cards e como ficará o painel. O saldo real e o saque ficam ativos depois que a verificação for aprovada pelo Admin.'}
@@ -149,7 +149,7 @@ export function ManagerPro() {
             {vStatus !== 'pending' ? (
               <Link
                 to="/config"
-                className="mt-2 inline-flex items-center gap-1.5 border border-amber-400/40 bg-amber-500/15 px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-wider text-amber-100 hover:bg-amber-500/25"
+                className="mt-2 inline-flex items-center gap-1.5 border border-neon-yellow/40 bg-neon-yellow/15 px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-wider text-neon-yellow hover:bg-neon-yellow/25"
               >
                 <ShieldCheck className="h-3.5 w-3.5" /> {vStatus === 'rejected' ? 'Reenviar verificação' : 'Verificar conta'}
                 <ChevronRight className="h-3 w-3" />
@@ -409,21 +409,21 @@ function KpiCard({
   tone: 'cyan' | 'emerald' | 'yellow' | 'fuchsia';
 }) {
   const tones: Record<typeof tone, string> = {
-    cyan: 'border-cyan-500/25 bg-black',
-    emerald: 'border-emerald-500/25 bg-black',
+    cyan: 'border-neon-yellow/25 bg-black',
+    emerald: 'border-[var(--color-success)]/25 bg-black',
     yellow: 'border-neon-yellow/25 bg-black',
-    fuchsia: 'border-fuchsia-500/25 bg-black',
+    fuchsia: 'border-neon-yellow/25 bg-black',
   };
   const valueClass: Record<typeof tone, string> = {
     cyan: 'text-neon-yellow/70',
-    emerald: 'text-emerald-300',
+    emerald: 'text-[var(--color-success)]',
     yellow: 'text-neon-yellow',
-    fuchsia: 'text-fuchsia-300',
+    fuchsia: 'text-neon-yellow',
   };
   return (
     <div className={cn('border p-3', tones[tone])}>
       <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/45">{label}</p>
-      <p className={cn('mt-1 ole-headline-italic tabular-nums', valueClass[tone])} style={{ fontSize: 'clamp(24px, 4vw, 32px)' }}>
+      <p className={cn('mt-1 font-impact tabular-nums', valueClass[tone])} style={{ fontSize: 'clamp(24px, 4vw, 32px)' }}>
         {value}
       </p>
       <p className="mt-1 text-[10px] text-white/45">{footer}</p>

@@ -79,8 +79,7 @@ export function MatchCountdownChip({
         <p
           className={`tabular-nums ${isLive ? 'text-red-400' : 'text-neon-yellow'}`}
           style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--font-impact)',
             fontSize: '20px',
             lineHeight: 1,
           }}

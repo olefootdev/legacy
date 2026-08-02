@@ -50,10 +50,9 @@ export function RivalsLeaderboardMini({
           Pos
         </span>
         <span
-          className="tabular-nums text-neon-yellow leading-none"
+          className="font-impact tabular-nums text-neon-yellow leading-none"
           style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--font-impact)',
             fontSize: '18px',
           }}
         >

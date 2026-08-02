@@ -85,7 +85,7 @@ const BADGE_META: Record<BadgeState, { label: string; tooltip: string; cls: stri
   'service-up': {
     label: 'Python · online',
     tooltip: 'Serviço /insights respondendo e dados do clube carregados.',
-    cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    cls: 'bg-[var(--color-success)]/15 text-[var(--color-success)] border-[var(--color-success)]/30',
     Icon: Wifi,
   },
   'no-auth': {
@@ -97,13 +97,13 @@ const BADGE_META: Record<BadgeState, { label: string; tooltip: string; cls: stri
   'data-error': {
     label: 'Sem dados',
     tooltip: 'Serviço /insights respondeu, mas o resumo do clube falhou (RLS, 5xx ou timeout). Mostrando fallback local.',
-    cls: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
+    cls: 'bg-neon-yellow/10 text-neon-yellow border-neon-yellow/30',
     Icon: AlertTriangle,
   },
   'service-down': {
     label: 'Serviço offline',
     tooltip: 'O serviço /insights (Python) não respondeu ao health-check. Mostrando dados locais.',
-    cls: 'bg-red-500/10 text-red-300 border-red-500/30',
+    cls: 'bg-[var(--color-danger)]/10 text-[var(--color-danger)] border-[var(--color-danger)]/30',
     Icon: WifiOff,
   },
 };
@@ -169,9 +169,7 @@ function StatCard({ label, value, hint, tone = 'neutral', Icon }: StatCardProps)
       <div
         className="leading-none tabular-nums"
         style={{
-          fontFamily: 'var(--font-serif-hero)',
-          fontStyle: 'italic',
-          fontWeight: 700,
+          fontFamily: 'var(--font-impact)',
           fontSize: 'clamp(28px, 4.5vw, 36px)',
           letterSpacing: '-0.03em',
         }}
@@ -262,9 +260,7 @@ function ConsequenceRow({ entry }: { entry: InsightsEvaluatedConsequence }) {
       <span
         className="text-white/45 tabular-nums shrink-0 leading-none"
         style={{
-          fontFamily: 'var(--font-serif-hero)',
-          fontStyle: 'italic',
-          fontWeight: 700,
+          fontFamily: 'var(--font-impact)',
           fontSize: '12px',
           letterSpacing: '-0.02em',
         }}
@@ -315,9 +311,7 @@ function DimensionCard({
         <span
           className="text-white/65 tabular-nums leading-none"
           style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
-            fontWeight: 700,
+            fontFamily: 'var(--font-impact)',
             fontSize: '18px',
             letterSpacing: '-0.02em',
           }}
@@ -402,9 +396,7 @@ function NightReportSection({ report }: { report: NightReport }) {
           <h3
             className="text-white leading-snug"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
-              fontWeight: 700,
+              fontFamily: 'var(--font-sans)',
               fontSize: 'clamp(20px, 3.2vw, 26px)',
               letterSpacing: '-0.02em',
             }}
@@ -444,7 +436,7 @@ function NightReportSection({ report }: { report: NightReport }) {
             <div
               className={cn('leading-none tabular-nums', c.color)}
               style={{
-                fontFamily: 'var(--font-serif-hero)',
+                fontFamily: 'var(--font-impact)',
                 fontStyle: 'italic',
                 fontWeight: 700,
                 fontSize: 'clamp(22px, 3.5vw, 28px)',
@@ -684,9 +676,7 @@ export function ManagerScouts() {
               <h1
                 className="text-neon-yellow leading-[0.95] truncate"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
-                  fontWeight: 700,
+                  fontFamily: 'var(--font-sans)',
                   fontSize: 'clamp(36px, 6vw, 52px)',
                   letterSpacing: '-0.03em',
                 }}

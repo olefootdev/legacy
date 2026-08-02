@@ -13,7 +13,6 @@ const quickActions: Array<{
   description: string;
   cta: string;
   href: string;
-  rail: string;
 }> = [
   {
     eyebrow: 'Onboarding',
@@ -21,7 +20,6 @@ const quickActions: Array<{
     description: 'Guia completo do jogo. Do cadastro à primeira vitória.',
     cta: 'Ler guia',
     href: '/how-to-play',
-    rail: 'bg-neon-yellow',
   },
   {
     eyebrow: 'Aprendizado',
@@ -29,7 +27,6 @@ const quickActions: Array<{
     description: 'Sequência de tutoriais visuais para dominar cada sistema.',
     cta: 'Começar tutorial',
     href: '/how-to-play',
-    rail: 'bg-emerald-400',
   },
 ];
 
@@ -45,81 +42,33 @@ export function HelpHub() {
         aria-label="Ajuda"
         className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm"
       >
-        {/* Watermark gigante */}
-        <div
-          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
-          aria-hidden
-        >
-          <AnimatePresence mode="wait">
-            <motion.span
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.04 }}
-              transition={{ duration: 0.4 }}
-              className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
-              style={{
-                fontSize: 'clamp(120px, 22vw, 380px)',
-                lineHeight: '0.85',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              ?
-            </motion.span>
-          </AnimatePresence>
-        </div>
-
-        {/* Composição editorial */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14 text-center"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative z-10 px-5 sm:px-8"
+        style={{ paddingBlock: 'clamp(28px, 6vw, 52px)' }}
+      >
+        <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
+          Central de ajuda
+        </span>
+        <h1
+          className="mt-2 font-impact uppercase"
+          style={{
+            color: 'var(--color-deep-black)',
+            fontSize: 'clamp(44px, 12vw, 92px)',
+            lineHeight: 0.84,
+            letterSpacing: '-0.01em',
+          }}
         >
-          <div className="ole-eyebrow !text-black mb-5 sm:mb-6" style={{ fontFamily: 'var(--font-ui)' }}>
-            <span className="!text-black">Central de ajuda</span>
-          </div>
-          <h1 className="leading-[0.9]">
-            <span
-              className="block font-bold uppercase text-black"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(2.75rem, 8vw, 6rem)',
-                letterSpacing: '0.005em',
-              }}
-            >
-              Ajuda
-            </span>
-            <motion.span
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: 0.1 }}
-              className="block italic text-black"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontSize: 'clamp(2.25rem, 7vw, 5rem)',
-                marginTop: '0.04em',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              Olefoot
-            </motion.span>
-          </h1>
-          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
-          <motion.blockquote
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.15 }}
-            className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
-            style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
-          >
-            "aprenda a dominar o jogo, passo a passo."
-          </motion.blockquote>
-          <p
-            className="mt-3 text-black/60 mx-auto max-w-md"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: 'clamp(0.85rem, 1vw, 0.95rem)', lineHeight: 1.55 }}
-          >
-            Guias, tutoriais e perguntas frequentes
-          </p>
+          Ajuda
+        </h1>
+        <p
+          className="mt-3"
+          style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'rgba(13,13,13,0.62)' }}
+        >
+          Guias, tutoriais e perguntas frequentes
+        </p>
         </motion.div>
       </section>
 
@@ -165,20 +114,20 @@ export function HelpHub() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
-        className="relative overflow-hidden rounded-lg border-2 border-cyan-400/40 bg-gradient-to-br from-cyan-400/10 via-black to-black p-6 sm:p-8"
+        className="ole-poster ole-rail relative overflow-hidden p-6 sm:p-8"
       >
         <div
-          className="absolute -right-12 -top-12 h-48 w-48 bg-cyan-400 opacity-[0.08]"
+          className="absolute -right-12 -top-12 h-48 w-48 bg-neon-yellow opacity-[0.06]"
           style={{ transform: 'rotate(34deg) skewX(-12deg)' }}
           aria-hidden
         />
 
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-cyan-400/20 border-2 border-cyan-400/40 shadow-[0_0_20px_rgba(34,211,238,0.3)]">
-            <MessageCircle className="h-8 w-8 text-cyan-400" strokeWidth={2.5} />
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-neon-yellow/40 bg-neon-yellow/12">
+            <MessageCircle className="h-7 w-7 text-neon-yellow" strokeWidth={2.2} />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="font-display text-xl sm:text-2xl font-black uppercase tracking-wide text-cyan-400 mb-2">
+            <h2 className="mb-2 font-impact uppercase text-white" style={{ fontSize: 'clamp(22px,5vw,30px)', lineHeight: 0.9 }}>
               Assistente IA
             </h2>
             <p className="text-sm sm:text-base text-white/70 leading-relaxed">
@@ -187,7 +136,7 @@ export function HelpHub() {
           </div>
           <button
             onClick={() => setShowAIAssistant(true)}
-            className="shrink-0 flex items-center gap-2 rounded-sm bg-cyan-400 px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-black transition-all hover:bg-white hover:scale-105 shadow-[0_0_20px_rgba(34,211,238,0.4)]"
+            className="shrink-0 inline-flex items-center gap-2 rounded-md bg-neon-yellow px-5 py-3 font-display text-[11px] font-black uppercase tracking-[0.14em] text-black transition-transform hover:scale-[1.02]" style={{ boxShadow: '5px 5px 0 rgba(237,235,228,0.14)' }}
           >
             <MessageCircle className="h-5 w-5" />
             Perguntar
@@ -209,7 +158,7 @@ export function HelpHub() {
               title={action.title}
               description={action.description}
               cta={action.cta}
-              rail={action.rail}
+              destaque={i === 0}
               delay={i * 0.08}
             />
           ))}

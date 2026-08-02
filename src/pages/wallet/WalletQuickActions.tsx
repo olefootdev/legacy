@@ -11,11 +11,12 @@ export type QuickAction = {
   badge?: string;
 };
 
+/** Verde = dinheiro entrando; vermelho = ação de risco; o resto é amarelo. */
 const ACCENT_RING: Record<NonNullable<QuickAction['accent']>, string> = {
-  green: 'ring-neon-green/30 text-neon-green',
-  red: 'ring-red-400/30 text-red-400',
-  amber: 'ring-amber-400/30 text-amber-400',
-  cyan: 'ring-cyan-400/30 text-cyan-400',
+  green: 'ring-[var(--color-success)]/30 text-[var(--color-success)]',
+  red: 'ring-[var(--color-danger)]/30 text-[var(--color-danger)]',
+  amber: 'ring-neon-yellow/30 text-neon-yellow',
+  cyan: 'ring-neon-yellow/30 text-neon-yellow',
   yellow: 'ring-neon-yellow/30 text-neon-yellow',
 };
 

@@ -61,7 +61,7 @@ export function PremiumPriceReveal({ item, children, onSelect }: PremiumPriceRev
                 Preço Premium
               </p>
               <p
-                className="bg-gradient-to-br from-neon-yellow via-amber-200 to-neon-yellow bg-clip-text text-transparent"
+                className="text-neon-yellow"
                 style={{
                   fontFamily: 'var(--font-serif-hero)', // Moret
                   fontStyle: 'italic',

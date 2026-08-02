@@ -64,7 +64,7 @@ export function FriendSearchBlock({
 
   return (
     <div className="space-y-3">
-      <div className="ole-eyebrow !text-cyan-400">
+      <div className="ole-eyebrow-poster !text-neon-yellow">
         <span>Encontrar manager</span>
       </div>
 
@@ -74,14 +74,14 @@ export function FriendSearchBlock({
           value={q}
           onChange={(e) => { setQ(e.target.value); setTouched(true); }}
           placeholder="Nome do clube, usuário ou e-mail"
-          className="w-full rounded-[var(--radius-sm)] border border-white/12 bg-black/40 py-3 pl-10 pr-10 text-sm text-white outline-none placeholder:text-white/30 focus:border-cyan-500/50"
+          className="w-full rounded-[var(--radius-sm)] border border-white/12 bg-black/40 py-3 pl-10 pr-10 text-sm text-white outline-none placeholder:text-white/30 focus:border-neon-yellow/50"
         />
         {searching && (
           <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-white/40" />
         )}
       </div>
 
-      {error && <p className="text-[11px] text-red-400">{error}</p>}
+      {error && <p className="text-[11px] text-[var(--color-danger)]">{error}</p>}
 
       {showEmpty && (
         <p className="rounded-[var(--radius-sm)] border border-dashed border-white/10 bg-black/20 px-3 py-3 text-xs text-gray-500">
@@ -113,7 +113,7 @@ export function FriendSearchBlock({
                     'flex shrink-0 items-center gap-1.5 rounded-sm px-3 py-1.5 font-display text-[10px] font-black uppercase tracking-wider transition-colors',
                     already || done
                       ? 'cursor-default border border-white/10 text-white/35'
-                      : 'bg-cyan-500 text-black hover:bg-white disabled:opacity-50',
+                      : 'bg-neon-yellow text-black hover:bg-white disabled:opacity-50',
                   )}
                 >
                   {already ? (

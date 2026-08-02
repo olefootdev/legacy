@@ -98,10 +98,9 @@ export function MatchReceiptCard({ data }: MatchReceiptCardProps) {
                 Resultado
               </p>
               <p
-                className="mt-1 tabular-nums text-neon-yellow"
+                className="font-impact mt-1 tabular-nums text-neon-yellow"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
+                  fontFamily: 'var(--font-impact)',
                   fontSize: '22px',
                   lineHeight: 1,
                 }}
@@ -143,8 +142,7 @@ export function MatchReceiptCard({ data }: MatchReceiptCardProps) {
                     key={currency}
                     className={`tabular-nums ${positive ? 'text-neon-green' : 'text-red-400'}`}
                     style={{
-                      fontFamily: 'var(--font-serif-hero)',
-                      fontStyle: 'italic',
+                      fontFamily: 'var(--font-impact)',
                       fontSize: '22px',
                       lineHeight: 1,
                     }}

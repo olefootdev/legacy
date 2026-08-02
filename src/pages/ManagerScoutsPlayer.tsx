@@ -84,10 +84,10 @@ function formatTimeLeft(ms: number): string {
 // ─── Severity styling ──────────────────────────────────────────────
 
 const SEVERITY_STYLE: Record<Severity, { color: string; Icon: typeof Activity }> = {
-  alert: { color: 'text-red-400 border-l-red-400', Icon: AlertOctagon },
-  celebration: { color: 'text-emerald-400 border-l-emerald-400', Icon: Sparkles },
+  alert: { color: 'text-[var(--color-danger)] border-l-red-400', Icon: AlertOctagon },
+  celebration: { color: 'text-[var(--color-success)] border-l-emerald-400', Icon: Sparkles },
   neutral: { color: 'text-white/70 border-l-white/30', Icon: Activity },
-  info: { color: 'text-blue-300 border-l-blue-300', Icon: Clock },
+  info: { color: 'text-neon-yellow border-l-blue-300', Icon: Clock },
 };
 
 // ─── Sub-components ────────────────────────────────────────────────
@@ -127,9 +127,7 @@ function HeroCard({
         aria-hidden
         className="absolute -right-6 top-1/2 -translate-y-1/2 select-none pointer-events-none"
         style={{
-          fontFamily: 'var(--font-serif-hero)',
-          fontStyle: 'italic',
-          fontWeight: 700,
+          fontFamily: 'var(--font-sans)',
           fontSize: '220px',
           letterSpacing: '-0.05em',
           color: isUnavailable ? 'rgba(239,68,68,0.04)' : 'rgba(253,225,0,0.05)',
@@ -163,9 +161,7 @@ function HeroCard({
           <div
             className="text-neon-yellow leading-none tabular-nums"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
-              fontWeight: 700,
+              fontFamily: 'var(--font-impact)',
               fontSize: 'clamp(56px, 9vw, 84px)',
               letterSpacing: '-0.04em',
               textShadow: '0 4px 24px rgba(253,225,0,0.25)',
@@ -207,9 +203,7 @@ function HeroCard({
           <h1
             className="text-white leading-[0.95]"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
-              fontWeight: 700,
+              fontFamily: 'var(--font-sans)',
               fontSize: 'clamp(32px, 5.5vw, 48px)',
               letterSpacing: '-0.025em',
             }}
@@ -224,9 +218,7 @@ function HeroCard({
               <span
                 className="text-neon-yellow tabular-nums leading-none"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
-                  fontWeight: 700,
+                  fontFamily: 'var(--font-impact)',
                   fontSize: 'clamp(22px, 3.5vw, 28px)',
                   letterSpacing: '-0.02em',
                 }}
@@ -339,9 +331,7 @@ function StatusGrid({
           <div
             className="leading-none tabular-nums"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
-              fontWeight: 700,
+              fontFamily: 'var(--font-impact)',
               fontSize: 'clamp(24px, 4vw, 30px)',
               letterSpacing: '-0.03em',
             }}
@@ -390,7 +380,7 @@ function SeasonStats({
   const items = [
     { label: 'Partidas', value: matches, Icon: Calendar, color: 'text-white' },
     { label: 'Gols', value: goals, Icon: Target, color: 'text-[var(--color-success)]' },
-    { label: 'Assists', value: assists, Icon: Award, color: 'text-blue-300' },
+    { label: 'Assists', value: assists, Icon: Award, color: 'text-neon-yellow' },
     { label: 'Amarelos', value: yellows, Icon: AlertTriangle, color: 'text-[var(--color-warning)]' },
     { label: 'Vermelhos', value: reds, Icon: AlertOctagon, color: 'text-[var(--color-danger)]' },
   ];
@@ -406,7 +396,7 @@ function SeasonStats({
           <div
             className={cn('leading-none tabular-nums', i.color)}
             style={{
-              fontFamily: 'var(--font-serif-hero)',
+              fontFamily: 'var(--font-impact)',
               fontStyle: 'italic',
               fontWeight: 700,
               fontSize: 'clamp(18px, 3vw, 22px)',
@@ -507,11 +497,11 @@ function Timeline({ events }: { events: PlayerTimelineEvent[] }) {
               className={cn(
                 'absolute -left-[5px] top-1.5 w-2 h-2 rounded-full',
                 e.severity === 'alert'
-                  ? 'bg-red-400'
+                  ? 'bg-[var(--color-danger)]'
                   : e.severity === 'celebration'
-                  ? 'bg-emerald-400'
+                  ? 'bg-[var(--color-success)]'
                   : e.severity === 'info'
-                  ? 'bg-blue-300'
+                  ? 'bg-neon-yellow'
                   : 'bg-white/40',
               )}
             />
@@ -592,9 +582,7 @@ function AttrDeltaList({
               <span
                 className="text-white leading-none tabular-nums"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
-                  fontWeight: 700,
+                  fontFamily: 'var(--font-impact)',
                   fontSize: '22px',
                   letterSpacing: '-0.02em',
                 }}
@@ -668,7 +656,7 @@ function MarketChart({
         <div
           className={cn(
             'text-[11px] font-display font-bold tabular-nums',
-            positive ? 'text-emerald-400' : 'text-red-400',
+            positive ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]',
           )}
         >
           {positive ? '+' : ''}
@@ -715,9 +703,7 @@ function SectionHeader({ kicker, title }: { kicker: string; title: string }) {
         <h2
           className="text-white leading-[0.95] mt-1"
           style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
-            fontWeight: 700,
+            fontFamily: 'var(--font-sans)',
             fontSize: 'clamp(20px, 3vw, 26px)',
             letterSpacing: '-0.02em',
           }}
@@ -940,8 +926,7 @@ export function ManagerScoutsPlayer() {
           <div
             className="text-white/55 text-center max-w-md leading-snug px-4"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
+              fontFamily: 'var(--font-sans)',
               fontWeight: 400,
               fontSize: '13px',
               letterSpacing: '-0.01em',
