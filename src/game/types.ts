@@ -749,7 +749,6 @@ export type GameAction =
   | { type: 'WALLET_RECEIVE_PVP_REWARD'; amount: number; mode: 'quick' | 'classic'; outcome: 'win' | 'draw' | 'loss'; opponentLabel?: string }
   /** Resgata renda passiva acumulada (estádio + megaloja) — credita via
    *  grantEarnedExp e atualiza finance.passiveIncome.lastClaimAt. */
-  | { type: 'CLAIM_PASSIVE_STRUCTURE_INCOME' }
   /** Envio de SPOT BRO para outro utilizador pelo código de indicação (MVP cliente). */
   /** Restaura o ledger de um backup na nuvem quando a wallet
    *  local está vazia (navegador limpo / novo dispositivo). NÃO restaura saldos

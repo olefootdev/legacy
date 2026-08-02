@@ -55,6 +55,34 @@ function sanitizeLineupForRoster(
   return { ...base, ...kept };
 }
 
+/**
+ * Soma o EXP que ficou PRESO em ordens de venda do próprio clube.
+ *
+ * O Exchange (câmbio EXP↔BRO) foi removido do jogo em 2026-08-01. Anunciar um
+ * lote DEBITAVA o EXP na hora — ele só voltava pelo botão "cancelar" da tela.
+ * Sem a tela, esse EXP ficaria preso pra sempre num save que ninguém mais
+ * consegue mexer, ou seja: dinheiro do manager destruído por uma decisão de
+ * produto. Aqui ele é devolvido no primeiro carregamento e a ordem some.
+ *
+ * Pode sair quando não houver mais saves antigos em circulação.
+ */
+export function expPresoEmOrdensDoExchange(raw: unknown, clubId: string | undefined): number {
+  if (!raw || typeof raw !== 'object') return 0;
+  const r = raw as { playerOrders?: unknown };
+  if (!Array.isArray(r.playerOrders)) return 0;
+  let total = 0;
+  for (const o of r.playerOrders) {
+    if (!o || typeof o !== 'object') continue;
+    const x = o as Record<string, unknown>;
+    // Só devolve o que é do próprio clube — ordem de terceiro não é dinheiro meu.
+    if (clubId != null && x.sellerClubId !== clubId) continue;
+    if (typeof x.expAmount === 'number' && Number.isFinite(x.expAmount) && x.expAmount > 0) {
+      total += Math.round(x.expAmount);
+    }
+  }
+  return total;
+}
+
 function hydrateExpExchange(raw: unknown, base: ExpExchangeState): ExpExchangeState {
   if (!raw || typeof raw !== 'object') return base;
   const r = raw as { npcOrders?: unknown; playerOrders?: unknown };
@@ -390,11 +418,19 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
 
   const rawExp = raw.finance?.expLifetimeEarned ?? 0;
 
+  // Exchange removido (2026-08-01): devolve o EXP que ficou preso em ordens de
+  // venda do próprio clube. Ver `expPresoEmOrdensDoExchange`.
+  const expDevolvidoDoExchange = expPresoEmOrdensDoExchange(
+    (raw as Partial<OlefootGameState>).expExchange,
+    raw.club?.id,
+  );
+  const oleComDevolucao = (Number.isFinite(rawOle) ? rawOle : 0) + expDevolvidoDoExchange;
+
   const finance = {
     ...base.finance,
     ...raw.finance,
     broCents: Math.min(MAX_BRO_CENTS, Math.max(0, Number.isFinite(rawBro) ? rawBro : 0)),
-    ole: Math.min(MAX_OLE, Math.max(0, Number.isFinite(rawOle) ? rawOle : 0)),
+    ole: Math.min(MAX_OLE, Math.max(0, oleComDevolucao)),
     expLifetimeEarned: Math.min(MAX_EXP, Math.max(0, Number.isFinite(rawExp) ? rawExp : 0)),
     expHistory: raw.finance?.expHistory ?? [],
     companyTreasuryBroCents: raw.finance?.companyTreasuryBroCents ?? base.finance.companyTreasuryBroCents ?? 0,
@@ -571,7 +607,9 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
     managerProspectArtQueue: hydrateManagerProspectArtQueue(
       (raw as Partial<OlefootGameState>).managerProspectArtQueue,
     ).filter((r) => players[r.playerId]),
-    expExchange: hydrateExpExchange((raw as Partial<OlefootGameState>).expExchange, base.expExchange),
+    // Exchange removido: o livro nasce vazio. As ordens do próprio clube já
+    // viraram EXP de volta na carteira (ver `expPresoEmOrdensDoExchange`).
+    expExchange: base.expExchange,
     playerHealth,
     playerSeasonLedger,
     playerEvolutionTimeline,

@@ -1,14 +1,21 @@
 import type { MemorableTrophyId } from '@/trophies/memorableCatalog';
 
-/** Prémios ao desbloquear troféu memorável (liga / taça) — EXP + BRO na carteira de jogo. */
+/**
+ * Prêmio ao desbloquear troféu memorável (liga / taça).
+ *
+ * 2026-08-01: o prêmio em BRO foi zerado. Título passa a valer EXP — moeda de
+ * jogo — e não dinheiro de valor real. `broCents` continua no retorno porque o
+ * reducer e o `processLeagueSchedule` leem o campo; devolver 0 mantém os dois
+ * caminhos intactos sem creditar nada.
+ */
 export function memorableTrophyFinanceReward(id: string): { exp: number; broCents: number } {
   switch (id as MemorableTrophyId | string) {
     case 'mem_liga_ole':
-      return { exp: 3_500, broCents: 5_000 };
+      return { exp: 3_500, broCents: 0 };
     case 'mem_copa_ole':
-      return { exp: 2_200, broCents: 2_500 };
+      return { exp: 2_200, broCents: 0 };
     case 'mem_supercopa_ole':
-      return { exp: 1_500, broCents: 1_500 };
+      return { exp: 1_500, broCents: 0 };
     default:
       return { exp: 0, broCents: 0 };
   }

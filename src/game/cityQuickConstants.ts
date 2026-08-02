@@ -9,7 +9,10 @@ export const CITY_QUICK_MEDICAL_FATIGUE_DELTA = 16;
 export const CITY_QUICK_MEDICAL_INJURY_RISK_DELTA = 5;
 
 export const CITY_QUICK_STORE_COST_EXP = 540;
-export const CITY_QUICK_STORE_BRO_GAIN_CENTS = 7_500;
+// 2026-08-01: a campanha pagava 7.500 centavos (R$ 75) de BRO por 540 EXP, sem
+// cooldown nem teto. Era conversão livre de moeda de jogo em dinheiro de valor
+// real. O ganho em BRO saiu; sobrou o efeito de torcida, que é o que a
+// mecânica sempre quis dizer.
 /** Reforço de apoio da torcida (0–100) após campanha na megaloja. */
 export const CITY_QUICK_STORE_CROWD_DELTA = 0.55;
 

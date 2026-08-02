@@ -117,9 +117,6 @@ const CoachChat = lazy(() => import('./pages/CoachChat').then((m) => ({ default:
 const YouthProspects = lazy(() => import('./pages/YouthProspects').then((m) => ({ default: m.YouthProspects })));
 const City = lazy(() => import('./pages/City').then((m) => ({ default: m.City })));
 const Transfer = lazy(() => import('./pages/Transfer').then((m) => ({ default: m.Transfer })));
-const TransferExchange = lazy(() =>
-  import('./pages/TransferExchange').then((m) => ({ default: m.TransferExchange })),
-);
 const LiveAuctionsPage = lazy(() =>
   import('./pages/LiveAuctionsPage').then((m) => ({ default: m.LiveAuctionsPage })),
 );
@@ -572,7 +569,8 @@ as a nice MVP. Let's Play Together! ⚽
             {/* Mercado subpages */}
             <Route path="/legends-cup" element={<LegendsCup />} />
             <Route path="/mercado/transfer" element={<Transfer />} />
-            <Route path="/mercado/exchange" element={<TransferExchange />} />
+            {/* Exchange (câmbio EXP↔BRO) removido em 2026-08-01 — link salvo cai no Mercado. */}
+            <Route path="/mercado/exchange" element={<Navigate to="/mercado" replace />} />
             <Route path="/mercado/leiloes" element={<LiveAuctionsPage />} />
             <Route path="/mercado/loja" element={<Store />} />
 
@@ -608,7 +606,7 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/city" element={<Navigate to="/clube/estruturas" replace />} />
             <Route path="/city/youth-prospects" element={<Navigate to="/clube/academia" replace />} />
             <Route path="/transfer" element={<Navigate to="/mercado/transfer" replace />} />
-            <Route path="/transfer/exchange" element={<Navigate to="/mercado/exchange" replace />} />
+            <Route path="/transfer/exchange" element={<Navigate to="/mercado" replace />} />
             <Route path="/store" element={<Navigate to="/mercado/loja" replace />} />
             <Route path="/leagues" element={<Navigate to="/competicao/ligas" replace />} />
             <Route path="/calendar" element={<Navigate to="/competicao/calendario" replace />} />

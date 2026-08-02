@@ -137,7 +137,6 @@ import type { ManagerProspectContractGames } from '@/playerContracts/playerContr
 import { tryUpgradeStructure } from '@/clubStructures/upgrade';
 import { DEFAULT_BRO_PRICES_CENTS } from '@/clubStructures/broDefaults';
 import { STRUCTURE_LABELS, LEDGER_REASON_EXP, LEDGER_REASON_BRO } from '@/clubStructures/types';
-import { calculatePassiveAccrual } from '@/clubStructures/passiveIncome';
 import {
   effectiveCrowdSupportPercent,
   medicalDeptRecoverySpeedBonusPercent,
@@ -168,7 +167,6 @@ import {
   CITY_QUICK_MEDICAL_COST_EXP,
   CITY_QUICK_MEDICAL_FATIGUE_DELTA,
   CITY_QUICK_MEDICAL_INJURY_RISK_DELTA,
-  CITY_QUICK_STORE_BRO_GAIN_CENTS,
   CITY_QUICK_STORE_COST_EXP,
   CITY_QUICK_STORE_CROWD_DELTA,
   CITY_QUICK_TRAINING_COST_EXP,
@@ -4301,7 +4299,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         -CITY_QUICK_STORE_COST_EXP,
         'Campanha Megaloja (cidade)',
       );
-      finance = addBroCents(finance, CITY_QUICK_STORE_BRO_GAIN_CENTS);
+      // 2026-08-01: a campanha NÃO paga mais BRO. Convertia 540 EXP em R$ 75
+      // sem cooldown nem teto — o jogo imprimia dinheiro de valor real em loop.
+      // O efeito que faz sentido (apoio da torcida) continua logo abaixo.
       finance = syncWalletSpotBro(finance);
       const sp = Math.min(99, Math.max(0, state.crowd.supportPercent + CITY_QUICK_STORE_CROWD_DELTA));
       return {
@@ -4313,7 +4313,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `city-store-${Date.now()}`,
             'FINANCE_BRO_MOVEMENT',
             'FINANCEIRO',
-            `Campanha na Megaloja: +${(CITY_QUICK_STORE_BRO_GAIN_CENTS / 100).toFixed(0)} BRO`,
+            `Campanha na Megaloja: a torcida respondeu.`,
             {
               body: `**${CITY_QUICK_STORE_COST_EXP} EXP** em marketing e logística. Pico de vendas e reforço do apoio da torcida.`,
               deepLink: '/wallet',
@@ -4508,38 +4508,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const norm = String(action.code ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (!norm || norm === w.myReferralCode) return state;
       return syncWalletToFinance(state, { ...w, myReferralCode: norm });
-    }
-    case 'CLAIM_PASSIVE_STRUCTURE_INCOME': {
-      const accrued = calculatePassiveAccrual(
-        state.structures,
-        state.finance.passiveIncome?.lastClaimAt ?? null,
-      );
-      const nowIso = new Date().toISOString();
-      if (accrued <= 0) {
-        // Nada a creditar — só inicia o relógio se ainda não existe lastClaimAt
-        if (state.finance.passiveIncome?.lastClaimAt) return state;
-        return {
-          ...state,
-          finance: { ...state.finance, passiveIncome: { lastClaimAt: nowIso } },
-        };
-      }
-      let finance = grantEarnedExp(state.finance, accrued);
-      finance = withExpHistory(finance, accrued, 'Receita de estruturas');
-      finance = { ...finance, passiveIncome: { lastClaimAt: nowIso } };
-      const inbox = [
-        makeInboxItem(
-          `passive-income-${Date.now()}`,
-          'FINANCE_EXP_GAIN',
-          'FINANCEIRO',
-          `+${accrued.toLocaleString('pt-BR')} EXP — receita de estruturas`,
-          {
-            body: `Estádio e megaloja geraram ${accrued.toLocaleString('pt-BR')} EXP enquanto estavas fora.`,
-            deepLink: '/clube/estruturas',
-          },
-        ),
-        ...state.inbox,
-      ].slice(0, 14);
-      return { ...state, finance, inbox };
     }
     case 'WALLET_RECEIVE_PVP_REWARD': {
       const amount = Math.floor(action.amount);
