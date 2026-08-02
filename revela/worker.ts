@@ -19,6 +19,13 @@ interface Env {
   ASSETS: { fetch: (req: Request) => Promise<Response> };
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
+  /**
+   * Segredo do Turnstile. É o ÚNICO valor sensível aqui — não vai no bundle,
+   * fica como secret do Worker (`wrangler secret put TURNSTILE_SECRET`).
+   * Quando ausente, a rota de envio protegida responde 503 e o cliente cai no
+   * caminho antigo (RPC direta) — ver `submitTalent` no cliente.
+   */
+  TURNSTILE_SECRET?: string;
 }
 
 interface Meta {
@@ -40,6 +47,14 @@ const FALLBACK: Omit<Meta, 'url'> = {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+
+    // Envio de talento protegido por Turnstile. Precisa passar por aqui porque
+    // o Postgres não enxerga IP nem resolve desafio — a checagem só existe no
+    // edge. Ver `enviarTalentoProtegido`.
+    if (url.pathname === '/api/enviar-talento' && request.method === 'POST') {
+      return enviarTalentoProtegido(request, env);
+    }
+
     const res = await env.ASSETS.fetch(request);
 
     // Só mexe em documento HTML. Imagem, CSS e JS passam direto.
@@ -75,6 +90,12 @@ async function metaParaRota(url: URL, env: Env): Promise<Meta | null> {
   // quando o jogador posta o link dele — sem isto, o preview seria o da home.
   if (partes.length === 1) {
     const seg = partes[0];
+
+    // Rotas próprias do app que ocupam um segmento só. Sem esta lista o Worker
+    // trataria "/meu-perfil" como handle e gastaria uma consulta pra descobrir
+    // que não existe. São privadas — preview é o da home, de propósito.
+    if (seg === 'meu-perfil') return { ...FALLBACK, url: `${base}/${seg}` };
+
     // Código de indicação cru (MAIÚSCULO 6-8) redireciona pra home no cliente,
     // então o preview é o da home.
     if (/^[A-Z0-9]{6,8}$/.test(seg)) return { ...FALLBACK, url: `${base}/${seg}` };
@@ -290,4 +311,78 @@ class AppendCanonical {
 
 function escapar(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* ══ Envio de talento protegido ════════════════════════════════════════════ */
+
+/**
+ * `POST /api/enviar-talento` — valida o Turnstile e só então grava.
+ *
+ * POR QUE NO WORKER: o envio é anônimo de propósito (o fundador pediu que
+ * clicar em ENVIAR já finalize o cadastro; a conta vem na aprovação). Isso
+ * deixa a porta aberta pra bot encher a fila e o bucket de fotos. Postgres não
+ * enxerga IP nem resolve desafio — a única camada que vê os dois é o edge.
+ *
+ * FAIL-CLOSED: sem `TURNSTILE_SECRET` esta rota responde 503 em vez de deixar
+ * passar. Um gate que falha aberto não é gate — este projeto já perdeu PII
+ * assim antes. O cliente trata o 503 caindo no caminho antigo (RPC direta),
+ * então enquanto o widget não existir nada quebra; quando existir, protege.
+ */
+async function enviarTalentoProtegido(request: Request, env: Env): Promise<Response> {
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+    });
+
+  if (!env.TURNSTILE_SECRET) {
+    return json({ ok: false, reason: 'turnstile_nao_configurado' }, 503);
+  }
+
+  let corpo: { token?: unknown; args?: unknown };
+  try {
+    corpo = (await request.json()) as typeof corpo;
+  } catch {
+    return json({ ok: false, reason: 'json_invalido' }, 400);
+  }
+
+  const token = typeof corpo.token === 'string' ? corpo.token : '';
+  if (!token) return json({ ok: false, reason: 'desafio_ausente' }, 400);
+
+  // O IP do visitante entra na verificação: o Turnstile usa isso pra detectar
+  // token reusado de outra máquina.
+  const ip = request.headers.get('CF-Connecting-IP') ?? '';
+  const forma = new FormData();
+  forma.append('secret', env.TURNSTILE_SECRET);
+  forma.append('response', token);
+  if (ip) forma.append('remoteip', ip);
+
+  let verificado = false;
+  try {
+    const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: forma,
+    });
+    const v = (await r.json()) as { success?: boolean };
+    verificado = v.success === true;
+  } catch {
+    verificado = false;
+  }
+  if (!verificado) return json({ ok: false, reason: 'desafio_falhou' }, 403);
+
+  // Desafio ok — grava pelo mesmo RPC de sempre, com a anon key.
+  const args = (corpo.args ?? {}) as Record<string, unknown>;
+  const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/revela_submit_talent`, {
+    method: 'POST',
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(args),
+  });
+  if (!r.ok) {
+    return json({ ok: false, reason: 'falha_ao_gravar' }, 502);
+  }
+  return json(await r.json());
 }
