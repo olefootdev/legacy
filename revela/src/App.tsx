@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthSheet } from './components/AuthSheet';
+import { MeuPerfilPage } from './pages/MeuPerfilPage';
 import { Toast, useToast } from './components/primitives';
 import {
   captureReferralFromUrl,
@@ -63,6 +64,12 @@ export default function App() {
         <Route
           path="/comecar"
           element={<OnboardingPage onNote={push} />}
+        />
+        {/* O painel do atleta. Precisa vir ANTES de /:short — senão o
+            catch-all de handle engoliria "meu-perfil" como se fosse um @. */}
+        <Route
+          path="/meu-perfil"
+          element={<MeuPerfilPage session={session} requireAuth={requireAuth} />}
         />
         <Route path="/lenda/:slug" element={<LegendPage onNote={push} />} />
         {/* Alias: links de /playervip/<handle> compartilhados por aí continuam

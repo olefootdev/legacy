@@ -174,6 +174,12 @@ export async function fetchMySupports(): Promise<string[]> {
 }
 
 export interface SubmitTalentInput {
+  /**
+   * Token do desafio anti-bot, quando o widget está montado. Sem ele o envio
+   * segue pelo caminho direto — é o que mantém o funil vivo enquanto o widget
+   * não existe no painel da Cloudflare.
+   */
+  turnstileToken?: string;
   /** Nome de documento — o card sai com ele. */
   name: string;
   pos: string;
@@ -258,9 +264,7 @@ function asSubmitFailure(reason: unknown): SubmitFailure {
  * cadastro — por isso ele é o único campo de contato obrigatório.
  */
 export async function submitTalent(input: SubmitTalentInput): Promise<SubmitResult> {
-  const res = await rpc<{ ok: boolean; id?: string; slug?: string; reason?: string }>(
-    'revela_submit_talent',
-    {
+  const args = {
       p_name: input.name,
       p_pos: input.pos,
       p_contact_phone: input.contactPhone,
@@ -284,7 +288,39 @@ export async function submitTalent(input: SubmitTalentInput): Promise<SubmitResu
       p_tiktok_url: input.tiktokUrl ?? null,
       p_photo_url: input.photoUrl ?? null,
       p_referral_code: input.referralCode ?? null,
-    },
+  };
+
+  /**
+   * CAMINHO PROTEGIDO — quando existe token do Turnstile, o envio passa pelo
+   * Worker (`/api/enviar-talento`), que resolve o desafio antes de gravar. O
+   * Postgres não enxerga IP nem valida desafio; essa checagem só existe no edge.
+   *
+   * O 503 tem significado: quer dizer que o Worker ainda não tem a secret
+   * configurada. Nesse caso caímos no caminho antigo, para o funil não parar
+   * enquanto o widget não é criado no painel da Cloudflare. Qualquer outra
+   * resposta é definitiva — inclusive a recusa do desafio, que NÃO tenta de
+   * novo pelo caminho aberto (senão o gate não gateia nada).
+   */
+  if (input.turnstileToken) {
+    try {
+      const r = await fetch('/api/enviar-talento', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ token: input.turnstileToken, args }),
+      });
+      if (r.status !== 503) {
+        const body = (await r.json()) as { ok?: boolean; id?: string; slug?: string; reason?: string };
+        if (body.ok && body.id && body.slug) return { ok: true, id: body.id, slug: body.slug };
+        return { ok: false, reason: asSubmitFailure(body.reason) };
+      }
+    } catch {
+      // Worker fora do ar — cai no caminho direto abaixo.
+    }
+  }
+
+  const res = await rpc<{ ok: boolean; id?: string; slug?: string; reason?: string }>(
+    'revela_submit_talent',
+    args,
   );
   if (!res) return { ok: false, reason: 'offline' };
   if (res.ok && res.id && res.slug) return { ok: true, id: res.id, slug: res.slug };
@@ -338,4 +374,34 @@ export async function claimTalent(talentId: string, phone: string): Promise<Clai
   });
   if (!res) return { ok: false, reason: 'offline' };
   return { ok: Boolean(res.ok), slug: res.slug, reason: res.reason as ClaimFailure | undefined };
+}
+
+
+/* ══ O perfil de quem está logado ══════════════════════════════════════════ */
+
+/**
+ * O talento da pessoa logada — a fonte do painel dela.
+ *
+ * `revela_my_talent()` filtra por `auth.uid()` no servidor e exclui recusado.
+ * Devolve null pra quem tem conta mas ainda não reivindicou um perfil.
+ */
+export interface MeuTalento {
+  id: string;
+  slug: string;
+  name: string;
+  pos: string;
+  category: string | null;
+  club: string | null;
+  city: string | null;
+  uf: string | null;
+  portrait: string | null;
+  overall: number | null;
+  status: string;
+  scoutNote: string | null;
+  supporters: number;
+  createdAt: string;
+}
+
+export async function fetchMeuTalento(): Promise<MeuTalento | null> {
+  return rpc<MeuTalento>('revela_my_talent');
 }

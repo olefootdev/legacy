@@ -85,21 +85,36 @@ export function Nav({
         </nav>
 
         <div className="flex items-center gap-2">
+          {/* ENTRAR / MEU PERFIL — sem `hidden sm:block`.
+              Estava escondido no celular, que é justamente onde o atleta está:
+              quem já mandou a ficha não tinha como voltar pra acompanhar. Logado,
+              o botão deixa de ser só "sair" e vira o caminho pro painel — que é
+              o que a pessoa quer quando volta ao site. */}
           {session ? (
-            <button
-              type="button"
-              onClick={onLogout}
-              className="rev-label rev-focus hidden text-[11px] sm:block"
-              data-on="yellow"
-              style={{ color: 'rgba(13,13,13,.6)' }}
-            >
-              Sair
-            </button>
+            <>
+              <a
+                href="/meu-perfil"
+                className="rev-label rev-focus text-[11px]"
+                data-on="yellow"
+                style={{ color: 'rgba(13,13,13,.75)' }}
+              >
+                Meu perfil
+              </a>
+              <button
+                type="button"
+                onClick={onLogout}
+                className="rev-label rev-focus hidden text-[11px] sm:block"
+                data-on="yellow"
+                style={{ color: 'rgba(13,13,13,.45)' }}
+              >
+                Sair
+              </button>
+            </>
           ) : (
             <button
               type="button"
               onClick={onLogin}
-              className="rev-label rev-focus hidden text-[11px] sm:block"
+              className="rev-label rev-focus text-[11px]"
               data-on="yellow"
               style={{ color: 'rgba(13,13,13,.6)' }}
             >

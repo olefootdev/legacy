@@ -35,6 +35,7 @@ import { AdminUsuariosPanel } from './panels/AdminUsuariosPanel';
 import { AdminFinanceiroPanel } from './panels/AdminFinanceiroPanel';
 import { AdminGameSpiritPanel } from './panels/AdminGameSpiritPanel';
 import { AdminProspectArtPanel } from './panels/AdminProspectArtPanel';
+import { AdminRevelaScoutPanel } from './panels/AdminRevelaScoutPanel';
 import { AdminGachaTemplatesPanel } from './panels/AdminGachaTemplatesPanel';
 import { AdminPlayerEvolutionPanel } from './panels/AdminPlayerEvolutionPanel';
 import { AdminGrowthPanel } from './panels/AdminGrowthPanel';
@@ -73,6 +74,7 @@ type TabId =
   | 'sistema';
 
 type SubTabId =
+  | 'revelaScout'
   | 'contribuicoes'
   | 'financeiro'
   | 'shop'
@@ -118,6 +120,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
     label: 'Jogadores',
     icon: Users,
     subTabs: [
+      { id: 'revelaScout', label: 'OLE Scout' },
       { id: 'prospectArt', label: 'Academy' },
       { id: 'gachaTemplates', label: 'Gacha' },
       { id: 'playerEvolution', label: 'Evolução' },
@@ -161,6 +164,8 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
 
 /** Hash na URL pode usar alias (ex.: #academy-players; #academia-art mantém compat.). */
 const HASH_TO_TAB: Record<string, TabId | SubTabId> = {
+  'ole-scout': 'revelaScout',
+  revela: 'revelaScout',
   'academy-players': 'prospectArt',
   'academia-art': 'prospectArt',
   'game-spirit': 'gameSpirit',
@@ -365,6 +370,7 @@ export function AdminDashboard() {
               {tab === 'economia' && !subTab ? <AdminFinanceiroPanel /> : null}
 
               {/* Jogadores group */}
+              {tab === 'jogadores' && subTab === 'revelaScout' ? <AdminRevelaScoutPanel /> : null}
               {tab === 'jogadores' && subTab === 'prospectArt' ? <AdminProspectArtPanel /> : null}
               {tab === 'jogadores' && subTab === 'gachaTemplates' ? <AdminGachaTemplatesPanel /> : null}
               {tab === 'jogadores' && subTab === 'playerEvolution' ? <AdminPlayerEvolutionPanel /> : null}
