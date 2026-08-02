@@ -206,7 +206,7 @@ export function AdminFinanceiroPanel() {
       setCreditMsg(error.message);
     } else {
       const parts = [];
-      if (cents) parts.push(`${formatBroFromCents(cents)} BRO`);
+      if (cents) parts.push(`${formatBroFromCents(cents)}`);
       if (expAmount) parts.push(`${expAmount.toLocaleString('pt-BR')} EXP`);
       setCreditStatus('ok');
       setCreditMsg(`✓ ${parts.join(' + ')} creditados. O jogador receberá ao próximo login.`);

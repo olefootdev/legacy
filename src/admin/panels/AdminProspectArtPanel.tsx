@@ -12,6 +12,14 @@ import type { ManagerProspectArtRequest } from '@/game/types';
 import { formatExp } from '@/systems/economy';
 import { cn } from '@/lib/utils';
 
+/**
+ * Fallback ESTÁVEL: `?? []` dentro de um seletor do `useGameStore`
+ * (useSyncExternalStore) cria um array novo a cada leitura e joga o React num
+ * laço infinito de re-render. A constante garante a mesma referência.
+ */
+const LISTA_VAZIA: never[] = [];
+
+
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 
 /**
@@ -442,7 +450,7 @@ export function AdminProspectArtPanel() {
   const createCostExp = useGameStore(
     (s) => s.managerProspectConfig?.createCostExp ?? DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP,
   );
-  const queue = useGameStore((s) => s.managerProspectArtQueue ?? []);
+  const queue = useGameStore((s) => s.managerProspectArtQueue ?? LISTA_VAZIA);
   const players = useGameStore((s) => s.players);
 
   const [costDraft, setCostDraft] = useState(String(createCostExp));

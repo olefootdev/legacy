@@ -27,11 +27,27 @@ import {
   type OfferAction,
 } from '@/supabase/marketOffers';
 
+/**
+ * Fallback ESTÁVEL para as listas de ofertas.
+ *
+ * POR QUÊ: `useGameStore` é `useSyncExternalStore`, que compara o resultado do
+ * seletor por IDENTIDADE. Escrever `?? []` dentro do seletor cria um array novo
+ * a cada chamada — o React vê um snapshot diferente toda vez, re-renderiza, o
+ * seletor roda de novo, e entra em laço infinito ("The result of getSnapshot
+ * should be cached to avoid an infinite loop"). Com a constante, o seletor
+ * devolve sempre a MESMA referência quando não há ofertas.
+ *
+ * Isso derrubava o Transfer inteiro para qualquer manager cujo estado ainda não
+ * tivesse `incomingOffers`/`outgoingOffers` — conta nova ou save anterior à
+ * migração do P2P.
+ */
+const SEM_OFERTAS: never[] = [];
+
 export function useMarketOffers() {
   const dispatch = useGameDispatch();
   const clubName = useGameStore((s) => s.club?.name ?? 'Manager');
-  const incoming = useGameStore((s) => s.managerProspectMarket.incomingOffers ?? []);
-  const outgoing = useGameStore((s) => s.managerProspectMarket.outgoingOffers ?? []);
+  const incoming = useGameStore((s) => s.managerProspectMarket.incomingOffers ?? SEM_OFERTAS);
+  const outgoing = useGameStore((s) => s.managerProspectMarket.outgoingOffers ?? SEM_OFERTAS);
   const [loading, setLoading] = useState(false);
 
   const refetch = useCallback(async () => {
