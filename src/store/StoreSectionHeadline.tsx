@@ -1,5 +1,5 @@
 /**
- * Headline de seção da Store — padrão BVB sem ícones.
+ * Headline de seção da Store — trilho amarelo + título, sem ícones.
  *
  * Uso:
  *   <StoreSectionHeadline
@@ -13,7 +13,7 @@
  *   - Subtítulo: text-soft, leading-snug abaixo
  *   - rightLabel (opcional): pill outline no canto direito
  *   - Sem ícone, sem badge colorido — minimalismo BVB
- *   - variant='moret': Título em Moret italic com glow pulsante para seções premium
+ *   - variant='moret': título maior em Anton, com trilho pulsante (seção premium)
  */
 
 import { motion } from 'motion/react';
@@ -27,7 +27,7 @@ interface StoreSectionHeadlineProps {
   /** Click handler na pílula. Se omitido, pill é só informativa. */
   onRightClick?: () => void;
   className?: string;
-  /** Variante visual: 'default' (Agency FB) ou 'moret' (Moret italic para seções premium) */
+  /** 'default' = título pequeno; 'moret' = título grande da seção premium. */
   variant?: 'default' | 'moret';
 }
 
@@ -57,15 +57,11 @@ export function StoreSectionHeadline({
             className="block w-[3px] h-10 bg-neon-yellow shrink-0"
           />
           <div className="min-w-0 flex-1">
-            {/* Título em Moret italic */}
+            {/* Título em Anton — serifa itálica é assinatura de nome de LENDA,
+                não de cabeçalho de seção. */}
             <h2
-              className="text-neon-yellow leading-tight"
-              style={{
-                fontFamily: 'var(--font-serif-hero)', // Moret
-                fontStyle: 'italic',
-                fontSize: 'clamp(1.5rem, 3vw, 2rem)',
-                letterSpacing: '-0.01em',
-              }}
+              className="font-impact uppercase leading-none text-neon-yellow"
+              style={{ fontSize: 'clamp(1.6rem, 3.2vw, 2.1rem)', letterSpacing: '-0.01em' }}
             >
               {title}
             </h2>

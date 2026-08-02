@@ -27,6 +27,7 @@ import { ManagerDesk } from '@/components/home/ManagerDesk';
 import { InheritanceModule } from '@/components/home/InheritanceModule';
 import { ManagerOfDay } from '@/components/home/ManagerOfDay';
 import { ReferralInvite } from '@/components/home/ReferralInvite';
+import { DailyMissions } from '@/components/home/DailyMissions';
 import { DivisionRanking } from '@/components/home/DivisionRanking';
 import { RankingTop10 } from '@/components/home/RankingTop10';
 import { LastGlobalChampion } from '@/components/home/LastGlobalChampion';
@@ -321,19 +322,12 @@ export function Home() {
           cupSublabel={cupSublabel}
         />
 
-        {/* Slider de destaques — logo abaixo do hero. Placeholders até existir
-            uma fonte real de imagem (slot de admin ou tabela de campanhas). */}
+        {/* Slider de destaques em largura total — logo abaixo do hero. */}
         <HomeImageSlider />
 
-        {/* No topo agora — líder real do ranking (#1) */}
-        {leader ? (
-          <ManagerOfDay clubName={leader.team} points={leader.points} overall={leader.overall} />
-        ) : null}
-
-        {/* Lendas em Destaque — drops reais (legacy_players) */}
-        <LegendsRail legends={legends} />
-
-        {/* Próxima Partida — Liga Global + brasão do coração + countdown ao vivo */}
+        {/* Próxima Partida — Liga Global + brasão do coração + countdown ao vivo.
+            Vem antes de tudo que é passivo: é a única coisa aqui com hora
+            marcada, então é a primeira que o manager precisa ver. */}
         <NextMatchCard
           clubName={club.name}
           opponentName={nextGlobal ? nextGlobal.opponentName : null}
@@ -346,11 +340,16 @@ export function Home() {
           }
         />
 
+        {/* No topo agora — líder real do ranking (#1) */}
+        {leader ? (
+          <ManagerOfDay clubName={leader.team} points={leader.points} overall={leader.overall} />
+        ) : null}
+
+        {/* Lendas em Destaque — drops reais (legacy_players) */}
+        <LegendsRail legends={legends} />
+
         {/* Ranking de Clubes — Top 10, aba Geral real */}
         <RankingTop10 top={top10} myRow={myRow} myRank={myRank} />
-
-        {/* Último Campeão da Liga Global — time + manager (dados reais) */}
-        <LastGlobalChampion />
 
         {/* Mesa do Manager — pendências reais */}
         <ManagerDesk
@@ -358,11 +357,6 @@ export function Home() {
           expiredCount={expiredCount}
           offersCount={incomingCount}
         />
-
-        {/* Herança (Messi→Yamal) — some quando não há lenda + joia */}
-        {inheritance ? (
-          <InheritanceModule legend={inheritance.legend} jewel={inheritance.jewel} />
-        ) : null}
 
         {/* Ranking da minha divisão — Top 10 da divisão + posição do manager.
             Some sozinho se a liga ainda não classificou o clube. */}
@@ -374,31 +368,56 @@ export function Home() {
           divisionSize={divisionEntries.length}
         />
 
-        {/* A Resenha — pulso do mundo via feed real de mercado */}
-        <section aria-label="A Resenha">
-          <div className="mb-2.5">
-            <h2 className="ole-eyebrow-poster">A Resenha</h2>
-          </div>
-          <div
-            className="ole-poster p-3 sm:p-4"
+        {/* Último Campeão da Liga Global — time + manager (dados reais) */}
+        <LastGlobalChampion />
+
+        {/* Herança (Messi→Yamal) — some quando não há lenda + joia */}
+        {inheritance ? (
+          <InheritanceModule legend={inheritance.legend} jewel={inheritance.jewel} />
+        ) : null}
+
+        {/* A Resenha — pulso do mundo via feed real de mercado.
+            Seção EDITORIAL que sangra a largura com fundo próprio: é o terceiro
+            tempo do ritmo de cor da Home (amarelo da Mesa → preto → editorial),
+            em vez de mais um card igual aos de cima. */}
+        <section
+          aria-label="A Resenha"
+          className="ole-bleed"
+          style={{ background: '#15130c', paddingBlock: 'clamp(22px, 5vw, 34px)' }}
+        >
+          <span className="ole-eyebrow-poster" style={{ fontSize: '12px' }}>
+            O mundo se mexeu
+          </span>
+          <h2
+            className="mb-4 mt-2 font-impact uppercase text-white"
+            style={{ fontSize: 'clamp(26px, 6vw, 40px)', lineHeight: 0.9, letterSpacing: '-0.01em' }}
           >
-            <MarketActivityFeed activities={marketActivities} maxVisible={5} />
-            <div className="mt-2 border-t border-white/5 pt-1">
-              <Link
-                to="/mercado/transfer"
-                className="inline-flex min-h-[44px] items-center gap-1 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
-                style={{ fontSize: '10px', letterSpacing: '0.22em' }}
-              >
-                Ir ao mercado
-                <ChevronRight className="w-4 h-4" aria-hidden />
-              </Link>
-            </div>
-          </div>
+            A Resenha
+          </h2>
+
+          <MarketActivityFeed activities={marketActivities} maxVisible={5} />
+
+          <Link
+            to="/mercado/transfer"
+            className="mt-3 inline-flex min-h-[44px] items-center gap-1 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
+            style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+          >
+            Ir ao mercado
+            <ChevronRight className="w-4 h-4" aria-hidden />
+          </Link>
         </section>
 
-        {/* Indicação — o link de convite do manager, abaixo da Resenha.
-            Some sozinha se o manager ainda não tem código de indicação. */}
-        <ReferralInvite />
+        {/* O par que fecha a Home: o que traz gente nova (indicação) e o que
+            traz a pessoa de volta amanhã (missões). Lado a lado no desktop,
+            empilhados no mobile. Cada um some sozinho quando não tem dado. */}
+        <div className="grid gap-4 min-[700px]:grid-cols-2">
+          <ReferralInvite />
+          <DailyMissions
+            challenges={dailyChallenges?.challenges ?? []}
+            streak={dailyChallenges?.streak}
+            onClaim={(challengeId) => dispatch({ type: 'CLAIM_CHALLENGE_REWARD', challengeId })}
+          />
+        </div>
       </div>
 
     </div>

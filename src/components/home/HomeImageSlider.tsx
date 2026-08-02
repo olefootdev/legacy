@@ -5,8 +5,16 @@
  * dentro da coluna) e a navegação é por botões numerados 1 · 2 · 3 — pra virar
  * um banner impactante, não uma miniatura.
  *
- * FONTE DAS IMAGENS: placeholders por enquanto. Quando existir uma fonte real
- * (slot de admin ou tabela de campanhas), troca-se `slides` e o resto segue.
+ * FONTE DAS IMAGENS (2026-08-01): as artes oficiais da marca, servidas de
+ * `/banners/home/`. Os PNGs originais em `public/` pesam ~2,2 MB cada — seis
+ * megabytes na primeira dobra. As versões daqui são JPEG de 1400px geradas a
+ * partir deles (originais preservados), e somam menos de 400 KB.
+ *
+ * São DOIS destaques porque existem duas artes horizontais distintas. A
+ * terceira arte da pasta é retrato (941×1672) e é a mesma cena do campeão —
+ * cortar pra paisagem só duplicaria o slide 2. Quando existir uma terceira arte
+ * de verdade, basta acrescentá-la em DESTAQUES: os botões numerados e o
+ * scroll-snap já acompanham qualquer quantidade.
  *
  * FULL-BLEED: a seção usa `.ole-full-bleed` (100vw) pra escapar da coluna de
  * 672px. Cada slide tem 100vw, então o scroll-snap alinha na largura da tela.
@@ -15,20 +23,29 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ImageIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export interface HomeSlide {
   src?: string;
   alt?: string;
+  /** Rota INTERNA do jogo. Cada destaque leva a uma tela que já existe. */
   href?: string;
 }
 
-const PLACEHOLDERS: HomeSlide[] = [
-  { alt: 'Imagem 1' },
-  { alt: 'Imagem 2' },
-  { alt: 'Imagem 3' },
+const DESTAQUES: HomeSlide[] = [
+  {
+    src: '/banners/home/banner-inicio-liga-ole.jpg',
+    alt: 'Time entrando em campo — Liga Global',
+    href: '/match/global',
+  },
+  {
+    src: '/banners/home/banner-campeao-game-ole.jpg',
+    alt: 'Manager erguido pelo time — campeão',
+    href: '/competicao/ranking',
+  },
 ];
 
-export function HomeImageSlider({ slides = PLACEHOLDERS }: { slides?: HomeSlide[] }) {
+export function HomeImageSlider({ slides = DESTAQUES }: { slides?: HomeSlide[] }) {
   const trilho = useRef<HTMLDivElement | null>(null);
   const [ativo, setAtivo] = useState(0);
   const total = slides.length;
@@ -47,6 +64,21 @@ export function HomeImageSlider({ slides = PLACEHOLDERS }: { slides?: HomeSlide[
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
   }, [onScroll]);
+
+  // Girar o celular muda a largura do trilho, mas o scroll continua no pixel
+  // antigo — o botão diria "1" com o destaque 2 na tela. Reancora no slide
+  // ativo a cada mudança de largura. Não vira laço: o destino é exatamente
+  // ativo × largura, então o onScroll recalcula o mesmo índice.
+  useEffect(() => {
+    const el = trilho.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const obs = new ResizeObserver(() => {
+      const alvo = ativo * el.clientWidth;
+      if (Math.abs(el.scrollLeft - alvo) > 1) el.scrollLeft = alvo;
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [ativo]);
 
   function irPara(i: number) {
     const el = trilho.current;
@@ -68,7 +100,9 @@ export function HomeImageSlider({ slides = PLACEHOLDERS }: { slides?: HomeSlide[
         style={{ scrollbarWidth: 'none' }}
       >
         {slides.map((s, i) => (
-          <Slide key={i} slide={s} />
+          // O primeiro destaque está na primeira dobra: carrega junto com a
+          // página. Os outros só quando o manager desliza pra eles.
+          <Slide key={i} slide={s} eager={i === 0} />
         ))}
       </div>
 
@@ -105,7 +139,7 @@ export function HomeImageSlider({ slides = PLACEHOLDERS }: { slides?: HomeSlide[
   );
 }
 
-function Slide({ slide }: { slide: HomeSlide }) {
+function Slide({ slide, eager = false }: { slide: HomeSlide; eager?: boolean }) {
   // Altura de banner: sobe com a viewport, com teto pra não estourar no desktop.
   const alturaStyle = { height: 'clamp(150px, 40vw, 300px)' } as const;
 
@@ -114,7 +148,12 @@ function Slide({ slide }: { slide: HomeSlide }) {
       src={slide.src}
       alt={slide.alt ?? ''}
       className="h-full w-full object-cover"
-      loading="lazy"
+      // width/height reservam a proporção antes do byte chegar — sem isso o
+      // resto da Home pula quando a imagem carrega.
+      width={1400}
+      height={933}
+      loading={eager ? 'eager' : 'lazy'}
+      fetchPriority={eager ? 'high' : 'auto'}
       referrerPolicy="no-referrer"
     />
   ) : (
@@ -132,9 +171,10 @@ function Slide({ slide }: { slide: HomeSlide }) {
   return (
     <div className="w-full flex-none snap-center overflow-hidden" style={alturaStyle}>
       {slide.href ? (
-        <a href={slide.href} className="block h-full w-full">
+        // Link, não <a>: destino interno navega sem recarregar o app inteiro.
+        <Link to={slide.href} className="block h-full w-full" aria-label={slide.alt}>
           {conteudo}
-        </a>
+        </Link>
       ) : (
         conteudo
       )}

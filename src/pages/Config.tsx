@@ -213,65 +213,31 @@ export function Config() {
         aria-label="Configurações"
         className="relative w-full overflow-hidden bg-neon-yellow -mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-2"
       >
-        {/* Watermark */}
-        <div
-          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
-          aria-hidden
-        >
-          <span
-            className="font-display font-black uppercase whitespace-nowrap text-black/[0.05]"
-            style={{
-              fontSize: 'clamp(140px, 28vw, 360px)',
-              lineHeight: '0.85',
-              letterSpacing: '-0.05em',
-            }}
-          >
-            CONFIG
-          </span>
-        </div>
+        {/* ── HERO no layer final: eyebrow + manchete + a linha que informa. ── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14 text-center"
+          className="relative z-10 px-5 sm:px-8"
+          style={{ paddingBlock: 'clamp(26px, 5vw, 46px)' }}
         >
-          <div
-            className="ole-eyebrow !text-black mb-5 sm:mb-6"
-            style={{ fontFamily: 'var(--font-ui)' }}
-          >
-            <span className="!text-black">Preferências</span>
-          </div>
-          <h1 className="leading-[0.9]">
-            <span
-              className="block font-bold uppercase text-black"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(2.5rem, 8vw, 5.5rem)',
-                letterSpacing: '0.005em',
-              }}
-            >
-              Configurações
-            </span>
-            <span
-              className="block italic text-black"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontSize: 'clamp(1.75rem, 5.5vw, 3.5rem)',
-                marginTop: '0.04em',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              do seu jogo.
-            </span>
-          </h1>
-          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
-          <p
-            className="mt-5 text-black/65 mx-auto max-w-md"
+          <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
+            Sua conta
+          </span>
+          <h1
+            className="mt-2 font-impact uppercase"
             style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'clamp(0.85rem, 1vw, 0.95rem)',
-              lineHeight: 1.55,
+              color: 'var(--color-deep-black)',
+              fontSize: 'clamp(38px, 10vw, 80px)',
+              lineHeight: 0.84,
+              letterSpacing: '-0.01em',
             }}
+          >
+            Configurações
+          </h1>
+          <p
+            className="mt-3"
+            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'rgba(13,13,13,0.62)' }}
           >
             Preferências persistidas com o teu save.
           </p>
@@ -523,7 +489,7 @@ export function Config() {
             <div className="flex items-start gap-3 min-w-0 flex-1">
               <Lock className="w-4 h-4 text-white/45 mt-0.5 shrink-0" />
               <div className="min-w-0">
-                <p className={cn('inline-flex items-center gap-1 font-display text-sm font-bold uppercase tracking-wider', hasPwd ? 'text-neon-green' : 'text-white/70')}>
+                <p className={cn('inline-flex items-center gap-1 font-display text-sm font-bold uppercase tracking-wider', hasPwd ? 'text-[var(--color-success)]' : 'text-white/70')}>
                   {hasPwd ? <><Check className="h-3.5 w-3.5" strokeWidth={2.4} /> Senha local ativa</> : 'Senha local não definida'}
                 </p>
                 <p className="mt-0.5 text-[11px] text-white/50">
@@ -584,7 +550,7 @@ export function Config() {
                       resetSecurityFields();
                       setSecurityMode('forgot');
                     }}
-                    className="rounded-lg border border-rose-500/35 bg-rose-500/5 px-4 py-2 text-xs font-bold uppercase text-rose-300 hover:bg-rose-500/10"
+                    className="rounded-lg border border-[var(--color-danger)]/35 bg-[var(--color-danger)]/5 px-4 py-2 text-xs font-bold uppercase text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
                   >
                     Esqueci a senha
                   </button>
@@ -634,12 +600,12 @@ export function Config() {
                   </div>
                 </div>
               ) : (
-                <div className="max-w-md space-y-3 rounded-lg border border-rose-500/30 bg-rose-500/[0.06] p-4">
+                <div className="max-w-md space-y-3 rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/[0.06] p-4">
                   <div>
-                    <p className="font-display text-sm font-bold uppercase tracking-wider text-rose-200">
+                    <p className="font-display text-sm font-bold uppercase tracking-wider text-[var(--color-danger)]">
                       Esqueci a senha
                     </p>
-                    <p className="mt-1 text-[11px] leading-snug text-rose-100/70">
+                    <p className="mt-1 text-[11px] leading-snug text-[var(--color-danger)]/70">
                       Esta é apenas um PIN deste dispositivo — não há recuperação por e-mail.
                       Podes <strong className="text-white">removê-la</strong> e definir uma nova abaixo. Para confirmar,
                       digita <strong className="text-white">REMOVER</strong>.
@@ -649,14 +615,14 @@ export function Config() {
                     value={forgotConfirm}
                     onChange={(e) => setForgotConfirm(e.target.value.toUpperCase())}
                     placeholder="Digite: REMOVER"
-                    className="w-full rounded-lg border border-rose-500/30 bg-black/40 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-[var(--color-danger)]/30 bg-black/40 px-3 py-2 text-sm"
                   />
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={handleForgotReset}
                       disabled={forgotConfirm.trim().toUpperCase() !== 'REMOVER'}
-                      className="rounded-lg bg-rose-500 px-4 py-2 text-xs font-bold uppercase text-white hover:bg-rose-400 disabled:opacity-40"
+                      className="rounded-lg bg-[var(--color-danger)] px-4 py-2 text-xs font-bold uppercase text-white hover:bg-[var(--color-danger)] disabled:opacity-40"
                     >
                       Remover senha
                     </button>
@@ -850,11 +816,11 @@ function VerificationSection() {
 
   const toneClass =
     summary.tone === 'ok'
-      ? 'text-neon-green'
+      ? 'text-[var(--color-success)]'
       : summary.tone === 'pending'
-      ? 'text-amber-300'
+      ? 'text-neon-yellow'
       : summary.tone === 'bad'
-      ? 'text-rose-300'
+      ? 'text-[var(--color-danger)]'
       : 'text-white/70';
 
   return (
@@ -1042,8 +1008,8 @@ function VerificationForm({
           Necessário para liberar o painel <strong className="text-white">PRO</strong> (saque de vendas). Aprovação pelo Admin.
         </p>
         {rejectedReason ? (
-          <div className="mt-2 rounded border border-rose-500/35 bg-rose-500/[0.08] px-3 py-2 text-[11px] text-rose-200">
-            <strong className="uppercase text-rose-300">Rejeitado:</strong> {rejectedReason}
+          <div className="mt-2 rounded border border-[var(--color-danger)]/35 bg-[var(--color-danger)]/[0.08] px-3 py-2 text-[11px] text-[var(--color-danger)]">
+            <strong className="uppercase text-[var(--color-danger)]">Rejeitado:</strong> {rejectedReason}
           </div>
         ) : null}
       </div>
@@ -1090,7 +1056,7 @@ function VerificationForm({
               </button>
             ) : null}
           </div>
-          {cepLookupErr ? <p className="mt-1 text-[10px] text-rose-300">{cepLookupErr}</p> : null}
+          {cepLookupErr ? <p className="mt-1 text-[10px] text-[var(--color-danger)]">{cepLookupErr}</p> : null}
         </label>
 
         <label className="block">
@@ -1163,7 +1129,7 @@ function VerificationForm({
       </div>
 
       {submitErr ? (
-        <p className="rounded border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200">{submitErr}</p>
+        <p className="rounded border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-[11px] text-[var(--color-danger)]">{submitErr}</p>
       ) : null}
 
       <div className="flex gap-2">

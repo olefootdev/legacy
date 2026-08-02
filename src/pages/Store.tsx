@@ -22,61 +22,81 @@ type StorePurchaseOutcome =
   | { kind: 'success'; item: ShopCatalogItem; atLabel: string; currency: 'exp' | 'bro' }
   | { kind: 'error'; title: string; message: string };
 
+/**
+ * Estilo por raridade do pack.
+ *
+ * ── Alinhado à regra canônica (2026-08-01) ─────────────────────────────────
+ * A escada de raridade do OLEFOOT tem uma regra escrita pelo fundador em
+ * `src/entities/rarityLabels.ts`: **prestígio = GRAU DE AMARELO** (o topo vem
+ * amarelo sólido, a base vem sem amarelo nenhum).
+ *
+ * Esta tela ignorava a regra e usava quatro matizes soltos — cinza, ciano,
+ * fúcsia e âmbar. O problema não era só destoar do layer final: o jogo tinha
+ * DUAS escalas de raridade conflitantes ao mesmo tempo (o `Badge` do DS pintava
+ * épico de ROXO enquanto aqui épico era FÚCSIA), então a cor não ensinava nada
+ * — o jogador via a mesma palavra em duas cores diferentes.
+ *
+ * Agora a raridade se lê pela quantidade de amarelo: comum não tem, raro tem um
+ * fio, épico tem trilho e etiqueta, mítico vem sólido. A informação continua
+ * inteira; o vocabulário passa a ser um só.
+ */
 function rarityStyles(r: ShopRarity): {
   border: string;
   glow: string;
   label: string;
   labelClass: string;
-  /** Cor sólida do trilho lateral (Sprint B). */
+  /** Cor sólida do trilho lateral. */
   rail: string;
-  /** Gradiente de fundo do bloco visual superior (Sprint B). */
+  /** Fundo do bloco visual superior. */
   bgWash: string;
 } {
   switch (r) {
     case 'comum':
       return {
-        border: 'border-slate-500/50',
-        glow: 'shadow-[0_0_24px_rgba(148,163,184,0.15)]',
+        border: 'border-white/12',
+        glow: '',
         label: 'COMUM',
-        labelClass: 'bg-slate-600/40 text-slate-200',
-        rail: 'bg-slate-400',
-        bgWash: 'bg-gradient-to-br from-slate-700/40 via-slate-900/60 to-black',
+        labelClass: 'bg-white/10 text-white/70',
+        rail: 'bg-white/25',
+        bgWash: 'bg-gradient-to-br from-white/[0.04] to-black',
       };
     case 'raro':
       return {
-        border: 'border-cyan-400/55',
-        glow: 'shadow-[0_0_28px_rgba(34,211,238,0.2)]',
+        border: 'border-neon-yellow/25',
+        glow: '',
         label: 'RARO',
-        labelClass: 'bg-cyan-500/25 text-cyan-200',
-        rail: 'bg-cyan-300',
-        bgWash: 'bg-gradient-to-br from-cyan-700/35 via-cyan-950/50 to-black',
+        labelClass: 'bg-neon-yellow/12 text-neon-yellow/85',
+        rail: 'bg-neon-yellow/45',
+        bgWash: 'bg-gradient-to-br from-neon-yellow/[0.05] to-black',
       };
     case 'epico':
       return {
-        border: 'border-fuchsia-500/60',
-        glow: 'shadow-[0_0_32px_rgba(217,70,239,0.25)]',
+        border: 'border-neon-yellow/55',
+        glow: 'shadow-[0_0_28px_rgba(253,225,0,0.14)]',
         label: 'ÉPICO',
-        labelClass: 'bg-fuchsia-600/30 text-fuchsia-100',
-        rail: 'bg-fuchsia-400',
-        bgWash: 'bg-gradient-to-br from-fuchsia-700/35 via-fuchsia-950/55 to-black',
+        labelClass: 'bg-neon-yellow/25 text-neon-yellow',
+        rail: 'bg-neon-yellow',
+        bgWash: 'bg-gradient-to-br from-neon-yellow/[0.10] to-black',
       };
     case 'mitico':
+      // O topo da escada: amarelo sólido, etiqueta invertida e sombra dura —
+      // o mesmo tratamento que o layer final dá ao que é mais importante.
       return {
-        border: 'border-amber-400/70',
-        glow: 'shadow-[0_0_40px_rgba(251,191,36,0.35)]',
+        border: 'border-neon-yellow',
+        glow: 'shadow-[5px_5px_0_rgba(237,235,228,0.13)]',
         label: 'MÍTICO',
-        labelClass: 'bg-gradient-to-r from-amber-600/50 to-orange-600/50 text-amber-50',
-        rail: 'bg-amber-400',
-        bgWash: 'bg-gradient-to-br from-amber-700/40 via-amber-950/55 to-black',
+        labelClass: 'bg-neon-yellow text-black',
+        rail: 'bg-neon-yellow',
+        bgWash: 'bg-gradient-to-br from-neon-yellow/20 to-black',
       };
     default:
       return {
-        border: 'border-white/20',
+        border: 'border-white/12',
         glow: '',
         label: '',
         labelClass: '',
-        rail: 'bg-white/30',
-        bgWash: 'bg-gradient-to-br from-white/5 to-black/60',
+        rail: 'bg-white/25',
+        bgWash: 'bg-gradient-to-br from-white/[0.03] to-black',
       };
   }
 }
@@ -211,11 +231,11 @@ export function Store() {
     finance.broCents >= confirmItem.priceBroCents;
 
   // Meta da aba — segue padrão BVB do /transfer (num + eyebrow + subtitle + quote)
-  const TAB_META: Record<ShopTab, { num: string; eyebrow: string; subtitle: string; quote: string }> = {
-    todos:    { num: '01', eyebrow: 'Catálogo Olefoot',  subtitle: 'tudo aqui.',          quote: '“boosters, packs e raridades — sob um teto só.”' },
-    packs:    { num: '02', eyebrow: 'Packs de Jogadores', subtitle: 'abre e descobre.',    quote: '“cada pack carrega uma surpresa do mercado.”' },
-    boosters: { num: '03', eyebrow: 'Boosters de Partida', subtitle: 'vantagem agora.',    quote: '“pequena vantagem, grande diferença no minuto certo.”' },
-    extra:    { num: '04', eyebrow: 'Extras Especiais',   subtitle: 'o que falta no jogo.', quote: '“utilidades raras pra quem joga sério.”' },
+  const TAB_META: Record<ShopTab, { eyebrow: string }> = {
+    todos:    { eyebrow: 'Catálogo Olefoot' },
+    packs:    { eyebrow: 'Packs de Jogadores' },
+    boosters: { eyebrow: 'Boosters de Partida' },
+    extra:    { eyebrow: 'Extras Especiais' },
   };
   const tabMeta = TAB_META[tab] ?? TAB_META.todos;
 
@@ -227,109 +247,46 @@ export function Store() {
         aria-label="Loja Olefoot"
         className="relative w-full overflow-hidden bg-neon-yellow"
       >
-        {/* Watermark gigante do número da aba — preto/5% */}
-        <div
-          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
-          aria-hidden
-        >
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={tabMeta.num}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.04 }}
-              transition={{ duration: 0.4 }}
-              className="font-display font-black tabular-nums whitespace-nowrap text-black/[0.05]"
-              style={{
-                fontSize: 'clamp(180px, 32vw, 460px)',
-                lineHeight: '0.85',
-                letterSpacing: '-0.05em',
-              }}
-            >
-              {tabMeta.num}
-            </motion.span>
-          </AnimatePresence>
-        </div>
-
-        {/* Composição editorial centrada vertical */}
+        {/* ── HERO no layer final ──────────────────────────────────────────
+            Saíram watermark, subtítulo em serifa itálica, régua decorativa e a
+            frase entre aspas por aba. Ficou o que decide a compra: onde estou e
+            quanto tenho. */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14 text-center"
+          className="relative z-10 px-5 sm:px-8"
+          style={{ paddingBlock: 'clamp(26px, 5vw, 46px)' }}
         >
-          {/* Eyebrow */}
-          <div
-            className="ole-eyebrow !text-black mb-5 sm:mb-6"
-            style={{ fontFamily: 'var(--font-ui)' }}
-          >
-            <span className="!text-black">{tabMeta.eyebrow}</span>
-          </div>
+          <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
+            {tabMeta.eyebrow}
+          </span>
 
-          {/* Headline duo: LOJA + italic dinâmico */}
-          <h1 className="leading-[0.9]">
-            <span
-              className="block font-bold uppercase text-black"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(2.75rem, 8vw, 6rem)',
-                letterSpacing: '0.005em',
-              }}
-            >
-              Loja
-            </span>
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={tabMeta.subtitle}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.35 }}
-                className="block italic text-black"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontSize: 'clamp(2.25rem, 7vw, 5rem)',
-                  marginTop: '0.04em',
-                  letterSpacing: '-0.01em',
-                }}
-              >
-                {tabMeta.subtitle}
-              </motion.span>
-            </AnimatePresence>
-          </h1>
-
-          {/* Régua decorativa */}
-          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
-
-          {/* Quote italic — centerpiece editorial */}
-          <AnimatePresence mode="wait">
-            <motion.blockquote
-              key={`q-${tab}`}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.35, delay: 0.05 }}
-              className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
-              style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
-            >
-              {tabMeta.quote}
-            </motion.blockquote>
-          </AnimatePresence>
-
-          {/* Subtítulo — saldos vivos */}
-          <p
-            className="mt-3 text-black/60 mx-auto max-w-md"
+          <h1
+            className="mt-2 font-impact uppercase"
             style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'clamp(0.85rem, 1vw, 0.95rem)',
-              lineHeight: 1.55,
+              color: 'var(--color-deep-black)',
+              fontSize: 'clamp(42px, 11vw, 88px)',
+              lineHeight: 0.84,
+              letterSpacing: '-0.01em',
             }}
           >
-            saldo <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>{expDisplay}</span> EXP · <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>{broDisplay}</span> BRO
-          </p>
+            Loja
+          </h1>
+
+          <div className="mt-5 flex flex-wrap items-baseline gap-x-6 gap-y-2">
+            <span className="font-impact tabular-nums" style={{ fontSize: '30px', lineHeight: 0.85, color: 'var(--color-deep-black)' }}>
+              {expDisplay}
+              <span className="ml-1.5 font-display font-black" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>EXP</span>
+            </span>
+            <span className="font-impact tabular-nums" style={{ fontSize: '30px', lineHeight: 0.85, color: 'rgba(13,13,13,0.55)' }}>
+              {broDisplay}
+              <span className="ml-1.5 font-display font-black" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>BRO</span>
+            </span>
+          </div>
 
           {/* CTAs — primary preto sobre amarelo + outline preto */}
-          <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link
               to="/wallet"
               className="inline-flex items-center gap-2 bg-black px-7 py-3 text-neon-yellow font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
@@ -450,7 +407,7 @@ export function Store() {
                         {rs.label || 'Item'}
                       </span>
                       {item.consumable && inv > 0 ? (
-                        <span className="rounded-[var(--radius-pill)] bg-emerald-500/15 px-2.5 py-1 font-display text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-200">
+                        <span className="rounded-[var(--radius-pill)] bg-[var(--color-success)]/15 px-2.5 py-1 font-display text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--color-success)]">
                           {inv}× inventário
                         </span>
                       ) : null}
@@ -469,17 +426,12 @@ export function Store() {
                       {item.blurb}
                     </p>
 
-                    {/* Preço — MORET serif italic, dominante */}
+                    {/* Preço — Anton tabular (número não usa serifa). */}
                     <div className="flex items-baseline gap-3 border-t border-[var(--color-divider-yellow)] pt-3">
                       {broText ? (
                         <span
-                          className="text-cyan-200"
-                          style={{
-                            fontFamily: 'var(--font-serif-hero)',
-                            fontStyle: 'italic',
-                            fontSize: 'clamp(22px, 3vw, 30px)',
-                            lineHeight: 1,
-                          }}
+                          className="font-impact tabular-nums text-white/80"
+                          style={{ fontSize: 'clamp(22px, 3vw, 30px)', lineHeight: 1 }}
                         >
                           {broText}
                         </span>
@@ -489,13 +441,8 @@ export function Store() {
                       ) : null}
                       {expText ? (
                         <span
-                          className="text-neon-yellow"
-                          style={{
-                            fontFamily: 'var(--font-serif-hero)',
-                            fontStyle: 'italic',
-                            fontSize: 'clamp(22px, 3vw, 30px)',
-                            lineHeight: 1,
-                          }}
+                          className="font-impact tabular-nums text-neon-yellow"
+                          style={{ fontSize: 'clamp(22px, 3vw, 30px)', lineHeight: 1 }}
                         >
                           {expText}
                         </span>
@@ -544,7 +491,7 @@ export function Store() {
               className={cn(
                 "relative w-full max-w-md overflow-hidden rounded-md border bg-panel",
                 confirmItem.rarity === 'mitico' || confirmItem.rarity === 'epico'
-                  ? 'border-amber-400/35 shadow-[0_0_48px_rgba(251,191,36,0.2)]'
+                  ? 'border-neon-yellow/35 shadow-[0_0_48px_rgba(253,225,0,0.18)]'
                   : 'border-neon-yellow/35 shadow-[0_0_48px_rgba(234,255,0,0.12)]'
               )}
               role="dialog"
@@ -554,24 +501,22 @@ export function Store() {
             >
               <div className={cn(
                 "flex items-start justify-between gap-2 border-b px-4 py-4",
-                confirmItem.rarity === 'mitico' ? 'border-amber-400/20 bg-gradient-to-r from-amber-950/30 to-transparent' : 'border-white/10'
+                confirmItem.rarity === 'mitico' ? 'border-neon-yellow/20 bg-gradient-to-r from-neon-yellow/[0.07] to-transparent' : 'border-white/10'
               )}>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[9px] font-bold uppercase tracking-widest text-neon-yellow/90">
                     Confirmar compra
                   </p>
 
-                  {/* Nome do item em Moret se for raro+ */}
+                  {/* Nome do item — Anton. Serifa itálica é assinatura de LENDA. */}
                   {(confirmItem.rarity === 'mitico' || confirmItem.rarity === 'epico') ? (
                     <h2
                       id="store-checkout-title"
-                      className="mt-2 bg-gradient-to-r from-amber-100 via-white to-amber-100 bg-clip-text text-transparent"
+                      className="mt-2 font-impact uppercase text-neon-yellow"
                       style={{
-                        fontFamily: 'var(--font-serif-hero)', // Moret
-                        fontStyle: 'italic',
-                        fontSize: 'clamp(1.25rem, 4vw, 1.75rem)',
+                        fontSize: 'clamp(1.35rem, 4.5vw, 1.9rem)',
                         letterSpacing: '-0.01em',
-                        lineHeight: 1.1,
+                        lineHeight: 1.05,
                       }}
                     >
                       {confirmItem.title}
@@ -608,7 +553,7 @@ export function Store() {
                       ID: {confirmItem.id}
                     </span>
                     {confirmItem.consumable ? (
-                      <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-display text-[8px] font-bold uppercase text-emerald-200">
+                      <span className="rounded border border-[var(--color-success)]/30 bg-[var(--color-success)]/10 px-2 py-0.5 font-display text-[8px] font-bold uppercase text-[var(--color-success)]">
                         Consumível
                       </span>
                     ) : null}
@@ -618,12 +563,12 @@ export function Store() {
                   <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Preço</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {checkoutPrices?.bro ? (
-                      <span className="rounded-lg border border-cyan-500/35 bg-cyan-950/50 px-3 py-2 text-sm font-bold text-cyan-100" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>
+                      <span className="rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 font-impact tabular-nums text-white" style={{ fontSize: '15px' }}>
                         {checkoutPrices.bro}
                       </span>
                     ) : null}
                     {checkoutPrices?.exp ? (
-                      <span className="rounded-lg border border-neon-yellow/35 bg-neon-yellow/10 px-3 py-2 text-sm font-bold text-neon-yellow" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>
+                      <span className="rounded-lg border border-neon-yellow/35 bg-neon-yellow/10 px-3 py-2 font-impact tabular-nums text-neon-yellow" style={{ fontSize: '15px' }}>
                         {checkoutPrices.exp}
                       </span>
                     ) : null}
@@ -632,16 +577,16 @@ export function Store() {
                     ) : null}
                   </div>
                   <p className="mt-3 text-[10px] leading-relaxed text-gray-600">
-                    Saldo: <span className="text-neon-yellow" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>{expDisplay} EXP</span>
+                    Saldo: <span className="font-impact tabular-nums text-neon-yellow">{expDisplay} EXP</span>
                     <span className="mx-1.5 text-white/20">·</span>
-                    <span className="text-cyan-200" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>{broDisplay} BRO</span>
+                    <span className="font-impact tabular-nums text-white/80">{broDisplay} BRO</span>
                   </p>
                   {purchaseErr ? (
-                    <div className="mt-3 space-y-2 rounded-lg border border-rose-500/25 bg-rose-950/30 p-3">
-                      <p className="text-xs font-bold leading-snug text-rose-200">{purchaseErr}</p>
+                    <div className="mt-3 space-y-2 rounded-lg border border-[var(--color-danger)]/25 bg-[var(--color-danger)]/10 p-3">
+                      <p className="text-xs font-bold leading-snug text-[var(--color-danger)]">{purchaseErr}</p>
                       <Link
                         to="/wallet"
-                        className="inline-flex w-full items-center justify-center rounded-lg border border-rose-400/35 bg-rose-500/15 py-2.5 font-display text-[10px] font-black uppercase tracking-wide text-rose-100 transition hover:bg-rose-500/25 sm:w-auto sm:px-4"
+                        className="inline-flex w-full items-center justify-center rounded-lg border border-[var(--color-danger)]/35 bg-[var(--color-danger)]/15 py-2.5 font-display text-[10px] font-black uppercase tracking-wide text-[var(--color-danger)] transition hover:bg-[var(--color-danger)]/25 sm:w-auto sm:px-4"
                       >
                         Ver saldo na Wallet
                       </Link>
@@ -673,7 +618,7 @@ export function Store() {
                     type="button"
                     disabled={!canBroBuy}
                     onClick={() => tryPurchase(confirmItem, 'bro')}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-cyan-500/40 bg-cyan-500/15 py-3 font-display text-[10px] font-black uppercase tracking-wide text-cyan-100 transition hover:bg-cyan-500/25 disabled:opacity-40"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 py-3 font-display text-[10px] font-black uppercase tracking-wide text-white transition hover:bg-white/20 disabled:opacity-40"
                   >
                     <Wallet className="h-4 w-4" />
                     Pagar BRO

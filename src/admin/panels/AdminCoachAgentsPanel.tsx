@@ -31,6 +31,14 @@ import { cn } from '@/lib/utils';
 import type { CoachAgent, CoachPersonality, CoachSpecialty } from '@/coach/types';
 import { saveCoachTemplate, removeCoachTemplate } from '@/supabase/coachTemplates';
 
+/**
+ * Fallback ESTÁVEL: `?? []` dentro de um seletor do `useGameStore`
+ * (useSyncExternalStore) cria um array novo a cada leitura e joga o React num
+ * laço infinito de re-render. A constante garante a mesma referência.
+ */
+const LISTA_VAZIA: never[] = [];
+
+
 const PERSONALITY_OPTIONS: { id: CoachPersonality; label: string; description: string; icon: typeof Shield }[] = [
   {
     id: 'Pragmatic',
@@ -566,7 +574,7 @@ export function AdminCoachAgentsPanel() {
 
 function CoachInstructionsSection() {
   const dispatch = useGameDispatch();
-  const instructions = useGameStore((s) => s.manager.coach?.memory.managerInstructions ?? []);
+  const instructions = useGameStore((s) => s.manager.coach?.memory.managerInstructions ?? LISTA_VAZIA);
   const [text, setText] = useState('');
   const [category, setCategory] = useState<'training' | 'staff' | 'lineup' | 'tactics' | 'general'>('general');
   const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');

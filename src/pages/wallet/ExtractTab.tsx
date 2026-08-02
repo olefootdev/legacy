@@ -27,18 +27,23 @@ const CURRENCY_OPTIONS: { value: WalletCurrencyExt | ''; label: string }[] = [
   { value: 'OLEFOOT', label: 'OLEFOOT' },
 ];
 
-function badgeColor(type: WalletLedgerType): string {
-  if (type.startsWith('REFERRAL')) return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-  if (type === 'MATCH_REWARD') return 'bg-green-500/20 text-green-300 border-green-500/30';
-  if (type === 'PURCHASE' || type === 'STRUCTURE_UPGRADE') return 'bg-red-500/20 text-red-300 border-red-500/30';
-  if (type === 'TRANSFER') return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
-  return 'bg-white/10 text-gray-300 border-white/10';
+/**
+ * Chip do tipo de lançamento — NEUTRO de propósito.
+ *
+ * Antes cada tipo tinha sua cor (referral azul, partida verde, compra vermelha,
+ * transferência ciano). Só que quem lê um extrato quer saber se o dinheiro
+ * ENTROU ou SAIU — e isso o valor já diz, em verde ou vermelho, logo ao lado.
+ * O chip colorido repetia a informação num vocabulário diferente e disputava a
+ * atenção com o número, que é o que importa.
+ */
+function badgeColor(_type: WalletLedgerType): string {
+  return 'bg-white/8 text-white/65 border-white/10';
 }
 
 function statusDot(status: string): string {
-  if (status === 'confirmed') return 'bg-neon-green';
-  if (status === 'pending') return 'bg-yellow-400';
-  return 'bg-red-400';
+  if (status === 'confirmed') return 'bg-[var(--color-success)]';
+  if (status === 'pending') return 'bg-neon-yellow';
+  return 'bg-[var(--color-danger)]';
 }
 
 function formatLedgerDate(iso: string): string {
@@ -142,7 +147,7 @@ export function ExtractTab() {
               </div>
               <div
                 className={`font-bold text-sm shrink-0 ml-4 ${
-                  entry.amount >= 0 ? 'text-neon-green' : 'text-red-500'
+                  entry.amount >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
                 }`}
               >
                 {entry.currency === 'EXP'

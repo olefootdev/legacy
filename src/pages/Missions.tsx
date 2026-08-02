@@ -236,22 +236,17 @@ export function Missions() {
         <div className="relative z-10 mx-auto max-w-6xl min-w-0 w-full px-3 sm:px-4 lg:px-8 py-5 sm:py-7">
 
           {/* Grid: esquerda (amarelo) + direita (preto) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-[50vh]">
+          <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-12 lg:min-h-[42vh]">
             {/* ── ESQUERDA: Título + Stats ────────────────────────── */}
             <div className="space-y-6 sm:space-y-8">
-              {/* Eyebrow */}
-              <div className="flex items-center justify-center gap-3 lg:justify-start">
-                <span className="h-px w-8 bg-black/40" aria-hidden />
-                <span className="font-display text-[10px] font-bold uppercase tracking-[0.35em] text-black/70">
-                  Centro de Missões
-                </span>
-                <span className="h-px w-8 bg-black/40" aria-hidden />
-              </div>
+              <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
+                Centro de missões
+              </span>
 
-              {/* Título Moret italic */}
+              {/* Manchete em Anton. */}
               <h1
-                className="ole-headline-italic text-black text-center lg:text-left leading-[0.9]"
-                style={{ fontSize: 'clamp(64px, 14vw, 120px)' }}
+                className="font-impact uppercase text-black leading-[0.84]"
+                style={{ fontSize: 'clamp(52px, 12vw, 104px)', letterSpacing: '-0.01em' }}
               >
                 Missões
               </h1>
@@ -263,7 +258,7 @@ export function Missions() {
                     Concluídas
                   </p>
                   <p
-                    className="ole-headline-italic text-neon-yellow mt-2 tabular-nums"
+                    className="font-impact text-neon-yellow mt-2 tabular-nums"
                     style={{ fontSize: 'clamp(32px, 5vw, 48px)' }}
                   >
                     {stats.completed}
@@ -274,7 +269,7 @@ export function Missions() {
                     Em Progresso
                   </p>
                   <p
-                    className="ole-headline-italic text-neon-yellow mt-2 tabular-nums"
+                    className="font-impact text-neon-yellow mt-2 tabular-nums"
                     style={{ fontSize: 'clamp(32px, 5vw, 48px)' }}
                   >
                     {stats.inProgress}
@@ -314,7 +309,7 @@ export function Missions() {
             <div className="relative flex items-center justify-center lg:justify-end">
               <div className="relative">
                 <p
-                  className="ole-headline-italic text-white/[0.08] tabular-nums leading-none select-none"
+                  className="font-impact text-white/[0.08] tabular-nums leading-none select-none"
                   style={{ fontSize: 'clamp(180px, 28vw, 320px)' }}
                   aria-hidden
                 >

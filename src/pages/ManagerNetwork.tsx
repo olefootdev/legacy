@@ -451,31 +451,13 @@ export function ManagerNetwork() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35 }}
-              className="block italic text-black"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontSize: 'clamp(2.25rem, 7vw, 5rem)',
-                marginTop: '0.04em',
-                letterSpacing: '-0.01em',
-              }}
+              className="block font-display font-black uppercase text-black"
+              style={{ fontSize: 'clamp(14px, 3vw, 20px)', letterSpacing: '0.16em', marginTop: '10px' }}
             >
               Conexões
             </motion.span>
           </h1>
 
-          {/* Régua decorativa */}
-          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
-
-          {/* Quote italic — CENTERPIECE editorial */}
-          <motion.blockquote
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.05 }}
-            className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
-            style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
-          >
-            "construir rede é construir legado — cada conexão multiplica oportunidades."
-          </motion.blockquote>
 
           {/* Link de indicação — destaque no hero */}
           <div className="mt-8 sm:mt-10 mx-auto max-w-lg">
@@ -541,19 +523,19 @@ export function ManagerNetwork() {
           {/* Stats strip — 3 métricas de rede */}
           <div className="mt-4 sm:mt-6 grid grid-cols-3 gap-2 sm:gap-3 max-w-lg mx-auto px-2">
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0" style={{ borderRadius: 'var(--radius-sm)' }}>
-              <p className="text-cyan-400 tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(20px, 4vw, 36px)' }}>
+              <p className="text-neon-yellow tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-impact)', fontSize: 'clamp(20px, 4vw, 36px)' }}>
                 {privacy ? '••' : (loadingReferrals ? '…' : referrals.length)}
               </p>
               <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">Indicações</p>
             </div>
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0" style={{ borderRadius: 'var(--radius-sm)' }}>
-              <p className="text-neon-yellow tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(20px, 4vw, 36px)' }}>
+              <p className="text-neon-yellow tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-impact)', fontSize: 'clamp(20px, 4vw, 36px)' }}>
                 {privacy ? '••' : netStatus.qualifyingCount.toLocaleString('pt-BR')}
               </p>
               <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">Qualificados</p>
             </div>
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0" style={{ borderRadius: 'var(--radius-sm)' }}>
-              <p className="text-amber-300 tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(20px, 4vw, 36px)' }}>
+              <p className="text-neon-yellow tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-impact)', fontSize: 'clamp(20px, 4vw, 36px)' }}>
                 {privacy ? '••' : (career?.lifetimePoints ?? 0).toLocaleString('pt-BR')}
               </p>
               <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">Pontos</p>
@@ -569,17 +551,17 @@ export function ManagerNetwork() {
           animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-panel p-5 pl-[18px] sm:p-6 sm:pl-[18px]"
         >
-          <span className="absolute inset-y-0 left-0 w-[3px] bg-amber-400" aria-hidden />
+          <span className="absolute inset-y-0 left-0 w-[3px] bg-neon-yellow" aria-hidden />
           <div className="flex items-start gap-3 mb-4">
-            <div className="shrink-0 bg-amber-400/20 p-2.5 rounded-sm">
-              <ShieldCheck className="w-6 h-6 text-amber-300" />
+            <div className="shrink-0 bg-neon-yellow/20 p-2.5 rounded-sm">
+              <ShieldCheck className="w-6 h-6 text-neon-yellow" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-amber-300 mb-1">
+              <p className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-neon-yellow mb-1">
                 Ativação obrigatória
               </p>
               <h2 className="font-display text-xl sm:text-2xl font-black uppercase text-white tracking-tight">
-                Ative sua conta · <span className="text-amber-300">R$ 125,00</span>
+                Ative sua conta · <span className="text-neon-yellow">R$ 125,00</span>
               </h2>
               <p className="text-xs text-white/60 mt-2">
                 Pack único (≈ ${ACTIVATION_AMOUNT_USD}) — libera comissões 5-5-5% e bônus de carreira.
@@ -588,9 +570,9 @@ export function ManagerNetwork() {
           </div>
 
           {activation.totalLostCommissionsCents > 0 && (
-            <div className="bg-rose-500/15 border border-rose-400/40 rounded-sm p-3 mb-4 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-300 shrink-0" />
-              <p className="text-xs text-rose-200 leading-snug">
+            <div className="bg-[var(--color-danger)]/15 border border-[var(--color-danger)]/40 rounded-sm p-3 mb-4 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-[var(--color-danger)] shrink-0" />
+              <p className="text-xs text-[var(--color-danger)] leading-snug">
                 Você já <strong>perdeu {fmtUsd(activation.totalLostCommissionsCents)}</strong> em
                 comissões da tua rede por estar inativo. Ative agora pra parar de perder.
               </p>
@@ -600,7 +582,7 @@ export function ManagerNetwork() {
           <button
             type="button"
             onClick={handleActivate}
-            className="w-full bg-amber-400 hover:bg-white text-black py-4 rounded-sm font-display text-sm font-black uppercase tracking-[0.18em] transition-colors"
+            className="w-full bg-neon-yellow hover:bg-white text-black py-4 rounded-sm font-display text-sm font-black uppercase tracking-[0.18em] transition-colors"
           >
             Ativar conta · R$ 125,00 (PIX)
           </button>
@@ -612,9 +594,9 @@ export function ManagerNetwork() {
       )}
 
       {activation?.isActivated && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-sm px-4 py-2.5 flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-300 shrink-0" />
-          <p className="text-xs text-emerald-200">
+        <div className="bg-[var(--color-success)]/10 border border-[var(--color-success)]/30 rounded-sm px-4 py-2.5 flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-[var(--color-success)] shrink-0" />
+          <p className="text-xs text-[var(--color-success)]">
             <strong>Conta ativada</strong>
             {activation.activatedAt && (
               <> · {new Date(activation.activatedAt).toLocaleDateString('pt-BR')}</>
@@ -626,9 +608,9 @@ export function ManagerNetwork() {
 
       {/* FOMO histórico — visível mesmo pra users já ativos (motivador retrospectivo) */}
       {activation?.isActivated && activation.totalLostCommissionsCents > 0 && (
-        <div className="bg-rose-500/10 border border-rose-400/30 rounded-sm px-4 py-3 flex items-center gap-3">
-          <AlertTriangle className="w-4 h-4 text-rose-300 shrink-0" />
-          <p className="text-xs text-rose-200 leading-snug">
+        <div className="bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 rounded-sm px-4 py-3 flex items-center gap-3">
+          <AlertTriangle className="w-4 h-4 text-[var(--color-danger)] shrink-0" />
+          <p className="text-xs text-[var(--color-danger)] leading-snug">
             Antes da ativação, você deixou de receber{' '}
             <strong>{privacy ? '••••' : fmtUsd(activation.totalLostCommissionsCents)}</strong>{' '}
             em comissões — agora todas estão sendo capturadas.
@@ -673,7 +655,7 @@ export function ManagerNetwork() {
             className="space-y-3"
           >
             <div className="flex items-center gap-2">
-              <div className="ole-eyebrow !text-rose-400">
+              <div className="ole-eyebrow-poster">
                 <span>Solicitações</span>
               </div>
             </div>
@@ -683,12 +665,12 @@ export function ManagerNetwork() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 + idx * 0.05 }}
-                className="group bg-panel border border-white/10 hover:border-rose-500/40 rounded-sm p-5 sm:p-6 transition-all hover:shadow-[0_0_24px_rgba(244,63,94,0.12)]"
+                className="group bg-panel border border-white/10 hover:border-[var(--color-danger)]/40 rounded-sm p-5 sm:p-6 transition-all hover:shadow-[0_0_24px_rgba(244,63,94,0.12)]"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center bg-rose-500/15 border-2 border-rose-500/40 rounded-sm transition-transform group-hover:scale-110">
-                      <UserPlus className="h-7 w-7 text-rose-400" strokeWidth={2.5} />
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center bg-[var(--color-danger)]/15 border-2 border-[var(--color-danger)]/40 rounded-sm transition-transform group-hover:scale-110">
+                      <UserPlus className="h-7 w-7 text-[var(--color-danger)]" strokeWidth={2.5} />
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-display text-sm font-black uppercase tracking-wider text-white mb-1">
@@ -730,13 +712,13 @@ export function ManagerNetwork() {
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="ole-eyebrow !text-cyan-400">
+              <div className="ole-eyebrow-poster">
                 <span>Indicações</span>
               </div>
-              <TrendingUp className="h-3.5 w-3.5 text-cyan-400/70" aria-hidden />
+              <TrendingUp className="h-3.5 w-3.5 text-neon-yellow/70" aria-hidden />
             </div>
             {referrals.length > 0 && (
-              <span className="bg-cyan-500/10 border border-cyan-500/30 px-2.5 py-1 rounded-sm font-display text-[10px] font-bold uppercase tracking-wider text-cyan-300">
+              <span className="bg-neon-yellow/10 border border-neon-yellow/30 px-2.5 py-1 rounded-sm font-display text-[10px] font-bold uppercase tracking-wider text-neon-yellow">
                 {referrals.length}
               </span>
             )}
@@ -827,7 +809,7 @@ export function ManagerNetwork() {
                 <motion.p
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-3 flex items-center justify-center gap-1.5 font-display text-[10px] uppercase tracking-wider text-emerald-300"
+                  className="mt-3 flex items-center justify-center gap-1.5 font-display text-[10px] uppercase tracking-wider text-[var(--color-success)]"
                 >
                   <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
                   +{claimSuccess.toLocaleString('pt-BR')} EXP creditados
@@ -850,7 +832,7 @@ export function ManagerNetwork() {
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="inline-flex items-center gap-2 bg-cyan-500 px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider text-white hover:bg-cyan-400 transition-colors"
+                className="inline-flex items-center gap-2 bg-neon-yellow px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider text-white hover:bg-neon-yellow transition-colors"
               >
                 <Copy className="w-3.5 h-3.5" />
                 Copiar link de indicação
@@ -879,7 +861,7 @@ export function ManagerNetwork() {
                         <p className="text-[10px] text-gray-500 uppercase tracking-wider flex items-center gap-1.5 mt-0.5">
                           {ref.clubShort && (
                             <>
-                              <span className="font-mono text-cyan-300/80">
+                              <span className="font-mono text-neon-yellow/80">
                                 {privacy ? '••••' : ref.clubShort}
                               </span>
                               <span className="text-white/30">·</span>
@@ -934,13 +916,13 @@ export function ManagerNetwork() {
                         <p className="text-[9px] text-neon-yellow/70 uppercase tracking-wider">Ativos</p>
                       </div>
                       <div className="text-center border-l border-white/5">
-                        <p className="text-[9px] text-emerald-300/80 uppercase tracking-[0.18em] mb-1">
+                        <p className="text-[9px] text-[var(--color-success)]/80 uppercase tracking-[0.18em] mb-1">
                           {usdPendingCents > 0 ? 'A resgatar' : 'Recebido'}
                         </p>
-                        <p className="font-display text-base font-bold text-emerald-300 tabular-nums">
+                        <p className="font-display text-base font-bold text-[var(--color-success)] tabular-nums">
                           {privacy ? '••••' : fmtUsd(usdPendingCents > 0 ? usdPendingCents : usdTotalCents)}
                         </p>
-                        <p className="text-[9px] text-emerald-300/80 uppercase tracking-wider">USDT 5%</p>
+                        <p className="text-[9px] text-[var(--color-success)]/80 uppercase tracking-wider">USDT 5%</p>
                       </div>
                     </div>
                   </motion.div>
@@ -956,7 +938,7 @@ export function ManagerNetwork() {
       {tab === 'carreira' && (
       <section className="space-y-4">
         {/* Eyebrow do bloco Carreira */}
-        <div className="ole-eyebrow !text-amber-300 flex items-center gap-2 pt-2">
+        <div className="ole-eyebrow-poster !text-neon-yellow flex items-center gap-2 pt-2">
           <Award className="w-3.5 h-3.5" />
           <span>Plano OLEFOOT · Carreira</span>
         </div>
@@ -965,7 +947,7 @@ export function ManagerNetwork() {
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-emerald-500/10 border border-emerald-400/40 rounded-sm px-4 py-3 text-emerald-300 text-sm font-display uppercase tracking-wider text-center inline-flex items-center justify-center gap-2 w-full"
+            className="bg-[var(--color-success)]/10 border border-[var(--color-success)]/40 rounded-sm px-4 py-3 text-[var(--color-success)] text-sm font-display uppercase tracking-wider text-center inline-flex items-center justify-center gap-2 w-full"
           >
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{careerToast}</span>
@@ -974,10 +956,10 @@ export function ManagerNetwork() {
 
         {/* CAREER PROGRESS — Resumo + bônus pendente */}
         <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-panel p-5 pl-[18px]">
-          <span className="absolute inset-y-0 left-0 w-[3px] bg-amber-400" aria-hidden />
+          <span className="absolute inset-y-0 left-0 w-[3px] bg-neon-yellow" aria-hidden />
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] text-amber-300 uppercase tracking-[0.2em] font-display font-bold mb-1 inline-flex items-center gap-1.5">
+              <p className="text-[10px] text-neon-yellow uppercase tracking-[0.2em] font-display font-bold mb-1 inline-flex items-center gap-1.5">
                 <Trophy className="w-3 h-3" />
                 Rank atual
               </p>
@@ -1003,18 +985,18 @@ export function ManagerNetwork() {
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.min(100, career?.progressPct ?? 0)}%` }}
                   transition={{ duration: 1, ease: 'easeOut' }}
-                  className="h-full bg-amber-400 rounded-full"
+                  className="h-full bg-neon-yellow rounded-full"
                 />
               </div>
               <p className="mt-2 text-[10px] uppercase tracking-wider text-white/50">
-                Próximo: <strong className="text-amber-300">{nextRankDef.label}</strong> em{' '}
+                Próximo: <strong className="text-neon-yellow">{nextRankDef.label}</strong> em{' '}
                 {privacy ? '••••' : (nextRankDef.thresholdPoints - (career?.lifetimePoints ?? 0)).toLocaleString('pt-BR')} pts ·{' '}
                 bônus {privacy ? '••••' : fmtUsd(nextRankDef.bonusCents)}
               </p>
             </>
           )}
           {!nextRankDef && (
-            <p className="text-[10px] uppercase tracking-wider text-amber-300 inline-flex items-center gap-1.5">
+            <p className="text-[10px] uppercase tracking-wider text-neon-yellow inline-flex items-center gap-1.5">
               <Crown className="w-3 h-3" /> Topo da carreira atingido
             </p>
           )}
@@ -1022,11 +1004,11 @@ export function ManagerNetwork() {
           {career && career.pendingBonusCents > 0 && (
             <div className="mt-4 pt-4 border-t border-white/5 flex items-start justify-between gap-3">
               <div>
-                <p className="text-[10px] text-amber-300 uppercase tracking-wider font-display font-bold inline-flex items-center gap-1.5">
+                <p className="text-[10px] text-neon-yellow uppercase tracking-wider font-display font-bold inline-flex items-center gap-1.5">
                   <Gift className="w-3 h-3" />
                   Bônus liberado
                 </p>
-                <p className="font-display text-xl font-black text-amber-300 tabular-nums mt-1">
+                <p className="font-display text-xl font-black text-neon-yellow tabular-nums mt-1">
                   {privacy ? '••••' : fmtUsd(career.pendingBonusCents)}
                 </p>
               </div>
@@ -1035,7 +1017,7 @@ export function ManagerNetwork() {
                 onClick={handleClaimCareer}
                 disabled={claimingCareer || !activation?.isActivated}
                 title={!activation?.isActivated ? 'Requer ativação' : undefined}
-                className="shrink-0 bg-amber-400 text-black px-4 py-2.5 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed self-end"
+                className="shrink-0 bg-neon-yellow text-black px-4 py-2.5 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed self-end"
               >
                 {claimingCareer ? 'Resgatando…' : !activation?.isActivated ? (
                   <span className="inline-flex items-center gap-1.5"><Lock className="w-3 h-3" /> Ativar</span>
@@ -1047,7 +1029,7 @@ export function ManagerNetwork() {
 
         {/* ESCALADA DE RANKS */}
         <div className="space-y-2">
-          <div className="ole-eyebrow !text-amber-300 flex items-center gap-2">
+          <div className="ole-eyebrow-poster !text-neon-yellow flex items-center gap-2">
             <Trophy className="w-3.5 h-3.5" />
             <span>Escalada de ranks</span>
           </div>
@@ -1061,7 +1043,7 @@ export function ManagerNetwork() {
                   key={rd.rank}
                   className={cn(
                     'bg-panel border rounded-sm p-3 text-center transition-all',
-                    isCurrent ? 'border-amber-400/60 shadow-[0_0_24px_rgba(251,191,36,0.2)]' : 'border-white/10',
+                    isCurrent ? 'border-neon-yellow/60 shadow-[0_0_24px_rgba(251,191,36,0.2)]' : 'border-white/10',
                     !isUnlocked && 'opacity-50',
                   )}
                 >
@@ -1086,7 +1068,7 @@ export function ManagerNetwork() {
         {/* SUPER-BÔNUS DE DEPÓSITO */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <div className="ole-eyebrow !text-cyan-300 flex items-center gap-2">
+            <div className="ole-eyebrow-poster !text-neon-yellow flex items-center gap-2">
               <TrendingUp className="w-3.5 h-3.5" />
               <span>Super-Bônus de Depósito</span>
             </div>
@@ -1096,7 +1078,7 @@ export function ManagerNetwork() {
                 onClick={handleClaimAffiliate}
                 disabled={claimingAffiliate || !activation?.isActivated}
                 title={!activation?.isActivated ? 'Requer ativação' : undefined}
-                className="bg-cyan-500 text-white px-3 py-1.5 rounded-sm font-display text-[10px] font-black uppercase tracking-[0.18em] hover:bg-white hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-neon-yellow text-white px-3 py-1.5 rounded-sm font-display text-[10px] font-black uppercase tracking-[0.18em] hover:bg-white hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {claimingAffiliate ? 'Resgatando…' : !activation?.isActivated ? (
                   <span className="inline-flex items-center gap-1.5"><Lock className="w-3 h-3" /> Ativar</span>
@@ -1106,7 +1088,7 @@ export function ManagerNetwork() {
           </div>
 
           <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-panel p-4 pl-[18px] sm:p-5 sm:pl-[18px]">
-            <span className="absolute inset-y-0 left-0 w-[3px] bg-cyan-400" aria-hidden />
+            <span className="absolute inset-y-0 left-0 w-[3px] bg-neon-yellow" aria-hidden />
             <p className="text-xs text-white/60 mb-4">
               5% de comissão sobre cada depósito da tua rede, em 3 níveis.
             </p>
@@ -1116,14 +1098,14 @@ export function ManagerNetwork() {
                 const data = commissionByLevel[lvl];
                 return (
                   <div key={lvl} className="bg-black/40 border border-white/5 rounded-sm p-3 text-center">
-                    <p className="font-display text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300 mb-2">
+                    <p className="font-display text-[10px] font-black uppercase tracking-[0.2em] text-neon-yellow mb-2">
                       Nível {lvl}
                     </p>
                     <p className="font-display text-lg sm:text-xl font-black text-white tabular-nums">
                       {privacy ? '••••' : fmtUsd(data.bro)}
                     </p>
                     {data.exp > 0 && (
-                      <p className="text-[10px] text-amber-300 mt-1 tabular-nums">
+                      <p className="text-[10px] text-neon-yellow mt-1 tabular-nums">
                         {privacy ? '••••' : `+${data.exp.toLocaleString('pt-BR')} EXP`}
                       </p>
                     )}
@@ -1143,7 +1125,7 @@ export function ManagerNetwork() {
         {/* PREMIUM CARDS */}
         {cards.length > 0 && (
           <div className="space-y-3">
-            <div className="ole-eyebrow !text-fuchsia-300 flex items-center gap-2">
+            <div className="ole-eyebrow-poster !text-neon-yellow flex items-center gap-2">
               <Award className="w-3.5 h-3.5" />
               <span>Premium Cards pendentes</span>
             </div>
@@ -1152,15 +1134,15 @@ export function ManagerNetwork() {
               {cards.map((card) => {
                 const TierIcon = card.cardTier === 'legendary' ? Crown : card.cardTier === 'rare' ? Gem : Star;
                 const tierColor =
-                  card.cardTier === 'legendary' ? 'text-amber-300' : card.cardTier === 'rare' ? 'text-fuchsia-300' : 'text-cyan-300';
+                  card.cardTier === 'legendary' ? 'text-neon-yellow' : card.cardTier === 'rare' ? 'text-neon-yellow' : 'text-neon-yellow';
                 return (
                   <div
                     key={card.id}
                     className={cn(
                       'bg-gradient-to-br rounded-sm p-4 border-2',
-                      card.cardTier === 'legendary' && 'from-amber-500/20 via-amber-400/10 to-transparent border-amber-400/40',
-                      card.cardTier === 'rare' && 'from-fuchsia-500/20 via-fuchsia-400/10 to-transparent border-fuchsia-400/40',
-                      card.cardTier === 'premium' && 'from-cyan-500/20 via-cyan-400/10 to-transparent border-cyan-400/40',
+                      card.cardTier === 'legendary' && 'from-neon-yellow/20 via-neon-yellow/10 to-transparent border-neon-yellow/40',
+                      card.cardTier === 'rare' && 'from-neon-yellow/20 via-neon-yellow/10 to-transparent border-neon-yellow/40',
+                      card.cardTier === 'premium' && 'from-neon-yellow/20 via-neon-yellow/10 to-transparent border-neon-yellow/40',
                     )}
                   >
                     <TierIcon className={cn('w-7 h-7 mb-2', tierColor)} strokeWidth={2} />
@@ -1183,7 +1165,7 @@ export function ManagerNetwork() {
         {/* 5.1 — Career Leaderboard */}
         {leaderboard.length > 0 && (
           <div className="space-y-3">
-            <div className="ole-eyebrow !text-amber-300 flex items-center gap-2">
+            <div className="ole-eyebrow-poster !text-neon-yellow flex items-center gap-2">
               <Medal className="w-3.5 h-3.5" />
               <span>Top da Carreira</span>
             </div>
@@ -1206,7 +1188,7 @@ export function ManagerNetwork() {
                       </p>
                       <p className="text-[10px] text-white/40 uppercase tracking-wider">
                         {entry.clubShort && (
-                          <span className="font-mono text-amber-300/70">
+                          <span className="font-mono text-neon-yellow/70">
                             {privacy ? '••••' : entry.clubShort}
                           </span>
                         )}
@@ -1215,9 +1197,9 @@ export function ManagerNetwork() {
                         )}
                       </p>
                     </div>
-                    <p className="font-display text-xs font-black text-amber-300 tabular-nums shrink-0">
+                    <p className="font-display text-xs font-black text-neon-yellow tabular-nums shrink-0">
                       {privacy ? '••••' : entry.lifetimePoints.toLocaleString('pt-BR')}
-                      <span className="text-[9px] text-amber-300/60 ml-1">pts</span>
+                      <span className="text-[9px] text-neon-yellow/60 ml-1">pts</span>
                     </p>
                   </li>
                 );
@@ -1234,20 +1216,20 @@ export function ManagerNetwork() {
           className="bg-panel border border-white/10 border-l-[3px] border-l-cyan-400 rounded-[var(--radius-md)] p-4 sm:p-5"
         >
           <p className="flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-wider text-white mb-3">
-            <Sparkles className="h-3.5 w-3.5 text-cyan-400" /> Como funcionam as comissões?
+            <Sparkles className="h-3.5 w-3.5 text-neon-yellow" /> Como funcionam as comissões?
           </p>
           <ul className="space-y-2 text-xs text-white/60">
             <li className="flex items-start gap-2">
-              <span className="text-cyan-400 font-bold mt-0.5">•</span>
+              <span className="text-neon-yellow font-bold mt-0.5">•</span>
               <span><strong className="text-white">5% em BRO</strong> sobre compras elegíveis (OLE Game / NFT) até 3 níveis</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-cyan-400 font-bold mt-0.5">•</span>
+              <span className="text-neon-yellow font-bold mt-0.5">•</span>
               <span><strong className="text-white">5% sobre cada depósito</strong> da tua rede (3 níveis) — ver Carreira</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-cyan-400 font-bold mt-0.5">•</span>
-              <span><strong className="text-white">1% da base GAT em EXP</strong> por dia, por nível (automático)</span>
+              <span className="text-neon-yellow font-bold mt-0.5">•</span>
+              <span><strong className="text-white">Marcos de rede em EXP</strong> — prêmio ao atingir cada degrau de indicados ativos</span>
             </li>
           </ul>
         </motion.div>

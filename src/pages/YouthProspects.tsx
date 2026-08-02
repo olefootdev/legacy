@@ -16,7 +16,8 @@ import { RailStat } from '@/components/ui/RailStat';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { trackMissionEvent } from '@/progression/trackEvent';
 
-const SERIF = 'var(--font-serif-hero)';
+/** Fonte de número do layer final: Anton. (Era serifa itálica.) */
+const NUM = 'var(--font-impact)';
 
 export function YouthProspects() {
   const players = useGameStore((s) => s.players);
@@ -84,7 +85,7 @@ export function YouthProspects() {
       </div>
 
       {/* Como funciona + Evoluir academia */}
-      <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] p-5 pl-[18px]">
+      <div className="relative overflow-hidden ole-poster p-5 pl-[18px]">
         <span className="absolute inset-y-0 left-0 w-[3px] bg-neon-yellow" aria-hidden />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="max-w-lg">
@@ -144,11 +145,11 @@ export function YouthProspects() {
               const headroom = Math.max(0, cap - ovr);
               return (
                 <button key={p.id} type="button" onClick={() => setSelectedId(p.id)}
-                  className="group relative flex items-stretch overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] text-left transition-colors hover:border-white/25">
+                  className="group relative flex items-stretch overflow-hidden ole-poster text-left transition-colors hover:border-white/25">
                   <span className="absolute inset-y-0 left-0 z-10 w-[3px] bg-neon-yellow" aria-hidden />
                   <div className="relative flex w-[86px] shrink-0 flex-col justify-center overflow-hidden bg-black/60 py-3 pl-4">
-                    <span className="pointer-events-none absolute -bottom-3 -right-1 italic leading-none text-white/[0.05]" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '72px' }} aria-hidden>{p.name.charAt(0)}</span>
-                    <span className="italic leading-none text-neon-yellow" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '32px' }}>{ovr}</span>
+                    <span className="tabular-nums pointer-events-none absolute -bottom-3 -right-1 leading-none text-white/[0.05]" style={{ fontFamily: NUM, fontSize: '72px' }} aria-hidden>{p.name.charAt(0)}</span>
+                    <span className="tabular-nums leading-none text-neon-yellow" style={{ fontFamily: NUM, fontSize: '32px' }}>{ovr}</span>
                     <span className="mt-1 font-display text-[10px] uppercase tracking-[0.1em] text-white/45">{p.pos}</span>
                   </div>
                   <div className="flex flex-1 items-center px-4">
@@ -201,7 +202,7 @@ export function YouthProspects() {
                 </div>
                 <div className="mt-5 rounded-xl border border-neon-yellow/30 bg-neon-yellow/10 p-4">
                   <div className="font-display text-[10px] uppercase tracking-widest text-white/50">Booster da academia</div>
-                  <div className="mt-1 italic text-neon-yellow" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '30px' }}>+{boosterPct}%</div>
+                  <div className="tabular-nums mt-1 text-neon-yellow" style={{ fontFamily: NUM, fontSize: '30px' }}>+{boosterPct}%</div>
                   <p className="mt-1 text-[11px] text-gray-400">de ganho extra no treino desta cria, pelo nível {youthLvl} da academia.</p>
                 </div>
                 <Link to="/team/treino"
@@ -226,9 +227,9 @@ export function YouthProspects() {
         {confirmUpgrade && upCost && (
           <>
             <div className="mt-4 flex items-center gap-3">
-              <span className="italic text-white/70" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '30px' }}>{youthLvl}</span>
+              <span className="tabular-nums text-white/70" style={{ fontFamily: NUM, fontSize: '30px' }}>{youthLvl}</span>
               <TrendingUp className="h-5 w-5 text-neon-yellow" />
-              <span className="italic text-neon-yellow" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '30px' }}>{youthLvl + 1}</span>
+              <span className="tabular-nums text-neon-yellow" style={{ fontFamily: NUM, fontSize: '30px' }}>{youthLvl + 1}</span>
             </div>
             <div className="mt-4 space-y-1.5 text-[12.5px]">
               <div className="flex justify-between"><span className="text-white/50">Custo</span><span className="font-semibold text-white">{upLabel}</span></div>

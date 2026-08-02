@@ -192,179 +192,57 @@ export function Manager() {
         aria-label="Perfil do Manager"
         className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-6"
       >
-        {/* Watermark gigante do tier — preto sobre amarelo, opacity baixa */}
-        <div
-          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
-          aria-hidden
-        >
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={currentTier.id}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.04 }}
-              transition={{ duration: 0.4 }}
-              className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
-              style={{
-                fontSize: 'clamp(120px, 22vw, 420px)',
-                lineHeight: '0.85',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {currentTier.name}
-            </motion.span>
-          </AnimatePresence>
-        </div>
-
-        {/* Composição editorial centrada vertical */}
+        {/* ── HERO no layer final ──────────────────────────────────────────
+            Saíram: o tier em marca-d'água gigante atrás do título, o nome do
+            tier em serifa itálica do tamanho da manchete, régua decorativa e a
+            frase entre aspas. Ficou quem é o manager, em que degrau está, e o
+            que ele tem no bolso (logo abaixo). */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-14 text-center"
+          className="relative z-10 px-4 sm:px-6 lg:px-8"
+          style={{ paddingBlock: 'clamp(26px, 5vw, 46px)' }}
         >
-          {/* Eyebrow */}
-          <div
-            className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-black mb-4 sm:mb-6 truncate"
-          >
-            <span className="text-black">{club.name} · {club.city}</span>
-          </div>
+          <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
+            {club.name} · {club.city}
+          </span>
 
-          {/* Headline duo: MANAGER + tier dinâmico */}
-          <h1 className="leading-[0.9]">
-            <span
-              className="block font-bold uppercase text-black"
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <h1
+              className="font-impact uppercase"
               style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(2.75rem, 8vw, 6rem)',
-                letterSpacing: '0.005em',
+                color: 'var(--color-deep-black)',
+                fontSize: 'clamp(42px, 11vw, 88px)',
+                lineHeight: 0.84,
+                letterSpacing: '-0.01em',
               }}
             >
               Manager
-            </span>
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={currentTier.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.35 }}
-                className="block italic text-black"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontSize: 'clamp(2.25rem, 7vw, 5rem)',
-                  marginTop: '0.04em',
-                  letterSpacing: '-0.01em',
-                }}
-              >
-                {currentTier.name}
-              </motion.span>
-            </AnimatePresence>
-          </h1>
-
-          {/* Régua decorativa */}
-          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
-
-          {/* Avatar + Favorite Team */}
-          <div className="mt-8 flex flex-col items-center gap-4">
-            <div className="group/avatar relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 transition-all hover:border-black/80 hover:shadow-[0_0_24px_rgba(0,0,0,0.4)]"
-                 style={{ borderRadius: 'var(--radius-sm)' }}>
-              {avatarSrc ? (
-                <img src={avatarSrc} alt="" className="h-full w-full object-cover transition-transform group-hover/avatar:scale-105" referrerPolicy="no-referrer" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <User className="h-10 w-10 text-neon-yellow/80" aria-hidden />
-                </div>
-              )}
-              <span className="absolute bottom-1 right-1 bg-black px-1.5 py-0.5 font-display text-[9px] font-black uppercase tracking-wider text-neon-yellow"
-                    style={{ borderRadius: 'var(--radius-sm)' }}>
-                {currentTier.name}
-              </span>
-            </div>
-
-            {favoriteTeam ? (
-              <div className="inline-flex items-center gap-2 border border-black/20 bg-black/10 px-3 py-1.5"
-                   style={{ borderRadius: 'var(--radius-sm)' }}>
-                {favoriteTeam.logo ? (
-                  <img src={favoriteTeam.logo} alt="" className="h-4 w-4 rounded-full object-contain" />
-                ) : (
-                  <Flag className="h-3.5 w-3.5 text-black/60" />
-                )}
-                <span className="text-[10px] font-bold uppercase tracking-wider text-black/70">
-                  Coração: <span className="text-black">{favoriteTeam.name}</span>
-                </span>
-              </div>
-            ) : null}
-          </div>
-
-          {/* Quote italic — CENTERPIECE editorial */}
-          <AnimatePresence mode="wait">
-            <motion.blockquote
-              key={`tier-${currentTier.id}`}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.35, delay: 0.05 }}
-              className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
-              style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
+            </h1>
+            {/* O tier é o degrau da carreira — chip preto, como um distintivo. */}
+            <span
+              className="inline-flex items-center font-impact uppercase"
+              style={{
+                background: 'var(--color-deep-black)',
+                color: 'var(--color-neon-yellow)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '4px 10px',
+                fontSize: 'clamp(15px, 3.6vw, 22px)',
+                lineHeight: 1,
+              }}
             >
-              {currentTier.id <= 2 && '"começando a jornada — cada partida é aprendizado."'}
-              {currentTier.id === 3 && '"construindo legado — o caminho é longo."'}
-              {currentTier.id === 4 && '"profissional de verdade — decisões importam."'}
-              {currentTier.id >= 5 && currentTier.id <= 6 && '"elite do futebol — poucos chegam aqui."'}
-              {currentTier.id >= 7 && '"lenda viva — história escrita com títulos."'}
-            </motion.blockquote>
-          </AnimatePresence>
-
-          {/* Link de indicação com botão de copiar */}
-          <div className="mt-3 mx-auto max-w-md">
-            {inviteLink ? (
-              <div className="inline-flex items-center gap-2 bg-black/10 border border-black/20 px-3 py-2 rounded-sm">
-                <span
-                  className="font-mono text-black/70 truncate max-w-[200px] sm:max-w-xs"
-                  style={{
-                    fontSize: 'clamp(0.75rem, 1vw, 0.85rem)',
-                  }}
-                >
-                  {inviteLink}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopyInviteLink}
-                  className="shrink-0 p-1.5 bg-black/80 hover:bg-black rounded-sm transition-colors"
-                  aria-label="Copiar link de indicação"
-                >
-                  {copiedInvite ? (
-                    <CheckCircle className="w-4 h-4 text-neon-yellow" />
-                  ) : (
-                    <Copy className="w-4 h-4 text-neon-yellow" />
-                  )}
-                </button>
-              </div>
-            ) : (
-              <p
-                className="text-black/60"
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: 'clamp(0.85rem, 1vw, 0.95rem)',
-                  lineHeight: 1.55,
-                }}
-              >
-                {formatExp(expLifetime)} EXP acumulado · {squadSize} jogadores · {social.friends.length} amigos
-              </p>
-            )}
+              {currentTier.name}
+            </span>
           </div>
 
           {/* Stats strip — 3 métricas principais */}
-          <div className="mt-8 sm:mt-10 grid grid-cols-3 gap-2 sm:gap-3 max-w-lg mx-auto px-2">
+          <div className="mt-6 grid max-w-lg grid-cols-3 gap-2 sm:gap-3">
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
               <p
-                className="font-serif-hero text-neon-yellow tabular-nums leading-none truncate"
-                style={{
-                  fontWeight: 700,
-                  fontSize: 'clamp(20px, 4vw, 36px)',
-                }}
+                className="font-impact text-neon-yellow tabular-nums leading-none truncate"
+                style={{ fontSize: 'clamp(20px, 4.4vw, 36px)' }}
               >
                 {formatCompactNumber(finance.ole)}
               </p>
@@ -375,11 +253,8 @@ export function Manager() {
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
               <p
-                className="font-serif-hero text-neon-yellow tabular-nums leading-none truncate"
-                style={{
-                  fontWeight: 700,
-                  fontSize: 'clamp(20px, 4vw, 36px)',
-                }}
+                className="font-impact text-neon-yellow tabular-nums leading-none truncate"
+                style={{ fontSize: 'clamp(20px, 4.4vw, 36px)' }}
               >
                 {broDisplay.primary}
               </p>
@@ -390,11 +265,8 @@ export function Manager() {
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
               <p
-                className="font-serif-hero text-neon-yellow tabular-nums leading-none truncate"
-                style={{
-                  fontWeight: 700,
-                  fontSize: 'clamp(20px, 4vw, 36px)',
-                }}
+                className="font-impact text-neon-yellow tabular-nums leading-none truncate"
+                style={{ fontSize: 'clamp(20px, 4.4vw, 36px)' }}
               >
                 {squadSize}
               </p>
@@ -469,12 +341,12 @@ export function Manager() {
                   <Icon className="h-5 w-5 text-neon-yellow" strokeWidth={2.2} aria-hidden />
                   <div className="flex items-center gap-1.5">
                     {item.badge && (
-                      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1.5 font-display text-[10px] font-black text-white">
+                      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--color-danger)] px-1.5 font-display text-[10px] font-black text-white">
                         {item.badge}
                       </span>
                     )}
                     {item.tag && (
-                      <span className="rounded-[var(--radius-pill)] border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-wider text-emerald-400">
+                      <span className="rounded-[var(--radius-pill)] border border-[var(--color-success)]/30 bg-[var(--color-success)]/15 px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-wider text-[var(--color-success)]">
                         {item.tag}
                       </span>
                     )}
@@ -494,7 +366,7 @@ export function Manager() {
       {/* ── TROFÉUS ─────────────────────────────────────────────── */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
-          <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
+          <div className="ole-eyebrow-poster !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
             <span>Troféus</span>
           </div>
           <Trophy className="h-3.5 w-3.5 text-neon-yellow/70" aria-hidden />
@@ -530,7 +402,7 @@ export function Manager() {
                     className={cn(
                       'flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-sm transition-transform hover:scale-110',
                       earned
-                        ? 'bg-gradient-to-br from-neon-yellow via-amber-400 to-yellow-600 text-black shadow-[0_0_20px_rgba(250,204,21,0.5)]'
+                        ? 'bg-gradient-to-br from-neon-yellow via-neon-yellow to-neon-yellow text-black shadow-[0_0_20px_rgba(250,204,21,0.5)]'
                         : 'bg-white/5 text-white/30',
                     )}
                   >
@@ -585,7 +457,7 @@ export function Manager() {
                     transition={{ delay: 0.32 + Math.min(i * 0.04, 0.4) }}
                     className="flex flex-col items-center gap-2 p-2 sm:p-3 rounded-sm border-2 bg-neon-yellow/5 border-neon-yellow/40 hover:border-neon-yellow/60 hover:shadow-[0_0_20px_rgba(253,225,0,0.18)] transition-all"
                   >
-                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-sm bg-gradient-to-br from-neon-yellow via-amber-400 to-yellow-600 text-black shadow-[0_0_20px_rgba(250,204,21,0.5)]">
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-sm bg-gradient-to-br from-neon-yellow via-neon-yellow to-neon-yellow text-black shadow-[0_0_20px_rgba(250,204,21,0.5)]">
                       <Crown className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
                     </div>
                     <div className="text-center">
@@ -609,8 +481,8 @@ export function Manager() {
         {/* Competição */}
         <TrophyGroup
           title="Competição"
-          accentClass="border-l-cyan-400"
-          countClass="text-cyan-300"
+          accentClass="border-l-neon-yellow"
+          countClass="text-neon-yellow"
           count={competitionTrophies.filter((t) => t.earned).length}
           total={competitionTrophies.length}
         >
@@ -624,7 +496,7 @@ export function Manager() {
                 className={cn(
                   'flex flex-col items-center gap-2 p-2 sm:p-3 rounded-sm border transition-all',
                   t.earned
-                    ? 'bg-cyan-500/5 border-cyan-500/30 hover:border-cyan-500/50'
+                    ? 'bg-neon-yellow/5 border-neon-yellow/30 hover:border-neon-yellow/50'
                     : 'bg-black/40 border-white/10 opacity-50',
                 )}
               >
@@ -632,7 +504,7 @@ export function Manager() {
                   className={cn(
                     'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-sm',
                     t.earned
-                      ? 'bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-600 text-black'
+                      ? 'bg-gradient-to-br from-neon-yellow via-neon-yellow to-neon-yellow text-black'
                       : 'bg-white/5 text-white/30',
                   )}
                 >
@@ -644,7 +516,7 @@ export function Manager() {
                 </div>
                 <p className={cn(
                   'text-center text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-tight',
-                  t.earned ? 'text-cyan-300' : 'text-white/45',
+                  t.earned ? 'text-neon-yellow' : 'text-white/45',
                 )}>
                   {t.name}
                 </p>
@@ -656,8 +528,8 @@ export function Manager() {
         {/* Missões */}
         <TrophyGroup
           title="Missões"
-          accentClass="border-l-emerald-400"
-          countClass="text-emerald-300"
+          accentClass="border-l-neon-yellow"
+          countClass="text-neon-yellow"
           count={missionTrophies.filter((t) => t.earned).length}
           total={missionTrophies.length}
         >
@@ -671,7 +543,7 @@ export function Manager() {
                 className={cn(
                   'flex flex-col items-center gap-2 p-2 sm:p-3 rounded-sm border transition-all',
                   t.earned
-                    ? 'bg-emerald-500/5 border-emerald-500/30 hover:border-emerald-500/50'
+                    ? 'bg-neon-yellow/5 border-neon-yellow/30 hover:border-neon-yellow/50'
                     : 'bg-black/40 border-white/10 opacity-50',
                 )}
               >
@@ -679,7 +551,7 @@ export function Manager() {
                   className={cn(
                     'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-sm',
                     t.earned
-                      ? 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 text-black'
+                      ? 'bg-gradient-to-br from-[var(--color-success)] via-[var(--color-success)] to-[var(--color-success)] text-black'
                       : 'bg-white/5 text-white/30',
                   )}
                 >
@@ -691,7 +563,7 @@ export function Manager() {
                 </div>
                 <p className={cn(
                   'text-center text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-tight',
-                  t.earned ? 'text-emerald-300' : 'text-white/45',
+                  t.earned ? 'text-neon-yellow' : 'text-white/45',
                 )}>
                   {t.trophy.name}
                 </p>
@@ -949,7 +821,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
   const club = useGameStore((s) => s.club);
   const social = useFriendships();
   return (
-    <DrawerShell title="Network" onClose={onClose} accent="bg-fuchsia-500">
+    <DrawerShell title="Network" onClose={onClose} accent="bg-neon-yellow">
       <div className="space-y-5">
         <div>
           <p className="text-[11px] text-white/60">Teu clube: <span className="font-bold text-white">{club.name}</span></p>
@@ -958,14 +830,14 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
 
         {social.data.incoming.length > 0 ? (
           <section>
-            <h4 className="mb-2 font-display text-[10px] font-bold uppercase tracking-widest text-fuchsia-300/90">
+            <h4 className="mb-2 font-display text-[10px] font-bold uppercase tracking-widest text-neon-yellow/85">
               Solicitações
             </h4>
             <ul className="space-y-2">
               {social.data.incoming.map((req) => (
                 <li
                   key={req.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-fuchsia-500/25 bg-black/40 px-3 py-2.5"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-neon-yellow/25 bg-black/40 px-3 py-2.5"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-display text-sm font-bold text-white">{req.clubName}</p>
@@ -1013,7 +885,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
                   <button
                     type="button"
                     onClick={() => void social.remove(f.id)}
-                    className="shrink-0 text-[10px] font-bold uppercase text-white/45 hover:text-red-400"
+                    className="shrink-0 text-[10px] font-bold uppercase text-white/45 hover:text-[var(--color-danger)]"
                   >
                     Remover
                   </button>
@@ -1046,7 +918,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
         ) : null}
 
         <p className="text-[10px] text-white/30">
-          Indicações pelo teu código aparecem aqui em breve (próxima fase).
+          O teu link de indicação e o placar da rede ficam na Home.
         </p>
       </div>
 

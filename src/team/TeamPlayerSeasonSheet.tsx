@@ -19,8 +19,8 @@ import { LegacyMentorSection } from '@/legacy/LegacyMentorSection';
 import { PlayerHealthContractSection } from '@/components/player/PlayerHealthContractSection';
 
 function TrendGlyph({ label }: { label: 'up' | 'down' | 'flat' | 'unknown' }) {
-  if (label === 'up') return <TrendingUp className="h-4 w-4 text-emerald-400" aria-hidden />;
-  if (label === 'down') return <TrendingDown className="h-4 w-4 text-rose-400" aria-hidden />;
+  if (label === 'up') return <TrendingUp className="h-4 w-4" style={{ color: 'var(--color-success)' }} aria-hidden />;
+  if (label === 'down') return <TrendingDown className="h-4 w-4" style={{ color: 'var(--color-danger)' }} aria-hidden />;
   if (label === 'flat') return <Minus className="h-4 w-4 text-gray-500" aria-hidden />;
   return <span className="text-[10px] font-bold uppercase text-gray-500">—</span>;
 }
@@ -219,10 +219,9 @@ export function TeamPlayerSeasonSheet({
             {/* OVR — Moret italic editorial (canto superior esquerdo) */}
             <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10">
               <p
-                className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]"
+                className="text-neon-yellow tabular-nums leading-none drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontWeight: 700,
+                  fontFamily: 'var(--font-impact)',
                   fontSize: 'clamp(72px, 15vw, 120px)',
                   letterSpacing: '-0.04em',
                 }}
@@ -302,10 +301,9 @@ export function TeamPlayerSeasonSheet({
                     Overall mint
                   </p>
                   <p
-                    className="italic text-white tabular-nums leading-none mt-1"
+                    className="text-white tabular-nums leading-none mt-1"
                     style={{
-                      fontFamily: 'var(--font-serif-hero)',
-                      fontWeight: 700,
+                      fontFamily: 'var(--font-impact)',
                       fontSize: 'clamp(28px, 4vw, 40px)',
                       letterSpacing: '-0.02em',
                     }}
@@ -340,9 +338,9 @@ export function TeamPlayerSeasonSheet({
                 </div>
               </div>
               <p
-                className="mt-2 text-white/40 italic"
+                className="mt-2 text-white/40"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
+                  fontFamily: 'var(--font-sans)',
                   fontSize: '11px',
                 }}
               >
@@ -411,7 +409,7 @@ export function TeamPlayerSeasonSheet({
               className={cn(
                 'mt-3 border px-3 py-2',
                 insight.recommendation.action === 'sell' && 'border-neon-yellow/35 bg-neon-yellow/5 text-neon-yellow',
-                insight.recommendation.action === 'hold' && 'border-cyan-500/25 bg-cyan-950/20 text-cyan-200',
+                insight.recommendation.action === 'hold' && 'border-white/12 bg-white/[0.04] text-white/75',
                 insight.recommendation.action === 'watch' && 'border-white/10 bg-black/30 text-gray-300',
               )}
               style={{ borderRadius: 'var(--radius-sm)' }}
@@ -453,13 +451,13 @@ export function TeamPlayerSeasonSheet({
           {player ? <PlayerHealthContractSection player={player} /> : null}
           {player ? <LegacyMentorSection student={player} /> : null}
           {boosterRows.length ? (
-            <section className="border border-fuchsia-500/35 bg-fuchsia-950/20 p-4 scroll-snap-section"
+            <section className="ole-poster p-4 scroll-snap-section"
               style={{ borderRadius: 'var(--radius-md)' }}
             >
               <div className="flex items-center gap-2.5">
-                <span aria-hidden className="shrink-0 w-[3px] h-5 bg-fuchsia-400" />
+                <span aria-hidden className="shrink-0 w-[3px] h-5 bg-neon-yellow" />
                 <h3
-                  className="text-fuchsia-200/90 uppercase"
+                  className="text-white uppercase"
                   style={{
                     fontFamily: 'var(--font-display)',
                     fontSize: '11px',
@@ -493,7 +491,7 @@ export function TeamPlayerSeasonSheet({
                       style={{ borderRadius: 'var(--radius-sm)' }}
                     >
                       <div className="flex min-w-0 items-start gap-2">
-                        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-300/80" aria-hidden />
+                        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-neon-yellow/70" aria-hidden />
                         <div className="min-w-0">
                           <p className="text-white"
                             style={{
@@ -526,7 +524,7 @@ export function TeamPlayerSeasonSheet({
                             playerId: needP ? playerId ?? undefined : undefined,
                           });
                         }}
-                        className="shrink-0 border border-fuchsia-500/40 bg-fuchsia-500/15 px-3 py-2 text-fuchsia-100 transition hover:bg-fuchsia-500/25 disabled:cursor-not-allowed disabled:opacity-35"
+                        className="shrink-0 border border-neon-yellow/40 bg-neon-yellow/15 px-3 py-2 text-neon-yellow transition hover:bg-neon-yellow/25 disabled:cursor-not-allowed disabled:opacity-35"
                         style={{
                           fontFamily: 'var(--font-display)',
                           fontSize: '10px',
@@ -546,13 +544,13 @@ export function TeamPlayerSeasonSheet({
           ) : null}
 
           {/* Mercado */}
-          <section className="border border-cyan-500/20 bg-cyan-950/25 p-4 scroll-snap-section"
+          <section className="ole-poster p-4 scroll-snap-section"
             style={{ borderRadius: 'var(--radius-md)' }}
           >
             <div className="flex items-center gap-2.5">
-              <span aria-hidden className="shrink-0 w-[3px] h-5 bg-cyan-400" />
+              <span aria-hidden className="shrink-0 w-[3px] h-5 bg-neon-yellow" />
               <h3
-                className="text-cyan-200/90 uppercase"
+                className="text-white uppercase"
                 style={{
                   fontFamily: 'var(--font-display)',
                   fontSize: '11px',
@@ -570,7 +568,7 @@ export function TeamPlayerSeasonSheet({
                 fontWeight: 700,
               }}
             >
-              {usesExpMarket ? `${formatExp(marketCurrent)} EXP` : `${formatBroFromCents(marketCurrent)} BRO`}
+              {usesExpMarket ? `${formatExp(marketCurrent)} EXP` : `${formatBroFromCents(marketCurrent)}`}
             </p>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <div className="border border-white/10 bg-black/30 px-3 py-2"
@@ -624,7 +622,7 @@ export function TeamPlayerSeasonSheet({
                     }}
                   >
                     {ledger?.lastMarketBroCentsAfterMatch != null
-                      ? `${trendSinceLastMatch.pct != null ? `${trendSinceLastMatch.pct >= 0 ? '+' : ''}${trendSinceLastMatch.pct.toFixed(1)}%` : '—'} vs. pós-jogo (${usesExpMarket ? `${formatExp(ledger.lastMarketBroCentsAfterMatch)} EXP` : `${formatBroFromCents(ledger.lastMarketBroCentsAfterMatch)} BRO`})`
+                      ? `${trendSinceLastMatch.pct != null ? `${trendSinceLastMatch.pct >= 0 ? '+' : ''}${trendSinceLastMatch.pct.toFixed(1)}%` : '—'} vs. pós-jogo (${usesExpMarket ? `${formatExp(ledger.lastMarketBroCentsAfterMatch)} EXP` : `${formatBroFromCents(ledger.lastMarketBroCentsAfterMatch)}`})`
                       : 'Sem jogo finalizado ainda'}
                   </span>
                 </div>
@@ -954,7 +952,7 @@ export function TeamPlayerSeasonSheet({
               <span className="ml-1.5 border border-black/20 bg-black/15 px-2 py-1 font-mono text-[10px] font-bold tracking-wider text-black/80 group-hover:bg-black/20"
                 style={{ borderRadius: 'var(--radius-sm)' }}
               >
-                {usesExpMarket ? `${formatExp(marketCurrent)} EXP` : `${formatBroFromCents(marketCurrent)} BRO`}
+                {usesExpMarket ? `${formatExp(marketCurrent)} EXP` : `${formatBroFromCents(marketCurrent)}`}
               </span>
             </button>
             {insight.recommendation.action === 'sell' ? (

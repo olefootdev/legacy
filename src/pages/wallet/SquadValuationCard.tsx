@@ -71,10 +71,9 @@ export function SquadValuationCard({
             </div>
 
             <p
-              className="tabular-nums leading-none text-neon-yellow"
+              className="font-impact tabular-nums leading-none text-neon-yellow"
               style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontStyle: 'italic',
+                fontFamily: 'var(--font-impact)',
                 fontSize: 'clamp(36px, 7vw, 56px)',
               }}
             >

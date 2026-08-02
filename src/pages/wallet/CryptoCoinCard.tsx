@@ -109,8 +109,7 @@ export function CryptoCoinCard({
               highlight ? 'text-neon-yellow' : 'text-white'
             }`}
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
+              fontFamily: 'var(--font-impact)',
               fontSize: 'clamp(22px, 4vw, 30px)',
             }}
           >

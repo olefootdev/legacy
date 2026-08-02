@@ -867,11 +867,11 @@ export function Transfer() {
   }, [selectedPlayer, genesisListedEntities, otherManagerListings, oleBal, dispatch, showPurchaseCompleteBanner, clubName]);
 
   type TransferTabKey = 'genesis' | 'legacies' | 'newbies' | 'highlights';
-  const TAB_META: Record<TransferTabKey, { num: string; subtitle: string; eyebrow: string }> = {
-    genesis: { num: '01', subtitle: 'fundadores', eyebrow: 'Cartas Genesis' },
-    legacies: { num: '02', subtitle: 'lendas', eyebrow: 'Hall of Fame' },
-    newbies: { num: '03', subtitle: 'novidades', eyebrow: 'Recém-listadas' },
-    highlights: { num: '04', subtitle: 'destaques', eyebrow: 'Curadoria' },
+  const TAB_META: Record<TransferTabKey, { subtitle: string; eyebrow: string }> = {
+    genesis: { subtitle: 'fundadores', eyebrow: 'Cartas Genesis' },
+    legacies: { subtitle: 'lendas', eyebrow: 'Hall of Fame' },
+    newbies: { subtitle: 'novidades', eyebrow: 'Recém-listadas' },
+    highlights: { subtitle: 'destaques', eyebrow: 'Curadoria' },
   };
   const tabMeta = TAB_META[marketTab as TransferTabKey] ?? TAB_META.genesis;
   const tabsList: { id: HeroTab; label: string }[] = [
@@ -891,121 +891,80 @@ export function Transfer() {
         aria-label="Mercado de transferências"
         className="relative w-full overflow-hidden bg-neon-yellow"
       >
-        {/* Watermark gigante do número da aba — preto sobre amarelo, opacity baixa
-            (assinatura /legend: tipografia como ornamento, não bloco visual). */}
-        <div
-          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
-          aria-hidden
-        >
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={tabMeta.num}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.04 }}
-              transition={{ duration: 0.4 }}
-              className="font-display font-black tabular-nums whitespace-nowrap text-black/[0.05]"
-              style={{
-                fontSize: 'clamp(180px, 32vw, 460px)',
-                lineHeight: '0.85',
-                letterSpacing: '-0.05em',
-              }}
-            >
-              {tabMeta.num}
-            </motion.span>
-          </AnimatePresence>
-        </div>
-
-        {/* Composição editorial centrada vertical — leveza /legend */}
+        {/* ── HERO no layer final ──────────────────────────────────────────
+            Saíram: o número da aba em marca-d'água gigante atrás do título, o
+            nome da aba em serifa itálica do tamanho da manchete, a régua
+            decorativa e a frase entre aspas que trocava por aba. Ficou o que o
+            comprador precisa pra decidir: onde ele está, quantas cartas
+            existem e quanto ele tem no bolso. */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14 text-center"
+          className="relative z-10 px-5 sm:px-8"
+          style={{ paddingBlock: 'clamp(26px, 5vw, 46px)' }}
         >
-          {/* Eyebrow */}
-          <div
-            className="ole-eyebrow !text-black mb-5 sm:mb-6"
-            style={{ fontFamily: 'var(--font-ui)' }}
-          >
-            <span className="!text-black">{tabMeta.eyebrow}</span>
-          </div>
+          <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
+            {tabMeta.eyebrow}
+          </span>
 
-          {/* Headline duo: MERCADO + italic dinâmico */}
-          <h1 className="leading-[0.9]">
-            <span
-              className="block font-bold uppercase text-black"
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <h1
+              className="font-impact uppercase"
               style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(2.75rem, 8vw, 6rem)',
-                letterSpacing: '0.005em',
+                color: 'var(--color-deep-black)',
+                fontSize: 'clamp(42px, 11vw, 88px)',
+                lineHeight: 0.84,
+                letterSpacing: '-0.01em',
               }}
             >
               Mercado
-            </span>
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={tabMeta.subtitle}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.35 }}
-                className="block italic text-black"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontSize: 'clamp(2.25rem, 7vw, 5rem)',
-                  marginTop: '0.04em',
-                  letterSpacing: '-0.01em',
-                }}
-              >
-                {tabMeta.subtitle}
-              </motion.span>
-            </AnimatePresence>
-          </h1>
-
-          {/* Régua decorativa (assinatura /legend) */}
-          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
-
-          {/* Quote italic — CENTERPIECE editorial (antes ficava escondido no lado dark) */}
-          <AnimatePresence mode="wait">
-            <motion.blockquote
-              key={`q-${marketTab}`}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.35, delay: 0.05 }}
-              className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
-              style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
+            </h1>
+            {/* A aba corrente vira chip preto — é navegação, não subtítulo. */}
+            <span
+              className="inline-flex items-center font-impact uppercase"
+              style={{
+                background: 'var(--color-deep-black)',
+                color: 'var(--color-neon-yellow)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '4px 10px',
+                fontSize: 'clamp(16px, 4vw, 24px)',
+                lineHeight: 1,
+              }}
             >
-              {marketTab === 'genesis' && '“coleção fundadora — supply finito.”'}
-              {marketTab === 'legacies' && '“DNA de quem entrou pra história.”'}
-              {marketTab === 'newbies' && '“acabaram de chegar à arena.”'}
-              {marketTab === 'highlights' && '“o time elegeu — só os tops.”'}
-            </motion.blockquote>
-          </AnimatePresence>
+              {tabMeta.subtitle}
+            </span>
+          </div>
 
-          {/* Subtítulo — dados vivos */}
-          <p
-            className="mt-3 text-black/60 mx-auto max-w-md"
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'clamp(0.85rem, 1vw, 0.95rem)',
-              lineHeight: 1.55,
-            }}
-          >
-            {auctionPool.length} cartas disponíveis · saldo {formatExp(oleBal)} EXP
-          </p>
+          {/* Estoque e saldo: o número manda, o rótulo acompanha. */}
+          <div className="mt-5 flex flex-wrap items-baseline gap-x-6 gap-y-2">
+            <span
+              className="font-impact tabular-nums"
+              style={{ fontSize: '30px', lineHeight: 0.85, color: 'var(--color-deep-black)' }}
+            >
+              {auctionPool.length}
+              <span className="ml-1.5 font-display font-black" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
+                cartas
+              </span>
+            </span>
+            <span
+              className="font-impact tabular-nums"
+              style={{ fontSize: '30px', lineHeight: 0.85, color: 'rgba(13,13,13,0.55)' }}
+            >
+              {formatExp(oleBal)}
+              <span className="ml-1.5 font-display font-black" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
+                EXP
+              </span>
+            </span>
+          </div>
 
-          {/* CTAs — centrados, primário preto sobre amarelo (consistente com /legend) */}
-          <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-3">
+          {/* CTAs — alinhados à esquerda, junto do resto do hero. */}
+          <div className="mt-7 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={() => setShowSearch((v) => !v)}
-              className="inline-flex items-center gap-2 bg-black px-7 py-3 text-neon-yellow font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
-              style={{
-                fontFamily: 'var(--font-display)',
-                borderRadius: 'var(--radius-sm)',
-              }}
+              className="inline-flex items-center gap-2 bg-black px-6 py-3 text-white font-display font-black uppercase tracking-[0.14em] text-[11px] transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              style={{ borderRadius: 'var(--radius-sm)', boxShadow: '5px 5px 0 rgba(13,13,13,0.28)' }}
             >
               <Search className="w-4 h-4" />
               Buscar carta
@@ -1522,15 +1481,14 @@ export function Transfer() {
           ))}
           {gridPlayers.length === 0 && (
             <div className="col-span-full py-16 text-center">
+              <p className="font-impact uppercase text-white" style={{ fontSize: '18px' }}>
+                Nenhuma carta encontrada
+              </p>
               <p
-                className="italic text-white/55 mx-auto max-w-md"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontSize: 'clamp(18px, 2.4vw, 24px)',
-                  lineHeight: 1.4,
-                }}
+                className="mx-auto mt-1.5 max-w-md text-white/50"
+                style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
               >
-                “nenhuma carta atende esses filtros.”
+                Nenhuma carta atende esses filtros. Tente afrouxar a busca.
               </p>
               <p
                 className="mt-3 text-white/35 uppercase"
@@ -1550,15 +1508,14 @@ export function Transfer() {
           {/* List view: cards horizontais um abaixo do outro (Sprint B-4) */}
           {gridPlayers.length === 0 && (
             <div className="py-16 text-center">
+              <p className="font-impact uppercase text-white" style={{ fontSize: '18px' }}>
+                Nenhuma carta encontrada
+              </p>
               <p
-                className="italic text-white/55 mx-auto max-w-md"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontSize: 'clamp(18px, 2.4vw, 24px)',
-                  lineHeight: 1.4,
-                }}
+                className="mx-auto mt-1.5 max-w-md text-white/50"
+                style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
               >
-                “nenhuma carta atende esses filtros.”
+                Nenhuma carta atende esses filtros. Tente afrouxar a busca.
               </p>
             </div>
           )}
@@ -1572,49 +1529,6 @@ export function Transfer() {
             />
           ))}
 
-          {/* Sessão do mercado removida — era apenas um ranking por OVR, sem
-              valor informativo novo depois do hero + featured boxes + rails.
-              Mantemos o CTA do Exchange, que é decisão real do manager. */}
-          <section id="transfer-exchange-cta" className="min-w-0 scroll-mt-4 border-t border-[var(--color-border)] pt-10">
-            <div className="flex flex-col items-center gap-3 px-0.5 text-center">
-              <span
-                className="text-white/45 uppercase"
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '10px',
-                  letterSpacing: '0.22em',
-                }}
-              >
-                Câmbio do mercado
-              </span>
-              <h3
-                className="italic text-white"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontSize: 'clamp(22px, 3vw, 32px)',
-                  lineHeight: 1.15,
-                }}
-              >
-                troque <span className="text-neon-yellow">EXP</span> por <span className="text-neon-yellow">BRO</span> a qualquer hora.
-              </h3>
-              <Link
-                to="/transfer/exchange"
-                className="mt-2 inline-flex items-center gap-2 bg-neon-yellow px-7 py-3 text-black hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  letterSpacing: '0.2em',
-                  textTransform: 'uppercase',
-                  borderRadius: 'var(--radius-sm)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-                }}
-              >
-                Abrir Exchange
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
-          </section>
 
           {managerAuctionCards.length > 0 ? (
             <section className="min-w-0 space-y-3">
@@ -2052,7 +1966,7 @@ function TransferMemorablesInfoBox({ ids }: { ids?: MemorableTrophyId[] }) {
           <p
             className={cn(
               'min-w-0 max-w-full text-[11px] font-medium leading-relaxed [overflow-wrap:anywhere] break-words md:max-w-md md:text-xs',
-              has ? 'text-amber-200/70' : 'text-white/45',
+              has ? 'text-neon-yellow/75' : 'text-white/45',
             )}
           >
             {has
@@ -2067,7 +1981,7 @@ function TransferMemorablesInfoBox({ ids }: { ids?: MemorableTrophyId[] }) {
                 key={label}
                 className="flex min-w-0 items-center gap-3 rounded-lg border border-neon-yellow/40 bg-neon-yellow/10 px-3 py-2.5 shadow-[0_0_18px_rgba(234,255,0,0.2)]"
               >
-                <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-neon-yellow bg-gradient-to-br from-neon-yellow to-amber-500 text-black -skew-x-6 shadow-[0_0_22px_rgba(250,204,21,0.45)] shrink-0">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-neon-yellow bg-neon-yellow text-black shrink-0">
                   <Trophy className="w-5 h-5 skew-x-6" strokeWidth={2.2} />
                 </div>
                 <span className="min-w-0 flex-1 break-words font-display text-sm font-bold uppercase tracking-wide text-white [overflow-wrap:anywhere]">
@@ -2117,16 +2031,14 @@ function TransferMarketCompactCard({
   player: MockAuctionPlayer;
   listHomonym?: { index: number; total: number };
 }) {
-  const isGold = player.category === 'gold';
+  const tier = cardTierOf(player);
+  const isGold = tier === 'lendario';
   const showHomonymStrip = listHomonym && listHomonym.total > 1;
   return (
     <div
       className={cn(
         'relative flex h-full min-h-0 min-w-0 w-full cursor-pointer flex-col overflow-hidden rounded-lg border-2 bg-dark-gray transition-opacity duration-200 hover:opacity-95 active:opacity-90',
-        isGold && `bg-gradient-to-b from-[#1a1508] via-dark-gray to-dark-gray ${GOLD_CARD_GLOW}`,
-        !isGold && player.style === 'neon-yellow' && 'border-neon-yellow/80 shadow-[0_0_12px_rgba(228,255,0,0.12)]',
-        !isGold && player.style === 'white' && 'border-white/25 hover:border-white/55',
-        !isGold && player.style === 'gray-400' && 'border-gray-700 hover:border-gray-500',
+        TIER_MOLDURA[tier],
       )}
     >
       {isGold && (
@@ -2139,24 +2051,16 @@ function TransferMarketCompactCard({
         />
       )}
       <div className="relative flex flex-1 flex-col">
-        <div
-          className={cn(
-            'absolute inset-0 z-0 opacity-15 transition-opacity group-hover:opacity-30',
-            isGold
-              ? 'bg-gradient-to-b from-neon-yellow/40 to-transparent'
-              : player.style === 'neon-yellow'
-                ? 'bg-gradient-to-b from-neon-yellow/45 to-transparent'
-                : player.style === 'white'
-                  ? 'bg-gradient-to-b from-white/40 to-transparent'
-                  : 'bg-gradient-to-b from-gray-500/40 to-transparent',
-          )}
-        />
+        {/* Só o topo da escada ganha véu — nas outras a foto fica limpa. */}
+        {tier === 'lendario' && (
+          <div
+            aria-hidden
+            className="absolute inset-0 z-0 bg-gradient-to-b from-neon-yellow/20 to-transparent"
+          />
+        )}
         <div className="absolute left-2 top-2 z-20 flex flex-col items-center drop-shadow-md">
           <div
-            className={cn(
-              'font-display text-xl font-black leading-none',
-              player.style === 'neon-yellow' ? 'text-neon-yellow' : 'text-white',
-            )}
+            className="font-impact text-xl leading-none tabular-nums text-neon-yellow"
           >
             {player.ovr}
           </div>
@@ -2194,7 +2098,7 @@ function TransferMarketCompactCard({
         </div>
         <div className="relative z-20 flex flex-1 flex-col justify-end bg-gradient-to-t from-black via-black/90 to-transparent px-2 pb-2 pt-6">
           <div className="text-center">
-            <div className="line-clamp-1 font-display text-xs font-black uppercase tracking-wide text-white">
+            <div className="line-clamp-1 font-impact text-[14px] uppercase leading-none tracking-wide text-white">
               {player.name}
             </div>
             {showHomonymStrip && listHomonym ? (
@@ -2209,7 +2113,7 @@ function TransferMarketCompactCard({
           <div
             className={cn(
               'mx-auto mb-1.5 mt-1.5 h-px w-3/5 opacity-45',
-              player.style === 'neon-yellow' ? 'bg-neon-yellow' : 'bg-white',
+              tier === 'comum' ? 'bg-white/30' : 'bg-neon-yellow',
             )}
           />
           <div className="grid grid-cols-3 gap-0.5 text-center">
@@ -2249,6 +2153,49 @@ function TransferMarketCompactCard({
   );
 }
 
+/**
+ * Escada de raridade do card — fonte ÚNICA.
+ *
+ * Antes existiam DOIS cortes do mesmo OVR, com limiares que não batiam:
+ * `style` virava 'white' a partir de 68, `category` virava 'gold' a partir de
+ * 70 e 'silver' a partir de 65. Um jogador de OVR 69 saía "white + silver" —
+ * duas escalas discordando sobre a mesma carta, e nenhuma seguindo a regra da
+ * casa (`src/entities/rarityLabels.ts`: prestígio = GRAU DE AMARELO).
+ *
+ * Agora é uma escada só, e ela é o que a moldura comunica.
+ */
+type CardTier = 'comum' | 'raro' | 'epico' | 'lendario';
+
+function cardTierOf(player: MockAuctionPlayer): CardTier {
+  if (player.category === 'gold' || player.ovr >= 80) return 'lendario';
+  if (player.ovr >= 72) return 'epico';
+  if (player.ovr >= 65) return 'raro';
+  return 'comum';
+}
+
+const TIER_LABEL: Record<CardTier, string> = {
+  comum: 'Comum',
+  raro: 'Raro',
+  epico: 'Épico',
+  lendario: 'Lendário',
+};
+
+/** Moldura por raridade. A quantidade de amarelo É a informação. */
+const TIER_MOLDURA: Record<CardTier, string> = {
+  comum: 'border-white/12',
+  raro: 'border-neon-yellow/30',
+  epico: 'border-neon-yellow/60',
+  lendario: 'border-neon-yellow',
+};
+
+/** Selo de raridade — só o topo da escada inverte para amarelo sólido. */
+const TIER_SELO: Record<CardTier, string> = {
+  comum: 'bg-white/10 text-white/70',
+  raro: 'bg-neon-yellow/12 text-neon-yellow/85',
+  epico: 'bg-neon-yellow/30 text-neon-yellow',
+  lendario: 'bg-neon-yellow text-black',
+};
+
 export function PlayerCard({
   player,
   isModal = false,
@@ -2276,7 +2223,8 @@ export function PlayerCard({
     : player.auctionCurrency === 'EXP'
       ? 'Lances em EXP'
       : 'Lances em BRO';
-  const isGold = player.category === 'gold';
+  const tier = cardTierOf(player);
+  const isGold = tier === 'lendario';
   const showHomonymStrip = !isModal && listHomonym && listHomonym.total > 1;
   return (
     <div className={cn(
@@ -2285,59 +2233,61 @@ export function PlayerCard({
       !isModal && !carouselStrip && 'w-full',
       !isModal && !carouselStrip && 'hover:-translate-y-2 hover:scale-[1.02]',
       !isModal && carouselStrip && 'hover:scale-[1.01]',
-      isGold && `bg-gradient-to-b from-[#1a1508] via-dark-gray to-dark-gray ${GOLD_CARD_GLOW}`,
-      !isGold && player.style === 'neon-yellow' && 'border-neon-yellow shadow-[0_0_15px_rgba(228,255,0,0.15)] group-hover:shadow-[0_0_25px_rgba(228,255,0,0.4)]',
-      !isGold && player.style === 'white' && 'border-white/30 hover:border-white/80 shadow-[0_0_15px_rgba(255,255,255,0.05)] group-hover:shadow-[0_0_25px_rgba(255,255,255,0.2)]',
-      !isGold && player.style === 'gray-400' && 'border-gray-700 hover:border-gray-400 shadow-[0_0_15px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_25px_rgba(156,163,175,0.2)]',
+      // A moldura É o indicador de raridade — uma escada só, sem dois sistemas
+      // discordando sobre a mesma carta.
+      TIER_MOLDURA[tier],
+      // Sombra dura clara do layer final, reservada ao topo da escada. Ela
+      // substitui os três halos coloridos que existiam antes.
+      tier === 'lendario' && 'shadow-[6px_6px_0_rgba(237,235,228,0.13)]',
     )}>
-      {isGold && (
-        <>
-          <div
-            className="pointer-events-none absolute inset-0 z-[1] opacity-[0.14]"
-            style={{
-              backgroundImage: 'radial-gradient(ellipse 90% 45% at 50% -15%, rgba(234,255,0,0.55), transparent 50%)',
-            }}
-          />
-          {!isModal && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[25] -skew-x-6 bg-neon-yellow text-black px-2 py-0.5 font-display font-black text-[8px] sm:text-[9px] tracking-[0.2em] uppercase shadow-[0_0_14px_rgba(234,255,0,0.5)]">
-              <span className="skew-x-6">Ouro</span>
-            </div>
-          )}
-        </>
-      )}
+      {/* Moldura interna: um fio que separa a arte da borda e dá profundidade —
+          o mesmo papel do frame que, no Sorare, amarra frente e verso. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-[3px] z-[26] rounded-lg"
+        style={{ boxShadow: 'inset 0 0 0 1px rgba(237,235,228,0.10)' }}
+      />
       {/* Card Content Wrapper */}
       <div className="relative flex-1">
-        {/* Background Glow based on style */}
-        <div className={cn(
-          "absolute inset-0 opacity-20 transition-opacity group-hover:opacity-40 z-0",
-          isGold ? 'bg-gradient-to-b from-neon-yellow/45 to-transparent' :
-          player.style === 'neon-yellow' ? 'bg-gradient-to-b from-neon-yellow/50 to-transparent' :
-          player.style === 'white' ? 'bg-gradient-to-b from-white/50 to-transparent' :
-          'bg-gradient-to-b from-gray-500/50 to-transparent'
-        )} />
+        {/* Um único véu de leitura no topo, e só no topo da escada — para o OVR
+            e a posição não brigarem com a foto. Saíram o halo colorido (que
+            mudava com dois sistemas de raridade diferentes) e a textura de
+            meio-tom, que cobria o rosto do jogador com pontinhos brancos. */}
+        {tier === 'lendario' && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-0"
+            style={{ background: 'radial-gradient(ellipse 90% 40% at 50% -10%, rgba(253,225,0,0.18), transparent 55%)' }}
+          />
+        )}
 
-        {/* Halftone texture */}
-        <div className="absolute inset-0 opacity-30 mix-blend-overlay pointer-events-none" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '4px 4px' }} />
-
-        {/* Top Left Info (OVR & POS) */}
+        {/* ── CAMADA DE CIMA: contexto ─────────────────────────────────────
+            Quem é esta carta antes de você olhar a foto: o quanto ela vale
+            (OVR), onde joga, de onde vem e que raridade é. O Sorare separa o
+            card em duas leituras — contexto em cima, jogador embaixo. */}
         <div className="absolute top-3 left-3 z-20 flex flex-col items-center drop-shadow-md">
-          <div className={cn(
-            "italic text-3xl leading-none",
-            player.style === 'neon-yellow' ? 'text-neon-yellow' : 'text-white'
-          )}
-          style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontWeight: 700,
-          }}>
+          <div
+            className="font-impact text-3xl leading-none tabular-nums text-neon-yellow"
+          >
             {player.ovr}
           </div>
-          <div className="text-[10px] font-bold uppercase tracking-widest text-white mt-1">{player.pos}</div>
+          <div className="mt-1 font-display text-[10px] font-bold uppercase tracking-widest text-white">
+            {player.pos}
+          </div>
         </div>
 
-        {/* Top Right: nação + selo de moeda do leilão */}
-        <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 items-end opacity-95">
+        <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
+          {/* Raridade: o selo diz por escrito o que a moldura já diz por cor. */}
+          <span
+            className={cn(
+              'rounded px-2 py-[3px] font-display text-[8px] font-black uppercase tracking-[0.16em]',
+              TIER_SELO[tier],
+            )}
+          >
+            {TIER_LABEL[tier]}
+          </span>
           <div
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-white/10 text-lg leading-none"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/50 text-lg leading-none"
             title={player.nat?.trim() && player.nat !== '—' ? player.nat : undefined}
           >
             {natFlagDisplay(player.nat) || <span className="text-[9px] font-bold text-white/60">—</span>}
@@ -2345,10 +2295,10 @@ export function PlayerCard({
           <span
             title={currencyLabel}
             className={cn(
-              'max-w-[5.5rem] truncate text-[7px] font-display font-bold uppercase tracking-wider sm:max-w-none sm:text-[8px] px-1.5 py-0.5 rounded border',
+              'max-w-[5.5rem] truncate rounded border px-1.5 py-0.5 font-display text-[7px] font-bold uppercase tracking-wider sm:max-w-none sm:text-[8px]',
               player.auctionCurrency === 'EXP'
-                ? 'border-neon-yellow/60 text-neon-yellow bg-black/70'
-                : 'border-white/40 text-white bg-black/70',
+                ? 'border-neon-yellow/60 bg-black/70 text-neon-yellow'
+                : 'border-white/40 bg-black/70 text-white',
             )}
           >
             {currencyLabel}
@@ -2362,14 +2312,16 @@ export function PlayerCard({
             alt={player.name}
             className={cn('w-full h-full object-cover object-top transition-all duration-500 drop-shadow-2xl', portraitClassName ?? 'grayscale group-hover:grayscale-0')}
             referrerPolicy="no-referrer"
-            style={portraitStyle ?? { maskImage: 'linear-gradient(to bottom, black 75%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 75%, transparent 100%)' }}
+            // A foto é a estrela: o recorte começa mais embaixo (88% em vez de
+            // 75%), então sobra mais imagem antes do texto assumir.
+            style={portraitStyle ?? { maskImage: 'linear-gradient(to bottom, black 88%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 88%, transparent 100%)' }}
           />
         </div>
 
         {/* Card Footer / Info */}
         <div className="absolute bottom-0 left-0 right-0 p-4 z-20 bg-gradient-to-t from-black via-black/90 to-transparent pt-12">
           <div className="mb-2 min-w-0 px-0.5 text-center">
-            <div className="break-words font-display text-lg font-black uppercase leading-none tracking-wider text-white drop-shadow-md [overflow-wrap:anywhere] sm:text-xl md:text-2xl">
+            <div className="break-words font-impact text-[22px] uppercase leading-none tracking-wide text-white drop-shadow-md [overflow-wrap:anywhere] sm:text-2xl md:text-3xl">
               {player.name}
             </div>
             {showHomonymStrip && listHomonym ? (
@@ -2392,18 +2344,15 @@ export function PlayerCard({
           )}
 
           {/* Divider */}
-          <div className={cn(
-            "h-px w-2/3 mx-auto mb-3 opacity-50",
-            player.style === 'neon-yellow' ? 'bg-neon-yellow' : 'bg-white'
-          )} />
+          <div className={cn('mx-auto mb-3 h-px w-2/3', tier === 'comum' ? 'bg-white/25' : 'bg-neon-yellow/50')} />
 
           {/* Mini Stats — Sprint B-3: MORET serif italic, peso editorial */}
           <div className="grid grid-cols-3 gap-1">
             <div className="text-center">
               <div className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">PAC</div>
               <div
-                className="mt-0.5 italic tabular-nums leading-none text-neon-yellow"
-                style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '17px', fontWeight: 700 }}
+                className="mt-0.5 font-impact tabular-nums leading-none text-neon-yellow"
+                style={{ fontSize: '17px' }}
               >
                 {player.pac}
               </div>
@@ -2411,8 +2360,8 @@ export function PlayerCard({
             <div className="text-center border-x border-white/10">
               <div className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">SHO</div>
               <div
-                className="mt-0.5 italic tabular-nums leading-none text-neon-yellow"
-                style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '17px', fontWeight: 700 }}
+                className="mt-0.5 font-impact tabular-nums leading-none text-neon-yellow"
+                style={{ fontSize: '17px' }}
               >
                 {player.sho}
               </div>
@@ -2420,8 +2369,8 @@ export function PlayerCard({
             <div className="text-center">
               <div className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">PAS</div>
               <div
-                className="mt-0.5 italic tabular-nums leading-none text-neon-yellow"
-                style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '17px', fontWeight: 700 }}
+                className="mt-0.5 font-impact tabular-nums leading-none text-neon-yellow"
+                style={{ fontSize: '17px' }}
               >
                 {player.pas}
               </div>
@@ -2454,10 +2403,11 @@ export function PlayerCard({
               {/* Preço — MORET serif italic, peso editorial */}
               <span
                 className={cn(
-                  'min-w-0 max-w-full break-words text-center italic tabular-nums leading-tight text-neon-green [overflow-wrap:anywhere] sm:text-right',
+                  'min-w-0 max-w-full break-words text-center tabular-nums leading-tight [overflow-wrap:anywhere] sm:text-right',
+                  player.auctionCurrency === 'EXP' ? 'text-neon-yellow' : 'text-white',
                   carouselStrip ? 'w-full truncate' : fixedSale ? 'w-full text-center' : 'sm:max-w-[58%]',
                 )}
-                style={{ fontFamily: 'var(--font-serif-hero)', fontSize: 'clamp(16px, 3vw, 22px)', fontWeight: 700 }}
+                style={{ fontFamily: 'var(--font-impact)', fontSize: 'clamp(16px, 3vw, 22px)' }}
                 title={fixedSale ? fixedSale.price : formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
               >
                 {fixedSale ? fixedSale.price : formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
@@ -2465,7 +2415,7 @@ export function PlayerCard({
             </div>
             <button
               type="button"
-              className="flex w-full min-h-11 max-w-full items-center justify-center bg-neon-yellow px-3 py-2.5 font-display text-[12px] font-black uppercase leading-tight tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all hover:bg-white hover:scale-[1.02] active:scale-[0.98] [-webkit-tap-highlight-color:transparent] sm:py-3 sm:text-[13px]"
+              className="flex w-full min-h-11 max-w-full items-center justify-center bg-neon-yellow px-3 py-2.5 font-display text-[12px] font-black uppercase leading-tight tracking-[0.18em] text-black transition-transform hover:scale-[1.02] active:scale-[0.98] [-webkit-tap-highlight-color:transparent] sm:py-3 sm:text-[13px]"
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
               {fixedSale ? fixedSale.cta : 'Dar Lance'}
@@ -2500,9 +2450,14 @@ export function TransferRowCard({
   portraitStyle?: import('react').CSSProperties;
   portraitClassName?: string;
 }) {
-  const isGold = player.category === 'gold';
-  const isNeon = player.style === 'neon-yellow';
-  const railColor = isGold || isNeon ? 'border-l-neon-yellow' : 'border-l-white/15';
+  const tier = cardTierOf(player);
+  // Na lista, o trilho de 3px carrega a raridade — mesma escada dos outros dois
+  // cards, para a carta não mudar de identidade ao trocar de visualização.
+  const railColor =
+    tier === 'lendario' ? 'border-l-neon-yellow'
+    : tier === 'epico' ? 'border-l-neon-yellow/60'
+    : tier === 'raro' ? 'border-l-neon-yellow/30'
+    : 'border-l-white/15';
   const stats = [
     { label: 'PAC', val: player.pac },
     { label: 'SHO', val: player.sho },
@@ -2532,7 +2487,7 @@ export function TransferRowCard({
         <div
           className={cn(
             'absolute inset-0',
-            isNeon ? 'bg-neon-yellow/10' : 'bg-white/5',
+            tier === 'comum' ? 'bg-white/5' : 'bg-neon-yellow/10',
           )}
           aria-hidden
         />
@@ -2550,10 +2505,8 @@ export function TransferRowCard({
         {/* OVR — Moret italic gigante editorial */}
         <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10">
           <p
-            className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]"
+            className="font-impact text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
               fontSize: 'clamp(36px, 5.5vw, 56px)',
               letterSpacing: '-0.04em',
             }}
@@ -2564,9 +2517,12 @@ export function TransferRowCard({
             {player.pos}
           </p>
         </div>
-        {isGold ? (
+        {tier === 'lendario' ? (
           <span
-            className="absolute bottom-2 left-2 z-10 inline-flex items-center bg-neon-yellow text-black px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-[0.2em] shadow-[0_0_14px_rgba(234,255,0,0.5)]"
+            className={cn(
+              'absolute bottom-2 left-2 z-10 inline-flex items-center px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-[0.18em]',
+              TIER_SELO[tier],
+            )}
             style={{ borderRadius: 'var(--radius-sm)' }}
           >
             Ouro
@@ -2643,10 +2599,8 @@ export function TransferRowCard({
                   {s.label}
                 </span>
                 <span
-                  className="italic text-neon-yellow tabular-nums leading-none"
+                  className="font-impact text-neon-yellow tabular-nums leading-none"
                   style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontWeight: 700,
                     fontSize: 'clamp(16px, 1.8vw, 20px)',
                     letterSpacing: '-0.02em',
                   }}
@@ -2667,8 +2621,8 @@ export function TransferRowCard({
               </span>
             )}
             <span
-              className="italic tabular-nums leading-tight text-neon-green"
-              style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: 'clamp(18px, 2.4vw, 24px)' }}
+              className="font-impact tabular-nums leading-tight text-neon-green"
+              style={{ fontSize: 'clamp(18px, 2.4vw, 24px)' }}
             >
               {fixedSale ? fixedSale.price : formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
             </span>

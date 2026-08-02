@@ -94,20 +94,19 @@ export function ReferralTab() {
       </button>
 
       <div className="flex items-center gap-3 mb-2">
-        <Users className="w-6 h-6 text-blue-400" />
-        <h2 className="text-2xl font-bold text-white">Indicações</h2>
+        <Users className="w-6 h-6 text-neon-yellow" />
+        <h2 className="font-impact uppercase text-white" style={{ fontSize: '26px' }}>Indicações</h2>
       </div>
       <p className="text-sm text-gray-400">
-        Indique amigos e ganhe <span className="text-white">5% em BRO</span> sobre compras elegíveis (OLE Game / NFT), até 3 níveis. Além disso, sobre o{' '}
-        <span className="text-white">Game Assets Treasury</span> da rede:{' '}
-        <span className="text-violet-200">1% da base em BRO por nível em EXP</span> por dia (automático quando a rede está ligada ao teu código).
+        Indique amigos e ganhe <span className="text-white">5% em BRO</span> sobre compras elegíveis (OLE Game / NFT), até 3 níveis.{' '}
+Ao atingir cada degrau de indicados ativos, a rede paga <span className="text-neon-yellow">marcos em EXP</span>.
       </p>
 
       {/* My referral code */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-panel p-5 border border-blue-400/20 space-y-3"
+        className="ole-poster p-5 space-y-3"
       >
         <p className="text-xs text-gray-400 mb-2">O teu código de indicação (não muda)</p>
         <div className="flex items-center gap-3">
@@ -118,7 +117,7 @@ export function ReferralTab() {
             type="button"
             onClick={handleCopyCode}
             disabled={!myCode}
-            className="bg-blue-500/10 border border-blue-400/30 text-blue-300 py-3 px-4 rounded-xl hover:bg-blue-500/20 transition-colors disabled:opacity-30"
+            className="bg-neon-yellow/10 border border-neon-yellow/30 text-neon-yellow py-3 px-4 rounded-xl hover:bg-neon-yellow/20 transition-colors disabled:opacity-30"
           >
             {copied ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
           </button>
@@ -129,7 +128,7 @@ export function ReferralTab() {
             <button
               type="button"
               onClick={handleCopyLink}
-              className="shrink-0 text-xs font-bold uppercase tracking-wide text-blue-300 hover:text-white flex items-center gap-1"
+              className="shrink-0 text-xs font-bold uppercase tracking-wide text-neon-yellow hover:text-white flex items-center gap-1"
             >
               <Link2 className="w-3.5 h-3.5" />
               {copiedLink ? 'Copiado' : 'Copiar link'}
@@ -146,7 +145,7 @@ export function ReferralTab() {
       */}
       {wallet.sponsorId && (
         <div className="bg-white/5 rounded-xl p-3 text-xs text-gray-400 flex items-center gap-2">
-          <User className="w-3.5 h-3.5 text-blue-300" />
+          <User className="w-3.5 h-3.5 text-neon-yellow/70" />
           Patrocinador (fixo):{' '}
           <span className="text-white font-mono font-medium">{wallet.sponsorId}</span>
         </div>
@@ -160,7 +159,7 @@ export function ReferralTab() {
       >
         <div className="flex items-center justify-between">
           <h3 className="font-bold flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-blue-300" />
+            <Trophy className="w-4 h-4 text-neon-yellow" />
             Os teus indicados
           </h3>
           <span className="text-2xl font-display font-black text-white tabular-nums">
@@ -194,7 +193,7 @@ export function ReferralTab() {
                     <span>{formatRelative(r.createdAt)}</span>
                   </div>
                 </div>
-                <div className="shrink-0 text-[10px] text-blue-300 uppercase tracking-wider font-bold">
+                <div className="shrink-0 text-[10px] text-neon-yellow uppercase tracking-wider font-bold">
                   Nível 1
                 </div>
               </div>
@@ -212,7 +211,7 @@ export function ReferralTab() {
                 className="bg-white/5 rounded-xl p-3 text-center border border-white/5"
               >
                 <div className="text-[10px] text-gray-400 mb-0.5 uppercase tracking-wider">Nv. {level}</div>
-                <div className="text-[10px] text-blue-300">
+                <div className="text-[10px] text-neon-yellow/80">
                   +{(broEarn / 100).toFixed(2)} BRO
                 </div>
               </div>
@@ -270,7 +269,7 @@ export function ReferralTab() {
       {/* NFT commissions */}
       <div className="space-y-3">
         <h3 className="font-bold flex items-center gap-2 text-sm">
-          <span className="w-2 h-2 rounded-full bg-purple-400 inline-block" />
+          <span className="w-2 h-2 rounded-full bg-neon-yellow inline-block" />
           Comissões NFT
         </h3>
         {nftEntries.length === 0 ? (
@@ -283,7 +282,7 @@ export function ReferralTab() {
                   <div className="text-gray-300">{e.source}</div>
                   <div className="text-[10px] text-gray-500">{formatLedgerDate(e.createdAt)}</div>
                 </div>
-                <div className="font-bold text-purple-300">+{(e.amount / 100).toFixed(2)} BRO</div>
+                <div className="font-bold text-neon-yellow">+{(e.amount / 100).toFixed(2)} BRO</div>
               </div>
             ))}
           </div>

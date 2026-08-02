@@ -1,138 +1,93 @@
 /**
- * Hero Editorial — Padrão visual do Staff
+ * EditorialHero — o cabeçalho amarelo das telas internas do Clube
+ * (Staff, Treino, Academia, Estruturas).
  *
- * Hero amarelo com watermark gigante, eyebrow, headline e quote italic
+ * ── Alinhado ao layer final (2026-08-01) ───────────────────────────────────
+ * A versão anterior empilhava, nesta ordem, antes de qualquer dado útil:
+ * watermark gigante do título atrás do próprio título, subtítulo em serifa
+ * itálica do tamanho da manchete, régua decorativa, um ícone dentro de uma
+ * caixa, e uma frase entre aspas. Cinco camadas de enfeite.
+ *
+ * O layer final é o oposto: eyebrow com risco, manchete em Anton, e o dado.
+ * Três razões concretas para o corte:
+ *   1. o watermark repetia a palavra que já estava escrita em cima dele — e
+ *      sobre amarelo virava um borrão cinza;
+ *   2. serifa itálica é assinatura de NOME DE LENDA, não de subtítulo;
+ *   3. a frase entre aspas era decoração: nunca dizia nada que o manager já
+ *      não soubesse.
+ *
+ * `watermark` e `quote` seguem na assinatura por compatibilidade, mas não são
+ * mais desenhados — quem chama não quebra, e as props somem quando as páginas
+ * pararem de passá-las.
  */
 
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import type { ReactNode } from 'react';
 
 interface EditorialHeroProps {
-  watermark: string;
+  /** @deprecated Não é mais desenhado. */
+  watermark?: string;
   eyebrow: string;
   title: string;
   subtitle?: string;
+  /** @deprecated Não é mais desenhado. */
   quote?: string;
   stats?: string;
   icon?: ReactNode;
 }
 
-export function EditorialHero({
-  watermark,
-  eyebrow,
-  title,
-  subtitle,
-  quote,
-  stats,
-  icon,
-}: EditorialHeroProps) {
+export function EditorialHero({ eyebrow, title, subtitle, stats, icon }: EditorialHeroProps) {
   return (
     <section
       aria-label={title}
-      className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm"
+      className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8"
     >
-      {/* Watermark gigante */}
-      <div
-        className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
-        aria-hidden
-      >
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={watermark}
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.04 }}
-            transition={{ duration: 0.4 }}
-            className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
-            style={{
-              fontSize: 'clamp(120px, 24vw, 360px)',
-              lineHeight: '0.85',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            {watermark}
-          </motion.span>
-        </AnimatePresence>
-      </div>
-
-      {/* Composição editorial centrada */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-14 text-center"
+        className="relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8"
+        style={{ paddingBlock: 'clamp(24px, 5vw, 44px)' }}
       >
-        {/* Eyebrow */}
-        <div className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-black mb-4 sm:mb-6 truncate">
-          <span className="text-black">{eyebrow}</span>
-        </div>
+        <div className="min-w-0 flex-1">
+          <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
+            {eyebrow}
+          </span>
 
-        {/* Headline */}
-        <h1 className="leading-[0.9]">
-          <span
-            className="block font-bold uppercase text-black"
+          <h1
+            className="mt-2 font-impact uppercase"
             style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(2.75rem, 8vw, 6rem)',
-              letterSpacing: '0.005em',
+              color: 'var(--color-deep-black)',
+              fontSize: 'clamp(40px, 11vw, 84px)',
+              lineHeight: 0.84,
+              letterSpacing: '-0.01em',
             }}
           >
             {title}
-          </span>
+          </h1>
+
           {subtitle && (
-            <motion.span
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: 0.1 }}
-              className="block italic text-black"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontSize: 'clamp(2.25rem, 7vw, 5rem)',
-                marginTop: '0.04em',
-                letterSpacing: '-0.01em',
-              }}
+            <p
+              className="mt-2 font-display font-black uppercase"
+              style={{ fontSize: '12px', letterSpacing: '0.16em', color: 'rgba(13,13,13,0.7)' }}
             >
               {subtitle}
-            </motion.span>
+            </p>
           )}
-        </h1>
 
-        {/* Régua decorativa */}
-        <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
+          {stats && (
+            <p
+              className="mt-2.5"
+              style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'rgba(13,13,13,0.62)' }}
+            >
+              {stats}
+            </p>
+          )}
+        </div>
 
-        {/* Ícone (opcional) */}
-        {icon && (
-          <div className="mt-8 flex justify-center">
-            {icon}
-          </div>
-        )}
-
-        {/* Quote italic — CENTERPIECE editorial */}
-        {quote && (
-          <motion.blockquote
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.15 }}
-            className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
-            style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
-          >
-            "{quote}"
-          </motion.blockquote>
-        )}
-
-        {/* Stats (opcional) */}
-        {stats && (
-          <p
-            className="mt-3 text-black/60 mx-auto max-w-md"
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'clamp(0.85rem, 1vw, 0.95rem)',
-              lineHeight: 1.55,
-            }}
-          >
-            {stats}
-          </p>
-        )}
+        {/* O ícone vira selo lateral: acompanha o título em vez de empurrar o
+            conteúdo pra baixo. Some no mobile, onde o espaço é do texto. */}
+        {icon && <div className="hidden flex-none sm:block">{icon}</div>}
       </motion.div>
     </section>
   );

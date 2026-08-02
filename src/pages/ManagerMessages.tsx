@@ -56,7 +56,7 @@ export function ManagerMessages() {
 
       {/* Header */}
       <header className="text-center pt-2 pb-2">
-        <div className="ole-eyebrow !text-neon-yellow mb-4">
+        <div className="ole-eyebrow-poster !text-neon-yellow mb-4">
           <span>Central do Manager</span>
         </div>
         <h1 className="leading-[0.95]">
@@ -72,9 +72,9 @@ export function ManagerMessages() {
           </span>
           {unreadCount > 0 && (
             <span
-              className="block italic text-neon-yellow mt-1"
+              className="block text-neon-yellow mt-1"
               style={{
-                fontFamily: 'var(--font-serif-hero)',
+                fontFamily: 'var(--font-sans)',
                 fontWeight: 400,
                 fontSize: 'clamp(1.5rem, 4vw, 2.25rem)',
                 letterSpacing: '-0.01em',
@@ -114,7 +114,7 @@ export function ManagerMessages() {
           <button
             type="button"
             onClick={markAllAsRead}
-            className="text-xs font-bold uppercase tracking-wider text-neon-yellow hover:text-yellow-300 transition-colors"
+            className="text-xs font-bold uppercase tracking-wider text-neon-yellow hover:text-neon-yellow transition-colors"
           >
             Marcar todas como lidas
           </button>
@@ -190,7 +190,7 @@ function MessageCard({ msg, onRead, onDelete }: { msg: InboxItem; onRead: () => 
                 <Link
                   to={msg.deepLink}
                   onClick={onRead}
-                  className="rounded-full bg-neon-yellow px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-black transition-all hover:bg-yellow-300"
+                  className="rounded-full bg-neon-yellow px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-black transition-all hover:bg-neon-yellow"
                 >
                   Ver detalhes
                 </Link>
@@ -210,7 +210,7 @@ function MessageCard({ msg, onRead, onDelete }: { msg: InboxItem; onRead: () => 
           <button
             type="button"
             onClick={onDelete}
-            className="shrink-0 rounded-full p-1 text-white/40 transition-colors hover:bg-red-500/20 hover:text-red-400"
+            className="shrink-0 rounded-full p-1 text-white/40 transition-colors hover:bg-[var(--color-danger)]/20 hover:text-[var(--color-danger)]"
             aria-label="Apagar mensagem"
           >
             <X className="h-4 w-4" />

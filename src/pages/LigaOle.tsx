@@ -44,7 +44,8 @@ import {
 } from '@/supabase/ligaOleWeekly';
 import type { OpponentStub } from '@/entities/types';
 
-const MORET = 'var(--font-serif-hero)';
+/** Fonte de manchete do layer final. (Era serifa itálica.) */
+const MANCHETE = 'var(--font-impact)';
 const roundAbbr = (r: string) => r.replace('Fase de 32', '32-avos').replace('Semifinal', 'Semi');
 
 /** Uma linha de confronto do chaveamento (compacto, mobile). */
@@ -163,7 +164,7 @@ function ChampionShareCard({ clubName, bestPlayer, referralCode }: {
 
         <div className="absolute inset-x-4 top-9 z-10">
           <p className="font-display uppercase mb-1" style={{ color: 'var(--color-neon-yellow)', fontSize: '10px', fontWeight: 800, letterSpacing: '0.26em' }}>Liga Ole · Mata-mata dos 32</p>
-          <p style={{ color: '#f7ecd2', fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(40px, 13vw, 60px)', lineHeight: 0.88, letterSpacing: '-0.03em' }}>É campeão!</p>
+          <p style={{ color: '#f7ecd2', fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: 'clamp(40px, 13vw, 60px)', lineHeight: 0.88, letterSpacing: '-0.03em' }}>É campeão!</p>
           <p className="mt-1.5 text-white" style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '14px' }}>{clubName}</p>
         </div>
 
@@ -202,7 +203,7 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3">
       <span aria-hidden className="block w-[3px] h-7 bg-neon-yellow shrink-0" />
-      <h2 className="text-neon-yellow" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(22px, 6vw, 30px)', letterSpacing: '-0.01em' }}>
+      <h2 className="text-neon-yellow" style={{ fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: 'clamp(22px, 6vw, 30px)', letterSpacing: '-0.01em' }}>
         {children}
       </h2>
     </div>
@@ -443,7 +444,7 @@ export function LigaOle() {
               <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-danger mb-2 flex items-center gap-2">
                 <ShieldX className="w-4 h-4" strokeWidth={2.5} aria-hidden /> Fim da linha
               </p>
-              <p className="text-white leading-[0.95]" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(34px, 10vw, 52px)', letterSpacing: '-0.03em' }}>
+              <p className="text-white leading-[0.95]" style={{ fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: 'clamp(34px, 10vw, 52px)', letterSpacing: '-0.03em' }}>
                 {flash.reachedRound}
               </p>
               <span aria-hidden className="block w-12 h-[3px] bg-white/30 mt-3 mb-3" />
@@ -470,7 +471,7 @@ export function LigaOle() {
                 <Crown className="w-5 h-5 text-neon-yellow shrink-0" strokeWidth={2} aria-hidden />
                 <span className="min-w-0">
                   <span className="block font-display uppercase tracking-[0.2em] text-[9px] font-black text-white/45">Dinastia</span>
-                  <span className="block truncate text-neon-yellow" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: '18px' }}>{dinastiaLabel(titles)}</span>
+                  <span className="block truncate text-neon-yellow" style={{ fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: '18px' }}>{dinastiaLabel(titles)}</span>
                 </span>
               </span>
               <span className="font-display tabular-nums text-[13px] font-black text-neon-yellow shrink-0">prêmios ×{dinastiaMultiplier(titles).toFixed(2)}</span>

@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { TrendingUp } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import { useTrackScreen } from '@/progression/trackEvent';
@@ -6,14 +6,13 @@ import { HubSectionCard } from '@/components/ui/HubSectionCard';
 import { StatTile } from '@/components/ui/StatTile';
 import { managerScoreToday } from '@/systems/managerScore/managerScore';
 
-/** Sprint B Legacy Tech: rail colorido por categoria, sem ícones soltos. */
+/** Ações do clube. O trilho amarelo é do HubSectionCard — nada de cor por categoria. */
 const quickActions: Array<{
   eyebrow: string;
   title: string;
   description: string;
   cta: string;
   href: string;
-  rail: string;
 }> = [
   {
     eyebrow: 'Plantel',
@@ -21,7 +20,6 @@ const quickActions: Array<{
     description: 'Gerir jogadores, formação tática e escalação titular.',
     cta: 'Abrir elenco',
     href: '/clube/elenco',
-    rail: 'bg-neon-yellow',
   },
   {
     eyebrow: 'Desenvolvimento',
@@ -29,7 +27,6 @@ const quickActions: Array<{
     description: 'Sessões individuais e coletivas. Evoluir físico, técnico e tático.',
     cta: 'Programar treino',
     href: '/clube/treino',
-    rail: 'bg-emerald-400',
   },
   {
     eyebrow: 'Comissão',
@@ -37,7 +34,6 @@ const quickActions: Array<{
     description: 'Profissionais, coach assistente e atribuições.',
     cta: 'Gerir staff',
     href: '/clube/staff',
-    rail: 'bg-violet-400',
   },
   {
     eyebrow: 'Categorias de base',
@@ -45,7 +41,6 @@ const quickActions: Array<{
     description: 'Jovens promessas, scouting e desenvolvimento de longo prazo.',
     cta: 'Ver promessas',
     href: '/clube/academia',
-    rail: 'bg-cyan-400',
   },
   {
     eyebrow: 'Infraestrutura',
@@ -53,7 +48,6 @@ const quickActions: Array<{
     description: 'Instalações do clube, upgrades e impacto no rendimento.',
     cta: 'Visitar estruturas',
     href: '/clube/estruturas',
-    rail: 'bg-fuchsia-400',
   },
 ];
 
@@ -77,86 +71,44 @@ export function ClubHub() {
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8 sm:space-y-10">
-      {/* ── HERO BVB — amarelo + watermark + tipografia épica ── */}
+      {/* ── HERO — bloco amarelo sangrado, no layer final ──────────────────
+          A versão anterior era centralizada, com um watermark gigante do nome
+          do clube atrás do título (que virava um fantasma cinza sobre o
+          amarelo) e uma frase de efeito em serifa itálica. Saíram os três:
+          serifa itálica aqui é assinatura de NOME DE LENDA, e o watermark
+          competia com a própria manchete. Agora é o que o layer final pede —
+          alinhado à esquerda, eyebrow com risco, nome do clube em Anton. */}
       <section
         aria-label="Clube"
-        className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm"
+        className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8"
       >
-        {/* Watermark gigante do nome do clube */}
-        <div
-          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
-          aria-hidden
-        >
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={club.name}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.04 }}
-              transition={{ duration: 0.4 }}
-              className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
-              style={{
-                fontSize: 'clamp(80px, 18vw, 280px)',
-                lineHeight: '0.85',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {club.shortName ?? club.name.slice(0, 3).toUpperCase()}
-            </motion.span>
-          </AnimatePresence>
-        </div>
-
-        {/* Composição editorial */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14 text-center"
+          className="relative z-10 px-5 sm:px-8"
+          style={{ paddingBlock: 'clamp(28px, 6vw, 52px)' }}
         >
-          <div className="ole-eyebrow !text-black mb-5 sm:mb-6" style={{ fontFamily: 'var(--font-ui)' }}>
-            <span className="!text-black">Gestão do clube</span>
-          </div>
-          <h1 className="leading-[0.9]">
-            <span
-              className="block font-bold uppercase text-black"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(2.75rem, 8vw, 6rem)',
-                letterSpacing: '0.005em',
-              }}
-            >
-              Clube
-            </span>
-            <motion.span
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: 0.1 }}
-              className="block italic text-black"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontSize: 'clamp(2.25rem, 7vw, 5rem)',
-                marginTop: '0.04em',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {club.name}
-            </motion.span>
+          <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
+            Teu clube
+          </span>
+          <h1
+            className="mt-2 font-impact uppercase"
+            style={{
+              color: 'var(--color-deep-black)',
+              fontSize: 'clamp(44px, 12vw, 92px)',
+              lineHeight: 0.84,
+              letterSpacing: '-0.01em',
+            }}
+          >
+            {club.name}
           </h1>
-          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
-          <motion.blockquote
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.15 }}
-            className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
-            style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
-          >
-            "gerir elenco, treinar jogadores, desenvolver estruturas."
-          </motion.blockquote>
           <p
-            className="mt-3 text-black/60 mx-auto max-w-md"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: 'clamp(0.85rem, 1vw, 0.95rem)', lineHeight: 1.55 }}
+            className="mt-3"
+            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'rgba(13,13,13,0.62)' }}
           >
-            {playerCount} jogadores no plantel · {club.shortName ?? club.name.slice(0, 3).toUpperCase()}
+            {playerCount} {playerCount === 1 ? 'jogador' : 'jogadores'} no plantel ·{' '}
+            {club.shortName ?? club.name.slice(0, 3).toUpperCase()}
           </p>
         </motion.div>
       </section>
@@ -164,8 +116,7 @@ export function ClubHub() {
       {/* Pontuação do Manager — destaque do core-engagement no topo do hub */}
       <section aria-label="Pontuação do manager">
         <div
-          className="relative flex items-center justify-between gap-4 overflow-hidden border border-neon-yellow/30 bg-deep-black px-5 py-4 sm:px-6 sm:py-5"
-          style={{ borderRadius: 'var(--radius-card)' }}
+          className="ole-poster ole-rail relative flex items-center justify-between gap-4 overflow-hidden px-5 py-4 sm:px-6 sm:py-5"
         >
           <div className="flex items-center gap-4 min-w-0">
             <span
@@ -201,9 +152,9 @@ export function ClubHub() {
         </div>
       </section>
 
-      {/* Quick Actions — Sprint B Legacy Tech: rail colorido + título grande + CTA texto-claro */}
+      {/* Ações do clube — o primeiro card vem em destaque amarelo. */}
       <section>
-        <h2 className="text-sm font-display font-bold uppercase tracking-[0.22em] text-white/70 mb-4 px-1">
+        <h2 className="ole-eyebrow-poster mb-4" style={{ fontSize: '13px' }}>
           Acesso rápido
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -215,7 +166,8 @@ export function ClubHub() {
               title={action.title}
               description={action.description}
               cta={action.cta}
-              rail={action.rail}
+              // Elenco é a porta de entrada do clube — é ele que fica amarelo.
+              destaque={i === 0}
               delay={i * 0.08}
             />
           ))}
@@ -224,7 +176,7 @@ export function ClubHub() {
 
       {/* Visão geral — StatTiles editoriais */}
       <section>
-        <h2 className="text-sm font-display font-bold uppercase tracking-[0.22em] text-white/70 mb-4 px-1">
+        <h2 className="ole-eyebrow-poster mb-4" style={{ fontSize: '13px' }}>
           Visão geral
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

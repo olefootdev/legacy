@@ -20,7 +20,7 @@ const TONE_RULE: Record<Tone, string> = {
 };
 
 /**
- * Bloco de estatística — número grande MORET + label Agency FB pequeno.
+ * Bloco de estatística — número grande em Anton + label pequeno.
  * Substitui os blocos pretos minúsculos com texto pequeno (Wallet, Home).
  *
  * Pensado para grids responsivos (2/3/4 colunas). Hierarquia explícita:
@@ -62,13 +62,15 @@ export function StatTile({
         className,
       )}
     >
+      {/* Número em Anton tabular. Era serifa itálica (--font-serif-hero) —
+          mas serifa itálica no layer final é assinatura de NOME DE LENDA, nunca
+          de número. Tabular pra os dígitos não dançarem quando o valor muda. */}
       <span
         className={cn(
-          'leading-none tracking-tight',
+          'font-impact tabular-nums leading-none tracking-tight',
           TONE_VALUE[tone],
           valueSize,
         )}
-        style={{ fontFamily: 'var(--font-serif-hero)' }}
       >
         {value}
       </span>

@@ -314,9 +314,15 @@
     @apply h-px w-8 bg-neon-yellow/40;
   }
 
+  /**
+   * Manchete. 2026-08-01: passou de Agency FB (--font-display) pra Anton
+   * (--font-impact), que é a fonte de manchete do layer final. Anton já tem o
+   * peso no desenho, então o font-weight sai — pedir 900 de uma fonte que só
+   * tem um peso faz o navegador engordar as letras artificialmente.
+   */
   .ole-headline {
-    font-family: var(--font-display);
-    font-weight: 900;
+    font-family: var(--font-impact);
+    font-weight: 400;
     text-transform: uppercase;
     letter-spacing: -0.01em;
     line-height: 0.95;
