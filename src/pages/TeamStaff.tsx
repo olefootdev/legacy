@@ -14,7 +14,8 @@ import { StatTile } from '@/components/ui/StatTile';
 import { RailStat } from '@/components/ui/RailStat';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
-const SERIF = 'var(--font-serif-hero)';
+/** Fonte de número do layer final: Anton. (Era serifa itálica.) */
+const NUM = 'var(--font-impact)';
 const COLLECTIVE_GROUPS = ['defensivo', 'criativo', 'ataque'] as const;
 
 function collectiveGroupIcon(g: (typeof COLLECTIVE_GROUPS)[number]) {
@@ -158,11 +159,11 @@ export function TeamStaff() {
 
         {/* ── Assistente IA (compacto) ── */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] p-5 pl-[18px]">
-          <span className="absolute inset-y-0 left-0 w-[3px] bg-violet-400" aria-hidden />
+          className="relative overflow-hidden ole-poster p-5 pl-[18px]">
+          <span className="absolute inset-y-0 left-0 w-[3px] bg-neon-yellow" aria-hidden />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-neon-yellow to-violet-500 p-0.5">
+              <div className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-neon-yellow to-[#8a7a00] p-0.5">
                 <div className="grid h-full w-full place-items-center rounded-full bg-deep-black"><Bot className="h-6 w-6 text-neon-yellow" /></div>
               </div>
               <div>
@@ -199,13 +200,13 @@ export function TeamStaff() {
               const level = manager.staff.roles[id] ?? 1;
               const cost = getStaffUpgradeCost(level);
               return (
-                <div key={id} className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] p-4 pl-[18px]">
+                <div key={id} className="relative overflow-hidden ole-poster p-4 pl-[18px]">
                   <span className="absolute inset-y-0 left-0 w-[3px] bg-neon-yellow" aria-hidden />
                   <div className="flex items-start justify-between gap-3">
                     <div className="font-display text-[15px] font-semibold uppercase tracking-[0.03em] text-white">{STAFF_LABELS[id]}</div>
                     <div className="flex items-baseline gap-1 shrink-0">
                       <span className="font-display text-[9px] uppercase tracking-[0.12em] text-white/40">Nível</span>
-                      <span className="italic leading-none text-neon-yellow" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '24px' }}>{level}</span>
+                      <span className="tabular-nums leading-none text-neon-yellow" style={{ fontFamily: NUM, fontSize: '24px' }}>{level}</span>
                       <span className="font-display text-[11px] text-white/35">/5</span>
                     </div>
                   </div>
@@ -364,9 +365,9 @@ export function TeamStaff() {
         {confirmRole && confirmCost && (
           <>
             <div className="mt-4 flex items-center gap-3">
-              <span className="italic text-white/70" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '30px' }}>{manager.staff.roles[confirmRole] ?? 1}</span>
+              <span className="tabular-nums text-white/70" style={{ fontFamily: NUM, fontSize: '30px' }}>{manager.staff.roles[confirmRole] ?? 1}</span>
               <TrendingUp className="h-5 w-5 text-neon-yellow" />
-              <span className="italic text-neon-yellow" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '30px' }}>{(manager.staff.roles[confirmRole] ?? 1) + 1}</span>
+              <span className="tabular-nums text-neon-yellow" style={{ fontFamily: NUM, fontSize: '30px' }}>{(manager.staff.roles[confirmRole] ?? 1) + 1}</span>
             </div>
             <div className="mt-4 space-y-1.5 text-[12.5px]">
               <div className="flex justify-between"><span className="text-white/50">Custo</span><span className="font-semibold text-white">{formatCost(confirmCost)}</span></div>
@@ -385,7 +386,7 @@ export function TeamStaff() {
 function StepHeader({ title }: { title: string }) {
   return (
     <div className="mb-3">
-      <h2 className="font-display text-[20px] font-bold uppercase tracking-[0.05em] leading-none">{title}</h2>
+      <h2 className="ole-eyebrow-poster" style={{ fontSize: '15px' }}>{title}</h2>
     </div>
   );
 }

@@ -18,6 +18,14 @@ import type { TrainingPlan } from '@/game/types';
 import { trackMissionEvent } from '@/progression/trackEvent';
 import { BackButton } from '@/components/BackButton';
 
+/**
+ * Fallback ESTÁVEL: `?? []` dentro de um seletor do `useGameStore`
+ * (useSyncExternalStore) cria um array novo a cada leitura e joga o React num
+ * laço infinito de re-render. A constante garante a mesma referência.
+ */
+const LISTA_VAZIA: never[] = [];
+
+
 /** Os 6 cards de treino. Chaves = trainingType do reducer (válidas p/ individual e coletivo). */
 type TrainingCardId = 'fisico' | 'mental' | 'tatico' | 'atributos' | 'especial' | 'descanso';
 /** Quem treina: o elenco todo, um setor, ou uma seleção manual. */
@@ -80,7 +88,8 @@ const GROUP_LABEL: Record<string, string> = {
   defensivo: 'Bloco defensivo', criativo: 'Meio / criação', ataque: 'Ataque', all: 'Plantel completo',
 };
 
-const SERIF = 'var(--font-serif-hero)';
+/** Fonte de número do layer final: Anton. (Era serifa itálica.) */
+const NUM = 'var(--font-impact)';
 
 function trainingTypeLabel(p: TrainingPlan): string {
   return RUNNING_TYPE_LABEL[p.trainingType] ?? p.trainingType;
@@ -127,7 +136,7 @@ export function TeamTraining() {
   const playerHealth = useGameStore((s) => s.playerHealth);
   const structures = useGameStore((s) => s.structures);
   const plans = useGameStore((s) => s.manager.trainingPlans);
-  const treatmentPlans = useGameStore((s) => s.manager.treatmentPlans ?? []);
+  const treatmentPlans = useGameStore((s) => s.manager.treatmentPlans ?? LISTA_VAZIA);
 
   const [trainingType, setTrainingType] = useState<TrainingCardId>('fisico');
   const [who, setWho] = useState<WhoMode>('elenco');
@@ -299,7 +308,7 @@ export function TeamTraining() {
                   </span>
                   <span
                     className="italic leading-none text-neon-yellow"
-                    style={{ fontFamily: SERIF, fontWeight: 700, fontSize: meta.grade.length > 1 ? '13px' : '26px' }}
+                    style={{ fontFamily: NUM, fontSize: meta.grade.length > 1 ? '13px' : '26px' }}
                   >
                     {meta.grade}
                   </span>
@@ -338,7 +347,7 @@ export function TeamTraining() {
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="sports-panel p-4 sm:p-5">
           {who === 'elenco' && (
             <div className="flex items-center gap-5">
-              <div className="italic leading-none text-neon-yellow" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '44px' }}>
+              <div className="tabular-nums leading-none text-neon-yellow" style={{ fontFamily: NUM, fontSize: '44px' }}>
                 {elencoCount}
               </div>
               <p className="text-[12.5px] leading-relaxed text-white/60">
@@ -367,7 +376,7 @@ export function TeamTraining() {
                       <span className={`absolute inset-y-0 left-0 w-[3px] ${sel ? 'bg-neon-yellow' : 'bg-white/15 group-hover:bg-neon-yellow/60'}`} aria-hidden />
                       <div className="font-display text-[14px] font-semibold uppercase tracking-[0.04em]">{meta.title}</div>
                       <div className="mt-0.5 text-[11px] text-white/50">{meta.sub}</div>
-                      <div className="mt-2 italic leading-none text-neon-yellow" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '24px' }}>
+                      <div className="tabular-nums mt-2 leading-none text-neon-yellow" style={{ fontFamily: NUM, fontSize: '24px' }}>
                         {sectorCounts[id]}
                         <span className="ml-1 align-baseline text-[11px] not-italic text-white/50" style={{ fontFamily: 'var(--font-sans)' }}>jogadores</span>
                       </div>
@@ -420,10 +429,10 @@ export function TeamTraining() {
                     >
                       <span className="absolute inset-y-0 left-0 z-10 w-[3px]" style={{ background: active ? 'var(--color-neon-yellow)' : rail }} aria-hidden />
                       <div className="relative flex w-[86px] shrink-0 flex-col justify-center overflow-hidden bg-black/60 py-3 pl-4">
-                        <span className="pointer-events-none absolute -bottom-3 -right-1 italic leading-none text-white/[0.05]" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '72px' }} aria-hidden>
+                        <span className="tabular-nums pointer-events-none absolute -bottom-3 -right-1 leading-none text-white/[0.05]" style={{ fontFamily: NUM, fontSize: '72px' }} aria-hidden>
                           {p.name.charAt(0)}
                         </span>
-                        <span className="italic leading-none" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '32px', color: rail }}>{ovr}</span>
+                        <span className="tabular-nums leading-none" style={{ fontFamily: NUM, fontSize: '32px', color: rail }}>{ovr}</span>
                         <span className="mt-1 font-display text-[10px] uppercase tracking-[0.1em] text-white/45">{p.pos}</span>
                       </div>
                       <div className="flex flex-1 items-center px-4">
@@ -503,7 +512,7 @@ export function TeamTraining() {
                 const endShort = new Date(p.endAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                 const done = remainingMs <= 0;
                 return (
-                  <div key={p.id} className="relative flex items-center gap-3 overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] py-3 pl-[18px] pr-3">
+                  <div key={p.id} className="relative flex items-center gap-3 overflow-hidden ole-poster py-3 pl-[18px] pr-3">
                     <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: done ? 'var(--color-neon-green)' : 'var(--color-neon-yellow)' }} aria-hidden />
                     <span className="shrink-0 rounded-md bg-neon-yellow/12 px-2 py-1 font-display text-[10.5px] uppercase tracking-[0.04em] text-neon-yellow">
                       {trainingTypeLabel(p)}
@@ -514,7 +523,7 @@ export function TeamTraining() {
                     </div>
                     <span
                       className={`inline-flex shrink-0 items-center gap-1.5 italic ${done ? 'text-neon-green' : 'text-white'}`}
-                      style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '17px' }}
+                      style={{ fontFamily: NUM, fontSize: '17px' }}
                       title={done ? 'Prazo atingido — usa «Concluir» para aplicar' : `Termina a ${endShort}`}
                     >
                       <Clock className="h-3.5 w-3.5 shrink-0 opacity-80 not-italic" aria-hidden />
@@ -583,8 +592,8 @@ export function TeamTraining() {
 function StepHeader({ n, title }: { n: number; title: string }) {
   return (
     <div className="flex items-center gap-3.5 pt-1">
-      <div className="italic leading-none text-neon-yellow" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '34px' }}>{n}</div>
-      <h2 className="font-display text-[20px] font-bold uppercase tracking-[0.05em] leading-none">{title}</h2>
+      <div className="tabular-nums leading-none text-neon-yellow" style={{ fontFamily: NUM, fontSize: '34px' }}>{n}</div>
+      <h2 className="ole-eyebrow-poster" style={{ fontSize: '15px' }}>{title}</h2>
     </div>
   );
 }

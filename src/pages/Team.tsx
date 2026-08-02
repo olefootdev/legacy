@@ -350,7 +350,6 @@ export function Team() {
         customHero={
           <PlantelHero
             clubName={club.name}
-            clubShort={club.shortName}
             formation={formationScheme}
             squadSize={Object.keys(playersById).length}
             startersCount={startersStrength.count}
@@ -437,11 +436,10 @@ export function Team() {
                   Overall
                 </p>
                 <p
-                  className="italic text-neon-yellow tabular-nums leading-none mt-0.5"
+                  className="text-neon-yellow tabular-nums leading-none mt-0.5"
                   style={{
-                    fontFamily: 'var(--font-serif-hero)',
+                    fontFamily: 'var(--font-impact)',
                     fontSize: 'clamp(20px, 6vw, 48px)',
-                    fontWeight: 700,
                     letterSpacing: '-0.02em',
                   }}
                 >
@@ -658,10 +656,9 @@ export function Team() {
                     {/* OVR — Moret italic editorial gigante */}
                     <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10">
                       <p
-                        className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]"
+                        className="text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]"
                         style={{
-                          fontFamily: 'var(--font-serif-hero)',
-                          fontWeight: 700,
+                          fontFamily: 'var(--font-impact)',
                           fontSize: 'clamp(38px, 5.5vw, 56px)',
                           letterSpacing: '-0.04em',
                         }}
@@ -734,10 +731,9 @@ export function Team() {
                                 {s.label}
                               </span>
                               <span
-                                className="italic text-neon-yellow tabular-nums leading-none"
+                                className="text-neon-yellow tabular-nums leading-none"
                                 style={{
-                                  fontFamily: 'var(--font-serif-hero)',
-                                  fontWeight: 700,
+                                  fontFamily: 'var(--font-impact)',
                                   fontSize: 'clamp(18px, 2vw, 22px)',
                                   letterSpacing: '-0.02em',
                                 }}
@@ -801,19 +797,18 @@ export function Team() {
             </AnimatePresence>
             
             {availablePlayers.length === 0 && (
-              <div
-                className="text-center py-12 border border-[var(--color-border)] bg-dark-gray"
-                style={{ borderRadius: 'var(--radius-md)' }}
-              >
+              // Empty-state: era uma frase entre aspas em corpo grande, no tom
+              // de epígrafe. Vira o que um empty-state deve ser — o fato, e o
+              // caminho de saída.
+              <div className="ole-poster px-6 py-10 text-center">
+                <p className="font-impact uppercase text-white" style={{ fontSize: '16px' }}>
+                  Sem reservas
+                </p>
                 <p
-                  className="italic text-white/55 mx-auto max-w-md px-6"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontSize: 'clamp(16px, 2.2vw, 20px)',
-                    lineHeight: 1.4,
-                  }}
+                  className="mx-auto mt-1.5 max-w-md text-white/50"
+                  style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
                 >
-                  “sem reservas — titulares completos ou jogadores no mercado.”
+                  Todo o plantel está escalado. Contrate no mercado pra ter banco.
                 </p>
               </div>
             )}
@@ -1170,7 +1165,7 @@ export function Team() {
                   </p>
                   <p
                     className="mt-1 text-3xl font-black text-neon-yellow tabular-nums"
-                    style={{ fontFamily: 'var(--font-serif-hero)', letterSpacing: '-0.02em' }}
+                    style={{ fontFamily: 'var(--font-impact)', letterSpacing: '-0.02em' }}
                   >
                     {formatExp(offerExp)} EXP
                   </p>
@@ -1331,11 +1326,10 @@ function PitchPlayerMenu({
               style={{ borderRadius: '9999px' }}
             >
               <span
-                className="italic tabular-nums leading-none"
+                className="tabular-nums leading-none"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
+                  fontFamily: 'var(--font-impact)',
                   fontSize: '13px',
-                  fontWeight: 700,
                 }}
               >
                 {player.ovr}
@@ -1375,13 +1369,13 @@ function PitchPlayerMenu({
               boxShadow: 'var(--shadow-card)',
             }}
           >
-            <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-rose-400" />
+            <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
             <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
               <div>
                 <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
                   Tática
                 </p>
-                <p className="font-display text-[16px] font-black uppercase leading-tight tracking-tight text-white transition-colors group-hover/act:text-neon-yellow">
+                <p className="font-impact text-[18px] uppercase leading-tight text-white transition-colors group-hover/act:text-neon-yellow">
                   Substituir
                 </p>
                 <p className="mt-0.5 text-[11px] text-white/50">Liberar slot e escolher outro jogador</p>
@@ -1399,13 +1393,13 @@ function PitchPlayerMenu({
               boxShadow: 'var(--shadow-card)',
             }}
           >
-            <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-cyan-300" />
+            <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
             <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
               <div>
                 <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
                   Perfil
                 </p>
-                <p className="font-display text-[16px] font-black uppercase leading-tight tracking-tight text-white transition-colors group-hover/act:text-neon-yellow">
+                <p className="font-impact text-[18px] uppercase leading-tight text-white transition-colors group-hover/act:text-neon-yellow">
                   Ver skills & temporada
                 </p>
                 <p className="mt-0.5 text-[11px] text-white/50">Atributos, evolução e histórico recente</p>
@@ -1429,7 +1423,7 @@ function PitchPlayerMenu({
                 <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
                   Mercado
                 </p>
-                <p className="font-display text-[16px] font-black uppercase leading-tight tracking-tight text-white transition-colors group-hover/act:text-neon-yellow">
+                <p className="font-impact text-[18px] uppercase leading-tight text-white transition-colors group-hover/act:text-neon-yellow">
                   Anunciar no mercado
                 </p>
                 <p className="mt-0.5 text-[11px] text-white/50">Listar para venda em EXP</p>
@@ -1444,11 +1438,10 @@ function PitchPlayerMenu({
 
 /**
  * Hero do Plantel — Sprint B-3 Legacy Tech.
- * Espelha o padrão do Manager: amarelo + watermark + headline + stats + CTAs.
+ * Bloco amarelo do layer final: eyebrow + manchete Anton + placar + ações.
  */
 function PlantelHero({
   clubName,
-  clubShort,
   formation,
   squadSize,
   startersCount,
@@ -1461,7 +1454,6 @@ function PlantelHero({
   academyCap,
 }: {
   clubName: string;
-  clubShort: string;
   formation: string;
   squadSize: number;
   startersCount: number;
@@ -1474,170 +1466,92 @@ function PlantelHero({
   academyCap: number;
 }) {
   const academyFull = academyUsed >= academyCap;
-  const watermark = (clubShort?.trim() || clubName.slice(0, 3)).toUpperCase();
   const xiAvgLabel = startersCount === 0 ? '—' : Math.round(xiAvgOverall).toString();
   return (
     <section
       aria-label="Plantel Principal"
       className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8"
     >
-      {/* Watermark gigante: sigla do clube */}
-      <div
-        className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
-        aria-hidden
-      >
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={watermark}
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.04 }}
-            transition={{ duration: 0.4 }}
-            className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
-            style={{
-              fontSize: 'clamp(140px, 26vw, 460px)',
-              lineHeight: '0.85',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            {watermark}
-          </motion.span>
-        </AnimatePresence>
-      </div>
-
-      {/* Composição editorial centrada vertical */}
+      {/* ── HERO no layer final ────────────────────────────────────────────
+          Saíram: watermark com a sigla do clube atrás do título, a formação em
+          serifa itálica do tamanho da manchete, régua decorativa e a frase
+          entre aspas que trocava conforme a escalação. Ficou o que o manager
+          precisa ler: quem é, qual a formação, e o placar do plantel. */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-14 text-center"
+        className="relative z-10 px-4 sm:px-6 lg:px-8"
+        style={{ paddingBlock: 'clamp(26px, 5vw, 46px)' }}
       >
-        {/* Eyebrow */}
-        <div
-          className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-black mb-4 sm:mb-6 truncate"
-        >
-          OLE Football · Meu Time · {clubName}
-        </div>
+        <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
+          {clubName}
+        </span>
 
-        {/* Headline duo: Plantel + formação italic */}
-        <h1 className="leading-[0.9]">
-          <span
-            className="block font-bold uppercase text-black"
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h1
+            className="font-impact uppercase"
             style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(2.75rem, 8vw, 6rem)',
-              letterSpacing: '0.005em',
+              color: 'var(--color-deep-black)',
+              fontSize: 'clamp(40px, 11vw, 84px)',
+              lineHeight: 0.84,
+              letterSpacing: '-0.01em',
             }}
           >
             Plantel
+          </h1>
+          {/* A formação é dado, não subtítulo decorativo: fica ao lado do
+              título, em chip preto, do jeito que se lê num placar. */}
+          <span
+            className="inline-flex items-center font-impact tabular-nums"
+            style={{
+              background: 'var(--color-deep-black)',
+              color: 'var(--color-neon-yellow)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '4px 10px',
+              fontSize: 'clamp(18px, 4.5vw, 28px)',
+              lineHeight: 1,
+            }}
+          >
+            {formation}
           </span>
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={formation}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.35 }}
-              className="block italic text-black"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontSize: 'clamp(2.25rem, 7vw, 5rem)',
-                marginTop: '0.04em',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {formation}
-            </motion.span>
-          </AnimatePresence>
-        </h1>
+        </div>
 
-        {/* Régua decorativa */}
-        <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
-
-        {/* Quote italic — tom Legacy Tech */}
-        <motion.blockquote
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, delay: 0.05 }}
-          className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
-          style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
-        >
-          {startersCount === startersCap && startersCap > 0
-            ? '"escalação completa — pronta para a próxima partida."'
-            : startersCount === 0
-              ? '"comece pelo XI titular — cada nome carrega uma história."'
-              : '"escalação em construção — tática e jogadores em harmonia."'}
-        </motion.blockquote>
-
-        {/* Stats strip — 3 métricas principais */}
-        <div className="mt-8 sm:mt-10 grid grid-cols-3 gap-2 sm:gap-3 max-w-lg mx-auto px-2">
-          <div
-            className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
-            style={{ borderRadius: 'var(--radius-sm)' }}
-          >
-            <p
-              className="text-neon-yellow tabular-nums leading-none truncate"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontStyle: 'italic',
-                fontSize: 'clamp(20px, 4vw, 36px)',
-              }}
+        {/* Placar do plantel — blocos pretos sobre o amarelo. */}
+        <div className="mt-6 grid max-w-lg grid-cols-3 gap-2 sm:gap-3">
+          {[
+            { v: String(squadSize), l: 'Plantel' },
+            { v: `${startersCount}/${startersCap}`, l: 'Titulares' },
+            { v: xiAvgLabel, l: 'OVR XI' },
+          ].map((m) => (
+            <div
+              key={m.l}
+              className="min-w-0 bg-black px-3 py-3 sm:px-4 sm:py-4"
+              style={{ borderRadius: 'var(--radius-sm)' }}
             >
-              {squadSize}
-            </p>
-            <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
-              Plantel
-            </p>
-          </div>
-          <div
-            className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
-            style={{ borderRadius: 'var(--radius-sm)' }}
-          >
-            <p
-              className="text-neon-yellow tabular-nums leading-none truncate"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontStyle: 'italic',
-                fontSize: 'clamp(20px, 4vw, 36px)',
-              }}
-            >
-              {startersCount}
-              <span className="text-white/30 text-[60%]">/{startersCap}</span>
-            </p>
-            <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
-              Titulares
-            </p>
-          </div>
-          <div
-            className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
-            style={{ borderRadius: 'var(--radius-sm)' }}
-          >
-            <p
-              className="text-neon-yellow tabular-nums leading-none truncate"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontStyle: 'italic',
-                fontSize: 'clamp(20px, 4vw, 36px)',
-              }}
-            >
-              {xiAvgLabel}
-            </p>
-            <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
-              OVR XI
-            </p>
-          </div>
+              <p
+                className="font-impact tabular-nums leading-none text-neon-yellow"
+                style={{ fontSize: 'clamp(20px, 4.6vw, 36px)' }}
+              >
+                {m.v}
+              </p>
+              <p
+                className="mt-1.5 font-display font-bold uppercase text-white/65"
+                style={{ fontSize: '9px', letterSpacing: '0.18em' }}
+              >
+                {m.l}
+              </p>
+            </div>
+          ))}
         </div>
 
         {/* CTAs — primário preto sobre amarelo, secundários outline */}
-        <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 px-4">
+        <div className="mt-7 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <button
             type="button"
             onClick={onChooseFormation}
-            className="inline-flex items-center justify-center bg-black px-5 sm:px-7 py-3 text-neon-yellow font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-[11px] sm:text-[12px] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
-            style={{ fontFamily: 'var(--font-display)', borderRadius: 'var(--radius-sm)' }}
+            className="inline-flex items-center justify-center bg-black px-5 sm:px-7 py-3 text-white font-display font-black uppercase tracking-[0.14em] text-[11px] transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            style={{ borderRadius: 'var(--radius-sm)', boxShadow: '5px 5px 0 rgba(13,13,13,0.28)' }}
           >
             Escolher formação
           </button>
@@ -1739,11 +1653,10 @@ function PitchPlayer({
           style={{ borderRadius: '9999px' }}
         >
           <span
-            className="italic tabular-nums leading-none"
+            className="tabular-nums leading-none"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
+              fontFamily: 'var(--font-impact)',
               fontSize: 'clamp(10px, 1.5vw, 13px)',
-              fontWeight: 700,
               letterSpacing: '-0.02em',
             }}
           >

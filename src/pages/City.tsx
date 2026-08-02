@@ -21,11 +21,9 @@ import { DEFAULT_BRO_PRICES_CENTS } from '@/clubStructures/broDefaults';
 import { MAX_LEVEL, type ClubStructureId } from '@/clubStructures/types';
 import { formatBroFromCents, formatExp } from '@/systems/economy';
 import {
-  CITY_QUICK_STORE_BRO_GAIN_CENTS,
   CITY_QUICK_STORE_COST_EXP,
 } from '@/game/cityQuickConstants';
 import { BackButton } from '@/components/BackButton';
-import { EditorialHero } from '@/components/EditorialHero';
 import { maxSlotsByTrainingCenter } from '@/systems/trainingPlans';
 import {
   megastoreAwayConfidenceBonusPoints,
@@ -46,9 +44,6 @@ type CityStructDef = {
   structureId: ClubStructureId;
   name: string;
   icon: typeof Building2;
-  color: string;
-  bg: string;
-  border: string;
   desc: string;
   action?: string;
   actionIcon?: typeof Users;
@@ -61,9 +56,6 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     structureId: 'stadium',
     name: 'Estádio',
     icon: Building2,
-    color: 'text-neon-yellow',
-    bg: 'bg-neon-yellow/10',
-    border: 'border-neon-yellow',
     desc: 'O coração do clube. Cada nível reforça capacidade, receita em dias de jogo e o ambiente para a torcida.',
     action: 'Expandir Arquibancada',
     actionIcon: Users,
@@ -84,9 +76,6 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     structureId: 'training_center',
     name: 'Centro de Treinamento',
     icon: Dumbbell,
-    color: 'text-neon-green',
-    bg: 'bg-neon-green/10',
-    border: 'border-neon-green',
     desc: 'Mais campos e ciência do desporto: melhor ganho de atributos e mais planos de treino em simultâneo.',
     statsForLevel: (lvl) => [
       { label: 'Slots por tipo de treino', value: String(maxSlotsByTrainingCenter(lvl)) },
@@ -106,9 +95,6 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     structureId: 'medical_dept',
     name: 'Departamento Médico',
     icon: Activity,
-    color: 'text-red-500',
-    bg: 'bg-red-500/10',
-    border: 'border-red-500',
     desc: 'Recuperação e prevenção: menos fadiga acumulada e risco de lesão conforme a evolução da estrutura.',
     statsForLevel: (lvl) => [
       { label: 'Slots de tratamento', value: String(medicalDeptTreatmentSlots(lvl)) },
@@ -124,9 +110,6 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     structureId: 'youth_academy',
     name: 'Categoria de Base',
     icon: GraduationCap,
-    color: 'text-blue-400',
-    bg: 'bg-blue-400/10',
-    border: 'border-blue-400',
     desc: 'Revela jovens promessas para o plantel ou para o mercado.',
     action: 'Buscar Promessas',
     actionIcon: Users,
@@ -143,14 +126,11 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     structureId: 'megastore',
     name: 'Megaloja',
     icon: Store,
-    color: 'text-purple-400',
-    bg: 'bg-purple-400/10',
-    border: 'border-purple-400',
     desc: 'Reforça o apoio em casa e fora; em vitórias, converte confiança da torcida em EXP extra.',
     action: 'Campanha de Vendas',
     actionIcon: Coins,
     statsForLevel: (lvl) => [
-      { label: 'Campanha (EXP → BRO)', value: `${CITY_QUICK_STORE_COST_EXP} → +${CITY_QUICK_STORE_BRO_GAIN_CENTS / 100} BRO` },
+      { label: 'Campanha de vendas', value: `${CITY_QUICK_STORE_COST_EXP} EXP · reforça a torcida` },
       {
         label: 'Apoio em casa',
         value: `+${megastoreHomeConfidenceBonusPoints(lvl)} pts`,
@@ -276,7 +256,7 @@ export function City() {
     } else if (quickPendingId === 'megastore') {
       costExpLine = `Custo em EXP: ${formatExp(CITY_QUICK_STORE_COST_EXP)}`;
       lines.push(
-        `Ganhas cerca de +${CITY_QUICK_STORE_BRO_GAIN_CENTS / 100} BRO e um pequeno reforço no apoio da torcida (atual ${crowd.supportPercent.toFixed(1)}%).`,
+        `Reforça o apoio da torcida (atual ${crowd.supportPercent.toFixed(1)}%).`,
       );
       if (!canQuickStore) confirmBlocked = true;
     }
@@ -308,37 +288,17 @@ export function City() {
           style={{ borderRadius: 'var(--radius-sm)', boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}
         >
           {/* Watermark gigante */}
-          <div
-            className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
-            aria-hidden
-          >
-            <Building2
-              className="text-black/[0.04]"
-              style={{ width: 'clamp(200px, 40vw, 500px)', height: 'clamp(200px, 40vw, 500px)' }}
-              strokeWidth={1}
-            />
-          </div>
-
           {/* Conteúdo */}
           <div className="relative z-10 p-6 sm:p-8">
             {/* Eyebrow */}
-            <div className="inline-flex items-center gap-3 text-black/85 mb-3">
-              <span aria-hidden className="h-px w-8 bg-black/60" />
-              <span className="uppercase font-semibold text-[10px] tracking-[0.22em]">
-                Estrutura Principal
-              </span>
-              <span aria-hidden className="h-px w-8 bg-black/60" />
-            </div>
+            <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
+              Estrutura principal
+            </span>
 
             {/* Título */}
             <h2
-              className="italic text-black leading-none mb-2"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontSize: 'clamp(2.5rem, 6vw, 3.75rem)',
-                letterSpacing: '-0.02em',
-              }}
+              className="mt-2 mb-2 font-impact uppercase text-black leading-none"
+              style={{ fontSize: 'clamp(40px, 10vw, 72px)', letterSpacing: '-0.01em' }}
             >
               Estádio
             </h2>
@@ -354,9 +314,8 @@ export function City() {
                   Capacidade
                 </p>
                 <p
-                  className="font-serif-hero text-neon-yellow tabular-nums leading-none"
+                  className="font-impact text-neon-yellow tabular-nums leading-none"
                   style={{
-                    fontWeight: 700,
                     fontSize: 'clamp(16px, 3vw, 24px)',
                   }}
                 >
@@ -368,9 +327,8 @@ export function City() {
                   EXP/Torcedor
                 </p>
                 <p
-                  className="font-serif-hero text-neon-yellow tabular-nums leading-none"
+                  className="font-impact text-neon-yellow tabular-nums leading-none"
                   style={{
-                    fontWeight: 700,
                     fontSize: 'clamp(16px, 3vw, 24px)',
                   }}
                 >
@@ -382,9 +340,8 @@ export function City() {
                   Nível
                 </p>
                 <p
-                  className="font-serif-hero text-neon-yellow tabular-nums leading-none"
+                  className="font-impact text-neon-yellow tabular-nums leading-none"
                   style={{
-                    fontWeight: 700,
                     fontSize: 'clamp(16px, 3vw, 24px)',
                   }}
                 >
@@ -436,7 +393,7 @@ export function City() {
                 aria-hidden
               >
                 <struct.icon
-                  className={cn('opacity-[0.03]', struct.color)}
+                  className="text-neon-yellow opacity-[0.03]"
                   style={{ width: 'clamp(120px, 30vw, 200px)', height: 'clamp(120px, 30vw, 200px)' }}
                   strokeWidth={1}
                 />
@@ -448,17 +405,13 @@ export function City() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div
-                      className={cn(
-                        'flex h-12 w-12 shrink-0 items-center justify-center border-2 transition-transform hover:scale-110',
-                        struct.bg,
-                        struct.border
-                      )}
+                      className="flex h-12 w-12 shrink-0 items-center justify-center border-2 border-neon-yellow bg-neon-yellow/10 transition-transform hover:scale-110"
                       style={{ borderRadius: 'var(--radius-sm)' }}
                     >
-                      <struct.icon className={cn('h-6 w-6', struct.color)} strokeWidth={2.5} />
+                      <struct.icon className="h-6 w-6 text-neon-yellow" strokeWidth={2.2} />
                     </div>
                     <div>
-                      <h3 className="font-display text-base font-black uppercase tracking-wider text-white">
+                      <h3 className="font-impact text-[19px] uppercase leading-none text-white">
                         {struct.name}
                       </h3>
                       <p className="text-[10px] text-white/45 uppercase tracking-wider">
@@ -478,7 +431,7 @@ export function City() {
                   {struct.statsForLevel(level).map((stat, i) => (
                     <div key={i} className="flex justify-between items-center text-xs gap-2">
                       <span className="text-white/45 uppercase tracking-wider text-[10px]">{stat.label}</span>
-                      <span className={cn('font-display font-bold', struct.color)}>{stat.value}</span>
+                      <span className="font-impact tabular-nums text-neon-yellow" style={{ fontSize: '14px' }}>{stat.value}</span>
                     </div>
                   ))}
                 </div>
@@ -516,7 +469,7 @@ export function City() {
                       className={cn(
                         'flex-1 py-2.5 text-xs font-display font-bold uppercase tracking-wider transition-all border flex items-center justify-center gap-1.5',
                         canQuick
-                          ? cn('border-transparent hover:brightness-110', struct.bg.replace('/10', '/90'), 'text-black')
+                          ? 'border-transparent bg-neon-yellow text-black hover:brightness-110'
                           : 'bg-white/5 text-white/35 border-white/5 cursor-not-allowed',
                       )}
                       style={{ borderRadius: 'var(--radius-sm)' }}
@@ -532,7 +485,8 @@ export function City() {
                   <button
                     type="button"
                     onClick={() => navigate('/clube/academia')}
-                    className="w-full text-xs text-blue-400 hover:text-blue-300 flex items-center justify-center gap-1 pt-2 transition-colors"
+                    className="flex w-full items-center justify-center gap-1 pt-2 font-display font-black uppercase text-neon-yellow transition-colors hover:text-white"
+                    style={{ fontSize: '10px', letterSpacing: '0.12em' }}
                   >
                     <span>Ver promessas</span>
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -584,7 +538,7 @@ export function City() {
                   <>
                     <div className="border-b border-white/10 bg-black/40 p-6">
                       <div className="flex items-center gap-3 mb-3">
-                        {def && <def.icon className={cn('h-8 w-8', def.color)} strokeWidth={2} />}
+                        {def && <def.icon className="h-8 w-8 text-neon-yellow" strokeWidth={2} />}
                         <h3 className="font-display text-xl font-black uppercase tracking-wider text-white">
                           Evoluir {def?.name}
                         </h3>
@@ -603,7 +557,7 @@ export function City() {
                         <p
                           className="text-neon-yellow"
                           style={{
-                            fontFamily: 'var(--font-serif-hero)',
+                            fontFamily: 'var(--font-sans)',
                             fontStyle: 'italic',
                             fontSize: '2rem',
                             letterSpacing: '-0.02em',
@@ -742,7 +696,7 @@ export function City() {
                       >
                         {cost?.currency === 'exp'
                           ? `Precisas de ${formatExp(cost.amount)} EXP para evoluir ${def?.name}`
-                          : `Precisas de ${formatBroFromCents(cost?.amount ?? 0)} BRO para evoluir ${def?.name}`
+                          : `Precisas de ${formatBroFromCents(cost?.amount ?? 0)} para evoluir ${def?.name}`
                         }
                       </motion.p>
                     </div>
