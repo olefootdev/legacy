@@ -1,10 +1,22 @@
 /**
- * MarketActivityFeed — Feed minimalista de atividades do mercado
- * Substitui seção de notificações na Home (final da página)
+ * MarketActivityFeed — "A Resenha": o pulso do mercado na Home.
+ *
+ * ── Repaginado no layer final (2026-08-01) ─────────────────────────────────
+ * A versão anterior era do padrão antigo: cada atividade virava um cartão com
+ * fundo, borda e um trilho de cor DIFERENTE por tipo (verde/azul/laranja/roxo),
+ * ícone dentro de um círculo, e o valor em serifa itálica.
+ *
+ * Isso brigava com a linguagem em três pontos:
+ *   1. o trilho é AMARELO e significa pertencimento — não é um código de cores;
+ *   2. hierarquia vem de UMA cor, não de um arco-íris que dá peso igual a tudo;
+ *   3. serifa itálica é pra nome de LENDA, nunca pra número (Anton tabular).
+ *
+ * Agora cada atividade é uma LINHA: trilho amarelo, ícone de traço monocromático,
+ * a frase em Inter e o valor em Anton amarelo. Lucro continua verde porque verde
+ * ali é informação (ganhou dinheiro), não decoração.
  */
 import { motion } from 'motion/react';
-import { TrendingUp, Trophy, Flame, Crown, DollarSign } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ArrowLeftRight, Gavel, Tag, TrendingUp } from 'lucide-react';
 import { formatPrice, type MarketActivity } from '@/market/socialTrade';
 
 interface MarketActivityFeedProps {
@@ -12,132 +24,106 @@ interface MarketActivityFeedProps {
   maxVisible?: number;
 }
 
-function ActivityIcon({ type, isAI }: { type: MarketActivity['type']; isAI?: boolean }) {
-  if (type === 'auction_won') {
-    return <Trophy className="h-4 w-4 text-yellow-400" />;
-  }
-  if (type === 'purchase') {
-    return <TrendingUp className="h-4 w-4 text-emerald-400" />;
-  }
-  if (type === 'sale') {
-    return <DollarSign className="h-4 w-4 text-blue-400" />;
-  }
-  return <Flame className="h-4 w-4 text-orange-400" />;
-}
+const ICONE: Record<MarketActivity['type'], typeof TrendingUp> = {
+  purchase: TrendingUp,
+  sale: ArrowLeftRight,
+  auction_won: Gavel,
+  auction_lost: Gavel,
+  listing: Tag,
+};
+
+const VERBO: Record<MarketActivity['type'], string> = {
+  purchase: 'comprou',
+  sale: 'vendeu',
+  auction_won: 'arrematou',
+  auction_lost: 'disputou',
+  listing: 'listou',
+};
 
 export function MarketActivityFeed({ activities, maxVisible = 5 }: MarketActivityFeedProps) {
   const visible = activities.slice(0, maxVisible);
 
   if (activities.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-white/40">Nenhuma atividade recente no mercado</p>
-      </div>
+      <p className="py-6 text-center text-white/40" style={{ fontFamily: 'var(--font-sans)', fontSize: '13px' }}>
+        Nenhuma movimentação no mercado ainda.
+      </p>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {visible.map((activity, i) => (
-        <motion.div
-          key={activity.id}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.05 }}
-          className={cn(
-            'group relative overflow-hidden rounded-lg border px-4 py-3 transition-all hover:border-white/20',
-            activity.isAI
-              ? 'border-purple-500/20 bg-purple-950/20'
-              : 'border-white/10 bg-white/5',
-          )}
-        >
-          {/* Barra lateral de cor */}
-          <div
-            className={cn(
-              'absolute left-0 top-0 h-full w-1',
-              activity.type === 'auction_won' && 'bg-yellow-400',
-              activity.type === 'purchase' && 'bg-emerald-400',
-              activity.type === 'sale' && 'bg-blue-400',
-              activity.type === 'listing' && 'bg-orange-400',
-            )}
-          />
+    <ul className="flex flex-col gap-3">
+      {visible.map((a, i) => {
+        const Icon = ICONE[a.type];
 
-          <div className="flex items-start gap-3 pl-2">
-            {/* Ícone */}
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40">
-              <ActivityIcon type={activity.type} isAI={activity.isAI} />
-            </div>
+        return (
+          <motion.li
+            key={a.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="flex items-start gap-2.5 pl-3"
+            // Trilho amarelo: a assinatura do layer final. Mesma espessura em
+            // todas as linhas — o feed não hierarquiza por cor de tipo.
+            style={{ borderLeft: '2px solid rgba(253,225,0,0.4)' }}
+          >
+            <Icon
+              className="mt-0.5 h-3.5 w-3.5 flex-none"
+              strokeWidth={2}
+              style={{ color: 'rgba(237,235,228,0.45)' }}
+              aria-hidden
+            />
 
-            {/* Conteúdo */}
             <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  {/* Nome do usuário */}
-                  <p className="text-xs font-bold text-white/90">
-                    {activity.isAI && <Crown className="mr-1 inline h-3 w-3 text-purple-400" />}
-                    {activity.userName}
-                  </p>
-
-                  {/* Ação */}
-                  <p className="mt-0.5 text-xs text-white/60">
-                    {activity.type === 'auction_won' && 'arrematou '}
-                    {activity.type === 'purchase' && 'comprou '}
-                    {activity.type === 'sale' && 'vendeu '}
-                    {activity.type === 'listing' && 'listou '}
-                    <span className="font-semibold text-white">
-                      {activity.playerName}
-                    </span>
-                    {' '}
-                    <span className="text-white/40">
-                      ({activity.playerPos}, {activity.playerOvr} OVR)
-                    </span>
-                  </p>
-
-                  {/* Preço em Moret */}
-                  <div className="mt-1 flex items-baseline gap-2">
-                    <span
-                      className="text-neon-yellow"
-                      style={{
-                        fontFamily: 'var(--font-serif-hero)',
-                        fontStyle: 'italic',
-                        fontSize: '1.125rem',
-                        letterSpacing: '-0.01em',
-                        lineHeight: 1,
-                      }}
-                    >
-                      {formatPrice(activity.price, activity.currency)}
-                    </span>
-                    {activity.profit && activity.profit > 0 && (
-                      <span className="text-[10px] font-bold text-emerald-400">
-                        +{formatPrice(activity.profit, activity.currency)} lucro
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Timestamp */}
-              <p className="mt-1 text-[10px] text-white/30">
-                {formatRelativeTime(activity.timestamp)}
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'rgba(237,235,228,0.62)' }}>
+                <span style={{ color: 'rgba(237,235,228,0.9)', fontWeight: 600 }}>{a.userName}</span>{' '}
+                {VERBO[a.type]}{' '}
+                <span style={{ color: '#fff', fontWeight: 600 }}>{a.playerName}</span>{' '}
+                <span style={{ color: 'rgba(237,235,228,0.4)' }}>
+                  ({a.playerPos} · {a.playerOvr} OVR)
+                </span>
               </p>
+
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+                <span
+                  className="font-impact tabular-nums"
+                  style={{ fontSize: '16px', lineHeight: 1, color: 'var(--color-neon-yellow)' }}
+                >
+                  {formatPrice(a.price, a.currency)}
+                </span>
+
+                {a.profit != null && a.profit > 0 && (
+                  <span
+                    className="font-display font-black uppercase"
+                    style={{ fontSize: '9px', letterSpacing: '0.1em', color: 'var(--color-success)' }}
+                  >
+                    +{formatPrice(a.profit, a.currency)} de lucro
+                  </span>
+                )}
+
+                <span
+                  className="font-display font-bold uppercase"
+                  style={{ fontSize: '9px', letterSpacing: '0.12em', color: 'rgba(237,235,228,0.3)' }}
+                >
+                  {formatRelativeTime(a.timestamp)}
+                </span>
+              </div>
             </div>
-          </div>
-        </motion.div>
-      ))}
-    </div>
+          </motion.li>
+        );
+      })}
+    </ul>
   );
 }
 
 function formatRelativeTime(date: Date): string {
-  const now = Date.now();
-  const diff = now - date.getTime();
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
   if (days > 0) return `há ${days}d`;
   if (hours > 0) return `há ${hours}h`;
-  if (minutes > 0) return `há ${minutes}m`;
+  if (minutes > 0) return `há ${minutes}min`;
   return 'agora';
 }
