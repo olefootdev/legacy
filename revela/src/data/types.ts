@@ -52,6 +52,15 @@ export interface Talent {
    * sozinho nos dois casos, que é o comportamento certo pros dois.
    */
   dna?: DnaPublico | null;
+  /**
+   * De onde veio a ficha. `auto` = gerada no cadastro a partir do que ele
+   * declarou + Player DNA; `scout` = um humano olhou e assinou. A vitrine
+   * PRECISA mostrar a diferença — ver migration 20260805220000.
+   *
+   * Opcional porque cadastro anterior à migration não tem o campo; quem lê
+   * trata ausência como 'scout', que é o que aquelas fichas de fato são.
+   */
+  ratingSource?: 'auto' | 'scout' | null;
   /** OVR ponderado por posição, calculado no servidor. NUNCA recalcular aqui. */
   overall: number | null;
   status: TalentStatus;

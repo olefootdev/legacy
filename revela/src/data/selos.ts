@@ -35,10 +35,15 @@ export function computeSelos(t: Talent): Selo[] {
   return [
     {
       id: 'scout',
+      // TER OVR NÃO É MAIS TER AVAL. Desde o SCOUT autônomo (20260805220000)
+      // todo mundo nasce com ficha e com OVR — se o selo continuasse olhando
+      // pro `overall`, ele acenderia sozinho pra todo cadastro e passaria a
+      // dizer que um humano avaliou quando ninguém avaliou. O selo é do
+      // trabalho do olheiro, e só ele carimba `ratingSource = 'scout'`.
       label: 'Aval do OLE SCOUT',
       icon: '🔎',
-      unlocked: t.overall != null,
-      hint: 'Aguardando a avaliação do scout',
+      unlocked: (t.ratingSource ?? 'scout') === 'scout' && t.overall != null,
+      hint: 'Tua ficha inicial já está no ar. O olheiro revisa e assina.',
     },
     {
       id: 'dezena',

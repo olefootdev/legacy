@@ -189,14 +189,32 @@ export function AdminRevelaScoutPanel() {
                     {t.overall}
                   </span>
                 ) : null}
+                {/* A FILA VIRA CURADORIA. Desde o SCOUT autônomo ninguém fica
+                    'pending' — todo cadastro entra aprovado com ficha gerada. O
+                    que importa saber de relance é se um HUMANO já assinou, e
+                    quanta torcida o atleta juntou (é por ela que a fila ordena
+                    agora: tração, não ordem de chegada). */}
+                {(t.supporters ?? 0) > 0 ? (
+                  <span
+                    className="shrink-0 font-display text-[10px] tabular-nums"
+                    style={{ color: 'rgba(255,255,255,0.45)' }}
+                    title={`${t.supporters} fã(s)`}
+                  >
+                    ♥ {t.supporters}
+                  </span>
+                ) : null}
                 <span
                   className="shrink-0 rounded px-2 py-1 font-display text-[9px] font-black uppercase tracking-[0.14em]"
                   style={{
-                    background: t.status === 'pending' ? 'var(--color-neon-yellow)' : 'rgba(255,255,255,0.10)',
-                    color: t.status === 'pending' ? 'var(--color-deep-black)' : 'rgba(255,255,255,0.7)',
+                    background:
+                      t.rating_source === 'auto'
+                        ? 'var(--color-neon-yellow)'
+                        : 'rgba(255,255,255,0.10)',
+                    color:
+                      t.rating_source === 'auto' ? 'var(--color-deep-black)' : 'rgba(255,255,255,0.7)',
                   }}
                 >
-                  {STATUS_LABEL[t.status] ?? t.status}
+                  {t.rating_source === 'auto' ? 'Revisar' : (STATUS_LABEL[t.status] ?? t.status)}
                 </span>
               </button>
             </li>

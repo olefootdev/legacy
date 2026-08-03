@@ -215,7 +215,8 @@ export function TalentPage({
                 >
                   {/* Ex-atleta não é "Revelação": ele já foi revelado. */}
                   {talent.carded ? 'Card jogável' : lenda ? 'Ex-atleta' : 'Revelação'}
-                  {talent.overall != null && ` · ${talent.overall} OVR`}
+                  {talent.overall != null &&
+                    ` · ${talent.overall} ${(talent.ratingSource ?? 'scout') === 'auto' ? 'inicial' : 'OVR'}`}
                 </span>
                 {lenda && <LegendMark />}
               </div>
@@ -374,7 +375,9 @@ export function TalentPage({
                 </div>
               </div>
               <p className="mt-7 text-[13px]" style={{ color: 'rgba(237,235,228,.42)' }}>
-                Ficha montada pelo OLE SCOUT — a mesma que ele leva pro campo dentro do game.
+                {(talent.ratingSource ?? 'scout') === 'auto'
+                  ? 'Ficha inicial, montada do cadastro e do Player DNA. Já vale no game — e muda quando o OLE SCOUT revisar.'
+                  : 'Ficha montada pelo OLE SCOUT — a mesma que ele leva pro campo dentro do game.'}
               </p>
             </>
           ) : (
@@ -568,6 +571,8 @@ function ResumoFicha({
   attrs: { key: string; label: string; value: number }[];
 }) {
   const fortes = [...attrs].sort((a, b) => b.value - a.value).slice(0, 3);
+  // Ausência = ficha antiga, e aquelas foram avaliadas por gente de verdade.
+  const auto = (talent.ratingSource ?? 'scout') === 'auto';
   const pe = PES.find((p) => p.code === talent.strongFoot)?.nome ?? null;
   const idade = talent.birthYear ? new Date().getFullYear() - talent.birthYear : null;
 
@@ -597,17 +602,27 @@ function ResumoFicha({
 
         <div className="min-w-0 flex-1">
           {talent.overall != null && (
-            <div className="flex items-end gap-2.5">
-              <span
-                className="rev-display tabular-nums"
-                style={{ fontSize: 56, lineHeight: 0.82, color: 'var(--color-rev-yellow)' }}
-              >
-                {talent.overall}
-              </span>
-              <span className="rev-label pb-1 text-[10px]" style={{ color: 'rgba(237,235,228,.45)' }}>
-                Overall
-              </span>
-            </div>
+            <>
+              <div className="flex items-end gap-2.5">
+                <span
+                  className="rev-display tabular-nums"
+                  style={{ fontSize: 56, lineHeight: 0.82, color: auto ? 'var(--color-rev-bone)' : 'var(--color-rev-yellow)' }}
+                >
+                  {talent.overall}
+                </span>
+                <span className="rev-label pb-1 text-[10px]" style={{ color: 'rgba(237,235,228,.45)' }}>
+                  {auto ? 'Ficha inicial' : 'Overall'}
+                </span>
+              </div>
+              {/* AMARELO É DO OLHEIRO. A ficha automática sai em osso, e o
+                  rótulo troca de palavra: dois atletas de 62 não podem parecer
+                  a mesma coisa quando um foi avaliado e o outro se declarou. */}
+              {auto && (
+                <p className="mt-2 text-[12px] leading-snug" style={{ color: 'rgba(237,235,228,.38)' }}>
+                  Gerada do cadastro e do Player DNA. O OLE SCOUT ainda vai revisar.
+                </p>
+              )}
+            </>
           )}
           <p
             className="rev-display mt-4 text-[19px] leading-none"

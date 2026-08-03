@@ -40,6 +40,15 @@ export interface ScoutTalent {
   guardian_phone: string | null;
   user_id: string | null;
   created_at: string;
+  /**
+   * De onde veio a ficha. `auto` = o SCOUT autônomo gerou no cadastro (o
+   * atleta já está no ar); `scout` = alguém revisou e assinou. Opcional porque
+   * a coluna chegou em 20260805220000 — banco velho não manda, e a tela trata
+   * ausência como já-revisada.
+   */
+  rating_source?: 'auto' | 'scout' | null;
+  /** Torcida. É por ela que a fila é ordenada agora — tração, não chegada. */
+  supporters?: number | null;
 }
 
 /** As 10 chaves canônicas — a mesma ficha do `PlayerAttributes` do jogo. */
