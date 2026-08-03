@@ -191,6 +191,8 @@ export type SubmitFailure =
   | 'handle_taken'
   | 'guardian_required'
   | 'already_submitted'
+  /** A conta logada já tem ficha. Trava do trigger 20260805180000. */
+  | 'account_has_talent'
   | 'offline';
 
 /** Disponibilidade do @username (confirmação em tempo real no cadastro). */
@@ -221,6 +223,7 @@ const SUBMIT_FAILURES: readonly SubmitFailure[] = [
   'handle_taken',
   'guardian_required',
   'already_submitted',
+  'account_has_talent',
   'offline',
 ];
 
@@ -290,10 +293,27 @@ export async function submitTalent(input: SubmitTalentInput): Promise<SubmitResu
     }
   }
 
-  const res = await rpc<{ ok: boolean; id?: string; slug?: string; reason?: string }>(
-    'revela_submit_talent',
-    args,
-  );
+  /**
+   * Chamada direta, SEM o `rpc()` genérico: aqui a mensagem de erro importa.
+   *
+   * A trava "uma conta, uma ficha" mora num trigger (migration 20260805180000)
+   * e chega como exceção, não como `{ok:false}`. O `rpc()` engole exceção e
+   * devolve null — a tela diria "sem conexão" pra um erro que não tem nada a
+   * ver com rede. Aqui a gente lê a mensagem e traduz.
+   */
+  const sb = getSupabase();
+  if (!sb) return { ok: false, reason: 'offline' };
+  const { data, error } = await sb.rpc('revela_submit_talent', args);
+
+  if (error) {
+    console.warn('[revela] revela_submit_talent falhou:', error.message);
+    if (/account_has_talent/i.test(error.message)) {
+      return { ok: false, reason: 'account_has_talent' };
+    }
+    return { ok: false, reason: 'offline' };
+  }
+
+  const res = data as { ok: boolean; id?: string; slug?: string; reason?: string } | null;
   if (!res) return { ok: false, reason: 'offline' };
   if (res.ok && res.id && res.slug) return { ok: true, id: res.id, slug: res.slug };
   return { ok: false, reason: asSubmitFailure(res.reason) };

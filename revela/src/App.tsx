@@ -87,7 +87,7 @@ export default function App() {
             entender que aquilo abria uma jornada de 7 passos. */}
         <Route
           path="/comecar"
-          element={<OnboardingPage onNote={push} />}
+          element={<OnboardingPage session={session} onNote={push} />}
         />
         {/* O painel do atleta. Precisa vir ANTES de /:short — senão o
             catch-all de handle engoliria "meu-perfil" como se fosse um @. */}

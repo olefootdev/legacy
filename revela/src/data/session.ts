@@ -163,6 +163,12 @@ export interface PendingTalent {
   slug: string;
   phone: string;
   apelido: string;
+  /**
+   * A ficha já nasceu com dono porque havia sessão no envio. Opcional: cadastro
+   * guardado antes deste campo existir simplesmente não tem, e `?? false` cai no
+   * comportamento antigo (mostrar o passo de reivindicar).
+   */
+  jaEraDono?: boolean;
 }
 
 export function savePendingTalent(t: PendingTalent): void {
@@ -179,7 +185,13 @@ export function readPendingTalent(): PendingTalent | null {
     if (!raw) return null;
     const t = JSON.parse(raw) as Partial<PendingTalent>;
     if (t && typeof t.id === 'string' && typeof t.phone === 'string') {
-      return { id: t.id, slug: t.slug ?? '', phone: t.phone, apelido: t.apelido ?? '' };
+      return {
+        id: t.id,
+        slug: t.slug ?? '',
+        phone: t.phone,
+        apelido: t.apelido ?? '',
+        jaEraDono: t.jaEraDono === true,
+      };
     }
     return null;
   } catch {

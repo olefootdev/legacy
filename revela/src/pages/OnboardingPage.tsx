@@ -51,6 +51,9 @@ const FALHA: Record<SubmitFailure, string> = {
   handle_taken: 'Esse nome de usuário já foi pego. Escolhe outro.',
   guardian_required: 'Menor de 18 precisa do nome e do telefone do responsável.',
   already_submitted: 'Já existe um cadastro com esse WhatsApp.',
+  // A regra é uma conta, uma ficha. Quem já tem perfil e quer outro precisa
+  // sair da conta — e o texto diz isso, em vez de deixar a pessoa adivinhando.
+  account_has_talent: 'Essa conta já tem um perfil de jogador. Sai da conta pra cadastrar outro.',
   offline: 'Não deu pra enviar agora. Tenta de novo em instantes.',
 };
 
@@ -91,8 +94,14 @@ const VAZIA: Ficha = {
 };
 
 export function OnboardingPage({
+  session,
   onNote,
 }: {
+  /**
+   * Sessão aberta = a ficha vai nascer com dono (o RPC grava `auth.uid()` no
+   * INSERT). É o que decide se a tela de sucesso pede conta ou não.
+   */
+  session: { userId: string } | null;
   onNote: (title: string, body?: string, tone?: 'yellow' | 'green') => void;
 }) {
   const [tela, setTela] = useState(0);
@@ -212,6 +221,9 @@ export function OnboardingPage({
         slug: res.slug,
         phone: telDigitos,
         apelido: f.apelido.trim() || f.nome.trim(),
+        // Havia sessão no envio? Então o RPC já gravou o dono e não existe
+        // claim a fazer. Guardado junto pra sobreviver ao refresh.
+        jaEraDono: Boolean(session),
       };
       savePendingTalent(pend); // sobrevive a refresh / confirmar e-mail
       setEnviado(pend);
@@ -230,6 +242,7 @@ export function OnboardingPage({
         apelido={enviado.apelido || 'Craque'}
         talentId={enviado.id}
         telefone={enviado.phone}
+        jaEraDono={enviado.jaEraDono ?? false}
         onNote={onNote}
       />
     );
@@ -887,18 +900,37 @@ function Chips({
   );
 }
 
+/**
+ * A tela de sucesso.
+ *
+ * ── `jaEraDono`: O BUG QUE ISTO CONSERTA ────────────────────────────────────
+ * `revela_submit_talent` grava `user_id = auth.uid()` no INSERT. Ou seja: quem
+ * preenche o formulário JÁ LOGADO cria uma ficha que nasce com dono.
+ *
+ * A tela, mesmo assim, mostrava o passo de reivindicar — e o claim só age sobre
+ * ficha ÓRFÃ. Resultado: a pessoa cadastrava certinho, com foto e vídeo, e a
+ * última tela dizia "Não deu pra ligar o cadastro a essa conta". O cadastro
+ * tinha funcionado; só a tela mentia. Pior: convidava a criar uma segunda conta
+ * pra resolver um problema que não existia.
+ *
+ * Com sessão aberta no envio, o passo 2 já está cumprido — e é isso que a tela
+ * diz agora.
+ */
 function Enviado({
   apelido,
   talentId,
   telefone,
+  jaEraDono,
   onNote,
 }: {
   apelido: string;
   talentId: string;
   telefone: string;
+  /** A ficha nasceu com dono porque quem enviou estava logado. */
+  jaEraDono: boolean;
   onNote: (title: string, body?: string, tone?: 'yellow' | 'green') => void;
 }) {
-  const [comConta, setComConta] = useState(false);
+  const [comConta, setComConta] = useState(jaEraDono);
 
   return (
     <main>
@@ -939,8 +971,18 @@ function Enviado({
                 ✓ Perfil garantido
               </p>
               <p className="mt-2 text-[14px] leading-relaxed" style={{ color: 'rgba(237,235,228,.62)' }}>
-                O cadastro agora é seu. Entra com essa conta pra acompanhar a aprovação.
+                {jaEraDono
+                  ? 'Você já estava logado, então o cadastro já é seu. Não precisa criar conta nenhuma.'
+                  : 'O cadastro agora é seu. Entra com essa conta pra acompanhar a aprovação.'}
               </p>
+              <Link
+                to="/meu-perfil"
+                className="rev-btn rev-focus mt-4 inline-flex"
+                data-variant="outline"
+                data-on="dark"
+              >
+                Ver meu painel →
+              </Link>
             </div>
           ) : (
             <ContaDoAtleta
