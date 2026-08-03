@@ -54,7 +54,9 @@ export function MeuPerfilPage({
   const [talento, setTalento] = useState<MeuTalento | null>(null);
   const [trajetoria, setTrajetoria] = useState<TrajetoriaData | null>(null);
   const [carregando, setCarregando] = useState(true);
-  const [copiado, setCopiado] = useState(false);
+  // Qual link foi copiado por último — a página tem dois, e um estado só
+  // acenderia "Copiado" nos dois ao mesmo tempo.
+  const [copiado, setCopiado] = useState<'perfil' | 'indicacao' | null>(null);
 
   const carregar = useCallback(async () => {
     if (!session) {
@@ -140,11 +142,11 @@ export function MeuPerfilPage({
   const publico = talento.status === 'approved' || talento.status === 'carded';
   const link = `${window.location.origin}/t/${talento.slug}`;
 
-  async function copiar() {
+  async function copiar(qual: 'perfil' | 'indicacao', texto: string) {
     try {
-      await navigator.clipboard.writeText(link);
-      setCopiado(true);
-      setTimeout(() => setCopiado(false), 1800);
+      await navigator.clipboard.writeText(texto);
+      setCopiado(qual);
+      setTimeout(() => setCopiado(null), 1800);
     } catch {
       /* clipboard bloqueado — o texto continua selecionável */
     }
@@ -231,13 +233,13 @@ export function MeuPerfilPage({
               </code>
               <button
                 type="button"
-                onClick={() => void copiar()}
+                onClick={() => void copiar('perfil', link)}
                 className="rev-btn rev-focus shrink-0"
                 data-variant="yellow"
                 data-on="dark"
                 style={{ minHeight: 36, padding: '0 14px' }}
               >
-                {copiado ? 'Copiado' : 'Copiar'}
+                {copiado === 'perfil' ? 'Copiado' : 'Copiar'}
               </button>
             </div>
             <Link
@@ -257,6 +259,9 @@ export function MeuPerfilPage({
           </p>
         )}
       </section>
+
+      {/* ── O link de indicação ─────────────────────────────────────────── */}
+      {publico && <LinkDeIndicacao talento={talento} />}
 
       {/* A Trajetória some inteira se a migration ainda não estiver aplicada —
           o painel é alicerce, ela é camada. */}
@@ -281,6 +286,89 @@ export function MeuPerfilPage({
         />
       )}
     </main>
+  );
+}
+
+/**
+ * O LINK DE INDICAÇÃO — `revela.olefoot.com/<handle>`.
+ *
+ * POR QUE ELE É DIFERENTE DO LINK DO PERFIL: os dois abrem a mesma página, mas
+ * só este CREDITA A REDE de quem o atleta trouxe. É o `revela_resolve_handle`
+ * que faz a ponte — traduz o @ em perfil E em código de indicação, na mesma
+ * URL. É o link que ele deve pôr na bio do Instagram.
+ *
+ * ⚠️ O CRÉDITO SÓ LIGA DEPOIS DO CLUBE. O código de indicação nasce com o
+ * `profiles` do jogo. Antes disso o link abre o perfil e não credita ninguém —
+ * e a tela DIZ isso, em vez de deixar o atleta divulgar achando que está
+ * construindo rede.
+ */
+function LinkDeIndicacao({ talento }: { talento: MeuTalento }) {
+  const [copiado, setCopiado] = useState(false);
+
+  // Sem @ escolhido não existe link curto. Acontece com quem foi cadastrado
+  // pelo scout antes do handle virar obrigatório — o Breno é um desses.
+  if (!talento.handle) {
+    return (
+      <section className="mt-8">
+        <Eyebrow>Teu link de indicação</Eyebrow>
+        <p className="mt-2 text-[14px]" style={{ color: 'rgba(237,235,228,.55)' }}>
+          Você ainda não escolheu teu @. É ele que vira teu endereço curto — o link que você põe
+          na bio do Instagram e que credita quem chegar por você. Fala com a gente pra escolher.
+        </p>
+      </section>
+    );
+  }
+
+  const url = `revela.olefoot.com/${talento.handle}`;
+  const ativo = talento.indicacaoAtiva === true;
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(`https://${url}`);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1800);
+    } catch {
+      /* clipboard bloqueado — o texto continua selecionável */
+    }
+  }
+
+  return (
+    <section className="mt-8">
+      <Eyebrow>Teu link de indicação</Eyebrow>
+      <p className="mt-2 text-[14px]" style={{ color: 'rgba(237,235,228,.6)' }}>
+        Curto, cabe na bio do Instagram. Quem chega por ele vê teu perfil — e entra na tua rede.
+      </p>
+
+      <div
+        className="mt-3 flex items-center gap-2.5 rounded-[10px] px-3 py-2.5"
+        style={{ background: 'rgba(13,13,13,.5)', border: '1px solid rgba(253,225,0,.28)' }}
+      >
+        <code
+          className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[14px]"
+          style={{ color: 'var(--color-rev-yellow, #fde100)' }}
+        >
+          {url}
+        </code>
+        <button
+          type="button"
+          onClick={() => void copiar()}
+          className="rev-btn rev-focus shrink-0"
+          data-variant="yellow"
+          data-on="dark"
+          style={{ minHeight: 36, padding: '0 14px' }}
+        >
+          {copiado ? 'Copiado' : 'Copiar'}
+        </button>
+      </div>
+
+      {!ativo && (
+        <p className="mt-3 text-[13px] leading-relaxed" style={{ color: 'rgba(237,235,228,.5)' }}>
+          O link já funciona como teu endereço. Mas a <strong>indicação</strong> só passa a contar
+          depois que você criar teu clube no game — é lá que nasce teu código. Sem isso, quem
+          chegar por você não entra na tua rede.
+        </p>
+      )}
+    </section>
   );
 }
 

@@ -384,6 +384,13 @@ export async function claimTalent(talentId: string, phone: string): Promise<Clai
 export interface MeuTalento {
   id: string;
   slug: string;
+  /** O @ curto: revela.olefoot.com/<handle>. Null enquanto ele não escolheu. */
+  handle: string | null;
+  /**
+   * Se o link curto já CREDITA rede. Só vira true depois que o atleta cria o
+   * clube no jogo — antes disso o link abre o perfil e não credita ninguém.
+   */
+  indicacaoAtiva?: boolean;
   name: string;
   pos: string;
   category: string | null;
