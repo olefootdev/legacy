@@ -69,10 +69,28 @@ export async function signInWithEmail(email: string, password: string): Promise<
   return { ok: true };
 }
 
-export async function sendPasswordResetEmail(email: string): Promise<{ ok: boolean; error?: string }> {
+/**
+ * Dispara o e-mail de recuperação de senha.
+ *
+ * O `redirectTo` sai de `window.location.origin` DE PROPÓSITO: o REVELA usa esta
+ * mesma função, e sessão do supabase-js mora em localStorage — que é por origem.
+ * Se o e-mail pedido no revela.olefoot.com voltasse pro domínio do jogo, a
+ * pessoa criaria a senha e continuaria deslogada no REVELA.
+ *
+ * `path` existe porque as duas rotas se chamam diferente: o jogo é em inglês
+ * (`/reset-password`), o REVELA é todo em pt-BR (`/reset-senha`).
+ *
+ * ⚠️ Cada origem precisa estar em Authentication → URL Configuration → Redirect
+ * URLs. Fora da lista, o Supabase ignora o `redirectTo` em silêncio e manda pra
+ * Site URL — sem erro nenhum, e a pessoa cai no lugar errado.
+ */
+export async function sendPasswordResetEmail(
+  email: string,
+  path = '/reset-password',
+): Promise<{ ok: boolean; error?: string }> {
   const sb = getSupabase();
   if (!sb) return { ok: false, error: 'Supabase não configurado.' };
-  const redirectTo = `${window.location.origin}/reset-password`;
+  const redirectTo = `${window.location.origin}${path}`;
   const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo });
   if (error) return { ok: false, error: error.message };
   return { ok: true };

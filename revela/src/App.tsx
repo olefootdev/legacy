@@ -27,6 +27,7 @@ import {
 import { Home } from './pages/Home';
 import { LegendPage } from './pages/LegendPage';
 import { OnboardingPage } from './pages/OnboardingPage';
+import { ResetSenhaPage } from './pages/ResetSenhaPage';
 import { ShortLink } from './pages/ShortLink';
 import { TalentPage } from './pages/TalentPage';
 import { Footer, Nav } from './sections/Top';
@@ -100,6 +101,11 @@ export default function App() {
           path="/dna"
           element={<DnaTestPage session={session} requireAuth={requireAuth} onNote={push} />}
         />
+        {/* Definir senha. O e-mail de recuperação volta PRA CÁ porque o
+            `redirectTo` é montado do `window.location.origin` — sessão do
+            supabase-js é por origem, e link que caísse no domínio do jogo
+            deixaria a pessoa deslogada aqui. Antes de /:short, como as outras. */}
+        <Route path="/reset-senha" element={<ResetSenhaPage onNote={push} />} />
         <Route path="/como-funciona" element={<ComoFuncionaPage session={session} />} />
         <Route path="/lenda/:slug" element={<LegendPage onNote={push} />} />
         {/* Alias: links de /playervip/<handle> compartilhados por aí continuam

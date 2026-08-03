@@ -16,7 +16,7 @@
  * O caminho pro jogo continua ali embaixo — pra quem quer o clube, não o fã.
  */
 import { forwardRef, useEffect, useRef, useState, type FormEvent } from 'react';
-import { signInWithEmail } from '@/supabase/auth';
+import { sendPasswordResetEmail, signInWithEmail } from '@/supabase/auth';
 import { signUpRevela, signupUrl } from '../data/session';
 
 export function AuthSheet({
@@ -34,6 +34,7 @@ export function AuthSheet({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modo, setModo] = useState<'entrar' | 'criar'>('criar');
+  const [recuperando, setRecuperando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const firstField = useRef<HTMLInputElement | null>(null);
 
@@ -45,6 +46,7 @@ export function AuthSheet({
     // chegou pelo link de um atleta e nunca ouviu falar da Olefoot. Abrir em
     // "entrar" faria essa pessoa procurar o botão certo antes de fazer nada.
     setModo('criar');
+    setRecuperando(false);
     const t = setTimeout(() => firstField.current?.focus(), 60);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -57,6 +59,32 @@ export function AuthSheet({
   }, [open, onClose]);
 
   if (!open) return null;
+
+  /**
+   * Manda o e-mail de recuperação.
+   *
+   * ── POR QUE ISTO É ESSENCIAL, E NÃO CONVENIÊNCIA ────────────────────────
+   * Todo atleta cadastrado PELO OLE SCOUT tem conta que ele nunca criou: e-mail
+   * confirmado, ficha dele, e nenhuma senha escolhida por ninguém. Sem este
+   * botão, esse atleta não entra no painel dele nunca.
+   *
+   * O `redirectTo` sai de `window.location.origin` lá dentro, então o link
+   * volta pro REVELA — e não pro domínio do jogo, onde a sessão nasceria em
+   * outro localStorage e não valeria aqui.
+   *
+   * A RESPOSTA É SEMPRE A MESMA, exista ou não a conta: dizer "esse e-mail não
+   * está cadastrado" transformaria a folha num verificador de quem tem conta na
+   * Olefoot.
+   */
+  async function recuperar() {
+    if (busy || !email.trim()) return;
+    setBusy(true);
+    setError(null);
+    await sendPasswordResetEmail(email, '/reset-senha');
+    setBusy(false);
+    setRecuperando(false);
+    setAviso('Se existir conta com esse e-mail, o link de senha já está a caminho.');
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -184,6 +212,49 @@ export function AuthSheet({
             </p>
           )}
         </form>
+
+        {/* Só no modo ENTRAR: oferecer "esqueci a senha" pra quem está criando
+            conta agora é oferecer socorro pra um problema que ele não tem. */}
+        {modo === 'entrar' && (
+          <div className="mt-3">
+            {recuperando ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => void recuperar()}
+                  disabled={busy || !email.trim()}
+                  className="rev-btn rev-focus"
+                  data-variant="outline"
+                  data-on="dark"
+                  style={{ minHeight: 36, padding: '0 14px' }}
+                >
+                  {busy ? 'Enviando…' : 'Mandar link pro meu e-mail'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRecuperando(false)}
+                  className="rev-label rev-focus text-[11px]"
+                  style={{ color: 'rgba(237,235,228,.45)' }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setRecuperando(true);
+                  setError(null);
+                  setAviso('Confere o e-mail acima e a gente manda o link.');
+                }}
+                className="rev-label rev-focus text-[11px]"
+                style={{ color: 'rgba(237,235,228,.5)' }}
+              >
+                Nunca criei senha / esqueci a minha
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="mt-5 flex flex-col gap-2 border-t pt-4" style={{ borderColor: 'rgba(255,255,255,.08)' }}>
           <button
