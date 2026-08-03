@@ -18,7 +18,9 @@ import { GAME_URL, signupUrl } from '../data/session';
 // não sairia do lugar. Com '/#lendas' o navegador volta pra home e desce.
 const NAV_LINKS = [
   { href: '/#descobrir', label: 'Descobrir' },
-  { href: '/#torcida', label: 'Torcida' },
+  // Era '/#torcida'. A seção saiu; o item vira A Trajetória, que é onde a
+  // disputa acontece agora.
+  { href: '/#placar', label: 'Trajetória' },
   { href: '/#mural', label: 'Reveal Wall' },
   { href: '/#lendas', label: 'Lendas' },
   { href: '/#resenha', label: 'Resenha' },

@@ -23,7 +23,7 @@ import {
 import { byAthlete, isLegend, type AthleteLegend } from '../data/legends';
 import type { ClubRank, DivisionCount, Talent } from '../data/types';
 import { GameCta, Hero, Marquee } from '../sections/Top';
-import { Discovery, EmAlta, RevealWall, Torcida } from '../sections/Talents';
+import { Discovery, EmAlta, RevealWall } from '../sections/Talents';
 import { ComoFunciona } from '../sections/Journey';
 import { Legends, Resenha } from '../sections/Legends';
 import { TopClubs } from '../sections/League';
@@ -141,9 +141,8 @@ export function Home({
         <Discovery talents={discovery} supported={supported} onSupport={handleSupport} />
         <Placar limite={10} />
         <EmAlta rising={rising} />
-        <Torcida talents={talents} />
-        <ComoFunciona />
         <RevealWall talents={talents} />
+        <ComoFunciona />
         <Legends legends={legends} />
         <Resenha legends={legends} />
 

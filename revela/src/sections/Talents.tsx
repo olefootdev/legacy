@@ -1,9 +1,14 @@
 /**
- * As três seções de talento: Descoberta, Torcida Digital e Reveal Wall.
+ * As seções de talento: Descoberta, Reveal Wall e Em Alta.
  *
  * Todas leem a MESMA lista (`talents`) — o que muda é a ordenação e o recorte.
- * Uma fonte, três leituras: descobrir (por nota), torcer (por apoio), varrer
- * (por volume). Se fossem três fetches, os três números divergiriam na tela.
+ * Uma fonte, várias leituras. Se fossem vários fetches, os números do mesmo
+ * jogador divergiriam entre as seções da mesma tela.
+ *
+ * A "Torcida Digital" saiu em 2026-08-03: ela ordenava por fã ACUMULADO, que é
+ * exatamente o que A Trajetória passou a fazer — só que por categoria, com
+ * disputa e prêmio. Duas listas pra mesma pergunta, e a mais fraca ganhava a
+ * dobra melhor.
  *
  * Todas degradam pra convite quando ainda não há talento aprovado. A página
  * nunca finge jogador — o funil começa vazio de propósito.
@@ -250,77 +255,7 @@ export function SupportButton({
   );
 }
 
-/* ══ 2. Torcida Digital ════════════════════════════════════════════════════ */
-
-export function Torcida({ talents }: { talents: Talent[] }) {
-  const top = [...talents].sort((a, b) => b.supporters - a.supporters).slice(0, 5);
-  const anySupport = top.some((t) => t.supporters > 0);
-
-  return (
-    <section
-      id="torcida"
-      className="rev-section"
-      style={{ background: 'var(--color-rev-cream)', color: '#0D0D0D' }}
-    >
-      <div className="rev-container">
-        <Eyebrow on="light">Torcida digital</Eyebrow>
-        <h2 className="rev-display mt-4" style={{ fontSize: 'clamp(30px,5vw,60px)' }}>
-          Os mais apoiados da semana
-        </h2>
-
-        {!anySupport ? (
-          <EmptyInvite
-            on="light"
-            title="A torcida ainda não começou."
-            body="Assim que alguém apoiar um talento, o ranking se monta aqui — e reordena ao vivo a cada apoio."
-          />
-        ) : (
-          <ol className="mt-9 flex flex-col">
-            {top.map((t, i) => (
-              <li key={t.id}>
-              <Link
-                to={`/t/${t.slug}`}
-                className="rev-focus grid items-center gap-4 px-4 py-4"
-                data-on="light"
-                style={{
-                  gridTemplateColumns: 'auto 1fr auto',
-                  background: i === 0 ? 'var(--color-rev-yellow)' : 'transparent',
-                  borderBottom: '1px solid rgba(13,13,13,.1)',
-                  borderRadius: i === 0 ? 8 : 0,
-                  transition: 'background var(--dur-rev-micro) var(--ease-rev)',
-                }}
-              >
-                <span className="rev-display text-[30px] tabular-nums" style={{ opacity: i === 0 ? 1 : 0.32 }}>
-                  {i + 1}
-                </span>
-                <span className="min-w-0">
-                  <p className="rev-display truncate text-[21px] leading-none">{t.name}</p>
-                  <p className="rev-label mt-1.5 text-[10px]" style={{ color: 'rgba(13,13,13,.5)' }}>
-                    {[t.pos, t.club ?? t.city, t.uf].filter(Boolean).join(' · ')}
-                  </p>
-                </span>
-                <span className="text-right">
-                  <span
-                    className="tabular-nums"
-                    style={{ fontFamily: 'var(--font-editorial)', fontStyle: 'italic', fontWeight: 800, fontSize: 26 }}
-                  >
-                    {ptBr(t.supporters)}
-                  </span>
-                  <p className="rev-label text-[9px]" style={{ color: 'rgba(13,13,13,.45)' }}>
-                    apoios
-                  </p>
-                </span>
-              </Link>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/* ══ 3. Reveal Wall ════════════════════════════════════════════════════════ */
+/* ══ 2. Reveal Wall ════════════════════════════════════════════════════════ */
 
 /**
  * O mural é a única seção que mostra volume. O amarelo cobre a foto e só sai no
