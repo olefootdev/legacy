@@ -336,6 +336,30 @@ body {
     }
   }
 
+  /* ── Ícone de rede social ──────────────────────────────────────────────── */
+  /* Hover em CSS, não em estado de React: funciona antes da hidratação, não
+     redesenha componente por passar o mouse, e o :focus-visible entra de graça
+     — quem navega por teclado vê o mesmo destaque de quem usa mouse. */
+  .rev-social {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    border: 1px solid rgba(237, 235, 228, 0.18);
+    color: rgba(237, 235, 228, 0.6);
+    transition:
+      background var(--dur-rev-micro) var(--ease-rev),
+      color var(--dur-rev-micro) var(--ease-rev),
+      border-color var(--dur-rev-micro) var(--ease-rev);
+  }
+  .rev-social:hover,
+  .rev-social:focus-visible {
+    background: var(--color-rev-yellow);
+    border-color: var(--color-rev-yellow);
+    color: var(--color-rev-black);
+  }
+
   /* ── Card pôster ───────────────────────────────────────────────────────── */
   .rev-poster {
     border: 3px solid var(--color-rev-black);

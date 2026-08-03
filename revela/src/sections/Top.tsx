@@ -333,6 +333,78 @@ export function GameCta() {
   );
 }
 
+/**
+ * Redes sociais do rodapé.
+ *
+ * SVG inline em vez de biblioteca de ícone: são três desenhos que nunca mudam,
+ * e trazer um pacote inteiro pra isso custaria mais bytes que o site todo do
+ * rodapé. Cada um herda `currentColor`, então o hover muda uma cor só.
+ */
+const REDES = [
+  {
+    nome: 'Instagram',
+    href: 'https://www.instagram.com/olefootgame/',
+    path: (
+      <>
+        <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" />
+        <circle cx="12" cy="12" r="4.2" />
+        <circle cx="17.6" cy="6.4" r="1.15" fill="currentColor" stroke="none" />
+      </>
+    ),
+  },
+  {
+    nome: 'LinkedIn',
+    href: 'https://www.linkedin.com/company/olefoot/',
+    path: (
+      <>
+        <rect x="2.5" y="2.5" width="19" height="19" rx="3" />
+        <path d="M7 10.5v7" />
+        <circle cx="7" cy="7.1" r="1.15" fill="currentColor" stroke="none" />
+        <path d="M11.4 17.5v-4a2.6 2.6 0 0 1 5.2 0v4" />
+        <path d="M11.4 10.5v1" />
+      </>
+    ),
+  },
+  {
+    nome: 'YouTube',
+    href: 'https://www.youtube.com/@olefoot',
+    path: (
+      <>
+        <rect x="2" y="5" width="20" height="14" rx="4.2" />
+        <path d="M10.3 9.3l5 2.7-5 2.7z" fill="currentColor" stroke="none" />
+      </>
+    ),
+  },
+] as const;
+
+function SocialLink({ nome, href, path }: { nome: string; href: string; path: React.ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer noopener"
+      aria-label={`Olefoot no ${nome}`}
+      title={nome}
+      className="rev-social rev-focus"
+      data-on="dark"
+    >
+      <svg
+        width="21"
+        height="21"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        {path}
+      </svg>
+    </a>
+  );
+}
+
 export function Footer() {
   return (
     <footer className="rev-section" style={{ background: 'var(--color-rev-black)' }}>
@@ -347,24 +419,17 @@ export function Footer() {
             Revela
           </span>
         </div>
-        <p
-          className="rev-editorial max-w-[36ch] text-[19px]"
-          style={{ color: 'rgba(237,235,228,.5)' }}
-        >
-          “Todo craque foi, um dia, um nome que ninguém conhecia.”
-        </p>
+        {/* Redes: ícone, não texto. Numa fileira de três, o rótulo escrito
+            ocupa o triplo do espaço e é lido mais devagar que a marca. */}
+        <div className="flex items-center justify-center gap-3">
+          {REDES.map((r) => (
+            <SocialLink key={r.nome} {...r} />
+          ))}
+        </div>
+
         <div className="flex flex-wrap justify-center gap-5">
           <a href="/como-funciona" className="rev-label rev-focus text-[11px]" style={{ color: 'rgba(237,235,228,.45)' }}>
             Como funciona
-          </a>
-          <a
-            href="https://instagram.com/olefootgame"
-            target="_blank"
-            rel="noreferrer noopener"
-            className="rev-label rev-focus text-[11px]"
-            style={{ color: 'var(--color-rev-yellow)' }}
-          >
-            @olefootgame
           </a>
           <a href={GAME_URL} className="rev-label rev-focus text-[11px]" style={{ color: 'rgba(237,235,228,.45)' }}>
             game.olefoot.com
