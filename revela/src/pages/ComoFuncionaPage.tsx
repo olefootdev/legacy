@@ -30,6 +30,15 @@ import {
   ORDEM_CHAVES,
   ptBrNum,
 } from '../data/trajetoria';
+import {
+  HISTORIA,
+  MATERIAS,
+  META_2030,
+  O_PROBLEMA,
+  TESE,
+  TIME,
+  VIDEO_FUNDADOR,
+} from '../data/olefoot';
 
 const AMARELO = 'var(--color-rev-yellow, #fde100)';
 const OSSO = 'rgba(237,235,228,';
@@ -106,12 +115,15 @@ export function ComoFuncionaPage({ session }: { session: { userId: string } | nu
             <Link to="/comecar" className="rev-btn rev-focus">
               Criar meu perfil
             </Link>
-            <a href="#roteiro" className="rev-btn rev-focus" data-variant="outline">
-              Como explicar pra alguém
+            <a href="#olefoot" className="rev-btn rev-focus" data-variant="outline">
+              O que é a Olefoot em 30 segundos
             </a>
           </div>
         </div>
       </section>
+
+      {/* ══ 0. Quem é a Olefoot ════════════════════════════════════════════ */}
+      <QuemEAOlefoot />
 
       {/* ══ 1. A jornada ═══════════════════════════════════════════════════ */}
       <section className="rev-section" style={{ background: 'var(--color-rev-black)' }}>
@@ -369,6 +381,215 @@ export function ComoFuncionaPage({ session }: { session: { userId: string } | nu
       </section>
     </main>
   );
+}
+
+/* ══ Quem é a Olefoot ══════════════════════════════════════════════════════ */
+
+/**
+ * O bloco institucional, e a razão dele: quem chega aqui por um link de
+ * WhatsApp não sabe se isto é uma empresa ou um golpe. Antes de pedir foto,
+ * vídeo e o telefone do responsável, a página precisa dizer quem está pedindo.
+ *
+ * Ordem deliberada — problema, tese, história, time. O problema primeiro porque
+ * é o que o atleta já vive; a empresa depois, como resposta a ele. Começar por
+ * "somos uma sport tech de 2018" é falar de nós antes de falar dele.
+ */
+function QuemEAOlefoot() {
+  const embed = VIDEO_FUNDADOR ? urlDeEmbed(VIDEO_FUNDADOR) : null;
+
+  return (
+    <section id="olefoot" className="rev-section" style={{ background: 'var(--color-rev-black)' }}>
+      <div className="rev-container">
+        <Eyebrow>O que é a Olefoot</Eyebrow>
+        <h2
+          className="rev-display mt-4 max-w-[18ch]"
+          style={{ fontSize: 'clamp(30px,5vw,60px)', color: 'var(--color-rev-bone)' }}
+        >
+          Um projeto de 2018, não um aplicativo de ontem
+        </h2>
+
+        {/* ── O problema ──────────────────────────────────────────────────── */}
+        <p className="mt-6 max-w-[56ch] text-[16px] leading-relaxed" style={{ color: `${OSSO}.72)` }}>
+          Quase todo mundo que entra numa escolinha sonha em virar profissional. Quase ninguém
+          chega:
+        </p>
+        <div
+          className="mt-6 grid gap-px overflow-hidden rounded-[14px]"
+          style={{
+            background: `${OSSO}.12)`,
+            border: `1px solid ${OSSO}.12)`,
+            gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,210px),1fr))',
+          }}
+        >
+          {O_PROBLEMA.map((x) => (
+            <div key={x.onde} className="px-5 py-5" style={{ background: 'var(--color-rev-black)' }}>
+              <p className="rev-display text-[clamp(26px,4vw,34px)] leading-none" style={{ color: AMARELO }}>
+                {x.valor}
+              </p>
+              <p className="rev-label mt-2 text-[10px]" style={{ color: `${OSSO}.45)` }}>
+                {x.onde}
+              </p>
+              <p className="mt-2 text-[13.5px] leading-snug" style={{ color: `${OSSO}.6)` }}>
+                {x.texto}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <p
+          className="rev-editorial mt-8 max-w-[24ch] text-[clamp(22px,3.4vw,34px)]"
+          style={{ color: AMARELO }}
+        >
+          {TESE}
+        </p>
+
+        {/* ── A história ──────────────────────────────────────────────────── */}
+        <h3 className="rev-display mt-14 text-[24px]" style={{ color: 'var(--color-rev-bone)' }}>
+          De onde a gente vem
+        </h3>
+        <ol className="list-none" style={{ margin: '20px 0 0', padding: 0 }}>
+          {HISTORIA.map((h) => (
+            <li
+              key={h.ano}
+              className="grid gap-4 border-t py-5"
+              style={{ gridTemplateColumns: '74px 1fr', borderColor: `${OSSO}.1)` }}
+            >
+              <span className="rev-display text-[22px] leading-none" style={{ color: AMARELO }}>
+                {h.ano}
+              </span>
+              <span>
+                <p className="text-[15px] font-semibold" style={{ color: 'var(--color-rev-bone)' }}>
+                  {h.titulo}
+                </p>
+                <p className="mt-1 max-w-[56ch] text-[14px] leading-relaxed" style={{ color: `${OSSO}.6)` }}>
+                  {h.texto}
+                </p>
+              </span>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-6 max-w-[52ch] text-[14.5px]" style={{ color: `${OSSO}.5)` }}>
+          {META_2030}
+        </p>
+
+        {/* ── O time ──────────────────────────────────────────────────────── */}
+        <h3 className="rev-display mt-14 text-[24px]" style={{ color: 'var(--color-rev-bone)' }}>
+          Quem está por trás
+        </h3>
+        <div
+          className="mt-5 grid gap-4"
+          style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,240px),1fr))' }}
+        >
+          {TIME.map((m) => (
+            <div
+              key={m.nome}
+              className="rounded-[14px] px-5 py-5"
+              style={{ background: `${OSSO}.05)`, border: `1px solid ${OSSO}.1)` }}
+            >
+              <p className="rev-label text-[9px]" style={{ color: AMARELO }}>
+                {m.papel}
+              </p>
+              <p className="rev-display mt-1.5 text-[21px] leading-none" style={{ color: 'var(--color-rev-bone)' }}>
+                {m.nome}
+              </p>
+              <p className="mt-2.5 text-[13.5px] leading-relaxed" style={{ color: `${OSSO}.6)` }}>
+                {m.texto}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* ── O vídeo — some enquanto não houver URL ───────────────────────── */}
+        {embed && (
+          <>
+            <h3 className="rev-display mt-14 text-[24px]" style={{ color: 'var(--color-rev-bone)' }}>
+              O fundador explica
+            </h3>
+            <div
+              className="mt-5 overflow-hidden rounded-[14px]"
+              style={{ aspectRatio: '16 / 9', border: `1px solid ${OSSO}.12)` }}
+            >
+              <iframe
+                src={embed}
+                title="O fundador explica a Olefoot"
+                allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture"
+                allowFullScreen
+                loading="lazy"
+                style={{ width: '100%', height: '100%', border: 0 }}
+              />
+            </div>
+          </>
+        )}
+
+        {/* ── Imprensa — some enquanto a lista estiver vazia ───────────────── */}
+        {MATERIAS.length > 0 && (
+          <>
+            <h3 className="rev-display mt-14 text-[24px]" style={{ color: 'var(--color-rev-bone)' }}>
+              Falaram da gente
+            </h3>
+            <ul className="list-none" style={{ margin: '18px 0 0', padding: 0 }}>
+              {MATERIAS.map((m) => (
+                <li key={m.url} className="border-t" style={{ borderColor: `${OSSO}.1)` }}>
+                  <a
+                    href={m.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="rev-focus flex items-baseline justify-between gap-4 py-4"
+                    data-on="dark"
+                    style={{ color: 'inherit' }}
+                  >
+                    <span className="min-w-0">
+                      <span className="rev-label block text-[9px]" style={{ color: AMARELO }}>
+                        {m.veiculo}
+                      </span>
+                      <span className="mt-1 block text-[15px] leading-snug">{m.titulo}</span>
+                    </span>
+                    <span className="shrink-0 text-[15px]" style={{ color: AMARELO }}>
+                      →
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * YouTube ou Vimeo → endereço de embed sem cookie. Mesma regra da tela do OLE
+ * SCOUT: link que não for de vídeo devolve null, e a seção some em vez de
+ * renderizar um iframe apontando pra qualquer lugar.
+ */
+function urlDeEmbed(bruto: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(bruto.trim());
+  } catch {
+    return null;
+  }
+  const host = u.hostname.replace(/^www\./, '');
+
+  if (host === 'youtu.be') {
+    const id = u.pathname.slice(1);
+    return id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` : null;
+  }
+  if (host === 'youtube.com' || host === 'm.youtube.com') {
+    if (u.pathname === '/watch') {
+      const id = u.searchParams.get('v');
+      return id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` : null;
+    }
+    const m = u.pathname.match(/^\/(shorts|embed)\/([\w-]+)/);
+    if (m) return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(m[2])}`;
+    return null;
+  }
+  if (host === 'vimeo.com') {
+    const id = u.pathname.split('/').filter(Boolean)[0];
+    return /^\d+$/.test(id ?? '') ? `https://player.vimeo.com/video/${id}` : null;
+  }
+  return null;
 }
 
 /* ══ Peças ═════════════════════════════════════════════════════════════════ */

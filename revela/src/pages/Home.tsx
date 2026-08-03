@@ -15,14 +15,12 @@ import {
   fetchLegends,
   fetchMySupports,
   fetchTalents,
-  fetchWeeklyRising,
   supportTalent,
-  type RisingTalent,
 } from '../data/revelaApi';
 import { byAthlete, isLegend, type AthleteLegend } from '../data/legends';
 import type { DivisionCount, Talent } from '../data/types';
 import { GameCta, Hero, Marquee } from '../sections/Top';
-import { Discovery, EmAlta, RevealWall } from '../sections/Talents';
+import { Discovery } from '../sections/Talents';
 import { ComoFunciona } from '../sections/Journey';
 import { Legends, Resenha } from '../sections/Legends';
 import { LigaRetro } from '../sections/LigaRetro';
@@ -41,7 +39,6 @@ export function Home({
   const [talents, setTalents] = useState<Talent[]>([]);
   const [legends, setLegends] = useState<AthleteLegend[]>([]);
   const [divisions, setDivisions] = useState<DivisionCount[]>([]);
-  const [rising, setRising] = useState<RisingTalent[]>([]);
   const [supported, setSupported] = useState<Set<string>>(new Set());
 
   /* ── Carga inicial ─────────────────────────────────────────────────────── */
@@ -55,12 +52,10 @@ export function Home({
       fetchTalents(40),
       fetchLegends(60),
       fetchDivisions(),
-      fetchWeeklyRising(8),
-    ]).then(([t, l, d, r]) => {
+    ]).then(([t, l, d]) => {
       setTalents(t);
       setLegends(byAthlete(l.filter(isLegend)));
       setDivisions(d);
-      setRising(r);
     });
   }, []);
 
@@ -134,9 +129,10 @@ export function Home({
         <Marquee />
 
         <Discovery talents={discovery} supported={supported} onSupport={handleSupport} />
+        {/* O Placar absorveu "Em alta essa semana": o recorte de 7 dias virou
+            um botão dentro dele. Duas caixas pra mesma pergunta era o que
+            fazia a home repetir o mesmo elenco. */}
         <Placar limite={10} />
-        <EmAlta rising={rising} />
-        <RevealWall talents={talents} />
         <ComoFunciona />
         <Legends legends={legends} />
         <Resenha legends={legends} />

@@ -9,7 +9,7 @@
  */
 import { getSupabase } from '@/supabase/client';
 import type { DivisionCount, Legend, Talent } from './types';
-import type { LinhaRanking, Trajetoria } from './trajetoria';
+import type { LinhaRanking, PeriodoId, Trajetoria } from './trajetoria';
 
 type TalentOrder = 'overall' | 'supporters' | 'recent';
 
@@ -45,31 +45,6 @@ export interface ResolvedHandle {
 export async function resolveHandle(handle: string): Promise<ResolvedHandle> {
   const res = await rpc<ResolvedHandle>('revela_resolve_handle', { p_handle: handle });
   return res ?? { found: false };
-}
-
-/** Um talento no ranking "Em Alta da Semana" (crescimento nos últimos 7 dias). */
-export interface RisingTalent {
-  id: string;
-  slug: string;
-  name: string;
-  pos: string;
-  club: string | null;
-  uf: string | null;
-  portrait: string | null;
-  overall: number | null;
-  carded: boolean;
-  supporters: number;
-  weeklyGain: number;
-}
-
-/**
- * "Em Alta da Semana" — ranking JUSTO por quem mais cresceu (não por total), pra
- * o novato poder liderar. Vazio quando ninguém ganhou apoiador na semana — a
- * seção some sozinha (nunca finge movimento).
- */
-export async function fetchWeeklyRising(limit = 8): Promise<RisingTalent[]> {
-  const rows = await rpc<RisingTalent[]>('revela_weekly_rising', { p_limit: limit });
-  return rows ?? [];
 }
 
 export async function fetchLegends(limit = 12): Promise<Legend[]> {
@@ -450,10 +425,12 @@ export async function enviarProva(
 export async function fetchRankingTrajetoria(
   chave: string | null,
   limit = 20,
+  periodo: PeriodoId = 'all',
 ): Promise<LinhaRanking[]> {
   const linhas = await rpc<LinhaRanking[]>('revela_trajetoria_ranking', {
     p_chave: chave,
     p_limit: limit,
+    p_periodo: periodo,
   });
   return linhas ?? [];
 }

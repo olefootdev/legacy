@@ -108,10 +108,31 @@ export interface LinhaRanking {
   name: string;
   portrait: string | null;
   chave: string;
+  /** No recorte de tempo, é o OLEKO GANHO na janela — não o total. */
   oleko: number;
   fas: number;
+  /** Fãs que entraram na janela. Zero quando o recorte é "Sempre". */
+  fasJanela?: number;
   divisao: Divisao;
 }
+
+/**
+ * Recortes de tempo do placar.
+ *
+ * ⚠️ JANELA MEDE MOVIMENTO, NÃO ACERVO. Só duas fontes de OLEKO têm data:
+ * os fãs (um a um) e o livro-razão (Instagram, pódio). Foto, vídeo, @, aval do
+ * scout, clube e rede são estados derivados — o banco sabe que ESTÁ feito, não
+ * QUANDO foi. Num recorte de 24h eles não entram, e é o certo: a pergunta ali é
+ * "quem correu hoje", não "quem tem mais".
+ */
+export const PERIODOS = [
+  { id: 'all', label: 'Sempre' },
+  { id: '24h', label: '24 horas' },
+  { id: '7d', label: '7 dias' },
+  { id: '30d', label: 'Mês' },
+] as const;
+
+export type PeriodoId = (typeof PERIODOS)[number]['id'];
 
 /** As chaves na ordem em que aparecem nas abas do placar. */
 export const ORDEM_CHAVES: readonly string[] = ['escolinha', 'junior', 'profissional', 'lenda'];
