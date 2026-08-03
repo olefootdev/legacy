@@ -86,7 +86,8 @@
     "test:competition-consequences": "tsx scripts/test-competition-consequences.ts",
     "test:style-evolution": "tsx scripts/test-style-evolution.ts",
     "test:market-offers-reducer": "tsx scripts/test-market-offers-reducer.ts",
-    "test:quatro-divisoes": "tsx scripts/test-quatro-divisoes.ts"
+    "test:quatro-divisoes": "tsx scripts/test-quatro-divisoes.ts",
+    "lint:all": "npm run lint && npm run lint:revela"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

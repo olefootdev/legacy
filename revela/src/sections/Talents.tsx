@@ -254,3 +254,44 @@ export function SupportButton({
     </button>
   );
 }
+
+/**
+ * Convite que ocupa o lugar da lista quando ainda não há talento aprovado.
+ * A página nunca finge jogador — o funil começa vazio de propósito.
+ */
+function EmptyInvite({
+  title,
+  body,
+  on,
+}: {
+  title: string;
+  body: string;
+  on: 'yellow' | 'light' | 'dark';
+}) {
+  const dark = on === 'dark';
+  return (
+    <div
+      className="mt-8 max-w-[52ch] px-6 py-7"
+      style={{
+        border: dark ? '2px dashed rgba(237,235,228,.28)' : '2px dashed rgba(13,13,13,.28)',
+        borderRadius: 'var(--radius-rev-card)',
+      }}
+    >
+      <p className="rev-display text-[26px] leading-tight">{title}</p>
+      <p
+        className="mt-2.5 text-[14px] leading-relaxed"
+        style={{ color: dark ? 'rgba(237,235,228,.6)' : 'rgba(13,13,13,.6)' }}
+      >
+        {body}
+      </p>
+      <Link
+        to="/comecar"
+        className="rev-btn rev-focus mt-5"
+        data-on={dark ? 'dark' : undefined}
+        data-variant={dark ? 'yellow' : undefined}
+      >
+        Criar meu perfil
+      </Link>
+    </div>
+  );
+}
