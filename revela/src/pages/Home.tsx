@@ -26,7 +26,7 @@ import { GameCta, Hero, Marquee } from '../sections/Top';
 import { Discovery, EmAlta, RevealWall, Torcida } from '../sections/Talents';
 import { ComoFunciona } from '../sections/Journey';
 import { Legends, Resenha } from '../sections/Legends';
-import { Divisoes, TopClubs } from '../sections/League';
+import { TopClubs } from '../sections/League';
 import { LigaRetro } from '../sections/LigaRetro';
 import { Placar } from '../sections/Placar';
 import { TeamBuilder } from '../sections/TeamBuilder';
@@ -160,7 +160,6 @@ export function Home({
         <LigaRetro />
 
         <TopClubs clubs={clubs} />
-        <Divisoes counts={divisions} />
 
       <GameCta />
     </main>
