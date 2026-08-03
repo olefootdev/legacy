@@ -437,7 +437,27 @@ body {
   }
 }
 
+/* O ponto do jogador no campo respirando. `transform-box: fill-box` porque sem
+   ele o scale de um <circle> tem origem no canto do SVG e o anel sai voando. */
+.rev-campo-pulso {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: revCampoPulso 2.8s var(--ease-rev) infinite;
+}
+
 /* ── Keyframes ─────────────────────────────────────────────────────────── */
+@keyframes revCampoPulso {
+  0%,
+  100% {
+    transform: scale(0.86);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.12;
+  }
+}
+
 @keyframes revPulse {
   0%,
   100% {

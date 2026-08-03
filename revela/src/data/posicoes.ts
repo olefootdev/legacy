@@ -68,6 +68,11 @@ export function nomeDaPosicao(code: string): string {
   return POR_CODIGO.get(code.toUpperCase())?.nome ?? code;
 }
 
+/** O que a posição faz, na língua de quem joga. Vazio se a sigla for estranha. */
+export function descricaoDaPosicao(code: string): string {
+  return POR_CODIGO.get(code.toUpperCase())?.descricao ?? '';
+}
+
 export function setorDaPosicao(code: string): string | null {
   return POR_CODIGO.get(code.toUpperCase())?.setor ?? null;
 }

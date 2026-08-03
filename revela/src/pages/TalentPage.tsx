@@ -24,7 +24,8 @@ import {
   ehLenda,
   ptBr,
 } from '../components/primitives';
-import { PES, nomeDaPosicao } from '../data/posicoes';
+import { CampoPosicao } from '../components/CampoPosicao';
+import { PES, descricaoDaPosicao, nomeDaPosicao } from '../data/posicoes';
 import { fetchMySupports, fetchTalent, supportTalent } from '../data/revelaApi';
 import { GAME_URL, signupUrl } from '../data/session';
 import { perfilInstagram } from '../data/instagram';
@@ -221,7 +222,16 @@ export function TalentPage({
               </h1>
 
               <p className="rev-label mt-5 text-[12px]" style={{ color: 'rgba(13,13,13,.62)' }}>
-                {[talent.pos, talent.club, local, idade ? `${idade} anos` : null].filter(Boolean).join(' · ')}
+                {/* Por extenso, não a sigla: a manchete é lida por quem chegou de
+                    um print no WhatsApp e não sabe o que é "LD". */}
+                {[
+                  talent.pos ? nomeDaPosicao(talent.pos) : null,
+                  talent.club,
+                  local,
+                  idade ? `${idade} anos` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </p>
 
               {/* O número de apoiadores é o coração emocional — corpo de manchete.
@@ -323,7 +333,7 @@ export function TalentPage({
           {/* ── O vídeo e o resumo, lado a lado ─────────────────────────────
               O vídeo manda: 1.6fr contra 1fr. No celular ele vem primeiro e
               ocupa tudo. */}
-          <div className="mt-9 grid items-start gap-6 lg:grid-cols-[1.6fr_1fr]">
+          <div className="mt-9 grid items-start gap-6 lg:grid-cols-[1.42fr_1fr]">
             {/* `cobrar`: só quem ainda não virou card ouve "falta pra convencer".
                 Pra quem já tem carta lançada — e pros ex-atletas — a frase
                 depreciaria uma ficha que já está fechada. */}
@@ -515,10 +525,11 @@ function VerJogando({ url, cobrar }: { url: string | null; cobrar: boolean }) {
 /**
  * O RESUMO — o que um olheiro lê antes de decidir se assiste ao vídeo inteiro.
  *
- * OVR gigante porque é o número que a pessoa procura, posição por extenso
- * porque "LD" não diz nada pra quem não é do meio, e os três atributos mais
- * altos porque ficha de dez linhas não tem hierarquia: sem destaque, o leitor
- * não sabe se ele é rápido ou se ele marca.
+ * OVR gigante porque é o número que a pessoa procura, o CAMPO porque "LD" não
+ * diz nada pra quem não é do meio e "Lateral-direito" só diz um pouco mais — um
+ * ponto aceso resolve em meio segundo. E os três atributos mais altos porque
+ * ficha de dez linhas não tem hierarquia: sem destaque, o leitor não sabe se ele
+ * é rápido ou se ele marca.
  */
 function ResumoFicha({
   talent,
@@ -532,7 +543,6 @@ function ResumoFicha({
   const idade = talent.birthYear ? new Date().getFullYear() - talent.birthYear : null;
 
   const linhas: { rotulo: string; valor: string }[] = [
-    { rotulo: 'Posição', valor: talent.pos ? nomeDaPosicao(talent.pos) : '—' },
     ...(pe ? [{ rotulo: 'Pé dominante', valor: pe }] : []),
     ...(idade ? [{ rotulo: 'Idade', valor: `${idade} anos` }] : []),
     ...(talent.club ? [{ rotulo: 'Clube', valor: talent.club }] : []),
@@ -547,32 +557,60 @@ function ResumoFicha({
         borderRadius: 'var(--radius-rev-card)',
       }}
     >
-      {talent.overall != null && (
-        <div className="flex items-end gap-3">
-          <span
-            className="rev-display tabular-nums"
-            style={{ fontSize: 64, lineHeight: 0.82, color: 'var(--color-rev-yellow)' }}
-          >
-            {talent.overall}
-          </span>
-          <span className="rev-label pb-1.5 text-[10px]" style={{ color: 'rgba(237,235,228,.45)' }}>
-            Overall
-          </span>
+      {/* ── O campo e o número, lado a lado ─────────────────────────────────
+          O campo é estreito de propósito (uma coluna de 108px): ele existe pra
+          ser LIDO de relance, não pra ser estudado. Quem quer detalhe tem a
+          ficha inteira logo abaixo. */}
+      <div className="flex items-start gap-5">
+        <div className="shrink-0" style={{ width: 'clamp(112px, 34%, 152px)' }}>
+          <CampoPosicao pos={talent.pos} />
         </div>
-      )}
 
-      <dl className="mt-6 flex flex-col gap-2.5">
-        {linhas.map((l) => (
-          <div key={l.rotulo} className="flex items-baseline justify-between gap-3">
-            <dt className="rev-label shrink-0 text-[9px]" style={{ color: 'rgba(237,235,228,.4)' }}>
-              {l.rotulo}
-            </dt>
-            <dd className="text-right text-[14px] font-semibold" style={{ color: 'var(--color-rev-bone)' }}>
-              {l.valor}
-            </dd>
-          </div>
-        ))}
-      </dl>
+        <div className="min-w-0 flex-1">
+          {talent.overall != null && (
+            <div className="flex items-end gap-2.5">
+              <span
+                className="rev-display tabular-nums"
+                style={{ fontSize: 56, lineHeight: 0.82, color: 'var(--color-rev-yellow)' }}
+              >
+                {talent.overall}
+              </span>
+              <span className="rev-label pb-1 text-[10px]" style={{ color: 'rgba(237,235,228,.45)' }}>
+                Overall
+              </span>
+            </div>
+          )}
+          <p
+            className="rev-display mt-4 text-[19px] leading-none"
+            style={{ color: 'var(--color-rev-bone)' }}
+          >
+            {talent.pos ? nomeDaPosicao(talent.pos) : 'Posição a definir'}
+          </p>
+          {talent.pos && (
+            <p className="mt-1.5 text-[13px] leading-snug" style={{ color: 'rgba(237,235,228,.42)' }}>
+              {descricaoDaPosicao(talent.pos)}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Nada é obrigatório no cadastro: cada linha aqui só existe se ele
+          preencheu. A lista inteira some quando não preencheu nenhuma — melhor
+          um bloco a menos que uma fileira de travessões. */}
+      {linhas.length > 0 && (
+        <dl className="mt-6 flex flex-col gap-2.5">
+          {linhas.map((l) => (
+            <div key={l.rotulo} className="flex items-baseline justify-between gap-3">
+              <dt className="rev-label shrink-0 text-[9px]" style={{ color: 'rgba(237,235,228,.4)' }}>
+                {l.rotulo}
+              </dt>
+              <dd className="text-right text-[14px] font-semibold" style={{ color: 'var(--color-rev-bone)' }}>
+                {l.valor}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
 
       {fortes.length > 0 && (
         <div className="mt-6 border-t pt-5" style={{ borderColor: 'rgba(237,235,228,.1)' }}>
