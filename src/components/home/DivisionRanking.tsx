@@ -4,7 +4,7 @@
  * Pedido do fundador (2026-07-24): antes da Resenha, mostrar os 10 primeiros da
  * divisão em que o manager compete, e a posição dele nela.
  *
- * POR QUE A DIVISÃO, E NÃO O GERAL: numa liga com 3 divisões, promoção e
+ * POR QUE A DIVISÃO, E NÃO O GERAL: numa liga com divisões, promoção e
  * rebaixamento acontecem DENTRO da divisão. O ranking geral (todos misturados)
  * diz menos ao manager que "onde estou entre meus pares diretos". O
  * RankingTop10 já cobre o geral; este é o recorte que importa pra decisão.
@@ -16,15 +16,11 @@
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { globalDivisionName } from '@/match/globalLeagueMVP';
 
 export type DivisionRankRow = { entryId: string; team: string; points: number; isMe: boolean };
 
-/** 1/2/3 → nome, na nomenclatura que o jogo já usa (globalLeagueMVPReducer). */
-const DIVISION_NAME: Record<number, string> = {
-  1: 'Elite',
-  2: 'Intermediária',
-  3: 'Acesso',
-};
+
 
 export function DivisionRanking({
   division,
@@ -46,7 +42,7 @@ export function DivisionRanking({
   // Sem divisão definida (liga ainda não classificou) → não mostra nada.
   if (division == null || top.length === 0) return null;
 
-  const nome = DIVISION_NAME[division] ?? `Divisão ${division}`;
+  const nome = globalDivisionName(division);
   const meNoTop = top.some((r) => r.isMe);
 
   return (

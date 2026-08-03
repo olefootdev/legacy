@@ -197,11 +197,46 @@ export interface DailyCrown {
 export const GLOBAL_LEAGUE_MVP_CONSTANTS = {
   MIN_TEAMS: 32,
   PLAYOFF_ROUNDS: 6, // 3 rodadas ida/volta
-  DIVISIONS: 3,
+  /**
+   * Quantas divisões a liga tem. Passou de 3 pra 4 em 2026-08-03.
+   *
+   * ⚠️ ESTE VALOR SÓ MANDA DE VERDADE DESDE HOJE. Até esta data ele existia mas
+   * era decorativo: distribuição, promoção, rebaixamento e divisão de entrada
+   * tinham o `3` cravado no corpo das funções. Mudar a constante não mudava
+   * nada — e é exatamente esse tipo de configuração mentirosa que faz alguém
+   * "trocar pra 4" e jurar que fez.
+   *
+   * A migração de verdade acontece no RESET de temporada: a constante decide
+   * como os times são redistribuídos.
+   */
+  DIVISIONS: 4,
   PROMOTION_PERCENTAGE: 0.1, // 10%
   RELEGATION_PERCENTAGE: 0.1, // 10%
   ROUND_INTERVAL_MS: 5 * 60 * 1000, // 5 min entre kickoffs (slot ativo)
 } as const;
+
+/**
+ * Nome de cada divisão — a FONTE ÚNICA.
+ *
+ * Existiam três cópias desta lista (home do jogo, reducer e a tela retro do
+ * REVELA), duas delas escritas como ternário de dois níveis que devolvia
+ * "Acesso" pra qualquer divisão acima de 2. No dia em que a 4ª nasceu, a
+ * Várzea seria anunciada como Acesso em dois lugares e como Várzea num
+ * terceiro. Nome de divisão é vocabulário de produto: tem que sair igual em
+ * toda tela.
+ */
+export const GLOBAL_DIVISION_NAME: Record<number, string> = {
+  1: 'Elite',
+  2: 'Intermediária',
+  3: 'Acesso',
+  4: 'Várzea',
+};
+
+/** Nome da divisão, com queda segura pra "Divisão N" se a liga crescer. */
+export function globalDivisionName(division: number | null | undefined): string {
+  if (division == null) return 'Sem divisão';
+  return GLOBAL_DIVISION_NAME[division] ?? `Divisão ${division}`;
+}
 
 /** Criar time inicial */
 export function createGlobalTeam(
@@ -282,7 +317,11 @@ export function registerTeam(
     return league;
   }
 
-  const division = league.status === 'active' ? 3 : undefined;
+  // Clube novo entra pela ÚLTIMA divisão — a porta de entrada é sempre a de
+  // baixo. Com o `3` cravado, virar a liga pra 4 divisões faria todo mundo
+  // continuar nascendo na 3 e a divisão de baixo nasceria vazia.
+  const division =
+    league.status === 'active' ? GLOBAL_LEAGUE_MVP_CONSTANTS.DIVISIONS : undefined;
   const newTeam = createGlobalTeam(managerId, clubName, clubShort, overall, division);
   return {
     ...league,
@@ -476,14 +515,17 @@ export function distributeIntoDivisions(teams: GlobalTeam[]): GlobalTeam[] {
     return a.clubName.localeCompare(b.clubName);
   });
 
-  // Distribuir em 3 divisões (~11 times cada)
-  const teamsPerDivision = Math.ceil(teams.length / 3);
+  // Distribuir nas divisões configuradas, em fatias iguais.
+  const totalDivisoes = GLOBAL_LEAGUE_MVP_CONSTANTS.DIVISIONS;
+  const teamsPerDivision = Math.ceil(teams.length / totalDivisoes);
 
   return sorted.map((team, index) => {
     const division = Math.floor(index / teamsPerDivision) + 1;
     return {
       ...team,
-      division: Math.min(division, 3), // Garantir que não passe de 3
+      // O `ceil` acima pode empurrar o último time pra uma divisão a mais
+      // quando o total não divide redondo — o clamp é o que segura.
+      division: Math.min(division, totalDivisoes),
       position: (index % teamsPerDivision) + 1,
     };
   });
@@ -708,7 +750,7 @@ export function applyPromotionRelegation(league: GlobalLeagueMVPState): GlobalLe
   const updatedTeams: GlobalTeam[] = [];
 
   // Processar cada divisão
-  for (let division = 1; division <= 3; division++) {
+  for (let division = 1; division <= GLOBAL_LEAGUE_MVP_CONSTANTS.DIVISIONS; division++) {
     const divTeams = byDivision.get(division) || [];
     // ORDENA pela classificação real (DESC: pontos > V > SG > GP) antes de
     // calcular promoção/rebaixamento. Sem isso, a ordem do Map é a de inserção
@@ -732,7 +774,10 @@ export function applyPromotionRelegation(league: GlobalLeagueMVPState): GlobalLe
         newDivision = division - 1;
       }
       // Rebaixamento (bottom 10%) — desce pra divisão de baixo (número maior)
-      else if (division < 3 && index >= teamsCount - relegationCount) {
+      else if (
+        division < GLOBAL_LEAGUE_MVP_CONSTANTS.DIVISIONS &&
+        index >= teamsCount - relegationCount
+      ) {
         newDivision = division + 1;
       }
 

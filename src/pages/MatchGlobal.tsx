@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Activity, Clock, ArrowUp, ArrowDown, History, ChevronDown } from 'lucide-react';
 import type { GlobalFixture } from '@/match/globalMatch';
 import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
+import { GLOBAL_LEAGUE_MVP_CONSTANTS } from '@/match/globalLeagueMVP';
 import type { GlobalTeam, PlayoffRound } from '@/match/globalLeagueMVP';
 import { SCHEDULER_CONFIG } from '@/match/globalRoundScheduler';
 import { DailyCycleHero } from '@/components/matchglobal/DailyCycleHero';
@@ -744,7 +745,7 @@ function ProjectedDivisionMini({
 function ProjectedDivisionsGrid({
   teams,
   roundNumber,
-  totalDivisions = 3,
+  totalDivisions = GLOBAL_LEAGUE_MVP_CONSTANTS.DIVISIONS,
 }: {
   teams: GlobalTeam[];
   roundNumber: number;

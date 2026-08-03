@@ -12,6 +12,7 @@ import {
   finalizeLeagueRound,
   applyPromotionRelegation,
   adminStartPlayoffs,
+  globalDivisionName,
   type GlobalLeagueMVPState,
 } from '@/match/globalLeagueMVP';
 import { simulateGlobalRound } from '@/match/globalMatchSimulator';
@@ -231,7 +232,7 @@ export function handleFinishGlobalPlayoffRound(
     const userTeam = updatedLeague.teams.find(t => t.managerId === managerId);
 
     if (userTeam && userTeam.division) {
-      const divisionName = userTeam.division === 1 ? 'Elite' : userTeam.division === 2 ? 'Intermediária' : 'Acesso';
+      const divisionName = globalDivisionName(userTeam.division);
       notifications.push(
         makeInboxItem(
           `division_assigned_${Date.now()}`,

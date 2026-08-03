@@ -85,7 +85,8 @@
     "test:legends-cup-reducer": "tsx scripts/test-legends-cup-reducer.ts",
     "test:competition-consequences": "tsx scripts/test-competition-consequences.ts",
     "test:style-evolution": "tsx scripts/test-style-evolution.ts",
-    "test:market-offers-reducer": "tsx scripts/test-market-offers-reducer.ts"
+    "test:market-offers-reducer": "tsx scripts/test-market-offers-reducer.ts",
+    "test:quatro-divisoes": "tsx scripts/test-quatro-divisoes.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

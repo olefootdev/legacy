@@ -18,7 +18,7 @@
  * regra real da liga (10% do tamanho da divisão, ceil).
  */
 import { useEffect, useState } from 'react';
-import { GLOBAL_LEAGUE_MVP_CONSTANTS } from '@/match/globalLeagueMVP';
+import { GLOBAL_LEAGUE_MVP_CONSTANTS, globalDivisionName } from '@/match/globalLeagueMVP';
 import { Eyebrow } from '../components/primitives';
 import {
   fetchStandings,
@@ -29,17 +29,15 @@ import {
 } from '../data/revelaApi';
 import { GAME_URL } from '../data/session';
 
-/** Nome da divisão — a nomenclatura que o jogo já usa (globalLeagueMVPReducer). */
-const DIVISION_NAME: Record<number, string> = {
-  1: 'Elite',
-  2: 'Intermediária',
-  3: 'Acesso',
-  4: 'Várzea',
-};
-
-function nomeDivisao(d: number): string {
-  return DIVISION_NAME[d] ?? `Divisão ${d}`;
-}
+/**
+ * O nome vem do JOGO, não daqui.
+ *
+ * Esta lista era uma cópia. Cópia de vocabulário é a coisa que mais silenciosa
+ * mente diverge: o dia em que a divisão 4 nasceu, duas telas do jogo ainda a
+ * chamavam de "Acesso" e só esta dizia "Várzea". Agora é uma definição só,
+ * importada de `@/match/globalLeagueMVP`.
+ */
+const nomeDivisao = globalDivisionName;
 
 type Status = 'sobe' | 'fica' | 'cai' | 'lider';
 
