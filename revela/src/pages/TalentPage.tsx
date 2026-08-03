@@ -25,6 +25,8 @@ import {
   ptBr,
 } from '../components/primitives';
 import { CampoPosicao } from '../components/CampoPosicao';
+import { RadarAtributos } from '../components/RadarAtributos';
+import { completudePct, computeCompletude } from '../data/completude';
 import { PES, descricaoDaPosicao, nomeDaPosicao } from '../data/posicoes';
 import { fetchMySupports, fetchTalent, supportTalent } from '../data/revelaApi';
 import { GAME_URL, signupUrl } from '../data/session';
@@ -341,17 +343,36 @@ export function TalentPage({
             <ResumoFicha talent={talent} attrs={attrs} />
           </div>
 
-          {/* ── A ficha em números ──────────────────────────────────────────── */}
+          {/* ── A ficha: forma de um lado, número do outro ───────────────────
+              Dois atletas de OVR 79 são a mesma linha numa tabela e são
+              jogadores completamente diferentes. O radar resolve isso sem
+              ninguém ler nada; os tiles ao lado dão a precisão que a forma não
+              dá. Um não substitui o outro — eles fazem trabalhos diferentes. */}
           {attrs.length > 0 ? (
             <>
-              {/* 2 ou 5 colunas, nunca no meio: são 10 atributos. Com `auto-fit`
-                  dava 7 numa linha e 3 sobrando — ficha de scout não tem sobra. */}
-              <div className="mt-12 grid grid-cols-2 gap-2.5 md:grid-cols-5">
-                {attrs.map((a) => (
-                  <AtributoTile key={a.key} label={a.label} value={a.value} />
-                ))}
+              <div className="mt-12 grid items-center gap-8 lg:grid-cols-[1fr_1.35fr]">
+                <div className="mx-auto w-full max-w-[430px]">
+                  <RadarAtributos eixos={attrs} />
+                  {/* A legenda só faz sentido com os dez eixos: é a ordem de
+                      ATTR_ORDER que joga o ofício na direita e a cabeça na
+                      esquerda. Com a ficha pela metade, a leitura seria falsa. */}
+                  {attrs.length === 10 && (
+                    <p
+                      className="rev-label mt-1 text-center text-[9px]"
+                      style={{ color: 'rgba(237,235,228,.34)' }}
+                    >
+                      Direita: o ofício · Esquerda: a cabeça
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {attrs.map((a) => (
+                    <AtributoTile key={a.key} label={a.label} value={a.value} />
+                  ))}
+                </div>
               </div>
-              <p className="mt-5 text-[13px]" style={{ color: 'rgba(237,235,228,.42)' }}>
+              <p className="mt-7 text-[13px]" style={{ color: 'rgba(237,235,228,.42)' }}>
                 Ficha montada pelo OLE SCOUT — a mesma que ele leva pro campo dentro do game.
               </p>
             </>
@@ -404,7 +425,11 @@ export function TalentPage({
                 ))}
               </div>
 
-              {/* Selos de Craque — conquistas colecionáveis derivadas do estado. */}
+              {/* Duas naturezas, dois blocos. O de cima ele resolve hoje,
+                  sozinho; o de baixo depende de olheiro e de torcida. Juntos,
+                  davam um contador que dizia "você falhou" pra quem tinha feito
+                  a parte dele inteira. */}
+              <CompletudeBlock talent={talent} />
               <SelosBlock talent={talent} />
             </div>
           </div>
@@ -656,37 +681,101 @@ function AtributoTile({ label, value }: { label: string; value: number }) {
 
   return (
     <div
-      className="px-4 pb-3.5 pt-4"
+      className="flex items-center gap-3.5 px-4 py-3"
       style={{
         background: 'var(--color-rev-surface)',
         border: '1px solid rgba(237,235,228,.09)',
         borderRadius: 12,
       }}
     >
-      <span className="rev-display block tabular-nums" style={{ fontSize: 38, lineHeight: 0.85, color: cor }}>
+      <span
+        className="rev-display shrink-0 text-right tabular-nums"
+        style={{ fontSize: 32, lineHeight: 0.85, color: cor, width: 46 }}
+      >
         {value}
       </span>
-      <p className="rev-label mt-2 text-[9px]" style={{ color: 'rgba(237,235,228,.42)' }}>
-        {label}
-      </p>
-      <div className="mt-2.5 h-[3px] overflow-hidden rounded-full" style={{ background: 'rgba(237,235,228,.1)' }}>
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${Math.max(0, Math.min(100, value))}%`,
-            background: cor,
-            transition: 'width .8s var(--ease-rev)',
-          }}
-        />
+      <div className="min-w-0 flex-1">
+        <p className="rev-label text-[9px]" style={{ color: 'rgba(237,235,228,.42)' }}>
+          {label}
+        </p>
+        <div className="mt-2 h-[3px] overflow-hidden rounded-full" style={{ background: 'rgba(237,235,228,.1)' }}>
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: `${Math.max(0, Math.min(100, value))}%`,
+              background: cor,
+              transition: 'width .8s var(--ease-rev)',
+            }}
+          />
+        </div>
       </div>
     </div>
   );
 }
 
 /**
- * SELOS DE CRAQUE — as conquistas do talento. Desbloqueado brilha (prova social
- * pra quem visita); bloqueado fica fosco com a meta ("faltam X apoiadores"), o
- * que puxa o talento a completar a estante.
+ * PERFIL COMPLETO — o que o atleta resolve hoje, sozinho.
+ *
+ * A regra do produto é não obrigar ninguém a preencher nada: quem trava o
+ * cadastro perde o moleque na terceira pergunta. O que existe é RECOMPENSA —
+ * cada campo preenchido acende um item aqui e deixa a página mais forte.
+ *
+ * Por isso a barra é de conquista e não de pendência: ela conta o que ele já
+ * fez. E os itens que faltam aparecem apagados com o rótulo, não com um "erro" —
+ * a página de um atleta não é um formulário reprovado.
+ */
+function CompletudeBlock({ talent }: { talent: Talent }) {
+  const itens = computeCompletude(talent);
+  const feitos = itens.filter((i) => i.feito).length;
+  const pct = completudePct(itens);
+
+  return (
+    <div className="mt-10">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="rev-label text-[10px]" style={{ color: 'rgba(237,235,228,.5)' }}>
+          Perfil completo
+        </span>
+        <span className="rev-label text-[10px]" style={{ color: 'var(--color-rev-yellow)' }}>
+          {feitos} de {itens.length}
+        </span>
+      </div>
+
+      <div className="mt-2.5 h-2 overflow-hidden rounded-sm" style={{ background: 'rgba(255,255,255,.12)' }}>
+        <div
+          className="h-full rounded-sm"
+          style={{
+            width: `${pct}%`,
+            background: 'var(--color-rev-yellow)',
+            transition: 'width .8s var(--ease-rev)',
+          }}
+        />
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {itens.map((i) => (
+          <span
+            key={i.id}
+            title={i.feito ? i.label : i.comoFazer}
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold"
+            style={
+              i.feito
+                ? { background: 'rgba(253,225,0,.12)', color: 'var(--color-rev-yellow)', border: '1px solid rgba(253,225,0,.45)' }
+                : { background: 'transparent', color: 'rgba(237,235,228,.32)', border: '1px dashed rgba(237,235,228,.18)' }
+            }
+          >
+            {i.feito && <span aria-hidden>✓</span>}
+            {i.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * SELOS DE CRAQUE — o que o MUNDO devolve. Desbloqueado brilha (prova social pra
+ * quem visita); bloqueado fica fosco com a meta ("faltam X fãs"), o que puxa o
+ * talento a completar a estante.
  */
 function SelosBlock({ talent }: { talent: Talent }) {
   const selos = computeSelos(talent);

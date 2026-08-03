@@ -1,13 +1,20 @@
 /**
- * SELOS DE CRAQUE — as conquistas colecionáveis do talento.
+ * SELOS DE CRAQUE — o que o MUNDO devolve pro atleta.
  *
- * Gamificação simples: cada selo é um `true/false` derivado do dado que o perfil
- * JÁ tem (foto, vídeo, apoiadores, status). Sem tabela, sem sistema de pontos —
- * só a leitura do estado atual. Desbloqueado = prova social no perfil público;
- * bloqueado = uma meta clara ("faltam X apoiadores").
+ * Gamificação simples: cada selo é um `true/false` derivado do estado atual. Sem
+ * tabela, sem sistema de pontos. Desbloqueado = prova social no perfil público;
+ * bloqueado = uma meta clara ("faltam X fãs").
  *
- * A ordem é a da jornada: primeiro o que depende só dele (ficha), depois o aval
- * externo (scout), depois a torcida (dezena → centena), e no fim o card.
+ * ── O QUE SAIU DAQUI, E POR QUÊ ─────────────────────────────────────────────
+ * "Ficha completa" morava aqui e foi embora pra `completude.ts`. Ela era a única
+ * que dependia SÓ DELE, e misturada com as outras estragava o contador: quem
+ * tinha 3 fãs lia "2 de 6" e entendia que tinha falhado, quando tinha feito a
+ * parte dele inteira e só faltava o mundo responder.
+ *
+ * A régua agora é: se o atleta consegue resolver hoje, sozinho, é COMPLETUDE.
+ * Se depende de olheiro, de torcida ou de lançamento, é SELO.
+ *
+ * A ordem é a da jornada: o aval externo, a torcida (dezena → centena), o card.
  */
 import type { Talent } from './types';
 
@@ -26,13 +33,6 @@ const faltam = (n: number, alvo: number) =>
 export function computeSelos(t: Talent): Selo[] {
   const s = t.supporters ?? 0;
   return [
-    {
-      id: 'ficha',
-      label: 'Ficha completa',
-      icon: '📋',
-      unlocked: Boolean(t.portrait && t.video),
-      hint: 'Adicione foto e vídeo à ficha',
-    },
     {
       id: 'scout',
       label: 'Aval do OLE SCOUT',
@@ -71,7 +71,7 @@ export function computeSelos(t: Talent): Selo[] {
   ];
 }
 
-/** Quantos selos já foram conquistados (pro contador "4 de 6"). */
+/** Quantos selos já foram conquistados (pro contador "3 de 5"). */
 export function selosUnlocked(selos: Selo[]): number {
   return selos.filter((x) => x.unlocked).length;
 }
