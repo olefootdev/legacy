@@ -128,6 +128,47 @@ const STATUS_STYLE: Record<CardStatus, { bg: string; fg: string; label: string }
   'card-ready': { bg: '#FDE100', fg: '#0D0D0D', label: 'Card pronto' },
 };
 
+/* ══ Selo de LEGEND ════════════════════════════════════════════════════════ */
+
+/**
+ * Ex-atleta na vitrine (`gameSituation === 'lenda'`).
+ *
+ * NÃO entra no vocabulário de adesivos acima de propósito. Aqueles medem
+ * TRAJETÓRIA — quem acabou de chegar, quem está subindo, quem bombou na semana.
+ * A trajetória de um ex-atleta já aconteceu: chamá-lo de "Novo" seria apagar a
+ * carreira dele. Este selo diz QUEM é a pessoa, não em que pé está o cadastro,
+ * então mora no canto oposto e usa o itálico serifado, que no REVELA é
+ * reservado a lenda.
+ *
+ * O ex-atleta continua na mesma vitrine, recebendo apoio e entrando no ranking
+ * da semana como qualquer outro — decisão do fundador. O selo é reconhecimento,
+ * não separação.
+ */
+export function LegendMark({ compact = false }: { compact?: boolean }) {
+  return (
+    <span
+      className="rev-editorial inline-flex items-center"
+      style={{
+        background: '#0D0D0D',
+        color: 'var(--color-rev-yellow)',
+        border: '1px solid rgba(253,225,0,.5)',
+        borderRadius: 4,
+        padding: compact ? '3px 7px' : '4px 10px',
+        fontSize: compact ? 12 : 15,
+        letterSpacing: '.02em',
+        lineHeight: 1,
+      }}
+    >
+      Legend
+    </span>
+  );
+}
+
+/** Único lugar que decide se um talento é ex-atleta. */
+export function ehLenda(gameSituation: string | null | undefined): boolean {
+  return gameSituation === 'lenda';
+}
+
 export function Sticker({ status, rotate = 0 }: { status: CardStatus; rotate?: number }) {
   const s = STATUS_STYLE[status];
   return (

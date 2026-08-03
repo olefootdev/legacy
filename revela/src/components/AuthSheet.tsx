@@ -1,13 +1,23 @@
 /**
- * Folha de login — aparece quando a ação exige conta (apoiar, criar perfil).
+ * Folha de conta — aparece quando a ação exige login (virar fã, criar perfil).
  *
- * Só LOGIN. Criar conta manda pro jogo, porque é lá que a árvore de indicação
- * é montada (ver a nota em data/session.ts). Meia dúzia de linhas a mais aqui
- * criaria usuário órfão sem crédito de rede.
+ * ── POR QUE ELA PASSOU A CRIAR CONTA AQUI DENTRO ────────────────────────────
+ * Até 2026-08-02 esta folha só fazia LOGIN: quem não tinha conta era mandado
+ * pro `game.olefoot.com/cadastro`. Ou seja, **pra virar fã de um amigo a pessoa
+ * tinha que ir criar um clube num jogo de gerenciamento de futebol.** Com meta
+ * de 10.000 fãs por atleta, esse funil não fecha — é o gargalo da campanha
+ * inteira.
+ *
+ * O medo original era criar usuário órfão, sem crédito de rede. Não procede:
+ * `signUpRevela()` já carrega o `referred_by_code` guardado por
+ * `captureReferralFromUrl()`, que é a MESMA via que o cadastro do jogo usa.
+ * Conta criada aqui nasce com indicador quando existe indicador.
+ *
+ * O caminho pro jogo continua ali embaixo — pra quem quer o clube, não o fã.
  */
 import { forwardRef, useEffect, useRef, useState, type FormEvent } from 'react';
 import { signInWithEmail } from '@/supabase/auth';
-import { signupUrl } from '../data/session';
+import { signUpRevela, signupUrl } from '../data/session';
 
 export function AuthSheet({
   open,
@@ -23,11 +33,18 @@ export function AuthSheet({
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [modo, setModo] = useState<'entrar' | 'criar'>('criar');
+  const [aviso, setAviso] = useState<string | null>(null);
   const firstField = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setAviso(null);
+    // Abre em CRIAR CONTA de propósito: quem esbarra nesta folha quase sempre
+    // chegou pelo link de um atleta e nunca ouviu falar da Olefoot. Abrir em
+    // "entrar" faria essa pessoa procurar o botão certo antes de fazer nada.
+    setModo('criar');
     const t = setTimeout(() => firstField.current?.focus(), 60);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -46,13 +63,44 @@ export function AuthSheet({
     if (busy) return;
     setBusy(true);
     setError(null);
-    const res = await signInWithEmail(email, password);
-    setBusy(false);
-    if (res.ok) {
-      onClose();
+    setAviso(null);
+
+    if (modo === 'entrar') {
+      const res = await signInWithEmail(email, password);
+      setBusy(false);
+      if (res.ok) {
+        onClose();
+        return;
+      }
+      setError(res.error ?? 'Não deu pra entrar. Confere e-mail e senha.');
       return;
     }
-    setError(res.error ?? 'Não deu pra entrar. Confere e-mail e senha.');
+
+    const res = await signUpRevela(email, password);
+    setBusy(false);
+
+    if (!res.ok) {
+      // E-mail já cadastrado é o erro mais comum aqui — e a saída não é um
+      // texto vermelho, é trocar o modo da folha pra pessoa entrar.
+      const jaExiste = /already|registered|exists/i.test(res.error ?? '');
+      if (jaExiste) {
+        setModo('entrar');
+        setAviso('Esse e-mail já tem conta. Entra com a tua senha.');
+        return;
+      }
+      setError(res.error ?? 'Não deu pra criar a conta. Tenta de novo.');
+      return;
+    }
+
+    if (!res.sessao) {
+      // Confirmação de e-mail ligada no projeto: a conta existe mas não há
+      // sessão. Não dá pra fingir que deu certo — a ação que ela queria fazer
+      // continua bloqueada até confirmar.
+      setAviso('Conta criada! Confirma o e-mail que te mandamos e volta aqui.');
+      return;
+    }
+
+    onClose();
   }
 
   return (
@@ -77,9 +125,13 @@ export function AuthSheet({
         <p className="rev-label text-[11px]" style={{ color: 'var(--color-rev-yellow)' }}>
           {reason}
         </p>
-        <h2 className="rev-display mt-2 text-[34px]">Entra na Olefoot</h2>
+        <h2 className="rev-display mt-2 text-[34px]">
+          {modo === 'criar' ? 'Cria tua conta' : 'Entra na Olefoot'}
+        </h2>
         <p className="mt-2 text-[13px] leading-relaxed" style={{ color: 'rgba(237,235,228,.6)' }}>
-          É a mesma conta do jogo. Se ainda não tem, cria em 1 minuto — é de graça.
+          {modo === 'criar'
+            ? 'E-mail e senha, só isso. É de graça e leva 10 segundos — a mesma conta serve pro jogo depois.'
+            : 'É a mesma conta do jogo.'}
         </p>
 
         <form onSubmit={submit} className="mt-6 flex flex-col gap-3">
@@ -96,8 +148,14 @@ export function AuthSheet({
             type="password"
             value={password}
             onChange={setPassword}
-            autoComplete="current-password"
+            autoComplete={modo === 'criar' ? 'new-password' : 'current-password'}
           />
+
+          {aviso && (
+            <p className="text-[12px]" style={{ color: 'var(--color-rev-yellow)' }}>
+              {aviso}
+            </p>
+          )}
 
           {error && (
             <p className="text-[12px]" style={{ color: 'var(--color-rev-danger)' }}>
@@ -110,19 +168,44 @@ export function AuthSheet({
             className="rev-btn rev-focus mt-1"
             data-variant="yellow"
             data-on="dark"
-            disabled={busy || !email.trim() || !password}
+            disabled={busy || !email.trim() || password.length < 6}
           >
-            {busy ? 'Entrando…' : 'Entrar'}
+            {busy
+              ? modo === 'criar'
+                ? 'Criando…'
+                : 'Entrando…'
+              : modo === 'criar'
+                ? 'Criar conta e continuar'
+                : 'Entrar'}
           </button>
+          {modo === 'criar' && (
+            <p className="text-[11px]" style={{ color: 'rgba(237,235,228,.38)' }}>
+              Senha de 6 caracteres pra cima.
+            </p>
+          )}
         </form>
 
         <div className="mt-5 flex flex-col gap-2 border-t pt-4" style={{ borderColor: 'rgba(255,255,255,.08)' }}>
+          <button
+            type="button"
+            onClick={() => {
+              setModo((m) => (m === 'criar' ? 'entrar' : 'criar'));
+              setError(null);
+              setAviso(null);
+            }}
+            className="rev-label rev-focus self-start text-[11px]"
+            style={{ color: 'var(--color-rev-yellow)' }}
+          >
+            {modo === 'criar' ? 'Já tenho conta — entrar' : 'Não tenho conta — criar agora'}
+          </button>
+          {/* Quem quer o CLUBE, não só a conta, continua indo pro jogo — é lá
+              que o onboarding de manager acontece. */}
           <a
             href={signupUrl()}
             className="rev-label rev-focus text-[11px]"
-            style={{ color: 'var(--color-rev-yellow)' }}
+            style={{ color: 'rgba(237,235,228,.45)' }}
           >
-            Não tenho conta — criar agora →
+            Quero criar meu clube no game →
           </a>
           <button
             type="button"

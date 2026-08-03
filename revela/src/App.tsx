@@ -10,7 +10,7 @@
  * lugar diferente bem na hora em que ia decidir comprar. Agora a vitrine da
  * lenda é uma rota daqui, com a mesma cara.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthSheet } from './components/AuthSheet';
 import { MeuPerfilPage } from './pages/MeuPerfilPage';
@@ -34,19 +34,40 @@ export default function App() {
   const [authReason, setAuthReason] = useState<string | null>(null);
   const { message, push } = useToast();
 
+  /**
+   * A ação que a pessoa TENTOU fazer antes de a folha de conta aparecer.
+   *
+   * Sem isto, quem clica em "SOU FÃ", cria a conta e volta pra tela encontra o
+   * mesmo botão intocado — e precisa lembrar de clicar de novo. Bem no ponto de
+   * maior atrito do funil, que é justamente onde a campanha não pode perder
+   * ninguém.
+   */
+  const pendente = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     captureReferralFromUrl();
     void currentSession().then(setSession);
-    return onSessionChange(setSession);
+    return onSessionChange((s) => {
+      setSession(s);
+      if (!s || !pendente.current) return;
+      const acao = pendente.current;
+      pendente.current = null;
+      // Um tick depois: o estado de sessão das páginas precisa ter descido
+      // antes, senão a ação roda de novo sem credencial.
+      setTimeout(acao, 0);
+    });
   }, []);
 
-  const requireAuth = useCallback((reason: string) => setAuthReason(reason), []);
+  const requireAuth = useCallback((reason: string, aoEntrar?: () => void) => {
+    pendente.current = aoEntrar ?? null;
+    setAuthReason(reason);
+  }, []);
 
   return (
     <BrowserRouter>
       <Nav
         session={session}
-        onLogin={() => setAuthReason('Entra pra apoiar e salvar teu time')}
+        onLogin={() => requireAuth('Entra pra apoiar e salvar teu time')}
         onLogout={() => void signOut()}
       />
 

@@ -13,7 +13,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '../components/primitives';
-import { fetchMeuTalento, type MeuTalento } from '../data/revelaApi';
+import { Trajetoria } from '../components/Trajetoria';
+import { fetchMeuTalento, fetchMinhaTrajetoria, type MeuTalento } from '../data/revelaApi';
+import type { Trajetoria as TrajetoriaData } from '../data/trajetoria';
 import type { RevelaSession } from '../data/session';
 
 /** O funil dos 7 passos, colapsado no que o atleta precisa saber agora. */
@@ -47,9 +49,10 @@ export function MeuPerfilPage({
   requireAuth,
 }: {
   session: RevelaSession | null;
-  requireAuth: (motivo: string) => void;
+  requireAuth: (motivo: string, aoEntrar?: () => void) => void;
 }) {
   const [talento, setTalento] = useState<MeuTalento | null>(null);
+  const [trajetoria, setTrajetoria] = useState<TrajetoriaData | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [copiado, setCopiado] = useState(false);
 
@@ -59,7 +62,11 @@ export function MeuPerfilPage({
       return;
     }
     setCarregando(true);
-    setTalento(await fetchMeuTalento());
+    // Em paralelo: a Trajetória não depende da ficha pra ser buscada, e
+    // serializar atrasaria o painel inteiro por nada.
+    const [t, tr] = await Promise.all([fetchMeuTalento(), fetchMinhaTrajetoria()]);
+    setTalento(t);
+    setTrajetoria(tr);
     setCarregando(false);
   }, [session]);
 
@@ -196,7 +203,7 @@ export function MeuPerfilPage({
       {/* ── Os números que já são dele ─────────────────────────────────── */}
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Numero valor={talento.overall != null ? String(talento.overall) : '—'} rotulo="Overall" />
-        <Numero valor={String(talento.supporters)} rotulo="Apoiadores" />
+        <Numero valor={String(talento.supporters)} rotulo="Fãs" />
         <Numero
           valor={new Date(talento.createdAt).toLocaleDateString('pt-BR')}
           rotulo="Ficha enviada"
@@ -250,6 +257,29 @@ export function MeuPerfilPage({
           </p>
         )}
       </section>
+
+      {/* A Trajetória some inteira se a migration ainda não estiver aplicada —
+          o painel é alicerce, ela é camada. */}
+      {trajetoria && (
+        <Trajetoria
+          dados={trajetoria}
+          linkPerfil={publico ? link : null}
+          story={
+            publico
+              ? {
+                  nome: talento.name,
+                  pos: talento.pos,
+                  clube: talento.club,
+                  overall: talento.overall,
+                  fas: trajetoria.fas,
+                  divisao: trajetoria.divisao,
+                  portrait: talento.portrait,
+                  url: link,
+                }
+              : null
+          }
+        />
+      )}
     </main>
   );
 }

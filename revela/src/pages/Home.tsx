@@ -28,6 +28,7 @@ import { ComoFunciona } from '../sections/Journey';
 import { Legends, Resenha } from '../sections/Legends';
 import { Divisoes, TopClubs } from '../sections/League';
 import { LigaRetro } from '../sections/LigaRetro';
+import { Placar } from '../sections/Placar';
 import { TeamBuilder } from '../sections/TeamBuilder';
 
 export function Home({
@@ -36,7 +37,7 @@ export function Home({
   onNote,
 }: {
   session: { userId: string } | null;
-  requireAuth: (reason: string) => void;
+  requireAuth: (reason: string, aoEntrar?: () => void) => void;
   onNote: (title: string, body?: string, tone?: 'yellow' | 'green') => void;
 }) {
   const [talents, setTalents] = useState<Talent[]>([]);
@@ -85,7 +86,7 @@ export function Home({
 
     if (!res.ok) {
       if (res.reason === 'auth_required') {
-        requireAuth('Pra apoiar, entra na tua conta');
+        requireAuth('Pra virar fã, cria tua conta', () => void handleSupport(talent));
         return;
       }
       onNote('Não deu pra registrar o apoio', 'Tenta de novo em instantes.');
@@ -102,11 +103,6 @@ export function Home({
   }
 
   /* ── Derivados ─────────────────────────────────────────────────────────── */
-  const featured = useMemo(() => {
-    if (talents.length === 0) return null;
-    return talents.find((t) => t.featured) ?? talents[0];
-  }, [talents]);
-
   const totalSupporters = useMemo(
     () => talents.reduce((sum, t) => sum + t.supporters, 0),
     [talents],
@@ -139,10 +135,11 @@ export function Home({
 
   return (
     <main>
-        <Hero featured={featured} stats={heroStats} />
+        <Hero stats={heroStats} />
         <Marquee />
 
         <Discovery talents={discovery} supported={supported} onSupport={handleSupport} />
+        <Placar limite={10} />
         <EmAlta rising={rising} />
         <Torcida talents={talents} />
         <ComoFunciona />

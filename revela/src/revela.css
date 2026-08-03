@@ -265,6 +265,78 @@ body {
     box-shadow: var(--shadow-rev-light);
   }
 
+  /* ── Hero fotográfico ──────────────────────────────────────────────────── */
+  /* A foto é o hero. O texto se ancora na BASE porque é a única faixa do
+     quadro que é escura em toda a largura — em cima, à esquerda, tem o muro
+     amarelo do grafite, e amarelo sobre amarelo não se lê. */
+  .rev-hero-shot {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    /* Alto de propósito no celular: a foto é cortada pela LARGURA, então a
+       única forma de o jogador subir e sair de trás da manchete é o quadro
+       crescer. Baixo demais, "DESCUBRA" cai em cima do rosto dele. */
+    min-height: clamp(580px, 88svh, 780px);
+  }
+  .rev-hero-shot__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* No celular o corte é vertical e engole as laterais: puxa pro jogador,
+       sem perder o portal à direita dele. */
+    object-position: 46% 50%;
+    z-index: -2;
+  }
+  .rev-hero-shot__veil {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(13, 13, 13, 0.6) 0%,
+        rgba(13, 13, 13, 0.12) 22%,
+        rgba(13, 13, 13, 0.58) 48%,
+        rgba(13, 13, 13, 0.9) 74%,
+        var(--color-rev-black) 100%
+      );
+  }
+  .rev-hero-shot__body {
+    position: relative;
+    padding: clamp(56px, 9vw, 96px) var(--rev-pad-x) clamp(36px, 5vw, 64px);
+  }
+  @media (min-width: 900px) {
+    .rev-hero-shot__img {
+      object-position: 50% 38%;
+    }
+    /* Em tela larga o texto ocupa a coluna da esquerda e o portal fica livre
+       à direita — o véu ganha um reforço lateral só aí. */
+    .rev-hero-shot__veil {
+      background:
+        linear-gradient(
+          90deg,
+          rgba(13, 13, 13, 0.72) 0%,
+          rgba(13, 13, 13, 0.28) 46%,
+          rgba(13, 13, 13, 0) 72%
+        ),
+        linear-gradient(
+          180deg,
+          rgba(13, 13, 13, 0.55) 0%,
+          rgba(13, 13, 13, 0.08) 30%,
+          rgba(13, 13, 13, 0.42) 60%,
+          rgba(13, 13, 13, 0.84) 82%,
+          var(--color-rev-black) 100%
+        );
+    }
+    .rev-hero-shot__body > * {
+      max-width: 720px;
+    }
+  }
+
   /* ── Card pôster ───────────────────────────────────────────────────────── */
   .rev-poster {
     border: 3px solid var(--color-rev-black);

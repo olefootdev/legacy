@@ -2,14 +2,17 @@
  * Topo do REVELA: nav, hero-pôster e marquee.
  *
  * O hero é a promessa da marca em uma tela: "DESCUBRA QUEM ESTÁ CHEGANDO".
- * O card flutuante à direita não é ilustração — é um talento REAL do banco. Se
- * ainda não houver nenhum aprovado, o card vira convite ("pode ser você"), que
- * é uma verdade melhor que um jogador inventado.
+ * A cena é a própria tese do produto — o beco, o grafite, o portal aberto pro
+ * estádio. Por isso a foto ocupa a tela inteira e o texto vira amarelo em cima
+ * dela, em vez do bloco amarelo chapado de antes.
+ *
+ * O card flutuante saiu daqui de propósito: sobre esta foto ele tapava o portal
+ * (o único elemento que explica o produto sem legenda) e repetia, acima da
+ * dobra, o mesmo talento que a seção Descoberta mostra logo abaixo.
  */
 import { useState } from 'react';
-import { OvrBadge, Portrait, Sticker, ptBr, useCountUp } from '../components/primitives';
+import { ptBr, useCountUp } from '../components/primitives';
 import { GAME_URL, signupUrl } from '../data/session';
-import type { Talent } from '../data/types';
 
 // Âncoras com a barra na frente: a partir de /lenda/<slug> um '#lendas' puro
 // não sairia do lugar. Com '/#lendas' o navegador volta pra home e desce.
@@ -172,63 +175,83 @@ export interface HeroStat {
   label: string;
 }
 
-export function Hero({ featured, stats }: { featured: Talent | null; stats: HeroStat[] }) {
-
+export function Hero({ stats }: { stats: HeroStat[] }) {
   return (
-    <section
-      id="topo"
-      className="rev-section relative overflow-hidden"
-      style={{ background: 'var(--color-rev-yellow)', color: '#0D0D0D' }}
-    >
-      <div className="rev-container relative z-10 grid items-center gap-12 lg:grid-cols-[1.15fr_.85fr]">
-        {/* ── Coluna da promessa ─────────────────────────────────────────── */}
-        <div>
+    <section id="topo" className="rev-hero-shot" style={{ background: '#0D0D0D' }}>
+      {/* A foto. `srcSet` existe porque o arquivo grande tem 334 KB e o celular
+          — que é onde o atleta está — não precisa de 1536px de largura. */}
+      <img
+        src="/revela/hero-portal-1536.jpg"
+        srcSet="/revela/hero-portal-960.jpg 960w, /revela/hero-portal-1536.jpg 1536w"
+        sizes="100vw"
+        width={1536}
+        height={1024}
+        fetchPriority="high"
+        decoding="async"
+        alt="Jogador de costas num beco, diante de um portal de energia que abre para um estádio lotado. Na parede, o grafite REVELA."
+        className="rev-hero-shot__img"
+      />
+
+      {/* Véu escuro. Sobe da base, onde o texto mora, e deixa o portal inteiro
+          visível no meio da tela — é ele que conta a história sem legenda. */}
+      <div className="rev-hero-shot__veil" aria-hidden="true" />
+
+      <div className="rev-hero-shot__body rev-container">
+        <span
+          className="rev-label inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[10px]"
+          style={{
+            background: 'rgba(13,13,13,.72)',
+            color: 'var(--color-rev-yellow)',
+            border: '1px solid rgba(253,225,0,.34)',
+            backdropFilter: 'blur(6px)',
+          }}
+        >
           <span
-            className="rev-label inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[10px]"
-            style={{ background: '#0D0D0D', color: 'var(--color-rev-yellow)' }}
+            className="rev-anim-pulse inline-block rounded-full"
+            style={{ width: 7, height: 7, background: 'var(--color-rev-yellow)' }}
+          />
+          A nova cena do futebol · ao vivo
+        </span>
+
+        <h1
+          className="rev-hero-type mt-5"
+          style={{ color: 'var(--color-rev-yellow)', textShadow: '0 3px 28px rgba(13,13,13,.72)' }}
+        >
+          Descubra
+          <br />
+          quem está
+          <br />
+          chegando.
+        </h1>
+
+        <p
+          className="rev-label mt-5 max-w-[46ch] text-[13px] leading-[1.8]"
+          style={{ color: 'rgba(237,235,228,.78)', letterSpacing: '.06em' }}
+        >
+          O portal onde talento vira card, lenda vira legado e você entra em campo com os dois.
+        </p>
+
+        <div className="mt-7 flex flex-wrap gap-3">
+          <a href="#descobrir" className="rev-btn rev-focus" data-variant="yellow" data-on="dark">
+            Explorar talentos
+          </a>
+          <a
+            href="#como-funciona"
+            className="rev-btn rev-focus"
+            data-variant="outline"
+            data-on="dark"
           >
-            <span
-              className="rev-anim-pulse inline-block rounded-full"
-              style={{ width: 7, height: 7, background: 'var(--color-rev-yellow)' }}
-            />
-            A nova cena do futebol · ao vivo
-          </span>
+            Como funciona
+          </a>
+        </div>
 
-          <h1 className="rev-hero-type mt-6">
-            Descubra
-            <br />
-            quem está
-            <br />
-            chegando.
-          </h1>
-
-          <p
-            className="rev-label mt-6 max-w-[46ch] text-[13px] leading-[1.8]"
-            style={{ color: 'rgba(13,13,13,.68)', letterSpacing: '.06em' }}
-          >
-            O portal onde talento vira card, lenda vira legado e você entra em campo com os dois.
-          </p>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a href="#descobrir" className="rev-btn rev-focus">
-              Explorar talentos
-            </a>
-            <a href="#como-funciona" className="rev-btn rev-focus" data-variant="outline">
-              Como funciona
-            </a>
-          </div>
-
-          <div className="mt-10 flex flex-wrap gap-x-10 gap-y-6">
+        {stats.length > 0 && (
+          <div className="mt-9 flex flex-wrap gap-x-10 gap-y-6">
             {stats.map((s) => (
               <Stat key={s.label} value={s.value} label={s.label} />
             ))}
           </div>
-        </div>
-
-        {/* ── Card flutuante ─────────────────────────────────────────────── */}
-        <div className="relative mx-auto w-full max-w-[330px]">
-          {featured ? <HeroCard talent={featured} /> : <HeroInvite />}
-        </div>
+        )}
       </div>
     </section>
   );
@@ -238,69 +261,16 @@ function Stat({ value, label }: { value: number; label: string }) {
   const shown = useCountUp(value, 1400);
   return (
     <div>
-      <p className="rev-display text-[42px] leading-none tabular-nums">{ptBr(shown)}</p>
-      <p className="rev-label mt-1.5 text-[10px]" style={{ color: 'rgba(13,13,13,.55)' }}>
+      <p
+        className="rev-display text-[clamp(30px,5vw,42px)] leading-none tabular-nums"
+        style={{ color: 'var(--color-rev-bone)' }}
+      >
+        {ptBr(shown)}
+      </p>
+      <p className="rev-label mt-1.5 text-[10px]" style={{ color: 'rgba(237,235,228,.5)' }}>
         {label}
       </p>
     </div>
-  );
-}
-
-function HeroCard({ talent }: { talent: Talent }) {
-  return (
-    <article className="rev-anim-float rev-poster relative" style={{ borderRadius: 'var(--radius-rev-card-lg)' }}>
-      <Portrait src={talent.portrait} alt={talent.name} ratio="4 / 5" width={360} priority />
-
-      <div className="absolute left-3 top-3">
-        <OvrBadge value={talent.overall} />
-      </div>
-      <div className="absolute right-3 top-3">
-        <Sticker status={talent.carded ? 'card-ready' : 'rising'} rotate={4} />
-      </div>
-
-      {/* Placa de nome com trilho amarelo — a assinatura de identidade. */}
-      <div
-        className="rev-rail absolute inset-x-3 bottom-3 px-3.5 py-2.5"
-        style={{ background: 'rgba(13,13,13,.9)', backdropFilter: 'blur(6px)', borderRadius: 6 }}
-      >
-        <p className="rev-display text-[22px] leading-none" style={{ color: 'var(--color-rev-bone)' }}>
-          {talent.name}
-        </p>
-        <p className="rev-label mt-1 text-[10px]" style={{ color: 'rgba(237,235,228,.55)' }}>
-          {[talent.pos, talent.club, talent.uf].filter(Boolean).join(' · ')}
-        </p>
-      </div>
-    </article>
-  );
-}
-
-/**
- * Sem talento aprovado ainda, o hero não finge. Ele convida — que é literalmente
- * a proposta do produto: o próximo nome pode ser o seu.
- */
-function HeroInvite() {
-  return (
-    <article
-      className="rev-anim-float rev-poster grid place-items-center px-7 text-center"
-      style={{ aspectRatio: '4 / 5', borderRadius: 'var(--radius-rev-card-lg)' }}
-    >
-      <div>
-        <span className="rev-label text-[10px]" style={{ color: 'var(--color-rev-yellow)' }}>
-          Vaga aberta
-        </span>
-        <p className="rev-display mt-3 text-[38px] leading-[.9]" style={{ color: 'var(--color-rev-bone)' }}>
-          O próximo
-          <br />
-          nome
-          <br />
-          pode ser
-          <br />o seu.
-        </p>
-        <a href="/comecar" className="rev-btn rev-focus mt-6" data-variant="yellow">
-          Criar meu perfil
-        </a>
-      </div>
-    </article>
   );
 }
 

@@ -9,6 +9,7 @@
  */
 import { getSupabase } from '@/supabase/client';
 import type { ClubRank, DivisionCount, Legend, Talent } from './types';
+import type { LinhaRanking, Trajetoria } from './trajetoria';
 
 type TalentOrder = 'overall' | 'supporters' | 'recent';
 
@@ -404,4 +405,30 @@ export interface MeuTalento {
 
 export async function fetchMeuTalento(): Promise<MeuTalento | null> {
   return rpc<MeuTalento>('revela_my_talent');
+}
+
+/**
+ * A Trajetória do atleta logado — OLEKO, divisão e o estado de cada missão.
+ *
+ * Devolve `null` em dois casos que a tela trata igual (não mostra o bloco):
+ * conta sem ficha, e migration ainda não aplicada. O painel continua de pé sem
+ * a Trajetória — ela é camada, não alicerce.
+ */
+export async function fetchMinhaTrajetoria(): Promise<Trajetoria | null> {
+  return rpc<Trajetoria>('revela_my_trajetoria');
+}
+
+/**
+ * O placar da Trajetória. `chave = null` traz o geral; com chave, só a
+ * categoria (escolinha · junior · profissional · lenda).
+ */
+export async function fetchRankingTrajetoria(
+  chave: string | null,
+  limit = 20,
+): Promise<LinhaRanking[]> {
+  const linhas = await rpc<LinhaRanking[]>('revela_trajetoria_ranking', {
+    p_chave: chave,
+    p_limit: limit,
+  });
+  return linhas ?? [];
 }

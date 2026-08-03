@@ -17,6 +17,13 @@ export interface Talent {
   slug: string;
   name: string;
   pos: string;
+  /**
+   * Situação de jogo: escolinha | junior | profissional | lenda.
+   * É o único campo do cadastro que a vitrine usa pra saber que o cadastrado é
+   * um EX-ATLETA. Opcional porque só chega depois da migration que o incluiu na
+   * lista branca das RPCs públicas (20260802140000).
+   */
+  gameSituation?: string | null;
   club: string | null;
   city: string | null;
   uf: string | null;

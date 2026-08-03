@@ -21,7 +21,7 @@ export interface Selo {
 }
 
 const faltam = (n: number, alvo: number) =>
-  `Faltam ${Math.max(0, alvo - n)} apoiadores`;
+  `Faltam ${Math.max(0, alvo - n)} fãs`;
 
 export function computeSelos(t: Talent): Selo[] {
   const s = t.supporters ?? 0;

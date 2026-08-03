@@ -13,9 +13,11 @@ import { Link } from 'react-router-dom';
 import {
   AttrBar,
   Eyebrow,
+  LegendMark,
   OvrBadge,
   Portrait,
   Sticker,
+  ehLenda,
   keyAttrs,
   ptBr,
 } from '../components/primitives';
@@ -52,8 +54,8 @@ export function Discovery({
     >
       <div className="rev-container">
         <Eyebrow on="yellow">Descoberta</Eyebrow>
-        <h2 className="rev-display mt-4 max-w-[16ch]" style={{ fontSize: 'clamp(34px,5.6vw,72px)' }}>
-          Você ainda não conhece esses nomes.
+        <h2 className="rev-display mt-4 max-w-[18ch]" style={{ fontSize: 'clamp(34px,5.4vw,70px)' }}>
+          Olefoot é parceira oficial dos novos talentos
         </h2>
 
         {talents.length === 0 ? (
@@ -136,8 +138,9 @@ function TalentCard({
         <div className="absolute left-2.5 top-2.5">
           <OvrBadge value={talent.overall} />
         </div>
-        <div className="absolute right-2.5 top-2.5">
+        <div className="absolute right-2.5 top-2.5 flex flex-col items-end gap-1.5">
           <Sticker status={status} />
+          {ehLenda(talent.gameSituation) && <LegendMark compact />}
         </div>
 
         {/* Camada revelada — nome + como joga. */}
@@ -198,7 +201,7 @@ function TalentCard({
             {ptBr(talent.supporters)}
           </span>
           <span className="rev-label text-[9px]" style={{ color: 'rgba(237,235,228,.45)' }}>
-            {talent.supporters === 1 ? 'apoiador' : 'apoiadores'}
+            {talent.supporters === 1 ? 'fã' : 'fãs'}
           </span>
         </span>
         <SupportButton supported={supported} onClick={onSupport} />
@@ -225,7 +228,7 @@ export function SupportButton({
       type="button"
       onClick={onClick}
       disabled={supported}
-      aria-label={supported ? 'Você já está na torcida' : 'Apoiar este jogador'}
+      aria-label={supported ? 'Você já está na torcida' : 'Virar fã deste jogador'}
       className="rev-label rev-focus"
       data-on="dark"
       style={{
@@ -242,7 +245,7 @@ export function SupportButton({
         transition: 'all var(--dur-rev-micro) var(--ease-rev)',
       }}
     >
-      {supported ? '✓ Na torcida' : 'Apoiar'}
+      {supported ? '✓ Na torcida' : 'Sou fã'}
     </button>
   );
 }
@@ -508,7 +511,7 @@ function RisingCard({ t, rank }: { t: RisingTalent; rank: number }) {
             className="inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
             style={{ background: 'rgba(34,197,94,.16)', color: '#4ade80', border: '1px solid rgba(34,197,94,.35)' }}
           >
-            ↑ +{t.weeklyGain} {t.weeklyGain === 1 ? 'apoiador' : 'apoiadores'} essa semana
+            ↑ +{t.weeklyGain} {t.weeklyGain === 1 ? 'fã' : 'fãs'} essa semana
           </span>
         </div>
       </Link>

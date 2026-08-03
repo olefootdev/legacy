@@ -16,7 +16,15 @@
  */
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ATTR_LABEL, AttrBar, Eyebrow, Portrait, ptBr } from '../components/primitives';
+import {
+  ATTR_LABEL,
+  AttrBar,
+  Eyebrow,
+  LegendMark,
+  Portrait,
+  ehLenda,
+  ptBr,
+} from '../components/primitives';
 import { fetchMySupports, fetchTalent, supportTalent } from '../data/revelaApi';
 import { GAME_URL, signupUrl } from '../data/session';
 import { computeSelos, selosUnlocked } from '../data/selos';
@@ -59,7 +67,7 @@ export function TalentPage({
   onNote,
 }: {
   session: { userId: string } | null;
-  requireAuth: (reason: string) => void;
+  requireAuth: (reason: string, aoEntrar?: () => void) => void;
   onNote: (title: string, body?: string, tone?: 'yellow' | 'green') => void;
 }) {
   const { slug = '' } = useParams<{ slug: string }>();
@@ -112,7 +120,7 @@ export function TalentPage({
 
     if (!res.ok) {
       if (res.reason === 'auth_required') {
-        requireAuth(`Pra apoiar ${primeiroNome(talent.name)}, entra na tua conta`);
+        requireAuth(`Pra virar fã de ${primeiroNome(talent.name)}, cria tua conta`, () => void apoiar());
         return;
       }
       onNote('Não deu pra registrar o apoio', 'Tenta de novo em instantes.');
@@ -156,6 +164,7 @@ export function TalentPage({
   const shareUrl = `${window.location.origin}/t/${talent.slug}`;
   const idade = talent.birthYear ? new Date().getFullYear() - talent.birthYear : null;
   const local = [talent.city, talent.uf].filter(Boolean).join(' · ');
+  const lenda = ehLenda(talent.gameSituation);
   const attrs = ATTR_ORDER.map((k) => ({
     key: k,
     label: ATTR_LABEL[k] ?? k,
@@ -192,13 +201,17 @@ export function TalentPage({
 
           <div className="mt-8 grid items-center gap-10 lg:grid-cols-[1.05fr_.95fr]">
             <div>
-              <span
-                className="rev-label inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[10px]"
-                style={{ background: '#0D0D0D', color: 'var(--color-rev-yellow)' }}
-              >
-                {talent.carded ? 'Card jogável' : 'Revelação'}
-                {talent.overall != null && ` · ${talent.overall} OVR`}
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className="rev-label inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[10px]"
+                  style={{ background: '#0D0D0D', color: 'var(--color-rev-yellow)' }}
+                >
+                  {/* Ex-atleta não é "Revelação": ele já foi revelado. */}
+                  {talent.carded ? 'Card jogável' : lenda ? 'Ex-atleta' : 'Revelação'}
+                  {talent.overall != null && ` · ${talent.overall} OVR`}
+                </span>
+                {lenda && <LegendMark />}
+              </div>
 
               <h1 className="rev-hero-type mt-6" style={{ fontSize: 'clamp(40px,7.5vw,104px)' }}>
                 {talent.name}
@@ -241,7 +254,7 @@ export function TalentPage({
                       : undefined
                   }
                 >
-                  {supported ? '✓ Você está na torcida' : busy ? 'Registrando…' : 'Apoiar'}
+                  {supported ? '✓ Você está na torcida' : busy ? 'Registrando…' : 'Sou fã'}
                 </button>
                 <button type="button" onClick={compartilhar} className="rev-btn rev-focus" data-variant="outline" data-on="yellow">
                   Compartilhar
