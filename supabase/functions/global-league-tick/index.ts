@@ -532,7 +532,19 @@ function generatePlayoffRoundsAndFixtures(
   return { rounds, fixtures };
 }
 
-function distributeIntoDivisions(teams: TeamRow[], totalDivisions = 3): TeamRow[] {
+/**
+ * Quantas divisões a liga tem. ESPELHA `GLOBAL_LEAGUE_MVP_CONSTANTS.DIVISIONS`
+ * de `src/match/globalLeagueMVP.ts` — a Edge roda em Deno e não importa do
+ * bundle do cliente, então a duplicação é estrutural. Mudar uma exige mudar a
+ * outra, e é por isso que o número está aqui em cima, sozinho, em vez de
+ * espalhado em sete lugares como estava até 2026-08-03.
+ */
+const DIVISIONS = 4;
+
+/** A porta de entrada é sempre a de baixo. */
+const ENTRY_DIVISION = DIVISIONS;
+
+function distributeIntoDivisions(teams: TeamRow[], totalDivisions = DIVISIONS): TeamRow[] {
   // Primário: overall (mais alto = divisão 1) — funciona para 1ª distribuição
   // quando todos os playoff_* são 0 (modo "só liga, sem playoffs").
   // Secundário: playoff_points/wins/gd para preservar critério antigo se algum dia
@@ -726,7 +738,7 @@ async function crownDivisionChampions(
   supabase: any, teams: TeamRow[], state: StateRow, now: number,
 ): Promise<string[]> {
   const crowned: string[] = [];
-  for (let division = 1; division <= 3; division++) {
+  for (let division = 1; division <= DIVISIONS; division++) {
     const champ = divisionLeader(teams, division);
     if (!champ) continue;
     const prize = SEASON_PRIZES[division] ?? { ole: 0, exp: 0 };
@@ -1111,7 +1123,7 @@ async function runSeasonReset(
   }));
   for (const t of reorganized) {
     if (!t.division) {
-      t.division = 3; t.points = 0; t.matches_played = 0; t.wins = 0; t.draws = 0;
+      t.division = ENTRY_DIVISION; t.points = 0; t.matches_played = 0; t.wins = 0; t.draws = 0;
       t.losses = 0; t.goals_for = 0; t.goals_against = 0; t.goal_difference = 0; t.recent_form = [];
     }
   }
@@ -1131,6 +1143,133 @@ async function runSeasonReset(
   return {
     ok: true, step: 'season-reset', seasonId,
     teams: reorganized.length, rounds: rounds.length, fixtures: fixtures.length,
+    firstKickoffUtc: rounds[0] ? new Date(rounds[0].scheduled_kickoff_ms).toISOString() : null,
+  };
+}
+
+/**
+ * Ordena por DESEMPENHO DA TEMPORADA — pontos, vitórias, saldo, gols feitos.
+ *
+ * POR QUE NÃO POR `overall`, que é o critério do `distributeIntoDivisions`:
+ * aquele nasceu pra PRIMEIRA distribuição, quando ninguém jogou ainda — e o
+ * próprio comentário dele diz isso. Hoje a liga tem uma temporada inteira
+ * disputada, e o `overall` está esmagado: em 2026-08-03, 57 dos 75 clubes
+ * (76%) tinham exatamente OVR 40. Com os desempates de playoff zerados, quem
+ * decidia de fato era a ORDEM ALFABÉTICA DO NOME DO CLUBE — o líder da liga
+ * (Pacafut, 79 pontos) cairia pro Acesso e um clube de 69 pontos iria pra
+ * Várzea, porque o nome começava com P.
+ *
+ * Ordenar pela tabela faz a nova pirâmide ser consequência do que aconteceu em
+ * campo, que é o único critério que um manager reconhece como justo.
+ */
+function ordenarPorDesempenho(teams: TeamRow[]): TeamRow[] {
+  return [...teams].sort((a, b) => {
+    if ((b.points ?? 0) !== (a.points ?? 0)) return (b.points ?? 0) - (a.points ?? 0);
+    if ((b.wins ?? 0) !== (a.wins ?? 0)) return (b.wins ?? 0) - (a.wins ?? 0);
+    const aD = (a.goals_for ?? 0) - (a.goals_against ?? 0);
+    const bD = (b.goals_for ?? 0) - (b.goals_against ?? 0);
+    if (bD !== aD) return bD - aD;
+    if ((b.goals_for ?? 0) !== (a.goals_for ?? 0)) return (b.goals_for ?? 0) - (a.goals_for ?? 0);
+    return a.club_name.localeCompare(b.club_name);
+  });
+}
+
+/**
+ * REDISTRIBUIÇÃO — remonta a pirâmide a partir da classificação atual.
+ *
+ * POR QUE PRECISOU EXISTIR (2026-08-03, liga indo de 3 pra 4 divisões):
+ * nenhuma das duas ações que já existiam servia.
+ *
+ *   `runSeasonReset`  faz promoção/rebaixamento — move ±1 divisão. NUNCA cria
+ *                     uma divisão que não existe. A Várzea nasceria vazia.
+ *   `runFullWipe`     zera antes de distribuir e ordena por `overall` — ver o
+ *                     comentário de `ordenarPorDesempenho`.
+ *
+ * ⚠️ A ORDEM DAS OPERAÇÕES É O PONTO DELICADO. A classificação é lida do estado
+ * ORIGINAL, antes de qualquer zeragem. Zerar primeiro e ordenar depois daria
+ * uma tabela de zeros e a pirâmide sairia alfabética de novo — o mesmo erro,
+ * por outro caminho.
+ *
+ * `apagarHistorico` decide se o all-time morre junto. É um parâmetro explícito,
+ * sem valor padrão, porque essa é a diferença entre "nova temporada" e "a liga
+ * nunca existiu" — e ninguém deve conseguir apagar 471 mil pontos de histórico
+ * por esquecer de passar uma flag.
+ */
+async function runRedistribute(
+  supabase: any, now: number, slots: string[], slotDurationMin: number,
+  apagarHistorico: boolean,
+): Promise<Record<string, unknown>> {
+  const { data: tData } = await supabase.from('global_league_teams').select('*');
+  const teams = (tData as TeamRow[]) ?? [];
+  if (teams.length < 2) {
+    return { ok: false, step: 'redistribute', reason: 'not-enough-teams', count: teams.length };
+  }
+  const seasonId = `season_${now}`;
+  const antes = new Map(teams.map((t) => [t.id, t.division]));
+
+  // 1) ORDENA (com a tabela ainda de pé) e já carimba a divisão.
+  const ordenados = ordenarPorDesempenho(teams);
+  const porDivisao = Math.ceil(teams.length / DIVISIONS);
+  const comDivisao = ordenados.map((t, i) => ({
+    ...t,
+    division: Math.min(Math.floor(i / porDivisao) + 1, DIVISIONS),
+    position: (i % porDivisao) + 1,
+  }));
+
+  // 2) SÓ ENTÃO zera.
+  const zeroTemporada = {
+    points: 0, matches_played: 0, wins: 0, draws: 0, losses: 0,
+    goals_for: 0, goals_against: 0, goal_difference: 0, recent_form: [],
+    previous_position: null,
+    playoff_points: 0, playoff_matches_played: 0, playoff_wins: 0, playoff_draws: 0,
+    playoff_losses: 0, playoff_goals_for: 0, playoff_goals_against: 0,
+    injury_modifier: 0, injury_rounds_remaining: 0,
+    yellow_card_count: 0, suspension_rounds_remaining: 0,
+  };
+  const zeroHistorico = {
+    all_time_points: 0, all_time_matches_played: 0, all_time_wins: 0, all_time_draws: 0,
+    all_time_losses: 0, all_time_goals_for: 0, all_time_goals_against: 0,
+    all_time_seasons_played: 0, season_crowns: 0, all_time_crowns: 0,
+    daily_points: 0, daily_matches_played: 0, daily_wins: 0, daily_draws: 0, daily_losses: 0,
+    daily_goals_for: 0, daily_goals_against: 0, daily_goal_difference: 0,
+    rivalry_encounters: {},
+  };
+  const finais = comDivisao.map((t) => ({
+    ...t,
+    ...zeroTemporada,
+    ...(apagarHistorico ? zeroHistorico : {}),
+  }));
+
+  // 3) Limpa o calendário velho e grava.
+  await supabase.from('global_league_events').delete().neq('id', '');
+  await supabase.from('global_league_fixtures').delete().neq('id', '');
+  await supabase.from('global_league_rounds').delete().neq('id', '');
+  await supabase.from('global_league_teams').upsert(finais as any, { onConflict: 'id' });
+
+  const { data: after } = await supabase.from('global_league_teams').select('*');
+  const withDiv = (after as TeamRow[]) ?? [];
+  const { rounds, fixtures } = generateLeagueRoundsAndFixtures(withDiv, seasonId, now, slots, slotDurationMin);
+  if (rounds.length > 0) await supabase.from('global_league_rounds').upsert(rounds as any, { onConflict: 'id' });
+  if (fixtures.length > 0) await supabase.from('global_league_fixtures').upsert(fixtures as any, { onConflict: 'id' });
+
+  await supabase.from('global_league_state').update({
+    status: 'active', season_id: seasonId, season_name: `OLEFOOT LIGA — ${seasonId}`,
+    current_playoff_round: null, current_league_round: 1,
+  }).eq('id', 'current');
+
+  const contagem: Record<string, number> = {};
+  let mudaram = 0;
+  for (const t of finais) {
+    contagem[String(t.division)] = (contagem[String(t.division)] ?? 0) + 1;
+    if (antes.get(t.id) !== t.division) mudaram++;
+  }
+
+  return {
+    ok: true, step: 'redistribute', seasonId,
+    divisions: DIVISIONS, teams: finais.length,
+    historicoApagado: apagarHistorico,
+    porDivisao: contagem, mudaramDeDivisao: mudaram,
+    rounds: rounds.length, fixtures: fixtures.length,
     firstKickoffUtc: rounds[0] ? new Date(rounds[0].scheduled_kickoff_ms).toISOString() : null,
   };
 }
@@ -1209,18 +1348,33 @@ Deno.serve(async (req: Request) => {
   // (env LEAGUE_ADMIN_SECRET). Não depende da service key, não vaza metadados.
   // Se o segredo não estiver configurado, o gatilho fica DESLIGADO (fail-safe).
   //   1) supabase secrets set LEAGUE_ADMIN_SECRET=<valor-forte>   (o fundador escolhe)
-  //   2a) reset SUAVE (mantém histórico): ?admin_action=force-season-reset
-  //   2b) reset ABSOLUTO (zera histórico tb): ?admin_action=force-full-wipe
+  //   2a) reset SUAVE (promo/rele, mantém histórico): ?admin_action=force-season-reset
+  //   2b) REDISTRIBUIR por desempenho, mantendo histórico:
+  //         ?admin_action=force-redistribute
+  //       REDISTRIBUIR e APAGAR o histórico all-time (irreversível):
+  //         ?admin_action=force-redistribute-wipe
+  //   2c) reset ABSOLUTO (zera histórico também):       ?admin_action=force-full-wipe
   //       curl -X POST "<fn-url>?admin_action=<acao>" -H "x-admin-key: <valor>"
   const adminAction = req.headers.get('x-admin-action')
     ?? new URL(req.url).searchParams.get('admin_action');
-  if (adminAction === 'force-season-reset' || adminAction === 'force-full-wipe') {
+  if (
+    adminAction === 'force-season-reset' ||
+    adminAction === 'force-redistribute' ||
+    adminAction === 'force-redistribute-wipe' ||
+    adminAction === 'force-full-wipe'
+  ) {
     const adminSecret = Deno.env.get('LEAGUE_ADMIN_SECRET') ?? '';
     const provided = req.headers.get('x-admin-key')?.trim() ?? '';
     if (adminSecret.length >= 8 && provided === adminSecret) {
-      const result = adminAction === 'force-full-wipe'
-        ? await runFullWipe(supabase, now, slots, slotDurationMin)
-        : await runSeasonReset(supabase, state, now, { promoPct, relePct, slots, slotDurationMin });
+      const result =
+        adminAction === 'force-full-wipe'
+          ? await runFullWipe(supabase, now, slots, slotDurationMin)
+          : adminAction === 'force-redistribute' || adminAction === 'force-redistribute-wipe'
+            ? await runRedistribute(
+                supabase, now, slots, slotDurationMin,
+                adminAction === 'force-redistribute-wipe',
+              )
+            : await runSeasonReset(supabase, state, now, { promoPct, relePct, slots, slotDurationMin });
       return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } });
     }
     return new Response(JSON.stringify({
@@ -1389,7 +1543,7 @@ Deno.serve(async (req: Request) => {
       // Incluir times órfãos (registrados mid-season) na 3ª divisão
       for (const team of reorganized) {
         if (!team.division) {
-          team.division = 3;
+          team.division = ENTRY_DIVISION;
           team.points = 0;
           team.matches_played = 0;
           team.wins = 0;
@@ -1475,15 +1629,15 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // 3.5 Incluir times órfãos na 3ª divisão + gerar fixtures mid-season
+  // 3.5 Incluir times órfãos na divisão de ENTRADA + gerar fixtures mid-season
   // Skip em REST: igual blocos 1 e 3, evita carga DB desnecessária à noite.
   if (!inLeagueRest && state.status === 'active') {
-    // (a) Setar division=3 para times sem divisão
-    await supabase.from('global_league_teams').update({ division: 3 }).is('division', null);
+    // (a) Time sem divisão entra pela porta de baixo
+    await supabase.from('global_league_teams').update({ division: ENTRY_DIVISION }).is('division', null);
 
     // (b) Detectar times na Div 3 sem fixtures nas rodadas futuras e gerar confrontos
     const [{ data: div3Teams }, { data: scheduledRounds }] = await Promise.all([
-      supabase.from('global_league_teams').select('*').eq('division', 3),
+      supabase.from('global_league_teams').select('*').eq('division', ENTRY_DIVISION),
       supabase.from('global_league_rounds').select('id,round_number,is_returning')
         .eq('season_id', state.season_id).eq('round_type', 'league').eq('status', 'scheduled')
         .order('round_number', { ascending: true }),
@@ -1494,7 +1648,7 @@ Deno.serve(async (req: Request) => {
       const futureRoundIds = futureRounds.map(r => r.id);
       const { data: existingFx } = await supabase
         .from('global_league_fixtures').select('home_team_id,away_team_id')
-        .in('round_id', futureRoundIds).eq('division', '3');
+        .in('round_id', futureRoundIds).eq('division', String(ENTRY_DIVISION));
       const teamsWithFx = new Set<string>();
       for (const fx of (existingFx ?? []) as Array<{ home_team_id: string; away_team_id: string }>) {
         teamsWithFx.add(fx.home_team_id); teamsWithFx.add(fx.away_team_id);
@@ -1510,7 +1664,7 @@ Deno.serve(async (req: Request) => {
             const opp = existingDiv3[oppIdx];
             const [h, a] = rd.is_returning ? [opp, nt] : [nt, opp];
             fxToInsert.push({
-              id: NEW_ID(), round_id: rd.id, division: '3',
+              id: NEW_ID(), round_id: rd.id, division: String(ENTRY_DIVISION),
               home_team_id: h.id, away_team_id: a.id,
               home_team_name: h.club_name, away_team_name: a.club_name,
               home_overall: h.overall, away_overall: a.overall,
