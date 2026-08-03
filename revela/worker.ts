@@ -94,7 +94,8 @@ async function metaParaRota(url: URL, env: Env): Promise<Meta | null> {
     // Rotas próprias do app que ocupam um segmento só. Sem esta lista o Worker
     // trataria "/meu-perfil" como handle e gastaria uma consulta pra descobrir
     // que não existe. São privadas — preview é o da home, de propósito.
-    if (seg === 'meu-perfil') return { ...FALLBACK, url: `${base}/${seg}` };
+    if (seg === 'meu-perfil' || seg === 'como-funciona')
+      return { ...FALLBACK, url: `${base}/${seg}` };
 
     // Código de indicação cru (MAIÚSCULO 6-8) redireciona pra home no cliente,
     // então o preview é o da home.

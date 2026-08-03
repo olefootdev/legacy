@@ -54,9 +54,16 @@ export function ComoFunciona() {
 
           {/* O passo 1 é clicável de dentro da explicação — é aqui que a pessoa
               acabou de entender o caminho e decide entrar nele. */}
-          <Link to="/comecar" className="rev-btn rev-focus mt-9" data-variant="yellow" data-on="dark">
-            Começar pelo passo 1 →
-          </Link>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link to="/comecar" className="rev-btn rev-focus" data-variant="yellow" data-on="dark">
+              Começar pelo passo 1 →
+            </Link>
+            {/* O guia completo é outra página de propósito: aqui cabe o resumo,
+                lá cabe a explicação que o atleta precisa pra repassar. */}
+            <Link to="/como-funciona" className="rev-btn rev-focus" data-variant="outline" data-on="dark">
+              Ler o guia completo
+            </Link>
+          </div>
         </div>
 
         <ol

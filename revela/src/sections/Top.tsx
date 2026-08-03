@@ -354,6 +354,9 @@ export function Footer() {
           “Todo craque foi, um dia, um nome que ninguém conhecia.”
         </p>
         <div className="flex flex-wrap justify-center gap-5">
+          <a href="/como-funciona" className="rev-label rev-focus text-[11px]" style={{ color: 'rgba(237,235,228,.45)' }}>
+            Como funciona
+          </a>
           <a
             href="https://instagram.com/olefootgame"
             target="_blank"

@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthSheet } from './components/AuthSheet';
+import { ComoFuncionaPage } from './pages/ComoFuncionaPage';
 import { MeuPerfilPage } from './pages/MeuPerfilPage';
 import { Toast, useToast } from './components/primitives';
 import {
@@ -92,6 +93,7 @@ export default function App() {
           path="/meu-perfil"
           element={<MeuPerfilPage session={session} requireAuth={requireAuth} />}
         />
+        <Route path="/como-funciona" element={<ComoFuncionaPage session={session} />} />
         <Route path="/lenda/:slug" element={<LegendPage onNote={push} />} />
         {/* Alias: links de /playervip/<handle> compartilhados por aí continuam
             funcionando se apontarem pra este domínio. A estrutura de divulgação

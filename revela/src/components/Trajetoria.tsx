@@ -12,6 +12,7 @@
  * não é missão, é deboche.
  */
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Eyebrow } from './primitives';
 import { BotaoStory, type StoryInput } from './StoryCard';
 import { enviarProva, fetchMinhasProvas, type MinhasProvas } from '../data/revelaApi';
@@ -170,6 +171,20 @@ function ComoFunciona() {
           {aberto ? '−' : '+'}
         </span>
       </button>
+
+      {!aberto && (
+        <div className="px-5 pb-5">
+          <Link
+            to="/como-funciona"
+            className="rev-btn rev-focus"
+            data-variant="outline"
+            data-on="dark"
+            style={{ minHeight: 38, padding: '0 16px', fontSize: 11 }}
+          >
+            Guia completo do REVELA →
+          </Link>
+        </div>
+      )}
 
       {aberto && (
         <ol className="list-none px-5 pb-5" style={{ margin: 0 }}>
