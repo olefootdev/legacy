@@ -287,54 +287,20 @@ export function ComoFuncionaPage({ session }: { session: { userId: string } | nu
         </div>
       </section>
 
-      {/* ══ 4. O print ═════════════════════════════════════════════════════ */}
-      <section className="rev-section" style={{ background: 'var(--color-rev-surface)' }}>
-        <div className="rev-container">
-          <Eyebrow>Instagram</Eyebrow>
-          <h2 className="rev-display mt-4 max-w-[20ch]" style={{ fontSize: 'clamp(28px,4.6vw,54px)', color: 'var(--color-rev-bone)' }}>
-            Postou? Manda o print
-          </h2>
-          <p className="mt-5 max-w-[56ch] text-[15px] leading-relaxed" style={{ color: `${OSSO}.62)` }}>
-            Marque <strong style={{ color: AMARELO }}>@olefootgame</strong> num post, num reels ou
-            num story. Depois tira um print e manda no teu painel, no bloco{' '}
-            <em>Esta semana</em>. Só isso.
-          </p>
-          <p className="mt-4 max-w-[56ch] text-[15px] leading-relaxed" style={{ color: `${OSSO}.62)` }}>
-            A gente confere a imagem e o OLEKO cai — quase sempre no mesmo dia. Se o print
-            estiver cortado ou embaçado, uma pessoa olha antes de decidir. Ninguém é reprovado
-            por uma foto ruim sem alguém ter olhado.
-          </p>
-          <p className="mt-6 max-w-[56ch] text-[14px] leading-relaxed" style={{ color: `${OSSO}.42)` }}>
-            Uma marcação por formato por semana. Na segunda, zera e você pode mandar de novo.
-          </p>
-        </div>
-      </section>
+      {/* Duas seções saíram daqui em 2026-08-03: "Postou? Manda o print" e
+          "Cada divisão paga em EXP".
 
-      {/* ══ 5. O prêmio ════════════════════════════════════════════════════ */}
-      <section className="rev-section" style={{ background: 'var(--color-rev-black)' }}>
-        <div className="rev-container">
-          <Eyebrow>O prêmio</Eyebrow>
-          <h2 className="rev-display mt-4 max-w-[22ch]" style={{ fontSize: 'clamp(28px,4.6vw,54px)', color: 'var(--color-rev-bone)' }}>
-            Cada divisão paga em EXP
-          </h2>
-          <p className="mt-5 max-w-[56ch] text-[15px] leading-relaxed" style={{ color: `${OSSO}.62)` }}>
-            Chegou em <strong style={{ color: AMARELO }}>Junior</strong>, são{' '}
-            <strong style={{ color: AMARELO }}>250 mil EXP</strong>. O EXP é o dinheiro de dentro
-            do game da Olefoot: compra jogador, paga treino, abre entrada de liga.
-          </p>
-          <p className="mt-4 max-w-[56ch] text-[15px] leading-relaxed" style={{ color: `${OSSO}.62)` }}>
-            Pra receber, você precisa do <strong>teu clube criado</strong> — leva dois minutos e
-            é grátis. Se ainda não tem, o prêmio não se perde: fica te esperando, e o painel
-            mostra quanto tem guardado.
-          </p>
-          <p className="mt-6 max-w-[56ch] text-[14px] leading-relaxed" style={{ color: `${OSSO}.4)` }}>
-            EXP não é dinheiro de verdade e não vira dinheiro de verdade. É ficha de fliperama:
-            só serve dentro do jogo.
-          </p>
-        </div>
-      </section>
+          POR QUÊ: eram explicação longa de coisa que se faz, não que se lê — e
+          as duas JÁ EXISTEM no painel, em forma de ação. O print tem o botão
+          "Mandar print" no bloco Esta semana; o prêmio tem o card "X EXP
+          esperando por você". Explicar aqui e agir lá é pedir pra pessoa ler
+          duas vezes a mesma coisa, num guia que já é longo.
 
-      {/* ══ 6. Perguntas ═══════════════════════════════════════════════════ */}
+          O essencial sobreviveu em forma compacta: a tabela de divisões mostra
+          o EXP de cada uma, e a família D do catálogo lista as missões de
+          Instagram com o valor. */}
+
+      {/* ══ 4. Perguntas ═══════════════════════════════════════════════════ */}
       <section className="rev-section" style={{ background: AMARELO, color: '#0D0D0D' }}>
         <div className="rev-container">
           <Eyebrow on="yellow">Direto ao ponto</Eyebrow>
@@ -354,7 +320,7 @@ export function ComoFuncionaPage({ session }: { session: { userId: string } | nu
         </div>
       </section>
 
-      {/* ══ 7. O roteiro pra repassar ══════════════════════════════════════ */}
+      {/* ══ 5. O roteiro pra repassar ══════════════════════════════════════ */}
       <RoteiroDeTrinta />
 
       {/* ══ Fechamento ═════════════════════════════════════════════════════ */}
@@ -496,9 +462,9 @@ function QuemEAOlefoot() {
               </p>
             </div>
             <img
-              src="/revela/lugano-800.png"
-              width={800}
-              height={457}
+              src="/revela/lugano-640.webp"
+              width={640}
+              height={581}
               loading="lazy"
               decoding="async"
               alt="Diego Lugano com a camisa da Olefoot"

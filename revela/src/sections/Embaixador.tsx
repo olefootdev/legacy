@@ -15,7 +15,17 @@
  *
  * O que É verdade — e o deck sustenta — é que ele é EMBAIXADOR desde 2020. É
  * isso que a seção diz. No dia em que existir uma carta dele, a chamada do
- * fundador vira verdade e é uma linha de texto pra trocar.
+ * fundador vira verdade e é UMA LINHA de texto pra trocar.
+ *
+ * ── A FOTO SANGRA, NÃO SE ENCAIXA ───────────────────────────────────────────
+ * Primeira versão punha ele numa coluna de 520px, dentro do respiro da seção:
+ * virou selo pequeno num mar amarelo. Recorte sem fundo pede o contrário — ele
+ * ENCOSTA na base e sai pela borda, como quem está de pé atrás do texto.
+ *
+ * O arquivo também foi recortado no CORPO, não na moldura: o original é
+ * 4000×2288 com o brilho ocupando as laterais, e o alfa sólido revelou que o
+ * homem cabe em 2457×2231. Cortando ali, o mesmo espaço na tela mostra ele
+ * quase três vezes maior. WebP com alfa: 128 KB contra 887 KB do PNG.
  */
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '../components/primitives';
@@ -24,25 +34,33 @@ import { GAME_URL } from '../data/session';
 export function Embaixador() {
   return (
     <section
-      className="rev-section relative overflow-hidden"
-      style={{ background: 'var(--color-rev-yellow)', color: '#0D0D0D' }}
+      className="relative overflow-hidden"
+      style={{
+        background: 'var(--color-rev-yellow)',
+        color: '#0D0D0D',
+        // Sem padding embaixo: é ali que a foto encosta.
+        padding: 'var(--rev-pad-y) var(--rev-pad-x) 0',
+      }}
     >
-      <div className="rev-container grid items-center gap-8 lg:grid-cols-[1fr_.92fr]">
+      <div className="rev-container grid items-end gap-6 lg:grid-cols-[1fr_.95fr]">
         {/* ── A fala ──────────────────────────────────────────────────────── */}
-        <div>
+        <div style={{ paddingBottom: 'var(--rev-pad-y)' }}>
           <Eyebrow on="yellow">Um embaixador respeitado</Eyebrow>
-          <h2 className="rev-display mt-4 max-w-[13ch]" style={{ fontSize: 'clamp(36px,6.4vw,78px)' }}>
+          <h2
+            className="rev-display mt-4 max-w-[11ch]"
+            style={{ fontSize: 'clamp(44px,8.4vw,104px)' }}
+          >
             Diego Lugano está no time
           </h2>
           <p
-            className="mt-5 max-w-[46ch] text-[clamp(15px,2.2vw,18px)] leading-relaxed"
-            style={{ color: 'rgba(13,13,13,.74)' }}
+            className="mt-6 max-w-[42ch] text-[clamp(16px,2.3vw,19px)] leading-relaxed"
+            style={{ color: 'rgba(13,13,13,.76)' }}
           >
             Capitão da seleção uruguaia em duas Copas do Mundo e campeão pelo São Paulo.
             Embaixador da Olefoot <strong>desde 2020</strong> — quando o projeto ainda estava
             começando.
           </p>
-          <p className="mt-4 max-w-[42ch] text-[14.5px]" style={{ color: 'rgba(13,13,13,.58)' }}>
+          <p className="mt-4 max-w-[40ch] text-[15px]" style={{ color: 'rgba(13,13,13,.58)' }}>
             Gente desse tamanho não entra num projeto qualquer. Foi por isso que ele entrou cedo.
           </p>
 
@@ -57,32 +75,20 @@ export function Embaixador() {
         </div>
 
         {/* ── A foto ──────────────────────────────────────────────────────────
-            PNG com alfa, recortado. Sobre o amarelo a camisa preta e o brasão
-            fazem o contraste sozinhos — sem caixa, sem moldura, sem sombra:
-            ele fica DENTRO da página em vez de colado nela.
-
-            `object-position: top` porque o corte é panorâmico (1200×686) e o
-            que importa é o rosto, que fica no terço de cima. */}
-        <div className="relative mx-auto w-full max-w-[520px]">
+            `items-end` no grid + zero padding embaixo: ele nasce do chão da
+            seção. No celular a coluna some e ele fica logo abaixo do texto,
+            grande, ocupando a largura inteira. */}
+        <div className="relative mx-auto w-full max-w-[640px] self-end lg:max-w-none">
           <img
-            src="/revela/lugano-1200.png"
-            srcSet="/revela/lugano-800.png 800w, /revela/lugano-1200.png 1200w"
-            sizes="(min-width: 1024px) 520px, 92vw"
-            width={1200}
-            height={686}
+            src="/revela/lugano-1000.webp"
+            srcSet="/revela/lugano-640.webp 640w, /revela/lugano-1000.webp 1000w"
+            sizes="(min-width: 1024px) 46vw, 92vw"
+            width={1000}
+            height={908}
             loading="lazy"
             decoding="async"
             alt="Diego Lugano com a camisa da Olefoot"
-            style={{
-              width: '100%',
-              height: 'auto',
-              display: 'block',
-              // O PNG é um corte panorâmico que termina no peito. Sobre o
-              // amarelo, essa borda reta lê como adesivo colado. A máscara
-              // dissolve os últimos 18% e ele passa a sair de dentro da página.
-              maskImage: 'linear-gradient(to bottom, #000 82%, transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(to bottom, #000 82%, transparent 100%)',
-            }}
+            style={{ width: '100%', height: 'auto', display: 'block' }}
           />
         </div>
       </div>
