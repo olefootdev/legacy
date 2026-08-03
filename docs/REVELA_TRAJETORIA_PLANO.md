@@ -27,7 +27,7 @@
 | 12 | Card em tempo real (como o manager o vê) | ⏳ |
 | 13 | Notificações (apoio novo, ultrapassagem no ranking) | ⏳ |
 | 14 | **Prova por print + conferência por IA** (`revela_oleko_provas`, rotas, envio no painel) | ✅ escrito · ⏳ migration |
-| 15 | Tela de admin listando a fila de prints | ⏳ — as rotas existem, falta a UI |
+| 15 | Tela de admin da fila de prints (`Admin → Jogadores → Provas`, ou `#provas`) | ✅ |
 | 16 | ~~App Review na Meta~~ | ❌ descartado — o print resolve melhor (ver §5) |
 
 **Decisão ainda aberta do fundador:** a data da largada.

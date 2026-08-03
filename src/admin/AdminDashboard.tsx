@@ -36,6 +36,7 @@ import { AdminFinanceiroPanel } from './panels/AdminFinanceiroPanel';
 import { AdminGameSpiritPanel } from './panels/AdminGameSpiritPanel';
 import { AdminProspectArtPanel } from './panels/AdminProspectArtPanel';
 import { AdminRevelaScoutPanel } from './panels/AdminRevelaScoutPanel';
+import { AdminRevelaProvasPanel } from './panels/AdminRevelaProvasPanel';
 import { AdminGachaTemplatesPanel } from './panels/AdminGachaTemplatesPanel';
 import { AdminPlayerEvolutionPanel } from './panels/AdminPlayerEvolutionPanel';
 import { AdminGrowthPanel } from './panels/AdminGrowthPanel';
@@ -75,6 +76,7 @@ type TabId =
 
 type SubTabId =
   | 'revelaScout'
+  | 'revelaProvas'
   | 'contribuicoes'
   | 'financeiro'
   | 'shop'
@@ -121,6 +123,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
     icon: Users,
     subTabs: [
       { id: 'revelaScout', label: 'OLE Scout' },
+      { id: 'revelaProvas', label: 'Provas' },
       { id: 'prospectArt', label: 'Academy' },
       { id: 'gachaTemplates', label: 'Gacha' },
       { id: 'playerEvolution', label: 'Evolução' },
@@ -166,6 +169,8 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
 const HASH_TO_TAB: Record<string, TabId | SubTabId> = {
   'ole-scout': 'revelaScout',
   revela: 'revelaScout',
+  provas: 'revelaProvas',
+  'revela-provas': 'revelaProvas',
   'academy-players': 'prospectArt',
   'academia-art': 'prospectArt',
   'game-spirit': 'gameSpirit',
@@ -371,6 +376,7 @@ export function AdminDashboard() {
 
               {/* Jogadores group */}
               {tab === 'jogadores' && subTab === 'revelaScout' ? <AdminRevelaScoutPanel /> : null}
+              {tab === 'jogadores' && subTab === 'revelaProvas' ? <AdminRevelaProvasPanel /> : null}
               {tab === 'jogadores' && subTab === 'prospectArt' ? <AdminProspectArtPanel /> : null}
               {tab === 'jogadores' && subTab === 'gachaTemplates' ? <AdminGachaTemplatesPanel /> : null}
               {tab === 'jogadores' && subTab === 'playerEvolution' ? <AdminPlayerEvolutionPanel /> : null}

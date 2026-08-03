@@ -138,3 +138,61 @@ export async function reviewScoutTalent(input: {
   if (!r.ok) return fail(r);
   return (await r.json()) as ReviewResult;
 }
+
+/* ══ Provas de divulgação — o print do Instagram ═══════════════════════════ */
+
+export interface ProvaDivulgacao {
+  id: string;
+  userId: string;
+  mission: string;
+  semana: string;
+  imageUrl: string;
+  status: string;
+  iaVeredito: string | null;
+  createdAt: string;
+  atleta: string | null;
+  slug: string | null;
+}
+
+export const PROVA_LABEL: Record<string, string> = {
+  insta_post: 'Post / Reels no Instagram',
+  insta_story: 'Story no Instagram',
+  highlight: 'Highlight novo',
+};
+
+export async function fetchProvas(): Promise<ProvaDivulgacao[]> {
+  const r = await fetch(`${olefootApiBase()}/api/revela-admin/provas`, { headers: await headers() });
+  if (!r.ok) return fail(r);
+  const body = (await r.json()) as { provas?: ProvaDivulgacao[] };
+  return body.provas ?? [];
+}
+
+export interface AnaliseResultado {
+  analisadas: number;
+  resultado: Array<{ id: string; acao: string; oleko?: number; veredito?: string }>;
+}
+
+/** Roda a IA na fila inteira. Aprova o que ela reconhece; o resto continua aqui. */
+export async function analisarProvas(): Promise<AnaliseResultado> {
+  const r = await fetch(`${olefootApiBase()}/api/revela-admin/provas/analisar`, {
+    method: 'POST',
+    headers: await headers(true),
+    body: '{}',
+  });
+  if (!r.ok) return fail(r);
+  return (await r.json()) as AnaliseResultado;
+}
+
+export async function revisarProva(input: {
+  id: string;
+  status: 'approved' | 'rejected';
+  note?: string;
+}): Promise<{ ok: boolean; oleko?: number; reason?: string }> {
+  const r = await fetch(`${olefootApiBase()}/api/revela-admin/provas/review`, {
+    method: 'POST',
+    headers: await headers(true),
+    body: JSON.stringify(input),
+  });
+  if (!r.ok) return fail(r);
+  return (await r.json()) as { ok: boolean; oleko?: number; reason?: string };
+}
