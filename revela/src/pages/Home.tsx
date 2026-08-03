@@ -15,18 +15,16 @@ import {
   fetchLegends,
   fetchMySupports,
   fetchTalents,
-  fetchTopClubs,
   fetchWeeklyRising,
   supportTalent,
   type RisingTalent,
 } from '../data/revelaApi';
 import { byAthlete, isLegend, type AthleteLegend } from '../data/legends';
-import type { ClubRank, DivisionCount, Talent } from '../data/types';
+import type { DivisionCount, Talent } from '../data/types';
 import { GameCta, Hero, Marquee } from '../sections/Top';
 import { Discovery, EmAlta, RevealWall } from '../sections/Talents';
 import { ComoFunciona } from '../sections/Journey';
 import { Legends, Resenha } from '../sections/Legends';
-import { TopClubs } from '../sections/League';
 import { LigaRetro } from '../sections/LigaRetro';
 import { Placar } from '../sections/Placar';
 import { TeamBuilder } from '../sections/TeamBuilder';
@@ -42,7 +40,6 @@ export function Home({
 }) {
   const [talents, setTalents] = useState<Talent[]>([]);
   const [legends, setLegends] = useState<AthleteLegend[]>([]);
-  const [clubs, setClubs] = useState<ClubRank[]>([]);
   const [divisions, setDivisions] = useState<DivisionCount[]>([]);
   const [rising, setRising] = useState<RisingTalent[]>([]);
   const [supported, setSupported] = useState<Set<string>>(new Set());
@@ -57,13 +54,11 @@ export function Home({
     void Promise.all([
       fetchTalents(40),
       fetchLegends(60),
-      fetchTopClubs(10),
       fetchDivisions(),
       fetchWeeklyRising(8),
-    ]).then(([t, l, c, d, r]) => {
+    ]).then(([t, l, d, r]) => {
       setTalents(t);
       setLegends(byAthlete(l.filter(isLegend)));
-      setClubs(c);
       setDivisions(d);
       setRising(r);
     });
@@ -126,10 +121,10 @@ export function Home({
       { value: talents.length, label: talents.length === 1 ? 'Talento na vitrine' : 'Talentos na vitrine' },
       { value: totalSupporters, label: 'Apoios registrados' },
       { value: legends.length, label: 'Lendas no acervo' },
-      { value: clubs.length > 0 ? divisions.reduce((s, d) => s + d.clubs, 0) : 0, label: 'Clubes em disputa' },
+      { value: divisions.reduce((s, d) => s + d.clubs, 0), label: 'Clubes em disputa' },
     ];
     return candidatos.filter((s) => s.value > 0).slice(0, 3);
-  }, [talents.length, totalSupporters, legends.length, clubs.length, divisions]);
+  }, [talents.length, totalSupporters, legends.length, divisions]);
 
   const discovery = useMemo(() => talents.slice(0, 10), [talents]);
 
@@ -157,8 +152,6 @@ export function Home({
         {/* A homenagem ao Elifoot — tela retro com a classificação real da liga.
             Some sozinha se a liga ainda não tem divisões. */}
         <LigaRetro />
-
-        <TopClubs clubs={clubs} />
 
       <GameCta />
     </main>

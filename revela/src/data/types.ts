@@ -65,18 +65,7 @@ export interface Legend {
   handle: string | null;
 }
 
-export interface ClubRank {
-  rank: number;
-  club: string;
-  short: string;
-  points: number;
-  division: number | null;
-  played: number;
-  wins: number;
-  crestId: number | null;
-  trend: 'up' | 'down' | 'flat';
-}
-
+/** Quantos clubes em cada divisão da Liga Global — alimenta o número do hero. */
 export interface DivisionCount {
   division: number;
   clubs: number;

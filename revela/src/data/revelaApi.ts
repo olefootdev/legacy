@@ -8,7 +8,7 @@
  * mora, não na UI.
  */
 import { getSupabase } from '@/supabase/client';
-import type { ClubRank, DivisionCount, Legend, Talent } from './types';
+import type { DivisionCount, Legend, Talent } from './types';
 import type { LinhaRanking, Trajetoria } from './trajetoria';
 
 type TalentOrder = 'overall' | 'supporters' | 'recent';
@@ -74,11 +74,6 @@ export async function fetchWeeklyRising(limit = 8): Promise<RisingTalent[]> {
 
 export async function fetchLegends(limit = 12): Promise<Legend[]> {
   const rows = await rpc<Legend[]>('revela_list_legends', { p_limit: limit });
-  return rows ?? [];
-}
-
-export async function fetchTopClubs(limit = 10): Promise<ClubRank[]> {
-  const rows = await rpc<ClubRank[]>('revela_top_clubs', { p_limit: limit });
   return rows ?? [];
 }
 
