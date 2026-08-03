@@ -39,7 +39,7 @@ import {
   TIME,
   VIDEO_FUNDADOR,
 } from '../data/olefoot';
-import { videoEmbedUrl } from '@/lib/videoEmbed';
+import { VIDEO_IFRAME_PROPS, videoEmbedUrl } from '@/lib/videoEmbed';
 
 const AMARELO = 'var(--color-rev-yellow, #fde100)';
 const OSSO = 'rgba(237,235,228,';
@@ -508,11 +508,9 @@ function QuemEAOlefoot() {
               style={{ aspectRatio: '16 / 9', border: `1px solid ${OSSO}.12)` }}
             >
               <iframe
+                {...VIDEO_IFRAME_PROPS}
                 src={embed}
                 title="O fundador explica a Olefoot"
-                allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture"
-                allowFullScreen
-                loading="lazy"
                 style={{ width: '100%', height: '100%', border: 0 }}
               />
             </div>

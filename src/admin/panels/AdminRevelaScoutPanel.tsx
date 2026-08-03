@@ -22,7 +22,7 @@ import {
   type ScoutAttrs,
   type ScoutTalent,
 } from '@/admin/revelaScoutClient';
-import { videoEmbedUrl } from '@/lib/videoEmbed';
+import { VIDEO_IFRAME_PROPS, videoEmbedUrl } from '@/lib/videoEmbed';
 
 /** Ponto de partida da ficha. O scout ajusta; ninguém nasce com 0. */
 const ATTR_PADRAO = 55;
@@ -470,12 +470,10 @@ function VideoDoTalento({ url }: { url: string | null }) {
   return (
     <div className="mt-3 overflow-hidden rounded-md border border-white/10" style={{ aspectRatio: '16 / 9' }}>
       <iframe
+        {...VIDEO_IFRAME_PROPS}
         src={embed}
         title="Vídeo enviado pelo atleta"
         className="h-full w-full"
-        allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture"
-        referrerPolicy="no-referrer"
-        sandbox="allow-scripts allow-same-origin allow-presentation"
       />
     </div>
   );

@@ -20,6 +20,31 @@
  * jogo) e outra no guia do REVELA (app separado). O REVELA importa `@/` do
  * mesmo `src/`, então este é o único lugar que os dois alcançam.
  */
+/**
+ * Os atributos do <iframe> de vídeo. Ficam aqui, e não soltos em cada tela,
+ * porque um deles é uma armadilha que já custou uma ida à produção.
+ *
+ * ── NÃO PONHA `referrerPolicy="no-referrer"` AQUI ───────────────────────────
+ * Parece a escolha privada e correta, e quebra o player: o YouTube usa o
+ * Referer pra conferir de que domínio o embed está sendo servido. Sem ele o
+ * player carrega e morre com **"Erro 153 · Video player configuration error"** —
+ * uma tela cinza de erro no lugar do vídeo do atleta. Foi exatamente o que
+ * aconteceu na página do Breno em 2026-08-05.
+ *
+ * O padrão do navegador (`strict-origin-when-cross-origin`) já manda só a
+ * origem, sem caminho nem query — que é a privacidade que importa. E o embed
+ * sai por `youtube-nocookie`, que é onde o ganho real de privacidade mora.
+ *
+ * O `sandbox` fica: ele impede que a página embutida navegue a nossa por cima,
+ * abra popup ou envie formulário, e o player funciona inteiro dentro dele.
+ */
+export const VIDEO_IFRAME_PROPS = {
+  allow: 'accelerometer; clipboard-write; encrypted-media; picture-in-picture; fullscreen',
+  allowFullScreen: true,
+  loading: 'lazy',
+  sandbox: 'allow-scripts allow-same-origin allow-presentation',
+} as const;
+
 export function videoEmbedUrl(bruto: string): string | null {
   let u: URL;
   try {

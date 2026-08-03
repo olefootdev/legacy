@@ -34,7 +34,7 @@ import { GAME_URL, signupUrl } from '../data/session';
 import { perfilInstagram } from '../data/instagram';
 import { computeSelos, selosUnlocked } from '../data/selos';
 import type { DnaPublico, Talent } from '../data/types';
-import { videoEmbedUrl } from '@/lib/videoEmbed';
+import { VIDEO_IFRAME_PROPS, videoEmbedUrl } from '@/lib/videoEmbed';
 
 /** Onde o atleta está nos 7 passos do "Como Funciona". */
 const STATUS_STEP: Record<string, number> = {
@@ -526,15 +526,11 @@ function VerJogando({ url, cobrar }: { url: string | null; cobrar: boolean }) {
       >
         {embed ? (
           <iframe
+            {...VIDEO_IFRAME_PROPS}
             src={embed}
             title="Vídeo do atleta"
-            loading="lazy"
             className="h-full w-full"
             style={{ display: 'block', border: 0 }}
-            allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture; fullscreen"
-            allowFullScreen
-            referrerPolicy="no-referrer"
-            sandbox="allow-scripts allow-same-origin allow-presentation"
           />
         ) : (
           <div className="px-6 text-center">
