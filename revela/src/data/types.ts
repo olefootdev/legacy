@@ -33,6 +33,12 @@ export interface Talent {
   bio: string | null;
   portrait: string | null;
   video: string | null;
+  /**
+   * TEXTO LIVRE do cadastro — pode ser '@fulano', 'instagram.com/fulano' ou
+   * até uma cidade digitada no campo errado. NUNCA usar como href: passar por
+   * `perfilInstagram()` primeiro. Só chega no perfil, não na listagem.
+   */
+  instagram?: string | null;
   attributes: RevelaAttributes;
   /** OVR ponderado por posição, calculado no servidor. NUNCA recalcular aqui. */
   overall: number | null;

@@ -27,6 +27,7 @@ import {
 } from '../components/primitives';
 import { fetchMySupports, fetchTalent, supportTalent } from '../data/revelaApi';
 import { GAME_URL, signupUrl } from '../data/session';
+import { perfilInstagram } from '../data/instagram';
 import { computeSelos, selosUnlocked } from '../data/selos';
 import type { Talent } from '../data/types';
 
@@ -165,6 +166,7 @@ export function TalentPage({
   const idade = talent.birthYear ? new Date().getFullYear() - talent.birthYear : null;
   const local = [talent.city, talent.uf].filter(Boolean).join(' · ');
   const lenda = ehLenda(talent.gameSituation);
+  const insta = perfilInstagram(talent.instagram);
   const attrs = ATTR_ORDER.map((k) => ({
     key: k,
     label: ATTR_LABEL[k] ?? k,
@@ -259,6 +261,21 @@ export function TalentPage({
                 <button type="button" onClick={compartilhar} className="rev-btn rev-focus" data-variant="outline" data-on="yellow">
                   Compartilhar
                 </button>
+                {/* Some sozinho quando o atleta não preencheu, ou quando o que
+                    ele escreveu não vira um @ plausível. Botão que leva a perfil
+                    inexistente queima a confiança de quem clicou. */}
+                {insta && (
+                  <a
+                    href={insta.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="rev-btn rev-focus"
+                    data-variant="outline"
+                    data-on="yellow"
+                  >
+                    Seguir {insta.handle}
+                  </a>
+                )}
               </div>
             </div>
 
