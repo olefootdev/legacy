@@ -235,6 +235,12 @@ export function MeuPerfilPage({
         />
       </div>
 
+      {/* ── O teste de DNA ──────────────────────────────────────────────
+          Vem ANTES do link de divulgação de propósito: é a coisa mais barata
+          que ele pode fazer agora pra ficha ficar mais forte — dois minutos,
+          sem depender de olheiro nem de ninguém aparecer. */}
+      <CardDna talento={talento} />
+
       {/* ── O link: só existe de verdade depois que o perfil é público ── */}
       <section className="mt-8">
         <Eyebrow>Chame a torcida</Eyebrow>
@@ -340,6 +346,66 @@ export function MeuPerfilPage({
  * e a tela DIZ isso, em vez de deixar o atleta divulgar achando que está
  * construindo rede.
  */
+/**
+ * O convite pro teste de DNA — ou o resultado, se ele já fez.
+ *
+ * O card muda de papel conforme o estado, e isso importa: pra quem não fez, ele
+ * é uma OFERTA ("dois minutos, sem depender de ninguém"); pra quem fez, ele é
+ * uma CONQUISTA, com o arquétipo em corpo grande. Card que continua pedindo
+ * depois de feito vira ruído no painel.
+ */
+function CardDna({ talento }: { talento: MeuTalento }) {
+  const feito = Boolean(talento.dna?.arquetipo);
+
+  return (
+    <section className="mt-8">
+      <Eyebrow>Como você pensa</Eyebrow>
+      <div
+        className="mt-3 flex flex-wrap items-center justify-between gap-4 rounded-[14px] px-5 py-5"
+        style={{
+          background: feito ? 'rgba(253,225,0,.08)' : 'rgba(13,13,13,.5)',
+          border: feito ? '1px solid rgba(253,225,0,.32)' : '1px solid rgba(237,235,228,.12)',
+        }}
+      >
+        <div className="min-w-0">
+          {feito ? (
+            <>
+              <p
+                className="rev-display text-[26px] leading-none"
+                style={{ color: 'var(--color-rev-yellow, #fde100)' }}
+              >
+                {talento.dna?.arquetipo}
+              </p>
+              <p className="mt-2 text-[13px]" style={{ color: 'rgba(237,235,228,.55)' }}>
+                Teu Player DNA já está no perfil.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="rev-display text-[22px] leading-none" style={{ color: 'var(--color-rev-bone)' }}>
+                Faz o teste de DNA
+              </p>
+              <p className="mt-2 max-w-[46ch] text-[13px] leading-snug" style={{ color: 'rgba(237,235,228,.55)' }}>
+                Treze situações de jogo, uns dois minutos. Não tem resposta certa — no fim
+                você descobre teu arquétipo, e ele entra no teu perfil.
+              </p>
+            </>
+          )}
+        </div>
+
+        <Link
+          to="/dna"
+          className="rev-btn rev-focus shrink-0"
+          data-variant={feito ? 'outline' : 'yellow'}
+          data-on="dark"
+        >
+          {feito ? 'Refazer' : 'Começar'}
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 function LinkDeIndicacao({ talento }: { talento: MeuTalento }) {
   const [copiado, setCopiado] = useState(false);
 

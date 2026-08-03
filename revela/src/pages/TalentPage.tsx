@@ -27,12 +27,13 @@ import {
 import { CampoPosicao } from '../components/CampoPosicao';
 import { RadarAtributos } from '../components/RadarAtributos';
 import { completudePct, computeCompletude } from '../data/completude';
+import { TRACOS } from '../data/dna';
 import { PES, descricaoDaPosicao, nomeDaPosicao } from '../data/posicoes';
 import { fetchMySupports, fetchTalent, supportTalent } from '../data/revelaApi';
 import { GAME_URL, signupUrl } from '../data/session';
 import { perfilInstagram } from '../data/instagram';
 import { computeSelos, selosUnlocked } from '../data/selos';
-import type { Talent } from '../data/types';
+import type { DnaPublico, Talent } from '../data/types';
 import { videoEmbedUrl } from '@/lib/videoEmbed';
 
 /** Onde o atleta está nos 7 passos do "Como Funciona". */
@@ -389,6 +390,13 @@ export function TalentPage({
             </p>
           )}
 
+          {/* ── Como ele pensa ──────────────────────────────────────────────
+              Some inteiro pra quem não fez o teste. Não entra placeholder aqui:
+              a moldura vazia do vídeo cobra porque vídeo é a prova que falta
+              pra ficha; DNA é camada nova, e cobrar de todo mundo que ainda não
+              respondeu encheria a vitrine inteira de buraco no dia 1. */}
+          {talent.dna && <DnaBlock dna={talent.dna} />}
+
           {/* ── História, progresso e selos ─────────────────────────────────── */}
           <div className="mt-16 grid gap-12 lg:grid-cols-2">
             <div>
@@ -707,6 +715,69 @@ function AtributoTile({ label, value }: { label: string; value: number }) {
               transition: 'width .8s var(--ease-rev)',
             }}
           />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * PLAYER DNA — como ele pensa.
+ *
+ * Fica DEPOIS da ficha e ANTES da história, e essa posição é o argumento: o
+ * olheiro já viu como ele joga e ainda não leu nada. "Líder Construtor" é o que
+ * faz ele parar — é a informação que nenhum número de OVR dá.
+ *
+ * Os traços saem em ordem decrescente, não na ordem fixa da lista: quem abre a
+ * página tem que ver primeiro o que esse atleta TEM, não percorrer sete linhas
+ * até achar. E não tem semáforo: DNA não é bom nem ruim, é preferência.
+ */
+function DnaBlock({ dna }: { dna: DnaPublico }) {
+  const ordenados = TRACOS.map((t) => ({ t, v: Number(dna.tracos?.[t.id] ?? 0) })).sort(
+    (a, b) => b.v - a.v,
+  );
+
+  return (
+    <div className="mt-16">
+      <Eyebrow>Como ele pensa</Eyebrow>
+      <div className="mt-5 grid items-start gap-8 lg:grid-cols-[1fr_1.1fr]">
+        <div>
+          <h3
+            className="rev-display"
+            style={{ fontSize: 'clamp(30px,4.6vw,54px)', lineHeight: 0.95, color: 'var(--color-rev-yellow)' }}
+          >
+            {dna.arquetipo}
+          </h3>
+          <p className="mt-4 max-w-[36ch] text-[14px] leading-relaxed" style={{ color: 'rgba(237,235,228,.45)' }}>
+            Resultado de 13 situações de jogo. Não é nota de bom ou ruim — é o jeito dele
+            de resolver.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          {ordenados.map(({ t, v }) => (
+            <div key={t.id} className="grid grid-cols-[112px_1fr_30px] items-center gap-3">
+              <span className="rev-label text-[9px]" style={{ color: 'rgba(237,235,228,.45)' }}>
+                {t.nome}
+              </span>
+              <span className="h-[5px] overflow-hidden rounded-full" style={{ background: 'rgba(237,235,228,.1)' }}>
+                <span
+                  className="block h-full rounded-full"
+                  style={{
+                    width: `${Math.max(0, Math.min(100, v))}%`,
+                    background: 'var(--color-rev-yellow)',
+                    transition: 'width .9s var(--ease-rev)',
+                  }}
+                />
+              </span>
+              <span
+                className="rev-display text-right text-[14px] tabular-nums"
+                style={{ color: 'var(--color-rev-bone)' }}
+              >
+                {v}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -14,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthSheet } from './components/AuthSheet';
 import { ComoFuncionaPage } from './pages/ComoFuncionaPage';
+import { DnaTestPage } from './pages/DnaTestPage';
 import { MeuPerfilPage } from './pages/MeuPerfilPage';
 import { Toast, useToast } from './components/primitives';
 import {
@@ -92,6 +93,12 @@ export default function App() {
         <Route
           path="/meu-perfil"
           element={<MeuPerfilPage session={session} requireAuth={requireAuth} onNote={push} />}
+        />
+        {/* O teste de DNA. Também antes de /:short, pelo mesmo motivo do
+            painel: "dna" seria engolido como se fosse um @. */}
+        <Route
+          path="/dna"
+          element={<DnaTestPage session={session} requireAuth={requireAuth} onNote={push} />}
         />
         <Route path="/como-funciona" element={<ComoFuncionaPage session={session} />} />
         <Route path="/lenda/:slug" element={<LegendPage onNote={push} />} />

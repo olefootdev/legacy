@@ -12,6 +12,12 @@ export type RevelaAttributes = Partial<PlayerAttributes>;
 /** Status do funil — os 7 passos do "Como Funciona" colapsados em 5 estados. */
 export type TalentStatus = 'pending' | 'in_review' | 'approved' | 'rejected' | 'carded';
 
+/** O que o perfil PÚBLICO mostra do teste. As respostas item a item não saem. */
+export interface DnaPublico {
+  arquetipo: string;
+  tracos: Record<string, number>;
+}
+
 export interface Talent {
   id: string;
   slug: string;
@@ -40,6 +46,12 @@ export interface Talent {
    */
   instagram?: string | null;
   attributes: RevelaAttributes;
+  /**
+   * Player DNA — como ele pensa. Null enquanto não fez o teste, e null também
+   * enquanto a migration 20260805120000 não estiver aplicada: o bloco some
+   * sozinho nos dois casos, que é o comportamento certo pros dois.
+   */
+  dna?: DnaPublico | null;
   /** OVR ponderado por posição, calculado no servidor. NUNCA recalcular aqui. */
   overall: number | null;
   status: TalentStatus;

@@ -8,7 +8,8 @@
  * mora, não na UI.
  */
 import { getSupabase } from '@/supabase/client';
-import type { DivisionCount, Legend, Talent } from './types';
+import type { RespostasDna, ResultadoDna } from './dna';
+import type { DivisionCount, DnaPublico, Legend, Talent } from './types';
 import type { LinhaRanking, PeriodoId, Trajetoria } from './trajetoria';
 
 type TalentOrder = 'overall' | 'supporters' | 'recent';
@@ -377,11 +378,37 @@ export interface MeuTalento {
   status: string;
   scoutNote: string | null;
   supporters: number;
+  /**
+   * O DNA do dono — aqui COM as respostas cruas, que é o que deixa ele refazer
+   * o teste sem começar do zero. No perfil público só sai arquétipo + traços.
+   */
+  dna?: (DnaPublico & { respostas: RespostasDna }) | null;
   createdAt: string;
 }
 
 export async function fetchMeuTalento(): Promise<MeuTalento | null> {
   return rpc<MeuTalento>('revela_my_talent');
+}
+
+/**
+ * Grava o Player DNA do atleta logado.
+ *
+ * Manda as respostas cruas E o resultado calculado. A conta mora em
+ * `data/dna.ts` (fonte única, com self-test) — o RPC valida forma e faixa, não
+ * refaz a conta. O porquê dessa escolha está no cabeçalho da migration
+ * 20260805120000: o arquétipo não paga nada, então forjar não rende, e duplicar
+ * o mapa item→traço em PL/pgSQL criaria duas verdades.
+ */
+export async function salvarDna(
+  respostas: RespostasDna,
+  resultado: ResultadoDna,
+): Promise<{ ok: boolean; reason?: string }> {
+  const res = await rpc<{ ok: boolean; reason?: string }>('revela_save_dna', {
+    p_respostas: respostas,
+    p_tracos: resultado.tracos,
+    p_arquetipo: resultado.arquetipo,
+  });
+  return res ?? { ok: false, reason: 'network' };
 }
 
 /**
