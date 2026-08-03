@@ -22,6 +22,7 @@ import type { DivisionCount, Talent } from '../data/types';
 import { GameCta, Hero, Marquee } from '../sections/Top';
 import { Discovery } from '../sections/Talents';
 import { ComoFunciona } from '../sections/Journey';
+import { Embaixador } from '../sections/Embaixador';
 import { Legends } from '../sections/Legends';
 import { LigaRetro } from '../sections/LigaRetro';
 import { Placar } from '../sections/Placar';
@@ -133,6 +134,10 @@ export function Home({
             fazia a home repetir o mesmo elenco. */}
         <Placar limite={10} />
         <ComoFunciona />
+        {/* Depois do institucional e ANTES das lendas: ele é embaixador, não
+            carta. Colado na grade de lendas, o visitante leria que existe um
+            card dele — que é exatamente o que não existe. */}
+        <Embaixador />
         <Legends legends={legends} />
 
         {/* A homenagem ao Elifoot — tela retro com a classificação real da liga.

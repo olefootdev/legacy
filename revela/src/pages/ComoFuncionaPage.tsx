@@ -476,11 +476,42 @@ function QuemEAOlefoot() {
         <h3 className="rev-display mt-14 text-[24px]" style={{ color: 'var(--color-rev-bone)' }}>
           Quem está por trás
         </h3>
+        {/* O embaixador ganha o card GRANDE, com foto. Três retângulos iguais
+            tratam um capitão de duas Copas como mais uma linha de lista — e é
+            justamente o rosto dele que faz um pai desconhecido levar o projeto
+            a sério em dois segundos. */}
+        {TIME.filter((m) => m.nome === 'Diego Lugano').map((m) => (
+          <div
+            key={m.nome}
+            className="mt-5 grid items-end gap-0 overflow-hidden rounded-[16px] sm:grid-cols-[1.1fr_.9fr]"
+            style={{ background: AMARELO, color: '#0D0D0D' }}
+          >
+            <div className="px-6 pb-6 pt-7 sm:px-7 sm:pb-8">
+              <p className="rev-label text-[9px]" style={{ color: 'rgba(13,13,13,.6)' }}>
+                {m.papel}
+              </p>
+              <p className="rev-display mt-2 text-[clamp(28px,5vw,42px)] leading-none">{m.nome}</p>
+              <p className="mt-3 max-w-[34ch] text-[14.5px] leading-relaxed" style={{ color: 'rgba(13,13,13,.72)' }}>
+                {m.texto}
+              </p>
+            </div>
+            <img
+              src="/revela/lugano-800.png"
+              width={800}
+              height={457}
+              loading="lazy"
+              decoding="async"
+              alt="Diego Lugano com a camisa da Olefoot"
+              style={{ width: '100%', height: 'auto', display: 'block' }}
+            />
+          </div>
+        ))}
+
         <div
-          className="mt-5 grid gap-4"
+          className="mt-4 grid gap-4"
           style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,240px),1fr))' }}
         >
-          {TIME.map((m) => (
+          {TIME.filter((m) => m.nome !== 'Diego Lugano').map((m) => (
             <div
               key={m.nome}
               className="rounded-[14px] px-5 py-5"
