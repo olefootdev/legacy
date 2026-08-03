@@ -11,9 +11,11 @@
  * como task — vira meta com barra. "Chegue a 10.000 fãs" num perfil com 12 fãs
  * não é missão, é deboche.
  */
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Eyebrow } from './primitives';
 import { BotaoStory, type StoryInput } from './StoryCard';
+import { enviarProva, fetchMinhasProvas, type MinhasProvas } from '../data/revelaApi';
+import { uploadPrint } from '../data/upload';
 import {
   CHAVES,
   DIVISOES,
@@ -61,26 +63,14 @@ export function Trajetoria({
         </Grupo>
       )}
 
-      {/* ── Bloco 2 — convite, não cobrança: o crédito é conferido depois ─── */}
+      {/* ── Bloco 2 — postou, print, mandou. A IA confere. ─────────────────── */}
       <Grupo titulo="Esta semana" nota="reseta toda segunda">
         {MISSOES_SEMANA.map((m) => (
-          <div
-            key={m.id}
-            className="flex items-start justify-between gap-3 border-t px-4 py-3"
-            style={{ borderColor: `${OSSO}.08)` }}
-          >
-            <div className="min-w-0">
-              <p className="text-[14.5px]">{m.label}</p>
-              <p className="mt-0.5 text-[12.5px]" style={{ color: `${OSSO}.45)` }}>
-                {m.comoFazer}
-              </p>
-            </div>
-            <Oleko valor={m.oleko} />
-          </div>
+          <MissaoComPrint key={m.id} missao={m} />
         ))}
         <p className="px-4 pb-3 pt-2 text-[12px]" style={{ color: `${OSSO}.4)` }}>
-          O OLEKO do Instagram entra depois que a gente confere — normalmente no
-          mesmo dia.
+          Postou, tira um print e manda aqui. A gente confere a imagem e o OLEKO cai — quase
+          sempre no mesmo dia.
         </p>
       </Grupo>
 
@@ -277,6 +267,126 @@ function OndeVoceEsta({ dados }: { dados: TrajetoriaData }) {
             Criar meu clube →
           </a>
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ══ 1b. Prova de divulgação ═══════════════════════════════════════════════ */
+
+/**
+ * "Postou? Manda o print."
+ *
+ * A alternativa era o webhook `mentions` da Meta — que exige App Review, leva
+ * semanas, e mesmo aprovado não cobre story. O print funciona hoje, em todos os
+ * formatos, e não depende de aprovação de ninguém.
+ *
+ * A IA olha a imagem e aprova o que reconhece com confiança. O que ela não tem
+ * certeza NÃO é reprovado: vai pra fila humana com o veredito anotado. Errar
+ * pro lado de pagar OLEKO a mais custa nada — OLEKO não é dinheiro. Errar pro
+ * outro lado é chamar de mentiroso um garoto que divulgou de verdade.
+ */
+const ROTULO_PROVA: Record<string, { texto: string; cor: string }> = {
+  pending: { texto: 'Print recebido — conferindo', cor: 'var(--color-rev-yellow, #fde100)' },
+  approved: { texto: 'Aprovado — OLEKO creditado', cor: 'var(--color-rev-success, #22c55e)' },
+  rejected: { texto: 'Não deu pra confirmar', cor: 'var(--color-rev-danger, #ef4444)' },
+};
+
+function MissaoComPrint({
+  missao,
+}: {
+  missao: { id: string; label: string; oleko: number; comoFazer: string };
+}) {
+  const [provas, setProvas] = useState<MinhasProvas>({});
+  const [ocupado, setOcupado] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    void fetchMinhasProvas().then(setProvas);
+  }, []);
+
+  const prova = provas[missao.id];
+
+  async function aoEscolher(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permite reescolher o mesmo arquivo depois de um erro
+    if (!file || ocupado) return;
+
+    setOcupado(true);
+    setErro(null);
+
+    const up = await uploadPrint(file);
+    if (!up.ok || !up.url) {
+      setErro(up.motivo ?? 'Não deu pra subir o print.');
+      setOcupado(false);
+      return;
+    }
+
+    const res = await enviarProva(missao.id, up.url);
+    setOcupado(false);
+
+    if (!res.ok) {
+      setErro(
+        res.reason === 'ja_enviado'
+          ? 'Você já mandou o print desta missão esta semana.'
+          : res.reason === 'sem_ficha'
+            ? 'Só quem tem ficha no REVELA manda print.'
+            : 'Não deu pra registrar. Tenta de novo.',
+      );
+      return;
+    }
+
+    setProvas((p) => ({ ...p, [missao.id]: { status: 'pending', note: null } }));
+  }
+
+  return (
+    <div className="border-t px-4 py-3" style={{ borderColor: `${OSSO}.08)` }}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[14.5px] leading-[1.35]">{missao.label}</p>
+          <p className="mt-0.5 text-[12.5px]" style={{ color: `${OSSO}.45)` }}>
+            {missao.comoFazer}
+          </p>
+        </div>
+        <Oleko valor={missao.oleko} apagado={prova?.status === 'approved'} />
+      </div>
+
+      {prova ? (
+        <p
+          className="rev-label mt-2.5 text-[10px]"
+          style={{ color: ROTULO_PROVA[prova.status]?.cor ?? AMARELO }}
+        >
+          {ROTULO_PROVA[prova.status]?.texto ?? prova.status}
+          {prova.note ? ` · ${prova.note}` : ''}
+        </p>
+      ) : (
+        <>
+          <input
+            ref={input}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(e) => void aoEscolher(e)}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => input.current?.click()}
+            disabled={ocupado}
+            className="rev-btn rev-focus mt-2.5"
+            data-variant="outline"
+            data-on="dark"
+            style={{ minHeight: 36, padding: '0 14px', fontSize: 11 }}
+          >
+            {ocupado ? 'Enviando…' : 'Mandar print'}
+          </button>
+        </>
+      )}
+
+      {erro && (
+        <p className="mt-2 text-[12px]" style={{ color: 'var(--color-rev-danger, #ef4444)' }}>
+          {erro}
+        </p>
       )}
     </div>
   );

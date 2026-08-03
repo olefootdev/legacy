@@ -56,3 +56,39 @@ export async function uploadFotoTalento(file: File): Promise<UploadResult> {
   const { data } = sb.storage.from(BUCKET).getPublicUrl(nome);
   return { ok: true, url: data.publicUrl };
 }
+
+/**
+ * Print de divulgação (a prova do Instagram).
+ *
+ * Vai pro MESMO bucket e sob o MESMO prefixo `talentos/` — não por elegância,
+ * mas porque a política do bucket exige esse prefixo, e criar outro exigiria
+ * mais uma migration pra guardar a mesma coisa. O nome carrega `prova-` só pra
+ * quem for olhar a pasta depois entender o que é.
+ */
+export async function uploadPrint(file: File): Promise<UploadResult> {
+  if (!TIPOS.includes(file.type)) {
+    return { ok: false, motivo: 'Manda JPG, PNG ou WEBP.' };
+  }
+  if (file.size > MAX_BYTES) {
+    const mb = (file.size / 1024 / 1024).toFixed(1);
+    return { ok: false, motivo: `Print de ${mb} MB — o limite é 4 MB.` };
+  }
+
+  const sb = getSupabase();
+  if (!sb) return { ok: false, motivo: 'Sem conexão agora. Tenta de novo.' };
+
+  const ext = file.name.split('.').pop()?.toLowerCase().slice(0, 5) || 'jpg';
+  const nome = `talentos/prova-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+
+  const { error } = await sb.storage.from(BUCKET).upload(nome, file, {
+    cacheControl: '31536000',
+    upsert: false,
+  });
+  if (error) {
+    console.warn('[revela] upload do print falhou:', error.message);
+    return { ok: false, motivo: 'Não deu pra subir o print. Tenta de novo.' };
+  }
+
+  const { data } = sb.storage.from(BUCKET).getPublicUrl(nome);
+  return { ok: true, url: data.publicUrl };
+}

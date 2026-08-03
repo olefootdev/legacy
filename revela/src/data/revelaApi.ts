@@ -418,6 +418,29 @@ export async function fetchMinhaTrajetoria(): Promise<Trajetoria | null> {
   return rpc<Trajetoria>('revela_my_trajetoria');
 }
 
+/** Estado das provas desta semana, por missão. */
+export type EstadoProva = 'pending' | 'approved' | 'rejected';
+export type MinhasProvas = Record<string, { status: EstadoProva; note: string | null }>;
+
+export async function fetchMinhasProvas(): Promise<MinhasProvas> {
+  return (await rpc<MinhasProvas>('revela_minhas_provas')) ?? {};
+}
+
+/**
+ * Manda o print da divulgação. A SEMANA é carimbada no servidor — se viesse
+ * daqui, bastava mandar outra pra reenviar a mesma missão sem limite.
+ */
+export async function enviarProva(
+  mission: string,
+  imageUrl: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  const r = await rpc<{ ok: boolean; reason?: string }>('revela_oleko_enviar_prova', {
+    p_mission: mission,
+    p_image_url: imageUrl,
+  });
+  return r ?? { ok: false, reason: 'offline' };
+}
+
 /**
  * O placar da Trajetória. `chave = null` traz o geral; com chave, só a
  * categoria (escolinha · junior · profissional · lenda).

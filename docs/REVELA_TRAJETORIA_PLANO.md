@@ -26,10 +26,11 @@
 | 11 | Ponte do scout pra creditar OLEKO (`POST /api/revela-admin/oleko`) | ✅ |
 | 12 | Card em tempo real (como o manager o vê) | ⏳ |
 | 13 | Notificações (apoio novo, ultrapassagem no ranking) | ⏳ |
-| 14 | Tela de admin com os botões de crédito do Instagram | ⏳ — hoje a rota existe, falta a UI |
-| 15 | App Review na Meta pra automatizar a marcação | ⏳ — temporada 2 |
+| 14 | **Prova por print + conferência por IA** (`revela_oleko_provas`, rotas, envio no painel) | ✅ escrito · ⏳ migration |
+| 15 | Tela de admin listando a fila de prints | ⏳ — as rotas existem, falta a UI |
+| 16 | ~~App Review na Meta~~ | ❌ descartado — o print resolve melhor (ver §5) |
 
-**Decisões ainda abertas do fundador:** data da largada · teto de contas premiadas por divisão.
+**Decisão ainda aberta do fundador:** a data da largada.
 
 ---
 
@@ -85,11 +86,15 @@ O prêmio **exige clube criado**. Quem não tem, não perde — o valor fica ret
 *"Você tem 250.000 EXP esperando por você. Cria teu clube pra sacar."* É a razão de a campanha
 existir.
 
-### A conta a olhar antes da largada
+### Sem teto de contas premiadas — decidido em 2026-08-02
 
-500 atletas em Junior = **125 milhões de EXP emitidos**. Não vira dinheiro (Exchange fora do ar
-desde 2026-08-01), mas é volume. Recomendação: **teto de contas premiadas por divisão** na
-temporada 1, anunciado desde o dia zero.
+Eu tinha recomendado limitar as contas premiadas por divisão na temporada 1, olhando o volume
+(500 atletas em Junior = 125 milhões de EXP emitidos). **O fundador derrubou, e está certo:** EXP
+é dinheiro fictício e nunca vira dinheiro real — o Exchange saiu do ar em 2026-08-01. Emitir um
+bilhão não tira nada de ninguém; ele só acelera o onboarding de quem chegou pela campanha.
+
+Teto, aqui, criaria a única coisa que a campanha não pode ter: alguém que cumpriu a missão e não
+recebeu porque chegou depois.
 
 ---
 
@@ -129,11 +134,11 @@ primeiro marco fica a mil de distância e ninguém vê a barra andar.
 | Bônus: 5 aprovados na sua rede | 10.000 |
 | Seu card jogável foi lançado | 10.000 |
 
-### D · Instagram (semanal)
+### D · Instagram (semanal) — por PRINT
 | Missão | OLEKO | Verificação |
 |---|---:|---|
-| Marcou @olefootgame em post/reels | 1.000 | webhook `mentions` (ver §5) |
-| Marcou no story | 500 | manual |
+| Marcou @olefootgame em post/reels | 1.000 | print + IA (ver §5) |
+| Marcou no story | 500 | print + IA |
 | Seguiu o perfil | 300 | na confiança |
 
 ### E · Vitrine viva (semanal)
@@ -144,19 +149,35 @@ primeiro marco fica a mil de distância e ninguém vê a barra andar.
 
 ---
 
-## 5. Instagram — o que dá e o que não dá
+## 5. Instagram — resolvido por PRINT + IA
 
-Verificado na documentação da Meta em 2026-08-02.
+**Decisão do fundador (2026-08-02):** *"basta a gente pedir um print! Postou, tira um print e
+manda pra gente, aí aprovamos assim que a IA ver que é real."*
 
-- **Marcação em post, reels, legenda ou comentário: dá pra verificar sozinho.** Webhook
-  `mentions`, escopos `instagram_business_basic` + `instagram_business_manage_comments`.
-- **Story: a doc não confirma.** As páginas de webhook listam `comments`, `mentions`,
-  `story_insights` e `messages`, e citam story mention só como canal que *inicia conversa*, sem
-  documentar o evento.
-- **Follow: impossível.** Nenhum escopo da Instagram Platform toca em seguir ou verificar
-  seguidor (verificado em 2026-08-02, ver `project_revela_lancamento`).
-- **O webhook exige App Review + verificação de negócio da Meta** — dias ou semanas.
-  → **A temporada 1 roda em conferência manual**, pelo mesmo olheiro que já aprova talento.
+É a saída certa, e não é um plano B. A rota da API tinha três problemas: exige **App Review +
+verificação de negócio da Meta** (dias a semanas), **não cobre story** (a doc só cita story
+mention como canal que *inicia conversa*, sem documentar o evento), e **follow é impossível** —
+nenhum escopo da Instagram Platform toca em seguir ou verificar seguidor. O print funciona hoje,
+em todos os formatos, sem depender de aprovação de ninguém.
+
+### Como roda
+
+1. O atleta posta, tira print e manda pelo painel (`Esta semana → Mandar print`).
+2. O print vai pro bucket e vira linha em `revela_oleko_provas` com status `pending`.
+   **A semana é carimbada no servidor** — se viesse do cliente, bastava mandar outra pra
+   reenviar a mesma missão sem limite.
+3. `POST /api/revela-admin/provas/analisar` roda a IA (Haiku, com visão) sobre a fila.
+4. **Confiança ≥ 0,75 e veredito positivo → aprova sozinha** e credita o OLEKO.
+5. **Qualquer outra coisa NÃO é reprovada** — vai pra fila humana com o veredito anotado.
+
+### Por que o modelo é instruído a errar pro lado da dúvida
+
+O custo de um falso positivo é OLEKO — que não é dinheiro. O custo de um falso negativo é
+chamar de mentiroso um garoto que divulgou de verdade. Os dois erros não pesam igual, e o prompt
+diz isso ao modelo com todas as letras.
+
+O veredito da IA fica gravado em `ia_veredito` mesmo quando um humano decide diferente: é assim
+que a régua dela é auditada depois.
 
 ---
 

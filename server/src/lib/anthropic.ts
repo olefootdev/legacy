@@ -65,6 +65,14 @@ export interface AnthropicCallOptions {
   expectJson?: boolean;
   /** Timeout em ms. Default 30000. */
   timeoutMs?: number;
+  /**
+   * URLs de imagem anexadas à mensagem do usuário — o modelo VÊ a imagem.
+   *
+   * A API busca a URL do lado dela, então o arquivo precisa ser público (é o
+   * caso do bucket do REVELA). Ignorado quando `messages` é fornecido: nesse
+   * caso quem monta o conteúdo é quem chamou.
+   */
+  imageUrls?: string[];
 }
 
 export interface AnthropicCallResult<T = unknown> {
@@ -103,7 +111,20 @@ export async function callAnthropic<T = unknown>(
         max_tokens: opts.maxTokens ?? 1024,
         temperature: opts.temperature ?? (opts.expectJson ? 0.3 : 0.7),
         system: opts.system,
-        messages: opts.messages ?? [{ role: 'user', content: opts.user }],
+        messages: opts.messages ?? [
+          {
+            role: 'user',
+            content: opts.imageUrls?.length
+              ? [
+                  ...opts.imageUrls.map((url) => ({
+                    type: 'image' as const,
+                    source: { type: 'url' as const, url },
+                  })),
+                  { type: 'text' as const, text: opts.user },
+                ]
+              : opts.user,
+          },
+        ],
       },
       { signal: abort.signal },
     );
