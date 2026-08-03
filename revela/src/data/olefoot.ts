@@ -108,17 +108,42 @@ export interface Materia {
 }
 
 /**
- * ⚠️ PREENCHER. As seções somem sozinhas enquanto estas listas estiverem
- * vazias — página com "em breve" é pior que página sem a seção.
+ * Imprensa. Em ordem cronológica decrescente — o mais recente primeiro, porque
+ * "falaram da gente" envelhece e a data mais nova é a que sustenta o presente.
  *
- * Basta colar aqui; não precisa mexer em layout nenhum.
+ * ⚠️ AS TRÊS SÃO SOBRE O ÂNGULO BLOCKCHAIN, que é o que a imprensa cobriu entre
+ * 2020 e 2024. A página não fala de NFT, mas os links falam — e isso está certo:
+ * matéria é matéria, e esconder o que ela diz seria pior. O que a página não
+ * pode é PROMETER o que essas matérias descrevem.
+ *
+ * O título do Valor foi derivado do slug da própria URL deles — a página bloqueia
+ * leitura automatizada, então não deu pra copiar a manchete verbatim. Confirmar
+ * com o fundador se está exato.
  */
 export const MATERIAS: Materia[] = [
-  // { veiculo: 'Nome do veículo', titulo: 'Título da matéria', url: 'https://…' },
+  {
+    veiculo: 'Valor Econômico · 2024',
+    titulo: 'Blockchain Chiliz ganha jogo NFT promovido por Lugano, ex-São Paulo',
+    url: 'https://valor.globo.com/financas/criptomoedas/noticia/2024/07/25/blockchain-chiliz-ganha-jogo-nft-promovido-por-lugano-ex-sao-paulo.ghtml',
+  },
+  {
+    veiculo: 'Exame · 2023',
+    titulo: 'Desenvolvedores brasileiros lançam jogo de futebol que une blockchain e NFTs',
+    url: 'https://exame.com/future-of-money/desenvolvedores-brasileiros-lancam-jogo-futebol-blockchain-nfts/',
+  },
+  {
+    // ⚠️ Esta é de 2020 e chama o projeto de OLECOIN (olesports.io) — o nome da
+    // época. É a mesma casa: fala do André Figer entrando, que é exatamente o
+    // que o deck registra em 2020. Quem clicar vai ver outro nome, e vale o
+    // fundador saber disso antes de divulgar.
+    veiculo: 'Universidade do Bitcoin · 2020',
+    titulo: 'Mega empresário do futebol no Brasil vai lançar plataforma em blockchain para tokenização de jogadores',
+    url: 'https://www.universidadedobitcoin.com.br/mega-empresario-do-futebol-no-brasil-vai-lancar-plataforma-em-blockchain-para-tokenizacao-de-jogadores',
+  },
 ];
 
 /**
  * O vídeo do fundador explicando a Olefoot. Aceita YouTube ou Vimeo — o
  * componente extrai o id e monta o embed sem cookie. Vazio = seção some.
  */
-export const VIDEO_FUNDADOR = '';
+export const VIDEO_FUNDADOR = 'https://www.youtube.com/watch?v=_t1toqTkoI8';
