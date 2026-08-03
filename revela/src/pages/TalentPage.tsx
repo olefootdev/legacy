@@ -30,6 +30,7 @@ import { GAME_URL, signupUrl } from '../data/session';
 import { perfilInstagram } from '../data/instagram';
 import { computeSelos, selosUnlocked } from '../data/selos';
 import type { Talent } from '../data/types';
+import { videoEmbedUrl } from '@/lib/videoEmbed';
 
 /** Onde o atleta está nos 7 passos do "Como Funciona". */
 const STATUS_STEP: Record<string, number> = {
@@ -339,18 +340,7 @@ export function TalentPage({
               </>
             )}
 
-            {talent.video && (
-              <a
-                href={talent.video}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="rev-btn rev-focus mt-6"
-                data-variant="outline"
-                data-on="dark"
-              >
-                Ver jogando →
-              </a>
-            )}
+            {talent.video && <VerJogando url={talent.video} />}
 
             {/* Road to Card: progresso de carreira, não pendência de checkout. */}
             <div className="mt-10">
@@ -412,6 +402,59 @@ export function TalentPage({
 
 function primeiroNome(nome: string): string {
   return nome.trim().split(/\s+/)[0] ?? nome;
+}
+
+/**
+ * VER JOGANDO — o vídeo do atleta.
+ *
+ * Antes era só um link "Ver jogando →". Num perfil que existe pra convencer em
+ * dez segundos, mandar a pessoa embora do site pra ver a única prova de que o
+ * moleque joga bola é jogar fora a visita. Quando o link é de YouTube ou Vimeo,
+ * o vídeo toca aqui dentro.
+ *
+ * Quando NÃO é (Drive, Instagram, um link torto), `videoEmbedUrl` devolve null
+ * e a gente volta pro botão — que é o certo: iframe só pra host conhecido, e o
+ * `src` é montado do ID extraído, nunca da string que o atleta digitou.
+ */
+function VerJogando({ url }: { url: string }) {
+  const embed = videoEmbedUrl(url);
+
+  if (!embed) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer noopener"
+        className="rev-btn rev-focus mt-6"
+        data-variant="outline"
+        data-on="dark"
+      >
+        Ver jogando →
+      </a>
+    );
+  }
+
+  return (
+    <div className="mt-8">
+      <Eyebrow>Ver jogando</Eyebrow>
+      <div
+        className="mt-4 overflow-hidden rounded-[14px]"
+        style={{ aspectRatio: '16 / 9', border: '1px solid rgba(237,235,228,.12)' }}
+      >
+        <iframe
+          src={embed}
+          title="Vídeo do atleta"
+          loading="lazy"
+          className="h-full w-full"
+          style={{ display: 'block', border: 0 }}
+          allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          referrerPolicy="no-referrer"
+          sandbox="allow-scripts allow-same-origin allow-presentation"
+        />
+      </div>
+    </div>
+  );
 }
 
 /**

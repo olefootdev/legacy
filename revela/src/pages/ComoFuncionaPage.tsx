@@ -39,6 +39,7 @@ import {
   TIME,
   VIDEO_FUNDADOR,
 } from '../data/olefoot';
+import { videoEmbedUrl } from '@/lib/videoEmbed';
 
 const AMARELO = 'var(--color-rev-yellow, #fde100)';
 const OSSO = 'rgba(237,235,228,';
@@ -361,7 +362,7 @@ export function ComoFuncionaPage({ session }: { session: { userId: string } | nu
  * "somos uma sport tech de 2018" é falar de nós antes de falar dele.
  */
 function QuemEAOlefoot() {
-  const embed = VIDEO_FUNDADOR ? urlDeEmbed(VIDEO_FUNDADOR) : null;
+  const embed = VIDEO_FUNDADOR ? videoEmbedUrl(VIDEO_FUNDADOR) : null;
 
   return (
     <section id="olefoot" className="rev-section" style={{ background: 'var(--color-rev-black)' }}>
@@ -555,39 +556,6 @@ function QuemEAOlefoot() {
   );
 }
 
-/**
- * YouTube ou Vimeo → endereço de embed sem cookie. Mesma regra da tela do OLE
- * SCOUT: link que não for de vídeo devolve null, e a seção some em vez de
- * renderizar um iframe apontando pra qualquer lugar.
- */
-function urlDeEmbed(bruto: string): string | null {
-  let u: URL;
-  try {
-    u = new URL(bruto.trim());
-  } catch {
-    return null;
-  }
-  const host = u.hostname.replace(/^www\./, '');
-
-  if (host === 'youtu.be') {
-    const id = u.pathname.slice(1);
-    return id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` : null;
-  }
-  if (host === 'youtube.com' || host === 'm.youtube.com') {
-    if (u.pathname === '/watch') {
-      const id = u.searchParams.get('v');
-      return id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` : null;
-    }
-    const m = u.pathname.match(/^\/(shorts|embed)\/([\w-]+)/);
-    if (m) return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(m[2])}`;
-    return null;
-  }
-  if (host === 'vimeo.com') {
-    const id = u.pathname.split('/').filter(Boolean)[0];
-    return /^\d+$/.test(id ?? '') ? `https://player.vimeo.com/video/${id}` : null;
-  }
-  return null;
-}
 
 /* ══ Peças ═════════════════════════════════════════════════════════════════ */
 

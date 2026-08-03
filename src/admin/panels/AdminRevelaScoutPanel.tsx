@@ -22,6 +22,7 @@ import {
   type ScoutAttrs,
   type ScoutTalent,
 } from '@/admin/revelaScoutClient';
+import { videoEmbedUrl } from '@/lib/videoEmbed';
 
 /** Ponto de partida da ficha. O scout ajusta; ninguém nasce com 0. */
 const ATTR_PADRAO = 55;
@@ -456,7 +457,7 @@ function Link({ href, rotulo }: { href: string; rotulo: string }) {
 function VideoDoTalento({ url }: { url: string | null }) {
   if (!url?.trim()) return null;
 
-  const embed = urlDeEmbed(url);
+  const embed = videoEmbedUrl(url);
   if (!embed) {
     return (
       <p className="mt-3 text-white/45" style={{ fontFamily: 'var(--font-sans)', fontSize: '12.5px' }}>
@@ -480,32 +481,3 @@ function VideoDoTalento({ url }: { url: string | null }) {
   );
 }
 
-/** Converte link de YouTube/Vimeo em URL de embed. Devolve null pro resto. */
-function urlDeEmbed(bruto: string): string | null {
-  let u: URL;
-  try {
-    u = new URL(bruto.trim());
-  } catch {
-    return null;
-  }
-  const host = u.hostname.replace(/^www\./, '');
-
-  if (host === 'youtu.be') {
-    const id = u.pathname.slice(1);
-    return id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` : null;
-  }
-  if (host === 'youtube.com' || host === 'm.youtube.com') {
-    if (u.pathname === '/watch') {
-      const id = u.searchParams.get('v');
-      return id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` : null;
-    }
-    const m = u.pathname.match(/^\/(shorts|embed)\/([\w-]+)/);
-    if (m) return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(m[2])}`;
-    return null;
-  }
-  if (host === 'vimeo.com') {
-    const id = u.pathname.split('/').filter(Boolean)[0];
-    return /^\d+$/.test(id ?? '') ? `https://player.vimeo.com/video/${id}` : null;
-  }
-  return null;
-}
