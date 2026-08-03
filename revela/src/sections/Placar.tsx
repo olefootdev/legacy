@@ -142,7 +142,7 @@ function Linha({ l }: { l: LinhaRanking }) {
       className="rev-focus grid items-center gap-3 border-t px-4 py-3"
       data-on="dark"
       style={{
-        gridTemplateColumns: '30px 44px 1fr auto',
+        gridTemplateColumns: '30px 48px 1fr auto',
         borderColor: 'rgba(237,235,228,.08)',
         color: 'inherit',
       }}
@@ -154,8 +154,11 @@ function Linha({ l }: { l: LinhaRanking }) {
         {l.pos}
       </span>
 
-      <span className="overflow-hidden rounded-[6px]" style={{ width: 44 }}>
-        <Portrait src={l.portrait} alt={l.name} ratio="1 / 1" width={88} />
+      {/* Mini-card 3:4, não quadrado. Num 1:1 o retrato é reduzido a dois
+          terços da altura e o rosto some — e quando o retrato é uma ARTE
+          (como a do Breno), o quadrado vira um pôster ilegível de 44px. */}
+      <span className="overflow-hidden rounded-[5px]" style={{ width: 48 }}>
+        <Portrait src={l.portrait} alt={l.name} ratio="3 / 4" width={96} />
       </span>
 
       <span className="min-w-0">
