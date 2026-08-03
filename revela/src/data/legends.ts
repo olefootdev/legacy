@@ -50,6 +50,28 @@ export function athleteSlug(l: Legend): string {
 }
 
 /**
+ * O nome da PESSOA, tirado do nome da CARTA.
+ *
+ * `legacy_players.name` guarda o nome da carta com a fase colada: "Palhinha 93",
+ * "Goncalves98", "Nem PR", "Adauto SLV". Isso está certo no jogo — são itens
+ * colecionáveis distintos. Numa assinatura de matéria, não: ninguém escreve
+ * "por GONCALVES98".
+ *
+ * Usa a MESMA regra de `athleteSlug` (primeiro token, sem dígitos no fim), só
+ * que preservando maiúsculas e acentos. As duas andam juntas de propósito: se
+ * uma mudar de critério sem a outra, o nome exibido deixaria de casar com o
+ * link `/lenda/<slug>` da mesma linha.
+ *
+ * ⚠️ LIMITE REAL: só recupera o PRIMEIRO nome. "Nem Lima" e "Gonçalves" (com
+ * cedilha) não existem no catálogo — o que está gravado é "Nem PR" e
+ * "Goncalves98". Corrigir isso é editar `legacy_players`, não código.
+ */
+export function athleteName(l: Legend): string {
+  const first = l.name.trim().split(/\s+/)[0] ?? l.name;
+  return first.replace(/\d+$/, '') || l.name;
+}
+
+/**
  * Todas as cartas de cada atleta, indexadas pelo slug que vai na URL.
  *
  * A grade da home só precisa da melhor fase; a página do atleta precisa de

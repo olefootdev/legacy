@@ -11,7 +11,7 @@
  */
 import { Link } from 'react-router-dom';
 import { Eyebrow, Portrait } from '../components/primitives';
-import type { AthleteLegend } from '../data/legends';
+import { athleteName, type AthleteLegend } from '../data/legends';
 
 export function Legends({ legends }: { legends: AthleteLegend[] }) {
   return (
@@ -161,6 +161,14 @@ function LegendCard({ legend }: { legend: AthleteLegend }) {
  * curado do catálogo em vez de uma redação.
  *
  * Quando existir um CMS, trocar a fonte aqui e manter o layout.
+ *
+ * ⚠️ O NOME DO ATLETA É OBRIGATÓRIO EM TODA LINHA.
+ * Até 2026-08-03 esta seção mostrava `title ?? name` — ou seja, quando havia
+ * título, o nome DESAPARECIA. Cinco manchetes anônimas embaixo de uma capa com
+ * o rosto do Palhinha, e o leitor atribuía todas a ele: "O zagueiro do Brasil"
+ * (Gonçalves) e "Capitão do primeiro título nacional do Athletico" (Nem Lima)
+ * viravam biografia do Palhinha, que não é zagueiro nem jogou no Athletico.
+ * Manchete sem assinatura não é resenha — é boato.
  */
 export function Resenha({ legends }: { legends: AthleteLegend[] }) {
   const withStory = legends.filter((l) => l.title || l.bio || l.tagline);
@@ -206,8 +214,11 @@ export function Resenha({ legends }: { legends: AthleteLegend[] }) {
               </span>
             </div>
             <div className="p-6">
+              <p className="rev-label text-[10px]" style={{ color: 'var(--color-rev-yellow)' }}>
+                {athleteName(feature)}
+              </p>
               <p
-                className="rev-editorial"
+                className="rev-editorial mt-2"
                 style={{ fontSize: 'clamp(24px,2.8vw,34px)', color: 'var(--color-rev-bone)' }}
               >
                 {feature.title ?? feature.name}
@@ -223,7 +234,6 @@ export function Resenha({ legends }: { legends: AthleteLegend[] }) {
             {list.map((l, i) => (
               <li
                 key={l.id}
-                className="flex items-start gap-5 py-5"
                 style={{
                   borderBottom: i < list.length - 1 ? '1px solid rgba(237,235,228,.1)' : undefined,
                   transition: 'transform var(--dur-rev-micro) var(--ease-rev)',
@@ -231,28 +241,43 @@ export function Resenha({ legends }: { legends: AthleteLegend[] }) {
                 onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateX(5px)')}
                 onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateX(0)')}
               >
-                <span
-                  className="rev-editorial shrink-0 text-[26px]"
-                  style={{ color: 'rgba(253,225,0,.6)' }}
+                {/* Vira link: se a linha diz de quem é a história, o passo
+                    seguinte natural é abrir a história. */}
+                <Link
+                  to={`/lenda/${l.slug}`}
+                  className="rev-focus flex items-start gap-5 py-5"
+                  data-on="dark"
+                  style={{ color: 'inherit' }}
                 >
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <span className="min-w-0">
-                  <p className="rev-label text-[9px]" style={{ color: 'rgba(237,235,228,.4)' }}>
-                    {l.rarity ?? 'Lenda'}
-                  </p>
-                  <p
-                    className="rev-editorial mt-1 text-[21px]"
-                    style={{ color: 'var(--color-rev-bone)' }}
+                  <span
+                    className="rev-editorial shrink-0 text-[26px]"
+                    style={{ color: 'rgba(253,225,0,.6)' }}
                   >
-                    {l.title ?? l.name}
-                  </p>
-                  {l.tagline && (
-                    <p className="mt-1.5 text-[13px] leading-snug" style={{ color: 'rgba(237,235,228,.45)' }}>
-                      {l.tagline}
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span className="min-w-0">
+                    {/* O NOME primeiro — é ele que responde "de quem é isso?".
+                        A raridade vem depois, apagada: é dado de catálogo, não
+                        de identidade. */}
+                    <p className="rev-label text-[9px]">
+                      <span style={{ color: 'var(--color-rev-yellow)' }}>{athleteName(l)}</span>
+                      {l.rarity && (
+                        <span style={{ color: 'rgba(237,235,228,.35)' }}> · {l.rarity}</span>
+                      )}
                     </p>
-                  )}
-                </span>
+                    <p
+                      className="rev-editorial mt-1 text-[21px]"
+                      style={{ color: 'var(--color-rev-bone)' }}
+                    >
+                      {l.title ?? l.name}
+                    </p>
+                    {l.tagline && (
+                      <p className="mt-1.5 text-[13px] leading-snug" style={{ color: 'rgba(237,235,228,.45)' }}>
+                        {l.tagline}
+                      </p>
+                    )}
+                  </span>
+                </Link>
               </li>
             ))}
           </ol>
