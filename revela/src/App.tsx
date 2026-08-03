@@ -91,7 +91,7 @@ export default function App() {
             catch-all de handle engoliria "meu-perfil" como se fosse um @. */}
         <Route
           path="/meu-perfil"
-          element={<MeuPerfilPage session={session} requireAuth={requireAuth} />}
+          element={<MeuPerfilPage session={session} requireAuth={requireAuth} onNote={push} />}
         />
         <Route path="/como-funciona" element={<ComoFuncionaPage session={session} />} />
         <Route path="/lenda/:slug" element={<LegendPage onNote={push} />} />

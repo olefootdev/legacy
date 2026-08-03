@@ -14,7 +14,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '../components/primitives';
 import { Trajetoria } from '../components/Trajetoria';
-import { fetchMeuTalento, fetchMinhaTrajetoria, type MeuTalento } from '../data/revelaApi';
+import {
+  fetchLegends,
+  fetchMeuTalento,
+  fetchMinhaTrajetoria,
+  fetchTalents,
+  type MeuTalento,
+} from '../data/revelaApi';
+import { byAthlete, isLegend, type AthleteLegend } from '../data/legends';
+import { TeamBuilder } from '../sections/TeamBuilder';
+import type { Talent } from '../data/types';
 import type { Trajetoria as TrajetoriaData } from '../data/trajetoria';
 import type { RevelaSession } from '../data/session';
 
@@ -47,12 +56,19 @@ const ESTADO: Record<string, { titulo: string; explica: string; passo: number }>
 export function MeuPerfilPage({
   session,
   requireAuth,
+  onNote,
 }: {
   session: RevelaSession | null;
   requireAuth: (motivo: string, aoEntrar?: () => void) => void;
+  onNote: (titulo: string, corpo?: string, tom?: 'yellow' | 'green') => void;
 }) {
   const [talento, setTalento] = useState<MeuTalento | null>(null);
   const [trajetoria, setTrajetoria] = useState<TrajetoriaData | null>(null);
+  // Elenco do montador de time. Sai da HOME e vem pro painel: brincar de montar
+  // escalação é coisa de quem já está dentro, não de quem chegou pelo link de um
+  // amigo e ainda não sabe o que é o REVELA.
+  const [talents, setTalents] = useState<Talent[]>([]);
+  const [legends, setLegends] = useState<AthleteLegend[]>([]);
   const [carregando, setCarregando] = useState(true);
   // Qual link foi copiado por último — a página tem dois, e um estado só
   // acenderia "Copiado" nos dois ao mesmo tempo.
@@ -70,6 +86,13 @@ export function MeuPerfilPage({
     setTalento(t);
     setTrajetoria(tr);
     setCarregando(false);
+
+    // Depois de pintar o painel — o montador fica lá embaixo e não pode
+    // atrasar o que a pessoa veio ver.
+    void Promise.all([fetchTalents(40), fetchLegends(60)]).then(([ts, ls]) => {
+      setTalents(ts);
+      setLegends(byAthlete(ls.filter(isLegend)));
+    });
   }, [session]);
 
   useEffect(() => {
@@ -262,6 +285,21 @@ export function MeuPerfilPage({
 
       {/* ── O link de indicação ─────────────────────────────────────────── */}
       {publico && <LinkDeIndicacao talento={talento} />}
+
+      {/* ── O montador de time ──────────────────────────────────────────
+          Fica DEPOIS da Trajetória de propósito: primeiro o que ele precisa
+          fazer, depois o que ele pode brincar. */}
+      {talents.length + legends.length > 0 && (
+        <div className="mt-12" style={{ marginInline: 'calc(var(--rev-pad-x) * -1)' }}>
+          <TeamBuilder
+            talents={talents}
+            legends={legends}
+            authed
+            onNeedAuth={() => requireAuth('Entra pra salvar teu time')}
+            onNote={onNote}
+          />
+        </div>
+      )}
 
       {/* A Trajetória some inteira se a migration ainda não estiver aplicada —
           o painel é alicerce, ela é camada. */}

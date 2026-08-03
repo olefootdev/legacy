@@ -22,10 +22,9 @@ import type { DivisionCount, Talent } from '../data/types';
 import { GameCta, Hero, Marquee } from '../sections/Top';
 import { Discovery } from '../sections/Talents';
 import { ComoFunciona } from '../sections/Journey';
-import { Legends, Resenha } from '../sections/Legends';
+import { Legends } from '../sections/Legends';
 import { LigaRetro } from '../sections/LigaRetro';
 import { Placar } from '../sections/Placar';
-import { TeamBuilder } from '../sections/TeamBuilder';
 
 export function Home({
   session,
@@ -135,15 +134,6 @@ export function Home({
         <Placar limite={10} />
         <ComoFunciona />
         <Legends legends={legends} />
-        <Resenha legends={legends} />
-
-        <TeamBuilder
-          talents={talents}
-          legends={legends}
-          authed={Boolean(session)}
-          onNeedAuth={() => requireAuth('Entra pra salvar teu time')}
-          onNote={onNote}
-        />
 
         {/* A homenagem ao Elifoot — tela retro com a classificação real da liga.
             Some sozinha se a liga ainda não tem divisões. */}

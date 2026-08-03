@@ -16,14 +16,14 @@ import { GAME_URL, signupUrl } from '../data/session';
 
 // Âncoras com a barra na frente: a partir de /lenda/<slug> um '#lendas' puro
 // não sairia do lugar. Com '/#lendas' o navegador volta pra home e desce.
+// O menu acompanha a limpeza da home: 'Torcida', 'Reveal Wall' e 'Resenha'
+// apontavam pra âncoras que deixaram de existir. Item de menu que não leva a
+// lugar nenhum é pior que menu curto.
 const NAV_LINKS = [
   { href: '/#descobrir', label: 'Descobrir' },
-  // Era '/#torcida'. A seção saiu; o item vira A Trajetória, que é onde a
-  // disputa acontece agora.
   { href: '/#placar', label: 'Trajetória' },
-  { href: '/#mural', label: 'Reveal Wall' },
   { href: '/#lendas', label: 'Lendas' },
-  { href: '/#resenha', label: 'Resenha' },
+  { href: '/como-funciona', label: 'Como funciona' },
 ];
 
 /* ══ Nav ═══════════════════════════════════════════════════════════════════ */
@@ -309,22 +309,31 @@ export function Marquee() {
 
 export function GameCta() {
   return (
+    /* PRETO, fechando a página. A Liga Retro logo acima é amarela; duas
+       seções amarelas coladas apagavam o corte entre "olha o jogo" e "entra
+       no jogo" — e o fecho é justamente onde o contraste tem que ser maior. */
     <section
       className="rev-section relative overflow-hidden text-center"
-      style={{ background: 'var(--color-rev-yellow)', color: '#0D0D0D' }}
+      style={{ background: 'var(--color-rev-black)' }}
     >
       <div className="rev-container relative z-10">
-        <h2 className="rev-hero-type" style={{ fontSize: 'clamp(46px,10vw,150px)' }}>
+        <h2
+          className="rev-hero-type"
+          style={{ fontSize: 'clamp(46px,10vw,150px)', color: 'var(--color-rev-yellow)' }}
+        >
           Entre em campo.
         </h2>
-        <p className="rev-label mx-auto mt-5 max-w-[44ch] text-[12px]" style={{ color: 'rgba(13,13,13,.62)' }}>
+        <p
+          className="rev-label mx-auto mt-5 max-w-[44ch] text-[12px]"
+          style={{ color: 'rgba(237,235,228,.6)' }}
+        >
           Monte o clube, escale o time, dispute ligas contra managers reais.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <a href={GAME_URL} className="rev-btn rev-focus">
+          <a href={GAME_URL} className="rev-btn rev-focus" data-variant="yellow" data-on="dark">
             Jogar agora
           </a>
-          <a href="/comecar" className="rev-btn rev-focus" data-variant="outline">
+          <a href="/comecar" className="rev-btn rev-focus" data-variant="outline" data-on="dark">
             Criar meu perfil
           </a>
         </div>

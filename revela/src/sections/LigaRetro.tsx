@@ -75,26 +75,30 @@ export function LigaRetro() {
   const maxDivision = Math.max(...divisions.map((d) => d.division));
 
   return (
-    <section className="rev-section" style={{ background: 'var(--color-rev-black)' }}>
+    /* FUNDO AMARELO: a tela retro é preta, e preto sobre preto some. Sobre o
+       amarelo ela vira um monitor ligado no meio da página — que é exatamente
+       a lembrança que a seção quer acionar. */
+    <section className="rev-section" style={{ background: 'var(--color-rev-yellow)', color: '#0D0D0D' }}>
       <div className="rev-container">
-        <Eyebrow>Pra quem é da velha guarda</Eyebrow>
-        <h2
-          className="rev-display mt-4"
-          style={{ fontSize: 'clamp(30px,6vw,64px)', color: 'var(--color-rev-bone)' }}
-        >
+        <Eyebrow on="yellow">Pra quem é da velha guarda</Eyebrow>
+        <h2 className="rev-display mt-4" style={{ fontSize: 'clamp(34px,6.6vw,76px)' }}>
           Você lembra
           <br />
-          <span style={{ color: 'var(--color-rev-yellow)' }}>disso aqui?</span>
+          disso aqui?
         </h2>
-        <p className="mt-4 max-w-[40ch] text-[clamp(16px,2.4vw,20px)] leading-relaxed" style={{ color: 'rgba(237,235,228,.7)' }}>
-          É igual antigamente — só que com{' '}
-          <strong style={{ color: 'var(--color-rev-yellow)' }}>times e jogadores reais.</strong>
+        <p className="mt-4 max-w-[40ch] text-[clamp(16px,2.4vw,20px)] leading-relaxed" style={{ color: 'rgba(13,13,13,.72)' }}>
+          É igual antigamente — só que com <strong>times e jogadores reais.</strong>
         </p>
 
         {/* ── A janela retro ─────────────────────────────────────────────── */}
         <div
           className="mt-8 overflow-hidden"
-          style={{ borderRadius: '7px 7px 5px 5px', boxShadow: '0 24px 60px rgba(0,0,0,.5)', maxWidth: 900 }}
+          style={{
+            borderRadius: '7px 7px 5px 5px',
+            border: '3px solid #0D0D0D',
+            boxShadow: 'var(--shadow-rev-md)',
+            maxWidth: 1120,
+          }}
         >
           <TitleBar />
           <Screen divisions={divisions} maxDivision={maxDivision} scorers={scorers} />
@@ -103,10 +107,10 @@ export function LigaRetro() {
         <Legenda />
 
         <div className="mt-7 flex flex-wrap gap-3">
-          <a href={GAME_URL} className="rev-btn rev-focus" data-variant="yellow">
+          <a href={GAME_URL} className="rev-btn rev-focus">
             Entrar no jogo
           </a>
-          <a href={`${GAME_URL}/competicao/ranking`} className="rev-btn rev-focus" data-variant="outline" data-on="dark">
+          <a href={`${GAME_URL}/competicao/ranking`} className="rev-btn rev-focus" data-variant="outline">
             Ver a liga completa
           </a>
         </div>
@@ -174,10 +178,10 @@ function Screen({
     <div
       style={{
         background: '#000',
-        padding: '14px clamp(10px,2vw,20px) 18px',
+        padding: '18px clamp(14px,2.4vw,26px) 24px',
         fontFamily: MONO,
         fontWeight: 700,
-        fontSize: 'clamp(10px,1.5vw,13px)',
+        fontSize: 'clamp(12px,1.7vw,16px)',
         lineHeight: 1.5,
         backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,.015) 0 2px, transparent 2px 4px)',
       }}
@@ -315,10 +319,20 @@ function Legenda() {
     { cor: '#ffe23a', label: 'Líder' },
   ];
   return (
-    <div className="mt-5 flex flex-wrap gap-4 text-[12px]">
+    <div className="mt-5 flex flex-wrap gap-4 text-[13px]">
       {itens.map((i) => (
-        <span key={i.label} className="inline-flex items-center gap-2" style={{ color: 'rgba(237,235,228,.6)' }}>
-          <i style={{ width: 11, height: 11, borderRadius: 2, background: i.cor }} />
+        <span key={i.label} className="inline-flex items-center gap-2" style={{ color: 'rgba(13,13,13,.7)' }}>
+          {/* A amostra vai sobre PRETO, não sobre o amarelo da seção — porque
+              é sobre preto que essas cores aparecem, lá dentro da tela. Com a
+              cor solta no fundo amarelo, o marcador do LÍDER (#ffe23a) some
+              contra o #fde100 da página: justamente a cor que marca o primeiro
+              lugar virava um quadrado vazio. */}
+          <i
+            className="grid place-items-center"
+            style={{ width: 20, height: 20, borderRadius: 3, background: '#0D0D0D' }}
+          >
+            <i style={{ width: 10, height: 10, borderRadius: 2, background: i.cor }} />
+          </i>
           {i.label}
         </span>
       ))}
