@@ -25,6 +25,7 @@ import {
   ptBr,
 } from '../components/primitives';
 import { BotaoCard } from '../components/CardDoAtleta';
+import { PostDoInstagram } from '../components/PostDoInstagram';
 import { CampoPosicao } from '../components/CampoPosicao';
 import { RadarAtributos } from '../components/RadarAtributos';
 import { completudePct, computeCompletude } from '../data/completude';
@@ -32,7 +33,7 @@ import { TRACOS, arquetipoDe } from '../data/dna';
 import { PES, descricaoDaPosicao, nomeDaPosicao } from '../data/posicoes';
 import { fetchMySupports, fetchTalent, supportTalent } from '../data/revelaApi';
 import { GAME_URL, signupUrl } from '../data/session';
-import { perfilInstagram } from '../data/instagram';
+import { embedDoPost, perfilInstagram } from '../data/instagram';
 import { computeSelos, selosUnlocked } from '../data/selos';
 import type { DnaPublico, Talent } from '../data/types';
 import { VIDEO_IFRAME_PROPS, videoEmbedUrl } from '@/lib/videoEmbed';
@@ -173,6 +174,7 @@ export function TalentPage({
   const local = [talent.city, talent.uf].filter(Boolean).join(' · ');
   const lenda = ehLenda(talent.gameSituation);
   const insta = perfilInstagram(talent.instagram);
+  const postEmbed = embedDoPost(talent.instagramPost);
   const attrs = ATTR_ORDER.map((k) => ({
     key: k,
     label: ATTR_LABEL[k] ?? k,
@@ -421,6 +423,21 @@ export function TalentPage({
               pra ficha; DNA é camada nova, e cobrar de todo mundo que ainda não
               respondeu encheria a vitrine inteira de buraco no dia 1. */}
           {talent.dna && <DnaBlock dna={talent.dna} />}
+
+          {/* ── O post que ele escolheu ─────────────────────────────────────
+              CURADORIA, NÃO FEED. Não existe endpoint que liste os posts de uma
+              conta pública, e puxar feed exigiria OAuth + App Review da Meta.
+              Mas o post escolhido é melhor mesmo tendo o feed disponível: numa
+              página que mostra menor de idade, "o que ele quis mostrar" e "o que
+              ele postou ontem" são coisas muito diferentes. */}
+          {postEmbed && (
+            <div className="mt-16">
+              <Eyebrow>O lance que ele escolheu</Eyebrow>
+              <div className="mt-5 max-w-[540px]">
+                <PostDoInstagram embed={postEmbed} titulo={`Post de ${talent.name} no Instagram`} />
+              </div>
+            </div>
+          )}
 
           {/* ── História, progresso e selos ─────────────────────────────────── */}
           <div className="mt-16 grid gap-12 lg:grid-cols-2">

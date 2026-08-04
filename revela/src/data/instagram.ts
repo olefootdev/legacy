@@ -52,3 +52,36 @@ export function perfilInstagram(bruto: string | null | undefined): PerfilInstagr
 
   return { handle: `@${s}`, url: `https://instagram.com/${s}` };
 }
+
+/* ══ O POST EM DESTAQUE ════════════════════════════════════════════════════ */
+
+/**
+ * O link de post que o atleta colou → endereço de embed do Instagram.
+ *
+ * ── POR QUE UM POST, E NÃO O FEED ───────────────────────────────────────────
+ * Não existe endpoint que liste os posts de uma conta pública: o oEmbed embute
+ * UM post, e feed exigiria o atleta conectar via OAuth com App Review da Meta.
+ * O post escolhido resolve o mesmo problema e é melhor — ele escolhe o gol, não
+ * o algoritmo. Numa página que mostra menor de idade, a diferença entre "o que
+ * ele quis mostrar" e "o que ele postou ontem" é a diferença toda.
+ *
+ * ── SEM TOKEN, E VERIFICADO ─────────────────────────────────────────────────
+ * `instagram.com/{p|reel|tv}/{código}/embed` responde 200 sem credencial e não
+ * manda `X-Frame-Options` nem `frame-ancestors` — dá pra embutir de qualquer
+ * origem. É o mesmo endereço que o `embed.js` oficial usa por baixo. (O
+ * `graph.facebook.com/instagram_oembed`, esse SIM exige token: devolve 400 sem
+ * ele. Testado em 2026-08-04.)
+ *
+ * ── A MESMA REGRA DE SEMPRE ─────────────────────────────────────────────────
+ * O endereço é MONTADO do código extraído, nunca a string que o atleta colou.
+ */
+const POST_VALIDO = /instagram\.com\/(p|reel|tv)\/([A-Za-z0-9_-]{5,20})/i;
+
+export function embedDoPost(bruto: string | null | undefined): string | null {
+  if (!bruto) return null;
+  const m = POST_VALIDO.exec(bruto.trim());
+  if (!m) return null;
+  const tipo = m[1].toLowerCase();
+  const codigo = m[2];
+  return `https://www.instagram.com/${tipo}/${encodeURIComponent(codigo)}/embed`;
+}

@@ -406,6 +406,8 @@ export interface MeuTalento {
   /** Autorização do responsável. O `token` só sai pro dono da ficha. */
   autorizacao?: { status: 'pending' | 'approved' | 'revoked'; token: string } | null;
   fotoEsperando?: boolean;
+  /** O post do Instagram que ele escolheu destacar. */
+  instagramPost?: string | null;
   createdAt: string;
 }
 
@@ -432,6 +434,21 @@ export async function salvarDna(
     p_arquetipo: resultado.arquetipo,
   });
   return res ?? { ok: false, reason: 'network' };
+}
+
+/**
+ * Grava (ou limpa) o post do Instagram em destaque.
+ *
+ * String vazia LIMPA — é como o atleta tira um post que não quer mais. O RPC
+ * valida só a forma; quem monta o endereço do embed é `embedDoPost`, do código
+ * extraído, nunca da string colada.
+ */
+export async function salvarPostInstagram(
+  url: string,
+): Promise<{ ok: boolean; reason?: 'nao_e_post' | 'no_talent' | 'auth_required' | 'offline' }> {
+  const res = await rpc<{ ok: boolean; reason?: string }>('revela_meu_post', { p_url: url });
+  if (!res) return { ok: false, reason: 'offline' };
+  return { ok: Boolean(res.ok), reason: res.reason as 'nao_e_post' | undefined };
 }
 
 /* ══ Autorização do responsável (atleta menor de idade) ═══════════════════ */

@@ -14,12 +14,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '../components/primitives';
 import { Trajetoria } from '../components/Trajetoria';
+import { PostDoInstagram } from '../components/PostDoInstagram';
 import { arquetipoDe } from '../data/dna';
+import { embedDoPost } from '../data/instagram';
 import {
   fetchLegends,
   fetchMeuTalento,
   fetchMinhaTrajetoria,
   fetchTalents,
+  salvarPostInstagram,
   type MeuTalento,
 } from '../data/revelaApi';
 import { byAthlete, isLegend, type AthleteLegend } from '../data/legends';
@@ -297,6 +300,9 @@ export function MeuPerfilPage({
         )}
       </section>
 
+      {/* ── O post em destaque ──────────────────────────────────────────── */}
+      {publico && <CardPostInstagram talento={talento} onNote={onNote} aoSalvar={carregar} />}
+
       {/* ── O link de indicação ─────────────────────────────────────────── */}
       {publico && <LinkDeIndicacao talento={talento} />}
 
@@ -354,6 +360,98 @@ export function MeuPerfilPage({
  * e a tela DIZ isso, em vez de deixar o atleta divulgar achando que está
  * construindo rede.
  */
+/**
+ * O POST EM DESTAQUE — um lance escolhido a dedo.
+ *
+ * Feed ao vivo não existe: o Instagram embute um post por vez, e listar os posts
+ * de uma conta exigiria o atleta conectar via OAuth com App Review da Meta.
+ * Mas mesmo se existisse, o escolhido é melhor — ele coloca o gol, não o que o
+ * algoritmo achar. E numa vitrine que mostra menor de idade, isso importa mais
+ * do que parece.
+ *
+ * O campo aceita vazio pra LIMPAR: tirar um post tem que ser tão fácil quanto pôr.
+ */
+function CardPostInstagram({
+  talento,
+  onNote,
+  aoSalvar,
+}: {
+  talento: MeuTalento;
+  onNote: (titulo: string, corpo?: string, tom?: 'yellow' | 'green') => void;
+  aoSalvar: () => Promise<void> | void;
+}) {
+  const [url, setUrl] = useState(talento.instagramPost ?? '');
+  const [busy, setBusy] = useState(false);
+  const embed = embedDoPost(url);
+
+  async function salvar() {
+    if (busy) return;
+    setBusy(true);
+    const res = await salvarPostInstagram(url.trim());
+    setBusy(false);
+    if (!res.ok) {
+      onNote(
+        res.reason === 'nao_e_post' ? 'Esse link não é de um post' : 'Não deu pra salvar',
+        res.reason === 'nao_e_post'
+          ? 'Abre o post no Instagram, toca em Compartilhar e copia o link.'
+          : 'Tenta de novo em instantes.',
+      );
+      return;
+    }
+    onNote(url.trim() ? 'Post no ar' : 'Post removido', undefined, 'green');
+    await aoSalvar();
+  }
+
+  return (
+    <section className="mt-8">
+      <Eyebrow>Teu lance em destaque</Eyebrow>
+      <p className="mt-2 max-w-[52ch] text-[14px] leading-relaxed" style={{ color: 'rgba(237,235,228,.6)' }}>
+        Escolhe UM post teu do Instagram pra aparecer no teu perfil. O gol, a assistência,
+        o corte. Cola o link aqui — pra tirar, apaga e salva.
+      </p>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2.5">
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://instagram.com/p/..."
+          className="rev-focus min-w-0 flex-1 px-3.5 py-3 text-[14px]"
+          style={{
+            background: 'rgba(13,13,13,.5)',
+            border: '1px solid rgba(237,235,228,.16)',
+            borderRadius: 'var(--radius-rev-btn)',
+            color: 'var(--color-rev-bone)',
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => void salvar()}
+          disabled={busy}
+          className="rev-btn rev-focus shrink-0"
+          data-variant="yellow"
+          data-on="dark"
+          style={{ minHeight: 44 }}
+        >
+          {busy ? 'Salvando…' : 'Salvar'}
+        </button>
+      </div>
+
+      {/* A prévia é a prova: se não aparecer aqui, não vai aparecer no perfil. */}
+      {embed && (
+        <div className="mt-4 max-w-[420px]">
+          <PostDoInstagram embed={embed} titulo="Prévia do teu post" />
+        </div>
+      )}
+      {url.trim() && !embed && (
+        <p className="mt-3 text-[13px]" style={{ color: 'var(--color-rev-danger)' }}>
+          Esse link não parece de um post. Abre o post, toca em Compartilhar e copia o link.
+        </p>
+      )}
+    </section>
+  );
+}
+
 /**
  * A FOTO ESPERANDO O RESPONSÁVEL.
  *

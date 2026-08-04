@@ -52,6 +52,11 @@ export interface Talent {
    * `perfilInstagram()` primeiro. Só chega no perfil, não na listagem.
    */
   instagram?: string | null;
+  /**
+   * UM post que o atleta escolheu destacar. Curadoria, não feed: ver o
+   * cabeçalho de `embedDoPost` em data/instagram.ts.
+   */
+  instagramPost?: string | null;
   attributes: RevelaAttributes;
   /**
    * Player DNA — como ele pensa. Null enquanto não fez o teste, e null também
