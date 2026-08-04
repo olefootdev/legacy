@@ -73,6 +73,13 @@ export interface Talent {
    * trata ausência como 'scout', que é o que aquelas fichas de fato são.
    */
   ratingSource?: 'auto' | 'scout' | null;
+  /**
+   * Perfil de DEMONSTRAÇÃO criado pela casa — não é atleta de verdade.
+   * A vitrine promete "descubra quem está chegando": um perfil inventado sem
+   * aviso, ao lado de gente real, seria mentira. Com a tag, ele é o que é —
+   * a amostra de como uma ficha fica pronta.
+   */
+  exemplo?: boolean;
   /** OVR ponderado por posição, calculado no servidor. NUNCA recalcular aqui. */
   overall: number | null;
   status: TalentStatus;

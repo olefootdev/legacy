@@ -160,6 +160,17 @@ function TalentCard({
           {estadoDoSelo(talent).tem && <SeloScout />}
         </div>
         <div className="absolute right-2.5 top-2.5 flex flex-col items-end gap-1.5">
+          {/* Antes do Sticker de propósito: quem bate o olho na grade tem que
+              ver "Exemplo" antes de "Card pronto". */}
+          {talent.exemplo && (
+            <span
+              className="rev-label rounded-full px-2.5 py-1 text-[9px]"
+              style={{ background: 'var(--color-rev-bone)', color: '#0D0D0D' }}
+              title="Perfil de demonstração da Olefoot — não é um atleta real"
+            >
+              Exemplo
+            </span>
+          )}
           <Sticker status={status} />
           {ehLenda(talent.gameSituation) && <LegendMark compact />}
         </div>

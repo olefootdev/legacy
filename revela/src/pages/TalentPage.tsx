@@ -225,6 +225,9 @@ export function TalentPage({
                     ` · ${talent.overall} ${(talent.ratingSource ?? 'scout') === 'auto' ? 'inicial' : 'OVR'}`}
                 </span>
                 {lenda && <LegendMark />}
+                {/* EXEMPLO vem ANTES do selo do scout e do resto: se a pessoa
+                    só ler uma coisa desta linha, tem que ser esta. */}
+                {talent.exemplo && <TagExemplo />}
                 {/* A marca de que uma PESSOA conferiu. Fica junto da pílula de
                     status, no alto: é a primeira coisa que separa esta ficha das
                     outras, e quem chega de um print precisa ver antes de rolar. */}
@@ -247,6 +250,13 @@ export function TalentPage({
                   .filter(Boolean)
                   .join(' · ')}
               </p>
+
+              {talent.exemplo && (
+                <p className="mt-3 max-w-[46ch] text-[14px] leading-snug" style={{ color: 'rgba(13,13,13,.6)' }}>
+                  Este é um <strong>perfil de exemplo</strong> criado pela Olefoot pra mostrar como
+                  uma ficha fica pronta. Não é um atleta real.
+                </p>
+              )}
 
               {/* O número de apoiadores é o coração emocional — corpo de manchete.
                   MAS não quando é zero: esta é a página do próprio atleta, e um
@@ -541,6 +551,25 @@ export function TalentPage({
         </div>
       </section>
     </main>
+  );
+}
+
+/**
+ * A TAG EXEMPLO — perfil de demonstração criado pela casa.
+ *
+ * Fundo osso e texto preto: destoa do amarelo e do preto que o resto da página
+ * usa, porque a função dela é justamente NÃO se misturar. Tag de aviso que
+ * combina com a identidade vira decoração e para de avisar.
+ */
+function TagExemplo() {
+  return (
+    <span
+      className="rev-label inline-flex items-center rounded-full px-3.5 py-2 text-[10px]"
+      style={{ background: 'var(--color-rev-bone)', color: '#0D0D0D' }}
+      title="Perfil de demonstração criado pela Olefoot — não é um atleta real"
+    >
+      Exemplo
+    </span>
   );
 }
 
