@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '../components/primitives';
 import { Trajetoria } from '../components/Trajetoria';
+import { arquetipoDe } from '../data/dna';
 import {
   fetchLegends,
   fetchMeuTalento,
@@ -374,7 +375,7 @@ function CardDna({ talento }: { talento: MeuTalento }) {
                 className="rev-display text-[26px] leading-none"
                 style={{ color: 'var(--color-rev-yellow, #fde100)' }}
               >
-                {talento.dna?.arquetipo}
+                {arquetipoDe(talento.dna?.tracos) ?? talento.dna?.arquetipo}
               </p>
               <p className="mt-2 text-[13px]" style={{ color: 'rgba(237,235,228,.55)' }}>
                 Teu Player DNA já está no perfil.

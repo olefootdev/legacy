@@ -86,15 +86,15 @@ export const TRACOS: Traco[] = [
   {
     id: 'adaptacao',
     nome: 'Adaptação',
-    substantivo: 'Camaleão',
-    adjetivo: 'camaleão',
+    substantivo: 'Adaptivo',
+    adjetivo: 'adaptivo',
     oQueDiz: 'se encaixa em qualquer cenário',
   },
   {
     id: 'decisao',
     nome: 'Decisão',
-    substantivo: 'Resolvedor',
-    adjetivo: 'resolvedor',
+    substantivo: 'Versátil',
+    adjetivo: 'versátil',
     oQueDiz: 'escolhe rápido e banca a escolha',
   },
   {
@@ -342,6 +342,33 @@ export function pontuarDna(respostas: RespostasDna, itens: ItemDna[] = ITENS_DNA
     // "assume o peso do lance e lê o jogo" — que o leitor lê como uma coisa só.
     frase: `${capitalizar(primeiro.oQueDiz)}. ${capitalizar(segundo.oQueDiz)}.`,
   };
+}
+
+/**
+ * O arquétipo a partir dos traços já pontuados.
+ *
+ * ── POR QUE ISTO EXISTE SEPARADO ────────────────────────────────────────────
+ * O nome fica gravado em `revela_talent_dna.arquetipo` no momento em que o
+ * atleta responde. Isso é bom pra histórico e péssimo pra copy: no dia em que
+ * uma palavra do catálogo muda — e mudou, "camaleão" virou "adaptivo" e
+ * "resolvedor" virou "versátil" — quem já respondeu ficaria com o nome velho
+ * pra sempre, e a vitrine mostraria duas gerações de título ao mesmo tempo.
+ *
+ * Então a tela DERIVA o nome dos traços, que são o dado de verdade. A coluna
+ * continua lá como registro do que ele viu no dia, e como rede quando os traços
+ * não vierem.
+ */
+export function arquetipoDe(tracos: Record<string, number> | null | undefined): string | null {
+  if (!tracos) return null;
+  const ordem = TRACOS.map((t) => t.id).sort((a, b) => {
+    const d = Number(tracos[b] ?? 0) - Number(tracos[a] ?? 0);
+    if (d !== 0) return d;
+    return TRACOS.findIndex((t) => t.id === a) - TRACOS.findIndex((t) => t.id === b);
+  });
+  const primeiro = TRACO_POR_ID.get(ordem[0]);
+  const segundo = TRACO_POR_ID.get(ordem[1]);
+  if (!primeiro || !segundo) return null;
+  return `${primeiro.substantivo} ${segundo.adjetivo}`;
 }
 
 /** Quantos itens já foram respondidos — pra barra de progresso e pra validação. */

@@ -24,10 +24,11 @@ import {
   ehLenda,
   ptBr,
 } from '../components/primitives';
+import { BotaoCard } from '../components/CardDoAtleta';
 import { CampoPosicao } from '../components/CampoPosicao';
 import { RadarAtributos } from '../components/RadarAtributos';
 import { completudePct, computeCompletude } from '../data/completude';
-import { TRACOS } from '../data/dna';
+import { TRACOS, arquetipoDe } from '../data/dna';
 import { PES, descricaoDaPosicao, nomeDaPosicao } from '../data/posicoes';
 import { fetchMySupports, fetchTalent, supportTalent } from '../data/revelaApi';
 import { GAME_URL, signupUrl } from '../data/session';
@@ -276,6 +277,22 @@ export function TalentPage({
                 <button type="button" onClick={compartilhar} className="rev-btn rev-focus" data-variant="outline" data-on="yellow">
                   Compartilhar
                 </button>
+                {/* A arte pronta. Link cru não para o dedo de ninguém no feed —
+                    o card sim, e ele carrega o endereço dentro da imagem. */}
+                <span data-on="yellow">
+                  <BotaoCard
+                    dados={{
+                      nome: talent.name,
+                      posicao: talent.pos ? nomeDaPosicao(talent.pos) : null,
+                      overall: talent.overall,
+                      arquetipo: talent.dna ? (arquetipoDe(talent.dna.tracos) ?? talent.dna.arquetipo) : null,
+                      inicial: (talent.ratingSource ?? 'scout') === 'auto',
+                      portrait: talent.portrait,
+                      url: shareUrl,
+                    }}
+                    rotulo="Baixar meu card"
+                  />
+                </span>
                 {/* Some sozinho quando o atleta não preencheu, ou quando o que
                     ele escreveu não vira um @ plausível. Botão que leva a perfil
                     inexistente queima a confiança de quem clicou. */}
@@ -299,7 +316,12 @@ export function TalentPage({
                 <Portrait src={talent.portrait} alt={talent.name} ratio="4 / 5" width={360} priority />
                 <div
                   className="rev-rail absolute inset-x-3 bottom-3 px-3.5 py-2.5"
-                  style={{ background: 'rgba(13,13,13,.9)', backdropFilter: 'blur(6px)', borderRadius: 6 }}
+                  /* SEM `backdrop-filter`. No Safari do iPhone, elemento com
+                     blur dentro de container que rola é pintado fora do lugar —
+                     esta plaquinha apareceu flutuando POR CIMA do vídeo, que
+                     está a mil pixels dali. O fundo já era 90% opaco: o blur não
+                     acrescentava nada que valesse o risco. */
+                  style={{ background: 'rgba(13,13,13,.94)', borderRadius: 6 }}
                 >
                   <p className="rev-display text-[20px] leading-none" style={{ color: 'var(--color-rev-bone)' }}>
                     {talent.name}
@@ -747,6 +769,9 @@ function DnaBlock({ dna }: { dna: DnaPublico }) {
   const ordenados = TRACOS.map((t) => ({ t, v: Number(dna.tracos?.[t.id] ?? 0) })).sort(
     (a, b) => b.v - a.v,
   );
+  // Derivado dos traços, com o gravado como rede: assim trocar uma palavra do
+  // catálogo atualiza quem já respondeu, sem ninguém refazer o teste.
+  const nome = arquetipoDe(dna.tracos) ?? dna.arquetipo;
 
   return (
     <div className="mt-16">
@@ -757,7 +782,7 @@ function DnaBlock({ dna }: { dna: DnaPublico }) {
             className="rev-display"
             style={{ fontSize: 'clamp(30px,4.6vw,54px)', lineHeight: 0.95, color: 'var(--color-rev-yellow)' }}
           >
-            {dna.arquetipo}
+            {nome}
           </h3>
           <p className="mt-4 max-w-[36ch] text-[14px] leading-relaxed" style={{ color: 'rgba(237,235,228,.45)' }}>
             Resultado de 13 situações de jogo. Não é nota de bom ou ruim — é o jeito dele
