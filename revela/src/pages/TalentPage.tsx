@@ -425,6 +425,10 @@ export function TalentPage({
           {/* ── História, progresso e selos ─────────────────────────────────── */}
           <div className="mt-16 grid gap-12 lg:grid-cols-2">
             <div>
+              {/* SONHO E HISTÓRIA SÃO COISAS DIFERENTES, e por um tempo não
+                  foram: o cadastro gravava o sonho na coluna `bio`, e a página
+                  publicava "A história: Jogar na Seleção Brasileira". Agora cada
+                  um no seu título — e os dois aparecem quando os dois existem. */}
               {talent.bio && (
                 <>
                   <Eyebrow>A história</Eyebrow>
@@ -432,6 +436,17 @@ export function TalentPage({
                     {talent.bio}
                   </p>
                 </>
+              )}
+              {talent.dream && (
+                <div className={talent.bio ? 'mt-8' : ''}>
+                  <Eyebrow>O sonho</Eyebrow>
+                  <p
+                    className="rev-display mt-4 max-w-[20ch]"
+                    style={{ fontSize: 'clamp(22px,3vw,34px)', lineHeight: 1.05, color: 'var(--color-rev-bone)' }}
+                  >
+                    {talent.dream}
+                  </p>
+                </div>
               )}
             </div>
 

@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthSheet } from './components/AuthSheet';
+import { AutorizacaoPage } from './pages/AutorizacaoPage';
 import { ComoFuncionaPage } from './pages/ComoFuncionaPage';
 import { DnaTestPage } from './pages/DnaTestPage';
 import { MeuPerfilPage } from './pages/MeuPerfilPage';
@@ -106,6 +107,9 @@ export default function App() {
             supabase-js é por origem, e link que caísse no domínio do jogo
             deixaria a pessoa deslogada aqui. Antes de /:short, como as outras. */}
         <Route path="/reset-senha" element={<ResetSenhaPage onNote={push} />} />
+        {/* O responsável abre isto por um link do WhatsApp, sem conta. Antes de
+            /:short, como todas as rotas nomeadas. */}
+        <Route path="/autorizacao/:token" element={<AutorizacaoPage onNote={push} />} />
         <Route path="/como-funciona" element={<ComoFuncionaPage session={session} />} />
         <Route path="/lenda/:slug" element={<LegendPage onNote={push} />} />
         {/* Alias: links de /playervip/<handle> compartilhados por aí continuam

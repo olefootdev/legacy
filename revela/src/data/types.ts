@@ -37,6 +37,13 @@ export interface Talent {
   birthYear: number | null;
   strongFoot: string | null;
   bio: string | null;
+  /** O sonho, que ele escreve no cadastro. Nunca foi a mesma coisa que a bio. */
+  dream?: string | null;
+  /**
+   * A foto existe mas está esperando o responsável autorizar (atleta menor de
+   * idade). Diferente de "não mandou foto": aqui o vazio tem explicação.
+   */
+  fotoEsperando?: boolean;
   portrait: string | null;
   video: string | null;
   /**

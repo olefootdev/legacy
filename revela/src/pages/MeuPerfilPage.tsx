@@ -236,6 +236,13 @@ export function MeuPerfilPage({
         />
       </div>
 
+      {/* ── A autorização do responsável ────────────────────────────────
+          PRIMEIRO DE TUDO quando falta: é o que segura a foto dele fora do ar,
+          e nenhuma outra coisa do painel importa mais que isso pro moleque. */}
+      {talento.fotoEsperando && talento.autorizacao?.status !== 'approved' && (
+        <CardAutorizacao talento={talento} onNote={onNote} />
+      )}
+
       {/* ── O teste de DNA ──────────────────────────────────────────────
           Vem ANTES do link de divulgação de propósito: é a coisa mais barata
           que ele pode fazer agora pra ficha ficar mais forte — dois minutos,
@@ -347,6 +354,89 @@ export function MeuPerfilPage({
  * e a tela DIZ isso, em vez de deixar o atleta divulgar achando que está
  * construindo rede.
  */
+/**
+ * A FOTO ESPERANDO O RESPONSÁVEL.
+ *
+ * O atleta é menor de idade, mandou a foto, e ela está guardada. Esta é a única
+ * tela onde ele descobre isso — então ela não pode ser um aviso: tem que ser um
+ * BOTÃO. Um toque copia uma mensagem pronta pro WhatsApp, com o link dentro.
+ *
+ * A mensagem é escrita pra caber num WhatsApp de pai: diz quem mandou, o que é,
+ * e o que acontece se ele não fizer nada. Sem jargão e sem link nu.
+ */
+function CardAutorizacao({
+  talento,
+  onNote,
+}: {
+  talento: MeuTalento;
+  onNote: (titulo: string, corpo?: string, tom?: 'yellow' | 'green') => void;
+}) {
+  const token = talento.autorizacao?.token;
+  if (!token) return null;
+
+  const link = `${window.location.origin}/autorizacao/${token}`;
+  const primeiro = talento.name.trim().split(/\s+/)[0];
+  const texto =
+    `Oi! Sou eu, ${primeiro}. Criei meu perfil de jogador na Olefoot ` +
+    `(é de graça, tipo um álbum de figurinhas do futebol de base). ` +
+    `Como sou menor de idade, minha foto só entra no ar se você autorizar. ` +
+    `É só abrir aqui e preencher: ${link}`;
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(texto);
+      onNote('Mensagem copiada', 'Cola no WhatsApp do teu responsável.', 'green');
+    } catch {
+      onNote('Não deu pra copiar', 'Segura no texto e copia na mão.');
+    }
+  }
+
+  async function mandar() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: texto });
+        return;
+      } catch {
+        /* cancelou: cai no clipboard */
+      }
+    }
+    await copiar();
+  }
+
+  return (
+    <section className="mt-8">
+      <Eyebrow>Falta uma coisa</Eyebrow>
+      <div
+        className="mt-3 rounded-[14px] px-5 py-5"
+        style={{ background: 'rgba(253,225,0,.09)', border: '1px solid rgba(253,225,0,.4)' }}
+      >
+        <p className="rev-display text-[22px] leading-none" style={{ color: 'var(--color-rev-yellow, #fde100)' }}>
+          Tua foto está guardada
+        </p>
+        <p className="mt-2.5 max-w-[52ch] text-[14px] leading-relaxed" style={{ color: 'rgba(237,235,228,.62)' }}>
+          Você é menor de idade, então a foto só aparece no perfil depois que teu pai, tua
+          mãe ou teu responsável autorizar. O resto do teu perfil já está no ar — só o
+          rosto que espera.
+        </p>
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button type="button" onClick={() => void mandar()} className="rev-btn rev-focus" data-variant="yellow" data-on="dark">
+            Mandar pro meu responsável
+          </button>
+          <button type="button" onClick={() => void copiar()} className="rev-btn rev-focus" data-variant="outline" data-on="dark">
+            Copiar a mensagem
+          </button>
+        </div>
+
+        <p className="mt-4 text-[12px] leading-relaxed" style={{ color: 'rgba(237,235,228,.38)' }}>
+          Ele vai ver tua foto e o que fica público antes de decidir. Leva menos de um
+          minuto e não precisa criar conta nenhuma.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 /**
  * O convite pro teste de DNA — ou o resultado, se ele já fez.
  *

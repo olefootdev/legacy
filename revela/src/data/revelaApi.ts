@@ -403,6 +403,9 @@ export interface MeuTalento {
    * o teste sem começar do zero. No perfil público só sai arquétipo + traços.
    */
   dna?: (DnaPublico & { respostas: RespostasDna }) | null;
+  /** Autorização do responsável. O `token` só sai pro dono da ficha. */
+  autorizacao?: { status: 'pending' | 'approved' | 'revoked'; token: string } | null;
+  fotoEsperando?: boolean;
   createdAt: string;
 }
 
@@ -429,6 +432,61 @@ export async function salvarDna(
     p_arquetipo: resultado.arquetipo,
   });
   return res ?? { ok: false, reason: 'network' };
+}
+
+/* ══ Autorização do responsável (atleta menor de idade) ═══════════════════ */
+
+export interface AutorizacaoVista {
+  ok: boolean;
+  status: 'pending' | 'approved' | 'revoked';
+  atleta: string;
+  nomeCompleto: string;
+  pos: string | null;
+  clube: string | null;
+  cidade: string | null;
+  uf: string | null;
+  idade: number | null;
+  foto: string | null;
+  slug: string;
+}
+
+/** O que o responsável vê ao abrir o link. Anônimo — ele não tem conta. */
+export async function verAutorizacao(token: string): Promise<AutorizacaoVista | null> {
+  return rpc<AutorizacaoVista>('revela_ver_autorizacao', { p_token: token });
+}
+
+export type FalhaAutorizacao =
+  | 'link_invalido'
+  | 'ja_autorizado'
+  | 'nome_incompleto'
+  | 'cpf_invalido'
+  | 'email_invalido'
+  | 'telefone_invalido'
+  | 'offline';
+
+/**
+ * O responsável assina.
+ *
+ * O CPF vai pro banco e NUNCA volta em leitura nenhuma — nem pro admin. Ele
+ * existe como prova de que houve autorização, não como dado de perfil.
+ */
+export async function autorizarResponsavel(entrada: {
+  token: string;
+  nome: string;
+  cpf: string;
+  email: string;
+  telefone: string;
+}): Promise<{ ok: boolean; reason?: FalhaAutorizacao }> {
+  const res = await rpc<{ ok: boolean; reason?: string }>('revela_autorizar', {
+    p_token: entrada.token,
+    p_nome: entrada.nome,
+    p_cpf: entrada.cpf,
+    p_email: entrada.email,
+    p_fone: entrada.telefone,
+    p_ua: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+  });
+  if (!res) return { ok: false, reason: 'offline' };
+  return { ok: Boolean(res.ok), reason: res.reason as FalhaAutorizacao | undefined };
 }
 
 /**

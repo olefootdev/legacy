@@ -997,6 +997,22 @@ function Enviado({
             />
           )}
 
+          {/* A SAÍDA. O cadastro guardado no navegador já expira em 24h, mas
+              dentro da janela ele ainda abre esta tela pra quem só queria
+              cadastrar OUTRA pessoa — o técnico com dois moleques, o pai com
+              dois filhos. Sem esta linha, a única saída é limpar o navegador. */}
+          <button
+            type="button"
+            onClick={() => {
+              clearPendingTalent();
+              window.location.reload();
+            }}
+            className="rev-label rev-focus mt-6 block text-[11px]"
+            style={{ color: 'rgba(237,235,228,.42)' }}
+          >
+            Não é você? Começar outro cadastro
+          </button>
+
           <Jornada ate={comConta ? 2 : 1} />
 
           {/* ── Seguir a Olefoot no Instagram ────────────────────────────

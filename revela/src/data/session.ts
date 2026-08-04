@@ -158,11 +158,16 @@ export function signupUrl(): string {
  * fechar a aba) até o claim fechar. */
 const PENDING_KEY = 'olefoot-revela-pending-talent';
 
+/** Depois disto, o cadastro guardado no navegador é lixo, não atalho. */
+const PENDING_VALIDADE_MS = 24 * 60 * 60 * 1000;
+
 export interface PendingTalent {
   id: string;
   slug: string;
   phone: string;
   apelido: string;
+  /** Quando foi enviado. Sem isto o cadastro guardado valia pra sempre. */
+  em?: number;
   /**
    * A ficha já nasceu com dono porque havia sessão no envio. Opcional: cadastro
    * guardado antes deste campo existir simplesmente não tem, e `?? false` cai no
@@ -173,27 +178,48 @@ export interface PendingTalent {
 
 export function savePendingTalent(t: PendingTalent): void {
   try {
-    localStorage.setItem(PENDING_KEY, JSON.stringify(t));
+    localStorage.setItem(PENDING_KEY, JSON.stringify({ ...t, em: t.em ?? Date.now() }));
   } catch {
     /* modo privado: segue sem persistir (o claim inline ainda funciona) */
   }
 }
 
+/**
+ * O cadastro pendente guardado no navegador — se ainda valer.
+ *
+ * ── POR QUE ELE EXPIRA ──────────────────────────────────────────────────────
+ * Este registro faz `/comecar` abrir direto na tela de sucesso, pra um refresh
+ * (ou o desvio de confirmar e-mail) não perder o claim. Sem validade, ele
+ * SEQUESTRA a tela pra sempre: o fundador tentou cadastrar um atleta novo e a
+ * página nem mostrou o formulário — abriu no cadastro de dois dias antes.
+ *
+ * 24 horas cobre o caso real (mandar, confirmar e-mail, voltar) e não cobre
+ * "abrir o site de novo na semana seguinte", que é quando ele atrapalha.
+ *
+ * Registro sem `em` é anterior a esta mudança: tratado como VENCIDO, porque é
+ * exatamente o registro velho que causou o problema.
+ */
 export function readPendingTalent(): PendingTalent | null {
   try {
     const raw = localStorage.getItem(PENDING_KEY);
     if (!raw) return null;
     const t = JSON.parse(raw) as Partial<PendingTalent>;
-    if (t && typeof t.id === 'string' && typeof t.phone === 'string') {
-      return {
-        id: t.id,
-        slug: t.slug ?? '',
-        phone: t.phone,
-        apelido: t.apelido ?? '',
-        jaEraDono: t.jaEraDono === true,
-      };
+    if (!t || typeof t.id !== 'string' || typeof t.phone !== 'string') return null;
+
+    const em = typeof t.em === 'number' ? t.em : 0;
+    if (Date.now() - em > PENDING_VALIDADE_MS) {
+      clearPendingTalent();
+      return null;
     }
-    return null;
+
+    return {
+      id: t.id,
+      slug: t.slug ?? '',
+      phone: t.phone,
+      apelido: t.apelido ?? '',
+      em,
+      jaEraDono: t.jaEraDono === true,
+    };
   } catch {
     return null;
   }
