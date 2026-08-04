@@ -26,6 +26,8 @@ import {
 } from '../components/primitives';
 import { BotaoCard } from '../components/CardDoAtleta';
 import { PostDoInstagram } from '../components/PostDoInstagram';
+import { SeloScout } from '../components/SeloScout';
+import { estadoDoSelo } from '../data/seloScout';
 import { CampoPosicao } from '../components/CampoPosicao';
 import { RadarAtributos } from '../components/RadarAtributos';
 import { completudePct, computeCompletude } from '../data/completude';
@@ -175,6 +177,7 @@ export function TalentPage({
   const lenda = ehLenda(talent.gameSituation);
   const insta = perfilInstagram(talent.instagram);
   const postEmbed = embedDoPost(talent.instagramPost);
+  const selo = estadoDoSelo(talent);
   const attrs = ATTR_ORDER.map((k) => ({
     key: k,
     label: ATTR_LABEL[k] ?? k,
@@ -222,6 +225,10 @@ export function TalentPage({
                     ` · ${talent.overall} ${(talent.ratingSource ?? 'scout') === 'auto' ? 'inicial' : 'OVR'}`}
                 </span>
                 {lenda && <LegendMark />}
+                {/* A marca de que uma PESSOA conferiu. Fica junto da pílula de
+                    status, no alto: é a primeira coisa que separa esta ficha das
+                    outras, e quem chega de um print precisa ver antes de rolar. */}
+                {selo.tem && <SeloScout size="md" />}
               </div>
 
               <h1 className="rev-hero-type mt-6" style={{ fontSize: 'clamp(40px,7.5vw,104px)' }}>
@@ -495,6 +502,14 @@ export function TalentPage({
                   davam um contador que dizia "você falhou" pra quem tinha feito
                   a parte dele inteira. */}
               <CompletudeBlock talent={talent} />
+              {/* O selo vira ALVO pra quem não tem: a frase diz exatamente qual
+                  das duas metades falta, em vez de um cadeado mudo. */}
+              {!selo.tem && selo.falta && (
+                <p className="mt-4 text-[13px]" style={{ color: 'rgba(237,235,228,.42)' }}>
+                  <span style={{ opacity: 0.5 }}>Selo do OLE SCOUT · </span>
+                  {selo.falta}
+                </p>
+              )}
               <SelosBlock talent={talent} />
             </div>
           </div>

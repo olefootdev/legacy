@@ -27,14 +27,27 @@ import {
   keyAttrs,
   ptBr,
 } from '../components/primitives';
+import { SeloScout } from '../components/SeloScout';
+import { estadoDoSelo } from '../data/seloScout';
 import type { CardStatus, Talent } from '../data/types';
 
-/** Status derivado do estado real do talento — nada é decorativo. */
+/**
+ * Status derivado do estado real do talento — nada é decorativo.
+ *
+ * ── `scouted` NÃO É MAIS "TEM OVR" ──────────────────────────────────────────
+ * Era `if (t.overall != null) return 'scouted'`, e virou mentira no dia do SCOUT
+ * autônomo: todo cadastro passou a nascer com overall, então a vitrine inteira
+ * carimbava "AVALIADO" em ficha que nenhum humano tinha aberto. Só
+ * `ratingSource === 'scout'` distingue — é o que o olheiro carimba ao assinar.
+ *
+ * Ausência do campo = ficha anterior à migration, e aquelas foram avaliadas por
+ * gente de verdade.
+ */
 function statusOf(t: Talent, rankBySupporters: number): CardStatus {
   if (t.carded) return 'card-ready';
   if (rankBySupporters === 0 && t.supporters > 0) return 'hot';
   if (t.supporters >= 10) return 'rising';
-  if (t.overall != null) return 'scouted';
+  if ((t.ratingSource ?? 'scout') === 'scout' && t.overall != null) return 'scouted';
   return 'new';
 }
 
@@ -140,8 +153,11 @@ function TalentCard({
       <Link to={`/t/${talent.slug}`} className="rev-focus relative block" data-on="dark">
         <Portrait src={talent.portrait} alt={talent.name} ratio="3 / 4" width={300} />
 
-        <div className="absolute left-2.5 top-2.5">
+        {/* `items-center` porque o selo é quadrado e o OVR é retangular:
+            alinhados pelo topo, o escudo fica flutuando alto. */}
+        <div className="absolute left-2.5 top-2.5 flex items-center gap-1.5">
           <OvrBadge value={talent.overall} />
+          {estadoDoSelo(talent).tem && <SeloScout />}
         </div>
         <div className="absolute right-2.5 top-2.5 flex flex-col items-end gap-1.5">
           <Sticker status={status} />
