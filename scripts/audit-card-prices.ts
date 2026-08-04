@@ -21,11 +21,16 @@
  *     currency = 'OLEFOOT' · price_bro_cents > 0  ← comparado como INTEIRO,
  *     não centavo: 250000 ali são 250.000 OLEFOOT
  *
- * ── E CONFERE O QUE AINDA NÃO QUEBROU ───────────────────────────────────────
- * Card em USDT carregando `price_bro_cents` diferente de zero não é bug hoje —
- * a guarda de moeda barra. Mas é uma bomba armada: no dia em que alguém trocar a
- * moeda daquele card no painel, o preço em OLEFOOT que estava sobrando vira o
- * preço de venda. O script acusa como AVISO, não como falha.
+ * ── E A BOMBA ARMADA ────────────────────────────────────────────────────────
+ * Card carregando o preço da OUTRA moeda não quebra hoje — a guarda de moeda
+ * barra. Mas vira o preço de venda no dia em que alguém trocar a moeda daquele
+ * card no painel. Era o caso do `legacy-juca-consolidacao`: USDT com 1.000.000
+ * em `price_bro_cents`.
+ *
+ * Desde 20260806280000 um trigger normaliza isso em toda escrita. Então achar
+ * um aqui virou FALHA, não aviso: significa que alguém escreveu por fora do
+ * caminho normal (restore, cópia de tabela, migration mal feita) e a rede de
+ * proteção não pegou.
  *
  * Sai com código 1 se achar qualquer FALHA — dá pra pendurar em CI.
  */
@@ -101,6 +106,13 @@ async function main() {
       }
     }
 
+    // Preço muito abaixo dos pares. O Juca estava em US$2 com OVR 80 enquanto
+    // as outras consolidações iam de US$5 a US$15 — não é bug de código, é
+    // placeholder esquecido, e só se vê comparando.
+    if (listado && moeda === 'USDT' && usd > 0 && usd < 300) {
+      avisos.push(`${c.id}: US$ ${(usd / 100).toFixed(2)} — abaixo do card mais barato do catálogo (US$ 3)`);
+    }
+
     if (listado && moeda === 'OLEFOOT') {
       if (ole <= 0) falhas.push(`${c.id}: à venda em OLEFOOT sem preço (buy-legacy recusa)`);
       else if (ole < PISO_OLEFOOT) {
@@ -109,11 +121,16 @@ async function main() {
     }
 
     // Bombas armadas: preço da OUTRA moeda sobrando na linha.
+    //
+    // Desde 20260806280000 um trigger normaliza isso em toda escrita, então
+    // achar um aqui significa que ALGUÉM ESCREVEU POR FORA do banco normal —
+    // restore, cópia de tabela, migration mal feita. Por isso virou FALHA, não
+    // aviso: se a rede de proteção falhou, quero saber alto.
     if (moeda === 'USDT' && ole > 0) {
-      avisos.push(`${c.id}: USDT carregando ${ole} em price_bro_cents — vira o preço se a moeda mudar`);
+      falhas.push(`${c.id}: USDT carregando ${ole} em price_bro_cents (o trigger devia ter zerado)`);
     }
     if (moeda === 'OLEFOOT' && usd > 0) {
-      avisos.push(`${c.id}: OLEFOOT carregando ${usd} em price_unit_cents — idem, ao contrário`);
+      falhas.push(`${c.id}: OLEFOOT carregando ${usd} em price_unit_cents (o trigger devia ter zerado)`);
     }
   }
 
