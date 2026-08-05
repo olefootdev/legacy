@@ -15,6 +15,7 @@
     "test:exchange-refund": "tsx src/game/runExchangeRefundSelfTest.mts",
     "test:field-smoke": "tsx src/field-schema/runSmoke.ts",
     "demo:sim-pipeline": "tsx src/match/events/runScenarioDemo.ts",
+    "fix:juca-price": "tsx --env-file=server/.env scripts/fix-juca-price.ts",
     "audit:card-prices": "tsx --env-file=server/.env scripts/audit-card-prices.ts",
     "test:card-pricing": "tsx server/src/lib/runCardPricingSelfTest.mts",
     "test:network-milestones": "tsx src/systems/network/runMilestonesSelfTest.mts",

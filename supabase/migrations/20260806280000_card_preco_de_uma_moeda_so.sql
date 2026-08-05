@@ -17,24 +17,14 @@
 -- Os dois vêm da mesma origem: a linha foi montada pra OLEFOOT e ficou com um
 -- preço em dólar de placeholder.
 --
--- ── A ESCOLHA, E ELA É REVERSÍVEL ───────────────────────────────────────────
--- O registro do projeto diz **JUCA = 1M OLE**. Então esta migration assume que
--- a intenção era OLEFOOT e põe a linha coerente com isso: moeda OLEFOOT,
--- 1.000.000, e o dólar zerado.
+-- ── ESTA MIGRATION É SÓ ESTRUTURA ───────────────────────────────────────────
+-- O conserto do Juca é DADO, e dado não é migration: `update ... where id =
+-- 'legacy-juca-consolidacao'` num ambiente novo não acha a linha e não faz
+-- nada — ou faz em cima de outra coisa. Foi pra `scripts/fix-juca-price.ts`,
+-- que roda pela service role, é repetível e deixa log.
 --
--- Se a intenção era vender por PIX, é UMA LINHA: trocar por
--- `currency='USDT', price_unit_cents=<centavos de dólar>, price_bro_cents=0`.
--- O card SEGUE FORA DE VENDA nos dois casos — nada muda pra comprador nenhum
--- hoje. Só some a armadilha.
+-- Aqui fica só o trigger, que é o que impede a classe inteira de voltar.
 -- ════════════════════════════════════════════════════════════════════════════
-
-update public.legacy_players
-   set currency         = 'OLEFOOT',
-       price_bro_cents  = 1000000,   -- 1.000.000 OLEFOOT (inteiro, não centavo)
-       price_unit_cents = 0,
-       updated_at       = now()
- where id = 'legacy-juca-consolidacao';
-
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- E A CLASSE INTEIRA, PRA NÃO VOLTAR
@@ -77,22 +67,68 @@ comment on function public.legacy_preco_de_uma_moeda_so() is
 
 
 -- ── Limpa quem já estava com sobra ──────────────────────────────────────────
--- O trigger só age em escrita. Este update passa por todo mundo uma vez — e
--- dispara o próprio trigger, que faz a normalização.
+-- Este SIM é migration: é BACKFILL da regra nova sobre o que já existe, não
+-- correção de uma linha específica. Sem ele, a regra só valeria pro futuro e o
+-- banco nasceria inconsistente em qualquer ambiente.
+--
+-- O trigger só age em escrita, então basta tocar as linhas fora da regra — o
+-- próprio trigger normaliza.
 update public.legacy_players
    set updated_at = now()
  where (coalesce(currency, 'OLEFOOT') = 'OLEFOOT' and coalesce(price_unit_cents, 0) <> 0)
     or (coalesce(currency, 'OLEFOOT') <> 'OLEFOOT' and coalesce(price_bro_cents, 0) <> 0);
 
 
--- ─── Verificação ────────────────────────────────────────────────────────────
--- Tem que voltar VAZIO:
-select id, name, currency, price_unit_cents, price_bro_cents, listed_on_market
-  from public.legacy_players
- where (coalesce(currency, 'OLEFOOT') = 'OLEFOOT' and coalesce(price_unit_cents, 0) <> 0)
-    or (coalesce(currency, 'OLEFOOT') <> 'OLEFOOT' and coalesce(price_bro_cents, 0) <> 0);
+-- ════════════════════════════════════════════════════════════════════════════
+-- VERIFICAÇÃO — roda junto e derruba tudo se falhar
+-- ════════════════════════════════════════════════════════════════════════════
+-- Não é `select` de conferir: é o trigger sendo EXERCITADO. Um card de teste
+-- com as duas moedas preenchidas tem que sair com uma zerada — nos dois
+-- sentidos. Se não sair, a migration inteira volta atrás.
+--
+-- (É exatamente o que faltou em 20260806140000, que passou verde executando
+-- só o caminho vazio e deixou menor de idade sem conseguir se cadastrar.)
+do $$
+declare
+  v_ole int;
+  v_usd int;
+begin
+  -- Sentido 1: card em USDT não pode carregar preço em OLEFOOT.
+  insert into public.legacy_players (id, name, pos, currency, price_unit_cents, price_bro_cents)
+  values ('zz-verifica-preco', 'ZZ Verifica', 'ATA', 'USDT', 500, 999999);
+  select price_bro_cents into v_ole from public.legacy_players where id = 'zz-verifica-preco';
+  if v_ole <> 0 then
+    raise exception 'trigger não zerou price_bro_cents em card USDT (ficou %)', v_ole;
+  end if;
 
--- E o Juca, coerente:
-select id, currency, price_unit_cents, price_bro_cents, listed_on_market
-  from public.legacy_players
- where id = 'legacy-juca-consolidacao';
+  -- Sentido 2: e o contrário.
+  update public.legacy_players
+     set currency = 'OLEFOOT', price_bro_cents = 250000, price_unit_cents = 700
+   where id = 'zz-verifica-preco';
+  select price_unit_cents, price_bro_cents into v_usd, v_ole
+    from public.legacy_players where id = 'zz-verifica-preco';
+  if v_usd <> 0 then
+    raise exception 'trigger não zerou price_unit_cents em card OLEFOOT (ficou %)', v_usd;
+  end if;
+  if v_ole <> 250000 then
+    raise exception 'trigger comeu o preço que DEVIA ficar (ficou %)', v_ole;
+  end if;
+
+  delete from public.legacy_players where id = 'zz-verifica-preco';
+  raise notice 'verificação: trigger de preço normaliza nos dois sentidos ✓';
+end $$;
+
+
+-- ── E ninguém ficou com sobra ───────────────────────────────────────────────
+do $$
+declare
+  n int;
+begin
+  select count(*) into n from public.legacy_players
+   where (coalesce(currency, 'OLEFOOT') = 'OLEFOOT' and coalesce(price_unit_cents, 0) <> 0)
+      or (coalesce(currency, 'OLEFOOT') <> 'OLEFOOT' and coalesce(price_bro_cents, 0) <> 0);
+  if n > 0 then
+    raise exception '% card(s) ainda carregam o preço da moeda errada', n;
+  end if;
+  raise notice 'verificação: nenhum card com preço da moeda errada ✓';
+end $$;
