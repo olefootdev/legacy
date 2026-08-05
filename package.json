@@ -79,6 +79,7 @@
     "legend:import": "tsx --env-file=server/.env scripts/import-legend.ts",
     "test:liga-ole": "tsx scripts/test-liga-ole.ts",
     "test:ovr-weights": "tsx scripts/test-ovr-weights.ts",
+    "test:revela-categoria": "tsx scripts/test-revela-categoria.ts",
     "test:revela-dna": "tsx scripts/test-revela-dna.ts",
     "test:revela-ovr": "tsx scripts/test-revela-ovr.ts",
     "test:global-sector": "tsx scripts/test-global-sector.ts",

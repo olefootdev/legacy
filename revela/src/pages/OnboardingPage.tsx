@@ -20,7 +20,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '../components/primitives';
 import { Field } from '../components/AuthSheet';
-import { CATEGORIAS, PES, SETORES, SITUACOES } from '../data/posicoes';
+import { categoriaCabeNaIdade, categoriasPara } from '../data/categoria';
+import { PES, SETORES, SITUACOES } from '../data/posicoes';
 import { checkHandle, submitTalent, type HandleStatus, type SubmitFailure } from '../data/revelaApi';
 import { Turnstile, turnstileAtivo } from '../components/Turnstile';
 import {
@@ -157,6 +158,10 @@ export function OnboardingPage({
       // @username OBRIGATÓRIO e confirmado disponível pra passar daqui.
       if (handleStatus !== 'ok') return false;
       if (anoInvalido) return false;
+      // Categoria que não cabe na idade trava aqui. Ela pode ficar incoerente
+      // sem ninguém mexer nela: o atleta escolhe a categoria, depois corrige o
+      // ano de nascimento, e a escolha antiga fica pra trás.
+      if (f.categoria && !categoriaCabeNaIdade(f.categoria, idade)) return false;
       // Sem responsável, menor de idade não passa daqui.
       if (menorDeIdade && (f.respNome.trim().length < 3 || respTelDigitos.length < 10)) return false;
       return true;
@@ -166,7 +171,7 @@ export function OnboardingPage({
       return f.temAgente !== 'sim' || f.agente.trim().length >= 2;
     }
     return telDigitos.length >= 10;
-  }, [tela, f.nome, f.pos, f.temAgente, f.agente, handleStatus, menorDeIdade, anoInvalido, f.respNome, respTelDigitos, telDigitos]);
+  }, [tela, f.nome, f.pos, f.temAgente, f.agente, handleStatus, menorDeIdade, anoInvalido, f.categoria, idade, f.respNome, respTelDigitos, telDigitos]);
 
   async function escolherFoto(file: File) {
     setSubindoFoto(true);
@@ -480,12 +485,47 @@ function Tela1({
 
       <Field label="Nome completo" value={f.nome} onChange={set('nome')} autoComplete="name" />
 
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Field
+            label="Ano de nascimento"
+            value={f.ano}
+            onChange={(v) => set('ano')(v.replace(/\D/g, '').slice(0, 4))}
+            inputMode="numeric"
+            placeholder="2006"
+          />
+          {idade != null && idade > 5 && idade < 70 && (
+            <p className="mt-1.5 text-[12px]" style={{ color: 'rgba(237,235,228,.4)' }}>
+              {idade} anos
+            </p>
+          )}
+        </div>
+        <Field
+          label="Altura (cm)"
+          value={f.altura}
+          onChange={(v) => set('altura')(v.replace(/\D/g, '').slice(0, 3))}
+          inputMode="numeric"
+          placeholder="178"
+        />
+      </div>
+
+      {/* CATEGORIA DEPOIS DA IDADE, e filtrada por ela.
+          A categoria define a BASE do rating automático (profissional vale 62,
+          sub15 vale 46), e antes ninguém conferia se ela cabia na idade — um
+          moleque de 14 podia se declarar profissional e ganhar 16 pontos sem
+          ninguém olhar. Aqui a opção impossível nem aparece.
+          Isto é só a camada gentil: o teto de verdade é por idade, no banco. */}
       <Chips
         rotulo="Categoria"
-        opcoes={CATEGORIAS.map((c) => ({ code: c.code, nome: c.nome }))}
+        opcoes={categoriasPara(idade)}
         valor={f.categoria}
         onEscolher={set('categoria')}
       />
+      {f.categoria && !categoriaCabeNaIdade(f.categoria, idade) && (
+        <p className="-mt-1 text-[12px]" style={{ color: 'var(--color-rev-danger)' }}>
+          Com {idade} anos, essa categoria não bate. Escolhe uma das de cima.
+        </p>
+      )}
 
       <div className="flex flex-col gap-3">
         <span className="rev-label text-[10px]" style={{ color: 'rgba(237,235,228,.5)' }}>
@@ -549,29 +589,7 @@ function Tela1({
         onEscolher={set('pe')}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Field
-            label="Ano de nascimento"
-            value={f.ano}
-            onChange={(v) => set('ano')(v.replace(/\D/g, '').slice(0, 4))}
-            inputMode="numeric"
-            placeholder="2006"
-          />
-          {idade != null && idade > 5 && idade < 70 && (
-            <p className="mt-1.5 text-[12px]" style={{ color: 'rgba(237,235,228,.4)' }}>
-              {idade} anos
-            </p>
-          )}
-        </div>
-        <Field
-          label="Altura (cm)"
-          value={f.altura}
-          onChange={(v) => set('altura')(v.replace(/\D/g, '').slice(0, 3))}
-          inputMode="numeric"
-          placeholder="178"
-        />
-      </div>
+
 
       {/* Menor de idade: o bloco aparece sozinho quando a conta da idade fecha
           abaixo de 18, e o passo não avança sem ele. */}
