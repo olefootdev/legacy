@@ -15,6 +15,7 @@ import {
   locomotionWalkSpeed,
   normalizeSpeedAttr01,
 } from './playerSpeedTuning';
+import { TIME_SCALE, simToFootballMs } from '@/tactical';
 
 function assert(cond: boolean, msg: string) {
   if (!cond) throw new Error(msg);
@@ -80,7 +81,17 @@ function main() {
 
   const tSlow = timeToCover(distance, blendedSlow, dt);
   const tFast = timeToCover(distance, blendedFast, dt);
-  assert(tFast < tSlow - 0.35, 'faster attribute should reach same distance sooner (repro gap)');
+  // A diferença tem que ser cobrada em segundos de FUTEBOL, não de simulação.
+  // O limiar antigo (0.35s de simulação) foi escrito quando as velocidades
+  // viviam em unidades fictícias e uma corrida de 28m levava ~1.6s de sim.
+  // Com as velocidades derivadas de m/s reais a mesma corrida leva ~0.2s de
+  // sim — o que continua sendo uma vantagem clara de mais de 1 segundo de
+  // futebol para o jogador mais rápido.
+  const gapFootballSec = (tSlow - tFast) * TIME_SCALE;
+  assert(
+    gapFootballSec >= 1.0,
+    `faster attribute should reach same distance sooner (gap=${gapFootballSec.toFixed(2)}s de futebol)`,
+  );
 
   const rawMaxSprint = locomotionSprintSpeed(1, 1);
   assert(
@@ -89,8 +100,10 @@ function main() {
   );
 
   console.info(
-    `[player-speed-selftest] OK distance=${distance}m tSlow=${tSlow.toFixed(3)}s tFast=${tFast.toFixed(3)}s ` +
-      `vSprint(low/high)=${vSprintLow.toFixed(2)}/${vSprintHigh.toFixed(2)} cap=${V_MAX_ABSOLUTE}`,
+    `[player-speed-selftest] OK ${distance}m: lento ${(tSlow * TIME_SCALE).toFixed(2)}s vs rápido ` +
+      `${(tFast * TIME_SCALE).toFixed(2)}s de futebol (vantagem ${gapFootballSec.toFixed(2)}s) · ` +
+      `sprint ${simToFootballMs(vSprintLow).toFixed(2)}–${simToFootballMs(vSprintHigh).toFixed(2)} m/s · ` +
+      `teto ${simToFootballMs(V_MAX_ABSOLUTE).toFixed(1)} m/s`,
   );
 }
 

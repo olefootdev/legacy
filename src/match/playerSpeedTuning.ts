@@ -1,26 +1,65 @@
 import type { AgentMode } from '@/agents/yukaAgents';
+import { footballMsToSim, footballAccelToSim } from '@/tactical';
 
-/** Virtual m/s on pitch (see `FIELD_LENGTH` in `field.ts`). */
-export const SPEED_WALK_BASE = 7.05;
-/** Corrida leve (jog): entre marcha e sprint. */
-export const SPEED_JOG_BASE = 9.24;
-/** Corrida acelerada (sprint): onde o atributo velocidade mais separa jogadores. */
-export const SPEED_SPRINT_BASE = 13.14;
+/**
+ * ── Velocidades ──────────────────────────────────────────────────────────────
+ *
+ * TODAS as velocidades daqui saem de m/s de FUTEBOL convertidos por
+ * `footballMsToSim`. Antes eram números soltos batizados de "virtual m/s"
+ * (7.05 / 9.24 / 13.14, teto 57), cada um calibrado no olho em momentos
+ * diferentes. O resultado medido pela régua de realismo: o sprint observado
+ * equivalia a 0,77 m/s e a bola em voo a 1,57 m/s — a partida inteira
+ * acontecia em câmera lenta em relação ao tamanho do campo, e por isso o bloco
+ * não conseguia atravessar o gramado, pressionar nem recompor.
+ *
+ * Regra: escreva o número em m/s de futebol. Nunca em unidade de motor.
+ */
+
+/** Caminhada: do mais lento ao mais rápido do elenco, m/s de futebol. */
+const WALK_SLOW_MS = 1.3;
+const WALK_FAST_MS = 1.9;
+/** Corrida leve (jog). */
+const JOG_SLOW_MS = 3.2;
+const JOG_FAST_MS = 4.8;
+/**
+ * Sprint. A faixa real entre um jogador lento e um rápido é estreita
+ * (~6,8 → 9,0 m/s); abrimos um pouco para o atributo `velocidade` continuar
+ * decidindo corridas, sem sair da faixa plausível.
+ */
+const SPRINT_SLOW_MS = 6.3;
+const SPRINT_FAST_MS = 9.5;
+
+export const SPEED_WALK_BASE = footballMsToSim(WALK_SLOW_MS);
+export const SPEED_JOG_BASE = footballMsToSim(JOG_SLOW_MS);
+export const SPEED_SPRINT_BASE = footballMsToSim(SPRINT_SLOW_MS);
 
 /** Walk: `v_walk = SPEED_WALK_BASE * lerp(1, SPEED_WALK_MAX_MULT, speedAttr01)`. */
-export const SPEED_WALK_MAX_MULT = 1.74;
+export const SPEED_WALK_MAX_MULT = WALK_FAST_MS / WALK_SLOW_MS;
 /** Jog: escala moderada com o atributo. */
-export const SPEED_JOG_MAX_MULT = 2.52;
-/** Sprint: escala forte — quem tem mais velocidade ganha corridas claras no teto. */
-export const SPEED_SPRINT_MAX_MULT = 5.05;
+export const SPEED_JOG_MAX_MULT = JOG_FAST_MS / JOG_SLOW_MS;
+/** Sprint: onde o atributo velocidade mais separa jogadores. */
+export const SPEED_SPRINT_MAX_MULT = SPRINT_FAST_MS / SPRINT_SLOW_MS;
 
 /** @deprecated Use SPEED_SPRINT_BASE — mantido para scripts/testes legados. */
 export const SPEED_RUN_BASE = SPEED_SPRINT_BASE;
 /** @deprecated Use SPEED_SPRINT_MAX_MULT */
 export const SPEED_RUN_MAX_MULT = SPEED_SPRINT_MAX_MULT;
 
-/** Hard cap on `Vehicle.maxSpeed` for integrator stability. */
-export const V_MAX_ABSOLUTE = 57.0;
+/** Teto absoluto de `Vehicle.maxSpeed` — folga acima do sprint mais rápido. */
+export const V_MAX_ABSOLUTE = footballMsToSim(11);
+
+/**
+ * ── Aceleração ───────────────────────────────────────────────────────────────
+ * `maxForce` do Yuka com massa 1 É a aceleração. Um jogador acelera por volta de
+ * 3–5 m/s² sustentados; como a aceleração escala com o QUADRADO da compressão de
+ * tempo, isso vira ~700–1000 unidades de motor. O teto anterior (320) dava
+ * ~1,4 m/s² reais: o agente levava segundos de futebol só pra sair do lugar, o
+ * que sozinho já impedia disputa e recomposição.
+ */
+export const ACCEL_SLOW_SIM = footballAccelToSim(3.2);
+export const ACCEL_FAST_SIM = footballAccelToSim(4.6);
+/** Teto de `maxForce`, com folga para arranques curtos. */
+export const ACCEL_MAX_SIM = footballAccelToSim(6.0);
 
 /**
  * effort01 smoothing (0 = andar dominante, 1 = sprint dominante).

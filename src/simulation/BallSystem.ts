@@ -1,16 +1,23 @@
 import { FIELD_LENGTH, FIELD_WIDTH, clampToPitch } from './field';
+import { TIME_SCALE, footballMsToSim, footballAccelToSim } from '@/tactical';
 
 // ---------------------------------------------------------------------------
 // Physics constants
 // ---------------------------------------------------------------------------
+//
+// Estas constantes estavam em unidades REAIS num mundo com o tempo comprimido
+// 15×. Com a gravidade a 9,81 em vez de 9,81×15², a bola alta praticamente não
+// caía; com o atrito e o arrasto na mesma escala, a bola rasteira não parava.
+// Aceleração escala com o QUADRADO da compressão; atrito linear em velocidade
+// escala com a compressão simples.
 
-const GRAVITY = 9.81;
-const GROUND_FRICTION = 6.5;
-const AIR_DRAG = 0.35;
+const GRAVITY = footballAccelToSim(9.81);
+const GROUND_FRICTION = footballAccelToSim(6.5);
+const AIR_DRAG = 0.35 * TIME_SCALE;
 const BOUNCE_COEFF = 0.55;
 const BOUNCE_FRICTION_LATERAL = 0.82;
-/** Below this speed (m/s) the ball is considered stopped. */
-const REST_SPEED_THRESHOLD = 0.4;
+/** Abaixo desta velocidade a bola é considerada parada. */
+const REST_SPEED_THRESHOLD = footballMsToSim(0.4);
 /** Below this height the ball is considered grounded. */
 const REST_HEIGHT_THRESHOLD = 0.08;
 
