@@ -48,9 +48,31 @@ import {
 
 /** Passo de integração do movimento, s. */
 export const STEP_S = 0.05;
-/** Cadência de decisão, s. Mesma fatia do Football Manager. */
+/** Cadência coletiva: a forma do time é recalculada nesta fatia. */
 const SLICE_S = 0.25;
 const STEPS_PER_SLICE = Math.round(SLICE_S / STEP_S);
+/** Reavaliação individual do agente que lê mal o jogo, s. */
+const SLICE_SLOW_S = 0.40;
+/** Reavaliação individual do agente que lê bem, s. */
+const SLICE_FAST_S = 0.15;
+/** Desvio máximo da âncora para quem tem Posicionamento zero, m. */
+const POSITIONING_MAX_DRIFT_M = 7.0;
+/** Raio em que a corrida de um companheiro já "ocupa" o espaço, m. */
+const CLAIM_RADIUS_M = 14;
+/** Alcance base para cortar uma bola em voo, m. */
+const INTERCEPT_BASE_M = 1.1;
+/** Alcance extra de quem antecipa bem — chega antes, não estica mais. */
+const INTERCEPT_ANTICIPATION_M = 1.6;
+
+/** Hash estável de id — para erros determinísticos por jogador. */
+function hashId(id: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
 
 /** Duração de cada tempo, s. */
 export const HALF_SECONDS = 45 * 60;
@@ -218,15 +240,63 @@ function makeRng(seed: number): () => number {
 // Tipos
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * ── Atributos ────────────────────────────────────────────────────────────────
+ *
+ * Três famílias, sem derivação automática entre elas.
+ *
+ * O motor antigo derivava `cruzamento = drible × 0,45 + passe × 0,45 + 6`, o
+ * que tornava impossível existir um Beckham e um Xavi no mesmo jogo: os dois
+ * colapsavam no mesmo jogador. Num catálogo de lendas de todas as épocas isso é
+ * fatal, porque apaga exatamente a diferença que faz a coleção existir.
+ *
+ * E não havia atributo mental nenhum. É o que o gênero inteiro usa para decidir
+ * partidas: um jogador tecnicamente mediano com Decisão e Antecipação altas
+ * supera um mais talentoso mal empregado.
+ */
 export interface MotorAttrs {
-  /** Qualidade sob as traves. Sem valor, cai em `marcacao`. */
-  goleiro?: number;
-  velocidade: number;
-  passe: number;
-  marcacao: number;
-  finalizacao: number;
+  // ── Físicos ────────────────────────────────────────────────────────────────
+  /** Arranque curto. Governa a aceleração em m/s² — o ponta de 5 metros. */
+  aceleracao: number;
+  /** Sprint longo. Governa a velocidade máxima — o ponta de 40 metros. */
+  velocidadeMaxima: number;
+  /** Resistência. */
   fisico: number;
+
+  // ── Técnicos ───────────────────────────────────────────────────────────────
+  passe: number;
+  /** INDEPENDENTE de passe e drible: é o que separa o cruzador do armador. */
+  cruzamento: number;
   drible: number;
+  finalizacao: number;
+  marcacao: number;
+
+  // ── Mentais ────────────────────────────────────────────────────────────────
+  /** Escolhe o melhor candidato ou um sub-ótimo; e erra mais sob pressão. */
+  decisao: number;
+  /** Quantos candidatos consegue avaliar por ciclo — raio de escaneamento. */
+  visaoDeJogo: number;
+  /** Reage ao presente ou à posição projetada. Encurta o tempo morto. */
+  antecipacao: number;
+  /** Tolerância de erro em relação à âncora: quem tem pouco vaza da linha. */
+  posicionamento: number;
+
+  /** Só goleiro. Sem valor, cai em `marcacao`. */
+  goleiro?: number;
+}
+
+/**
+ * Elenco de referência — todos os atributos em 72, sem nenhum destaque.
+ * Serve de base para testes e para preencher lacunas; qualquer jogador real
+ * sobrescreve o que importa.
+ */
+export function defaultAttrs(over: Partial<MotorAttrs> = {}): MotorAttrs {
+  return {
+    aceleracao: 72, velocidadeMaxima: 74, fisico: 72,
+    passe: 72, cruzamento: 68, drible: 70, finalizacao: 72, marcacao: 70,
+    decisao: 70, visaoDeJogo: 70, antecipacao: 70, posicionamento: 72,
+    ...over,
+  };
 }
 
 export interface MotorPlayerInput {
@@ -248,6 +318,20 @@ interface MotorPlayer extends MotorPlayerInput {
   /** Largura normalizada, 0 = esquerda. */
   width01: number;
   vmax: number;
+  /** Aceleração em m/s², vinda de `aceleracao`. */
+  accel: number;
+  /** 0–1, vindo de `antecipacao`. */
+  anticipation01: number;
+  /**
+   * Intervalo entre reavaliações deste agente, s. Vem de Decisão + Visão: quem
+   * lê o jogo revê o campo quase quatro vezes mais rápido que quem não lê.
+   */
+  sliceS: number;
+  /** Instante da próxima reavaliação. */
+  nextDecisionAt: number;
+  /** Erro persistente em relação à âncora, m — vem de `posicionamento`. */
+  anchorErrX: number;
+  anchorErrZ: number;
   stamina: number;
   targetX: number;
   targetZ: number;
@@ -448,6 +532,15 @@ export class MotorEngine {
     passes: 0, passesOk: 0, shots: 0, goals: 0, tackles: 0,
     blocked: 0, offTarget: 0, onTarget: 0, saves: 0, rebounds: 0,
   };
+  /**
+   * Estatísticas por lado. Além de alimentar o pós-jogo, é o que permite medir
+   * o efeito de um atributo com centenas de eventos por partida em vez dos ~5
+   * gols — gol tem variância alta demais para servir de régua de atributo.
+   */
+  readonly bySide = {
+    home: { passes: 0, passesOk: 0, shots: 0, xg: 0, possessionS: 0 },
+    away: { passes: 0, passesOk: 0, shots: 0, xg: 0, possessionS: 0 },
+  };
 
   constructor(home: MotorPlayerInput[], away: MotorPlayerInput[], private readonly cfg: MotorConfig) {
     this.rng = makeRng(cfg.seed);
@@ -473,7 +566,18 @@ export class MotorEngine {
       const nx = base?.nx ?? 0.5;
       const nz = base?.nz ?? 0.5;
       // Velocidade máxima real: 6,3 m/s no mais lento, 9,5 no mais rápido.
-      const vmax = 6.3 + (p.attrs.velocidade / 100) * 3.2;
+      const vmax = 6.3 + (p.attrs.velocidadeMaxima / 100) * 3.2;
+      // Aceleração sustentada: 2,8 a 5,2 m/s².
+      const accel = 2.8 + (p.attrs.aceleracao / 100) * 2.4;
+      // Cadência de decisão por atributo — diretriz vinda da análise do FM:
+      // quem tem Decisão e Visão altas reavalia a cada 150ms; quem não tem,
+      // a cada 400ms. O motor usava fatia fixa de 250ms para os 22.
+      const mind01 = (p.attrs.decisao + p.attrs.visaoDeJogo) / 200;
+      const sliceS = SLICE_SLOW_S + (SLICE_FAST_S - SLICE_SLOW_S) * mind01;
+      // Erro de posicionamento: determinístico por jogador, não sorteado a
+      // cada tick — um zagueiro desatento erra SEMPRE para o mesmo lado.
+      const posErr = (1 - p.attrs.posicionamento / 100) * POSITIONING_MAX_DRIFT_M;
+      const phase = ((hashId(p.id) % 1000) / 1000) * Math.PI * 2;
       return {
         ...p,
         x: FIELD_LENGTH / 2,
@@ -483,6 +587,12 @@ export class MotorEngine {
         depth01: p.role === 'gk' ? 0 : (nx - lo) / span,
         width01: nz,
         vmax,
+        accel,
+        anticipation01: p.attrs.antecipacao / 100,
+        sliceS,
+        nextDecisionAt: 0,
+        anchorErrX: Math.cos(phase) * posErr,
+        anchorErrZ: Math.sin(phase) * posErr,
         stamina: 100,
         targetX: FIELD_LENGTH / 2,
         targetZ: GOAL_Z,
@@ -540,9 +650,11 @@ export class MotorEngine {
       GOAL_Z
       + (p.width01 - 0.5) * BLOCK_WIDTH_M
       + (this.ball.z - GOAL_Z) * LATERAL_FOLLOW;
+    // Posicionamento entra aqui: quem tem pouco vaza da linha, sempre para o
+    // mesmo lado. É o atributo que faz um lateral ser furado por infiltração.
     return {
-      x: Math.max(3, Math.min(FIELD_LENGTH - 3, x)),
-      z: Math.max(2, Math.min(FIELD_WIDTH - 2, z)),
+      x: Math.max(3, Math.min(FIELD_LENGTH - 3, x + p.anchorErrX)),
+      z: Math.max(2, Math.min(FIELD_WIDTH - 2, z + p.anchorErrZ)),
     };
   }
 
@@ -557,6 +669,8 @@ export class MotorEngine {
       vx: p.vx,
       vz: p.vz,
       vmax: p.vmax * (0.72 + 0.28 * (p.stamina / 100)),
+      accel: p.accel,
+      anticipation01: p.anticipation01,
     }));
   }
 
@@ -587,19 +701,24 @@ export class MotorEngine {
       const runners = new Set<string>();
       if (teamHasBall && carrier) {
         const dir = this.dirOf(side);
-        const ranked = mates
-          .filter((m) => m.id !== carrier.id && m.depth01 > 0.35)
-          .map((m) => {
-            const spot = this.bestRunSpot(m, dir, cps);
-            return { m, spot };
-          })
-          .sort((a, b) => b.spot.gain - a.spot.gain);
-        for (let i = 0; i < SUPPORT_RUNNERS && i < ranked.length; i++) {
-          const r = ranked[i]!;
-          runners.add(r.m.id);
-          r.m.targetX = r.spot.x;
-          r.m.targetZ = r.spot.z;
-          r.m.urgency = 0.95;
+        // Atribuição SEQUENCIAL: cada corredor escolhe sabendo para onde os
+        // anteriores já foram. É o que transforma decisão individual boa em
+        // ocupação coletiva boa.
+        const claimed: Array<{ x: number; z: number }> = [];
+        const pool = mates.filter((m) => m.id !== carrier.id && m.depth01 > 0.35);
+        for (let i = 0; i < SUPPORT_RUNNERS; i++) {
+          let best: { m: MotorPlayer; spot: { x: number; z: number; gain: number } } | null = null;
+          for (const m of pool) {
+            if (runners.has(m.id)) continue;
+            const spot = this.bestRunSpot(m, dir, cps, claimed);
+            if (!best || spot.gain > best.spot.gain) best = { m, spot };
+          }
+          if (!best) break;
+          runners.add(best.m.id);
+          best.m.targetX = best.spot.x;
+          best.m.targetZ = best.spot.z;
+          best.m.urgency = 0.95;
+          claimed.push({ x: best.spot.x, z: best.spot.z });
         }
       }
 
@@ -738,7 +857,10 @@ export class MotorEngine {
   }
 
   private cp(p: MotorPlayer): ControlPlayer {
-    return { id: p.id, side: p.side, x: p.x, z: p.z, vx: p.vx, vz: p.vz, vmax: p.vmax };
+    return {
+      id: p.id, side: p.side, x: p.x, z: p.z, vx: p.vx, vz: p.vz,
+      vmax: p.vmax, accel: p.accel, anticipation01: p.anticipation01,
+    };
   }
 
   /**
@@ -750,12 +872,19 @@ export class MotorEngine {
     p: MotorPlayer,
     dir: 1 | -1,
     cps: ControlPlayer[],
+    claimed: Array<{ x: number; z: number }> = [],
   ): { x: number; z: number; gain: number } {
-    let best = { x: p.x, z: p.z, gain: -1 };
-    const here = positionValue(p.x, p.z, dir);
-    for (let i = 0; i < 8; i++) {
+    // Visão de Jogo = quantos pontos ele consegue avaliar por ciclo: de 5
+    // (não levanta a cabeça) a 12 (enxerga o campo todo).
+    const candidates = Math.round(5 + (p.attrs.visaoDeJogo / 100) * 7);
+    const scored: Array<{ x: number; z: number; gain: number }> = [];
+    // Valor esperado de ONDE ELE ESTÁ, na mesma moeda dos candidatos.
+    const cHere = controlAt(cps, this.ball, p.x, p.z, 20);
+    const mineHere = p.side === 'home' ? cHere.home : 1 - cHere.home;
+    const here = possessionValue(p.x, p.z, dir) * mineHere;
+    for (let i = 0; i < candidates; i++) {
       const ahead = 8 + (i % 4) * 9;               // 8 a 35 metros à frente
-      const lateral = (Math.floor(i / 4) === 0 ? -1 : 1) * (4 + (i % 4) * 5);
+      const lateral = (Math.floor(i / 4) % 2 === 0 ? -1 : 1) * (4 + (i % 4) * 5);
       const offside = this.offsideLineX(p.side === 'home' ? 'away' : 'home', dir);
       const raw = p.x + dir * ahead;
       const capped = dir === 1 ? Math.min(raw, offside - 0.5) : Math.max(raw, offside + 0.5);
@@ -763,10 +892,41 @@ export class MotorEngine {
       const z = Math.max(3, Math.min(FIELD_WIDTH - 3, p.z + lateral));
       const c = controlAt(cps, this.ball, x, z, 20);
       const mine = p.side === 'home' ? c.home : 1 - c.home;
-      const gain = (positionValue(x, z, dir) - here) * (0.25 + 0.75 * mine);
-      if (gain > best.gain) best = { x, z, gain };
+      // GOLS ESPERADOS, não ganho posicional bruto.
+      //
+      // A versão anterior pontuava `(posição melhor) × (0,25 + 0,75 × controle)`.
+      // Aquele piso de 0,25 fazia um ponto TOTALMENTE dominado pelo adversário
+      // ainda valer um quarto — então quem decidia "melhor" corria para dentro
+      // da marcação. Medido: o time com os quatro mentais em 88 completava
+      // 34,0% dos passes contra 37,9% do time com 42, de forma consistente em
+      // todos os seeds. Decidir melhor tem que significar valor esperado maior,
+      // e valor esperado inclui a chance de a bola chegar lá.
+      let gain = possessionValue(x, z, dir) * mine - here;
+      // Espaço já reivindicado por um companheiro nesta mesma fatia vale menos.
+      //
+      // Sem isto, DECISÃO alta piorava o time: todo mundo identificava o mesmo
+      // "melhor ponto" e corria para lá, enquanto quem decidia mal se espalhava
+      // por acidente e cobria mais campo. Medido: Decisão 88 contra 42 dava
+      // -3,6 p.p. de acerto de passe. Otimização individual gulosa contra o
+      // coletivo — no futebol, você corre onde o companheiro NÃO está.
+      for (const c of claimed) {
+        const dc = Math.hypot(x - c.x, z - c.z);
+        if (dc < CLAIM_RADIUS_M) gain *= dc / CLAIM_RADIUS_M;
+      }
+      scored.push({ x, z, gain });
     }
-    return best;
+    if (scored.length === 0) return { x: p.x, z: p.z, gain: -1 };
+    scored.sort((a, b) => b.gain - a.gain);
+    // Decisão = chance de ficar com o melhor candidato em vez de um sub-ótimo.
+    // Um jogador de Decisão 40 escolhe certo em pouco mais da metade das vezes;
+    // é o que faz o mesmo físico render menos num jogador que lê mal.
+    // Faixa larga de propósito: com Decisão 40 o jogador acerta a melhor opção
+    // em ~3 de 5 vezes; com 90, em ~9 de 10. É a diferença entre um time que
+    // constrói e um que desperdiça a mesma posse.
+    const pickBest = 0.32 + (p.attrs.decisao / 100) * 0.62;
+    if (this.rng() < pickBest || scored.length === 1) return scored[0]!;
+    const alt = 1 + Math.floor(this.rng() * Math.min(3, scored.length - 1));
+    return scored[alt]!;
   }
 
   /** Decisão do portador: passe, finalização ou condução. */
@@ -898,10 +1058,13 @@ export class MotorEngine {
     // não tem como falhar no meio do caminho, e por isso quase toda posse
     // chegava à área — o motor produzia uma finalização a cada 1,04 passe.
     // Aqui o passe difícil, o jogador pressionado e o passe longo erram.
-    const rushed = 0.55 + 0.45 * Math.min(1, press / 1.6);
+    // Sob pressão quem decide bem mantém a qualidade; quem decide mal apressa
+    // e erra — é para isso que serve o atributo Decisão.
+    const composure = 0.62 + (from.attrs.decisao / 100) * 0.38;
+    const rushed = 0.55 + 0.45 * Math.min(1, (press / 1.6) * composure + (1 - composure) * 0);
     const accuracy = Math.min(
       0.97,
-      ((from.attrs.passe / 100) * 0.58 + survival * 0.42) * rushed,
+      ((from.attrs.passe / 100) * 0.58 + survival * 0.42) * (0.72 + 0.28 * composure) * rushed,
     );
     const sigma = (1 - accuracy) * (2.2 + d * 0.12);
     toX += this.gauss() * sigma;
@@ -914,10 +1077,13 @@ export class MotorEngine {
     this.ballMode = 'flight';
     this.setCarrier(null);
     this.stats.passes++;
+    this.bySide[from.side].passes++;
   }
 
   private takeShot(shooter: MotorPlayer, dir: 1 | -1, o: ShotOutcome): void {
     this.stats.shots++;
+    this.bySide[shooter.side].shots++;
+    this.bySide[shooter.side].xg += o.goal;
     const goalX: number = dir === 1 ? FIELD_LENGTH : 0;
     const foeSide = shooter.side === 'home' ? 'away' : 'home';
 
@@ -1056,7 +1222,7 @@ export class MotorEngine {
       const tz = (d > 1e-6 ? (dz / d) * want : 0) + sepZ * SEPARATION_STRENGTH;
 
       // Aceleração limitada — é o que dá inércia e faz o momento importar.
-      const accel = 4.0 * dt;
+      const accel = p.accel * dt;
       const ax = tx - p.vx;
       const az = tz - p.vz;
       const am = Math.hypot(ax, az);
@@ -1128,7 +1294,23 @@ export class MotorEngine {
     for (const p of this.players) {
       if (p.id === f.passerId) continue;
       const dp = Math.hypot(p.x - this.ball.x, p.z - this.ball.z);
-      if (dp < 1.4) {
+      // Antecipação entra na EXECUÇÃO, não só na percepção. Antes ela só
+      // encurtava o tempo de reação dentro do controle de espaço, o que fazia
+      // o time achar que estava mais seguro do que estava: ele arriscava
+      // passes com base numa vantagem que não existia na hora de interceptar.
+      // Medido: Antecipação 88 contra 42 dava -3,2 p.p. de acerto de passe.
+      const reach = INTERCEPT_BASE_M + p.anticipation01 * INTERCEPT_ANTICIPATION_M;
+      if (dp < reach) {
+        // Companheiro que corta a bola no caminho RECEBEU o passe — não é
+        // interceptação. Sem esta distinção, todo passe apanhado antes de
+        // chegar ao ponto exato contava como perdido: o acerto de passe
+        // despencou para 10,6%, o que não é futebol nenhum, e por um triz
+        // isso passou por "o time é mais ambicioso".
+        const passer = this.players.find((q) => q.id === f.passerId);
+        if (passer && p.side === passer.side) {
+          this.stats.passesOk++;
+          this.bySide[p.side].passesOk++;
+        }
         this.setCarrier(p.id);
         this.ballMode = 'held';
         this.flight = null;
@@ -1167,7 +1349,10 @@ export class MotorEngine {
       return;
     }
     this.setCarrier(best.id);
-    if (best.side === target?.side) this.stats.passesOk++;
+    if (best.side === target?.side) {
+      this.stats.passesOk++;
+      this.bySide[best.side].passesOk++;
+    }
   }
 
   /** Disputa direta: adversário colado no portador pode roubar. */
@@ -1212,10 +1397,19 @@ export class MotorEngine {
       this.possessionSince = this.t;
     }
     this.inPlayAccum += STEP_S;
+    const holder = this.carrierId ? this.players.find((p) => p.id === this.carrierId) : undefined;
+    if (holder) this.bySide[holder.side].possessionS += STEP_S;
 
-    if (this.stepCount % STEPS_PER_SLICE === 0) {
-      this.assignTargets();
-      if (this.ballMode === 'held' && this.carrierId) this.carrierAction();
+    // A FORMA do time é coletiva e roda na fatia fixa. A DECISÃO do portador
+    // roda no ritmo dele: Decisão e Visão altas revêem o campo a cada 150ms,
+    // baixas a cada 400ms.
+    if (this.stepCount % STEPS_PER_SLICE === 0) this.assignTargets();
+    if (this.ballMode === 'held' && this.carrierId) {
+      const c = this.players.find((p) => p.id === this.carrierId);
+      if (c && this.t >= c.nextDecisionAt) {
+        c.nextDecisionAt = this.t + c.sliceS;
+        this.carrierAction();
+      }
     }
     this.movePlayers(STEP_S);
     this.moveBall(STEP_S);

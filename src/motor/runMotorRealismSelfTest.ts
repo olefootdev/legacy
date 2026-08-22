@@ -6,7 +6,7 @@
  * contra o TacticalSimLoop. É de propósito: os dois motores precisam ser
  * comparáveis medida a medida, senão "o novo é melhor" vira opinião.
  */
-import { MotorEngine, type MotorPlayerInput, HALF_SECONDS } from './MotorEngine';
+import { MotorEngine, defaultAttrs, type MotorPlayerInput, HALF_SECONDS } from './MotorEngine';
 import {
   MatchRealismSampler,
   checkRealism,
@@ -47,10 +47,7 @@ function team(
     slotId: s.slot,
     role: s.role,
     shirtNumber: i + 1,
-    attrs: {
-      velocidade: 74, passe: 72, marcacao: 70,
-      finalizacao: 72, fisico: 72, drible: 70,
-    },
+    attrs: defaultAttrs(),
   }));
 }
 

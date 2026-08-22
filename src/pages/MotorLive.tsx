@@ -15,6 +15,7 @@ import {
   MotorEngine,
   STEP_S,
   HALF_SECONDS,
+  defaultAttrs,
   type MotorPlayerInput,
 } from '@/motor/MotorEngine';
 import type { MatchTruthSnapshot } from '@/bridge/matchTruthSchema';
@@ -53,7 +54,7 @@ function buildTeam(
     slotId: slot,
     role,
     shirtNumber: i + 1,
-    attrs: { velocidade: 74, passe: 72, marcacao: 70, finalizacao: 72, fisico: 72, drible: 70 },
+    attrs: defaultAttrs(),
   }));
 }
 

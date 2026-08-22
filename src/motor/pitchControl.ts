@@ -20,7 +20,7 @@
  * playback, não na física.
  */
 
-/** Aceleração sustentada de um jogador de futebol, m/s². */
+/** Aceleração de referência quando o agente não informa a própria, m/s². */
 export const PLAYER_ACCEL_MS2 = 4.0;
 /** Tempo de reação antes de mudar de direção, s. */
 export const REACTION_TIME_S = 0.25;
@@ -38,8 +38,16 @@ export interface ControlPlayer {
   z: number;
   vx: number;
   vz: number;
-  /** Velocidade máxima em m/s de futebol. */
+  /** Velocidade máxima em m/s de futebol — atributo Velocidade Máxima. */
   vmax: number;
+  /** Aceleração em m/s² — atributo Aceleração. Ausente, cai na referência. */
+  accel?: number;
+  /**
+   * 0–1: Antecipação. Quem antecipa bem já está saindo quando a jogada
+   * acontece; quem não antecipa perde o tempo de reação inteiro. Entra como
+   * encurtamento do tempo morto antes de mudar de direção.
+   */
+  anticipation01?: number;
 }
 
 /**
@@ -50,16 +58,20 @@ export interface ControlPlayer {
  * um zagueiro correndo para trás não "teleporta" para cobrir um lançamento.
  */
 export function timeToReach(p: ControlPlayer, px: number, pz: number): number {
-  const projX = p.x + p.vx * REACTION_TIME_S;
-  const projZ = p.z + p.vz * REACTION_TIME_S;
+  // Antecipação encurta o tempo morto: de 0,25s (não lê a jogada) a 0,10s
+  // (já está saindo antes de a bola sair do pé).
+  const react = REACTION_TIME_S * (1 - 0.72 * Math.max(0, Math.min(1, p.anticipation01 ?? 0.5)));
+  const accel = Math.max(1.5, p.accel ?? PLAYER_ACCEL_MS2);
+  const projX = p.x + p.vx * react;
+  const projZ = p.z + p.vz * react;
   const d = Math.hypot(px - projX, pz - projZ);
-  if (d < 1e-6) return REACTION_TIME_S;
+  if (d < 1e-6) return react;
 
   // Distância consumida enquanto acelera de 0 a vmax.
-  const tAccel = p.vmax / PLAYER_ACCEL_MS2;
-  const dAccel = 0.5 * PLAYER_ACCEL_MS2 * tAccel * tAccel;
-  if (d <= dAccel) return REACTION_TIME_S + Math.sqrt((2 * d) / PLAYER_ACCEL_MS2);
-  return REACTION_TIME_S + tAccel + (d - dAccel) / p.vmax;
+  const tAccel = p.vmax / accel;
+  const dAccel = 0.5 * accel * tAccel * tAccel;
+  if (d <= dAccel) return react + Math.sqrt((2 * d) / accel);
+  return react + tAccel + (d - dAccel) / p.vmax;
 }
 
 /** Tempo de voo da bola até o ponto, em segundos. */
