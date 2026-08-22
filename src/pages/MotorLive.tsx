@@ -75,7 +75,9 @@ const HOME = '#39D98A';
 const AWAY = '#FF8A5B';
 const LINE = 'rgba(255,255,255,0.34)';
 
-const SPEEDS = [1, 4, 10, 30] as const;
+// Ritmo: segundos de futebol por segundo real. Começa em 2× porque acima
+// disso não dá para LER o jogo — e ler o jogo é a proposta deste modo.
+const SPEEDS = [1, 2, 4, 10, 30] as const;
 
 export function MotorLive() {
   const engineRef = useRef<MotorEngine | null>(null);
@@ -84,7 +86,7 @@ export function MotorLive() {
     minute: 0, home: 0, away: 0, phase: 'live',
     passes: 0, shots: 0, carrier: null as string | null,
   });
-  const [speed, setSpeed] = useState<number>(10);
+  const [speed, setSpeed] = useState<number>(2);
   const [running, setRunning] = useState(true);
   const [seed, setSeed] = useState(404413);
   const speedRef = useRef(speed);

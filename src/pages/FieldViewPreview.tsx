@@ -353,6 +353,15 @@ function useExpertBallAnimation(
 export function FieldViewPreview() {
   const navigate = useNavigate();
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  /**
+   * Ritmo da partida: segundos de futebol por segundo real.
+   *
+   * Nasceu em 8× e ficou frenético — o motor agora corre em velocidade de
+   * futebol de verdade, então 8× é oito vezes a vida real. Padrão em 2×:
+   * anda, mas dá pra LER o jogo, que é a proposta inteira deste modo. Quem
+   * quiser 90 minutos de 90 minutos tem "Tempo real" no cabeçalho.
+   */
+  const [matchSpeed, setMatchSpeed] = useState(2);
   const [camera, setCamera] = useState<'aerial' | 'broadcast' | 'firstperson'>('aerial');
   const [viewMode, setViewMode] = useState<'aerial' | 'expert'>('aerial');
   const [cameraTrack, setCameraTrack] = useState<CameraTrackMode>('static');
@@ -436,7 +445,7 @@ export function FieldViewPreview() {
   // ── PlayerBrainCard ───────────────────────────────────────────────────────
   const [brainPlayer, setBrainPlayer] = useState<PitchPlayerState | null>(null);
 
-  const engine = useMotorMatch(homeXI, () => {}, false, 8, awayRoster, effectivePlayersById);
+  const engine = useMotorMatch(homeXI, () => {}, false, matchSpeed, awayRoster, effectivePlayersById);
 
   // flPitch vem diretamente do TacticalSimLoop via engine —
   // que já tem Yuka, MatchFieldContext, TerritoryRules, TacticaDoZero e OffBallDecision integrados.
@@ -748,6 +757,8 @@ export function FieldViewPreview() {
           setViewMode(m);
           setCamera(m === 'expert' ? 'broadcast' : 'aerial');
         }}
+        speed={matchSpeed}
+        onSpeedChange={setMatchSpeed}
       />
 
       {showExitConfirm && (

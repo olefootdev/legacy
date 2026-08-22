@@ -27,16 +27,40 @@ interface LegacyEditorialHeaderProps {
   onExit?: () => void;
   viewMode?: 'aerial' | 'expert';
   onViewModeChange?: (m: 'aerial' | 'expert') => void;
+  /** Segundos de futebol por segundo real. */
+  speed?: number;
+  onSpeedChange?: (s: number) => void;
 }
+
+/**
+ * Ritmo da partida.
+ *
+ * O motor roda em tempo de futebol de verdade, então a escolha aqui é quanto
+ * dele cabe num segundo real. O padrão nasceu em 8× e o fundador jogou e disse
+ * o óbvio: fica frenético — não dá pra LER o jogo, e ler o jogo é a proposta
+ * inteira deste modo.
+ *
+ * "Tempo real" existe e é honesto: 90 minutos são 90 minutos.
+ */
+const SPEEDS: Array<{ v: number; label: string }> = [
+  { v: 1, label: 'Tempo real' },
+  { v: 2, label: 'Corrido 2×' },
+  { v: 4, label: 'Rápido 4×' },
+  { v: 8, label: 'Turbo 8×' },
+  { v: 20, label: 'Resultado 20×' },
+];
 
 export function LegacyEditorialHeader({
   homeName, awayName, homeScore, awayScore, minute, possession, phase,
   formation, onFormationChange, actionCam = false, onActionCamToggle, onExit,
   viewMode = 'aerial', onViewModeChange,
+  speed, onSpeedChange,
 }: LegacyEditorialHeaderProps) {
   const eyebrow = phase === 'halftime' ? 'OLEFOOT • INTERVALO' : phase === 'fulltime' ? 'OLEFOOT • ENCERRADO' : 'OLEFOOT • LEGACY MODE';
   const [showFormations, setShowFormations] = useState(false);
   const [showViewModes, setShowViewModes] = useState(false);
+  const [showSpeeds, setShowSpeeds] = useState(false);
+  const speedLabel = SPEEDS.find((s) => s.v === speed)?.label ?? `${speed}×`;
 
   const dotStyle: React.CSSProperties = {
     color: 'rgba(253,225,0,0.4)',
@@ -206,9 +230,54 @@ export function LegacyEditorialHeader({
               </div>
             )}
 
-            {formation && onFormationChange && (
+            {speed !== undefined && onSpeedChange && (
               <>
                 {onViewModeChange && <span style={dotStyle}>•</span>}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowSpeeds(v => !v)}
+                    aria-label="Ritmo da partida"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 3,
+                      background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
+                      fontFamily: 'var(--font-display)', fontSize: 9, fontWeight: 800,
+                      letterSpacing: '0.32em', color: NEON, textTransform: 'uppercase',
+                    }}
+                  >
+                    {speedLabel}
+                    <span style={{ fontSize: 7, color: 'rgba(253,225,0,0.55)' }}>▾</span>
+                  </button>
+                  {showSpeeds && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, background: '#0d0d0d', border: '1px solid rgba(253,225,0,0.18)', zIndex: 400, minWidth: 140 }}>
+                      {SPEEDS.map(s => (
+                        <button
+                          key={s.v}
+                          type="button"
+                          onClick={() => { onSpeedChange(s.v); setShowSpeeds(false); }}
+                          style={{
+                            display: 'block', width: '100%',
+                            background: s.v === speed ? 'rgba(253,225,0,0.08)' : 'transparent',
+                            border: 'none', padding: '6px 12px', cursor: 'pointer',
+                            fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 13,
+                            color: s.v === speed ? NEON : 'rgba(255,255,255,0.6)',
+                            textAlign: 'left', transition: 'background 120ms',
+                          }}
+                          onMouseEnter={e => { if (s.v !== speed) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                          onMouseLeave={e => { if (s.v !== speed) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {formation && onFormationChange && (
+              <>
+                {(onViewModeChange || onSpeedChange) && <span style={dotStyle}>•</span>}
                 <div style={{ position: 'relative' }}>
                   <button
                     type="button"
