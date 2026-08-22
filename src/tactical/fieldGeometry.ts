@@ -38,15 +38,24 @@ export const GOAL_MOUTH_HALF_WIDTH_M = GOAL_INNER_WIDTH_M / 2;
 export const GOAL_DEPTH_M            = 2.5; // profundidade física do gol (gameplay)
 
 // ── Marcações em metros ───────────────────────────────────────────────────────
-// Escala de largura: gol passou de 7.32m → 10m (+36.6%)
-// Grande área e pequena área escalam proporcionalmente no eixo da largura.
-const _GOAL_SCALE = GOAL_INNER_WIDTH_M / GOAL_INNER_WIDTH_IFAB_M; // ≈ 1.366
+// O GOL é maior que o IFAB de propósito: 10m contra 7.32m (+36.6%). Olefoot é
+// fantasy — finalizar tem que ser generoso, e essa é a alavanca certa pra isso.
+//
+// As ÁREAS voltaram ao IFAB em 2026-08-21. Elas escalavam junto com o gol pelo
+// mesmo fator, o que produzia uma grande área de 55.1m num campo de 68m — 81%
+// da largura do gramado, contra 59% do futebol real. Com a área ocupando quase
+// toda a largura, "entrar na área" virava quase de graça e compactação defensiva
+// dentro dela perdia o sentido: não sobrava lado, nem cruzamento, nem
+// diferença entre jogar por dentro e por fora.
+//
+// Gol largo com área normal é coerente: a meta é maior DENTRO de uma área de
+// tamanho real. A generosidade fica na finalização, não na geometria do campo.
 export const CENTER_CIRCLE_RADIUS_M  = 9.15;
 export const PENALTY_SPOT_M          = 11;
 export const PENALTY_AREA_DEPTH_M    = 16.5;
-export const PENALTY_AREA_HALF_W_M   = 20.16 * _GOAL_SCALE; // ≈ 27.54m
+export const PENALTY_AREA_HALF_W_M   = 20.16; // IFAB — área de 40.32m (59% da largura)
 export const GOAL_AREA_DEPTH_M       = 5.5;
-export const GOAL_AREA_HALF_W_M      = 9.16  * _GOAL_SCALE; // ≈ 12.51m
+export const GOAL_AREA_HALF_W_M      = 9.16;  // IFAB — comporta o gol de 10m com folga
 export const GOAL_WIDTH_M            = GOAL_INNER_WIDTH_M;  // 10m
 export const GOAL_HALF_W_M           = GOAL_WIDTH_M / 2;    // 5m
 

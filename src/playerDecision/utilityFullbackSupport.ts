@@ -27,6 +27,7 @@ import { scoreAction, applyInertiaBonus } from '@/decisionAI/utility';
 import type { ContextReading, DecisionContext, OffBallAction, BallSector, PlayerProfile } from './types';
 import { recordFullbackTelemetry } from './utilityFullbackTelemetry';
 import { getLastFullbackAction, recordFullbackAction } from './agentActionMemory';
+import { FIELD_LENGTH, FIELD_WIDTH } from '@/tactical';
 
 // ---------------------------------------------------------------------------
 // CandidateActions (data-driven) — 4 actions competing
@@ -208,8 +209,10 @@ export function selectFullbackAction(
 // Resolve to concrete OffBallAction (preserves legacy geometry)
 // ---------------------------------------------------------------------------
 
-const FIELD_LENGTH = 100;
-const FIELD_WIDTH = 100;
+// Campo real (105 × 68) — vinha fixado em 100 × 100 aqui dentro. O erro não era
+// só de escala: `FIELD_WIDTH / 2` valia 50 num campo de 68m de largura, ou seja,
+// o "meio" ficava 16m fora do meio, e todo teste de `z < FIELD_WIDTH / 2` para
+// decidir esquerda/direita classificava errado boa parte do gramado.
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
