@@ -47,7 +47,7 @@ import {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /** Passo de integração do movimento, s. */
-const STEP_S = 0.05;
+export const STEP_S = 0.05;
 /** Cadência de decisão, s. Mesma fatia do Football Manager. */
 const SLICE_S = 0.25;
 const STEPS_PER_SLICE = Math.round(SLICE_S / STEP_S);
@@ -110,6 +110,28 @@ const PASS_SPEED_MAX_MS = 26;
 const TACKLE_RADIUS_M = 2.5;
 /** Quem carrega a bola corre menos que quem corre livre. */
 const CARRY_SPEED_MULT = 0.82;
+
+/**
+ * ── Espaçamento entre companheiros ───────────────────────────────────────────
+ *
+ * Achado ao OLHAR a partida na tela, não na régua: aos 6 minutos havia nove
+ * jogadores empilhados dentro da área, ocupando cinco metros quadrados, com o
+ * resto do time largado no meio-campo. Todas as 17 medidas continuavam
+ * passando — compactação de bloco mede a CAIXA que o time ocupa, não a
+ * distância entre companheiros dentro dela.
+ *
+ * No futebol ninguém joga colado no companheiro: ocupar espaços diferentes é o
+ * ponto. Adversário pode e deve chegar perto — isso é disputa —, então a
+ * repulsão vale só entre quem é do mesmo lado.
+ */
+const TEAMMATE_MIN_SEP_M = 4.6;
+/** Força da separação, em m/s de correção. */
+const SEPARATION_STRENGTH = 2.6;
+/**
+ * Quem está fechando o cone de chute NÃO se espalha: defender a própria área é
+ * aglomerado legítimo, e é justamente o que faz a finalização travar num corpo.
+ */
+const COVER_SEPARATION_MULT = 0.25;
 
 // ── Ritmo ────────────────────────────────────────────────────────────────────
 // Sem estas constantes o motor produz futebol geometricamente correto e
@@ -231,6 +253,8 @@ interface MotorPlayer extends MotorPlayerInput {
   targetZ: number;
   /** Urgência do destino atual, 0–1. Governa o quanto ele corre. */
   urgency: number;
+  /** Está fechando o cone de chute — pode e deve ficar colado aos companheiros. */
+  tight: boolean;
 }
 
 type BallMode = 'held' | 'flight';
@@ -463,6 +487,7 @@ export class MotorEngine {
         targetX: FIELD_LENGTH / 2,
         targetZ: GOAL_Z,
         urgency: 0.3,
+        tight: false,
       };
     });
   }
@@ -583,6 +608,7 @@ export class MotorEngine {
       // faltava — a instrumentação mostrou finalização de 11m com mediana de
       // UM defensor no cone, ou seja, o atacante entrava na área sozinho.
       const cover = new Set<string>();
+      for (const m of mates) m.tight = false;
       if (!teamHasBall) {
         const dirD = this.dirOf(side);
         const ownGoalX = dirD === 1 ? 0 : FIELD_LENGTH;
@@ -601,8 +627,9 @@ export class MotorEngine {
             // para cobrir largura em vez de virarem fila indiana.
             const t = Math.min(0.75, (2.6 + i * 2.3) / Math.max(1, ballToGoal));
             d.targetX = this.ball.x + (ownGoalX - this.ball.x) * t;
-            d.targetZ = GOAL_Z + (this.ball.z - GOAL_Z) * (1 - t) + (i - 1) * 2.1;
+            d.targetZ = GOAL_Z + (this.ball.z - GOAL_Z) * (1 - t) + (i - 1) * 5.5;
             d.urgency = 1;
+            d.tight = true;
             cover.add(d.id);
           }
         }
@@ -1005,9 +1032,28 @@ export class MotorEngine {
       const carrying = p.id === this.carrierId && this.ballMode === 'held';
       const effVmax =
         p.vmax * (0.72 + 0.28 * (p.stamina / 100)) * (carrying ? CARRY_SPEED_MULT : 1);
+
+      // Repulsão entre companheiros: mantém o time ocupando espaços distintos
+      // dentro do bloco em vez de virar aglomerado em cima da bola.
+      let sepX = 0;
+      let sepZ = 0;
+      if (!carrying && p.role !== 'gk') {
+        for (const o of this.players) {
+          if (o === p || o.side !== p.side || o.role === 'gk') continue;
+          const ddx = p.x - o.x;
+          const ddz = p.z - o.z;
+          const dd = Math.hypot(ddx, ddz);
+          if (dd > 1e-6 && dd < TEAMMATE_MIN_SEP_M) {
+            const push = (TEAMMATE_MIN_SEP_M - dd) / TEAMMATE_MIN_SEP_M;
+            const k = p.tight || o.tight ? COVER_SEPARATION_MULT : 1;
+            sepX += (ddx / dd) * push * k;
+            sepZ += (ddz / dd) * push * k;
+          }
+        }
+      }
       const want = Math.min(effVmax, effVmax * p.urgency * Math.min(1, d / 6));
-      const tx = d > 1e-6 ? (dx / d) * want : 0;
-      const tz = d > 1e-6 ? (dz / d) * want : 0;
+      const tx = (d > 1e-6 ? (dx / d) * want : 0) + sepX * SEPARATION_STRENGTH;
+      const tz = (d > 1e-6 ? (dz / d) * want : 0) + sepZ * SEPARATION_STRENGTH;
 
       // Aceleração limitada — é o que dá inércia e faz o momento importar.
       const accel = 4.0 * dt;
@@ -1219,6 +1265,11 @@ export class MotorEngine {
 
   get carrier(): string | null {
     return this.carrierId;
+  }
+
+  /** Minuto de futebol para exibição, 0–90. */
+  get minute(): number {
+    return Math.min(90, Math.floor(this.t / 60));
   }
 
   /** Segundos de futebol com a bola em jogo. */

@@ -105,6 +105,7 @@ const SetPiecePreview = lazy(() => import('./pages/SetPiecePreview').then((m) =>
 const LegacyCardPreview = lazy(() => import('./pages/LegacyCardPreview').then((m) => ({ default: m.LegacyCardPreview })));
 const CeremonyPreview = lazy(() => import('./pages/CeremonyPreview').then((m) => ({ default: m.CeremonyPreview })));
 const FieldViewPreview = lazy(() => import('./pages/FieldViewPreview').then((m) => ({ default: m.FieldViewPreview })));
+const MotorLive = lazy(() => import('./pages/MotorLive').then((m) => ({ default: m.MotorLive })));
 const AgentsDebugLog = lazy(() => import('./pages/AgentsDebugLog').then((m) => ({ default: m.AgentsDebugLog })));
 const AgentsFieldView = lazy(() => import('./pages/AgentsFieldView').then((m) => ({ default: m.AgentsFieldView })));
 const OleFieldLab = lazy(() => import('./pages/OleFieldLab').then((m) => ({ default: m.OleFieldLab })));
@@ -459,6 +460,16 @@ as a nice MVP. Let's Play Together! ⚽
             element={
               <Suspense fallback={<RouteFallback />}>
                 <DesignSystemShowcase />
+              </Suspense>
+            }
+          />
+          {/* Bancada do motor novo — campo inteiro em retrato. Fora do guard
+              de registro de propósito: é ferramenta de observação do motor. */}
+          <Route
+            path="/dev/motor"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <MotorLive />
               </Suspense>
             }
           />
