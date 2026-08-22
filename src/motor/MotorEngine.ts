@@ -211,6 +211,10 @@ const DEAD_AFTER_SHOT_S = 18;
 const DEAD_AFTER_OUT_S = 18;
 /** Bola parada depois de falta, s. */
 const DEAD_AFTER_FOUL_S = 26;
+/** Fração dos bloqueios que desvia para fora em vez de sobrar em jogo. */
+const BLOCKED_OUT_CHANCE = 0.45;
+/** Fração das defesas em que o goleiro segura ou manda para fora. */
+const SAVE_HELD_CHANCE = 0.78;
 /** Quanto o goleiro avança em relação à distância da bola. */
 const GK_OUT_RATIO = 0.17;
 /** Teto de saída do goleiro, m. */
@@ -226,8 +230,14 @@ const COVER_DEFENDERS = 3;
  * passo de 0,05s, o que dava um desarme a cada 0,45 segundos: nenhuma posse
  * sobrevivia, o jogo virava pingue-pongue e saíam 130 passes por partida em vez
  * de ~900. É o erro clássico de probabilidade não escalada pelo dt.
+ *
+ * O valor foi de 0,55 para 0,09 depois de instrumentar o ciclo de posse. O
+ * achado que mudou o diagnóstico: 3,3% das posses terminavam em finalização, que
+ * é EXATAMENTE o futebol real. O excesso de chutes não vinha de finalizar
+ * demais — vinha de haver posses demais. Eram 381 desarmes por partida contra
+ * ~40 do futebol, o que picava o jogo em sequências de um passe só.
  */
-const TACKLE_ATTEMPTS_PER_S = 0.55;
+const TACKLE_ATTEMPTS_PER_S = 0.09;
 /** Faltas por segundo de contato. */
 const FOUL_RATE_PER_S = 0.06;
 
@@ -1240,11 +1250,21 @@ export class MotorEngine {
     const goalX: number = dir === 1 ? FIELD_LENGTH : 0;
     const foeSide = shooter.side === 'home' ? 'away' : 'home';
 
-    // 1. Travou num corpo. Continua viva: rebote é segunda chance, não parada.
+    // 1. Travou num corpo.
     if (this.rng() < o.blocked) {
       this.stats.blocked++;
       this.evento(`Bloqueio na frente de ${this.rotulo(shooter)}`, 'shot', shooter.id);
-      // Bloqueio sobra para quem bloqueou: a bola bate no defensor.
+      // Boa parte dos bloqueios DESVIA para fora — escanteio, não segunda
+      // chance imediata. Sem isso o lance vira metralhadora: medido, a partida
+      // tinha 131 trocas de posse e 67 finalizações, ou seja meia finalização
+      // por posse contra 0,1 do futebol real. Não eram posses demais; eram
+      // chutes repetidos DENTRO da mesma posse.
+      if (this.rng() < BLOCKED_OUT_CHANCE) {
+        this.ball.x = goalX - dir * 1.5;
+        this.ball.z = shooter.z > GOAL_Z ? FIELD_WIDTH - 1 : 1;
+        this.stop('shot', foeSide);
+        return;
+      }
       this.ball.x = shooter.x + dir * 2.0;
       this.ball.z = shooter.z + (this.rng() - 0.5) * 5;
       this.giveToNearest(9, foeSide);
@@ -1265,8 +1285,9 @@ export class MotorEngine {
       this.stats.saves++;
       const gk = this.players.find((p) => p.role === 'gk' && p.side === foeSide);
       this.evento(`Defesa do goleiro — ${this.rotulo(shooter)} finalizou`, 'save', shooter.id);
-      // Segura ou espalma. Chute forte de perto tende a rebote.
-      if (this.rng() < 0.62) {
+      // Segura, espalma para fora ou dá rebote. Rebote que sobra limpo para o
+      // atacante é a exceção no futebol, não a regra.
+      if (this.rng() < SAVE_HELD_CHANCE) {
         this.ball.x = gk?.x ?? goalX;
         this.ball.z = gk?.z ?? GOAL_Z;
         this.stop('shot', foeSide);

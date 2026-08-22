@@ -17,7 +17,11 @@ import {
   type RealismCheck,
 } from '@/simulation/matchRealismMetrics';
 
-const SEEDS = [404_413, 777_001, 190_277];
+// Seis partidas, não três. Gol e finalização são medidas de alta variância:
+// com três, a mesma calibração "passava" e "falhava" em execuções seguidas, e
+// eu cheguei a ajustar constantes duas vezes contra ruído. Custa o dobro de
+// tempo e vale — uma régua que oscila é pior que régua nenhuma.
+const SEEDS = [404_413, 777_001, 190_277, 515_099, 888_123, 246_810];
 /** Duas amostras por segundo de futebol — mesma densidade da régua antiga. */
 const SAMPLE_EVERY_STEPS = 10;
 
