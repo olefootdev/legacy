@@ -7,6 +7,7 @@
  * comparáveis medida a medida, senão "o novo é melhor" vira opinião.
  */
 import { MotorEngine, defaultAttrs, type MotorPlayerInput, HALF_SECONDS } from './MotorEngine';
+import { defaultArchetypeForSlot } from './archetypeWeights';
 import {
   MatchRealismSampler,
   checkRealism,
@@ -48,6 +49,7 @@ function team(
     role: s.role,
     shirtNumber: i + 1,
     attrs: defaultAttrs(),
+    tacticalArchetypeId: defaultArchetypeForSlot(s.slot),
   }));
 }
 

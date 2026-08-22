@@ -94,7 +94,8 @@
     "test:quatro-divisoes": "tsx scripts/test-quatro-divisoes.ts",
     "lint:all": "npm run lint && npm run lint:revela",
     "test:motor": "tsx src/motor/runMotorRealismSelfTest.ts",
-    "test:mental": "tsx src/motor/runMentalImpactSelfTest.ts"
+    "test:mental": "tsx src/motor/runMentalImpactSelfTest.ts",
+    "test:arquetipos": "tsx src/motor/runArchetypeStyleSelfTest.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

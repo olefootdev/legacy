@@ -18,6 +18,7 @@ import {
   defaultAttrs,
   type MotorPlayerInput,
 } from '@/motor/MotorEngine';
+import { defaultArchetypeForSlot } from '@/motor/archetypeWeights';
 import type { MatchTruthSnapshot } from '@/bridge/matchTruthSchema';
 import {
   FIELD_LENGTH,
@@ -55,6 +56,7 @@ function buildTeam(
     role,
     shirtNumber: i + 1,
     attrs: defaultAttrs(),
+    tacticalArchetypeId: defaultArchetypeForSlot(slot),
   }));
 }
 

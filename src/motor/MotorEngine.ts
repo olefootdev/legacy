@@ -35,6 +35,11 @@ import { FIELD_LENGTH, FIELD_WIDTH } from '@/tactical';
 import { FORMATION_BASES } from '@/match-engine/formations/catalog';
 import type { FormationSchemeId } from '@/match-engine/types';
 import {
+  resolveArchetype,
+  weightsFor,
+  type DecisionWeights,
+} from './archetypeWeights';
+import {
   controlAt,
   passSurvival,
   pressureSec,
@@ -59,6 +64,12 @@ const SLICE_FAST_S = 0.15;
 const POSITIONING_MAX_DRIFT_M = 7.0;
 /** Raio em que a corrida de um companheiro já "ocupa" o espaço, m. */
 const CLAIM_RADIUS_M = 14;
+/**
+ * Amplitude da célula-alvo em torno da âncora, como fração do leque de
+ * corrida. Pequeno de propósito: o jogador escolhe onde ficar DENTRO do seu
+ * posto, não abandona o posto.
+ */
+const CELL_SPREAD = 0.42;
 /** Alcance base para cortar uma bola em voo, m. */
 const INTERCEPT_BASE_M = 1.1;
 /** Alcance extra de quem antecipa bem — chega antes, não estica mais. */
@@ -306,6 +317,15 @@ export interface MotorPlayerInput {
   role: 'gk' | 'def' | 'mid' | 'attack';
   shirtNumber?: number;
   attrs: MotorAttrs;
+  /**
+   * OBRIGATÓRIO. Um dos 54 ids de `@/tactical/archetypesCatalog`.
+   *
+   * É o que define o ESTILO do jogador — o que ele valoriza ao decidir. No
+   * motor antigo este campo era opcional, nunca era atribuído, e a leitura
+   * ficava num `try/catch` silencioso: 35 KB de design tático nunca rodaram.
+   * Aqui a ausência é erro de compilação, e um id inválido é erro em execução.
+   */
+  tacticalArchetypeId: string;
 }
 
 interface MotorPlayer extends MotorPlayerInput {
@@ -339,6 +359,8 @@ interface MotorPlayer extends MotorPlayerInput {
   urgency: number;
   /** Está fechando o cone de chute — pode e deve ficar colado aos companheiros. */
   tight: boolean;
+  /** Pesos de decisão do arquétipo — o estilo, traduzido em multiplicadores. */
+  w: DecisionWeights;
 }
 
 type BallMode = 'held' | 'flight';
@@ -515,6 +537,14 @@ export class MotorEngine {
     targetId: string | null; passerId: string; travelled: number;
   } | null = null;
   private stepCount = 0;
+  /**
+   * Estatísticas POR JOGADOR. O pós-jogo precisa delas, e sem elas não há como
+   * julgar um arquétipo: o efeito de dois zagueiros diluído em ~1.000 passes
+   * do time some no ruído, e a medida chega a inverter de sinal.
+   */
+  readonly byPlayer = new Map<string, {
+    passes: number; passesForward: number; carries: number; shots: number; xg: number;
+  }>();
   /** Instante em que o portador atual ganhou a bola. */
   private possessionSince = 0;
   /** Até quando a bola está parada. */
@@ -538,8 +568,16 @@ export class MotorEngine {
    * gols — gol tem variância alta demais para servir de régua de atributo.
    */
   readonly bySide = {
-    home: { passes: 0, passesOk: 0, shots: 0, xg: 0, possessionS: 0 },
-    away: { passes: 0, passesOk: 0, shots: 0, xg: 0, possessionS: 0 },
+    home: {
+      passes: 0, passesOk: 0, shots: 0, xg: 0, possessionS: 0,
+      passesForward: 0, passDistSum: 0, carries: 0, touchesWide: 0, touches: 0,
+      touchAdvanceSum: 0,
+    },
+    away: {
+      passes: 0, passesOk: 0, shots: 0, xg: 0, possessionS: 0,
+      passesForward: 0, passDistSum: 0, carries: 0, touchesWide: 0, touches: 0,
+      touchAdvanceSum: 0,
+    },
   };
 
   constructor(home: MotorPlayerInput[], away: MotorPlayerInput[], private readonly cfg: MotorConfig) {
@@ -578,6 +616,8 @@ export class MotorEngine {
       // cada tick — um zagueiro desatento erra SEMPRE para o mesmo lado.
       const posErr = (1 - p.attrs.posicionamento / 100) * POSITIONING_MAX_DRIFT_M;
       const phase = ((hashId(p.id) % 1000) / 1000) * Math.PI * 2;
+      // Falha ruidosa: sem arquétipo válido a partida não começa.
+      const archetype = resolveArchetype(p.tacticalArchetypeId, p.id);
       return {
         ...p,
         x: FIELD_LENGTH / 2,
@@ -598,8 +638,19 @@ export class MotorEngine {
         targetZ: GOAL_Z,
         urgency: 0.3,
         tight: false,
+        w: weightsFor(archetype),
       };
     });
+  }
+
+  /** Acumulador do jogador, criado sob demanda. */
+  private pstat(id: string) {
+    let e = this.byPlayer.get(id);
+    if (!e) {
+      e = { passes: 0, passesForward: 0, carries: 0, shots: 0, xg: 0 };
+      this.byPlayer.set(id, e);
+    }
+    return e;
   }
 
   private dirOf(side: 'home' | 'away'): 1 | -1 {
@@ -694,7 +745,16 @@ export class MotorEngine {
         (a, b) => timeToReach(this.cp(a), contestX, contestZ) - timeToReach(this.cp(b), contestX, contestZ),
       );
       const chasers = new Set<string>();
-      const nChase = teamHasBall ? (this.ballMode === 'flight' ? 1 : 0) : PRESSERS;
+      let nChase = teamHasBall ? (this.ballMode === 'flight' ? 1 : 0) : PRESSERS;
+      // Um time de arquétipos agressivos manda mais gente à bola. A média do
+      // peso `press` dos que estão perto decide se sai um a mais.
+      if (!teamHasBall && byArrival.length > 0) {
+        const pressAvg =
+          byArrival.slice(0, 3).reduce((sum, m) => sum + m.w.press, 0)
+          / Math.min(3, byArrival.length);
+        if (pressAvg > 1.22) nChase += 1;
+        else if (pressAvg < 0.85) nChase = Math.max(1, nChase - 1);
+      }
       for (let i = 0; i < nChase && i < byArrival.length; i++) chasers.add(byArrival[i]!.id);
 
       // Com a bola: corridas de apoio para onde o espaço vale.
@@ -810,10 +870,23 @@ export class MotorEngine {
           continue;
         }
         const s = this.shapeTarget(p, teamHasBall);
-        p.targetX = s.x;
-        p.targetZ = s.z;
+        // Célula-alvo: em vez de ir para o ponto exato da âncora, cada jogador
+        // escolhe a melhor opção NUM RAIO EM TORNO DELA. É o que faz o estilo
+        // do arquétipo aparecer em todo mundo, não só nos dois apoiadores —
+        // um ponta de linha só usa a faixa se tiver como escolher a faixa.
+        let tx = s.x;
+        let tz = s.z;
+        if (p.role !== 'gk') {
+          const spot = this.bestRunSpot(p, this.dirOf(side), cps, [], s, CELL_SPREAD);
+          if (spot.gain > 0) {
+            tx = spot.x;
+            tz = spot.z;
+          }
+        }
+        p.targetX = tx;
+        p.targetZ = tz;
         // Longe do posto = corre para voltar; perto = trota.
-        const d = Math.hypot(p.x - s.x, p.z - s.z);
+        const d = Math.hypot(p.x - tx, p.z - tz);
         p.urgency = Math.max(0.22, Math.min(0.9, d / 22));
       }
     }
@@ -868,30 +941,49 @@ export class MotorEngine {
    * dele e escolhe o que mais soma valor de posse ponderado pelo controle que o
    * time teria ali. É isto que substitui o "ande 3 metros para frente".
    */
+  /**
+   * Melhor destino entre candidatos gerados EM TORNO DE UM CENTRO.
+   *
+   * Passando a âncora de forma como centro, o jogador escolhe a melhor opção
+   * local sem sair do bloco — é o modelo de "célula-alvo" do Football Manager:
+   * o cérebro escolhe um ponto, a cinemática leva até lá em velocidade cheia,
+   * e não existe elástico puxando de volta.
+   */
   private bestRunSpot(
     p: MotorPlayer,
     dir: 1 | -1,
     cps: ControlPlayer[],
     claimed: Array<{ x: number; z: number }> = [],
+    center?: { x: number; z: number },
+    spread = 1,
   ): { x: number; z: number; gain: number } {
+    const cx = center?.x ?? p.x;
+    const cz = center?.z ?? p.z;
     // Visão de Jogo = quantos pontos ele consegue avaliar por ciclo: de 5
     // (não levanta a cabeça) a 12 (enxerga o campo todo).
     const candidates = Math.round(5 + (p.attrs.visaoDeJogo / 100) * 7);
     const scored: Array<{ x: number; z: number; gain: number }> = [];
     // Valor esperado de ONDE ELE ESTÁ, na mesma moeda dos candidatos.
-    const cHere = controlAt(cps, this.ball, p.x, p.z, 20);
+    const cHere = controlAt(cps, this.ball, cx, cz, 20);
     const mineHere = p.side === 'home' ? cHere.home : 1 - cHere.home;
-    const here = possessionValue(p.x, p.z, dir) * mineHere;
+    const here = possessionValue(cx, cz, dir) * mineHere;
     for (let i = 0; i < candidates; i++) {
-      const ahead = 8 + (i % 4) * 9;               // 8 a 35 metros à frente
-      const lateral = (Math.floor(i / 4) % 2 === 0 ? -1 : 1) * (4 + (i % 4) * 5);
+      const ahead = (8 + (i % 4) * 9) * spread;
+      const lateral = (Math.floor(i / 4) % 2 === 0 ? -1 : 1) * (4 + (i % 4) * 5) * spread;
       const offside = this.offsideLineX(p.side === 'home' ? 'away' : 'home', dir);
-      const raw = p.x + dir * ahead;
+      const raw = cx + dir * ahead;
       const capped = dir === 1 ? Math.min(raw, offside - 0.5) : Math.max(raw, offside + 0.5);
       const x = Math.max(4, Math.min(FIELD_LENGTH - 4, capped));
-      const z = Math.max(3, Math.min(FIELD_WIDTH - 3, p.z + lateral));
+      const z = Math.max(3, Math.min(FIELD_WIDTH - 3, cz + lateral));
       const c = controlAt(cps, this.ball, x, z, 20);
       const mine = p.side === 'home' ? c.home : 1 - c.home;
+      // Estilo da corrida: quem busca profundidade valoriza o ponto mais
+      // adiantado; quem dá largura valoriza o mais aberto. É o que separa o
+      // ponta que rasga a linha do que segura a bola no pé na faixa.
+      const depthGain = Math.max(0, (x - cx) * dir) / 35;
+      const wideGain = Math.abs(z - GOAL_Z) / (FIELD_WIDTH / 2);
+      const styleMul =
+        1 + depthGain * (p.w.runDepth - 1) + wideGain * (p.w.runWide - 1);
       // GOLS ESPERADOS, não ganho posicional bruto.
       //
       // A versão anterior pontuava `(posição melhor) × (0,25 + 0,75 × controle)`.
@@ -901,7 +993,7 @@ export class MotorEngine {
       // 34,0% dos passes contra 37,9% do time com 42, de forma consistente em
       // todos os seeds. Decidir melhor tem que significar valor esperado maior,
       // e valor esperado inclui a chance de a bola chegar lá.
-      let gain = possessionValue(x, z, dir) * mine - here;
+      let gain = possessionValue(x, z, dir) * mine * styleMul - here;
       // Espaço já reivindicado por um companheiro nesta mesma fatia vale menos.
       //
       // Sem isto, DECISÃO alta piorava o time: todo mundo identificava o mesmo
@@ -952,7 +1044,10 @@ export class MotorEngine {
     // Finalizar?
     // Todas as opções abaixo estão em GOLS ESPERADOS — mesma moeda.
     const shot = this.evaluateShot(carrier, dir);
-    const sv = shot.goal;
+    // O peso do arquétipo entra na DECISÃO de finalizar, nunca na chance real
+    // de o chute entrar: um centroavante de área finaliza mais, não com mais
+    // sorte. A resolução do lance continua usando `shot` puro.
+    const sv = shot.goal * carrier.w.shoot;
     const here = possessionValue(carrier.x, carrier.z, dir);
 
     // Melhor passe.
@@ -966,11 +1061,17 @@ export class MotorEngine {
       if (d < 4 || d > 55) continue;
       const speed = this.passSpeedFor(carrier, d);
       const survival = passSurvival(cps, carrier, m, carrier.side, speed);
-      // Gols esperados do passe = chance de chegar × (valor do destino +
-      // valor de continuar com a bola). É a segunda parcela que torna o passe
-      // lateral e o recuo opções legítimas.
-      const gain = possessionValue(m.x, m.z, dir) + RETENTION_VALUE;
-      const value = survival * gain;
+      // ── Estilo entra aqui ──────────────────────────────────────────────
+      // Tolerância a risco achata a penalidade do passe improvável: é o meia
+      // genial que erra oito e decide o jogo no nono. Progressão ganha bônus
+      // separado, porque um armador e um volante de contenção enxergam a mesma
+      // bola vertical com valores diferentes.
+      const effSurvival = Math.pow(survival, 1 / carrier.w.risk);
+      const forward = (m.x - carrier.x) * dir > 3 ? carrier.w.passForward : 1;
+      const gain =
+        possessionValue(m.x, m.z, dir) * carrier.w.pass * forward
+        + RETENTION_VALUE * carrier.w.retention;
+      const value = effSurvival * gain;
       if (!bestPass || value > bestPass.value) bestPass = { to: m, value, survival };
     }
 
@@ -996,7 +1097,9 @@ export class MotorEngine {
       Math.min(0.92, duel * (0.30 + 0.70 * Math.min(1, nearestFoe.d / 9))),
     );
     const carryValue =
-      (possessionValue(carryX, carrier.z, dir) + RETENTION_VALUE) * carrySurvival;
+      (possessionValue(carryX, carrier.z, dir) * carrier.w.carry
+        + RETENTION_VALUE * carrier.w.retention)
+      * carrySurvival;
 
     const passValue = bestPass ? bestPass.value : -1;
 
@@ -1005,7 +1108,7 @@ export class MotorEngine {
     // vezes por partida.
     const goalX = dir === 1 ? FIELD_LENGTH : 0;
     const distToGoal = Math.hypot(goalX - carrier.x, carrier.z - GOAL_Z);
-    const canShoot = distToGoal <= 26 && sv >= SHOT_MIN_XG;
+    const canShoot = distToGoal <= 26 && shot.goal >= SHOT_MIN_XG;
     // Na mesma moeda a comparação é direta — com uma reserva: empate técnico
     // entre finalizar e passar não vira finalização, porque finalizar ENCERRA
     // a posse enquanto passar a mantém.
@@ -1025,6 +1128,8 @@ export class MotorEngine {
       this.makePass(carrier, bestPass.to, bestPass.survival, press);
       return;
     }
+    this.bySide[carrier.side].carries++;
+    this.pstat(carrier.id).carries++;
     // Condução: destino de verdade, não um passinho.
     carrier.targetX = carryX;
     carrier.targetZ = carrier.z + (this.rng() - 0.5) * 8;
@@ -1077,13 +1182,24 @@ export class MotorEngine {
     this.ballMode = 'flight';
     this.setCarrier(null);
     this.stats.passes++;
-    this.bySide[from.side].passes++;
+    const acc = this.bySide[from.side];
+    acc.passes++;
+    acc.passDistSum += d;
+    const pe = this.pstat(from.id);
+    pe.passes++;
+    if ((toX - from.x) * this.dirOf(from.side) > 3) {
+      acc.passesForward++;
+      pe.passesForward++;
+    }
   }
 
   private takeShot(shooter: MotorPlayer, dir: 1 | -1, o: ShotOutcome): void {
     this.stats.shots++;
     this.bySide[shooter.side].shots++;
     this.bySide[shooter.side].xg += o.goal;
+    const ps = this.pstat(shooter.id);
+    ps.shots++;
+    ps.xg += o.goal;
     const goalX: number = dir === 1 ? FIELD_LENGTH : 0;
     const foeSide = shooter.side === 'home' ? 'away' : 'home';
 
@@ -1398,7 +1514,15 @@ export class MotorEngine {
     }
     this.inPlayAccum += STEP_S;
     const holder = this.carrierId ? this.players.find((p) => p.id === this.carrierId) : undefined;
-    if (holder) this.bySide[holder.side].possessionS += STEP_S;
+    if (holder) {
+      const acc = this.bySide[holder.side];
+      acc.possessionS += STEP_S;
+      acc.touches++;
+      if (Math.abs(holder.z - GOAL_Z) > 17) acc.touchesWide++;
+      // Avanço do toque: quantos metros à frente do próprio gol ele aconteceu.
+      const ownGoalX = this.dirOf(holder.side) === 1 ? 0 : FIELD_LENGTH;
+      acc.touchAdvanceSum += Math.abs(holder.x - ownGoalX);
+    }
 
     // A FORMA do time é coletiva e roda na fatia fixa. A DECISÃO do portador
     // roda no ritmo dele: Decisão e Visão altas revêem o campo a cada 150ms,

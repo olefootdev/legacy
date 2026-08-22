@@ -12,6 +12,7 @@
  * Decisão e Antecipação altas supera um mais talentoso mal empregado.
  */
 import { MotorEngine, defaultAttrs, type MotorPlayerInput, type MotorAttrs } from './MotorEngine';
+import { defaultArchetypeForSlot } from './archetypeWeights';
 
 const SEEDS = [404_413, 777_001, 190_277, 515_099, 888_123, 246_810];
 
@@ -37,6 +38,7 @@ function team(side: 'home' | 'away', mente: Partial<MotorAttrs>): MotorPlayerInp
     role,
     shirtNumber: i + 1,
     attrs: defaultAttrs(mente),
+    tacticalArchetypeId: defaultArchetypeForSlot(slot),
   }));
 }
 
