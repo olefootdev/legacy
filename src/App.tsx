@@ -463,6 +463,18 @@ as a nice MVP. Let's Play Together! ⚽
               </Suspense>
             }
           />
+          {/* Legacy Mode com o motor novo por baixo — cards, câmera de tensão e
+              toque no jogador. Entrada de desenvolvimento, sem guard, para
+              conferir a experiência sem precisar de elenco montado.
+              A rota de produto continua sendo /match/legacy. */}
+          <Route
+            path="/dev/legacy"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <FieldViewPreview />
+              </Suspense>
+            }
+          />
           {/* Bancada do motor novo — campo inteiro em retrato. Fora do guard
               de registro de propósito: é ferramenta de observação do motor. */}
           <Route

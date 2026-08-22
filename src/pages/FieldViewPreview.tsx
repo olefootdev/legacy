@@ -22,7 +22,15 @@ import type { PitchPlayerState } from '@/engine/types';
 import type { PlayerEntity } from '@/entities/types';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { FORMATION_BASES } from '@/match-engine/formations/catalog';
-import { useLegacyMatchEngine, type LegacyAwayRosterEntry } from './useLegacyMatchEngine';
+// ── A PONTE ─────────────────────────────────────────────────────────────────
+// Esta página é a experiência do Legacy Mode: cards em perspectiva, câmera de
+// tensão com zoom, toque para abrir a mente do jogador. Ela nunca teve
+// problema — o que não jogava futebol era o motor debaixo dela.
+//
+// `useMotorMatch` tem a MESMA interface de `useLegacyMatchEngine` e roda o
+// motor novo (determinístico, 15 de 17 na régua de realismo, com atributos
+// mentais e os 54 arquétipos ligados). Trocou o cérebro, manteve o corpo.
+import { useMotorMatch, type MotorAwayRosterEntry as LegacyAwayRosterEntry } from '@/motor/useMotorMatch';
 import { useGameStore } from '@/game/store';
 import { pitchPlayersFromLineup, roleFromPos } from '@/engine/pitchFromLineup';
 import { mergeLineupWithDefaults, awayStartingElevenFromSquad } from '@/entities/lineup';
@@ -428,7 +436,7 @@ export function FieldViewPreview() {
   // ── PlayerBrainCard ───────────────────────────────────────────────────────
   const [brainPlayer, setBrainPlayer] = useState<PitchPlayerState | null>(null);
 
-  const engine = useLegacyMatchEngine(homeXI, () => {}, false, 1, awayRoster, effectivePlayersById);
+  const engine = useMotorMatch(homeXI, () => {}, false, 8, awayRoster, effectivePlayersById);
 
   // flPitch vem diretamente do TacticalSimLoop via engine —
   // que já tem Yuka, MatchFieldContext, TerritoryRules, TacticaDoZero e OffBallDecision integrados.

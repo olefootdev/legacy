@@ -1,139 +1,133 @@
 # 👻 Olefoot — Ghost Mapping Report
 
-**Data:** 2026-07-10
-**Arquivos varridos:** 1076 (.ts/.tsx) — eram 863 na auditoria anterior
+**Data:** 22 de agosto de 2026
+**Foco:** Legacy Mode — a experiência de CARDS, câmera e interação
 **Score anterior:** 75/100 (2026-05-02)
-**Score atual:** 78/100
-**Evolução:** +3 pontos — mas por motivos mistos (ver veredito)
-**Método:** 3 varreduras paralelas grep-backed (motor / app-UI / economia). Sem acusação sem evidência.
-
----
-
-## ✅ Correções aplicadas nesta sessão (2026-07-10, pós-diagnóstico)
-
-- **Ponte #1 (afiliado):** migration `20260710120000_fix_affiliate_commission_payout.sql` — `claim_my_affiliate_commissions` agora INSERE `wallet_credits` por moeda (espelha `claim_career_bonus`). ⚠️ **precisa ser aplicada no Supabase** (não deployável daqui).
-- **Ponte #2 (Cápsula Lendária):** removida do Store (produto 100% placeholder — preço/estoque fake, compra = `console.log`). `MythicPackHero.tsx` + `MythicPackModal.tsx` deletados.
-- **Ponte #5 (órfãos do motor):** 9 arquivos deletados — `matchLearningIntegration`, `utilityBridge`, `utilityShootDecision`, `replaySystem`, `globalMatchRealtime`, `dailyDigest`, `cycleCoachBridge`, `matchTickClient`, `positionAttributeWeights`.
-- **Ponte #6 (executeCoachCommand):** função de "sucesso falso" deletada + import não-usado removido de `CoachCommandInput.tsx`.
-- Lint (tsc) verde após tudo. Vite compila.
-
-**Ainda abertas (precisam backend/deploy ou trabalho dedicado):** #3 2FA TOTP (segurança — backend), #4 ranking real na Home (precisa hoistar `myRank`), #7 OLEXP/GAT server-authority (infra grande, plano em docs/), #8 posse/confiança pós-jogo hardcoded, #9 DISCOVERABLE em Manager.tsx, #10 podar rotas órfãs.
+**Score atual:** 68/100
+**Evolução:** −7 pontos
 
 ---
 
 ## 🎯 Veredito Geral
 
-> O **motor de partida evoluiu muito** (o maior órfão de 2026-05-02 — `agentProfile` — está ligado; o DNA agora muda resultado de verdade). Mas a varredura foi mais funda desta vez e revelou que a **camada de economia/loja mente para o jogador** em pontos críticos (comissão de afiliado que não credita, cápsula lendária que não compra). O motor subiu; a confiança da carteira puxou o score pra baixo.
+> O motor melhorou muito e a coerência de produto piorou: agora existem DOIS mundos paralelos desconectados em vez de um só quebrado.
+
+O motor antigo passou de 2 para 15 de 17 medidas de realismo, ganhou determinismo, atributos mentais e os 54 arquétipos ligados. Mas a experiência que o fundador desenhou — cards de jogador em perspectiva, câmera de tensão com zoom, toque para abrir a mente do jogador — continua pendurada numa única página órfã. E o motor novo, escrito hoje, **não fala a língua dela**.
 
 ---
 
-## ✅ O que MELHOROU desde 2026-05-02 (provado)
+## 1. 🔴 A experiência inteira do fundador está órfã
 
-- **`agentProfile` LIGADO** — era o órfão nº1 ("cache nunca populado"). Hoje: `TacticalSimLoop.ts:6299` popula o cache num loop por match (`for (const ag of [...homeAgents, ...awayAgents]) agentProfileCache.set(...)`), lido em `:3702`, e `applyAgentBiasToScore()` é chamado em `collectiveIndividualDecision.ts:399`. 🧬→🟢
-- **DNA agora é VIVO, não decorativo** — `ego` entra em `OnBallDecision.ts:527`; `composure` em `OutcomeResolver.ts:68/80/97` e `Reception.ts`; `riskTaking` em `collectiveIndividualDecision.ts:517`. Valores mudam probabilidade de verdade.
-- **Aprendizado ao vivo ligado** — `LiveLearningBridge` instanciado em `TacticalSimLoop.ts:458`.
-- **GameSpirit quase determinístico** — só 2 `Math.random` reais (usa rng seedado quando disponível). `InteractionResolver` = 0.
-- **Zero alucinações de comentário** — grep por "Integrated with / Wired to / Hooked into" veio vazio.
-- **pressingTrap / momentumBuff / desperationBehavior / positionKnowledge** seguem vivos.
+### 1.1 `src/pages/FieldViewPreview.tsx` — o único consumidor de tudo
 
----
+- **A Promessa:** o Legacy Mode jogável — cards, câmera, painéis, interação.
+- **A Realidade:** rota `/match/legacy` com **zero links na interface**. Último commit de conteúdo: 2026-05-05.
+- **Evidência:** onze componentes de experiência, **um consumidor cada**, todos ele:
 
-## 1. 🔴 Lógicas Órfãs (arquivos de lógica, zero import externo — verificado)
-
-| Arquivo | Linhas | Diagnóstico |
+| Componente | Consumidores | Papel |
 |---|---|---|
-| `src/agents/matchLearningIntegration.ts` | 135 | **Duplicata morta** — o aprendizado vivo é `liveLearningBridge`+`MatchLearningEngine`. Deletar. |
-| `src/playerDecision/utilityShootDecision.ts` | 192 | Modelo de "instinto de finalização" (`shootInstinctUtility`, `SHOOT_INSTINCT_THRESHOLD`) **nunca chamado**. Sem equivalente vivo — intenção perdida. |
-| `src/playerDecision/utilityBridge.ts` | 98 | Lib de scoring de candidatos (`scoreCandidate/sampleFromCandidates/pickBest`) que a decisão real não usa. |
-| `src/match/replaySystem.ts` | 287 | Sistema de replay completo, zero import. |
-| `src/match/globalMatchRealtime.ts` | 286 | Realtime de partida global, zero import. |
-| `src/systems/dailyDigest.ts` | 152 | Resumo diário, zero import. |
-| `src/match/cycleCoachBridge.ts` | 60 | "Bridge" que não liga nada. |
-| `src/match/matchTickClient.ts` | 58 | Zero import. |
-| `src/engine/test2d/positionAttributeWeights.ts` | 50 | Pesos por posição, zero import. |
-| `src/match/coachCommands.ts:240` (`executeCoachCommand`) | — | **Retorna `success:true` FALSO** — todos os branches são stub `// TODO enviar comando`. Único import é não-usado em `CoachCommandInput.tsx:18`. O comando de voz real usa outro caminho (`VOICE_COMMAND_ISSUED`, `reducer.ts:1701`). |
+| `useNarrativeCamera` | 1 | câmera por TENSÃO (não segue a bola) + zoom |
+| `PlayerBrainCard` | 1 | o que o jogador pensou, ao tocar nele |
+| `TacticalOverlay` | 1 | leitura tática sobre o campo |
+| `PressureZoneOverlay` | 1 | zonas de pressão |
+| `ExpertPanel` | 1 | leitura de especialista |
+| `ReadGamePanel` | 1 | ler o jogo |
+| `FalePlayerBar` | 1 | falar com o jogador |
+| `SmartPanel` | 1 | painel de estilo ao vivo |
+| `LegacySkillBanner` | 1 | skills do Modo Legado |
+| `NarrativeBar` | 1 | narrativa |
 
-Semi-mortos (só referenciados por ferramentas admin/reference, não pelo jogo): `advanceLiveStoryMinute.ts`, `prematchCoachSuggestion.ts`, `playerFromPrompt.ts`.
+- **Intenção Perdida:** o jogo. Não o motor — **o jogo**.
 
----
+### 1.2 `src/components/match/FieldView.tsx` — 1.197 linhas de linguagem visual
 
-## 2. 🤖 Alucinações / "Sucesso Falso"
+O cabeçalho do arquivo declara a intenção com todas as letras:
 
-Comentários de instalação: **0** (limpo). Mas há **sucesso funcional falso** — código que diz "deu certo" sem fazer nada:
+> *"Jogadores: **cards** posicionados no campo (não sprites). Destaque: **zoom-in** no jogador ativo via prop `highlightPlayerId`."*
 
-- `src/store/MythicPackHero.tsx:14` — `handlePurchase` = `console.log('Compra da Cápsula Lendária')`, fecha modal. **Compra fake.**
-- `src/match/coachCommands.ts:240-334` — `executeCoachCommand` retorna mensagens de sucesso ("ativou skill", "mensagem enviada") sobre stubs.
-- `src/admin/useAdmin2FA.ts:107` — `verify2FA` aceita **qualquer** 6 dígitos (`// TODO validação TOTP real`).
-
----
-
-## 3. 💰 Economia — o ponto mais doloroso
-
-### 3.1 🔴 Comissão de afiliado NÃO CREDITA (dinheiro queimado)
-`claim_my_affiliate_commissions` (`supabase/migrations/20260527000100_affiliate_commissions.sql:236-247`) apenas marca `claimed_at = now()` e RETORNA o total — **nunca insere `wallet_credits`, nunca toca saldo.** Compare com `claim_career_bonus` (`career_progress.sql:260`) que insere corretamente. O cliente (`ManagerNetwork.tsx:380`, `ManagerCareer.tsx:196`) soma, mostra "X resgatados", dá `refresh()` → pendente zera, **saldo não muda**. Todo "Resgatar" de comissão de depósito **queima o valor**. É a comissão principal do MMN. (Justamente o botão da tela que acabamos de repaginar.)
-
-### 3.2 🟡 OLEXP/GAT staking ainda client-only
-`accrueOlexpDaily`/`accrueGatDaily` (`src/wallet/olexp.ts:159`) rodam só no cliente via `WORLD_CATCH_UP`. Sem tabela de posições no servidor (grep em migrations = nada). Limpar localStorage fabrica rendimento. (O *token* OLEXP no servidor é real; a *posição de staking* é ficção — dois "OLEXP" diferentes.)
-
-### 3.3 🟡 3 sistemas de XP fragmentados
-`finance.expLifetimeEarned` (carteira, real) · `progressionStore.expBalance` (contador órfão que carteira nenhuma lê) · `PlayerProgressionManager.totalXP` (só signature moves). O `expBalance` é um saldo morto.
-
-### 3.4 🟡 Nível do jogador é cosmético
-`evolutionXp` acumula de treino real, mas `getPlayerLevel` só alimenta UI — atributos sobem direto no treino, o nível não destrava nada.
-
-✅ **Reais e ligados:** renda passiva, prêmios de liga, HODL (cron server), bônus de carreira (diferido pro próximo mount), débitos de compra (moeda certa em todos os casos checados).
+O que existe dentro e nunca foi usado por nada novo:
+- `InclinedCard` — card em **projeção de perspectiva** (`ivProject`), com sombra, faixa de cor do time, número em 28px, nome e stats, escala variando com a profundidade (`1.05 - tEased * 0.55`).
+- `PlayerCard` — versão aérea/broadcast.
+- `onPlayerClick` — o toque, propagado até o card.
 
 ---
 
-## 4. 🎭 Números falsos na UI (hardcoded)
+## 2. 🤖 A alucinação desta sessão fui eu
 
-- `src/pages/Home.tsx:1062` — ranking pós-jogo fixo em **#1 / 0%** (`// TODO pegar do sistema real`).
-- `src/game/reducer.ts:1860` — posse fixa em **60%** no pós-jogo; `:1917` `wasLosingAtHalftime:false`.
-- `src/hooks/useVoiceCommandDispatch.ts:95` — obediência ao comando de voz usa `confianca:70` fixo (moral do jogador nunca pesa).
-- `src/pages/MatchGlobalSetup.tsx:19` — `generateMockTeams()` com nomes reais (Flamengo/Palmeiras) e OVR `Math.random()`.
+Não houve comentário mentiroso no código. Houve algo pior: **construí um segundo dialeto e chamei de progresso.**
 
----
-
-## 5. 🚪 Rotas Órfãs (registradas, nada navega até elas)
-
-- `/olefoot/ranked` (`App.tsx:617`) — zero refs.
-- `/liga-global/coroas` (`App.tsx:621`) — zero refs.
-- `/match/global/setup` (`App.tsx:610`) — zero refs + mock teams.
-- `/match/penalty-legacy` (`App.tsx:607`) — supersedido por `/match/penalty`.
-- `/match/classic` (`App.tsx:626`) — dead-end intencional ("Em breve").
+- **Evidência:** `grep -c "PitchPlayerState\|FieldView\|PlayerBrainCard\|useNarrativeCamera" src/motor/*.ts src/pages/MotorLive.tsx` → **0 em todos os sete arquivos.**
+- **O que eu fiz:** o motor novo emite `MatchTruthSnapshot`. A experiência do fundador consome `PitchPlayerState`. São dois tipos para a mesma coisa, e eu não escrevi a ponte — escrevi uma tela nova, de círculos com número, e nela deixei registrado que *"o que se lê aqui é forma coletiva, não drible"*. Racionalizei a ausência do jogo como decisão de design.
+- **Por que é o erro de sempre:** é exatamente o padrão que esta skill existe para pegar. Uma sessão de IA entrega um subsistema tecnicamente melhor, desligado do que o fundador construiu, e o produto não anda.
 
 ---
 
-## 6. 🌉 Pontes a Construir (ranqueadas por impacto)
+## 3. 🧬 DNA Perdido
 
-| # | Ponte | Origem → Destino | Esforço | Ganho |
-|---|---|---|---|---|
-| 1 | **Comissão afiliado credita saldo** | `claim_my_affiliate_commissions` SQL → INSERT `wallet_credits` | 🟢 | 🔥🔥🔥 |
-| 2 | **Cápsula Lendária compra de verdade** | `MythicPackHero.handlePurchase` → debita+concede | 🟡 | 🔥🔥🔥 |
-| 3 | **2FA admin real (TOTP)** | `useAdmin2FA.verify2FA` → backend | 🟡 | 🔥🔥 (segurança) |
-| 4 | **Ranking real na Home** | `Home.tsx:1062` → sistema de ranking | 🟢 | 🔥🔥 |
-| 5 | **Deletar órfãos do motor** | matchLearningIntegration/utilityBridge/utilityShootDecision/replaySystem/etc | 🟢 | 🔥 (clareza) |
-| 6 | **executeCoachCommand: deletar ou ligar** | `coachCommands.ts:240` + import em `CoachCommandInput.tsx:18` | 🟢 | 🔥 |
-| 7 | **OLEXP/GAT staking server-authoritative** | `olexp.ts` accrual → cron+tabela (padrão HODL) | 🔴 | 🔥🔥 |
-| 8 | **Posse/confiança/ranking reais no pós-jogo** | reducer/voice hardcodes → estado real | 🟡 | 🔥 |
-| 9 | **DISCOVERABLE_MANAGERS real** | `Manager.tsx:1320` → managers online | 🟡 | 🔥 |
-| 10 | **Podar rotas órfãs** | /olefoot/ranked, /liga-global/coroas, /match/global/setup, /match/penalty-legacy | 🟢 | 🔥 |
+### 3.1 `PlayerBrainCard` — 👻 e este dói mais que os outros
 
----
+- **O que faz:** ao tocar num card, mostra a última ação do agente com rótulo em português ("Infiltrou a área", "Reciclou a bola", "Cobriu transição"), fadiga, tier de obediência e tendência.
+- **O que isso É:** a primeira versão do *"a IA explica o jogo"*. Já construída, já em português, já ligada ao toque.
+- **O que eu fiz:** propus construir uma árvore causal do zero (task #22) sem notar que metade da ideia já estava no repositório, funcionando, órfã.
 
-## 7. 📊 Métricas
+### 3.2 `legendDNA` — 👻 Fantasma (inalterado desde 2026-05-02)
 
-- Órfãos de lógica confirmados: **9 arquivos** (+3 semi-mortos admin) | Sucesso falso: **3** | Rotas órfãs: **5**
-- DNA: 🟢 **VIVO** (era decorativo) | agentProfile: 🟢 **LIGADO** (era órfão) | Alucinações de comentário: **0**
-- Bugs de dinheiro: **1 crítico** (afiliado) + **1 loja fake** (cápsula) | XP fragmentado em **3** sistemas
-- **Score: 78/100** (+3 vs 75)
+- `grep "legendDNA\|calmness" src/playerDecision` → **0 ocorrências**.
+- Os traços de lenda não chegam ao motor de decisão. As lendas ainda não jogam como lendas.
+
+### 3.3 `agentDecisionIntegration` — 🔴 Órfão (inalterado)
+
+- `grep "getAgentProfileBias"` fora do próprio arquivo → **0**.
 
 ---
 
-## 8. 💡 Conclusão (sem bajulação)
+## 4. 🎭 Desmerecimento Tático
 
-O **cérebro da partida está muito melhor** — o trabalho de acender `agentProfile` e fazer o DNA (ego/composure/riskTaking) pesar em fórmulas reais é exatamente a "inteligência" que faltava em 2026-05-02. Isso sozinho justificaria subir o score.
+### 4.1 `src/gamespirit/GameSpirit.ts`
 
-O que segura em 78 é a **camada de dinheiro/loja**: a comissão de afiliado é o pior achado do relatório — não é código morto, é **código que finge pagar e queima o valor**, na engrenagem principal do MMN. Somado à Cápsula Lendária (produto em destaque que não compra) e ao 2FA que aceita qualquer código, o jogo tem 3 pontos onde a UI mente. São poucos, são cirúrgicos, mas são de alta confiança — e o fundador acabou de repaginar a própria tela onde o bug do afiliado vive.
+- 3 ocorrências de `Math.random()` remanescentes. O motor NOVO já é determinístico por seed; o GameSpirit não.
 
-**Prioridade absoluta: ponte #1 (afiliado credita saldo).** Depois #2 e #3. O resto é limpeza (deletar órfãos) e honestidade (ranking/posse reais).
+### 4.2 O motor novo desmerece a própria UI
+
+- **Hoje:** `MotorLive.tsx` desenha `<circle r="1.95">` com um número dentro.
+- **Deveria ser:** `FieldView` com `InclinedCard` — perspectiva, sombra, nome, foto quando houver.
+- **Sistemas desperdiçados:** os onze componentes da tabela 1.1, mais a câmera de tensão.
+
+---
+
+## 5. 🌉 Pontes a Construir
+
+| # | Ponte | Origem | Destino | Esforço | Ganho |
+|---|---|---|---|---|---|
+| 1 | Adaptador de verdade | `MotorEngine.snapshot()` | `PitchPlayerState[]` | 🟢 | 🔥🔥🔥 |
+| 2 | Motor novo sob os cards | adaptador | `FieldView` inclinado | 🟢 | 🔥🔥🔥 |
+| 3 | Câmera de tensão religada | `useNarrativeCamera` | motor novo | 🟢 | 🔥🔥 |
+| 4 | Toque → mente do jogador | `onPlayerClick` | `PlayerBrainCard` | 🟡 | 🔥🔥🔥 |
+| 5 | Arquétipo no card | `archetypeWeights` | `PlayerBrainCard` | 🟢 | 🔥🔥 |
+| 6 | `/match/legacy` aponta pro novo | `App.tsx` | rota viva | 🟢 | 🔥🔥 |
+| 7 | `legendDNA` no motor novo | `legendDNA` | `MotorAttrs` + pesos | 🟡 | 🔥🔥🔥 |
+
+A ponte 1 é a chave: os dois lados já existem e são completos. Falta um tradutor de tipo.
+
+---
+
+## 6. 📊 Métricas
+
+- Componentes de experiência órfãos: **11** (todos com 1 consumidor, e esse consumidor é uma página sem link)
+- Tipos paralelos para a mesma coisa: **2** (`MatchTruthPlayer` × `PitchPlayerState`)
+- Referências do motor novo à experiência do fundador: **0**
+- DNA fantasma: **2** (`legendDNA`, `agentDecisionIntegration`) — inalterado desde 2026-05-02
+- `Math.random()` no GameSpirit: **3**
+- **Score: 68/100**
+
+---
+
+## 7. 💡 Conclusão
+
+Contra os 75/100 de maio: **o motor subiu e o produto desceu.**
+
+O que melhorou é real e medido — determinismo por seed, unidades em metros e m/s de verdade, bloco compacto que acompanha a bola, atributos mentais que decidem partida, 54 arquétipos que mudam comportamento. Nada disso existia.
+
+O que piorou é a coerência. Em maio havia um jogo quebrado. Hoje há um motor bom e um jogo quebrado, **lado a lado, sem se falarem**. Somei um subsistema paralelo à pilha em vez de ligar o que existia — que é precisamente o comportamento que esta skill foi escrita para flagrar.
+
+O fundador está certo ao dizer que são os erros de sempre. A diferença é que desta vez a ponte é curta: `MotorEngine` e `FieldView` estão os dois prontos, e falta um adaptador de tipo entre eles.

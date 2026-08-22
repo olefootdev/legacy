@@ -550,6 +550,12 @@ export class MotorEngine {
   /** Até quando a bola está parada. */
   private deadUntil = 0;
   readonly stoppages = { shots: 0, outs: 0, fouls: 0 };
+  /**
+   * Narrativa mínima da partida. Alimenta a barra de eventos da UI e é a
+   * semente do traço causal — o mesmo lugar por onde o comentarista que
+   * conhece o contrafactual vai ler depois.
+   */
+  readonly events: Array<{ minute: number; text: string; kind: string; playerId?: string }> = [];
   private inPlayAccum = 0;
 
   t = 0;
@@ -1206,6 +1212,7 @@ export class MotorEngine {
     // 1. Travou num corpo. Continua viva: rebote é segunda chance, não parada.
     if (this.rng() < o.blocked) {
       this.stats.blocked++;
+      this.evento(`Bloqueio na frente de ${this.rotulo(shooter)}`, 'shot', shooter.id);
       // Bloqueio sobra para quem bloqueou: a bola bate no defensor.
       this.ball.x = shooter.x + dir * 2.0;
       this.ball.z = shooter.z + (this.rng() - 0.5) * 5;
@@ -1215,6 +1222,7 @@ export class MotorEngine {
     // 2. Foi para fora.
     if (this.rng() > o.onTarget) {
       this.stats.offTarget++;
+      this.evento(`${this.rotulo(shooter)} finalizou para fora`, 'shot', shooter.id);
       this.ball.x = goalX + (dir === 1 ? -5 : 5);
       this.ball.z = GOAL_Z + (this.rng() - 0.5) * 16;
       this.stop('shot', foeSide);
@@ -1225,6 +1233,7 @@ export class MotorEngine {
     if (this.rng() < o.save) {
       this.stats.saves++;
       const gk = this.players.find((p) => p.role === 'gk' && p.side === foeSide);
+      this.evento(`Defesa do goleiro — ${this.rotulo(shooter)} finalizou`, 'save', shooter.id);
       // Segura ou espalma. Chute forte de perto tende a rebote.
       if (this.rng() < 0.62) {
         this.ball.x = gk?.x ?? goalX;
@@ -1242,6 +1251,7 @@ export class MotorEngine {
     if (shooter.side === 'home') this.homeScore++;
     else this.awayScore++;
     this.stats.goals++;
+    this.evento(`GOL! ${this.rotulo(shooter)}`, 'goal', shooter.id);
     this.kickoff(foeSide);
   }
 
@@ -1487,6 +1497,7 @@ export class MotorEngine {
       }
       // Desarme malfeito: falta e bola parada.
       if (this.rng() < FOUL_RATE_PER_S * dt) {
+        this.evento(`Falta de ${this.rotulo(p)} em ${this.rotulo(c)}`, 'freekick', p.id);
         this.stop('foul', c.side);
         return;
       }
@@ -1590,9 +1601,19 @@ export class MotorEngine {
     return Math.min(90, Math.floor(this.t / 60));
   }
 
+  /** Nome curto do jogador para a narrativa. */
+  private rotulo(p: MotorPlayer): string {
+    return `#${p.shirtNumber ?? '?'} ${p.slotId.toUpperCase()}`;
+  }
+
   /** Segundos de futebol com a bola em jogo. */
   get inPlaySeconds(): number {
     return this.inPlayAccum;
+  }
+
+  private evento(text: string, kind: string, playerId?: string): void {
+    this.events.push({ minute: this.minute, text, kind, playerId });
+    if (this.events.length > 300) this.events.shift();
   }
 
   private setCarrier(id: string | null, forceReset = false): void {
