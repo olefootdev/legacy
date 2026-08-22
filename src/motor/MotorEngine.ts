@@ -74,6 +74,22 @@ const ATTACK_PUSH_M = 6;
  * atravessar ninguém, e o motor produzia 92 finalizações por partida.
  */
 const DEFEND_DROP_M = 17;
+/**
+ * Faixa em que o centro do bloco pode viver, medida a partir do PRÓPRIO gol.
+ *
+ * Sem este limite o bloco só conhecia a bola: com a posse no goleiro
+ * adversário, os onze do time que defende acampavam na entrada da área dele —
+ * o clamp global levava os dois blocos para o mesmo lugar. Toda perda de bola
+ * virava finalização, e o motor produzia mais chutes (212) do que passes (110).
+ *
+ * É a linha de confrontação: por mais que se pressione, o bloco não abandona a
+ * própria metade; por mais que se recue, ele não cola na própria meta.
+ */
+const BLOCK_MIN_FROM_OWN_GOAL_M = 20;
+/** Teto sem a bola: pressão alta ainda deixa o bloco aquém do meio adversário. */
+const BLOCK_MAX_FROM_OWN_GOAL_DEF_M = 58;
+/** Teto com a bola: aí sim o time inteiro sobe. */
+const BLOCK_MAX_FROM_OWN_GOAL_ATT_M = 78;
 
 /** Quantos defensores saem da forma para disputar a bola. */
 const PRESSERS = 2;
@@ -83,8 +99,17 @@ const SUPPORT_RUNNERS = 2;
 const PASS_SPEED_MIN_MS = 15;
 const PASS_SPEED_MAX_MS = 26;
 
-/** Raio em que o portador é considerado sob disputa direta, m. */
-const TACKLE_RADIUS_M = 1.6;
+/**
+ * Raio em que o portador é considerado sob disputa direta, m.
+ *
+ * Com 1,6m o portador simplesmente fugia: corria a 7 m/s e nenhum perseguidor
+ * chegava perto o bastante para tentar o desarme. Conduzir virava progressão
+ * grátis — e como conduzir sempre valia mais que passar, o motor produzia mais
+ * finalizações (199) do que passes (134).
+ */
+const TACKLE_RADIUS_M = 2.5;
+/** Quem carrega a bola corre menos que quem corre livre. */
+const CARRY_SPEED_MULT = 0.82;
 
 // ── Ritmo ────────────────────────────────────────────────────────────────────
 // Sem estas constantes o motor produz futebol geometricamente correto e
@@ -93,20 +118,52 @@ const TACKLE_RADIUS_M = 1.6;
 // bola nunca saía de jogo. Numa partida de verdade a bola fica em jogo ~55 dos
 // 90 minutos e são ~900 passes e ~25 finalizações somando os dois times.
 
-/** Tempo mínimo com a bola antes de agir (domínio + primeiro toque), s. */
-const CONTROL_TIME_MIN_S = 1.1;
+/**
+ * Tempo mínimo com a bola antes de agir (domínio + primeiro toque), s.
+ *
+ * Calibrado para baixo: sob pressão o jogador se livra em meio segundo, de um
+ * ou dois toques. Com 1,1s de piso, quase metade das posses pressionadas
+ * terminava em desarme ANTES de o jogador conseguir decidir qualquer coisa —
+ * o que fazia a partida ter 116 passes em vez dos ~900 do futebol.
+ */
+const CONTROL_TIME_MIN_S = 0.5;
 /** Tempo extra de posse quando ninguém pressiona, s. */
-const CONTROL_TIME_FREE_S = 2.6;
-/** O passe só sai se for este tanto melhor que segurar. */
-const PASS_ADVANTAGE = 1.10;
-/** Probabilidade de gol mínima para finalizar. */
-const SHOT_MIN_XG = 0.06;
+const CONTROL_TIME_FREE_S = 2.2;
+/**
+ * Valor de simplesmente NÃO PERDER a bola, em gols esperados.
+ *
+ * Faltava isto. A regra antiga exigia que o passe MELHORASSE a posição
+ * (`passValue >= here * 1.10`), o que proibia passe para o lado e para trás —
+ * e no futebol metade dos passes é circulação, sem ganho posicional nenhum.
+ * Sem circulação toda posse virava linha reta para o gol: uma finalização a
+ * cada passe, contra uma a cada ~36 do futebol real.
+ *
+ * Com retenção valendo algo, o passe seguro de lado ganha do drible arriscado.
+ */
+const RETENTION_VALUE = 0.042;
+/**
+ * Probabilidade de gol mínima para finalizar.
+ *
+ * Piso, não critério: a decisão continua sendo por comparação em gols
+ * esperados. Serve para o jogador não bater de qualquer jeito quando a
+ * alternativa também vale pouco — 9% corresponde grosso modo a uma bola
+ * central de ~15m sem corpo na frente.
+ */
+const SHOT_MIN_XG = 0.09;
 /** Bola parada depois de finalização (recuo, tiro de meta, escanteio), s. */
 const DEAD_AFTER_SHOT_S = 18;
 /** Bola parada depois de lateral, s. */
 const DEAD_AFTER_OUT_S = 18;
 /** Bola parada depois de falta, s. */
 const DEAD_AFTER_FOUL_S = 26;
+/** Quanto o goleiro avança em relação à distância da bola. */
+const GK_OUT_RATIO = 0.17;
+/** Teto de saída do goleiro, m. */
+const GK_MAX_OUT_M = 7.5;
+/** A partir desta distância da própria meta, a defesa fecha o cone de chute. */
+const DANGER_DIST_M = 28;
+/** Quantos defensores fecham a linha bola→gol na zona de perigo. */
+const COVER_DEFENDERS = 3;
 /**
  * Tentativas de desarme por segundo com um adversário colado.
  *
@@ -140,6 +197,8 @@ function makeRng(seed: number): () => number {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export interface MotorAttrs {
+  /** Qualidade sob as traves. Sem valor, cai em `marcacao`. */
+  goleiro?: number;
   velocidade: number;
   passe: number;
   marcacao: number;
@@ -222,6 +281,56 @@ const POSSESSION_VALUE_K = 0.20;
 
 export function possessionValue(x: number, z: number, dir: 1 | -1): number {
   return positionValue(x, z, dir) * POSSESSION_VALUE_K;
+}
+
+/**
+ * Desfechos possíveis de uma finalização, em probabilidade.
+ *
+ * A MESMA função alimenta a decisão do portador e a resolução do lance. Se o
+ * motor decide com um número e resolve com outro, ele finaliza errado por
+ * construção — foi assim que a versão anterior produzia 167 chutes por
+ * partida: a decisão via 0,13 de chance onde a realidade era bem menor.
+ *
+ * Referências de futebol real: ~1/3 das finalizações vão no alvo, ~30% das que
+ * vão no alvo viram gol, conversão global ~10%.
+ */
+export interface ShotOutcome {
+  /** Trava num corpo antes de chegar. */
+  blocked: number;
+  /** Vai no alvo, dado que não travou. */
+  onTarget: number;
+  /** Goleiro defende, dado que foi no alvo. */
+  save: number;
+  /** Probabilidade final de gol — é o que a decisão consome. */
+  goal: number;
+}
+
+export function shotOutcome(
+  dist: number,
+  angle01: number,
+  finalizacao: number,
+  pressure: number,
+  blockers: number,
+  gkQuality: number,
+  gkCover01: number,
+): ShotOutcome {
+  // Corpos no caminho.
+  const blocked = 1 - Math.exp(-0.42 * blockers);
+  // No alvo: quem finaliza melhor acerta mais; sob pressão, erra mais.
+  const pressed = 0.55 + 0.45 * Math.min(1, pressure / 1.5);
+  const onTarget = Math.max(
+    0.12,
+    Math.min(0.72, (0.30 + (finalizacao / 100) * 0.26) * pressed * (0.72 + 0.28 * angle01)),
+  );
+  // Defesa: quanto mais perto e mais aberto o ângulo, mais difícil defender.
+  // gkCover01 mede o quanto o goleiro fechou o ângulo saindo da linha.
+  const chanceQuality = Math.exp(-dist / 9) * angle01;
+  const save = Math.max(
+    0.12,
+    Math.min(0.95, (0.94 - chanceQuality * 1.25) * (0.70 + 0.30 * (gkQuality / 100)) * (0.78 + 0.42 * gkCover01)),
+  );
+  const goal = (1 - blocked) * onTarget * (1 - save);
+  return { blocked, onTarget, save, goal };
 }
 
 /**
@@ -311,7 +420,10 @@ export class MotorEngine {
   awayScore = 0;
   phase: MatchTruthPhase = 'live';
   /** Estatísticas simples para o pós-jogo e para a narração. */
-  readonly stats = { passes: 0, passesOk: 0, shots: 0, goals: 0, tackles: 0 };
+  readonly stats = {
+    passes: 0, passesOk: 0, shots: 0, goals: 0, tackles: 0,
+    blocked: 0, offTarget: 0, onTarget: 0, saves: 0, rebounds: 0,
+  };
 
   constructor(home: MotorPlayerInput[], away: MotorPlayerInput[], private readonly cfg: MotorConfig) {
     this.rng = makeRng(cfg.seed);
@@ -369,23 +481,31 @@ export class MotorEngine {
    */
   private blockCenterX(side: 'home' | 'away', teamHasBall: boolean): number {
     const dir = this.dirOf(side);
+    const ownGoalX = dir === 1 ? 0 : FIELD_LENGTH;
     const push = teamHasBall ? ATTACK_PUSH_M : -DEFEND_DROP_M;
     const raw = this.ball.x + dir * push;
-    // A linha mais recuada não cola na própria meta e a mais adiantada não
-    // ultrapassa a linha de fundo adversária.
-    const halfDepth = BLOCK_DEPTH_M / 2;
-    return Math.max(halfDepth + 11, Math.min(FIELD_LENGTH - halfDepth - 11, raw));
+    // O limite é medido a partir do PRÓPRIO gol, não do campo em abstrato —
+    // é isso que impede os dois blocos de colapsarem no mesmo ponto quando a
+    // bola está perto de uma das metas.
+    const fromOwnGoal = (raw - ownGoalX) * dir;
+    const maxOut = teamHasBall ? BLOCK_MAX_FROM_OWN_GOAL_ATT_M : BLOCK_MAX_FROM_OWN_GOAL_DEF_M;
+    const clamped = Math.max(BLOCK_MIN_FROM_OWN_GOAL_M, Math.min(maxOut, fromOwnGoal));
+    return ownGoalX + dir * clamped;
   }
 
   private shapeTarget(p: MotorPlayer, teamHasBall: boolean): { x: number; z: number } {
     if (p.role === 'gk') {
       const dir = this.dirOf(p.side);
       const goalX = dir === 1 ? 0 : FIELD_LENGTH;
-      // Sai um pouco da linha conforme a bola se aproxima.
-      const advance = Math.max(0, 1 - Math.abs(this.ball.x - goalX) / 45) * 9;
+      // Goleiro fica NA LINHA entre a bola e o centro da meta, avançando para
+      // fechar o ângulo. Antes ele só deslizava de lado e ficava colado à
+      // trave — o atacante entrava na área e tinha o gol todo aberto.
+      const bd = Math.hypot(this.ball.x - goalX, this.ball.z - GOAL_Z);
+      const out = Math.max(0.8, Math.min(GK_MAX_OUT_M, bd * GK_OUT_RATIO));
+      const t = out / Math.max(1, bd);
       return {
-        x: goalX + dir * (2.5 + advance),
-        z: GOAL_Z + (this.ball.z - GOAL_Z) * 0.32,
+        x: goalX + (this.ball.x - goalX) * t,
+        z: GOAL_Z + (this.ball.z - GOAL_Z) * Math.min(t, 0.55),
       };
     }
     const dir = this.dirOf(p.side);
@@ -458,6 +578,36 @@ export class MotorEngine {
         }
       }
 
+      // Cobertura: na zona de perigo, os mais próximos param de acompanhar
+      // homem e vão FECHAR A LINHA entre a bola e a própria meta. É o que
+      // faltava — a instrumentação mostrou finalização de 11m com mediana de
+      // UM defensor no cone, ou seja, o atacante entrava na área sozinho.
+      const cover = new Set<string>();
+      if (!teamHasBall) {
+        const dirD = this.dirOf(side);
+        const ownGoalX = dirD === 1 ? 0 : FIELD_LENGTH;
+        const ballToGoal = Math.hypot(this.ball.x - ownGoalX, this.ball.z - GOAL_Z);
+        if (ballToGoal < DANGER_DIST_M) {
+          const free = mates
+            .filter((m) => !chasers.has(m.id))
+            .sort(
+              (a, b) =>
+                Math.hypot(a.x - this.ball.x, a.z - this.ball.z)
+                - Math.hypot(b.x - this.ball.x, b.z - this.ball.z),
+            );
+          for (let i = 0; i < COVER_DEFENDERS && i < free.length; i++) {
+            const d = free[i]!;
+            // Escalonados ao longo da linha bola→meta, ligeiramente abertos
+            // para cobrir largura em vez de virarem fila indiana.
+            const t = Math.min(0.75, (2.6 + i * 2.3) / Math.max(1, ballToGoal));
+            d.targetX = this.ball.x + (ownGoalX - this.ball.x) * t;
+            d.targetZ = GOAL_Z + (this.ball.z - GOAL_Z) * (1 - t) + (i - 1) * 2.1;
+            d.urgency = 1;
+            cover.add(d.id);
+          }
+        }
+      }
+
       // Marcação: sem a bola, quem está atrás pega o adversário mais perigoso
       // da sua zona em vez de só ocupar posição. Sem isto o ataque chega
       // limpo à pequena área e o xG médio da finalização fica absurdo.
@@ -471,7 +621,9 @@ export class MotorEngine {
             (a, b) =>
               positionValue(b.x, b.z, (-dir) as 1 | -1) - positionValue(a.x, a.z, (-dir) as 1 | -1),
           );
-        const free = mates.filter((m) => !chasers.has(m.id) && m.depth01 < 0.5);
+        const free = mates.filter(
+          (m) => !chasers.has(m.id) && !cover.has(m.id) && m.depth01 < 0.5,
+        );
         for (const th of threats) {
           if (free.length === 0) break;
           free.sort(
@@ -483,7 +635,7 @@ export class MotorEngine {
       }
 
       for (const p of this.players.filter((q) => q.side === side)) {
-        if (runners.has(p.id)) continue;
+        if (runners.has(p.id) || cover.has(p.id)) continue;
         const mark = marks.get(p.id);
         if (mark) {
           // Fica entre o marcado e o próprio gol, colado — mas sem sair da
@@ -521,6 +673,43 @@ export class MotorEngine {
     }
   }
 
+  /**
+   * Avalia uma finalização a partir da posição atual do jogador. Uma função só
+   * para decidir e para resolver — ver `shotOutcome`.
+   */
+  private evaluateShot(shooter: MotorPlayer, dir: 1 | -1): ShotOutcome {
+    const goalX = dir === 1 ? FIELD_LENGTH : 0;
+    const dist = Math.hypot(goalX - shooter.x, shooter.z - GOAL_Z);
+    const openAngle = Math.atan2(3.66, Math.max(1, dist)) * 2;
+    const angle01 = Math.min(1, openAngle / 0.55);
+    const cps = this.controlPlayers();
+    const press = pressureSec(cps, shooter.side, shooter.x, shooter.z);
+    const blockers = countBlockers(shooter, this.players, dir);
+    const gk = this.players.find((p) => p.role === 'gk' && p.side !== shooter.side);
+    const gkQuality = gk ? (gk.attrs.goleiro ?? gk.attrs.marcacao) : 55;
+    // Quanto o goleiro fechou o ângulo: 0 = colado na linha, 1 = bem à frente
+    // no vértice do ângulo. Goleiro mal posicionado defende muito menos.
+    const gkOut = gk ? Math.abs(gk.x - goalX) : 0;
+    const gkCover01 = Math.max(0, Math.min(1, gkOut / 7));
+    return shotOutcome(dist, angle01, shooter.attrs.finalizacao, press, blockers, gkQuality, gkCover01);
+  }
+
+  /**
+   * X da linha de impedimento para quem ataca em `dir`: o penúltimo defensor.
+   * Sem isto o atacante acampa nas costas da zaga e a linha nunca sobe.
+   */
+  private offsideLineX(defendingSide: 'home' | 'away', dir: 1 | -1): number {
+    const xs = this.players
+      .filter((p) => p.side === defendingSide)
+      .map((p) => p.x)
+      .sort((a, b) => (dir === 1 ? b - a : a - b));
+    const secondLast = xs[1] ?? xs[0] ?? (dir === 1 ? FIELD_LENGTH : 0);
+    // Não há impedimento no próprio campo.
+    return dir === 1
+      ? Math.max(secondLast, FIELD_LENGTH / 2)
+      : Math.min(secondLast, FIELD_LENGTH / 2);
+  }
+
   private cp(p: MotorPlayer): ControlPlayer {
     return { id: p.id, side: p.side, x: p.x, z: p.z, vx: p.vx, vz: p.vz, vmax: p.vmax };
   }
@@ -540,7 +729,10 @@ export class MotorEngine {
     for (let i = 0; i < 8; i++) {
       const ahead = 8 + (i % 4) * 9;               // 8 a 35 metros à frente
       const lateral = (Math.floor(i / 4) === 0 ? -1 : 1) * (4 + (i % 4) * 5);
-      const x = Math.max(4, Math.min(FIELD_LENGTH - 4, p.x + dir * ahead));
+      const offside = this.offsideLineX(p.side === 'home' ? 'away' : 'home', dir);
+      const raw = p.x + dir * ahead;
+      const capped = dir === 1 ? Math.min(raw, offside - 0.5) : Math.max(raw, offside + 0.5);
+      const x = Math.max(4, Math.min(FIELD_LENGTH - 4, capped));
       const z = Math.max(3, Math.min(FIELD_WIDTH - 3, p.z + lateral));
       const c = controlAt(cps, this.ball, x, z, 20);
       const mine = p.side === 'home' ? c.home : 1 - c.home;
@@ -572,29 +764,52 @@ export class MotorEngine {
 
     // Finalizar?
     // Todas as opções abaixo estão em GOLS ESPERADOS — mesma moeda.
-    const blockers = countBlockers(carrier, this.players, dir);
-    const sv = shotValue(carrier.x, carrier.z, dir, carrier.attrs.finalizacao, press, blockers);
+    const shot = this.evaluateShot(carrier, dir);
+    const sv = shot.goal;
     const here = possessionValue(carrier.x, carrier.z, dir);
 
     // Melhor passe.
     let bestPass: { to: MotorPlayer; value: number; survival: number } | null = null;
+    const offside = this.offsideLineX(carrier.side === 'home' ? 'away' : 'home', dir);
     for (const m of this.players) {
       if (m.side !== carrier.side || m.id === carrier.id || m.role === 'gk') continue;
+      // Impedido: passe simplesmente não é opção.
+      if ((m.x - offside) * dir > 0) continue;
       const d = Math.hypot(m.x - carrier.x, m.z - carrier.z);
       if (d < 4 || d > 55) continue;
       const speed = this.passSpeedFor(carrier, d);
       const survival = passSurvival(cps, carrier, m, carrier.side, speed);
-      const gain = possessionValue(m.x, m.z, dir);
+      // Gols esperados do passe = chance de chegar × (valor do destino +
+      // valor de continuar com a bola). É a segunda parcela que torna o passe
+      // lateral e o recuo opções legítimas.
+      const gain = possessionValue(m.x, m.z, dir) + RETENTION_VALUE;
       const value = survival * gain;
       if (!bestPass || value > bestPass.value) bestPass = { to: m, value, survival };
     }
 
-    // Conduzir: vale o quanto o próximo passo à frente vale, descontado a pressão.
+    // Conduzir: vale o destino À FRENTE, mas multiplicado pela chance real de
+    // chegar lá com a bola. Sem esse desconto, driblar 14 metros por dentro de
+    // um bloco compacto era uma opção sem risco — e por isso ninguém passava.
     const carryX = Math.max(3, Math.min(FIELD_LENGTH - 3, carrier.x + dir * 14));
+    const nearestFoe = this.players
+      .filter((p) => p.side !== carrier.side && p.role !== 'gk')
+      .reduce(
+        (best, p) => {
+          const d = Math.hypot(p.x - carrier.x, p.z - carrier.z);
+          return d < best.d ? { d, p } : best;
+        },
+        { d: Infinity, p: undefined as MotorPlayer | undefined },
+      );
+    const duel = nearestFoe.p
+      ? (carrier.attrs.drible + 10) / (carrier.attrs.drible + nearestFoe.p.attrs.marcacao + 20)
+      : 0.85;
+    // Quanto mais perto o adversário, menor a chance de a condução sobreviver.
+    const carrySurvival = Math.max(
+      0.06,
+      Math.min(0.92, duel * (0.30 + 0.70 * Math.min(1, nearestFoe.d / 9))),
+    );
     const carryValue =
-      possessionValue(carryX, carrier.z, dir)
-      * Math.min(1, press / 1.6)
-      * (0.55 + carrier.attrs.drible / 220);
+      (possessionValue(carryX, carrier.z, dir) + RETENTION_VALUE) * carrySurvival;
 
     const passValue = bestPass ? bestPass.value : -1;
 
@@ -604,14 +819,23 @@ export class MotorEngine {
     const goalX = dir === 1 ? FIELD_LENGTH : 0;
     const distToGoal = Math.hypot(goalX - carrier.x, carrier.z - GOAL_Z);
     const canShoot = distToGoal <= 26 && sv >= SHOT_MIN_XG;
-    // Na mesma moeda a comparação passa a ser direta: finaliza quando o chute
-    // vale mais que a melhor alternativa.
-    if (canShoot && sv > passValue && sv > carryValue) {
-      this.takeShot(carrier, dir, sv);
+    // Na mesma moeda a comparação é direta — com uma reserva: empate técnico
+    // entre finalizar e passar não vira finalização, porque finalizar ENCERRA
+    // a posse enquanto passar a mantém.
+    //
+    // MEDIDO: hoje esta reserva não muda uma única decisão — as três medidas de
+    // ritmo saem idênticas com 1.0 e com 1.25. Quando o motor decide finalizar,
+    // o chute já vale mais de 25% acima da melhor alternativa. Ou seja, o
+    // excesso de finalizações (49 por partida contra as ~25 do futebol) NÃO vem
+    // de o portador ser afoito: vem de o ataque chegar a boas posições vezes
+    // demais. O conserto é defensivo, não é mexer neste número.
+    const SHOOT_RELUCTANCE = 1.25;
+    if (canShoot && sv > passValue * SHOOT_RELUCTANCE && sv > carryValue * SHOOT_RELUCTANCE) {
+      this.takeShot(carrier, dir, shot);
       return;
     }
-    if (bestPass && passValue >= carryValue && passValue >= here * PASS_ADVANTAGE) {
-      this.makePass(carrier, bestPass.to);
+    if (bestPass && passValue >= carryValue) {
+      this.makePass(carrier, bestPass.to, bestPass.survival, press);
       return;
     }
     // Condução: destino de verdade, não um passinho.
@@ -626,13 +850,37 @@ export class MotorEngine {
     return Math.max(PASS_SPEED_MIN_MS, Math.min(PASS_SPEED_MAX_MS, wanted));
   }
 
-  private makePass(from: MotorPlayer, to: MotorPlayer): void {
+  /** Ruído gaussiano ~N(0,1) a partir do rng determinístico (Box–Muller). */
+  private gauss(): number {
+    const u = Math.max(1e-9, this.rng());
+    const v = this.rng();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  private makePass(from: MotorPlayer, to: MotorPlayer, survival = 1, press = 9): void {
     const d = Math.hypot(to.x - from.x, to.z - from.z);
     const speed = this.passSpeedFor(from, d);
     // Lidera o passe: a bola vai para onde o receptor VAI estar.
     const lead = Math.min(2.2, d / speed);
-    const toX = Math.max(2, Math.min(FIELD_LENGTH - 2, to.x + to.vx * lead));
-    const toZ = Math.max(1, Math.min(FIELD_WIDTH - 1, to.z + to.vz * lead));
+    let toX = to.x + to.vx * lead;
+    let toZ = to.z + to.vz * lead;
+
+    // ── Erro de execução ────────────────────────────────────────────────────
+    // `passSurvival` só entrava na ESCOLHA do passe: uma vez escolhido, a bola
+    // chegava sempre exatamente onde foi mirada. Sem erro de execução o ataque
+    // não tem como falhar no meio do caminho, e por isso quase toda posse
+    // chegava à área — o motor produzia uma finalização a cada 1,04 passe.
+    // Aqui o passe difícil, o jogador pressionado e o passe longo erram.
+    const rushed = 0.55 + 0.45 * Math.min(1, press / 1.6);
+    const accuracy = Math.min(
+      0.97,
+      ((from.attrs.passe / 100) * 0.58 + survival * 0.42) * rushed,
+    );
+    const sigma = (1 - accuracy) * (2.2 + d * 0.12);
+    toX += this.gauss() * sigma;
+    toZ += this.gauss() * sigma;
+    toX = Math.max(2, Math.min(FIELD_LENGTH - 2, toX));
+    toZ = Math.max(1, Math.min(FIELD_WIDTH - 1, toZ));
     this.ball.x = from.x;
     this.ball.z = from.z;
     this.flight = { toX, toZ, speed, targetId: to.id, passerId: from.id, travelled: 0 };
@@ -641,20 +889,82 @@ export class MotorEngine {
     this.stats.passes++;
   }
 
-  private takeShot(shooter: MotorPlayer, dir: 1 | -1, xg: number): void {
+  private takeShot(shooter: MotorPlayer, dir: 1 | -1, o: ShotOutcome): void {
     this.stats.shots++;
     const goalX: number = dir === 1 ? FIELD_LENGTH : 0;
-    if (this.rng() < xg) {
-      if (shooter.side === 'home') this.homeScore++;
-      else this.awayScore++;
-      this.stats.goals++;
-      this.kickoff(shooter.side === 'home' ? 'away' : 'home');
+    const foeSide = shooter.side === 'home' ? 'away' : 'home';
+
+    // 1. Travou num corpo. Continua viva: rebote é segunda chance, não parada.
+    if (this.rng() < o.blocked) {
+      this.stats.blocked++;
+      // Bloqueio sobra para quem bloqueou: a bola bate no defensor.
+      this.ball.x = shooter.x + dir * 2.0;
+      this.ball.z = shooter.z + (this.rng() - 0.5) * 5;
+      this.giveToNearest(9, foeSide);
       return;
     }
-    // Defendido ou para fora: bola parada e reinício com o adversário.
-    this.ball.x = goalX + (dir === 1 ? -6 : 6);
-    this.ball.z = GOAL_Z + (this.rng() - 0.5) * 14;
-    this.stop('shot', shooter.side === 'home' ? 'away' : 'home');
+    // 2. Foi para fora.
+    if (this.rng() > o.onTarget) {
+      this.stats.offTarget++;
+      this.ball.x = goalX + (dir === 1 ? -5 : 5);
+      this.ball.z = GOAL_Z + (this.rng() - 0.5) * 16;
+      this.stop('shot', foeSide);
+      return;
+    }
+    this.stats.onTarget++;
+    // 3. Goleiro.
+    if (this.rng() < o.save) {
+      this.stats.saves++;
+      const gk = this.players.find((p) => p.role === 'gk' && p.side === foeSide);
+      // Segura ou espalma. Chute forte de perto tende a rebote.
+      if (this.rng() < 0.62) {
+        this.ball.x = gk?.x ?? goalX;
+        this.ball.z = gk?.z ?? GOAL_Z;
+        this.stop('shot', foeSide);
+      } else {
+        this.stats.rebounds++;
+        this.ball.x = goalX - dir * (5 + this.rng() * 5);
+        this.ball.z = GOAL_Z + (this.rng() - 0.5) * 14;
+        this.giveToNearest(11, foeSide);
+      }
+      return;
+    }
+    // 4. Gol.
+    if (shooter.side === 'home') this.homeScore++;
+    else this.awayScore++;
+    this.stats.goals++;
+    this.kickoff(foeSide);
+  }
+
+  /**
+   * Entrega a bola solta a quem estiver mais perto; se ninguém, sai de jogo.
+   *
+   * `favour` privilegia um lado — um chute travado sobra para quem bloqueou, e
+   * um rebote de goleiro cai mais vezes para a defesa do que para o atacante.
+   *
+   * O reset de posse é OBRIGATÓRIO aqui: sem ele, quando a bola voltava para o
+   * próprio finalizador, `setCarrier` via o mesmo id, não reiniciava o relógio
+   * de domínio, e ele batia de novo no instante seguinte. Era um laço — 28% das
+   * finalizações saíam a menos de 3s da anterior, e o motor chegou a 287
+   * finalizações por partida com apenas 102 passes.
+   */
+  private giveToNearest(maxDist: number, favour?: 'home' | 'away'): void {
+    this.ballMode = 'held';
+    this.flight = null;
+    let best: MotorPlayer | undefined;
+    let bestD = Infinity;
+    for (const p of this.players) {
+      const raw = Math.hypot(p.x - this.ball.x, p.z - this.ball.z);
+      // Vantagem de posição para o lado favorecido: ele já estava de frente
+      // para a bola, o atacante estava de costas ou desequilibrado.
+      const d = favour && p.side === favour ? raw * 0.55 : raw;
+      if (d < bestD) { bestD = d; best = p; }
+    }
+    if (!best || bestD > maxDist) {
+      this.stop('out', this.rng() < 0.5 ? 'home' : 'away');
+      return;
+    }
+    this.setCarrier(best.id, true);
   }
 
   private kickoff(side: 'home' | 'away'): void {
@@ -692,7 +1002,9 @@ export class MotorEngine {
       // Velocidade desejada: sobe com a distância e com a urgência. Chegando
       // perto, desacelera — mas o destino é longe o bastante para exigir
       // corrida, que era exatamente o que faltava no motor antigo.
-      const effVmax = p.vmax * (0.72 + 0.28 * (p.stamina / 100));
+      const carrying = p.id === this.carrierId && this.ballMode === 'held';
+      const effVmax =
+        p.vmax * (0.72 + 0.28 * (p.stamina / 100)) * (carrying ? CARRY_SPEED_MULT : 1);
       const want = Math.min(effVmax, effVmax * p.urgency * Math.min(1, d / 6));
       const tx = d > 1e-6 ? (dx / d) * want : 0;
       const tz = d > 1e-6 ? (dz / d) * want : 0;
@@ -753,6 +1065,14 @@ export class MotorEngine {
     this.ball.x += this.ball.vx * dt;
     this.ball.z += this.ball.vz * dt;
     f.travelled += stepDist;
+
+    // Saiu pela lateral. Sem isto a partida não tinha uma única reposição — e
+    // são ~40 por jogo no futebol, parte do orçamento de bola parada.
+    if (this.ball.z <= 0.4 || this.ball.z >= FIELD_WIDTH - 0.4) {
+      const passer = this.players.find((p) => p.id === f.passerId);
+      this.stop('out', passer?.side === 'home' ? 'away' : 'home');
+      return;
+    }
 
     // Interceptação. Duas guardas que faltavam e quebravam tudo: quem passou
     // não pode reinterceptar (ele está a 1m da bola no primeiro passo, então
@@ -906,8 +1226,8 @@ export class MotorEngine {
     return this.inPlayAccum;
   }
 
-  private setCarrier(id: string | null): void {
-    if (id !== this.carrierId) this.possessionSince = this.t;
+  private setCarrier(id: string | null, forceReset = false): void {
+    if (forceReset || id !== this.carrierId) this.possessionSince = this.t;
     this.carrierId = id;
   }
 
