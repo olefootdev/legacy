@@ -38,6 +38,7 @@ import {
   type MotorPlayerInput,
 } from './MotorEngine';
 import { defaultArchetypeForSlot } from './archetypeWeights';
+import { recordAttackingAction } from '@/playerDecision/agentActionMemory';
 
 /** Metros do motor → profundidade 0–100 dos cards. */
 const toDepth = (x: number) => (x / FIELD_LENGTH) * 100;
@@ -261,6 +262,12 @@ export function useMotorMatch(
             fatigue: Math.max(0, 100 - (t.matchStamina ?? 100)),
           };
         });
+
+      // Espelha a última decisão de cada jogador na memória que o
+      // PlayerBrainCard já lê. O motor fica puro — quem adapta é a ponte, e é
+      // de propósito: criar um segundo canal para o card seria repetir o erro
+      // que o ghost mapping flagrou (dois dialetos para a mesma coisa).
+      for (const [id, acao] of engine.lastAction) recordAttackingAction(id, acao);
 
       // Eventos novos desde o último quadro viram gatilho de câmera.
       const novos = engine.events.slice(ultimoEvento);

@@ -25,6 +25,17 @@ const ACTION_LABELS: Record<string, string> = {
   defensive_cover:            'Cobriu transição',
   offer_short_line:           'Ofereceu passe curto',
   open_width:                 'Manteve amplitude',
+  // ── Vocabulário do motor novo ─────────────────────────────────────────────
+  // Mesmas palavras de futebol das de cima: o card não deve saber qual motor
+  // está por baixo.
+  press_ball:                 'Foi pressionar',
+  chase_loose:                'Disputou a bola',
+  cover_shot_line:            'Fechou o cone de chute',
+  man_mark:                   'Marcou o homem',
+  hold_shape:                 'Segurou o posto',
+  carry_forward:              'Conduziu para frente',
+  pass_progress:              'Passe que progride',
+  take_shot:                  'Finalizou',
 };
 
 const TENDENCY_MAP: Record<string, Record<string, string>> = {

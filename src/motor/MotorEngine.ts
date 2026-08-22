@@ -556,6 +556,19 @@ export class MotorEngine {
    * conhece o contrafactual vai ler depois.
    */
   readonly events: Array<{ minute: number; text: string; kind: string; playerId?: string }> = [];
+  /**
+   * Última decisão de cada jogador, em vocabulário de futebol.
+   *
+   * O motor SEMPRE soube isto — escolhe a cada fatia entre correr para a
+   * célula-alvo, pressionar, fechar o cone de chute ou marcar homem, e o
+   * portador escolhe entre passar, conduzir e finalizar comparando gols
+   * esperados. O que faltava era guardar a escolha. É o que faz o toque no card
+   * mostrar o que o jogador acabou de pensar, e é o primeiro degrau do traço
+   * causal: sem isso, o comentarista não tem o que ler.
+   */
+  readonly lastAction = new Map<string, string>();
+  /** Até quando uma ação com a bola resiste a ser sobrescrita pela forma. */
+  private readonly actionHold = new Map<string, number>();
   private inPlayAccum = 0;
 
   t = 0;
@@ -784,6 +797,7 @@ export class MotorEngine {
           best.m.targetX = best.spot.x;
           best.m.targetZ = best.spot.z;
           best.m.urgency = 0.95;
+          this.marcarAcao(best.m.id, this.rotuloCorrida(best.m, dir, best.spot));
           claimed.push({ x: best.spot.x, z: best.spot.z });
         }
       }
@@ -815,6 +829,7 @@ export class MotorEngine {
             d.targetZ = GOAL_Z + (this.ball.z - GOAL_Z) * (1 - t) + (i - 1) * 5.5;
             d.urgency = 1;
             d.tight = true;
+            this.marcarAcao(d.id, 'cover_shot_line');
             cover.add(d.id);
           }
         }
@@ -850,6 +865,7 @@ export class MotorEngine {
         if (runners.has(p.id) || cover.has(p.id)) continue;
         const mark = marks.get(p.id);
         if (mark) {
+          this.marcarAcao(p.id, 'man_mark');
           // Fica entre o marcado e o próprio gol, colado — mas sem sair da
           // faixa do bloco, senão marcar estica a equipe e reprova a
           // profundidade que a compactação acabou de conquistar.
@@ -873,6 +889,7 @@ export class MotorEngine {
           p.targetX = contestX;
           p.targetZ = contestZ;
           p.urgency = 1;
+          this.marcarAcao(p.id, teamHasBall ? 'chase_loose' : 'press_ball');
           continue;
         }
         const s = this.shapeTarget(p, teamHasBall);
@@ -887,6 +904,9 @@ export class MotorEngine {
           if (spot.gain > 0) {
             tx = spot.x;
             tz = spot.z;
+            this.marcarAcao(p.id, this.rotuloCorrida(p, this.dirOf(side), spot));
+          } else {
+            this.marcarAcao(p.id, 'hold_shape');
           }
         }
         p.targetX = tx;
@@ -1127,15 +1147,19 @@ export class MotorEngine {
     // demais. O conserto é defensivo, não é mexer neste número.
     const SHOOT_RELUCTANCE = 1.25;
     if (canShoot && sv > passValue * SHOOT_RELUCTANCE && sv > carryValue * SHOOT_RELUCTANCE) {
+      this.marcarAcao(carrier.id, 'take_shot', 6);
       this.takeShot(carrier, dir, shot);
       return;
     }
     if (bestPass && passValue >= carryValue) {
+      const progride = (bestPass.to.x - carrier.x) * dir > 6;
+      this.marcarAcao(carrier.id, progride ? 'pass_progress' : 'sq_recycle', 3.5);
       this.makePass(carrier, bestPass.to, bestPass.survival, press);
       return;
     }
     this.bySide[carrier.side].carries++;
     this.pstat(carrier.id).carries++;
+    this.marcarAcao(carrier.id, 'carry_forward', 2.5);
     // Condução: destino de verdade, não um passinho.
     carrier.targetX = carryX;
     carrier.targetZ = carrier.z + (this.rng() - 0.5) * 8;
@@ -1599,6 +1623,43 @@ export class MotorEngine {
   /** Minuto de futebol para exibição, 0–90. */
   get minute(): number {
     return Math.min(90, Math.floor(this.t / 60));
+  }
+
+  /**
+   * Grava a decisão do jogador.
+   *
+   * Ação COM a bola gruda por alguns segundos. Sem isso ela é apagada na fatia
+   * seguinte pela decisão de forma — o jogador finaliza e, um quarto de segundo
+   * depois, o card já diz "Segurou o posto". Quem toca no card quer ver o que
+   * ele acabou de fazer de relevante, não o que está fazendo neste instante.
+   */
+  private marcarAcao(id: string, acao: string, seguraS = 0): void {
+    if (seguraS <= 0 && (this.actionHold.get(id) ?? 0) > this.t) return;
+    this.lastAction.set(id, acao);
+    if (seguraS > 0) this.actionHold.set(id, this.t + seguraS);
+  }
+
+  /**
+   * Que tipo de corrida foi essa? Profundidade e largura saem da geometria do
+   * destino escolhido; o papel decide a palavra, porque um centroavante que
+   * ataca a profundidade "infiltra a área" e um lateral "faz o overlap".
+   */
+  private rotuloCorrida(
+    p: MotorPlayer,
+    dir: 1 | -1,
+    spot: { x: number; z: number },
+  ): string {
+    const ganhoProfundidade = (spot.x - p.x) * dir;
+    const abriu = Math.abs(spot.z - GOAL_Z) > Math.abs(p.z - GOAL_Z) + 2;
+    if (ganhoProfundidade > 9) {
+      if (p.role === 'attack') return 'striker_infiltrate_box';
+      if (p.slotId === 'pe' || p.slotId === 'pd') return 'winger_attack_depth';
+      if (p.role === 'def') return 'fullback_overlap_box_entry';
+      return 'mid_attack_depth';
+    }
+    if (abriu) return p.role === 'def' ? 'open_width' : 'sq_create_width';
+    if (ganhoProfundidade < -4) return 'defensive_cover';
+    return 'sq_offer_line';
   }
 
   /** Nome curto do jogador para a narrativa. */
