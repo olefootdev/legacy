@@ -68,8 +68,8 @@ export const REALISM_THRESHOLDS = {
   blockWidthMaxM: 48,
   /** Rastreamento real chama "alta compactação" abaixo de 600m². 1600 é o teto do tolerável. */
   blockAreaMaxM2: 1600,
-  /** Jogador rápido tem que sprintar como gente: piso de 6,5 m/s de futebol. */
-  sprintTopMinMs: 6.5,
+  /** Sprint na cauda (p99) de um jogador rápido: piso de 6,0 m/s de futebol. */
+  sprintTopMinMs: 6.0,
   /** Passe médio de futebol fica em 15–25 m/s. Piso de 12. */
   ballFlightMinMs: 12,
   /** A bola tem que ser mais rápida que o jogador. Real ≈ 2,4. */
@@ -168,6 +168,23 @@ function convexHullArea(points: Pt[]): number {
  * Alimente só com frames de jogo rolando — parada de bola distorce as medidas.
  */
 export class MatchRealismSampler {
+  /**
+   * Como converter as velocidades do snapshot para m/s de futebol.
+   *
+   * 'sim'      — o snapshot vem em unidades do motor com tempo comprimido
+   *              (TacticalSimLoop). Divide por TIME_SCALE.
+   * 'football' — o snapshot já vem em m/s reais (MotorEngine, que roda em tempo
+   *              de futebol e não conhece compressão nenhuma).
+   *
+   * O resto das medidas é idêntico nos dois casos: distância é metro nos dois
+   * motores, e é isso que permite compará-los na mesma régua.
+   */
+  constructor(private readonly speedUnit: 'sim' | 'football' = 'sim') {}
+
+  private toFootballMs(v: number): number {
+    return this.speedUnit === 'football' ? v : simToFootballMs(v);
+  }
+
   private readonly home = newSideAcc();
   private readonly away = newSideAcc();
   private samples = 0;
@@ -191,9 +208,17 @@ export class MatchRealismSampler {
     if (carrierId) this.carrierFrames += 1;
 
     // ── Velocidade da bola em voo ────────────────────────────────────────────
-    if (Number.isFinite(ball.vx) && Number.isFinite(ball.vz)) {
+    // Só conta quando a bola está SOLTA. Com ela nos pés de alguém, a
+    // velocidade dela é a do portador — medir isso como "bola em voo" reporta
+    // velocidade de jogador e esconde se os passes são rápidos.
+    const holder = carrierId ? players.find((p) => p.id === carrierId) : undefined;
+    const ballIsHeld = holder
+      ? Math.hypot(holder.x - ball.x, holder.z - ball.z) < 1.6
+      : false;
+    if (!ballIsHeld && Number.isFinite(ball.vx) && Number.isFinite(ball.vz)) {
       const bs = Math.hypot(ball.vx as number, ball.vz as number);
-      if (bs >= BALL_MOVING_MIN_SIM) {
+      const movingMin = this.speedUnit === 'football' ? 3 : BALL_MOVING_MIN_SIM;
+      if (bs >= movingMin) {
         this.ballSpeedSum += bs;
         this.ballSpeedFrames += 1;
       }
@@ -257,9 +282,13 @@ export class MatchRealismSampler {
     const avgOf = (acc: SideAcc, sum: number, fallback: number) =>
       acc.centroidX.length > 0 ? sum / acc.centroidX.length : fallback;
 
-    const sprintTopMs = simToFootballMs(percentile(this.playerSpeeds, 0.95));
+    // p99, não p95: em dados de rastreamento reais o percentil 95 da velocidade
+    // instantânea fica em 4–5 m/s, porque jogador anda a maior parte do tempo.
+    // O sprint mora na cauda. O limiar de 6,5 sobre p95 que esta régua trazia na
+    // primeira versão era mal calibrado contra futebol real.
+    const sprintTopMs = this.toFootballMs(percentile(this.playerSpeeds, 0.99));
     const ballFlightMs =
-      this.ballSpeedFrames > 0 ? simToFootballMs(this.ballSpeedSum / this.ballSpeedFrames) : 0;
+      this.ballSpeedFrames > 0 ? this.toFootballMs(this.ballSpeedSum / this.ballSpeedFrames) : 0;
 
     return {
       samples: this.samples,
@@ -288,7 +317,7 @@ export interface RealismCheck {
   /** 'min' = quanto maior melhor; 'max' = quanto menor melhor. */
   dir: 'min' | 'max';
   /** 'forma' = os onze jogam como time; 'unidade' = as grandezas batem com futebol. */
-  group: 'forma' | 'unidade';
+  group: 'forma' | 'unidade' | 'ritmo';
 }
 
 /** Confronta um relatório com os limiares. */
@@ -321,9 +350,58 @@ export function checkRealism(r: MatchRealismReport): RealismCheck[] {
     // ── unidade ──────────────────────────────────────────────────────────────
     maxF('largura do bloco, pior lado (m)', worstWidth, T.blockWidthMaxM),
     maxF('área do bloco, pior lado (m²)', worstArea, T.blockAreaMaxM2),
-    minU('sprint observado (m/s futebol)', r.sprintTopMs, T.sprintTopMinMs),
+    minU('sprint p99 (m/s futebol)', r.sprintTopMs, T.sprintTopMinMs),
     minU('bola em voo (m/s futebol)', r.ballFlightMs, T.ballFlightMinMs),
     minU('razão bola/jogador', r.ballPlayerRatio, T.ballPlayerRatioMin),
+  ];
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RITMO — o bloco que faltava
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// As medidas acima são de FORMA e de UNIDADE: onde os onze estão, e se as
+// grandezas físicas batem com futebol. Nenhuma delas olha para QUANTAS COISAS
+// acontecem. Um motor pode ter bloco compacto, disputa saudável e velocidades
+// perfeitas — e ainda assim produzir 12.221 passes e 917 chutes por partida,
+// terminando 118x189. Foi exatamente o que o motor novo fez na primeira
+// execução, e a régua aprovou 12 de 12.
+//
+// Referências de futebol profissional (dois times somados, partida cheia).
+
+export interface MatchRateReport {
+  passes: number;
+  shots: number;
+  goals: number;
+}
+
+export const RATE_THRESHOLDS = {
+  /** ~800–1000 passes numa partida; a faixa é larga por causa do estilo. */
+  passesMin: 400,
+  passesMax: 1600,
+  /** ~25 finalizações somando os dois times. */
+  shotsMin: 8,
+  shotsMax: 45,
+  /** Média europeia fica em ~2,7 gols por jogo. */
+  goalsMax: 8,
+} as const;
+
+/** Confronta as contagens de uma partida com o que o futebol produz. */
+export function checkMatchRates(r: MatchRateReport): RealismCheck[] {
+  const mk = (
+    label: string, value: number, limit: number, dir: 'min' | 'max',
+  ): RealismCheck => ({
+    label, value, limit, dir, group: 'ritmo',
+    ok: dir === 'min' ? value >= limit : value <= limit,
+  });
+  const T = RATE_THRESHOLDS;
+  return [
+    mk('passes por partida (piso)', r.passes, T.passesMin, 'min'),
+    mk('passes por partida (teto)', r.passes, T.passesMax, 'max'),
+    mk('finalizações por partida (piso)', r.shots, T.shotsMin, 'min'),
+    mk('finalizações por partida (teto)', r.shots, T.shotsMax, 'max'),
+    mk('gols por partida (teto)', r.goals, T.goalsMax, 'max'),
   ];
 }
 
@@ -336,10 +414,15 @@ export function formatRealism(checks: RealismCheck[]): string {
   };
   const forma = checks.filter((c) => c.group === 'forma');
   const unidade = checks.filter((c) => c.group === 'unidade');
-  return [
+  const ritmo = checks.filter((c) => c.group === 'ritmo');
+  const out = [
     '  ── forma: os onze jogam como time? ──',
     ...forma.map(line),
     '  ── unidade: as grandezas batem com futebol? ──',
     ...unidade.map(line),
-  ].join('\n');
+  ];
+  if (ritmo.length > 0) {
+    out.push('  ── ritmo: acontece a quantidade certa de coisas? ──', ...ritmo.map(line));
+  }
+  return out.join('\n');
 }

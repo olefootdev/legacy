@@ -92,7 +92,8 @@
     "test:style-evolution": "tsx scripts/test-style-evolution.ts",
     "test:market-offers-reducer": "tsx scripts/test-market-offers-reducer.ts",
     "test:quatro-divisoes": "tsx scripts/test-quatro-divisoes.ts",
-    "lint:all": "npm run lint && npm run lint:revela"
+    "lint:all": "npm run lint && npm run lint:revela",
+    "test:motor": "tsx src/motor/runMotorRealismSelfTest.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
