@@ -188,6 +188,9 @@ import {
 } from '@/match/playerInMatch';
 import type { HomeStaffMatchBonuses } from '@/systems/staffBenefits';
 import {
+  ACCEL_SLOW_SIM,
+  ACCEL_FAST_SIM,
+  ACCEL_MAX_SIM,
   blendThreeLocomotionCaps,
   clampVehicleMaxSpeed,
   classifyLocomotionTier,
@@ -272,6 +275,7 @@ import { computeGoalThreat, type GoalThreat, type ThreatTrend } from '@/playerDe
 import { buildGoalContext } from '@/match/goalContext';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
 import { getPlayerIntention } from '@/tactical';
+import { DECISION_INTERVAL_SIM_MS, DECISION_JITTER_SIM_MS, footballMsToSim } from '@/tactical';
 import { getZoneFromNormalizedPosition } from '@/tactical';
 import type { FieldZoneId } from '@/tactical';
 import {
@@ -290,6 +294,42 @@ import { slotToPositionId } from '../../agents/bridge/slotToPositionId';
 import { ROLE_EXPECTATIONS } from '../../agents/context/PlayerRoleExpectations';
 import type { Vec2, PositionId } from '../../agents/core/AgentTypes';
 const FIXED_DT = 1 / 60;
+
+/**
+ * ── Translação do bloco ───────────────────────────────────────────────────────
+ *
+ * Ganhos do deslocamento do bloco em função de onde a bola está.
+ *
+ * Antes disto, a âncora de cada jogador era a posição-base FIXA da formação,
+ * grampeada três vezes (zona do papel + zona operativa de 18 + coesão de linha).
+ * O time não tinha como acompanhar o jogo: a correlação medida entre o X da bola
+ * e o X do centro do bloco era 0,05 — na prática, zero. Um time de verdade
+ * mantém a forma relativa e DESLOCA o conjunto inteiro atrás da bola.
+ *
+ * Profundidade desloca mais que largura: no futebol o bloco sobe e desce muito
+ * mais do que desliza de lado.
+ */
+const BLOCK_SHIFT_X_GAIN = 0.62;
+const BLOCK_SHIFT_X_MAX_M = 26;
+const BLOCK_SHIFT_Z_GAIN = 0.45;
+const BLOCK_SHIFT_Z_MAX_M = 12;
+/** O goleiro acompanha o bloco só de leve — não sai jogando de linha. */
+const BLOCK_SHIFT_GK_SCALE = 0.22;
+
+/**
+ * Fase determinística em [0,1) para o `AgentRegulator`, derivada do id do agente.
+ * Substitui o `Math.random()` que desencontrava as decisões do time — cumpre a
+ * mesma função (nem todos redecidem no mesmo frame) sem quebrar a reprodução
+ * por seed.
+ */
+function regulatorPhaseFor(agentId: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < agentId.length; i++) {
+    h ^= agentId.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 10007) / 10007;
+}
 
 // ── World ↔ AgentVec2 converters ─────────────────────────────────────────────
 // AgentVec2: x=depth 0–100, y=width 0–100 (agents/core/AgentTypes.ts)
@@ -624,7 +664,7 @@ export class TacticalSimLoop {
     // SPEED BOOST: Bola mais rápida para ações mais dinâmicas
     const speedConfig = getActiveSpeedBoostConfig();
     this.ballVehicle.boundingRadius = 0.42;
-    this.ballVehicle.maxSpeed = applySpeedBoostToBallVelocity(144);
+    this.ballVehicle.maxSpeed = applySpeedBoostToBallVelocity(footballMsToSim(35));
     this.ballVehicle.maxForce = 600;
     this.ballVehicle.mass = 0.3;
     // Fan frustration system: provides events that can nudge player behaviour
@@ -813,7 +853,11 @@ export class TacticalSimLoop {
           locomotionRunBlendSmoothed: 0.35,
           strongFoot: hp.strongFoot,
           archetype: hp.archetype,
-          regulator: new AgentRegulator(280, 120),
+          regulator: new AgentRegulator(
+            DECISION_INTERVAL_SIM_MS,
+            DECISION_JITTER_SIM_MS,
+            regulatorPhaseFor(base.id),
+          ),
         };
         this.applyVehicleSpeedFromAttrs(agEx, FIXED_DT, null);
         this.homeAgents.push(agEx);
@@ -843,7 +887,11 @@ export class TacticalSimLoop {
           matchRuntime: rt,
           cognitiveArchetype: cog,
           locomotionRunBlendSmoothed: 0.35,
-          regulator: new AgentRegulator(280, 120),
+          regulator: new AgentRegulator(
+            DECISION_INTERVAL_SIM_MS,
+            DECISION_JITTER_SIM_MS,
+            regulatorPhaseFor(base.id),
+          ),
         };
         this.applyVehicleSpeedFromAttrs(agEx, FIXED_DT, null);
         this.awayAgents.push(agEx);
@@ -1077,7 +1125,11 @@ export class TacticalSimLoop {
     oldAg.cognitiveArchetype = cog;
     oldAg.strongFoot = hp.strongFoot;
     oldAg.archetype = hp.archetype;
-    oldAg.regulator = new AgentRegulator(280, 120);
+    oldAg.regulator = new AgentRegulator(
+      DECISION_INTERVAL_SIM_MS,
+      DECISION_JITTER_SIM_MS,
+      regulatorPhaseFor(oldAg.id),
+    );
     oldAg._lastAction = undefined;
     this.applyVehicleSpeedFromAttrs(oldAg, FIXED_DT, null);
     oldAg.vehicle.maxSpeed = maxSpeed;
@@ -1369,7 +1421,7 @@ export class TacticalSimLoop {
     const cx = FIELD_LENGTH / 2;
     const cz = FIELD_WIDTH / 2;
     const str = selfSnap.fisico / 100;
-    const speed = Math.max(14, Math.min(42, 17 + selfSnap.passeCurto * 0.11 + str * 0.9));
+    const speed = footballMsToSim(Math.max(12, Math.min(28, 13 + selfSnap.passeCurto * 0.10 + str * 0.9)));
     const m = this.simState.minute;
     const interceptReason =
       variant === 'second_half' ? 'second_half_kickoff_intercept' : 'match_opening_kickoff_intercept';
@@ -1579,7 +1631,7 @@ export class TacticalSimLoop {
     const opt = ranked[0] ?? passOpts[0];
 
     const str = selfSnap.fisico / 100;
-    const speed = Math.max(14, Math.min(42, 17 + selfSnap.passeCurto * 0.11 + str * 0.9));
+    const speed = footballMsToSim(Math.max(12, Math.min(28, 13 + selfSnap.passeCurto * 0.10 + str * 0.9)));
     const cx = FIELD_LENGTH / 2;
     const cz = FIELD_WIDTH / 2;
 
@@ -1722,6 +1774,21 @@ export class TacticalSimLoop {
   }
 
   /** Alvo de movimento; GR em `live` fica ancorado à sua baliza. */
+  /**
+   * Deslocamento do bloco em direção à bola, em metros de mundo.
+   * Vale para os dois lados: o jogo inteiro compacta em volta da bola.
+   */
+  private blockShiftForBall(role: string): { dx: number; dz: number } {
+    const ball = this.ballSys.state;
+    if (!Number.isFinite(ball.x) || !Number.isFinite(ball.z)) return { dx: 0, dz: 0 };
+    const clampAbs = (v: number, max: number) => Math.max(-max, Math.min(max, v));
+    const scale = role === 'gk' ? BLOCK_SHIFT_GK_SCALE : 1;
+    return {
+      dx: clampAbs((ball.x - FIELD_LENGTH / 2) * BLOCK_SHIFT_X_GAIN, BLOCK_SHIFT_X_MAX_M) * scale,
+      dz: clampAbs((ball.z - FIELD_WIDTH / 2) * BLOCK_SHIFT_Z_GAIN, BLOCK_SHIFT_Z_MAX_M) * scale,
+    };
+  }
+
   private safeArrive(ag: AgentEx, x: number, z: number, mode: AgentMode) {
     // Guard: never propagate NaN into arrive target — reset to current position if needed
     if (!Number.isFinite(x) || !Number.isFinite(z)) {
@@ -2090,17 +2157,14 @@ export class TacticalSimLoop {
     // Higher effort (sprinting) gives higher top speed but reduces
     // maneuverability (maxForce) so players can't accelerate/turn unrealistically.
     // baseForce tuned to keep walking/jog responsive while sprinting feels heavier.
-  const baseForce = Math.max(88, 100 + vel01 * 38);
-  // Reduce how much maxForce is penalized at high sprint effort. Previously the
-  // penalty could drop maxForce very low which made vehicles unable to accelerate
-  // or turn properly when sprinting and produced freezing/stuttering.
-  // Cap the penalty and ensure a speed-proportional floor so faster players keep
-  // a reasonable maneuverability budget.
-  const penaltyCap = Math.min(0.5, effort * 0.6); // at effort=1 -> 0.5
-  const maneuverMultiplier = 1 - penaltyCap; // between 0.5 and 1
-  const computedForce = Math.round(baseForce * maneuverMultiplier + effort * 18);
-  const speedBasedFloor = Math.round(48 + ag.vehicle.maxSpeed * 1.8);
-  ag.vehicle.maxForce = Math.min(320, Math.max(speedBasedFloor, computedForce));
+  // maxForce com massa 1 É a aceleração. Deriva de m/s² de futebol (ver
+  // ACCEL_* em playerSpeedTuning): o teto fixo de 320 dava ~1,4 m/s² reais e
+  // travava qualquer arranque, disputa ou recomposição.
+  const baseForce = ACCEL_SLOW_SIM + (ACCEL_FAST_SIM - ACCEL_SLOW_SIM) * vel01;
+  // Em sprint alto sobra menos margem para mudar de direção — mas nunca a ponto
+  // de o agente não conseguir acelerar (era o que produzia travamento e tremor).
+  const maneuverMultiplier = 1 - Math.min(0.35, effort * 0.4);
+  ag.vehicle.maxForce = Math.min(ACCEL_MAX_SIM, baseForce * maneuverMultiplier);
     // Discrete locomotion state for renderer/animation (3 níveis — mantido pra compatibilidade).
     if (effort < 0.28) ag.locomotionState = 'walk';
     else if (effort < 0.68) ag.locomotionState = 'jog';
@@ -2397,7 +2461,7 @@ export class TacticalSimLoop {
               const toX = best.vehicle.position.x;
               const toZ = best.vehicle.position.z;
               // Goal kicks use a strong clearance-style kick; other restarts use a short pass.
-              const speed = isGoalKick ? 22 : 14;
+              const speed = footballMsToSim(isGoalKick ? 24 : 12);
               const flightType = isGoalKick ? 'clearance' : 'pass';
               this.ballSys.startFlight({ x: this.pendingThrowIn.x, z: this.pendingThrowIn.z }, { x: toX, z: toZ }, speed, flightType as any, best.id);
               this.simState.carrierId = null;
@@ -2860,13 +2924,20 @@ export class TacticalSimLoop {
         slotTarget.z,
         agentTactx,
       );
+      // A translação entra DEPOIS do clamp de zona: a zona operativa viaja junto
+      // com o bloco. Aplicada antes, os três grampos desfaziam o deslocamento e
+      // o time voltava a ficar cravado na formação.
+      const shift = this.blockShiftForBall(a.role);
+      const shifted = (t: { x: number; z: number }) =>
+        clampToPitch(t.x + shift.dx, t.z + shift.dz, 1);
+
       const coll = a.side === 'home' ? this.homeCollective : this.awayCollective;
       if (coll && a.role !== 'gk') {
         const teamBall = a.side === carrierSide;
         const lcd = computeLineCohesionDelta(cr.x, cr.z, a.role, coll, teamBall);
-        return clamp18(cr.x + lcd.dx, cr.z + lcd.dz);
+        return shifted(clamp18(cr.x + lcd.dx, cr.z + lcd.dz));
       }
-      return clamp18(cr.x, cr.z);
+      return shifted(clamp18(cr.x, cr.z));
     };
 
     this.turnoverCtx = { manager, slotTargetFor };
@@ -4070,20 +4141,23 @@ export class TacticalSimLoop {
         stats.passesAttempt++;
         if (passRes.completed) stats.passesOk++;
 
+        // m/s de FUTEBOL. Este é o caminho principal do passe — era o último
+        // que ainda vivia em unidade de motor, e por isso a bola em voo media
+        // 2,28 m/s enquanto o chute (já convertido) media 12,35 m/s.
         const str = selfSnap.fisico / 100;
-        let speed: number;
+        let speedMs: number;
         if (action.type === 'long_ball' || action.type === 'switch_play') {
-          speed = 30 + selfSnap.passe * 0.16 + str * 2.8;
+          speedMs = 21 + selfSnap.passe * 0.09 + str * 2.8;
         } else if (action.type === 'through_ball') {
-          speed = 27 + selfSnap.passe * 0.15 + str * 1.4;
+          speedMs = 19 + selfSnap.passe * 0.08 + str * 1.4;
         } else if (action.type === 'lateral_pass') {
-          speed = 18 + selfSnap.passe * 0.1;
+          speedMs = 14 + selfSnap.passe * 0.06;
         } else if (action.type === 'short_pass_safety') {
-          speed = 16.5 + selfSnap.passe * 0.11;
+          speedMs = 13 + selfSnap.passe * 0.06;
         } else {
-          speed = 22 + selfSnap.passe * 0.12 + str * 0.9;
+          speedMs = 16 + selfSnap.passe * 0.07 + str * 0.9;
         }
-        speed = Math.max(14, Math.min(46, speed));
+        const speed = footballMsToSim(Math.max(11, Math.min(30, speedMs)));
 
         if (passRes.interceptPlayerId) {
           const intr = this.findAgent(passRes.interceptPlayerId);
@@ -4377,7 +4451,7 @@ export class TacticalSimLoop {
           });
         }
         const cr = selfSnap.cruzamento / 100;
-        const speed = action.type === 'high_cross' ? 26 + cr * 4 : 22 + cr * 3;
+        const speed = footballMsToSim(action.type === 'high_cross' ? 17 + cr * 4 : 15 + cr * 4);
         this.ballSys.startFlight(
           { x: selfSnap.x, z: selfSnap.z },
           { x: cRes.targetX, z: cRes.targetZ },
@@ -4678,7 +4752,7 @@ export class TacticalSimLoop {
             intr.vehicle.position.x,
             intr.vehicle.position.z,
           );
-          const speedGk = Math.max(14, Math.min(42, 17 + selfSnap.passeCurto * 0.11 + (selfSnap.fisico / 100) * 0.9));
+          const speedGk = footballMsToSim(Math.max(12, Math.min(28, 13 + selfSnap.passeCurto * 0.10 + (selfSnap.fisico / 100) * 0.9)));
           const flyDist = Math.hypot(contact.x - selfSnap.x, contact.z - selfSnap.z);
           const tFly = flyDist / Math.max(11, speedGk);
           this.pendingPassIntercept = {
@@ -4707,7 +4781,7 @@ export class TacticalSimLoop {
       }
 
       const str = selfSnap.fisico / 100;
-      const speed = Math.max(14, Math.min(42, 17 + selfSnap.passeCurto * 0.11 + str * 0.9));
+      const speed = footballMsToSim(Math.max(12, Math.min(28, 13 + selfSnap.passeCurto * 0.10 + str * 0.9)));
       if (passRes.completed) {
         this.scheduleGkReleaseChaseSuppressionFromFlight(selfSnap.x, selfSnap.z, passRes.x, passRes.z, speed);
         this.ballSys.startFlight(
@@ -5349,9 +5423,11 @@ export class TacticalSimLoop {
     const zHi = zc + GOAL_MOUTH_HALF_WIDTH_M - 0.05;
     const goalMouthZ = Math.min(FIELD_WIDTH - margin, Math.max(margin, Math.min(zHi, Math.max(zLo, gz))));
     const dist = Math.hypot(gx - selfSnap.x, gz - selfSnap.z);
-    let speed =
-      strike === 'power' ? 36 + dist * 0.07 : strike === 'weak' ? 20 + dist * 0.05 : 28 + dist * 0.06;
-    speed = Math.max(17, Math.min(52, speed));
+    // m/s de futebol: chute forte ~30, normal ~24, fraco ~17.
+    let speedMs =
+      strike === 'power' ? 26 + dist * 0.10 : strike === 'weak' ? 15 + dist * 0.06 : 21 + dist * 0.08;
+    speedMs = Math.max(14, Math.min(34, speedMs));
+    const speed = footballMsToSim(speedMs);
     const from = { x: selfSnap.x, z: selfSnap.z };
 
     if (plan === 'goal') {
@@ -5610,7 +5686,8 @@ export class TacticalSimLoop {
     const gkTeam = pend.defSide === 'home' ? this.homeAgents : this.awayAgents;
     const gk = gkTeam.find((a) => a.role === 'gk');
     const pCorner = spec ? 0.3 : 0.4;
-    const doCorner = gk && Math.random() < pCorner;
+    const doCorner = gk
+      && rngFromSeed(this.simState.simulationSeed, `shot_corner:${pend.shooterId}:${this.world.simTime.toFixed(3)}`).nextUnit() < pCorner;
     if (doCorner && gk) {
       // Direção do gol defendido (linha de fundo).
       const goalLineX =
@@ -5645,7 +5722,8 @@ export class TacticalSimLoop {
     // leve velocidade residual pra bola escapar da linha
     const reboundSign = pend.defSide === 'home' ? 1 : -1;
     this.ballSys.state.vx = reboundSign * 3;
-    this.ballSys.state.vz = (Math.random() - 0.5) * 4;
+    this.ballSys.state.vz =
+      (rngFromSeed(this.simState.simulationSeed, `shot_rebound:${pend.shooterId}:${this.world.simTime.toFixed(3)}`).nextUnit() - 0.5) * 4;
     this.simState.carrierId = null;
     pushSimEvent(
       this.simState,
