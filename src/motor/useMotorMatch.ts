@@ -110,6 +110,95 @@ function toMotorInput(
 
 const RENDER_MS = 33;
 
+/** Linha de estatística que o crédito de partida já consome. */
+export interface MotorStatRow {
+  passesOk: number;
+  passesAttempt: number;
+  tackles: number;
+  km: number;
+  rating: number;
+  shotsOn?: number;
+  goals?: number;
+}
+
+export interface MotorFinalize {
+  homeScore: number;
+  awayScore: number;
+  reading: { good: number; total: number };
+  homeStats: Record<string, MotorStatRow>;
+  homeOnPitch: string[];
+  agg: { shots: number; possessionHome: number; wasLosing: boolean };
+  mvpName?: string;
+}
+
+/**
+ * Nota do jogador, 4 a 10, na escala que o torcedor reconhece.
+ *
+ * Base 6,0 e sobe pelo que ele produziu: gol pesa mais que tudo, acerto de
+ * passe move meio ponto para cada lado, desarme e xG somam. Não é modelo
+ * sofisticado — é o suficiente para o pós-jogo dizer quem jogou, e o lugar
+ * óbvio para o arquétipo entrar depois (um volante de contenção não deveria
+ * ser julgado pela mesma régua de um armador).
+ */
+function nota(e: {
+  passes: number; passesOk: number; tackles: number; goals: number; xg: number;
+}): number {
+  const acerto = e.passes > 0 ? e.passesOk / e.passes : 0.8;
+  const r =
+    6.0
+    + e.goals * 1.25
+    + (acerto - 0.82) * 3.2
+    + Math.min(1.2, e.tackles * 0.09)
+    + Math.min(1.0, e.xg * 1.6);
+  return Math.round(Math.max(4, Math.min(10, r)) * 10) / 10;
+}
+
+/** Monta o resultado no formato que `FINALIZE_QUICK_PLAN` já espera. */
+function buildFinalize(engine: MotorEngine, homeXI: PitchPlayerState[]): MotorFinalize {
+  const homeStats: Record<string, MotorStatRow> = {};
+  let melhorNota = -1;
+  let mvpName: string | undefined;
+  for (const p of homeXI) {
+    const e = engine.byPlayer.get(p.playerId);
+    const base = e ?? {
+      passes: 0, passesForward: 0, passesOk: 0, carries: 0,
+      shots: 0, xg: 0, tackles: 0, goals: 0, distanceM: 0,
+    };
+    const r = nota(base);
+    homeStats[p.playerId] = {
+      passesOk: base.passesOk,
+      passesAttempt: base.passes,
+      tackles: base.tackles,
+      km: Math.round((base.distanceM / 1000) * 100) / 100,
+      rating: r,
+      shotsOn: base.shots,
+      goals: base.goals,
+    };
+    if (r > melhorNota) {
+      melhorNota = r;
+      mvpName = p.name;
+    }
+  }
+  const H = engine.bySide.home;
+  const A = engine.bySide.away;
+  const posseTotal = Math.max(1, H.possessionS + A.possessionS);
+  return {
+    homeScore: engine.homeScore,
+    awayScore: engine.awayScore,
+    // "Leitura" no Quick mede decisões certas. Aqui o proxy honesto é o acerto
+    // de passe do time, que é o que este motor mede de verdade.
+    reading: { good: H.passesOk, total: Math.max(1, H.passes) },
+    homeStats,
+    homeOnPitch: homeXI.map((p) => p.playerId),
+    agg: {
+      shots: H.shots,
+      possessionHome: Math.round((H.possessionS / posseTotal) * 100),
+      wasLosing: engine.homeScore < engine.awayScore,
+    },
+    mvpName,
+  };
+}
+
 export type MotorAwayRosterEntry = { id: string; num: number; name: string; pos: string };
 
 /** Slots do 4-4-2 visitante, na ordem em que o roster chega. */
@@ -364,6 +453,15 @@ export function useMotorMatch(
     playersById: entitiesRef.current ?? {},
     applySkillToPlayer,
     toggleLegacyMode,
+    /**
+     * Resultado da partida no formato do crédito. `null` antes do apito final —
+     * a página só despacha quando existe.
+     */
+    finalize: (): MotorFinalize | null => {
+      const engine = engineRef.current;
+      if (!engine || !engine.finished) return null;
+      return buildFinalize(engine, homeRef.current);
+    },
     startMatch: () => {
       startedRef.current = true;
       setState((prev) => (prev.phase === 'pregame' ? { ...prev, phase: 'playing' } : prev));

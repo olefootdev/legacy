@@ -31,7 +31,7 @@ import { FORMATION_BASES } from '@/match-engine/formations/catalog';
 // motor novo (determinístico, 15 de 17 na régua de realismo, com atributos
 // mentais e os 54 arquétipos ligados). Trocou o cérebro, manteve o corpo.
 import { useMotorMatch, type MotorAwayRosterEntry as LegacyAwayRosterEntry } from '@/motor/useMotorMatch';
-import { useGameStore } from '@/game/store';
+import { useGameStore, useGameDispatch } from '@/game/store';
 import { pitchPlayersFromLineup, roleFromPos } from '@/engine/pitchFromLineup';
 import { mergeLineupWithDefaults, awayStartingElevenFromSquad } from '@/entities/lineup';
 import { matchAttributesFromPlayerEntity, behaviorToCognitiveArchetype } from '@/match/playerInMatch';
@@ -636,6 +636,21 @@ export function FieldViewPreview() {
 
   // Normaliza 'pregame' → 'playing' para componentes que não aceitam 'pregame' no tipo phase
   const displayPhase = engine.phase === 'pregame' ? 'playing' as const : engine.phase;
+
+  // ── A PARTIDA CONTA ───────────────────────────────────────────────────────
+  // Esta página não tinha um único dispatch: jogava e nada acontecia. Reusa o
+  // FINALIZE_QUICK_PLAN, que é o caminho já vivo em produção — economia,
+  // evolução por estilo, fadiga e streak saem dele. Criar um segundo caminho
+  // de crédito seria repetir o erro que o ghost mapping flagrou.
+  const dispatch = useGameDispatch();
+  const creditadoRef = useRef(false);
+  useEffect(() => {
+    if (engine.phase !== 'fulltime' || creditadoRef.current) return;
+    const resultado = engine.finalize();
+    if (!resultado) return;
+    creditadoRef.current = true;
+    dispatch({ type: 'FINALIZE_QUICK_PLAN', ...resultado });
+  }, [engine.phase, engine, dispatch]);
 
   // ── Players para o campo ──────────────────────────────────────────────────
   // Antes do jogo: posições de kickoff do engine legacy (TacticalSimLoop)

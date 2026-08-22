@@ -95,7 +95,8 @@
     "lint:all": "npm run lint && npm run lint:revela",
     "test:motor": "tsx src/motor/runMotorRealismSelfTest.ts",
     "test:mental": "tsx src/motor/runMentalImpactSelfTest.ts",
-    "test:arquetipos": "tsx src/motor/runArchetypeStyleSelfTest.ts"
+    "test:arquetipos": "tsx src/motor/runArchetypeStyleSelfTest.ts",
+    "test:legacy-persistence": "tsx scripts/test-legacy-persistence.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

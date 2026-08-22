@@ -543,7 +543,9 @@ export class MotorEngine {
    * do time some no ruído, e a medida chega a inverter de sinal.
    */
   readonly byPlayer = new Map<string, {
-    passes: number; passesForward: number; carries: number; shots: number; xg: number;
+    passes: number; passesForward: number; passesOk: number;
+    carries: number; shots: number; xg: number;
+    tackles: number; goals: number; distanceM: number;
   }>();
   /** Instante em que o portador atual ganhou a bola. */
   private possessionSince = 0;
@@ -666,7 +668,11 @@ export class MotorEngine {
   private pstat(id: string) {
     let e = this.byPlayer.get(id);
     if (!e) {
-      e = { passes: 0, passesForward: 0, carries: 0, shots: 0, xg: 0 };
+      e = {
+        passes: 0, passesForward: 0, passesOk: 0,
+        carries: 0, shots: 0, xg: 0,
+        tackles: 0, goals: 0, distanceM: 0,
+      };
       this.byPlayer.set(id, e);
     }
     return e;
@@ -1209,6 +1215,7 @@ export class MotorEngine {
     this.ball.x = from.x;
     this.ball.z = from.z;
     this.flight = { toX, toZ, speed, targetId: to.id, passerId: from.id, travelled: 0 };
+    this.ultimoPassador = from.id;
     this.ballMode = 'flight';
     this.setCarrier(null);
     this.stats.passes++;
@@ -1275,6 +1282,7 @@ export class MotorEngine {
     if (shooter.side === 'home') this.homeScore++;
     else this.awayScore++;
     this.stats.goals++;
+    this.pstat(shooter.id).goals++;
     this.evento(`GOL! ${this.rotulo(shooter)}`, 'goal', shooter.id);
     this.kickoff(foeSide);
   }
@@ -1384,8 +1392,13 @@ export class MotorEngine {
         p.vz = tz;
       }
 
+      const antesX = p.x;
+      const antesZ = p.z;
       p.x = Math.max(0.5, Math.min(FIELD_LENGTH - 0.5, p.x + p.vx * dt));
       p.z = Math.max(0.5, Math.min(FIELD_WIDTH - 0.5, p.z + p.vz * dt));
+      // Distância percorrida — o pós-jogo cobra quilometragem e é o que
+      // transforma "jogou bem" em número que o torcedor reconhece.
+      this.pstat(p.id).distanceM += Math.hypot(p.x - antesX, p.z - antesZ);
 
       // Fadiga: correr custa, andar recupera.
       const spd = Math.hypot(p.vx, p.vz);
@@ -1460,6 +1473,7 @@ export class MotorEngine {
         if (passer && p.side === passer.side) {
           this.stats.passesOk++;
           this.bySide[p.side].passesOk++;
+          this.pstat(passer.id).passesOk++;
         }
         this.setCarrier(p.id);
         this.ballMode = 'held';
@@ -1468,6 +1482,9 @@ export class MotorEngine {
       }
     }
   }
+
+  /** Quem deu o último passe — a recepção precisa creditar o passador. */
+  private ultimoPassador: string | null = null;
 
   private resolveReception(): void {
     const target = this.flight?.targetId
@@ -1502,6 +1519,8 @@ export class MotorEngine {
     if (best.side === target?.side) {
       this.stats.passesOk++;
       this.bySide[best.side].passesOk++;
+      const passador = this.flight?.passerId ?? this.ultimoPassador;
+      if (passador) this.pstat(passador).passesOk++;
     }
   }
 
@@ -1517,6 +1536,7 @@ export class MotorEngine {
       if (this.rng() < win * TACKLE_ATTEMPTS_PER_S * dt) {
         this.setCarrier(p.id);
         this.stats.tackles++;
+        this.pstat(p.id).tackles++;
         return;
       }
       // Desarme malfeito: falta e bola parada.
