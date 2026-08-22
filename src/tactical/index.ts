@@ -12,6 +12,27 @@
  */
 
 export {
+  // Escala de tempo — toda velocidade do motor deriva daqui
+  HALF_SIM_SECONDS,
+  HALF_FOOTBALL_SECONDS,
+  TIME_SCALE,
+  DECISION_INTERVAL_FOOTBALL_MS,
+  DECISION_JITTER_FOOTBALL_MS,
+  DECISION_INTERVAL_SIM_MS,
+  DECISION_JITTER_SIM_MS,
+  footballMsToSim,
+  simToFootballMs,
+  footballAccelToSim,
+  REF_SPRINT_FAST_MS,
+  REF_SPRINT_SLOW_MS,
+  REF_JOG_MS,
+  REF_WALK_MS,
+  REF_PASS_MS,
+  REF_SHOT_MS,
+  REF_BALL_PLAYER_RATIO,
+} from './timeScale';
+
+export {
   // Dimensões IFAB
   FIELD_WIDTH_M,
   FIELD_LENGTH_M,
