@@ -35,6 +35,7 @@
     "test:shot-resolve": "tsx src/simulation/runShotResolveSelfTest.ts",
     "test:shoot-pipeline": "tsx src/simulation/runShootPipelineSelfTest.ts && tsx src/simulation/runShootSimIntegrationSelfTest.ts",
     "test:tactical-live-moments": "tsx src/simulation/runTacticalLiveNaturalMomentsSelfTest.ts",
+    "test:match-realism": "tsx src/simulation/runMatchRealismSelfTest.ts",
     "test:quick-clock": "tsx src/simulation/runQuickMatchClockSelfTest.ts",
     "test:quick-matchup": "tsx scripts/test-quick-matchup.ts",
     "test:quick-beats": "tsx scripts/test-quick-beats.ts",
