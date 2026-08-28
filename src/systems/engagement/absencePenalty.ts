@@ -1,13 +1,24 @@
 /**
  * OLEFOOT PYTHON MODE — Penalidade por ausência.
  *
- * Calibração travada na conversa de design:
+ * RECALIBRADO EM 2026-08-26 — lesão CERTA virou RISCO elevado.
+ *
+ * A tabela antiga forçava 1–3 lesões automáticas por ausência: quem voltava
+ * depois de dois dias encontrava o plantel quebrado e desistia de novo. Um
+ * jogo que pune o retorno não retém ninguém. A pressão continua existindo —
+ * ela só mudou de lugar: vive agora no `injuryRiskAdditive` (que o motor já
+ * lê ao escalar) em vez de estragar o elenco antes do manager tocar em nada.
+ *
+ * Calibração atual:
  *   0-12h    normal
  *   12-24h   treino -10%, sem evolução de atributos
- *   24-36h   treino para, risco lesão +15, 1 jogador desmotivado
- *   36-48h   1 lesão leve aleatória possível, fadiga não regenera, mercado para
- *   48-72h   treino zerado, 2-3 lesões leves automáticas, ofertas desaparecem
- *   72h+     crise: -20% apoio torcida, jogadores estrela considerando saída
+ *   24-36h   treino para, risco lesão +15
+ *   36-48h   risco +22, fadiga não regenera, mercado para
+ *   48-72h   risco +30, treino zerado, ofertas desaparecem
+ *   72h+     crise: risco +38, torcida esfria (-8), estrelas cogitam sair
+ *
+ * O que NÃO mudou: treino, evolução de atributos e mercado continuam parando.
+ * O clube sente a ausência — ele só não devolve o plantel destruído.
  *
  * Toda função é pura. O reducer agenda quando aplicar (não aqui).
  */
@@ -60,37 +71,37 @@ const TIER_TABLE: Record<AbsenceTier, AbsencePenaltyEffect> = {
     tier: 'moderate_36h',
     trainingMultiplier: 0,
     attrEvolutionEnabled: false,
-    injuryRiskAdditive: 15,
+    injuryRiskAdditive: 22,
     fatigueRegenEnabled: false,
     marketActivityEnabled: false,
-    randomInjuryCount: 1,
-    crowdSupportDelta: -5,
+    randomInjuryCount: 0,
+    crowdSupportDelta: -2,
     starPlayerDepartureRisk: false,
-    message: 'Clube à deriva. Lesões começam a aparecer, mercado paralisado.',
+    message: 'Clube à deriva. Sem recuperação física, mercado paralisado.',
   },
   heavy_48h: {
     tier: 'heavy_48h',
     trainingMultiplier: 0,
     attrEvolutionEnabled: false,
-    injuryRiskAdditive: 25,
+    injuryRiskAdditive: 30,
     fatigueRegenEnabled: false,
     marketActivityEnabled: false,
-    randomInjuryCount: 2,
-    crowdSupportDelta: -10,
+    randomInjuryCount: 0,
+    crowdSupportDelta: -4,
     starPlayerDepartureRisk: false,
-    message: 'Crise no clube. Múltiplas lesões, ofertas desaparecendo.',
+    message: 'Elenco no limite. Risco de lesão alto, ofertas desaparecendo.',
   },
   crisis_72h: {
     tier: 'crisis_72h',
     trainingMultiplier: 0,
     attrEvolutionEnabled: false,
-    injuryRiskAdditive: 35,
+    injuryRiskAdditive: 38,
     fatigueRegenEnabled: false,
     marketActivityEnabled: false,
-    randomInjuryCount: 3,
-    crowdSupportDelta: -20,
+    randomInjuryCount: 0,
+    crowdSupportDelta: -8,
     starPlayerDepartureRisk: true,
-    message: 'CRISE. Torcida revoltada, jogadores estrela cogitando sair.',
+    message: 'CRISE. Torcida esfriou, jogadores estrela cogitando sair.',
   },
 };
 
