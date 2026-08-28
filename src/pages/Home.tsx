@@ -15,6 +15,7 @@ import { managerScoreToday } from '@/systems/managerScore/managerScore';
 import { roundOf } from '@/match/legendsCup/legendsCupModel';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { useClubPulse } from '@/hooks/useClubPulse';
+import { track } from '@/analytics/track';
 import { resolveHomeMode, blockOrderFor, type HomeBlock } from './homeMode';
 import { HeroCinematic } from '@/components/home/HeroCinematic';
 import { HomeImageSlider } from '@/components/home/HomeImageSlider';
@@ -36,6 +37,9 @@ import { fetchListedLegacyPlayerRows, legacyPortraitImageUrl } from '@/supabase/
 import { overallFromAttributes } from '@/entities/player';
 import { fetchMyOffers } from '@/supabase/marketOffers';
 import type { PlayerAttributes, PlayerEntity } from '@/entities/types';
+
+/** Telemetria de abertura: 1× por carga da página, não por render. */
+let openingTracked = false;
 
 /** Hero — asset real do repositório (mesmo do antigo HomeHeroLegacy). */
 const HERO_IMAGE = '/hero-legacy-full.png';
@@ -328,6 +332,17 @@ export function Home() {
       }),
     [nextGlobal, incomingCount, suspendedCount, expiredCount, injuredCount, hasResultFlash, nowMs],
   );
+
+  // ── Telemetria de abertura (Fase 1) ──────────────────────────────────────
+  // Em que estado o clube abre, e qual modo a Home escolheu. É o que permite
+  // perguntar depois: quem abre "em crise" volta amanhã? O modo matchday
+  // realmente pega gente antes do jogo?
+  useEffect(() => {
+    if (openingTracked) return;
+    openingTracked = true;
+    track('pulse_seen', { value: pulse.value, band: pulse.band, trend: pulse.trend, drivers: pulse.drivers.length });
+    track('home_mode', { mode: homeMode, hasRequest: (playerRequests?.length ?? 0) > 0 });
+  }, [pulse, homeMode, playerRequests]);
 
   // ── Blocos da Home ────────────────────────────────────────────────────────
   // Cada entrada é um bloco que JÁ existia. O que a Fase 1 mudou é só a ORDEM:

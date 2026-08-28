@@ -13,10 +13,11 @@
  * Presentational puro.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Share2, Sparkles, Star } from 'lucide-react';
 import { shareImageWithText } from '@/lib/shareImage';
+import { track } from '@/analytics/track';
 import { momentTierLabel, type Moment, type MomentCompetition } from '@/systems/moments/detectMoment';
 
 const MORET = 'var(--font-serif-hero)';
@@ -71,12 +72,31 @@ export function MomentShareCard({
 
   const banner = BANNER[moment.competition];
 
+  // O card foi MOSTRADO. Sem isto não dá pra calcular taxa de share — só o
+  // numerador (quem apertou) seria conhecido.
+  useEffect(() => {
+    track('moment_detected', {
+      competition: moment.competition,
+      tier: moment.tier,
+      oneInX: moment.oneInX,
+      surface: 'card',
+    });
+  }, [moment.competition, moment.tier, moment.oneInX]);
+
   const onShare = async () => {
     const r = await shareImageWithText({
       imageUrl: banner,
       text: shareMessage,
       fileName: `olefoot-${moment.competition}.png`,
       title: moment.headline,
+    });
+    // `result` separa quem compartilhou de verdade de quem caiu no fallback
+    // de clipboard e de quem cancelou no diálogo do sistema.
+    track('moment_shared', {
+      competition: moment.competition,
+      tier: moment.tier,
+      result: r,
+      surface: 'card',
     });
     if (r === 'shared') setShared('done');
     else if (r === 'fallback') setShared('copied');

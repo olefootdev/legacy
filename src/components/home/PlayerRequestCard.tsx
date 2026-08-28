@@ -14,6 +14,7 @@
  * Presentational puro: pedido e handler entram por prop.
  */
 
+import { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { MessageSquare } from 'lucide-react';
 import {
@@ -21,6 +22,7 @@ import {
   type PlayerRequest,
   type PlayerRequestChoice,
 } from '@/systems/playerPersonality';
+import { track } from '@/analytics/track';
 
 const CHOICES: readonly PlayerRequestChoice[] = ['grant', 'challenge', 'promise'] as const;
 
@@ -31,6 +33,12 @@ export function PlayerRequestCard({
   request: PlayerRequest;
   onChoose: (choice: PlayerRequestChoice) => void;
 }) {
+  // Denominador da taxa de resposta: quantos pedidos aparecem e nunca são
+  // respondidos? Se for a maioria, o card está no lugar errado da Home.
+  useEffect(() => {
+    track('request_shown', { kind: request.kind });
+  }, [request.id, request.kind]);
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 10 }}
@@ -71,7 +79,12 @@ export function PlayerRequestCard({
           <button
             key={c}
             type="button"
-            onClick={() => onChoose(c)}
+            onClick={() => {
+              // A pergunta central da Fase 4: qual das três ganha? Se for
+              // sempre "dar chance", as outras duas não estão custando nada.
+              track('request_resolved', { kind: request.kind, choice: c });
+              onChoose(c);
+            }}
             className="min-h-[44px] border px-1 py-2 font-display text-[10px] font-black uppercase leading-tight tracking-[0.06em] text-white/70 transition-colors hover:border-neon-yellow hover:bg-neon-yellow hover:text-black"
             style={{ borderColor: 'var(--color-border)', borderRadius: 'var(--radius-sm)' }}
           >

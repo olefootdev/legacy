@@ -18,6 +18,7 @@ import type { DailyCrown } from '@/match/globalLeagueMVP';
 import { detectMoment } from '@/systems/moments';
 import { shareImageWithText } from '@/lib/shareImage';
 import { fetchMyReferralCode } from '@/supabase/referrals';
+import { track } from '@/analytics/track';
 
 interface Props {
   crown: DailyCrown | null;
@@ -42,6 +43,12 @@ export function CoronationModal({ crown, onClose }: Props) {
     let alive = true;
     void fetchMyReferralCode().then((c) => { if (alive) setReferralCode(c); }).catch(() => {});
     return () => { alive = false; };
+  }, [crown]);
+
+  // A coroação apareceu — é o maior feito do jogo e até agora morria na tela.
+  useEffect(() => {
+    if (!crown) return;
+    track('moment_detected', { competition: 'global', tier: 3, bracketSize: crown.bracketSize, surface: 'coronation' });
   }, [crown]);
 
   useEffect(() => {
@@ -147,6 +154,12 @@ export function CoronationModal({ crown, onClose }: Props) {
       text,
       fileName: 'olefoot-coroa-do-dia.png',
       title: 'Coroa do Dia',
+    });
+    track('moment_shared', {
+      competition: 'global',
+      tier: moment.tier,
+      result: r,
+      surface: 'coronation',
     });
     if (r === 'shared') setShared('done');
     else if (r === 'fallback') setShared('copied');

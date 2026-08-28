@@ -18,7 +18,7 @@
  * o manager acabou de jogar (ver `selectRecentConsequences`).
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useGameStore } from '@/game/store';
@@ -26,6 +26,7 @@ import { EMPTY_CONSEQUENCE_STORE } from '@/systems/consequences/store';
 import { templateForKind } from '@/systems/impactCatalog';
 import { selectRecentConsequences } from '@/systems/consequences/recent';
 import type { PersistentConsequence } from '@/systems/consequences/types';
+import { track } from '@/analytics/track';
 
 const MAX_ROWS = 5;
 
@@ -48,6 +49,18 @@ export function MatchConsequences({ playerNames, nowMs }: MatchConsequencesProps
       .filter((r): r is { consequence: PersistentConsequence; template: NonNullable<typeof r.template> } => !!r.template)
       .slice(0, MAX_ROWS);
   }, [store, clubId, nowMs]);
+
+  // Quantas partidas realmente produzem consequência visível? Se este evento
+  // quase não dispara, o bloco não está pagando o espaço que ocupa.
+  const shown = rows.length;
+  useEffect(() => {
+    if (shown === 0) return;
+    track('consequences_seen', {
+      count: shown,
+      penalties: rows.filter((r) => r.consequence.magnitude < 0).length,
+    });
+    // Dispara quando o lote muda de tamanho — não a cada render.
+  }, [shown]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   if (rows.length === 0) return null;
 

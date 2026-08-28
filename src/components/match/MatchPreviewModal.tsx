@@ -26,6 +26,7 @@ import {
   TACTICAL_INTENSITY_PRESETS,
   type TacticalIntensityLevel,
 } from '@/match/quickTacticalIntensity';
+import { track } from '@/analytics/track';
 
 interface Props {
   opponentName: string;
@@ -406,7 +407,12 @@ export function MatchPreviewModal({
                         key={level}
                         type="button"
                         aria-pressed={active}
-                        onClick={() => dispatch({ type: 'SET_TACTICAL_INTENSITY', level })}
+                        onClick={() => {
+                          // A pergunta: o manager MEXE nisso, ou aceita o
+                          // default? `from` mostra de onde ele saiu.
+                          track('focus_chosen', { level, from: focus, changed: level !== focus });
+                          dispatch({ type: 'SET_TACTICAL_INTENSITY', level });
+                        }}
                         className={
                           'min-h-[40px] border px-1 py-2 font-display text-[10px] font-black uppercase leading-tight tracking-[0.06em] transition-colors ' +
                           (active
