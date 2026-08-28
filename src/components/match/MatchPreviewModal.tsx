@@ -22,6 +22,10 @@ import { FATIGUE_EXHAUSTED_THRESHOLD } from '@/entities/lineup';
 import { FORMATION_SCHEME_LIST, pitchUiSlots } from '@/match-engine/formations/catalog';
 import { suggestBestLineup } from '@/team/suggestBestLineup';
 import type { FormationSchemeId } from '@/match-engine/types';
+import {
+  TACTICAL_INTENSITY_PRESETS,
+  type TacticalIntensityLevel,
+} from '@/match/quickTacticalIntensity';
 
 interface Props {
   opponentName: string;
@@ -53,6 +57,20 @@ interface LineupPreset {
   formation: FormationSchemeId;
   lineup: Record<string, string>;
 }
+/**
+ * FOCO da partida — os 5 estilos humanos do jogo, do mais cauteloso ao mais
+ * agressivo. É a decisão de UMA linha que o manager toma antes de entrar em
+ * campo: por dentro cada um vira dezenas de parâmetros (linha, prensa, fadiga,
+ * chance de contra-ataque) via TACTICAL_INTENSITY_PRESETS, e o log de estilos
+ * alimenta o DNA do clube (eixo Romântico ↔ Pragmático).
+ *
+ * Nada de motor novo aqui: a ação SET_TACTICAL_INTENSITY já existia e já era
+ * lida ao vivo pelo dock da partida. O que faltava era poder decidir ANTES.
+ */
+const FOCUS_ORDER: readonly TacticalIntensityLevel[] = [
+  'defend', 'possession', 'counter', 'press', 'attack',
+] as const;
+
 const PRESETS_KEY = 'olefoot.lineup-presets-v1';
 const MAX_PRESETS = 3;
 function readPresets(): LineupPreset[] {
@@ -85,6 +103,9 @@ export function MatchPreviewModal({
   const playerHealth = useGameStore((s) => s.playerHealth);
   const currentScheme = useGameStore((s) => s.manager.formationScheme);
   const dispatch = useGameDispatch();
+  // FOCO da partida — seletor estável (lê o objeto que já está no estado).
+  const intensity = useGameStore((st) => st.quickMatchIntensity);
+  const focus: TacticalIntensityLevel = intensity?.current ?? 'possession';
 
   const [formation, setFormation] = useState<FormationSchemeId>(currentScheme);
   const [working, setWorking] = useState<Record<string, string>>(lineup);
@@ -370,6 +391,39 @@ export function MatchPreviewModal({
             </div>
           ) : (
             <>
+              {/* FOCO — a decisão da partida. Vem antes de escalação e formação
+                  de propósito: é a única escolha aqui que muda o jogo por si só. */}
+              <div>
+                <p className="mb-1.5 font-display text-[9px] font-black uppercase tracking-[0.2em] text-white/50">
+                  Foco
+                </p>
+                <div className="grid grid-cols-5 gap-1">
+                  {FOCUS_ORDER.map((level) => {
+                    const preset = TACTICAL_INTENSITY_PRESETS[level];
+                    const active = focus === level;
+                    return (
+                      <button
+                        key={level}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => dispatch({ type: 'SET_TACTICAL_INTENSITY', level })}
+                        className={
+                          'min-h-[40px] border px-1 py-2 font-display text-[10px] font-black uppercase leading-tight tracking-[0.06em] transition-colors ' +
+                          (active
+                            ? 'border-neon-yellow bg-neon-yellow text-black'
+                            : 'border-zinc-800 text-white/60 hover:border-neon-yellow/60 hover:text-white')
+                        }
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1.5 text-[11px] leading-snug text-white/45">
+                  {TACTICAL_INTENSITY_PRESETS[focus].description}
+                </p>
+              </div>
+
               {/* Presets salvos (Fase 4) */}
               <div>
                 <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-display font-black mb-1.5">

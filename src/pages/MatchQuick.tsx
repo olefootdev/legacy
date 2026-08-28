@@ -56,6 +56,7 @@ import { QuickMatchFeed } from '@/components/matchquick/QuickMatchFeed';
 import { QuickMatchLineup } from '@/components/matchquick/QuickMatchLineup';
 import { QuickMatchHalftime } from '@/components/matchquick/QuickMatchHalftime';
 import { QuickMatchSummary } from '@/components/matchquick/QuickMatchSummary';
+import { MatchConsequences } from '@/components/match/MatchConsequences';
 import { QuickInteractiveMomentOverlay } from '@/components/matchquick/QuickInteractiveMomentOverlay';
 import { QuickPerformanceBonusPanel } from '@/components/matchquick/QuickPerformanceBonusPanel';
 import { QuickTacticalIntensityControls, QuickTacticalIntensityInfo } from '@/components/matchquick/QuickTacticalIntensityControls';
@@ -757,6 +758,12 @@ function MatchQuickLegacy() {
   const [session, setSession] = useState(0);
   const [halfTimeUi, setHalfTimeUi] = useState(false);
   const [summary, setSummary] = useState<EndSummary | null>(null);
+  /** playerId → nome, pro bloco de consequências dizer QUEM levou. */
+  const quickPlayerNames = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const p of Object.values(playersById)) out[p.id] = p.name;
+    return out;
+  }, [playersById]);
   const [showInstantRewards, setShowInstantRewards] = useState(false);
   const [selected, setSelected] = useState<PitchPlayerState | null>(null);
   const [subPickId, setSubPickId] = useState('');
@@ -4070,6 +4077,10 @@ function MatchQuickLegacy() {
               />
             </div>
           )}
+
+          {/* A CONTA DA PARTIDA (Fase 3.2) — mesmo bloco do caminho novo
+              (MatchQuickEngaged), pra o caminho legado não ficar cego. */}
+          <MatchConsequences playerNames={quickPlayerNames} />
 
           {/* CTAs — Legacy Tech */}
           <div className="flex flex-col gap-2 pt-1">
