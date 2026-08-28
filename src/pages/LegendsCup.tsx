@@ -24,6 +24,9 @@ import {
 } from '@/match/legendsCup/legendsCupModel';
 import { buildLegendsCupOpponent, type LegendsCupOpponent } from '@/match/legendsCup/legendsCupSquad';
 import { coachPersonaFor, personaLine } from '@/match/ligaOle/coachPersona';
+import { MomentShareCard } from '@/components/moments/MomentShareCard';
+import { detectMoment, stageFromRoundName } from '@/systems/moments';
+import { fetchMyReferralCode } from '@/supabase/referrals';
 
 const YELLOW = 'var(--color-neon-yellow)';
 
@@ -36,6 +39,52 @@ export function LegendsCup() {
   const flash = useGameStore((s) => s.legendsCupResultFlash);
   const club = useGameStore((s) => s.club);
   const players = useGameStore((s) => s.players);
+
+  /**
+   * MOMENTO da campanha (Fase 2). A Legends Cup fechava campanhas — inclusive
+   * títulos contra TODAS as lendas na final — sem oferecer nada pra
+   * compartilhar. Agora o mesmo detector da Partida Rápida classifica a
+   * corrida: o campeão sempre rende card; sem taça, só a partir de ÉPICO.
+   */
+  const cupMoment = useMemo(() => {
+    if (!flash) return null;
+    const isTitle = flash.outcome === 'champion';
+    const stage = isTitle ? 'final' : stageFromRoundName(flash.reachedRound);
+    const m = detectMoment({
+      competition: 'legends-cup',
+      homeScore: 0, awayScore: 0,
+      won: isTitle, draw: false, wasLosing: false,
+      possessionHome: 0, shotsHome: 0, bonusCount: 0,
+      cleanSheet: false, hattrick: false,
+      streak: 0,
+      stage,
+      isTitle,
+    });
+    if (isTitle) return m;
+    return m.tier >= 2 ? m : null;
+  }, [flash]);
+
+  /** Craque do plantel — vira o chip de destaque do card. */
+  const bestPlayer = useMemo(() => {
+    const all = Object.values(players ?? {});
+    if (all.length === 0) return null;
+    let best = all[0]!;
+    let bestOvr = overallFromAttributes(best.attrs, best.pos);
+    for (const p of all) {
+      const o = overallFromAttributes(p.attrs, p.pos);
+      if (o > bestOvr) { best = p; bestOvr = o; }
+    }
+    return { name: best.name, ovr: bestOvr };
+  }, [players]);
+
+  // Código de indicação — só busca quando há card pra compartilhar.
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  useEffect(() => {
+    if (!cupMoment) return;
+    let alive = true;
+    void fetchMyReferralCode().then((c) => { if (alive) setReferralCode(c); }).catch(() => {});
+    return () => { alive = false; };
+  }, [cupMoment]);
 
   const [opp, setOpp] = useState<LegendsCupOpponent | null>(null);
   const [loading, setLoading] = useState(false);
@@ -173,6 +222,18 @@ export function LegendsCup() {
             : '5 fases · todas as lendas na final'
         }
       />
+
+      {cupMoment && (
+        <div className="flex justify-center">
+          <MomentShareCard
+            moment={cupMoment}
+            clubName={club.name}
+            highlight={bestPlayer ? { label: 'Craque', name: bestPlayer.name, detail: `OVR ${bestPlayer.ovr}` } : null}
+            referralCode={referralCode}
+            ctaLabel={cupMoment.tier === 3 ? 'CRIE SEU TIME AGORA' : 'VEM TENTAR TAMBÉM'}
+          />
+        </div>
+      )}
 
       {flash && (
         <div

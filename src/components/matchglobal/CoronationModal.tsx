@@ -2,13 +2,22 @@
  * CoronationModal — celebração fullscreen quando o manager logado é Coroa do Dia.
  *
  * Trigger: Realtime INSERT em `daily_crowns` capturado por useCoronationListener.
- * Confetti via canvas inline (sem lib externa). Dismiss via clique ou auto após 10s.
+ * Confetti via canvas inline (sem lib externa). Dismiss via clique ou auto após 12s.
+ *
+ * [Fase 2] Ganhou COMPARTILHAMENTO. Era o maior feito do jogo — bater todo mundo
+ * na chave do dia — e morria na tela sem render print. O texto sai do mesmo
+ * detector de momento das outras competições, com o placar real da final e o
+ * link de indicação embutido. Compartilhar CANCELA o auto-fechamento: ninguém
+ * perde a modal no meio do share.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Crown, X } from 'lucide-react';
+import { Crown, X, Share2 } from 'lucide-react';
 import type { DailyCrown } from '@/match/globalLeagueMVP';
+import { detectMoment } from '@/systems/moments';
+import { shareImageWithText } from '@/lib/shareImage';
+import { fetchMyReferralCode } from '@/supabase/referrals';
 
 interface Props {
   crown: DailyCrown | null;
@@ -17,12 +26,23 @@ interface Props {
 
 export function CoronationModal({ crown, onClose }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [shared, setShared] = useState<'idle' | 'done' | 'copied'>('idle');
+  /** Mexeu no share → a modal para de se auto-fechar e espera o manager. */
+  const [holdOpen, setHoldOpen] = useState(false);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!crown || holdOpen) return;
+    const t = setTimeout(onClose, 12_000);
+    return () => clearTimeout(t);
+  }, [crown, onClose, holdOpen]);
 
   useEffect(() => {
     if (!crown) return;
-    const t = setTimeout(onClose, 12_000);
-    return () => clearTimeout(t);
-  }, [crown, onClose]);
+    let alive = true;
+    void fetchMyReferralCode().then((c) => { if (alive) setReferralCode(c); }).catch(() => {});
+    return () => { alive = false; };
+  }, [crown]);
 
   useEffect(() => {
     if (!crown) return;
@@ -83,6 +103,54 @@ export function CoronationModal({ crown, onClose }: Props) {
       window.removeEventListener('resize', resize);
     };
   }, [crown]);
+
+  /**
+   * Momento da coroação. `isTitle` + `stage: 'final'` fazem o detector tratar
+   * como o feito máximo — e os pênaltis, quando houve, multiplicam a raridade.
+   */
+  const moment = crown
+    ? detectMoment({
+        competition: 'global',
+        homeScore: crown.finalScoreHome ?? 0,
+        awayScore: crown.finalScoreAway ?? 0,
+        won: true,
+        draw: false,
+        wasLosing: false,
+        possessionHome: 0,
+        shotsHome: 0,
+        bonusCount: 0,
+        cleanSheet: (crown.finalScoreAway ?? 1) === 0,
+        hattrick: false,
+        streak: 0,
+        stage: 'final',
+        isTitle: true,
+        wentToPens: crown.finalWentToPens,
+      })
+    : null;
+
+  const onShare = async () => {
+    if (!crown || !moment) return;
+    setHoldOpen(true);
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.com';
+    const referralUrl = referralCode ? `${origin}/cadastro/${referralCode}` : `${origin}/cadastro`;
+    const scoreLine =
+      crown.finalScoreHome != null && crown.finalScoreAway != null && crown.runnerUpClubName
+        ? ` Final ${crown.finalScoreHome}–${crown.finalScoreAway} contra ${crown.runnerUpClubName}${crown.finalWentToPens ? ' nos pênaltis' : ''}.`
+        : '';
+    const text =
+      `👑 COROA DO DIA no Olefoot! ${crown.clubName} ganhou a chave de ${crown.bracketSize} times.` +
+      scoreLine +
+      (moment.oneInX >= 10 ? ` Raridade estimada: 1 em ${moment.oneInX}.` : '') +
+      ` Monta teu time e vem me tirar a coroa 👉 ${referralUrl}`;
+    const r = await shareImageWithText({
+      imageUrl: '/banner-campeao-game-ole.png',
+      text,
+      fileName: 'olefoot-coroa-do-dia.png',
+      title: 'Coroa do Dia',
+    });
+    if (r === 'shared') setShared('done');
+    else if (r === 'fallback') setShared('copied');
+  };
 
   return (
     <AnimatePresence>
@@ -163,13 +231,36 @@ export function CoronationModal({ crown, onClose }: Props) {
               </motion.p>
             )}
 
+            <motion.button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); void onShare(); }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.1 }}
+              className="mt-8 inline-flex items-center justify-center gap-2 border"
+              style={{
+                padding: '13px 26px',
+                borderRadius: 'var(--radius-sm)',
+                borderColor: 'var(--color-neon-yellow)',
+                backgroundColor: 'rgba(253,225,0,0.1)',
+                color: 'var(--color-neon-yellow)',
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: '13px',
+                letterSpacing: '0.12em',
+              }}
+            >
+              <Share2 className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+              {shared === 'done' ? 'COMPARTILHADO!' : shared === 'copied' ? 'LINK COPIADO!' : 'COMPARTILHAR A COROA'}
+            </motion.button>
+
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1.2 }}
-              className="text-xs text-white/40 mt-8 uppercase tracking-wider"
+              transition={{ delay: 1.4 }}
+              className="mt-5 text-xs uppercase tracking-wider text-white/40"
             >
-              clique pra fechar
+              clique fora pra fechar
             </motion.p>
           </motion.div>
         </motion.div>
