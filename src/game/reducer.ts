@@ -78,6 +78,11 @@ import {
   materializeBatch,
 } from '@/systems/consequences/handlers';
 import { buildImpactSummary } from '@/systems/consequences/fromLiveMatch';
+import {
+  derivePersonality,
+  detectPlayerRequest,
+  resolveRequest,
+} from '@/systems/playerPersonality';
 import { buildGlobalImpactSummary } from '@/systems/consequences/fromGlobalFixture';
 import { recordCheckIn } from '@/systems/engagement/checkIn';
 import { evaluateAbsence } from '@/systems/engagement/absencePenalty';
@@ -2233,6 +2238,52 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         : tickedStore;
       // ─────────────────────────────────────────────────────────────
 
+      // ─── FASE 4 — o jogador tem algo a dizer ────────────────────────
+      //
+      // Depois da partida, UM jogador (no máximo) pode bater na porta: quem
+      // joga pouco cobra minutos, quem é ambicioso quer palco maior, quem
+      // carrega o time quer status. Os três traços são DERIVADOS de dado que
+      // já existe (idade, OVR, mint, jogos) — sem campo novo no jogador.
+      //
+      // Um pedido por vez, de propósito: o valor está em UMA decisão com peso,
+      // não numa caixa de reclamações.
+      const nextPlayerRequests = (() => {
+        const pending = state.playerRequests ?? [];
+        if (pending.length > 0) return pending; // já tem pedido na mesa
+        const roster = Object.values(players);
+        if (roster.length === 0) return pending;
+
+        const clubMatches = results.length;
+        const overalls = roster.map((p) => overallFromAttributes(p.attrs, p.pos));
+        const squadAvg = overalls.reduce((a, b) => a + b, 0) / overalls.length;
+        const relations = state.managerRelationByPlayer ?? {};
+        const now = Date.now();
+
+        for (let idx = 0; idx < roster.length; idx++) {
+          const p = roster[idx]!;
+          const personality = derivePersonality({
+            playerId: p.id,
+            age: p.age,
+            overall: overalls[idx]!,
+            mintOverall: p.mintOverall,
+            squadAverageOverall: squadAvg,
+            matchesPlayed: playerSeasonLedger[p.id]?.matchesPlayed ?? 0,
+            clubMatchesPlayed: clubMatches,
+          });
+          const req = detectPlayerRequest({
+            playerId: p.id,
+            playerName: p.name,
+            personality,
+            matchesPlayed: playerSeasonLedger[p.id]?.matchesPlayed ?? 0,
+            clubMatchesPlayed: clubMatches,
+            relation: relations[p.id] ?? 75,
+            now,
+          });
+          if (req) return [req];
+        }
+        return pending;
+      })();
+
       const stateAfterMatch: OlefootGameState = {
         ...state,
         finance,
@@ -2252,6 +2303,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         competitiveRanking,
         localLeagues,
         consequenceStore,
+        playerRequests: nextPlayerRequests,
       };
       let manager = stateAfterMatch.manager;
       if (manager.coach) {
@@ -2753,6 +2805,55 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     }
     case 'DISMISS_LEGENDS_CUP_RESULT': {
       return { ...state, legendsCupResultFlash: undefined };
+    }
+
+    /**
+     * FASE 4 — o manager responde ao pedido do jogador.
+     *
+     * É aqui que a corrente fecha: a escolha escreve em `managerRelationByPlayer`
+     * — campo que JÁ existia, já persiste no Supabase (`manager_relation`) e já
+     * alimenta `relacaoManager` → `computeIndividualObedience()` na partida ao
+     * vivo — e, pela PONTE nova, também na moral do jogador, que todos os modos
+     * leem. Sem essa ponte a decisão só teria efeito no caminho de comando de voz.
+     */
+    case 'RESOLVE_PLAYER_REQUEST': {
+      const pending = state.playerRequests ?? [];
+      const req = pending.find((r) => r.id === action.requestId);
+      if (!req) return state;
+
+      const outcome = resolveRequest(req.kind, action.choice);
+      const now = Date.now();
+
+      const prevRel = state.managerRelationByPlayer ?? {};
+      const curRel = prevRel[req.playerId] ?? 75;
+      const nextRel = Math.max(0, Math.min(100, curRel + outcome.relationDelta));
+
+      const prevMoral = state.playerMoral ?? {};
+      const curMoral = prevMoral[req.playerId] ?? createDefaultMoral(req.playerId, now);
+      const nextMoral: PlayerMoral = {
+        ...curMoral,
+        moral: Math.max(0, Math.min(100, curMoral.moral + outcome.moralDelta)),
+        lastResultAt: now,
+      };
+
+      const inbox = [
+        makeInboxItem(
+          `player_request_${req.id}_${now}`,
+          'PLAYER_MORALE',
+          'PLANTEL',
+          `${req.playerName} — conversa resolvida`,
+          { body: outcome.reply, tag: 'PLANTEL', timeLabel: 'Agora', deepLink: '/clube/elenco' },
+        ),
+        ...state.inbox,
+      ].slice(0, 60);
+
+      return {
+        ...state,
+        playerRequests: pending.filter((r) => r.id !== action.requestId),
+        managerRelationByPlayer: { ...prevRel, [req.playerId]: nextRel },
+        playerMoral: { ...prevMoral, [req.playerId]: nextMoral },
+        inbox,
+      };
     }
     case 'MERGE_PLAYERS': {
       const players = { ...state.players, ...action.players };

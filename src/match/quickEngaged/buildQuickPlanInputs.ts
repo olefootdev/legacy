@@ -57,6 +57,9 @@ export interface QuickPlanInputsResult {
 export interface BuildQuickPlanArgs {
   players: Record<string, PlayerEntity>;
   playerHealth: Record<string, PlayerHealth> | undefined;
+  /** Moral por playerId (`state.playerMoral`). PONTE Fase 4: a moral tempera
+   *  os atributos mentais enviados ao motor. Ausente = todo mundo neutro. */
+  moralById?: Record<string, { moral: number }> | undefined;
   /** Record slot→playerId vindo do store (pode carregar `formation`; ignorado aqui). */
   lineup: Record<string, string>;
   homeShort: string;
@@ -78,7 +81,7 @@ export function effectiveOvr(ovr: number, fatigue: number): number {
 }
 
 /** PlayerEntity → view usada em cards/substituição (titulares e reservas). */
-export function playerToHomeView(p: PlayerEntity, fatigue: number): QuickHomePlayerView {
+export function playerToHomeView(p: PlayerEntity, fatigue: number, moral?: number): QuickHomePlayerView {
   const ovr = overallFromAttributes(p.attrs, p.pos);
   return {
     id: p.id,
@@ -88,7 +91,7 @@ export function playerToHomeView(p: PlayerEntity, fatigue: number): QuickHomePla
     ovr,
     fatigue,
     effective: effectiveOvr(ovr, fatigue),
-    payload: playerToQuickPlanPayload(p, fatigue, roleFromPos(p.pos)),
+    payload: playerToQuickPlanPayload(p, fatigue, roleFromPos(p.pos), moral),
   };
 }
 
@@ -135,7 +138,7 @@ export function awayPayloadsFromPlayers(players: PlayerEntity[]): QuickPlanPlaye
  * `homePlayers` sai ordenado pela ordem de slot da lineup.
  */
 export function buildQuickPlanInputs(args: BuildQuickPlanArgs): QuickPlanInputsResult {
-  const { players, playerHealth, lineup, intensity = 'balanced' } = args;
+  const { players, playerHealth, lineup, intensity = 'balanced', moralById } = args;
 
   const fatigueById = buildFatigueByIdMap(players, playerHealth);
   const merged = mergeLineupWithDefaults(lineup, players, { fatigueById });
@@ -146,7 +149,7 @@ export function buildQuickPlanInputs(args: BuildQuickPlanArgs): QuickPlanInputsR
     const p = players[pid];
     if (!p) continue;
     const fat = getEffectiveFatigue(pid, p, playerHealth);
-    const view = playerToHomeView(p, fat);
+    const view = playerToHomeView(p, fat, moralById?.[pid]?.moral);
     ovrSum += view.ovr;
     homePlayers.push(view);
   }
