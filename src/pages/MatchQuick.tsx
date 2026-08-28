@@ -679,6 +679,8 @@ function MatchQuickLegacy() {
   const dispatch = useGameDispatch();
   const live = useGameStore((s) => s.liveMatch);
   const playersById = useGameStore((s) => s.players);
+  // PONTE Fase 4 — a moral do vestiário entra na força efetiva do XI.
+  const playerMoral = useGameStore((s) => s.playerMoral);
   const playerHealth = useGameStore((s) => s.playerHealth);
   // Derivados base — declarados aqui no topo para evitar TDZ em deps de hooks (effects/memos abaixo).
   const pitch = live?.homePlayers ?? [];
@@ -2086,7 +2088,7 @@ function MatchQuickLegacy() {
     if (!fixture?.opponent || fixture.opponent.id === 'placeholder-opponent' || fixture.opponent.id === 'no-opponent-available') {
       return null;
     }
-    const effective = selectEffectiveTeamStrength({ players: playersById, health: playerHealth });
+    const effective = selectEffectiveTeamStrength({ players: playersById, health: playerHealth, moral: playerMoral });
     if (effective.startersCounted === 0) return null;
     const mods = computeMatchContextModifiers({
       isHome: true,
@@ -2113,7 +2115,7 @@ function MatchQuickLegacy() {
   const livePrediction = useMemo(() => {
     if (!live || live.phase !== 'playing') return null;
     if (!fixture?.opponent || fixture.opponent.id === 'placeholder-opponent' || fixture.opponent.id === 'no-opponent-available') return null;
-    const effective = selectEffectiveTeamStrength({ players: playersById, health: playerHealth });
+    const effective = selectEffectiveTeamStrength({ players: playersById, health: playerHealth, moral: playerMoral });
     if (effective.startersCounted === 0) return null;
     const mods = computeMatchContextModifiers({
       isHome: true,

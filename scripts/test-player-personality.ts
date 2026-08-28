@@ -21,6 +21,8 @@ import {
   type PlayerRequestChoice,
 } from '../src/systems/playerPersonality';
 import { moralTilt } from '../src/match/quickPlanClient';
+import { selectEffectiveTeamStrength } from '../src/match/availabilityReport';
+import type { PlayerEntity, PlayerAttributes } from '../src/entities/types';
 
 let fail = 0;
 const check = (label: string, ok: boolean, detail = '') => {
@@ -151,6 +153,57 @@ console.log('\n🔗 A PONTE ATÉ O MOTOR\n');
   check('dar chance → moral maior → confiança maior no motor',
     moralTilt(depois).conf > moralTilt(antes).conf,
     `${moralTilt(antes).conf} → ${moralTilt(depois).conf}`);
+}
+
+// ── 6) A ponte que alcança PRODUÇÃO ───────────────────────────────────────
+// `moralTilt` só vive no caminho do motor Python, e esse caminho está
+// DESLIGADO em produção (VITE_QUICK_PLAN_ENABLED não definida). Quem roda de
+// verdade é o motor legado, que deriva força em `selectEffectiveTeamStrength`.
+{
+  const attrs = (v: number): PlayerAttributes => ({
+    passe: v, marcacao: v, velocidade: v, drible: v, finalizacao: v,
+    fisico: v, tatico: v, mentalidade: v, confianca: v, fairPlay: v,
+    cabeceio: v, bolaParada: v, penalti: v,
+  });
+  const POS = ['GOL', 'ZAG', 'ZAG', 'LE', 'LD', 'VOL', 'MC', 'MC', 'PE', 'PD', 'ATA'];
+  const players: Record<string, PlayerEntity> = {};
+  POS.forEach((pos, i) => {
+    const id = `p${i}`;
+    players[id] = {
+      id, num: i + 1, name: `J${i}`, pos, attrs: attrs(70),
+      fatigue: 0, injuryRisk: 0, outForMatches: 0, evolutionXp: 0,
+    } as unknown as PlayerEntity;
+  });
+  const moralAll = (v: number) => Object.fromEntries(Object.keys(players).map((id) => [id, { moral: v }]));
+
+  const semMoral = selectEffectiveTeamStrength({ players, health: undefined });
+  const neutra   = selectEffectiveTeamStrength({ players, health: undefined, moral: moralAll(50) });
+  const alta     = selectEffectiveTeamStrength({ players, health: undefined, moral: moralAll(100) });
+  const baixa    = selectEffectiveTeamStrength({ players, health: undefined, moral: moralAll(0) });
+
+  check('sem moral, nada muda (chamadores antigos intactos)',
+    semMoral.effectiveOverall === neutra.effectiveOverall, `${semMoral.effectiveOverall} vs ${neutra.effectiveOverall}`);
+  check('moral 50 é exatamente neutra', Math.abs(neutra.penalties.moral) < 1e-9, `${neutra.penalties.moral}`);
+  check('plantel empolgado joga MELHOR', alta.effectiveOverall > neutra.effectiveOverall,
+    `${alta.effectiveOverall.toFixed(2)} vs ${neutra.effectiveOverall.toFixed(2)}`);
+  check('plantel abatido joga PIOR', baixa.effectiveOverall < neutra.effectiveOverall,
+    `${baixa.effectiveOverall.toFixed(2)} vs ${neutra.effectiveOverall.toFixed(2)}`);
+  check('o efeito é simétrico',
+    Math.abs((alta.effectiveOverall - neutra.effectiveOverall) - (neutra.effectiveOverall - baixa.effectiveOverall)) < 1e-9);
+  check('e é PEQUENO — tempera, não decide (<= 2 OVR)',
+    alta.effectiveOverall - neutra.effectiveOverall <= 2 + 1e-9,
+    `${(alta.effectiveOverall - neutra.effectiveOverall).toFixed(2)}`);
+  check('o bônus não vira alavanca (piso -2 no total)',
+    alta.penalties.moral >= -2 - 1e-9, `${alta.penalties.moral}`);
+  check('moral inválida é ignorada',
+    selectEffectiveTeamStrength({ players, health: undefined, moral: moralAll(NaN) }).effectiveOverall === neutra.effectiveOverall);
+
+  // A corrente completa, ponta a ponta.
+  const depois = 50 + resolveRequest('minutes', 'grant').moralDelta;
+  const comResposta = selectEffectiveTeamStrength({ players, health: undefined, moral: moralAll(depois) });
+  check('dar chance → moral maior → XI mais forte em PRODUÇÃO',
+    comResposta.effectiveOverall > neutra.effectiveOverall,
+    `${comResposta.effectiveOverall.toFixed(2)} vs ${neutra.effectiveOverall.toFixed(2)}`);
 }
 
 console.log(fail === 0 ? '\n✅ TUDO VERDE\n' : `\n❌ ${fail} FALHA(S)\n`);

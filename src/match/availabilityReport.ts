@@ -84,6 +84,8 @@ export interface EffectiveTeamStrength {
     fatigue: number;
     contractWarning: number;
     forcedPosition: number;
+    /** Moral do plantel. NEGATIVO = empolgado, virou bônus. 0 sem dado. */
+    moral: number;
   };
 }
 
@@ -256,8 +258,21 @@ export function selectAvailabilityReport(args: {
 export function selectEffectiveTeamStrength(args: {
   players: Record<string, PlayerEntity>;
   health: Record<string, PlayerHealth> | undefined;
+  /**
+   * PONTE MORAL → MOTOR LEGADO (Fase 4).
+   *
+   * `state.playerMoral`. OPCIONAL de propósito: sem ela nada muda, então os
+   * chamadores que ainda não passam moral (auto, catch-up de liga, reducer)
+   * seguem com o comportamento exato de antes.
+   *
+   * Existe porque a primeira ponte (`moralTilt`, em quickPlanClient) só vive
+   * no caminho do motor Python — que está DESLIGADO em produção
+   * (`VITE_QUICK_PLAN_ENABLED` não definida). Sem isto, responder ao pedido do
+   * vestiário não mudaria nada em campo pra jogador nenhum.
+   */
+  moral?: Record<string, { moral: number }> | undefined;
 }): EffectiveTeamStrength {
-  const { players, health } = args;
+  const { players, health, moral } = args;
   const build = buildDefaultLineupWithMeta(players, { strictPosition: true });
   const starterIds = Object.values(build.lineup);
 
@@ -267,13 +282,14 @@ export function selectEffectiveTeamStrength(args: {
       effectiveOverall: 0,
       depletionMultiplier: 0,
       startersCounted: 0,
-      penalties: { fatigue: 0, contractWarning: 0, forcedPosition: 0 },
+      penalties: { fatigue: 0, contractWarning: 0, forcedPosition: 0, moral: 0 },
     };
   }
 
   let baseSum = 0;
   let fatiguePenalty = 0;
   let contractPenalty = 0;
+  let moralPenalty = 0;
   const forcedPositionCount = build.forcedExhaustedIds.length;
 
   for (const pid of starterIds) {
@@ -300,6 +316,15 @@ export function selectEffectiveTeamStrength(args: {
         contractPenalty += 1.5; // -1.5 OVR por starter em fim de contrato
       }
     }
+
+    // Moral: simétrica e pequena. 50 é neutro; 100 vale -2 (ou seja, +2 OVR
+    // de bônus) e 0 vale +2 de penalidade. Metade do teto da fadiga, porque
+    // moral TEMPERA — não decide. Mesmo princípio do `moralTilt`.
+    const m = moral?.[pid]?.moral;
+    if (typeof m === 'number' && Number.isFinite(m)) {
+      const clamped = Math.max(0, Math.min(100, m));
+      moralPenalty += ((50 - clamped) / 50) * 2;
+    }
   }
 
   const baseOverall = baseSum / starterIds.length;
@@ -308,8 +333,11 @@ export function selectEffectiveTeamStrength(args: {
   const avgContract = contractPenalty / starterIds.length;
   // Cada slot forçado custa -1.0 OVR no time (forçaram exausto pra cobrir).
   const avgForced = (forcedPositionCount * 1.0) / starterIds.length;
+  const avgMoral = moralPenalty / starterIds.length;
 
-  const totalPenalty = Math.min(8, avgFatigue + avgContract + avgForced);
+  // Piso -2: plantel empolgado ajuda, mas o bônus não pode virar alavanca.
+  // Teto 8: preservado do comportamento original.
+  const totalPenalty = Math.max(-2, Math.min(8, avgFatigue + avgContract + avgForced + avgMoral));
   const effectiveOverall = Math.max(0, baseOverall - totalPenalty);
   const depletionMultiplier = baseOverall > 0 ? effectiveOverall / baseOverall : 0;
 
@@ -322,6 +350,8 @@ export function selectEffectiveTeamStrength(args: {
       fatigue: avgFatigue,
       contractWarning: avgContract,
       forcedPosition: avgForced,
+      /** Negativo = plantel empolgado dando bônus. Zero quando `moral` não vem. */
+      moral: avgMoral,
     },
   };
 }
