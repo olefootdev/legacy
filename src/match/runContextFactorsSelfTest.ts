@@ -78,7 +78,7 @@ function approx(a: number, b: number, eps = 0.001): boolean {
       effectiveOverall: 76,
       depletionMultiplier: 0.95,
       startersCounted: 11,
-      penalties: { fatigue: 2, contractWarning: 1, forcedPosition: 1 },
+      penalties: { fatigue: 2, contractWarning: 1, forcedPosition: 1, moral: 0 },
     },
   });
   check('squadDepletion = EffectiveTeamStrength.depletionMultiplier', approx(mods.squadDepletion, 0.95));

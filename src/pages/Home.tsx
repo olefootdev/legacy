@@ -1,10 +1,7 @@
-import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, Flame, Search, X } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import { ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useGameDispatch, useGameStore } from '@/game/store';
-import { formatExp } from '@/systems/economy';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNextGlobalFixture } from '@/hooks/useNextGlobalFixture';
 import { getGlobalLeagueRankingEntries } from '@/ranking/globalLeagueRanking';
 import { makeInboxItem } from '@/game/inboxItem';
@@ -17,6 +14,9 @@ import { fetchMyPendingPvpResults, claimPvpMatchResult } from '@/supabase/pvpMat
 import { managerScoreToday } from '@/systems/managerScore/managerScore';
 import { roundOf } from '@/match/legendsCup/legendsCupModel';
 import { useTrackScreen } from '@/progression/trackEvent';
+import { useClubPulse } from '@/hooks/useClubPulse';
+import { track } from '@/analytics/track';
+import { resolveHomeMode, blockOrderFor, type HomeBlock } from './homeMode';
 import { HeroCinematic } from '@/components/home/HeroCinematic';
 import { HomeImageSlider } from '@/components/home/HomeImageSlider';
 import { NextMatchCard } from '@/components/home/NextMatchCard';
@@ -28,6 +28,8 @@ import { InheritanceModule } from '@/components/home/InheritanceModule';
 import { ManagerOfDay } from '@/components/home/ManagerOfDay';
 import { ReferralInvite } from '@/components/home/ReferralInvite';
 import { DailyMissions } from '@/components/home/DailyMissions';
+import { ClubFeed } from '@/components/home/ClubFeed';
+import { PlayerRequestCard } from '@/components/home/PlayerRequestCard';
 import { DivisionRanking } from '@/components/home/DivisionRanking';
 import { RankingTop10 } from '@/components/home/RankingTop10';
 import { LastGlobalChampion } from '@/components/home/LastGlobalChampion';
@@ -35,6 +37,9 @@ import { fetchListedLegacyPlayerRows, legacyPortraitImageUrl } from '@/supabase/
 import { overallFromAttributes } from '@/entities/player';
 import { fetchMyOffers } from '@/supabase/marketOffers';
 import type { PlayerAttributes, PlayerEntity } from '@/entities/types';
+
+/** Telemetria de abertura: 1× por carga da página, não por render. */
+let openingTracked = false;
 
 /** Hero — asset real do repositório (mesmo do antigo HomeHeroLegacy). */
 const HERO_IMAGE = '/hero-legacy-full.png';
@@ -44,8 +49,6 @@ const HERO_IMAGE = '/hero-legacy-full.png';
 export function Home() {
   useTrackScreen('screen_home');
   const dispatch = useGameDispatch();
-  const navigate = useNavigate();
-  const finance = useGameStore((s) => s.finance);
   const inbox = useGameStore((s) => s.inbox);
   const club = useGameStore((s) => s.club);
   const players = useGameStore((s) => s.players);
@@ -66,13 +69,14 @@ export function Home() {
   const favoriteRealTeam = useGameStore((s) => s.userSettings?.favoriteRealTeam ?? null);
   const dailyChallenges = useGameStore((s) => s.dailyChallenges);
   const streakChallenges = useGameStore((s) => s.streakChallenges);
-  // Viral #5 (saga) + #6 (rival fantasma): sequência viva + recorde a bater.
-  const quickStreak = useGameStore((s) => s.quickMatchStreak);
-  const quickBestWin = useGameStore((s) => s.quickBestWin);
   // REBRAND — pontuação do manager (eixo da Home nova).
   const managerScore = useGameStore((s) => s.managerScore);
   const legendsCup = useGameStore((s) => s.legendsCup);
-  const trainingPlans = useGameStore((s) => s.manager.trainingPlans);
+  // Fase 4 — pedido de jogador aguardando resposta (no máximo 1 por vez).
+  const playerRequests = useGameStore((s) => s.playerRequests);
+  // Flash de título/eliminação — efêmero, manda a Home entrar em modo festa.
+  const ligaOleResultFlash = useGameStore((s) => s.ligaOleResultFlash);
+  const legendsCupResultFlash = useGameStore((s) => s.legendsCupResultFlash);
 
   // Inicializa/renova engagement state quando user abre a Home.
   // Daily reseta por UTC day; streak por semana. Garante que o progress tracker
@@ -305,11 +309,166 @@ export function Home() {
 
   const cupSublabel = cupActive && cupPhaseLabel ? `Legends Cup · ${cupPhaseLabel}` : 'Legends Cup · comece agora';
 
+  // ── CLUB PULSE — seis sistemas invisíveis viram um número no cockpit ─────
+  const pulse = useClubPulse();
+
+  // ── MODO DA HOME — a tela reage ao estado do clube (Fase 1) ──────────────
+  // Nenhum bloco novo: só muda QUAL sobe pro topo. Ver src/pages/homeMode.ts.
+  const injuredCount = useMemo(
+    () => Object.values(players).filter((p) => (playerHealth?.[p.id]?.outForMatches ?? 0) > 0).length,
+    [players, playerHealth],
+  );
+  const hasResultFlash = !!(ligaOleResultFlash || legendsCupResultFlash);
+  const homeMode = useMemo(
+    () =>
+      resolveHomeMode({
+        nextKickoffMs: nextGlobal?.scheduledKickoffMs ?? null,
+        incomingOffersCount: incomingCount,
+        suspendedCount,
+        expiredCount,
+        injuredCount,
+        hasResultFlash,
+        nowMs,
+      }),
+    [nextGlobal, incomingCount, suspendedCount, expiredCount, injuredCount, hasResultFlash, nowMs],
+  );
+
+  // ── Telemetria de abertura (Fase 1) ──────────────────────────────────────
+  // Em que estado o clube abre, e qual modo a Home escolheu. É o que permite
+  // perguntar depois: quem abre "em crise" volta amanhã? O modo matchday
+  // realmente pega gente antes do jogo?
+  useEffect(() => {
+    if (openingTracked) return;
+    openingTracked = true;
+    track('pulse_seen', { value: pulse.value, band: pulse.band, trend: pulse.trend, drivers: pulse.drivers.length });
+    track('home_mode', { mode: homeMode, hasRequest: (playerRequests?.length ?? 0) > 0 });
+  }, [pulse, homeMode, playerRequests]);
+
+  // ── Blocos da Home ────────────────────────────────────────────────────────
+  // Cada entrada é um bloco que JÁ existia. O que a Fase 1 mudou é só a ORDEM:
+  // `blockOrderFor(homeMode)` decide o que sobe. Bloco sem dado devolve null e
+  // simplesmente não aparece — nenhum some da lista por decisão de layout.
+  const pendingRequest = playerRequests?.[0] ?? null;
+
+  const blocks: Record<HomeBlock, ReactNode> = {
+    // O vestiário fala. É a única decisão da Home que muda relação, moral e,
+    // por consequência, a obediência do jogador dentro de campo.
+    playerRequest: pendingRequest ? (
+      <PlayerRequestCard
+        key="playerRequest"
+        request={pendingRequest}
+        onChoose={(choice) =>
+          dispatch({ type: 'RESOLVE_PLAYER_REQUEST', requestId: pendingRequest.id, choice })
+        }
+      />
+    ) : null,
+
+    slider: <HomeImageSlider key="slider" />,
+
+    nextMatch: (
+      <NextMatchCard
+        key="nextMatch"
+        clubName={club.name}
+        opponentName={nextGlobal ? nextGlobal.opponentName : null}
+        kickoffMs={nextGlobal ? nextGlobal.scheduledKickoffMs : null}
+        isLive={nextRoundLabel === 'Agora'}
+        isNemesis={isNemesisNext}
+        myCrestUrl={matchdayHomeCrestUrl({ favoriteRealTeam })}
+        opponentCrestUrl={
+          nextGlobal?.opponentFavoriteTeamId != null ? localCrestUrl(nextGlobal.opponentFavoriteTeamId) : null
+        }
+      />
+    ),
+
+    // O clube contando o que fez — inbox tipado, que só vivia num dropdown.
+    feed: <ClubFeed key="feed" inbox={inbox} />,
+
+    managerDesk: (
+      <ManagerDesk
+        key="managerDesk"
+        suspendedCount={suspendedCount}
+        expiredCount={expiredCount}
+        offersCount={incomingCount}
+      />
+    ),
+
+    managerOfDay: leader ? (
+      <ManagerOfDay key="managerOfDay" clubName={leader.team} points={leader.points} overall={leader.overall} />
+    ) : null,
+
+    legends: <LegendsRail key="legends" legends={legends} />,
+
+    rankingTop10: <RankingTop10 key="rankingTop10" top={top10} myRow={myRow} myRank={myRank} />,
+
+    divisionRanking: (
+      <DivisionRanking
+        key="divisionRanking"
+        division={myDivision}
+        top={divisionTop10}
+        myRow={myRow}
+        myRank={myDivisionRank}
+        divisionSize={divisionEntries.length}
+      />
+    ),
+
+    lastChampion: <LastGlobalChampion key="lastChampion" />,
+
+    inheritance: inheritance ? (
+      <InheritanceModule key="inheritance" legend={inheritance.legend} jewel={inheritance.jewel} />
+    ) : null,
+
+    // A Resenha — o MUNDO. Seção editorial que sangra a largura com fundo
+    // próprio: é o terceiro tempo do ritmo de cor da Home (amarelo da Mesa →
+    // preto → editorial), em vez de mais um card igual aos de cima.
+    resenha: (
+      <section
+        key="resenha"
+        aria-label="A Resenha"
+        className="ole-bleed"
+        style={{ background: '#15130c', paddingBlock: 'clamp(22px, 5vw, 34px)' }}
+      >
+        <span className="ole-eyebrow-poster" style={{ fontSize: '12px' }}>
+          O mundo se mexeu
+        </span>
+        <h2
+          className="mb-4 mt-2 font-impact uppercase text-white"
+          style={{ fontSize: 'clamp(26px, 6vw, 40px)', lineHeight: 0.9, letterSpacing: '-0.01em' }}
+        >
+          A Resenha
+        </h2>
+
+        <MarketActivityFeed activities={marketActivities} maxVisible={5} />
+
+        <Link
+          to="/mercado/transfer"
+          className="mt-3 inline-flex min-h-[44px] items-center gap-1 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
+          style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+        >
+          Ir ao mercado
+          <ChevronRight className="w-4 h-4" aria-hidden />
+        </Link>
+      </section>
+    ),
+
+    // O par que fecha a Home: o que traz gente nova (indicação) e o que traz a
+    // pessoa de volta amanhã (missões). Cada um some sozinho quando não tem dado.
+    referralAndMissions: (
+      <div key="referralAndMissions" className="grid gap-4 min-[700px]:grid-cols-2">
+        <ReferralInvite />
+        <DailyMissions
+          challenges={dailyChallenges?.challenges ?? []}
+          streak={dailyChallenges?.streak}
+          onClaim={(challengeId) => dispatch({ type: 'CLAIM_CHALLENGE_REWARD', challengeId })}
+        />
+      </div>
+    ),
+  };
+
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
       <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col gap-4 px-3 sm:px-4">
 
-        {/* Dobra 1 — trailer cinematográfico do manager */}
+        {/* Dobra 1 — trailer cinematográfico do manager + CLUB PULSE */}
         <HeroCinematic
           clubName={club.name}
           managerName={managerFirstName}
@@ -320,106 +479,12 @@ export function Home() {
           heroImgOk={heroImgOk}
           onHeroError={() => setHeroImgOk(false)}
           cupSublabel={cupSublabel}
+          pulse={pulse}
         />
 
-        {/* Slider de destaques em largura total — logo abaixo do hero. */}
-        <HomeImageSlider />
-
-        {/* Próxima Partida — Liga Global + brasão do coração + countdown ao vivo.
-            Vem antes de tudo que é passivo: é a única coisa aqui com hora
-            marcada, então é a primeira que o manager precisa ver. */}
-        <NextMatchCard
-          clubName={club.name}
-          opponentName={nextGlobal ? nextGlobal.opponentName : null}
-          kickoffMs={nextGlobal ? nextGlobal.scheduledKickoffMs : null}
-          isLive={nextRoundLabel === 'Agora'}
-          isNemesis={isNemesisNext}
-          myCrestUrl={matchdayHomeCrestUrl({ favoriteRealTeam })}
-          opponentCrestUrl={
-            nextGlobal?.opponentFavoriteTeamId != null ? localCrestUrl(nextGlobal.opponentFavoriteTeamId) : null
-          }
-        />
-
-        {/* No topo agora — líder real do ranking (#1) */}
-        {leader ? (
-          <ManagerOfDay clubName={leader.team} points={leader.points} overall={leader.overall} />
-        ) : null}
-
-        {/* Lendas em Destaque — drops reais (legacy_players) */}
-        <LegendsRail legends={legends} />
-
-        {/* Ranking de Clubes — Top 10, aba Geral real */}
-        <RankingTop10 top={top10} myRow={myRow} myRank={myRank} />
-
-        {/* Mesa do Manager — pendências reais */}
-        <ManagerDesk
-          suspendedCount={suspendedCount}
-          expiredCount={expiredCount}
-          offersCount={incomingCount}
-        />
-
-        {/* Ranking da minha divisão — Top 10 da divisão + posição do manager.
-            Some sozinho se a liga ainda não classificou o clube. */}
-        <DivisionRanking
-          division={myDivision}
-          top={divisionTop10}
-          myRow={myRow}
-          myRank={myDivisionRank}
-          divisionSize={divisionEntries.length}
-        />
-
-        {/* Último Campeão da Liga Global — time + manager (dados reais) */}
-        <LastGlobalChampion />
-
-        {/* Herança (Messi→Yamal) — some quando não há lenda + joia */}
-        {inheritance ? (
-          <InheritanceModule legend={inheritance.legend} jewel={inheritance.jewel} />
-        ) : null}
-
-        {/* A Resenha — pulso do mundo via feed real de mercado.
-            Seção EDITORIAL que sangra a largura com fundo próprio: é o terceiro
-            tempo do ritmo de cor da Home (amarelo da Mesa → preto → editorial),
-            em vez de mais um card igual aos de cima. */}
-        <section
-          aria-label="A Resenha"
-          className="ole-bleed"
-          style={{ background: '#15130c', paddingBlock: 'clamp(22px, 5vw, 34px)' }}
-        >
-          <span className="ole-eyebrow-poster" style={{ fontSize: '12px' }}>
-            O mundo se mexeu
-          </span>
-          <h2
-            className="mb-4 mt-2 font-impact uppercase text-white"
-            style={{ fontSize: 'clamp(26px, 6vw, 40px)', lineHeight: 0.9, letterSpacing: '-0.01em' }}
-          >
-            A Resenha
-          </h2>
-
-          <MarketActivityFeed activities={marketActivities} maxVisible={5} />
-
-          <Link
-            to="/mercado/transfer"
-            className="mt-3 inline-flex min-h-[44px] items-center gap-1 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
-            style={{ fontSize: '10px', letterSpacing: '0.22em' }}
-          >
-            Ir ao mercado
-            <ChevronRight className="w-4 h-4" aria-hidden />
-          </Link>
-        </section>
-
-        {/* O par que fecha a Home: o que traz gente nova (indicação) e o que
-            traz a pessoa de volta amanhã (missões). Lado a lado no desktop,
-            empilhados no mobile. Cada um some sozinho quando não tem dado. */}
-        <div className="grid gap-4 min-[700px]:grid-cols-2">
-          <ReferralInvite />
-          <DailyMissions
-            challenges={dailyChallenges?.challenges ?? []}
-            streak={dailyChallenges?.streak}
-            onClaim={(challengeId) => dispatch({ type: 'CLAIM_CHALLENGE_REWARD', challengeId })}
-          />
-        </div>
+        {/* O resto da Home na ordem que o ESTADO do clube pede. */}
+        {blockOrderFor(homeMode).map((id) => blocks[id])}
       </div>
-
     </div>
   );
 }

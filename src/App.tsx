@@ -620,20 +620,27 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/legend/:id" element={<Legend />} />
             <Route path="/legend" element={<Legend />} />
             <Route path="/matchday/preview" element={<MatchdayPreview />} />
-            <Route path="/dev/penalty-preview" element={<PenaltyPreview />} />
-            <Route path="/dev/setpiece-preview" element={<SetPiecePreview />} />
-            <Route path="/dev/legacy-card" element={<LegacyCardPreview />} />
-            <Route path="/dev/ceremony-preview" element={<CeremonyPreview />} />
-            <Route path="/dev/field-view" element={<FieldViewPreview />} />
-            <Route path="/dev/agents-field" element={<AgentsFieldView />} />
-            <Route
-              path="/dev/agents-debug"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <AgentsDebugLog />
-                </Suspense>
-              }
-            />
+            {/* Laboratórios internos — SÓ em dev. Iam pra produção navegáveis
+                por qualquer jogador logado (10 rotas). `false` é ignorado pelo
+                createRoutesFromChildren do react-router, então o gate é seguro. */}
+            {import.meta.env.DEV && (
+              <>
+                <Route path="/dev/penalty-preview" element={<PenaltyPreview />} />
+                <Route path="/dev/setpiece-preview" element={<SetPiecePreview />} />
+                <Route path="/dev/legacy-card" element={<LegacyCardPreview />} />
+                <Route path="/dev/ceremony-preview" element={<CeremonyPreview />} />
+                <Route path="/dev/field-view" element={<FieldViewPreview />} />
+                <Route path="/dev/agents-field" element={<AgentsFieldView />} />
+                <Route
+                  path="/dev/agents-debug"
+                  element={
+                    <Suspense fallback={<RouteFallback />}>
+                      <AgentsDebugLog />
+                    </Suspense>
+                  }
+                />
+              </>
+            )}
             <Route path="/match/legacy" element={<FieldViewPreview />} />
             <Route path="/match" element={<LiveMatch />} />
             <Route path="/match/auto" element={<MatchAuto />} />
@@ -670,30 +677,34 @@ as a nice MVP. Let's Play Together! ⚽
             {/* Fullscreen match modes — sem GameShell (sem nav global) */}
             <Route path="/match/classic" element={<MatchClassic />} />
           </Route>
-          <Route
-            path="/dev/field-lab"
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <OleFieldLab />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/dev/field-lab/legacy"
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <OleFieldLabLegacy />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/dev/field-lab/aerea"
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <OleFieldLabAerea />
-              </Suspense>
-            }
-          />
+          {import.meta.env.DEV && (
+            <>
+              <Route
+                path="/dev/field-lab"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <OleFieldLab />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/dev/field-lab/legacy"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <OleFieldLabLegacy />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/dev/field-lab/aerea"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <OleFieldLabAerea />
+                  </Suspense>
+                }
+              />
+            </>
+          )}
           <Route
             path="/:inviteCode"
             element={

@@ -396,3 +396,29 @@ export function getCatalogEntry(event: ImpactEventKind): ImpactCatalogEntry {
 export function listImpactKinds(): ImpactEventKind[] {
   return Object.keys(IMPACT_CATALOG) as ImpactEventKind[];
 }
+
+// ─── Busca reversa: kind da consequência → template ─────────────────────
+//
+// O `PersistentConsequence` guarda só o `kind` do template (ex.: 'red_card_suspension')
+// — o `label` e o `description` ("por que isso aconteceu") ficam aqui, no catálogo.
+// A UI precisava do caminho de volta pra explicar ao manager o que a partida
+// causou, então este índice existe. Montado uma vez, na carga do módulo.
+
+const TEMPLATE_BY_KIND: Record<string, ConsequenceTemplate> = (() => {
+  const out: Record<string, ConsequenceTemplate> = {};
+  for (const entry of Object.values(IMPACT_CATALOG)) {
+    for (const tpl of [...(entry.player ?? []), ...(entry.club ?? [])]) {
+      out[tpl.kind] = tpl;
+    }
+  }
+  return out;
+})();
+
+/**
+ * Devolve o template de um `kind` de consequência — a fonte do rótulo curto e
+ * do texto longo de explicação. `undefined` para kinds que não nascem do
+ * catálogo (ex.: 'crowd_support_drop' criado à mão por ausência).
+ */
+export function templateForKind(kind: string): ConsequenceTemplate | undefined {
+  return TEMPLATE_BY_KIND[kind];
+}

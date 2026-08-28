@@ -290,13 +290,16 @@ function testCheckInAndAbsence(): void {
   // 50h: heavy
   const eval50 = evaluateAbsence(presence, t0 + 50 * MS_PER_HOUR);
   assert(eval50.tier === 'heavy_48h', '50h → heavy_48h');
-  assert(eval50.effect.randomInjuryCount === 2, 'Heavy: 2 lesões automáticas');
+  // [2026-08-26] Lesão automática desligada: a pressão migrou pro risco.
+  assert(eval50.effect.randomInjuryCount === 0, 'Heavy: nenhuma lesão automática');
+  assert(eval50.effect.injuryRiskAdditive >= 25, 'Heavy: risco de lesão elevado');
 
   // 100h: crise
   const eval100 = evaluateAbsence(presence, t0 + 100 * MS_PER_HOUR);
   assert(eval100.tier === 'crisis_72h', '100h → crisis_72h');
   assert(eval100.effect.starPlayerDepartureRisk, 'Estrelas considerando sair em crise');
-  assert(eval100.effect.crowdSupportDelta === -20, 'Apoio torcida -20% em crise');
+  assert(eval100.effect.crowdSupportDelta === -8, 'Apoio torcida -8% em crise (recalibrado de -20)');
+  assert(eval100.effect.randomInjuryCount === 0, 'Crise: nenhuma lesão automática');
 
   // Helper boundary 0h
   const at0 = getAbsenceTier(0);
@@ -471,17 +474,19 @@ function testAbsenceActiveEffects(): void {
     hoursAbsent: 52,
     now: t0,
   });
-  // Heavy: 2 lesões = 2 ImpactEvents → cada injury_light gera 2 templates
-  // (injury_light_out + physical_attr_drop_light) → 4 consequências de lesão
-  // + 1 crowd_support_drop = 5 total
+  // [2026-08-26] Heavy não gera mais lesão: só o esfriamento da torcida.
   const injuryCons = sideHeavy.consequences.filter((c) => c.kind.startsWith('injury_'));
-  assert(injuryCons.length === 2, 'Heavy: 2 lesões "out" geradas');
+  assert(injuryCons.length === 0, 'Heavy: nenhuma lesão "out" gerada');
   const crowdCons = sideHeavy.consequences.find((c) => c.kind === 'crowd_support_drop');
   assert(!!crowdCons, 'Heavy: crowd_support_drop gerada');
-  assert(crowdCons!.magnitude === -10, 'Heavy: crowd_support magnitude -10');
+  assert(crowdCons!.magnitude === -4, 'Heavy: crowd_support magnitude -4 (recalibrado de -10)');
+  assert(
+    crowdCons!.expiresAt - crowdCons!.startsAt === 12 * MS_PER_HOUR,
+    'Heavy: esfriamento dura 12h (recalibrado de 24h)',
+  );
   assert(sideHeavy.inboxItems.length === 1, 'Heavy: 1 item de inbox gerado');
 
-  // Crisis: 3 lesões + -20 crowd
+  // Crisis: zero lesão + torcida esfriando -8
   const sideCrisis = buildAbsenceSideEffects({
     managerId: 'mgr1',
     clubId: 'club1',
@@ -492,9 +497,9 @@ function testAbsenceActiveEffects(): void {
     now: t0,
   });
   const crisisInjuries = sideCrisis.consequences.filter((c) => c.kind.startsWith('injury_'));
-  assert(crisisInjuries.length === 3, 'Crisis: 3 lesões "out" geradas');
+  assert(crisisInjuries.length === 0, 'Crisis: nenhuma lesão "out" gerada');
   const crisisCrowd = sideCrisis.consequences.find((c) => c.kind === 'crowd_support_drop');
-  assert(crisisCrowd?.magnitude === -20, 'Crisis: crowd_support -20');
+  assert(crisisCrowd?.magnitude === -8, 'Crisis: crowd_support -8 (recalibrado de -20)');
 
   // Eligibles vazios: nenhuma lesão (sem jogadores disponíveis)
   const sideEmpty = buildAbsenceSideEffects({

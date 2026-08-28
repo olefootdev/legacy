@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Trophy, Swords, ChevronRight, ShieldX, Flame, Crown, CalendarDays, Skull, Medal, Share2, Star } from 'lucide-react';
+import { Trophy, Swords, ChevronRight, ShieldX, Flame, Crown, CalendarDays, Skull, Medal } from 'lucide-react';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { getEffectiveFatigue } from '@/systems/fatigue';
@@ -31,7 +31,8 @@ import {
 } from '@/match/ligaOle/ligaOleModel';
 import { formatCompactNumber } from '@/systems/economy';
 import { fetchMyReferralCode } from '@/supabase/referrals';
-import { shareImageWithText } from '@/lib/shareImage';
+import { MomentShareCard } from '@/components/moments/MomentShareCard';
+import { detectMoment, stageFromRoundName } from '@/systems/moments';
 import { LigaOlePreviewModal } from '@/components/ligaole/LigaOlePreviewModal';
 import { CinematicHero } from '@/components/CinematicHero';
 import {
@@ -128,77 +129,6 @@ function BracketCompact({ liga }: { liga: LigaOleState }) {
  * (Web Share API → imagem real + texto + link). Crescimento orgânico: quem
  * clica no texto/CTA cai no /cadastro/<código> e vira indicado.
  */
-function ChampionShareCard({ clubName, bestPlayer, referralCode }: {
-  clubName: string;
-  bestPlayer: { name: string; ovr: number } | null;
-  referralCode: string | null;
-}) {
-  const [shared, setShared] = useState<'idle' | 'done' | 'copied'>('idle');
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.com';
-  const referralUrl = referralCode ? `${origin}/cadastro/${referralCode}` : `${origin}/cadastro`;
-  const displayUrl = referralUrl.replace(/^https?:\/\//, '');
-  const shareMessage =
-    `🏆 ${clubName} é CAMPEÃO da Liga Ole no Olefoot!` +
-    (bestPlayer ? ` Craque: ${bestPlayer.name} (OVR ${bestPlayer.ovr}).` : '') +
-    ` Monta teu time e vem me enfrentar 👉 ${referralUrl}`;
-
-  const onShare = async () => {
-    const r = await shareImageWithText({
-      imageUrl: '/banner-campeao-liga-ole.png',
-      text: shareMessage,
-      fileName: 'campeao-liga-ole.png',
-      title: 'Campeão da Liga Ole',
-    });
-    if (r === 'shared') setShared('done');
-    else if (r === 'fallback') setShared('copied');
-  };
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-3">
-      <div className="relative w-full max-w-[340px] overflow-hidden"
-        style={{ borderRadius: 'var(--radius-md)', aspectRatio: '9 / 16', border: '2px solid rgba(201,162,39,0.55)', boxShadow: '0 12px 34px rgba(0,0,0,0.5)' }}>
-        <img src="/banner-campeao-liga-ole.png" alt={`${clubName} campeão da Liga Ole`} loading="eager"
-          className="absolute inset-0 h-full w-full object-cover" />
-        <div aria-hidden className="absolute inset-0"
-          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.1) 22%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.35) 64%, rgba(0,0,0,0.92) 100%)' }} />
-
-        <div className="absolute inset-x-4 top-9 z-10">
-          <p className="font-display uppercase mb-1" style={{ color: 'var(--color-neon-yellow)', fontSize: '10px', fontWeight: 800, letterSpacing: '0.26em' }}>Liga Ole · Mata-mata dos 32</p>
-          <p style={{ color: '#f7ecd2', fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: 'clamp(40px, 13vw, 60px)', lineHeight: 0.88, letterSpacing: '-0.03em' }}>É campeão!</p>
-          <p className="mt-1.5 text-white" style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '14px' }}>{clubName}</p>
-        </div>
-
-        <div className="absolute inset-x-4 bottom-4 z-10">
-          {bestPlayer && (
-            <div className="inline-flex items-center gap-2 mb-2.5 px-2.5 py-1.5"
-              style={{ borderRadius: 'var(--radius-sm)', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(253,225,0,0.4)' }}>
-              <Star className="w-3.5 h-3.5 text-neon-yellow" strokeWidth={2.5} aria-hidden />
-              <span style={{ color: '#f7ecd2', fontSize: '11px', fontWeight: 600 }}>Craque: <span className="text-white">{bestPlayer.name}</span> · OVR {bestPlayer.ovr}</span>
-            </div>
-          )}
-          <p className="mb-3" style={{ color: 'rgba(247,236,210,0.82)', fontSize: '11px', lineHeight: 1.5 }}>
-            Bati managers reais no chaveamento e levantei a taça. Você também consegue.
-          </p>
-          <a href={referralUrl} target="_blank" rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full"
-            style={{ padding: '11px', borderRadius: 'var(--radius-sm)', background: 'var(--color-neon-yellow)', color: '#1a1405', fontWeight: 800, fontSize: '13px', letterSpacing: '0.04em', textDecoration: 'none', fontFamily: 'var(--font-display)' }}>
-            <Trophy className="w-4 h-4" strokeWidth={2.5} aria-hidden /> CRIE SEU TIME AGORA
-          </a>
-          <p className="mt-1.5 text-center" style={{ color: 'rgba(253,225,0,0.85)', fontSize: '10px' }}>{displayUrl}</p>
-        </div>
-      </div>
-
-      <button type="button" onClick={onShare}
-        className="flex items-center justify-center gap-2 w-full max-w-[340px] border"
-        style={{ padding: '12px', borderRadius: 'var(--radius-sm)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'rgba(253,225,0,0.08)', color: 'var(--color-neon-yellow)', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '12px', letterSpacing: '0.1em' }}>
-        <Share2 className="w-4 h-4" strokeWidth={2.5} aria-hidden />
-        {shared === 'done' ? 'COMPARTILHADO!' : shared === 'copied' ? 'LINK COPIADO!' : 'COMPARTILHAR NAS REDES'}
-      </button>
-    </motion.div>
-  );
-}
-
-/** Section header editorial — rail amarelo 3×ALTO + Moret italic. */
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3">
@@ -262,11 +192,39 @@ export function LigaOle() {
   // Card de campeão viral: código de indicação (server) + craque do elenco.
   const [referralCode, setReferralCode] = useState<string | null>(null);
   useEffect(() => {
-    if (flash?.outcome !== 'champion') return;
+    // Busca o código sempre que há card pra compartilhar (título OU campanha épica).
+    if (!flash) return;
     let alive = true;
     fetchMyReferralCode().then((c) => { if (alive) setReferralCode(c); }).catch(() => {});
     return () => { alive = false; };
-  }, [flash?.outcome]);
+  }, [flash]);
+
+  /**
+   * MOMENTO da campanha (Fase 2). Antes o card viral só existia no TÍTULO —
+   * uma campanha que morria na semifinal não rendia print nenhum. Agora o
+   * detector classifica a corrida inteira: chegar longe já é raro, e a fase
+   * alcançada entra no peso.
+   *
+   * Só vira card a partir de ÉPICO (tier >= 2) quando não houve taça. O
+   * campeão sempre ganha o card — levantar caneco é o momento por definição.
+   */
+  const ligaOleMoment = useMemo(() => {
+    if (!flash) return null;
+    const isTitle = flash.outcome === 'champion';
+    const stage = isTitle ? 'final' : stageFromRoundName(flash.reachedRound);
+    const m = detectMoment({
+      competition: 'liga-ole',
+      homeScore: 0, awayScore: 0,
+      won: isTitle, draw: false, wasLosing: false,
+      possessionHome: 0, shotsHome: 0, bonusCount: 0,
+      cleanSheet: false, hattrick: false,
+      streak: 0,
+      stage,
+      isTitle,
+    });
+    if (isTitle) return m;
+    return m.tier >= 2 ? m : null;
+  }, [flash]);
 
   const bestPlayer = useMemo(() => {
     const all = Object.values(players ?? {});
@@ -428,11 +386,13 @@ export function LigaOle() {
       {!active && (
         <div className="flex flex-col gap-5">
           {/* Resultado da última campanha — só quando ACABOU de acontecer */}
-          {flash?.outcome === 'champion' && (
-            <ChampionShareCard
-              clubName={flash.clubName}
-              bestPlayer={bestPlayer}
+          {ligaOleMoment && (
+            <MomentShareCard
+              moment={ligaOleMoment}
+              clubName={flash!.clubName}
+              highlight={bestPlayer ? { label: 'Craque', name: bestPlayer.name, detail: `OVR ${bestPlayer.ovr}` } : null}
               referralCode={referralCode}
+              ctaLabel={flash!.outcome === 'champion' ? 'CRIE SEU TIME AGORA' : 'VEM TENTAR TAMBÉM'}
             />
           )}
           {flash?.outcome === 'eliminated' && (

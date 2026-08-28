@@ -56,6 +56,7 @@ import { QuickMatchFeed } from '@/components/matchquick/QuickMatchFeed';
 import { QuickMatchLineup } from '@/components/matchquick/QuickMatchLineup';
 import { QuickMatchHalftime } from '@/components/matchquick/QuickMatchHalftime';
 import { QuickMatchSummary } from '@/components/matchquick/QuickMatchSummary';
+import { MatchConsequences } from '@/components/match/MatchConsequences';
 import { QuickInteractiveMomentOverlay } from '@/components/matchquick/QuickInteractiveMomentOverlay';
 import { QuickPerformanceBonusPanel } from '@/components/matchquick/QuickPerformanceBonusPanel';
 import { QuickTacticalIntensityControls, QuickTacticalIntensityInfo } from '@/components/matchquick/QuickTacticalIntensityControls';
@@ -678,6 +679,8 @@ function MatchQuickLegacy() {
   const dispatch = useGameDispatch();
   const live = useGameStore((s) => s.liveMatch);
   const playersById = useGameStore((s) => s.players);
+  // PONTE Fase 4 — a moral do vestiário entra na força efetiva do XI.
+  const playerMoral = useGameStore((s) => s.playerMoral);
   const playerHealth = useGameStore((s) => s.playerHealth);
   // Derivados base — declarados aqui no topo para evitar TDZ em deps de hooks (effects/memos abaixo).
   const pitch = live?.homePlayers ?? [];
@@ -757,6 +760,12 @@ function MatchQuickLegacy() {
   const [session, setSession] = useState(0);
   const [halfTimeUi, setHalfTimeUi] = useState(false);
   const [summary, setSummary] = useState<EndSummary | null>(null);
+  /** playerId → nome, pro bloco de consequências dizer QUEM levou. */
+  const quickPlayerNames = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const p of Object.values(playersById)) out[p.id] = p.name;
+    return out;
+  }, [playersById]);
   const [showInstantRewards, setShowInstantRewards] = useState(false);
   const [selected, setSelected] = useState<PitchPlayerState | null>(null);
   const [subPickId, setSubPickId] = useState('');
@@ -2079,7 +2088,7 @@ function MatchQuickLegacy() {
     if (!fixture?.opponent || fixture.opponent.id === 'placeholder-opponent' || fixture.opponent.id === 'no-opponent-available') {
       return null;
     }
-    const effective = selectEffectiveTeamStrength({ players: playersById, health: playerHealth });
+    const effective = selectEffectiveTeamStrength({ players: playersById, health: playerHealth, moral: playerMoral });
     if (effective.startersCounted === 0) return null;
     const mods = computeMatchContextModifiers({
       isHome: true,
@@ -2106,7 +2115,7 @@ function MatchQuickLegacy() {
   const livePrediction = useMemo(() => {
     if (!live || live.phase !== 'playing') return null;
     if (!fixture?.opponent || fixture.opponent.id === 'placeholder-opponent' || fixture.opponent.id === 'no-opponent-available') return null;
-    const effective = selectEffectiveTeamStrength({ players: playersById, health: playerHealth });
+    const effective = selectEffectiveTeamStrength({ players: playersById, health: playerHealth, moral: playerMoral });
     if (effective.startersCounted === 0) return null;
     const mods = computeMatchContextModifiers({
       isHome: true,
@@ -4070,6 +4079,10 @@ function MatchQuickLegacy() {
               />
             </div>
           )}
+
+          {/* A CONTA DA PARTIDA (Fase 3.2) — mesmo bloco do caminho novo
+              (MatchQuickEngaged), pra o caminho legado não ficar cego. */}
+          <MatchConsequences playerNames={quickPlayerNames} />
 
           {/* CTAs — Legacy Tech */}
           <div className="flex flex-col gap-2 pt-1">

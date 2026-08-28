@@ -5,10 +5,57 @@
  * preenche o card, escurece pra baixo, e o bloco de texto fica ANCORADO NA BASE
  * (eyebrow + nome empilhado em Anton + pontuação inline + CTA). Compacto.
  * Dados reais por props; presentational puro.
+ *
+ * [Fase 1] Ganhou o CLUB PULSE: selo no canto superior direito com o número
+ * vivo do clube + as 3 forças que o explicam, logo abaixo da pontuação. É o
+ * único lugar do jogo onde torcida, forma, moral, comando e consequências
+ * aparecem juntos.
  */
 
 import { Link } from 'react-router-dom';
-import { Play } from 'lucide-react';
+import { Play, TrendingUp, TrendingDown } from 'lucide-react';
+import type { ClubPulse } from '@/systems/clubPulse';
+import { pulseColorToken, shouldShowTrend } from '@/systems/clubPulse';
+
+/** Selo do Pulse — número grande, band em rótulo, seta de tendência. */
+function PulseBadge({ pulse }: { pulse: ClubPulse }) {
+  const color = pulseColorToken(pulse.band);
+  // Ver `shouldShowTrend`: na crise a seta some — "Em crise ↑" se contradiz.
+  const TrendIcon = shouldShowTrend(pulse)
+    ? (pulse.trend === 'up' ? TrendingUp : TrendingDown)
+    : null;
+
+  return (
+    <div
+      className="absolute right-3 top-3 flex flex-col items-end"
+      aria-label={`Pulso do clube ${pulse.value} de 100 — ${pulse.label}`}
+    >
+      <span
+        className="font-display font-black uppercase text-white/50"
+        style={{ fontSize: '9px', letterSpacing: '0.24em' }}
+      >
+        Pulso
+      </span>
+      <span className="flex items-center gap-1 leading-none">
+        {/* ~30% menor que o desenho inicial: o Pulso INFORMA, mas o eixo do
+            rebrand é a pontuação do manager — os dois não podem disputar o olho. */}
+        <span
+          className="font-impact tabular-nums leading-[0.8]"
+          style={{ fontSize: 'clamp(22px, 5.5vw, 31px)', color }}
+        >
+          {pulse.value}
+        </span>
+        {TrendIcon ? <TrendIcon aria-hidden className="h-3 w-3" style={{ color }} strokeWidth={3} /> : null}
+      </span>
+      <span
+        className="font-display font-black uppercase"
+        style={{ fontSize: '9px', letterSpacing: '0.16em', color }}
+      >
+        {pulse.label}
+      </span>
+    </div>
+  );
+}
 
 export function HeroCinematic({
   clubName,
@@ -20,6 +67,7 @@ export function HeroCinematic({
   heroImgOk,
   onHeroError,
   cupSublabel,
+  pulse,
 }: {
   clubName: string;
   managerName: string;
@@ -30,6 +78,8 @@ export function HeroCinematic({
   heroImgOk: boolean;
   onHeroError: () => void;
   cupSublabel: string;
+  /** Estado vivo do clube. Ausente = clube sem dado suficiente (não renderiza). */
+  pulse?: ClubPulse;
 }) {
   // Nome empilhado (poster): cada palavra numa linha, igual ao aprovado.
   const nameLines = managerName.trim().split(/\s+/).slice(0, 2);
@@ -69,6 +119,8 @@ export function HeroCinematic({
         className="absolute inset-0"
         style={{ background: 'linear-gradient(180deg, transparent 30%, rgba(12,12,12,0.62) 64%, var(--color-deep-black) 100%)' }}
       />
+
+      {pulse ? <PulseBadge pulse={pulse} /> : null}
 
       {/* Bloco de texto ancorado na base */}
       <div className="relative">
@@ -127,6 +179,45 @@ export function HeroCinematic({
             </span>
           ) : null}
         </div>
+
+        {/* As 3 forças que explicam o Pulse — leitura de 1 segundo, sem página nova. */}
+        {pulse ? (
+          <ul className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1" aria-label="O que move o pulso">
+            {pulse.drivers.map((d) => (
+              <li
+                key={d.label}
+                className="inline-flex items-center gap-1 uppercase"
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  letterSpacing: '0.12em',
+                  padding: '3px 7px',
+                  borderRadius: 'var(--radius-pill)',
+                  background: 'rgba(255,255,255,0.06)',
+                  color: 'rgba(255,255,255,0.62)',
+                }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: '50%',
+                    background:
+                      d.direction === 'up'
+                        ? 'var(--color-neon-green)'
+                        : d.direction === 'down'
+                          ? 'var(--color-danger)'
+                          : 'rgba(255,255,255,0.35)',
+                  }}
+                />
+                <span className="text-white/85">{d.label}</span>
+                <span className="normal-case tracking-normal">{d.detail}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         {/* CTA dominante — única ação amarela */}
         <Link

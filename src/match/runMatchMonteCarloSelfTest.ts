@@ -73,14 +73,14 @@ function approx(a: number, b: number, eps = 0.01): boolean {
     homeTeamOvr: 80, awayTeamOvr: 70, n: 1000, seed: 13,
     effectiveHomeStrength: {
       baseOverall: 80, effectiveOverall: 80, depletionMultiplier: 1.0,
-      startersCounted: 11, penalties: { fatigue: 0, contractWarning: 0, forcedPosition: 0 },
+      startersCounted: 11, penalties: { fatigue: 0, contractWarning: 0, forcedPosition: 0, moral: 0 },
     },
   });
   const desfalcado = simulateMatchN({
     homeTeamOvr: 80, awayTeamOvr: 70, n: 1000, seed: 13,
     effectiveHomeStrength: {
       baseOverall: 80, effectiveOverall: 70, depletionMultiplier: 0.85,
-      startersCounted: 11, penalties: { fatigue: 4, contractWarning: 3, forcedPosition: 1 },
+      startersCounted: 11, penalties: { fatigue: 4, contractWarning: 3, forcedPosition: 1, moral: 0 },
     },
   });
   check(

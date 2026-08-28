@@ -2,9 +2,13 @@
  * OLEFOOT PYTHON MODE — Aplicação ativa das penalidades de ausência.
  *
  * Quando o manager volta após período longo fora, este módulo:
- *   - Gera lesões automáticas em jogadores aleatórios (conforme tier)
- *   - Cria consequência de queda de apoio da torcida (escopo clube)
+ *   - Cria consequência de esfriamento da torcida (escopo clube)
  *   - Cria mensagens de inbox para deixar visível o que aconteceu
+ *
+ * [2026-08-26] As lesões automáticas foram DESLIGADAS pela recalibração do
+ * `TIER_TABLE` (`randomInjuryCount: 0` em todas as tiers) — voltar e encontrar
+ * o plantel quebrado espantava mais do que retinha. A mecânica continua aqui,
+ * dormente: basta a tabela voltar a pedir lesão que este caminho reacende.
  *
  * Idempotente: usa `lastAbsenceTier` da presença pra não re-aplicar
  * múltiplas vezes a mesma tier.
@@ -103,7 +107,7 @@ export function buildAbsenceSideEffects(opts: ApplyOpts): AbsenceSideEffects {
   const events: ImpactEvent[] = [];
   const inboxItems: InboxItem[] = [];
 
-  // 1) Lesões automáticas
+  // 1) Lesões automáticas — DORMENTE (randomInjuryCount = 0 em toda a tabela).
   const injuredIds = pickRandomIds(
     opts.eligiblePlayerIds,
     opts.effect.randomInjuryCount,
@@ -120,7 +124,7 @@ export function buildAbsenceSideEffects(opts: ApplyOpts): AbsenceSideEffects {
     });
   }
 
-  // 2) Queda de apoio da torcida (só em moderate+; crisis tem -20% direto)
+  // 2) Torcida esfria (só em moderate+; magnitudes recalibradas em 2026-08-26)
   let crowdConsequence: PersistentConsequence | undefined;
   if (opts.effect.crowdSupportDelta < 0) {
     crowdConsequence = {
@@ -133,8 +137,9 @@ export function buildAbsenceSideEffects(opts: ApplyOpts): AbsenceSideEffects {
       magnitude: opts.effect.crowdSupportDelta,
       decayCurve: 'linear',
       startsAt: opts.now,
-      // Decai em 24h reais — manager tem 1 dia pra reconquistar
-      expiresAt: opts.now + 24 * MS_PER_HOUR,
+      // Decai em 12h reais. Era 24h: com o manager já de volta, arrastar a
+      // punição por um dia inteiro só azedava a sessão de retorno.
+      expiresAt: opts.now + 12 * MS_PER_HOUR,
       sourceEventId: `absence_${opts.tier}_${opts.now}`,
       metadata: { absenceTier: opts.tier, hoursAbsent: opts.hoursAbsent },
     };

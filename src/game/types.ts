@@ -486,6 +486,15 @@ export interface OlefootGameState {
    * Efeito aplicado via MatchContextModifiers enquanto a semana durar.
    */
   weeklyDecree?: import('@/systems/weeklyDecree').WeeklyDecreeState;
+  /**
+   * PERSONALIDADE MÍNIMA (Fase 4) — fila de pedidos de jogador ainda não
+   * respondidos. No máximo 1 por vez: o objetivo é uma decisão com peso, não
+   * uma caixa de entrada de reclamação.
+   *
+   * Derivado, não persistido no Supabase (v1 local): o pedido nasce do estado
+   * que já sincroniza (jogos, OVR, relação) e se resolve na mesma sessão.
+   */
+  playerRequests?: import('@/systems/playerPersonality').PlayerRequest[];
 }
 
 export type GameAction =
@@ -649,6 +658,12 @@ export type GameAction =
       expelledPlayerName: string;
     }
   | { type: 'FINALIZE_MATCH' }
+  /** Fase 4 — resposta do manager ao pedido de um jogador. */
+  | {
+      type: 'RESOLVE_PLAYER_REQUEST';
+      requestId: string;
+      choice: import('@/systems/playerPersonality').PlayerRequestChoice;
+    }
   /** Crédito da Partida Rápida 2.0 (motor Python) — progressão sem o loop tick. */
   | {
       type: 'FINALIZE_QUICK_PLAN';

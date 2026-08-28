@@ -54,6 +54,7 @@ import { QuickStreakChallengesPanel } from '@/components/matchquick/QuickStreakC
 import { calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
 import { QuickShareCard } from '@/components/matchquick/QuickShareCard';
 import { computeQuickRarity } from '@/match/quickRarity';
+import { MatchConsequences } from '@/components/match/MatchConsequences';
 import { fetchMyReferralCode } from '@/supabase/referrals';
 import { scarShootoutConfidenceDelta } from '@/systems/scars';
 import { nemesisIsDerby } from '@/match/rivalDerby';
@@ -67,6 +68,14 @@ export default function MatchQuickEngaged() {
   const navigate = useNavigate();
   const dispatch = useGameDispatch();
   const players = useGameStore((s) => s.players);
+  // Moral por jogador — ponte Fase 4 até os atributos enviados ao motor.
+  const playerMoral = useGameStore((s) => s.playerMoral);
+  /** playerId → nome, pro bloco de consequências dizer QUEM levou. */
+  const playerNames = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const p of Object.values(players)) out[p.id] = p.name;
+    return out;
+  }, [players]);
   const playerHealth = useGameStore((s) => s.playerHealth);
   const lineup = useGameStore((s) => s.lineup);
   const club = useGameStore((s) => s.club);
@@ -195,6 +204,8 @@ export default function MatchQuickEngaged() {
         const { input, homePlayers } = buildQuickPlanInputs({
           players,
           playerHealth,
+          // PONTE Fase 4 — a moral do vestiário chega ao motor.
+          moralById: playerMoral,
           lineup: lineup as Record<string, string>,
           homeShort: club.shortName,
           awayShort: opponent!.shortName,
@@ -686,6 +697,14 @@ export default function MatchQuickEngaged() {
                 </div>
               );
             })()}
+
+            {/* A CONTA DA PARTIDA (Fase 3.2) — o motor de consequências persistentes
+                já rodava em silêncio: cartão vira suspensão + moral abalado + multa,
+                hat-trick vira moral em alta + valor de mercado. Aqui o manager
+                finalmente VÊ a corrente causal do jogo que acabou de jogar. */}
+            <div className="mb-1">
+              <MatchConsequences playerNames={playerNames} />
+            </div>
 
             {/* EVOLUÇÃO DO TIME — o manager VÊ que não perdeu tempo: o time melhorou. */}
             {lastEvolution && (lastEvolution.risers.length > 0 || lastEvolution.teamOvrAfter > 0) && (() => {

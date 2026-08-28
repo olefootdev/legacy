@@ -55,6 +55,27 @@ function behaviorTilt(behavior: PlayerBehavior | undefined): {
   }
 }
 
+/**
+ * PONTE MORAL → MOTOR (Fase 4).
+ *
+ * A moral do jogador era um SSOT que só a UI lia: escrita a cada partida,
+ * mostrada em card, e ignorada pela simulação. Aqui ela vira sinal, no mesmo
+ * padrão do `behaviorTilt` acima — tilt PEQUENO nos atributos mentais, que é
+ * onde o estado de espírito realmente aparece em campo.
+ *
+ * É o que faz a decisão do vestiário pagar: responder ao pedido de um jogador
+ * mexe na moral dele, e a moral chega ao motor.
+ *
+ * Escala: moral 50 (neutro) = 0. moral 100 → +5 confiança / +2 mentalidade;
+ * moral 0 → −5 / −2. Deliberadamente menor que o tilt de comportamento não ser:
+ * moral tempera, não decide.
+ */
+export function moralTilt(moral: number | undefined): { conf: number; men: number } {
+  if (moral == null || !Number.isFinite(moral)) return { conf: 0, men: 0 };
+  const delta = (Math.max(0, Math.min(100, moral)) - 50) / 50; // -1 … +1
+  return { conf: Math.round(delta * 5), men: Math.round(delta * 2) };
+}
+
 export interface FetchQuickPlanInput {
   seed: string;
   homeShort: string;
@@ -89,8 +110,11 @@ export function playerToQuickPlanPayload(
   p: PlayerEntity,
   fatigue: number,
   role: 'attack' | 'mid' | 'def' | 'gk',
+  /** Moral 0–100 (`state.playerMoral[id].moral`). Ausente = neutro. */
+  moral?: number,
 ): QuickPlanPlayerPayload {
   const t = behaviorTilt(p.behavior);
+  const mt = moralTilt(moral);
   const clamp = (v: number) => Math.max(1, Math.min(99, Math.round(v)));
   return {
     id: p.id,
@@ -102,10 +126,10 @@ export function playerToQuickPlanPayload(
     marcacao: clamp(p.attrs.marcacao + t.mar),
     velocidade: clamp(p.attrs.velocidade + t.vel),
     fisico: clamp(p.attrs.fisico + t.fis),
-    confianca: p.attrs.confianca,
+    confianca: clamp(p.attrs.confianca + mt.conf),
     drible: clamp(p.attrs.drible + t.dri),
     tatico: clamp(p.attrs.tatico + t.tat),
-    mentalidade: p.attrs.mentalidade,
+    mentalidade: clamp(p.attrs.mentalidade + mt.men),
     fair_play: p.attrs.fairPlay,
     fatigue,
   };

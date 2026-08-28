@@ -91,6 +91,12 @@
     "test:style-evolution": "tsx scripts/test-style-evolution.ts",
     "test:market-offers-reducer": "tsx scripts/test-market-offers-reducer.ts",
     "test:quatro-divisoes": "tsx scripts/test-quatro-divisoes.ts",
+    "test:club-pulse": "tsx scripts/test-club-pulse.ts",
+    "test:absence-penalty": "tsx scripts/test-absence-penalty.ts",
+    "test:moments": "tsx scripts/test-moments.ts",
+    "test:match-consequences": "tsx scripts/test-match-consequences.ts",
+    "test:player-personality": "tsx scripts/test-player-personality.ts",
+    "test:analytics": "tsx scripts/test-analytics.ts",
     "lint:all": "npm run lint && npm run lint:revela"
   },
   "dependencies": {
