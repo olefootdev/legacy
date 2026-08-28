@@ -26,9 +26,21 @@ export interface ManagerPresence {
   engagementScore?: number;
 }
 
+/**
+ * Presença zerada — o estado de quem NUNCA fez check-in.
+ *
+ * `lastLoginAt: 0` é intencional (era `Date.now()`, e isso era um bug): com o
+ * timestamp de agora, `recordCheckIn` via a janela de 5 min como "mesma sessão"
+ * e NÃO contava a primeira — todo manager começava a carreira uma sessão a
+ * menos, pra sempre, e isso descontava pontos no `computeEngagementScore`.
+ *
+ * Zero é seguro: todo leitor de `lastLoginAt` já trata o valor falsy (ver
+ * `hoursSinceLastLogin`, `isFirstLoginToday`), e o valor nunca escapa daqui —
+ * `recordCheckIn` o sobrescreve na mesma expressão. Bônus: a fábrica virou pura.
+ */
 export const EMPTY_PRESENCE = (managerId: string): ManagerPresence => ({
   managerId,
-  lastLoginAt: Date.now(),
+  lastLoginAt: 0,
   totalSessions: 0,
   bonusStreakSlots: 0,
 });
