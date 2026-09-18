@@ -28,6 +28,16 @@ export const REFERRAL_ELIGIBLE_SOURCES: readonly string[] = [
 /**
  * Preço de venda interno do token OLE em USD.
  * IMUTÁVEL — qualquer alteração requer decisão explícita do fundador.
+ *
+ * ÚNICA FONTE DE PREÇO DO TOKEN NO CÓDIGO (Onda 0, 2026-09-01).
+ * Até esta data existia um segundo módulo, `economy/tokenEconomyConfig.ts`, que
+ * lia `token_economy_config` do banco e dizia ser o canônico — com $0,00001,
+ * dez vezes este valor. Ele não tinha um único consumidor: a página de Rede
+ * chamava `getTokenPrice()` e jogava o resultado fora. Foi removido.
+ *
+ * A tabela e o RPC `get_token_price` continuam no banco, ociosos, com a linha
+ * `current` ainda em 0,00001 — reconciliar quando o token real existir (Onda 3),
+ * que é quando um preço formado por mercado passa a fazer sentido.
  */
 export const OLE_INTERNAL_PRICE_USD = 0.000001;
 
