@@ -1,5 +1,18 @@
+# CSP ainda em Report-Only. Critério pra passar a BLOQUEAR (A VIRADA · E2):
+# 7 dias seguidos sem linha nova em public.csp_reports que não seja ruído
+# conhecido (extensão de navegador). A tela das palavras da carteira embutida
+# (C4) só pode existir com a CSP bloqueando.
+#
+# Relatórios de 2026-09-19, o primeiro dia com destino:
+#   · connect-src → br.dolarapi.com (/mercado/transfer, /wallet): RESOLVIDO na
+#     raiz — a cotação passou a vir de GET /api/quote/usd-brl, no nosso
+#     servidor. O terceiro saiu do navegador em vez de entrar na lista.
+#   · script-src-elem → static.cloudflareinsights.com (/, /login): é o beacon
+#     do Web Analytics, injetado pelo próprio Cloudflare Pages. Liberado abaixo
+#     (o POST do beacon vai pra /cdn-cgi/rum, na própria origem, já coberto por
+#     'self'). Pra tirar da lista é preciso desligar o Web Analytics no painel.
 /*
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://xtuveikgwlgbcleloxia.supabase.co wss://xtuveikgwlgbcleloxia.supabase.co https://legacy-production-de1e.up.railway.app; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; report-uri https://legacy-production-de1e.up.railway.app/api/csp-report; report-to csp
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://xtuveikgwlgbcleloxia.supabase.co wss://xtuveikgwlgbcleloxia.supabase.co https://legacy-production-de1e.up.railway.app; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; report-uri https://legacy-production-de1e.up.railway.app/api/csp-report; report-to csp
   Reporting-Endpoints: csp="https://legacy-production-de1e.up.railway.app/api/csp-report"
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
