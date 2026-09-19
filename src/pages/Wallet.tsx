@@ -12,6 +12,7 @@ import { SquadValuationCard } from './wallet/SquadValuationCard';
 import { TrophyShowcase } from './wallet/TrophyShowcase';
 import { PlayerWatchlist } from './wallet/PlayerWatchlist';
 import { WalletQuickActions, type QuickAction } from './wallet/WalletQuickActions';
+import { SolanaWalletCard } from './wallet/SolanaWalletCard';
 import {
   useSquadValuation,
   useTopSquadPlayers,
@@ -187,6 +188,9 @@ export function Wallet() {
 
       {/* ── QUICK ACTIONS (Revolut-style strip) ──────────────────── */}
       <WalletQuickActions actions={quickActions} />
+
+      {/* ── CARTEIRA SOLANA (vínculo, não é claim real ainda) ─────── */}
+      <SolanaWalletCard />
 
       {/* ── PATRIMÔNIO ESPORTIVO (Squad Valuation — dados reais) ── */}
       <SquadValuationCard
