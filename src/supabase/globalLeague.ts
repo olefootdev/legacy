@@ -60,9 +60,9 @@ export async function registerGlobalTeamIdentity(opts: {
       }
       return { ok: true };
     }
-    const { data: stateRow } = await supabase
-      .from('global_league_state').select('status').eq('id', 'current').maybeSingle();
-    const leagueActive = (stateRow as { status: string } | null)?.status === 'active';
+    // Sem `division`: a Edge põe time sem divisão na porta de entrada
+    // (ENTRY_DIVISION, a de baixo) e só gera partidas mid-season pra quem está
+    // nela — mandar uma divisão daqui deixava o time sem jogos até o reset.
     const { error: insErr } = await supabase
       .from('global_league_teams')
       .insert({
@@ -73,7 +73,6 @@ export async function registerGlobalTeamIdentity(opts: {
         overall: opts.overall,
         registered_at: new Date(opts.registeredAt ?? Date.now()).toISOString(),
         ...(opts.favoriteTeamId != null ? { favorite_team_id: opts.favoriteTeamId } : {}),
-        ...(leagueActive ? { division: 3 } : {}),
       });
     if (insErr) {
       console.warn('[globalLeague] registerGlobalTeamIdentity insert error:', insErr.message);
