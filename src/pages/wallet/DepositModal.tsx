@@ -3,7 +3,6 @@ import { motion } from 'motion/react';
 import { X, Landmark, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { OlefootUsdBrlQuoteState } from '@/wallet/olefootUsdBrlQuote';
-import { OLEFOOT_BRL_MARKUP } from '@/wallet/olefootUsdBrlQuote';
 
 function fmtBrl(n: number): string {
   return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -134,12 +133,15 @@ export function DepositModal({
                 R$ 1 ≈ {fmtBrl(1 / quote.olefootVenda)} BRO
               </p>
               <p className="text-[10px] leading-relaxed text-cimento">
-                Referência API: R$ {fmtBrl(quote.apiVenda)} + {(OLEFOOT_BRL_MARKUP * 100).toFixed(0)}% custos operacionais.
+                {/* A margem sai da própria cotação (servidor), não de uma constante
+                    copiada aqui — copiada, ela divergiria em silêncio. */}
+                Referência API: R$ {fmtBrl(quote.apiVenda)} +{' '}
+                {Math.round((quote.olefootVenda / quote.apiVenda - 1) * 100)}% custos operacionais.
                 Base 1 BRO ≈ 1 USD.
               </p>
-              {quote.updatedAt && (
+              {quote.fetchedAt && (
                 <p className="font-mono text-[9.5px] text-poeira">
-                  Cotação atualizada: {fmtQuoteUpdated(quote.updatedAt)}
+                  Cotação consultada: {fmtQuoteUpdated(quote.fetchedAt)}
                 </p>
               )}
             </div>

@@ -14,10 +14,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-const BR_DOLAR_API_URL = 'https://br.dolarapi.com/v1/cotacoes';
-
-/** Margem Olefoot sobre a cotação de referência. Espelha OLEFOOT_BRL_MARKUP no front. */
-const OLEFOOT_BRL_MARKUP = 0.05;
+import { fetchUsdBrlVenda } from './usdBrlQuote.js';
 
 const ATTR_KEYS = [
   'passe', 'marcacao', 'velocidade', 'drible', 'finalizacao',
@@ -83,18 +80,6 @@ function overallFromAttributes(a: PlayerAttrs, pos?: string | null): number {
   let w = 0;
   for (const k of ATTR_KEYS) w += a[k] * weights[k];
   return Math.round(Math.min(99, Math.max(40, w)));
-}
-
-/** Cotação USD→BRL (venda) já com a margem Olefoot. Lança se a API falhar. */
-async function fetchUsdBrlVenda(): Promise<number> {
-  const res = await fetch(BR_DOLAR_API_URL);
-  if (!res.ok) throw new Error(`cotação indisponível (${res.status})`);
-  const rows = (await res.json()) as Array<{ moeda?: string; venda?: number }>;
-  const usd = Array.isArray(rows) ? rows.find((r) => r.moeda === 'USD') : undefined;
-  if (!usd || typeof usd.venda !== 'number' || !Number.isFinite(usd.venda) || usd.venda <= 0) {
-    throw new Error('resposta da API sem USD');
-  }
-  return Math.round(usd.venda * (1 + OLEFOOT_BRL_MARKUP) * 10_000) / 10_000;
 }
 
 /**

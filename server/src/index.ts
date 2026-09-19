@@ -9,6 +9,7 @@ import { csrfGuard, securityHeaders } from './lib/securityMiddleware.js';
 import { bodyLimit } from './lib/inputGuards.js';
 import { gameSpiritRoutes } from './routes/gameSpirit.js';
 import { healthRoutes } from './routes/health.js';
+import { quoteRoutes } from './routes/quote.js';
 import { paymentsRoutes } from './routes/payments.js';
 import { matchPlanRoutes } from './routes/matchPlan.js';
 import { quickNarrateRoutes } from './routes/quickNarrate.js';
@@ -112,6 +113,7 @@ app.route('/', cspReportRoutes);
 app.use('*', csrfGuard);
 
 app.route('/', healthRoutes);
+app.route('/', quoteRoutes);
 app.route('/', paymentsRoutes);
 app.route('/', matchPlanRoutes);
 app.route('/', quickNarrateRoutes);

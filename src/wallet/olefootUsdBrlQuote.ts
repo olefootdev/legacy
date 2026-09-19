@@ -1,14 +1,21 @@
-/** Margem Olefoot sobre a cotação de referência (custos operacionais). */
-export const OLEFOOT_BRL_MARKUP = 0.05;
+import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 
-const BR_DOLAR_API_URL = 'https://br.dolarapi.com/v1/cotacoes';
+/**
+ * A cotação vem do NOSSO servidor (GET /api/quote/usd-brl), não do terceiro.
+ * Dois motivos: a CSP bloqueia `br.dolarapi.com` no navegador (relatório real
+ * de 2026-09-19 em /mercado/transfer e /wallet — sem isto, o card de R$ some da
+ * vitrine e aparece com preço em OLE, que é a moeda errada), e é o mesmo número
+ * que o servidor usa pra cobrar: tela e cobrança não podem divergir.
+ */
+const QUOTE_PATH = '/api/quote/usd-brl';
 
-type BrCotacaoRow = {
-  moeda: string;
-  nome?: string;
-  compra: number;
-  venda: number;
-  dataAtualizacao?: string;
+type QuoteResponse = {
+  ok?: boolean;
+  apiCompra?: number;
+  apiVenda?: number;
+  olefootCompra?: number;
+  olefootVenda?: number;
+  fetchedAt?: string;
 };
 
 export type OlefootUsdBrlQuoteOk = {
@@ -19,7 +26,8 @@ export type OlefootUsdBrlQuoteOk = {
   olefootCompra: number;
   /** Venda API + margem Olefoot (BRL por 1 USD) — referência principal para depósito PIX. */
   olefootVenda: number;
-  updatedAt: string | null;
+  /** Quando o servidor buscou a cotação (o carimbo do terceiro é inconfiável). */
+  fetchedAt: string | null;
 };
 
 export type OlefootUsdBrlQuoteState =
@@ -28,39 +36,27 @@ export type OlefootUsdBrlQuoteState =
   | { status: 'error'; message: string }
   | OlefootUsdBrlQuoteOk;
 
-export function applyOlefootMarkup(brlPerUsd: number): number {
-  return Math.round(brlPerUsd * (1 + OLEFOOT_BRL_MARKUP) * 10_000) / 10_000;
-}
-
-export async function fetchBrUsdCotacao(): Promise<{
-  compra: number;
-  venda: number;
-  updatedAt: string | null;
-}> {
-  const res = await fetch(BR_DOLAR_API_URL);
+export async function fetchOlefootUsdBrlQuote(): Promise<OlefootUsdBrlQuoteOk> {
+  const res = await fetch(`${olefootApiBase()}${QUOTE_PATH}`);
   if (!res.ok) {
     throw new Error(`Cotação indisponível (${res.status})`);
   }
-  const rows = (await res.json()) as BrCotacaoRow[];
-  const usd = rows.find((r) => r.moeda === 'USD');
-  if (!usd || typeof usd.compra !== 'number' || typeof usd.venda !== 'number') {
-    throw new Error('Resposta da API sem USD');
+  const data = (await res.json()) as QuoteResponse;
+  const { apiCompra, apiVenda, olefootCompra, olefootVenda } = data;
+  if (
+    data.ok !== true ||
+    ![apiCompra, apiVenda, olefootCompra, olefootVenda].every(
+      (n) => typeof n === 'number' && Number.isFinite(n) && n > 0,
+    )
+  ) {
+    throw new Error('Resposta da cotação inválida');
   }
   return {
-    compra: usd.compra,
-    venda: usd.venda,
-    updatedAt: usd.dataAtualizacao ?? null,
-  };
-}
-
-export async function fetchOlefootUsdBrlQuote(): Promise<OlefootUsdBrlQuoteOk> {
-  const raw = await fetchBrUsdCotacao();
-  return {
     status: 'ok',
-    apiCompra: raw.compra,
-    apiVenda: raw.venda,
-    olefootCompra: applyOlefootMarkup(raw.compra),
-    olefootVenda: applyOlefootMarkup(raw.venda),
-    updatedAt: raw.updatedAt,
+    apiCompra: apiCompra!,
+    apiVenda: apiVenda!,
+    olefootCompra: olefootCompra!,
+    olefootVenda: olefootVenda!,
+    fetchedAt: data.fetchedAt ?? null,
   };
 }
