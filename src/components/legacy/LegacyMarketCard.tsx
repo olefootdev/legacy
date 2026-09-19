@@ -48,6 +48,7 @@ export function LegacyMarketCard({
   pixReady,
   lot,
   owned,
+  tag,
   onOpen,
 }: {
   row: LegacyPlayerRow;
@@ -57,6 +58,10 @@ export function LegacyMarketCard({
   pixReady: boolean;
   lot?: LegacyLotInfo;
   owned: boolean;
+  /** Fase/edição da carta (#revelação, #consolidação, #expansão). Na grade do
+   *  mercado é o que diferencia as cartas do MESMO atleta — antes isso vivia no
+   *  título da seção, que sumiu junto com o agrupamento por atleta. */
+  tag?: string | null;
   onOpen: () => void;
 }) {
   const tier = tierOf(row, ovr);
@@ -224,9 +229,12 @@ export function LegacyMarketCard({
               <h3 className="truncate font-display font-extrabold uppercase leading-[0.96] text-white" style={{ fontSize: 20, letterSpacing: '0.01em' }}>
                 {row.name}
               </h3>
-              <p className="mt-0.5 font-display font-bold uppercase text-white/60" style={{ fontSize: 9, letterSpacing: '0.16em' }}>
+              <p className="mt-0.5 truncate font-display font-bold uppercase text-white/60" style={{ fontSize: 9, letterSpacing: '0.16em' }}>
                 {row.pos} · {row.country ?? '—'}
               </p>
+              {tag && (
+                <p className="mt-0.5 truncate font-mono text-[10.5px] font-medium text-white/50">{tag}</p>
+              )}
             </div>
           </div>
 

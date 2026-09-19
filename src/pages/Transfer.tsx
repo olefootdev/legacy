@@ -3,7 +3,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search,
-  Filter,
   Gavel,
   Clock,
   X,
@@ -23,6 +22,7 @@ import { overallFromAttributes } from '@/entities/player';
 import { fetchListedGenesisEntitiesByCatalogId, fetchGenesisMarketAuctionCards } from '@/supabase/genesisMarket';
 import { fetchOtherManagerListings, type OtherManagerListing } from '@/supabase/academyManagers';
 import { TransferLegaciesTab } from './TransferLegaciesTab';
+import { MARKET_POSITIONS, MARKET_SORTS, type SortKey } from '@/transfer/marketFilters';
 import {
   fetchListedLegacyPlayerRows,
   legacyRowToPlayerEntity,
@@ -183,16 +183,8 @@ function initialDiscoveryVisibleMap(): Record<'highlights' | 'fresh' | 'valuable
   };
 }
 
-/** Ordenar “tempo restante” do leilão (mock HH:MM:SS) para rails de oportunidade. */
-function timeLeftToSeconds(timeLeft: string): number {
-  const parts = timeLeft.trim().split(':').map((x) => Number(x));
-  if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return 24 * 3600;
-  const [h, m, s] = parts as [number, number, number];
-  return h * 3600 + m * 60 + s;
-}
-
-const POSITIONS = ['ATA', 'PD', 'PE', 'MEI', 'MC', 'VOL', 'LE', 'LD', 'ZAG', 'GOL'];
-const NATIONS = ['BR', 'PT', 'ES', 'FR', 'AR', 'UY'];
+// Ordem do campo (gol → ataque): é assim que o manager lê uma escalação.
+const POSITIONS = MARKET_POSITIONS;
 
 /** `card`: EXP sempre com valor integral (pt-BR), sem 680k / 2,5M — evita erro de leitura no card. */
 function formatAuctionDisplay(
@@ -339,8 +331,6 @@ function featuredBoxesPlayersForTab(tab: HeroTab, pool: MockAuctionPlayer[]): Mo
 
 export function Transfer() {
   useTrackScreen('screen_transfer');
-  const [showFilters, setShowFilters] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
   const [purchaseCompleteBanner, setPurchaseCompleteBanner] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
@@ -463,27 +453,16 @@ export function Transfer() {
   }, [genesisAuctionCards, managerAuctionCards, ownedGenesisCatalogIds]);
 
   // Filters State
-  type SortKey = 'relevance' | 'value_desc' | 'price_asc' | 'new' | 'deals';
-  const [filters, setFilters] = useState<{
-    pos: string;
-    nat: string;
-    name: string;
-    /** Vazio = todas as moedas. */
-    currency: '' | AuctionCurrency;
-    sort: SortKey;
-  }>({
+  /** Nome + posição + ordem. Nacionalidade e moeda saíram junto com o painel
+      sanfonado: eram dois selects que ninguém abria (o painel vinha fechado) e
+      a base não tem nacionalidade variada o bastante pra justificar o filtro. */
+  const [filters, setFilters] = useState<{ pos: string; name: string; sort: SortKey }>({
     pos: '',
-    nat: '',
     name: '',
-    currency: '',
     sort: 'relevance',
   });
-
-  useEffect(() => {
-    if (!showSearch) return;
-    const id = requestAnimationFrame(() => searchInputRef.current?.focus());
-    return () => cancelAnimationFrame(id);
-  }, [showSearch]);
+  const filtroAtivo = Boolean(filters.pos || filters.name.trim() || filters.sort !== 'relevance');
+  const limparFiltros = () => setFilters({ pos: '', name: '', sort: 'relevance' });
 
   const nameQueryNorm = filters.name.trim().toLowerCase();
 
@@ -491,27 +470,26 @@ export function Transfer() {
     () =>
       auctionPool.filter((p) => {
         if (filters.pos && p.pos !== filters.pos) return false;
-        if (filters.nat && p.nat !== filters.nat) return false;
-        if (filters.currency && p.auctionCurrency !== filters.currency) return false;
         if (nameQueryNorm && !p.name.toLowerCase().includes(nameQueryNorm)) return false;
         return true;
       }),
-    [auctionPool, filters.pos, filters.nat, filters.currency, nameQueryNorm],
+    [auctionPool, filters.pos, nameQueryNorm],
   );
 
-  /** Aplica busca por nome (alfabética) OU ordenação explícita (ecommerce-style). */
+  /** Ordenação escolhida pelo manager. A busca por nome FILTRA, não reordena:
+      antes ela forçava A–Z por baixo do pano e o botão "mais baratos" parava de
+      valer assim que se digitava uma letra. Quem quer A–Z clica em A–Z. */
   const gridPlayers = useMemo(() => {
     const list = [...filteredPlayers];
-    if (nameQueryNorm) {
-      list.sort((a, b) => {
-        const byName = a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' });
-        if (byName !== 0) return byName;
-        if (b.ovr !== a.ovr) return b.ovr - a.ovr;
-        return a.id - b.id;
-      });
-      return list;
-    }
     switch (filters.sort) {
+      case 'name_asc':
+        list.sort((a, b) => {
+          const byName = a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' });
+          if (byName !== 0) return byName;
+          if (b.ovr !== a.ovr) return b.ovr - a.ovr;
+          return a.id - b.id;
+        });
+        break;
       case 'value_desc':
         list.sort((a, b) => b.buyNow - a.buyNow);
         break;
@@ -521,16 +499,13 @@ export function Transfer() {
       case 'new':
         list.sort((a, b) => b.id - a.id);
         break;
-      case 'deals':
-        list.sort((a, b) => timeLeftToSeconds(a.timeLeft) - timeLeftToSeconds(b.timeLeft));
-        break;
       case 'relevance':
       default:
         list.sort((a, b) => b.ovr - a.ovr);
         break;
     }
     return list;
-  }, [filteredPlayers, nameQueryNorm, filters.sort]);
+  }, [filteredPlayers, filters.sort]);
 
   /** Dentro do resultado atual, quantos anúncios compartilham o mesmo nome (para mostrar 1/3, 2/3…). */
   const homonymRankById = useMemo(() => {
@@ -550,9 +525,7 @@ export function Transfer() {
   }, [gridPlayers]);
 
   /** Sem filtros/sort nem busca: vitrine horizontal (escala). Com filtros ou sort não-default: grelha clássica. */
-  const isFiltered = Boolean(
-    filters.pos || filters.nat || filters.currency || nameQueryNorm || filters.sort !== 'relevance',
-  );
+  const isFiltered = filtroAtivo;
 
   useEffect(() => {
     setDiscoveryVisibleCount(initialDiscoveryVisibleMap());
@@ -943,7 +916,10 @@ export function Transfer() {
               className="font-impact tabular-nums"
               style={{ fontSize: '30px', lineHeight: 0.85, color: 'var(--color-deep-black)' }}
             >
-              {auctionPool.length}
+              {/* O estoque da aba que está aberta. Antes dizia sempre o total
+                  dos leilões — nas Legacies o hero falava 42 e a grade logo
+                  abaixo dizia 23. */}
+              {marketTab === 'legacies' ? legacyRows.length : auctionPool.length}
               <span className="ml-1.5 font-display font-black" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
                 cartas
               </span>
@@ -959,272 +935,123 @@ export function Transfer() {
             </span>
           </div>
 
-          {/* CTAs — alinhados à esquerda, junto do resto do hero. */}
-          <div className="mt-7 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setShowSearch((v) => !v)}
-              className="inline-flex items-center gap-2 bg-black px-6 py-3 text-white font-display font-black uppercase tracking-[0.14em] text-[11px] transition-colors hover:bg-deep-black/80"
-              style={{ borderRadius: 'var(--radius-sm)' }}
-            >
-              <Search className="w-4 h-4" />
-              Buscar carta
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowFilters((v) => !v)}
-              className="inline-flex items-center gap-2 border border-black/70 bg-transparent px-7 py-3 text-black font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-black/10 transition-colors"
-              style={{
-                fontFamily: 'var(--font-display)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <Filter className="w-4 h-4" />
-              Filtrar
-            </button>
+          {/* ── BUSCA — o balcão do mercado ───────────────────────────────
+              Antes eram dois botões ("Buscar carta" / "Filtrar") que abriam
+              painéis sanfonados: ninguém abre o que não vê. Agora a busca é o
+              hero. Nome, posição e ordem ficam à mão, do jeito do Elifoot:
+              o manager procura, não navega. */}
+          <div
+            className="mt-6 border border-black/20 bg-deep-black p-3 sm:p-4"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            <div className="flex items-center gap-2">
+              <label className="sr-only" htmlFor="mercado-busca">
+                Buscar jogador pelo nome
+              </label>
+              <div className="relative min-w-0 flex-1">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neon-yellow"
+                  aria-hidden
+                />
+                <input
+                  id="mercado-busca"
+                  ref={searchInputRef}
+                  type="search"
+                  inputMode="search"
+                  placeholder="Buscar jogador…"
+                  value={filters.name}
+                  onChange={(e) => setFilters({ ...filters, name: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setFilters({ ...filters, name: '' });
+                  }}
+                  autoComplete="off"
+                  className="h-11 w-full min-w-0 border border-white/15 bg-black pl-9 pr-9 text-[14px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-neon-yellow"
+                  style={{ fontFamily: 'var(--font-ui)', borderRadius: 'var(--radius-sm)' }}
+                />
+                {filters.name.trim() !== '' && (
+                  <button
+                    type="button"
+                    onClick={() => setFilters({ ...filters, name: '' })}
+                    aria-label="Limpar busca"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-white/45 hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              {filtroAtivo && (
+                <button
+                  type="button"
+                  onClick={limparFiltros}
+                  className="ole-num h-11 shrink-0 whitespace-nowrap border border-white/20 px-3 text-[11px] uppercase text-cimento transition-colors hover:border-white hover:text-white"
+                  style={{ borderRadius: 'var(--radius-sm)' }}
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
+
+            {/* Posição — rolagem horizontal no celular, tudo à vista no desktop. */}
+            <div className="mt-3">
+              <p className="ole-eyebrow-poster mb-1.5 text-poeira" style={{ fontSize: '10px' }}>
+                Posição
+              </p>
+              <div className="hide-scrollbar -mx-1 flex max-w-none gap-1.5 overflow-x-auto px-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+                {['', ...POSITIONS].map((p) => (
+                  <button
+                    key={p || 'todas'}
+                    type="button"
+                    onClick={() => setFilters({ ...filters, pos: p })}
+                    aria-pressed={filters.pos === p}
+                    className={cn(
+                      'ole-num h-8 shrink-0 whitespace-nowrap px-2.5 text-[11px] uppercase transition-colors',
+                      filters.pos === p
+                        ? 'bg-neon-yellow text-black'
+                        : 'border border-white/15 text-cimento hover:border-white hover:text-white',
+                    )}
+                    style={{ borderRadius: 'var(--radius-sm)' }}
+                  >
+                    {p || 'Todas'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Ordenar — mesmo vocabulário nas duas abas. */}
+            <div className="mt-3">
+              <p className="ole-eyebrow-poster mb-1.5 text-poeira" style={{ fontSize: '10px' }}>
+                Ordenar
+              </p>
+              <div className="hide-scrollbar -mx-1 flex max-w-none gap-1.5 overflow-x-auto px-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+                {MARKET_SORTS.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setFilters({ ...filters, sort: s.id })}
+                    aria-pressed={filters.sort === s.id}
+                    className={cn(
+                      'ole-num h-8 shrink-0 whitespace-nowrap px-2.5 text-[11px] uppercase transition-colors',
+                      filters.sort === s.id
+                        ? 'bg-neon-yellow text-black'
+                        : 'border border-white/15 text-cimento hover:border-white hover:text-white',
+                    )}
+                    style={{ borderRadius: 'var(--radius-sm)' }}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </motion.div>
       </section>
 
-      {/* Painéis Buscar/Filtros — abrem logo abaixo do hero pra dar feedback ao clique */}
-      <AnimatePresence>
-        {showSearch && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div
-              className="flex flex-col gap-3 border border-[var(--color-border)] bg-dark-gray p-4"
-              style={{ borderRadius: 'var(--radius-md)' }}
-            >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                <label className="sr-only" htmlFor="transfer-search-input">
-                  Buscar por nome do jogador
-                </label>
-                <div className="relative min-w-0 flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neon-yellow/70" />
-                  <input
-                    id="transfer-search-input"
-                    ref={searchInputRef}
-                    type="search"
-                    placeholder="Nome no cartão (ex.: Silva)…"
-                    value={filters.name}
-                    onChange={(e) => setFilters({ ...filters, name: e.target.value })}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') setShowSearch(false);
-                    }}
-                    className="w-full border border-[var(--color-border)] bg-black/55 py-2.5 pl-10 pr-10 text-white placeholder:text-white/35 outline-none focus:border-neon-yellow transition-colors"
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: '14px',
-                      borderRadius: 'var(--radius-sm)',
-                    }}
-                    autoComplete="off"
-                  />
-                  {filters.name.trim() !== '' && (
-                    <button
-                      type="button"
-                      onClick={() => setFilters({ ...filters, name: '' })}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-white/40 hover:bg-white/10 hover:text-white"
-                      aria-label="Limpar busca"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                <p
-                  className="min-w-0 max-w-full text-white/45 [overflow-wrap:anywhere] break-words sm:max-w-[220px] sm:shrink-0 sm:pt-2"
-                  style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '11px',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {gridPlayers.length}{' '}
-                  {gridPlayers.length === 1 ? 'anúncio listado' : 'anúncios listados'}
-                  {nameQueryNorm ? ' · mesmos nomes ordenados por OVR' : ''}
-                </p>
-              </div>
-              {nameQueryNorm && gridPlayers.length > 0 && (
-                <div className="border-t border-white/10 pt-3">
-                  <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-white/45">
-                    Atalho — escolher anúncio
-                  </p>
-                  <ul
-                    className="max-h-44 space-y-1 overflow-y-auto overscroll-y-contain rounded-lg border border-white/5 bg-black/30 p-1"
-                    aria-label="Resultados da busca por nome"
-                  >
-                    {gridPlayers.slice(0, 20).map((p) => {
-                      const hm = homonymRankById.get(p.id);
-                      return (
-                        <li key={p.id}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedPlayer(p);
-                              setShowSearch(false);
-                            }}
-                            className="flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-2 text-left hover:bg-white/10"
-                          >
-                            <span className="block min-w-0 max-w-full break-words font-display text-xs font-bold tracking-wide text-white">
-                              {p.name}
-                              {hm ? (
-                                <span className="ml-1.5 text-neon-yellow/90">
-                                  ({hm.index}/{hm.total})
-                                </span>
-                              ) : null}
-                            </span>
-                            <span className="block min-w-0 max-w-full break-words text-[10px] text-white/50 [overflow-wrap:anywhere]">
-                              {playerIdentityLine(p)}
-                            </span>
-                            <span className="text-[9px] text-white/35">Anúncio #{p.id}</span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div
-              className="grid grid-cols-1 gap-4 border border-[var(--color-border)] bg-dark-gray p-4 sm:p-6 sm:grid-cols-2 lg:grid-cols-4"
-              style={{ borderRadius: 'var(--radius-md)' }}
-            >
-              {([
-                { key: 'pos', label: 'Posição', value: filters.pos, options: ['', ...POSITIONS], render: (v: string) => (v === '' ? 'Todas' : v) },
-                { key: 'nat', label: 'Nacionalidade', value: filters.nat, options: ['', ...NATIONS], render: (v: string) => (v === '' ? 'Todas' : v) },
-                { key: 'currency', label: 'Compra em', value: filters.currency, options: ['', 'BRO', 'EXP'], render: (v: string) => (v === '' ? 'Todas' : v) },
-              ] as const).map((f) => (
-                <div key={f.key}>
-                  <label
-                    className="mb-2 block text-[var(--color-neon-yellow)] uppercase"
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: '10px',
-                      letterSpacing: '0.22em',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {f.label}
-                  </label>
-                  <select
-                    className="w-full border border-[var(--color-border)] bg-black/55 px-3 py-2 text-white outline-none focus:border-neon-yellow transition-colors"
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: '13px',
-                      borderRadius: 'var(--radius-sm)',
-                    }}
-                    value={f.value}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (f.key === 'currency') {
-                        setFilters({ ...filters, currency: v === 'BRO' || v === 'EXP' ? v : '' });
-                      } else {
-                        setFilters({ ...filters, [f.key]: v });
-                      }
-                    }}
-                  >
-                    {f.options.map((o) => (
-                      <option key={o || 'all'} value={o}>{f.render(o)}</option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-              <div className="sm:col-span-2 lg:col-span-1">
-                <label
-                  className="mb-2 block text-[var(--color-neon-yellow)] uppercase"
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: '10px',
-                    letterSpacing: '0.22em',
-                    fontWeight: 600,
-                  }}
-                >
-                  Nome
-                </label>
-                <input
-                  type="search"
-                  placeholder="Buscar por nome…"
-                  value={filters.name}
-                  onChange={(e) => setFilters({ ...filters, name: e.target.value })}
-                  className="w-full border border-[var(--color-border)] bg-black/55 px-3 py-2 text-white placeholder:text-white/35 outline-none focus:border-neon-yellow transition-colors"
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: '13px',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                  autoComplete="off"
-                />
-              </div>
-              <div className="sm:col-span-2 lg:col-span-3">
-                <label
-                  className="mb-2 block text-[var(--color-neon-yellow)] uppercase"
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: '10px',
-                    letterSpacing: '0.22em',
-                    fontWeight: 600,
-                  }}
-                >
-                  Ordenar
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {([
-                    { id: 'relevance', label: 'Relevância' },
-                    { id: 'value_desc', label: 'Mais valiosos' },
-                    { id: 'price_asc', label: 'Mais baratos' },
-                    { id: 'new', label: 'Novos' },
-                    { id: 'deals', label: 'Oportunidades' },
-                  ] as const).map((s) => {
-                    const active = filters.sort === s.id;
-                    return (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => setFilters({ ...filters, sort: s.id })}
-                        className={cn(
-                          'border px-3 py-1.5 transition-colors',
-                          active
-                            ? 'border-neon-yellow bg-neon-yellow text-black'
-                            : 'border-[var(--color-border)] bg-deep-black text-white/65 hover:border-neon-yellow/50 hover:text-white',
-                        )}
-                        style={{
-                          fontFamily: 'var(--font-display)',
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          letterSpacing: '0.18em',
-                          textTransform: 'uppercase',
-                          borderRadius: 'var(--radius-sm)',
-                        }}
-                      >
-                        {s.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Sprint B-4: ordem padronizada com /loja — DESTAQUES vem antes do SLIDER */}
-      {/* ── DESTAQUES DA SEMANA ─────────────────────────────────────── */}
-      {highlightsOrdered.length > 0 ? (
+      {/* ── DESTAQUES DA SEMANA ───────────────────────────────────────
+          Some enquanto há busca/filtro: é curadoria, não obedece ao filtro —
+          deixar o carrossel no topo do resultado confundia (procurava um nome
+          e o primeiro card da tela era outro jogador). */}
+      {!isFiltered && highlightsOrdered.length > 0 ? (
         <section className="min-w-0 space-y-3">
           <SecaoVolt label="Destaques da semana" className="px-0.5" />
           <div className="relative -mx-3 sm:-mx-4 lg:-mx-8">
@@ -1334,6 +1161,9 @@ export function Transfer() {
         <TransferLegaciesTab
           openDetailId={pendingLegacyDetailId}
           onDetailConsumed={() => setPendingLegacyDetailId(null)}
+          busca={filters.name}
+          pos={filters.pos}
+          sort={filters.sort}
         />
       ) : null}
       <div className={marketTab !== 'legacies' ? 'contents' : 'hidden'}>

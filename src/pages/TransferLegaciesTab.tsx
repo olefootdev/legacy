@@ -22,14 +22,22 @@ import { LegacyPlayerDetailModal } from '@/components/legacy/LegacyPlayerDetailM
 import { PurchaseReceiptModal } from '@/components/legacy/PurchaseReceiptModal';
 import { TransferRowCard } from '@/pages/Transfer';
 import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
+import type { SortKey } from '@/transfer/marketFilters';
 
 export function TransferLegaciesTab({
   openDetailId,
   onDetailConsumed,
+  busca = '',
+  pos = '',
+  sort = 'relevance',
 }: {
   /** id de um legacy a abrir no modal de detalhe (vindo do destaque global). */
   openDetailId?: string | null;
   onDetailConsumed?: () => void;
+  /** Busca/posição/ordem vêm do hero do Mercado — aqui só se obedece. */
+  busca?: string;
+  pos?: string;
+  sort?: SortKey;
 } = {}) {
   const dispatch = useGameDispatch();
   const oleBal = useGameStore((s) => s.finance.ole);
@@ -217,35 +225,70 @@ export function TransferLegaciesTab({
     })();
   };
 
+  // Ordenação da grade. Preço mistura moedas (PIX em R$ e carta em OLE), então
+  // as de dinheiro real vêm primeiro e cada bloco é ordenado pelo próprio preço
+  // — comparar R$ com OLE direto seria inventar uma equivalência que não existe.
+  const precoReal = (r: LegacyPlayerRow): number | null => brlCentsFor(r);
+  const precoOle = (r: LegacyPlayerRow) => Math.max(1, Math.round(Number(r.price_bro_cents) || 0));
+  const ovrDe = (r: LegacyPlayerRow) => {
+    const e = legacyRowToPlayerEntity(r);
+    return overallFromAttributes(e.attrs, e.pos);
+  };
+  const porPreco = (dir: 1 | -1) => (a: LegacyPlayerRow, b: LegacyPlayerRow) => {
+    const ra = precoReal(a);
+    const rb = precoReal(b);
+    if ((ra == null) !== (rb == null)) return ra == null ? 1 : -1;
+    const va = ra ?? precoOle(a);
+    const vb = rb ?? precoOle(b);
+    return (va - vb) * dir;
+  };
+  const buscaNorm = busca.trim().toLowerCase();
+  const ordenada = useMemo(() => {
+    const list = rows.filter((r) => {
+      const e = legacyRowToPlayerEntity(r);
+      if (pos && e.pos !== pos) return false;
+      if (buscaNorm && !e.name.toLowerCase().includes(buscaNorm)) return false;
+      return true;
+    });
+    if (sort === 'price_asc') return list.sort(porPreco(1));
+    if (sort === 'value_desc') return list.sort(porPreco(-1));
+    if (sort === 'relevance') return list.sort((a, b) => ovrDe(b) - ovrDe(a));
+    if (sort === 'name_asc') {
+      return list.sort((a, b) =>
+        legacyRowToPlayerEntity(a).name.localeCompare(legacyRowToPlayerEntity(b).name, 'pt', {
+          sensitivity: 'base',
+        }),
+      );
+    }
+    return list.sort(
+      (a, b) => (b.created_at ? Date.parse(b.created_at) : 0) - (a.created_at ? Date.parse(a.created_at) : 0),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, sort, pos, buscaNorm, quote]);
+
   if (loading) {
     return <div className="py-10 text-center text-sm text-gray-500">Carregando legacies…</div>;
   }
 
-  // Agrupa por ATLETA (não por coleção): todas as cartas do mesmo jogador
-  // (ex: as 3 fases do Gonçalves) aparecem lado a lado sob um cabeçalho, mesmo
-  // sendo de coleções/temporadas diferentes. Escala melhor com muitos jogadores.
-  const athleteKey = (r: LegacyPlayerRow) =>
-    r.collection_id?.trim() || r.id.replace(/-(revelacao|consolidacao|expansao)$/i, '');
-  const athleteTitle = (r: LegacyPlayerRow) => {
-    const cid = r.collection_id?.trim();
-    if (cid) {
-      const base = cid.replace(/^mem-/i, '').replace(/-\d{4}$/, '').replace(/-/g, ' ').trim();
-      if (base) return base.replace(/\b\w/g, (c) => c.toUpperCase());
+  // GRADE ÚNICA (2026-09-19). Antes: uma seção com carrossel POR ATLETA — com
+  // 100 jogadores seriam 100 faixas e a página não terminava mais. Agora é uma
+  // grade só, como num marketplace de cartas: cada card é uma oferta, a
+  // rolagem é vertical e a ordenação é escolhida pelo manager. A fase da carta
+  // (o que antes era o título da seção) foi pra dentro do card.
+  const faseDaCarta = (r: LegacyPlayerRow): string | null => {
+    const m = /-(revelacao|consolidacao|expansao)$/i.exec(r.id);
+    if (m) {
+      const f = m[1]!.toLowerCase();
+      return f === 'revelacao' ? '#revelação' : f === 'consolidacao' ? '#consolidação' : '#expansão';
     }
-    return r.name.replace(/\s*\d+$/, '').trim() || r.name;
+    const code = r.collection_code?.trim();
+    return code ? `#${code.toLowerCase().replace(/\s+/g, '')}` : null;
   };
-  const groups: Array<{ code: string; title: string; rows: LegacyPlayerRow[] }> = [];
-  const groupIndex = new Map<string, number>();
-  for (const row of rows) {
-    const code = athleteKey(row) || 'OUTROS';
-    let idx = groupIndex.get(code);
-    if (idx === undefined) {
-      idx = groups.length;
-      groupIndex.set(code, idx);
-      groups.push({ code, title: athleteTitle(row), rows: [] });
-    }
-    groups[idx]!.rows.push(row);
-  }
+
+  // Conta o que está na tela agora (com filtro do hero aplicado), não o catálogo.
+  const atletas = new Set(
+    ordenada.map((r) => r.collection_id?.trim() || r.id.replace(/-(revelacao|consolidacao|expansao)$/i, '')),
+  ).size;
 
   const fmtBrl = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 
@@ -282,22 +325,17 @@ export function TransferLegaciesTab({
   const fixedSaleFor = (row: LegacyPlayerRow): { price: string; cta: string; badge: string } => {
     const isOwned = owned.has(legacyRowToPlayerEntity(row).id);
     const brl = brlCentsFor(row);
-    const oleTxt = `${Math.max(1, Math.round(row.price_bro_cents)).toLocaleString('pt-BR')} OLE`;
+    // Sem o sufixo da moeda: o selo ao lado do preço já diz OLE (ou PIX), e
+    // repetir cortava o número em 320px.
+    const oleTxt = Math.max(1, Math.round(row.price_bro_cents)).toLocaleString('pt-BR');
     const price = brl != null ? fmtBrl(brl) : oleTxt;
     if (isOwned) return { price, cta: 'Adquirido', badge: 'Legacy' };
     return { price, cta: 'Comprar', badge: brl != null ? 'PIX' : 'OLE' };
   };
 
-  // Ordena a coleção do atleta pela carta de MAIOR VALOR primeiro (destaque).
-  // USDT compara por price_unit_cents; OLE por price_bro_cents (dentro de um
-  // atleta a moeda é consistente, então a ordenação é estável).
-  const priceSort = (r: LegacyPlayerRow) =>
-    r.currency === 'USDT' ? r.price_unit_cents ?? 0 : Math.round(Number(r.price_bro_cents) || 0);
-  const orderByPriceDesc = (list: LegacyPlayerRow[]): LegacyPlayerRow[] =>
-    [...list].sort((a, b) => priceSort(b) - priceSort(a));
 
   return (
-    <div className="space-y-8 px-4 sm:px-5">
+    <div className="space-y-5 px-4 sm:px-5">
       {/* Vazio SEM early-return: o modal de detalhe (deep-link do Legends Cup
           pra lenda fora de catálogo) precisa renderizar mesmo sem listados. */}
       {rows.length === 0 && (
@@ -306,73 +344,77 @@ export function TransferLegaciesTab({
         </div>
       )}
 
-      {/* Toggle de visualização — Grid (card vertical) vs Lista (linha) */}
+      {/* Barra da grade: quantas cartas e como ver. Ordenar/buscar é no hero. */}
       {rows.length > 0 && (
-      <div className="flex items-center justify-end gap-1.5">
-        {(['grid', 'list'] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setView(m)}
-            className={cn(
-              'rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition',
-              view === m ? 'bg-neon-yellow text-black' : 'border border-white/10 text-white/55 hover:border-white/30 hover:text-white',
-            )}
-          >
-            {m === 'grid' ? 'Grid' : 'Lista'}
-          </button>
-        ))}
-      </div>
-      )}
-
-      {groups.map((g) => (
-        <section key={g.code} className="space-y-3">
-          <SecaoVolt label={g.title}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <SecaoVolt label="Lendas à venda">
             <Hashtag>
-              {g.rows.length} {g.rows.length === 1 ? 'carta' : 'cartas'}
+              {`${ordenada.length} ${ordenada.length === 1 ? 'carta' : 'cartas'} · ${atletas} ${atletas === 1 ? 'atleta' : 'atletas'}`}
             </Hashtag>
           </SecaoVolt>
+          <div className="flex items-center gap-1.5">
+            {(['grid', 'list'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setView(m)}
+                aria-pressed={view === m}
+                className={cn(
+                  'ole-num h-9 px-3 text-[11.5px] uppercase transition-colors',
+                  view === m
+                    ? 'bg-neon-yellow text-black'
+                    : 'border border-white/20 text-cimento hover:border-white hover:text-white',
+                )}
+              >
+                {m === 'grid' ? 'Grade' : 'Lista'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-          {view === 'grid' ? (
-            // Carrossel horizontal: arrasta pro lado e vê todas as cartas do atleta.
-            // Cards de tamanho ÚNICO; a MAIS CARA vem primeiro (destaque).
-            <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {orderByPriceDesc(g.rows).map((row) => {
-                const entity = legacyRowToPlayerEntity(row);
-                const o = overallFromAttributes(entity.attrs, entity.pos);
-                const sale = fixedSaleFor(row);
-                return (
-                  <div key={row.id} className="w-[158px] flex-none snap-start sm:w-[186px]">
-                    <LegacyMarketCard
-                      row={row}
-                      ovr={o}
-                      portrait={legacyPortraitImageUrl(row)}
-                      priceLabel={sale.price}
-                      pixReady={pixStateFor(row) === 'ready'}
-                      lot={lots.get(row.id)}
-                      owned={owned.has(entity.id)}
-                      onOpen={() => setDetailRow(row)}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {g.rows.map((row, i) => (
-                <TransferRowCard
-                  key={row.id}
-                  player={toAuction(row, i)}
-                  onSelect={() => setDetailRow(row)}
-                  fixedSale={fixedSaleFor(row)}
-                  portraitClassName=""
-                  delay={i * 0.04}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      ))}
+      {/* Busca sem resultado: diz o que aconteceu, não some com a tela. */}
+      {rows.length > 0 && ordenada.length === 0 && (
+        <div className="border border-white/10 bg-panel py-12 text-center text-sm text-cimento">
+          Nenhuma lenda com esse filtro.
+        </div>
+      )}
+
+      {view === 'grid' ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+          {ordenada.map((row) => {
+            const entity = legacyRowToPlayerEntity(row);
+            const sale = fixedSaleFor(row);
+            return (
+              <LegacyMarketCard
+                key={row.id}
+                row={row}
+                ovr={ovrDe(row)}
+                portrait={legacyPortraitImageUrl(row)}
+                priceLabel={sale.price}
+                pixReady={pixStateFor(row) === 'ready'}
+                lot={lots.get(row.id)}
+                owned={owned.has(entity.id)}
+                tag={faseDaCarta(row)}
+                onOpen={() => setDetailRow(row)}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {ordenada.map((row, i) => (
+            <TransferRowCard
+              key={row.id}
+              player={toAuction(row, i)}
+              onSelect={() => setDetailRow(row)}
+              fixedSale={fixedSaleFor(row)}
+              portraitClassName=""
+              delay={Math.min(i, 8) * 0.03}
+            />
+          ))}
+        </div>
+      )}
 
       {pixRow && brlCentsFor(pixRow) != null && (
         <PixCheckoutModal
