@@ -1,10 +1,12 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- ONDA 0 · prêmios da Liga — a reclamação vira RPC atômica
 -- ════════════════════════════════════════════════════════════════════════════
--- ⏸ SEGURADA até o fundador decidir o acumulado: em 2026-09-18 havia 69
--- prêmios de campeão e 4.163 de mata-mata pendentes, nenhum pago desde junho
--- (17M OLE + ~758M EXP; o maior manager sozinho ~89M EXP). Aplicar esta
--- migration + o bundle novo paga TUDO de uma vez, no próximo load de cada um.
+-- Em 2026-09-18 havia 69 prêmios de campeão e 4.163 de mata-mata pendentes,
+-- nenhum pago desde junho (17M OLE + ~758M EXP; o maior manager sozinho ~89M
+-- EXP). DECISÃO DO FUNDADOR (2026-09-18): pagar o acumulado inteiro. Com esta
+-- migration + o bundle novo, cada manager recebe tudo no próximo load — um
+-- dispatch por prêmio (teto de 5M por chamada no reducer; maior linha 2,5M) e
+-- flush imediato do saldo (ver runLeaguePrizeClaim em useGlobalConsequencesSync).
 -- Ver 20260918230000.
 --
 -- As RPCs travam as linhas do próprio manager (FOR UPDATE), marcam claimed e

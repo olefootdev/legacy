@@ -1,5 +1,6 @@
 import { getSupabase } from '@/supabase/client';
 import { dispatchGame } from '@/game/store';
+import { flushAllPersistence } from '@/game/flushPersistence';
 
 /**
  * Reivindica créditos BRO/EXP pendentes via RPC server-side e aplica ao
@@ -34,4 +35,8 @@ export async function applyPendingCredits(): Promise<void> {
     broCentsDelta: totalCents,
     earnedExp: totalExp > 0 ? totalExp : undefined,
   });
+
+  // O servidor já marcou applied_at: salva o saldo agora, não no debounce —
+  // fechar a aba nesse intervalo perderia o depósito.
+  await flushAllPersistence();
 }

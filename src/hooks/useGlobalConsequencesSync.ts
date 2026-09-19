@@ -21,6 +21,7 @@ import { useGameStore, dispatchGame } from '@/game/store';
 import { globalRoundPlayedEvents } from '@/systems/playerHealth/fromGlobalMatch';
 import { makeInboxItem } from '@/game/inboxItem';
 import { getSupabase } from '@/supabase/client';
+import { flushAllPersistence } from '@/game/flushPersistence';
 import { fetchMyOlefootBalance, spendMyOlefoot } from '@/wallet/olefoot';
 import { DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP } from '@/entities/managerProspect';
 import { overallFromAttributes } from '@/entities/player';
@@ -130,79 +131,10 @@ export function useGlobalConsequencesSync() {
     };
   }, [players, createCostExp]);
 
-  // ── Prêmio de Campeão de Temporada: reclama via RPC e credita ───────────────
-  // claim_my_season_champion_prizes() trava as linhas do próprio manager,
-  // marca claimed=true e devolve só as recém-reclamadas — atômico no servidor,
-  // sem o cliente ler/escrever a tabela direto (ver migration
-  // 20260918230000_global_league_prizes_lockdown.sql).
+  // ── Prêmios da Liga (campeão de temporada + mata-mata diário) ───────────────
   useEffect(() => {
-    const email = managerProfile?.email;
-    if (!email) return;
-    const sb = getSupabase();
-    if (!sb) return;
-    let cancelled = false;
-    (async () => {
-      const { data, error } = await sb.rpc('claim_my_season_champion_prizes');
-      if (error) {
-        console.warn('[globalSync] claim_my_season_champion_prizes:', error.message);
-        return;
-      }
-      if (cancelled || !data || data.length === 0) return;
-      const items = [];
-      for (const c of data as Array<Record<string, any>>) {
-        const ole = Number(c.prize_ole ?? 0);
-        const exp = Number(c.prize_exp ?? 0);
-        dispatchGame({ type: 'CLAIM_SEASON_CHAMPION_PRIZE', ole, exp, division: Number(c.division) });
-        items.push(
-          makeInboxItem(`season-champ-${c.id}`, 'FINANCE_EXP_GAIN', 'COMPETIÇÃO', `🏆 Campeão da Divisão ${c.division}!`, {
-            body: `Sua equipe venceu a temporada da Div ${c.division} com ${c.points ?? 0} pts. Prêmio creditado: +${ole.toLocaleString('pt-BR')} OLE · +${exp.toLocaleString('pt-BR')} EXP.`,
-            deepLink: '/match/global',
-          }),
-        );
-      }
-      if (!cancelled && items.length > 0) dispatchGame({ type: 'PUSH_INBOX_ITEMS', items });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [managerProfile?.email, globalLeagueMVP?.seasonId]);
-
-  // ── Prêmio do Mata-Mata Diário (Coroa do Dia): reclama via RPC ──────────────
-  // Mesmo padrão do campeão sazonal — claim_my_ko_prizes() atômico no servidor.
-  useEffect(() => {
-    const email = managerProfile?.email;
-    if (!email) return;
-    const sb = getSupabase();
-    if (!sb) return;
-    let cancelled = false;
-    (async () => {
-      const { data, error } = await sb.rpc('claim_my_ko_prizes');
-      if (error) {
-        console.warn('[globalSync] claim_my_ko_prizes:', error.message);
-        return;
-      }
-      if (cancelled || !data || data.length === 0) return;
-      const STAGE_LABEL: Record<string, string> = {
-        qualified: 'Classificado pro Mata-Mata!', r16: 'Venceu as oitavas!',
-        qf: 'Venceu as quartas!', sf: 'Venceu a semifinal!', final: '👑 Campeão do Dia!',
-      };
-      const items = [];
-      for (const c of data as Array<Record<string, any>>) {
-        const exp = Number(c.prize_exp ?? 0);
-        if (exp <= 0) continue;
-        dispatchGame({ type: 'CLAIM_KO_PRIZE', exp, stage: String(c.stage ?? '') });
-        items.push(
-          makeInboxItem(`ko-prize-${c.id}`, 'FINANCE_EXP_GAIN', 'COMPETIÇÃO', `🏆 ${STAGE_LABEL[c.stage] ?? 'Mata-Mata do Dia'}`, {
-            body: `Mata-Mata da Liga Global — prêmio creditado: +${exp.toLocaleString('pt-BR')} EXP.`,
-            deepLink: '/match/global',
-          }),
-        );
-      }
-      if (!cancelled && items.length > 0) dispatchGame({ type: 'PUSH_INBOX_ITEMS', items });
-    })();
-    return () => {
-      cancelled = true;
-    };
+    if (!managerProfile?.email) return;
+    void claimLeaguePrizes();
   }, [managerProfile?.email, globalLeagueMVP?.seasonId]);
 
   useEffect(() => {
@@ -274,6 +206,101 @@ export function useGlobalConsequencesSync() {
     // rodada acima (roda uma vez por rodada).
     void applyLanceEvolution(myFixture.id);
   }, [globalLeagueMVP, club, managerProfile, lineup, players, playerHealth, lastProcessedRound]);
+}
+
+const KO_STAGE_LABEL: Record<string, string> = {
+  qualified: 'Classificado pro Mata-Mata!', r16: 'Venceu as oitavas!',
+  qf: 'Venceu as quartas!', sf: 'Venceu a semifinal!', final: '👑 Campeão do Dia!',
+};
+
+/** Acima disto, uma mensagem-resumo em vez de uma por prêmio (acumulado de meses). */
+const PRIZE_INBOX_SUMMARY_OVER = 3;
+
+let prizeClaimInFlight: Promise<void> | null = null;
+
+function claimLeaguePrizes(): Promise<void> {
+  prizeClaimInFlight ??= runLeaguePrizeClaim().finally(() => {
+    prizeClaimInFlight = null;
+  });
+  return prizeClaimInFlight;
+}
+
+/**
+ * As RPCs (migration 20260918270000) marcam `claimed` no servidor ANTES de
+ * devolver as linhas. A partir daí o crédito tem que acontecer de qualquer jeito
+ * — sem flag de cancelamento de efeito: se o componente re-renderizar no meio
+ * (seasonId hidratando no boot), descartar a resposta deixaria o prêmio pago no
+ * banco e fora do saldo. `dispatchGame` é o store global, seguro fora do React.
+ */
+async function runLeaguePrizeClaim(): Promise<void> {
+  const sb = getSupabase();
+  if (!sb) return;
+  const [champRes, koRes] = await Promise.all([
+    sb.rpc('claim_my_season_champion_prizes'),
+    sb.rpc('claim_my_ko_prizes'),
+  ]);
+  if (champRes.error) console.warn('[globalSync] claim_my_season_champion_prizes:', champRes.error.message);
+  if (koRes.error) console.warn('[globalSync] claim_my_ko_prizes:', koRes.error.message);
+
+  const champs = (champRes.data ?? []) as Array<Record<string, any>>;
+  const kos = ((koRes.data ?? []) as Array<Record<string, any>>).filter((c) => Number(c.prize_exp ?? 0) > 0);
+  if (champs.length === 0 && kos.length === 0) return;
+
+  // Um dispatch POR prêmio: o reducer tem teto de 5M por chamada — somar o
+  // acumulado num dispatch só faria ele ser rejeitado em silêncio.
+  for (const c of champs) {
+    dispatchGame({
+      type: 'CLAIM_SEASON_CHAMPION_PRIZE',
+      ole: Number(c.prize_ole ?? 0),
+      exp: Number(c.prize_exp ?? 0),
+      division: Number(c.division),
+    });
+  }
+  for (const c of kos) {
+    dispatchGame({ type: 'CLAIM_KO_PRIZE', exp: Number(c.prize_exp), stage: String(c.stage ?? '') });
+  }
+
+  const items: ReturnType<typeof makeInboxItem>[] = [];
+  if (champs.length + kos.length > PRIZE_INBOX_SUMMARY_OVER) {
+    const ole = champs.reduce((s, c) => s + Number(c.prize_ole ?? 0), 0);
+    const exp = champs.reduce((s, c) => s + Number(c.prize_exp ?? 0), 0)
+      + kos.reduce((s, c) => s + Number(c.prize_exp ?? 0), 0);
+    const parts = [
+      champs.length > 0 ? `${champs.length} título(s) de divisão` : null,
+      kos.length > 0 ? `${kos.length} fase(s) de mata-mata` : null,
+    ].filter(Boolean).join(' e ');
+    items.push(
+      makeInboxItem(`league-prizes-${champs[0]?.id ?? kos[0]?.id}`, 'FINANCE_EXP_GAIN', 'COMPETIÇÃO', `🏆 Prêmios da Liga Global creditados`, {
+        body: `${parts}. Total: +${ole.toLocaleString('pt-BR')} OLE · +${exp.toLocaleString('pt-BR')} EXP.`,
+        deepLink: '/match/global',
+      }),
+    );
+  } else {
+    for (const c of champs) {
+      const ole = Number(c.prize_ole ?? 0);
+      const exp = Number(c.prize_exp ?? 0);
+      items.push(
+        makeInboxItem(`season-champ-${c.id}`, 'FINANCE_EXP_GAIN', 'COMPETIÇÃO', `🏆 Campeão da Divisão ${c.division}!`, {
+          body: `Sua equipe venceu a temporada da Div ${c.division} com ${c.points ?? 0} pts. Prêmio creditado: +${ole.toLocaleString('pt-BR')} OLE · +${exp.toLocaleString('pt-BR')} EXP.`,
+          deepLink: '/match/global',
+        }),
+      );
+    }
+    for (const c of kos) {
+      const exp = Number(c.prize_exp);
+      items.push(
+        makeInboxItem(`ko-prize-${c.id}`, 'FINANCE_EXP_GAIN', 'COMPETIÇÃO', `🏆 ${KO_STAGE_LABEL[c.stage] ?? 'Mata-Mata do Dia'}`, {
+          body: `Mata-Mata da Liga Global — prêmio creditado: +${exp.toLocaleString('pt-BR')} EXP.`,
+          deepLink: '/match/global',
+        }),
+      );
+    }
+  }
+  dispatchGame({ type: 'PUSH_INBOX_ITEMS', items });
+
+  // O servidor já marcou como pago: salva o saldo agora, não no debounce —
+  // fechar a aba nesse intervalo perderia o crédito.
+  await flushAllPersistence();
 }
 
 function pickRandom<T>(arr: T[]): T {
