@@ -174,10 +174,10 @@ export function NotificationsDropdown() {
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border transition-all',
+          'relative flex h-10 w-10 items-center justify-center border bg-nav transition-colors',
           isOpen
-            ? 'border-neon-yellow/40 bg-neon-yellow/10 text-neon-yellow'
-            : 'border-white/10 bg-white/5 text-white/70 hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow',
+            ? 'border-white text-white'
+            : 'border-white/16 text-white/80 hover:border-white hover:text-white',
         )}
         aria-label="Notificações"
       >

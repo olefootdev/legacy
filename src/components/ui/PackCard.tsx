@@ -115,9 +115,9 @@ export function PackCard({
               type="button"
               onClick={onPurchase}
               disabled={disabled}
-              className="bg-neon-yellow text-black font-display font-bold uppercase tracking-[0.12em] text-[13px] px-5 py-2.5 -skew-x-6 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-neon-yellow text-black font-display font-bold uppercase tracking-[0.12em] text-[13px] px-5 py-2.5 [clip-path:var(--clip-corte)] hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="inline-block skew-x-6">Adquirir</span>
+              <span className="inline-block">Adquirir</span>
             </button>
           </div>
         </div>

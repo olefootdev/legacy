@@ -100,8 +100,7 @@ export function PlayerPortrait({
         'relative isolate flex flex-col rounded-[var(--radius-card)] overflow-hidden bg-deep-black ring-1',
         RARITY_RING[rarity],
         dims,
-        glow && 'shadow-[var(--shadow-glow-yellow)]',
-        interactive && 'cursor-pointer transition-transform hover:scale-[1.02] hover:shadow-[var(--shadow-glow-yellow-strong)]',
+        interactive && 'cursor-pointer transition-colors hover:border-neon-yellow',
         className,
       )}
     >
@@ -115,7 +114,7 @@ export function PlayerPortrait({
           loading="lazy"
         />
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-black/40" aria-hidden />
+        <div className="absolute inset-0 bg-card" aria-hidden />
       )}
 
       {/* Vinheta vertical (escurece base e topo pra leitura de OVR/nome) */}
@@ -129,7 +128,7 @@ export function PlayerPortrait({
         <div className="absolute left-3 top-3 flex flex-col items-start leading-none">
           <span
             className={cn(
-              'font-[var(--font-serif-hero)] font-bold text-neon-yellow drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]',
+              'font-[var(--font-serif-hero)] font-bold text-neon-yellow',
               ovrSize,
             )}
             style={{ fontFamily: 'var(--font-serif-hero)' }}

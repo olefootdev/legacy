@@ -2297,12 +2297,12 @@ export function OleSmartHubTrigger({
     <button
       type="button"
       onClick={onClick}
-      className="xl:hidden relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition-all hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow"
+      className="xl:hidden relative flex h-10 w-10 items-center justify-center border border-white/16 bg-nav text-white/80 transition-colors hover:border-white hover:text-white"
       aria-label="Abrir Smart Hub"
     >
       <Zap className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={2.25} />
       {hasActivity && (
-        <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-neon-yellow animate-pulse" />
+        <span className="absolute top-2 right-2 h-2 w-2 bg-neon-yellow" />
       )}
     </button>
   );

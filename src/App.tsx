@@ -55,6 +55,18 @@ import { getSupabase, isSupabaseConfigured } from './supabase/client';
  */
 function SessionGuard() {
   useEffect(() => {
+    // DEV: `?semsessao=1` desliga o guard nesta aba — pra olhar telas internas
+    // sem login (o bypass de cadastro não basta: o save nasce no 1º render e o
+    // guard manda pro /login). Só existe em `vite dev`.
+    if (import.meta.env.DEV) {
+      try {
+        if (new URLSearchParams(window.location.search).get('semsessao') === '1') {
+          sessionStorage.setItem('dev-semsessao', '1');
+        }
+        if (sessionStorage.getItem('dev-semsessao') === '1') return;
+      } catch { /* storage bloqueado: segue o fluxo normal */ }
+    }
+
     // Não age em rotas públicas
     const path = window.location.pathname;
     if (

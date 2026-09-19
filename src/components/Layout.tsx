@@ -47,11 +47,6 @@ type NavItem = {
   accent?: boolean;
 };
 
-/** Bola do botão JOGAR — ícone-only (sem fundo) — versão de teste atual.
- *  Asset: public/test-botao-01-01.svg. Fundo amarelo é tile CSS controlada
- *  separadamente (BOTÃO e ÍCONE escalam de forma independente). */
-const JOGAR_BALL_SRC = '/test-botao-01-01.svg';
-
 const mainNavItems: NavItem[] = [
   { icon: Home, label: 'HOME', path: '/' },
   { icon: Users, label: 'CLUBE', path: '/clube' },
@@ -81,7 +76,7 @@ type BottomNavAction = {
 type BottomNavItem = BottomNavLink | BottomNavAction;
 
 const bottomNavItems: BottomNavItem[] = [
-  { kind: 'link', icon: Home, label: 'HOME', path: '/' },
+  { kind: 'link', icon: Home, label: 'INÍCIO', path: '/' },
   { kind: 'link', icon: Users, label: 'CLUBE', path: '/clube' },
   { kind: 'action', label: 'JOGAR', actionId: 'open-match-modes' },
   { kind: 'link', icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
@@ -422,7 +417,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* IMPORTANTE: Logo SEMPRE visível em todas as páginas e subpáginas */}
         {!isPenaltyRoute && (
         <header
-          className="sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] min-h-14 shrink-0 items-center gap-3 border-b border-[var(--color-border)] bg-deep-black px-4 supports-[padding:max(0px)]:pt-[max(0px,env(safe-area-inset-top,0px))] sm:min-h-16 sm:px-6"
+          className="sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] min-h-14 shrink-0 items-center gap-3 border-b border-white/[0.07] bg-nav px-4 supports-[padding:max(0px)]:pt-[max(0px,env(safe-area-inset-top,0px))] sm:min-h-16 sm:px-6"
         >
           {/* Esquerda — hamburger (só abaixo de lg; desktop tem sidebar) */}
           <div className="flex justify-start">
@@ -456,7 +451,7 @@ export function Layout({ children }: { children: ReactNode }) {
             {/* Wallet */}
             <Link
               to="/wallet"
-              className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition-all hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow"
+              className="flex h-10 w-10 items-center justify-center border border-white/16 bg-nav text-white/80 transition-colors hover:border-white hover:text-white"
               aria-label="Wallet"
             >
               <Wallet className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={2.25} />
@@ -465,7 +460,7 @@ export function Layout({ children }: { children: ReactNode }) {
             {/* Config */}
             <Link
               to="/manager/config"
-              className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition-all hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow"
+              className="flex h-10 w-10 items-center justify-center border border-white/16 bg-nav text-white/80 transition-colors hover:border-white hover:text-white"
               aria-label="Configurações"
             >
               <Settings className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={2.25} />
@@ -513,7 +508,7 @@ export function Layout({ children }: { children: ReactNode }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileMenuOpen(false)}
-              className="fixed inset-0 bg-black/80 z-[60] lg:hidden backdrop-blur-sm"
+              className="fixed inset-0 bg-black/80 z-[60] lg:hidden"
             />
             <motion.div
               initial={{ x: '-100%' }}
@@ -668,59 +663,33 @@ export function Layout({ children }: { children: ReactNode }) {
         )}
       </AnimatePresence>
 
-      {/* Mobile Bottom Nav — Legacy Tech (hidden at lg+) */}
+      {/* Mobile Bottom Nav — VOLT2 (hidden at lg+): faixa chapada, rótulo curto,
+          risco volt no ativo e o JOGAR como círculo elevado. Sem gradiente,
+          sem halo, sem vidro fosco. */}
       {!hideMobileBottomNav && (
         <nav
           aria-label="Navegação principal"
-          className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-stretch justify-around bg-deep-black/95 backdrop-blur pb-safe"
+          className="lg:hidden fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 items-start border-t border-white/[0.07] bg-nav pb-safe"
         >
-          {/* Régua amarela editorial no topo (gradient sutil) */}
-          <span
-            aria-hidden
-            className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-neon-yellow/55 to-transparent"
-          />
           {bottomNavItems.map((item) => {
-            // Slot ACTION (JOGAR) — tile amarela MAIOR que os vizinhos
-            // (h-14 vs h-12) com o ícone v2 da marca em h-7 w-7 idêntico
-            // aos demais ícones do nav. Tile e ícone controlados separados.
             if (item.kind === 'action') {
               return (
-                <button
-                  key={item.actionId}
-                  type="button"
-                  aria-label={item.label}
-                  aria-haspopup="dialog"
-                  aria-expanded={matchModeSheetOpen}
-                  onClick={() => setMatchModeSheetOpen(true)}
-                  className={cn(
-                    'group relative flex min-h-16 min-w-0 flex-1 items-center justify-center px-1 py-1.5 transition-all duration-200 [-webkit-tap-highlight-color:transparent] active:scale-[0.96]',
-                  )}
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      'relative flex h-14 w-full items-center justify-center rounded-xl',
-                      // Fundo amarelo sofisticado — sem borda preta, gradiente
-                      // contido e halo sutil (low-opacity, raio menor).
-                      'bg-gradient-to-b from-[#FFEB3D] to-neon-yellow',
-                      'shadow-[0_2px_10px_rgba(253,225,0,0.18)]',
-                      'transition-all duration-200',
-                      'group-hover:shadow-[0_3px_14px_rgba(253,225,0,0.28)]',
-                      'group-hover:brightness-105 group-active:scale-[0.97]',
-                    )}
+                <div key={item.actionId} className="flex justify-center">
+                  <button
+                    type="button"
+                    aria-label={item.label}
+                    aria-haspopup="dialog"
+                    aria-expanded={matchModeSheetOpen}
+                    onClick={() => setMatchModeSheetOpen(true)}
+                    className="-mt-5 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-nav ring-1 ring-white/[0.08] transition-colors [-webkit-tap-highlight-color:transparent] hover:ring-neon-yellow/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon-yellow"
                   >
-                    <img
-                      src={JOGAR_BALL_SRC}
-                      alt=""
-                      draggable={false}
-                      className="h-9 w-9 object-contain"
-                    />
-                  </span>
-                </button>
+                    {/* Símbolo em volt sobre o círculo escuro (o SVG de antes era preto, feito pro amarelo). */}
+                    <img src="/brand/olefoot-icone-yellow-01.svg" alt="" draggable={false} className="h-11 w-11 object-contain" />
+                  </button>
+                </div>
               );
             }
 
-            // Slot LINK normal
             const isActive =
               location.pathname === item.path || location.pathname.startsWith(item.path + '/');
             const Icon = item.icon;
@@ -728,31 +697,19 @@ export function Layout({ children }: { children: ReactNode }) {
               <Link
                 key={item.path}
                 to={item.path}
-                aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'group relative flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center px-1 py-3 transition-all duration-200 [-webkit-tap-highlight-color:transparent] active:scale-[0.94]',
-                  isActive
-                    ? 'text-neon-yellow bg-neon-yellow/[0.05]'
-                    : 'text-white/55 hover:text-white/90',
+                  'relative flex min-h-16 min-w-0 flex-col items-center gap-[5px] px-1 pt-3 pb-2 transition-colors [-webkit-tap-highlight-color:transparent]',
+                  isActive ? 'text-white' : 'text-poeira hover:text-white/90',
                 )}
               >
-                {/* Rail amarelo top (assinatura Legacy Tech) */}
                 {isActive ? (
-                  <span
-                    aria-hidden
-                    className="absolute left-1/2 top-0 h-[3px] w-10 -translate-x-1/2 bg-neon-yellow shadow-[0_0_12px_rgba(253,225,0,0.55)]"
-                  />
+                  <span aria-hidden className="absolute left-1/2 top-[-1px] h-0.5 w-6 -translate-x-1/2 bg-neon-yellow" />
                 ) : null}
-                <Icon
-                  className={cn(
-                    'h-7 w-7 shrink-0 transition-transform duration-200',
-                    isActive
-                      ? 'drop-shadow-[0_0_8px_rgba(253,225,0,0.55)]'
-                      : 'group-hover:scale-110',
-                  )}
-                  strokeWidth={isActive ? 2.5 : 2}
-                />
+                <Icon className="h-[22px] w-[22px] shrink-0" strokeWidth={isActive ? 2.2 : 1.8} />
+                <span className={cn('block max-w-full truncate text-[10.5px] leading-none', isActive ? 'font-semibold' : 'font-medium')}>
+                  {item.label.charAt(0) + item.label.slice(1).toLowerCase()}
+                </span>
               </Link>
             );
           })}
