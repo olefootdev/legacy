@@ -71,7 +71,7 @@ export function evaluatePerformanceBonuses(stats: MatchStats): PerformanceBonus[
     bonuses.push({
       id: 'clean_sheet',
       name: 'Defesa Impecável',
-      description: 'Não sofreu nenhum golo',
+      description: 'Não sofreu nenhum gol',
       ole: 50,
       exp: 10,
       icon: '🧤',
@@ -84,7 +84,7 @@ export function evaluatePerformanceBonuses(stats: MatchStats): PerformanceBonus[
     bonuses.push({
       id: 'hattrick',
       name: 'Hat-trick',
-      description: 'Um jogador marcou 3+ golos',
+      description: 'Um jogador marcou 3+ gols',
       ole: 100,
       exp: 20,
       icon: '🎩',
@@ -120,7 +120,7 @@ export function evaluatePerformanceBonuses(stats: MatchStats): PerformanceBonus[
     bonuses.push({
       id: 'efficiency',
       name: 'Eficiência Clínica',
-      description: '3+ golos com ≤8 finalizações',
+      description: '3+ gols com ≤8 finalizações',
       ole: 40,
       exp: 10,
       icon: '🎯',

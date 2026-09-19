@@ -147,7 +147,7 @@ export function VoiceCommandPreview({
 
         {/* Label do comando */}
         <motion.div
-          className="absolute rounded-lg border border-neon-yellow/60 bg-black/80 px-3 py-1.5 text-xs font-bold text-neon-yellow backdrop-blur-sm"
+          className="absolute rounded-lg border border-neon-yellow/60 bg-nav px-3 py-1.5 text-xs font-bold text-neon-yellow"
           style={{
             left: playerPx.x + 30,
             top: playerPx.y - 10,

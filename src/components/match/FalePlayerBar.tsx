@@ -1,7 +1,7 @@
 /**
  * FalePlayerBar — comando do Legacy Mode (editorial Legacy Tech).
  * Eyebrow Agency + linha mic + input + send + ATIVAR LEGACY.
- * Feedback Moret italic. Fixa no rodapé.
+ * Feedback em texto reto. Fixa no rodapé.
  */
 import { useCallback, useState } from 'react';
 import { Mic, Send, Crown } from 'lucide-react';
@@ -11,7 +11,7 @@ import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 import { processVoiceCommand, type VoiceCommandResult } from '@/voiceCommand/voiceCommandProcessor';
 import { parseCoachCommand, findPlayerByName } from '@/match/coachCommands';
 
-const NEON = '#FDE100';
+const NEON = 'var(--color-neon-yellow)';
 
 interface FalePlayerBarProps {
   players: PitchPlayerState[];
@@ -156,26 +156,23 @@ export function FalePlayerBar({
         right: 0,
         bottom: 0,
         zIndex: 140,
-        background: 'rgba(13,13,13,0.96)',
-        backdropFilter: 'blur(8px)',
+        background: 'var(--color-nav)',
         borderTop: `1px solid rgba(253,225,0,0.18)`,
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0px)',
       }}
     >
-      {/* Régua amarela superior (animada quando ouvindo) */}
+      {/* Régua amarela superior, chapada (pisca quando ouvindo) */}
       <div
         aria-hidden
         style={{
           height: 2,
           width: '100%',
-          background: listening
-            ? `linear-gradient(90deg, transparent 0%, ${NEON} 50%, transparent 100%)`
-            : `linear-gradient(90deg, transparent 0%, rgba(253,225,0,0.55) 50%, transparent 100%)`,
+          background: listening ? NEON : 'rgba(253,225,0,0.35)',
           animation: listening ? 'shimmer 1.4s ease-in-out infinite' : 'none',
         }}
       />
 
-      {/* Feedback Moret — sobre a barra */}
+      {/* Feedback — sobre a barra */}
       {feedback && (
         <div
           style={{
@@ -203,8 +200,7 @@ export function FalePlayerBar({
               </span>
               <span
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
+                  fontFamily: 'var(--font-sans)',
                   fontSize: 16,
                   letterSpacing: '-0.01em',
                   color: '#fff',
@@ -224,7 +220,7 @@ export function FalePlayerBar({
                 fontSize: 10,
                 fontWeight: 700,
                 letterSpacing: '0.24em',
-                color: '#EF4444',
+                color: 'var(--color-baixa)',
                 textTransform: 'uppercase',
               }}
             >
@@ -259,8 +255,8 @@ export function FalePlayerBar({
             aria-label={listening ? 'Parar captura' : 'Falar com o time'}
             title={voice.supported ? (listening ? 'Parar' : 'Falar') : 'Voz não suportada'}
             style={{
-              background: listening ? '#EF4444' : 'transparent',
-              border: `1px solid ${listening ? '#EF4444' : 'rgba(253,225,0,0.55)'}`,
+              background: listening ? 'var(--color-baixa)' : 'transparent',
+              border: `1px solid ${listening ? 'var(--color-baixa)' : 'rgba(253,225,0,0.55)'}`,
               color: listening ? '#fff' : NEON,
               width: 44,
               height: 44,
@@ -272,7 +268,6 @@ export function FalePlayerBar({
               justifyContent: 'center',
               flexShrink: 0,
               transition: 'all 150ms',
-              boxShadow: listening ? '0 0 16px rgba(239,68,68,0.55)' : 'none',
             }}
           >
             <Mic size={18} strokeWidth={listening ? 2.5 : 2} />
@@ -294,7 +289,6 @@ export function FalePlayerBar({
               border: '1px solid rgba(255,255,255,0.15)',
               color: '#fff',
               fontFamily: 'var(--font-sans)',
-              fontStyle: 'italic',
               fontSize: 13,
               padding: '0 14px',
               height: 44,
@@ -326,13 +320,12 @@ export function FalePlayerBar({
               justifyContent: 'center',
               flexShrink: 0,
               transition: 'all 150ms',
-              boxShadow: text.trim() && !busy ? '0 8px 24px rgba(253,225,0,0.18)' : 'none',
             }}
           >
             <Send size={16} strokeWidth={2.5} />
           </button>
 
-          {/* Legacy — botão quadrado, Moret italic */}
+          {/* Legacy — botão quadrado */}
           <button
             type="button"
             onClick={toggleLegacy}
@@ -340,7 +333,7 @@ export function FalePlayerBar({
             aria-label={effectiveLegacyActive ? 'Desativar Legacy' : 'Ativar Legacy'}
             title={effectiveLegacyActive ? 'Legacy ativo — skills do time ativadas' : 'Ativar Legacy: ativa skills do time'}
             style={{
-              background: effectiveLegacyActive ? '#0D0D0D' : NEON,
+              background: effectiveLegacyActive ? 'var(--color-asfalto)' : NEON,
               color: effectiveLegacyActive ? NEON : '#000',
               border: `2px solid ${NEON}`,
               width: 44,
@@ -352,11 +345,6 @@ export function FalePlayerBar({
               justifyContent: 'center',
               flexShrink: 0,
               transition: 'all 200ms',
-              boxShadow: effectiveLegacyActive
-                ? '0 0 18px rgba(253,225,0,0.65)'
-                : '0 8px 24px rgba(253,225,0,0.18)',
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
               fontWeight: 700,
               fontSize: 16,
               letterSpacing: '-0.01em',

@@ -29,10 +29,10 @@ export function Sparkline({
     })
     .join(' ');
 
-  const stroke = positive ? 'var(--color-neon-green, #65ff8a)' : '#ff6b6b';
+  const stroke = positive ? 'var(--color-alta)' : 'var(--color-baixa)';
   const fill = positive
-    ? 'rgba(101, 255, 138, 0.08)'
-    : 'rgba(255, 107, 107, 0.08)';
+    ? 'rgba(34, 197, 94, 0.08)'
+    : 'rgba(255, 77, 77, 0.08)';
 
   const areaPath = `M 0,${height} L ${points.split(' ').join(' L ')} L ${width},${height} Z`;
 

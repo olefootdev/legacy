@@ -86,7 +86,7 @@ export function MomentumShiftOverlay({ momentum, homeShort, awayShort }: Momentu
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
           onClick={() => setShiftEvent(null)}
         >
           <motion.div
@@ -98,10 +98,9 @@ export function MomentumShiftOverlay({ momentum, homeShort, awayShort }: Momentu
           >
             {/* Ícone animado */}
             <motion.div
-              className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-orange-500"
+              className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-neon-yellow"
               animate={{
                 scale: [1, 1.2, 1],
-                rotate: [0, 180, 360],
               }}
               transition={{
                 duration: 2,
@@ -109,12 +108,12 @@ export function MomentumShiftOverlay({ momentum, homeShort, awayShort }: Momentu
                 ease: 'easeInOut',
               }}
             >
-              <Zap className="h-10 w-10 text-white" strokeWidth={3} />
+              <Zap className="h-10 w-10 text-black" strokeWidth={3} />
             </motion.div>
 
             {/* Título principal */}
             <motion.h1
-              className="mb-4 font-display text-6xl font-black uppercase tracking-tight text-yellow-400 sm:text-7xl"
+              className="mb-4 font-display text-6xl font-black uppercase tracking-tight text-neon-yellow sm:text-7xl"
               animate={{
                 scale: [1, 1.05, 1],
               }}
@@ -154,7 +153,7 @@ export function MomentumShiftOverlay({ momentum, homeShort, awayShort }: Momentu
               transition={{ delay: 0.7 }}
             >
               <motion.div
-                className="h-full bg-yellow-400"
+                className="h-full bg-neon-yellow"
                 initial={{ width: '100%' }}
                 animate={{ width: '0%' }}
                 transition={{ duration: 3, ease: 'linear' }}

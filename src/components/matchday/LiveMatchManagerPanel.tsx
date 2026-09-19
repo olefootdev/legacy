@@ -152,12 +152,12 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
 
   const doSubstitution = () => {
     if (!subOutId || !subInId) {
-      setFeedback('Escolhe quem sai e quem entra.');
+      setFeedback('Escolha quem sai e quem entra.');
       window.setTimeout(() => setFeedback(null), 2200);
       return;
     }
     if (subOutId === subInId) {
-      setFeedback('Jogadores têm de ser diferentes.');
+      setFeedback('Os jogadores precisam ser diferentes.');
       window.setTimeout(() => setFeedback(null), 2200);
       return;
     }
@@ -275,10 +275,10 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
             <span
               className="border px-2 py-1"
               style={{
-                background: 'rgba(251, 191, 36, 0.15)',
-                borderColor: 'rgba(251, 191, 36, 0.4)',
+                background: 'rgba(255, 159, 28, 0.15)',
+                borderColor: 'rgba(255, 159, 28, 0.4)',
                 borderRadius: 'var(--radius-sm)',
-                color: '#fcd34d',
+                color: 'var(--color-atencao)',
                 fontFamily: 'var(--font-display)',
                 fontSize: '9px',
                 fontWeight: 700,
@@ -299,26 +299,26 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
                 key={id}
                 type="button"
                 onClick={() => selectFormation(id)}
-                className="border px-3 py-2 ole-headline tabular-nums transition-all hover:scale-105 active:scale-95"
+                className="border px-3 py-2 ole-headline tabular-nums transition-[filter] hover:brightness-125 active:scale-95"
                 style={{
                   background: isActive
                     ? 'rgba(253, 225, 0, 0.15)'
                     : isPending
-                      ? 'rgba(251, 191, 36, 0.2)'
+                      ? 'rgba(255, 159, 28, 0.2)'
                       : 'rgba(255, 255, 255, 0.05)',
                   borderColor: isActive
                     ? 'var(--yellow)'
                     : isPending
-                      ? 'rgba(251, 191, 36, 0.5)'
+                      ? 'rgba(255, 159, 28, 0.5)'
                       : 'rgba(255, 255, 255, 0.15)',
                   borderRadius: 'var(--radius-sm)',
                   color: isActive
                     ? 'var(--yellow)'
                     : isPending
-                      ? '#fcd34d'
-                      : '#d1d5db',
+                      ? 'var(--color-atencao)'
+                      : 'var(--color-giz)',
                   fontSize: 'var(--text-ui-xs)',
-                  boxShadow: isPending ? '0 0 0 1px rgba(251, 191, 36, 0.5)' : undefined,
+                  outline: isPending ? '1px solid rgba(255, 159, 28, 0.5)' : undefined,
                 }}
               >
                 {id}
@@ -330,7 +330,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
           type="button"
           onClick={implementFormation}
           disabled={!pendingScheme}
-          className="inline-flex w-full items-center justify-center gap-2 border px-4 py-3 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+          className="inline-flex w-full items-center justify-center gap-2 border px-4 py-3 transition-[filter] hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
           style={{
             background: pendingScheme ? 'var(--yellow)' : 'rgba(255, 255, 255, 0.05)',
             borderColor: pendingScheme ? 'rgba(0, 0, 0, 0.1)' : 'var(--border)',
@@ -355,9 +355,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
             color: 'rgba(255, 255, 255, 0.5)',
           }}
         >
-          {pendingScheme
-            ? 'Clica IMPLEMENTAR para o time começar a atuar na nova formação.'
-            : 'Selecione uma formação; o time só muda depois de IMPLEMENTAR.'}
+          O time só muda depois de implementar.
         </p>
       </div>
 
@@ -401,16 +399,6 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
             {subsLeft}/{maxSubs} restantes
           </span>
         </div>
-        <p
-          className="leading-relaxed"
-          style={{
-            fontFamily: 'var(--font-ui)',
-            fontSize: '11px',
-            color: 'rgba(255, 255, 255, 0.6)',
-          }}
-        >
-          Troca um titular por um jogador do banco. O relato da partida regista a alteração.
-        </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="flex-1 space-y-2">
             <span
@@ -486,7 +474,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
             type="button"
             onClick={doSubstitution}
             disabled={subsLeft <= 0}
-            className="border px-4 py-2 transition-all hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-35 disabled:hover:scale-100"
+            className="border px-4 py-2 transition-[filter] hover:brightness-110 active:scale-95 disabled:pointer-events-none disabled:opacity-35"
             style={{
               background: 'var(--yellow)',
               borderColor: 'rgba(0, 0, 0, 0.1)',
@@ -565,13 +553,12 @@ function LiveActionCards({ onFire }: { onFire: (label: string) => void }) {
               key={c.id}
               type="button"
               onClick={() => fire(c)}
-              className="group relative flex flex-col items-start gap-2 border p-3 text-left transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="group relative flex flex-col items-start gap-2 border p-3 text-left transition-colors active:scale-[0.98]"
               style={{
                 background: style.bg,
-                borderColor: style.border,
+                borderColor: active ? style.hover : style.border,
                 borderRadius: 'var(--radius-sm)',
                 color: style.text,
-                boxShadow: active ? `0 0 20px ${style.hover}` : undefined,
               }}
               title={`Voz: "${c.phrase}"`}
             >
@@ -590,7 +577,7 @@ function LiveActionCards({ onFire }: { onFire: (label: string) => void }) {
                   {c.label}
                 </p>
                 <p
-                  className="mt-1 line-clamp-2 leading-snug opacity-80"
+                  className="mt-1 truncate leading-snug opacity-80"
                   style={{
                     fontFamily: 'var(--font-ui)',
                     fontSize: '9px',
@@ -602,7 +589,7 @@ function LiveActionCards({ onFire }: { onFire: (label: string) => void }) {
               </div>
               {/* Tooltip de voz no hover */}
               <span
-                className="pointer-events-none absolute right-2 top-2 rounded-sm bg-black/50 px-1.5 py-0.5 font-mono text-[7px] uppercase opacity-0 backdrop-blur transition-opacity group-hover:opacity-90"
+                className="pointer-events-none absolute right-2 top-2 rounded-sm bg-nav px-1.5 py-0.5 font-mono text-[7px] uppercase opacity-0 transition-opacity group-hover:opacity-90"
                 style={{ color: 'rgba(255, 255, 255, 0.9)' }}
               >
                 🎤 "{c.phrase}"
@@ -660,12 +647,12 @@ function LegacyFineTune({
                 key={id}
                 type="button"
                 onClick={() => onApplyPreset(id)}
-                className="border px-3 py-2 transition-all hover:scale-105 active:scale-95"
+                className="border px-3 py-2 transition-[filter] hover:brightness-125 active:scale-95"
                 style={{
                   background: presetActive === id ? 'rgba(253, 225, 0, 0.15)' : 'rgba(255, 255, 255, 0.05)',
                   borderColor: presetActive === id ? 'var(--yellow)' : 'rgba(255, 255, 255, 0.15)',
                   borderRadius: 'var(--radius-sm)',
-                  color: presetActive === id ? 'var(--yellow)' : '#d1d5db',
+                  color: presetActive === id ? 'var(--yellow)' : 'var(--color-giz)',
                   fontFamily: 'var(--font-display)',
                   fontSize: '10px',
                   fontWeight: 700,
@@ -694,7 +681,7 @@ function LegacyFineTune({
                   background: 'rgba(255, 255, 255, 0.05)',
                   borderColor: 'rgba(255, 255, 255, 0.1)',
                   borderRadius: 'var(--radius-sm)',
-                  color: '#e5e7eb',
+                  color: 'var(--color-giz)',
                   fontFamily: 'var(--font-ui)',
                   fontSize: '10px',
                   fontWeight: 600,

@@ -94,7 +94,7 @@ export function LegacyEditorialHeader({
             cursor: 'pointer',
             transition: 'all 150ms',
           }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.55)'; }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#FF4D4D'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.55)'; }}
           onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; }}
         >
           <X size={12} strokeWidth={2.5} />
@@ -121,7 +121,6 @@ export function LegacyEditorialHeader({
           <h1
             style={{
               fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
               fontWeight: 700,
               fontSize: 'clamp(20px, 3.4vw, 30px)',
               letterSpacing: '-0.02em',
@@ -247,7 +246,6 @@ export function LegacyEditorialHeader({
                             padding: '6px 12px',
                             cursor: 'pointer',
                             fontFamily: 'var(--font-serif-hero)',
-                            fontStyle: 'italic',
                             fontSize: 13,
                             color: f === formation ? NEON : 'rgba(255,255,255,0.6)',
                             textAlign: 'left',
@@ -271,7 +269,6 @@ export function LegacyEditorialHeader({
         <div
           style={{
             fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
             fontWeight: 700,
             fontSize: 'clamp(40px, 7.5vw, 68px)',
             letterSpacing: '-0.04em',

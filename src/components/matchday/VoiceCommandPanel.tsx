@@ -411,7 +411,7 @@ export function VoiceCommandPanel() {
       let commandPayload: Record<string, unknown> | undefined;
       if (cmd.intent === 'pass_to_player') {
         if (!live.onBallPlayerId) {
-          addFeedback({ kind: 'error', message: '🎯 "Passa" só funciona com bola no pé da sua equipa' });
+          addFeedback({ kind: 'error', message: '🎯 "Passa" só funciona com bola no pé do seu time' });
           continue;
         }
         if (live.onBallPlayerId === targetPlayerId) {
@@ -691,7 +691,7 @@ export function VoiceCommandPanel() {
               ))}
             </div>
             {liveText ? (
-              <p className="mt-1 text-xs text-white/90 italic">"{liveText}"</p>
+              <p className="mt-1 text-xs text-white/90">"{liveText}"</p>
             ) : null}
           </motion.div>
         ) : null}
@@ -713,7 +713,7 @@ export function VoiceCommandPanel() {
             autoComplete="off"
           />
           {mentionEdit && mentionSuggestions.length > 0 ? (
-            <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-violet-400/50 bg-black/95 shadow-[0_8px_24px_rgba(0,0,0,0.55)] backdrop-blur">
+            <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-violet-400/50 bg-panel">
               <div className="border-b border-white/5 bg-white/[0.03] px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-violet-200">
                 {mentionEdit.kind === '@' ? 'Jogador' : 'Setor'}
                 <span className="ml-1.5 text-white/30">
@@ -807,7 +807,7 @@ export function VoiceCommandPanel() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.2 }}
-            className="rounded-xl border border-cyan-400/60 bg-cyan-500/10 px-3 py-3 shadow-[0_0_18px_rgba(34,211,238,0.12)]"
+            className="rounded-xl border border-cyan-400/60 bg-cyan-500/10 px-3 py-3"
           >
             <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-200">🤔 Você quis dizer…</p>
             <p className="mt-1 font-display text-sm font-black uppercase tracking-wider text-white">
@@ -817,7 +817,7 @@ export function VoiceCommandPanel() {
               ) : null}
               ?
             </p>
-            <p className="mt-1 text-[10px] italic leading-snug text-cyan-300/80">
+            <p className="mt-1 text-[10px] leading-snug text-cyan-300/80">
               Original: "{pendingGuess.originalPhrase}" · Canônico: "{pendingGuess.guess.canonicalPhrase}"
             </p>
             <div className="mt-2 flex gap-2">

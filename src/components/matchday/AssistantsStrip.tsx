@@ -63,7 +63,7 @@ export function AssistantsStrip({
               className={cn(
                 'rounded-lg border px-1.5 py-1 text-center transition-colors',
                 isPulsing
-                  ? 'border-violet-400 bg-violet-500/25 shadow-[0_0_12px_rgba(167,139,250,0.5)]'
+                  ? 'border-violet-400 bg-violet-500/25'
                   : 'border-white/10 bg-white/[0.03]',
               )}
             >

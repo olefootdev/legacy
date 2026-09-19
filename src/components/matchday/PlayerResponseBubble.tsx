@@ -71,7 +71,7 @@ export function PlayerResponseBubble({ command }: { command?: PendingCommand }) 
             exit={{ opacity: 0, y: -8, scale: 0.9 }}
             transition={{ type: 'spring', stiffness: 420, damping: 24 }}
             className={cn(
-              'pointer-events-none absolute left-1/2 -top-8 -translate-x-1/2 whitespace-nowrap rounded-full border-2 px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-wider shadow-lg z-20',
+              'pointer-events-none absolute left-1/2 -top-8 -translate-x-1/2 whitespace-nowrap rounded-full border-2 px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-wider z-20',
               color,
               tier === 'protest' ? 'animate-pulse' : '',
             )}
@@ -94,7 +94,7 @@ export function PlayerResponseBubble({ command }: { command?: PendingCommand }) 
             <motion.div
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
-              className="flex items-center gap-1 rounded-full border border-cyan-400/60 bg-cyan-500/90 px-2 py-0.5 shadow-lg"
+              className="flex items-center gap-1 rounded-full border border-cyan-400/60 bg-cyan-500/90 px-2 py-0.5"
             >
               <span className="text-[10px] font-black text-black">🎯</span>
               <span className="font-mono text-[9px] font-bold text-black">{timeLeftSecs}s</span>

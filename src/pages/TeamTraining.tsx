@@ -41,32 +41,32 @@ type CardMeta = { label: string; grade: string; desc: string; icon: LucideIcon; 
 const CARD_META: Record<TrainingCardId, CardMeta> = {
   fisico: {
     label: 'Físico', grade: 'A', icon: Zap,
-    desc: 'Resistência e velocidade. Alivia a fadiga.',
+    desc: 'Resistência e velocidade',
     gains: [{ t: '+2 Físico' }, { t: '+1 Velocidade' }, { t: '−4 Fadiga' }],
   },
   mental: {
     label: 'Mental', grade: 'A', icon: Brain,
-    desc: 'Mentalidade e confiança sob pressão.',
+    desc: 'Confiança sob pressão',
     gains: [{ t: '+2 Mental' }, { t: '+2 Confiança' }, { t: '+6 Fadiga', down: true }],
   },
   tatico: {
     label: 'Tático', grade: 'B', icon: LayoutGrid,
-    desc: 'Posicionamento e marcação por função.',
+    desc: 'Posicionamento e marcação',
     gains: [{ t: '+2 Tático' }, { t: '+1 Marcação' }, { t: '+7 Fadiga', down: true }],
   },
   atributos: {
     label: 'Técnico', grade: 'B', icon: Footprints,
-    desc: 'Passe, drible e finalização — a base.',
+    desc: 'Passe, drible, finalização',
     gains: [{ t: '+1 Passe' }, { t: '+1 Drible' }, { t: '+1 Finalização' }, { t: '+8 Fadiga', down: true }],
   },
   especial: {
     label: 'Espec. ofensiva', grade: 'A', icon: Crosshair,
-    desc: 'Faro de gol: finalização acima de tudo.',
+    desc: 'Faro de gol',
     gains: [{ t: '+2 Finalização' }, { t: '+1 Passe' }, { t: '+1 Drible' }, { t: '+8 Fadiga', down: true }],
   },
   descanso: {
     label: 'Descanso', grade: 'REC', icon: BatteryCharging,
-    desc: 'Recupera fadiga e reduz risco de lesão. Sem evolução.',
+    desc: 'Recuperação',
     gains: [{ t: '−25 Fadiga' }, { t: '−8 Risco' }, { t: 'Sem XP', muted: true }],
   },
 };
@@ -260,7 +260,7 @@ export function TeamTraining() {
           subtitle="Evolua seu time"
           stats={`${running.length} planos ativos · ${completedPlans.length} concluídos · ${slots} slots disponíveis`}
           icon={
-            <div className="group/icon relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 transition-all hover:border-black/80 hover:shadow-[0_0_24px_rgba(0,0,0,0.4)]"
+            <div className="group/icon relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 transition-colors hover:border-black/80"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
               <div className="flex h-full w-full items-center justify-center">
                 <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-neon-yellow/90" aria-hidden />
@@ -269,7 +269,7 @@ export function TeamTraining() {
           }
         />
 
-        {/* ---- STAT CARDS (rail 3px + número serifa) ---- */}
+        {/* ---- STAT CARDS (rail 3px + número) ---- */}
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
           <RailStat label="Slots por sessão" value={<>{slots}</>} />
           <RailStat label="Coletivos simult." value={<>{runningCollective}<small className="text-white/45"> /{maxColl}</small></>} />
@@ -290,10 +290,10 @@ export function TeamTraining() {
                 type="button"
                 onClick={() => setTrainingType(id)}
                 aria-pressed={sel}
-                className={`group relative overflow-hidden rounded-[var(--radius-md)] border bg-[#1c1c1c] p-4 pl-[18px] text-left transition-all ${
+                className={`group relative overflow-hidden rounded-md border bg-card p-4 pl-[18px] text-left transition-colors ${
                   sel
-                    ? '-translate-y-0.5 border-neon-yellow shadow-[0_12px_34px_-18px_rgba(253,225,0,0.6)]'
-                    : 'border-white/10 hover:-translate-y-0.5 hover:border-white/20'
+                    ? 'border-neon-yellow'
+                    : 'border-white/10 hover:border-white/30'
                 }`}
               >
                 <span
@@ -303,18 +303,18 @@ export function TeamTraining() {
                   aria-hidden
                 />
                 <div className="flex items-start justify-between">
-                  <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-neon-yellow/10">
+                  <span className="grid h-9 w-9 place-items-center rounded-sm bg-neon-yellow/10">
                     <Icon className="h-5 w-5 text-neon-yellow" aria-hidden />
                   </span>
                   <span
-                    className="italic leading-none text-neon-yellow"
+                    className="leading-none text-neon-yellow"
                     style={{ fontFamily: NUM, fontSize: meta.grade.length > 1 ? '13px' : '26px' }}
                   >
                     {meta.grade}
                   </span>
                 </div>
                 <h3 className="mt-3 font-display text-[16px] font-semibold uppercase tracking-[0.03em] leading-tight">{meta.label}</h3>
-                <p className="mt-1 min-h-[34px] text-[11.5px] leading-snug text-white/55">{meta.desc}</p>
+                <p className="mt-1 truncate text-[11.5px] leading-snug text-white/55">{meta.desc}</p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {meta.gains.map((g) => (
                     <span
@@ -351,7 +351,7 @@ export function TeamTraining() {
                 {elencoCount}
               </div>
               <p className="text-[12.5px] leading-relaxed text-white/60">
-                <span className="text-white">Plantel completo</span> na sessão coletiva. Ganho menor por jogador, mas todos evoluem juntos — conta como 1 slot coletivo (máx. {maxColl} em simultâneo).
+                <span className="text-white">Plantel completo</span> · ganho menor por jogador · 1 slot coletivo (máx. {maxColl})
               </p>
             </div>
           )}
@@ -369,8 +369,8 @@ export function TeamTraining() {
                       type="button"
                       onClick={() => setSector(id)}
                       aria-pressed={sel}
-                      className={`group relative overflow-hidden rounded-[var(--radius-md)] border bg-[#1c1c1c] p-3.5 pl-[18px] text-left transition-all ${
-                        sel ? '-translate-y-0.5 border-neon-yellow' : 'border-white/10 hover:-translate-y-0.5 hover:border-white/20'
+                      className={`group relative overflow-hidden rounded-md border bg-card p-3.5 pl-[18px] text-left transition-colors ${
+                        sel ? 'border-neon-yellow' : 'border-white/10 hover:border-white/30'
                       }`}
                     >
                       <span className={`absolute inset-y-0 left-0 w-[3px] ${sel ? 'bg-neon-yellow' : 'bg-white/15 group-hover:bg-neon-yellow/60'}`} aria-hidden />
@@ -378,7 +378,7 @@ export function TeamTraining() {
                       <div className="mt-0.5 text-[11px] text-white/50">{meta.sub}</div>
                       <div className="tabular-nums mt-2 leading-none text-neon-yellow" style={{ fontFamily: NUM, fontSize: '24px' }}>
                         {sectorCounts[id]}
-                        <span className="ml-1 align-baseline text-[11px] not-italic text-white/50" style={{ fontFamily: 'var(--font-sans)' }}>jogadores</span>
+                        <span className="ml-1 align-baseline text-[11px] text-white/50" style={{ fontFamily: 'var(--font-sans)' }}>jogadores</span>
                       </div>
                     </button>
                   );
@@ -404,7 +404,7 @@ export function TeamTraining() {
                 </div>
               </div>
               {roster.length === 0 ? (
-                <div className="rounded-[var(--radius-md)] border border-dashed border-white/15 bg-black/30 px-4 py-6 text-center text-[13px] text-white/60">
+                <div className="rounded-md border border-dashed border-white/15 bg-black/30 px-4 py-6 text-center text-[13px] text-white/60">
                   Nenhum jogador no elenco ainda.
                 </div>
               ) : (
@@ -423,15 +423,12 @@ export function TeamTraining() {
                       onClick={() => togglePlayer(p.id)}
                       disabled={disabled}
                       aria-pressed={active}
-                      className={`group relative flex min-h-[64px] shrink-0 items-stretch overflow-hidden rounded-[var(--radius-md)] border bg-[#1c1c1c] text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                      className={`group relative flex min-h-[64px] shrink-0 items-stretch overflow-hidden rounded-md border bg-card text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                         active ? 'border-neon-yellow' : 'border-white/10 hover:border-white/25'
                       }`}
                     >
                       <span className="absolute inset-y-0 left-0 z-10 w-[3px]" style={{ background: active ? 'var(--color-neon-yellow)' : rail }} aria-hidden />
                       <div className="relative flex w-[86px] shrink-0 flex-col justify-center overflow-hidden bg-black/60 py-3 pl-4">
-                        <span className="tabular-nums pointer-events-none absolute -bottom-3 -right-1 leading-none text-white/[0.05]" style={{ fontFamily: NUM, fontSize: '72px' }} aria-hidden>
-                          {p.name.charAt(0)}
-                        </span>
                         <span className="tabular-nums leading-none" style={{ fontFamily: NUM, fontSize: '32px', color: rail }}>{ovr}</span>
                         <span className="mt-1 font-display text-[10px] uppercase tracking-[0.1em] text-white/45">{p.pos}</span>
                       </div>
@@ -447,7 +444,7 @@ export function TeamTraining() {
                         </div>
                       </div>
                       <div className="flex items-center pr-4">
-                        <span className={`grid h-[22px] w-[22px] place-items-center rounded-[7px] border ${active ? 'border-neon-yellow bg-neon-yellow' : 'border-white/20'}`}>
+                        <span className={`grid h-[22px] w-[22px] place-items-center rounded-sm border ${active ? 'border-neon-yellow bg-neon-yellow' : 'border-white/20'}`}>
                           {active && <Check className="h-3 w-3 text-black" strokeWidth={3} />}
                         </span>
                       </div>
@@ -480,14 +477,14 @@ export function TeamTraining() {
               type="button"
               onClick={startTraining}
               disabled={!canStartTraining}
-              className="rounded-[var(--radius-md)] bg-neon-yellow px-6 py-3.5 font-display text-[14px] font-bold uppercase tracking-[0.08em] text-black shadow-[0_0_24px_-6px_rgba(253,225,0,0.6)] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40 disabled:shadow-none"
+              className="rounded-md bg-neon-yellow px-6 py-3.5 font-display text-[14px] font-bold uppercase tracking-[0.08em] text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
             >
               Iniciar treino
             </button>
             <button
               type="button"
               onClick={completeDueNow}
-              className="rounded-[var(--radius-md)] border border-white/20 bg-white/[0.06] px-4 py-3.5 font-display text-[12px] font-bold uppercase tracking-[0.08em] text-white/80 transition-colors hover:bg-white/10"
+              className="rounded-md border border-white/20 bg-white/[0.06] px-4 py-3.5 font-display text-[12px] font-bold uppercase tracking-[0.08em] text-white/80 transition-colors hover:bg-white/10"
             >
               Concluir
             </button>
@@ -522,11 +519,11 @@ export function TeamTraining() {
                       <div className="text-[10.5px] text-white/45">{dh}h · até {endShort}</div>
                     </div>
                     <span
-                      className={`inline-flex shrink-0 items-center gap-1.5 italic ${done ? 'text-neon-green' : 'text-white'}`}
+                      className={`inline-flex shrink-0 items-center gap-1.5 ${done ? 'text-neon-green' : 'text-white'}`}
                       style={{ fontFamily: NUM, fontSize: '17px' }}
                       title={done ? 'Prazo atingido — usa «Concluir» para aplicar' : `Termina a ${endShort}`}
                     >
-                      <Clock className="h-3.5 w-3.5 shrink-0 opacity-80 not-italic" aria-hidden />
+                      <Clock className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
                       {formatCountdownRemaining(done ? 0 : remainingMs)}
                     </span>
                   </div>
@@ -604,7 +601,7 @@ function WhoButton({ active, onClick, title, desc }: { active: boolean; onClick:
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`group relative overflow-hidden rounded-[var(--radius-md)] border bg-[#1c1c1c] p-4 pl-[18px] text-left transition-colors ${
+      className={`group relative overflow-hidden rounded-md border bg-card p-4 pl-[18px] text-left transition-colors ${
         active ? 'border-neon-yellow' : 'border-white/10 hover:border-white/20'
       }`}
     >

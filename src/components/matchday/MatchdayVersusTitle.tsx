@@ -6,7 +6,7 @@ import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 
 /**
  * Dígito animado: quando o valor muda, o número novo "cai" de cima com bounce,
- * o placar pulsa com scale + glow amarelo, e o fundo pisca verde por 1s.
+ * o placar pulsa com scale, e o fundo pisca verde por 1s.
  */
 function AnimatedScore({ value, side }: { value: number; side: 'home' | 'away' }) {
   const prev = useRef(value);
@@ -36,19 +36,19 @@ function AnimatedScore({ value, side }: { value: number; side: 'home' | 'away' }
             transition={{ duration: 0.9, ease: 'easeOut' }}
             className={cn(
               'pointer-events-none absolute inset-0 rounded-full',
-              side === 'home' ? 'bg-emerald-400/60' : 'bg-emerald-400/40',
+              side === 'home' ? 'bg-alta/60' : 'bg-alta/40',
             )}
           />
         )}
       </AnimatePresence>
 
-      {/* número com pulse + glow */}
+      {/* número com pulse */}
       <motion.span
         key={key}
         initial={{ y: -28, opacity: 0, scale: 0.7 }}
         animate={
           flash
-            ? { y: 0, opacity: 1, scale: [0.7, 1.35, 0.95, 1.08, 1], textShadow: ['0 0 0px #FFE600', '0 0 18px #FFE600', '0 0 6px #FFE600', '0 0 0px #FFE600'] }
+            ? { y: 0, opacity: 1, scale: [0.7, 1.35, 0.95, 1.08, 1] }
             : { y: 0, opacity: 1, scale: 1 }
         }
         transition={{ type: 'spring', stiffness: 420, damping: 18 }}
@@ -76,23 +76,23 @@ function hueFromSeed(seed: string): number {
 
 const crestSize = {
   /** Linhas compactas / placar */
-  sm: 'h-8 w-8 min-h-8 min-w-8 max-h-8 max-w-8 object-contain shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]',
+  sm: 'h-8 w-8 min-h-8 min-w-8 max-h-8 max-w-8 object-contain shrink-0',
   /** Partida rápida / live ribbon */
-  md: 'h-10 w-10 min-h-10 min-w-10 sm:h-11 sm:w-11 sm:min-h-11 sm:min-w-11 object-contain shrink-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.55)]',
+  md: 'h-10 w-10 min-h-10 min-w-10 sm:h-11 sm:w-11 sm:min-h-11 sm:min-w-11 object-contain shrink-0',
   /**
    * Faixa [casa][relógio][visitante] numa única linha (mobile → desktop).
    * Brasões mais pequenos no telemóvel para caber sem quebrar linha.
    */
   quick:
-    'h-7 w-7 min-h-7 min-w-7 max-h-7 max-w-7 object-contain shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)] min-[400px]:h-9 min-[400px]:w-9 min-[400px]:min-h-9 min-[400px]:min-w-9 min-[400px]:max-h-9 min-[400px]:max-w-9 sm:h-10 sm:w-10 sm:min-h-10 sm:min-w-10 sm:max-h-10 sm:max-w-10 md:h-11 md:w-11 md:min-h-11 md:min-w-11 md:max-h-11 md:max-w-11',
+    'h-7 w-7 min-h-7 min-w-7 max-h-7 max-w-7 object-contain shrink-0 min-[400px]:h-9 min-[400px]:w-9 min-[400px]:min-h-9 min-[400px]:min-w-9 min-[400px]:max-h-9 min-[400px]:max-w-9 sm:h-10 sm:w-10 sm:min-h-10 sm:min-w-10 sm:max-h-10 sm:max-w-10 md:h-11 md:w-11 md:min-h-11 md:min-w-11 md:max-h-11 md:max-w-11',
   /** Banner matchday — compacto para caber nomes completos na mesma linha (brasão largo limitado). */
-  lg: 'h-[1.3rem] w-auto max-h-[1.45rem] max-w-[min(2.85rem,14vw)] object-contain object-left shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)] sm:h-[1.5rem] sm:max-h-[1.65rem] sm:max-w-[min(3.35rem,16vw)] md:h-[1.7rem] md:max-h-[1.9rem] md:max-w-[min(4rem,14vw)] lg:h-[1.85rem] lg:max-h-[2.05rem] lg:max-w-[min(4.75rem,11vw)]',
+  lg: 'h-[1.3rem] w-auto max-h-[1.45rem] max-w-[min(2.85rem,14vw)] object-contain object-left shrink-0 sm:h-[1.5rem] sm:max-h-[1.65rem] sm:max-w-[min(3.35rem,16vw)] md:h-[1.7rem] md:max-h-[1.9rem] md:max-w-[min(4rem,14vw)] lg:h-[1.85rem] lg:max-h-[2.05rem] lg:max-w-[min(4.75rem,11vw)]',
   /**
    * Título “OLE … vs …” no banner da Home — brasões maiores para aproveitar logos HD (ex.: API-Sports ~150px).
    * `object-contain` + teto de largura evita esmagar nomes longos em mobile.
    */
   banner:
-    'h-9 w-auto max-h-9 max-w-[min(3.25rem,18vw)] object-contain object-center shrink-0 drop-shadow-[0_3px_10px_rgba(0,0,0,0.55)] sm:h-10 sm:max-h-10 sm:max-w-[min(3.75rem,16vw)] md:h-11 md:max-h-11 md:max-w-[min(4.25rem,14vw)] lg:h-12 lg:max-h-12 lg:max-w-[min(4.75rem,12vw)] xl:h-[3.25rem] xl:max-h-[3.35rem] xl:max-w-[min(5.25rem,11vw)]',
+    'h-9 w-auto max-h-9 max-w-[min(3.25rem,18vw)] object-contain object-center shrink-0 sm:h-10 sm:max-h-10 sm:max-w-[min(3.75rem,16vw)] md:h-11 md:max-h-11 md:max-w-[min(4.25rem,14vw)] lg:h-12 lg:max-h-12 lg:max-w-[min(4.75rem,12vw)] xl:h-[3.25rem] xl:max-h-[3.35rem] xl:max-w-[min(5.25rem,11vw)]',
 } as const;
 
 /** Brasão sintético do adversário (IA). */
@@ -120,12 +120,12 @@ export function AwayCrestBadge({
   return (
     <span
       className={cn(
-        'inline-flex aspect-square items-center justify-center rounded-sm border border-white/35 font-display font-black leading-none text-white shadow-[0_0_0_1px_rgba(0,0,0,0.35)]',
+        'inline-flex aspect-square items-center justify-center rounded-sm border border-white/35 font-display font-black leading-none text-white',
         box,
         className,
       )}
       style={{
-        background: `linear-gradient(145deg, hsla(${hue}, 58%, 46%, 0.95), hsla(${hue}, 45%, 18%, 0.98))`,
+        background: `hsl(${hue}, 52%, 32%)`,
       }}
       aria-hidden
     >
@@ -162,7 +162,7 @@ function AwayCrestOrPhoto({
 }
 
 /**
- * Duelo no banner: nomes completos (sem truncar). Itálico evitado nos nomes para o espaço não “colar” (ex.: OLE FC).
+ * Duelo no banner: nomes completos (sem truncar), em Anton.
  */
 export function MatchdayVersusTitle({
   homeName,
@@ -188,15 +188,10 @@ export function MatchdayVersusTitle({
   return (
     <h2
       className={cn(
-        'uppercase leading-snug tracking-normal',
+        'font-impact uppercase leading-snug tracking-normal',
         className,
       )}
-      style={{
-        fontFamily: 'var(--font-serif-hero)',
-        fontStyle: 'italic',
-        fontWeight: 700,
-        letterSpacing: '0.01em',
-      }}
+      style={{ letterSpacing: '0.01em' }}
     >
       <span className="flex w-full min-w-0 items-center justify-center gap-1 px-0.5 sm:gap-1.5 sm:px-1 md:gap-3">
         {/* Metade esquerda: bloco [brasão + nome] junto ao “vs”, sem esticar o nome e isolar o brasão */}
@@ -217,16 +212,13 @@ export function MatchdayVersusTitle({
         <span
           aria-label="versus"
           className={cn(
-            'shrink-0 italic text-neon-yellow leading-none',
+            'shrink-0 text-neon-yellow leading-none',
             vsClassName,
           )}
           style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontWeight: 400,
             fontSize: '1.85em',
             letterSpacing: '-0.04em',
             transform: 'translateY(-0.06em)',
-            textShadow: '0 2px 18px rgba(253,225,0,0.25)',
           }}
         >
           ×
@@ -330,11 +322,8 @@ export function MatchdayVersusWithClock({
       <div className="flex min-w-0 flex-1 basis-0 items-center justify-end gap-1 min-[360px]:gap-1.5 sm:gap-2 md:gap-3">
         {showTeamCrests && crest ? <img src={crest} alt="" className={crestSize.quick} /> : null}
         <span
-          className="min-w-0 truncate text-end leading-tight text-white uppercase"
+          className="min-w-0 truncate text-end font-impact leading-tight text-white uppercase"
           style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
-            fontWeight: 700,
             fontSize: 'clamp(11px, 2.2vw, 18px)',
             letterSpacing: '0.01em',
           }}
@@ -358,11 +347,8 @@ export function MatchdayVersusWithClock({
       </div>
       <div className="flex min-w-0 flex-1 basis-0 items-center justify-start gap-1 min-[360px]:gap-1.5 sm:gap-2 md:gap-3">
         <span
-          className="min-w-0 truncate text-start leading-tight text-gray-200 uppercase"
+          className="min-w-0 truncate text-start font-impact leading-tight text-gray-200 uppercase"
           style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
-            fontWeight: 700,
             fontSize: 'clamp(11px, 2.2vw, 18px)',
             letterSpacing: '0.01em',
           }}
@@ -397,11 +383,11 @@ export function MatchdayLiveScoreRibbon({
   const seed = awaySeed ?? fallbackAway;
 
   return (
-    <div className="pointer-events-auto flex max-w-[min(100dvw-2rem,42rem)] min-w-0 items-stretch shadow-2xl">
+    <div className="pointer-events-auto flex max-w-[min(100dvw-2rem,42rem)] min-w-0 items-stretch">
       <div className="flex shrink-0 items-center justify-center bg-white px-3 py-2 font-display text-xl font-black text-black tabular-nums sm:px-4 sm:text-2xl">
         {minuteDisplay}&apos;
       </div>
-      <div className="flex min-w-0 flex-1 items-center gap-3 border border-l-0 border-white/10 bg-[#111] px-3 py-2 sm:gap-6 sm:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-3 border border-l-0 border-white/10 bg-panel px-3 py-2 sm:gap-6 sm:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-2 text-lg sm:gap-3 sm:text-xl">
           <span className="inline-flex min-w-0 items-center gap-2">
             {crest ? <img src={crest} alt="" className={crestSize.md} /> : null}

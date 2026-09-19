@@ -39,55 +39,46 @@ export function RivalsLeaderboardMini({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="relative flex w-full items-center gap-3 overflow-hidden border border-white/[0.06] px-4 py-3 text-left transition-colors hover:border-white/15"
-      style={{
-        borderRadius: 'var(--radius-card)',
-        background: 'var(--color-panel-elevated,#0b0b0b)',
-      }}
+      className="relative flex w-full items-center gap-3 overflow-hidden border border-white/10 bg-panel px-4 py-3 text-left transition-colors hover:border-white/30"
+      style={{ borderRadius: 'var(--radius-card)' }}
     >
-      <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-md bg-black/40 ring-1 ring-neon-yellow/20">
-        <span className="font-display text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">
+      <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center bg-card-hi">
+        <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-poeira">
           Pos
         </span>
-        <span
-          className="font-impact tabular-nums text-neon-yellow leading-none"
-          style={{
-            fontFamily: 'var(--font-impact)',
-            fontSize: '18px',
-          }}
-        >
+        <span className="ole-num tabular-nums text-white leading-none" style={{ fontSize: '15px' }}>
           #{position}
         </span>
       </div>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
+          <p className="truncate font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-cimento">
             Ranking de patrimônio
           </p>
           {hasDelta ? (
             <span
-              className={`inline-flex items-center gap-0.5 font-display text-[9px] font-bold uppercase tracking-[0.12em] ${
-                climbed ? 'text-neon-green' : 'text-red-400'
+              className={`inline-flex items-center gap-0.5 font-mono text-[10px] font-medium ${
+                climbed ? 'text-alta' : 'text-baixa'
               }`}
             >
               {climbed ? '↑' : '↓'} {Math.abs(delta24h!)}
             </span>
           ) : null}
         </div>
-        <p className="mt-1 text-[12px] text-white/75">
+        <p className="mt-1 text-[12px] text-giz">
           <span className="font-bold text-white">+{formatOle(gapToNextOle)} EXP</span>{' '}
-          <span className="text-white/55">
+          <span className="text-cimento">
             pra ultrapassar{' '}
             <span className="font-bold text-white/80">{nextRivalName ?? 'o próximo'}</span>
           </span>
         </p>
-        <p className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-white/35">
+        <p className="mt-0.5 font-mono text-[10px] text-poeira">
           De {total.toLocaleString('pt-BR')} managers
         </p>
       </div>
 
-      <span aria-hidden className="text-neon-yellow/60 text-xl shrink-0">
+      <span aria-hidden className="text-cimento text-xl shrink-0">
         →
       </span>
     </motion.button>

@@ -30,7 +30,7 @@ export function QuickStreakChallengesPanel({ challenges, onClaimReward }: Props)
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-yellow-400" />
+          <Trophy className="w-5 h-5 text-neon-yellow" />
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">
             Desafios Semanais
           </h3>
@@ -55,10 +55,10 @@ export function QuickStreakChallengesPanel({ challenges, onClaimReward }: Props)
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.1 }}
               className={cn(
-                'p-3 rounded-lg border-2',
+                'p-3 border',
                 isCompleted
-                  ? 'bg-green-500/10 border-green-500/30'
-                  : 'bg-black/40 border-white/20',
+                  ? 'bg-panel border-alta'
+                  : 'bg-panel border-white/10',
               )}
             >
               <div className="flex items-start justify-between gap-3 mb-2">
@@ -83,7 +83,7 @@ export function QuickStreakChallengesPanel({ challenges, onClaimReward }: Props)
                 </div>
                 <div className="text-right shrink-0 flex flex-col items-end gap-1">
                   <div>
-                    <div className="text-xs font-bold text-yellow-400">
+                    <div className="font-mono text-xs font-medium text-giz">
                       +{challenge.reward.ole + challenge.reward.exp} EXP
                     </div>
                     {challenge.reward.item && (
@@ -99,9 +99,9 @@ export function QuickStreakChallengesPanel({ challenges, onClaimReward }: Props)
                       whileTap={{ scale: 0.95 }}
                       type="button"
                       onClick={() => onClaimReward(challenge.id)}
-                      className="text-[10px] bg-neon-yellow text-black px-2.5 py-1 rounded font-bold uppercase tracking-wider"
+                      className="whitespace-nowrap text-[10px] bg-neon-yellow text-black px-2.5 py-1 font-bold uppercase tracking-wider hover:bg-white transition-colors"
                     >
-                      Resgatar
+                      Resgatar +{challenge.reward.ole + challenge.reward.exp} EXP
                     </motion.button>
                   )}
                 </div>
@@ -117,7 +117,7 @@ export function QuickStreakChallengesPanel({ challenges, onClaimReward }: Props)
                     {challenge.progress}/{challenge.target}
                   </span>
                 </div>
-                <div className="h-2 bg-black/40 rounded-full overflow-hidden">
+                <div className="h-2 bg-card-hi rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
@@ -125,8 +125,8 @@ export function QuickStreakChallengesPanel({ challenges, onClaimReward }: Props)
                     className={cn(
                       'h-full rounded-full',
                       isCompleted
-                        ? 'bg-gradient-to-r from-green-400 to-emerald-500'
-                        : 'bg-gradient-to-r from-yellow-400 to-orange-500',
+                        ? 'bg-alta'
+                        : 'bg-neon-yellow',
                     )}
                   />
                 </div>

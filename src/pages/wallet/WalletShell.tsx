@@ -25,73 +25,39 @@ export function WalletShell({
   heroVariant?: 'cinematic' | 'compact';
   children: ReactNode;
 }) {
-  const heroMinH =
-    heroVariant === 'compact'
-      ? 'min-h-[52vh] sm:min-h-[58vh]'
-      : 'min-h-[78vh] sm:min-h-[88vh]';
+  const heroMinH = heroVariant === 'compact' ? '' : 'min-h-[60vh]';
   const titleSize =
     heroVariant === 'compact'
-      ? 'clamp(48px, 10vw, 88px)'
-      : 'clamp(64px, 14vw, 120px)';
+      ? 'clamp(44px, 10vw, 80px)'
+      : 'clamp(56px, 13vw, 112px)';
   return (
     <div className="min-h-screen bg-deep-black">
-      {/* ── HERO CINEMATOGRÁFICO ──────────────────────────────────── */}
-      <section className={`relative w-full overflow-hidden bg-neon-yellow ${heroMinH}`}>
-        {/* Camada amarela sólida */}
-        <div className="absolute inset-0 bg-neon-yellow" aria-hidden />
-
-        {/* Linhas verticais sutis (textura de campo) */}
-        <svg
-          aria-hidden
-          className="absolute inset-0 pointer-events-none"
-          width="100%"
-          height="100%"
-          preserveAspectRatio="none"
-          viewBox="0 0 100 100"
-        >
-          <g stroke="#000" strokeOpacity="0.06" strokeWidth="0.15">
-            <line x1="20" y1="0" x2="20" y2="100" />
-            <line x1="40" y1="0" x2="40" y2="100" />
-            <line x1="60" y1="0" x2="60" y2="100" />
-            <line x1="80" y1="0" x2="80" y2="100" />
-          </g>
-        </svg>
-
+      {/* ── HERO — VOLT2: asfalto chapado, título em Anton, saldo em bloco ── */}
+      <section className={`relative w-full border-b border-white/10 bg-deep-black ${heroMinH}`}>
         {/* Conteúdo */}
-        <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-8 py-5 sm:py-7">
-          {/* Top bar — Sprint B-4: toggle centralizado pílulas arredondadas */}
-          <div className="flex items-center justify-center mb-8 sm:mb-12">
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-8 py-5 sm:py-7">
+          <div className="mb-8 flex items-center justify-center sm:mb-10">
             <WalletSpotToggle />
           </div>
 
           {/* Grid: esquerda + direita */}
-          <div
-            className={`grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center ${
-              heroVariant === 'compact' ? 'min-h-[28vh]' : 'min-h-[50vh]'
-            }`}
-          >
-            {/* ── ESQUERDA: Título + Descrição ────────────────────────── */}
-            <div className="space-y-6 sm:space-y-8">
-              {/* Eyebrow */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+          <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-12">
+            {/* ── ESQUERDA: Título ────────────────────────── */}
+            <div className="min-w-0 space-y-3">
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
-                className="flex items-center justify-center gap-3 lg:justify-start"
+                className="text-center font-mono text-[11.5px] font-medium text-cimento lg:text-left"
               >
-                <span className="h-px w-8 bg-black/40" aria-hidden />
-                <span className="font-display text-[10px] font-bold uppercase tracking-[0.35em] text-black/70">
-                  Wallet Olefoot
-                </span>
-                <span className="h-px w-8 bg-black/40" aria-hidden />
-              </motion.div>
+                #carteira
+              </motion.p>
 
-              {/* Título Moret italic */}
               <motion.h1
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="ole-headline-italic text-black text-center lg:text-left leading-[0.9]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.15 }}
+                className="text-center font-impact uppercase leading-[0.95] text-white lg:text-left"
                 style={{ fontSize: titleSize }}
               >
                 {title}
@@ -100,10 +66,10 @@ export function WalletShell({
               {/* Subtítulo */}
               {subtitle && (
                 <motion.p
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.3 }}
-                  className="text-black/70 text-sm sm:text-base leading-relaxed text-center lg:text-left max-w-md mx-auto lg:mx-0"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4, delay: 0.2 }}
+                  className="mx-auto max-w-md text-center text-sm leading-relaxed text-cimento lg:mx-0 lg:text-left"
                 >
                   {subtitle}
                 </motion.p>
@@ -113,32 +79,29 @@ export function WalletShell({
             {/* ── DIREITA: Stats grid ──────────────── */}
             {heroStats && heroStats.length > 0 && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                className="grid grid-cols-2 gap-3 sm:gap-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.25 }}
+                className="grid grid-cols-2 gap-2 sm:gap-3"
               >
                 {heroStats.map((stat, i) => (
-                  <motion.div
+                  <div
                     key={i}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3, delay: 0.5 + i * 0.1 }}
-                    className="bg-black px-4 py-4 text-center"
+                    className="min-w-0 border border-white/10 bg-panel px-3 py-4 text-center"
                   >
-                    <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50">
+                    <p className="truncate font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
                       {stat.label}
                     </p>
                     <p
-                      className={`ole-headline-italic mt-2 tabular-nums ${
-                        stat.highlight ? 'text-neon-yellow' : 'text-white'
+                      className={`mt-2 font-mono font-medium tabular-nums leading-none [overflow-wrap:anywhere] ${
+                        stat.highlight ? 'text-white' : 'text-giz'
                       }`}
-                      style={{ fontSize: 'clamp(32px, 5vw, 48px)' }}
+                      style={{ fontSize: 'clamp(18px, 5vw, 32px)' }}
                     >
                       {stat.value}
                     </p>
                     {stat.subValue ? (
-                      <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/45 tabular-nums">
+                      <p className="mt-1.5 truncate font-mono text-[10.5px] text-poeira tabular-nums">
                         {stat.subValue}
                       </p>
                     ) : null}
@@ -153,13 +116,11 @@ export function WalletShell({
                         />
                       </div>
                     ) : null}
-                  </motion.div>
+                  </div>
                 ))}
               </motion.div>
             )}
           </div>
-
-          {/* (Scroll cue "Ver detalhes" removido — desnecessário no hero) */}
         </div>
       </section>
 

@@ -17,10 +17,25 @@
  * Importado em src/index.css logo após o @theme.
  */
 
+/* VOLT2 · o corte do escudo. Declarado em TODO elemento (não só no :root):
+   variável que referencia variável é resolvida onde é declarada — no :root,
+   `[--corte:14px]` num botão não mudaria nada (herdaria o polígono já pronto
+   com 12px). Aqui cada elemento monta o polígono com o próprio --corte. */
+*,
+::before,
+::after {
+  --clip-corte: polygon(0 0, 100% 0, 100% calc(100% - var(--corte, 12px)), calc(100% - var(--corte, 12px)) 100%, 0 100%);
+}
+
 :root {
+  /* ── VOLT2: o corte do escudo ─────────────────────────────────
+     Canto inferior direito cortado — a única "forma" do botão primário.
+     Sem sombra e sem inclinação: é isso que sobrevive a 320px. */
+  --corte: 12px;
+
   /* ── Aliases de cor (BVB-style names) ────────────────────────── */
   --stadium-night:  var(--color-deep-black);   /* #0D0D0D */
-  --surface-dark:   var(--color-card);         /* #242424 */
+  --surface-dark:   var(--color-card);         /* #1B1D1F (VOLT2) */
   --yellow:         var(--color-neon-yellow);  /* #FDE100 */
   --text-primary:   #FFFFFF;
   --text-secondary: var(--color-text-soft);    /* #A0A0A0 */
@@ -46,8 +61,8 @@
 
   /* Border-radius máximo permitido = 8px (sharp esportivo) */
   --radius-none: 0px;
-  --radius-sm:   4px;
-  --radius-md:   8px;
+  --radius-sm:   2px;  /* VOLT2: canto vivo */
+  --radius-md:   2px;
 
   /* ── Tipografia: escalas do brief ─────────────────────────────── */
   --text-display-xl: 96px;
@@ -77,8 +92,9 @@
 
 @layer utilities {
   /* Clip-paths angulares */
+  /* VOLT2: o paralelogramo virou o corte do escudo. */
   .clip-angular-btn {
-    clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+    clip-path: var(--clip-corte);
   }
   .clip-angular-card {
     clip-path: polygon(
@@ -90,7 +106,7 @@
     );
   }
   .clip-angular-badge {
-    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+    clip-path: none;
   }
   .clip-diagonal-section {
     /* Hero matchday split: 62/38 com inclinação */
@@ -106,7 +122,8 @@
     position: absolute;
     background: var(--yellow);
     opacity: 0.06;
-    transform: skewX(calc(-1 * var(--angle))) rotate(8deg);
+    /* VOLT2: nada torto — a faixa fica reta. */
+    transform: none;
     pointer-events: none;
   }
 
@@ -117,6 +134,8 @@
 
   /* Glow amarelo (pack hover, hero cards) */
   .ole-yellow-glow::before {
+    /* VOLT2: sem halo. */
+    display: none;
     content: '';
     position: absolute;
     inset: 0;
@@ -273,16 +292,15 @@
 }
 
 .ole-table__pos[data-rank="1"] {
-  color: #FFD700;
-  text-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
+  color: var(--color-neon-yellow);
 }
 
 .ole-table__pos[data-rank="2"] {
-  color: #C0C0C0;
+  color: var(--color-giz);
 }
 
 .ole-table__pos[data-rank="3"] {
-  color: #CD7F32;
+  color: var(--color-cimento);
 }
 
 /* Pills de forma recente (V/E/D) */
@@ -341,24 +359,24 @@
   padding: 0 24px 0 20px;
   background: var(--lt-bg);
   border-left: var(--lt-accent-w) solid var(--color-neon-yellow);
-  transform: skewX(var(--lt-skew));
+  transform: none;
   font-family: var(--font-display);
   color: #fff;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  box-shadow: none;
 }
 .ole-lt > * {
-  transform: skewX(calc(-1 * var(--lt-skew)));
+  transform: none;
 }
 .ole-lt[data-tone="goal"] {
   border-left-color: var(--color-event-goal);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), var(--glow-goal-soft);
+  box-shadow: none;
 }
 .ole-lt[data-tone="card-yellow"] { border-left-color: var(--color-event-card-yellow); }
 .ole-lt[data-tone="card-red"] {
   border-left-color: var(--color-event-card-red);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), var(--glow-card-red);
+  box-shadow: none;
 }
 .ole-lt[data-tone="foul"] { border-left-color: var(--color-event-foul); }
 .ole-lt[data-tone="save"] { border-left-color: var(--color-event-save); }
@@ -474,12 +492,13 @@
   to { opacity: 0; transform: translateY(-12%) scale(1.02); }
 }
 .ole-goal-hero-text {
-  font-family: var(--font-serif-hero);
-  font-style: italic;
-  font-weight: 900;
+  /* VOLT2: GOL em Anton chapado — sem serifa, sem halo. */
+  font-family: var(--font-impact);
+  font-style: normal;
+  font-weight: 400;
   font-size: clamp(72px, 14vw, 160px);
   color: var(--color-event-goal);
-  text-shadow: 0 0 32px rgba(253, 225, 0, 0.65), 0 0 8px rgba(0, 0, 0, 0.7);
+  text-shadow: none;
   letter-spacing: -0.02em;
   line-height: 1;
 }
@@ -492,12 +511,12 @@
   align-items: center;
   height: 38px;
   padding: 0 14px 0 10px;
-  background: linear-gradient(90deg, rgba(13,13,13,0.95) 0%, rgba(13,13,13,0.78) 100%);
+  background: #0D0D0D;
   border-left: 3px solid var(--color-neon-yellow);
-  transform: skewX(var(--lt-skew));
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  transform: none;
+  box-shadow: none;
 }
-.ole-broadcast-bug > * { transform: skewX(calc(-1 * var(--lt-skew))); }
+.ole-broadcast-bug > * { transform: none; }
 
 /* ── Ticker (rolling stats na bottom bar) ──────────────────────────── */
 .ole-ticker-item {

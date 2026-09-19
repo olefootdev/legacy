@@ -69,7 +69,7 @@ export function MarkingAssignmentsControls({ homePlayers, awayRoster, playersByI
       </div>
 
       {defendersOnPitch.length === 0 || attackersToMark.length === 0 ? (
-        <div className="text-[10px] text-white/35 italic">
+        <div className="text-[10px] text-white/35">
           Sem dados suficientes pra marcação (defensores ou ataque adversário ausentes).
         </div>
       ) : (

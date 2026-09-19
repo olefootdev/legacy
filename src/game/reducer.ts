@@ -4589,7 +4589,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               body:
                 action.structureId === 'stadium'
                   ? `Pagamento em ${currencyLabel}. Expansão reforça o ambiente e o apoio em dias de jogo.`
-                  : `Pagamento registado em ${currencyLabel}.`,
+                  : `Pagamento registrado em ${currencyLabel}.`,
               deepLink: '/city',
             },
           ),
@@ -4735,7 +4735,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               'FINANCEIRO',
               `Desafio amistoso vs ${opponentName}: prémio em escrow (BRO).`,
               {
-                body: `Retido ${(prizeCents / 100).toFixed(2)} BRO para o vencedor; taxa registada ${(feeCents / 100).toFixed(2)} BRO. O resultado fica no histórico após o jogo.`,
+                body: `Retido ${(prizeCents / 100).toFixed(2)} BRO para o vencedor; taxa registrada ${(feeCents / 100).toFixed(2)} BRO. O resultado fica no histórico após o jogo.`,
                 deepLink: '/wallet',
               },
             ),
@@ -5330,7 +5330,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const shareText = [
         `🎁 Acabei de receber minha carta da Academia OLE!`,
         `Conheça ${pl.name}, ${pl.pos} da minha Academia.`,
-        `Joga em #Olefoot — o teu time, a tua história.`,
+        `Jogue no #Olefoot — seu time, sua história.`,
       ].join('\n');
       const deliveryInbox = makeInboxItem(
         `academy-delivery-${action.requestId}`,
@@ -5339,7 +5339,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         `🎁 Carta da Academia OLE: ${pl.name}`,
         {
           tag: 'ACADEMIA',
-          body: 'Tua carta foi entregue pela equipa Olefoot. Compartilha e mostra o teu jogador pro mundo!',
+          body: 'Sua carta foi entregue pela Olefoot. Compartilhe e mostre seu jogador pro mundo!',
           deepLink: `/clube/elenco?academyDelivery=${action.requestId}`,
           colorClass: 'text-neon-yellow',
           academy: {
@@ -5501,7 +5501,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             'CLUBE',
             `Pedido: ${item.title}`,
             {
-              body: `**${item.title}** — entrega de pack em desenvolvimento; o pagamento foi registado.`,
+              body: `**${item.title}** — entrega de pack em desenvolvimento; o pagamento foi registrado.`,
               deepLink: '/store',
             },
           ),

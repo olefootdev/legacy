@@ -1,8 +1,8 @@
 /**
  * QuickMatchHero — Hero cinematográfico para pré-jogo da Partida Rápida.
  *
- * Countdown 3-2-1 em Moret italic gigante sobre fundo amarelo com split diagonal BVB.
- * Transição emocional: "Pronto?" → 3 → 2 → 1 → "Bola a rolar!"
+ * VOLT2: countdown 3-2-1 gigante sobre volt chapado — sem textura, sem itálico.
+ * Transição: "Pronto?" → 3 → 2 → 1 → "Bola rolando!"
  */
 
 import { motion, AnimatePresence } from 'motion/react';
@@ -42,23 +42,6 @@ export function QuickMatchHero({
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[9999] bg-neon-yellow overflow-hidden"
     >
-      {/* Linhas verticais sutis (textura de campo) */}
-      <svg
-        aria-hidden
-        className="absolute inset-0 pointer-events-none opacity-[0.06]"
-        width="100%"
-        height="100%"
-        preserveAspectRatio="none"
-        viewBox="0 0 100 100"
-      >
-        <g stroke="#000" strokeWidth="0.15">
-          <line x1="20" y1="0" x2="20" y2="100" />
-          <line x1="40" y1="0" x2="40" y2="100" />
-          <line x1="60" y1="0" x2="60" y2="100" />
-          <line x1="80" y1="0" x2="80" y2="100" />
-        </g>
-      </svg>
-
       {/* Conteúdo centralizado */}
       <div className="relative z-10 flex flex-col items-center justify-center h-full px-4 gap-8 sm:gap-12">
         {/* Duelo: Brasões + nomes */}
@@ -93,15 +76,10 @@ export function QuickMatchHero({
             </p>
           </div>
 
-          {/* Separador × em Moret italic */}
+          {/* Separador × */}
           <span
-            className="text-black/85 leading-none select-none"
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
-              fontSize: 'clamp(40px, 8vw, 72px)',
-              letterSpacing: '-0.04em',
-            }}
+            className="font-impact text-black/85 leading-none select-none"
+            style={{ fontSize: 'clamp(40px, 8vw, 72px)' }}
           >
             ×
           </span>
@@ -149,13 +127,8 @@ export function QuickMatchHero({
               className="text-center"
             >
               <p
-                className="italic text-black leading-none"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontWeight: 700,
-                  fontSize: 'clamp(2.5rem, 8vw, 5rem)',
-                  letterSpacing: '-0.02em',
-                }}
+                className="font-impact uppercase text-black leading-[1.1]"
+                style={{ fontSize: 'clamp(2.5rem, 8vw, 5rem)' }}
               >
                 Pronto?
               </p>
@@ -172,13 +145,8 @@ export function QuickMatchHero({
               className="text-center"
             >
               <span
-                className="italic text-black leading-none tabular-nums"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontWeight: 700,
-                  fontSize: 'clamp(6rem, 18vw, 12rem)',
-                  letterSpacing: '-0.04em',
-                }}
+                className="ole-num text-black leading-none"
+                style={{ fontSize: 'clamp(6rem, 18vw, 12rem)' }}
               >
                 {countdownNumber}
               </span>
@@ -203,7 +171,7 @@ export function QuickMatchHero({
                   letterSpacing: '0.02em',
                 }}
               >
-                Bola a rolar!
+                Bola rolando!
               </p>
             </motion.div>
           )}

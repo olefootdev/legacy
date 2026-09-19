@@ -33,20 +33,20 @@ function EmptyShelf() {
 
 function CollectibleCard({ item }: { item: WalletCollectible }) {
   return (
-    <article className="group overflow-hidden rounded-2xl border border-white/10 bg-[#121214]">
+    <article className="overflow-hidden border border-white/10 bg-panel hover:border-white/30">
       <div className="relative aspect-[3/4] overflow-hidden bg-black/40">
         {item.imageUrl ? (
           <img
             src={item.imageUrl}
             alt={item.name}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+            className="h-full w-full object-cover"
           />
         ) : (
           <div className="grid h-full w-full place-items-center text-white/20">◈</div>
         )}
         {item.rarityLabel && (
-          <span className="absolute left-2 top-2 rounded-full border border-white/15 bg-black/60 px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-[0.16em] text-white/80 backdrop-blur-sm">
+          <span className="absolute left-2 top-2 border border-white/15 bg-nav px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-[0.16em] text-white/80">
             {item.rarityLabel}
           </span>
         )}

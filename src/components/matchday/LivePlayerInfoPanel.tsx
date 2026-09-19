@@ -144,7 +144,7 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
-      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/80"
       onClick={onClose}
     >
       <motion.div
@@ -152,13 +152,13 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 60, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-        className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-white/15 bg-gradient-to-b from-gray-900/98 to-black/98 shadow-[0_-10px_60px_rgba(0,0,0,0.7)] sm:shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
+        className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-white/15 bg-sheet"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="relative flex items-center gap-3 border-b border-white/10 px-4 py-3">
           <div className="relative shrink-0">
-            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-2 border-neon-yellow/70 bg-black/60 shadow-[0_0_16px_rgba(234,255,0,0.2)]">
+            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-2 border-neon-yellow/70 bg-black/60">
               {portraitUrl ? (
                 <img
                   src={portraitUrl}
@@ -170,7 +170,7 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
                 <span className="text-sm font-black text-white">{player.num}</span>
               )}
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-neon-yellow text-[9px] font-black text-black shadow">
+            <div className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-neon-yellow text-[9px] font-black text-black">
               {player.num}
             </div>
           </div>

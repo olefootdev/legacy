@@ -16,14 +16,14 @@ interface StoreViewToggleProps {
 
 export function StoreViewToggle({ mode, onChange }: StoreViewToggleProps) {
   return (
-    <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.02] p-1">
+    <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-panel p-1">
       <button
         type="button"
         onClick={() => onChange('grid')}
         className={cn(
-          'flex items-center gap-1.5 rounded px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider transition-all',
+          'flex items-center gap-1.5 rounded px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider transition-colors',
           mode === 'grid'
-            ? 'bg-neon-yellow text-black shadow-[0_2px_8px_rgba(253,225,0,0.3)]'
+            ? 'bg-neon-yellow text-black'
             : 'text-gray-500 hover:text-gray-300'
         )}
         aria-label="Visualização em grade"
@@ -35,9 +35,9 @@ export function StoreViewToggle({ mode, onChange }: StoreViewToggleProps) {
         type="button"
         onClick={() => onChange('list')}
         className={cn(
-          'flex items-center gap-1.5 rounded px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider transition-all',
+          'flex items-center gap-1.5 rounded px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider transition-colors',
           mode === 'list'
-            ? 'bg-neon-yellow text-black shadow-[0_2px_8px_rgba(253,225,0,0.3)]'
+            ? 'bg-neon-yellow text-black'
             : 'text-gray-500 hover:text-gray-300'
         )}
         aria-label="Visualização em lista"

@@ -3,6 +3,7 @@ import { Search, UserPlus, X, Zap, Trophy, Shield, Star, Users } from 'lucide-re
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { Hashtag } from '@/components/ui';
 import { useGameStore } from '@/game/store';
 import { quickFindOpponent, type OpponentMatch, opponentMatchToStub } from '@/match/friendlyMatchmaking';
 import { overallFromAttributes } from '@/entities/player';
@@ -92,7 +93,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
     <>
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/88 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/90 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -102,24 +103,22 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-4 top-4 z-10 rounded-full bg-black/60 p-2 text-gray-400 hover:text-white"
+              className="absolute right-4 top-4 z-10 border border-white/16 bg-black p-2 text-cimento hover:border-white/30 hover:text-white"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="shrink-0 border-b border-white/10 bg-neon-yellow/5 p-6">
-              <h3 className="text-xl font-display font-black uppercase tracking-wider text-white">
+            <div className="shrink-0 border-b border-white/10 bg-deep-black p-6">
+              <h3 className="font-impact text-2xl uppercase leading-[1.1] text-white">
                 Buscar Partida
               </h3>
-              <p className="mt-2 text-sm leading-snug text-gray-300">
-                Sistema encontra adversário automaticamente
-              </p>
+              <Hashtag className="mt-1.5">#pvp · adversário automático</Hashtag>
             </div>
 
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain p-6">
               {/* Tipo de partida: Competitivo / Amistoso */}
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">
+                <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento block mb-2">
                   Tipo de partida
                 </span>
                 <div className="grid grid-cols-2 gap-2">
@@ -127,10 +126,10 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                     type="button"
                     onClick={() => setMatchType('competitive')}
                     className={cn(
-                      'py-3 rounded text-xs font-display font-bold uppercase border transition-all',
+                      'ole-num py-3 text-[12px] uppercase border transition-colors',
                       matchType === 'competitive'
-                        ? 'bg-neon-yellow text-black border-neon-yellow shadow-[0_0_12px_rgba(253,224,71,0.3)]'
-                        : 'border-white/15 text-gray-400 hover:border-white/30',
+                        ? 'bg-neon-yellow text-black border-neon-yellow'
+                        : 'border-white/16 text-cimento hover:border-white/30 hover:text-white',
                     )}
                   >
                     <div className="flex flex-col items-center gap-1">
@@ -142,10 +141,10 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                     type="button"
                     onClick={() => setMatchType('friendly')}
                     className={cn(
-                      'py-3 rounded text-xs font-display font-bold uppercase border transition-all',
+                      'ole-num py-3 text-[12px] uppercase border transition-colors',
                       matchType === 'friendly'
-                        ? 'bg-neon-yellow text-black border-neon-yellow shadow-[0_0_12px_rgba(253,224,71,0.3)]'
-                        : 'border-white/15 text-gray-400 hover:border-white/30',
+                        ? 'bg-neon-yellow text-black border-neon-yellow'
+                        : 'border-white/16 text-cimento hover:border-white/30 hover:text-white',
                     )}
                   >
                     <div className="flex flex-col items-center gap-1">
@@ -155,15 +154,15 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                   </button>
                 </div>
                 {matchType === 'competitive' && (
-                  <p className="mt-2 text-[10px] text-neon-yellow/80 leading-snug">
-                    ⭐ Partida competitiva conta pontos para o ranking quando jogada contra time humano
+                  <p className="mt-2 font-mono text-[10.5px] text-neon-yellow leading-snug">
+                    Conta pontos no ranking contra time humano
                   </p>
                 )}
               </div>
 
               {/* Modo de partida */}
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">
+                <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento block mb-2">
                   Modo de partida
                 </span>
                 <div className="grid grid-cols-2 gap-2">
@@ -171,10 +170,10 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                     type="button"
                     onClick={() => setMode('quick')}
                     className={cn(
-                      'py-2.5 rounded text-xs font-display font-bold uppercase border',
+                      'ole-num py-2.5 px-1 whitespace-nowrap text-[10px] uppercase border transition-colors',
                       mode === 'quick'
                         ? 'bg-neon-yellow text-black border-neon-yellow'
-                        : 'border-white/15 text-gray-400 hover:border-white/30',
+                        : 'border-white/16 text-cimento hover:border-white/30 hover:text-white',
                     )}
                   >
                     Partida Rápida
@@ -183,10 +182,10 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                     type="button"
                     onClick={() => setMode('penalty')}
                     className={cn(
-                      'py-2.5 rounded text-xs font-display font-bold uppercase border',
+                      'ole-num py-2.5 px-1 whitespace-nowrap text-[10px] uppercase border transition-colors',
                       mode === 'penalty'
                         ? 'bg-neon-yellow text-black border-neon-yellow'
-                        : 'border-white/15 text-gray-400 hover:border-white/30',
+                        : 'border-white/16 text-cimento hover:border-white/30 hover:text-white',
                     )}
                   >
                     Disputa Pênaltis
@@ -197,7 +196,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
               {/* Aposta */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                  <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">
                     Prêmio (vencedor leva)
                   </span>
                   <div className="flex gap-1">
@@ -205,8 +204,8 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                       type="button"
                       onClick={() => setBetCurrency('BRO')}
                       className={cn(
-                        'px-2 py-1 rounded text-[10px] font-bold uppercase',
-                        betCurrency === 'BRO' ? 'bg-white text-black' : 'bg-white/5 text-gray-500',
+                        'ole-num px-2 py-1 text-[10px] uppercase',
+                        betCurrency === 'BRO' ? 'bg-white text-black' : 'border border-white/16 text-cimento',
                       )}
                     >
                       BRO
@@ -215,8 +214,8 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                       type="button"
                       onClick={() => setBetCurrency('EXP')}
                       className={cn(
-                        'px-2 py-1 rounded text-[10px] font-bold uppercase',
-                        betCurrency === 'EXP' ? 'bg-neon-yellow text-black' : 'bg-white/5 text-gray-500',
+                        'ole-num px-2 py-1 text-[10px] uppercase',
+                        betCurrency === 'EXP' ? 'bg-neon-yellow text-black' : 'border border-white/16 text-cimento',
                       )}
                     >
                       EXP
@@ -227,9 +226,9 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                   value={betInput}
                   onChange={(e) => setBetInput(e.target.value)}
                   placeholder={betCurrency === 'BRO' ? 'Ex.: 10,50' : 'Ex.: 500'}
-                  className="w-full bg-black/40 border border-white/15 rounded px-3 py-2 text-sm"
+                  className="w-full bg-deep-black border border-white/16 px-3 py-2 text-sm text-white placeholder:text-poeira focus:border-neon-yellow/60 focus:outline-none"
                 />
-                <p className="text-[10px] text-gray-600 mt-2">
+                <p className="font-mono text-[10.5px] text-cimento mt-2">
                   Saldo: {betCurrency === 'BRO' ? `${(finance.broCents / 100).toFixed(2)} BRO` : `${formatExp(finance.ole)} EXP`}
                 </p>
               </div>
@@ -254,40 +253,40 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="border border-neon-yellow/40 rounded bg-black/40 p-4 space-y-3"
+                  className="border border-neon-yellow/40 bg-deep-black p-4 space-y-3"
                 >
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-display font-bold uppercase tracking-wider text-neon-yellow">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="truncate font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-neon-yellow">
                       Adversário encontrado
                     </h4>
                     {opponent.type === 'bot' ? (
-                      <span className="px-2 py-1 rounded text-[9px] font-bold uppercase bg-gray-700 text-gray-300">
+                      <span className="shrink-0 bg-card-hi px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-cimento">
                         BOT
                       </span>
                     ) : opponent.type === 'real_manager' ? (
-                      <span className="px-2 py-1 rounded text-[9px] font-bold uppercase bg-neon-yellow/20 text-neon-yellow">
+                      <span className="shrink-0 bg-neon-yellow px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-black">
                         MANAGER REAL
                       </span>
                     ) : (
-                      <span className="px-2 py-1 rounded text-[9px] font-bold uppercase bg-emerald-500/20 text-emerald-300">
+                      <span className="shrink-0 border border-alta/50 px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-alta">
                         ONLINE
                       </span>
                     )}
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full border-2 border-neon-yellow/40 bg-deep-black grid place-items-center shrink-0">
-                      <Shield className="w-8 h-8 text-neon-yellow/70" />
+                    <div className="w-16 h-16 rounded-full border-2 border-neon-yellow/40 bg-panel grid place-items-center shrink-0">
+                      <Shield className="w-8 h-8 text-neon-yellow" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h5 className="text-lg font-display font-black text-white truncate">
+                      <h5 className="font-impact text-xl uppercase leading-[1.1] text-white truncate">
                         {opponent.type === 'bot'
                           ? opponent.bot.name
                           : opponent.type === 'real_manager'
                             ? opponent.stub.name
                             : '—'}
                       </h5>
-                      <p className="text-xs text-gray-400">
+                      <p className="font-mono text-[11.5px] text-cimento">
                         {opponent.type === 'bot'
                           ? `OVR ${opponent.bot.avgOverall} · ${opponent.bot.country}`
                           : opponent.type === 'real_manager'
@@ -295,13 +294,13 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                             : '—'}
                       </p>
                       {opponent.type === 'bot' && (
-                        <p className="text-[10px] text-gray-500 mt-1">
+                        <p className="font-mono text-[10.5px] text-poeira mt-1">
                           {opponent.bot.formation} · {opponent.bot.style}
                         </p>
                       )}
                       {opponent.type === 'real_manager' && (
-                        <p className="text-[10px] text-neon-yellow/60 mt-1">
-                          Plantel real · EXP conta para o ranking
+                        <p className="font-mono text-[10.5px] text-neon-yellow mt-1">
+                          Elenco real · EXP conta para o ranking
                         </p>
                       )}
                     </div>
@@ -309,26 +308,26 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
 
                   <div className="border-t border-white/10 pt-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase tracking-wider text-gray-500">Tipo</span>
+                      <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">Tipo</span>
                       <span className={cn(
-                        "text-xs font-display font-bold uppercase px-2 py-0.5 rounded",
+                        "ole-num text-[11px] uppercase px-2 py-0.5",
                         matchType === 'competitive'
-                          ? 'bg-neon-yellow/20 text-neon-yellow'
-                          : 'bg-white/5 text-gray-400'
+                          ? 'bg-neon-yellow text-black'
+                          : 'border border-white/16 text-cimento'
                       )}>
-                        {matchType === 'competitive' ? '⭐ Competitivo' : 'Amistoso'}
+                        {matchType === 'competitive' ? 'Competitivo' : 'Amistoso'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase tracking-wider text-gray-500">Prêmio</span>
-                      <span className="text-sm font-display font-bold text-neon-yellow">
+                      <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">Prêmio</span>
+                      <span className="ole-num text-sm text-neon-yellow">
                         {betCurrency === 'BRO'
                           ? `${(betBroCents / 100).toFixed(2)} BRO`
                           : `${betExp} EXP`}
                       </span>
                     </div>
                     {(matchType === 'competitive' && opponent.type !== 'bot') || opponent.type === 'real_manager' ? (
-                      <div className="flex items-center gap-1.5 text-[10px] text-neon-yellow/70 bg-neon-yellow/5 px-2 py-1.5 rounded">
+                      <div className="flex items-center gap-1.5 border border-neon-yellow/40 px-2 py-1.5 font-mono text-[10.5px] text-neon-yellow">
                         <Star className="w-3 h-3 shrink-0" />
                         <span>Partida vale pontos no ranking</span>
                       </div>
@@ -349,7 +348,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                   <button
                     type="button"
                     onClick={() => setOpponent(null)}
-                    className="w-full border border-white/15 py-2.5 text-xs font-bold uppercase text-gray-400 hover:bg-white/5"
+                    className="ole-num w-full h-11 border border-white/30 text-[12px] uppercase text-white transition-colors hover:border-white hover:bg-white/5"
                   >
                     Buscar outro adversário
                   </button>

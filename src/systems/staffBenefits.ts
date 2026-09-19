@@ -243,7 +243,7 @@ export const STAFF_BENEFIT_SUMMARY: Record<
     title: 'Treinador',
     lines: [
       'N1–N3: boost global de atributos em jogo e ganhos de treino.',
-      'N4: +25% de recuperação de confiança após sofrer golo.',
+      'N4: +25% de recuperação de confiança após sofrer gol.',
       'N5: +10% moral inicial no apito; +25% confiança positiva fora de casa.',
     ],
   },
@@ -258,7 +258,7 @@ export const STAFF_BENEFIT_SUMMARY: Record<
   preparador_goleiros: {
     title: 'Preparador de GR',
     lines: [
-      'N1–N2: melhor taxa de defesa do GR da equipa.',
+      'N1–N2: melhor taxa de defesa do goleiro do time.',
       'N3–N4: menos rebotes perigosos após defesa.',
       'N5: defesas fortes + chance de defesa “clutch”.',
     ],

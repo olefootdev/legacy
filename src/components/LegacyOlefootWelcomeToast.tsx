@@ -45,8 +45,8 @@ export function LegacyOlefootWelcomeToast() {
   };
 
   return (
-    <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
-      <div className="relative max-w-md w-full rounded-2xl border border-neon-yellow/40 bg-panel p-6 shadow-2xl">
+    <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/85 px-4">
+      <div className="relative max-w-md w-full border border-white/16 bg-panel p-6">
         <button
           onClick={dismiss}
           className="absolute right-3 top-3 text-white/40 hover:text-white/80 text-xl leading-none"
@@ -54,18 +54,18 @@ export function LegacyOlefootWelcomeToast() {
         >
           ×
         </button>
-        <div className="text-neon-yellow text-xs uppercase tracking-widest font-semibold">
+        <div className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-cimento">
           Bem-vindo de volta
         </div>
-        <div className="mt-2 text-white text-xl font-bold leading-tight">
+        <div className="mt-2 font-impact text-2xl uppercase leading-[1.1] text-white">
           Seu saldo da era anterior foi recuperado
         </div>
-        <div className="mt-5 rounded-xl border border-white/10 bg-deep-black/60 p-4">
-          <div className="text-[10px] text-white/40 uppercase tracking-wider">Saldo OLEFOOT</div>
-          <div className="mt-1 text-3xl font-bold text-neon-yellow tabular-nums">
+        <div className="mt-5 border border-white/10 bg-card p-4">
+          <div className="font-mono text-[10.5px] text-cimento uppercase tracking-wider">Saldo OLEFOOT</div>
+          <div className="mt-1 font-mono text-3xl font-medium text-white tabular-nums">
             {formatBalance(balanceHuman)}
           </div>
-          <div className="mt-1 text-[11px] text-white/40">
+          <div className="mt-1 font-mono text-[11px] text-poeira">
             ({balanceHuman} OLEFOOT — snapshot da carteira BSC)
           </div>
         </div>
@@ -75,7 +75,7 @@ export function LegacyOlefootWelcomeToast() {
         </p>
         <button
           onClick={dismiss}
-          className="mt-5 w-full rounded-xl bg-neon-yellow py-3 text-deep-black font-bold tracking-wide hover:bg-neon-yellow/90 transition"
+          className="btn-primary mt-5 w-full py-3 text-[15px] [--corte:12px]"
         >
           Entendido
         </button>

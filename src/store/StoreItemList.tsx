@@ -43,7 +43,7 @@ function formatBro(cents: number): string {
 export function StoreItemList({ items, inventory, onSelect }: StoreItemListProps) {
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-white/10 bg-white/[0.02] p-8 text-center">
+      <div className="rounded-lg border border-white/10 bg-panel p-8 text-center">
         <p className="text-sm text-gray-500">Nenhum item disponível nesta categoria.</p>
       </div>
     );
@@ -65,9 +65,8 @@ export function StoreItemList({ items, inventory, onSelect }: StoreItemListProps
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.015, duration: 0.2 }}
             className={cn(
-              'group relative w-full overflow-hidden rounded-lg border bg-gradient-to-r from-white/[0.02] to-transparent text-left transition-all hover:from-white/[0.06] hover:to-white/[0.02]',
+              'group relative w-full overflow-hidden rounded-lg border bg-panel text-left transition-colors hover:bg-card',
               rarityBorder(item.rarity),
-              'hover:scale-[1.01] hover:shadow-lg'
             )}
           >
             {/* Layout horizontal compacto */}
@@ -75,10 +74,10 @@ export function StoreItemList({ items, inventory, onSelect }: StoreItemListProps
               {/* Ícone + Badge lendário */}
               <div className="relative shrink-0">
                 <div className={cn(
-                  'flex h-14 w-14 items-center justify-center rounded-lg border bg-gradient-to-br from-white/5 to-black/60',
+                  'flex h-14 w-14 items-center justify-center rounded-lg border bg-deep-black',
                   rarityBorder(item.rarity)
                 )}>
-                  <Icon className={cn('h-7 w-7 transition-transform group-hover:scale-110', rarityColor(item.rarity))} aria-hidden />
+                  <Icon className={cn('h-7 w-7', rarityColor(item.rarity))} aria-hidden />
                 </div>
                 {(item.rarity === 'mitico' || item.featured) && (
                   <div className="absolute -right-1 -top-1">
@@ -152,13 +151,6 @@ export function StoreItemList({ items, inventory, onSelect }: StoreItemListProps
               </div>
             </div>
 
-            {/* Hover overlay sutil */}
-            <div
-              className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100"
-              style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.02) 50%, transparent 100%)',
-              }}
-            />
           </motion.button>
         );
       })}

@@ -149,7 +149,7 @@ export function RoundStatusBar() {
         <div className="mt-3">
           <div className="h-1 bg-deep-black rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-gradient-to-r from-neon-green to-neon-yellow"
+              className="h-full bg-neon-green"
               initial={{ width: '0%' }}
               animate={{
                 width: `${((Date.now() - currentRound.actualKickoffMs) / SCHEDULER_CONFIG.ROUND_DURATION_MS) * 100}%`,

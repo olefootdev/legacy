@@ -10,8 +10,11 @@ import type { CSSProperties } from 'react';
  * de coliseu) e foto do jogador são opcionais; quando ausentes, o card usa
  * apenas o painel ornamentado em dourado/preto.
  *
- * Tipografia herda de tokens globais: font-display (Agency FB) e
- * font-serif-hero (Moret). Cor primária: --color-neon-yellow.
+ * Tipografia herda de tokens globais: font-display e font-impact (Anton).
+ * Cor primária: --color-neon-yellow.
+ *
+ * VOLT2 (2026-09-19): sem halo, sem degradê de superfície, sem serifa/itálico,
+ * sem texto girado decorativo. Fica só o fade da base da foto (scrim).
  */
 
 export interface LegacyPlayerCardStats {
@@ -42,13 +45,14 @@ export interface LegacyPlayerCardProps {
 const VB_W = 1024;
 const VB_H = 1536;
 
-// Paleta — derivada do PDF de referência.
-const GOLD = '#FDE100';
-const GOLD_DARK = '#C9B000';
-const GOLD_DEEP = '#8C7A1B';
-const GOLD_SHADOW = '#3A3208';
-const BLACK = '#000000';
-const DEEP_BLACK = '#0D0D0D';
+// Paleta — tokens VOLT2 em hex (atributo SVG não lê var()). "GOLD" aqui é o
+// volt do jogo (#FDE100), não o ouro da rede.
+const GOLD = '#FDE100'; // --color-neon-yellow
+const GOLD_DARK = '#C9B000'; // --color-neon-yellow-dark
+const GOLD_DEEP = '#7E8185'; // --color-poeira
+const BLACK = '#08090A'; // --color-nav
+const DEEP_BLACK = '#0D0D0D'; // --color-deep-black
+const PANEL = '#141516'; // --color-panel
 
 function StatPip({
   x,
@@ -117,35 +121,12 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
       aria-label={`Card Legadão de ${name}, ${position}, OVR ${ovr}`}
     >
       <defs>
-        {/* Gradient dourado vertical para bordas e elementos premium */}
-        <linearGradient id="lpc-gold-vertical" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={GOLD} />
-          <stop offset="50%" stopColor={GOLD_DARK} />
-          <stop offset="100%" stopColor={GOLD_DEEP} />
-        </linearGradient>
-        <linearGradient id="lpc-gold-horizontal" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor={GOLD_DEEP} />
-          <stop offset="50%" stopColor={GOLD} />
-          <stop offset="100%" stopColor={GOLD_DEEP} />
-        </linearGradient>
-        {/* Gradient escuro para fundo do painel */}
-        <radialGradient id="lpc-bg" cx="0.5" cy="0.4" r="0.8">
-          <stop offset="0%" stopColor="#1A1206" />
-          <stop offset="60%" stopColor={DEEP_BLACK} />
-          <stop offset="100%" stopColor={BLACK} />
-        </radialGradient>
-        {/* Gradient sutil para escurecer a foto na base */}
+        {/* Scrim: escurece a base da foto pra o nome ler (gradiente permitido) */}
         <linearGradient id="lpc-photo-fade" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="rgba(0,0,0,0)" />
           <stop offset="55%" stopColor="rgba(0,0,0,0)" />
           <stop offset="100%" stopColor="rgba(0,0,0,0.95)" />
         </linearGradient>
-        {/* Glow dourado por trás do herói */}
-        <radialGradient id="lpc-hero-glow" cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0%" stopColor="rgba(253,225,0,0.45)" />
-          <stop offset="60%" stopColor="rgba(253,225,0,0.10)" />
-          <stop offset="100%" stopColor="rgba(0,0,0,0)" />
-        </radialGradient>
         {/* Clip do interior da moldura */}
         <clipPath id="lpc-inner-clip">
           <path d="M 64 96 L 960 96 L 960 1440 L 64 1440 Z" />
@@ -160,10 +141,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
 
       {/* === Conteúdo dentro da moldura (recortado) === */}
       <g clipPath="url(#lpc-inner-clip)">
-        <rect x="64" y="96" width={VB_W - 128} height={VB_H - 192} fill="url(#lpc-bg)" />
-
-        {/* Glow dourado central */}
-        <ellipse cx={VB_W / 2} cy="700" rx="380" ry="520" fill="url(#lpc-hero-glow)" />
+        <rect x="64" y="96" width={VB_W - 128} height={VB_H - 192} fill={PANEL} />
 
         {/* Backdrop (cenário) opcional */}
         {backdropUrl && (
@@ -202,7 +180,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
         width={VB_W - 64}
         height={VB_H - 120}
         fill="none"
-        stroke="url(#lpc-gold-vertical)"
+        stroke={GOLD}
         strokeWidth="3"
       />
       {/* Borda interna fina */}
@@ -264,10 +242,8 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           x="0"
           y="36"
           fill={GOLD}
-          fontFamily="var(--font-serif-hero)"
+          fontFamily="var(--font-impact)"
           fontSize="44"
-          fontStyle="italic"
-          fontWeight="900"
           textAnchor="middle"
         >
           L
@@ -355,10 +331,8 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
               x="0"
               y="12"
               fill={GOLD}
-              fontFamily="var(--font-serif-hero)"
+              fontFamily="var(--font-impact)"
               fontSize="36"
-              fontStyle="italic"
-              fontWeight="900"
               textAnchor="middle"
             >
               L
@@ -366,30 +340,6 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           </g>
         </g>
       )}
-
-      {/* === LATERAIS: texto vertical decorativo === */}
-      <text
-        transform={`translate(72, ${VB_H / 2}) rotate(-90)`}
-        fill={GOLD_DEEP}
-        fontFamily="var(--font-display)"
-        fontSize="20"
-        fontWeight="700"
-        letterSpacing="0.5em"
-        textAnchor="middle"
-      >
-        LEGADO · INSPIRA
-      </text>
-      <text
-        transform={`translate(${VB_W - 72}, ${VB_H / 2}) rotate(90)`}
-        fill={GOLD_DEEP}
-        fontFamily="var(--font-display)"
-        fontSize="20"
-        fontWeight="700"
-        letterSpacing="0.5em"
-        textAnchor="middle"
-      >
-        ÍCONE · ETERNO
-      </text>
 
       {/* === DIVISOR antes do nome === */}
       <line x1="120" y1="1170" x2={VB_W - 120} y2="1170" stroke={GOLD} strokeWidth="2" />
@@ -400,11 +350,9 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
         x={VB_W / 2}
         y="1280"
         fill={GOLD}
-        fontFamily="var(--font-serif-hero)"
+        fontFamily="var(--font-impact)"
         fontSize="124"
-        fontStyle="italic"
-        fontWeight="900"
-        letterSpacing="0.04em"
+        letterSpacing="0.01em"
         textAnchor="middle"
       >
         {name.toUpperCase()}
@@ -496,10 +444,8 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
             x="0"
             y="10"
             fill={GOLD}
-            fontFamily="var(--font-serif-hero)"
+            fontFamily="var(--font-impact)"
             fontSize="26"
-            fontStyle="italic"
-            fontWeight="900"
             textAnchor="middle"
           >
             L
@@ -529,7 +475,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           letterSpacing="0.22em"
           textAnchor="end"
         >
-          BLOCKCHAIN
+          OLEFOOT
         </text>
         <text
           x={VB_W - 100}

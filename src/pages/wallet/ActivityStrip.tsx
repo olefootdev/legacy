@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import type { WalletLedgerEntry, WalletLedgerType } from '@/wallet/types';
+import { SecaoVolt } from '@/components/ui';
 
 type ActivityStripProps = {
   ledger: WalletLedgerEntry[];
@@ -52,39 +53,24 @@ export function ActivityStrip({ ledger, limit = 3 }: ActivityStripProps) {
 
   return (
     <section className="space-y-3">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80">
-            Atividade recente
-          </p>
-          <h2
-            className="mt-1 font-display text-[22px] font-black uppercase leading-none tracking-tight text-white sm:text-[26px]"
-            style={{ letterSpacing: '0.005em' }}
-          >
-            Últimas movimentações
-          </h2>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <SecaoVolt label="Atividade recente" tone="neutro" className="min-w-0 grow" />
         <button
           type="button"
           onClick={() => navigate('/wallet/extract')}
-          className="text-[10px] font-display font-bold uppercase tracking-[0.2em] text-white/55 hover:text-neon-yellow transition-colors"
+          className="shrink-0 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento transition-colors hover:text-white"
         >
-          Ver extrato →
+          Extrato →
         </button>
       </div>
 
       <div
-        className="border border-white/[0.06] divide-y divide-white/[0.04]"
-        style={{
-          borderRadius: 'var(--radius-card)',
-          background: 'var(--color-panel-elevated,#0b0b0b)',
-        }}
+        className="border border-white/10 bg-panel divide-y divide-white/[0.07]"
+        style={{ borderRadius: 'var(--radius-card)' }}
       >
         {recent.length === 0 ? (
           <div className="p-5 text-center">
-            <p className="text-[12px] text-white/55">
-              Sem movimentações ainda. Suas próximas transações aparecem aqui.
-            </p>
+            <p className="text-[12px] text-cimento">Sem movimentações ainda</p>
           </div>
         ) : (
           recent.map((entry) => {
@@ -92,19 +78,19 @@ export function ActivityStrip({ ledger, limit = 3 }: ActivityStripProps) {
             const positive = entry.amount >= 0;
             return (
               <div key={entry.id} className="flex items-center gap-3 p-3 sm:p-4">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 ring-1 ring-white/[0.05] text-neon-yellow text-[14px]">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-card-hi text-cimento text-[14px]">
                   {meta.icon}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-medium text-white truncate">{meta.label}</p>
-                  <p className="text-[10px] uppercase tracking-[0.15em] text-white/40">
+                  <p className="font-mono text-[10.5px] text-cimento">
                     {timeAgo(entry.createdAt)}
                     {entry.status !== 'confirmed' ? ` · ${entry.status}` : ''}
                   </p>
                 </div>
                 <p
-                  className={`text-[13px] font-bold tabular-nums shrink-0 ${
-                    positive ? 'text-neon-green' : 'text-red-400'
+                  className={`font-mono text-[13px] font-medium tabular-nums shrink-0 ${
+                    positive ? 'text-alta' : 'text-giz'
                   }`}
                 >
                   {formatAmount(entry.amount, entry.currency)}

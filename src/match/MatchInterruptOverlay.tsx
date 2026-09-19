@@ -2,8 +2,8 @@
  * MatchInterruptOverlay (F3 — Olefoot Broadcast)
  *
  * Painel central diegético para gol / pênalti / cartão vermelho / intervalo / cena.
- * Mantém compatibilidade da API; visualmente refeito com tokens do design system,
- * letterbox sutil, eyebrow editorial, contagem em font-display monumental.
+ * Mantém compatibilidade da API. VOLT2: painel chapado (sem vidro, sem brilho),
+ * categoria em #hashtag, título em placa de cor chapada, contagem em ole-num.
  */
 import type { CSSProperties } from 'react';
 import { motion } from 'motion/react';
@@ -23,9 +23,9 @@ export interface MatchInterruptOverlayProps {
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 interface KindStyle {
-  accent: string;          // cor do título + accent border
-  glow: string;             // box-shadow
-  eyebrow: string;          // texto eyebrow ("LANCE" / "INTERVALO" etc)
+  accent: string;          // cor da placa do título + accent border
+  onAccent: string;        // cor do texto sobre a placa
+  eyebrow: string;          // categoria em #hashtag ("#lance" / "#intervalo" etc)
   borderRGB: string;        // r,g,b para borda transparente
 }
 
@@ -34,36 +34,36 @@ function kindStyle(kind: SpiritOverlayKind): KindStyle {
     case 'goal':
       return {
         accent: 'var(--color-event-goal)',
-        glow: 'var(--glow-goal)',
-        eyebrow: 'Lance',
+        onAccent: 'var(--color-deep-black)',
+        eyebrow: '#lance',
         borderRGB: '253,225,0',
       };
     case 'penalty':
       return {
         accent: 'var(--color-event-card-yellow)',
-        glow: 'var(--glow-card-yellow)',
-        eyebrow: 'Pênalti',
+        onAccent: 'var(--color-deep-black)',
+        eyebrow: '#pênalti',
         borderRGB: '245,197,24',
       };
     case 'red_card':
       return {
         accent: 'var(--color-event-card-red)',
-        glow: 'var(--glow-card-red)',
-        eyebrow: 'Expulsão',
+        onAccent: '#FFFFFF',
+        eyebrow: '#expulsão',
         borderRGB: '225,29,42',
       };
     case 'halftime':
       return {
         accent: 'var(--color-event-goal)',
-        glow: 'var(--glow-goal-soft)',
-        eyebrow: 'Intervalo',
+        onAccent: 'var(--color-deep-black)',
+        eyebrow: '#intervalo',
         borderRGB: '253,225,0',
       };
     default:
       return {
         accent: '#FFFFFF',
-        glow: '0 0 24px rgba(255,255,255,0.12)',
-        eyebrow: 'Cena',
+        onAccent: 'var(--color-deep-black)',
+        eyebrow: '#cena',
         borderRGB: '255,255,255',
       };
   }
@@ -80,56 +80,26 @@ export function MatchInterruptOverlay({
   const style = kindStyle(kind);
 
   const panelStyle: CSSProperties = {
-    background:
-      'linear-gradient(180deg, rgba(13,13,13,0.92) 0%, rgba(13,13,13,0.72) 100%)',
+    background: 'var(--color-panel)',
     border: `1px solid rgba(${style.borderRGB}, 0.32)`,
     borderTop: `2px solid ${style.accent}`,
-    boxShadow: `${style.glow}, 0 24px 60px rgba(0,0,0,0.6)`,
-    backdropFilter: 'blur(18px)',
-    WebkitBackdropFilter: 'blur(18px)',
   };
 
   const inner = (
     <>
-      {/* Eyebrow */}
-      <div
-        className="flex items-center justify-center gap-3 mb-3 opacity-85"
-        aria-hidden
-      >
-        <span
-          style={{
-            width: '28px',
-            height: '1px',
-            background: `rgba(${style.borderRGB}, 0.6)`,
-          }}
-        />
-        <span
-          className="font-ui font-bold uppercase"
-          style={{
-            color: style.accent,
-            fontSize: '10px',
-            letterSpacing: '0.42em',
-          }}
-        >
-          {style.eyebrow}
-        </span>
-        <span
-          style={{
-            width: '28px',
-            height: '1px',
-            background: `rgba(${style.borderRGB}, 0.6)`,
-          }}
-        />
-      </div>
+      {/* Categoria em #hashtag */}
+      <p className="mb-3 font-mono text-[11.5px] font-medium text-cimento" aria-hidden>
+        {style.eyebrow}
+      </p>
 
-      {/* Título — font-display black */}
+      {/* Título — Anton em placa de cor chapada */}
       <p
-        className="font-display font-black uppercase leading-tight"
+        className="inline-block font-impact uppercase leading-[1.1] px-3 pt-0.5"
         style={{
-          color: style.accent,
-          fontSize: 'clamp(20px, 3.4vw, 28px)',
-          letterSpacing: '0.06em',
-          textShadow: `0 0 16px rgba(${style.borderRGB}, 0.45)`,
+          background: style.accent,
+          color: style.onAccent,
+          fontSize: 'clamp(22px, 3.8vw, 32px)',
+          letterSpacing: '0.04em',
         }}
       >
         {title}
@@ -138,12 +108,10 @@ export function MatchInterruptOverlay({
       {/* Countdown monumental — só quando aplicável */}
       {countdown != null && (
         <p
-          className="font-display font-black tabular-nums leading-none mt-5 mb-1"
+          className="ole-num leading-none mt-5 mb-1"
           style={{
-            color: '#FFF',
-            fontSize: 'clamp(64px, 12vw, 96px)',
-            letterSpacing: '-0.04em',
-            textShadow: '0 4px 24px rgba(0,0,0,0.7)',
+            color: '#FFFFFF',
+            fontSize: 'clamp(56px, 11vw, 88px)',
           }}
         >
           {countdown}

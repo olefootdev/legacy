@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, TrendingUp } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export type NearMissType =
@@ -24,43 +24,37 @@ interface NearMissOverlayProps {
 const NEAR_MISS_CONFIG = {
   close_shot: {
     icon: '😱',
-    color: '#F59E0B',
-    bgGradient: 'from-amber-500/20 to-orange-600/20',
+    color: '#FF9F1C',
     borderColor: 'border-amber-500/50',
     shake: true,
   },
   post_hit: {
     icon: '🎯',
-    color: '#EF4444',
-    bgGradient: 'from-red-500/20 to-red-600/20',
+    color: '#FF4D4D',
     borderColor: 'border-red-500/50',
     shake: true,
   },
   great_save: {
     icon: '🧤',
-    color: '#3B82F6',
-    bgGradient: 'from-blue-500/20 to-cyan-600/20',
+    color: '#00C2FF',
     borderColor: 'border-blue-500/50',
     shake: false,
   },
   almost_goal: {
     icon: '😤',
-    color: '#EF4444',
-    bgGradient: 'from-red-500/20 to-pink-600/20',
+    color: '#FF4D4D',
     borderColor: 'border-red-500/50',
     shake: true,
   },
   close_win: {
     icon: '😅',
-    color: '#10B981',
-    bgGradient: 'from-green-500/20 to-emerald-600/20',
+    color: '#22C55E',
     borderColor: 'border-green-500/50',
     shake: false,
   },
   close_loss: {
     icon: '💔',
-    color: '#EF4444',
-    bgGradient: 'from-red-500/20 to-red-700/20',
+    color: '#FF4D4D',
     borderColor: 'border-red-500/50',
     shake: true,
   },
@@ -105,14 +99,13 @@ export function NearMissOverlay({ event, onDismiss }: NearMissOverlayProps) {
           className="fixed top-24 left-1/2 -translate-x-1/2 z-[90] pointer-events-none"
         >
           <div
-            className={`bg-gradient-to-br ${config.bgGradient} backdrop-blur-md border-2 ${config.borderColor} rounded-xl px-6 py-4 shadow-2xl min-w-[280px] max-w-md`}
+            className={`bg-panel border-2 ${config.borderColor} rounded-xl px-6 py-4 min-w-[280px] max-w-md`}
           >
             <div className="flex items-center gap-4">
               {/* Icon */}
               <motion.div
                 animate={{
                   scale: [1, 1.3, 1],
-                  rotate: config.shake ? [0, -15, 15, -15, 15, 0] : 0,
                 }}
                 transition={{
                   duration: 0.6,
@@ -187,7 +180,7 @@ export function NearMissMotivation({ visible, scoreDiff, onClose }: NearMissMoti
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[95] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+        className="fixed inset-0 z-[95] flex items-center justify-center bg-black/80"
         onClick={onClose}
       >
         <motion.div
@@ -195,14 +188,13 @@ export function NearMissMotivation({ visible, scoreDiff, onClose }: NearMissMoti
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.8, opacity: 0, y: 50 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="relative bg-gradient-to-br from-gray-900 to-black border-2 border-red-500/50 rounded-2xl p-8 max-w-md mx-4 shadow-2xl"
+          className="relative bg-panel border-2 border-red-500/50 rounded-2xl p-8 max-w-md mx-4"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Icon */}
           <motion.div
             animate={{
               scale: [1, 1.1, 1],
-              rotate: [0, -5, 5, -5, 5, 0],
             }}
             transition={{ duration: 0.8, repeat: 2 }}
             className="text-center mb-4"
@@ -236,32 +228,13 @@ export function NearMissMotivation({ visible, scoreDiff, onClose }: NearMissMoti
             <p
               className="text-white/90 mb-2"
               style={{
-                fontFamily: 'var(--font-serif-hero)',
+                fontFamily: 'var(--font-sans)',
                 fontSize: '18px',
-                fontStyle: 'italic',
                 lineHeight: 1.4,
               }}
             >
-              Perdeste por apenas {scoreDiff} {scoreDiff === 1 ? 'golo' : 'golos'}
+              Perdeu por {scoreDiff} {scoreDiff === 1 ? 'gol' : 'gols'}
             </p>
-            <p className="text-white/60 text-sm">
-              Estiveste muito perto da vitória. Tenta outra vez!
-            </p>
-          </motion.div>
-
-          {/* Stats */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 }}
-            className="bg-black/40 border border-red-500/30 rounded-lg p-4 mb-6"
-          >
-            <div className="flex items-center justify-center gap-2 text-red-400">
-              <TrendingUp className="w-5 h-5" />
-              <span className="text-sm font-bold uppercase" style={{ fontFamily: 'var(--font-display)' }}>
-                Estás a melhorar
-              </span>
-            </div>
           </motion.div>
 
           {/* CTA */}
@@ -269,11 +242,10 @@ export function NearMissMotivation({ visible, scoreDiff, onClose }: NearMissMoti
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             type="button"
             onClick={onClose}
-            className="w-full py-3 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg font-bold uppercase"
+            className="w-full py-3 bg-red-600 hover:bg-red-500 transition-colors text-white rounded-lg font-bold uppercase"
             style={{
               fontFamily: 'var(--font-display)',
               fontSize: '14px',
@@ -319,7 +291,7 @@ export function detectShotNearMiss(shotProbs: { goal: number; save: number; out:
   if (goal >= 0.30 && goal < 0.45 && save > out) {
     return {
       type: 'great_save',
-      message: 'Defesa incrível! Quase foi golo!',
+      message: 'Defesa incrível! Quase foi gol!',
       intensity: 'high',
     };
   }
@@ -337,7 +309,7 @@ export function detectShotNearMiss(shotProbs: { goal: number; save: number; out:
   if (goal >= 0.40 && goal < 0.50 && save > 0.3) {
     return {
       type: 'great_save',
-      message: 'Que defesa! Era quase golo certo!',
+      message: 'Que defesa! Era quase gol certo!',
       intensity: 'high',
     };
   }

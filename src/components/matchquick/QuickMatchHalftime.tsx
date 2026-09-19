@@ -2,7 +2,7 @@
  * QuickMatchHalftime — Painel de intervalo otimizado e direto.
  *
  * Padrão visual:
- * - Placar parcial em Moret italic
+ * - Placar parcial em ole-num (Archivo)
  * - Stats essenciais do 1º tempo (apenas 3 principais)
  * - Botão "Iniciar 2º Tempo" amarelo primário
  * - Countdown reduzido (5s) - clique retoma imediatamente
@@ -41,7 +41,7 @@ export function QuickMatchHalftime({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9998] flex items-center justify-center bg-deep-black/95 backdrop-blur-md px-4"
+      className="fixed inset-0 z-[9998] flex items-center justify-center bg-deep-black px-4"
     >
       <div className="w-full max-w-xl space-y-6">
         {/* Eyebrow compacto */}
@@ -75,14 +75,8 @@ export function QuickMatchHalftime({
               {homeShort}
             </p>
             <span
-              className="leading-none text-neon-yellow tabular-nums"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontStyle: 'italic',
-                fontSize: 'clamp(40px, 8vw, 64px)',
-                fontWeight: 700,
-                letterSpacing: '-0.03em',
-              }}
+              className="ole-num leading-none text-neon-yellow"
+              style={{ fontSize: 'clamp(36px, 7vw, 56px)' }}
             >
               {homeScore}
             </span>
@@ -90,12 +84,8 @@ export function QuickMatchHalftime({
 
           {/* Separador */}
           <span
-            className="leading-none text-white/35 select-none"
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
-              fontSize: 'clamp(24px, 4vw, 32px)',
-            }}
+            className="ole-num leading-none text-white/35 select-none"
+            style={{ fontSize: 'clamp(22px, 3.5vw, 28px)' }}
           >
             –
           </span>
@@ -103,14 +93,8 @@ export function QuickMatchHalftime({
           {/* Visitante */}
           <div className="flex items-center gap-3">
             <span
-              className="leading-none text-white tabular-nums"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontStyle: 'italic',
-                fontSize: 'clamp(40px, 8vw, 64px)',
-                fontWeight: 700,
-                letterSpacing: '-0.03em',
-              }}
+              className="ole-num leading-none text-white"
+              style={{ fontSize: 'clamp(36px, 7vw, 56px)' }}
             >
               {awayScore}
             </span>
@@ -134,7 +118,7 @@ export function QuickMatchHalftime({
             {topStats.map((s) => (
               <div
                 key={s.label}
-                className="border border-white/10 bg-black/60 px-3 py-2.5 text-center backdrop-blur-sm"
+                className="border border-white/10 bg-panel px-3 py-2.5 text-center"
                 style={{ borderRadius: 'var(--radius-sm)' }}
               >
                 <p
@@ -172,7 +156,7 @@ export function QuickMatchHalftime({
           <button
             type="button"
             onClick={onForceEnd}
-            className="inline-flex items-center gap-3 border-2 border-neon-yellow bg-neon-yellow px-8 py-4 text-black shadow-[0_0_30px_rgba(253,224,71,0.4)] transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(253,224,71,0.6)] active:scale-95"
+            className="inline-flex items-center gap-3 border-2 border-neon-yellow bg-neon-yellow px-8 py-4 text-black transition-colors hover:bg-white hover:border-white active:scale-95"
             style={{
               fontFamily: 'var(--font-display)',
               fontSize: '13px',
@@ -184,14 +168,10 @@ export function QuickMatchHalftime({
           >
             <Play className="w-5 h-5 fill-current" />
             Iniciar 2º Tempo
+            <span className="ole-num text-black/60" aria-label={`Inicia sozinho em ${countdown} segundos`}>
+              {countdown}s
+            </span>
           </button>
-
-          <p
-            className="text-[11px] text-white/40"
-            style={{ fontFamily: 'var(--font-sans)' }}
-          >
-            Inicia automaticamente em <span className="font-bold tabular-nums text-neon-yellow">{countdown}s</span>
-          </p>
         </div>
       </div>
     </motion.div>

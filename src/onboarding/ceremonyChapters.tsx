@@ -7,9 +7,9 @@ import { DAILY_REWARDS_7D, type DailyReward } from './dailyBonus';
 /**
  * Cerimônia de onboarding — capítulos editoriais.
  *
- * Tom visual: tudo é uma página de revista esportiva sendo impressa em tempo
- * real. Tipografia massiva (font-serif-hero, font-display), pretos profundos,
- * neon-yellow como acento. Sem áudio. Cada capítulo respira.
+ * Tom visual (VOLT2): tipo grande em Anton, asfalto chapado, volt como ação.
+ * Sem serifa, sem itálico, sem inclinação, sem sombra. Degradê só como scrim
+ * sobre foto (legibilidade do OVR/nome). Sem áudio. Cada capítulo respira.
  */
 
 const TIER_LABEL: Record<RarityTier, string> = {
@@ -19,37 +19,34 @@ const TIER_LABEL: Record<RarityTier, string> = {
   legendary: 'Lendário',
 };
 
+/** Cor de raridade em token VOLT2 (era hex solto: cinza/azul/amarelo/amarelo). */
 const TIER_ACCENT: Record<RarityTier, string> = {
-  basic: '#9CA3AF',
-  rare: '#60A5FA',
-  epic: '#FACC15',
-  legendary: '#FDE100',
+  basic: 'var(--color-cimento)',
+  rare: 'var(--color-giz)',
+  epic: 'var(--color-lenda)',
+  legendary: 'var(--color-neon-yellow)',
 };
 
 function ChapterLabel({ children }: { children: string }) {
-  return (
-    <div
-      className="font-display uppercase text-neon-yellow"
-      style={{ fontSize: '11px', letterSpacing: '0.4em' }}
-    >
-      {children}
-    </div>
-  );
+  return <span className="ole-eyebrow-poster">{children}</span>;
 }
 
+/** Botão de avanço: volt chapado + corte do escudo (.btn-primary). Sem inclinação. */
 function NextButton({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="bg-neon-yellow text-black font-display font-bold uppercase tracking-wider px-10 py-4 -skew-x-6 hover:bg-white transition-all disabled:opacity-50 disabled:cursor-wait"
-      style={{ fontSize: '18px', letterSpacing: '0.18em' }}
+      className="btn-primary flex h-14 items-center justify-center px-10 text-[18px] disabled:opacity-50 disabled:cursor-wait"
     >
-      <span className="inline-block skew-x-6">{children}</span>
+      {children}
     </button>
   );
 }
+
+/** Título de capítulo em Anton (era serifa itálica). */
+const TITULO = 'font-impact uppercase text-white';
 
 /**
  * CeremonyPlayerCard — adaptação do TransferRowCard (rota /transfer) para a cerimônia.
@@ -83,58 +80,45 @@ function CeremonyPlayerCard({
   const isHero = variant === 'hero';
   return (
     <div
-      className="group flex w-full overflow-hidden border bg-dark-gray"
-      style={{
-        borderColor: accent,
-        borderLeftWidth: 3,
-        borderRadius: 'var(--radius-md)',
-      }}
+      className="group flex w-full overflow-hidden border bg-panel"
+      style={{ borderColor: accent }}
     >
       <div
-        className="relative flex-shrink-0 overflow-hidden bg-black border-r border-white/8"
+        className="relative flex-shrink-0 overflow-hidden bg-deep-black border-r border-white/10"
         style={{
           width: isHero ? 'clamp(112px, 24%, 176px)' : 96,
         }}
       >
-        <div
-          className="absolute inset-0"
-          style={{ background: `${accent}1A` }}
-          aria-hidden
-        />
         {player.portraitUrl ? (
           <img
             src={player.portraitUrl}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover object-top grayscale transition-all duration-500 group-hover:grayscale-0"
+            className="absolute inset-0 object-cover object-top grayscale transition-all duration-500 group-hover:grayscale-0"
+            // Inline de propósito: mobile-responsive.css tem `img { height: auto }`
+            // fora de camada, que vence o h-full do Tailwind.
+            style={{ width: '100%', height: '100%' }}
             referrerPolicy="no-referrer"
             loading="lazy"
           />
         ) : null}
+        {/* Scrim da foto — legibilidade do OVR (único degradê do card). */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent"
         />
         <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10">
           <p
-            className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]"
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
-              fontSize: isHero ? 'clamp(36px, 5.5vw, 56px)' : 30,
-              letterSpacing: '-0.04em',
-            }}
+            className="ole-num text-neon-yellow leading-none"
+            style={{ fontSize: isHero ? 'clamp(30px, 5vw, 48px)' : 26 }}
           >
             {player.ovr}
           </p>
-          <p className="mt-0.5 font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white/85 drop-shadow-md">
+          <p className="mt-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-giz">
             {player.pos}
           </p>
         </div>
         {rank ? (
-          <span
-            className="absolute bottom-2 left-2 z-10 inline-flex items-center bg-neon-yellow text-black px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-[0.2em] shadow-[0_0_14px_rgba(234,255,0,0.5)]"
-            style={{ borderRadius: 'var(--radius-sm)' }}
-          >
+          <span className="ole-num absolute bottom-2 left-2 z-10 inline-flex items-center bg-neon-yellow text-black px-2 py-0.5 text-[10px]">
             #{rank}
           </span>
         ) : null}
@@ -144,57 +128,29 @@ function CeremonyPlayerCard({
         <div className="flex items-start justify-between gap-2 min-w-0">
           <div className="min-w-0 flex-1">
             <p
-              className="text-white uppercase truncate"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: isHero ? 'clamp(16px, 2.2vw, 22px)' : 14,
-                letterSpacing: '0.03em',
-                lineHeight: 1.05,
-              }}
+              className="font-impact text-white uppercase truncate"
+              style={{ fontSize: isHero ? 'clamp(18px, 2.4vw, 24px)' : 15, lineHeight: 1.1 }}
             >
               {player.name}
             </p>
-            <p
-              className="text-white/55 uppercase mt-0.5 truncate"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: isHero ? '10px' : '9px',
-                letterSpacing: '0.22em',
-                fontWeight: 600,
-              }}
-            >
+            <p className="mt-0.5 truncate font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">
               {player.pos} · OVR {player.ovr}
             </p>
           </div>
           <span
-            className="shrink-0 inline-flex items-center border px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-[0.18em]"
-            style={{
-              borderColor: accent,
-              color: accent,
-              background: 'rgba(0,0,0,0.7)',
-              borderRadius: 'var(--radius-sm)',
-            }}
+            className="shrink-0 inline-flex items-center border bg-deep-black px-2 py-0.5 font-mono text-[9.5px] font-medium uppercase tracking-[0.14em]"
+            style={{ borderColor: accent, color: accent }}
           >
             {TIER_LABEL[player.tier]}
           </span>
         </div>
 
         {isHero ? (
-          <div className="mt-auto pt-2 border-t border-[var(--color-divider-yellow)]">
-            <span
-              className="italic tabular-nums leading-tight text-neon-yellow"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontSize: 'clamp(18px, 2.4vw, 24px)',
-              }}
-            >
+          <div className="mt-auto flex min-w-0 items-baseline gap-2 border-t border-white/10 pt-2">
+            <span className="font-impact uppercase leading-[1.1] text-neon-yellow" style={{ fontSize: 'clamp(18px, 2.4vw, 22px)' }}>
               {TIER_LABEL[player.tier]}
             </span>
-            <span
-              className="ml-2 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50"
-            >
+            <span className="min-w-0 truncate font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">
               · Pioneiro do clube
             </span>
           </div>
@@ -237,27 +193,16 @@ export function IntroChapter(props: {
         />
 
         <h1
-          className="font-serif-hero text-white"
-          style={{
-            fontStyle: 'italic',
-            fontSize: 'clamp(40px, 7vw, 80px)',
-            lineHeight: 0.95,
-            letterSpacing: '-0.01em',
-          }}
+          className={TITULO}
+          style={{ fontSize: 'clamp(40px, 9vw, 80px)', lineHeight: 1.02, letterSpacing: '-0.01em' }}
         >
           Hoje começa a história
           <br />
           do{' '}
-          <span className="text-neon-yellow">{props.clubName}</span>.
+          <span className="text-neon-yellow [overflow-wrap:anywhere]">{props.clubName}</span>.
         </h1>
 
-        <p
-          className="font-sans text-white/70 max-w-[640px]"
-          style={{ fontSize: 17, lineHeight: 1.55 }}
-        >
-          Cada decisão sua será impressa nesta página. Comece pelo cofre,
-          monte o plantel e leve seu nome ao próximo capítulo.
-        </p>
+        <span className="font-mono text-[12px] font-medium text-cimento">#cofre #plantel #astros</span>
 
         <div className="pt-2">
           <NextButton onClick={props.onNext}>Abrir o cofre</NextButton>
@@ -303,14 +248,7 @@ export function ExpRouletteChapter(props: {
       <div className="flex flex-col items-center text-center gap-7">
         <ChapterLabel>Capítulo I · Cofre Fundador</ChapterLabel>
 
-        <h2
-          className="font-serif-hero text-white"
-          style={{
-            fontStyle: 'italic',
-            fontSize: 'clamp(34px, 5.5vw, 56px)',
-            lineHeight: 1.0,
-          }}
-        >
+        <h2 className={TITULO} style={{ fontSize: 'clamp(32px, 7vw, 56px)', lineHeight: 1.04 }}>
           O capital inicial<br />que vai mover o clube.
         </h2>
 
@@ -321,30 +259,23 @@ export function ExpRouletteChapter(props: {
             return (
               <div
                 key={t.id}
-                className="-skew-x-6 px-6 py-3 flex items-center justify-between transition-all"
+                className="px-6 py-3 flex items-center justify-between transition-colors"
                 style={{
                   background: isWinner
                     ? 'var(--color-neon-yellow)'
                     : isActive
                       ? 'rgba(253,225,0,0.18)'
                       : 'rgba(255,255,255,0.04)',
-                  color: isWinner ? '#000' : 'rgba(255,255,255,0.85)',
+                  color: isWinner ? 'var(--color-deep-black)' : 'var(--color-giz)',
                   border: isWinner
                     ? '2px solid var(--color-neon-yellow)'
-                    : '1px solid rgba(255,255,255,0.06)',
-                  transform: `skewX(-6deg)${isWinner ? ' scale(1.04)' : ''}`,
+                    : '1px solid rgba(255,255,255,0.10)',
                 }}
               >
-                <span
-                  className="font-display uppercase skew-x-6"
-                  style={{ fontSize: 14, letterSpacing: '0.2em' }}
-                >
+                <span className="font-mono uppercase" style={{ fontSize: 13, letterSpacing: '0.16em' }}>
                   {t.id}
                 </span>
-                <span
-                  className="font-display font-black skew-x-6"
-                  style={{ fontSize: 24 }}
-                >
+                <span className="ole-num" style={{ fontSize: 20 }}>
                   {t.label}
                 </span>
               </div>
@@ -357,14 +288,9 @@ export function ExpRouletteChapter(props: {
             className="flex flex-col items-center gap-3"
             style={{ animation: 'olefoot-fade-up 500ms both' }}
           >
+            <span className="ole-eyebrow-poster">O cofre revelou</span>
             <div
-              className="font-serif-hero italic text-white"
-              style={{ fontSize: 22 }}
-            >
-              o cofre revelou
-            </div>
-            <div
-              className="font-display font-black text-neon-yellow"
+              className="font-impact text-neon-yellow"
               style={{
                 fontSize: 'clamp(80px, 14vw, 160px)',
                 lineHeight: 0.9,
@@ -373,10 +299,7 @@ export function ExpRouletteChapter(props: {
             >
               {targetTier.label}
             </div>
-            <div
-              className="font-display uppercase text-white/60"
-              style={{ fontSize: 13, letterSpacing: '0.35em' }}
-            >
+            <div className="font-mono uppercase text-cimento" style={{ fontSize: 13, letterSpacing: '0.2em' }}>
               EXP iniciais
             </div>
             <div className="pt-4">
@@ -419,22 +342,12 @@ export function SquadDraftChapter(props: {
       <div className="w-full max-w-[1100px] mx-auto px-6 sm:px-12 py-8 flex flex-col gap-5">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <ChapterLabel>Capítulo II · 25 Pioneiros</ChapterLabel>
-          <div
-            className="font-display text-white/70"
-            style={{ fontSize: 13, letterSpacing: '0.25em' }}
-          >
+          <div className="ole-num text-giz" style={{ fontSize: 13 }}>
             {revealedCount} / {cards.length}
           </div>
         </div>
 
-        <h2
-          className="font-serif-hero text-white"
-          style={{
-            fontStyle: 'italic',
-            fontSize: 'clamp(28px, 4.5vw, 44px)',
-            lineHeight: 1.05,
-          }}
-        >
+        <h2 className={TITULO} style={{ fontSize: 'clamp(28px, 6vw, 44px)', lineHeight: 1.06 }}>
           Os primeiros nomes a vestir as cores do clube.
         </h2>
 
@@ -444,18 +357,15 @@ export function SquadDraftChapter(props: {
             return (
               <div
                 key={c.id}
-                className="relative overflow-hidden"
+                className="relative overflow-hidden border border-white/10 bg-deep-black"
                 style={{
                   aspectRatio: '5 / 6',
-                  background: '#0D0D0D',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: 6,
                   opacity: visible ? 1 : 0,
                   transform: visible ? 'translateY(0)' : 'translateY(8px)',
                   transition: 'opacity 320ms ease, transform 320ms ease',
                 }}
               >
-                {/* Barra dourada vertical à esquerda — assinatura do brandbook */}
+                {/* Barra vertical na cor da raridade — é dado (tier), não enfeite. */}
                 <div
                   className="absolute left-0 top-0 bottom-0 z-20"
                   style={{
@@ -469,11 +379,11 @@ export function SquadDraftChapter(props: {
                     src={c.portraitUrl}
                     alt=""
                     loading="lazy"
-                    className="absolute inset-0 w-full h-full object-cover grayscale"
-                    style={{ opacity: 0.42 }}
+                    className="absolute inset-0 object-cover grayscale"
+                    style={{ width: '100%', height: '100%', opacity: 0.42 }}
                   />
                 ) : null}
-                {/* Vinheta para legibilidade do texto */}
+                {/* Scrim da foto — legibilidade do OVR e do nome (degradê permitido). */}
                 <div
                   aria-hidden
                   className="absolute inset-0"
@@ -484,38 +394,22 @@ export function SquadDraftChapter(props: {
                 />
                 {/* OVR — topo esquerda */}
                 <div
-                  className="absolute top-2 left-3 z-10 italic text-neon-yellow tabular-nums leading-none"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontWeight: 700,
-                    fontSize: 'clamp(32px, 5vw, 52px)',
-                    letterSpacing: '-0.03em',
-                    textShadow: '0 2px 8px rgba(0,0,0,0.85)',
-                  }}
+                  className="ole-num absolute top-2 left-3 z-10 text-neon-yellow leading-none"
+                  style={{ fontSize: 'clamp(22px, 4.5vw, 44px)' }}
                 >
                   {c.ovr}
                 </div>
                 {/* Nome + POS — base direita */}
                 <div className="absolute bottom-2 right-3 z-10 flex flex-col items-end leading-tight">
                   <div
-                    className="font-display uppercase text-white truncate max-w-full"
-                    style={{
-                      fontSize: 12,
-                      letterSpacing: '0.14em',
-                      fontWeight: 700,
-                      textShadow: '0 1px 4px rgba(0,0,0,0.85)',
-                    }}
+                    className="font-impact uppercase text-white truncate max-w-full"
+                    style={{ fontSize: 13, letterSpacing: '0.04em', lineHeight: 1.1 }}
                   >
                     {c.name}
                   </div>
                   <div
-                    className="font-display uppercase text-neon-yellow"
-                    style={{
-                      fontSize: 9,
-                      letterSpacing: '0.32em',
-                      fontWeight: 700,
-                      marginTop: -1,
-                    }}
+                    className="font-mono uppercase text-neon-yellow"
+                    style={{ fontSize: 9.5, letterSpacing: '0.16em', fontWeight: 500 }}
                   >
                     {c.pos}
                   </div>
@@ -560,22 +454,12 @@ export function Top3Chapter(props: {
       >
         <div className="flex items-center justify-between flex-wrap gap-3">
           <ChapterLabel>Capítulo III · Os Astros</ChapterLabel>
-          <div
-            className="font-display text-white/70"
-            style={{ fontSize: 13, letterSpacing: '0.25em' }}
-          >
+          <div className="ole-num text-giz" style={{ fontSize: 13 }}>
             {revealed} / {total}
           </div>
         </div>
 
-        <h2
-          className="font-serif-hero text-white"
-          style={{
-            fontStyle: 'italic',
-            fontSize: 'clamp(36px, 6vw, 72px)',
-            lineHeight: 0.95,
-          }}
-        >
+        <h2 className={TITULO} style={{ fontSize: 'clamp(34px, 7vw, 72px)', lineHeight: 1.02 }}>
           E entre eles,<br />
           <span className="text-neon-yellow">três nomes</span> brilharam mais alto.
         </h2>
@@ -601,8 +485,8 @@ export function Top3Chapter(props: {
 
         {!allRevealed ? (
           <div
-            className="font-display uppercase text-neon-yellow text-center pt-2"
-            style={{ fontSize: 12, letterSpacing: '0.32em', animation: 'olefoot-fade-up 400ms both' }}
+            className="font-mono uppercase text-neon-yellow text-center pt-2"
+            style={{ fontSize: 12, letterSpacing: '0.2em', animation: 'olefoot-fade-up 400ms both' }}
           >
             Toque para revelar o {revealed === 0 ? 'primeiro' : revealed === 1 ? 'segundo' : 'terceiro'} astro
           </div>
@@ -633,8 +517,8 @@ export function DailyBonusChapter(props: { onClaim: () => void; onNext: () => vo
           : 'rgba(255,255,255,0.04)',
     border: isToday
       ? '2px solid var(--color-neon-yellow)'
-      : '1px solid rgba(255,255,255,0.06)',
-    color: isToday && claimed ? '#000' : 'rgba(255,255,255,0.92)',
+      : '1px solid rgba(255,255,255,0.10)',
+    color: isToday && claimed ? 'var(--color-deep-black)' : 'var(--color-giz)',
   });
 
   return (
@@ -642,24 +526,13 @@ export function DailyBonusChapter(props: { onClaim: () => void; onNext: () => vo
       <div className="flex flex-col gap-6">
         <ChapterLabel>Capítulo IV · Rotina dos Campeões</ChapterLabel>
 
-        <h2
-          className="font-serif-hero text-white"
-          style={{
-            fontStyle: 'italic',
-            fontSize: 'clamp(32px, 5vw, 56px)',
-            lineHeight: 1.0,
-          }}
-        >
+        <h2 className={TITULO} style={{ fontSize: 'clamp(32px, 7vw, 56px)', lineHeight: 1.04 }}>
           Volte todo dia.<br />
           <span className="text-neon-yellow">A casa retribui.</span>
         </h2>
 
-        <p
-          className="font-sans text-white/70 max-w-[640px]"
-          style={{ fontSize: 16, lineHeight: 1.55 }}
-        >
-          Sete capítulos em loop. Falte mais de 48h e a sequência reinicia. Hoje
-          você abre o primeiro selo.
+        <p className="font-sans text-cimento max-w-[640px]" style={{ fontSize: 15, lineHeight: 1.5 }}>
+          Falte mais de 48h e a sequência reinicia.
         </p>
 
         <div className="grid grid-cols-7 gap-2">
@@ -668,19 +541,19 @@ export function DailyBonusChapter(props: { onClaim: () => void; onNext: () => vo
             return (
               <div
                 key={r.day}
-                className="-skew-x-6 px-2 py-3 flex flex-col items-center text-center gap-1 transition-all"
+                className="px-1 py-3 flex min-w-0 flex-col items-center text-center gap-1 transition-colors"
                 style={dayCardStyle(r, isToday)}
               >
-                <div className="skew-x-6 flex flex-col items-center gap-1">
+                <div className="flex min-w-0 flex-col items-center gap-1">
                   <span
-                    className="font-display uppercase"
-                    style={{ fontSize: 9, letterSpacing: '0.25em', opacity: 0.7 }}
+                    className="font-mono uppercase"
+                    style={{ fontSize: 9, letterSpacing: '0.14em', opacity: 0.7 }}
                   >
                     Dia
                   </span>
                   <span
-                    className="font-display font-black"
-                    style={{ fontSize: 28, lineHeight: 1 }}
+                    className="font-impact"
+                    style={{ fontSize: 28, lineHeight: 1.05 }}
                   >
                     {r.day}
                   </span>
@@ -721,17 +594,12 @@ export function OutroChapter(props: { managerName: string; onFinish: () => void;
     <StageWrap>
       <div className="flex flex-col items-center text-center gap-8">
         <h1
-          className="font-serif-hero text-white"
-          style={{
-            fontStyle: 'italic',
-            fontSize: 'clamp(48px, 9vw, 112px)',
-            lineHeight: 0.95,
-            letterSpacing: '-0.01em',
-          }}
+          className={TITULO}
+          style={{ fontSize: 'clamp(48px, 11vw, 112px)', lineHeight: 1.02, letterSpacing: '-0.01em' }}
         >
-          Bem vindo,
+          Bem-vindo,
           <br />
-          <span className="text-neon-yellow">{props.managerName}</span>
+          <span className="text-neon-yellow [overflow-wrap:anywhere]">{props.managerName}</span>
         </h1>
         <NextButton onClick={props.onFinish} disabled={props.finishing}>
           {props.finishing ? 'Salvando...' : 'Acessar painel'}
@@ -746,16 +614,8 @@ export function LoadingChapter() {
   return (
     <StageWrap>
       <div className="flex flex-col items-center gap-4">
-        <div
-          className="font-display uppercase text-neon-yellow"
-          style={{ fontSize: 11, letterSpacing: '0.4em' }}
-        >
-          Preparando capítulo I
-        </div>
-        <div
-          className="font-serif-hero italic text-white/80"
-          style={{ fontSize: 'clamp(28px, 4vw, 40px)' }}
-        >
+        <span className="ole-eyebrow-poster">Preparando capítulo I</span>
+        <div className="font-impact uppercase text-giz" style={{ fontSize: 'clamp(28px, 6vw, 40px)', lineHeight: 1.1 }}>
           A imprensa está rodando…
         </div>
       </div>
@@ -768,10 +628,7 @@ export function ErrorChapter(props: { onRetry: () => void }) {
     <StageWrap>
       <div className="flex flex-col items-center gap-5 text-center">
         <ChapterLabel>Atraso na edição</ChapterLabel>
-        <div
-          className="font-serif-hero italic text-white"
-          style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', lineHeight: 1.15, maxWidth: 520 }}
-        >
+        <div className="font-sans text-giz" style={{ fontSize: 'clamp(17px, 3vw, 22px)', lineHeight: 1.4, maxWidth: 520 }}>
           Não conseguimos imprimir o capítulo. Verifique sua conexão e tente
           novamente em instantes.
         </div>

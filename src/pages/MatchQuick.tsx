@@ -11,6 +11,7 @@ import { roleFromPos } from '@/engine/pitchFromLineup';
 import type { OpponentStub } from '@/entities/types';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { cn } from '@/lib/utils';
+import { Hashtag } from '@/components/ui';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { hashStringSeed } from '@/match/seededRng';
 import { computeAwayImpactsFromVirtualLedger, computeHomeImpactsFromLedger } from '@/match/impactLedger';
@@ -128,7 +129,7 @@ function RedCardIcon({ className }: { className?: string }) {
       aria-label="Cartão vermelho"
       title="Expulso"
       className={cn(
-        'inline-block shrink-0 rounded-[2px] bg-red-600 ring-1 ring-red-950/50 shadow-[0_0_10px_rgba(220,38,38,0.5)]',
+        'inline-block shrink-0 rounded-sm bg-red-600 ring-1 ring-red-950/50',
         'w-[11px] h-[14px] sm:w-3 sm:h-4',
         className,
       )}
@@ -152,7 +153,7 @@ function PlayerEventStrip({ badges }: { badges: QuickEventBadge[] }) {
             <span
               key={`y-${i}`}
               title="Amarelo"
-              className="inline-block w-2 h-2.5 rounded-[1px] bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.5)]"
+              className="inline-block w-2 h-2.5 rounded-xs bg-amber-400"
             />
           );
         if (b === 'red')
@@ -160,7 +161,7 @@ function PlayerEventStrip({ badges }: { badges: QuickEventBadge[] }) {
             <span
               key={`r-${i}`}
               title="Vermelho"
-              className="inline-block w-2 h-2.5 rounded-[1px] bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.45)]"
+              className="inline-block w-2 h-2.5 rounded-xs bg-red-500"
             />
           );
         return (
@@ -272,12 +273,12 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
       initial={false}
       {...wrapperProps}
       className={cn(
-        'group flex w-full overflow-hidden border border-l-[3px] border-[var(--color-border)] bg-dark-gray transition-all duration-200',
-        onClick && !isSentOff ? 'text-left hover:border-neon-yellow/40 hover:-translate-y-0.5 cursor-pointer' : '',
+        'group flex w-full overflow-hidden border border-l-[3px] border-[var(--color-border)] bg-dark-gray transition-colors duration-200',
+        onClick && !isSentOff ? 'text-left hover:border-neon-yellow/40 cursor-pointer' : '',
         isSentOff ? 'opacity-85' : '',
         railClass,
       )}
-      style={{ borderRadius: 'var(--radius-md)', willChange: onClick && !isSentOff ? 'transform' : undefined }}
+      style={{ borderRadius: 'var(--radius-md)' }}
     >
       {/* Foto + OVR overlay (só home) — w-14 mobile (56px) economiza
        *  ~20% da largura pra info; w-20 (80px) em sm+. */}
@@ -299,32 +300,23 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
                 onError={handleImgError}
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-white/10 to-white/[0.02]">
+              <div className="absolute inset-0 flex items-center justify-center bg-card">
                 <span
-                  className="italic text-white/40 leading-none"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontWeight: 700,
-                    fontSize: 'clamp(22px, 3vw, 30px)',
-                    letterSpacing: '-0.04em',
-                  }}
+                  className="font-impact text-white/40 leading-none"
+                  style={{ fontSize: 'clamp(22px, 3vw, 30px)' }}
                 >
                   {(name?.[0] ?? '?').toUpperCase()}
                 </span>
               </div>
             )}
+            {/* Scrim da foto: legibilidade do OVR sobre a imagem. */}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent" />
             {/* OVR — só desktop (sm+). Mobile fica minimalista. */}
             {ovr !== undefined && !isSentOff ? (
               <div className="absolute top-1 left-1.5 z-10 hidden sm:block">
                 <p
-                  className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_8px_rgba(0,0,0,0.95)]"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontWeight: 700,
-                    fontSize: 'clamp(20px, 3vw, 28px)',
-                    letterSpacing: '-0.04em',
-                  }}
+                  className="ole-num text-neon-yellow leading-none"
+                  style={{ fontSize: 'clamp(18px, 2.6vw, 24px)' }}
                 >
                   {ovr}
                 </p>
@@ -368,15 +360,10 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
           </>
         ) : (
           // Away: silhueta mínima IA com inicial
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-white/10 to-white/[0.02]">
+          <div className="absolute inset-0 flex items-center justify-center bg-card">
             <span
-              className="italic text-white/35 leading-none"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontSize: 'clamp(22px, 3vw, 30px)',
-                letterSpacing: '-0.04em',
-              }}
+              className="font-impact text-white/35 leading-none"
+              style={{ fontSize: 'clamp(22px, 3vw, 30px)' }}
             >
               {(name?.[0] ?? '?').toUpperCase()}
             </span>
@@ -394,15 +381,12 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
         </div>
         {/* Número da camisa — bottom-right só mobile (com margem segura). */}
         {!isSentOff ? (
-          <div className="absolute bottom-1 right-1 z-10 inline-flex items-baseline gap-0.5 sm:hidden">
+          <div className="absolute bottom-1 right-1 z-10 inline-flex items-baseline gap-0.5 bg-black/75 px-1 py-0.5 sm:hidden">
             <span
-              className="italic tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]"
+              className="ole-num leading-none"
               style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontSize: '15px',
-                fontWeight: 700,
+                fontSize: '12px',
                 color: isAway ? 'rgba(255,255,255,0.95)' : 'var(--color-neon-yellow)',
-                letterSpacing: '-0.02em',
               }}
             >
               {num}
@@ -441,19 +425,14 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
           {badges}
           {isSentOff ? <RedCardIcon /> : null}
         </div>
-        {/* Rating Moret */}
+        {/* Rating */}
         {impact !== undefined && !isSentOff ? (
           <span
             className={cn(
-              'shrink-0 italic tabular-nums leading-none',
+              'ole-num shrink-0 leading-none',
               isAway ? 'text-white/85' : 'text-neon-yellow',
             )}
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
-              fontSize: '17px',
-              letterSpacing: '-0.02em',
-            }}
+            style={{ fontSize: '13px' }}
           >
             {impact.toFixed(2)}
           </span>
@@ -465,11 +444,9 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
         {/* Rank lateral */}
         {rank !== undefined ? (
           <span
-            className="shrink-0 italic tabular-nums leading-none w-5 text-center"
+            className="ole-num shrink-0 leading-none w-5 text-center"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
-              fontSize: '15px',
+              fontSize: '13px',
               color: isSentOff
                 ? 'rgba(255,80,80,0.65)'
                 : isTop
@@ -477,7 +454,6 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
                     ? 'rgba(255,255,255,0.9)'
                     : 'var(--color-neon-yellow)'
                   : 'rgba(255,255,255,0.35)',
-              letterSpacing: '-0.02em',
             }}
           >
             {isSentOff ? '—' : rank}
@@ -554,19 +530,14 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
           )}
         </div>
 
-        {/* Impact — Moret italic */}
+        {/* Impact */}
         {impact !== undefined && !isSentOff ? (
           <span
             className={cn(
-              'shrink-0 italic tabular-nums leading-none',
+              'ole-num shrink-0 leading-none',
               isAway ? 'text-white/85' : 'text-neon-yellow',
             )}
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
-              fontSize: 'clamp(18px, 2.2vw, 22px)',
-              letterSpacing: '-0.02em',
-            }}
+            style={{ fontSize: 'clamp(15px, 1.8vw, 18px)' }}
           >
             {impact.toFixed(2)}
           </span>
@@ -2414,13 +2385,10 @@ function MatchQuickLegacy() {
         <div className="max-w-md text-center space-y-6">
           <div className="ole-eyebrow !text-neon-yellow"><span>Partida rápida</span></div>
           <h1
-            className="text-white italic"
+            className="font-impact uppercase text-white"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
               fontSize: 'clamp(28px, 5vw, 44px)',
-              letterSpacing: '-0.02em',
-              lineHeight: 1.05,
+              lineHeight: 1.1,
             }}
           >
             Nenhum manager disponível
@@ -2623,15 +2591,13 @@ function MatchQuickLegacy() {
                 <span>Plantel incompleto</span>
               </div>
               <p
-                className="italic text-white/85"
+                className="text-white/85"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontSize: 'clamp(1.1rem, 2.4vw, 1.5rem)',
+                  fontSize: 'clamp(1rem, 2.2vw, 1.25rem)',
                   lineHeight: 1.4,
-                  letterSpacing: '-0.005em',
                 }}
               >
-                Precisas de <span className="not-italic text-neon-yellow tabular-nums" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>11 titulares</span> e pelo menos <span className="not-italic text-neon-yellow tabular-nums" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>5 no banco</span> pra entrar em campo.
+                Você precisa de <span className="ole-num text-neon-yellow">11 titulares</span> e pelo menos <span className="ole-num text-neon-yellow">5 no banco</span> pra entrar em campo.
               </p>
               {squadReport.reason ? (
                 <p
@@ -2648,7 +2614,7 @@ function MatchQuickLegacy() {
               ) : null}
               <Link
                 to="/team"
-                className="inline-flex items-center justify-center gap-2 bg-neon-yellow px-7 py-3 text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all"
+                className="inline-flex items-center justify-center gap-2 bg-neon-yellow px-7 py-3 text-black hover:bg-white transition-colors"
                 style={{
                   fontFamily: 'var(--font-display)',
                   fontSize: '12px',
@@ -2656,7 +2622,6 @@ function MatchQuickLegacy() {
                   letterSpacing: '0.2em',
                   textTransform: 'uppercase',
                   borderRadius: 'var(--radius-sm)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
                 }}
               >
                 Ajustar plantel
@@ -2671,15 +2636,8 @@ function MatchQuickLegacy() {
                   awayName={fixture?.opponent?.shortName ?? 'Visitante'}
                 />
               ) : null}
-              <p
-                className="italic text-white/55 text-center py-2"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontSize: 'clamp(15px, 2vw, 18px)',
-                  lineHeight: 1.4,
-                }}
-              >
-                "a preparar a partida…"
+              <p className="font-mono text-[12px] uppercase tracking-[0.2em] text-cimento text-center py-2">
+                Preparando a partida…
               </p>
             </div>
           )}
@@ -2703,7 +2661,7 @@ function MatchQuickLegacy() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.96, y: 8 }}
               className="w-full max-w-sm border border-[var(--color-border)] border-l-[3px] border-l-[var(--color-danger)] bg-deep-black p-6"
-              style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}
+              style={{ borderRadius: 'var(--radius-md)' }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-3 mb-4">
@@ -2722,18 +2680,14 @@ function MatchQuickLegacy() {
                 </h2>
               </div>
               <p
-                className="italic text-white/85"
+                className="text-white/85"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontSize: 'clamp(16px, 2.2vw, 19px)',
+                  fontSize: 'clamp(15px, 2vw, 17px)',
                   lineHeight: 1.45,
                 }}
               >
                 Você perde por{' '}
-                <span
-                  className="not-italic text-[var(--color-danger)] tabular-nums"
-                  style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
-                >
+                <span className="ole-num text-[var(--color-danger)]">
                   5×0
                 </span>
                 . O resultado entra na liga e no histórico.
@@ -2786,11 +2740,11 @@ function MatchQuickLegacy() {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="fixed top-20 left-1/2 -translate-x-1/2 z-[90] w-full max-w-md px-4"
           >
-            <div className="bg-amber-500/95 backdrop-blur-sm border-2 border-amber-400 rounded-lg p-3 shadow-lg">
+            <div className="bg-amber-400 border-2 border-amber-300 p-3">
               <div className="flex items-center gap-3">
                 <div className="flex gap-1 shrink-0">
-                  <span className="inline-block w-3 h-4 rounded-[2px] bg-amber-600" />
-                  <span className="inline-block w-3 h-4 rounded-[2px] bg-amber-600" />
+                  <span className="inline-block w-3 h-4 rounded-sm bg-amber-600" />
+                  <span className="inline-block w-3 h-4 rounded-sm bg-amber-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
@@ -2818,7 +2772,7 @@ function MatchQuickLegacy() {
             <MatchInterruptOverlay
               kind="halftime"
               title="Intervalo"
-              lines={['Escolhe as alterações para o 2.º tempo']}
+              lines={['Faça as alterações do 2º tempo']}
             />
           </Fragment>
         ) : live?.spiritOverlay?.kind === 'goal' &&
@@ -2855,7 +2809,7 @@ function MatchQuickLegacy() {
         <div data-tutorial-anchor="match-quick-board" className="glass-panel p-5 border border-white/10 space-y-4 relative overflow-visible">
           {quickPreStart === 'ready' || quickPreStart === 'c3' || quickPreStart === 'c2' || quickPreStart === 'c1' ? (
             <div
-              className="absolute inset-0 z-20 flex items-center justify-center bg-black/55 backdrop-blur-[2px] pointer-events-none"
+              className="absolute inset-0 z-20 flex items-center justify-center bg-deep-black/85 pointer-events-none"
               aria-live="polite"
             >
               {quickPreStart === 'ready' ? (
@@ -2865,7 +2819,7 @@ function MatchQuickLegacy() {
                   animate={{ scale: 1, opacity: 1, letterSpacing: '0.25em' }}
                   exit={{ opacity: 0, scale: 1.05 }}
                   transition={{ duration: 0.35, ease: 'easeOut' }}
-                  className="font-display font-black text-[min(8vw,2.2rem)] uppercase text-white/90 drop-shadow-[0_0_18px_rgba(234,255,0,0.35)]"
+                  className="font-display font-black text-[min(8vw,2.2rem)] uppercase text-white/90"
                 >
                   Preparados?
                 </motion.span>
@@ -2876,7 +2830,7 @@ function MatchQuickLegacy() {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 520, damping: 28 }}
-                  className="font-display font-black text-[min(22vw,7rem)] text-neon-yellow tabular-nums drop-shadow-[0_0_24px_rgba(234,255,0,0.35)]"
+                  className="font-display font-black text-[min(22vw,7rem)] text-neon-yellow tabular-nums"
                 >
                   {quickPreStart === 'c3' ? 3 : quickPreStart === 'c2' ? 2 : 1}
                 </motion.span>
@@ -2901,7 +2855,7 @@ function MatchQuickLegacy() {
               rowClassName="w-full max-w-[min(100%,44rem)] mx-auto"
             />
           </motion.div>
-          {/* Força dos times — Moret italic, padrão DNA do Campeão */}
+          {/* Força dos times — ole-num */}
           <div className="w-full max-w-[min(100%,44rem)] mx-auto mt-2 grid grid-cols-[1fr_auto_1fr] items-end gap-3">
             <div className="flex flex-col items-start gap-1">
               <motion.span
@@ -2909,24 +2863,17 @@ function MatchQuickLegacy() {
                 initial={{ scale: 1.15 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.4 }}
-                className="italic text-neon-yellow tabular-nums leading-none"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontWeight: 700,
-                  fontSize: 'clamp(24px, 3.5vw, 32px)',
-                  letterSpacing: '-0.02em',
-                }}
+                className="ole-num text-neon-yellow leading-none"
+                style={{ fontSize: 'clamp(20px, 3vw, 28px)' }}
               >
                 {homeForce || '—'}
               </motion.span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <span
-                className="italic text-white/40"
+                className="font-mono text-white/40"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontWeight: 400,
-                  fontSize: 'clamp(16px, 2.2vw, 22px)',
+                  fontSize: 'clamp(13px, 1.8vw, 16px)',
                   lineHeight: 1,
                 }}
               >
@@ -2967,19 +2914,14 @@ function MatchQuickLegacy() {
                 initial={{ scale: 1.15 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.4 }}
-                className="italic text-white tabular-nums leading-none"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontWeight: 700,
-                  fontSize: 'clamp(24px, 3.5vw, 32px)',
-                  letterSpacing: '-0.02em',
-                }}
+                className="ole-num text-white leading-none"
+                style={{ fontSize: 'clamp(20px, 3vw, 28px)' }}
               >
                 {awayForce || '—'}
               </motion.span>
             </div>
           </div>
-          {/* Score editorial — Moret italic gigante (assinatura Olefoot) */}
+          {/* Placar gigante — ole-num (VOLT2) */}
           <div
             className={cn(
               'flex justify-center items-center transition-opacity',
@@ -2989,34 +2931,20 @@ function MatchQuickLegacy() {
             )}
           >
             <span
-              className="italic text-neon-yellow tabular-nums leading-none"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontSize: 'clamp(56px, 12vw, 112px)',
-                letterSpacing: '-0.04em',
-              }}
+              className="ole-num text-neon-yellow leading-none"
+              style={{ fontSize: 'clamp(52px, 11vw, 100px)' }}
             >
               {displayHomeScore}
             </span>
             <span
-              className="italic text-white/40 leading-none mx-2 sm:mx-3"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 400,
-                fontSize: 'clamp(40px, 8vw, 76px)',
-              }}
+              className="ole-num text-white/40 leading-none mx-2 sm:mx-3"
+              style={{ fontSize: 'clamp(34px, 7vw, 64px)' }}
             >
               –
             </span>
             <span
-              className="italic text-white tabular-nums leading-none"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontSize: 'clamp(56px, 12vw, 112px)',
-                letterSpacing: '-0.04em',
-              }}
+              className="ole-num text-white leading-none"
+              style={{ fontSize: 'clamp(52px, 11vw, 100px)' }}
             >
               {displayAwayScore}
             </span>
@@ -3049,7 +2977,7 @@ function MatchQuickLegacy() {
           {quickPreStart === null ? (
             <div className="space-y-2 pt-1 hidden">
               <p className="text-[9px] font-bold uppercase tracking-wider text-center text-gray-500">
-                Momento — pressão em direção à baliza adversária
+                Momento — pressão rumo ao gol adversário
               </p>
               <div
                 key={momentumAnimKey ?? 'momentum-idle'}
@@ -3072,7 +3000,7 @@ function MatchQuickLegacy() {
                       className={cn(
                         'absolute inset-x-0 top-1/2 -translate-y-1/2 rounded-full border overflow-hidden pointer-events-none',
                         preGoalActive
-                          ? 'h-4 border-neon-yellow/50 bg-black/70 shadow-[0_0_28px_rgba(228,255,0,0.25)]'
+                          ? 'h-4 border-neon-yellow/50 bg-black/70'
                           : 'h-3 border-white/15 bg-black/50',
                       )}
                       style={{
@@ -3106,8 +3034,8 @@ function MatchQuickLegacy() {
                       className={cn(
                         'absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-white pointer-events-none',
                         preGoalActive
-                          ? 'h-7 w-2 ring-2 ring-neon-yellow/60 shadow-[0_0_36px_rgba(228,255,0,0.95)]'
-                          : 'h-5 w-1.5 ring-2 ring-white/40 shadow-[0_0_16px_rgba(228,255,0,0.65)]',
+                          ? 'h-7 w-2 ring-2 ring-neon-yellow/60'
+                          : 'h-5 w-1.5 ring-2 ring-white/40',
                       )}
                       style={{
                         left: `${momentumPressure * 100}%`,
@@ -3135,8 +3063,8 @@ function MatchQuickLegacy() {
             <div className="min-h-[5.5rem] pt-1 flex items-center justify-center border border-white/8 rounded-lg bg-black/20">
               <p className="text-[10px] font-medium text-gray-500 text-center px-4">
                 {quickPreStart === 'kickoff'
-                  ? 'Bola a rolar em instantes…'
-                  : 'Prepara-te — o apito soa em segundos.'}
+                  ? 'Bola rolando em instantes…'
+                  : 'O apito soa em segundos.'}
               </p>
             </div>
           )}
@@ -3158,24 +3086,12 @@ function MatchQuickLegacy() {
               ) : (
                 <AnimatePresence initial={false} mode="popLayout">
                   {feedVisibleEvents.map((e) => {
-                    const isYellow = e.kind === 'yellow_home' || e.kind === 'yellow_away';
-                    const isRed = e.kind === 'red_home' || e.kind === 'red_away';
-                    const isCard = isYellow || isRed;
-                    const cardGlow = isRed
-                      ? ['0 0 0 2px #ef4444cc', '0 0 10px 3px #ef444466', '0 0 0 0px transparent']
-                      : isYellow
-                        ? ['0 0 0 2px #fbbf24cc', '0 0 10px 3px #fbbf2466', '0 0 0 0px transparent']
-                        : undefined;
                     return (
                       <motion.div
                         key={e.id}
                         layout="position"
                         initial={{ opacity: 0, x: 44 }}
-                        animate={
-                          isCard
-                            ? { opacity: 1, x: 0, boxShadow: cardGlow }
-                            : { opacity: 1, x: 0 }
-                        }
+                        animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -10, transition: { duration: 0.18 } }}
                         transition={{ type: 'spring', stiffness: 380, damping: 28 }}
                         className={cn(
@@ -3303,11 +3219,11 @@ function MatchQuickLegacy() {
               aria-hidden
             >
               <div className="hidden sm:block w-px flex-1 min-h-6 bg-gradient-to-b from-transparent via-neon-yellow/35 to-transparent" />
-              <span className="font-display font-black text-[8px] text-neon-yellow/90 italic tracking-tighter leading-none py-1 flex flex-col items-center sm:hidden">
+              <span className="font-display font-black text-[8px] text-neon-yellow/90 tracking-tighter leading-none py-1 flex flex-col items-center sm:hidden">
                 <span>V</span>
                 <span>S</span>
               </span>
-              <span className="hidden sm:inline font-display font-black text-neon-yellow/90 italic tracking-tighter sm:[writing-mode:vertical-rl] sm:rotate-180 sm:text-xl md:text-2xl py-2">
+              <span className="hidden sm:inline font-display font-black text-neon-yellow/90 tracking-tighter sm:[writing-mode:vertical-rl] sm:rotate-180 sm:text-xl md:text-2xl py-2">
                 VS
               </span>
               <div className="hidden sm:block w-px flex-1 min-h-6 bg-gradient-to-b from-neon-yellow/25 via-transparent to-transparent" />
@@ -3376,7 +3292,7 @@ function MatchQuickLegacy() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+          className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-4 bg-black/90"
           role="dialog"
           aria-modal="true"
           aria-labelledby="sub-quick-title"
@@ -3387,7 +3303,7 @@ function MatchQuickLegacy() {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="w-full max-w-md bg-deep-black overflow-hidden border border-neon-yellow/30 shadow-[0_0_40px_rgba(253,224,71,0.2)]"
+            className="w-full max-w-md bg-deep-black overflow-hidden border border-neon-yellow/30"
             style={{ borderRadius: 'var(--radius-md)' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -3413,14 +3329,8 @@ function MatchQuickLegacy() {
                         {isGrave ? 'Lesão grave' : 'Lesão leve'}
                       </p>
                       <p
-                        className={cn('leading-tight uppercase', isGrave ? 'text-white' : 'text-white')}
-                        style={{
-                          fontFamily: 'var(--font-serif-hero)',
-                          fontStyle: 'italic',
-                          fontWeight: 700,
-                          fontSize: '18px',
-                          letterSpacing: '0.01em',
-                        }}
+                        className={cn('font-impact leading-[1.1] uppercase', isGrave ? 'text-white' : 'text-white')}
+                        style={{ fontSize: '20px', letterSpacing: '0.01em' }}
                       >
                         {selected.num} {selected.name}
                       </p>
@@ -3455,14 +3365,8 @@ function MatchQuickLegacy() {
                     Substituição
                   </p>
                   <p
-                    className="text-white leading-tight uppercase"
-                    style={{
-                      fontFamily: 'var(--font-serif-hero)',
-                      fontStyle: 'italic',
-                      fontWeight: 700,
-                      fontSize: '18px',
-                      letterSpacing: '0.01em',
-                    }}
+                    className="font-impact text-white leading-[1.1] uppercase"
+                    style={{ fontSize: '20px', letterSpacing: '0.01em' }}
                   >
                     {selected.num} {selected.name} sai
                   </p>
@@ -3476,16 +3380,15 @@ function MatchQuickLegacy() {
                 const isGrave = (playerHealth?.[live.quickInjurySub.outPlayerId]?.outForMatches ?? injuredEnt?.outForMatches ?? 1) >= 3;
                 return (
                   <p
-                    className="leading-relaxed"
+                    className={cn('leading-relaxed', isGrave ? 'text-baixa' : 'text-atencao')}
                     style={{
                       fontFamily: 'var(--font-sans)',
                       fontSize: '13px',
-                      color: isGrave ? '#fca5a5' : '#fcd34d',
                     }}
                   >
                     {isGrave
-                      ? `Lesão grave — ${selected.name} não pode continuar. Escolhe o substituto obrigatoriamente.`
-                      : `Lesão leve — podes substituir ou arriscar que ${selected.name} continue em campo.`}
+                      ? `${selected.name} não pode continuar. Substituição obrigatória.`
+                      : `Substitua ou arrisque ${selected.name} em campo.`}
                   </p>
                 );
               })() : null}
@@ -3528,7 +3431,7 @@ function MatchQuickLegacy() {
                     fontSize: '13px',
                   }}
                 >
-                  Não há jogadores elegíveis no banco. Termina a partida ou joga com menos.
+                  Não há jogadores elegíveis no banco. Termine a partida ou jogue com menos.
                 </p>
               ) : null}
 
@@ -3536,7 +3439,7 @@ function MatchQuickLegacy() {
                 <button
                   type="button"
                   disabled={!subPickId}
-                  className="w-full py-3 bg-neon-yellow text-black uppercase tracking-[0.2em] disabled:opacity-40 disabled:pointer-events-none hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(0,0,0,0.3)]"
+                  className="w-full py-3 bg-neon-yellow text-black uppercase tracking-[0.2em] disabled:opacity-40 disabled:pointer-events-none hover:bg-white active:scale-[0.98] transition-all"
                   style={{
                     fontFamily: 'var(--font-display)',
                     fontSize: '11px',
@@ -3560,7 +3463,7 @@ function MatchQuickLegacy() {
                   return (
                     <button
                       type="button"
-                      className="w-full py-3 bg-black/60 hover:bg-black/80 border border-amber-500/40 text-amber-400 uppercase tracking-[0.2em] transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      className="w-full py-3 bg-black/60 hover:bg-black/80 hover:border-amber-400 border border-amber-500/40 text-amber-400 uppercase tracking-[0.2em] transition-all active:scale-[0.98]"
                       style={{
                         fontFamily: 'var(--font-display)',
                         fontSize: '11px',
@@ -3740,36 +3643,21 @@ function MatchQuickLegacy() {
               {/* Score Moret gigante */}
               <div className="flex items-baseline gap-2 sm:gap-3">
                 <span
-                  className="italic text-neon-yellow tabular-nums leading-none"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontWeight: 700,
-                    fontSize: 'clamp(48px, 9vw, 72px)',
-                    letterSpacing: '-0.04em',
-                  }}
+                  className="ole-num text-neon-yellow leading-none"
+                  style={{ fontSize: 'clamp(44px, 8vw, 64px)' }}
                 >
                   {summary.homeScore}
                 </span>
                 <span
-                  className="text-white/35 leading-none"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontStyle: 'italic',
-                    fontWeight: 400,
-                    fontSize: 'clamp(28px, 5vw, 40px)',
-                  }}
+                  className="ole-num text-white/35 leading-none"
+                  style={{ fontSize: 'clamp(24px, 4vw, 34px)' }}
                   aria-hidden
                 >
                   –
                 </span>
                 <span
-                  className="italic text-white tabular-nums leading-none"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontWeight: 700,
-                    fontSize: 'clamp(48px, 9vw, 72px)',
-                    letterSpacing: '-0.04em',
-                  }}
+                  className="ole-num text-white leading-none"
+                  style={{ fontSize: 'clamp(44px, 8vw, 64px)' }}
                 >
                   {summary.awayScore}
                 </span>
@@ -3790,7 +3678,7 @@ function MatchQuickLegacy() {
                   {summary.awayName?.trim() || summary.awayShort}
                 </p>
                 <span
-                  className="inline-flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center bg-[#5e1a26] text-white"
+                  className="inline-flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center bg-card-hi text-white"
                   style={{
                     fontFamily: 'var(--font-display)',
                     fontWeight: 800,
@@ -3819,31 +3707,23 @@ function MatchQuickLegacy() {
                       aria-hidden
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-neon-yellow/15 to-transparent">
+                    <div className="absolute inset-0 flex items-center justify-center bg-card">
                       <span
-                        className="italic text-neon-yellow/80 leading-none"
-                        style={{
-                          fontFamily: 'var(--font-serif-hero)',
-                          fontWeight: 700,
-                          fontSize: 'clamp(48px, 8vw, 64px)',
-                        }}
+                        className="font-impact text-neon-yellow/80 leading-none"
+                        style={{ fontSize: 'clamp(48px, 8vw, 64px)' }}
                       >
                         {(summary.mvp.name?.[0] ?? '?').toUpperCase()}
                       </span>
                     </div>
                   )}
+                  {/* Scrim da foto: legibilidade do OVR e da posição. */}
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/45" />
                   {/* OVR */}
                   {summary.mvp.ovr !== undefined ? (
                     <div className="absolute top-2 left-2 z-10">
                       <p
-                        className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_8px_rgba(0,0,0,0.95)]"
-                        style={{
-                          fontFamily: 'var(--font-serif-hero)',
-                          fontWeight: 700,
-                          fontSize: 'clamp(28px, 4.5vw, 40px)',
-                          letterSpacing: '-0.04em',
-                        }}
+                        className="ole-num text-neon-yellow leading-none"
+                        style={{ fontSize: 'clamp(24px, 4vw, 34px)' }}
                       >
                         {summary.mvp.ovr}
                       </p>
@@ -3852,7 +3732,7 @@ function MatchQuickLegacy() {
                   {/* Tag MVP */}
                   <div className="absolute top-2 right-2 z-10">
                     <span
-                      className="inline-flex items-center bg-neon-yellow text-black px-2 py-0.5 font-display font-black uppercase shadow-[0_0_14px_rgba(253,225,0,0.45)]"
+                      className="inline-flex items-center bg-neon-yellow text-black px-2 py-0.5 font-display font-black uppercase"
                       style={{
                         fontSize: '9px',
                         letterSpacing: '0.22em',
@@ -3875,12 +3755,7 @@ function MatchQuickLegacy() {
 
                 {/* Info MVP */}
                 <div className="flex flex-col justify-center gap-2 px-4 py-3 sm:px-5 sm:py-4">
-                  <span
-                    className="font-display uppercase text-white/45"
-                    style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.32em' }}
-                  >
-                    Joia do Plantel
-                  </span>
+                  <Hashtag>#joiadoplantel</Hashtag>
                   <p
                     className="text-white uppercase truncate"
                     style={{
@@ -3893,19 +3768,14 @@ function MatchQuickLegacy() {
                   >
                     {summary.mvp.num} {summary.mvp.name}
                   </p>
-                  {/* Rating Moret gigante */}
+                  {/* Rating gigante */}
                   <p
-                    className="italic text-neon-yellow tabular-nums leading-none mt-1"
-                    style={{
-                      fontFamily: 'var(--font-serif-hero)',
-                      fontWeight: 700,
-                      fontSize: 'clamp(28px, 5vw, 40px)',
-                      letterSpacing: '-0.03em',
-                    }}
+                    className="ole-num text-neon-yellow leading-none mt-1"
+                    style={{ fontSize: 'clamp(24px, 4.2vw, 34px)' }}
                   >
                     {summary.mvp.rating.toFixed(2)}
                     <span
-                      className="ml-2 not-italic font-display text-white/45"
+                      className="ml-2 font-display text-white/45"
                       style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.22em' }}
                     >
                       RATING
@@ -3938,18 +3808,10 @@ function MatchQuickLegacy() {
               </div>
             ) : null}
 
-            {/* Frase editorial fechando */}
+            {/* Confirmação: o resultado já entrou na liga e no elenco */}
             <div className="px-6 pt-3 pb-5 text-center border-t border-[var(--color-divider-yellow)]">
-              <span aria-hidden className="mx-auto mb-3 block w-10 h-[2px] bg-neon-yellow/70" />
-              <p
-                className="italic text-white/55"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontSize: 'clamp(13px, 1.5vw, 15px)',
-                  lineHeight: 1.4,
-                }}
-              >
-                "liga e elenco atualizados."
+              <p className="font-mono text-[11.5px] font-medium text-cimento">
+                Liga e elenco atualizados
               </p>
             </div>
           </div>
@@ -3997,13 +3859,8 @@ function MatchQuickLegacy() {
                           {c.label}
                         </span>
                         <span
-                          className="italic text-neon-yellow tabular-nums leading-none"
-                          style={{
-                            fontFamily: 'var(--font-serif-hero)',
-                            fontWeight: 700,
-                            fontSize: 'clamp(20px, 3.5vw, 28px)',
-                            letterSpacing: '-0.02em',
-                          }}
+                          className="ole-num text-neon-yellow leading-none"
+                          style={{ fontSize: 'clamp(18px, 3vw, 24px)' }}
                         >
                           {c.val}
                         </span>
@@ -4092,9 +3949,8 @@ function MatchQuickLegacy() {
                   type="button"
                   initial={{ scale: 0.96 }}
                   animate={{ scale: 1 }}
-                  whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full py-4 inline-flex items-center justify-center gap-2 bg-neon-yellow text-black border-l-[3px] border-l-[var(--color-danger)] hover:bg-white transition-all"
+                  className="w-full py-4 inline-flex items-center justify-center gap-2 bg-neon-yellow text-black border-l-[3px] border-l-[var(--color-danger)] hover:bg-white transition-colors"
                   style={{
                     fontFamily: 'var(--font-display)',
                     fontSize: '13px',
@@ -4102,22 +3958,12 @@ function MatchQuickLegacy() {
                     letterSpacing: '0.24em',
                     textTransform: 'uppercase',
                     borderRadius: 'var(--radius-sm)',
-                    boxShadow: '0 8px 24px rgba(253,225,0,0.20)',
                   }}
                   onClick={() => setSession((s) => s + 1)}
                 >
                   <RotateCcw className="w-5 h-5" />
                   Revanche imediata
                 </motion.button>
-                <p
-                  className="text-center italic text-[var(--color-danger)]/85 -mt-1 mb-1"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontSize: '13px',
-                  }}
-                >
-                  "Não desistas. Tenta outra vez."
-                </p>
               </>
             ) : (
               <button
@@ -4130,7 +3976,6 @@ function MatchQuickLegacy() {
                   letterSpacing: '0.24em',
                   textTransform: 'uppercase',
                   borderRadius: 'var(--radius-sm)',
-                  boxShadow: '0 8px 24px rgba(253,225,0,0.18)',
                 }}
                 onClick={() => setSession((s) => s + 1)}
               >
@@ -4351,7 +4196,7 @@ function ShotProbabilityBar({
     <div
       role="status"
       aria-label="Probabilidades do tiro"
-      className="flex h-5 w-[min(260px,70vw)] overflow-hidden rounded-md border border-white/10 bg-black/40 font-display text-[9px] font-black uppercase tracking-wider shadow-[0_0_16px_rgba(234,255,0,0.18)]"
+      className="flex h-5 w-[min(260px,70vw)] overflow-hidden rounded-md border border-white/10 bg-black/40 font-display text-[9px] font-black uppercase tracking-wider"
     >
       {labels.map((l) => (
         <div

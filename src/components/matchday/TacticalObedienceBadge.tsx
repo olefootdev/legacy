@@ -42,7 +42,7 @@ export function TacticalObedienceBadge() {
       className={cn(
         'rounded-xl border px-3 py-2 transition-colors',
         flashUp
-          ? 'border-emerald-400 bg-emerald-500/15 shadow-[0_0_16px_rgba(16,185,129,0.4)]'
+          ? 'border-emerald-400 bg-emerald-500/15'
           : 'border-white/10 bg-black/30',
       )}
     >

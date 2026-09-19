@@ -12,6 +12,7 @@ import {
   type LegacyLotInfo,
 } from '@/supabase/legacyPlayers';
 import { LegacyMarketCard } from '@/components/legacy/LegacyMarketCard';
+import { Hashtag, SecaoVolt } from '@/components/ui';
 import { recordMarketActivity } from '@/supabase/marketActivities';
 import { getSupabase } from '@/supabase/client';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
@@ -300,7 +301,7 @@ export function TransferLegaciesTab({
       {/* Vazio SEM early-return: o modal de detalhe (deep-link do Legends Cup
           pra lenda fora de catálogo) precisa renderizar mesmo sem listados. */}
       {rows.length === 0 && (
-        <div className="rounded-xl border border-white/5 bg-white/[0.02] py-12 text-center text-sm text-gray-500">
+        <div className="rounded-xl border border-white/10 bg-panel py-12 text-center text-sm text-cimento">
           Nenhum Legacy disponível no momento.
         </div>
       )}
@@ -315,7 +316,7 @@ export function TransferLegaciesTab({
             onClick={() => setView(m)}
             className={cn(
               'rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition',
-              view === m ? 'bg-amber-400 text-black' : 'border border-white/10 text-white/55 hover:text-white',
+              view === m ? 'bg-neon-yellow text-black' : 'border border-white/10 text-white/55 hover:border-white/30 hover:text-white',
             )}
           >
             {m === 'grid' ? 'Grid' : 'Lista'}
@@ -326,12 +327,11 @@ export function TransferLegaciesTab({
 
       {groups.map((g) => (
         <section key={g.code} className="space-y-3">
-          <div className="flex items-baseline justify-between gap-3 border-b border-amber-400/20 pb-1.5">
-            <h3 className="font-display text-sm font-black uppercase tracking-wide text-amber-300">{g.title}</h3>
-            <span className="text-[11px] text-white/45">
+          <SecaoVolt label={g.title}>
+            <Hashtag>
               {g.rows.length} {g.rows.length === 1 ? 'carta' : 'cartas'}
-            </span>
-          </div>
+            </Hashtag>
+          </SecaoVolt>
 
           {view === 'grid' ? (
             // Carrossel horizontal: arrasta pro lado e vê todas as cartas do atleta.
@@ -382,7 +382,7 @@ export function TransferLegaciesTab({
           amountCents={brlCentsFor(pixRow)!}
           metadata={{ player: legacyRowToPlayerEntity(pixRow), clubName }}
           title={`Comprar ${pixRow.name}`}
-          description="Pague via PIX e o jogador entra no teu time automaticamente."
+          description="Pague via PIX e o jogador entra no seu time automaticamente."
           defaultName={clubName}
           defaultEmail={sessionEmail}
           onClose={() => setPixRow(null)}

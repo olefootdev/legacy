@@ -37,7 +37,7 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
 
   if (compact) {
     return (
-      <div className="bg-gradient-to-br from-gray-900 to-black border border-neon-yellow/30 rounded-lg p-4">
+      <div className="bg-panel border border-neon-yellow/30 rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Gift className="w-5 h-5 text-neon-yellow" />
@@ -103,9 +103,7 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
                         transition={{ duration: 0.5, ease: 'easeOut' }}
                         className="absolute inset-y-0 left-0 rounded-full"
                         style={{
-                          background: challenge.completed
-                            ? `linear-gradient(to right, ${color}, #FDE047)`
-                            : `linear-gradient(to right, ${color}80, ${color})`,
+                          background: challenge.completed ? 'var(--color-neon-yellow)' : color,
                         }}
                       />
                     </div>
@@ -119,14 +117,13 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
                         <motion.button
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           type="button"
                           onClick={() => onClaimReward(challenge.id)}
-                          className="text-[10px] bg-neon-yellow text-black px-2 py-0.5 rounded font-bold uppercase"
+                          className="text-[10px] bg-neon-yellow text-black px-2 py-0.5 rounded font-bold uppercase whitespace-nowrap hover:bg-white transition-colors"
                           style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.1em' }}
                         >
-                          Resgatar
+                          Resgatar +{challenge.reward} EXP
                         </motion.button>
                       )}
 
@@ -157,10 +154,10 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-3 bg-gradient-to-r from-neon-yellow/20 to-yellow-600/20 border border-neon-yellow rounded-lg p-3 text-center"
+            className="mt-3 bg-neon-yellow/15 border border-neon-yellow rounded-lg p-3 text-center"
           >
             <p className="text-xs text-neon-yellow font-bold uppercase" style={{ fontFamily: 'var(--font-display)' }}>
-              🎉 Todos os desafios completos!
+              Todos os desafios completos
             </p>
           </motion.div>
         )}
@@ -170,7 +167,7 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
 
   // Full version (not compact)
   return (
-    <div className="bg-gradient-to-br from-gray-900 to-black border-2 border-neon-yellow/30 rounded-xl p-6 shadow-2xl">
+    <div className="bg-panel border-2 border-neon-yellow/30 rounded-xl p-6">
       {/* Header */}
       <div className="text-center mb-6">
         <div className="flex items-center justify-center gap-2 mb-2">
@@ -188,7 +185,6 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
           </h2>
         </div>
         <div className="h-1 w-20 bg-neon-yellow mx-auto mb-3" />
-        <p className="text-sm text-white/60">Completa desafios para ganhar recompensas extras</p>
       </div>
 
       {/* Challenges */}
@@ -206,14 +202,13 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
               transition={{ delay: index * 0.1 }}
               className={cn(
                 'bg-black/40 border-2 rounded-xl p-4 transition-all',
-                challenge.completed ? 'border-neon-yellow/50 shadow-lg shadow-neon-yellow/20' : 'border-white/10',
+                challenge.completed ? 'border-neon-yellow/50' : 'border-white/10',
               )}
             >
               <div className="flex items-start gap-4">
                 <motion.div
                   animate={{
                     scale: challenge.completed ? [1, 1.2, 1] : 1,
-                    rotate: challenge.completed ? [0, 360] : 0,
                   }}
                   transition={{ duration: 0.6 }}
                   className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
@@ -247,9 +242,7 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
                       transition={{ duration: 0.5, ease: 'easeOut' }}
                       className="absolute inset-y-0 left-0 rounded-full"
                       style={{
-                        background: challenge.completed
-                          ? `linear-gradient(to right, ${color}, #FDE047)`
-                          : `linear-gradient(to right, ${color}80, ${color})`,
+                        background: challenge.completed ? 'var(--color-neon-yellow)' : color,
                       }}
                     />
                   </div>
@@ -263,14 +256,13 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
                       <motion.button
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         type="button"
                         onClick={() => onClaimReward(challenge.id)}
-                        className="bg-neon-yellow text-black px-4 py-1.5 rounded-lg font-bold uppercase text-sm"
+                        className="bg-neon-yellow text-black px-4 py-1.5 rounded-lg font-bold uppercase text-sm whitespace-nowrap hover:bg-white transition-colors"
                         style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.1em' }}
                       >
-                        Resgatar
+                        Resgatar +{challenge.reward} EXP
                       </motion.button>
                     )}
 
@@ -286,7 +278,7 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
       </div>
 
       {/* Summary */}
-      <div className="bg-gradient-to-r from-neon-yellow/10 to-yellow-600/10 border border-neon-yellow/30 rounded-lg p-4">
+      <div className="bg-card border border-neon-yellow/30 rounded-lg p-4">
         <div className="flex items-center justify-between">
           <span className="text-white uppercase font-bold" style={{ fontFamily: 'var(--font-display)' }}>
             Total Disponível
@@ -301,10 +293,10 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="mt-4 bg-gradient-to-r from-neon-yellow/20 to-yellow-600/20 border-2 border-neon-yellow rounded-lg p-4 text-center"
+          className="mt-4 bg-neon-yellow/15 border-2 border-neon-yellow rounded-lg p-4 text-center"
         >
           <p className="text-neon-yellow font-bold uppercase" style={{ fontFamily: 'var(--font-display)' }}>
-            🎉 Parabéns! Todos os desafios completos!
+            Todos os desafios completos
           </p>
         </motion.div>
       )}

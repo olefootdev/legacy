@@ -2,7 +2,7 @@
  * QuickMatchSummary — Tela de resultado final cinematográfica.
  *
  * Padrão visual:
- * - Resultado gigante em Moret italic (vitória amarelo, empate branco, derrota vermelho)
+ * - Resultado gigante em Anton sobre cor chapada (vitória volt, empate cinza, derrota vermelho)
  * - Placar final com tipografia display
  * - Feed de eventos-chave em timeline vertical
  * - Botões de ação (Ver postgame, Nova partida, Home)
@@ -40,8 +40,8 @@ export function QuickMatchSummary({
   const isLoss = homeScore < awayScore;
 
   const resultLabel = isWin ? 'Vitória' : isDraw ? 'Empate' : 'Derrota';
-  const resultColor = isWin ? 'text-neon-yellow' : isDraw ? 'text-white' : 'text-red-400';
-  const resultBg = isWin ? 'bg-neon-yellow/10' : isDraw ? 'bg-white/5' : 'bg-red-500/10';
+  const resultColor = isWin ? 'text-black' : isDraw ? 'text-white' : 'text-black';
+  const resultBg = isWin ? 'bg-neon-yellow' : isDraw ? 'bg-card-hi' : 'bg-baixa';
 
   return (
     <motion.div
@@ -64,7 +64,7 @@ export function QuickMatchSummary({
             <span aria-hidden className="h-px w-12 bg-white/20" />
           </div>
 
-          {/* Resultado em destaque — Moret italic gigante */}
+          {/* Resultado em destaque — Anton gigante em placa chapada */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -73,13 +73,8 @@ export function QuickMatchSummary({
             style={{ borderRadius: 'var(--radius-md)' }}
           >
             <p
-              className={cn('italic leading-none', resultColor)}
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontSize: 'clamp(3rem, 8vw, 6rem)',
-                letterSpacing: '-0.02em',
-              }}
+              className={cn('font-impact uppercase leading-[1.1]', resultColor)}
+              style={{ fontSize: 'clamp(3rem, 8vw, 6rem)' }}
             >
               {resultLabel}
             </p>
@@ -104,14 +99,8 @@ export function QuickMatchSummary({
                 {homeName ?? homeShort}
               </p>
               <span
-                className={cn('leading-none tabular-nums', isWin ? 'text-neon-yellow' : 'text-white')}
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
-                  fontSize: 'clamp(56px, 12vw, 96px)',
-                  fontWeight: 700,
-                  letterSpacing: '-0.03em',
-                }}
+                className={cn('ole-num leading-none', isWin ? 'text-neon-yellow' : 'text-white')}
+                style={{ fontSize: 'clamp(48px, 11vw, 88px)' }}
               >
                 {homeScore}
               </span>
@@ -119,12 +108,8 @@ export function QuickMatchSummary({
 
             {/* Separador */}
             <span
-              className="leading-none text-white/35 select-none"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontStyle: 'italic',
-                fontSize: 'clamp(32px, 6vw, 48px)',
-              }}
+              className="ole-num leading-none text-white/35 select-none"
+              style={{ fontSize: 'clamp(28px, 5vw, 40px)' }}
             >
               –
             </span>
@@ -141,14 +126,8 @@ export function QuickMatchSummary({
                 {awayName ?? awayShort}
               </p>
               <span
-                className={cn('leading-none tabular-nums', isLoss ? 'text-red-400' : 'text-white')}
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
-                  fontSize: 'clamp(56px, 12vw, 96px)',
-                  fontWeight: 700,
-                  letterSpacing: '-0.03em',
-                }}
+                className={cn('ole-num leading-none', isLoss ? 'text-red-400' : 'text-white')}
+                style={{ fontSize: 'clamp(48px, 11vw, 88px)' }}
               >
                 {awayScore}
               </span>
@@ -209,7 +188,7 @@ export function QuickMatchSummary({
         >
           <Link
             to="/postgame"
-            className="inline-flex items-center gap-2 bg-neon-yellow text-black px-5 py-3 hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+            className="inline-flex items-center gap-2 bg-neon-yellow text-black px-5 py-3 hover:bg-white active:scale-[0.98] transition-all"
             style={{
               fontFamily: 'var(--font-display)',
               fontSize: '11px',
@@ -226,7 +205,7 @@ export function QuickMatchSummary({
           <button
             type="button"
             onClick={onNewMatch}
-            className="inline-flex items-center gap-2 bg-deep-black border border-white/15 text-white px-5 py-3 hover:border-neon-yellow hover:text-neon-yellow hover:scale-[1.02] active:scale-[0.98] transition-all"
+            className="inline-flex items-center gap-2 bg-deep-black border border-white/15 text-white px-5 py-3 hover:border-neon-yellow hover:text-neon-yellow active:scale-[0.98] transition-all"
             style={{
               fontFamily: 'var(--font-display)',
               fontSize: '11px',
@@ -242,7 +221,7 @@ export function QuickMatchSummary({
 
           <Link
             to="/"
-            className="inline-flex items-center gap-2 bg-deep-black border border-white/15 text-white px-5 py-3 hover:border-neon-yellow hover:text-neon-yellow hover:scale-[1.02] active:scale-[0.98] transition-all"
+            className="inline-flex items-center gap-2 bg-deep-black border border-white/15 text-white px-5 py-3 hover:border-neon-yellow hover:text-neon-yellow active:scale-[0.98] transition-all"
             style={{
               fontFamily: 'var(--font-display)',
               fontSize: '11px',

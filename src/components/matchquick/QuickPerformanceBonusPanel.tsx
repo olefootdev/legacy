@@ -33,9 +33,9 @@ export function QuickPerformanceBonusPanel({ bonuses, totalOle, totalExp }: Prop
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.15 }}
             className={cn(
-              'p-3 rounded-lg border-2',
-              'bg-gradient-to-r from-yellow-500/10 to-orange-500/10',
-              'border-yellow-500/30',
+              'p-3 border',
+              'bg-panel',
+              'border-white/10',
             )}
           >
             <div className="flex items-start justify-between gap-3">
@@ -47,9 +47,9 @@ export function QuickPerformanceBonusPanel({ bonuses, totalOle, totalExp }: Prop
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <div className="text-sm font-bold text-yellow-400">+{bonus.ole} OLE</div>
+                <div className="font-mono text-sm font-medium text-neon-yellow">+{bonus.ole} OLE</div>
                 {bonus.exp > 0 && (
-                  <div className="text-xs text-blue-400">+{bonus.exp} EXP</div>
+                  <div className="font-mono text-xs text-giz">+{bonus.exp} EXP</div>
                 )}
               </div>
             </div>
@@ -63,9 +63,9 @@ export function QuickPerformanceBonusPanel({ bonuses, totalOle, totalExp }: Prop
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: bonuses.length * 0.15 + 0.2 }}
         className={cn(
-          'p-4 rounded-xl border-2',
-          'bg-gradient-to-r from-yellow-500/20 to-orange-500/20',
-          'border-yellow-400/50 shadow-lg shadow-yellow-500/10',
+          'p-4 border-2',
+          'bg-card',
+          'border-neon-yellow',
         )}
       >
         <div className="flex items-center justify-between">
@@ -73,8 +73,8 @@ export function QuickPerformanceBonusPanel({ bonuses, totalOle, totalExp }: Prop
             Total de Bônus
           </span>
           <div className="text-right">
-            <div className="text-lg font-bold text-yellow-400">+{totalOle} OLE</div>
-            {totalExp > 0 && <div className="text-sm text-blue-400">+{totalExp} EXP</div>}
+            <div className="font-mono text-lg font-medium text-neon-yellow">+{totalOle} OLE</div>
+            {totalExp > 0 && <div className="font-mono text-sm text-giz">+{totalExp} EXP</div>}
           </div>
         </div>
       </motion.div>

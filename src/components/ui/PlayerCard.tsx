@@ -54,7 +54,7 @@ export function PlayerCard({
       onClick={onClick}
       className={cn(
         'ole-player-card relative cursor-pointer transition-all duration-200',
-        'hover:border-neon-yellow hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(253,225,0,0.15)]',
+        'hover:border-neon-yellow',
         highlighted && 'border-neon-yellow shadow-[0_0_0_1px_var(--yellow)]',
         className,
       )}

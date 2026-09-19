@@ -3,7 +3,7 @@
  *
  * Sequência cinemática 5s:
  * 0-300ms     → fundo amarelo entra
- * 300-900ms   → "GOL" em Moret italic gigante (ole-goal-hero-text)
+ * 300-900ms   → "GOL" em Anton gigante
  * 900-1800ms  → portrait + lower-third com nome do jogador
  * 1800-3500ms → narrativa + pontos
  * 3500-5000ms → CTA permanece, fade-out gradual
@@ -78,17 +78,6 @@ export function GoalTakeover({
             backgroundColor: 'var(--color-event-goal)',
           }}
         >
-          {/* Vinheta decorativa — barras pretas diagonais sutis */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                'repeating-linear-gradient(135deg, transparent 0, transparent 80px, rgba(0,0,0,0.04) 80px, rgba(0,0,0,0.04) 82px)',
-              opacity: 0.6,
-            }}
-            aria-hidden
-          />
-
           {/* Eyebrow: minuto + LANCE */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -100,19 +89,19 @@ export function GoalTakeover({
               className="font-ui font-bold tabular-nums"
               style={{
                 fontSize: '12px',
-                color: '#000',
+                color: 'var(--color-deep-black)',
                 letterSpacing: '0.32em',
                 textTransform: 'uppercase',
               }}
             >
               {minute}'
             </span>
-            <span style={{ width: '36px', height: '2px', background: '#000' }} />
+            <span style={{ width: '36px', height: '2px', background: 'var(--color-deep-black)' }} />
             <span
               className="font-ui font-bold"
               style={{
                 fontSize: '12px',
-                color: '#000',
+                color: 'var(--color-deep-black)',
                 letterSpacing: '0.4em',
                 textTransform: 'uppercase',
               }}
@@ -123,19 +112,15 @@ export function GoalTakeover({
 
           {/* Stack central */}
           <div className="relative flex flex-col items-center gap-8 px-6 pointer-events-none">
-            {/* GOL — Moret italic monumental */}
+            {/* GOL — Anton monumental, chapado */}
             <motion.h1
               initial={{ opacity: 0, y: 60, scale: 0.92 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: 0.30, duration: 0.7, ease: EASE }}
-              className="leading-none text-black"
+              className="font-impact uppercase leading-none text-deep-black"
               style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontStyle: 'italic',
-                fontWeight: 900,
                 fontSize: 'clamp(5rem, 20vw, 11rem)',
-                letterSpacing: '-0.04em',
-                textShadow: '0 4px 20px rgba(0,0,0,0.18)',
+                letterSpacing: '-0.01em',
               }}
             >
               Gol
@@ -154,7 +139,6 @@ export function GoalTakeover({
                   style={{
                     width: 'clamp(110px, 18vw, 150px)',
                     height: 'clamp(110px, 18vw, 150px)',
-                    boxShadow: '0 12px 40px rgba(0,0,0,0.32)',
                   }}
                 >
                   {scorerPortrait ? (
@@ -172,14 +156,8 @@ export function GoalTakeover({
                 </div>
 
                 {/* Lower-third inline com nome */}
-                <div
-                  className="flex items-center gap-3 px-4 py-2"
-                  style={{
-                    background: '#000',
-                    transform: 'skewX(-6deg)',
-                  }}
-                >
-                  <div style={{ transform: 'skewX(6deg)' }} className="flex items-center gap-3">
+                <div className="flex items-center gap-3 bg-deep-black px-4 py-2">
+                  <div className="flex items-center gap-3">
                     {scorer.num != null && (
                       <span
                         className="font-display font-black tabular-nums leading-none"
@@ -246,16 +224,13 @@ export function GoalTakeover({
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.32, ease: EASE }}
                 onClick={handleDismiss}
-                className="absolute bottom-12 inline-flex items-center gap-3 px-7 py-3 font-display font-black uppercase tracking-[0.18em] pointer-events-auto"
+                className="absolute bottom-12 inline-flex items-center gap-3 bg-deep-black px-7 py-3 font-display font-black uppercase tracking-[0.18em] pointer-events-auto [--corte:12px] [clip-path:var(--clip-corte)]"
                 style={{
-                  background: '#000',
                   color: 'var(--color-event-goal)',
-                  transform: 'skewX(-6deg)',
                   fontSize: 'clamp(0.9rem, 2.4vw, 1.1rem)',
-                  boxShadow: '6px 6px 0px rgba(0,0,0,0.25)',
                 }}
               >
-                <span style={{ transform: 'skewX(6deg)' }} className="inline-flex items-center gap-3">
+                <span className="inline-flex items-center gap-3">
                   Voltar à partida
                   <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
                 </span>

@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { overallFromAttributes } from '@/entities/player';
+import { Hashtag } from '@/components/ui';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { getEffectiveFatigue } from '@/systems/fatigue';
@@ -572,8 +573,8 @@ export default function MatchQuickEngaged() {
               key={countdown}
               initial={{ scale: 0.4, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="font-serif italic text-white"
-              style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '8rem' }}
+              className="font-impact text-neon-yellow leading-none"
+              style={{ fontSize: '8rem' }}
             >
               {countdown > 0 ? countdown : 'BOLA!'}
             </motion.span>
@@ -708,7 +709,6 @@ export default function MatchQuickEngaged() {
 
             {/* EVOLUÇÃO DO TIME — o manager VÊ que não perdeu tempo: o time melhorou. */}
             {lastEvolution && (lastEvolution.risers.length > 0 || lastEvolution.teamOvrAfter > 0) && (() => {
-              const M = 'var(--font-serif-hero)';
               const teamUp = lastEvolution.teamOvrAfter - lastEvolution.teamOvrBefore;
               const risers = lastEvolution.risers.slice(0, 4);
               return (
@@ -726,7 +726,7 @@ export default function MatchQuickEngaged() {
                           {players[r.id] && (
                             <img src={playerPortraitSrc(players[r.id]!, 32, 32)} alt="" className="w-7 h-7 rounded-full object-cover bg-deep-black shrink-0" />
                           )}
-                          <span className="flex-1 truncate text-white" style={{ fontFamily: M, fontStyle: 'italic', fontWeight: 700, fontSize: '15px' }}>{r.name}</span>
+                          <span className="flex-1 truncate text-white" style={{ fontWeight: 700, fontSize: '15px' }}>{r.name}</span>
                           <span className="font-display uppercase tracking-[0.1em] text-[9px] font-black text-white/35 shrink-0">{r.pos}</span>
                           <span className="font-display tabular-nums text-[12px] font-black text-success shrink-0">{r.ovrBefore}→{r.ovrAfter}</span>
                         </div>
@@ -757,7 +757,7 @@ export default function MatchQuickEngaged() {
                   </div>
                   <div className="flex items-center justify-between mt-1.5">
                     <span className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/35">Pragmático</span>
-                    <span className="text-white/80 text-[12px]" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700 }}>{dnaLabel(clubDna.axis)}</span>
+                    <span className="text-white/80 text-[12px] font-bold">{dnaLabel(clubDna.axis)}</span>
                     <span className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/35">Romântico</span>
                   </div>
                 </div>
@@ -830,7 +830,7 @@ export default function MatchQuickEngaged() {
                       <div key={p.key} className="flex items-center gap-2.5">
                         <span className="text-base shrink-0">{p.icon}</span>
                         <span className="font-display uppercase tracking-[0.1em] text-[9px] font-black text-white/40 w-20 shrink-0">{p.label}</span>
-                        <span className="flex-1 truncate text-white" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: '15px' }}>{p.name}</span>
+                        <span className="flex-1 truncate text-white" style={{ fontWeight: 700, fontSize: '15px' }}>{p.name}</span>
                         <span className="font-display tabular-nums text-[13px] font-black text-neon-yellow shrink-0">{p.val}</span>
                       </div>
                     ))}
@@ -841,7 +841,7 @@ export default function MatchQuickEngaged() {
 
             {/* LIGA OLE — continuação da campanha (avançou / campeão / eliminado) */}
             {isLigaOleMatchRef.current && (() => {
-              const M = 'var(--font-serif-hero)';
+              const M = 'var(--font-impact)';
               // FABLE — a persona do treinador rival deixa o recado (NPC com
               // opinião): ele perdeu → 'lost'; ele te eliminou → 'eliminated_you'.
               const rivalId = ligaOpponentIdRef.current;
@@ -859,9 +859,9 @@ export default function MatchQuickEngaged() {
               ) : null;
               if (ligaFlash?.outcome === 'champion') {
                 return (
-                  <div className="relative overflow-hidden bg-neon-yellow px-5 py-5 text-black mb-1" style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 10px 30px rgba(253,225,0,0.22)' }}>
-                    <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-black/70 mb-1">Liga Ole · Campeão</p>
-                    <p style={{ fontFamily: M, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(30px, 9vw, 46px)', lineHeight: 0.95 }}>{club.name}</p>
+                  <div className="relative overflow-hidden bg-neon-yellow px-5 py-5 text-black mb-1" style={{ borderRadius: 'var(--radius-md)' }}>
+                    <Hashtag className="mb-1 text-black/70">#ligaole #campeão</Hashtag>
+                    <p className="uppercase" style={{ fontFamily: M, fontSize: 'clamp(30px, 9vw, 46px)', lineHeight: 1.05 }}>{club.name}</p>
                     <p className="font-display uppercase tracking-[0.2em] text-[11px] font-black text-black/80 mt-1">Levantou a taça!</p>
                     {rivalQuoteEl}
                     <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3 bg-black text-neon-yellow font-display uppercase tracking-[0.2em] text-[12px] font-black" style={{ borderRadius: 'var(--radius-sm)' }}>Ver Liga Ole</button>
@@ -871,8 +871,8 @@ export default function MatchQuickEngaged() {
               if (ligaFlash?.outcome === 'eliminated') {
                 return (
                   <div className="border px-5 py-5 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-danger)', backgroundColor: 'var(--color-dark-gray)' }}>
-                    <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-danger mb-1">Liga Ole · Fim da linha</p>
-                    <p className="text-white" style={{ fontFamily: M, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(24px, 7vw, 36px)' }}>Caiu nas {ligaFlash.reachedRound}</p>
+                    <Hashtag className="mb-1 text-danger">#ligaole #eliminado</Hashtag>
+                    <p className="text-white uppercase" style={{ fontFamily: M, fontSize: 'clamp(24px, 7vw, 36px)', lineHeight: 1.05 }}>Caiu nas {ligaFlash.reachedRound}</p>
                     {rivalQuoteEl}
                     <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3 border border-white/20 text-white/80 font-display uppercase tracking-[0.18em] text-[11px] font-black hover:border-white/50 transition-colors" style={{ borderRadius: 'var(--radius-sm)' }}>Ver Liga Ole</button>
                   </div>
@@ -880,9 +880,9 @@ export default function MatchQuickEngaged() {
               }
               if (ligaOle?.status === 'active') {
                 return (
-                  <div className="relative overflow-hidden border px-5 py-5 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'var(--color-dark-gray)', boxShadow: '0 10px 30px rgba(253,225,0,0.10)' }}>
-                    <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-neon-yellow mb-1">Liga Ole</p>
-                    <p className="text-white" style={{ fontFamily: M, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(22px, 6.5vw, 32px)', lineHeight: 0.95 }}>{club.name} avançou de fase!</p>
+                  <div className="relative overflow-hidden border px-5 py-5 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'var(--color-dark-gray)' }}>
+                    <Hashtag className="mb-1 text-neon-yellow">#ligaole</Hashtag>
+                    <p className="text-white uppercase" style={{ fontFamily: M, fontSize: 'clamp(22px, 6.5vw, 32px)', lineHeight: 1.05 }}>{club.name} avançou de fase!</p>
                     <p className="font-display uppercase tracking-[0.2em] text-[10px] font-black text-white/50 mt-1">Próxima: {LIGA_OLE_ROUNDS[ligaOle.roundIndex]}</p>
                     {rivalQuote && (
                       <p className="text-[12px] mt-2 text-white/60">
@@ -912,9 +912,7 @@ export default function MatchQuickEngaged() {
                   className="mb-1 border p-4"
                   style={{ borderColor: 'var(--color-neon-yellow)', borderRadius: 'var(--radius-md)', background: 'rgba(253,225,0,0.06)' }}
                 >
-                  <div className="font-display uppercase tracking-[0.28em] text-[10px] text-neon-yellow">
-                    Legends Cup
-                  </div>
+                  <Hashtag className="text-neon-yellow">#legendscup</Hashtag>
                   <p className="mt-2 text-[15px] font-bold leading-snug text-white">
                     {won
                       ? `Você venceu ${star.name}. Agora imagine ele do seu lado.`
@@ -926,7 +924,7 @@ export default function MatchQuickEngaged() {
                       <Link
                         key={l.id}
                         to={`/mercado/transfer?legacy=${encodeURIComponent(l.id)}&from=legendscup`}
-                        className="w-[74px] shrink-0 overflow-hidden border border-white/10 bg-black transition-transform hover:-translate-y-0.5"
+                        className="w-[74px] shrink-0 overflow-hidden border border-white/10 bg-black transition-colors hover:border-white/30"
                         style={{ borderRadius: 'var(--radius-sm)' }}
                       >
                         <div className="relative aspect-[3/4] bg-black">

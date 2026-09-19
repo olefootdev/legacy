@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Trophy, Users, Plus, Copy, Check, Share2, Swords, Crown, Star, Medal, X } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
+import { Hashtag } from '@/components/ui';
 import {
   fetchOpenLeagues,
   fetchMyLeagues,
@@ -25,26 +26,26 @@ function formatPool(n: number): string {
 }
 
 const SIZE_OPTIONS = [16, 32, 64] as const;
-const RANK_COLORS = ['text-[#FFD700]', 'text-[#C0C0C0]', 'text-[#CD7F32]', 'text-white/50'];
+const RANK_COLORS = ['text-neon-yellow', 'text-giz', 'text-cimento', 'text-cimento'];
 
 /** Ícone do posto: 1º troféu, 2º/3º medalha, 4º texto. `rank` é 1-indexado. */
 function RankIcon({ rank, className }: { rank: number; className?: string }) {
   if (rank === 1) return <Trophy className={className} strokeWidth={2.2} />;
   if (rank === 2 || rank === 3) return <Medal className={className} strokeWidth={2.2} />;
-  return <span className="text-sm font-bold">4º</span>;
+  return <span className="ole-num text-sm">4º</span>;
 }
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    open: { label: 'Inscrições Abertas', cls: 'border-neon-green/50 text-neon-green bg-neon-green/10' },
-    live: { label: 'Ao Vivo', cls: 'border-red-400/50 text-red-400 bg-red-400/10' },
-    finished: { label: 'Encerrada', cls: 'border-white/20 text-white/40 bg-white/5' },
-    cancelled: { label: 'Cancelada', cls: 'border-white/10 text-white/30 bg-white/5' },
+    open: { label: 'Inscrições abertas', cls: 'border-alta/50 text-alta' },
+    live: { label: 'Ao vivo', cls: 'border-baixa/50 text-baixa' },
+    finished: { label: 'Encerrada', cls: 'border-white/16 text-cimento' },
+    cancelled: { label: 'Cancelada', cls: 'border-white/10 text-poeira' },
   };
   const s = map[status] ?? map.cancelled!;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.15em] ${s.cls}`}>
-      {status === 'live' && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />}
+    <span className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] ${s.cls}`}>
+      {status === 'live' && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-baixa" />}
       {s.label}
     </span>
   );
@@ -64,7 +65,7 @@ function ShareButton({ slug, compact }: { slug: string; compact?: boolean }) {
   };
   if (compact) {
     return (
-      <button onClick={() => void onShare()} className="flex items-center gap-1.5 rounded-full border border-neon-yellow/30 bg-neon-yellow/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-neon-yellow hover:bg-neon-yellow/20 transition">
+      <button onClick={() => void onShare()} className="ole-num flex items-center gap-1.5 border border-neon-yellow/50 px-3 py-1.5 text-[10.5px] uppercase text-neon-yellow hover:border-neon-yellow transition-colors">
         {copied ? <Check className="h-3 w-3" /> : <Share2 className="h-3 w-3" />}
         {copied ? 'Copiado!' : 'Convidar'}
       </button>
@@ -72,9 +73,9 @@ function ShareButton({ slug, compact }: { slug: string; compact?: boolean }) {
   }
   return (
     <button onClick={() => void onShare()}
-      className="flex items-center justify-center gap-2 w-full rounded-md border border-neon-yellow/30 bg-neon-yellow/10 px-4 py-3 font-display text-[12px] font-bold uppercase tracking-[0.15em] text-neon-yellow hover:bg-neon-yellow/20 transition">
+      className="ole-num flex h-[50px] items-center justify-center gap-2 w-full whitespace-nowrap border border-neon-yellow/50 px-4 text-[13px] uppercase text-neon-yellow hover:border-neon-yellow transition-colors">
       {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
-      {copied ? 'Link Copiado!' : 'Compartilhar Liga'}
+      {copied ? 'Link copiado' : 'Compartilhar liga'}
     </button>
   );
 }
@@ -88,21 +89,20 @@ function LeagueCard({ league, onClick, delay }: { league: PremiumLeague; onClick
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay }}
-      className="w-full text-left sports-panel panel-accent overflow-hidden p-0 hover:-translate-y-0.5 transition-transform"
-      style={{ borderRadius: 'var(--radius-card)' }}
+      className="w-full text-left sports-panel panel-accent overflow-hidden p-0 hover:bg-card transition-colors"
     >
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-neon-yellow/30 bg-neon-yellow/10">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center border border-white/10 bg-card">
                 <Trophy className="h-4 w-4 text-neon-yellow" />
               </div>
               <div className="min-w-0">
-                <h3 className="font-display text-[15px] font-black uppercase tracking-tight text-white truncate">
+                <h3 className="font-impact text-[18px] uppercase leading-[1.1] text-white truncate">
                   {league.name}
                 </h3>
-                <p className="text-[10px] text-white/40 font-display uppercase tracking-[0.12em]">
+                <p className="truncate font-mono text-[10.5px] text-cimento">
                   por {league.creator_club_name}
                 </p>
               </div>
@@ -113,33 +113,33 @@ function LeagueCard({ league, onClick, delay }: { league: PremiumLeague; onClick
 
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div>
-            <p className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/35">Inscrição</p>
-            <p className="mt-0.5 font-display text-[18px] font-black tabular-nums text-neon-yellow leading-none">
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Inscrição</p>
+            <p className="ole-num mt-0.5 text-[17px] text-neon-yellow leading-none">
               {formatPool(league.entry_fee)}
             </p>
-            <p className="text-[9px] text-neon-yellow/50">{league.currency}</p>
+            <p className="font-mono text-[9.5px] text-cimento">{league.currency}</p>
           </div>
           <div>
-            <p className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/35">Pote</p>
-            <p className="mt-0.5 font-display text-[18px] font-black tabular-nums text-white leading-none">
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Pote</p>
+            <p className="ole-num mt-0.5 text-[17px] text-white leading-none">
               {formatPool(league.total_pool)}
             </p>
-            <p className="text-[9px] text-white/40">{league.currency}</p>
+            <p className="font-mono text-[9.5px] text-cimento">{league.currency}</p>
           </div>
           <div className="text-right">
-            <p className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/35">Times</p>
-            <p className="mt-0.5 font-display text-[18px] font-black tabular-nums text-white leading-none">
-              {league.current_teams}<span className="text-white/30">/{league.max_teams}</span>
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Times</p>
+            <p className="ole-num mt-0.5 text-[17px] text-white leading-none">
+              {league.current_teams}<span className="text-poeira">/{league.max_teams}</span>
             </p>
             {league.status === 'live' && league.current_round && (
-              <p className="text-[9px] text-red-400/80">R{league.current_round}/{league.total_rounds}</p>
+              <p className="font-mono text-[9.5px] text-baixa">R{league.current_round}/{league.total_rounds}</p>
             )}
           </div>
         </div>
 
-        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
+        <div className="mt-3 h-1 w-full overflow-hidden bg-card-hi">
           <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-neon-yellow/80 to-neon-yellow"
+            className="h-full bg-neon-yellow"
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.6, delay: delay + 0.2 }}
@@ -182,36 +182,36 @@ function CreateLeagueModal({ open, onClose, onCreated, clubOverall }: {
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
+    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/85 p-0 sm:p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}>
       <motion.div
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-neon-yellow/20 bg-[#0c0c0c] shadow-[0_0_60px_rgba(253,225,0,0.08)]"
+        className="w-full max-w-md border border-white/10 bg-panel"
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-neon-yellow" />
-            <h2 className="font-display text-lg font-black uppercase tracking-tight text-white">Criar Liga</h2>
+            <h2 className="font-impact text-2xl uppercase leading-[1.1] text-white">Criar Liga</h2>
           </div>
-          <button onClick={onClose} className="text-white/30 hover:text-white text-2xl leading-none">×</button>
+          <button onClick={onClose} className="text-cimento hover:text-white text-2xl leading-none">×</button>
         </div>
         <form onSubmit={(e) => void onSubmit(e)} className="p-6 space-y-5">
           <label className="block">
-            <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Nome da Liga</span>
+            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Nome da Liga</span>
             <input value={name} onChange={(e) => setName(e.target.value)} required minLength={3} maxLength={40}
               placeholder="Ex: Copa dos Campeões"
-              className="mt-1.5 w-full rounded-md border border-white/10 bg-deep-black px-4 py-3 text-sm text-white placeholder:text-white/20 focus:border-neon-yellow/40 focus:outline-none" />
+              className="mt-1.5 w-full border border-white/10 bg-deep-black px-4 py-3 text-sm text-white placeholder:text-poeira focus:border-neon-yellow/50 focus:outline-none" />
           </label>
           <div>
-            <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Quantidade de Times</span>
+            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Quantidade de Times</span>
             <div className="mt-1.5 grid grid-cols-3 gap-2">
               {SIZE_OPTIONS.map((n) => (
                 <button key={n} type="button" onClick={() => setMaxTeams(n)}
-                  className={`rounded-md border py-3 font-display text-[16px] font-black transition ${
+                  className={`ole-num border py-3 text-[16px] transition-colors ${
                     maxTeams === n
-                      ? 'border-neon-yellow bg-neon-yellow/15 text-neon-yellow shadow-[0_0_20px_rgba(253,225,0,0.1)]'
-                      : 'border-white/10 text-white/40 hover:border-white/20 hover:text-white/60'
+                      ? 'border-neon-yellow bg-neon-yellow text-black'
+                      : 'border-white/16 text-cimento hover:border-white/30 hover:text-white'
                   }`}>
                   {n}
                 </button>
@@ -219,30 +219,30 @@ function CreateLeagueModal({ open, onClose, onCreated, clubOverall }: {
             </div>
           </div>
           <label className="block">
-            <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Valor de Inscrição (EXP)</span>
+            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Valor de Inscrição (EXP)</span>
             <input type="number" value={entryFee} onChange={(e) => setEntryFee(e.target.value)} required min={100} max={10000000}
-              className="mt-1.5 w-full rounded-md border border-white/10 bg-deep-black px-4 py-3 text-sm text-white tabular-nums focus:border-neon-yellow/40 focus:outline-none" />
+              className="mt-1.5 w-full border border-white/10 bg-deep-black px-4 py-3 text-sm text-white tabular-nums focus:border-neon-yellow/50 focus:outline-none" />
           </label>
 
-          <div className="rounded-md border border-neon-yellow/20 bg-neon-yellow/[0.03] p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">Pote Estimado</span>
-              <span className="font-display text-[20px] font-black tabular-nums text-neon-yellow">{formatPool(estimatedPool)} EXP</span>
+          <div className="border border-white/10 bg-deep-black p-4 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Pote Estimado</span>
+              <span className="ole-num text-[18px] text-neon-yellow">{formatPool(estimatedPool)} EXP</span>
             </div>
             <div className="h-px bg-white/[0.06]" />
-            <div className="grid grid-cols-3 gap-2 text-[10px]">
-              <div><span className="inline-flex items-center gap-1 text-[#FFD700]"><Trophy className="h-3 w-3" strokeWidth={2.2} /> 40%</span><br/><span className="text-white/40">{formatPool(estimatedPool * 0.4)}</span></div>
-              <div><span className="inline-flex items-center gap-1 text-[#C0C0C0]"><Medal className="h-3 w-3" strokeWidth={2.2} /> 20%</span><br/><span className="text-white/40">{formatPool(estimatedPool * 0.2)}</span></div>
-              <div><span className="inline-flex items-center gap-1 text-[#CD7F32]"><Medal className="h-3 w-3" strokeWidth={2.2} /> 12%</span><br/><span className="text-white/40">{formatPool(estimatedPool * 0.12)}</span></div>
+            <div className="grid grid-cols-3 gap-2 font-mono text-[10.5px]">
+              <div><span className="inline-flex items-center gap-1 text-neon-yellow"><Trophy className="h-3 w-3" strokeWidth={2.2} /> 40%</span><br/><span className="text-cimento">{formatPool(estimatedPool * 0.4)}</span></div>
+              <div><span className="inline-flex items-center gap-1 text-giz"><Medal className="h-3 w-3" strokeWidth={2.2} /> 20%</span><br/><span className="text-cimento">{formatPool(estimatedPool * 0.2)}</span></div>
+              <div><span className="inline-flex items-center gap-1 text-cimento"><Medal className="h-3 w-3" strokeWidth={2.2} /> 12%</span><br/><span className="text-cimento">{formatPool(estimatedPool * 0.12)}</span></div>
             </div>
-            <p className="text-[10px] text-neon-yellow/60">
-              Você ganha <strong className="text-neon-yellow">10%</strong> do pote como criador ({formatPool(estimatedPool * 0.1)} EXP)
+            <p className="font-mono text-[10.5px] text-cimento">
+              Criador leva <strong className="text-neon-yellow">10%</strong> do pote ({formatPool(estimatedPool * 0.1)} EXP)
             </p>
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2.5 text-[12px] text-rose-200">
-              <X className="h-3.5 w-3.5 shrink-0 text-rose-400" strokeWidth={2.4} /> {error}
+            <div className="flex items-start gap-2 border border-baixa/50 bg-deep-black px-3 py-2.5 text-[12px] text-baixa">
+              <X className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} /> {error}
             </div>
           )}
           <button type="submit" disabled={busy || name.trim().length < 3 || !entryFee || Number(entryFee) < 100}
@@ -293,7 +293,7 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
     return () => clearTimeout(t);
   }, [showCreatedBanner]);
 
-  if (!league) return <div className="py-16 text-center text-white/30 text-sm">Carregando…</div>;
+  if (!league) return <div className="py-16 text-center font-mono text-cimento text-sm">Carregando…</div>;
 
   const onJoin = async () => {
     setJoining(true); setError(null);
@@ -304,27 +304,27 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
   };
 
   const roundLabel = (r: number) => {
-    if (!league.total_rounds) return `Round ${r}`;
+    if (!league.total_rounds) return `Rodada ${r}`;
     const remaining = league.total_rounds - r + 1;
     if (remaining === 1) return 'Final';
     if (remaining === 2) return 'Semifinal';
     if (remaining === 3) return 'Quartas de Final';
     if (remaining === 4) return 'Oitavas de Final';
-    return `Round ${r}`;
+    return `Rodada ${r}`;
   };
 
   const rounds = [...new Set(fixtures.map((f) => f.round))].sort((a, b) => a - b);
 
   return (
     <div className="space-y-5">
-      <button onClick={onBack} className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-white/40 hover:text-neon-yellow transition">
+      <button onClick={onBack} className="font-mono text-[11px] uppercase tracking-[0.14em] text-cimento hover:text-neon-yellow transition-colors">
         ← Todas as Ligas
       </button>
 
       {showCreatedBanner && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-          className="rounded-md border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-[12px] text-neon-green font-bold text-center">
-          Liga criada com sucesso! Compartilhe o link para convidar adversários.
+          className="border border-alta/50 bg-panel px-4 py-3 text-[12.5px] text-alta font-bold text-center">
+          Liga criada. Compartilhe o link.
         </motion.div>
       )}
 
@@ -333,10 +333,8 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden sports-panel"
-        style={{ borderRadius: 'var(--radius-card-lg)', boxShadow: 'var(--shadow-glow-yellow)' }}
       >
         <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow" />
-        <div className="absolute inset-0 bg-gradient-to-br from-neon-yellow/[0.05] via-transparent to-transparent" />
         <div className="relative p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -345,38 +343,38 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
                 <StatusBadge status={league.status} />
               </div>
               <h2
-                className="font-display font-black uppercase text-white leading-none"
-                style={{ fontSize: 'clamp(1.5rem, 5vw, 2.2rem)', letterSpacing: '-0.01em' }}
+                className="font-impact uppercase text-white leading-[1.1]"
+                style={{ fontSize: 'clamp(1.6rem, 5.5vw, 2.4rem)', letterSpacing: '-0.005em' }}
               >
                 {league.name}
               </h2>
-              <p className="mt-1 text-[11px] text-white/40">
-                <span className="text-neon-yellow/60">por {league.creator_club_name}</span> · {league.max_teams} times · Mata-mata
+              <p className="mt-1 font-mono text-[11px] text-cimento">
+                <span className="text-neon-yellow">por {league.creator_club_name}</span> · {league.max_teams} times · mata-mata
               </p>
             </div>
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-lg bg-deep-black/60 border border-white/[0.06] p-4 text-center">
+            <div className="bg-deep-black border border-white/[0.06] p-4 text-center">
               <p
-                className="tabular-nums text-neon-yellow leading-none"
-                style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 'clamp(28px, 6vw, 42px)' }}
+                className="ole-num text-neon-yellow leading-none"
+                style={{ fontSize: 'clamp(24px, 5.5vw, 36px)' }}
               >
                 {formatPool(league.total_pool)}
               </p>
-              <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.25em] text-white/35">
+              <p className="mt-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">
                 Pote Total · {league.currency}
               </p>
             </div>
-            <div className="rounded-lg bg-deep-black/60 border border-white/[0.06] p-4 text-center">
+            <div className="bg-deep-black border border-white/[0.06] p-4 text-center">
               <p
-                className="tabular-nums text-white leading-none"
-                style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 'clamp(28px, 6vw, 42px)' }}
+                className="ole-num text-white leading-none"
+                style={{ fontSize: 'clamp(24px, 5.5vw, 36px)' }}
               >
-                {league.current_teams}<span className="text-white/25">/{league.max_teams}</span>
+                {league.current_teams}<span className="text-poeira">/{league.max_teams}</span>
               </p>
-              <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.25em] text-white/35">
-                {league.status === 'open' ? 'Inscritos' : league.current_round ? `Round ${league.current_round}/${league.total_rounds}` : 'Times'}
+              <p className="mt-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">
+                {league.status === 'open' ? 'Inscritos' : league.current_round ? `Rodada ${league.current_round}/${league.total_rounds}` : 'Times'}
               </p>
             </div>
           </div>
@@ -388,26 +386,26 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
                 className="btn-primary w-full disabled:opacity-40">
                 <span className="btn-primary-inner justify-center py-1.5">
                   <Swords className="h-4 w-4" />
-                  {joining ? 'Entrando…' : `Inscrever-se · ${formatPool(league.entry_fee)} ${league.currency}`}
+                  {joining ? 'Entrando…' : `Inscrever −${formatPool(league.entry_fee)} ${league.currency}`}
                 </span>
               </button>
             )}
             {league.status === 'open' && myEntry && (
-              <div className="rounded-md border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-center font-display text-[12px] font-bold uppercase tracking-wider text-neon-green">
+              <div className="border border-alta/50 px-4 py-3 text-center font-mono text-[11.5px] uppercase tracking-[0.12em] text-alta">
                 Inscrito · Aguardando {league.max_teams - league.current_teams} times
               </div>
             )}
             <ShareButton slug={league.slug} />
           </div>
 
-          {error && <p className="mt-2 text-[12px] text-rose-300">{error}</p>}
+          {error && <p className="mt-2 text-[12px] text-baixa">{error}</p>}
         </div>
       </motion.div>
 
       {/* Premiação */}
       {champions.length > 0 && (
         <section className="space-y-2">
-          <div className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/70">
+          <div className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-neon-yellow">
             Premiação Final
           </div>
           {champions.map((c, i) => (
@@ -416,15 +414,14 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="flex items-center justify-between sports-panel px-4 py-3"
-              style={{ borderRadius: 'var(--radius-md)' }}
+              className={`flex items-center justify-between gap-3 px-4 py-3 ${c.rank === 1 ? 'bg-neon-yellow text-black' : 'sports-panel'}`}
             >
-              <div className="flex items-center gap-3">
-                <span className={`inline-flex items-center ${RANK_COLORS[c.rank - 1]}`}><RankIcon rank={c.rank} className="h-5 w-5" /></span>
-                <span className="font-display text-[13px] font-bold uppercase tracking-tight text-white">{c.club_name}</span>
+              <div className="flex min-w-0 items-center gap-3">
+                <span className={`inline-flex shrink-0 items-center ${c.rank === 1 ? 'text-black' : RANK_COLORS[c.rank - 1]}`}><RankIcon rank={c.rank} className="h-5 w-5" /></span>
+                <span className={c.rank === 1 ? 'truncate font-impact text-[22px] uppercase leading-[1.1] text-black' : 'truncate text-[14px] font-semibold text-giz'}>{c.club_name}</span>
               </div>
-              <span className="font-display text-[15px] font-black tabular-nums text-neon-yellow">
-                {formatPool(c.prize_amount)} <span className="text-[10px] text-neon-yellow/50">{c.currency}</span>
+              <span className={`ole-num shrink-0 text-[15px] ${c.rank === 1 ? 'text-black' : 'text-white'}`}>
+                {formatPool(c.prize_amount)} <span className={`font-mono text-[10px] ${c.rank === 1 ? 'text-black/70' : 'text-cimento'}`}>{c.currency}</span>
               </span>
             </motion.div>
           ))}
@@ -434,18 +431,18 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
       {/* Participantes (quando liga está open) */}
       {league.status === 'open' && entries.length > 0 && (
         <section className="space-y-2">
-          <div className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">
+          <div className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
             Inscritos ({entries.length}/{league.max_teams})
           </div>
           <div className="grid grid-cols-2 gap-2">
             {entries.map((e, i) => (
-              <div key={e.id} className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-[#0b0b0b] px-3 py-2">
-                <span className="font-display text-[10px] font-bold text-white/25 tabular-nums">{i + 1}</span>
-                <span className="text-[11px] font-bold text-white truncate flex-1">{e.club_name}</span>
+              <div key={e.id} className="flex min-w-0 items-center gap-2 border border-white/[0.06] bg-deep-black px-3 py-2">
+                <span className="ole-num text-[10px] text-poeira">{i + 1}</span>
+                <span className="text-[12px] font-semibold text-giz truncate flex-1">{e.club_name}</span>
                 {e.user_id === league.creator_id && (
-                  <Star className="h-3 w-3 text-neon-yellow/60 shrink-0" />
+                  <Star className="h-3 w-3 text-neon-yellow shrink-0" />
                 )}
-                <span className="text-[9px] font-bold text-white/25 tabular-nums shrink-0">{e.overall}</span>
+                <span className="ole-num text-[10px] text-cimento shrink-0">{e.overall}</span>
               </div>
             ))}
           </div>
@@ -455,14 +452,14 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
       {/* Bracket */}
       {rounds.length > 0 && (
         <section className="space-y-4">
-          <div className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">
-            Bracket Mata-Mata
+          <div className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
+            Chave do mata-mata
           </div>
           {rounds.map((r) => (
             <div key={r} className="space-y-2">
               <div className="flex items-center gap-2">
-                <Swords className="h-3.5 w-3.5 text-neon-yellow/50" />
-                <p className="font-display text-[11px] font-bold uppercase tracking-[0.15em] text-neon-yellow/70">
+                <Swords className="h-3.5 w-3.5 text-neon-yellow" />
+                <p className="ole-num text-[11px] uppercase text-neon-yellow">
                   {roundLabel(r)}
                 </p>
               </div>
@@ -475,28 +472,27 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: fi * 0.05 }}
-                    className="overflow-hidden border border-white/[0.06] bg-[#0b0b0b]"
-                    style={{ borderRadius: 'var(--radius-md)' }}
+                    className="overflow-hidden border border-white/[0.06] bg-deep-black"
                   >
                     <div className="grid grid-cols-[1fr_auto_1fr] items-center">
-                      <div className={`px-3 py-2.5 text-[12px] font-bold truncate ${homeWon ? 'text-white bg-neon-yellow/[0.06]' : 'text-white/40'}`}>
+                      <div className={`px-3 py-2.5 text-[12.5px] truncate ${homeWon ? 'font-bold text-white' : 'text-cimento'}`}>
                         {fx.home_club_name ?? 'A definir'}
                       </div>
-                      <div className="px-3 py-2.5 text-center border-x border-white/[0.04]">
+                      <div className="px-3 py-2.5 text-center border-x border-white/[0.06]">
                         {fx.status === 'finished' ? (
                           <div>
-                            <span className="font-display text-[16px] font-black tabular-nums text-white">
+                            <span className="ole-num text-[15px] text-white">
                               {fx.score_home} - {fx.score_away}
                             </span>
                             {fx.went_to_penalties && (
-                              <p className="text-[9px] text-neon-yellow/60">pen {fx.penalty_home}-{fx.penalty_away}</p>
+                              <p className="font-mono text-[9.5px] text-neon-yellow">pen {fx.penalty_home}-{fx.penalty_away}</p>
                             )}
                           </div>
                         ) : (
-                          <span className="font-display text-[11px] font-bold text-white/20 uppercase">vs</span>
+                          <span className="font-mono text-[10.5px] text-poeira uppercase">vs</span>
                         )}
                       </div>
-                      <div className={`px-3 py-2.5 text-[12px] font-bold truncate text-right ${awayWon ? 'text-white bg-neon-yellow/[0.06]' : 'text-white/40'}`}>
+                      <div className={`px-3 py-2.5 text-[12.5px] truncate text-right ${awayWon ? 'font-bold text-white' : 'text-cimento'}`}>
                         {fx.away_club_name ?? 'A definir'}
                       </div>
                     </div>
@@ -509,20 +505,20 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
       )}
 
       {/* Split info (sempre visível) */}
-      <div className="sports-panel p-4 space-y-2" style={{ borderRadius: 'var(--radius-md)' }}>
-        <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/30">Distribuição do Pote</p>
-        <div className="grid grid-cols-6 gap-1 text-center text-[10px]">
+      <div className="sports-panel p-4 space-y-2">
+        <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Distribuição do Pote</p>
+        <div className="grid grid-cols-6 gap-1 text-center font-mono text-[10px] text-cimento">
           {[
-            { label: <Trophy className="mx-auto h-3.5 w-3.5 text-[#FFD700]" strokeWidth={2.2} />, pct: league.pct_champion },
-            { label: <Medal className="mx-auto h-3.5 w-3.5 text-[#C0C0C0]" strokeWidth={2.2} />, pct: league.pct_vice },
-            { label: <Medal className="mx-auto h-3.5 w-3.5 text-[#CD7F32]" strokeWidth={2.2} />, pct: league.pct_third },
+            { label: <Trophy className="mx-auto h-3.5 w-3.5 text-neon-yellow" strokeWidth={2.2} />, pct: league.pct_champion },
+            { label: <Medal className="mx-auto h-3.5 w-3.5 text-giz" strokeWidth={2.2} />, pct: league.pct_vice },
+            { label: <Medal className="mx-auto h-3.5 w-3.5 text-cimento" strokeWidth={2.2} />, pct: league.pct_third },
             { label: '4º', pct: league.pct_fourth },
             { label: 'Criador', pct: league.pct_creator },
             { label: 'Casa', pct: league.pct_house },
           ].map((s, i) => (
             <div key={i}>
-              <p className="text-[12px]">{s.label}</p>
-              <p className="font-bold text-white/50 tabular-nums">{s.pct}%</p>
+              <p className="text-[11px]">{s.label}</p>
+              <p className="ole-num text-giz">{s.pct}%</p>
             </div>
           ))}
         </div>
@@ -585,16 +581,14 @@ export function PremiumLeagues() {
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-display text-[10px] font-bold uppercase tracking-[0.35em] text-neon-yellow/70">
-              Competição Premium
-            </p>
+            <Hashtag className="text-neon-yellow">#premiada</Hashtag>
             <h1
-              className="mt-1 font-display font-black uppercase text-white leading-none"
-              style={{ fontSize: 'clamp(1.8rem, 6vw, 2.5rem)', letterSpacing: '-0.01em' }}
+              className="mt-1 font-impact uppercase text-white leading-[1.1]"
+              style={{ fontSize: 'clamp(1.8rem, 6vw, 2.5rem)', letterSpacing: '-0.005em' }}
             >
               Ligas Premiadas
             </h1>
-            <p className="mt-1 text-[11px] text-white/40">Mata-mata · Pote em EXP · Top 4 premiados</p>
+            <p className="mt-1 font-mono text-[11px] text-cimento">Mata-mata · pote em EXP · top 4 premiados</p>
           </div>
           <button onClick={() => setCreateOpen(true)}
             className="btn-primary disabled:opacity-40">
@@ -607,20 +601,20 @@ export function PremiumLeagues() {
 
       {slugNotFound && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="rounded-md border border-rose-500/20 bg-rose-500/[0.06] px-4 py-3 text-[12px] text-rose-200">
+          className="border border-baixa/50 bg-panel px-4 py-3 text-[12px] text-baixa">
           <span className="font-bold">Liga não encontrada.</span>{' '}
-          O link pode estar incorreto. Veja as ligas abertas abaixo:
+          Confira o link ou veja as abertas abaixo.
         </motion.div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-md bg-white/[0.03] border border-white/[0.06] p-1">
+      <div className="flex gap-1 bg-panel border border-white/10 p-1">
         {(['open', 'mine'] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 rounded-sm py-2.5 font-display text-[11px] font-bold uppercase tracking-[0.18em] transition ${
+            className={`ole-num flex-1 whitespace-nowrap py-2.5 text-[12px] uppercase transition-colors ${
               tab === t
-                ? 'bg-neon-yellow/15 text-neon-yellow border border-neon-yellow/20'
-                : 'text-white/30 hover:text-white/50 border border-transparent'
+                ? 'bg-neon-yellow text-black'
+                : 'text-cimento hover:text-white'
             }`}>
             {t === 'open' ? `Abertas (${leagues.length})` : `Minhas (${myLeagues.length})`}
           </button>
@@ -631,7 +625,7 @@ export function PremiumLeagues() {
       {loading ? (
         <div className="py-16 text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-neon-yellow/20 border-t-neon-yellow" />
-          <p className="mt-3 text-[11px] text-white/30">Carregando ligas…</p>
+          <p className="mt-3 font-mono text-[11px] text-cimento">Carregando ligas…</p>
         </div>
       ) : displayLeagues.length > 0 ? (
         <div className="space-y-3">
@@ -645,20 +639,18 @@ export function PremiumLeagues() {
           animate={{ opacity: 1 }}
           className="py-16 text-center space-y-4"
         >
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.03]">
-            <Trophy className="h-7 w-7 text-white/15" />
-          </div>
+          <Trophy className="mx-auto h-8 w-8 text-poeira" />
           <div>
-            <p className="font-display text-[14px] font-bold uppercase tracking-tight text-white/40">
+            <p className="font-impact text-[20px] uppercase leading-[1.1] text-cimento">
               {tab === 'open' ? 'Nenhuma liga aberta' : 'Você ainda não entrou'}
             </p>
-            <p className="mt-1 text-[11px] text-white/25">
+            <p className="mt-1 font-mono text-[11px] text-poeira">
               {tab === 'open' ? 'Crie a primeira liga premiada' : 'Entre em uma liga aberta ou crie a sua'}
             </p>
           </div>
           {tab === 'open' && (
             <button onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center gap-1.5 font-display text-[11px] font-bold uppercase tracking-wider text-neon-yellow hover:text-white transition">
+              className="ole-num inline-flex items-center gap-1.5 text-[12px] uppercase text-neon-yellow hover:text-white transition-colors">
               <Plus className="h-3.5 w-3.5" /> Criar Liga Premiada
             </button>
           )}

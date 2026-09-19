@@ -20,27 +20,34 @@ interface StoreFeaturedBoxesProps {
 
 const VARIANT_STYLES: Record<NonNullable<StoreFeaturedBoxesProps['variant']>, {
   badge: string;
-  glow: string;
 }> = {
   premium: {
     badge: 'bg-neon-yellow/20 text-neon-yellow border-neon-yellow/40',
-    glow: 'shadow-[0_0_24px_rgba(234,255,0,0.08)]',
   },
   rising: {
     badge: 'bg-[var(--color-success)]/20 text-[var(--color-success)] border-[var(--color-success)]/40',
-    glow: 'shadow-[0_0_24px_rgba(16,185,129,0.08)]',
   },
   drop: {
     badge: 'bg-neon-yellow/20 text-neon-yellow border-neon-yellow/40',
-    glow: 'shadow-[0_0_24px_rgba(217,70,239,0.08)]',
   },
 };
 
-const RARITY_GRADIENT: Record<ShopRarity, string> = {
-  comum:  'from-white/[0.05] to-black',
-  raro:   'from-neon-yellow/[0.07] to-black',
-  epico:  'from-neon-yellow/[0.13] to-black',
-  mitico: 'from-neon-yellow/25 to-black',
+/**
+ * Raridade = grau de amarelo, em cor chapada (VOLT2): etiqueta por tier e,
+ * no topo da escada, borda volt 2px. Sem degradê de fundo nem brilho.
+ */
+const RARITY_TAG: Record<ShopRarity, string> = {
+  comum:  'border-white/20 bg-deep-black text-white',
+  raro:   'border-neon-yellow/30 bg-deep-black text-neon-yellow/85',
+  epico:  'border-neon-yellow/60 bg-deep-black text-neon-yellow',
+  mitico: 'border-neon-yellow bg-neon-yellow text-black',
+};
+
+const RARITY_FRAME: Record<ShopRarity, string> = {
+  comum:  'border border-white/10 hover:border-white/30',
+  raro:   'border border-white/10 hover:border-white/30',
+  epico:  'border border-neon-yellow/55',
+  mitico: 'border-2 border-neon-yellow',
 };
 
 const RARITY_LABEL: Record<ShopRarity, string> = {
@@ -87,19 +94,19 @@ export function StoreFeaturedBoxes({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04, duration: 0.25 }}
               className={cn(
-                'group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-black/40 p-0 text-left transition-colors hover:border-white/30',
-                v.glow,
+                'group relative overflow-hidden bg-panel p-0 text-left transition-colors',
+                RARITY_FRAME[item.rarity],
               )}
             >
-              {/* Visual superior — ícone centralizado com gradiente de raridade */}
-              <div className={cn('relative flex h-52 w-full items-center justify-center overflow-hidden bg-gradient-to-br', RARITY_GRADIENT[item.rarity])}>
+              {/* Visual superior — ícone centralizado sobre fundo chapado */}
+              <div className="relative flex h-52 w-full items-center justify-center overflow-hidden bg-card">
                 <Icon
-                  className="h-24 w-24 text-white/80 transition-transform duration-500 group-hover:scale-110"
+                  className="h-24 w-24 text-white/80 transition-colors duration-300 group-hover:text-white"
                   aria-hidden
                 />
 
-                <div className="absolute right-2 top-2 rounded-md border border-white/20 bg-black/70 px-2 py-0.5 backdrop-blur">
-                  <p className="font-display text-[9px] font-black uppercase tracking-widest text-white">
+                <div className={cn('absolute right-2 top-2 border px-2 py-0.5', RARITY_TAG[item.rarity])}>
+                  <p className="font-display text-[9px] font-black uppercase tracking-widest">
                     {RARITY_LABEL[item.rarity]}
                   </p>
                 </div>
@@ -107,12 +114,11 @@ export function StoreFeaturedBoxes({
                 {item.featured ? (
                   <div className="absolute left-2 top-2">
                     <span className={cn('rounded-full border px-2 py-0.5 font-display text-[8px] font-black uppercase tracking-widest', v.badge)}>
-                      Featured
+                      Destaque
                     </span>
                   </div>
                 ) : null}
 
-                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/90 to-transparent" />
               </div>
 
               {/* Info */}

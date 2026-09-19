@@ -49,42 +49,29 @@ function ExitConfirmModal(props: { onCancel: () => void; onConfirm: () => void }
       className="fixed inset-0 z-[110] flex items-center justify-center px-6"
       style={{ background: 'rgba(0,0,0,0.85)' }}
     >
-      <div
-        className="w-full max-w-[440px] sports-panel p-7 flex flex-col gap-5"
-        style={{ background: '#0D0D0D', border: '1px solid rgba(255,255,255,0.12)' }}
-      >
-        <div
-          className="font-display uppercase text-neon-yellow"
-          style={{ fontSize: 11, letterSpacing: '0.35em' }}
-        >
-          Aviso · Antes de sair
-        </div>
-        <h3
-          className="font-serif-hero italic text-white"
-          style={{ fontSize: 28, lineHeight: 1.05 }}
-        >
+      <div className="w-full max-w-[440px] border border-white/10 bg-deep-black p-7 flex flex-col gap-5">
+        <span className="ole-eyebrow-poster">Aviso · Antes de sair</span>
+        <h3 className="font-impact uppercase text-white" style={{ fontSize: 28, lineHeight: 1.08 }}>
           Você não vai ter jogadores nem EXP inicial pra começar. Tudo bem?
         </h3>
-        <p className="text-white/70" style={{ fontSize: 14, lineHeight: 1.55 }}>
+        <p className="text-cimento" style={{ fontSize: 14, lineHeight: 1.55 }}>
           Se sair agora, o sorteio será descartado. Ele rodará de novo na
           próxima vez que você abrir o app.
         </p>
-        <div className="flex gap-3 justify-end pt-2">
+        <div className="flex flex-wrap gap-3 justify-end pt-2">
           <button
             type="button"
             onClick={props.onCancel}
-            className="bg-dark-gray text-white border border-white/20 font-display font-bold uppercase tracking-wider px-5 py-2 -skew-x-6 hover:bg-white/10 transition-all"
-            style={{ fontSize: 13, letterSpacing: '0.18em' }}
+            className="btn-primary flex h-12 items-center justify-center px-5 text-[14px]"
           >
-            <span className="inline-block skew-x-6">Não, continuar</span>
+            Não, continuar
           </button>
           <button
             type="button"
             onClick={props.onConfirm}
-            className="bg-white/10 text-white border border-white/30 font-display font-bold uppercase tracking-wider px-5 py-2 -skew-x-6 hover:bg-white/20 transition-all"
-            style={{ fontSize: 13, letterSpacing: '0.18em' }}
+            className="btn-secondary flex h-12 items-center justify-center px-5 text-[14px]"
           >
-            <span className="inline-block skew-x-6">Sim, sair</span>
+            Sim, sair
           </button>
         </div>
       </div>
@@ -98,8 +85,7 @@ function CloseButton(props: { onClick: () => void }) {
       type="button"
       onClick={props.onClick}
       aria-label="Fechar cerimônia"
-      className="absolute top-4 right-4 z-[105] w-10 h-10 flex items-center justify-center text-white/60 hover:text-white transition-colors"
-      style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)' }}
+      className="absolute top-4 right-4 z-[105] w-10 h-10 flex items-center justify-center border border-white/16 text-cimento transition-colors hover:border-white/30 hover:text-white"
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path d="M5 5l14 14M19 5L5 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -264,7 +250,7 @@ export function OnboardingCeremony() {
         'PLANTEL',
         'Bem-vindo ao Olefoot',
         {
-          body: `Recebeste 25 jogadores e ${pkg.expTier.amount.toLocaleString('pt-BR')} EXP iniciais. Veja o plantel em Equipe e jogue o primeiro amistoso quando quiser.`,
+          body: `Você recebeu 25 jogadores e ${pkg.expTier.amount.toLocaleString('pt-BR')} EXP iniciais. Veja o plantel em Equipe e jogue o primeiro amistoso quando quiser.`,
           deepLink: '/team',
         },
       );
@@ -292,12 +278,8 @@ export function OnboardingCeremony() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] overflow-hidden"
-      style={{
-        background:
-          'radial-gradient(ellipse at top, #1A1A1A 0%, #0D0D0D 70%, #000000 100%)',
-        animation: 'olefoot-fade-in 400ms both',
-      }}
+      className="fixed inset-0 z-[100] overflow-hidden bg-deep-black"
+      style={{ animation: 'olefoot-fade-in 400ms both' }}
     >
       {managerDay <= 1 && <CloseButton onClick={() => setAskingExit(true)} />}
       {phase.kind === 'loading' && <LoadingChapter />}

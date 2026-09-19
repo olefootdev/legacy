@@ -62,10 +62,10 @@ export function GoalScorerOverlay({
     >
       <div
         className={cn(
-          'glass-panel w-full p-5 border text-center relative overflow-hidden',
+          'glass-panel w-full p-5 border bg-panel text-center relative overflow-hidden',
           side === 'away'
-            ? 'border-red-500/40 shadow-[0_0_40px_rgba(239,68,68,0.18)]'
-            : 'border-neon-yellow/45 shadow-[0_0_40px_rgba(234,255,0,0.18)]',
+            ? 'border-red-500/40'
+            : 'border-neon-yellow',
         )}
       >
         {side === 'away' && (
@@ -75,12 +75,13 @@ export function GoalScorerOverlay({
               alt=""
               className="absolute inset-0 w-full h-full object-cover opacity-25"
             />
+            {/* Scrim da foto: legibilidade do texto sobre a imagem. */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/60" />
           </>
         )}
         <p className={cn(
-          'relative z-10 font-display font-black text-2xl sm:text-3xl uppercase tracking-[0.2em]',
-          side === 'away' ? 'text-red-400' : 'text-neon-yellow',
+          'relative z-10 font-impact text-4xl sm:text-5xl uppercase leading-[1.1] tracking-[0.04em]',
+          side === 'away' ? 'text-red-400' : 'inline-block bg-neon-yellow px-4 pt-1 text-black',
         )}>
           {isGoal ? (side === 'away' ? 'Tomamos gol...' : 'Gol!') : 'Defesa!'}
         </p>
@@ -97,7 +98,7 @@ export function GoalScorerOverlay({
                 />
                 <div
                   className={cn(
-                    'absolute left-1 top-1 z-[1] rounded px-1 py-0.5 font-display text-[9px] font-black tabular-nums drop-shadow-md sm:left-1.5 sm:top-1.5 sm:px-1.5 sm:text-[10px]',
+                    'absolute left-1 top-1 z-[1] rounded px-1 py-0.5 font-display text-[9px] font-black tabular-nums sm:left-1.5 sm:top-1.5 sm:px-1.5 sm:text-[10px]',
                     side === 'home'
                       ? 'bg-neon-yellow text-black'
                       : 'bg-black/80 text-white border border-white/20',
@@ -128,7 +129,7 @@ export function GoalScorerOverlay({
             <div className="min-w-0 flex flex-1 flex-col justify-center p-3 text-left sm:p-4">
               <p
                 className={cn(
-                  'font-display text-lg font-black uppercase italic leading-tight tracking-wide sm:text-2xl',
+                  'font-display text-lg font-black uppercase leading-[1.1] tracking-wide sm:text-2xl',
                   accent,
                   'truncate',
                 )}

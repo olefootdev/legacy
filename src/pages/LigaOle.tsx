@@ -1,9 +1,9 @@
 /**
  * LigaOle — hub da Liga Ole (mata-mata de 32 times reais).
  *
- * Visual no SISTEMA EDITORIAL Olefoot (Legacy Tech): Hero amarelo no padrão
- * Crown Jewel (eyebrow Agency + Moret italic gigante + régua + caption), section
- * headers com rail amarelo + Moret italic, e o confronto como peça editorial.
+ * VOLT2: superfícies chapadas, manchete Anton, números em Archivo (ole-num),
+ * rótulos em mono. Section headers com rail amarelo e o confronto como peça
+ * editorial — sem sombra, sem serifa itálica.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -73,11 +73,11 @@ function BracketRow({ m }: { m: LigaOleRoundMatch }) {
     >
       <span className="flex-1 text-right truncate leading-none" style={nameStyle(m.a.id)}>{m.a.name}</span>
       {resolved ? (
-        <span className="font-display tabular-nums text-[13px] font-black text-white/75 shrink-0">
-          {m.result!.scoreA}<span className="text-white/30 mx-0.5">-</span>{m.result!.scoreB}
+        <span className="ole-num text-[13px] text-giz shrink-0">
+          {m.result!.scoreA}<span className="text-poeira mx-0.5">-</span>{m.result!.scoreB}
         </span>
       ) : (
-        <span className="font-display uppercase tracking-[0.12em] text-[9px] font-black text-white/30 shrink-0">vs</span>
+        <span className="font-mono uppercase tracking-[0.12em] text-[9.5px] text-poeira shrink-0">vs</span>
       )}
       <span className="flex-1 text-left truncate leading-none" style={nameStyle(m.b.id)}>{m.b.name}</span>
       {m.result?.shootout && <Flame className="w-3 h-3 text-neon-yellow shrink-0" strokeWidth={2.5} aria-hidden />}
@@ -92,7 +92,7 @@ function BracketCompact({ liga }: { liga: LigaOleState }) {
   const matches = roundMatches(liga, round);
   const isCurrent = round === liga.roundIndex;
   return (
-    <div className="border p-3" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
+    <div className="border border-white/10 bg-panel p-3">
       {/* Abas das fases já existentes (passadas + atual) */}
       <div className="flex gap-1.5 overflow-x-auto pb-2 mb-1" style={{ scrollbarWidth: 'none' }}>
         {LIGA_OLE_ROUNDS.slice(0, total).map((r, i) => {
@@ -102,7 +102,7 @@ function BracketCompact({ liga }: { liga: LigaOleState }) {
               key={r}
               type="button"
               onClick={() => setRound(i)}
-              className="shrink-0 px-2.5 py-1 font-display uppercase tracking-[0.1em] text-[9px] font-black transition-colors"
+              className="shrink-0 px-2.5 py-1 font-mono uppercase tracking-[0.1em] text-[10px] font-medium transition-colors"
               style={{ borderRadius: 'var(--radius-sm)', backgroundColor: sel ? 'var(--color-neon-yellow)' : 'transparent', color: sel ? '#000' : 'rgba(255,255,255,0.5)', border: sel ? 'none' : '1px solid var(--color-border)' }}
             >
               {roundAbbr(r)}
@@ -110,7 +110,7 @@ function BracketCompact({ liga }: { liga: LigaOleState }) {
           );
         })}
       </div>
-      <p className="font-display uppercase tracking-[0.2em] text-[8px] font-black text-white/35 mb-2 px-0.5">
+      <p className="font-mono uppercase tracking-[0.14em] text-[10px] text-cimento mb-2 px-0.5">
         {isCurrent
           ? `${matches.length * 2} clubes ainda na disputa`
           : `Resultados · ${matches.length} ${matches.length === 1 ? 'jogo' : 'jogos'}`}
@@ -145,10 +145,10 @@ function WeeklyLeaderboard({ rows, myId, weekLabel }: { rows: LigaOleWeeklyRow[]
   if (!rows.length) return null;
   const reachedName = (i: number, champ: boolean) => (champ ? 'Campeão' : (LIGA_OLE_ROUNDS[Math.max(0, Math.min(4, i))] ?? '—'));
   return (
-    <div className="border p-3" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
+    <div className="border border-white/10 bg-panel p-3">
       <div className="flex items-center gap-2 mb-2.5 px-0.5">
         <CalendarDays className="w-3.5 h-3.5 text-neon-yellow shrink-0" strokeWidth={2.5} aria-hidden />
-        <span className="font-display uppercase tracking-[0.2em] text-[9px] font-black text-white/55">Liga da Semana · {weekLabel} · quem chegou mais longe</span>
+        <span className="truncate font-mono uppercase tracking-[0.12em] text-[10px] text-cimento">Liga da Semana · {weekLabel} · quem chegou mais longe</span>
       </div>
       <div className="flex flex-col gap-1">
         {rows.map((r) => {
@@ -156,15 +156,14 @@ function WeeklyLeaderboard({ rows, myId, weekLabel }: { rows: LigaOleWeeklyRow[]
           return (
             <div
               key={r.managerId}
-              className="flex items-center gap-2.5 px-2.5 py-1.5"
-              style={{ borderRadius: 'var(--radius-sm)', backgroundColor: mine ? 'rgba(253,225,0,0.10)' : 'var(--color-deep-black)', border: mine ? '1px solid var(--color-neon-yellow)' : '1px solid transparent' }}
+              className={`flex h-10 items-center gap-2.5 px-2.5 ${mine ? 'bg-neon-yellow text-black' : 'bg-deep-black'}`}
             >
-              <span className="font-display tabular-nums text-[11px] font-black w-5 text-center shrink-0" style={{ color: r.rank <= 3 ? 'var(--color-neon-yellow)' : 'rgba(255,255,255,0.4)' }}>{r.rank}</span>
+              <span className={`ole-num text-[12px] w-5 text-center shrink-0 ${mine ? 'text-black' : r.rank <= 3 ? 'text-white' : 'text-cimento'}`}>{r.rank}</span>
               {r.isChampion
-                ? <Crown className="w-3.5 h-3.5 text-neon-yellow shrink-0" strokeWidth={2.5} aria-hidden />
-                : <Medal className="w-3.5 h-3.5 text-white/30 shrink-0" strokeWidth={2} aria-hidden />}
-              <span className="flex-1 truncate leading-none" style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '14px', color: mine ? 'var(--color-neon-yellow)' : '#fff' }}>{r.clubName}</span>
-              <span className="font-display uppercase tracking-[0.1em] text-[8px] font-black text-white/45 shrink-0">{reachedName(r.reachedRound, r.isChampion)}</span>
+                ? <Crown className={`w-3.5 h-3.5 shrink-0 ${mine ? 'text-black' : 'text-neon-yellow'}`} strokeWidth={2.5} aria-hidden />
+                : <Medal className={`w-3.5 h-3.5 shrink-0 ${mine ? 'text-black/60' : 'text-poeira'}`} strokeWidth={2} aria-hidden />}
+              <span className={`flex-1 truncate leading-none text-[14px] ${mine ? 'font-bold text-black' : 'font-semibold text-giz'}`}>{r.clubName}</span>
+              <span className={`font-mono uppercase tracking-[0.1em] text-[9.5px] shrink-0 ${mine ? 'text-black/70' : 'text-cimento'}`}>{reachedName(r.reachedRound, r.isChampion)}</span>
             </div>
           );
         })}
@@ -363,8 +362,8 @@ export function LigaOle() {
   const reset = () => dispatch({ type: 'RESET_LIGA_OLE' });
   const dismissFlash = () => dispatch({ type: 'DISMISS_LIGA_OLE_RESULT' });
   const opp = active ? managerOpponent(active) : null;
-  const pillCls = 'w-full py-4 font-display uppercase tracking-[0.18em] text-[13px] font-black transition-colors disabled:opacity-50 flex items-center justify-center gap-2';
-  const pillStyle = { backgroundColor: 'var(--color-neon-yellow)', color: '#000', borderRadius: 'var(--radius-md)' } as const;
+  const pillCls = 'ole-num w-full h-[52px] whitespace-nowrap uppercase text-[13px] transition-colors enabled:hover:!bg-white disabled:opacity-50 flex items-center justify-center gap-2 [--corte:12px] [clip-path:var(--clip-corte)]';
+  const pillStyle = { backgroundColor: 'var(--color-neon-yellow)', color: '#000' } as const;
   // CTA "Avançar" — usado em DOIS lugares (acima e abaixo do chaveamento) pra
   // ficar sempre à mão no mobile, sem precisar rolar de volta.
   const advanceBtn = (
@@ -376,9 +375,9 @@ export function LigaOle() {
   return (
     <main className="min-h-screen bg-black text-white px-5 py-6 max-w-xl mx-auto">
       <div className="flex items-center justify-between mb-5">
-        <Link to="/" className="font-display uppercase tracking-[0.2em] text-[11px] text-white/50 hover:text-white">← Home</Link>
-        <span className="font-display uppercase tracking-[0.3em] text-[11px] font-black text-neon-yellow flex items-center gap-1.5">
-          <Trophy className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> Liga Ole
+        <Link to="/" className="font-mono uppercase tracking-[0.14em] text-[11px] text-cimento hover:text-white">← Home</Link>
+        <span className="font-mono tracking-[0.04em] text-[11.5px] font-medium text-neon-yellow flex items-center gap-1.5">
+          <Trophy className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> #ligaole
         </span>
       </div>
 
@@ -398,17 +397,16 @@ export function LigaOle() {
           {flash?.outcome === 'eliminated' && (
             <motion.div
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className="relative px-6 py-7 border" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-danger)', backgroundColor: 'var(--color-dark-gray)' }}
+              className="relative px-6 py-7 border border-baixa bg-panel"
             >
-              <button type="button" onClick={dismissFlash} aria-label="Fechar" className="absolute top-3 right-4 text-white/40 hover:text-white text-lg leading-none">×</button>
-              <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-danger mb-2 flex items-center gap-2">
+              <button type="button" onClick={dismissFlash} aria-label="Fechar" className="absolute top-3 right-4 text-cimento hover:text-white text-lg leading-none">×</button>
+              <p className="font-mono uppercase tracking-[0.16em] text-[11px] font-medium text-baixa mb-2 flex items-center gap-2">
                 <ShieldX className="w-4 h-4" strokeWidth={2.5} aria-hidden /> Fim da linha
               </p>
-              <p className="text-white leading-[0.95]" style={{ fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: 'clamp(34px, 10vw, 52px)', letterSpacing: '-0.03em' }}>
+              <p className="text-white leading-[1.1]" style={{ fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: 'clamp(34px, 10vw, 52px)', letterSpacing: '-0.01em' }}>
                 {flash.reachedRound}
               </p>
-              <span aria-hidden className="block w-12 h-[3px] bg-white/30 mt-3 mb-3" />
-              <p className="font-display uppercase tracking-[0.2em] text-[12px] font-black text-white/55">Eliminado · a taça fica pra próxima</p>
+              <p className="mt-2 font-mono uppercase tracking-[0.14em] text-[11.5px] text-cimento">Eliminado</p>
             </motion.div>
           )}
 
@@ -417,7 +415,7 @@ export function LigaOle() {
             <CinematicHero
               badgeLabel="Liga Ole"
               BadgeIcon={Trophy}
-              eyebrow="Mata-mata · 32 clubes"
+              eyebrow="#matamata · 32 clubes"
               title="Seja campeão."
               caption="Só managers reais · 5 confrontos"
               image="/banner-inicio-liga-ole.png"
@@ -426,33 +424,33 @@ export function LigaOle() {
 
           {/* DINASTIA — títulos acumulados multiplicam os prêmios das próximas campanhas */}
           {titles > 0 && (
-            <div className="flex items-center justify-between px-4 py-3 border" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'var(--color-dark-gray)' }}>
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border border-neon-yellow bg-panel">
               <span className="flex items-center gap-2.5 min-w-0">
                 <Crown className="w-5 h-5 text-neon-yellow shrink-0" strokeWidth={2} aria-hidden />
                 <span className="min-w-0">
-                  <span className="block font-display uppercase tracking-[0.2em] text-[9px] font-black text-white/45">Dinastia</span>
-                  <span className="block truncate text-neon-yellow" style={{ fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: '18px' }}>{dinastiaLabel(titles)}</span>
+                  <span className="block font-mono uppercase tracking-[0.14em] text-[10px] text-cimento">Dinastia</span>
+                  <span className="block truncate text-neon-yellow leading-[1.1]" style={{ fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: '20px' }}>{dinastiaLabel(titles)}</span>
                 </span>
               </span>
-              <span className="font-display tabular-nums text-[13px] font-black text-neon-yellow shrink-0">prêmios ×{dinastiaMultiplier(titles).toFixed(2)}</span>
+              <span className="ole-num text-[13px] text-neon-yellow shrink-0">prêmios ×{dinastiaMultiplier(titles).toFixed(2)}</span>
             </div>
           )}
 
           {/* NÊMESIS — quem te eliminou entra na próxima clássica como revanche */}
           {nemesis && (
-            <div className="flex items-center gap-2.5 px-4 py-3 border" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-danger)', backgroundColor: 'var(--color-dark-gray)' }}>
-              <Skull className="w-5 h-5 text-danger shrink-0" strokeWidth={2} aria-hidden />
-              <p className="text-[12px] text-white/75 leading-snug">
-                Revanche: <span className="text-white font-semibold" style={{ fontFamily: 'var(--font-sans)' }}>{nemesis.name}</span> te eliminou na <span className="text-danger">{nemesis.round}</span>. Crie a Liga Ole clássica e <span className="text-neon-yellow">cobre essa conta</span>.
+            <div className="flex items-center gap-2.5 px-4 py-3 border border-baixa bg-panel">
+              <Skull className="w-5 h-5 text-baixa shrink-0" strokeWidth={2} aria-hidden />
+              <p className="text-[12.5px] text-giz leading-snug">
+                Revanche: <span className="text-white font-semibold">{nemesis.name}</span> te eliminou na <span className="text-baixa">{nemesis.round}</span> · volta na Liga Ole clássica.
               </p>
             </div>
           )}
 
           <div>
-            <p className="text-white/60 text-[13px] leading-snug mb-3 px-1">
-              O sistema sorteia <span className="text-white font-semibold">31 managers reais</span> (com elencos de verdade) + o seu time. Você joga rodada a rodada — Fase de 32, Oitavas, Quartas, Semi e Final. Empatou? <span className="text-neon-yellow">Pênaltis decidem.</span> Perdeu? Acabou. Vença tudo e seja campeão.
+            <p className="font-mono text-cimento text-[11.5px] leading-snug mb-3 px-1">
+              <span className="text-white">31 managers reais</span> + você · 5 fases · empate vai pros <span className="text-neon-yellow">pênaltis</span> · perdeu, acabou
             </p>
-            {error && <p className="text-danger text-[12px] mb-2 px-1">{error}</p>}
+            {error && <p className="text-baixa text-[12px] mb-2 px-1">{error}</p>}
             <div className="flex flex-col gap-2.5">
               <button type="button" disabled={busy} onClick={() => createLeague('classic')} className={pillCls} style={pillStyle}>
                 {busy ? 'Sorteando os 32…' : flash ? 'Criar nova Liga Ole' : 'Criar Liga Ole'}
@@ -462,12 +460,11 @@ export function LigaOle() {
                 type="button"
                 disabled={busy}
                 onClick={() => createLeague('weekly')}
-                className="w-full py-3.5 font-display uppercase tracking-[0.18em] text-[12px] font-black transition-colors disabled:opacity-50 flex items-center justify-center gap-2 border"
-                style={{ backgroundColor: 'var(--color-dark-gray)', color: 'var(--color-neon-yellow)', borderColor: 'var(--color-neon-yellow)', borderRadius: 'var(--radius-md)' }}
+                className="ole-num w-full h-[50px] whitespace-nowrap uppercase text-[13px] transition-colors disabled:opacity-50 flex items-center justify-center gap-2 border border-neon-yellow bg-panel text-neon-yellow hover:bg-card"
               >
                 <CalendarDays className="w-4 h-4" strokeWidth={2.5} aria-hidden /> Liga da Semana
               </button>
-              <p className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/35 text-center">
+              <p className="font-mono text-[10.5px] text-cimento text-center">
                 Liga da Semana · {weekKey} · mesmo chaveamento pra todo mundo
               </p>
             </div>
@@ -492,8 +489,8 @@ export function LigaOle() {
                 const current = i === active.roundIndex;
                 return (
                   <div key={r} className="flex-1 text-center">
-                    <div className="h-1.5 rounded-full mb-1.5 transition-colors" style={{ backgroundColor: done ? 'var(--color-success)' : current ? 'var(--color-neon-yellow)' : 'rgba(255,255,255,0.12)' }} />
-                    <span className="font-display uppercase tracking-[0.06em] text-[8px] font-black leading-tight block" style={{ color: current ? 'var(--color-neon-yellow)' : done ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)' }}>
+                    <div className="h-1.5 mb-1.5 transition-colors" style={{ backgroundColor: done ? 'var(--color-alta)' : current ? 'var(--color-neon-yellow)' : 'var(--color-card-hi)' }} />
+                    <span className="font-mono uppercase tracking-[0.04em] text-[9px] font-medium leading-tight block" style={{ color: current ? 'var(--color-neon-yellow)' : done ? 'var(--color-giz)' : 'var(--color-poeira)' }}>
                       {roundAbbr(r)}
                     </span>
                   </div>
@@ -502,24 +499,24 @@ export function LigaOle() {
             </div>
 
             {/* Confronto — peça editorial (Moret protagonista) */}
-            <div className="relative overflow-hidden border px-5 py-6" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'var(--color-dark-gray)', boxShadow: '0 10px 30px rgba(253,225,0,0.08)' }}>
+            <div className="relative overflow-hidden border border-neon-yellow bg-panel px-5 py-6">
               {opp && nemesis && opp.id === nemesis.id && (
-                <p className="flex items-center justify-center gap-1.5 font-display uppercase tracking-[0.3em] text-[10px] font-black text-danger mb-2">
+                <p className="flex items-center justify-center gap-1.5 font-mono uppercase tracking-[0.16em] text-[11px] font-medium text-baixa mb-2">
                   <Skull className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> Revanche
                 </p>
               )}
-              <p className="font-display uppercase tracking-[0.32em] text-[10px] font-black text-neon-yellow text-center mb-4">
+              <p className="font-mono uppercase tracking-[0.16em] text-[11px] font-medium text-neon-yellow text-center mb-4">
                 {active.mode === 'weekly' ? 'Liga da Semana · ' : ''}{LIGA_OLE_ROUNDS[active.roundIndex]}
               </p>
               <div className="flex items-center justify-center gap-3">
                 <div className="flex-1 text-right min-w-0">
                   <p className="text-neon-yellow truncate leading-[0.95]" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 'clamp(20px, 6vw, 30px)', letterSpacing: '-0.01em' }}>{club.name}</p>
-                  <p className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45 mt-1">Força {managerOverall}</p>
+                  <p className="ole-num uppercase text-[10px] text-cimento mt-1">Força {managerOverall}</p>
                 </div>
-                <Swords className="w-5 h-5 text-white/35 shrink-0" strokeWidth={2} aria-hidden />
+                <Swords className="w-5 h-5 text-poeira shrink-0" strokeWidth={2} aria-hidden />
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-white truncate leading-[0.95]" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 'clamp(20px, 6vw, 30px)', letterSpacing: '-0.01em' }}>{opp?.name ?? '—'}</p>
-                  <p className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45 mt-1">Força {opp?.overall ?? '—'}</p>
+                  <p className="ole-num uppercase text-[10px] text-cimento mt-1">Força {opp?.overall ?? '—'}</p>
                 </div>
               </div>
               {/* FABLE — persona do treinador rival: rosto + provocação pré-jogo.
@@ -528,8 +525,8 @@ export function LigaOle() {
                 const persona = coachPersonaFor(opp.id);
                 const line = personaLine(opp.id, 'pre', LIGA_OLE_ROUNDS[active.roundIndex]);
                 return (
-                  <p className="text-center text-white/55 text-[12px] mt-4">
-                    {persona.icon} <span className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/40">{persona.label}</span>{' '}
+                  <p className="text-center text-cimento text-[12px] mt-4">
+                    {persona.icon} <span className="font-mono uppercase tracking-[0.12em] text-[10px] text-giz">{persona.label}</span>{' '}
                     — “{line}”
                   </p>
                 );
@@ -552,18 +549,18 @@ export function LigaOle() {
                     const mult = dinastiaMultiplier(titles);
                     const finalPrize = Math.round(prize.amount * mult);
                     return (
-                      <div className="flex items-center justify-between px-3.5 py-2.5 border" style={{ borderRadius: 'var(--radius-sm)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-deep-black)' }}>
-                        <div className="flex flex-col">
-                          <span className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45">
-                            {prize.isChampion ? 'Prêmio de TÍTULO' : 'Prêmio da fase'}
+                      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 border border-white/10 bg-deep-black">
+                        <div className="flex min-w-0 flex-col">
+                          <span className="font-mono uppercase tracking-[0.14em] text-[10px] text-cimento">
+                            {prize.isChampion ? 'Prêmio de título' : 'Prêmio da fase'}
                           </span>
                           {mult > 1 && (
-                            <span className="font-display tabular-nums text-[9px] font-black text-white/40 mt-0.5">
+                            <span className="truncate font-mono text-[10px] text-poeira mt-0.5">
                               base {prize.amount.toLocaleString('pt-BR')} × Dinastia {mult.toFixed(2)}
                             </span>
                           )}
                         </div>
-                        <span className="font-display tabular-nums text-[14px] font-black text-neon-yellow">
+                        <span className="ole-num shrink-0 text-[14px] text-neon-yellow">
                           +{finalPrize.toLocaleString('pt-BR')} EXP
                         </span>
                       </div>
@@ -571,10 +568,10 @@ export function LigaOle() {
                   })()}
 
                   {/* Aposta */}
-                  <div className="px-3.5 py-3 border" style={{ borderRadius: 'var(--radius-sm)', borderColor: staked > 0 ? 'var(--color-neon-yellow)' : 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/55">Apostar EXP · paga 2× na vitória</span>
-                      <span className="font-display tabular-nums text-[9px] font-black text-white/35">Saldo {formatCompactNumber(balance)}</span>
+                  <div className="px-3.5 py-3 border bg-panel" style={{ borderColor: staked > 0 ? 'var(--color-neon-yellow)' : 'var(--color-border)' }}>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="truncate font-mono uppercase tracking-[0.12em] text-[10px] text-giz">Apostar EXP · paga 2× na vitória</span>
+                      <span className="shrink-0 font-mono text-[10px] text-cimento">Saldo {formatCompactNumber(balance)}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {chips.map((c) => {
@@ -585,7 +582,7 @@ export function LigaOle() {
                             type="button"
                             disabled={busy}
                             onClick={() => setWager(c.value)}
-                            className="px-2.5 py-1.5 font-display uppercase tracking-[0.08em] text-[10px] font-black transition-colors"
+                            className="ole-num px-2.5 py-1.5 uppercase text-[10.5px] transition-colors"
                             style={{ borderRadius: 'var(--radius-sm)', backgroundColor: sel ? 'var(--color-neon-yellow)' : 'transparent', color: sel ? '#000' : 'rgba(255,255,255,0.6)', border: sel ? 'none' : '1px solid var(--color-border)' }}
                           >
                             {c.label}
@@ -595,13 +592,13 @@ export function LigaOle() {
                     </div>
                     {staked > 0 && (
                       <div className="grid grid-cols-2 gap-1.5 mt-2.5">
-                        <div className="px-2.5 py-2 text-center border" style={{ borderRadius: 'var(--radius-sm)', borderColor: 'var(--color-success)', backgroundColor: 'rgba(34,197,94,0.10)' }}>
-                          <p className="font-display uppercase tracking-[0.14em] text-[8px] font-black text-success/80">Vitória</p>
-                          <p className="font-display tabular-nums text-[13px] font-black text-success">+{(staked * 2).toLocaleString('pt-BR')}</p>
+                        <div className="px-2.5 py-2 text-center border border-alta/60 bg-deep-black">
+                          <p className="font-mono uppercase tracking-[0.12em] text-[9.5px] text-alta">Vitória</p>
+                          <p className="ole-num text-[13px] text-alta">+{(staked * 2).toLocaleString('pt-BR')}</p>
                         </div>
-                        <div className="px-2.5 py-2 text-center border" style={{ borderRadius: 'var(--radius-sm)', borderColor: 'var(--color-danger)', backgroundColor: 'rgba(239,68,68,0.10)' }}>
-                          <p className="font-display uppercase tracking-[0.14em] text-[8px] font-black text-danger/80">Derrota</p>
-                          <p className="font-display tabular-nums text-[13px] font-black text-danger">−{staked.toLocaleString('pt-BR')}</p>
+                        <div className="px-2.5 py-2 text-center border border-baixa/60 bg-deep-black">
+                          <p className="font-mono uppercase tracking-[0.12em] text-[9.5px] text-baixa">Derrota</p>
+                          <p className="ole-num text-[13px] text-baixa">−{staked.toLocaleString('pt-BR')}</p>
                         </div>
                       </div>
                     )}
@@ -610,7 +607,7 @@ export function LigaOle() {
               );
             })()}
 
-            {error && <p className="text-danger text-[12px] text-center">{error}</p>}
+            {error && <p className="text-baixa text-[12px] text-center">{error}</p>}
 
             {advanceBtn}
           </div>
@@ -623,7 +620,7 @@ export function LigaOle() {
             {advanceBtn}
           </div>
 
-          <button type="button" onClick={reset} className="text-white/30 text-[11px] underline self-center hover:text-white/60">
+          <button type="button" onClick={reset} className="font-mono text-poeira text-[11px] underline self-center hover:text-white">
             Desistir da liga
           </button>
         </div>

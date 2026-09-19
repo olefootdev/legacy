@@ -4,15 +4,15 @@
  * Anatomia (DESIGN_SYSTEM §8.1):
  *   ┌─────────┬──────────────────────────────────┐
  *   │  OVR    │  EYEBROW · pos                   │
- *   │ (Moret  │  NOME (Agency 800 uppercase)     │
- *   │  italic)│  💰 valor (Moret italic)         │
+ *   │ (Archivo│  NOME (Agency 800 uppercase)     │
+ *   │  125%)  │  💰 valor (mono)                 │
  *   │  POS    │  ───────────────────────────────│
  *   │  chip   │  STATS inline (PAC SHO PAS …)    │
  *   │ (Agency)│  Bottom: badges de estado        │
  *   └─────────┴──────────────────────────────────┘
  *
  * Border-left 3px da cor do estado (neon-yellow / warning / danger / success
- * / white/15). Hover sobe 0.5px + borda neon. Press scale-[0.98].
+ * / white/15). Hover: só a borda neon (VOLT2 — nada pula). Press scale-[0.98].
  */
 import { useMemo } from 'react';
 import { motion } from 'motion/react';
@@ -130,7 +130,7 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
     ? 'border-l-neon-yellow'
     : 'border-l-white/15';
 
-  // OVR cor em Moret italic
+  // Cor do OVR
   const ovrColor =
     ovr === null
       ? 'text-white/40'
@@ -145,33 +145,22 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
   return (
     <motion.button
       type="button"
-      whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
       onClick={() => navigate(`/manager/scouts/player/${encodeURIComponent(playerId)}`)}
       className={cn(
         'group w-full text-left flex items-stretch gap-4 p-4',
         'border border-l-[3px] border-[var(--color-border)] bg-[var(--color-card)]',
-        'hover:border-neon-yellow/40 transition-all',
+        'hover:border-neon-yellow/40 transition-colors',
         railColor,
       )}
-      style={{
-        borderRadius: 'var(--radius-md)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-      }}
+      style={{ borderRadius: 'var(--radius-md)' }}
     >
-      {/* ── Bloco esquerdo: OVR Moret + POS chip Agency ──────── */}
+      {/* ── Bloco esquerdo: OVR + POS ──────── */}
       <div className="shrink-0 w-14 flex flex-col items-center justify-center gap-1.5 self-center">
         <div
-          className={cn('leading-none tabular-nums', ovrColor)}
-          style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
-            fontWeight: 700,
-            fontSize: 'clamp(30px, 5vw, 38px)',
-            letterSpacing: '-0.03em',
-            textShadow: '0 2px 12px rgba(0,0,0,0.45)',
-          }}
+          className={cn('ole-num leading-none tabular-nums', ovrColor)}
+          style={{ fontSize: 'clamp(24px, 5vw, 30px)' }}
         >
           {ovr ?? '—'}
         </div>
@@ -228,13 +217,11 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
             </div>
             {mvCents > 0 && (
               <div
-                className="mt-1 text-neon-yellow/90 tabular-nums leading-none"
+                className="mt-1 text-white tabular-nums leading-none"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
-                  fontWeight: 700,
-                  fontSize: '15px',
-                  letterSpacing: '-0.02em',
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 500,
+                  fontSize: '14px',
                 }}
               >
                 {formatBroFromCents(mvCents)}

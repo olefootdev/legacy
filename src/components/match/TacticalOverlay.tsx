@@ -338,7 +338,7 @@ export function TacticalOverlay({ homePlayers, awayPlayers, ballX = 50, ballY = 
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
               <div>
                 <div style={{ fontSize:7, fontWeight:800, letterSpacing:'0.3em', color:NEON, textTransform:'uppercase', marginBottom:2 }}>TÁTICO</div>
-                <div style={{ fontSize:14, fontStyle:'italic', color:'#fff', lineHeight:1.1, fontFamily:'serif' }}>{sel.name}</div>
+                <div style={{ fontSize:14, color:'#fff', lineHeight:1.1, fontFamily:'var(--font-sans)' }}>{sel.name}</div>
               </div>
               <button type="button" onClick={() => setSelected(null)}
                 style={{ background:'none', border:'none', color:'rgba(255,255,255,0.4)', fontSize:18, cursor:'pointer', padding:0 }}>×</button>

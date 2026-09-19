@@ -196,7 +196,7 @@ export function ManagerPro() {
         <Link
           to="/wallet"
           className={cn(
-            'group flex items-center gap-3 border p-5 transition-all hover:scale-[1.01]',
+            'group flex items-center gap-3 border p-5 transition-colors',
             verified
               ? 'border-neon-yellow/40 bg-black hover:border-neon-yellow/60'
               : 'border-white/10 bg-black opacity-60 pointer-events-none',
@@ -213,12 +213,12 @@ export function ManagerPro() {
               {verified ? 'Converte saldo em BRO' : 'Disponível após verificação'}
             </p>
           </div>
-          <ChevronRight className="h-5 w-5 shrink-0 text-white/40 transition-transform group-hover:translate-x-1" />
+          <ChevronRight className="h-5 w-5 shrink-0 text-white/40 transition-colors group-hover:text-white" />
         </Link>
 
         <Link
           to="/city/youth-prospects"
-          className="group flex items-center gap-3 border border-neon-yellow/40 bg-black p-5 transition-all hover:scale-[1.01] hover:border-neon-yellow/60"
+          className="group flex items-center gap-3 border border-neon-yellow/40 bg-black p-5 transition-colors hover:border-neon-yellow/60"
         >
           <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-neon-yellow/20">
             <TrendingUp className="h-6 w-6 text-neon-yellow" strokeWidth={2.5} />
@@ -227,11 +227,11 @@ export function ManagerPro() {
             <p className="font-display text-sm font-black uppercase tracking-wide text-white">
               Criar novo card
             </p>
-            <p className="mt-0.5 text-[11px] text-white/55">
-              Mais cards na academia = mais vendas possíveis
+            <p className="mt-0.5 font-mono text-[11.5px] text-cimento">
+              #academia
             </p>
           </div>
-          <ChevronRight className="h-5 w-5 shrink-0 text-white/40 transition-transform group-hover:translate-x-1" />
+          <ChevronRight className="h-5 w-5 shrink-0 text-white/40 transition-colors group-hover:text-white" />
         </Link>
       </div>
 
@@ -347,7 +347,7 @@ export function ManagerPro() {
                   className={cn(
                     'flex items-center justify-between gap-3 border px-3 py-2 transition',
                     isFlash
-                      ? 'border-neon-green/50 bg-neon-green/10 shadow-[0_0_12px_rgba(0,255,128,0.18)]'
+                      ? 'border-alta/50 bg-alta/10'
                       : 'border-white/10 bg-black/30',
                   )}
                 >

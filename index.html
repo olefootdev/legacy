@@ -27,15 +27,10 @@
     <meta name="security-contact" content="exp@olefoot.com" />
     <meta name="security-policy" content="Hey Hacker — I know you understand much more than me. Please contact me to share vulnerabilities. We are open and believe in the power of community. exp@olefoot.com" />
 
-    <!-- Preload de fontes críticas para performance -->
-    <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/Inter-Bold.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/Oswald-Bold.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/Montserrat-ExtraBold.woff2" as="font" type="font/woff2" crossorigin />
-
-    <!-- Preconnect para Google Fonts (fallback) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Fontes: servidas do próprio domínio via Fontsource (src/main.tsx).
+         Os preloads de /fonts/Inter|Oswald|Montserrat foram removidos em
+         2026-09-19: os arquivos nunca existiram e cada preload baixava o
+         index.html inteiro no lugar da fonte. -->
   </head>
   <body>
     <div id="root"></div>

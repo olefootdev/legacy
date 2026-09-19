@@ -18,8 +18,6 @@ interface LiveAuctionCardProps {
   userBalance: number;
 }
 
-const GOLD_CARD_GLOW = 'shadow-[0_0_20px_rgba(234,255,0,0.25)] hover:shadow-[0_0_35px_rgba(234,255,0,0.45)]';
-
 export function LiveAuctionCard({ auction, userId, userName, userBalance }: LiveAuctionCardProps) {
   const { timeLeft, isEnding } = useAuctionCountdown(auction.id);
   const [bidInput, setBidInput] = useState('');
@@ -67,62 +65,28 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className={cn(
-        'relative group flex h-full min-w-0 flex-col overflow-hidden rounded-xl border-2 bg-dark-gray transition-all duration-300',
+        'relative group flex h-full min-w-0 flex-col overflow-hidden border-2 bg-dark-gray transition-colors duration-300',
         isEnding && 'animate-pulse',
-        isGold && `bg-gradient-to-b from-[#1a1508] via-dark-gray to-dark-gray ${GOLD_CARD_GLOW}`,
-        !isGold && isWinning && 'border-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.3)]',
-        !isGold && isEnding && 'border-red-500/60 shadow-[0_0_15px_rgba(239,68,68,0.4)]',
-        !isGold && !isWinning && !isEnding && 'border-neon-yellow/40 shadow-[0_0_15px_rgba(228,255,0,0.15)]',
+        // Estado pela borda chapada (VOLT2): elite = volt 2px; vencendo = alta;
+        // acabando = baixa. Sem brilho, sem degradê.
+        isGold && 'border-neon-yellow',
+        !isGold && isWinning && 'border-alta/60',
+        !isGold && isEnding && 'border-baixa/60',
+        !isGold && !isWinning && !isEnding && 'border-neon-yellow/40',
       )}
     >
-      {/* Gold glow */}
-      {isGold && (
-        <div
-          className="pointer-events-none absolute inset-0 z-[1] opacity-[0.14]"
-          style={{
-            backgroundImage: 'radial-gradient(ellipse 90% 45% at 50% -15%, rgba(234,255,0,0.55), transparent 50%)',
-          }}
-        />
-      )}
-
       {/* Badge de status */}
       {isGold && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[25] -skew-x-6 bg-neon-yellow text-black px-2 py-0.5 font-display font-black text-[8px] sm:text-[9px] tracking-[0.2em] uppercase shadow-[0_0_14px_rgba(234,255,0,0.5)]">
-          <span className="skew-x-6">Elite</span>
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[25] bg-neon-yellow text-black px-2 py-0.5 font-display font-black text-[8px] sm:text-[9px] tracking-[0.2em] uppercase">
+          Elite
         </div>
       )}
 
       {/* Card Content */}
       <div className="relative flex-1">
-        {/* Background Glow */}
-        <div
-          className={cn(
-            'absolute inset-0 opacity-20 transition-opacity group-hover:opacity-40 z-0',
-            isGold
-              ? 'bg-gradient-to-b from-neon-yellow/45 to-transparent'
-              : isWinning
-                ? 'bg-gradient-to-b from-emerald-500/50 to-transparent'
-                : isEnding
-                  ? 'bg-gradient-to-b from-red-500/50 to-transparent'
-                  : 'bg-gradient-to-b from-neon-yellow/50 to-transparent',
-          )}
-        />
-
-        {/* Halftone texture */}
-        <div
-          className="absolute inset-0 opacity-30 mix-blend-overlay pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '4px 4px' }}
-        />
-
         {/* Top Left: OVR & POS */}
-        <div className="absolute top-3 left-3 z-20 flex flex-col items-center drop-shadow-md">
-          <div
-            className="italic text-3xl leading-none text-neon-yellow"
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
-            }}
-          >
+        <div className="absolute top-3 left-3 z-20 flex flex-col items-center bg-deep-black px-2 py-1.5">
+          <div className="font-impact text-3xl leading-none tabular-nums text-neon-yellow">
             {auction.playerOvr}
           </div>
           <div className="text-[10px] font-bold uppercase tracking-widest text-white mt-1">
@@ -134,10 +98,10 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
         <div className="absolute top-3 right-3 z-20">
           <div
             className={cn(
-              'flex items-center gap-1.5 rounded-full px-3 py-1.5 border backdrop-blur',
+              'flex items-center gap-1.5 rounded-full px-3 py-1.5 border',
               isEnding
-                ? 'bg-red-500/20 border-red-500/40 text-red-400'
-                : 'bg-black/70 border-white/20 text-neon-yellow',
+                ? 'bg-deep-black border-baixa/60 text-baixa'
+                : 'bg-deep-black border-white/20 text-neon-yellow',
             )}
           >
             <Clock className={cn('h-4 w-4', isEnding && 'animate-pulse')} />
@@ -148,16 +112,15 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
         </div>
 
         {/* Player Image Placeholder */}
-        <div className="aspect-[3/4] relative flex items-center justify-center bg-gradient-to-br from-black to-white/5">
+        <div className="aspect-[3/4] relative flex items-center justify-center bg-card">
           <div className="text-center">
             <Gavel className="mx-auto h-16 w-16 text-white/20 mb-2" />
             <p
-              className="italic text-white/15"
+              className="font-impact uppercase text-white/15"
               style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
                 fontSize: '3rem',
-                letterSpacing: '-0.03em',
+                letterSpacing: '-0.01em',
+                lineHeight: 1.1,
               }}
             >
               {auction.playerName.split(' ').map((w) => w[0]).join('').slice(0, 2)}
@@ -166,10 +129,10 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
         </div>
 
         {/* Card Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 z-20 bg-gradient-to-t from-black via-black/90 to-transparent pt-12">
+        <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-white/10 bg-deep-black p-4">
           {/* Nome do jogador */}
           <div className="mb-2 min-w-0 px-0.5 text-center">
-            <div className="break-words font-display text-lg font-black uppercase leading-none tracking-wider text-white drop-shadow-md sm:text-xl md:text-2xl">
+            <div className="break-words font-display text-lg font-black uppercase leading-[1.1] tracking-wider text-white sm:text-xl md:text-2xl">
               {auction.playerName}
             </div>
           </div>
@@ -177,25 +140,22 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
           {/* Divider */}
           <div className="h-px w-2/3 mx-auto mb-3 opacity-50 bg-neon-yellow" />
 
-          {/* Lance atual — Sprint B-3: MORET serif italic editorial */}
+          {/* Lance atual — número em Archivo (ole-num), sem itálico */}
           <div className="mb-3 text-center">
             <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/55 mb-1">
               Lance atual
             </p>
             <p
-              className="italic tabular-nums leading-none text-neon-yellow"
+              className="ole-num tabular-nums leading-none text-neon-yellow"
               style={{
-                fontFamily: 'var(--font-serif-hero)',
                 fontSize: 'clamp(28px, 5vw, 36px)',
-                fontWeight: 700,
-                letterSpacing: '-0.02em',
               }}
             >
               {formatPrice(auction.currentBid, 'EXP')}
             </p>
             {auction.currentBidderName && (
               <p className="mt-1 flex items-center justify-center gap-1 text-xs text-white/60">
-                {isAIWinning && <Crown className="h-3 w-3 text-purple-400" />}
+                {isAIWinning && <Crown className="h-3 w-3 text-cimento" />}
                 {auction.currentBidderName}
               </p>
             )}
@@ -214,10 +174,10 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="mb-2 flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2"
+                className="mb-2 flex items-center gap-2 border border-alta/40 bg-panel px-3 py-2"
               >
-                <Trophy className="h-4 w-4 text-emerald-400" />
-                <p className="text-xs font-bold text-emerald-400">Você está vencendo!</p>
+                <Trophy className="h-4 w-4 text-alta" />
+                <p className="text-xs font-bold text-alta">Você está vencendo!</p>
               </motion.div>
             ) : (
               <motion.div
@@ -225,10 +185,10 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="mb-2 flex items-center gap-2 rounded-lg bg-orange-500/10 px-3 py-2"
+                className="mb-2 flex items-center gap-2 border border-atencao/40 bg-panel px-3 py-2"
               >
-                <AlertCircle className="h-4 w-4 text-orange-400" />
-                <p className="text-xs font-bold text-orange-400">
+                <AlertCircle className="h-4 w-4 text-atencao" />
+                <p className="text-xs font-bold text-atencao">
                   Mínimo: {formatPrice(minBid, 'EXP')}
                 </p>
               </motion.div>
@@ -245,7 +205,7 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
                   className="flex items-center justify-between rounded bg-black/20 px-2 py-1.5"
                 >
                   <span className="flex items-center gap-1 text-xs text-white/70">
-                    {bid.isAI && <Crown className="h-3 w-3 text-purple-400" />}
+                    {bid.isAI && <Crown className="h-3 w-3 text-cimento" />}
                     {bid.bidderName}
                   </span>
                   <span className="text-xs font-bold text-white">{formatPrice(bid.amount, 'EXP')}</span>
@@ -261,10 +221,10 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
               onClick={() => setShowBidForm(true)}
               disabled={isWinning}
               className={cn(
-                'flex w-full min-h-11 items-center justify-center px-3 py-3 font-display text-[12px] font-black uppercase leading-tight tracking-[0.22em] transition-all sm:text-[13px]',
+                'flex w-full min-h-11 items-center justify-center px-3 py-3 font-display text-[12px] font-black uppercase leading-tight tracking-[0.22em] transition-colors sm:text-[13px]',
                 isWinning
                   ? 'cursor-not-allowed bg-white/5 text-white/30'
-                  : 'bg-neon-yellow text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] hover:bg-white hover:scale-[1.02] active:scale-[0.98]',
+                  : 'bg-neon-yellow text-black hover:bg-white',
               )}
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
@@ -282,9 +242,9 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
                 value={bidInput}
                 onChange={(e) => setBidInput(e.target.value)}
                 placeholder={`Mínimo: ${minBid.toLocaleString('pt-BR')}`}
-                className="w-full rounded-lg border border-white/20 bg-black/40 px-4 py-3 text-white placeholder:text-white/40 focus:border-neon-yellow focus:outline-none"
+                className="w-full border border-white/20 bg-deep-black px-4 py-3 text-white placeholder:text-white/40 focus:border-neon-yellow focus:outline-none"
               />
-              {bidError && <p className="text-xs text-red-400">{bidError}</p>}
+              {bidError && <p className="text-xs text-baixa">{bidError}</p>}
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -293,14 +253,14 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
                     setBidError(null);
                     setBidInput('');
                   }}
-                  className="flex-1 rounded-lg border border-white/20 bg-white/5 py-2 text-sm font-bold uppercase tracking-wider text-white/70 transition-all hover:border-white/30"
+                  className="flex-1 border border-white/30 bg-transparent py-2 text-sm font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-white"
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
                   onClick={handlePlaceBid}
-                  className="flex-1 rounded-lg bg-neon-yellow py-2 text-sm font-bold uppercase tracking-wider text-black transition-all hover:bg-yellow-300 active:scale-[0.98]"
+                  className="flex-1 bg-neon-yellow py-2 text-sm font-bold uppercase tracking-wider text-black transition-colors hover:bg-white"
                 >
                   Confirmar
                 </button>

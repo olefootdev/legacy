@@ -38,14 +38,13 @@ export function QuickTacticalIntensityControls({ current, onChange, disabled }: 
             key={level}
             onClick={() => onChange(level)}
             disabled={disabled || isActive}
-            whileHover={!disabled && !isActive ? { scale: 1.05 } : {}}
             whileTap={!disabled && !isActive ? { scale: 0.95 } : {}}
             className={cn(
-              'flex-1 min-w-[70px] p-2.5 rounded-lg border-2 transition-all',
+              'flex-1 min-w-[70px] p-2.5 border-2 transition-colors',
               'flex flex-col items-center gap-1.5',
               isActive
-                ? 'bg-neon-yellow border-neon-yellow shadow-[0_0_16px_rgba(253,224,71,0.4)]'
-                : 'bg-black/60 border-white/20 hover:border-neon-yellow/40 hover:bg-black/80',
+                ? 'bg-neon-yellow border-neon-yellow'
+                : 'bg-panel border-white/20 hover:border-neon-yellow/40 hover:bg-card',
               disabled && 'opacity-50 cursor-not-allowed',
             )}
           >

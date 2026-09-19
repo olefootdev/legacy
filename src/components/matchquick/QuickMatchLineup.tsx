@@ -39,7 +39,7 @@ function PlayerEventBadges({ badges }: { badges: QuickEventBadge[] }) {
             <span
               key={`y-${i}`}
               title="Amarelo"
-              className="inline-block w-2 h-2.5 sm:w-2.5 sm:h-3 rounded-[1px] bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.5)]"
+              className="inline-block w-2 h-2.5 sm:w-2.5 sm:h-3 rounded-xs bg-amber-400"
             />
           );
         if (b === 'red')
@@ -47,7 +47,7 @@ function PlayerEventBadges({ badges }: { badges: QuickEventBadge[] }) {
             <span
               key={`r-${i}`}
               title="Vermelho"
-              className="inline-block w-2 h-2.5 sm:w-2.5 sm:h-3 rounded-[1px] bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.45)]"
+              className="inline-block w-2 h-2.5 sm:w-2.5 sm:h-3 rounded-xs bg-red-500"
             />
           );
         return (
@@ -131,8 +131,8 @@ export function QuickMatchLineup({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.03, duration: 0.25 }}
               className={cn(
-                'group relative w-full bg-[var(--color-card)] border border-white/8 transition-all',
-                'hover:border-neon-yellow/40 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.35)]',
+                'group relative w-full bg-[var(--color-card)] border border-white/8 transition-colors',
+                'hover:border-neon-yellow/40',
                 onPlayerClick && 'cursor-pointer'
               )}
               style={{ borderRadius: 'var(--radius-sm)' }}
@@ -142,8 +142,8 @@ export function QuickMatchLineup({
                 {/* Coluna 1: Número da Camisa (destaque) */}
                 <div className="flex items-center justify-center shrink-0">
                   <span
-                    className="text-neon-yellow font-display font-black leading-none tabular-nums"
-                    style={{ fontSize: 'clamp(28px, 5vw, 36px)' }}
+                    className="ole-num text-neon-yellow leading-none"
+                    style={{ fontSize: 'clamp(22px, 4vw, 28px)' }}
                   >
                     {p.num}
                   </span>
@@ -156,8 +156,6 @@ export function QuickMatchLineup({
                     <p
                       className="text-white uppercase truncate leading-tight flex-1 min-w-0"
                       style={{
-                        fontFamily: 'var(--font-serif-hero)',
-                        fontStyle: 'italic',
                         fontWeight: 700,
                         fontSize: 'clamp(14px, 2.8vw, 16px)',
                         letterSpacing: '0.02em',
@@ -166,12 +164,8 @@ export function QuickMatchLineup({
                       {p.name}
                     </p>
                     <span
-                      className="italic text-neon-yellow tabular-nums leading-none shrink-0"
-                      style={{
-                        fontFamily: 'var(--font-serif-hero)',
-                        fontWeight: 700,
-                        fontSize: 'clamp(20px, 3.5vw, 24px)',
-                      }}
+                      className="ole-num text-neon-yellow leading-none shrink-0"
+                      style={{ fontSize: 'clamp(17px, 3vw, 20px)' }}
                     >
                       {ovr}
                     </span>
@@ -238,8 +232,6 @@ export function QuickMatchLineup({
                   <p
                     className="text-red-300 uppercase truncate leading-tight flex-1 min-w-0"
                     style={{
-                      fontFamily: 'var(--font-serif-hero)',
-                      fontStyle: 'italic',
                       fontWeight: 700,
                       fontSize: 'clamp(14px, 2.8vw, 16px)',
                       letterSpacing: '0.02em',
@@ -250,7 +242,7 @@ export function QuickMatchLineup({
                   <span
                     role="img"
                     aria-label="Expulso"
-                    className="inline-block shrink-0 rounded-[2px] bg-red-600 ring-1 ring-red-950/50 shadow-[0_0_10px_rgba(220,38,38,0.5)] w-[11px] h-[14px] sm:w-3 sm:h-4"
+                    className="inline-block shrink-0 rounded-sm bg-red-600 ring-1 ring-red-950/50 w-[11px] h-[14px] sm:w-3 sm:h-4"
                   />
                 </div>
 

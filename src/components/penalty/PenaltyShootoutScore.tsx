@@ -32,14 +32,14 @@ export function PenaltyShootoutScore({
         {/* Placar central */}
         <div className="flex items-center justify-center gap-3">
           <div
-            className="font-display italic font-black text-black tabular-nums leading-none"
+            className="font-display font-black text-black tabular-nums leading-none"
             style={{ fontSize: 'clamp(40px, 6vw, 64px)' }}
           >
             {homeGoals}
           </div>
           <div className="text-black/50 text-3xl">—</div>
           <div
-            className="font-display italic font-black text-black tabular-nums leading-none"
+            className="font-display font-black text-black tabular-nums leading-none"
             style={{ fontSize: 'clamp(40px, 6vw, 64px)' }}
           >
             {awayGoals}

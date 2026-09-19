@@ -1,6 +1,5 @@
-/* Fontes locais (prioridade) + Google Fonts (fallback) */
+/* Fontes do próprio domínio (ver styles/fonts.css e o import em main.tsx). */
 @import "./styles/fonts.css";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:ital,wght@0,500;0,700;1,500;1,700&family=Montserrat:ital,wght@0,400;0,600;0,800;1,800;1,900&display=swap');
 @import "tailwindcss";
 @import "./styles/design-system.css";
 @import "./styles/mobile-responsive.css";
@@ -11,20 +10,48 @@
   --color-neon-yellow-dark: #C9B000;
   --color-neon-green: #00FF66;
   --color-deep-black: #0D0D0D;
-  --color-dark-gray: #1A1A1A;
-  --color-panel: #1A1A1A;
-  --color-card: #242424;
-  --color-card-hi: #2E2E2E;
-  --color-text-soft: #A0A0A0;
-  --color-text-muted: #555555;
 
-  /* Tipografia — alinhada ao site */
-  --font-sans: "Inter", "Montserrat", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Agency FB", "AgencyFB", Impact, "Oswald", ui-sans-serif, sans-serif;
+  /* VOLT2 (2026-09-19) — superfícies em escada, neutros com viés frio.
+     Mesmos nomes de antes pra não mexer em componente: só o valor mudou,
+     degrau por degrau (panel < card < card-hi continuam distintos). */
+  --color-dark-gray: #141516;
+  --color-panel: #141516;
+  --color-card: #1B1D1F;
+  --color-card-hi: #25282B;
+  --color-text-soft: #9A9C9F;   /* cimento */
+  --color-text-muted: #7E8185;  /* poeira — era #555, abaixo do contraste mínimo */
+
+  /* Vocabulário do VOLT2. Ouro é SÓ da carteira e SÓ de ativo que está na
+     rede: EXP e OLEFOOT do jogo são fictícios e nunca usam ouro. */
+  --color-asfalto: #0D0D0D;
+  --color-nav: #08090A;
+  --color-sheet: #25282B;
+  --color-giz: #ECECE7;
+  --color-cimento: #9A9C9F;
+  --color-poeira: #7E8185;
+  --color-ouro: #E8B331;
+  --color-lenda: #8B5CF6;
+  --color-alta: #22C55E;
+  --color-baixa: #FF4D4D;
+  --color-atencao: #FF9F1C;
+
+  /* Tipografia. Todas as pilhas terminam em fonte de sistema, e a de título
+     (--font-display) é EXATAMENTE a que produção mostrava até hoje — a classe
+     .fonts-fallback aplicava essa pilha em todo acesso, porque Inter/Oswald
+     nunca carregavam. Trocar a fonte de título é tela a tela (VOLT2 V4/V7):
+     a Archivo expandida é mais larga e estouraria rótulo nas 1.792 ocorrências. */
+  --font-sans: "Inter Tight Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Anton", Impact, "Arial Narrow Bold", sans-serif;
   /* Impacto de pôster — Anton (embutida, OFL). Nomes, números de placar, manchetes. */
-  --font-impact: "Anton", "Arial Narrow Bold", Impact, "Oswald", sans-serif;
-  --font-serif-hero: "Moret", Georgia, "Times New Roman", serif;
-  --font-ui: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", ui-sans-serif, sans-serif;
+  --font-impact: "Anton", "Arial Narrow Bold", Impact, sans-serif;
+  /* VOLT2 não usa serifa: a Moret nunca carregou (renderizava Georgia). O token
+     fica pra não mexer em 400+ usos — agora aponta pra fonte de interface. */
+  --font-serif-hero: "Inter Tight Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-ui: "Inter Tight Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  /* Números e rótulo de botão do VOLT2 — usar com .ole-num (largura 125%). */
+  --font-num: "Archivo Variable", "Arial Black", Impact, sans-serif;
+  /* Dinheiro e #hashtag. */
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* === Escala tipográfica (Brief v2) === */
   --text-xs:     11px;
@@ -48,8 +75,25 @@
   --color-border: rgba(255,255,255,0.08);
   --color-text-on-accent: #000000;
   --color-accent-rgb: 253,225,0;
-  --radius-sm: 4px;
-  --radius-md: 8px;
+  /* VOLT2: canto vivo. Toda a escala do Tailwind cai pra 2px; só rounded-full
+     (avatar, pílula, anel) continua redondo. */
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 2px;
+  --radius-3xl: 2px;
+  --radius-4xl: 2px;
+
+  /* VOLT2: sem sombra. A escala inteira do Tailwind vira transparente. */
+  --shadow-2xs: 0 0 #0000;
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 0 #0000;
+  --shadow-md: 0 0 #0000;
+  --shadow-lg: 0 0 #0000;
+  --shadow-xl: 0 0 #0000;
+  --shadow-2xl: 0 0 #0000;
 
   /* === Threshold de atributos (Football Manager) === */
   --attr-elite: #00FF66;  /* 80+   */
@@ -60,19 +104,20 @@
   /* === Sprint A — Legacy Tech tokens (Apr/2026) ===
    * Aditivos sobre a paleta atual; não substituem nada.
    * Usar em primitivos novos: LegacyHeader, DataCard, PlayerPortrait, StatTile. */
-  --color-panel-elevated: #1F1F1F;
-  --color-panel-soft: #161616;
+  --color-panel-elevated: #1B1D1F;  /* VOLT2: elevado */
+  --color-panel-soft: #141516;      /* VOLT2: card */
   --color-divider-soft: rgba(255, 255, 255, 0.06);
   --color-divider-yellow: rgba(253, 225, 0, 0.12);
   --color-divider-yellow-strong: rgba(253, 225, 0, 0.35);
 
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  --shadow-glow-yellow: 0 0 32px rgba(253, 225, 0, 0.18);
-  --shadow-glow-yellow-strong: 0 0 56px rgba(253, 225, 0, 0.32);
+  /* VOLT2: sombra e brilho zerados (o nome fica, o efeito sai). */
+  --shadow-card: none;
+  --shadow-card-hover: none;
+  --shadow-glow-yellow: none;
+  --shadow-glow-yellow-strong: none;
 
-  --radius-card: 14px;
-  --radius-card-lg: 20px;
+  --radius-card: 2px;
+  --radius-card-lg: 2px;
   --radius-pill: 999px;
 
   /* === F1 — OLEFOOT BROADCAST: Live Match foundation (Apr/2026) ===
@@ -100,14 +145,15 @@
   --color-momentum-cold:     #2979FF;
 
   /* Glows tipados — uma cor por evento, não inventar. */
-  --glow-goal:               0 0 48px 4px rgba(253, 225, 0, 0.55);
-  --glow-goal-soft:          0 0 24px rgba(253, 225, 0, 0.32);
-  --glow-foul:               0 0 24px rgba(201, 112, 11, 0.40);
-  --glow-save:               0 0 32px rgba(0, 194, 255, 0.40);
-  --glow-card-red:           0 0 28px rgba(225, 29, 42, 0.45);
-  --glow-card-yellow:        0 0 24px rgba(245, 197, 24, 0.40);
-  --glow-team-home:          0 0 20px rgba(253, 225, 0, 0.40);
-  --glow-team-away:          0 0 20px rgba(225, 29, 42, 0.40);
+  /* VOLT2: o evento fala pela cor chapada, não pelo halo. */
+  --glow-goal:               none;
+  --glow-goal-soft:          none;
+  --glow-foul:               none;
+  --glow-save:               none;
+  --glow-card-red:           none;
+  --glow-card-yellow:        none;
+  --glow-team-home:          none;
+  --glow-team-away:          none;
 
   /* Easings cinematográficos — uma curva pra tudo. */
   --ease-broadcast: cubic-bezier(0.22, 1, 0.36, 1);
@@ -120,9 +166,9 @@
 
   /* Lower-third — primitivo de broadcast. */
   --lt-height:      56px;
-  --lt-bg:          linear-gradient(90deg, #0D0D0D 0%, rgba(13,13,13,0.88) 60%, rgba(13,13,13,0.55) 100%);
+  --lt-bg:          #0D0D0D;
   --lt-accent-w:    4px;
-  --lt-skew:        -6deg;
+  --lt-skew:        0deg;
 
   /* Letterbox cinema — bandas pretas para zoom dramático. */
   --letterbox-h:    72px;
@@ -136,22 +182,23 @@
    * por isso salta. Aqui o fundo é preto, e sombra preta sobre preto não
    * existe. Verificado num modelo antes de aplicar. Use a clara em superfície
    * escura e a escura só sobre amarelo. */
-  --shadow-poster:        5px 5px 0 rgba(237, 235, 228, 0.13);
-  --shadow-poster-strong: 8px 8px 0 rgba(237, 235, 228, 0.18);
-  --shadow-poster-dark:   6px 6px 0 rgba(13, 13, 13, 0.85);
+  /* VOLT2 (2026-09-19): a sombra de adesivo saiu — "fica antiquado". */
+  --shadow-poster:        none;
+  --shadow-poster-strong: none;
+  --shadow-poster-dark:   none;
 
   /* Superfícies do REVELA. `paper` é o creme da Torcida — o terceiro universo,
    * usado com parcimônia pra quebrar a alternância amarelo/preto. */
-  --color-poster-surface: #141414;
-  --color-poster-paper:   #F2ECDC;
+  --color-poster-surface: #141516;
+  --color-poster-paper:   #ECECE7; /* VOLT2: o creme virou o giz da paleta */
   --color-poster-editorial: #15130C;
 
-  --radius-poster: 14px;
-  --radius-poster-lg: 20px;
+  --radius-poster: 2px;
+  --radius-poster-lg: 2px;
 
   /* Eyebrow: risco amarelo + rótulo. Abre toda seção no portal. */
-  --eyebrow-rule-w: 30px;
-  --eyebrow-rule-h: 3px;
+  --eyebrow-rule-w: 18px;
+  --eyebrow-rule-h: 2px;
 
   /* Trilho de identidade — marca o que é "de alguém", não decoração. */
   --rail-w: 3px;
@@ -168,9 +215,9 @@
    */
   .ole-poster {
     background: var(--color-poster-surface);
-    border: 2px solid rgba(253, 225, 0, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: var(--radius-poster);
-    box-shadow: var(--shadow-poster);
+    box-shadow: none;
   }
   /* Sobre amarelo a lógica se inverte: borda e sombra viram pretas. */
   .ole-poster[data-on='yellow'] {
@@ -195,15 +242,17 @@
    * usado em 26 telas. Este aqui é a gramática do portal REVELA — assimétrico,
    * pesado, abrindo bloco de dado. Dois nomes porque são duas ideias.
    */
+  /* VOLT2: rótulo de seção = risco volt + mono espaçado (igual ao SecaoVolt). */
   .ole-eyebrow-poster {
     display: inline-flex;
     align-items: center;
-    gap: 9px;
-    font-family: var(--font-impact);
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-weight: 500;
     text-transform: uppercase;
-    font-size: 13px;
-    letter-spacing: 0.06em;
-    color: #fff;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--color-giz);
   }
   .ole-eyebrow-poster::before {
     content: '';
@@ -260,21 +309,26 @@
   .panel-accent {
     @apply border-l-4 border-l-neon-yellow;
   }
+  /* VOLT2: volt chapado + corte do escudo. Sem sombra, sem inclinação, sem
+     crescer no hover — o layout real não aceita enfeite que só vive no mockup.
+     O foco é desenhado POR DENTRO porque o clip-path corta o outline de fora. */
   .btn-primary {
-    @apply bg-neon-yellow text-black font-display font-bold uppercase tracking-wider px-8 py-3 -skew-x-6 hover:bg-white hover:scale-105 transition-all shadow-[4px_4px_0px_rgba(255,255,255,0.2)] active:shadow-[0px_0px_0px_rgba(255,255,255,0.2)] active:translate-y-1 active:translate-x-1;
+    @apply bg-neon-yellow text-black font-display font-bold uppercase tracking-wider px-8 py-3 hover:bg-white transition-colors focus-visible:outline-2 focus-visible:outline-black focus-visible:-outline-offset-4;
+    clip-path: var(--clip-corte);
   }
   .btn-primary-inner {
-    @apply skew-x-6 block flex items-center justify-center gap-2;
+    @apply block flex items-center justify-center gap-2;
   }
   .btn-secondary {
-    @apply bg-dark-gray text-white border border-white/20 font-display font-bold uppercase tracking-wider px-6 py-2 -skew-x-6 hover:bg-white/10 transition-all;
+    @apply bg-transparent text-white border border-white/30 font-display font-bold uppercase tracking-wider px-6 py-2 hover:border-white hover:bg-white/5 transition-colors focus-visible:outline-2 focus-visible:outline-neon-yellow focus-visible:outline-offset-2;
   }
   .btn-secondary-inner {
-    @apply skew-x-6 block flex items-center justify-center gap-2;
+    @apply block flex items-center justify-center gap-2;
   }
+  /* VOLT2: número vazado saiu — "no layout aceita tudo, na aplicação quebra".
+     A classe fica (sem uso hoje) e vira texto sólido apagado. */
   .text-outline {
-    -webkit-text-stroke: 1px rgba(255,255,255,0.2);
-    color: transparent;
+    color: var(--color-poeira);
   }
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
@@ -329,8 +383,8 @@
   }
   .ole-headline-italic {
     font-family: var(--font-serif-hero);
-    font-style: italic;
-    font-weight: 400;
+    font-style: normal;
+    font-weight: 600;
     letter-spacing: -0.005em;
   }
 
@@ -341,11 +395,21 @@
     @apply bg-[var(--color-card)] border border-white/8 rounded-md border-l-4 border-l-neon-yellow;
   }
   .ole-card-hover {
-    @apply transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)];
+    @apply transition-colors duration-150 hover:border-white/20;
+  }
+
+  /* Número do VOLT2: Archivo expandida. Placar, OVR, preço, rótulo de botão novo. */
+  .ole-num {
+    font-family: var(--font-num);
+    font-stretch: 125%;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
   }
 
   .btn-on-yellow {
-    @apply bg-black text-neon-yellow font-display font-bold uppercase tracking-wider px-6 py-2 -skew-x-6 hover:bg-deep-black transition-all;
+    @apply bg-black text-neon-yellow font-display font-bold uppercase tracking-wider px-6 py-2 hover:bg-deep-black transition-colors;
+    clip-path: var(--clip-corte);
   }
 
   /* === Scoreboard (Brief v2 COMP-01) === */
@@ -385,15 +449,15 @@
 
   /* === Player Card "carta colecionável" (Brief v2 COMP-02 + NFT-frame BVB-vibe) === */
   .ole-player-card {
-    background: linear-gradient(180deg, var(--color-card-hi) 0%, var(--color-card) 100%);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 6px;
+    background: var(--color-card);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: var(--radius-card);
     position: relative;
     overflow: hidden;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
   }
   .ole-player-card::before {
-    /* Glow amarelo no topo — assinatura de "carta esportiva" */
+    /* VOLT2: o brilho amarelo do topo saiu (enfeite). */
+    display: none;
     content: "";
     position: absolute;
     inset: 0 0 auto 0;
@@ -403,14 +467,14 @@
     z-index: 1;
   }
   .ole-player-card__overall {
-    font-family: var(--font-serif-hero);
-    font-style: italic;
-    font-weight: 700;
+    /* VOLT2: número em Anton (condensada — cabe onde a serifa cabia). */
+    font-family: var(--font-impact);
+    font-style: normal;
+    font-weight: 400;
     font-size: calc(var(--text-rating) * 1.05);
     color: var(--color-neon-yellow);
     line-height: 0.9;
-    letter-spacing: -0.04em;
-    text-shadow: 0 2px 12px rgba(0,0,0,0.65);
+    letter-spacing: 0;
   }
   .ole-player-card__position {
     font-family: var(--font-ui);
@@ -452,9 +516,9 @@
   }
   .ole-goal-takeover__italic {
     font-family: var(--font-serif-hero);
-    font-style: italic;
+    font-style: normal;
     font-size: 0.4em;
-    font-weight: 400;
+    font-weight: 600;
     display: block;
     margin-top: 0.1em;
     color: #000;
@@ -473,9 +537,10 @@
   .ole-table tbody tr:nth-child(odd)  { background: var(--color-deep-black); }
   .ole-table tbody tr:nth-child(even) { background: var(--color-card); }
   .ole-table tbody tr:hover           { background: var(--color-card-hi); }
-  .ole-table__pos[data-rank="1"] { color: #FFD700; font-weight: 900; }
-  .ole-table__pos[data-rank="2"] { color: #C0C0C0; font-weight: 900; }
-  .ole-table__pos[data-rank="3"] { color: #CD7F32; font-weight: 900; }
+  /* VOLT2: pódio sem ouro/prata/bronze (ouro é só da rede) — volt, giz, cimento. */
+  .ole-table__pos[data-rank="1"] { color: var(--color-neon-yellow); font-weight: 900; }
+  .ole-table__pos[data-rank="2"] { color: var(--color-giz); font-weight: 900; }
+  .ole-table__pos[data-rank="3"] { color: var(--color-cimento); font-weight: 900; }
   .ole-table__form-pill {
     width: 18px; height: 18px; border-radius: 9999px;
     display: inline-block; font-size: 10px; font-weight: 700;
@@ -537,7 +602,12 @@ html {
 
 body {
   @apply bg-deep-black text-white font-sans antialiased;
-  background-image: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #090909 70%);
+  /* VOLT2: asfalto chapado — o degradê radial do fundo saiu. */
+  background-image: none;
+  /* Sem negrito e itálico sintetizados: a Anton só tem um peso, e itálico não é
+     VOLT2. Fonte variável (Inter Tight, Archivo) segue com todos os pesos. */
+  font-synthesis-weight: none;
+  font-synthesis-style: none;
   overflow-x: hidden;
   max-width: 100vw;
   width: 100%;
@@ -605,10 +675,10 @@ html[data-graphic-quality='low'] .sports-panel::after {
   100% { transform: rotate(360deg)  scale(1);    }
 }
 
-/* Pulso de escala/brilho em chutes — sensação de pancada. */
+/* Pulso em chutes — sensação de pancada. VOLT2: pela escala, sem halo. */
 @keyframes olefoot-ball-pulse {
-  from { filter: drop-shadow(0 0 10px rgba(253,225,0,0.6)) drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
-  to   { filter: drop-shadow(0 0 18px rgba(253,225,0,1))   drop-shadow(0 0 8px rgba(255,255,255,0.85)); }
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
 }
 
 /* Vibração da bola durante carregamento de força no pênalti */

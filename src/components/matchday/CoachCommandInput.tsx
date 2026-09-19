@@ -427,7 +427,7 @@ export function CoachCommandInput({
               />
             ))}
           </div>
-          {liveText && <p className="mt-1 text-xs text-white/90 italic">"{liveText}"</p>}
+          {liveText && <p className="mt-1 text-xs text-white/90">"{liveText}"</p>}
         </div>
       )}
 
@@ -530,7 +530,7 @@ export function CoachCommandInput({
 
       {/* Autocomplete dropdown */}
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute left-0 right-12 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-white/20 bg-black/95 shadow-xl backdrop-blur-sm">
+        <div className="absolute left-0 right-12 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-white/20 bg-panel">
           {suggestions.map((suggestion, index) => (
             <button
               key={suggestion.id}

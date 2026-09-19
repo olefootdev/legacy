@@ -26,7 +26,6 @@ export function LegacyMinuteWatermark({ minute, possessionPct }: LegacyMinuteWat
       <div
         style={{
           fontFamily: 'var(--font-serif-hero)',
-          fontStyle: 'italic',
           fontWeight: 700,
           fontSize: 'clamp(48px, 8vw, 88px)',
           letterSpacing: '-0.04em',

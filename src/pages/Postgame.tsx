@@ -6,6 +6,7 @@ import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { trackMissionEvent } from '@/progression/trackEvent';
 import { syncMyExpLifetime } from '@/supabase/referrals';
 import { recordPvpMatchResult } from '@/supabase/pvpMatches';
+import { Hashtag } from '@/components/ui';
 
 type TeamStats = {
   passesOk: number;
@@ -199,18 +200,18 @@ export default function Postgame() {
         transition={{ duration: 0.4 }}
         className="space-y-6"
       >
-        {/* Header — eyebrow + resultado emocional em Moret italic */}
+        {/* Header — #hashtag + resultado em Anton grande, cor chapada */}
         <header className="text-center space-y-4">
-          <div className="ole-eyebrow">Pós-jogo</div>
+          <Hashtag>#posjogo</Hashtag>
           {homeWin && (
             <Trophy
-              className="mx-auto h-10 w-10 text-neon-yellow drop-shadow-[0_0_22px_rgba(253,225,0,0.5)]"
+              className="mx-auto h-10 w-10 text-neon-yellow"
               strokeWidth={1.6}
               aria-hidden
             />
           )}
           <h1
-            className={`ole-headline-italic ${resultColor} leading-[0.9]`}
+            className={`ole-headline ${resultColor} leading-[1.05]`}
             style={{ fontSize: 'clamp(64px, 14vw, 128px)' }}
           >
             {resultLabel}
@@ -218,8 +219,8 @@ export default function Postgame() {
           <div className="mx-auto w-12 h-[3px] bg-white/30" aria-hidden />
         </header>
 
-        {/* Resultado — placar monumental + narrativa Moret italic */}
-        <section className="ole-card p-6 text-center bg-gradient-to-b from-panel to-deep-black">
+        {/* Resultado — placar monumental + narrativa */}
+        <section className="ole-card p-6 text-center">
           <h1 className="ole-headline text-5xl sm:text-7xl">
             {clubName}{' '}
             <span className="text-neon-yellow tabular-nums">{homeScore}</span>

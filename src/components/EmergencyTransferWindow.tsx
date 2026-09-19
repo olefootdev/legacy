@@ -6,13 +6,13 @@
  * do Genesis Market. Preço em EXP com markup de urgência (+30%).
  * One-shot: se dispensar, não volta.
  *
- * Visual segue DS §8.3 (Modal full-screen Legacy Tech):
- *   - Backdrop deep-black/95 + blur
- *   - Painel dark-gray border-l-[3px] danger (situação crítica)
- *   - Header com ícone, eyebrow Agency, headline Moret italic
- *   - Cards de candidato seguem view-player-card mini (OVR Moret + Nome Agency)
+ * Visual VOLT2 (sólido, sem enfeite):
+ *   - Backdrop deep-black/95 chapado (sem blur)
+ *   - Painel card border-l-[3px] danger (situação crítica), sem sombra
+ *   - Header com ícone, eyebrow, headline Anton
+ *   - Cards de candidato: OVR Anton + nome, sem brilho
  *   - CTA primário amarelo dominante (não verde)
- *   - Footer: saldo Moret italic + link ghost "Dispensar"
+ *   - Footer: saldo em número (ole-num) + link ghost "Dispensar"
  */
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -99,33 +99,27 @@ function CandidateRow({
 
   return (
     <motion.div
-      whileHover={canAfford && !purchasing ? { y: -1 } : undefined}
-      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
       className={cn(
-        'flex items-stretch gap-3 p-3 border border-l-[3px] bg-[var(--color-card)] transition-all',
+        'flex items-stretch gap-3 p-3 border border-l-[3px] bg-[var(--color-card)] transition-colors',
         canAfford && !purchasing
           ? 'border-l-neon-yellow border-white/12 hover:border-neon-yellow/40'
           : 'border-l-white/15 border-white/8 opacity-70',
       )}
       style={{ borderRadius: 'var(--radius-md)' }}
     >
-      {/* OVR Moret + POS chip Agency */}
+      {/* OVR Anton + POS chip */}
       <div className="shrink-0 w-12 flex flex-col items-center justify-center gap-1 self-center">
         <div
-          className={cn('leading-none tabular-nums', ovrColor)}
+          className={cn('font-impact leading-none tabular-nums', ovrColor)}
           style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
-            fontWeight: 700,
             fontSize: '28px',
-            letterSpacing: '-0.03em',
-            textShadow: '0 2px 12px rgba(0,0,0,0.45)',
+            letterSpacing: '-0.01em',
           }}
         >
           {card.ovr}
         </div>
         <div
-          className="px-1.5 py-0.5 bg-deep-black/60 border border-white/12 text-white/70"
+          className="px-1.5 py-0.5 bg-deep-black border border-white/12 text-white/70"
           style={{
             fontFamily: 'var(--font-display)',
             fontWeight: 900,
@@ -166,21 +160,19 @@ function CandidateRow({
         </span>
       </div>
 
-      {/* CTA amarelo dominante (preço Moret italic) */}
+      {/* CTA amarelo dominante (preço em ole-num) */}
       <motion.button
         whileTap={{ scale: 0.96 }}
         onClick={() => onBuy(candidate)}
         disabled={!canAfford || !!purchasing}
         className={cn(
-          'shrink-0 flex items-center gap-1.5 px-3 py-2 transition-all',
+          'shrink-0 flex items-center gap-1.5 px-3 py-2 transition-colors',
           canAfford && !purchasing
             ? 'bg-neon-yellow text-deep-black hover:bg-white'
             : 'bg-white/5 text-white/35 cursor-not-allowed border border-white/8',
         )}
         style={{
           borderRadius: 'var(--radius-sm)',
-          boxShadow:
-            canAfford && !purchasing ? '0 8px 24px rgba(253,225,0,0.22)' : undefined,
         }}
         aria-label={`Comprar ${card.name} por ${formatExp(price)} EXP`}
       >
@@ -190,13 +182,9 @@ function CandidateRow({
           <ShoppingCart size={11} />
         )}
         <span
-          className="tabular-nums"
+          className="ole-num tabular-nums"
           style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
-            fontWeight: 700,
             fontSize: '14px',
-            letterSpacing: '-0.02em',
           }}
         >
           {formatExp(price)}
@@ -288,7 +276,7 @@ export function EmergencyTransferWindow() {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.25 }}
         onClick={handleDismiss}
-        className="fixed inset-0 z-[200] flex items-center justify-center bg-deep-black/95 backdrop-blur p-4"
+        className="fixed inset-0 z-[200] flex items-center justify-center bg-deep-black/95 p-4"
         role="dialog"
         aria-modal="true"
         aria-label="Reforço Emergencial"
@@ -302,7 +290,6 @@ export function EmergencyTransferWindow() {
           className="relative w-full max-w-md bg-[var(--color-card)] border border-l-[3px] border-l-[var(--color-danger)] border-white/12 overflow-hidden"
           style={{
             borderRadius: 'var(--radius-md)',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
           }}
         >
           {/* ── Header ─────────────────────────────────────────── */}
@@ -330,15 +317,12 @@ export function EmergencyTransferWindow() {
                     Reforço Emergencial
                   </span>
                 </div>
-                {/* Headline Moret italic */}
+                {/* Headline Anton */}
                 <h2
-                  className="text-white leading-snug"
+                  className="font-impact uppercase text-white leading-[1.1]"
                   style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontStyle: 'italic',
-                    fontWeight: 700,
                     fontSize: 'clamp(18px, 3vw, 22px)',
-                    letterSpacing: '-0.02em',
+                    letterSpacing: '0.01em',
                   }}
                 >
                   {offer.injuredPlayerName} sofreu lesão grave
@@ -376,8 +360,8 @@ export function EmergencyTransferWindow() {
               className="text-white/60 leading-snug"
               style={{ fontFamily: 'var(--font-ui)', fontSize: '12px' }}
             >
-              Contrate um substituto imediato com EXP. Preço de urgência{' '}
-              <span className="text-[var(--color-danger)] font-semibold">+30%</span>.
+              Substituto em EXP · urgência{' '}
+              <span className="text-[var(--color-danger)] font-semibold">+30%</span>
             </p>
 
             {loading && (
@@ -388,7 +372,7 @@ export function EmergencyTransferWindow() {
 
             {!loading && candidates.length === 0 && (
               <div
-                className="text-center py-6 px-4 bg-deep-black/40 border border-dashed border-white/12 text-white/45 italic"
+                className="text-center py-6 px-4 bg-deep-black border border-dashed border-white/12 text-white/45"
                 style={{
                   fontFamily: 'var(--font-ui)',
                   fontSize: '12px',
@@ -412,7 +396,7 @@ export function EmergencyTransferWindow() {
           </div>
 
           {/* ── Footer ─────────────────────────────────────────── */}
-          <div className="px-5 py-3.5 border-t border-white/8 bg-deep-black/40 flex items-center justify-between gap-3">
+          <div className="px-5 py-3.5 border-t border-white/8 bg-deep-black flex items-center justify-between gap-3">
             <div className="flex items-baseline gap-2 min-w-0">
               <span
                 className="text-white/45 shrink-0"
@@ -427,13 +411,9 @@ export function EmergencyTransferWindow() {
                 Saldo
               </span>
               <span
-                className="text-neon-yellow tabular-nums leading-none truncate"
+                className="ole-num text-neon-yellow tabular-nums leading-none truncate"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
-                  fontWeight: 700,
                   fontSize: '15px',
-                  letterSpacing: '-0.02em',
                 }}
               >
                 {formatExp(oleBal)}

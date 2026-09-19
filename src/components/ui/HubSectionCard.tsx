@@ -52,16 +52,15 @@ export function HubSectionCard({
   onClick?: () => void;
 }) {
   const className = [
-    'group relative isolate block h-full overflow-hidden transition-transform duration-300 hover:-translate-y-1',
-    destaque ? '' : 'ole-poster ole-rail',
+    // VOLT2: sem pular no hover e sem trilho lateral — o card chapado muda a borda.
+    'group relative isolate block h-full overflow-hidden transition-colors duration-200',
+    destaque ? 'hover:bg-white' : 'ole-poster hover:border-white/30',
   ].join(' ');
 
   const style = destaque
     ? ({
         borderRadius: 'var(--radius-poster)',
         background: 'var(--color-neon-yellow)',
-        boxShadow: 'var(--shadow-poster-dark)',
-        borderLeft: 'var(--rail-w) solid var(--color-deep-black)',
       } as const)
     : ({ borderRadius: 'var(--radius-poster)' } as const);
 
@@ -72,10 +71,7 @@ export function HubSectionCard({
   const inner = (
     <div className="relative flex h-full flex-col gap-4 p-5 pl-6">
       <div className="flex items-start justify-between gap-3">
-        <span
-          className="font-display font-black uppercase"
-          style={{ fontSize: '10px', letterSpacing: '0.22em', color: tintaEyebrow }}
-        >
+        <span className="min-w-0 truncate font-mono text-[11.5px] font-medium" style={{ color: tintaEyebrow }}>
           {eyebrow}
         </span>
         {badge ? (
@@ -115,17 +111,14 @@ export function HubSectionCard({
       ) : null}
 
       <div className="mt-auto pt-1">
+        {/* VOLT2: CTA chapado com o corte do escudo — a sombra de adesivo saiu. */}
         <span
-          className="inline-flex items-center font-display font-black uppercase"
+          className="ole-num inline-flex items-center whitespace-nowrap text-[12px] uppercase [--corte:12px] [clip-path:var(--clip-corte)]"
           style={{
             minHeight: 42,
             padding: '0 18px',
-            borderRadius: 'var(--radius-sm)',
-            fontSize: '11px',
-            letterSpacing: '0.14em',
             background: destaque ? 'var(--color-deep-black)' : 'var(--color-neon-yellow)',
             color: destaque ? '#fff' : 'var(--color-deep-black)',
-            boxShadow: destaque ? '5px 5px 0 rgba(13,13,13,0.28)' : '5px 5px 0 rgba(237,235,228,0.14)',
           }}
         >
           {cta}

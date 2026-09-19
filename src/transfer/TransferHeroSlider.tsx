@@ -2,8 +2,8 @@
  * Hero slider promocional para /transfer — rotaciona 3-5 slides por aba.
  *
  * Cada slide usa imagem promocional em `/public/transfer-heroes/{tab}-{n}.webp`.
- * Enquanto o designer não entrega a arte, renderiza um fallback com gradiente
- * temático + título/subtítulo (nunca quebra o layout).
+ * Enquanto o designer não entrega a arte, renderiza um fallback chapado
+ * (bg-card + rótulo da aba) + título/subtítulo (nunca quebra o layout).
  */
 
 import { useEffect, useState } from 'react';
@@ -35,16 +35,16 @@ interface TransferHeroSliderProps {
   autoPlayMs?: number;
 }
 
-/** Paletas de fallback por aba — placeholder enquanto a arte real não chega. */
-const TAB_THEME: Record<HeroTab, { from: string; via: string; to: string; accent: string; label: string }> = {
-  genesis:          { from: 'from-neon-yellow/30', via: 'via-amber-500/20',  to: 'to-black', accent: 'text-neon-yellow', label: 'GENESIS' },
-  legacies:         { from: 'from-amber-400/30',   via: 'via-orange-500/20', to: 'to-black', accent: 'text-amber-300',   label: 'LEGACIES' },
-  newbies:          { from: 'from-emerald-400/25', via: 'via-cyan-500/15',   to: 'to-black', accent: 'text-emerald-300', label: 'NEWBIES' },
-  highlights:       { from: 'from-fuchsia-500/25', via: 'via-violet-600/20', to: 'to-black', accent: 'text-fuchsia-300', label: 'HIGHLIGHTS' },
-  'store-all':      { from: 'from-neon-yellow/25', via: 'via-amber-500/15',  to: 'to-black', accent: 'text-neon-yellow', label: 'LOJA' },
-  'store-packs':    { from: 'from-amber-500/30',   via: 'via-orange-500/15', to: 'to-black', accent: 'text-amber-300',   label: 'PACKS' },
-  'store-boosters': { from: 'from-cyan-400/25',    via: 'via-sky-500/15',    to: 'to-black', accent: 'text-cyan-300',    label: 'BOOSTERS' },
-  'store-extra':    { from: 'from-fuchsia-400/25', via: 'via-violet-600/15', to: 'to-black', accent: 'text-fuchsia-300', label: 'EXTRA' },
+/** Rótulo de fallback por aba — placeholder chapado enquanto a arte real não chega (VOLT2). */
+const TAB_THEME: Record<HeroTab, { label: string }> = {
+  genesis:          { label: 'GENESIS' },
+  legacies:         { label: 'LEGACIES' },
+  newbies:          { label: 'NEWBIES' },
+  highlights:       { label: 'HIGHLIGHTS' },
+  'store-all':      { label: 'LOJA' },
+  'store-packs':    { label: 'PACKS' },
+  'store-boosters': { label: 'BOOSTERS' },
+  'store-extra':    { label: 'EXTRA' },
 };
 
 export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferHeroSliderProps) {
@@ -91,26 +91,22 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               />
             ) : (
-              <div className={cn(
-                'flex h-full w-full items-center justify-center bg-gradient-to-br',
-                theme.from, theme.via, theme.to,
-              )}>
-                {/* Fallback label em Moret italic case mixto (era Agency uppercase fake italic) */}
+              <div className="flex h-full w-full items-center justify-center bg-card">
+                {/* Fallback: rótulo da aba em Anton, fundo chapado */}
                 <p
-                  className="text-neon-yellow/35 italic select-none"
+                  className="font-impact uppercase text-neon-yellow/35 select-none"
                   style={{
-                    fontFamily: 'var(--font-serif-hero)',
                     fontSize: 'clamp(2.5rem, 7vw, 5rem)',
                     letterSpacing: '-0.01em',
-                    lineHeight: 1,
+                    lineHeight: 1.1,
                   }}
                 >
-                  {theme.label.charAt(0) + theme.label.slice(1).toLowerCase()}
+                  {theme.label}
                 </p>
               </div>
             )}
 
-            {/* Gradientes mais leves — não engole imagem, deixa cor respirar */}
+            {/* Scrim sobre a foto — legibilidade do título (gradiente permitido no VOLT2) */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-transparent to-transparent" />
 
@@ -131,14 +127,12 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
                 </div>
               ) : null}
 
-              {/* TÍTULO — Moret italic case mixto (carrega a emoção) */}
+              {/* TÍTULO — Anton, sem serifa nem itálico (VOLT2) */}
               <h2
-                className="italic text-white leading-[1.05] [overflow-wrap:anywhere] max-w-2xl"
+                className="font-impact uppercase text-white leading-[1.1] [overflow-wrap:anywhere] max-w-2xl"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontWeight: 400,
                   fontSize: 'clamp(1.65rem, 4.2vw, 3rem)',
-                  letterSpacing: '-0.015em',
+                  letterSpacing: '-0.01em',
                 }}
               >
                 {slide.title}
@@ -161,7 +155,7 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
                 <button
                   type="button"
                   onClick={slide.onCta}
-                  className="mt-4 inline-flex w-fit items-center gap-2 bg-neon-yellow px-5 py-2.5 text-black font-bold uppercase hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  className="mt-4 inline-flex w-fit items-center gap-2 bg-neon-yellow px-5 py-2.5 text-black font-bold uppercase hover:bg-white transition-colors"
                   style={{
                     fontFamily: 'var(--font-display)',
                     fontSize: '11px',
@@ -183,7 +177,7 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
               type="button"
               onClick={() => setIndex((i) => (i - 1 + slides.length) % slides.length)}
               aria-label="Slide anterior"
-              className="absolute left-3 top-1/2 z-10 -translate-y-1/2 grid h-8 w-8 place-items-center border border-[var(--color-border)] bg-black/55 text-white/70 backdrop-blur transition-colors hover:border-neon-yellow/60 hover:text-neon-yellow"
+              className="absolute left-3 top-1/2 z-10 -translate-y-1/2 grid h-8 w-8 place-items-center border border-[var(--color-border)] bg-deep-black text-white/70 transition-colors hover:border-neon-yellow/60 hover:text-neon-yellow"
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -192,7 +186,7 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
               type="button"
               onClick={() => setIndex((i) => (i + 1) % slides.length)}
               aria-label="Próximo slide"
-              className="absolute right-3 top-1/2 z-10 -translate-y-1/2 grid h-8 w-8 place-items-center border border-[var(--color-border)] bg-black/55 text-white/70 backdrop-blur transition-colors hover:border-neon-yellow/60 hover:text-neon-yellow"
+              className="absolute right-3 top-1/2 z-10 -translate-y-1/2 grid h-8 w-8 place-items-center border border-[var(--color-border)] bg-deep-black text-white/70 transition-colors hover:border-neon-yellow/60 hover:text-neon-yellow"
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
               <ChevronRight className="h-4 w-4" />

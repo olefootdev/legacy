@@ -1,6 +1,6 @@
 /**
- * Preço Dinâmico com Moret para Itens Caros
- * Para itens acima de ¢50, mostrar o preço em Moret italic gigante no hover.
+ * Preço em destaque para itens caros
+ * Para itens acima de ¢50, mostra o preço grande (Anton, sem itálico) no hover.
  */
 
 import { motion, AnimatePresence } from 'motion/react';
@@ -35,7 +35,7 @@ export function PremiumPriceReveal({ item, children, onSelect }: PremiumPriceRev
     >
       {children}
 
-      {/* Overlay de preço em Moret */}
+      {/* Overlay de preço — fundo chapado, sem vidro fosco (VOLT2) */}
       <AnimatePresence>
         {isHovered && (
           <motion.div
@@ -43,7 +43,7 @@ export function PremiumPriceReveal({ item, children, onSelect }: PremiumPriceRev
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-lg bg-black/95 backdrop-blur-sm"
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-lg bg-deep-black"
           >
             <motion.div
               initial={{ scale: 0.9, y: 10 }}
@@ -61,13 +61,11 @@ export function PremiumPriceReveal({ item, children, onSelect }: PremiumPriceRev
                 Preço Premium
               </p>
               <p
-                className="text-neon-yellow"
+                className="font-impact tabular-nums text-neon-yellow"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)', // Moret
-                  fontStyle: 'italic',
                   fontSize: 'clamp(2rem, 5vw, 3rem)',
-                  letterSpacing: '-0.02em',
-                  lineHeight: 0.9,
+                  letterSpacing: '-0.01em',
+                  lineHeight: 1,
                 }}
               >
                 {priceDisplay}

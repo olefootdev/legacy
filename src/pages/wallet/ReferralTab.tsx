@@ -88,18 +88,18 @@ export function ReferralTab() {
       <button
         type="button"
         onClick={() => navigate('/wallet')}
-        className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-2"
+        className="flex items-center gap-2 text-sm text-cimento hover:text-white transition-colors mb-2"
       >
         <ArrowLeft className="w-4 h-4" /> Carteira
       </button>
 
       <div className="flex items-center gap-3 mb-2">
-        <Users className="w-6 h-6 text-neon-yellow" />
+        <Users className="w-6 h-6 text-white" />
         <h2 className="font-impact uppercase text-white" style={{ fontSize: '26px' }}>Indicações</h2>
       </div>
-      <p className="text-sm text-gray-400">
+      <p className="text-sm text-cimento">
         Indique amigos e ganhe <span className="text-white">5% em BRO</span> sobre compras elegíveis (OLE Game / NFT), até 3 níveis.{' '}
-Ao atingir cada degrau de indicados ativos, a rede paga <span className="text-neon-yellow">marcos em EXP</span>.
+Ao atingir cada degrau de indicados ativos, a rede paga <span className="text-white">marcos em EXP</span>.
       </p>
 
       {/* My referral code */}
@@ -108,27 +108,27 @@ Ao atingir cada degrau de indicados ativos, a rede paga <span className="text-ne
         animate={{ opacity: 1, y: 0 }}
         className="ole-poster p-5 space-y-3"
       >
-        <p className="text-xs text-gray-400 mb-2">O teu código de indicação (não muda)</p>
+        <p className="text-xs text-cimento mb-2">Seu código de indicação (não muda)</p>
         <div className="flex items-center gap-3">
-          <div className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm tracking-wider">
+          <div className="flex-1 bg-deep-black border border-white/16 px-4 py-3 text-white font-mono text-sm tracking-wider">
             {myCode || '—'}
           </div>
           <button
             type="button"
             onClick={handleCopyCode}
             disabled={!myCode}
-            className="bg-neon-yellow/10 border border-neon-yellow/30 text-neon-yellow py-3 px-4 rounded-xl hover:bg-neon-yellow/20 transition-colors disabled:opacity-30"
+            className="border border-white/30 text-white py-3 px-4 hover:border-white transition-colors disabled:opacity-30"
           >
             {copied ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
           </button>
         </div>
         {shareUrl ? (
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between pt-1 border-t border-white/5">
-            <p className="text-[10px] text-gray-500 break-all font-mono">{shareUrl}</p>
+            <p className="text-[10px] text-poeira break-all font-mono">{shareUrl}</p>
             <button
               type="button"
               onClick={handleCopyLink}
-              className="shrink-0 text-xs font-bold uppercase tracking-wide text-neon-yellow hover:text-white flex items-center gap-1"
+              className="ole-num shrink-0 text-[12px] uppercase text-neon-yellow hover:text-white flex items-center gap-1"
             >
               <Link2 className="w-3.5 h-3.5" />
               {copiedLink ? 'Copiado' : 'Copiar link'}
@@ -144,8 +144,8 @@ Ao atingir cada degrau de indicados ativos, a rede paga <span className="text-ne
         não fluía. O display abaixo permanece para quem já tinha um vínculo local.
       */}
       {wallet.sponsorId && (
-        <div className="bg-white/5 rounded-xl p-3 text-xs text-gray-400 flex items-center gap-2">
-          <User className="w-3.5 h-3.5 text-neon-yellow/70" />
+        <div className="border border-white/10 bg-panel p-3 text-xs text-cimento flex items-center gap-2">
+          <User className="w-3.5 h-3.5 text-cimento" />
           Patrocinador (fixo):{' '}
           <span className="text-white font-mono font-medium">{wallet.sponsorId}</span>
         </div>
@@ -155,37 +155,36 @@ Ao atingir cada degrau de indicados ativos, a rede paga <span className="text-ne
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-panel p-5 space-y-4"
+        className="glass-panel border border-white/10 bg-panel p-5 space-y-4"
       >
         <div className="flex items-center justify-between">
           <h3 className="font-bold flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-neon-yellow" />
-            Os teus indicados
+            <Trophy className="w-4 h-4 text-cimento" />
+            Seus indicados
           </h3>
-          <span className="text-2xl font-display font-black text-white tabular-nums">
+          <span className="ole-num text-2xl text-white tabular-nums">
             {loadingReferrals ? '…' : referrals.length}
           </span>
         </div>
 
         {loadingReferrals ? (
-          <p className="text-xs text-gray-500">A carregar a tua rede…</p>
+          <p className="text-xs text-poeira">Carregando sua rede…</p>
         ) : referrals.length === 0 ? (
-          <p className="text-xs text-gray-500">
-            Ainda ninguém entrou usando o teu código. Partilha o link acima — assim que alguém criar
-            conta com ele, aparece aqui.
+          <p className="text-xs text-poeira">
+            Ninguém entrou com seu código ainda. Compartilhe o link acima.
           </p>
         ) : (
           <div className="space-y-1.5">
             {referrals.map((r) => (
               <div
                 key={r.id}
-                className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/5"
+                className="flex items-center justify-between gap-3 px-3 py-2 bg-card border border-white/10"
               >
                 <div className="min-w-0 flex-1">
                   <div className="text-sm text-white font-medium truncate">
                     {r.displayName ?? r.clubName ?? 'Manager'}
                   </div>
-                  <div className="text-[10px] text-gray-500 flex items-center gap-2">
+                  <div className="text-[10px] text-poeira flex items-center gap-2">
                     {r.clubShort && (
                       <span className="font-mono uppercase tracking-widest">{r.clubShort}</span>
                     )}
@@ -193,7 +192,7 @@ Ao atingir cada degrau de indicados ativos, a rede paga <span className="text-ne
                     <span>{formatRelative(r.createdAt)}</span>
                   </div>
                 </div>
-                <div className="shrink-0 text-[10px] text-neon-yellow uppercase tracking-wider font-bold">
+                <div className="shrink-0 font-mono text-[10px] text-cimento uppercase tracking-wider">
                   Nível 1
                 </div>
               </div>
@@ -208,10 +207,10 @@ Ao atingir cada degrau de indicados ativos, a rede paga <span className="text-ne
             return (
               <div
                 key={level}
-                className="bg-white/5 rounded-xl p-3 text-center border border-white/5"
+                className="bg-card p-3 text-center border border-white/10"
               >
-                <div className="text-[10px] text-gray-400 mb-0.5 uppercase tracking-wider">Nv. {level}</div>
-                <div className="text-[10px] text-neon-yellow/80">
+                <div className="text-[10px] text-cimento mb-0.5 uppercase tracking-wider">Nv. {level}</div>
+                <div className="font-mono text-[10.5px] text-white tabular-nums">
                   +{(broEarn / 100).toFixed(2)} BRO
                 </div>
               </div>
@@ -224,19 +223,19 @@ Ao atingir cada degrau de indicados ativos, a rede paga <span className="text-ne
       {transferOut.length > 0 && (
         <div className="space-y-3">
           <h3 className="font-bold flex items-center gap-2 text-sm">
-            <span className="w-2 h-2 rounded-full bg-neon-yellow inline-block" />
+            <span className="w-2 h-2 bg-cimento inline-block" />
             Envios BRO por código
           </h3>
           <div className="space-y-2">
             {transferOut.slice(0, 10).map((e) => (
-              <div key={e.id} className="flex justify-between items-center p-3 rounded-lg bg-white/5 text-sm">
+              <div key={e.id} className="flex justify-between items-center p-3 border border-white/10 bg-panel text-sm">
                 <div>
-                  <div className="text-gray-300 font-mono text-xs">
+                  <div className="text-giz font-mono text-xs">
                     → {(e.metadata?.recipientReferralCode as string) ?? '—'}
                   </div>
-                  <div className="text-[10px] text-gray-500">{formatLedgerDate(e.createdAt)}</div>
+                  <div className="text-[10px] text-poeira">{formatLedgerDate(e.createdAt)}</div>
                 </div>
-                <div className="font-bold text-red-300">{(e.amount / 100).toFixed(2)} BRO</div>
+                <div className="font-mono font-medium tabular-nums text-baixa">{(e.amount / 100).toFixed(2)} BRO</div>
               </div>
             ))}
           </div>
@@ -246,20 +245,20 @@ Ao atingir cada degrau de indicados ativos, a rede paga <span className="text-ne
       {/* OLE Game commissions */}
       <div className="space-y-3">
         <h3 className="font-bold flex items-center gap-2 text-sm">
-          <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
+          <span className="w-2 h-2 bg-cimento inline-block" />
           Comissões OLE Game
         </h3>
         {oleEntries.length === 0 ? (
-          <p className="text-xs text-gray-500">Nenhuma comissão OLE Game registrada.</p>
+          <p className="text-xs text-poeira">Nenhuma comissão OLE Game registrada.</p>
         ) : (
           <div className="space-y-2">
             {oleEntries.slice(0, 10).map((e) => (
-              <div key={e.id} className="flex justify-between items-center p-3 rounded-lg bg-white/5 text-sm">
+              <div key={e.id} className="flex justify-between items-center p-3 border border-white/10 bg-panel text-sm">
                 <div>
-                  <div className="text-gray-300">{e.source}</div>
-                  <div className="text-[10px] text-gray-500">{formatLedgerDate(e.createdAt)}</div>
+                  <div className="text-giz">{e.source}</div>
+                  <div className="text-[10px] text-poeira">{formatLedgerDate(e.createdAt)}</div>
                 </div>
-                <div className="font-bold text-neon-green">+{(e.amount / 100).toFixed(2)} BRO</div>
+                <div className="font-mono font-medium tabular-nums text-alta">+{(e.amount / 100).toFixed(2)} BRO</div>
               </div>
             ))}
           </div>
@@ -269,20 +268,20 @@ Ao atingir cada degrau de indicados ativos, a rede paga <span className="text-ne
       {/* NFT commissions */}
       <div className="space-y-3">
         <h3 className="font-bold flex items-center gap-2 text-sm">
-          <span className="w-2 h-2 rounded-full bg-neon-yellow inline-block" />
+          <span className="w-2 h-2 bg-cimento inline-block" />
           Comissões NFT
         </h3>
         {nftEntries.length === 0 ? (
-          <p className="text-xs text-gray-500">Nenhuma comissão NFT registrada.</p>
+          <p className="text-xs text-poeira">Nenhuma comissão NFT registrada.</p>
         ) : (
           <div className="space-y-2">
             {nftEntries.slice(0, 10).map((e) => (
-              <div key={e.id} className="flex justify-between items-center p-3 rounded-lg bg-white/5 text-sm">
+              <div key={e.id} className="flex justify-between items-center p-3 border border-white/10 bg-panel text-sm">
                 <div>
-                  <div className="text-gray-300">{e.source}</div>
-                  <div className="text-[10px] text-gray-500">{formatLedgerDate(e.createdAt)}</div>
+                  <div className="text-giz">{e.source}</div>
+                  <div className="text-[10px] text-poeira">{formatLedgerDate(e.createdAt)}</div>
                 </div>
-                <div className="font-bold text-neon-yellow">+{(e.amount / 100).toFixed(2)} BRO</div>
+                <div className="font-mono font-medium tabular-nums text-alta">+{(e.amount / 100).toFixed(2)} BRO</div>
               </div>
             ))}
           </div>

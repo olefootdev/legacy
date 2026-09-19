@@ -19,6 +19,7 @@ import { detectMoment } from '@/systems/moments';
 import { shareImageWithText } from '@/lib/shareImage';
 import { fetchMyReferralCode } from '@/supabase/referrals';
 import { track } from '@/analytics/track';
+import { Hashtag } from '@/components/ui';
 
 interface Props {
   crown: DailyCrown | null;
@@ -69,7 +70,7 @@ export function CoronationModal({ crown, onClose }: Props) {
     resize();
     window.addEventListener('resize', resize);
 
-    const colors = ['#FFDC00', '#FFFFFF', '#39FF14', '#FF6B35'];
+    const colors = ['#FDE100', '#FFFFFF', '#22C55E', '#FF9F1C'];
     interface Particle { x: number; y: number; vx: number; vy: number; size: number; color: string; rot: number; vr: number; }
     const particles: Particle[] = [];
     const W = window.innerWidth, H = window.innerHeight;
@@ -172,7 +173,7 @@ export function CoronationModal({ crown, onClose }: Props) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center"
+          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center"
           onClick={onClose}
         >
           <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
@@ -196,21 +197,21 @@ export function CoronationModal({ crown, onClose }: Props) {
             onClick={(e) => e.stopPropagation()}
           >
             <motion.div
-              animate={{ rotate: [0, -6, 6, -4, 4, 0], scale: [1, 1.05, 1] }}
+              animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
               className="inline-block mb-6"
             >
-              <Crown className="w-32 h-32 text-neon-yellow drop-shadow-[0_0_32px_rgba(255,220,0,0.7)]" strokeWidth={1.5} />
+              <Crown className="w-32 h-32 text-neon-yellow" strokeWidth={1.5} />
             </motion.div>
 
-            <motion.p
+            <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="font-display text-[10px] sm:text-xs font-bold uppercase tracking-[0.4em] text-neon-yellow/80 mb-3"
+              className="mb-3"
             >
-              Coroa do Dia · {crown.dailyDate}
-            </motion.p>
+              <Hashtag className="text-neon-yellow/80">#coroadodia · {crown.dailyDate}</Hashtag>
+            </motion.div>
 
             <motion.h1
               initial={{ y: 30, opacity: 0 }}
@@ -227,7 +228,7 @@ export function CoronationModal({ crown, onClose }: Props) {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.7 }}
-              className="font-serif-hero italic text-xl sm:text-2xl text-white/80 mt-6"
+              className="font-impact text-2xl sm:text-3xl uppercase leading-[1.1] text-white/80 mt-6"
             >
               {crown.clubName}
             </motion.p>

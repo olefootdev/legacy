@@ -5,12 +5,14 @@
  * corretamente em todos os navegadores, com fallbacks robustos.
  */
 
-// Fontes críticas da identidade Olefoot
+// Fontes críticas do VOLT2. Até 2026-09-19 esta lista apontava pra Inter,
+// Oswald e Montserrat — que nunca existiram em /public/fonts — e por isso o
+// jogo entrava em `fonts-fallback` em todo acesso. Todas as pilhas em
+// index.css já terminam em fonte de sistema, então a classe virou só sinal.
 const CRITICAL_FONTS = [
-  { family: 'Inter', weight: '400', style: 'normal' },
-  { family: 'Inter', weight: '700', style: 'normal' },
-  { family: 'Oswald', weight: '700', style: 'normal' },
-  { family: 'Montserrat', weight: '800', style: 'normal' },
+  { family: 'Inter Tight Variable', weight: '400', style: 'normal' },
+  { family: 'Archivo Variable', weight: '800', style: 'normal' },
+  { family: 'Anton', weight: '400', style: 'normal' },
 ];
 
 // Timeout para carregamento de fontes (3 segundos)

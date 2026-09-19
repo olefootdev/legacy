@@ -46,6 +46,7 @@ import { BackButton } from '@/components/BackButton';
 import { useMarketOffers } from '@/hooks/useMarketOffers';
 import { MakeOfferModal } from '@/components/market/MakeOfferModal';
 import { MarketOffersPanel } from '@/components/market/MarketOffersPanel';
+import { Hashtag, SecaoVolt } from '@/components/ui';
 import { recordMarketActivity } from '@/supabase/marketActivities';
 
 const BIO_MAX_LEN = 250;
@@ -126,8 +127,8 @@ function playerEntityToManagerMockAuction(
       (p.bio ?? '').trim().slice(0, 250) ||
       (marketKind === 'manager_own'
         ? p.managerCreated
-          ? 'Prospect da tua Academia OLE.'
-          : 'Jogador do teu plantel no mercado EXP.'
+          ? 'Prospect da sua Academia OLE.'
+          : 'Jogador do seu plantel no mercado EXP.'
         : marketKind === 'manager_other'
         ? 'Prospect de outro manager — Academia OLE.'
         : 'Prospect da rede de managers OLE.'),
@@ -241,7 +242,7 @@ function useHighlightRailSizing(
   }, [enabled, trackLength]);
 }
 
-/** Célula final dos carrosseis (borda tracejada + gradiente), ação “Ver mais”. */
+/** Célula final dos carrosseis (borda tracejada, fundo chapado), ação “Ver mais”. */
 function TransferCarouselVerMaisTile({
   onClick,
   topLabel,
@@ -262,10 +263,10 @@ function TransferCarouselVerMaisTile({
       disabled={disabled}
       aria-label={bottomLabel ? `Ver mais — ${bottomLabel}` : 'Ver mais'}
       className={cn(
-        'flex w-[min(5.25rem,calc(100vw-2rem))] max-w-[5.5rem] shrink-0 flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed px-1.5 py-5 text-center transition-colors sm:w-[5.25rem] sm:px-2 sm:py-6',
+        'flex w-[min(5.25rem,calc(100vw-2rem))] max-w-[5.5rem] shrink-0 flex-col items-center justify-center gap-1.5 border border-dashed px-1.5 py-5 text-center transition-colors sm:w-[5.25rem] sm:px-2 sm:py-6',
         variant === 'neon'
-          ? 'border-neon-yellow/40 bg-gradient-to-b from-neon-yellow/10 via-black/40 to-black/60 hover:from-neon-yellow/[0.14] hover:border-neon-yellow/55 disabled:pointer-events-none disabled:opacity-40'
-          : 'border-white/25 bg-gradient-to-b from-white/[0.07] via-black/40 to-black/55 hover:border-white/35 hover:from-white/[0.11] disabled:pointer-events-none disabled:opacity-40',
+          ? 'border-neon-yellow/40 bg-panel hover:border-neon-yellow hover:bg-card disabled:pointer-events-none disabled:opacity-40'
+          : 'border-white/25 bg-panel hover:border-white/30 hover:bg-card disabled:pointer-events-none disabled:opacity-40',
       )}
     >
       {topLabel ? (
@@ -693,7 +694,7 @@ export function Transfer() {
             });
             serverRes = await r.json() as typeof serverRes;
           } catch {
-            setPurchaseError('Falha de rede. Verifica a tua ligação e tenta novamente.');
+            setPurchaseError('Falha de rede. Verifique sua conexão e tente novamente.');
             setIsPurchasing(false);
             return;
           }
@@ -721,7 +722,7 @@ export function Transfer() {
                 setIsPurchasing(false);
                 return;
               }
-              setPurchaseError('Este jogador já está no teu plantel.');
+              setPurchaseError('Este jogador já está no seu plantel.');
               setIsPurchasing(false);
               return;
             }
@@ -799,7 +800,7 @@ export function Transfer() {
         const base = olefootApiBase();
         const serverUrl = base && base !== 'http://localhost:4000' ? base : null;
         if (!serverUrl || !token) {
-          setPurchaseError('Compra de Academia exige sessão autenticada — faz login.');
+          setPurchaseError('Compra de Academia exige sessão autenticada — faça login.');
           return;
         }
         let serverRes: {
@@ -820,7 +821,7 @@ export function Transfer() {
           });
           serverRes = (await r.json()) as typeof serverRes;
         } catch {
-          setPurchaseError('Falha de rede. Verifica a tua ligação e tenta novamente.');
+          setPurchaseError('Falha de rede. Verifique sua conexão e tente novamente.');
           return;
         }
         if (!serverRes?.ok) {
@@ -963,8 +964,8 @@ export function Transfer() {
             <button
               type="button"
               onClick={() => setShowSearch((v) => !v)}
-              className="inline-flex items-center gap-2 bg-black px-6 py-3 text-white font-display font-black uppercase tracking-[0.14em] text-[11px] transition-transform hover:scale-[1.02] active:scale-[0.98]"
-              style={{ borderRadius: 'var(--radius-sm)', boxShadow: '5px 5px 0 rgba(13,13,13,0.28)' }}
+              className="inline-flex items-center gap-2 bg-black px-6 py-3 text-white font-display font-black uppercase tracking-[0.14em] text-[11px] transition-colors hover:bg-deep-black/80"
+              style={{ borderRadius: 'var(--radius-sm)' }}
             >
               <Search className="w-4 h-4" />
               Buscar carta
@@ -1225,37 +1226,8 @@ export function Transfer() {
       {/* ── DESTAQUES DA SEMANA ─────────────────────────────────────── */}
       {highlightsOrdered.length > 0 ? (
         <section className="min-w-0 space-y-3">
-          <div className="flex min-w-0 items-center gap-3 px-0.5">
-            <span
-              aria-hidden
-              className="shrink-0 w-[3px] h-7 bg-neon-yellow shadow-[0_0_10px_rgba(253,225,0,0.55)]"
-            />
-            <div className="min-w-0 flex-1">
-              <h3
-                className="text-neon-yellow font-bold uppercase"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '14px',
-                  letterSpacing: '0.18em',
-                }}
-              >
-                Destaques da semana
-              </h3>
-              <p
-                className="text-white/45"
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '10px',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                Cartas em destaque pelo overall e buzz do mercado.
-              </p>
-            </div>
-          </div>
+          <SecaoVolt label="Destaques da semana" className="px-0.5" />
           <div className="relative -mx-3 sm:-mx-4 lg:-mx-8">
-            <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-3 bg-gradient-to-r from-deep-black/90 to-transparent sm:w-4 lg:w-8" />
-            <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-16 bg-gradient-to-l from-deep-black/95 via-deep-black/60 to-transparent sm:w-20 lg:w-24" />
             <div
               ref={highlightsScrollRef}
               className="hide-scrollbar overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] "
@@ -1294,7 +1266,7 @@ export function Transfer() {
                     topLabel="Destaques da semana"
                     bottomLabel={
                       highlightsShownLen < highlightsOrdered.length
-                        ? `+${Math.min(DISCOVERY_CAROUSEL_STEP, highlightsOrdered.length - highlightsShownLen)} neste carril`
+                        ? `+${Math.min(DISCOVERY_CAROUSEL_STEP, highlightsOrdered.length - highlightsShownLen)} cartas`
                         : `${highlightsShownLen}/${highlightsOrdered.length}`
                     }
                     disabled={highlightsShownLen >= highlightsOrdered.length}
@@ -1391,16 +1363,6 @@ export function Transfer() {
                 >
                   Compra concluída
                 </p>
-                <p
-                  className="mt-0.5 text-white/55"
-                  style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '12px',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  Compra imediata registada. Continua a negociar no mercado quando quiseres.
-                </p>
               </div>
             </div>
             <button
@@ -1424,35 +1386,23 @@ export function Transfer() {
 
       {/* ── GENESIS EM FOCO ─ headline + view toggle (padrão /loja) ── */}
       <div className="flex flex-wrap items-end justify-between gap-3 px-0.5 pb-3 sm:pb-4">
-        <div className="min-w-0">
-          <div className="flex items-center gap-3">
-            <span aria-hidden className="shrink-0 w-[3px] h-7 bg-neon-yellow shadow-[0_0_10px_rgba(253,225,0,0.55)]" />
-            <h3
-              className="text-neon-yellow font-bold uppercase"
-              style={{ fontFamily: 'var(--font-display)', fontSize: '14px', letterSpacing: '0.18em' }}
-            >
-              Genesis em foco
-            </h3>
-          </div>
-          <p
-            className="mt-1 ml-[14px] text-white/45"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', lineHeight: 1.5 }}
-          >
+        <SecaoVolt label="Genesis em foco" className="min-w-0 flex-1">
+          <Hashtag>
             {gridPlayers.length} {gridPlayers.length === 1 ? 'carta disponível' : 'cartas disponíveis'}
             {isFiltered ? ' (filtros aplicados)' : ''}
-          </p>
-        </div>
+          </Hashtag>
+        </SecaoVolt>
         {/* View toggle Grid / List — Sprint B-4 */}
-        <div className="flex items-center gap-1 rounded-[var(--radius-pill)] border border-white/10 bg-white/[0.03] p-1">
+        <div className="flex items-center gap-1 border border-white/10 bg-panel p-1">
           {(['grid', 'list'] as const).map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => setGenesisViewMode(m)}
               className={cn(
-                'inline-flex items-center rounded-[var(--radius-pill)] px-4 py-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em] transition-all',
+                'inline-flex items-center px-4 py-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em] transition-colors',
                 genesisViewMode === m
-                  ? 'bg-neon-yellow text-black shadow-[0_2px_10px_rgba(253,225,0,0.25)]'
+                  ? 'bg-neon-yellow text-black'
                   : 'text-white/55 hover:text-white',
               )}
               aria-pressed={genesisViewMode === m}
@@ -1533,27 +1483,9 @@ export function Transfer() {
           {managerAuctionCards.length > 0 ? (
             <section className="min-w-0 space-y-3">
               <div className="flex items-center justify-between gap-2 px-0.5">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span aria-hidden className="w-[3px] h-7 bg-neon-yellow shrink-0" />
-                  <div className="min-w-0">
-                    <h3
-                      className="text-neon-yellow font-bold uppercase"
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '14px',
-                        letterSpacing: '0.18em',
-                      }}
-                    >
-                      Jogadores anunciados
-                    </h3>
-                    <p
-                      className="text-white/45"
-                      style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}
-                    >
-                      Os teus cards à venda. Clica pra gerir preço ou retirar do mercado.
-                    </p>
-                  </div>
-                </div>
+                <SecaoVolt label="Jogadores anunciados" className="min-w-0 flex-1">
+                  <Hashtag>Toque pra mudar preço ou retirar</Hashtag>
+                </SecaoVolt>
                 <Link
                   to="/team"
                   className="shrink-0 inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-3.5 py-1.5 text-white/80 transition-colors hover:border-neon-yellow/60 hover:text-neon-yellow"
@@ -1571,8 +1503,6 @@ export function Transfer() {
                 </Link>
               </div>
               <div className="relative -mx-3 sm:-mx-4 lg:-mx-8">
-                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-3 bg-gradient-to-r from-deep-black/90 to-transparent sm:w-4 lg:w-8" />
-                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-16 bg-gradient-to-l from-deep-black/95 via-deep-black/60 to-transparent sm:w-20 lg:w-24" />
                 <div className="hide-scrollbar overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch]">
                   <div className="inline-flex flex-nowrap items-stretch gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 lg:px-8">
                     {managerAuctionCards.map((player) => (
@@ -1597,7 +1527,7 @@ export function Transfer() {
       {/* Player Details Modal — overlay com scroll; painel limitado a viewport menos safe areas e barra inferior */}
       <AnimatePresence>
         {selectedPlayer && (
-          <div className="fixed inset-0 z-50 flex min-h-0 flex-col overflow-y-auto overscroll-y-contain bg-black/90 px-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom,0px)+5.5rem))] backdrop-blur-sm sm:items-center sm:justify-center sm:px-4 sm:pb-[max(1.5rem,calc(env(safe-area-inset-bottom,0px)+2rem))] sm:pt-[max(1rem,env(safe-area-inset-top,0px))] md:px-6">
+          <div className="fixed inset-0 z-50 flex min-h-0 flex-col overflow-y-auto overscroll-y-contain bg-black/90 px-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom,0px)+5.5rem))] sm:items-center sm:justify-center sm:px-4 sm:pb-[max(1.5rem,calc(env(safe-area-inset-bottom,0px)+2rem))] sm:pt-[max(1rem,env(safe-area-inset-top,0px))] md:px-6">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1608,14 +1538,14 @@ export function Transfer() {
                 'max-h-[min(920px,calc(100dvh-7.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))] sm:max-h-[min(920px,calc(100dvh-4.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))]',
                 selectedPlayer.category === 'gold'
                   ? `border-2 border-neon-yellow ${GOLD_CARD_GLOW}`
-                  : 'border-neon-yellow/50 shadow-[0_0_50px_rgba(228,255,0,0.1)]',
+                  : 'border-neon-yellow/50',
               )}
             >
               <div className="z-[60] flex shrink-0 justify-end px-3 pb-1 pt-3">
                 <button
                   type="button"
                   onClick={() => setSelectedPlayer(null)}
-                  className="rounded-full bg-black/50 p-2 text-white/50 hover:text-white"
+                  className="border border-white/16 bg-panel p-2 text-white/50 hover:border-white/30 hover:text-white"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -1637,7 +1567,7 @@ export function Transfer() {
                     {/* Header */}
                     <div className="border-b border-white/10 pb-4">
                       <div className="flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                        <h2 className="min-w-0 max-w-full break-words text-2xl font-display font-black italic uppercase tracking-wider text-white [overflow-wrap:anywhere] sm:text-3xl md:text-4xl">
+                        <h2 className="min-w-0 max-w-full break-words text-2xl font-display font-black uppercase leading-[1.1] tracking-wider text-white [overflow-wrap:anywhere] sm:text-3xl md:text-4xl">
                           {selectedPlayer.name}
                         </h2>
                         <span
@@ -1715,16 +1645,14 @@ export function Transfer() {
 
                     {/* Bidding Area */}
                     <div className="pt-2">
-                      <div className="relative overflow-hidden rounded-xl border border-neon-green/50 bg-gradient-to-br from-neon-green/20 to-transparent p-4 sm:p-6">
-                        <div className="absolute inset-0 opacity-10 mix-blend-overlay pointer-events-none" style={{ backgroundImage: 'radial-gradient(#00FF66 1px, transparent 1px)', backgroundSize: '8px 8px' }} />
-                        
+                      <div className="relative overflow-hidden border border-white/10 bg-panel p-4 sm:p-6">
                         <div className="relative z-10">
                           <div className="mb-5 flex flex-col gap-4 md:mb-6 md:flex-row md:items-end md:justify-between">
                             <div className="min-w-0">
-                              <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-neon-green">
+                              <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cimento">
                                 <Gavel className="h-4 w-4 shrink-0" /> Lance Atual
                               </div>
-                              <div className="max-w-full break-words text-xl font-display font-black text-white drop-shadow-md [overflow-wrap:anywhere] sm:text-2xl md:text-3xl lg:text-4xl">
+                              <div className="ole-num max-w-full break-words text-xl text-white [overflow-wrap:anywhere] sm:text-2xl md:text-3xl lg:text-4xl">
                                 {formatAuctionDisplay(selectedPlayer.auctionCurrency, selectedPlayer.currentBid)}
                               </div>
                             </div>
@@ -1755,20 +1683,20 @@ export function Transfer() {
                                 ) : null;
                               })()}
                               {purchaseError && (
-                                <p className="text-xs text-red-400 font-medium">{purchaseError}</p>
+                                <p className="text-xs text-baixa font-medium">{purchaseError}</p>
                               )}
                               <button
                                 type="button"
                                 onClick={handleAcademiaMarketAction}
                                 disabled={isPurchasing || oleBal < selectedPlayer.buyNow}
                                 className={cn(
-                                  'btn-primary min-h-12 w-full bg-neon-green px-3 py-3 text-black hover:bg-white sm:py-4',
+                                  'btn-primary min-h-12 w-full px-3 py-3 sm:py-4',
                                   (isPurchasing || oleBal < selectedPlayer.buyNow) && 'pointer-events-none opacity-40',
                                 )}
                               >
-                                <span className="skew-x-6 block text-center text-sm font-black uppercase sm:text-base">
+                                <span className="block text-center text-sm font-black uppercase sm:text-base">
                                   {isPurchasing
-                                    ? 'A processar…'
+                                    ? 'Processando…'
                                     : `Comprar agora · ${formatAuctionDisplay(
                                         selectedPlayer.auctionCurrency,
                                         selectedPlayer.buyNow,
@@ -1778,7 +1706,7 @@ export function Transfer() {
                               <button
                                 type="button"
                                 onClick={() => setOfferModalListingId(selectedPlayer.managerListingId!)}
-                                className="min-h-12 w-full rounded-lg border-2 border-neon-yellow/60 bg-neon-yellow/10 px-3 py-3 font-display text-sm font-black uppercase tracking-wide text-neon-yellow transition-colors hover:bg-neon-yellow/20 sm:py-4"
+                                className="min-h-12 w-full border border-white/30 bg-transparent px-3 py-3 font-display text-sm font-black uppercase tracking-wide text-white transition-colors hover:border-white hover:bg-white/5 sm:py-4"
                               >
                                 {marketOffers.pendingForListing(selectedPlayer.managerListingId)
                                   ? 'Atualizar proposta'
@@ -1789,9 +1717,7 @@ export function Transfer() {
                           selectedPlayer.marketKind === 'genesis' ? (
                             <div className="space-y-3">
                               {selectedPlayer.marketKind === 'manager_own' ? (
-                                <p className="text-[10px] text-white/50">
-                                  Anúncio teu — retira o prospect do mercado quando quiseres (sem custo).
-                                </p>
+                                <p className="text-[10px] text-white/50">Seu anúncio</p>
                               ) : (
                                 <>
                                   <p className="text-[10px] text-white/50">
@@ -1799,7 +1725,7 @@ export function Transfer() {
                                     <span className="font-display font-bold text-white">{formatExp(oleBal)}</span>
                                     {selectedPlayer.marketKind === 'genesis' &&
                                     oleBal < selectedPlayer.buyNow ? (
-                                      <span className="mt-1 block text-red-300">
+                                      <span className="mt-1 block text-baixa">
                                         Saldo insuficiente para compra imediata.
                                       </span>
                                     ) : null}
@@ -1807,7 +1733,7 @@ export function Transfer() {
                                   {selectedPlayer.marketKind === 'genesis' && selectedPlayer.genesisCatalogId ? (
                                     <p className="text-[10px] text-white/50">
                                       {genesisListedEntities[selectedPlayer.genesisCatalogId] == null
-                                        ? 'A sincronizar catálogo Genesis… recarrega se o botão ficar bloqueado.'
+                                        ? 'Sincronizando catálogo Genesis… recarregue se o botão travar.'
                                         : genesisListedEntities[selectedPlayer.genesisCatalogId]!.contractIsLifetime
                                           ? 'Contrato vitalício (admin) — não expira com jogos.'
                                           : `Contrato: ${
@@ -1819,7 +1745,7 @@ export function Transfer() {
                                 </>
                               )}
                               {purchaseError && (
-                                <p className="text-xs text-red-400 font-medium">{purchaseError}</p>
+                                <p className="text-xs text-baixa font-medium">{purchaseError}</p>
                               )}
                               <button
                                 type="button"
@@ -1832,7 +1758,7 @@ export function Transfer() {
                                         genesisListedEntities[selectedPlayer.genesisCatalogId] == null)))
                                 }
                                 className={cn(
-                                  'btn-primary min-h-12 w-full bg-neon-green px-3 py-3 text-black hover:bg-white sm:py-4',
+                                  'btn-primary min-h-12 w-full px-3 py-3 sm:py-4',
                                   (isPurchasing ||
                                     (selectedPlayer.marketKind === 'genesis' &&
                                       (oleBal < selectedPlayer.buyNow ||
@@ -1841,11 +1767,11 @@ export function Transfer() {
                                     'pointer-events-none opacity-40',
                                 )}
                               >
-                                <span className="skew-x-6 block text-center text-sm font-black uppercase sm:text-base">
+                                <span className="block text-center text-sm font-black uppercase sm:text-base">
                                   {isPurchasing
-                                    ? 'A processar…'
+                                    ? 'Processando…'
                                     : selectedPlayer.marketKind === 'manager_own'
-                                    ? 'Retirar do mercado'
+                                    ? 'Retirar do mercado · grátis'
                                     : `Comprar agora · ${formatAuctionDisplay(
                                         selectedPlayer.auctionCurrency,
                                         selectedPlayer.buyNow,
@@ -1867,14 +1793,14 @@ export function Transfer() {
                                         ? `${selectedPlayer.currentBid + 100000}`
                                         : `${selectedPlayer.currentBid + 1000}`
                                     }
-                                    className="w-full min-h-12 rounded-lg border border-white/20 bg-black/60 py-3 pl-14 pr-3 font-display text-lg font-bold text-white transition-colors focus:border-neon-green focus:outline-none sm:min-h-0 sm:py-4 sm:pl-16 sm:pr-4 sm:text-xl"
+                                    className="w-full min-h-12 border border-white/20 bg-deep-black py-3 pl-14 pr-3 font-display text-lg font-bold text-white transition-colors focus:border-neon-yellow focus:outline-none sm:min-h-0 sm:py-4 sm:pl-16 sm:pr-4 sm:text-xl"
                                   />
                                 </div>
                                 <button
                                   type="button"
-                                  className="btn-primary min-h-12 w-full max-w-full shrink-0 bg-neon-green px-3 py-3 text-black hover:bg-white sm:w-auto sm:min-h-0 sm:self-stretch sm:px-8 sm:py-4"
+                                  className="btn-primary min-h-12 w-full max-w-full shrink-0 px-3 py-3 sm:w-auto sm:min-h-0 sm:self-stretch sm:px-8 sm:py-4"
                                 >
-                                  <span className="skew-x-6 flex min-w-0 max-w-full items-center justify-center gap-2 whitespace-normal text-center text-sm leading-tight sm:text-base md:text-lg">
+                                  <span className="flex min-w-0 max-w-full items-center justify-center gap-2 whitespace-normal text-center text-sm leading-tight sm:text-base md:text-lg">
                                     <Gavel className="h-5 w-5 shrink-0" aria-hidden />
                                     Confirmar Lance
                                   </span>
@@ -1934,43 +1860,33 @@ function TransferMemorablesInfoBox({ ids }: { ids?: MemorableTrophyId[] }) {
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-xl border-2 p-5 md:p-6',
-        has
-          ? 'border-neon-yellow bg-gradient-to-b from-[#1a1508] via-black/80 to-black/90 shadow-[0_0_28px_rgba(234,255,0,0.35),0_0_56px_rgba(250,204,21,0.18),inset_0_1px_0_rgba(255,255,255,0.06)]'
-          : 'border-white/10 bg-black/50',
+        'relative overflow-hidden border-2 p-5 md:p-6',
+        has ? 'border-neon-yellow bg-panel' : 'border-white/10 bg-panel',
       )}
     >
-      {has && (
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.12]"
-          style={{
-            backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(234,255,0,0.5), transparent 55%)',
-          }}
-        />
-      )}
       <div className="relative z-10">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <span
             className={cn(
-              'inline-flex max-w-full min-w-0 -skew-x-6 self-start px-3 py-1.5 font-display text-xs font-black uppercase tracking-[0.2em] md:px-4 md:text-sm md:tracking-[0.25em]',
+              'inline-flex max-w-full min-w-0 self-start px-3 py-1.5 font-display text-xs font-black uppercase tracking-[0.2em] md:px-4 md:text-sm md:tracking-[0.25em]',
               has
-                ? 'bg-neon-yellow text-black shadow-[0_0_20px_rgba(234,255,0,0.45)]'
+                ? 'bg-neon-yellow text-black'
                 : 'bg-white/10 text-white/50 border border-white/10',
             )}
           >
-            <span className="skew-x-6 flex items-center gap-2">
-              <Trophy className="w-4 h-4 shrink-0 skew-x-6" strokeWidth={2.2} />
+            <span className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 shrink-0" strokeWidth={2.2} />
               MEMORÁVEIS
             </span>
           </span>
           <p
             className={cn(
-              'min-w-0 max-w-full text-[11px] font-medium leading-relaxed [overflow-wrap:anywhere] break-words md:max-w-md md:text-xs',
-              has ? 'text-neon-yellow/75' : 'text-white/45',
+              'min-w-0 max-w-full font-mono text-[11.5px] font-medium leading-relaxed [overflow-wrap:anywhere] break-words md:max-w-md',
+              has ? 'text-cimento' : 'text-white/45',
             )}
           >
             {has
-              ? 'Títulos de campeonato ligados a esta carta: liga, copa e supercopa OLE.'
+              ? '#liga #copa #supercopa'
               : 'Sem títulos memoráveis neste anúncio.'}
           </p>
         </div>
@@ -1979,10 +1895,10 @@ function TransferMemorablesInfoBox({ ids }: { ids?: MemorableTrophyId[] }) {
             {labels.map((label) => (
               <li
                 key={label}
-                className="flex min-w-0 items-center gap-3 rounded-lg border border-neon-yellow/40 bg-neon-yellow/10 px-3 py-2.5 shadow-[0_0_18px_rgba(234,255,0,0.2)]"
+                className="flex min-w-0 items-center gap-3 border border-neon-yellow/40 bg-card px-3 py-2.5"
               >
                 <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-neon-yellow bg-neon-yellow text-black shrink-0">
-                  <Trophy className="w-5 h-5 skew-x-6" strokeWidth={2.2} />
+                  <Trophy className="w-5 h-5" strokeWidth={2.2} />
                 </div>
                 <span className="min-w-0 flex-1 break-words font-display text-sm font-bold uppercase tracking-wide text-white [overflow-wrap:anywhere]">
                   {label}
@@ -2019,9 +1935,8 @@ function StatBar({ label, value }: { label: string, value: number }) {
   );
 }
 
-/** Borda + sombras no mesmo espírito do box Memoráveis (Sala de Troféus). */
-const GOLD_CARD_GLOW =
-  'border-neon-yellow shadow-[0_0_28px_rgba(234,255,0,0.35),0_0_56px_rgba(250,204,21,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] ring-1 ring-amber-400/35 hover:shadow-[0_0_36px_rgba(234,255,0,0.45),0_0_72px_rgba(250,204,21,0.22)]';
+/** Topo da escada: borda volt chapada, sem brilho (VOLT2). */
+const GOLD_CARD_GLOW = 'border-neon-yellow';
 
 /** Carta estreita para carris horizontais — poucos nós DOM vs. `PlayerCard` completo. */
 function TransferMarketCompactCard({
@@ -2032,33 +1947,17 @@ function TransferMarketCompactCard({
   listHomonym?: { index: number; total: number };
 }) {
   const tier = cardTierOf(player);
-  const isGold = tier === 'lendario';
   const showHomonymStrip = listHomonym && listHomonym.total > 1;
   return (
     <div
       className={cn(
-        'relative flex h-full min-h-0 min-w-0 w-full cursor-pointer flex-col overflow-hidden rounded-lg border-2 bg-dark-gray transition-opacity duration-200 hover:opacity-95 active:opacity-90',
+        'relative flex h-full min-h-0 min-w-0 w-full cursor-pointer flex-col overflow-hidden border-2 bg-dark-gray transition-opacity duration-200 hover:opacity-95 active:opacity-90',
         TIER_MOLDURA[tier],
       )}
     >
-      {isGold && (
-        <div
-          className="pointer-events-none absolute inset-0 z-[1] opacity-[0.12]"
-          style={{
-            backgroundImage:
-              'radial-gradient(ellipse 90% 45% at 50% -15%, rgba(234,255,0,0.55), transparent 50%)',
-          }}
-        />
-      )}
       <div className="relative flex flex-1 flex-col">
-        {/* Só o topo da escada ganha véu — nas outras a foto fica limpa. */}
-        {tier === 'lendario' && (
-          <div
-            aria-hidden
-            className="absolute inset-0 z-0 bg-gradient-to-b from-neon-yellow/20 to-transparent"
-          />
-        )}
-        <div className="absolute left-2 top-2 z-20 flex flex-col items-center drop-shadow-md">
+        {/* OVR em etiqueta chapada — legível sobre a foto sem sombra. */}
+        <div className="absolute left-2 top-2 z-20 flex flex-col items-center bg-deep-black px-1.5 py-1">
           <div
             className="font-impact text-xl leading-none tabular-nums text-neon-yellow"
           >
@@ -2096,7 +1995,7 @@ function TransferMarketCompactCard({
             }}
           />
         </div>
-        <div className="relative z-20 flex flex-1 flex-col justify-end bg-gradient-to-t from-black via-black/90 to-transparent px-2 pb-2 pt-6">
+        <div className="relative z-20 flex flex-1 flex-col justify-end px-2 pb-2 pt-2">
           <div className="text-center">
             <div className="line-clamp-1 font-impact text-[14px] uppercase leading-none tracking-wide text-white">
               {player.name}
@@ -2139,11 +2038,11 @@ function TransferMarketCompactCard({
               <Clock className="h-2.5 w-2.5 shrink-0" aria-hidden />
               <span className="tabular-nums">{player.timeLeft}</span>
             </span>
-            <span className="min-w-0 max-w-full truncate text-center font-display text-[8px] font-bold leading-tight text-neon-green sm:text-right sm:text-[9px]">
+            <span className="min-w-0 max-w-full truncate text-center font-display text-[8px] font-bold leading-tight text-white sm:text-right sm:text-[9px]">
               {formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
             </span>
           </div>
-          <div className="flex min-h-9 w-full max-w-full items-center justify-center gap-1 rounded bg-neon-yellow/90 px-1 py-1.5 font-display text-[7px] font-black uppercase leading-tight tracking-wider text-black min-[340px]:text-[8px]">
+          <div className="flex min-h-9 w-full max-w-full items-center justify-center gap-1 bg-neon-yellow px-1 py-1.5 font-display text-[7px] font-black uppercase leading-tight tracking-wider text-black min-[340px]:text-[8px]">
             <Gavel className="h-3 w-3 shrink-0" aria-hidden />
             Abrir
           </div>
@@ -2224,48 +2123,32 @@ export function PlayerCard({
       ? 'Lances em EXP'
       : 'Lances em BRO';
   const tier = cardTierOf(player);
-  const isGold = tier === 'lendario';
   const showHomonymStrip = !isModal && listHomonym && listHomonym.total > 1;
   return (
     <div className={cn(
-      'relative group flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-xl border-2 bg-dark-gray transition-all duration-300',
+      'relative group flex h-full min-w-0 cursor-pointer flex-col overflow-hidden border-2 bg-dark-gray transition-colors duration-300',
       carouselStrip && 'w-full max-w-full',
       !isModal && !carouselStrip && 'w-full',
-      !isModal && !carouselStrip && 'hover:-translate-y-2 hover:scale-[1.02]',
-      !isModal && carouselStrip && 'hover:scale-[1.01]',
       // A moldura É o indicador de raridade — uma escada só, sem dois sistemas
-      // discordando sobre a mesma carta.
+      // discordando sobre a mesma carta. O topo (lendário) é a borda volt 2px
+      // chapada + o selo volt sólido; sem sombra de adesivo (VOLT2).
       TIER_MOLDURA[tier],
-      // Sombra dura clara do layer final, reservada ao topo da escada. Ela
-      // substitui os três halos coloridos que existiam antes.
-      tier === 'lendario' && 'shadow-[6px_6px_0_rgba(237,235,228,0.13)]',
+      !isModal && tier === 'comum' && 'hover:border-white/30',
     )}>
-      {/* Moldura interna: um fio que separa a arte da borda e dá profundidade —
-          o mesmo papel do frame que, no Sorare, amarra frente e verso. */}
+      {/* Moldura interna: um fio que separa a arte da borda — o mesmo papel do
+          frame que, no Sorare, amarra frente e verso. Linha, não sombra. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-[3px] z-[26] rounded-lg"
-        style={{ boxShadow: 'inset 0 0 0 1px rgba(237,235,228,0.10)' }}
+        className="pointer-events-none absolute inset-[3px] z-[26] border border-giz/10"
       />
       {/* Card Content Wrapper */}
       <div className="relative flex-1">
-        {/* Um único véu de leitura no topo, e só no topo da escada — para o OVR
-            e a posição não brigarem com a foto. Saíram o halo colorido (que
-            mudava com dois sistemas de raridade diferentes) e a textura de
-            meio-tom, que cobria o rosto do jogador com pontinhos brancos. */}
-        {tier === 'lendario' && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 z-0"
-            style={{ background: 'radial-gradient(ellipse 90% 40% at 50% -10%, rgba(253,225,0,0.18), transparent 55%)' }}
-          />
-        )}
 
         {/* ── CAMADA DE CIMA: contexto ─────────────────────────────────────
             Quem é esta carta antes de você olhar a foto: o quanto ela vale
             (OVR), onde joga, de onde vem e que raridade é. O Sorare separa o
             card em duas leituras — contexto em cima, jogador embaixo. */}
-        <div className="absolute top-3 left-3 z-20 flex flex-col items-center drop-shadow-md">
+        <div className="absolute top-3 left-3 z-20 flex flex-col items-center bg-deep-black px-2 py-1.5">
           <div
             className="font-impact text-3xl leading-none tabular-nums text-neon-yellow"
           >
@@ -2310,7 +2193,7 @@ export function PlayerCard({
           <img
             src={player.portraitSrc?.trim() || `https://picsum.photos/seed/transfer-${player.id}/300/400`}
             alt={player.name}
-            className={cn('w-full h-full object-cover object-top transition-all duration-500 drop-shadow-2xl', portraitClassName ?? 'grayscale group-hover:grayscale-0')}
+            className={cn('w-full h-full object-cover object-top transition-all duration-500', portraitClassName ?? 'grayscale group-hover:grayscale-0')}
             referrerPolicy="no-referrer"
             // A foto é a estrela: o recorte começa mais embaixo (88% em vez de
             // 75%), então sobra mais imagem antes do texto assumir.
@@ -2321,7 +2204,7 @@ export function PlayerCard({
         {/* Card Footer / Info */}
         <div className="absolute bottom-0 left-0 right-0 p-4 z-20 bg-gradient-to-t from-black via-black/90 to-transparent pt-12">
           <div className="mb-2 min-w-0 px-0.5 text-center">
-            <div className="break-words font-impact text-[22px] uppercase leading-none tracking-wide text-white drop-shadow-md [overflow-wrap:anywhere] sm:text-2xl md:text-3xl">
+            <div className="break-words font-impact text-[22px] uppercase leading-[1.1] tracking-wide text-white [overflow-wrap:anywhere] sm:text-2xl md:text-3xl">
               {player.name}
             </div>
             {showHomonymStrip && listHomonym ? (
@@ -2346,7 +2229,7 @@ export function PlayerCard({
           {/* Divider */}
           <div className={cn('mx-auto mb-3 h-px w-2/3', tier === 'comum' ? 'bg-white/25' : 'bg-neon-yellow/50')} />
 
-          {/* Mini Stats — Sprint B-3: MORET serif italic, peso editorial */}
+          {/* Mini Stats — número em Anton, sem serifa nem itálico (VOLT2) */}
           <div className="grid grid-cols-3 gap-1">
             <div className="text-center">
               <div className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">PAC</div>
@@ -2377,10 +2260,6 @@ export function PlayerCard({
             </div>
           </div>
 
-          {/* Shine Effect on Hover */}
-          {!isModal && (
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
-          )}
         </div>
       </div>
 
@@ -2400,7 +2279,7 @@ export function PlayerCard({
                   Encerra em <span className="text-white/85">{player.timeLeft}</span>
                 </span>
               )}
-              {/* Preço — MORET serif italic, peso editorial */}
+              {/* Preço — Anton, sem itálico (VOLT2) */}
               <span
                 className={cn(
                   'min-w-0 max-w-full break-words text-center tabular-nums leading-tight [overflow-wrap:anywhere] sm:text-right',
@@ -2415,7 +2294,7 @@ export function PlayerCard({
             </div>
             <button
               type="button"
-              className="flex w-full min-h-11 max-w-full items-center justify-center bg-neon-yellow px-3 py-2.5 font-display text-[12px] font-black uppercase leading-tight tracking-[0.18em] text-black transition-transform hover:scale-[1.02] active:scale-[0.98] [-webkit-tap-highlight-color:transparent] sm:py-3 sm:text-[13px]"
+              className="flex w-full min-h-11 max-w-full items-center justify-center bg-neon-yellow px-3 py-2.5 font-display text-[12px] font-black uppercase leading-tight tracking-[0.18em] text-black transition-colors hover:bg-white [-webkit-tap-highlight-color:transparent] sm:py-3 sm:text-[13px]"
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
               {fixedSale ? fixedSale.cta : 'Dar Lance'}
@@ -2472,7 +2351,7 @@ export function TransferRowCard({
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ delay, duration: 0.22 }}
       className={cn(
-        'group flex w-full overflow-hidden border border-l-[3px] border-[var(--color-border)] bg-dark-gray transition-all duration-200 hover:border-neon-yellow/40 hover:-translate-y-0.5',
+        'group flex w-full overflow-hidden border border-l-[3px] border-[var(--color-border)] bg-dark-gray transition-colors duration-200 hover:border-white/30',
         railColor,
       )}
       style={{ borderRadius: 'var(--radius-md)' }}
@@ -2502,10 +2381,10 @@ export function TransferRowCard({
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent"
         />
-        {/* OVR — Moret italic gigante editorial */}
+        {/* OVR — Anton gigante; o scrim da foto dá a leitura */}
         <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10">
           <p
-            className="font-impact text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]"
+            className="font-impact text-neon-yellow tabular-nums leading-none"
             style={{
               fontSize: 'clamp(36px, 5.5vw, 56px)',
               letterSpacing: '-0.04em',
@@ -2513,7 +2392,7 @@ export function TransferRowCard({
           >
             {player.ovr}
           </p>
-          <p className="mt-0.5 font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white/85 drop-shadow-md">
+          <p className="mt-0.5 font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white/85">
             {player.pos}
           </p>
         </div>
@@ -2525,7 +2404,7 @@ export function TransferRowCard({
             )}
             style={{ borderRadius: 'var(--radius-sm)' }}
           >
-            Ouro
+            {TIER_LABEL[tier]}
           </span>
         ) : null}
       </button>
@@ -2582,7 +2461,7 @@ export function TransferRowCard({
           </span>
         </div>
 
-        {/* Mini-stats — MORET serif italic editorial */}
+        {/* Mini-stats — Anton, sem itálico (VOLT2) */}
         <div className="grid grid-cols-3 gap-3 md:gap-5">
           {stats.map((s) => (
             <div key={s.label} className="min-w-0">
@@ -2621,7 +2500,7 @@ export function TransferRowCard({
               </span>
             )}
             <span
-              className="font-impact tabular-nums leading-tight text-neon-green"
+              className="font-impact tabular-nums leading-tight text-white"
               style={{ fontSize: 'clamp(18px, 2.4vw, 24px)' }}
             >
               {fixedSale ? fixedSale.price : formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
@@ -2633,7 +2512,7 @@ export function TransferRowCard({
               e.stopPropagation();
               onSelect();
             }}
-            className="inline-flex items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all hover:bg-white hover:scale-[1.02] active:scale-[0.98]"
+            className="inline-flex items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black transition-colors hover:bg-white"
             style={{ borderRadius: 'var(--radius-sm)' }}
           >
             {fixedSale ? fixedSale.cta : 'Dar Lance'}

@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Wallet as WalletIcon, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import {
   connectAndLinkSolanaWallet,
   fetchMyLinkedSolanaWallet,
-  hasSolanaWalletInstalled,
+  listSolanaWallets,
+  onSolanaWalletsChange,
+  type SolanaWalletLink,
+  type SolanaWalletOption,
 } from '@/supabase/solanaWallet';
 
 function truncateAddress(addr: string): string {
@@ -11,84 +14,99 @@ function truncateAddress(addr: string): string {
 }
 
 /**
- * Vínculo de carteira Solana — ponte mínima pro lançamento (não é claim real
- * ainda, só registra o endereço pra lista de espera). Ver
- * src/supabase/solanaWallet.ts.
+ * Vínculo de carteira Solana com prova de posse (A VIRADA · C1). Lista toda
+ * carteira Solana instalada pelo Wallet Standard — não só a Phantom — e só
+ * vincula depois que a própria carteira assina. Ver src/supabase/solanaWallet.ts.
+ *
+ * VOLT2: categoria em #hashtag, uma linha por texto, a ação é o nome da carteira.
  */
 export function SolanaWalletCard() {
-  const [address, setAddress] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [link, setLink] = useState<SolanaWalletLink | null>(null);
+  const [wallets, setWallets] = useState<SolanaWalletOption[]>(() => listSolanaWallets());
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    void fetchMyLinkedSolanaWallet().then((link) => {
+    void fetchMyLinkedSolanaWallet().then((l) => {
       if (!cancelled) {
-        setAddress(link?.walletAddress ?? null);
+        setLink(l);
         setChecked(true);
       }
     });
-    return () => { cancelled = true; };
+    const off = onSolanaWalletsChange(() => setWallets(listSolanaWallets()));
+    return () => {
+      cancelled = true;
+      off();
+    };
   }, []);
 
-  const onConnect = async () => {
+  const onLink = async (option: SolanaWalletOption) => {
     if (busy) return;
-    setBusy(true);
+    setBusy(option.name);
     setError(null);
     try {
-      const r = await connectAndLinkSolanaWallet();
-      if (!r.ok) {
-        setError(r.error ?? 'Não foi possível conectar a carteira.');
+      const r = await connectAndLinkSolanaWallet(option);
+      if (!r.ok || !r.address) {
+        setError(r.error ?? 'Não foi possível vincular a carteira.');
         return;
       }
-      setAddress(r.address ?? null);
+      setLink({ walletAddress: r.address, verified: true, linkedAt: new Date().toISOString() });
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
   if (!checked) return null;
 
+  const verified = Boolean(link?.verified);
+
   return (
-    <section className="relative overflow-hidden rounded-sm border border-white/[0.1] bg-black/70 px-5 py-4 backdrop-blur-md">
-      <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow/90" aria-hidden />
+    <section className="border border-white/10 bg-panel px-5 py-4">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80">
-            Carteira Solana
-          </p>
-          {address ? (
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-white">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" strokeWidth={2.5} />
-              {truncateAddress(address)}
+          <p className="font-mono text-[11.5px] text-poeira">#solana</p>
+          {verified && link ? (
+            <p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm text-white">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-alta" strokeWidth={2.5} />
+              <span className="truncate font-mono">{truncateAddress(link.walletAddress)}</span>
             </p>
           ) : (
-            <p className="mt-1 text-[12px] text-white/60">
-              Conecte pra garantir sua vaga no claim do $OLE.
+            <p className="mt-1 truncate text-[13px] text-giz">
+              {link ? 'Confirme com a carteira' : 'Vincule sua carteira'}
             </p>
           )}
         </div>
-        {!address && (
-          <button
-            type="button"
-            onClick={() => void onConnect()}
-            disabled={busy || !hasSolanaWalletInstalled()}
-            className="btn-primary shrink-0 disabled:pointer-events-none disabled:opacity-40"
-          >
-            <span className="btn-primary-inner flex items-center gap-1.5 px-3 py-1.5">
-              <WalletIcon className="h-4 w-4" />
-              {busy ? 'Conectando…' : 'Conectar'}
-            </span>
-          </button>
-        )}
       </div>
-      {!hasSolanaWalletInstalled() && !address && (
-        <p className="mt-2 text-[11px] text-white/40">
-          Instale a Phantom (phantom.app) pra conectar.
-        </p>
+
+      {!verified && (
+        wallets.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {wallets.map((w) => (
+              <button
+                key={w.name}
+                type="button"
+                onClick={() => void onLink(w)}
+                disabled={busy != null}
+                className="btn-secondary px-3 py-1.5 text-[12px] disabled:pointer-events-none disabled:opacity-40"
+              >
+                <span className="btn-secondary-inner">
+                  <img src={w.icon} alt="" className="h-4 w-4" />
+                  {busy === w.name ? 'Assinando…' : w.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-2 space-y-1">
+            <p className="truncate text-[12px] text-cimento">Nenhuma carteira Solana neste navegador</p>
+            <p className="truncate text-[12px] text-poeira">No celular, abra o jogo pelo app da Phantom ou da MetaMask</p>
+          </div>
+        )
       )}
-      {error && <p className="mt-2 text-[11px] text-rose-300">{error}</p>}
+
+      {error && <p className="mt-2 text-[12px] text-baixa">{error}</p>}
     </section>
   );
 }

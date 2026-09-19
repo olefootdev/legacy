@@ -70,7 +70,7 @@ export function AnalystBeatCard({ beat, onChoose }: Props) {
           <motion.span
             animate={{ opacity: [0.3, 1, 0.3] }}
             transition={{ duration: 1, repeat: Infinity }}
-            className="font-sans text-[13px] italic"
+            className="font-sans text-[13px]"
           >
             O Analista está lendo o jogo…
           </motion.span>

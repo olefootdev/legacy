@@ -119,14 +119,14 @@ function RadarSVG({ values }: { values: number[] }) {
       <path
         d={hexPath(values, maxR, cx, cy)}
         fill="rgba(253,225,0,0.15)"
-        stroke="#FDE100"
+        stroke="var(--color-neon-yellow)"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
       {/* Vertex dots */}
       {values.map((v, i) => {
         const [x, y] = hexPoint((360 / n) * i, (v / 100) * maxR, cx, cy);
-        return <circle key={i} cx={x.toFixed(2)} cy={y.toFixed(2)} r="2.5" fill="#FDE100" />;
+        return <circle key={i} cx={x.toFixed(2)} cy={y.toFixed(2)} r="2.5" fill="var(--color-neon-yellow)" />;
       })}
       {/* Labels */}
       {RADAR_LABELS.map((label, i) => {
@@ -387,14 +387,14 @@ function FormWidget() {
       {ranking && ranking.matchesPlayed > 0 && (
         <div className="grid grid-cols-3 gap-1 text-center">
           {([
-            { label: 'VITÓRIAS', value: ranking.wins, color: 'text-green-400' },
-            { label: 'EMPATES', value: ranking.draws, color: 'text-yellow-400' },
-            { label: 'DERROTAS', value: ranking.losses, color: 'text-red-400' },
+            { label: 'VITÓRIAS', value: ranking.wins, color: 'text-alta' },
+            { label: 'EMPATES', value: ranking.draws, color: 'text-giz' },
+            { label: 'DERROTAS', value: ranking.losses, color: 'text-baixa' },
           ] as const).map((s) => (
             <div key={s.label}>
               <div
-                className={cn('tabular-nums italic', s.color)}
-                style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '18px' }}
+                className={cn('ole-num tabular-nums', s.color)}
+                style={{ fontSize: '17px' }}
               >
                 {s.value}
               </div>
@@ -475,8 +475,8 @@ function RadarWidget() {
           </div>
           <div className="flex-1 min-w-0">
             <div
-              className="tabular-nums italic text-neon-yellow mb-2 leading-none"
-              style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '28px' }}
+              className="ole-num tabular-nums text-white mb-2 leading-none"
+              style={{ fontSize: '26px' }}
             >
               {avgOvr}
             </div>
@@ -642,8 +642,8 @@ function MarketWidget() {
                   </div>
                 </div>
                 <div
-                  className="tabular-nums italic text-neon-yellow shrink-0"
-                  style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '18px' }}
+                  className="ole-num tabular-nums text-white shrink-0"
+                  style={{ fontSize: '16px' }}
                 >
                   {playerOvr}
                 </div>
@@ -1463,7 +1463,7 @@ function CoachInlineChat() {
           className={cn(
             'flex items-center justify-center shrink-0 mb-0.5 transition-all',
             input.trim() && !loading
-              ? 'text-neon-yellow hover:scale-110 active:scale-95'
+              ? 'text-neon-yellow hover:text-white'
               : 'text-white/20 cursor-not-allowed',
           )}
           aria-label="Enviar"
@@ -1838,7 +1838,7 @@ function ChatPanel() {
             className={cn(
               'flex items-center justify-center shrink-0 mb-0.5 transition-all',
               canSend
-                ? 'text-neon-yellow hover:scale-110 active:scale-95'
+                ? 'text-neon-yellow hover:text-white'
                 : 'text-white/20 cursor-not-allowed',
             )}
             aria-label="Enviar"
@@ -1861,11 +1861,8 @@ function HubHeader({ onClose }: { onClose?: () => void }) {
 
   return (
     <div className="shrink-0">
-      {/* Rail amarelo topo */}
-      <span
-        aria-hidden
-        className="block h-px bg-gradient-to-r from-transparent via-neon-yellow/55 to-transparent"
-      />
+      {/* Filete de topo — chapado */}
+      <span aria-hidden className="block h-px bg-white/10" />
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -1892,8 +1889,8 @@ function HubHeader({ onClose }: { onClose?: () => void }) {
           <div className="min-w-0">
             {managerFirst && (
               <span
-                className="italic text-neon-yellow leading-none block"
-                style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '16px' }}
+                className="font-impact uppercase text-white leading-[1.1] block"
+                style={{ fontSize: '17px' }}
               >
                 {managerFirst}
               </span>
@@ -1908,8 +1905,8 @@ function HubHeader({ onClose }: { onClose?: () => void }) {
             )}
           </div>
           <span
-            className="tabular-nums italic text-neon-yellow ml-auto"
-            style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '16px' }}
+            className="font-mono font-medium tabular-nums text-white ml-auto"
+            style={{ fontSize: '14px' }}
           >
             {formatOle(expBalance)} EXP
           </span>
@@ -1986,19 +1983,15 @@ function ScoutsStatusWidget() {
   return (
     <motion.button
       type="button"
-      whileHover={{ y: -1 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
       onClick={() => navigate('/manager/scouts')}
       className={cn(
-        'group w-full text-left border border-l-[3px] border-white/10 bg-[var(--color-card)] p-3 transition-all',
+        'group w-full text-left border border-l-[3px] border-white/10 bg-[var(--color-card)] p-3 transition-colors',
         'hover:border-neon-yellow/40',
         railColor,
       )}
-      style={{
-        borderRadius: 'var(--radius-md)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-      }}
+      style={{ borderRadius: 'var(--radius-md)' }}
       aria-label="Abrir painel SCOUTS"
     >
       {/* Eyebrow */}
@@ -2024,7 +2017,7 @@ function ScoutsStatusWidget() {
         />
       </div>
 
-      {/* Counts row — Moret italic nos números */}
+      {/* Counts row */}
       <div className="grid grid-cols-3 gap-2 mb-2">
         <div className="flex flex-col items-start">
           <span
@@ -2033,11 +2026,10 @@ function ScoutsStatusWidget() {
               unavailable > 0 ? 'text-[var(--color-danger)]' : 'text-white/70',
             )}
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
-              fontWeight: 700,
-              fontSize: '22px',
-              letterSpacing: '-0.03em',
+              fontFamily: 'var(--font-num)',
+              fontStretch: '125%',
+              fontWeight: 800,
+              fontSize: '20px',
             }}
           >
             {unavailable}
@@ -2066,11 +2058,10 @@ function ScoutsStatusWidget() {
                   : 'text-white/70',
             )}
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
-              fontWeight: 700,
-              fontSize: '22px',
-              letterSpacing: '-0.03em',
+              fontFamily: 'var(--font-num)',
+              fontStretch: '125%',
+              fontWeight: 800,
+              fontSize: '20px',
             }}
           >
             {alerts}
@@ -2095,11 +2086,10 @@ function ScoutsStatusWidget() {
               celebrations > 0 ? 'text-[var(--color-success)]' : 'text-white/70',
             )}
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
-              fontWeight: 700,
-              fontSize: '22px',
-              letterSpacing: '-0.03em',
+              fontFamily: 'var(--font-num)',
+              fontStretch: '125%',
+              fontWeight: 800,
+              fontSize: '20px',
             }}
           >
             {celebrations}
@@ -2131,9 +2121,8 @@ function ScoutsStatusWidget() {
             <span
               className="text-white/85 tabular-nums"
               style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontStyle: 'italic',
-                fontWeight: 700,
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 500,
               }}
             >
               {mostUrgent.msUntilExpiry < 60_000
@@ -2176,11 +2165,11 @@ function HubQuickMenu() {
             type="button"
             whileTap={{ scale: 0.97 }}
             onClick={() => navigate(to)}
-            className="group flex items-center gap-2.5 border border-white/10 bg-white/[0.03] px-3 transition-all hover:border-neon-yellow/40 hover:-translate-y-0.5 hover:bg-white/[0.05] active:scale-[0.98]"
+            className="group flex items-center gap-2.5 border border-white/10 bg-panel px-3 transition-colors hover:border-white/30"
             style={{ minHeight: 56, borderRadius: 'var(--radius-md)' }}
           >
             <Icon
-              className="w-[18px] h-[18px] text-neon-yellow shrink-0 transition-transform group-hover:scale-110"
+              className="w-[18px] h-[18px] text-neon-yellow shrink-0"
               strokeWidth={2}
             />
             <span
@@ -2202,7 +2191,7 @@ function HubCard({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="border border-white/10 bg-[var(--color-card)] p-4"
-      style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
+      style={{ borderRadius: 'var(--radius-md)' }}
     >
       {children}
     </div>
@@ -2211,7 +2200,7 @@ function HubCard({ children }: { children: React.ReactNode }) {
 
 function HubBody({ onClose }: { onClose?: () => void }) {
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-[#0D0D0D] border-l border-white/10">
+    <div className="flex flex-col h-full overflow-hidden bg-deep-black border-l border-white/10">
       <HubHeader onClose={onClose} />
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
@@ -2267,7 +2256,7 @@ export function OleSmartHubDrawer({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="xl:hidden fixed inset-0 bg-black/70 z-[80] backdrop-blur-sm"
+            className="xl:hidden fixed inset-0 bg-black/80 z-[80]"
           />
           <motion.div
             initial={{ x: '100%' }}
@@ -2297,12 +2286,12 @@ export function OleSmartHubTrigger({
     <button
       type="button"
       onClick={onClick}
-      className="xl:hidden relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition-all hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow"
+      className="xl:hidden relative flex h-10 w-10 items-center justify-center border border-white/16 bg-nav text-white/80 transition-colors hover:border-white hover:text-white"
       aria-label="Abrir Smart Hub"
     >
       <Zap className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={2.25} />
       {hasActivity && (
-        <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-neon-yellow animate-pulse" />
+        <span className="absolute top-2 right-2 h-2 w-2 bg-neon-yellow" />
       )}
     </button>
   );

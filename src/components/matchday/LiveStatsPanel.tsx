@@ -110,11 +110,9 @@ function LiveStatsPanelInner() {
       className="px-2.5 sm:px-3 py-2.5"
       aria-label="Estatísticas da partida em tempo real"
       style={{
-        background: 'rgba(13,13,13,0.78)',
+        background: 'var(--color-nav)',
         border: '1px solid var(--color-divider-soft)',
         borderTop: '2px solid var(--color-event-save)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
       }}
     >
       <header className="mb-2.5 flex items-center justify-between gap-2">

@@ -16,6 +16,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { Hashtag } from '@/components/ui';
 
 type ModeStatus = 'available' | 'soon' | 'wip';
 
@@ -119,7 +120,7 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
         {open ? (
           <motion.div
             key="backdrop"
-            className="fixed inset-0 z-[60] bg-black/55 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] bg-black/75"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -139,7 +140,7 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="match-mode-sheet-title"
-            className="fixed bottom-0 left-0 right-0 z-[61] mx-auto w-full max-w-2xl rounded-t-3xl border-t border-neon-yellow/25 bg-deep-black/98 pb-safe shadow-[0_-12px_40px_rgba(0,0,0,0.55)]"
+            className="fixed bottom-0 left-0 right-0 z-[61] mx-auto w-full max-w-2xl border-t border-neon-yellow/25 bg-sheet pb-safe"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -158,25 +159,13 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
 
             {/* Header */}
             <div className="px-6 pt-2 pb-4">
-              <p
-                className="text-[10px] uppercase tracking-[0.32em] text-white/45 font-display font-bold"
-              >
-                Olefoot · Modos
-              </p>
+              <Hashtag>#olefoot #modos</Hashtag>
               <h2
                 id="match-mode-sheet-title"
-                className="mt-1 text-3xl italic text-neon-yellow leading-none"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontWeight: 700,
-                  letterSpacing: '-0.015em',
-                }}
+                className="mt-1 font-impact text-4xl uppercase text-neon-yellow leading-[1.1]"
               >
                 Jogar
               </h2>
-              <p className="mt-1.5 text-xs text-white/55">
-                Escolhe como queres entrar em campo agora.
-              </p>
             </div>
 
             {/* Lista de modos */}
@@ -243,7 +232,7 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
                       {!disabled ? (
                         <span
                           aria-hidden
-                          className="shrink-0 text-neon-yellow/85 text-lg transition-transform group-hover:translate-x-0.5"
+                          className="shrink-0 text-neon-yellow/85 text-lg transition-colors group-hover:text-neon-yellow"
                         >
                           ›
                         </span>
@@ -254,7 +243,7 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
               })}
             </ul>
 
-            {/* Linha sutil amarela editorial no rodapé do sheet */}
+            {/* Linha que se apaga (VOLT2 permite) no rodapé do sheet */}
             <span
               aria-hidden
               className="block h-px w-full bg-gradient-to-r from-transparent via-neon-yellow/35 to-transparent"

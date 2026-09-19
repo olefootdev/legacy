@@ -53,7 +53,7 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
           onClick={onClose}
         >
           <motion.div
@@ -61,11 +61,11 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-[95vw] max-w-7xl max-h-[90vh] overflow-auto bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg border-2 border-neon-yellow/30 shadow-2xl"
+            className="relative w-[95vw] max-w-7xl max-h-[90vh] overflow-auto bg-panel rounded-lg border-2 border-neon-yellow/30"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-gradient-to-r from-neon-yellow/20 to-neon-green/20 border-b-2 border-neon-yellow/50 px-6 py-4">
+            <div className="sticky top-0 z-10 bg-card border-b-2 border-neon-yellow/50 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Trophy className="w-8 h-8 text-neon-yellow" />
@@ -74,7 +74,7 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
                       CLASSIFICAÇÃO
                     </h2>
                     <p className="text-sm text-gray-300 font-mono">
-                      {roundNumber}ª JORNADA
+                      {roundNumber}ª RODADA
                     </p>
                   </div>
                 </div>
@@ -98,7 +98,7 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
                   className="sports-panel"
                 >
                   {/* Division Header */}
-                  <div className="bg-gradient-to-r from-neon-yellow/30 to-neon-green/30 border-b-2 border-neon-yellow/50 px-4 py-3">
+                  <div className="bg-card border-b-2 border-neon-yellow/50 px-4 py-3">
                     <h3 className="text-lg font-bold text-neon-yellow uppercase tracking-wider text-center">
                       {div.division}ª DIVISÃO
                     </h3>
@@ -196,7 +196,7 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
             </div>
 
             {/* Footer Stats */}
-            <div className="sticky bottom-0 bg-gradient-to-r from-gray-900 to-gray-800 border-t-2 border-neon-yellow/30 px-6 py-4">
+            <div className="sticky bottom-0 bg-card border-t-2 border-neon-yellow/30 px-6 py-4">
               <div className="flex items-center justify-center gap-8 text-sm">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-neon-green" />

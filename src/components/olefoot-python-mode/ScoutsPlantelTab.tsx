@@ -1,7 +1,7 @@
 /**
  * Aba PLANTEL do SCOUTS — Legacy Tech.
  *
- * Cabeçalho editorial: eyebrow Agency + headline Moret italic + régua amarela.
+ * Cabeçalho editorial: eyebrow + headline em Anton + régua amarela (VOLT2).
  * Filtros como pílulas (DS §7.6): bg neon/[0.08] quando ativo + glow.
  * Lista com `view-player-card` (cada ScoutPlayerCard).
  */
@@ -49,9 +49,9 @@ function FilterChip({
       whileTap={{ scale: 0.96 }}
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-1.5 px-3 py-1.5 border transition-all whitespace-nowrap',
+        'inline-flex items-center gap-1.5 px-3 py-1.5 border transition-colors whitespace-nowrap',
         active
-          ? 'bg-neon-yellow/[0.08] text-neon-yellow border-neon-yellow/45 shadow-[0_0_12px_rgba(253,225,0,0.18)]'
+          ? 'bg-neon-yellow text-black border-neon-yellow'
           : 'bg-deep-black/40 text-white/65 border-white/12 hover:border-neon-yellow/30 hover:text-white',
       )}
       style={{
@@ -186,14 +186,8 @@ export function ScoutsPlantelTab({ overview }: Props) {
           </span>
         </div>
         <h2
-          className="text-white leading-[0.95]"
-          style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
-            fontWeight: 700,
-            fontSize: 'clamp(22px, 3.5vw, 30px)',
-            letterSpacing: '-0.02em',
-          }}
+          className="font-impact uppercase text-white leading-[1.1]"
+          style={{ fontSize: 'clamp(22px, 3.5vw, 30px)' }}
         >
           Quem está em campo
         </h2>
@@ -282,7 +276,7 @@ export function ScoutsPlantelTab({ overview }: Props) {
 
       {sortedIds.length === 0 && (
         <div
-          className="text-center py-6 text-white/45 italic"
+          className="text-center py-6 text-white/45"
           style={{ fontFamily: 'var(--font-ui)', fontSize: '12px' }}
         >
           Nenhum jogador corresponde ao filtro.

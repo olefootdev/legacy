@@ -29,11 +29,16 @@ import {
   type CardSaleRow, type CardSalesSummary,
 } from '@/supabase/playerVip';
 import { formatExp } from '@/systems/economy';
-import { RailStat, ConfirmDialog } from '@/components/ui';
+import { RailStat, ConfirmDialog, SecaoVolt } from '@/components/ui';
 import { cn } from '@/lib/utils';
 
-const SERIF = 'var(--font-serif-hero)';
 const YELLOW = 'var(--color-neon-yellow)';
+/** Verde de "entrou dinheiro" — token VOLT2 (alta), não hex solto. */
+const ALTA = 'var(--color-alta)';
+/** Campo de formulário VOLT2: asfalto chapado, canto vivo. */
+const INPUT = 'w-full border border-white/16 bg-deep-black px-3.5 py-3 text-base text-white outline-none placeholder:text-poeira focus:border-neon-yellow';
+/** Rótulo mono (dinheiro, seção, campo). */
+const ROTULO = 'font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento';
 
 const PHASE_LABEL: Record<string, string> = {
   revelacao: 'Revelação',
@@ -72,9 +77,9 @@ export function PlayerVip() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-white" style={{ fontFamily: 'var(--font-ui)' }}>
+    <div className="min-h-screen bg-deep-black text-white" style={{ fontFamily: 'var(--font-ui)' }}>
       {session === 'loading' ? (
-        <div className="grid min-h-screen place-items-center text-white/50">
+        <div className="grid min-h-screen place-items-center text-cimento">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
       ) : session === 'anon' ? (
@@ -112,32 +117,31 @@ function PlayerVipLogin() {
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
       <div className="mb-10 flex items-center gap-3">
         <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="w-auto shrink-0" style={{ height: 22 }} />
-        <span className="font-display text-[15px] font-black uppercase tracking-wide text-white/40">PLAYERVIP</span>
+        <span className="font-impact text-[15px] uppercase tracking-wide text-cimento">PLAYERVIP</span>
       </div>
 
       {state === 'sent' ? (
-        <div className="rounded-2xl border border-white/10 bg-[#131315] p-7 text-center">
-          <CheckCircle2 className="mx-auto mb-4 h-10 w-10" style={{ color: YELLOW }} />
-          <h1 className="ole-headline-italic text-3xl">Link enviado</h1>
-          <p className="mt-3 text-sm leading-relaxed text-white/60">
+        <div className="border border-white/10 bg-panel p-7 text-center">
+          <CheckCircle2 className="mx-auto mb-4 h-10 w-10 text-neon-yellow" />
+          <h1 className="font-impact text-[32px] uppercase leading-[1.05]">Link enviado</h1>
+          <p className="mt-3 text-sm leading-relaxed text-cimento">
             Enviamos um link de acesso para <b className="text-white">{email.trim()}</b>. Abra seu e-mail e toque no
             link para entrar — sem senha.
           </p>
           <button
             onClick={() => setState('idle')}
-            className="mt-5 text-xs font-bold uppercase tracking-wider text-white/50 hover:text-white"
+            className="mt-5 text-xs font-bold uppercase tracking-wider text-cimento transition-colors hover:text-white"
           >
             Usar outro e-mail
           </button>
         </div>
       ) : (
         <>
-          <h1 className="ole-headline-italic leading-[0.95]" style={{ fontSize: 'clamp(34px,9vw,52px)' }}>
-            Bem-vindo,<br />lenda.
+          <h1 className="font-impact uppercase leading-[1.02]" style={{ fontSize: 'clamp(40px,12vw,64px)' }}>
+            Bem-vindo,<br /><span className="text-neon-yellow">lenda.</span>
           </h1>
-          <p className="mt-4 text-sm leading-relaxed text-white/55">
-            Seu espaço para acompanhar coleções, vendas e receber seus valores. Digite seu e-mail e enviamos um
-            link de acesso.
+          <p className="mt-4 text-sm leading-relaxed text-cimento">
+            Digite seu e-mail e enviamos um link de acesso.
           </p>
           <div className="mt-7 space-y-3">
             <input
@@ -148,19 +152,18 @@ function PlayerVipLogin() {
               onChange={(e) => { setEmail(e.target.value); if (state === 'error') setState('idle'); }}
               onKeyDown={(e) => { if (e.key === 'Enter') void send(); }}
               placeholder="seu@email.com"
-              className="w-full rounded-xl border border-white/12 bg-[#0c0c0d] px-4 py-4 text-base text-white outline-none placeholder:text-white/30 focus:border-white/30"
+              className="w-full border border-white/16 bg-panel px-4 py-4 text-base text-white outline-none placeholder:text-poeira focus:border-neon-yellow"
             />
-            {state === 'error' && <p className="text-xs text-red-400">{err}</p>}
+            {state === 'error' && <p className="text-xs text-baixa">{err}</p>}
             <button
               onClick={() => void send()}
               disabled={state === 'sending'}
-              className="flex w-full items-center justify-center gap-2 rounded-xl py-4 font-display text-sm font-black uppercase tracking-wider text-black transition-transform hover:-translate-y-0.5 disabled:opacity-60"
-              style={{ background: YELLOW }}
+              className="btn-primary flex h-14 w-full items-center justify-center gap-2 disabled:opacity-60"
             >
               {state === 'sending' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Receber link de acesso'}
             </button>
           </div>
-          <p className="mt-6 text-center text-[11px] leading-relaxed text-white/35">
+          <p className="mt-6 text-center text-[11px] leading-relaxed text-poeira">
             Prefere WhatsApp? Peça seu link direto ao seu contato na OLEFOOT.
           </p>
         </>
@@ -318,44 +321,42 @@ function PlayerVipDashboard() {
   return (
     <div className="mx-auto max-w-2xl px-4 pb-24 pt-6">
       {/* Top bar */}
-      <header className="sticky top-0 z-20 -mx-4 mb-2 flex items-center justify-between bg-gradient-to-b from-[#0a0a0b] via-[#0a0a0b] to-transparent px-4 py-3">
+      <header className="sticky top-0 z-20 -mx-4 mb-4 flex max-w-none items-center justify-between border-b border-white/10 bg-deep-black px-4 py-3">
         <div className="flex items-center gap-2.5">
           <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="w-auto shrink-0" style={{ height: 19 }} />
-          <span className="font-display text-[13px] font-black uppercase tracking-wide text-white/40">PLAYERVIP</span>
+          <span className="font-impact text-[13px] uppercase tracking-wide text-cimento">PLAYERVIP</span>
         </div>
-        <button onClick={() => void logout()} className="flex items-center gap-1.5 text-xs text-white/45 hover:text-white" aria-label="Sair">
+        <button onClick={() => void logout()} className="flex items-center gap-1.5 text-xs text-cimento transition-colors hover:text-white" aria-label="Sair">
           <LogOut className="h-4 w-4" />
         </button>
       </header>
 
       {/* SALDO HERO */}
-      <section className="relative overflow-hidden rounded-3xl border border-white/10"
-        style={{ background: 'radial-gradient(130% 100% at 100% 0%, rgba(253,225,0,.08), transparent 55%), linear-gradient(180deg,#17171b,#121214)' }}>
-        <div className="flex flex-wrap items-end justify-between gap-5 p-7 pb-5">
-          <div>
-            <div className="font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">Disponível para saque</div>
-            <div className="mt-3 italic leading-none text-white" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 'clamp(44px,12vw,64px)' }}>
+      <section className="border border-white/10 bg-panel">
+        <div className="flex flex-wrap items-end justify-between gap-5 p-5 pb-4 sm:p-7 sm:pb-5">
+          <div className="min-w-0">
+            <div className={ROTULO}>Disponível para saque</div>
+            <div className="ole-num mt-3 leading-none text-white [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(26px,8.5vw,52px)' }}>
               {loading ? '—' : brl(withdrawable)}
             </div>
           </div>
           <div className="flex gap-2.5">
             <button
               onClick={() => setModal('withdraw')}
-              className="rounded-xl px-6 py-4 font-display text-sm font-black uppercase tracking-wider text-black transition-transform hover:-translate-y-0.5"
-              style={{ background: YELLOW, boxShadow: '0 0 30px rgba(253,225,0,.25)' }}
+              className="btn-primary flex h-14 items-center justify-center"
             >
               Sacar
             </button>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 px-7 pb-6">
+        <div className="flex flex-wrap items-center gap-2 px-5 pb-5 sm:px-7 sm:pb-6">
           {withdrawals.some((w) => w.status === 'pending') && (
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/12 px-3 py-1.5 text-xs font-semibold text-white/60">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: '#f5a524', boxShadow: '0 0 8px #f5a524' }} />
+            <span className="inline-flex items-center gap-2 border border-white/10 px-3 py-1.5 font-mono text-[11px] font-medium text-cimento">
+              <span className="h-1.5 w-1.5 rounded-full bg-atencao" />
               Saque em análise
             </span>
           )}
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/12 px-3 py-1.5 text-xs font-semibold text-white/60">
+          <span className="inline-flex items-center gap-2 border border-white/10 px-3 py-1.5 font-mono text-[11px] font-medium text-cimento">
             Depósito em até <b className="text-white">2 dias úteis</b>
           </span>
         </div>
@@ -364,24 +365,23 @@ function PlayerVipDashboard() {
       {/* STAT STRIP */}
       <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <RailStat label="Coleções" value={loading ? '—' : String(cards.length)} />
-        <RailStat label="Vendidos" value={loading ? '—' : String(summary.totalSales)} rail="var(--good, #46d07f)" />
+        <RailStat label="Vendidos" value={loading ? '—' : String(summary.totalSales)} rail={ALTA} />
         <RailStat label="Curtidas" value={loading ? '—' : likes.toLocaleString('pt-BR')} />
         <RailStat label="Indicados" value={loading ? '—' : String(referrals.length)} />
       </div>
 
       {/* COMISSÃO DE FACILITADOR — só aparece se a lenda trouxe outras lendas */}
       {!loading && (summary.facilitatorBroCents > 0 || summary.facilitatorSales > 0) && (
-        <div className="mt-2.5 flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-5 py-4"
-          style={{ background: 'linear-gradient(180deg,#17171b,#121214)' }}>
-          <div>
-            <div className="font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/50">
+        <div className="mt-2.5 flex items-center justify-between gap-3 border border-white/10 bg-panel px-5 py-4">
+          <div className="min-w-0">
+            <div className={ROTULO}>
               Comissão de facilitador
             </div>
-            <div className="mt-0.5 text-[11px] text-white/45">
+            <div className="mt-0.5 text-[11px] text-cimento">
               {summary.facilitatorSales} venda{summary.facilitatorSales === 1 ? '' : 's'} de lendas que você trouxe
             </div>
           </div>
-          <div className="italic text-white" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 26 }}>
+          <div className="ole-num shrink-0 text-[20px] text-white">
             {brl(summary.facilitatorBroCents)}
           </div>
         </div>
@@ -390,17 +390,16 @@ function PlayerVipDashboard() {
       {/* RECEITA DA PLATAFORMA — só aparece na conta OLEFOOT (fatias
           olefoot 25% + community 15%). Pro atleta isso é sempre zero. */}
       {!loading && summary.platformSales > 0 && (
-        <div className="mt-2.5 flex items-center justify-between gap-3 rounded-2xl border px-5 py-4"
-          style={{ background: 'linear-gradient(180deg,#17171b,#121214)', borderColor: 'rgba(253,225,0,.25)' }}>
-          <div>
-            <div className="font-display text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: YELLOW }}>
+        <div className="mt-2.5 flex items-center justify-between gap-3 border border-neon-yellow/30 bg-panel px-5 py-4">
+          <div className="min-w-0">
+            <div className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-neon-yellow">
               Receita OLEFOOT
             </div>
-            <div className="mt-0.5 text-[11px] text-white/45">
+            <div className="mt-0.5 text-[11px] text-cimento">
               {summary.platformSales} repasse{summary.platformSales === 1 ? '' : 's'} de venda de card (25% + 15%)
             </div>
           </div>
-          <div className="italic text-white" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 26 }}>
+          <div className="ole-num shrink-0 text-[20px] text-white">
             {brl(summary.platformBroCents)}
           </div>
         </div>
@@ -418,48 +417,51 @@ function PlayerVipDashboard() {
             const cardStats = salesByCard.get(c.id) ?? { count: 0, broCents: 0, olefootCents: 0 };
             const phase = phaseFromId(c.id);
             return (
-              <div key={`${c.source}:${c.id}`} className="relative flex items-stretch overflow-hidden rounded-2xl border border-white/10 bg-[#121214]">
-                <span className="absolute inset-y-[15%] left-0 w-[3px] rounded-r" style={{ background: YELLOW }} />
-                <div className="relative m-3.5 ml-5 flex w-24 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-[#22222a] to-[#0e0e11]">
+              <div key={`${c.source}:${c.id}`} className="flex items-stretch overflow-hidden border border-white/10 bg-panel">
+                <div className="relative m-3.5 flex w-24 shrink-0 overflow-hidden border border-white/10 bg-card">
                   {c.portrait_public_url ? (
                     <img src={c.portrait_public_url} alt={c.name}
-                      className="h-full w-full object-cover opacity-90" style={{ filter: 'grayscale(.15)' }} loading="lazy" />
+                      className="object-cover opacity-90"
+                      // Inline de propósito: mobile-responsive.css tem `img { height: auto }`
+                      // fora de camada, que vence o h-full do Tailwind.
+                      style={{ width: '100%', height: '100%', filter: 'grayscale(.15)' }} loading="lazy" />
                   ) : (
-                    <span className="grid h-full w-full place-items-center italic text-white/10"
-                      style={{ fontFamily: SERIF, fontSize: 64 }}>{initialOf(c.name)}</span>
+                    <span className="grid h-full w-full place-items-center font-impact text-[56px] uppercase text-white/10">
+                      {initialOf(c.name)}
+                    </span>
                   )}
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 py-4 pr-3">
-                  <div className="font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">
+                  <div className={cn(ROTULO, 'truncate')}>
                     {phase ? `Fase · ${phase}` : (c.rarity_label || 'Coleção')}
                   </div>
-                  <h3 className="truncate text-[17px] font-extrabold">{c.name}</h3>
+                  <h3 className="truncate font-impact text-[20px] uppercase leading-[1.1] text-white">{c.name}</h3>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1">
                     <Kv k="Vendidos" v={String(cardStats.count)} />
                     {c.listed_on_market
-                      ? <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: YELLOW }}>À venda</span>
-                      : <span className="text-[11px] font-semibold uppercase tracking-wide text-white/35">Pausada</span>}
+                      ? <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-neon-yellow">À venda</span>
+                      : <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-poeira">Pausada</span>}
                   </div>
                   {/* Só quem é dono do card chega aqui (get_my_linked_cards filtra por
                       beneficiary) — e o servidor recusa de novo no RPC. */}
                   <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
                     <button type="button" onClick={() => setContribution({ kind: 'correcao', card: c })}
-                      className="text-[11px] font-bold uppercase tracking-wider text-white/35 underline-offset-2 hover:text-white/70 hover:underline">
+                      className="text-[11px] font-bold uppercase tracking-wider text-cimento underline-offset-2 transition-colors hover:text-white hover:underline">
                       Sugerir correção
                     </button>
                     <button type="button" onClick={() => setContribution({ kind: 'historia', card: c })}
-                      className="text-[11px] font-bold uppercase tracking-wider text-white/35 underline-offset-2 hover:text-white/70 hover:underline">
+                      className="text-[11px] font-bold uppercase tracking-wider text-cimento underline-offset-2 transition-colors hover:text-white hover:underline">
                       Contar a história
                     </button>
                   </div>
                 </div>
-                <div className="hidden w-32 shrink-0 flex-col items-end justify-center gap-0.5 border-l border-white/10 px-5 sm:flex">
-                  <div className="italic text-white" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 22 }}>
+                <div className="hidden w-36 shrink-0 flex-col items-end justify-center gap-0.5 border-l border-white/10 px-4 sm:flex">
+                  <div className="max-w-full truncate font-mono text-[14px] font-medium text-white">
                     {cardStats.broCents > 0 || cardStats.olefootCents === 0
                       ? brl(cardStats.broCents)
                       : `${formatExp(cardStats.olefootCents)}`}
                   </div>
-                  <div className="font-display text-[9px] font-bold uppercase tracking-[0.14em] text-white/40">
+                  <div className="font-mono text-[9.5px] font-medium uppercase tracking-[0.14em] text-poeira">
                     {cardStats.broCents > 0 || cardStats.olefootCents === 0 ? 'Ganhos (R$)' : 'Ganhos (OLE)'}
                   </div>
                 </div>
@@ -476,29 +478,29 @@ function PlayerVipDashboard() {
       ) : sales.length === 0 ? (
         <EmptyCard>Quando alguém comprar um card seu, a venda aparece aqui na hora.</EmptyCard>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121214]">
+        <div className="overflow-hidden border border-white/10 bg-panel">
           {sales.map((s, i) => {
             const name = cards.find((c) => c.id === s.legacy_player_id)?.name ?? s.legacy_player_id;
             const isBro = s.currency === 'BRO';
             const isFac = s.role === 'facilitator';
             const isPlatform = s.role === 'olefoot' || s.role === 'community';
             const tag = isFac ? 'Comissão' : s.role === 'olefoot' ? 'Olefoot 25%' : s.role === 'community' ? 'Comunidade 15%' : null;
-            const accent = isFac || isPlatform ? YELLOW : '#46d07f';
+            const accent = isFac || isPlatform ? YELLOW : ALTA;
             return (
               <div key={s.id}
                 className={cn('flex items-center gap-3.5 px-5 py-3.5 transition', i > 0 && 'border-t border-white/[0.07]',
-                  flashId === s.id && 'bg-[rgba(70,208,127,.1)]')}>
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: accent, boxShadow: `0 0 10px ${accent === YELLOW ? 'rgba(253,225,0,.5)' : 'rgba(70,208,127,.5)'}` }} />
+                  flashId === s.id && 'bg-alta/10')}>
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: accent }} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-bold">
-                    {tag && <span className="mr-1.5 rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide" style={{ background: 'rgba(253,225,0,.14)', color: YELLOW }}>{tag}</span>}
+                    {tag && <span className="mr-1.5 bg-neon-yellow/15 px-1.5 py-0.5 font-mono text-[9.5px] font-medium uppercase tracking-wide text-neon-yellow">{tag}</span>}
                     {name}
                   </div>
-                  <div className="mt-0.5 text-[11px] text-white/45">
+                  <div className="mt-0.5 truncate text-[11px] text-cimento">
                     {isFac ? 'Facilitador · ' : isPlatform ? 'Plataforma · ' : ''}{isBro ? 'PIX' : 'OLEFOOT'} · {new Date(s.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
-                <div className="shrink-0 italic" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 18, color: isFac ? YELLOW : '#46d07f' }}>
+                <div className={cn('ole-num shrink-0 text-[14px]', isFac ? 'text-neon-yellow' : 'text-alta')}>
                   +{isBro ? brl(s.owner_cents) : formatExp(s.owner_cents)}
                 </div>
               </div>
@@ -510,37 +512,34 @@ function PlayerVipDashboard() {
       {/* COMISSÕES */}
       <SectionHeader title="Comissões" />
       <div className="grid gap-2.5 sm:grid-cols-[1fr_1.35fr]">
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 p-5 pl-6"
-          style={{ background: 'linear-gradient(180deg,#17171b,#121214)' }}>
-          <span className="absolute inset-y-[12%] left-0 w-[3px] rounded-r" style={{ background: '#46d07f' }} />
-          <div className="font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/50">Recebido por indicações</div>
-          <div className="mt-3 italic text-white" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 40 }}>
+        <div className="border border-white/10 bg-panel p-5">
+          <div className={ROTULO}>Recebido por indicações</div>
+          <div className="ole-num mt-3 text-white [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(24px,7vw,32px)' }}>
             {loading ? '—' : brl(commissionBroCents)}
           </div>
-          <p className="mt-3 text-xs leading-relaxed text-white/45">
+          <p className="mt-3 text-xs leading-relaxed text-cimento">
             Você ganha sobre as vendas dos jogadores que trouxe para a OLEFOOT.
           </p>
         </div>
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121214]">
+        <div className="overflow-hidden border border-white/10 bg-panel">
           {loading ? (
-            <div className="p-5 text-sm text-white/40">Carregando…</div>
+            <div className="p-5 text-sm text-poeira">Carregando…</div>
           ) : referrals.length === 0 ? (
-            <div className="p-5 text-sm text-white/45">Você ainda não indicou ninguém. Compartilhe seu link abaixo.</div>
+            <div className="p-5 text-sm text-cimento">Você ainda não indicou ninguém. Compartilhe seu link abaixo.</div>
           ) : (
             referrals.slice(0, 6).map((r, i) => (
               <div key={r.id} className={cn('flex items-center gap-3 px-4 py-3.5', i > 0 && 'border-t border-white/[0.07]')}>
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/15 bg-[#1c1c22] italic text-white/60"
-                  style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 14 }}>
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/16 bg-card font-impact text-[15px] uppercase text-giz">
                   {initialOf(r.displayName ?? r.clubName ?? '?')}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-bold">{r.displayName ?? r.clubName ?? 'Manager'}</div>
-                  <div className="mt-0.5 text-[11px] text-white/45">Entrou pelo seu link</div>
+                  <div className="mt-0.5 text-[11px] text-cimento">Entrou pelo seu link</div>
                 </div>
                 {/* Tamanho da equipe dele. A comissão sobre o EXP do indicado foi
                     removida em 2026-07-17 — agora o ganho vem por marco de rede. */}
                 {r.legSize > 0 ? (
-                  <span className="shrink-0 text-[11px] text-white/45">
+                  <span className="shrink-0 font-mono text-[11px] text-cimento">
                     equipe de {r.legSize.toLocaleString('pt-BR')}
                   </span>
                 ) : null}
@@ -552,23 +551,21 @@ function PlayerVipDashboard() {
 
       {/* INDICAÇÃO */}
       <SectionHeader title="Indique uma Lenda" />
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 p-5"
-        style={{ background: 'radial-gradient(120% 140% at 0% 0%, rgba(253,225,0,.09), transparent 50%), #121214' }}>
+      <div className="flex flex-wrap items-center justify-between gap-4 border border-white/10 bg-panel p-5">
         <div className="min-w-0">
-          <h4 className="text-base font-extrabold">Traga outros craques</h4>
-          <p className="mt-1 text-xs text-white/50">Compartilhe seu link e ganhe comissão sobre o que eles venderem.</p>
+          <h4 className="font-impact text-[20px] uppercase leading-[1.1] text-white">Traga outros craques</h4>
+          <p className="mt-1 text-xs text-cimento">Compartilhe seu link e ganhe comissão sobre o que eles venderem.</p>
         </div>
-        <div className="flex items-center overflow-hidden rounded-xl border border-white/15 bg-[#0c0c0d]">
-          <code className="max-w-[52vw] truncate px-3.5 text-xs font-semibold text-white/85 sm:max-w-[220px]">
+        <div className="flex items-center overflow-hidden border border-white/16 bg-deep-black">
+          <code className="max-w-[52vw] truncate px-3.5 font-mono text-xs font-medium text-giz sm:max-w-[220px]">
             {shareUrl || '—'}
           </code>
           <button onClick={copyLink} disabled={!shareUrl}
-            className="px-3 py-3.5 text-white/60 hover:text-white disabled:opacity-40" aria-label="Copiar link">
-            {copied ? <CheckCircle2 className="h-4 w-4" style={{ color: '#46d07f' }} /> : <Copy className="h-4 w-4" />}
+            className="px-3 py-3.5 text-cimento transition-colors hover:text-white disabled:opacity-40" aria-label="Copiar link">
+            {copied ? <CheckCircle2 className="h-4 w-4 text-alta" /> : <Copy className="h-4 w-4" />}
           </button>
           <button onClick={() => void shareLink()} disabled={!shareUrl}
-            className="px-4 py-3.5 font-display text-xs font-black uppercase tracking-wider text-black disabled:opacity-40"
-            style={{ background: YELLOW }}>
+            className="bg-neon-yellow px-4 py-3.5 font-display text-xs font-black uppercase tracking-wider text-black transition-colors hover:bg-white disabled:opacity-40">
             <Share2 className="h-4 w-4" />
           </button>
         </div>
@@ -577,18 +574,18 @@ function PlayerVipDashboard() {
       {/* AÇÕES */}
       <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
         <ActionTile icon={<Plus className="h-5 w-5" />} accent={YELLOW}
-          title="Pedir um card meu" desc="Teve uma época marcante que ainda não virou card? Conte o ano e o clube."
+          title="Pedir um card meu" desc="Conte o ano e o clube."
           onClick={() => setContribution({ kind: 'novo_card', card: null })} />
-        <ActionTile icon={<Sparkles className="h-5 w-5" />} accent="#c084fc"
-          title="Indicar um atleta" desc="Conhece alguém que merece uma coleção? Indique para a OLEFOOT."
+        <ActionTile icon={<Sparkles className="h-5 w-5" />} accent="var(--color-lenda)"
+          title="Indicar um atleta" desc="Quem merece uma coleção?"
           onClick={() => setModal('collection')} />
-        <ActionTile icon={<MessageCircle className="h-5 w-5" />} accent="#5b8def"
-          title="Falar com a OLEFOOT" desc="Dúvida, saque, contrato? Nossa equipe responde por aqui."
+        <ActionTile icon={<MessageCircle className="h-5 w-5" />} accent="var(--color-giz)"
+          title="Falar com a OLEFOOT" desc="Dúvida, saque, contrato."
           onClick={() => setModal('support')} />
       </div>
 
-      <p className="mt-10 text-center text-[11px] tracking-wide text-white/25">
-        OLEFOOT · <b className="text-white/45">PLAYERVIP</b> · Seu espaço de lenda
+      <p className="mt-10 text-center font-mono text-[11px] tracking-wide text-poeira">
+        OLEFOOT · <b className="font-medium text-cimento">PLAYERVIP</b>
       </p>
 
       {/* ── Modais ── */}
@@ -612,30 +609,26 @@ function PlayerVipDashboard() {
 }
 
 // ─── sub-componentes de layout ──────────────────────────────────────────────
+// Título de seção = SecaoVolt (risco volt + mono + linha que se apaga).
 function SectionHeader({ title }: { title: string }) {
-  return (
-    <div className="mb-4 mt-11 flex items-center gap-3.5">
-      <span className="h-8 w-[3px] rounded-sm" style={{ background: YELLOW }} />
-      <h2 className="ole-headline-italic" style={{ fontSize: 'clamp(24px,6vw,32px)' }}>{title}</h2>
-    </div>
-  );
+  return <SecaoVolt label={title} className="mb-4 mt-11" />;
 }
 function Kv({ k, v }: { k: string; v: string }) {
   return (
     <span className="flex items-baseline gap-1.5">
-      <span className="font-display text-[9px] font-bold uppercase tracking-[0.12em] text-white/40">{k}</span>
-      <span className="italic text-white" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 16 }}>{v}</span>
+      <span className="font-mono text-[9.5px] font-medium uppercase tracking-[0.12em] text-poeira">{k}</span>
+      <span className="ole-num text-[14px] text-white">{v}</span>
     </span>
   );
 }
 function EmptyCard({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.02] p-6 text-center text-sm text-white/55">{children}</div>;
+  return <div className="border border-dashed border-white/10 bg-panel p-6 text-center text-sm text-cimento">{children}</div>;
 }
 function SkeletonRows({ n }: { n: number }) {
   return (
     <div className="flex flex-col gap-2.5">
       {Array.from({ length: n }).map((_, i) => (
-        <div key={i} className="h-20 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />
+        <div key={i} className="h-20 animate-pulse border border-white/10 bg-panel" />
       ))}
     </div>
   );
@@ -645,14 +638,13 @@ function ActionTile({ icon, title, desc, accent, onClick }: {
 }) {
   return (
     <button onClick={onClick}
-      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#121214] p-5 pl-6 text-left transition hover:border-white/20 hover:bg-[#1a1a1f]">
-      <span className="absolute inset-y-[18%] left-0 w-[3px] rounded-r" style={{ background: accent }} />
-      <span className="absolute right-4 top-5 text-white/25 transition group-hover:translate-x-0.5" style={{ color: accent }}>
+      className="relative border border-white/10 bg-panel p-5 text-left transition-colors hover:border-white/30">
+      <span className="absolute right-4 top-5" style={{ color: accent }}>
         <ArrowUpRight className="h-4 w-4" />
       </span>
       <span className="mb-3 inline-block" style={{ color: accent }}>{icon}</span>
-      <h4 className="text-base font-extrabold">{title}</h4>
-      <p className="mt-1 text-xs leading-relaxed text-white/50">{desc}</p>
+      <h4 className="truncate pr-6 font-impact text-[20px] uppercase leading-[1.1] text-white">{title}</h4>
+      <p className="mt-1 truncate text-xs text-cimento">{desc}</p>
     </button>
   );
 }
@@ -691,28 +683,28 @@ function WithdrawModal({ open, onClose, maxCents, kycApproved, onDone }: {
       confirmLabel={busy ? 'Enviando…' : 'Confirmar saque'} confirmDisabled={!valid || busy || ok}
     >
       {ok ? (
-        <p className="mt-3 text-sm leading-relaxed text-white/70">
+        <p className="mt-3 text-sm leading-relaxed text-giz">
           Recebemos seu pedido. O depósito cai na conta em até <b className="text-white">2 dias úteis</b> após a conferência.
         </p>
       ) : !kycApproved ? (
-        <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] p-3.5 text-[13px] leading-relaxed text-amber-100/85">
-          <ShieldCheck className="mb-1.5 h-4 w-4 text-amber-300" />
+        <div className="mt-3 border border-atencao/40 bg-atencao/10 p-3.5 text-[13px] leading-relaxed text-giz">
+          <ShieldCheck className="mb-1.5 h-4 w-4 text-atencao" />
           Para liberar saques precisamos verificar sua conta. Toque em <b>Falar com a OLEFOOT</b> que a gente resolve rápido.
         </div>
       ) : (
         <div className="mt-4 space-y-3">
           <div>
-            <label className="font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">Valor (R$)</label>
+            <label className={ROTULO}>Valor (R$)</label>
             <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="0,00"
-              className="mt-1 w-full rounded-lg border border-white/12 bg-[#0c0c0d] px-3.5 py-3 text-base text-white outline-none focus:border-white/30" />
-            <div className="mt-1 text-[11px] text-white/40">Disponível: <b className="text-white/70">{brl(maxCents)}</b></div>
+              className={cn(INPUT, 'mt-1')} />
+            <div className="mt-1 text-[11px] text-cimento">Disponível: <b className="font-mono font-medium text-white">{brl(maxCents)}</b></div>
           </div>
           <div>
-            <label className="font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">Chave PIX</label>
+            <label className={ROTULO}>Chave PIX</label>
             <input value={pixKey} onChange={(e) => setPixKey(e.target.value)} placeholder="CPF, e-mail ou telefone"
-              className="mt-1 w-full rounded-lg border border-white/12 bg-[#0c0c0d] px-3.5 py-3 text-base text-white outline-none focus:border-white/30" />
+              className={cn(INPUT, 'mt-1')} />
           </div>
-          {err && <p className="text-xs text-red-400">{err}</p>}
+          {err && <p className="text-xs text-baixa">{err}</p>}
         </div>
       )}
     </ConfirmDialog>
@@ -737,15 +729,14 @@ function SupportModal({ open, onClose }: { open: boolean; onClose: () => void })
   return (
     <ConfirmDialog open={open} onClose={onClose} onConfirm={() => void submit()}
       eyebrow="Suporte" title={ok ? 'Mensagem enviada' : 'Falar com a OLEFOOT'}
-      confirmLabel={busy ? 'Enviando…' : 'Enviar'} confirmDisabled={busy || ok || body.trim().length < 3}
-      accent="#5b8def">
+      confirmLabel={busy ? 'Enviando…' : 'Enviar'} confirmDisabled={busy || ok || body.trim().length < 3}>
       {ok ? (
-        <p className="mt-3 text-sm leading-relaxed text-white/70">Recebemos sua mensagem. Responderemos por e-mail em breve.</p>
+        <p className="mt-3 text-sm leading-relaxed text-giz">Recebemos sua mensagem. Responderemos por e-mail em breve.</p>
       ) : (
         <div className="mt-4">
           <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder="Como podemos ajudar?"
-            className="w-full resize-none rounded-lg border border-white/12 bg-[#0c0c0d] px-3.5 py-3 text-base text-white outline-none focus:border-white/30" />
-          {err && <p className="mt-2 text-xs text-red-400">{err}</p>}
+            className={cn(INPUT, 'resize-none')} />
+          {err && <p className="mt-2 text-xs text-baixa">{err}</p>}
         </div>
       )}
     </ConfirmDialog>
@@ -774,19 +765,19 @@ function CollectionModal({ open, onClose }: { open: boolean; onClose: () => void
       eyebrow="Indicação" title={ok ? 'Indicação enviada' : 'Indicar um atleta'}
       confirmLabel={busy ? 'Enviando…' : 'Solicitar'} confirmDisabled={busy || ok || athlete.trim().length < 2}>
       {ok ? (
-        <p className="mt-3 text-sm leading-relaxed text-white/70">
-          <Sparkles className="mb-1 mr-1 inline h-4 w-4" style={{ color: YELLOW }} />
+        <p className="mt-3 text-sm leading-relaxed text-giz">
+          <Sparkles className="mb-1 mr-1 inline h-4 w-4 text-neon-yellow" />
           Recebemos! Nossa equipe monta a proposta e envia para sua aprovação.
         </p>
       ) : (
         <div className="mt-4 space-y-3">
           <input value={athlete} onChange={(e) => setAthlete(e.target.value)} placeholder="Nome do atleta que você indica"
-            className="w-full rounded-lg border border-white/12 bg-[#0c0c0d] px-3.5 py-3 text-base text-white outline-none focus:border-white/30" />
+            className={INPUT} />
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Por que ele merece uma coleção? (opcional)"
-            className="w-full resize-none rounded-lg border border-white/12 bg-[#0c0c0d] px-3.5 py-3 text-base text-white outline-none focus:border-white/30" />
+            className={cn(INPUT, 'resize-none')} />
           <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Como falar com ele? WhatsApp ou e-mail (opcional)"
-            className="w-full rounded-lg border border-white/12 bg-[#0c0c0d] px-3.5 py-3 text-base text-white outline-none focus:border-white/30" />
-          {err && <p className="text-xs text-red-400">{err}</p>}
+            className={INPUT} />
+          {err && <p className="text-xs text-baixa">{err}</p>}
         </div>
       )}
     </ConfirmDialog>

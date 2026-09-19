@@ -26,13 +26,13 @@ function collectiveGroupIcon(g: (typeof COLLECTIVE_GROUPS)[number]) {
 
 /** Descrição HONESTA do que cada role faz HOJE (treino / scouting / fadiga). Efeito em partida ao vivo é wiring futuro. */
 const ROLE_ONELINER: Record<StaffRoleId, string> = {
-  preparador_fisico: 'Energia em jogo + recuperação de fadiga fora de campo. Reforça o treino físico.',
-  mental: 'Reforça o ganho de treino mental (mentalidade e confiança).',
-  nutricao: 'Acelera a recuperação de fadiga e reduz o acúmulo de risco de lesão.',
-  tatico: 'Reforça o ganho de treino tático (posicionamento e marcação).',
-  treinador: 'Aumenta os slots de staff e o ganho geral de todos os treinos.',
-  olheiro: 'Desconto e melhores talentos no scouting de prospects NPC.',
-  preparador_goleiros: 'Reforça o treino específico dos goleiros.',
+  preparador_fisico: 'Energia em jogo e fadiga',
+  mental: 'Reforça treino mental',
+  nutricao: 'Fadiga e risco de lesão',
+  tatico: 'Reforça treino tático',
+  treinador: 'Mais slots, todo treino',
+  olheiro: 'Desconto no scouting',
+  preparador_goleiros: 'Reforça treino de goleiros',
 };
 
 function formatCost(cost: { currency: 'exp' | 'bro'; amount: number }): string {
@@ -163,7 +163,7 @@ export function TeamStaff() {
           <span className="absolute inset-y-0 left-0 w-[3px] bg-neon-yellow" aria-hidden />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-neon-yellow to-[#8a7a00] p-0.5">
+              <div className="grid h-12 w-12 place-items-center rounded-full bg-neon-yellow p-0.5">
                 <div className="grid h-full w-full place-items-center rounded-full bg-deep-black"><Bot className="h-6 w-6 text-neon-yellow" /></div>
               </div>
               <div>
@@ -172,7 +172,7 @@ export function TeamStaff() {
               </div>
             </div>
             <button onClick={() => navigate('/coach/chat')}
-              className="inline-flex items-center gap-2 rounded-[var(--radius-md)] bg-neon-yellow px-5 py-3 font-display text-sm font-bold uppercase tracking-wide text-black transition-transform hover:-translate-y-0.5">
+              className="inline-flex items-center gap-2 rounded-md bg-neon-yellow px-5 py-3 font-display text-sm font-bold uppercase tracking-wide text-black transition-colors hover:bg-white">
               <MessageCircle className="h-5 w-5" /> Conversar
             </button>
           </div>
@@ -210,11 +210,11 @@ export function TeamStaff() {
                       <span className="font-display text-[11px] text-white/35">/5</span>
                     </div>
                   </div>
-                  <p className="mt-1.5 min-h-[34px] text-[11.5px] leading-snug text-white/55">{ROLE_ONELINER[id]}</p>
+                  <p className="mt-1.5 truncate text-[11.5px] leading-snug text-white/55">{ROLE_ONELINER[id]}</p>
                   <button
                     disabled={!cost}
                     onClick={() => cost && setConfirmRole(id)}
-                    className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-neon-yellow py-2.5 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-black transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
+                    className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-neon-yellow py-2.5 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
                   >
                     {cost ? <><TrendingUp className="h-3.5 w-3.5" /> Evoluir · {formatCost(cost)}</> : 'Nível máximo'}
                   </button>
@@ -236,11 +236,10 @@ export function TeamStaff() {
           {academyRoster.length === 0 ? (
             <div className="rounded border border-dashed border-white/15 bg-black/30 p-6 text-center">
               <Sparkles className="mx-auto h-6 w-6 text-neon-yellow/80" aria-hidden />
-              <p className="mt-3 text-sm text-white/80">Ainda não há jogadores criados pelo manager.</p>
+              <p className="mt-3 text-sm text-white/80">Nenhum jogador da academia.</p>
               <p className="mt-1 text-xs text-gray-500">
-                Cria teu primeiro prospecto na{' '}
-                <Link to="/clube/academia" className="text-neon-yellow underline hover:text-white">Academia</Link>{' '}
-                pra dar buff de treino específico com os profissionais.
+                Crie o primeiro na{' '}
+                <Link to="/clube/academia" className="text-neon-yellow underline hover:text-white">Academia</Link>.
               </p>
             </div>
           ) : (

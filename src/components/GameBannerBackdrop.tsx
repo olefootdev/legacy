@@ -28,8 +28,11 @@ export function GameBannerBackdrop({
         src={url}
         alt=""
         className={cn('h-full w-full object-cover', imgClassName)}
-        style={{ opacity: imageOpacity }}
+        // Inline de propósito: mobile-responsive.css tem `img { height: auto }`
+        // fora de camada, que vence o h-full do Tailwind.
+        style={{ width: '100%', height: '100%', maxWidth: 'none', opacity: imageOpacity }}
       />
+      {/* Scrim da foto (legibilidade) — degradê permitido pelo VOLT2. */}
       <div
         className={cn(
           'absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent',

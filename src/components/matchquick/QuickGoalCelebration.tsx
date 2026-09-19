@@ -114,16 +114,12 @@ export function QuickGoalCelebration({
           onClick={(e) => e.stopPropagation()}
           className="flex flex-col items-center gap-6 px-4"
         >
-          {/* GOL em Moret italic amarelo */}
+          {/* GOL — Anton gigante em placa volt chapada */}
           <h1
-            className="text-neon-yellow leading-none"
+            className="bg-neon-yellow px-6 pt-1 text-black font-impact uppercase leading-[1.05]"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
               fontSize: 'clamp(4rem, 18vw, 10rem)',
-              fontWeight: 700,
-              letterSpacing: '-0.04em',
-              textShadow: '0 0 40px rgba(253,225,0,0.4)',
+              letterSpacing: '0.01em',
             }}
           >
             Gol
@@ -137,7 +133,7 @@ export function QuickGoalCelebration({
               transition={{ delay: 0.2 }}
               className="relative"
             >
-              <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-neon-yellow shadow-[0_0_30px_rgba(253,225,0,0.3)]">
+              <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-neon-yellow">
                 <img
                   src={scorerPortrait}
                   alt={scorerName}
@@ -147,12 +143,9 @@ export function QuickGoalCelebration({
               </div>
               {/* Nome do jogador */}
               <p
-                className="mt-3 text-center text-white uppercase tracking-wider"
+                className="mt-3 text-center text-white uppercase font-impact leading-[1.1]"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
-                  fontWeight: 700,
-                  fontSize: 'clamp(1.2rem, 4vw, 1.8rem)',
+                  fontSize: 'clamp(1.4rem, 5vw, 2.2rem)',
                   letterSpacing: '0.02em',
                 }}
               >
@@ -166,27 +159,19 @@ export function QuickGoalCelebration({
               transition={{ delay: 0.2 }}
               className="relative"
             >
-              <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-neon-yellow shadow-[0_0_30px_rgba(253,225,0,0.3)] bg-neon-yellow/10 flex items-center justify-center">
+              <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-neon-yellow bg-neon-yellow/10 flex items-center justify-center">
                 <span
-                  className="text-neon-yellow leading-none"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontStyle: 'italic',
-                    fontSize: '4rem',
-                    fontWeight: 700,
-                  }}
+                  className="font-impact text-neon-yellow leading-none"
+                  style={{ fontSize: '4rem' }}
                 >
                   G
                 </span>
               </div>
               {/* Nome do jogador */}
               <p
-                className="mt-3 text-center text-white uppercase tracking-wider"
+                className="mt-3 text-center text-white uppercase font-impact leading-[1.1]"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
-                  fontWeight: 700,
-                  fontSize: 'clamp(1.2rem, 4vw, 1.8rem)',
+                  fontSize: 'clamp(1.4rem, 5vw, 2.2rem)',
                   letterSpacing: '0.02em',
                 }}
               >
@@ -222,7 +207,7 @@ export function QuickGoalCelebration({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               onClick={handleDismiss}
-              className="mt-8 inline-flex items-center gap-3 border-2 border-neon-yellow bg-neon-yellow px-8 py-4 text-black uppercase tracking-wider transition-all hover:scale-105 hover:shadow-[0_0_30px_rgba(253,225,0,0.4)] active:scale-95"
+              className="mt-8 inline-flex items-center gap-3 border-2 border-neon-yellow bg-neon-yellow px-8 py-4 text-black uppercase tracking-wider transition-colors hover:bg-white hover:border-white active:scale-95"
               style={{
                 fontFamily: 'var(--font-display)',
                 fontSize: 'clamp(1rem, 3vw, 1.3rem)',

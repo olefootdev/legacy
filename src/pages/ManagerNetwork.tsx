@@ -391,31 +391,11 @@ export function ManagerNetwork() {
 
   return (
     <div className="mx-auto min-w-0 w-full max-w-6xl space-y-6 overflow-x-hidden pb-6 md:pb-8 px-3 sm:px-4 lg:px-6">
-      {/* ── HERO EDITORIAL — amarelo com watermark cinematográfico ── */}
+      {/* ── HERO — volt chapado, sem marca-d'água ── */}
       <section
         aria-label="Network do Manager"
         className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-6"
       >
-        {/* Watermark gigante — preto sobre amarelo, opacity baixa */}
-        <div
-          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
-          aria-hidden
-        >
-          <motion.span
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4 }}
-            className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
-            style={{
-              fontSize: 'clamp(120px, 22vw, 420px)',
-              lineHeight: '0.85',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Network
-          </motion.span>
-        </div>
-
         {/* Composição editorial centrada vertical */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -459,7 +439,7 @@ export function ManagerNetwork() {
             {inviteLink && (
               <div className="bg-black/10 border-2 border-black/20 px-4 py-4 rounded-sm">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-black/60 mb-2">
-                  Teu link de indicação
+                  Seu link de indicação
                 </p>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="flex-1 bg-black/20 border border-black/30 rounded-sm px-3 py-2.5">
@@ -518,19 +498,19 @@ export function ManagerNetwork() {
           {/* Stats strip — 3 métricas de rede */}
           <div className="mt-4 sm:mt-6 grid grid-cols-3 gap-2 sm:gap-3 max-w-lg mx-auto px-2">
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0" style={{ borderRadius: 'var(--radius-sm)' }}>
-              <p className="text-neon-yellow tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-impact)', fontSize: 'clamp(20px, 4vw, 36px)' }}>
+              <p className="ole-num text-white tabular-nums leading-none truncate" style={{ fontSize: 'clamp(16px, 4vw, 32px)' }}>
                 {privacy ? '••' : (loadingReferrals ? '…' : referrals.length)}
               </p>
               <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">Indicações</p>
             </div>
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0" style={{ borderRadius: 'var(--radius-sm)' }}>
-              <p className="text-neon-yellow tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-impact)', fontSize: 'clamp(20px, 4vw, 36px)' }}>
+              <p className="ole-num text-white tabular-nums leading-none truncate" style={{ fontSize: 'clamp(16px, 4vw, 32px)' }}>
                 {privacy ? '••' : netStatus.qualifyingCount.toLocaleString('pt-BR')}
               </p>
               <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">Qualificados</p>
             </div>
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0" style={{ borderRadius: 'var(--radius-sm)' }}>
-              <p className="text-neon-yellow tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-impact)', fontSize: 'clamp(20px, 4vw, 36px)' }}>
+              <p className="ole-num text-white tabular-nums leading-none truncate" style={{ fontSize: 'clamp(16px, 4vw, 32px)' }}>
                 {privacy ? '••' : (career?.lifetimePoints ?? 0).toLocaleString('pt-BR')}
               </p>
               <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">Pontos</p>
@@ -544,9 +524,8 @@ export function ManagerNetwork() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-panel p-5 pl-[18px] sm:p-6 sm:pl-[18px]"
+          className="relative overflow-hidden border border-neon-yellow/40 bg-panel p-5 sm:p-6"
         >
-          <span className="absolute inset-y-0 left-0 w-[3px] bg-neon-yellow" aria-hidden />
           <div className="flex items-start gap-3 mb-4">
             <div className="shrink-0 bg-neon-yellow/20 p-2.5 rounded-sm">
               <ShieldCheck className="w-6 h-6 text-neon-yellow" />
@@ -569,7 +548,7 @@ export function ManagerNetwork() {
               <AlertTriangle className="w-4 h-4 text-[var(--color-danger)] shrink-0" />
               <p className="text-xs text-[var(--color-danger)] leading-snug">
                 Você já <strong>perdeu {fmtUsd(activation.totalLostCommissionsCents)}</strong> em
-                comissões da tua rede por estar inativo. Ative agora pra parar de perder.
+                comissões da sua rede por estar inativo. Ative agora pra parar de perder.
               </p>
             </div>
           )}
@@ -621,10 +600,10 @@ export function ManagerNetwork() {
             type="button"
             onClick={() => setTab(k)}
             className={cn(
-              'flex-1 rounded-[var(--radius-pill)] px-4 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.2em] transition-all',
+              'flex-1 px-4 py-2.5 font-mono text-[11px] font-medium uppercase tracking-[0.2em] transition-colors',
               tab === k
-                ? 'bg-neon-yellow text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)]'
-                : 'border border-white/15 bg-white/[0.03] text-white/60 hover:border-neon-yellow/40 hover:text-white',
+                ? 'bg-white text-black'
+                : 'border border-white/16 bg-panel text-cimento hover:border-white/30 hover:text-white',
             )}
           >
             {label}
@@ -660,19 +639,19 @@ export function ManagerNetwork() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 + idx * 0.05 }}
-                className="group bg-panel border border-white/10 hover:border-[var(--color-danger)]/40 rounded-sm p-5 sm:p-6 transition-all hover:shadow-[0_0_24px_rgba(244,63,94,0.12)]"
+                className="group bg-panel border border-white/10 hover:border-white/30 p-5 sm:p-6 transition-colors"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center bg-[var(--color-danger)]/15 border-2 border-[var(--color-danger)]/40 rounded-sm transition-transform group-hover:scale-110">
-                      <UserPlus className="h-7 w-7 text-[var(--color-danger)]" strokeWidth={2.5} />
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center bg-card-hi border border-white/16">
+                      <UserPlus className="h-7 w-7 text-white" strokeWidth={2.5} />
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-display text-sm font-black uppercase tracking-wider text-white mb-1">
                         {maskName(req.clubName, privacy)}
                       </h3>
                       <p className="text-xs text-gray-400">
-                        Quer entrar na tua rede
+                        Quer entrar na sua rede
                       </p>
                     </div>
                   </div>
@@ -680,14 +659,14 @@ export function ManagerNetwork() {
                     <button
                       type="button"
                       onClick={() => void friendships.accept(req.id)}
-                      className="bg-neon-green px-4 py-2 rounded-sm font-display text-[10px] font-black uppercase tracking-wider text-black hover:bg-white transition-all hover:scale-[1.02]"
+                      className="ole-num bg-neon-yellow px-4 py-2 text-[11px] uppercase text-black hover:bg-white transition-colors"
                     >
                       Aceitar
                     </button>
                     <button
                       type="button"
                       onClick={() => void friendships.decline(req.id)}
-                      className="border border-white/20 px-4 py-2 rounded-sm font-display text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+                      className="ole-num border border-white/30 px-4 py-2 text-[11px] uppercase text-white hover:border-white transition-colors"
                     >
                       Recusar
                     </button>
@@ -710,10 +689,10 @@ export function ManagerNetwork() {
               <div className="ole-eyebrow-poster">
                 <span>Indicações</span>
               </div>
-              <TrendingUp className="h-3.5 w-3.5 text-neon-yellow/70" aria-hidden />
+              <TrendingUp className="h-3.5 w-3.5 text-cimento" aria-hidden />
             </div>
             {referrals.length > 0 && (
-              <span className="bg-neon-yellow/10 border border-neon-yellow/30 px-2.5 py-1 rounded-sm font-display text-[10px] font-bold uppercase tracking-wider text-neon-yellow">
+              <span className="ole-num border border-white/16 px-2.5 py-1 text-[11px] text-white">
                 {referrals.length}
               </span>
             )}
@@ -724,9 +703,9 @@ export function ManagerNetwork() {
               DESCENDENTES dele (o direto não conta a si mesmo); só as 2 maiores
               equipes somam. O marco de 1 é a exceção: olha indicação direta. */}
           {!loadingReferrals && (
-            <div className="rounded-[var(--radius-md)] border border-white/10 border-l-[3px] border-l-neon-yellow bg-panel p-4">
+            <div className="border border-white/10 bg-panel p-4">
               <div className="flex items-baseline justify-between gap-3">
-                <p className="text-[9px] text-neon-yellow/70 uppercase tracking-[0.2em] font-display font-bold">
+                <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-giz">
                   Marcos da rede
                 </p>
                 <p className="text-[10px] text-white/45">
@@ -815,19 +794,19 @@ export function ManagerNetwork() {
 
           {loadingReferrals ? (
             <div className="bg-panel border border-dashed border-white/10 rounded-sm p-6 text-center">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">A carregar a tua rede…</p>
+              <p className="text-xs text-poeira uppercase tracking-wider">Carregando sua rede…</p>
             </div>
           ) : referrals.length === 0 ? (
             <div className="bg-panel border border-dashed border-white/10 rounded-sm p-6 text-center">
               <Sparkles className="w-10 h-10 text-white/20 mx-auto mb-3" />
               <p className="text-sm text-gray-500 mb-2">Nenhuma indicação ainda</p>
               <p className="text-xs text-gray-600 mb-4">
-                Partilha o teu link de indicação para começar a construir a tua rede e ganhar comissões.
+                Compartilhe seu link de indicação para começar a construir sua rede e ganhar comissões.
               </p>
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="inline-flex items-center gap-2 bg-neon-yellow px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider text-white hover:bg-neon-yellow transition-colors"
+                className="ole-num inline-flex items-center gap-2 bg-neon-yellow px-4 py-2.5 text-[12px] uppercase text-black hover:bg-white transition-colors [--corte:10px] [clip-path:var(--clip-corte)]"
               >
                 <Copy className="w-3.5 h-3.5" />
                 Copiar link de indicação
@@ -845,7 +824,7 @@ export function ManagerNetwork() {
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 + idx * 0.05 }}
-                    className="rounded-[var(--radius-md)] border border-white/10 border-l-[3px] border-l-cyan-400 bg-panel p-4 hover:border-white/20 transition-colors"
+                    className="border border-white/10 bg-panel p-4 hover:border-white/30 transition-colors"
                   >
                     {/* Header: nome + clube + L badge */}
                     <div className="flex items-start justify-between gap-3 mb-3">
@@ -933,7 +912,7 @@ export function ManagerNetwork() {
       {tab === 'carreira' && (
       <section className="space-y-4">
         {/* Eyebrow do bloco Carreira */}
-        <div className="ole-eyebrow-poster !text-neon-yellow flex items-center gap-2 pt-2">
+        <div className="ole-eyebrow-poster flex items-center gap-2 pt-2">
           <Award className="w-3.5 h-3.5" />
           <span>Plano OLEFOOT · Carreira</span>
         </div>
@@ -950,8 +929,7 @@ export function ManagerNetwork() {
         )}
 
         {/* CAREER PROGRESS — Resumo + bônus pendente */}
-        <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-panel p-5 pl-[18px]">
-          <span className="absolute inset-y-0 left-0 w-[3px] bg-neon-yellow" aria-hidden />
+        <div className="relative overflow-hidden border border-white/10 bg-panel p-5">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="min-w-0 flex-1">
               <p className="text-[10px] text-neon-yellow uppercase tracking-[0.2em] font-display font-bold mb-1 inline-flex items-center gap-1.5">
@@ -1024,7 +1002,7 @@ export function ManagerNetwork() {
 
         {/* ESCALADA DE RANKS */}
         <div className="space-y-2">
-          <div className="ole-eyebrow-poster !text-neon-yellow flex items-center gap-2">
+          <div className="ole-eyebrow-poster flex items-center gap-2">
             <Trophy className="w-3.5 h-3.5" />
             <span>Escalada de ranks</span>
           </div>
@@ -1037,8 +1015,8 @@ export function ManagerNetwork() {
                 <div
                   key={rd.rank}
                   className={cn(
-                    'bg-panel border rounded-sm p-3 text-center transition-all',
-                    isCurrent ? 'border-neon-yellow/60 shadow-[0_0_24px_rgba(251,191,36,0.2)]' : 'border-white/10',
+                    'bg-panel border p-3 text-center transition-colors',
+                    isCurrent ? 'border-neon-yellow' : 'border-white/10',
                     !isUnlocked && 'opacity-50',
                   )}
                 >
@@ -1063,7 +1041,7 @@ export function ManagerNetwork() {
         {/* SUPER-BÔNUS DE DEPÓSITO */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <div className="ole-eyebrow-poster !text-neon-yellow flex items-center gap-2">
+            <div className="ole-eyebrow-poster flex items-center gap-2">
               <TrendingUp className="w-3.5 h-3.5" />
               <span>Super-Bônus de Depósito</span>
             </div>
@@ -1073,7 +1051,7 @@ export function ManagerNetwork() {
                 onClick={handleClaimAffiliate}
                 disabled={claimingAffiliate || !activation?.isActivated}
                 title={!activation?.isActivated ? 'Requer ativação' : undefined}
-                className="bg-neon-yellow text-white px-3 py-1.5 rounded-sm font-display text-[10px] font-black uppercase tracking-[0.18em] hover:bg-white hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="ole-num whitespace-nowrap bg-neon-yellow px-3 py-1.5 text-[11px] uppercase text-black hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {claimingAffiliate ? 'Resgatando…' : !activation?.isActivated ? (
                   <span className="inline-flex items-center gap-1.5"><Lock className="w-3 h-3" /> Ativar</span>
@@ -1082,10 +1060,9 @@ export function ManagerNetwork() {
             )}
           </div>
 
-          <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-panel p-4 pl-[18px] sm:p-5 sm:pl-[18px]">
-            <span className="absolute inset-y-0 left-0 w-[3px] bg-neon-yellow" aria-hidden />
-            <p className="text-xs text-white/60 mb-4">
-              5% de comissão sobre cada depósito da tua rede, em 3 níveis.
+          <div className="relative overflow-hidden border border-white/10 bg-panel p-4 sm:p-5">
+            <p className="text-xs text-cimento mb-4">
+              5% de comissão sobre cada depósito da sua rede, em 3 níveis.
             </p>
 
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -1110,8 +1087,8 @@ export function ManagerNetwork() {
             </div>
 
             {broCommissionPending === 0 && expCommissionPending === 0 && (
-              <p className="text-[11px] text-white/40 mt-4 text-center italic">
-                Quando alguém da tua rede depositar, o bônus aparece aqui automaticamente.
+              <p className="text-[11px] text-poeira mt-4 text-center">
+                Quando alguém da sua rede depositar, o bônus aparece aqui automaticamente.
               </p>
             )}
           </div>
@@ -1120,7 +1097,7 @@ export function ManagerNetwork() {
         {/* PREMIUM CARDS */}
         {cards.length > 0 && (
           <div className="space-y-3">
-            <div className="ole-eyebrow-poster !text-neon-yellow flex items-center gap-2">
+            <div className="ole-eyebrow-poster flex items-center gap-2">
               <Award className="w-3.5 h-3.5" />
               <span>Premium Cards pendentes</span>
             </div>
@@ -1134,10 +1111,10 @@ export function ManagerNetwork() {
                   <div
                     key={card.id}
                     className={cn(
-                      'bg-gradient-to-br rounded-sm p-4 border-2',
-                      card.cardTier === 'legendary' && 'from-neon-yellow/20 via-neon-yellow/10 to-transparent border-neon-yellow/40',
-                      card.cardTier === 'rare' && 'from-neon-yellow/20 via-neon-yellow/10 to-transparent border-neon-yellow/40',
-                      card.cardTier === 'premium' && 'from-neon-yellow/20 via-neon-yellow/10 to-transparent border-neon-yellow/40',
+                      'bg-panel p-4 border-2',
+                      card.cardTier === 'legendary' && 'border-neon-yellow/40',
+                      card.cardTier === 'rare' && 'border-neon-yellow/40',
+                      card.cardTier === 'premium' && 'border-neon-yellow/40',
                     )}
                   >
                     <TierIcon className={cn('w-7 h-7 mb-2', tierColor)} strokeWidth={2} />
@@ -1160,11 +1137,11 @@ export function ManagerNetwork() {
         {/* 5.1 — Career Leaderboard */}
         {leaderboard.length > 0 && (
           <div className="space-y-3">
-            <div className="ole-eyebrow-poster !text-neon-yellow flex items-center gap-2">
+            <div className="ole-eyebrow-poster flex items-center gap-2">
               <Medal className="w-3.5 h-3.5" />
               <span>Top da Carreira</span>
             </div>
-            <ul className="bg-panel border border-white/10 border-l-[3px] border-l-amber-400 rounded-[var(--radius-md)] divide-y divide-white/5">
+            <ul className="bg-panel border border-white/10 divide-y divide-white/5">
               {leaderboard.slice(0, 20).map((entry) => {
                 const rankDef = RANK_CATALOG.find((r) => r.rank === entry.currentRank);
                 const RankIcon = rankDef ? RANK_ICON_MAP[rankDef.iconName] : Medal;
@@ -1208,7 +1185,7 @@ export function ManagerNetwork() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-panel border border-white/10 border-l-[3px] border-l-cyan-400 rounded-[var(--radius-md)] p-4 sm:p-5"
+          className="bg-panel border border-white/10 p-4 sm:p-5"
         >
           <p className="flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-wider text-white mb-3">
             <Sparkles className="h-3.5 w-3.5 text-neon-yellow" /> Como funcionam as comissões?
@@ -1220,7 +1197,7 @@ export function ManagerNetwork() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-neon-yellow font-bold mt-0.5">•</span>
-              <span><strong className="text-white">5% sobre cada depósito</strong> da tua rede (3 níveis) — ver Carreira</span>
+              <span><strong className="text-white">5% sobre cada depósito</strong> da sua rede (3 níveis) — ver Carreira</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-neon-yellow font-bold mt-0.5">•</span>

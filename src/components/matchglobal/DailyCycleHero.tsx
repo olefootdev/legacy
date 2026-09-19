@@ -17,6 +17,7 @@ import { useGameStore } from '@/game/store';
 import { DailyBracket } from './DailyBracket';
 import { GlobalChampionHonor } from './GlobalChampionHonor';
 import { resolveManagerName } from '@/lib/championManager';
+import { Hashtag } from '@/components/ui';
 
 function fmt(ms: number): string {
   if (ms <= 0) return '00:00';
@@ -86,7 +87,7 @@ export function DailyCycleHero() {
   }
 
   return (
-    <section className="relative overflow-hidden rounded-lg border border-neon-yellow/30 bg-gradient-to-br from-neon-yellow/5 via-black to-black p-4 sm:p-6">
+    <section className="relative overflow-hidden rounded-lg border border-neon-yellow/30 bg-deep-black p-4 sm:p-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
@@ -94,9 +95,7 @@ export function DailyCycleHero() {
           {daily.phase === 'knockout' && <Swords className="w-6 h-6 text-neon-yellow animate-pulse" />}
           {daily.phase === 'crowned' && <Crown className="w-6 h-6 text-neon-yellow" />}
           <div>
-            <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-neon-yellow">
-              Coroa do Dia
-            </p>
+            <Hashtag>#coroadodia</Hashtag>
             <h2 className="font-display text-lg sm:text-2xl font-bold uppercase text-white leading-tight">
               {daily.phase === 'qualifying' && 'Corrida do Dia'}
               {daily.phase === 'knockout' && 'Mata-Mata ao Vivo'}

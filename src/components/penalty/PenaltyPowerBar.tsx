@@ -2,7 +2,7 @@ import { POWER_SWEET_HIGH, POWER_SWEET_LOW } from './constants';
 
 export function PenaltyPowerBar({ power }: { power: number }) {
   const tone =
-    power > POWER_SWEET_HIGH ? '#ef4444' : power > POWER_SWEET_LOW ? '#FDE100' : '#999';
+    power > POWER_SWEET_HIGH ? '#FF4D4D' : power > POWER_SWEET_LOW ? '#FDE100' : '#9A9C9F';
 
   const label =
     power > POWER_SWEET_HIGH
@@ -32,7 +32,6 @@ export function PenaltyPowerBar({ power }: { power: number }) {
           style={{
             width: `${power * 100}%`,
             background: tone,
-            boxShadow: power > POWER_SWEET_HIGH ? '0 0 16px rgba(239,68,68,0.8)' : undefined,
           }}
         />
         <div
@@ -45,7 +44,7 @@ export function PenaltyPowerBar({ power }: { power: number }) {
         />
       </div>
       <div className="text-[10px] uppercase tracking-[0.25em] text-black/60 mt-1">
-        Solte o botão pra chutar · Zona dourada = pancada na medida
+        Solte o botão pra chutar · Zona amarela = pancada na medida
       </div>
     </div>
   );

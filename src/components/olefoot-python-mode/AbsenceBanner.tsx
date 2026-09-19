@@ -8,8 +8,8 @@
  *   heavy / crisis        → --color-danger (vermelho)
  *
  * Filosofia: NÃO punir silenciosamente. O manager precisa SABER o que
- * está perdendo, senão não volta. Headline em Moret italic, eyebrow
- * Agency uppercase, métricas Moret italic tabular-nums.
+ * está perdendo, senão não volta. VOLT2: headline sem serifa/itálico,
+ * eyebrow em caixa alta, sem sombra.
  */
 import { motion } from 'motion/react';
 import { AlertTriangle, AlertOctagon, Flame } from 'lucide-react';
@@ -135,10 +135,7 @@ export function AbsenceBanner() {
         style.borderLeft,
         style.bgClass,
       )}
-      style={{
-        borderRadius: 'var(--radius-md)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-      }}
+      style={{ borderRadius: 'var(--radius-md)' }}
       role="alert"
     >
       <div className="px-4 sm:px-5 py-4 flex items-start gap-3">
@@ -175,12 +172,11 @@ export function AbsenceBanner() {
             </span>
           </div>
 
-          {/* Headline Moret italic — mensagem editorial */}
+          {/* Headline — mensagem editorial */}
           <p
             className="text-white leading-snug"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
+              fontFamily: 'var(--font-sans)',
               fontWeight: 700,
               fontSize: 'clamp(15px, 2.6vw, 18px)',
               letterSpacing: '-0.01em',

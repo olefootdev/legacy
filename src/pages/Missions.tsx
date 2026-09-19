@@ -73,7 +73,7 @@ const KIND_LABELS: Record<MissionKind, string> = {
 };
 
 function statusColor(s: MissionStub['status']) {
-  if (s === 'completed') return 'text-neon-green';
+  if (s === 'completed') return 'text-alta';
   if (s === 'in_progress') return 'text-neon-yellow';
   if (s === 'locked') return 'text-white/35';
   return 'text-white/45';
@@ -209,28 +209,7 @@ export function Missions() {
       </div>
       {/* ── HERO CINEMATOGRÁFICO ──────────────────────────────────── */}
       <section className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow">
-        {/* Camada amarela sólida (sem faixa preta) */}
-        <div
-          className="absolute inset-0 bg-neon-yellow"
-          aria-hidden
-        />
-        {/* Linhas verticais sutis (textura de campo) */}
-        <svg
-          aria-hidden
-          className="absolute inset-0 pointer-events-none"
-          style={{ clipPath: 'polygon(0 0, 62% 0, 38% 100%, 0% 100%)' }}
-          width="100%"
-          height="100%"
-          preserveAspectRatio="none"
-          viewBox="0 0 100 100"
-        >
-          <g stroke="#000" strokeOpacity="0.06" strokeWidth="0.15">
-            <line x1="20" y1="0" x2="20" y2="100" />
-            <line x1="40" y1="0" x2="40" y2="100" />
-            <line x1="60" y1="0" x2="60" y2="100" />
-            <line x1="80" y1="0" x2="80" y2="100" />
-          </g>
-        </svg>
+        {/* VOLT2: volt chapado — saiu a textura de listras. */}
 
         {/* Conteúdo */}
         <div className="relative z-10 mx-auto max-w-6xl min-w-0 w-full px-3 sm:px-4 lg:px-8 py-5 sm:py-7">
@@ -307,25 +286,14 @@ export function Missions() {
 
             {/* ── DIREITA: Badge com número total de missões ──────────────── */}
             <div className="relative flex items-center justify-center lg:justify-end">
-              <div className="relative">
-                <p
-                  className="font-impact text-white/[0.08] tabular-nums leading-none select-none"
-                  style={{ fontSize: 'clamp(180px, 28vw, 320px)' }}
-                  aria-hidden
-                >
+              {/* Total de missões — bloco chapado, sem número fantasma atrás. */}
+              <div className="bg-black px-6 py-3 text-center sm:px-8 sm:py-4">
+                <p className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-cimento">
+                  Missões
+                </p>
+                <p className="ole-num mt-1 text-2xl text-white tabular-nums sm:text-3xl">
                   {stats.total}
                 </p>
-                {/* Badge sobreposto */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="bg-neon-yellow px-6 py-3 sm:px-8 sm:py-4">
-                    <p className="font-display text-xs sm:text-sm font-bold uppercase tracking-[0.22em] text-black/70">
-                      Missões
-                    </p>
-                    <p className="font-display text-2xl sm:text-3xl font-black uppercase text-black mt-1 tabular-nums">
-                      {stats.total}
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -370,9 +338,6 @@ export function Missions() {
                   >
                     Link de Indicação
                   </h3>
-                  <p className="text-[11px] text-white/45 mt-1 leading-relaxed">
-                    Compartilhe e ganhe recompensas quando seus amigos entrarem
-                  </p>
                 </div>
               </div>
               <Link
@@ -489,12 +454,12 @@ export function Missions() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
                   className={cn(
-                    'w-full max-w-full min-w-0 border bg-black/40 p-4 sm:p-5 transition-all h-full flex flex-col',
-                    m.status === 'completed' && 'border-neon-green/50 bg-gradient-to-br from-neon-green/10 to-black/40',
+                    'w-full max-w-full min-w-0 border bg-panel p-4 sm:p-5 transition-colors h-full flex flex-col',
+                    m.status === 'completed' && 'border-alta/50 bg-panel',
                     m.status === 'in_progress' && 'border-neon-yellow/30 hover:border-neon-yellow/50',
                     m.status === 'locked' && 'border-white/10 opacity-60',
                     m.status === 'available' && 'border-white/10 hover:border-white/20',
-                    isReady && 'border-neon-yellow/60 bg-gradient-to-br from-neon-yellow/15 to-black/40'
+                    isReady && 'border-neon-yellow bg-card'
                   )}
                 >
                   {/* Header */}
@@ -502,7 +467,7 @@ export function Missions() {
                     <div
                       className={cn(
                         'flex h-10 w-10 shrink-0 items-center justify-center border-2',
-                        m.status === 'completed' && 'border-neon-green bg-neon-green/20',
+                        m.status === 'completed' && 'border-alta bg-alta/20',
                         m.status === 'in_progress' && 'border-neon-yellow bg-neon-yellow/20',
                         m.status === 'locked' && 'border-white/10 bg-white/5',
                         m.status === 'available' && 'border-white/15 bg-white/5'
@@ -516,7 +481,7 @@ export function Missions() {
                           {KIND_LABELS[m.kind]}
                         </span>
                         {m.status === 'completed' && (
-                          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-neon-green">
+                          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-alta">
                             Concluída
                           </span>
                         )}

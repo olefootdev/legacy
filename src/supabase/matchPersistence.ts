@@ -281,7 +281,7 @@ export async function syncPlayerToSupabase(
       ok: false,
       reason: 'no_club',
       message:
-        'Sem clube no Supabase para este utilizador. Confirma login, migrations aplicadas e `profiles.club_id` preenchido.',
+        'Sem clube no Supabase para este usuário. Confira o login, migrations aplicadas e `profiles.club_id` preenchido.',
     };
   }
   try {

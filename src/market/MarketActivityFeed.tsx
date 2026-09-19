@@ -78,7 +78,7 @@ export function MarketActivityFeed({ activities, maxVisible = 5 }: MarketActivit
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'rgba(237,235,228,0.62)' }}>
                 <span style={{ color: 'rgba(237,235,228,0.9)', fontWeight: 600 }}>{a.userName}</span>{' '}
                 {VERBO[a.type]}{' '}
-                <span style={{ color: '#fff', fontWeight: 600 }}>{a.playerName}</span>{' '}
+                <span className="text-white" style={{ fontWeight: 600 }}>{a.playerName}</span>{' '}
                 <span style={{ color: 'rgba(237,235,228,0.4)' }}>
                   ({a.playerPos} · {a.playerOvr} OVR)
                 </span>

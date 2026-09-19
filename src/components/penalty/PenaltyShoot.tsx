@@ -315,7 +315,7 @@ export function PenaltyShoot({
       {/* Timer + Headline */}
       <div className="w-full max-w-[920px] flex flex-col items-center">
         <div
-          className={`font-display italic font-black leading-none tabular-nums transition-colors duration-200 ${
+          className={`font-display font-black leading-none tabular-nums transition-colors duration-200 ${
             timeLeft <= 3 && phase === 'pick' ? 'text-black animate-pulse' : 'text-black/85'
           }`}
           style={{ fontSize: 'clamp(32px, min(5vh, 8vw), 80px)' }}
@@ -324,13 +324,13 @@ export function PenaltyShoot({
         </div>
 
         <h1
-          className="ole-headline-italic text-black text-center mt-1"
+          className="ole-headline text-black text-center mt-1"
           style={{
             fontSize:
               phase === 'result'
                 ? 'clamp(36px, min(7vh, 9vw), 100px)'
                 : 'clamp(18px, min(3.5vh, 3.5vw), 40px)',
-            lineHeight: 1.0,
+            lineHeight: 1.1,
           }}
         >
           {headline}
@@ -381,7 +381,7 @@ export function PenaltyShoot({
             {onNextShooter && (
               <button
                 onClick={handleNextShooter}
-                className="relative bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider -skew-x-6 hover:bg-white hover:text-black transition-all overflow-hidden"
+                className="relative bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider hover:bg-white hover:text-black transition-colors overflow-hidden"
               >
                 <span className="relative z-10">
                   Próximo
@@ -405,7 +405,7 @@ export function PenaltyShoot({
             {onReset && (
               <button
                 onClick={handleReset}
-                className="bg-transparent border-2 border-black text-black px-8 py-3 font-display font-black italic uppercase tracking-wider -skew-x-6 hover:bg-black hover:text-neon-yellow transition-all"
+                className="bg-transparent border-2 border-black text-black px-8 py-3 font-display font-black uppercase tracking-wider hover:bg-black hover:text-neon-yellow transition-colors"
               >
                 Reiniciar
               </button>

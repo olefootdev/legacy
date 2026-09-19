@@ -12,6 +12,7 @@ import {
   type ShotResult,
   type SlotIndex,
 } from '@/components/penalty';
+import { Hashtag } from '@/components/ui';
 
 const REGULAR_KICKS = 5;
 
@@ -233,14 +234,12 @@ export function MatchPenaltyV2() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="text-[10px] uppercase tracking-[0.35em] text-white/60">
-              Disputa de Pênaltis · v2
-            </div>
+            <Hashtag className="w-auto">#penaltis</Hashtag>
             <div className="w-9" />
           </div>
 
           <h1
-            className="ole-headline-italic text-center mb-2"
+            className="ole-headline text-center mb-2 leading-[1.1]"
             style={{ fontSize: 'clamp(28px, min(5vh, 5vw), 56px)' }}
           >
             Escolha 5 batedores
@@ -271,7 +270,7 @@ export function MatchPenaltyV2() {
               <button
                 type="button"
                 onClick={() => navigate('/clube/elenco')}
-                className="inline-flex items-center justify-center bg-neon-yellow text-black px-6 py-2.5 font-display font-black uppercase tracking-wider text-xs -skew-x-6 hover:bg-white transition-colors"
+                className="inline-flex items-center justify-center bg-neon-yellow text-black px-6 py-2.5 font-display font-black uppercase tracking-wider text-xs hover:bg-white transition-colors"
               >
                 Ir ao Elenco
               </button>
@@ -320,7 +319,7 @@ export function MatchPenaltyV2() {
             type="button"
             disabled={takerOrder.length < REGULAR_KICKS}
             onClick={startMatch}
-            className="w-full bg-neon-yellow text-black px-8 py-4 font-display font-black uppercase tracking-wider -skew-x-6 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white"
+            className="w-full bg-neon-yellow text-black px-8 py-4 font-display font-black uppercase tracking-wider disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white"
           >
             Começar Disputa
           </button>
@@ -344,12 +343,12 @@ export function MatchPenaltyV2() {
           Final da Disputa
         </div>
         <h1
-          className="ole-headline-italic text-black text-center mb-3 sm:mb-4"
+          className="ole-headline text-black text-center mb-3 sm:mb-4"
           style={{ fontSize: 'clamp(56px, min(13vh, 14vw), 160px)', lineHeight: 1 }}
         >
           {winner === 'home' ? 'GANHAMOS!' : 'PERDEMOS'}
         </h1>
-        <div className="font-display italic font-black tabular-nums text-black/85 mb-6 sm:mb-12"
+        <div className="font-display font-black tabular-nums text-black/85 mb-6 sm:mb-12"
           style={{ fontSize: 'clamp(44px, min(9vh, 10vw), 120px)' }}
         >
           {homeGoals} — {awayGoals}
@@ -358,14 +357,14 @@ export function MatchPenaltyV2() {
           <button
             type="button"
             onClick={fullReset}
-            className="bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider -skew-x-6"
+            className="bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider hover:bg-deep-black transition-colors"
           >
             Nova Disputa
           </button>
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="bg-transparent border-2 border-black text-black px-8 py-3 font-display font-black italic uppercase tracking-wider -skew-x-6"
+            className="bg-transparent border-2 border-black text-black px-8 py-3 font-display font-black uppercase tracking-wider"
           >
             Voltar
           </button>
@@ -417,12 +416,12 @@ export function MatchPenaltyV2() {
           {opponentShort} bate agora
         </div>
         <h2
-          className="ole-headline-italic text-black animate-pulse"
+          className="ole-headline text-black animate-pulse"
           style={{ fontSize: 'clamp(32px, min(6vh, 6vw), 64px)' }}
         >
           Aguarde…
         </h2>
-        <div className="font-display italic font-black tabular-nums mt-4 sm:mt-8"
+        <div className="font-display font-black tabular-nums mt-4 sm:mt-8"
           style={{ fontSize: 'clamp(36px, min(6vh, 6vw), 64px)' }}
         >
           {homeGoals} — {awayGoals}

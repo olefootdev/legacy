@@ -163,7 +163,7 @@ export function TeamPlayerSeasonSheet({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/80 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:p-4"
       onClick={onClose}
       role="presentation"
     >
@@ -173,7 +173,7 @@ export function TeamPlayerSeasonSheet({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.96, opacity: 0, y: 12 }}
         onClick={(e) => e.stopPropagation()}
-        className="my-auto flex w-full max-w-2xl flex-col border border-white/10 bg-dark-gray shadow-2xl"
+        className="my-auto flex w-full max-w-2xl flex-col border border-white/10 bg-dark-gray"
         style={{
           borderRadius: 'var(--radius-md)',
           maxHeight: 'min(92vh, calc(100vh - 2rem))',
@@ -187,18 +187,12 @@ export function TeamPlayerSeasonSheet({
         <div className="relative w-full border-b border-white/10 bg-black overflow-hidden shrink-0">
           {/* Foto do jogador — hero slider generoso */}
           <div className="relative w-full overflow-hidden bg-black" style={{ height: 'clamp(280px, 45vh, 500px)' }}>
-            {/* Spotlight de estúdio — dá profundidade e faz a moldura da foto parecer uma ficha */}
+            {/* Fundo chapado atrás da foto (tom volt leve no card destaque) */}
             <div
               aria-hidden
-              className="absolute inset-0"
-              style={{
-                background:
-                  card.style === 'neon-yellow'
-                    ? 'radial-gradient(120% 90% at 50% 22%, rgba(253,225,0,0.14) 0%, rgba(20,18,4,0.85) 55%, #050505 100%)'
-                    : 'radial-gradient(120% 90% at 50% 22%, rgba(255,255,255,0.08) 0%, rgba(12,12,12,0.9) 55%, #050505 100%)',
-              }}
+              className={card.style === 'neon-yellow' ? 'absolute inset-0 bg-neon-yellow/[0.06]' : 'absolute inset-0 bg-deep-black'}
             />
-            {/* Foto — object-contain garante que a cabeça nunca seja cortada; o spotlight cobre as laterais */}
+            {/* Foto — object-contain garante que a cabeça nunca seja cortada */}
             <img
               src={playerPortraitSrc({ id: player.id, name: player.name, portraitUrl: player.portraitUrl }, 800, 1200)}
               alt=""
@@ -216,10 +210,10 @@ export function TeamPlayerSeasonSheet({
               className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/95"
             />
 
-            {/* OVR — Moret italic editorial (canto superior esquerdo) */}
+            {/* OVR — Anton (canto superior esquerdo; o scrim garante a leitura) */}
             <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10">
               <p
-                className="text-neon-yellow tabular-nums leading-none drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]"
+                className="text-neon-yellow tabular-nums leading-none"
                 style={{
                   fontFamily: 'var(--font-impact)',
                   fontSize: 'clamp(72px, 15vw, 120px)',
@@ -245,7 +239,7 @@ export function TeamPlayerSeasonSheet({
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 shrink-0 rounded-full border border-white/20 bg-black/70 p-2 text-white/80 backdrop-blur-sm transition-colors hover:bg-white/10 hover:text-white"
+              className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 shrink-0 rounded-full border border-white/20 bg-black/70 p-2 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
               aria-label="Fechar"
             >
               <X className="h-5 w-5" />
@@ -257,7 +251,7 @@ export function TeamPlayerSeasonSheet({
               <div className="pr-12">
                 <p
                   id="team-player-sheet-title"
-                  className="text-white uppercase leading-none drop-shadow-[0_3px_12px_rgba(0,0,0,0.9)]"
+                  className="text-white uppercase leading-none"
                   style={{
                     fontFamily: 'var(--font-display)',
                     fontWeight: 800,

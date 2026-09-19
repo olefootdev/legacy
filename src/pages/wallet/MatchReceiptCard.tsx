@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { SecaoVolt } from '@/components/ui';
 
 export type ReceiptLine = {
   label: string;
@@ -38,22 +39,12 @@ export function MatchReceiptCard({ data }: MatchReceiptCardProps) {
 
   return (
     <section className="space-y-3">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80">
-            Recibo
-          </p>
-          <h2
-            className="mt-1 font-display text-[22px] font-black uppercase leading-none tracking-tight text-white sm:text-[26px]"
-            style={{ letterSpacing: '0.005em' }}
-          >
-            Última partida
-          </h2>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <SecaoVolt label="Última partida" tone="neutro" className="min-w-0 grow" />
         <button
           type="button"
           onClick={() => navigate('/wallet/extract')}
-          className="text-[10px] font-display font-bold uppercase tracking-[0.2em] text-white/55 hover:text-neon-yellow transition-colors"
+          className="shrink-0 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento transition-colors hover:text-white"
         >
           Recibos anteriores →
         </button>
@@ -61,13 +52,10 @@ export function MatchReceiptCard({ data }: MatchReceiptCardProps) {
 
       {!data ? (
         <div
-          className="border border-white/[0.06] p-5 text-center"
-          style={{
-            borderRadius: 'var(--radius-card)',
-            background: 'var(--color-panel-elevated,#0b0b0b)',
-          }}
+          className="border border-white/10 bg-panel p-5 text-center"
+          style={{ borderRadius: 'var(--radius-card)' }}
         >
-          <p className="text-[12px] text-white/55">
+          <p className="text-[12px] text-cimento">
             Joga a próxima partida e o recibo aparece aqui.
           </p>
         </div>
@@ -76,34 +64,26 @@ export function MatchReceiptCard({ data }: MatchReceiptCardProps) {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="relative overflow-hidden border border-white/[0.06]"
-          style={{
-            borderRadius: 'var(--radius-card)',
-            background: 'var(--color-panel-elevated,#0b0b0b)',
-            boxShadow: 'var(--shadow-card)',
-          }}
+          className="relative overflow-hidden border border-white/10 bg-panel"
+          style={{ borderRadius: 'var(--radius-card)' }}
         >
           {/* Header do recibo */}
           <div className="flex items-center justify-between gap-3 border-b border-dashed border-white/[0.08] px-5 py-4">
             <div>
-              <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/40">
+              <p className="font-mono text-[10.5px] text-cimento">
                 {data.roundLabel} · {data.isHome ? 'Casa' : 'Fora'}
               </p>
-              <p className="mt-1 font-display text-[16px] font-black uppercase tracking-tight text-white">
+              <p className="mt-1 font-impact text-[17px] uppercase leading-[1.1] text-white">
                 vs {data.opponent}
               </p>
             </div>
             <div className="text-right">
-              <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/40">
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-poeira">
                 Resultado
               </p>
               <p
-                className="font-impact mt-1 tabular-nums text-neon-yellow"
-                style={{
-                  fontFamily: 'var(--font-impact)',
-                  fontSize: '22px',
-                  lineHeight: 1,
-                }}
+                className="ole-num mt-1 tabular-nums text-white"
+                style={{ fontSize: '20px', lineHeight: 1 }}
               >
                 {data.result}
               </p>
@@ -116,10 +96,10 @@ export function MatchReceiptCard({ data }: MatchReceiptCardProps) {
               const positive = line.amount >= 0;
               return (
                 <div key={i} className="flex items-center justify-between gap-3 px-5 py-2.5">
-                  <p className="text-[12px] text-white/75">{line.label}</p>
+                  <p className="text-[12px] text-giz">{line.label}</p>
                   <p
-                    className={`text-[12px] font-bold tabular-nums ${
-                      positive ? 'text-neon-green' : 'text-red-400'
+                    className={`font-mono text-[12px] font-medium tabular-nums ${
+                      positive ? 'text-alta' : 'text-baixa'
                     }`}
                   >
                     {fmt(line.amount)} {line.currency}
@@ -130,8 +110,8 @@ export function MatchReceiptCard({ data }: MatchReceiptCardProps) {
           </div>
 
           {/* Líquido */}
-          <div className="border-t border-dashed border-white/[0.08] bg-black/40 px-5 py-4">
-            <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/55">
+          <div className="border-t border-dashed border-white/[0.08] bg-card px-5 py-4">
+            <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
               Líquido
             </p>
             <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -140,12 +120,8 @@ export function MatchReceiptCard({ data }: MatchReceiptCardProps) {
                 return (
                   <p
                     key={currency}
-                    className={`tabular-nums ${positive ? 'text-neon-green' : 'text-red-400'}`}
-                    style={{
-                      fontFamily: 'var(--font-impact)',
-                      fontSize: '22px',
-                      lineHeight: 1,
-                    }}
+                    className={`font-mono font-medium tabular-nums ${positive ? 'text-alta' : 'text-baixa'}`}
+                    style={{ fontSize: '20px', lineHeight: 1 }}
                   >
                     {fmt(total)} <span className="text-[14px]">{currency}</span>
                   </p>

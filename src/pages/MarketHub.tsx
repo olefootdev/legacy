@@ -66,7 +66,7 @@ export function MarketHub() {
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link
               to="/wallet"
-              className="inline-flex items-center gap-2 bg-black px-7 py-3 text-neon-yellow font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
+              className="inline-flex items-center gap-2 bg-black px-7 py-3 text-neon-yellow font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-deep-black/80 transition-colors"
               style={{
                 fontFamily: 'var(--font-display)',
                 borderRadius: 'var(--radius-sm)',
@@ -96,7 +96,7 @@ export function MarketHub() {
           to="/mercado/transfer"
           eyebrow="Jogadores"
           title="Transfer Market"
-          description="Comprar e vender jogadores no mercado global. Negocia com outros clubes e monta o plantel ideal."
+          description="Compra e venda entre clubes"
           cta="Explorar mercado"
           destaque
           delay={0.1}
@@ -105,7 +105,7 @@ export function MarketHub() {
           to="/mercado/loja"
           eyebrow="Itens"
           title="Loja"
-          description="Packs de jogadores, boosters de partida e itens especiais. Tudo num só lugar."
+          description="Packs, boosters e extras"
           cta="Abrir loja"
           delay={0.3}
         />

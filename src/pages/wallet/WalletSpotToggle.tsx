@@ -3,16 +3,16 @@ import { cn } from '@/lib/utils';
 
 /**
  * Toggle SPOT | COLEÇÃO do hero da Wallet.
- * Sprint B-4 Legacy Tech: pílulas arredondadas (radius-pill) com peso editorial.
+ * VOLT2: segmento reto sobre asfalto — ativo em branco chapado, sem sombra.
  * OLEXP e GAT foram removidos em 2026-07-16; a Coleção ocupou o lugar.
  */
 const tabClass =
-  'shrink-0 rounded-[var(--radius-pill)] px-5 py-2 text-center font-display text-[11px] font-black uppercase tracking-[0.22em] transition-all min-[380px]:px-6 min-[380px]:text-[12px]';
+  'shrink-0 px-5 py-2 text-center font-mono text-[11px] font-medium uppercase tracking-[0.2em] transition-colors min-[380px]:px-6 min-[380px]:text-[12px]';
 
 export function WalletSpotToggle() {
   return (
     <div
-      className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-black/15 bg-black/10 p-1 backdrop-blur-sm"
+      className="inline-flex items-center gap-1 border border-white/16 bg-panel p-1"
       role="tablist"
       aria-label="Conta SPOT ou Coleção"
     >
@@ -23,8 +23,8 @@ export function WalletSpotToggle() {
           cn(
             tabClass,
             isActive
-              ? 'bg-black text-neon-yellow shadow-[0_2px_10px_rgba(0,0,0,0.25)]'
-              : 'text-black/55 hover:text-black',
+              ? 'bg-white text-black'
+              : 'text-cimento hover:text-white',
           )
         }
       >
@@ -36,8 +36,8 @@ export function WalletSpotToggle() {
           cn(
             tabClass,
             isActive
-              ? 'bg-black text-neon-yellow shadow-[0_2px_10px_rgba(0,0,0,0.25)]'
-              : 'text-black/55 hover:text-black',
+              ? 'bg-white text-black'
+              : 'text-cimento hover:text-white',
           )
         }
       >

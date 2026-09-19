@@ -20,8 +20,9 @@ import type { FormLetter } from '@/entities/types';
 import type { QuickRarity } from '@/match/quickRarity';
 import { rarityTierLabel } from '@/match/quickRarity';
 import { shareImageWithText } from '@/lib/shareImage';
+import { Hashtag } from '@/components/ui';
 
-const MORET = 'var(--font-serif-hero)';
+const MANCHETE = 'var(--font-impact)';
 
 interface Props {
   clubName: string;
@@ -82,7 +83,7 @@ export function QuickShareCard({
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-3">
       <div
         className="relative w-full max-w-[340px] overflow-hidden"
-        style={{ borderRadius: 'var(--radius-md)', aspectRatio: '9 / 16', border: '2px solid rgba(201,162,39,0.55)', boxShadow: '0 12px 34px rgba(0,0,0,0.5)' }}
+        style={{ borderRadius: 'var(--radius-md)', aspectRatio: '9 / 16', border: '2px solid var(--color-neon-yellow)' }}
       >
         <img
           src="/banner-campeao-game-ole.png"
@@ -90,6 +91,7 @@ export function QuickShareCard({
           loading="eager"
           className="absolute inset-0 h-full w-full object-cover"
         />
+        {/* Scrim da foto: legibilidade do texto sobre o banner. */}
         <div
           aria-hidden
           className="absolute inset-0"
@@ -109,10 +111,8 @@ export function QuickShareCard({
               </span>
             </div>
           )}
-          <p className="font-display uppercase mb-1" style={{ color: 'var(--color-neon-yellow)', fontSize: '10px', fontWeight: 800, letterSpacing: '0.26em' }}>
-            Partida Rápida · Olefoot
-          </p>
-          <p style={{ color: '#f7ecd2', fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(30px, 10vw, 46px)', lineHeight: 0.9, letterSpacing: '-0.03em' }}>
+          <Hashtag className="mb-1 text-neon-yellow">#partidarápida #olefoot</Hashtag>
+          <p className="uppercase" style={{ color: 'var(--color-giz)', fontFamily: MANCHETE, fontSize: 'clamp(30px, 10vw, 46px)', lineHeight: 1.05 }}>
             {rarity.headline}
           </p>
           <p className="mt-1.5 text-white" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '15px' }}>
@@ -128,7 +128,7 @@ export function QuickShareCard({
               style={{ borderRadius: 'var(--radius-sm)', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(253,225,0,0.4)' }}
             >
               <Star className="w-3.5 h-3.5 text-neon-yellow" strokeWidth={2.5} aria-hidden />
-              <span style={{ color: '#f7ecd2', fontSize: '11px', fontWeight: 600 }}>
+              <span style={{ color: 'var(--color-giz)', fontSize: '11px', fontWeight: 600 }}>
                 Craque: <span className="text-white">{mvp.name}</span> · nota {mvp.rating.toFixed(1)}
               </span>
             </div>
@@ -141,7 +141,7 @@ export function QuickShareCard({
                 <span
                   key={idx}
                   className="grid place-items-center font-display"
-                  style={{ width: 16, height: 16, borderRadius: 4, background: FORM_COLOR[f], color: '#0b0b0b', fontSize: '9px', fontWeight: 900 }}
+                  style={{ width: 16, height: 16, borderRadius: 'var(--radius-sm)', background: FORM_COLOR[f], color: 'var(--color-deep-black)', fontSize: '9px', fontWeight: 900 }}
                 >
                   {f}
                 </span>
@@ -154,7 +154,7 @@ export function QuickShareCard({
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 w-full"
-            style={{ padding: '11px', borderRadius: 'var(--radius-sm)', background: 'var(--color-neon-yellow)', color: '#1a1405', fontWeight: 800, fontSize: '13px', letterSpacing: '0.04em', textDecoration: 'none', fontFamily: 'var(--font-display)' }}
+            style={{ padding: '11px', borderRadius: 'var(--radius-sm)', background: 'var(--color-neon-yellow)', color: 'var(--color-deep-black)', fontWeight: 800, fontSize: '13px', letterSpacing: '0.04em', textDecoration: 'none', fontFamily: 'var(--font-display)' }}
           >
             CRIE SEU TIME AGORA
           </a>

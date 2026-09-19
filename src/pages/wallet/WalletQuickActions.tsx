@@ -11,13 +11,13 @@ export type QuickAction = {
   badge?: string;
 };
 
-/** Verde = dinheiro entrando; vermelho = ação de risco; o resto é amarelo. */
+/** VOLT2: ícone branco chapado; verde = dinheiro entrando; vermelho = ação de risco. */
 const ACCENT_RING: Record<NonNullable<QuickAction['accent']>, string> = {
-  green: 'ring-[var(--color-success)]/30 text-[var(--color-success)]',
-  red: 'ring-[var(--color-danger)]/30 text-[var(--color-danger)]',
-  amber: 'ring-neon-yellow/30 text-neon-yellow',
-  cyan: 'ring-neon-yellow/30 text-neon-yellow',
-  yellow: 'ring-neon-yellow/30 text-neon-yellow',
+  green: 'text-alta',
+  red: 'text-baixa',
+  amber: 'text-white',
+  cyan: 'text-white',
+  yellow: 'text-white',
 };
 
 type WalletQuickActionsProps = {
@@ -26,17 +26,10 @@ type WalletQuickActionsProps = {
 
 export function WalletQuickActions({ actions }: WalletQuickActionsProps) {
   return (
-    <section
-      className="border border-white/[0.06] p-3 sm:p-4"
-      style={{
-        borderRadius: 'var(--radius-card)',
-        background: 'var(--color-panel-elevated,#0b0b0b)',
-        boxShadow: 'var(--shadow-card)',
-      }}
-    >
-      <div className="grid grid-cols-5 gap-1 sm:gap-3">
+    <section>
+      <div className="grid grid-cols-4 gap-2 sm:gap-3">
         {actions.map((a) => {
-          const ringCls = a.accent ? ACCENT_RING[a.accent] : 'ring-white/15 text-white/80';
+          const ringCls = a.accent ? ACCENT_RING[a.accent] : 'text-white';
           return (
             <motion.button
               key={a.key}
@@ -44,19 +37,17 @@ export function WalletQuickActions({ actions }: WalletQuickActionsProps) {
               onClick={a.onClick}
               disabled={a.disabled}
               whileTap={a.disabled ? undefined : { scale: 0.94 }}
-              className="group relative flex flex-col items-center gap-2 px-1 py-2 transition-colors disabled:opacity-40"
+              className="group relative flex h-[64px] min-w-0 flex-col items-center justify-center gap-1.5 border border-white/14 bg-card px-1 transition-colors hover:border-white/30 disabled:opacity-40"
             >
-              <span
-                className={`relative flex h-11 w-11 items-center justify-center rounded-full bg-black/40 ring-1 text-[18px] transition-all group-hover:ring-2 sm:h-12 sm:w-12 ${ringCls}`}
-              >
+              <span className={`relative flex items-center justify-center ${ringCls}`}>
                 {a.icon}
                 {a.badge ? (
-                  <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-neon-yellow px-1 font-display text-[8px] font-black text-deep-black tabular-nums">
+                  <span className="ole-num absolute -top-2 -right-3 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-neon-yellow px-1 text-[8px] text-deep-black tabular-nums">
                     {a.badge}
                   </span>
                 ) : null}
               </span>
-              <span className="font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/75 group-hover:text-white">
+              <span className="max-w-full truncate text-[11px] font-semibold text-white sm:text-[12px]">
                 {a.label}
               </span>
             </motion.button>

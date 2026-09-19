@@ -2,8 +2,8 @@
  * DailyCycleWidget — banner FIXO da Coroa do Dia na Home.
  *
  * Sempre visível (não esconde quando não há dados — vira convite). Aplica o
- * hero pattern editorial do Olefoot: BG neon-yellow + watermark gigante atrás
- * + hero text preto + divider + serif-hero italic. Adaptativo por fase:
+ * hero pattern do Olefoot (VOLT2): BG neon-yellow chapado + hero text preto
+ * + divider + subtítulo reto. Adaptativo por fase:
  *
  *   • qualifying → CORRIDA DO DIA · meu rank + countdown 19h
  *   • knockout   → MATA-MATA · fase atual + status do meu time
@@ -92,21 +92,10 @@ export function DailyCycleWidget() {
       onClick={() => navigate('/match/global')}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
       transition={{ type: 'spring', damping: 18, stiffness: 240 }}
-      className="relative w-full overflow-hidden bg-neon-yellow rounded-sm text-left shadow-[0_4px_24px_rgba(255,220,0,0.12)] focus:outline-none focus:ring-2 focus:ring-neon-yellow/60"
+      className="relative w-full overflow-hidden bg-neon-yellow rounded-sm text-left focus:outline-none focus:ring-2 focus:ring-neon-yellow/60"
     >
-      {/* Watermark gigante atrás (hero pattern Olefoot) */}
-      <div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden" aria-hidden>
-        <span
-          className="font-display font-black uppercase whitespace-nowrap text-black/[0.06]"
-          style={{ fontSize: 'clamp(80px, 18vw, 200px)', lineHeight: '0.85', letterSpacing: '-0.02em' }}
-        >
-          {heroConfig.watermark}
-        </span>
-      </div>
-
       {/* Conteúdo */}
       <div className="relative z-10 px-4 sm:px-5 py-4 sm:py-5 flex items-center gap-4">
         {/* Bloco esquerdo: kicker + title + subtitle */}
@@ -122,7 +111,7 @@ export function DailyCycleWidget() {
               {heroConfig.title}
             </h3>
             <span aria-hidden className="block w-8 h-[2px] bg-black mt-1.5" />
-            <p className="font-serif-hero italic text-sm sm:text-base text-black/80 mt-1.5 truncate">
+            <p className="font-serif-hero text-sm sm:text-base text-black/80 mt-1.5 truncate">
               {heroConfig.subtitle}
             </p>
           </div>

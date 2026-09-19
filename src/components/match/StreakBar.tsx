@@ -19,7 +19,7 @@ export function StreakBar({ streak }: StreakBarProps) {
       animate={{ opacity: 1, y: 0 }}
       className="fixed top-20 left-1/2 -translate-x-1/2 z-50"
     >
-      <div className="bg-black/90 border-2 border-neon-yellow rounded-lg px-6 py-3 shadow-2xl">
+      <div className="bg-panel border-2 border-neon-yellow rounded-lg px-6 py-3">
         <div className="flex items-center gap-4">
           {/* Fire Icon */}
           <motion.div
@@ -37,7 +37,7 @@ export function StreakBar({ streak }: StreakBarProps) {
             <div className="flex items-baseline gap-2">
               <motion.span
                 key={current}
-                initial={{ scale: 1.5, color: '#FDE047' }}
+                initial={{ scale: 1.5, color: '#FDE100' }}
                 animate={{ scale: 1, color: '#FFFFFF' }}
                 className="text-3xl font-black"
               >
@@ -92,7 +92,7 @@ export function StreakBar({ streak }: StreakBarProps) {
                           : (current / 3) * 100
                   }%`,
                 }}
-                className="h-full bg-gradient-to-r from-neon-yellow to-yellow-300"
+                className="h-full bg-neon-yellow"
               />
             </div>
           </div>

@@ -1,19 +1,17 @@
 /**
  * OleCard — Sistema de cards unificado Olefoot.
  *
- * Padrão visual BVB:
- * - Bordas sharp (4px radius máximo)
- * - Border-left accent (2-4px colorido)
- * - Gradientes sutis (5-10% opacity)
- * - Hover lift + glow
- * - Skew decorativo opcional (-6deg)
+ * VOLT2 (2026-09-19) — sólido, sem enfeite:
+ * - Raio do token (2px), cor chapada, borda como única marcação
+ * - Sem gradiente, sem vidro fosco, sem sombra, sem crescer no hover
+ * - `skewed` é aceito por compatibilidade e não inclina mais nada
  *
- * Variantes:
- * - default: card básico preto com borda branca/8
- * - accent: border-left amarela + glow hover
- * - gradient: gradiente sutil de tom
- * - glass: backdrop-blur + transparência
- * - elevated: sombra forte + hover lift
+ * Variantes (nomes mantidos por compatibilidade):
+ * - default: card chapado com borda branca/10
+ * - accent: border-left na cor do tom
+ * - gradient: superfície chapada com borda do tom (sem degradê)
+ * - glass: superfície chapada (sem vidro fosco)
+ * - elevated: superfície elevada (bg-card) com borda — sem sombra
  */
 
 import { cn } from '@/lib/utils';
@@ -31,9 +29,9 @@ interface OleCardProps {
   tone?: OleCardTone;
   /** Tamanho do padding interno. */
   size?: OleCardSize;
-  /** Adiciona hover interativo (lift + glow). */
+  /** Adiciona hover interativo (a borda acende). */
   interactive?: boolean;
-  /** Adiciona skew decorativo -6deg no ícone/badge. */
+  /** Compatibilidade: não inclina mais nada (VOLT2). */
   skewed?: boolean;
   /** Classes adicionais. */
   className?: string;
@@ -43,47 +41,49 @@ interface OleCardProps {
   [key: string]: unknown;
 }
 
+/** Tons mapeados para a paleta VOLT2 (nomes mantidos por compatibilidade). */
 const TONE_CLASSES: Record<OleCardTone, {
   border: string;
   bg: string;
-  glow: string;
   text: string;
+  /** Etiqueta/ícone chapado no tom. */
+  solid: string;
 }> = {
   yellow: {
-    border: 'border-neon-yellow/25',
-    bg: 'bg-gradient-to-br from-neon-yellow/5 to-black/40',
-    glow: 'hover:shadow-[0_0_20px_rgba(253,225,0,0.12)]',
+    border: 'border-neon-yellow/40',
+    bg: 'bg-panel',
     text: 'text-neon-yellow',
+    solid: 'bg-neon-yellow text-black',
   },
   fuchsia: {
-    border: 'border-fuchsia-500/25',
-    bg: 'bg-gradient-to-br from-fuchsia-500/5 to-black/40',
-    glow: 'hover:shadow-[0_0_20px_rgba(217,70,239,0.12)]',
-    text: 'text-fuchsia-300',
+    border: 'border-lenda/40',
+    bg: 'bg-panel',
+    text: 'text-lenda',
+    solid: 'bg-lenda text-white',
   },
   cyan: {
-    border: 'border-cyan-500/25',
-    bg: 'bg-gradient-to-br from-cyan-500/5 to-black/40',
-    glow: 'hover:shadow-[0_0_20px_rgba(6,182,212,0.12)]',
-    text: 'text-cyan-300',
+    border: 'border-white/30',
+    bg: 'bg-panel',
+    text: 'text-giz',
+    solid: 'bg-giz text-black',
   },
   emerald: {
-    border: 'border-emerald-500/25',
-    bg: 'bg-gradient-to-br from-emerald-500/5 to-black/40',
-    glow: 'hover:shadow-[0_0_20px_rgba(16,185,129,0.12)]',
-    text: 'text-emerald-300',
+    border: 'border-alta/40',
+    bg: 'bg-panel',
+    text: 'text-alta',
+    solid: 'bg-alta text-black',
   },
   rose: {
-    border: 'border-rose-500/25',
-    bg: 'bg-gradient-to-br from-rose-500/5 to-black/40',
-    glow: 'hover:shadow-[0_0_20px_rgba(244,63,94,0.12)]',
-    text: 'text-rose-300',
+    border: 'border-baixa/40',
+    bg: 'bg-panel',
+    text: 'text-baixa',
+    solid: 'bg-baixa text-white',
   },
   neutral: {
     border: 'border-white/10',
     bg: 'bg-[var(--color-card)]',
-    glow: 'hover:shadow-[0_0_16px_rgba(255,255,255,0.04)]',
     text: 'text-white',
+    solid: 'bg-card-hi text-white',
   },
 };
 
@@ -99,7 +99,7 @@ export function OleCard({
   tone = 'neutral',
   size = 'md',
   interactive = false,
-  skewed = false,
+  skewed: _skewed = false,
   className,
   onClick,
   ...props
@@ -109,14 +109,14 @@ export function OleCard({
 
   // Base classes (sempre aplicadas)
   const baseClasses = cn(
-    'relative overflow-hidden border transition-all',
+    'relative overflow-hidden border transition-colors',
     SIZE_PADDING[size],
   );
 
   // Variant-specific classes
   const variantClasses = cn(
-    // Default: card básico preto
-    variant === 'default' && 'bg-[var(--color-card)] border-white/8',
+    // Default: card chapado
+    variant === 'default' && 'bg-[var(--color-card)] border-white/10',
 
     // Accent: border-left colorida + fundo sutil
     variant === 'accent' && cn(
@@ -125,31 +125,27 @@ export function OleCard({
       toneStyle.bg,
     ),
 
-    // Gradient: gradiente completo do tom
+    // Gradient (nome legado): superfície chapada com borda do tom
     variant === 'gradient' && cn(
       toneStyle.border,
       toneStyle.bg,
     ),
 
-    // Glass: backdrop-blur + transparência
-    variant === 'glass' && 'bg-black/40 backdrop-blur-sm border-white/15',
+    // Glass (nome legado): superfície chapada, sem vidro fosco
+    variant === 'glass' && 'bg-panel border-white/16',
 
-    // Elevated: sombra forte
-    variant === 'elevated' && cn(
-      'bg-[var(--color-card)] border-white/10',
-      'shadow-[0_8px_24px_rgba(0,0,0,0.25)]',
-    ),
+    // Elevated: superfície elevada, sem sombra
+    variant === 'elevated' && 'bg-card-hi border-white/10',
   );
 
   // Interactive classes (hover/active)
   const interactiveClasses = cn(
-    interactive && 'hover:scale-[1.01] active:scale-[0.99]',
-    interactive && variant === 'accent' && 'hover:border-l-neon-yellow/60',
-    interactive && toneStyle.glow,
+    interactive && 'hover:border-white/30',
+    interactive && variant === 'accent' && 'hover:border-l-neon-yellow',
     isClickable && 'cursor-pointer',
   );
 
-  // Border radius (sempre 4px — sharp esportivo)
+  // Border radius (token VOLT2 = 2px)
   const radiusClass = 'rounded-sm';
 
   const Component = isClickable ? 'button' : 'div';
@@ -200,7 +196,7 @@ export function OleCardHeader({
         {Icon && (
           <Icon
             className={cn(
-              'h-4 w-4 shrink-0 transition-transform group-hover:scale-110',
+              'h-4 w-4 shrink-0',
               toneStyle.text,
             )}
             aria-hidden
@@ -295,13 +291,8 @@ export function OleCardBadge({
     <span
       className={cn(
         'absolute flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5',
-        'font-display text-[10px] font-black text-white',
-        'shadow-[0_2px_8px_rgba(0,0,0,0.3)]',
-        tone === 'rose' && 'bg-rose-500',
-        tone === 'yellow' && 'bg-neon-yellow text-black',
-        tone === 'fuchsia' && 'bg-fuchsia-500',
-        tone === 'cyan' && 'bg-cyan-500',
-        tone === 'emerald' && 'bg-emerald-500',
+        'font-display text-[10px] font-black',
+        toneStyle.solid,
         positionClasses[position],
         className,
       )}
@@ -312,7 +303,7 @@ export function OleCardBadge({
 }
 
 /**
- * OleCardIcon — ícone decorativo com skew opcional.
+ * OleCardIcon — ícone em bloco chapado. `skewed` mantido só por compatibilidade.
  */
 interface OleCardIconProps {
   icon: ComponentType<{ className?: string; strokeWidth?: number }>;
@@ -325,11 +316,10 @@ interface OleCardIconProps {
 export function OleCardIcon({
   icon: Icon,
   tone = 'neutral',
-  skewed = false,
+  skewed: _skewed = false,
   size = 'md',
   className,
 }: OleCardIconProps) {
-  const toneStyle = TONE_CLASSES[tone];
 
   const sizeClasses = {
     sm: 'h-8 w-8',
@@ -346,21 +336,20 @@ export function OleCardIcon({
   return (
     <div
       className={cn(
-        'flex items-center justify-center shrink-0 transition-transform group-hover:scale-110',
+        'flex items-center justify-center shrink-0',
         sizeClasses[size],
-        skewed && '-skew-x-6',
         tone === 'yellow' && 'bg-neon-yellow text-black',
-        tone === 'fuchsia' && 'bg-fuchsia-500/20 border-2 border-fuchsia-500/40 text-fuchsia-300',
-        tone === 'cyan' && 'bg-cyan-500/20 border-2 border-cyan-500/40 text-cyan-300',
-        tone === 'emerald' && 'bg-emerald-500/20 border-2 border-emerald-500/40 text-emerald-300',
-        tone === 'rose' && 'bg-rose-500/20 border-2 border-rose-500/40 text-rose-300',
-        tone === 'neutral' && 'bg-white/5 border-2 border-white/15 text-white/70',
+        tone === 'fuchsia' && 'bg-panel border-2 border-lenda/40 text-lenda',
+        tone === 'cyan' && 'bg-panel border-2 border-white/30 text-giz',
+        tone === 'emerald' && 'bg-panel border-2 border-alta/40 text-alta',
+        tone === 'rose' && 'bg-panel border-2 border-baixa/40 text-baixa',
+        tone === 'neutral' && 'bg-panel border-2 border-white/16 text-white/70',
         className,
       )}
       style={{ borderRadius: 'var(--radius-sm)' }}
     >
       <Icon
-        className={cn(iconSizes[size], skewed && 'skew-x-6')}
+        className={iconSizes[size]}
         strokeWidth={2.2}
         aria-hidden
       />

@@ -40,8 +40,7 @@ export function SubstitutePickerModal({ outgoing, bench, onPick, onClose }: Prop
         position: 'fixed',
         inset: 0,
         zIndex: 320,
-        background: 'rgba(0,0,0,0.78)',
-        backdropFilter: 'blur(6px)',
+        background: 'rgba(0,0,0,0.85)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -51,7 +50,7 @@ export function SubstitutePickerModal({ outgoing, bench, onPick, onClose }: Prop
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#0D0D0D',
+          background: 'var(--color-panel)',
           border: '1px solid rgba(253,225,0,0.25)',
           borderLeft: `3px solid ${NEON}`,
           padding: '20px 22px 16px',
@@ -79,13 +78,12 @@ export function SubstitutePickerModal({ outgoing, bench, onPick, onClose }: Prop
         {/* Saindo */}
         <div
           style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--font-impact)',
             fontSize: 22,
             color: '#fff',
             lineHeight: 1.1,
             marginBottom: 4,
-            letterSpacing: '-0.01em',
+            textTransform: 'uppercase',
           }}
         >
           Sai {outgoing.name?.split(' ').pop() ?? outgoing.name}
@@ -106,7 +104,6 @@ export function SubstitutePickerModal({ outgoing, bench, onPick, onClose }: Prop
           <div
             style={{
               fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
               fontSize: 14,
               color: 'rgba(255,255,255,0.4)',
               textAlign: 'center',
@@ -174,7 +171,6 @@ export function SubstitutePickerModal({ outgoing, bench, onPick, onClose }: Prop
                   <span
                     style={{
                       fontFamily: 'var(--font-serif-hero)',
-                      fontStyle: 'italic',
                       fontSize: 16,
                       color: '#fff',
                       flex: 1,

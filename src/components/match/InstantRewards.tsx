@@ -47,7 +47,7 @@ export function InstantRewards({
       label: result === 'win' ? 'Vitória' : result === 'draw' ? 'Empate' : 'Participação',
       value: baseExp,
       icon: 'trophy',
-      color: result === 'win' ? '#FDE047' : result === 'draw' ? '#60A5FA' : '#9CA3AF',
+      color: result === 'win' ? '#FDE100' : result === 'draw' ? '#ECECE7' : '#9A9C9F',
     },
   ];
 
@@ -57,7 +57,7 @@ export function InstantRewards({
       label: `Streak ${streakCount}x`,
       value: `${streakMultiplier}x`,
       icon: 'zap',
-      color: '#F59E0B',
+      color: '#FF9F1C',
     });
   }
 
@@ -67,7 +67,7 @@ export function InstantRewards({
       label: bonus.label,
       value: bonus.value,
       icon: 'star',
-      color: '#A78BFA',
+      color: '#8B5CF6',
     });
   });
 
@@ -99,7 +99,7 @@ export function InstantRewards({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
         onClick={onClose}
       >
         <motion.div
@@ -107,7 +107,7 @@ export function InstantRewards({
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.8, opacity: 0 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="relative w-full max-w-md mx-4 bg-gradient-to-b from-gray-900 to-black border-2 border-neon-yellow/30 rounded-2xl p-6 shadow-2xl"
+          className="relative w-full max-w-md mx-4 bg-panel border-2 border-neon-yellow/30 rounded-2xl p-6"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close Button */}
@@ -156,22 +156,11 @@ export function InstantRewards({
                       transition={{ type: 'spring', damping: 20, stiffness: 300 }}
                       className="flex items-center justify-between bg-black/40 border border-white/10 rounded-lg p-4 relative overflow-hidden"
                     >
-                      {/* Background Glow */}
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: [0, 0.3, 0] }}
-                        transition={{ duration: 0.8 }}
-                        className="absolute inset-0 pointer-events-none"
-                        style={{
-                          background: `radial-gradient(circle at center, ${reward.color}40, transparent)`,
-                        }}
-                      />
-
                       {/* Icon */}
                       <div className="flex items-center gap-3 relative z-10">
                         <motion.div
-                          initial={{ scale: 0, rotate: -180 }}
-                          animate={{ scale: 1, rotate: 0 }}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
                           transition={{ type: 'spring', damping: 15, stiffness: 300, delay: 0.1 }}
                           className="w-10 h-10 rounded-full flex items-center justify-center"
                           style={{ backgroundColor: `${reward.color}20`, border: `2px solid ${reward.color}` }}
@@ -230,7 +219,7 @@ export function InstantRewards({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.3, type: 'spring', damping: 20, stiffness: 300 }}
-              className="bg-gradient-to-r from-neon-yellow/20 to-yellow-600/20 border-2 border-neon-yellow rounded-lg p-4 mb-4"
+              className="bg-neon-yellow/10 border-2 border-neon-yellow rounded-lg p-4 mb-4"
             >
               <div className="flex items-center justify-between">
                 <span

@@ -7,6 +7,7 @@ import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { overallFromAttributes } from '@/entities/player';
 import { PenaltyShoot, type PenaltyKeeper, type PenaltyShooter } from '@/components/penalty';
 import { LegacyTicker } from '@/components/match/LegacyTicker';
+import { Hashtag } from '@/components/ui';
 
 type UiPhase = 'analyzing' | 'ticker' | 'result';
 
@@ -88,7 +89,7 @@ export function MatchAuto() {
         simError =
           e instanceof Error
             ? e.message
-            : 'Falha ao simular a partida. Tenta de novo ou ajusta a equipa.';
+            : 'Falha ao simular a partida. Tente de novo ou ajuste o time.';
       }
 
       if (!lm && !simError) {
@@ -173,9 +174,7 @@ export function MatchAuto() {
         >
           ← Home
         </Link>
-        <span className="text-[10px] font-display font-bold uppercase tracking-widest text-gray-600">
-          Partida automática
-        </span>
+        <Hashtag className="w-auto">#automatica</Hashtag>
         {phase === 'analyzing' && (
           <button
             type="button"
@@ -194,7 +193,7 @@ export function MatchAuto() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4"
+            className="fixed inset-0 z-[100] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:p-4"
             role="dialog"
             aria-modal="true"
             aria-labelledby="forfeit-auto-title"
@@ -204,27 +203,26 @@ export function MatchAuto() {
               initial={{ scale: 0.96, y: 8 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.96, y: 8 }}
-              className="glass-panel my-auto w-full max-w-md border border-red-500/40 p-6 shadow-[0_0_40px_rgba(239,68,68,0.12)] max-h-[min(88dvh,calc(100dvh-5rem))] overflow-y-auto sm:max-h-none"
+              className="glass-panel bg-panel my-auto w-full max-w-md border border-red-500/40 p-6 max-h-[min(88dvh,calc(100dvh-5rem))] overflow-y-auto sm:max-h-none"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 id="forfeit-auto-title" className="font-display font-black text-xl text-white text-center uppercase tracking-wide">
                 Sair do jogo?
               </h2>
               <p className="text-sm text-gray-400 text-center mt-4 leading-relaxed">
-                Você perde por <span className="text-red-400 font-display font-black text-lg">5×0</span>. O resultado
-                entra na liga e no histórico.
+                Entra na liga e no histórico.
               </p>
               <div className="mt-6 flex flex-col gap-2">
                 <button
                   type="button"
-                  className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-display font-black uppercase tracking-wider text-sm transition-colors"
+                  className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-display font-black uppercase tracking-wider text-sm transition-colors whitespace-nowrap"
                   onClick={confirmForfeitAuto}
                 >
-                  Confirmar desistência
+                  Desistir · derrota <span className="ole-num">5×0</span>
                 </button>
                 <button
                   type="button"
-                  className="w-full py-3 rounded-xl border border-white/20 text-gray-300 font-bold text-sm hover:bg-white/5 transition-colors"
+                  className="w-full py-3 border border-white/30 text-gray-300 font-bold text-sm hover:bg-white/5 transition-colors"
                   onClick={() => setForfeitOpen(false)}
                 >
                   Cancelar
@@ -239,14 +237,11 @@ export function MatchAuto() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="glass-panel p-10 flex flex-col items-center justify-center gap-4 border border-neon-yellow/20"
+          className="glass-panel bg-panel p-10 flex flex-col items-center justify-center gap-4 border border-neon-yellow/20"
         >
           <Loader2 className="w-10 h-10 text-neon-yellow animate-spin" />
           <p className="text-white font-display font-bold text-lg uppercase tracking-wide text-center">
             Analisando elenco e adversário…
-          </p>
-          <p className="text-xs text-gray-500 text-center max-w-sm">
-            O GameSpirit resolve os 90 minutos de uma vez — alvo &lt; 10 segundos (sem relógio ao vivo da Partida Rápida).
           </p>
         </motion.div>
       )}
@@ -275,8 +270,8 @@ export function MatchAuto() {
 
       {phase === 'result' && blockedReason && !summary && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          <div className="glass-panel p-6 border border-amber-500/30 text-center">
-            <p className="text-[10px] text-amber-400/90 font-bold uppercase tracking-widest mb-2">Partida automática</p>
+          <div className="glass-panel bg-panel p-6 border border-amber-500/30 text-center">
+            <Hashtag className="mb-2">#automatica</Hashtag>
             <p className="text-sm text-gray-200 leading-relaxed">{blockedReason}</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -289,7 +284,7 @@ export function MatchAuto() {
             </button>
             <button
               type="button"
-              className="flex-1 py-3 rounded-xl border border-white/20 font-bold text-sm hover:bg-white/10 transition-colors"
+              className="flex-1 py-3 border border-white/30 font-bold text-sm hover:bg-white/10 transition-colors"
               onClick={() => navigate('/')}
             >
               Home
@@ -300,7 +295,7 @@ export function MatchAuto() {
 
       {phase === 'result' && summary && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          <div className="glass-panel p-6 border border-white/10 text-center">
+          <div className="glass-panel bg-panel p-6 border border-white/10 text-center">
             <div className="ole-eyebrow mb-4">RESULTADO</div>
             <div className="ole-scoreboard mb-2">
               {summary.homeScore}
@@ -315,7 +310,7 @@ export function MatchAuto() {
             </p>
           </div>
 
-          <div className="glass-panel p-5 border border-white/10">
+          <div className="glass-panel bg-panel p-5 border border-white/10">
             <div className="ole-eyebrow mb-3">TITULARES</div>
             <div className="flex flex-wrap gap-2">
               {starters.slice(0, 11).map(({ slot, p, ovr }) => (
@@ -329,7 +324,7 @@ export function MatchAuto() {
             </div>
           </div>
 
-          <div className="glass-panel p-5 border border-white/10">
+          <div className="glass-panel bg-panel p-5 border border-white/10">
             <div className="ole-eyebrow mb-3">DESTAQUES</div>
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {Object.entries(topStats)
@@ -352,7 +347,7 @@ export function MatchAuto() {
             </div>
           </div>
 
-          <div className="glass-panel p-5 border border-white/10">
+          <div className="glass-panel bg-panel p-5 border border-white/10">
             <div className="ole-eyebrow mb-3 flex items-center justify-between">
               <span>EVENTOS</span>
               {summary.events.some((e) => e.kind === 'penalty_start') && (
@@ -411,14 +406,14 @@ export function MatchAuto() {
             </button>
             <button
               type="button"
-              className="flex-1 py-3 rounded-xl border border-white/20 font-bold text-sm hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-3 border border-white/30 font-bold text-sm hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
               onClick={() => navigate('/leagues')}
             >
               <Trophy className="w-4 h-4 text-neon-yellow" /> Ir para Liga
             </button>
             <button
               type="button"
-              className="flex-1 py-3 rounded-xl border border-white/20 font-bold text-sm hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-3 border border-white/30 font-bold text-sm hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
               onClick={() => navigate('/')}
             >
               <Home className="w-4 h-4" /> Home

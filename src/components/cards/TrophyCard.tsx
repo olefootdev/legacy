@@ -1,12 +1,10 @@
 /**
- * TrophyCard — Card de troféu ÉPICO BVB com split diagonal.
+ * TrophyCard — Card de troféu.
  *
- * PADRÃO VISUAL BVB:
- * - Split diagonal amarelo/preto (quando conquistado)
+ * VOLT2 (2026-09-19):
+ * - Faixa reta na cor do tom no topo (quando conquistado) + corpo chapado
  * - Watermark gigante do troféu em fundo
- * - Tipografia Druk Wide Bold
- * - Glow dourado intenso
- * - Animação de brilho no hover
+ * - Sem brilho, sem degradê, sem girar nem crescer no hover
  */
 
 import { Trophy, Lock } from 'lucide-react';
@@ -27,58 +25,54 @@ interface TrophyCardProps {
   onClick?: () => void;
 }
 
+/**
+ * Tons mapeados para a paleta VOLT2 — nomes mantidos por compatibilidade.
+ * Troféu do jogo é fictício: volt, nunca ouro (ouro é só ativo na rede).
+ */
 const TONE_STYLES = {
   yellow: {
-    splitBg: 'bg-gradient-to-br from-neon-yellow via-amber-400 to-yellow-600',
-    mainBg: 'bg-black',
+    splitBg: 'bg-neon-yellow',
+    mainBg: 'bg-panel',
     border: 'border-neon-yellow/70',
     borderHover: 'group-hover:border-neon-yellow',
-    glow: 'shadow-[0_0_32px_rgba(253,225,0,0.4)]',
-    glowHover: 'group-hover:shadow-[0_0_48px_rgba(253,225,0,0.6)]',
     iconText: 'text-black',
     mainText: 'text-neon-yellow',
     watermark: 'text-neon-yellow/[0.04]',
-    badgeBg: 'bg-neon-yellow/30',
+    badgeBg: 'bg-deep-black',
     badgeText: 'text-neon-yellow',
   },
   cyan: {
-    splitBg: 'bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-600',
-    mainBg: 'bg-black',
-    border: 'border-cyan-400/70',
-    borderHover: 'group-hover:border-cyan-400',
-    glow: 'shadow-[0_0_32px_rgba(6,182,212,0.4)]',
-    glowHover: 'group-hover:shadow-[0_0_48px_rgba(6,182,212,0.6)]',
+    splitBg: 'bg-giz',
+    mainBg: 'bg-panel',
+    border: 'border-white/30',
+    borderHover: 'group-hover:border-white',
     iconText: 'text-black',
-    mainText: 'text-cyan-300',
-    watermark: 'text-cyan-500/[0.04]',
-    badgeBg: 'bg-cyan-500/30',
-    badgeText: 'text-cyan-300',
+    mainText: 'text-giz',
+    watermark: 'text-giz/[0.04]',
+    badgeBg: 'bg-deep-black',
+    badgeText: 'text-giz',
   },
   emerald: {
-    splitBg: 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600',
-    mainBg: 'bg-black',
-    border: 'border-emerald-400/70',
-    borderHover: 'group-hover:border-emerald-400',
-    glow: 'shadow-[0_0_32px_rgba(16,185,129,0.4)]',
-    glowHover: 'group-hover:shadow-[0_0_48px_rgba(16,185,129,0.6)]',
+    splitBg: 'bg-alta',
+    mainBg: 'bg-panel',
+    border: 'border-alta/70',
+    borderHover: 'group-hover:border-alta',
     iconText: 'text-black',
-    mainText: 'text-emerald-300',
-    watermark: 'text-emerald-500/[0.04]',
-    badgeBg: 'bg-emerald-500/30',
-    badgeText: 'text-emerald-300',
+    mainText: 'text-alta',
+    watermark: 'text-alta/[0.04]',
+    badgeBg: 'bg-deep-black',
+    badgeText: 'text-alta',
   },
   fuchsia: {
-    splitBg: 'bg-gradient-to-br from-fuchsia-400 via-fuchsia-500 to-fuchsia-600',
-    mainBg: 'bg-black',
-    border: 'border-fuchsia-400/70',
-    borderHover: 'group-hover:border-fuchsia-400',
-    glow: 'shadow-[0_0_32px_rgba(217,70,239,0.4)]',
-    glowHover: 'group-hover:shadow-[0_0_48px_rgba(217,70,239,0.6)]',
+    splitBg: 'bg-lenda',
+    mainBg: 'bg-panel',
+    border: 'border-lenda/70',
+    borderHover: 'group-hover:border-lenda',
     iconText: 'text-white',
-    mainText: 'text-fuchsia-300',
-    watermark: 'text-fuchsia-500/[0.04]',
-    badgeBg: 'bg-fuchsia-500/30',
-    badgeText: 'text-fuchsia-300',
+    mainText: 'text-lenda',
+    watermark: 'text-lenda/[0.04]',
+    badgeBg: 'bg-deep-black',
+    badgeText: 'text-lenda',
   },
 };
 
@@ -100,30 +94,28 @@ export function TrophyCard({
       className={cn(
         'group relative isolate overflow-hidden',
         'flex min-h-[180px] flex-col gap-3 p-5',
-        'border-2 transition-all duration-300',
-        onClick && 'cursor-pointer hover:scale-[1.03] active:scale-[0.98]',
+        'border-2 transition-colors duration-300',
+        onClick && 'cursor-pointer',
         !onClick && 'cursor-default',
         earned && style
           ? cn(
               style.border,
               style.borderHover,
-              style.glow,
-              style.glowHover,
             )
-          : 'border-white/15 bg-black/60 opacity-75 hover:opacity-90',
+          : 'border-white/15 bg-panel opacity-75 hover:opacity-90',
       )}
       style={{ borderRadius: 'var(--radius-sm)' }}
     >
-      {/* Split diagonal — 25% colorido, 75% preto (quando conquistado) */}
+      {/* Faixa reta — 28% na cor do tom, 72% chapado (quando conquistado) */}
       {earned && style && (
         <>
           <div
             className={cn(
-              'absolute inset-0 transition-all duration-500',
+              'absolute inset-0',
               style.splitBg,
             )}
             style={{
-              clipPath: 'polygon(0 0, 100% 0, 100% 25%, 0 30%)',
+              clipPath: 'polygon(0 0, 100% 0, 100% 28%, 0 28%)',
             }}
             aria-hidden
           />
@@ -133,7 +125,7 @@ export function TrophyCard({
               style.mainBg,
             )}
             style={{
-              clipPath: 'polygon(0 30%, 100% 25%, 100% 100%, 0 100%)',
+              clipPath: 'polygon(0 28%, 100% 28%, 100% 100%, 0 100%)',
             }}
             aria-hidden
           />
@@ -147,10 +139,7 @@ export function TrophyCard({
           aria-hidden
         >
           <Trophy
-            className={cn(
-              'transition-all duration-500 group-hover:scale-110 group-hover:rotate-6',
-              style.watermark,
-            )}
+            className={style.watermark}
             style={{
               width: 'clamp(100px, 16vw, 160px)',
               height: 'clamp(100px, 16vw, 160px)',
@@ -166,11 +155,9 @@ export function TrophyCard({
         <div
           className={cn(
             'flex h-16 w-16 shrink-0 items-center justify-center',
-            'transition-all duration-300',
-            'group-hover:scale-110 group-hover:-rotate-6',
             earned && style
-              ? cn(style.splitBg, style.iconText, 'shadow-[0_0_28px_rgba(250,204,21,0.7)]')
-              : 'bg-white/5 text-gray-600 border-2 border-white/10',
+              ? cn(style.splitBg, style.iconText, 'border-2 border-deep-black')
+              : 'bg-white/5 text-poeira border-2 border-white/10',
           )}
           style={{ borderRadius: 'var(--radius-md)' }}
         >
@@ -219,13 +206,6 @@ export function TrophyCard({
         )}
       </div>
 
-      {/* Brilho decorativo no hover (só quando conquistado) */}
-      {earned && (
-        <div
-          className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-white/15 opacity-0 blur-xl transition-opacity duration-500 group-hover:opacity-100"
-          aria-hidden
-        />
-      )}
     </button>
   );
 }

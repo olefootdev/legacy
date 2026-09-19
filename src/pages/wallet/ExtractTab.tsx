@@ -41,9 +41,9 @@ function badgeColor(_type: WalletLedgerType): string {
 }
 
 function statusDot(status: string): string {
-  if (status === 'confirmed') return 'bg-[var(--color-success)]';
-  if (status === 'pending') return 'bg-neon-yellow';
-  return 'bg-[var(--color-danger)]';
+  if (status === 'confirmed') return 'bg-alta';
+  if (status === 'pending') return 'bg-atencao';
+  return 'bg-baixa';
 }
 
 function formatLedgerDate(iso: string): string {
@@ -75,23 +75,23 @@ export function ExtractTab() {
       <button
         type="button"
         onClick={() => navigate('/wallet')}
-        className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-2"
+        className="flex items-center gap-2 text-sm text-cimento hover:text-white transition-colors mb-2"
       >
         <ArrowLeft className="w-4 h-4" /> Carteira
       </button>
 
       <div className="flex items-center gap-3 mb-2">
         <FileText className="w-6 h-6 text-white" />
-        <h2 className="text-2xl font-bold text-white">Extrato Completo</h2>
+        <h2 className="font-impact text-2xl uppercase leading-[1.1] text-white">Extrato Completo</h2>
       </div>
 
       {/* Filters */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-panel p-4 flex flex-wrap gap-3 items-center"
+        className="glass-panel border border-white/10 bg-panel p-4 flex flex-wrap gap-3 items-center"
       >
-        <Filter className="w-4 h-4 text-gray-400" />
+        <Filter className="w-4 h-4 text-cimento" />
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value as WalletLedgerType | '')}
@@ -114,12 +114,12 @@ export function ExtractTab() {
             </option>
           ))}
         </select>
-        <span className="text-xs text-gray-500 ml-auto">{sorted.length} registros</span>
+        <span className="ml-auto font-mono text-[11px] text-cimento">{sorted.length} registros</span>
       </motion.div>
 
       {/* Entries */}
       {sorted.length === 0 ? (
-        <div className="text-center py-12 text-gray-500 text-sm">
+        <div className="text-center py-12 text-cimento text-sm">
           Nenhuma transação encontrada.
         </div>
       ) : (
@@ -129,31 +129,31 @@ export function ExtractTab() {
               key={entry.id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/[0.07] transition-colors"
+              className="flex items-center justify-between border border-white/10 bg-panel p-4 hover:border-white/30 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusDot(entry.status)}`} />
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded border shrink-0 ${badgeColor(entry.type)}`}
+                  className={`font-mono text-[10px] font-medium px-2 py-0.5 border shrink-0 ${badgeColor(entry.type)}`}
                 >
                   {entry.type}
                 </span>
                 <div className="min-w-0">
-                  <div className="text-sm text-gray-300 truncate">{entry.source}</div>
-                  <div className="text-[10px] text-gray-500">
+                  <div className="text-sm text-giz truncate">{entry.source}</div>
+                  <div className="font-mono text-[10.5px] text-poeira">
                     {formatLedgerDate(entry.createdAt)} · {entry.currency}
                   </div>
                 </div>
               </div>
               <div
-                className={`font-bold text-sm shrink-0 ml-4 ${
-                  entry.amount >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
+                className={`font-mono font-medium text-sm tabular-nums shrink-0 ml-4 ${
+                  entry.amount >= 0 ? 'text-alta' : 'text-baixa'
                 }`}
               >
                 {entry.currency === 'EXP'
                   ? `${entry.amount < 0 ? '-' : '+'}${Math.abs(entry.amount).toLocaleString('pt-BR')}`
                   : `${entry.amount >= 0 ? '+' : ''}${(entry.amount / 100).toFixed(2)}`}
-                <span className="text-[10px] font-normal text-gray-500 ml-1">
+                <span className="text-[10px] font-normal text-poeira ml-1">
                   {entry.currency === 'BRO' ? 'USDT' : entry.currency}
                 </span>
               </div>

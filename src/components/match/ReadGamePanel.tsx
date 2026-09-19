@@ -122,8 +122,7 @@ export function ReadGamePanel(props: ReadGamePanelProps) {
           <div
             style={{
               width: '100%',
-              background: 'rgba(8,8,8,0.96)',
-              backdropFilter: 'blur(6px)',
+              background: 'var(--color-panel)',
               border: '1px solid rgba(253,225,0,0.22)',
               borderLeft: `3px solid ${NEON}`,
               padding: '14px 18px 16px',
@@ -139,7 +138,7 @@ export function ReadGamePanel(props: ReadGamePanelProps) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {lines.map((line, i) => (
                 <div key={i} style={{
-                  fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
+                  fontFamily: 'var(--font-serif-hero)', 
                   fontSize: i === 0 ? 16 : 14,
                   color: i === 0 ? '#fff' : 'rgba(255,255,255,0.7)',
                   lineHeight: 1.35,

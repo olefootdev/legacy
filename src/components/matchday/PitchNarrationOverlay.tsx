@@ -110,7 +110,7 @@ function eventToNarration(
       id: `narr-${ev.id}`,
       kind: 'foul',
       title: `🚑 Lesão · ${name}`,
-      subtitle: 'Staff corre ao relvado',
+      subtitle: 'Staff entra em campo',
       minute: ev.minute,
       ttlMs: 3500,
       createdAt,
@@ -183,12 +183,12 @@ function PitchNarrationOverlayInner() {
             c.kind === 'corner_home' || c.kind === 'corner_away' ? Flag :
             AlertTriangle;
           const accent =
-            c.kind === 'yellow' ? 'from-yellow-500/40 to-yellow-600/30 border-yellow-400/60 text-yellow-100' :
-            c.kind === 'red' ? 'from-rose-600/50 to-rose-700/40 border-rose-400/70 text-rose-100' :
-            c.kind === 'goal' ? 'from-neon-yellow/40 to-amber-500/30 border-neon-yellow/70 text-white' :
-            c.kind === 'corner_home' ? 'from-emerald-500/30 to-teal-500/25 border-emerald-400/60 text-emerald-100' :
-            c.kind === 'corner_away' ? 'from-rose-500/30 to-rose-600/25 border-rose-400/60 text-rose-100' :
-            'from-orange-500/30 to-orange-600/25 border-orange-400/60 text-orange-100';
+            c.kind === 'yellow' ? 'border-yellow-400/60 text-yellow-100' :
+            c.kind === 'red' ? 'border-rose-400/70 text-rose-100' :
+            c.kind === 'goal' ? 'border-neon-yellow/70 text-white' :
+            c.kind === 'corner_home' ? 'border-emerald-400/60 text-emerald-100' :
+            c.kind === 'corner_away' ? 'border-rose-400/60 text-rose-100' :
+            'border-orange-400/60 text-orange-100';
           return (
             <motion.div
               key={c.id}
@@ -197,7 +197,7 @@ function PitchNarrationOverlayInner() {
               exit={{ opacity: 0, y: -12, scale: 0.92 }}
               transition={{ type: 'spring', stiffness: 280, damping: 22 }}
               className={cn(
-                'rounded-xl border bg-gradient-to-b px-3 py-2 shadow-xl backdrop-blur pointer-events-auto',
+                'rounded-xl border bg-panel px-3 py-2 pointer-events-auto',
                 accent,
               )}
             >

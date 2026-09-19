@@ -20,8 +20,8 @@ interface ExpertPanelProps {
 function barColor(value: number): string {
   if (value >= 70) return '#22C55E';
   if (value >= 45) return NEON;
-  if (value >= 25) return '#F59E0B';
-  return '#EF4444';
+  if (value >= 25) return '#FF9F1C';
+  return '#FF4D4D';
 }
 
 function SmartBar({ label, value, subtitle }: {
@@ -40,7 +40,7 @@ function SmartBar({ label, value, subtitle }: {
         {label}
       </div>
       <div style={{
-        fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700,
+        fontFamily: 'var(--font-serif-hero)', fontWeight: 700,
         fontSize: 32, color, lineHeight: 1,
         fontVariantNumeric: 'tabular-nums',
         transition: 'color 600ms ease',
@@ -73,7 +73,7 @@ function SmartBar({ label, value, subtitle }: {
 
 function PlayerRow({ player }: { player: PitchPlayerState }) {
   const fatigue = player.fatigue ?? 0;
-  const fatigueColor = fatigue > 70 ? '#EF4444' : fatigue > 45 ? '#F59E0B' : '#22C55E';
+  const fatigueColor = fatigue > 70 ? '#FF4D4D' : fatigue > 45 ? '#FF9F1C' : '#22C55E';
   const staminaPct = Math.max(0, 100 - fatigue);
 
   return (
@@ -124,25 +124,25 @@ function deriveAdversaryStatus(bars: ExpertBars): {
   const confLabel = bars.confidence.awayLabel;
 
   if (confLabel === 'abalado' || conf < 20) {
-    return { label: 'Desmoronando', color: '#EF4444', description: 'Moral destruída, erros em série' };
+    return { label: 'Desmoronando', color: '#FF4D4D', description: 'Moral destruída, erros em série' };
   }
   if (dec < 30 && conf < 40) {
-    return { label: 'Errando muito', color: '#EF4444', description: 'Decisões ruins, time perdido' };
+    return { label: 'Errando muito', color: '#FF4D4D', description: 'Decisões ruins, time perdido' };
   }
   if (confLabel === 'tenso') {
-    return { label: 'Pressionado', color: '#F59E0B', description: 'Sentindo a pressão, pode cometer erros' };
+    return { label: 'Pressionado', color: '#FF9F1C', description: 'Sentindo a pressão, pode cometer erros' };
   }
   if (tact < 30 && dec < 45) {
-    return { label: 'Desorganizado', color: '#F59E0B', description: 'Fora de posição, sem padrão de jogo' };
+    return { label: 'Desorganizado', color: '#FF9F1C', description: 'Fora de posição, sem padrão de jogo' };
   }
   if (dec >= 70 && conf >= 65 && tact >= 60) {
-    return { label: 'Dominando', color: '#EF4444', description: 'Adversário forte, atenção total' };
+    return { label: 'Dominando', color: '#FF4D4D', description: 'Adversário forte, atenção total' };
   }
   if (confLabel === 'embalado') {
-    return { label: 'Embalado', color: '#F59E0B', description: 'Confiante e perigoso' };
+    return { label: 'Embalado', color: '#FF9F1C', description: 'Confiante e perigoso' };
   }
   if (conf >= 60 && dec >= 55) {
-    return { label: 'Confortável', color: '#F59E0B', description: 'Jogando sem pressão' };
+    return { label: 'Confortável', color: '#FF9F1C', description: 'Jogando sem pressão' };
   }
   if (conf < 45 && dec < 50) {
     return { label: 'Com medo', color: '#22C55E', description: 'Hesitante, evitando riscos' };
@@ -252,7 +252,7 @@ export function ExpertPanel({
           borderLeft: `3px solid ${adversary.color}`,
         }}>
           <div style={{
-            fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700,
+            fontFamily: 'var(--font-serif-hero)', fontWeight: 700,
             fontSize: 18, color: adversary.color, lineHeight: 1,
             whiteSpace: 'nowrap',
           }}>
