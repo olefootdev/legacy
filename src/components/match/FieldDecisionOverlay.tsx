@@ -1,13 +1,13 @@
 /**
  * FieldDecisionOverlay — decision moment cinematográfico.
  *
- * A câmera "entra em campo": fundo escurece com vignette intensa,
+ * A câmera "entra em campo": fundo escurece (scrim chapado),
  * nome + posição do jogador surgem no centro, e dois círculos com
  * borda amarela flutuam como escolhas do manager.
  */
 import { useEffect, useState } from 'react';
 
-const NEON = '#FDE100';
+const NEON = 'var(--color-neon-yellow)';
 
 export interface FieldDecisionChoice {
   id: string;
@@ -67,7 +67,7 @@ export function FieldDecisionOverlay({
     <div
       className="absolute inset-0 z-[400] flex flex-col items-center justify-center"
       style={{
-        background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.92) 100%)',
+        background: 'rgba(13,13,13,0.88)',
         opacity: entered ? 1 : 0,
         transition: 'opacity 320ms ease-out',
       }}
@@ -96,7 +96,7 @@ export function FieldDecisionOverlay({
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, fontWeight: 800, letterSpacing: '0.3em', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 4 }}>
           {playerPos} · {playerNum}
         </div>
-        <div style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 'clamp(28px, 6vw, 48px)', fontWeight: 700, color: '#fff', lineHeight: 1, letterSpacing: '-0.01em' }}>
+        <div style={{ fontFamily: 'var(--font-impact)', fontSize: 'clamp(28px, 6vw, 48px)', fontWeight: 400, color: '#fff', lineHeight: 1.1, textTransform: 'uppercase' }}>
           {firstName}
         </div>
       </div>
@@ -121,19 +121,14 @@ export function FieldDecisionOverlay({
               border: `2px solid ${NEON}`,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', gap: 4,
-              transition: 'transform 150ms ease, background 150ms ease, box-shadow 150ms ease',
-              boxShadow: `0 0 0 0 ${NEON}`,
+              transition: 'background 150ms ease',
               animationDelay: `${i * 80}ms`,
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.transform = 'scale(1.08)';
               e.currentTarget.style.background = 'rgba(253,225,0,0.12)';
-              e.currentTarget.style.boxShadow = `0 0 24px rgba(253,225,0,0.35)`;
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.transform = 'scale(1)';
               e.currentTarget.style.background = 'rgba(0,0,0,0.6)';
-              e.currentTarget.style.boxShadow = `0 0 0 0 ${NEON}`;
             }}
           >
             <span style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(9px, 2vw, 12px)', fontWeight: 800, letterSpacing: '0.22em', color: NEON, textTransform: 'uppercase', textAlign: 'center', lineHeight: 1.2 }}>
@@ -150,7 +145,7 @@ export function FieldDecisionOverlay({
 
       {/* Timer arc — linha fina embaixo dos círculos */}
       <div style={{ marginTop: 20, width: 'clamp(80px, 16vw, 110px)', height: 2, background: 'rgba(255,255,255,0.08)', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${progress}%`, background: progress > 40 ? NEON : '#ef4444', transition: 'background 300ms' }} />
+        <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${progress}%`, background: progress > 40 ? NEON : 'var(--color-baixa)', transition: 'background 300ms' }} />
       </div>
     </div>
   );

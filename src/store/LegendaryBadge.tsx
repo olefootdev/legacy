@@ -1,6 +1,6 @@
 /**
  * Badge animado para itens míticos/featured
- * Aparece no canto superior esquerdo do card com glow pulsante
+ * Aparece no canto superior esquerdo do card — etiqueta volt chapada, sem brilho
  */
 
 import { motion } from 'motion/react';
@@ -22,20 +22,6 @@ export function LegendaryBadge({ rarity, featured }: LegendaryBadgeProps) {
       transition={{ delay: 0.1, type: 'spring', stiffness: 300 }}
       className="absolute left-3 top-3 z-10"
     >
-      {/* Glow pulsante */}
-      <motion.div
-        animate={{
-          opacity: [0.4, 0.8, 0.4],
-          scale: [1, 1.05, 1],
-        }}
-        transition={{
-          duration: 2.5,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-        className="absolute inset-0 rounded-lg bg-neon-yellow/25 blur-xl"
-      />
-
       {/* Badge */}
       <div className="relative flex items-center gap-2 rounded-lg bg-neon-yellow px-3 py-1.5">
         <Sparkles className="h-3.5 w-3.5 text-black" strokeWidth={2.4} />

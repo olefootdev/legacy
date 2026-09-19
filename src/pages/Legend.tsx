@@ -3,8 +3,8 @@
  *
  * Modelo visual: BVB Rebrand 2023 (DesignStudio) + Legacy Tech Olefoot.
  * Composto por blocos reutilizáveis pra qualquer lenda futura:
- *  - Hero: fundo amarelo + foto B&W + OVR/era badge + quote Moret italic
- *  - Achievements: 4 mini-cards Moret italic (gols, mundiais, etc.)
+ *  - Hero: fundo amarelo + foto B&W + OVR (ole-num) + nome em Anton
+ *  - Achievements: mini-cards com número em ole-num
  *  - Trajetória: timeline horizontal de marcos
  *  - DNA do Campeão: grid 3x2 de atributos
  *  - Tributos: citações de outros grandes sobre a lenda
@@ -40,19 +40,6 @@ export function Legend() {
     <div className="min-h-screen bg-deep-black text-white">
       {/* ── HERO: fundo amarelo + foto + OVR/era badge ─────────────── */}
       <section className="relative w-full overflow-hidden bg-neon-yellow">
-        {/* Watermark sutil do nome */}
-        <div
-          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
-          aria-hidden
-        >
-          <span
-            className="font-display font-black uppercase tracking-tight whitespace-nowrap text-black/[0.04]"
-            style={{ fontSize: 'clamp(160px, 28vw, 420px)', lineHeight: '0.85' }}
-          >
-            {legend.name}
-          </span>
-        </div>
-
         <div className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-8 sm:py-12">
           {/* 1. Search centralizada com borda preta — primeiro elemento
               do hero. Navegação back disponível pelo header global +
@@ -71,24 +58,18 @@ export function Legend() {
 
           {/* 3. Nome */}
           <h1
-            className="ole-headline-italic text-black text-center leading-[0.9]"
-            style={{ fontSize: 'clamp(72px, 16vw, 144px)' }}
+            className="font-impact uppercase break-words text-black text-center leading-[1.1]"
+            style={{ fontSize: 'clamp(56px, 15vw, 128px)' }}
           >
             {legend.name.charAt(0) + legend.name.slice(1).toLowerCase()}
           </h1>
 
-          {/* 4. Régua editorial */}
-          <div
-            className="mx-auto mt-5 w-12 h-[3px] bg-black"
-            aria-hidden
-          />
-
           {/* 5. Data/conquista textual editorial — substitui "era · país" */}
           <p
-            className="mt-4 text-center font-display font-black uppercase text-black/75"
+            className="mt-4 text-center font-mono uppercase text-black/75"
             style={{
-              fontSize: 'clamp(11px, 1.3vw, 12px)',
-              letterSpacing: '0.28em',
+              fontSize: '11.5px',
+              letterSpacing: '0.16em',
               lineHeight: 1.4,
             }}
           >
@@ -101,13 +82,13 @@ export function Legend() {
               <img
                 src={legend.photoUrl}
                 alt={legend.fullName}
-                className="w-full h-full object-cover ole-player-photo-bw shadow-[0_24px_48px_rgba(0,0,0,0.18)] transition-all duration-500 hover:[filter:none]"
+                className="w-full h-full object-cover ole-player-photo-bw transition-all duration-500 hover:[filter:none]"
                 draggable={false}
               />
             ) : (
-              <div className="w-full h-full bg-black/90 grid place-items-center shadow-[0_24px_48px_rgba(0,0,0,0.22)]">
+              <div className="w-full h-full bg-black grid place-items-center">
                 <span
-                  className="font-display font-black text-white/15 uppercase"
+                  className="font-impact text-white/15 uppercase"
                   style={{
                     fontSize: 'clamp(96px, 18vw, 160px)',
                     lineHeight: 1,
@@ -118,48 +99,37 @@ export function Legend() {
                 </span>
               </div>
             )}
-            {/* OVR badge — Moret italic neon-yellow no preto */}
-            <div className="absolute top-3 left-3 z-10 bg-black/90 px-2.5 py-1.5 shadow-[0_4px_14px_rgba(0,0,0,0.45)]">
+            {/* OVR badge — número Archivo volt no preto */}
+            <div className="absolute top-3 left-3 z-10 bg-black px-2.5 py-1.5">
               <p
-                className="italic text-neon-yellow tabular-nums leading-none"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontWeight: 700,
-                  fontSize: 'clamp(28px, 4.5vw, 40px)',
-                  letterSpacing: '-0.04em',
-                }}
+                className="ole-num text-neon-yellow leading-none"
+                style={{ fontSize: 'clamp(26px, 4.2vw, 36px)' }}
               >
                 {legend.ovr}
               </p>
-              <p
-                className="mt-0.5 font-display font-black uppercase text-white/85"
-                style={{ fontSize: '8px', letterSpacing: '0.22em' }}
-              >
+              <p className="mt-0.5 font-mono uppercase text-giz" style={{ fontSize: '9px', letterSpacing: '0.16em' }}>
                 OVR
               </p>
             </div>
-            {/* Era ribbon — canto superior direito */}
-            <div className="absolute top-3 right-3 z-10 bg-neon-yellow border border-black/30 px-2.5 py-1 shadow-[0_4px_14px_rgba(0,0,0,0.25)]">
-              <p
-                className="font-display font-black uppercase text-black"
-                style={{ fontSize: '9px', letterSpacing: '0.22em' }}
-              >
+            {/* Selo — canto superior direito */}
+            <div className="absolute top-3 right-3 z-10 bg-black px-2 py-1">
+              <p className="font-mono uppercase text-neon-yellow" style={{ fontSize: '9.5px', letterSpacing: '0.14em' }}>
                 Lenda
               </p>
             </div>
           </div>
 
-          {/* 7. Frase — quote em Moret italic logo abaixo da foto */}
+          {/* 7. Frase — quote logo abaixo da foto */}
           <blockquote
-            className="ole-headline-italic mt-8 sm:mt-10 text-black/85 text-center max-w-2xl mx-auto leading-snug"
+            className="mt-8 sm:mt-10 font-semibold text-black/85 text-center max-w-2xl mx-auto leading-snug"
             style={{ fontSize: 'clamp(17px, 2.4vw, 22px)' }}
           >
             "{legend.quote}"
           </blockquote>
           {legend.quoteAuthor ? (
             <p
-              className="mt-3 text-black/60 font-display uppercase font-bold text-center"
-              style={{ fontSize: '11px', letterSpacing: '0.22em' }}
+              className="mt-3 text-black/60 font-mono uppercase text-center"
+              style={{ fontSize: '11px', letterSpacing: '0.14em' }}
             >
               — {legend.quoteAuthor}
             </p>
@@ -186,13 +156,8 @@ export function Legend() {
           <header className="flex items-center gap-3 mb-6">
             <span aria-hidden className="w-1 h-8 bg-neon-yellow" />
             <h2
-              className="italic text-neon-yellow leading-none"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontSize: 'clamp(28px, 4.5vw, 40px)',
-                letterSpacing: '-0.02em',
-              }}
+              className="font-impact uppercase text-neon-yellow leading-[1.1]"
+              style={{ fontSize: 'clamp(28px, 4.5vw, 40px)' }}
             >
               Trajetória
             </h2>
@@ -209,28 +174,22 @@ export function Legend() {
                 <article
                   key={ev.year}
                   role="listitem"
-                  className="shrink-0 snap-start w-[210px] sm:w-[230px] bg-[var(--color-card)] border border-[var(--color-border)] border-l-2 border-l-neon-yellow p-4 transition-transform duration-200 hover:-translate-y-0.5"
-                  style={{ borderRadius: 'var(--radius-sm)' }}
+                  className="shrink-0 snap-start w-[210px] sm:w-[230px] bg-card border border-white/10 border-l-2 border-l-neon-yellow p-4 transition-colors hover:bg-card-hi"
                 >
                   <p
-                    className="italic text-neon-yellow tabular-nums leading-none"
-                    style={{
-                      fontFamily: 'var(--font-serif-hero)',
-                      fontWeight: 700,
-                      fontSize: 'clamp(28px, 3.8vw, 32px)',
-                      letterSpacing: '-0.03em',
-                    }}
+                    className="ole-num text-neon-yellow leading-none"
+                    style={{ fontSize: 'clamp(24px, 3.4vw, 28px)' }}
                   >
                     {ev.year}
                   </p>
-                  <p className="mt-3 text-white/85 text-[12px] sm:text-[13px] leading-snug">
+                  <p className="mt-3 text-giz text-[12px] sm:text-[13px] leading-snug">
                     {ev.text}
                   </p>
                 </article>
               ))}
             </div>
-            <div className="mt-3 h-[3px] bg-white/8 relative overflow-hidden">
-              <div className="absolute inset-y-0 left-0 w-1/3 bg-neon-yellow/85" aria-hidden />
+            <div className="mt-3 h-[3px] bg-card-hi relative overflow-hidden">
+              <div className="absolute inset-y-0 left-0 w-1/3 bg-neon-yellow" aria-hidden />
             </div>
           </div>
         </div>
@@ -238,22 +197,12 @@ export function Legend() {
 
       {/* ── DNA DO CAMPEÃO — grid 3x2 ─────────────────────────────── */}
       <section className="relative bg-deep-black pb-10 sm:pb-14">
-        <div
-          className="diagonal-accent"
-          style={{ top: '-40px', right: '-60px', width: '300px', height: '300px' }}
-          aria-hidden
-        />
         <div className="mx-auto max-w-6xl px-5 sm:px-8 relative">
           <header className="flex items-center gap-3 mb-6">
             <span aria-hidden className="w-1 h-8 bg-neon-yellow" />
             <h2
-              className="italic text-neon-yellow leading-none"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontSize: 'clamp(28px, 4.5vw, 40px)',
-                letterSpacing: '-0.02em',
-              }}
+              className="font-impact uppercase text-neon-yellow leading-[1.1]"
+              style={{ fontSize: 'clamp(28px, 4.5vw, 40px)' }}
             >
               DNA do Campeão
             </h2>
@@ -265,29 +214,17 @@ export function Legend() {
               return (
                 <div
                   key={attr.label}
-                  className="relative bg-[var(--color-card)] border border-[var(--color-border)] p-4 overflow-hidden"
-                  style={{ borderRadius: 'var(--radius-sm)' }}
+                  className="relative bg-card border border-white/10 p-4 overflow-hidden"
                 >
                   <div className="flex items-baseline justify-between gap-2">
-                    <span
-                      className="font-display font-bold uppercase text-white/65"
-                      style={{ fontSize: '11px', letterSpacing: '0.18em' }}
-                    >
+                    <span className="min-w-0 truncate font-mono uppercase text-cimento" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
                       {attr.label}
                     </span>
-                    <span
-                      className="text-neon-yellow tabular-nums leading-none italic"
-                      style={{
-                        fontFamily: 'var(--font-serif-hero)',
-                        fontWeight: 700,
-                        fontSize: '32px',
-                        letterSpacing: '-0.02em',
-                      }}
-                    >
+                    <span className="ole-num shrink-0 text-neon-yellow leading-none" style={{ fontSize: '28px' }}>
                       {v}
                     </span>
                   </div>
-                  <div className="mt-3 h-[3px] bg-white/8 overflow-hidden">
+                  <div className="mt-3 h-[3px] bg-card-hi overflow-hidden">
                     <div
                       className="h-full bg-neon-yellow transition-all duration-500"
                       style={{ width: `${v}%` }}
@@ -308,13 +245,8 @@ export function Legend() {
             <header className="flex items-center gap-3 mb-6">
               <span aria-hidden className="w-1 h-8 bg-neon-yellow" />
               <h2
-                className="italic text-neon-yellow leading-none"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontWeight: 700,
-                  fontSize: 'clamp(28px, 4.5vw, 40px)',
-                  letterSpacing: '-0.02em',
-                }}
+                className="font-impact uppercase text-neon-yellow leading-[1.1]"
+                style={{ fontSize: 'clamp(28px, 4.5vw, 40px)' }}
               >
                 A Voz do Povo
               </h2>
@@ -323,26 +255,21 @@ export function Legend() {
               {legend.tributes.map((t, i) => (
                 <blockquote
                   key={i}
-                  className="border-l-[3px] border-l-neon-yellow bg-[var(--color-card)] px-5 py-5 sm:px-7 sm:py-7"
-                  style={{ borderRadius: 'var(--radius-sm)' }}
+                  className="border-l-[3px] border-l-neon-yellow bg-card px-5 py-5 sm:px-7 sm:py-7"
                 >
                   <p
-                    className="italic text-white/90 leading-snug"
-                    style={{
-                      fontFamily: 'var(--font-serif-hero)',
-                      fontWeight: 700,
-                      fontSize: 'clamp(17px, 2.4vw, 22px)',
-                    }}
+                    className="font-semibold text-giz leading-snug"
+                    style={{ fontSize: 'clamp(17px, 2.4vw, 22px)' }}
                   >
                     "{t.text}"
                   </p>
                   <footer
-                    className="mt-3 font-display font-bold uppercase text-neon-yellow/85"
-                    style={{ fontSize: '11px', letterSpacing: '0.22em' }}
+                    className="mt-3 font-mono uppercase text-neon-yellow"
+                    style={{ fontSize: '11px', letterSpacing: '0.14em' }}
                   >
                     — {t.author}
                     {t.context ? (
-                      <span className="text-white/40 ml-2 normal-case font-normal">
+                      <span className="text-cimento ml-2 normal-case font-normal">
                         ({t.context})
                       </span>
                     ) : null}

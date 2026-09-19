@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
+import { Hashtag } from '@/components/ui';
 
 /**
  * Header padrão das páginas /clube/elenco · /clube/treino · /clube/staff.
@@ -33,33 +34,18 @@ export function TeamMeuTimeHeader({
     >
       <GameBannerBackdrop slot="team_header" imageOpacity={0.32} />
       <div className="relative z-10 px-5 sm:px-7 py-6 sm:py-8 flex flex-col items-start gap-3">
-        {/* Eyebrow */}
-        <div
-          className="inline-flex items-center gap-3 text-neon-yellow"
-          style={{ fontFamily: 'var(--font-ui)' }}
-        >
-          <span aria-hidden className="h-px w-8 bg-neon-yellow/50" />
-          <span
-            className="uppercase font-semibold"
-            style={{ fontSize: '10px', letterSpacing: '0.22em' }}
-          >
-            OLE Football · Meu Time
-          </span>
-        </div>
-        {/* Headline — Moret italic case mixto (assinatura /legend) */}
+        {/* Categoria em #hashtag */}
+        <Hashtag>#meutime</Hashtag>
+        {/* Headline — Anton */}
         <h2
-          className="italic text-white leading-[1.05] [overflow-wrap:anywhere]"
+          className="font-impact uppercase text-white leading-[1.05] [overflow-wrap:anywhere]"
           style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontWeight: 700,
             fontSize: 'clamp(1.85rem, 4.5vw, 3rem)',
-            letterSpacing: '-0.015em',
+            letterSpacing: '-0.01em',
           }}
         >
           {title}
         </h2>
-        {/* Régua decorativa */}
-        <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow" />
         {/* Subtítulo */}
         {subtitle != null && (
           <div

@@ -75,7 +75,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
     return {
       Icon: BadgeCheck,
       className:
-        'bg-neon-yellow/12 text-neon-yellow border-neon-yellow/35 shadow-[0_0_10px_rgba(253,225,0,0.18)]',
+        'bg-neon-yellow/12 text-neon-yellow border-neon-yellow/35',
       label: kind === 'morale_boost_hat_trick' ? 'Hat-trick' : 'MVP',
     };
   }
@@ -156,11 +156,9 @@ export function PlayerConsequencesBadge({ playerId, compact = true }: Props) {
             <span
               className="tabular-nums opacity-70 leading-none"
               style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontStyle: 'italic',
-                fontWeight: 700,
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 500,
                 fontSize: '11px',
-                letterSpacing: '-0.02em',
               }}
             >
               {formatTimeLeft(c.msUntilExpiry)}

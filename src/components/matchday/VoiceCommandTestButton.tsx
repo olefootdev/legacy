@@ -276,12 +276,12 @@ export function VoiceCommandTestButton() {
               f.kind === 'error' ? XCircle :
               CheckCircle2;
             const bg =
-              f.kind === 'sent' ? 'bg-sky-500/25 border-sky-400/60 text-sky-50' :
-              f.kind === 'accepted' ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-100' :
-              f.kind === 'refused' ? 'bg-rose-500/20 border-rose-400/50 text-rose-100' :
-              f.kind === 'warning' ? 'bg-amber-500/20 border-amber-400/50 text-amber-100' :
-              f.kind === 'error' ? 'bg-rose-600/25 border-rose-500/60 text-rose-100' :
-              'bg-cyan-500/20 border-cyan-400/50 text-cyan-100';
+              f.kind === 'sent' ? 'border-sky-400/60 text-sky-50' :
+              f.kind === 'accepted' ? 'border-emerald-400/50 text-emerald-100' :
+              f.kind === 'refused' ? 'border-rose-400/50 text-rose-100' :
+              f.kind === 'warning' ? 'border-amber-400/50 text-amber-100' :
+              f.kind === 'error' ? 'border-rose-500/60 text-rose-100' :
+              'border-cyan-400/50 text-cyan-100';
             return (
               <motion.div
                 key={f.id}
@@ -290,7 +290,7 @@ export function VoiceCommandTestButton() {
                 exit={{ opacity: 0, x: 40, scale: 0.9 }}
                 transition={{ duration: 0.22, ease: 'easeOut' }}
                 className={cn(
-                  'rounded-xl border px-3 py-2 text-[11px] font-bold shadow-xl backdrop-blur',
+                  'rounded-xl border bg-panel px-3 py-2 text-[11px] font-bold',
                   bg,
                 )}
               >
@@ -321,7 +321,7 @@ export function VoiceCommandTestButton() {
         animate={pulseColor ? { scale: [1, 1.12, 1] } : { scale: 1 }}
         transition={{ duration: 0.35 }}
         className={cn(
-          'fixed bottom-20 right-4 z-[9990] inline-flex items-center gap-2 rounded-full border px-4 py-2 font-display text-[10px] font-black uppercase tracking-wider shadow-xl backdrop-blur transition-colors',
+          'fixed bottom-20 right-4 z-[9990] inline-flex items-center gap-2 rounded-full border px-4 py-2 font-display text-[10px] font-black uppercase tracking-wider transition-colors',
           pulseColor
             ? `${pulseColor} border-white/40 text-white`
             : 'border-cyan-400/60 bg-cyan-950/90 text-cyan-100',
@@ -340,7 +340,7 @@ export function VoiceCommandTestButton() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.96 }}
             transition={{ duration: 0.18 }}
-            className="fixed bottom-36 right-4 z-[9990] w-72 space-y-1 rounded-xl border border-cyan-400/40 bg-black/90 p-3 shadow-xl backdrop-blur"
+            className="fixed bottom-36 right-4 z-[9990] w-72 space-y-1 rounded-xl border border-cyan-400/40 bg-panel p-3"
           >
             <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-cyan-300">Comandos teste</p>
             {TEST_PHRASES.map((phrase) => (

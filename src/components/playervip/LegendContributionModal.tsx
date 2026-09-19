@@ -16,7 +16,8 @@ import {
 } from '@/supabase/legendContributions';
 import { useStoryRecorder } from '@/hooks/useStoryRecorder';
 
-const YELLOW = 'var(--color-neon-yellow)';
+/** Campo de formulário VOLT2: asfalto chapado, canto vivo, foco em volt. */
+const CAMPO = 'border border-white/16 bg-deep-black px-4 py-3.5 text-sm text-white outline-none placeholder:text-poeira focus:border-neon-yellow';
 
 const TITLE: Record<ContributionKind, string> = {
   correcao: 'Sugerir correção',
@@ -25,8 +26,8 @@ const TITLE: Record<ContributionKind, string> = {
 };
 
 const LEDE: Record<ContributionKind, string> = {
-  correcao: 'Este card é sobre você. Se tem algo errado — um ano, um clube, um número — nos conte. Ninguém sabe melhor do que quem viveu.',
-  historia: 'Grave um áudio contando como foi. Um jogo, um gol, um vestiário, uma virada. É a sua voz que vira a história do card.',
+  correcao: 'Se tem algo errado — um ano, um clube, um número — nos conte.',
+  historia: 'Grave um áudio contando como foi: um jogo, um gol, um vestiário, uma virada.',
   novo_card: 'Teve uma época marcante que ainda não virou card? Conte qual e a gente estuda.',
 };
 
@@ -102,33 +103,33 @@ export function LegendContributionModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-6" onClick={onClose}>
       <div
-        className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-white/10 bg-[#131315] p-6 sm:rounded-3xl"
+        className="max-h-[92vh] w-full max-w-md overflow-y-auto border border-white/10 bg-panel p-6"
         onClick={(e) => e.stopPropagation()}
       >
         {state === 'sent' ? (
           <div className="text-center">
-            <CheckCircle2 className="mx-auto mb-4 h-10 w-10" style={{ color: YELLOW }} />
-            <h2 className="ole-headline-italic text-2xl">Recebemos</h2>
-            <p className="mt-2 text-sm leading-relaxed text-white/60">
+            <CheckCircle2 className="mx-auto mb-4 h-10 w-10 text-neon-yellow" />
+            <h2 className="font-impact text-[28px] uppercase leading-[1.05]">Recebemos</h2>
+            <p className="mt-2 text-sm leading-relaxed text-cimento">
               {kind === 'historia'
                 ? 'Sua história vai ser ouvida por uma pessoa da OLEFOOT. Obrigado por contar.'
                 : 'Uma pessoa da OLEFOOT vai ler. Se fizer sentido, a gente ajusta.'}
             </p>
-            <button onClick={onClose} className="mt-5 w-full rounded-xl py-3.5 font-display text-sm font-black uppercase tracking-wider text-black" style={{ background: YELLOW }}>
+            <button onClick={onClose} className="btn-primary mt-5 flex h-12 w-full items-center justify-center">
               Fechar
             </button>
           </div>
         ) : (
           <>
-            <h2 className="ole-headline-italic text-2xl">{TITLE[kind]}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-white/55">{LEDE[kind]}</p>
-            {cardName && <p className="mt-3 text-[11px] uppercase tracking-wider text-white/30">{cardName}</p>}
+            <h2 className="font-impact text-[28px] uppercase leading-[1.05]">{TITLE[kind]}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-cimento">{LEDE[kind]}</p>
+            {cardName && <p className="mt-3 truncate font-mono text-[11px] uppercase tracking-wider text-poeira">{cardName}</p>}
 
             <div className="mt-5 space-y-3">
               {kind === 'correcao' && (
                 <select
                   value={field} onChange={(e) => setField(e.target.value)}
-                  className="w-full rounded-xl border border-white/12 bg-[#0c0c0d] px-4 py-3.5 text-sm text-white outline-none focus:border-white/30"
+                  className={`w-full ${CAMPO}`}
                 >
                   <option value="">O que está errado? (opcional)</option>
                   {CORRECTION_FIELDS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
@@ -139,16 +140,16 @@ export function LegendContributionModal({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <input value={ano} onChange={(e) => setAno(e.target.value)} inputMode="numeric" placeholder="Ano (ex.: 2003)"
-                      className="rounded-xl border border-white/12 bg-[#0c0c0d] px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/30" />
+                      className={`w-full min-w-0 ${CAMPO}`} />
                     <input value={clube} onChange={(e) => setClube(e.target.value)} placeholder="Clube"
-                      className="rounded-xl border border-white/12 bg-[#0c0c0d] px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/30" />
+                      className={`w-full min-w-0 ${CAMPO}`} />
                   </div>
                   <input value={pontoForte} onChange={(e) => setPontoForte(e.target.value)} placeholder="Seu ponto forte na época"
-                    className="w-full rounded-xl border border-white/12 bg-[#0c0c0d] px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/30" />
+                    className={`w-full ${CAMPO}`} />
                   <div>
                     <input value={preco} onChange={(e) => setPreco(e.target.value)} inputMode="decimal" placeholder="Quanto você acha que vale (US$)"
-                      className="w-full rounded-xl border border-white/12 bg-[#0c0c0d] px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/30" />
-                    <p className="mt-1.5 text-[11px] leading-snug text-white/30">
+                      className={`w-full ${CAMPO}`} />
+                    <p className="mt-1.5 text-[11px] leading-snug text-cimento">
                       É a sua opinião, e ela conta. O preço final é definido pela OLEFOOT junto com o resto da coleção.
                     </p>
                   </div>
@@ -156,38 +157,38 @@ export function LegendContributionModal({
               )}
 
               {kind === 'historia' && (
-                <div className="rounded-xl border border-white/12 bg-[#0c0c0d] p-4">
+                <div className="border border-white/16 bg-deep-black p-4">
                   {rec.state === 'unsupported' || rec.state === 'denied' ? (
-                    <p className="text-[12px] leading-relaxed text-white/50">
+                    <p className="text-[12px] leading-relaxed text-cimento">
                       {rec.state === 'denied'
                         ? 'Precisamos do microfone para gravar. Libere o acesso e tente de novo — ou escreva abaixo.'
                         : 'Seu navegador não grava áudio. Sem problema: escreva sua história abaixo.'}
                     </p>
                   ) : rec.state === 'recording' ? (
                     <div className="flex items-center gap-3">
-                      <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
-                      <span className="font-display text-lg font-black tabular-nums">{mmss(rec.seconds)}</span>
-                      <button onClick={rec.stop} className="ml-auto flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-bold uppercase tracking-wider hover:bg-white/20">
+                      <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-baixa" />
+                      <span className="ole-num text-lg">{mmss(rec.seconds)}</span>
+                      <button onClick={rec.stop} className="ml-auto flex items-center gap-2 border border-white/30 px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors hover:border-white">
                         <Square className="h-3.5 w-3.5" /> Parar
                       </button>
                     </div>
                   ) : rec.blob ? (
                     <div className="flex items-center gap-3">
                       <audio controls src={URL.createObjectURL(rec.blob)} className="h-9 min-w-0 flex-1" />
-                      <button onClick={rec.reset} className="shrink-0 rounded-lg p-2 text-white/40 hover:bg-white/10 hover:text-white" aria-label="Descartar gravação">
+                      <button onClick={rec.reset} className="shrink-0 p-2 text-cimento transition-colors hover:text-white" aria-label="Descartar gravação">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   ) : (
-                    <button onClick={() => void rec.start()} className="flex w-full items-center justify-center gap-2 rounded-lg py-3 font-display text-sm font-black uppercase tracking-wider text-black" style={{ background: YELLOW }}>
+                    <button onClick={() => void rec.start()} className="btn-primary flex h-12 w-full items-center justify-center gap-2">
                       <Mic className="h-4 w-4" /> Gravar
                     </button>
                   )}
                   {rec.state === 'recording' && rec.interim && (
-                    <p className="mt-3 text-[12px] italic leading-snug text-white/30">{rec.interim}</p>
+                    <p className="mt-3 text-[12px] leading-snug text-poeira">{rec.interim}</p>
                   )}
                   {rec.state !== 'idle' && !rec.canTranscribe && (
-                    <p className="mt-3 text-[11px] leading-snug text-white/30">
+                    <p className="mt-3 text-[11px] leading-snug text-cimento">
                       Seu navegador não transcreve automaticamente — mas o áudio é gravado e nós escutamos.
                     </p>
                   )}
@@ -203,26 +204,25 @@ export function LegendContributionModal({
                   : kind === 'historia' ? 'Rascunho da transcrição — corrija à vontade, ou escreva direto aqui.'
                   : 'Conte por que essa época merece um card.'
                 }
-                className="w-full resize-none rounded-xl border border-white/12 bg-[#0c0c0d] px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/30"
+                className={`w-full resize-none ${CAMPO}`}
               />
 
               {kind === 'historia' && (
-                <p className="text-[11px] leading-snug text-white/30">
+                <p className="text-[11px] leading-snug text-cimento">
                   Ao enviar, você autoriza a OLEFOOT a usar esta história na construção do seu card. Sua voz não é publicada sem falar com você antes.
                 </p>
               )}
 
-              {state === 'error' && <p className="text-xs text-red-400">{err}</p>}
+              {state === 'error' && <p className="text-xs text-baixa">{err}</p>}
 
               <div className="flex gap-2">
-                <button onClick={onClose} className="flex-1 rounded-xl border border-white/12 py-3.5 text-sm font-bold uppercase tracking-wider text-white/60 hover:border-white/30">
+                <button onClick={onClose} className="btn-secondary flex h-12 flex-1 items-center justify-center px-3">
                   Cancelar
                 </button>
                 <button
                   onClick={() => void send()}
                   disabled={state === 'sending' || rec.state === 'recording'}
-                  className="flex flex-1 items-center justify-center rounded-xl py-3.5 font-display text-sm font-black uppercase tracking-wider text-black disabled:opacity-50"
-                  style={{ background: YELLOW }}
+                  className="btn-primary flex h-12 flex-1 items-center justify-center px-3 disabled:opacity-50"
                 >
                   {state === 'sending' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar'}
                 </button>

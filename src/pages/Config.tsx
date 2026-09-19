@@ -208,7 +208,7 @@ export function Config() {
       <div className="px-3 sm:px-4 lg:px-8">
         <BackButton to="/manager" label="Manager" />
       </div>
-      {/* ── HERO BVB — amarelo full + watermark + Agency caps + Moret italic ── */}
+      {/* ── HERO — volt chapado + manchete em Anton ── */}
       <section
         aria-label="Configurações"
         className="relative w-full overflow-hidden bg-neon-yellow -mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-2"
@@ -235,12 +235,6 @@ export function Config() {
           >
             Configurações
           </h1>
-          <p
-            className="mt-3"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'rgba(13,13,13,0.62)' }}
-          >
-            Preferências persistidas com o teu save.
-          </p>
         </motion.div>
       </section>
 
@@ -255,7 +249,6 @@ export function Config() {
       >
         <StoreSectionHeadline
           title="Geral"
-          subtitle="Idioma, sons e preferências do app."
           className="mb-3"
         />
         <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
@@ -375,7 +368,6 @@ export function Config() {
       >
         <StoreSectionHeadline
           title="Clube"
-          subtitle="Identidade do seu time no save."
           className="mb-3"
         />
         <div className="bg-panel border border-white/10 rounded-sm overflow-hidden">
@@ -384,7 +376,7 @@ export function Config() {
               <Building2 className="w-4 h-4 text-white/45 mt-0.5 shrink-0" />
               <div className="min-w-0 flex-1">
                 <span className="text-sm font-display font-bold text-white tracking-wider">Nome do clube</span>
-                <p className="text-[10px] text-white/45">Aparece em jogos, ranking e ecrãs principais.</p>
+                <p className="text-[10px] text-white/45">Aparece em jogos, ranking e telas principais.</p>
                 <input
                   value={clubDraft}
                   onChange={(e) => setClubDraft(e.target.value)}
@@ -402,7 +394,7 @@ export function Config() {
               Guardar
             </button>
           </div>
-          {clubSaved ? <p className="px-5 py-2 text-[10px] text-neon-green font-bold">Nome atualizado.</p> : null}
+          {clubSaved ? <p className="px-5 py-2 text-[10px] text-alta font-bold">Nome atualizado.</p> : null}
           <div className={rowClass}>
             <div className="flex items-start gap-3">
               <User className="mt-0.5 h-4 w-4 shrink-0 text-white/45" />
@@ -452,7 +444,7 @@ export function Config() {
                   />
                 </div>
                 {trainerAvatarErr ? (
-                  <p className="mt-2 text-xs text-red-400" role="alert">
+                  <p className="mt-2 text-xs text-baixa" role="alert">
                     {trainerAvatarErr}
                   </p>
                 ) : null}
@@ -471,7 +463,6 @@ export function Config() {
       >
         <StoreSectionHeadline
           title="Segurança local"
-          subtitle="PIN e proteção do save no dispositivo."
           className="mb-3"
         />
         <div className="bg-panel border border-white/10 rounded-sm overflow-hidden">
@@ -659,7 +650,6 @@ export function Config() {
       >
         <StoreSectionHeadline
           title="Dados"
-          subtitle="Backup, exportação e reset do save."
           className="mb-3"
         />
         <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
@@ -676,7 +666,7 @@ export function Config() {
               onClick={downloadBackup}
               className="text-xs font-display font-bold uppercase tracking-wider bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg shrink-0"
             >
-              Descarregar
+              Baixar
             </button>
           </div>
           <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -684,7 +674,7 @@ export function Config() {
               <Upload className="w-4 h-4 text-neon-yellow" />
               <div>
                 <span className="text-sm font-display font-bold text-white tracking-wider">Restaurar backup</span>
-                <p className="text-[10px] text-white/45">Substitui o save atual. Recarrega a página a seguir.</p>
+                <p className="text-[10px] text-white/45">Substitui o save atual. Recarrega a página em seguida.</p>
               </div>
             </div>
             <div>
@@ -717,7 +707,6 @@ export function Config() {
       >
         <StoreSectionHeadline
           title="Sobre"
-          subtitle="Versão, créditos e suporte."
           className="mb-3"
         />
         <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">

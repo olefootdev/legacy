@@ -5,8 +5,12 @@ import { useTrackScreen } from '@/progression/trackEvent';
 import { HubSectionCard } from '@/components/ui/HubSectionCard';
 import { StatTile } from '@/components/ui/StatTile';
 import { managerScoreToday } from '@/systems/managerScore/managerScore';
+import { Hashtag } from '@/components/ui';
 
-/** Ações do clube. O trilho amarelo é do HubSectionCard — nada de cor por categoria. */
+/**
+ * Ações do clube. O trilho amarelo é do HubSectionCard — nada de cor por categoria.
+ * VOLT2: a categoria vira #hashtag e a descrição fica em 2–3 palavras.
+ */
 const quickActions: Array<{
   eyebrow: string;
   title: string;
@@ -15,37 +19,37 @@ const quickActions: Array<{
   href: string;
 }> = [
   {
-    eyebrow: 'Plantel',
+    eyebrow: '#plantel',
     title: 'Elenco',
-    description: 'Gerir jogadores, formação tática e escalação titular.',
+    description: 'Escalação e formação',
     cta: 'Abrir elenco',
     href: '/clube/elenco',
   },
   {
-    eyebrow: 'Desenvolvimento',
+    eyebrow: '#desenvolvimento',
     title: 'Treino',
-    description: 'Sessões individuais e coletivas. Evoluir físico, técnico e tático.',
+    description: 'Individual e coletivo',
     cta: 'Programar treino',
     href: '/clube/treino',
   },
   {
-    eyebrow: 'Comissão',
+    eyebrow: '#comissao',
     title: 'Staff',
-    description: 'Profissionais, coach assistente e atribuições.',
+    description: 'Profissionais e coach',
     cta: 'Gerir staff',
     href: '/clube/staff',
   },
   {
-    eyebrow: 'Categorias de base',
+    eyebrow: '#base',
     title: 'Academia',
-    description: 'Jovens promessas, scouting e desenvolvimento de longo prazo.',
+    description: 'Jovens promessas',
     cta: 'Ver promessas',
     href: '/clube/academia',
   },
   {
-    eyebrow: 'Infraestrutura',
+    eyebrow: '#infraestrutura',
     title: 'Estruturas',
-    description: 'Instalações do clube, upgrades e impacto no rendimento.',
+    description: 'Instalações e upgrades',
     cta: 'Visitar estruturas',
     href: '/clube/estruturas',
   },
@@ -162,7 +166,7 @@ export function ClubHub() {
             <HubSectionCard
               key={action.href}
               to={action.href}
-              eyebrow={action.eyebrow}
+              eyebrow={<Hashtag className="normal-case tracking-normal text-current">{action.eyebrow}</Hashtag>}
               title={action.title}
               description={action.description}
               cta={action.cta}

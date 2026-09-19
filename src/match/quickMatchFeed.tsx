@@ -63,8 +63,6 @@ export function renderQuickFeedRichText(
         key={key++}
         className={cn('font-bold', cls)}
         style={{
-          fontFamily: 'var(--font-serif-hero)',
-          fontStyle: 'italic',
           fontWeight: 700,
           fontSize: opts.fontSize ?? '15px',
           letterSpacing: '0.01em',

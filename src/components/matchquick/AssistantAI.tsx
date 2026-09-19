@@ -86,7 +86,7 @@ export function AssistantAI({
           ...prev,
           {
             role: 'assistant',
-            text: 'Qual formação queres adotar?',
+            text: 'Qual formação você quer adotar?',
             choices: script.formations.map((f, i) => ({
               label: `${i + 1}) ${f.label}`,
               value: `ht:formation:${f.id}`,
@@ -150,7 +150,7 @@ export function AssistantAI({
         script.onPickTiredPlayer(id);
         setChatHistory((prev) => [
           ...prev,
-          { role: 'assistant', text: 'Beleza, vou abrir o banco pra escolheres quem entra.' },
+          { role: 'assistant', text: 'Beleza, vou abrir o banco pra você escolher quem entra.' },
         ]);
         return;
       }
@@ -165,7 +165,7 @@ export function AssistantAI({
     setChatHistory([
       {
         role: 'assistant',
-        text: 'Chegamos no intervalo, queres mudar algo?',
+        text: 'Intervalo. Quer mudar algo?',
         choices: [
           { label: '1) Mudar formação', value: 'ht:menu:formation' },
           { label: '2) Estilo de jogo', value: 'ht:menu:style' },
@@ -268,7 +268,7 @@ export function AssistantAI({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-[100] flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center bg-deep-black border-2 border-neon-yellow text-neon-yellow shadow-[0_0_24px_rgba(253,225,0,0.28)] transition-all hover:scale-105 hover:bg-neon-yellow hover:text-black"
+            className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-[100] flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center bg-deep-black border-2 border-neon-yellow text-neon-yellow transition-colors hover:bg-neon-yellow hover:text-black"
             style={{ borderRadius: 'var(--radius-pill)' }}
             aria-label="Assistente tático"
           >
@@ -284,7 +284,7 @@ export function AssistantAI({
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-[100] w-[calc(100vw-2rem)] sm:w-96 max-h-[500px] flex flex-col overflow-hidden border border-l-[3px] border-[var(--color-border)] border-l-neon-yellow bg-dark-gray shadow-[0_8px_40px_rgba(0,0,0,0.6)]"
+            className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-[100] w-[calc(100vw-2rem)] sm:w-96 max-h-[500px] flex flex-col overflow-hidden border border-l-[3px] border-[var(--color-border)] border-l-neon-yellow bg-dark-gray"
             style={{ borderRadius: 'var(--radius-md)' }}
           >
             {/* Header editorial */}
@@ -307,17 +307,6 @@ export function AssistantAI({
                     }}
                   >
                     Assistente Tático
-                  </p>
-                  <p
-                    className="italic text-white/55 mt-1 leading-none"
-                    style={{
-                      fontFamily: 'var(--font-serif-hero)',
-                      fontWeight: 700,
-                      fontSize: '13px',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    no banco contigo
                   </p>
                 </div>
               </div>
@@ -350,8 +339,7 @@ export function AssistantAI({
                     Olá, treinador
                   </p>
                   <p className="text-xs text-white/45 max-w-xs leading-relaxed">
-                    Posso ajustar tática, sugerir substituições e ler o jogo
-                    contigo. Manda comando ou pergunta.
+                    Peça tática, substituição ou leitura do jogo.
                   </p>
                 </div>
               ) : (

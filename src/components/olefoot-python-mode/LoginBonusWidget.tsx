@@ -4,14 +4,13 @@
  * Layout:
  *   ┌──────────────────────────────────────────────────────────┐
  *   │ ┌──┐  EYEBROW Agency tracking-0.32em                     │
- *   │ │GI│  Reward (Moret italic) / Countdown (Moret italic)   │
+ *   │ │GI│  Reward / Countdown (número chapado)                │
  *   │ │FT│  ─────────                                           │
  *   │ └──┘                                       [ CTA YELLOW ] │
  *   └──────────────────────────────────────────────────────────┘
  *
- * Eyebrow Agency + Moret italic no número/reward respeitam DS §4 e §7.4.
- * CTA é botão amarelo dominante (DS §7.1). Quando claimable, rail amarelo
- * 3px à esquerda + glow neon assinatura.
+ * VOLT2: sem serifa/itálico, sem brilho. CTA é botão amarelo dominante
+ * (DS §7.1). Quando claimable, rail amarelo 3px à esquerda.
  */
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -46,20 +45,13 @@ export function LoginBonusWidget() {
 
   return (
     <motion.div
-      whileHover={canClaim ? { y: -1 } : undefined}
-      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
       className={cn(
         'relative w-full bg-[var(--color-card)] border border-l-[3px] overflow-hidden',
         canClaim
-          ? 'border-l-neon-yellow border-white/12 shadow-[0_0_18px_rgba(253,225,0,0.12)]'
+          ? 'border-l-neon-yellow border-white/12'
           : 'border-l-white/15 border-white/8',
       )}
-      style={{
-        borderRadius: 'var(--radius-md)',
-        boxShadow: canClaim
-          ? '0 8px 24px rgba(0,0,0,0.18), 0 0 18px rgba(253,225,0,0.12)'
-          : '0 8px 24px rgba(0,0,0,0.18)',
-      }}
+      style={{ borderRadius: 'var(--radius-md)' }}
     >
       <div className="px-4 py-3.5 flex items-center gap-3">
         {/* Ícone à esquerda */}
@@ -94,17 +86,15 @@ export function LoginBonusWidget() {
             </span>
           </div>
 
-          {/* Headline — Moret italic */}
+          {/* Headline */}
           <div className="mt-1">
             {canClaim ? (
               <div
                 className="text-white truncate leading-tight"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
+                  fontFamily: 'var(--font-sans)',
                   fontWeight: 700,
                   fontSize: 'clamp(15px, 2.6vw, 18px)',
-                  letterSpacing: '-0.02em',
                 }}
               >
                 {nextReward?.label ?? 'Recompensa pronta'}
@@ -126,11 +116,10 @@ export function LoginBonusWidget() {
                 <span
                   className="text-white tabular-nums leading-none"
                   style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontStyle: 'italic',
-                    fontWeight: 700,
-                    fontSize: 'clamp(18px, 2.8vw, 22px)',
-                    letterSpacing: '-0.02em',
+                    fontFamily: 'var(--font-num)',
+                    fontStretch: '125%',
+                    fontWeight: 800,
+                    fontSize: 'clamp(16px, 2.8vw, 20px)',
                   }}
                 >
                   {formatCountdown(msUntilNext)}
@@ -153,7 +142,6 @@ export function LoginBonusWidget() {
               letterSpacing: '0.24em',
               textTransform: 'uppercase',
               borderRadius: 'var(--radius-sm)',
-              boxShadow: '0 8px 24px rgba(253,225,0,0.22)',
             }}
             aria-label="Reivindicar bônus"
           >
@@ -191,11 +179,9 @@ export function LoginBonusWidget() {
               <div
                 className="text-black leading-none"
                 style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
-                  fontWeight: 700,
+                  fontFamily: 'var(--font-impact)',
                   fontSize: 'clamp(18px, 3vw, 22px)',
-                  letterSpacing: '-0.02em',
+                  textTransform: 'uppercase',
                 }}
               >
                 {lastClaimResult.reward?.label}

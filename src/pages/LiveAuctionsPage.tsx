@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
 import { BackButton } from '@/components/BackButton';
 import { LiveAuctionCard } from '@/market/LiveAuctionCard';
+import { SecaoVolt } from '@/components/ui';
 import {
   useActiveAuctions,
   useAuctionMessages,
@@ -81,10 +82,8 @@ export function LiveAuctionsPage() {
           </span>
           {activeAuctions.length > 0 && (
             <span
-              className="block italic text-neon-yellow mt-1"
+              className="block font-impact uppercase leading-[1.1] text-neon-yellow mt-1"
               style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 400,
                 fontSize: 'clamp(1.5rem, 4vw, 2.25rem)',
                 letterSpacing: '-0.01em',
               }}
@@ -94,16 +93,6 @@ export function LiveAuctionsPage() {
           )}
         </h1>
         <span aria-hidden className="mx-auto mt-5 block w-12 h-[3px] bg-neon-yellow" />
-        <p
-          className="mx-auto mt-5 max-w-xl text-white/55"
-          style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: '13px',
-            lineHeight: 1.55,
-          }}
-        >
-          Leilões em tempo real com IA competindo. Dê lances, vença jogadores de elite e construa seu time dos sonhos.
-        </p>
       </header>
 
       {/* Saldo + Mensagens — Grid padrão */}
@@ -124,12 +113,9 @@ export function LiveAuctionsPage() {
             Seu Saldo
           </p>
           <p
-            className="mt-1.5 italic tabular-nums leading-none text-neon-yellow"
+            className="ole-num mt-1.5 tabular-nums leading-none text-neon-yellow"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
               fontSize: 'clamp(1.6rem, 3.5vw, 2.25rem)',
-              letterSpacing: '-0.02em',
             }}
           >
             {formatExp(ole)}
@@ -153,18 +139,15 @@ export function LiveAuctionsPage() {
             Notificações
           </p>
           <p
-            className="mt-1.5 italic tabular-nums leading-none text-white"
+            className="ole-num mt-1.5 tabular-nums leading-none text-white"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
               fontSize: 'clamp(1.6rem, 3.5vw, 2.25rem)',
-              letterSpacing: '-0.02em',
             }}
           >
             {unreadMessages}
           </p>
           {unreadMessages > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-baixa text-[10px] font-bold text-white">
               {unreadMessages}
             </span>
           )}
@@ -186,8 +169,8 @@ export function LiveAuctionsPage() {
                 className={cn(
                   'rounded-lg border px-4 py-3',
                   msg.urgency === 'high'
-                    ? 'border-red-500/30 bg-red-950/20'
-                    : 'border-white/10 bg-white/5',
+                    ? 'border-baixa/40 bg-panel'
+                    : 'border-white/10 bg-panel',
                 )}
               >
                 <p className="text-sm font-bold text-white">{msg.title}</p>
@@ -201,34 +184,7 @@ export function LiveAuctionsPage() {
       {/* Leilões Ativos — Header padrão editorial */}
       {activeAuctions.length > 0 && (
         <section className="space-y-4">
-          <div className="flex min-w-0 items-center gap-3 px-0.5">
-            <span
-              aria-hidden
-              className="shrink-0 w-[3px] h-7 bg-neon-yellow shadow-[0_0_10px_rgba(253,225,0,0.55)]"
-            />
-            <div className="min-w-0 flex-1">
-              <h3
-                className="text-neon-yellow font-bold uppercase"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '14px',
-                  letterSpacing: '0.18em',
-                }}
-              >
-                Leilões Ativos ({activeAuctions.length})
-              </h3>
-              <p
-                className="text-white/45"
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '10px',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                Dê lances e vença jogadores de elite
-              </p>
-            </div>
-          </div>
+          <SecaoVolt label={`Leilões ativos (${activeAuctions.length})`} className="px-0.5" />
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {activeAuctions.map((auction) => (
@@ -247,21 +203,7 @@ export function LiveAuctionsPage() {
       {/* Leilões Encerrados */}
       {endedAuctions.length > 0 && (
         <section className="space-y-4">
-          <div className="flex min-w-0 items-center gap-3 px-0.5">
-            <span aria-hidden className="shrink-0 w-[3px] h-7 bg-white/30" />
-            <div className="min-w-0 flex-1">
-              <h3
-                className="text-white/70 font-bold uppercase"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '14px',
-                  letterSpacing: '0.18em',
-                }}
-              >
-                Encerrados ({endedAuctions.length})
-              </h3>
-            </div>
-          </div>
+          <SecaoVolt label={`Encerrados (${endedAuctions.length})`} tone="neutro" className="px-0.5" />
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {endedAuctions.map((auction) => (

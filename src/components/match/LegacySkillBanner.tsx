@@ -69,11 +69,10 @@ export function LegacySkillBanner({
     <div
       style={{
         width: 280,
-        background: '#0D0D0D',
+        background: 'var(--color-panel)',
         border: `1px solid rgba(253,225,0,0.35)`,
         borderLeft: `3px solid ${NEON}`,
         padding: '12px 14px 14px',
-        boxShadow: '0 12px 36px rgba(0,0,0,0.55), 0 0 18px rgba(253,225,0,0.18)',
         animation: 'legacyBannerIn 320ms cubic-bezier(0.2,0.8,0.2,1)',
         pointerEvents: 'none',
         userSelect: 'none',
@@ -154,7 +153,7 @@ export function LegacySkillBanner({
           style={{
             width: 56,
             height: 56,
-            background: 'linear-gradient(160deg, #1a1a1a 0%, #0a0a0a 100%)',
+            background: 'var(--color-card)',
             border: '1px solid rgba(253,225,0,0.25)',
             display: 'flex',
             alignItems: 'center',
@@ -165,8 +164,7 @@ export function LegacySkillBanner({
         >
           <span
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
+              fontFamily: 'var(--font-impact)',
               fontSize: 28,
               color: '#fff',
               lineHeight: 1,
@@ -192,13 +190,12 @@ export function LegacySkillBanner({
           </div>
           <div
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
-              fontWeight: 700,
+              fontFamily: 'var(--font-impact)',
+              fontWeight: 400,
               fontSize: 18,
               color: '#fff',
-              lineHeight: 1.05,
-              letterSpacing: '-0.01em',
+              lineHeight: 1.1,
+              textTransform: 'uppercase',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -232,8 +229,7 @@ export function LegacySkillBanner({
         </div>
         <div
           style={{
-            fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--font-sans)',
             fontSize: 11,
             color: 'rgba(255,255,255,0.6)',
             lineHeight: 1.3,

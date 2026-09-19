@@ -288,7 +288,7 @@ export function PenaltyKickModal({
             />
 
             {/* Gradiente superior para legibilidade */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/60" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/35 to-black/65" />
 
             {/* Conteúdo */}
             <div className="relative z-10 flex flex-col items-center justify-between h-full px-4 py-6">
@@ -300,7 +300,7 @@ export function PenaltyKickModal({
                 transition={{ delay: 0.1 }}
                 className="text-center"
               >
-                <p className={`font-display font-black uppercase tracking-widest text-4xl sm:text-5xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)] ${
+                <p className={`font-display font-black uppercase tracking-widest text-4xl sm:text-5xl leading-[1.1] ${
                   outcome.isGoal ? 'text-neon-yellow' : 'text-white'
                 }`}>
                   {isHome
@@ -311,7 +311,7 @@ export function PenaltyKickModal({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.4 }}
-                  className="mt-2 text-sm text-white/80 font-medium max-w-xs mx-auto drop-shadow"
+                  className="mt-2 text-sm text-white/80 font-medium max-w-xs mx-auto"
                 >
                   {outcome.narrative}
                 </motion.p>
@@ -403,7 +403,7 @@ export function PenaltyKickModal({
                             : 'border-white/40 bg-black/10 hover:bg-blue-400/25 hover:border-blue-400'
                         }`}
                       >
-                        <span className="text-[10px] font-bold text-white/80 font-display uppercase tracking-wide drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                        <span className="bg-black/70 px-1 text-[10px] font-bold text-white/80 font-display uppercase tracking-wide">
                           {SLOT_LABELS[slot]}
                         </span>
                       </button>
@@ -488,7 +488,7 @@ export function SlotHighlight({ slot, color, label }: { slot: number; color: str
         border: `2px solid ${color.replace(/[\d.]+\)$/, '1)')}`,
       }}
     >
-      <span className="text-white font-display font-black text-xs uppercase tracking-wide drop-shadow">
+      <span className="text-white font-display font-black text-xs uppercase tracking-wide">
         {label}
       </span>
     </motion.div>

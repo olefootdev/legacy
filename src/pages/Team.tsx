@@ -23,6 +23,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { Hashtag } from '@/components/ui';
 import { playerPortraitSrc, playerDisplayName } from '@/lib/playerPortrait';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { overallFromAttributes, playerToCardView, samePersonKey } from '@/entities/player';
@@ -410,10 +411,10 @@ export function Team() {
               </div>
 
               {/* Pitch: `min-w-0` + `max-w-full` garantem que a caixa de aspeto nunca força overflow horizontal. */}
-              <div className="relative aspect-[68/105] w-full min-w-0 max-w-full overflow-hidden rounded-md border border-white/25 bg-[#0a2e15] shadow-lg shadow-black/40 sm:rounded-lg sm:border-2 sm:shadow-2xl md:rounded-lg md:border-4 md:border-white/20 md:shadow-2xl">
+              <div className="relative aspect-[68/105] w-full min-w-0 max-w-full overflow-hidden rounded-md border border-white/25 bg-[#0a2e15] sm:rounded-lg sm:border-2 md:rounded-lg md:border-4 md:border-white/20">
               {/* Força do XI: soma dos OVR dos titulares (canto superior esquerdo do gramado) */}
               <div
-                className="pointer-events-none absolute left-1 top-1 z-20 border border-neon-yellow/30 bg-black/85 px-1.5 py-1 shadow-lg shadow-black/40 backdrop-blur-sm sm:left-1.5 sm:top-1.5 sm:px-2 sm:py-1.5 md:left-2 md:top-2 md:px-3 md:py-2"
+                className="pointer-events-none absolute left-1 top-1 z-20 border border-neon-yellow/30 bg-nav px-1.5 py-1 sm:left-1.5 sm:top-1.5 sm:px-2 sm:py-1.5 md:left-2 md:top-2 md:px-3 md:py-2"
                 style={{
                   borderRadius: 'var(--radius-sm)',
                   maxWidth: 'calc(100% - 0.5rem)',
@@ -502,9 +503,9 @@ export function Team() {
                     <div
                       onClick={() => setSelectedSlotId(slot.id)}
                       className={cn(
-                        'flex size-10 cursor-pointer items-center justify-center rounded-full border border-dashed backdrop-blur-sm transition-all sm:size-12 md:size-16 md:border-2',
+                        'flex size-10 cursor-pointer items-center justify-center rounded-full border border-dashed transition-all sm:size-12 md:size-16 md:border-2',
                         selectedSlotId === slot.id
-                          ? 'border-neon-yellow bg-neon-yellow/20 text-neon-yellow shadow-[0_0_18px_rgba(228,255,0,0.35)] sm:scale-110'
+                          ? 'border-neon-yellow bg-neon-yellow/20 text-neon-yellow sm:scale-110'
                           : 'border-white/35 bg-black/30 text-white/55 hover:border-white/70 hover:text-white/90',
                       )}
                     >
@@ -551,11 +552,11 @@ export function Team() {
               )}
             </AnimatePresence>
 
-            {/* Save — primário sistema (sharp 4px, sem skew, sombra base) */}
+            {/* Save — primário VOLT2 (volt chapado, sem sombra) */}
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="mt-3 box-border inline-flex w-full items-center justify-center gap-2 bg-neon-yellow py-3 text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-neon-yellow disabled:hover:scale-100 [-webkit-tap-highlight-color:transparent]"
+              className="mt-3 box-border inline-flex w-full items-center justify-center gap-2 bg-neon-yellow py-3 text-black hover:bg-white active:scale-[0.995] transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-neon-yellow [-webkit-tap-highlight-color:transparent]"
               style={{
                 fontFamily: 'var(--font-display)',
                 fontSize: '12px',
@@ -563,7 +564,6 @@ export function Team() {
                 letterSpacing: '0.2em',
                 textTransform: 'uppercase',
                 borderRadius: 'var(--radius-sm)',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
               }}
             >
               <Save className="h-4 w-4 shrink-0" />
@@ -621,7 +621,7 @@ export function Team() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   className={cn(
-                    'flex bg-dark-gray border border-l-[3px] overflow-hidden transition-all duration-200 hover:border-neon-yellow/40 hover:-translate-y-0.5 group',
+                    'flex bg-dark-gray border border-l-[3px] overflow-hidden transition-colors duration-200 hover:border-neon-yellow/40 group',
                     player.style === 'neon-yellow'
                       ? 'border-[var(--color-border)] border-l-neon-yellow'
                       : 'border-[var(--color-border)] border-l-white/15',
@@ -653,10 +653,10 @@ export function Team() {
                       aria-hidden
                       className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent"
                     />
-                    {/* OVR — Moret italic editorial gigante */}
+                    {/* OVR — Anton gigante (o scrim acima garante a leitura) */}
                     <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10">
                       <p
-                        className="text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]"
+                        className="text-neon-yellow tabular-nums leading-none"
                         style={{
                           fontFamily: 'var(--font-impact)',
                           fontSize: 'clamp(38px, 5.5vw, 56px)',
@@ -808,7 +808,7 @@ export function Team() {
                   className="mx-auto mt-1.5 max-w-md text-white/50"
                   style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
                 >
-                  Todo o plantel está escalado. Contrate no mercado pra ter banco.
+                  Contrate no mercado.
                 </p>
               </div>
             )}
@@ -824,7 +824,7 @@ export function Team() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/80 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4"
+            className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:p-4"
             onClick={() => setSelectedSlotId(null)}
           >
             <motion.div 
@@ -832,7 +832,7 @@ export function Team() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               onClick={e => e.stopPropagation()}
-              className="my-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-md border border-white/10 bg-dark-gray shadow-2xl max-h-[min(85dvh,calc(100dvh-6rem))] sm:max-h-[80vh]"
+              className="my-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-md border border-white/10 bg-dark-gray max-h-[min(85dvh,calc(100dvh-6rem))] sm:max-h-[80vh]"
             >
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
                 <h3 className="font-display font-black uppercase tracking-wider text-xl text-white flex items-center gap-2">
@@ -868,7 +868,7 @@ export function Team() {
                           style={{ maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)' }}
                         />
                         <div className={cn(
-                          "absolute top-1 left-1 px-1 md:px-1.5 py-0.5 rounded text-[9px] md:text-[10px] font-black drop-shadow-md",
+                          "absolute top-1 left-1 px-1 md:px-1.5 py-0.5 rounded text-[9px] md:text-[10px] font-black",
                           player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-black/80 text-white border border-white/20'
                         )}>
                           {player.ovr}
@@ -911,8 +911,8 @@ export function Team() {
 
                       {/* Right: CTA */}
                       <div className="w-16 md:w-28 flex items-center justify-center p-2 border-l border-white/5 bg-black/20 group-hover:bg-neon-yellow transition-colors">
-                        <span className="font-display font-bold uppercase tracking-wider text-[9px] md:text-xs text-white group-hover:text-black -skew-x-6">
-                          <span className="skew-x-6 block">Escalar</span>
+                        <span className="font-display font-bold uppercase tracking-wider text-[9px] md:text-xs text-white group-hover:text-black">
+                          Escalar
                         </span>
                       </div>
                     </div>
@@ -924,9 +924,9 @@ export function Team() {
                     </p>
                     <button 
                       onClick={() => navigate('/transfer')}
-                      className="px-8 py-3 bg-neon-yellow text-black font-display font-bold uppercase tracking-wider text-sm -skew-x-6 hover:bg-white transition-colors"
+                      className="px-8 py-3 bg-neon-yellow text-black font-display font-bold uppercase tracking-wider text-sm hover:bg-white transition-colors"
                     >
-                      <span className="skew-x-6 block">Ir para Mercado</span>
+                      Ir para Mercado
                     </button>
                   </div>
                 )}
@@ -943,7 +943,7 @@ export function Team() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/80 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4"
+            className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:p-4"
             onClick={() => setFormationModalOpen(false)}
           >
             <motion.div
@@ -951,7 +951,7 @@ export function Team() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 12 }}
               onClick={(e) => e.stopPropagation()}
-              className="my-auto flex w-full max-w-lg flex-col overflow-hidden rounded-md border border-white/10 bg-dark-gray shadow-2xl max-h-[min(88dvh,calc(100dvh-6rem))] sm:max-h-[85vh]"
+              className="my-auto flex w-full max-w-lg flex-col overflow-hidden rounded-md border border-white/10 bg-dark-gray max-h-[min(88dvh,calc(100dvh-6rem))] sm:max-h-[85vh]"
             >
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
                 <h3 className="font-display font-black uppercase tracking-wider text-sm md:text-base text-white flex items-center gap-2">
@@ -1117,7 +1117,7 @@ export function Team() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[55] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/80 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4"
+            className="fixed inset-0 z-[55] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:p-4"
             onClick={() => setAnnouncePlayer(null)}
             role="presentation"
           >
@@ -1126,7 +1126,7 @@ export function Team() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 16 }}
               onClick={(e) => e.stopPropagation()}
-              className="my-auto w-full max-w-md overflow-hidden rounded-md border border-neon-yellow/25 bg-dark-gray shadow-2xl"
+              className="my-auto w-full max-w-md overflow-hidden rounded-md border border-neon-yellow/25 bg-dark-gray"
               role="dialog"
               aria-modal="true"
               aria-labelledby="market-maker-title"
@@ -1134,9 +1134,7 @@ export function Team() {
               {/* Header */}
               <div className="flex items-start justify-between gap-3 border-b border-white/10 bg-black/40 px-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-[0.28em] text-white/45 font-display font-bold">
-                    Market Maker · Proposta
-                  </p>
+                  <Hashtag>#marketmaker #proposta</Hashtag>
                   <h3
                     id="market-maker-title"
                     className="mt-0.5 font-display text-lg font-black uppercase tracking-wide text-white"
@@ -1172,10 +1170,6 @@ export function Team() {
                   <p className="mt-1 text-[11px] text-white/40">{discountLabel}</p>
                 </div>
 
-                <p className="text-xs text-white/50 leading-relaxed">
-                  O Market Maker compra na hora. O valor é creditado imediatamente na tua wallet em EXP.
-                </p>
-
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                   <button
                     type="button"
@@ -1189,7 +1183,7 @@ export function Team() {
                     onClick={() => void handleMarketMakerAccept()}
                     className="rounded-lg bg-neon-yellow py-2.5 font-display text-xs font-black uppercase tracking-wider text-black hover:bg-neon-yellow/85 active:scale-[0.98] sm:px-4"
                   >
-                    Aceitar oferta
+                    Aceitar +{formatExp(offerExp)} EXP
                   </button>
                 </div>
               </div>
@@ -1239,7 +1233,7 @@ export function Team() {
               setSelectedSlotId(slotId);
               setSaveBanner({
                 kind: 'success',
-                text: `Slot ${slotId} liberado. Escolhe um substituto na lista.`,
+                text: `Slot ${slotId} liberado. Escolha um substituto na lista.`,
               });
             }}
             onVerSkill={() => {
@@ -1281,7 +1275,7 @@ function PitchPlayerMenu({
     <motion.div
       key="pitch-player-menu"
       role="presentation"
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/75 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -1297,7 +1291,6 @@ function PitchPlayerMenu({
         style={{
           borderRadius: 'var(--radius-card)',
           background: 'var(--color-panel-elevated)',
-          boxShadow: 'var(--shadow-card-hover)',
         }}
         role="dialog"
         aria-modal="true"
@@ -1308,7 +1301,7 @@ function PitchPlayerMenu({
         <div className="flex items-center gap-4 border-b border-[var(--color-divider-yellow)] p-5">
           <div
             className={cn(
-              'relative size-16 shrink-0 overflow-hidden rounded-full border bg-dark-gray shadow-lg',
+              'relative size-16 shrink-0 overflow-hidden rounded-full border bg-dark-gray',
               player.style === 'neon-yellow' ? 'border-neon-yellow' : 'border-white/40',
             )}
           >
@@ -1320,7 +1313,7 @@ function PitchPlayerMenu({
             />
             <span
               className={cn(
-                'absolute -right-1 -top-1 flex size-7 items-center justify-center shadow-md',
+                'absolute -right-1 -top-1 flex size-7 items-center justify-center',
                 player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-white text-black',
               )}
               style={{ borderRadius: '9999px' }}
@@ -1362,23 +1355,20 @@ function PitchPlayerMenu({
           <button
             type="button"
             onClick={onSubstituir}
-            className="group/act relative w-full overflow-hidden border border-white/[0.05] text-left transition-all hover:border-white/15 hover:-translate-y-0.5"
+            className="group/act relative w-full overflow-hidden border border-white/[0.05] text-left transition-colors hover:border-white/30"
             style={{
               borderRadius: 'var(--radius-card)',
               background: 'var(--color-panel-soft)',
-              boxShadow: 'var(--shadow-card)',
             }}
           >
             <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
             <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
               <div>
-                <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
-                  Tática
-                </p>
+                <Hashtag>#tatica</Hashtag>
                 <p className="font-impact text-[18px] uppercase leading-tight text-white transition-colors group-hover/act:text-neon-yellow">
                   Substituir
                 </p>
-                <p className="mt-0.5 text-[11px] text-white/50">Liberar slot e escolher outro jogador</p>
+                <p className="mt-0.5 text-[11px] text-white/50">Libera o slot</p>
               </div>
             </div>
           </button>
@@ -1386,23 +1376,20 @@ function PitchPlayerMenu({
           <button
             type="button"
             onClick={onVerSkill}
-            className="group/act relative w-full overflow-hidden border border-white/[0.05] text-left transition-all hover:border-white/15 hover:-translate-y-0.5"
+            className="group/act relative w-full overflow-hidden border border-white/[0.05] text-left transition-colors hover:border-white/30"
             style={{
               borderRadius: 'var(--radius-card)',
               background: 'var(--color-panel-soft)',
-              boxShadow: 'var(--shadow-card)',
             }}
           >
             <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
             <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
               <div>
-                <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
-                  Perfil
-                </p>
+                <Hashtag>#perfil</Hashtag>
                 <p className="font-impact text-[18px] uppercase leading-tight text-white transition-colors group-hover/act:text-neon-yellow">
                   Ver skills & temporada
                 </p>
-                <p className="mt-0.5 text-[11px] text-white/50">Atributos, evolução e histórico recente</p>
+                <p className="mt-0.5 text-[11px] text-white/50">Atributos e histórico</p>
               </div>
             </div>
           </button>
@@ -1410,23 +1397,20 @@ function PitchPlayerMenu({
           <button
             type="button"
             onClick={onAnunciar}
-            className="group/act relative w-full overflow-hidden border border-white/[0.05] text-left transition-all hover:border-white/15 hover:-translate-y-0.5"
+            className="group/act relative w-full overflow-hidden border border-white/[0.05] text-left transition-colors hover:border-white/30"
             style={{
               borderRadius: 'var(--radius-card)',
               background: 'var(--color-panel-soft)',
-              boxShadow: 'var(--shadow-card)',
             }}
           >
             <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
             <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
               <div>
-                <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
-                  Mercado
-                </p>
+                <Hashtag>#mercado</Hashtag>
                 <p className="font-impact text-[18px] uppercase leading-tight text-white transition-colors group-hover/act:text-neon-yellow">
                   Anunciar no mercado
                 </p>
-                <p className="mt-0.5 text-[11px] text-white/50">Listar para venda em EXP</p>
+                <p className="mt-0.5 text-[11px] text-white/50">Venda em EXP</p>
               </div>
             </div>
           </button>
@@ -1550,8 +1534,8 @@ function PlantelHero({
           <button
             type="button"
             onClick={onChooseFormation}
-            className="inline-flex items-center justify-center bg-black px-5 sm:px-7 py-3 text-white font-display font-black uppercase tracking-[0.14em] text-[11px] transition-transform hover:scale-[1.02] active:scale-[0.98]"
-            style={{ borderRadius: 'var(--radius-sm)', boxShadow: '5px 5px 0 rgba(13,13,13,0.28)' }}
+            className="inline-flex items-center justify-center bg-deep-black px-5 sm:px-7 py-3 text-white font-display font-black uppercase tracking-[0.14em] text-[11px] transition-colors hover:text-neon-yellow active:scale-[0.98]"
+            style={{ borderRadius: 'var(--radius-sm)' }}
           >
             Escolher formação
           </button>
@@ -1617,7 +1601,7 @@ function PitchPlayer({
         {/* Sprint B-3: token ~40% maior */}
         <div
           className={cn(
-            'relative size-12 overflow-hidden rounded-full border bg-dark-gray shadow-lg sm:size-14 md:size-16 md:border-2',
+            'relative size-12 overflow-hidden rounded-full border bg-dark-gray sm:size-14 md:size-16 md:border-2',
             player.style === 'neon-yellow' ? 'border-neon-yellow' : 'border-white',
           )}
         >
@@ -1639,7 +1623,7 @@ function PitchPlayer({
         </div>
 
         <div
-          className="mt-1 max-w-[min(5.5rem,24vw)] truncate border border-white/25 bg-black/90 px-1 py-0.5 text-[9px] font-bold text-white drop-shadow-md sm:mt-1.5 sm:max-w-[6.5rem] sm:px-1.5 sm:text-[10px] md:max-w-[7.5rem] md:px-2 md:text-[11px]"
+          className="mt-1 max-w-[min(5.5rem,24vw)] truncate border border-white/25 bg-black/90 px-1 py-0.5 text-[9px] font-bold text-white sm:mt-1.5 sm:max-w-[6.5rem] sm:px-1.5 sm:text-[10px] md:max-w-[7.5rem] md:px-2 md:text-[11px]"
           style={{ borderRadius: 'var(--radius-sm)' }}
         >
           {playerDisplayName(player)}
@@ -1647,7 +1631,7 @@ function PitchPlayer({
 
         <div
           className={cn(
-            'pointer-events-none absolute -right-1 -top-1 flex size-5 items-center justify-center shadow-md sm:-right-1.5 sm:-top-1.5 sm:size-6 md:-right-2 md:-top-2 md:size-7',
+            'pointer-events-none absolute -right-1 -top-1 flex size-5 items-center justify-center sm:-right-1.5 sm:-top-1.5 sm:size-6 md:-right-2 md:-top-2 md:size-7',
             player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-white text-black',
           )}
           style={{ borderRadius: '9999px' }}

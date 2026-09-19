@@ -63,7 +63,6 @@ export function PenaltyShootSVG({
       viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
       className="w-full max-w-[920px] h-auto"
       style={{
-        filter: 'drop-shadow(0 8px 0 rgba(0,0,0,0.08))',
         maxHeight: 'min(42dvh, 320px)',
       }}
     >

@@ -190,7 +190,7 @@
   /* Superfícies do REVELA. `paper` é o creme da Torcida — o terceiro universo,
    * usado com parcimônia pra quebrar a alternância amarelo/preto. */
   --color-poster-surface: #141516;
-  --color-poster-paper:   #F2ECDC;
+  --color-poster-paper:   #ECECE7; /* VOLT2: o creme virou o giz da paleta */
   --color-poster-editorial: #15130C;
 
   --radius-poster: 2px;
@@ -325,9 +325,10 @@
   .btn-secondary-inner {
     @apply block flex items-center justify-center gap-2;
   }
+  /* VOLT2: número vazado saiu — "no layout aceita tudo, na aplicação quebra".
+     A classe fica (sem uso hoje) e vira texto sólido apagado. */
   .text-outline {
-    -webkit-text-stroke: 1px rgba(255,255,255,0.2);
-    color: transparent;
+    color: var(--color-poeira);
   }
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
@@ -515,9 +516,9 @@
   }
   .ole-goal-takeover__italic {
     font-family: var(--font-serif-hero);
-    font-style: italic;
+    font-style: normal;
     font-size: 0.4em;
-    font-weight: 400;
+    font-weight: 600;
     display: block;
     margin-top: 0.1em;
     color: #000;
@@ -536,9 +537,10 @@
   .ole-table tbody tr:nth-child(odd)  { background: var(--color-deep-black); }
   .ole-table tbody tr:nth-child(even) { background: var(--color-card); }
   .ole-table tbody tr:hover           { background: var(--color-card-hi); }
-  .ole-table__pos[data-rank="1"] { color: #FFD700; font-weight: 900; }
-  .ole-table__pos[data-rank="2"] { color: #C0C0C0; font-weight: 900; }
-  .ole-table__pos[data-rank="3"] { color: #CD7F32; font-weight: 900; }
+  /* VOLT2: pódio sem ouro/prata/bronze (ouro é só da rede) — volt, giz, cimento. */
+  .ole-table__pos[data-rank="1"] { color: var(--color-neon-yellow); font-weight: 900; }
+  .ole-table__pos[data-rank="2"] { color: var(--color-giz); font-weight: 900; }
+  .ole-table__pos[data-rank="3"] { color: var(--color-cimento); font-weight: 900; }
   .ole-table__form-pill {
     width: 18px; height: 18px; border-radius: 9999px;
     display: inline-block; font-size: 10px; font-weight: 700;
@@ -673,10 +675,10 @@ html[data-graphic-quality='low'] .sports-panel::after {
   100% { transform: rotate(360deg)  scale(1);    }
 }
 
-/* Pulso de escala/brilho em chutes — sensação de pancada. */
+/* Pulso em chutes — sensação de pancada. VOLT2: pela escala, sem halo. */
 @keyframes olefoot-ball-pulse {
-  from { filter: drop-shadow(0 0 10px rgba(253,225,0,0.6)) drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
-  to   { filter: drop-shadow(0 0 18px rgba(253,225,0,1))   drop-shadow(0 0 8px rgba(255,255,255,0.85)); }
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
 }
 
 /* Vibração da bola durante carregamento de força no pênalti */

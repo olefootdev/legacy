@@ -3,7 +3,7 @@
  * Overlay editorial Legacy Tech: SAI ↔ ENTRA com foto do jogador, sem emojis.
  *
  * - Foto do jogador (picsum seed por playerId) com OVR-style overlay opcional
- * - Tipografia: Moret italic pros números/título, Agency uppercase pros labels
+ * - Tipografia VOLT2: ole-num nos números, Anton no título, uppercase nos labels
  * - Rail amarelo de assinatura, tokens de cor (--color-danger / --color-success)
  * - Clicável (toque em qualquer área) — mobile-first, sem dependência de teclado
  * - Auto-dismiss em 3s com timer estável (callback via ref)
@@ -59,7 +59,7 @@ function PlayerHalf({
         borderRadius: 'var(--radius-md)',
       }}
     >
-      {/* Foto + número Moret overlay */}
+      {/* Foto + número overlay */}
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-black">
         <img
           src={photoUrl}
@@ -68,19 +68,17 @@ function PlayerHalf({
           referrerPolicy="no-referrer"
           aria-hidden
         />
+        {/* Scrim da foto: legibilidade do número e da posição. */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-black/20 to-black/85"
         />
-        {/* Número grande Moret italic */}
-        <div className="absolute top-2 left-2.5 z-10">
+        {/* Número grande */}
+        <div className="absolute top-2 left-2 z-10 bg-black/75 px-1.5 py-1">
           <p
-            className="italic tabular-nums leading-none drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]"
+            className="ole-num leading-none"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
-              fontSize: 'clamp(36px, 5vw, 52px)',
-              letterSpacing: '-0.04em',
+              fontSize: 'clamp(26px, 4vw, 36px)',
               color: accent,
             }}
           >
@@ -95,7 +93,7 @@ function PlayerHalf({
               fontSize: '10px',
               letterSpacing: '0.22em',
               backgroundColor: accent,
-              color: '#000',
+              color: 'var(--color-deep-black)',
               borderRadius: 'var(--radius-sm)',
             }}
           >
@@ -162,7 +160,7 @@ export function SubstitutionOverlay({
       role="button"
       tabIndex={0}
       aria-label="Fechar overlay de substituição"
-      className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-deep-black/95 backdrop-blur-sm cursor-pointer"
+      className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-deep-black cursor-pointer"
     >
       {/* Hint discreto no topo */}
       <p
@@ -189,24 +187,10 @@ export function SubstitutionOverlay({
         {/* Eyebrow + Título editorial duo */}
         <div className="flex flex-col items-center gap-2">
           <span aria-hidden className="block w-10 h-[3px]" style={{ backgroundColor: cfg.accent }} />
-          <p
-            className="font-display uppercase text-center"
-            style={{
-              fontSize: '10px',
-              letterSpacing: '0.32em',
-              fontWeight: 700,
-              color: 'rgba(255,255,255,0.55)',
-            }}
-          >
-            Tempo Real
-          </p>
           <h2
-            className="italic text-center leading-[0.95]"
+            className="font-impact uppercase text-center leading-[1.1]"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontSize: 'clamp(22px, 4.5vw, 30px)',
-              fontWeight: 700,
-              letterSpacing: '-0.02em',
+              fontSize: 'clamp(24px, 5vw, 34px)',
               color: cfg.accent,
             }}
           >
@@ -218,7 +202,7 @@ export function SubstitutionOverlay({
         <div className="flex items-stretch gap-3 sm:gap-5">
           <PlayerHalf player={playerOut} kind="out" />
 
-          {/* Divisor Moret VS-style */}
+          {/* Divisor ↔ */}
           <motion.div
             initial={{ scale: 0.6, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -226,13 +210,8 @@ export function SubstitutionOverlay({
             className="flex flex-col items-center justify-center"
           >
             <span
-              className="italic text-neon-yellow leading-none"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontSize: 'clamp(28px, 5vw, 38px)',
-                letterSpacing: '-0.04em',
-              }}
+              className="font-bold text-neon-yellow leading-none"
+              style={{ fontSize: 'clamp(28px, 5vw, 38px)' }}
               aria-hidden
             >
               ↔

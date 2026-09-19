@@ -202,9 +202,9 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
         <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-neon-yellow">
           Disputa de Pênaltis
         </p>
-        <p className="font-serif italic text-white/70 text-[13px]" style={{ fontFamily: 'var(--font-serif-hero)' }}>
-          {phase === 'setup' ? 'Empate — quem decide é você. Escale os 5 batedores.' : 'Aqui é coração. Frieza ganha.'}
-        </p>
+        {phase === 'setup' && (
+          <p className="text-white/70 text-[13px]">Escale os 5 batedores.</p>
+        )}
       </div>
 
       {/* ─── SETUP ──────────────────────────────────────────────────────────── */}
@@ -227,9 +227,8 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                 }}
               >
                 <span
-                  className="w-7 h-7 shrink-0 flex items-center justify-center font-serif italic text-[15px] rounded-full"
+                  className="ole-num w-7 h-7 shrink-0 flex items-center justify-center text-[13px] rounded-full"
                   style={{
-                    fontFamily: 'var(--font-serif-hero)',
                     backgroundColor: picked ? 'var(--color-neon-yellow)' : 'transparent',
                     color: picked ? '#000' : 'rgba(255,255,255,0.4)',
                     border: picked ? 'none' : '1px solid var(--color-border)',
@@ -274,8 +273,8 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
               initial={{ scale: 1.25 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 400, damping: 18 }}
-              className="font-serif italic tabular-nums text-5xl"
-              style={{ fontFamily: 'var(--font-serif-hero)', color: '#fff' }}
+              className="ole-num text-5xl"
+              style={{ color: '#fff' }}
             >
               {liveHome}<span className="text-white/40 mx-1">–</span>{liveAway}
             </motion.span>
@@ -298,15 +297,6 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                     animate={isDecider ? { scale: HEARTBEAT_SCALE } : { scale: 1 }}
                     transition={isDecider ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut', times: HEARTBEAT_TIMES } : undefined}
                   >
-                    {isDecider && (
-                      <motion.span
-                        aria-hidden
-                        className="absolute inset-0 -z-10 rounded-full"
-                        style={{ background: 'radial-gradient(ellipse at center, color-mix(in srgb, var(--color-neon-yellow) 26%, transparent), transparent 70%)' }}
-                        animate={{ opacity: [0.2, 0.55, 0.2] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', times: HEARTBEAT_TIMES }}
-                      />
-                    )}
                     <div className="flex items-center justify-center gap-2 mb-1">
                       <span className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45">
                         {currentKick.side === 'home' ? homeName : awayName}
@@ -324,8 +314,7 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                     </div>
                     {isDecider ? (
                       <p
-                        className="font-serif italic text-[22px] leading-tight text-white px-2"
-                        style={{ fontFamily: 'var(--font-serif-hero)', textShadow: '0 0 20px color-mix(in srgb, var(--color-neon-yellow) 55%, transparent)' }}
+                        className="font-impact text-[22px] leading-[1.15] text-neon-yellow px-2"
                       >
                         {tensionLine(currentKick, isDecider, kickIdx)}
                       </p>
@@ -333,8 +322,7 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                       <motion.p
                         animate={{ opacity: [0.6, 1, 0.6] }}
                         transition={{ duration: 1.1, repeat: Infinity }}
-                        className="font-serif italic text-[16px] text-white/90"
-                        style={{ fontFamily: 'var(--font-serif-hero)' }}
+                        className="font-semibold text-[16px] text-white/90"
                       >
                         {tensionLine(currentKick, isDecider, kickIdx)}
                       </motion.p>
@@ -359,13 +347,12 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                       className={`font-display uppercase font-black ${isDecider ? 'tracking-[0.22em] text-[24px]' : 'tracking-[0.2em] text-[15px]'}`}
                       style={{
                         color: currentKick.scored ? 'var(--color-success)' : 'var(--color-danger)',
-                        textShadow: isDecider ? `0 0 24px color-mix(in srgb, ${currentKick.scored ? 'var(--color-success)' : 'var(--color-danger)'} 55%, transparent)` : undefined,
                       }}
                     >
                       {currentKick.scored ? 'GOL!' : currentKick.outcome === 'save' ? 'DEFENDEU!' : 'PERDEU!'}
                     </span>
                   </div>
-                  <p className={`font-serif italic text-white/80 ${isDecider ? 'text-[16px] px-2' : 'text-[14px]'}`} style={{ fontFamily: 'var(--font-serif-hero)' }}>
+                  <p className={`text-white/80 ${isDecider ? 'text-[16px] px-2' : 'text-[14px]'}`}>
                     {currentKick.kickerName} — {reactionLine(currentKick, isDecider, winnerName, kickIdx)}
                   </p>
                 </motion.div>
@@ -435,7 +422,7 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
               className="text-center py-3 border-t border-white/8"
             >
               <Check className="w-7 h-7 mx-auto mb-1" style={{ color: result.winner === 'home' ? 'var(--color-success)' : 'var(--color-danger)' }} strokeWidth={3} aria-hidden />
-              <p className="font-serif italic text-2xl" style={{ fontFamily: 'var(--font-serif-hero)', color: result.winner === 'home' ? 'var(--color-neon-yellow)' : '#fff' }}>
+              <p className="font-impact uppercase text-2xl leading-[1.1]" style={{ color: result.winner === 'home' ? 'var(--color-neon-yellow)' : '#fff' }}>
                 {winnerName}
               </p>
               <p className="font-display uppercase tracking-[0.22em] text-[10px] font-black text-white/60 mt-0.5">

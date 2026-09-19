@@ -1,7 +1,7 @@
 /**
  * QuickMatchScoreboard — Placar ao vivo cinematográfico para Partida Rápida.
  *
- * Placar gigante em Moret italic + barra de momentum animada + relógio ao vivo.
+ * Placar gigante em ole-num + barra de momentum animada + relógio ao vivo.
  * Padrão visual: MatchdayHero + identidade BVB (amarelo elétrico, preto profundo).
  */
 
@@ -60,7 +60,7 @@ export function QuickMatchScoreboard({
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      {/* Placar principal — Moret italic gigante + brasões maiores */}
+      {/* Placar principal — ole-num gigante + brasões maiores */}
       <motion.div
         key={scoreShakeKey}
         animate={scoreShakeKey > 0 ? { x: [0, -4, 4, -2, 2, 0] } : {}}
@@ -93,8 +93,6 @@ export function QuickMatchScoreboard({
           <p
             className="text-white uppercase truncate max-w-full text-right"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
               fontWeight: 700,
               fontSize: 'clamp(11px, 1.8vw, 15px)',
               letterSpacing: '0.02em',
@@ -105,14 +103,8 @@ export function QuickMatchScoreboard({
 
           {/* Score */}
           <span
-            className="leading-none text-neon-yellow tabular-nums"
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
-              fontSize: 'clamp(48px, 14vw, 108px)',
-              fontWeight: 700,
-              letterSpacing: '-0.03em',
-            }}
+            className="ole-num leading-none text-neon-yellow"
+            style={{ fontSize: 'clamp(44px, 12vw, 96px)' }}
           >
             {homeScore}
           </span>
@@ -121,12 +113,8 @@ export function QuickMatchScoreboard({
         {/* Separador */}
         <div className="relative flex flex-col items-center gap-2 shrink-0">
           <span
-            className="leading-none text-white/35 select-none"
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
-              fontSize: 'clamp(36px, 7vw, 56px)',
-            }}
+            className="ole-num leading-none text-white/35 select-none"
+            style={{ fontSize: 'clamp(30px, 6vw, 48px)' }}
           >
             –
           </span>
@@ -158,8 +146,6 @@ export function QuickMatchScoreboard({
           <p
             className="text-white uppercase truncate max-w-full text-left"
             style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
               fontWeight: 700,
               fontSize: 'clamp(11px, 1.8vw, 15px)',
               letterSpacing: '0.02em',
@@ -170,14 +156,8 @@ export function QuickMatchScoreboard({
 
           {/* Score */}
           <span
-            className="leading-none text-white tabular-nums"
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontStyle: 'italic',
-              fontSize: 'clamp(48px, 14vw, 108px)',
-              fontWeight: 700,
-              letterSpacing: '-0.03em',
-            }}
+            className="ole-num leading-none text-white"
+            style={{ fontSize: 'clamp(44px, 12vw, 96px)' }}
           >
             {awayScore}
           </span>
@@ -195,9 +175,7 @@ export function QuickMatchScoreboard({
       </div>
 
       {/* Barra de momentum — animada com transição suave */}
-      <div className="relative w-full h-2 bg-deep-black border border-white/10 overflow-hidden" style={{ borderRadius: 'var(--radius-sm)' }}>
-        {/* Fundo gradiente sutil */}
-        <div className="absolute inset-0 bg-gradient-to-r from-neon-yellow/10 via-transparent to-white/10" />
+      <div className="relative w-full h-2 bg-card-hi border border-white/10 overflow-hidden" style={{ borderRadius: 'var(--radius-sm)' }}>
 
         {/* Barra amarela (casa) — cresce da esquerda */}
         <motion.div
@@ -206,9 +184,6 @@ export function QuickMatchScoreboard({
           animate={{ width: `${homePressurePct}%` }}
           transition={{ duration: barTransitionMs / 1000, ease: barEasing }}
           className="absolute left-0 top-0 h-full bg-neon-yellow"
-          style={{
-            boxShadow: homePressurePct > 70 ? '0 0 12px rgba(253,225,0,0.6)' : 'none',
-          }}
         />
 
         {/* Barra branca (visitante) — cresce da direita */}
@@ -218,9 +193,6 @@ export function QuickMatchScoreboard({
           animate={{ width: `${awayPressurePct}%` }}
           transition={{ duration: barTransitionMs / 1000, ease: barEasing }}
           className="absolute right-0 top-0 h-full bg-white/80"
-          style={{
-            boxShadow: awayPressurePct > 70 ? '0 0 12px rgba(255,255,255,0.5)' : 'none',
-          }}
         />
 
         {/* Indicador central (linha vertical fina) */}

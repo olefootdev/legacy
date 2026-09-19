@@ -170,9 +170,9 @@ export function AssistantWidget() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full border border-violet-500/50 bg-violet-950/90 px-3 py-2 text-[11px] font-bold text-violet-100 shadow-xl backdrop-blur transition-colors hover:bg-violet-900/95"
+        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full border border-white/16 bg-panel px-3 py-2 text-[11px] font-bold text-white transition-colors hover:border-white/30"
       >
-        <Sparkles className="h-4 w-4 text-violet-300" />
+        <Sparkles className="h-4 w-4 text-white" />
         Assistente
       </button>
     );
@@ -189,18 +189,18 @@ export function AssistantWidget() {
         transform: position.x !== 0 || position.y !== 0 ? 'translate(-50%, -50%)' : 'none',
       }}
     >
-      <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-sm rounded-2xl border border-violet-500/50 bg-gradient-to-br from-violet-950/95 via-black/95 to-black/95 p-3 sm:p-4 shadow-[0_20px_60px_rgba(139,92,246,0.25)] backdrop-blur">
+      <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-sm border border-white/16 bg-panel p-3 sm:p-4">
         <div className="mb-2 flex items-start gap-2">
           <button
             type="button"
             onMouseDown={handleMouseDown}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-500/20 text-violet-300 cursor-move hover:bg-violet-500/30 transition-colors"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-card-hi text-cimento cursor-move hover:text-white transition-colors"
             title="Arrastar"
           >
             <GripVertical className="h-4 w-4" />
           </button>
           <div className="min-w-0 flex-1">
-            <span className="font-display text-[9px] font-bold uppercase tracking-widest text-violet-300/80">
+            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-cimento">
               Assistente
             </span>
             <h3 className="mt-0.5 text-sm font-black text-white">{tip.title}</h3>
@@ -209,12 +209,12 @@ export function AssistantWidget() {
             type="button"
             onClick={() => setOpen(false)}
             title="Fechar"
-            className="rounded-lg p-1 text-violet-200/60 hover:bg-white/5 hover:text-white"
+            className="p-1 text-cimento hover:bg-white/5 hover:text-white"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <p className="text-[13px] leading-relaxed text-violet-50/90">{tip.body}</p>
+        <p className="text-[13px] leading-relaxed text-giz">{tip.body}</p>
       </div>
     </div>
   );

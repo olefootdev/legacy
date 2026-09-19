@@ -20,7 +20,6 @@ import { motion } from 'motion/react';
 import {
   ChevronLeft,
   Activity,
-  Brain,
   TrendingUp,
   TrendingDown,
   DollarSign,
@@ -107,7 +106,7 @@ function HeroCard({
   isUnavailable: boolean;
   outForMatches: number;
 }) {
-  // Hero editorial Legacy Tech: eyebrow Agency + Nome Moret italic + régua + OVR Moret italic.
+  // VOLT2: eyebrow + nome + OVR chapado (sem marca-d'água, sem brilho).
   return (
     <motion.section
       initial={{ scale: 0.97, opacity: 0, y: 8 }}
@@ -117,25 +116,8 @@ function HeroCard({
         'relative border border-l-[3px] bg-[var(--color-card)] p-5 sm:p-6 overflow-hidden',
         isUnavailable ? 'border-l-[var(--color-danger)]' : 'border-l-neon-yellow',
       )}
-      style={{
-        borderRadius: 'var(--radius-md)',
-        boxShadow: '0 24px 48px rgba(0,0,0,0.18)',
-      }}
+      style={{ borderRadius: 'var(--radius-md)' }}
     >
-      {/* Background watermark — número OVR gigante quase invisível */}
-      <div
-        aria-hidden
-        className="absolute -right-6 top-1/2 -translate-y-1/2 select-none pointer-events-none"
-        style={{
-          fontFamily: 'var(--font-sans)',
-          fontSize: '220px',
-          letterSpacing: '-0.05em',
-          color: isUnavailable ? 'rgba(239,68,68,0.04)' : 'rgba(253,225,0,0.05)',
-          lineHeight: 1,
-        }}
-      >
-        {ovr}
-      </div>
 
       {/* Badge "indisponível" no canto */}
       {isUnavailable && (
@@ -156,16 +138,11 @@ function HeroCard({
       )}
 
       <div className="relative flex items-start gap-5">
-        {/* OVR Moret italic + POS chip Agency */}
+        {/* OVR + POS */}
         <div className="shrink-0 flex flex-col items-center gap-2">
           <div
-            className="text-neon-yellow leading-none tabular-nums"
-            style={{
-              fontFamily: 'var(--font-impact)',
-              fontSize: 'clamp(56px, 9vw, 84px)',
-              letterSpacing: '-0.04em',
-              textShadow: '0 4px 24px rgba(253,225,0,0.25)',
-            }}
+            className="ole-num text-white leading-none tabular-nums"
+            style={{ fontSize: 'clamp(48px, 9vw, 76px)' }}
           >
             {ovr}
           </div>
@@ -366,7 +343,7 @@ function SeasonStats({
   if (matches === 0) {
     return (
       <div
-        className="text-white/45 italic p-4 bg-[var(--color-card)] border border-dashed border-white/12 text-center"
+        className="text-white/45 p-4 bg-[var(--color-card)] border border-dashed border-white/12 text-center"
         style={{
           fontFamily: 'var(--font-ui)',
           fontSize: '12px',
@@ -397,10 +374,7 @@ function SeasonStats({
             className={cn('leading-none tabular-nums', i.color)}
             style={{
               fontFamily: 'var(--font-impact)',
-              fontStyle: 'italic',
-              fontWeight: 700,
               fontSize: 'clamp(18px, 3vw, 22px)',
-              letterSpacing: '-0.02em',
             }}
           >
             {i.value}
@@ -481,7 +455,7 @@ function ActiveConsequences({
 function Timeline({ events }: { events: PlayerTimelineEvent[] }) {
   if (events.length === 0) {
     return (
-      <div className="text-center py-4 text-[11px] text-white/40 italic">
+      <div className="text-center py-4 text-[11px] text-white/40">
         Sem eventos recentes nos últimos 7 dias.
       </div>
     );
@@ -621,7 +595,7 @@ function MarketChart({
 }) {
   if (points.length < 2) {
     return (
-      <div className="text-[11px] text-white/40 italic text-center py-4">
+      <div className="text-[11px] text-white/40 text-center py-4">
         Histórico de mercado ainda construindo — precisa de mais snapshots
         após partidas pra exibir tendência.
       </div>
@@ -683,7 +657,7 @@ function MarketChart({
 // ─── Page ──────────────────────────────────────────────────────────
 
 function SectionHeader({ kicker, title }: { kicker: string; title: string }) {
-  // DS §7.5: rail amarelo 3px à esquerda + headline Moret italic.
+  // DS §7.5: rail amarelo 3px à esquerda + headline.
   return (
     <div className="flex items-stretch gap-3 py-1">
       <span aria-hidden className="w-[3px] bg-neon-yellow self-stretch min-h-[36px]" />
@@ -876,12 +850,12 @@ export function ManagerScoutsPlayer() {
           {transparency ? (
             <ActiveConsequences list={transparency.active} />
           ) : showFallbackNotice ? (
-            <div className="text-[11px] text-white/40 italic text-center py-4">
+            <div className="text-[11px] text-white/40 text-center py-4">
               Serviço /insights indisponível — não foi possível listar consequências
               com explicação humana. Tente entrar na conta ou aguarde reconexão.
             </div>
           ) : (
-            <div className="text-[11px] text-white/40 italic text-center py-4">
+            <div className="text-[11px] text-white/40 text-center py-4">
               Carregando consequências...
             </div>
           )}
@@ -894,7 +868,7 @@ export function ManagerScoutsPlayer() {
             {transparency ? (
               <Timeline events={transparency.timeline} />
             ) : (
-              <div className="text-[11px] text-white/40 italic text-center py-3">
+              <div className="text-[11px] text-white/40 text-center py-3">
                 Timeline disponível só com /insights online.
               </div>
             )}
@@ -906,7 +880,7 @@ export function ManagerScoutsPlayer() {
           <SectionHeader kicker="Evolução técnica" title="Atributos · delta 7 dias" />
           <AttrDeltaList currentAttrs={player.attrs} weekAgoAttrs={weekAgoAttrs} />
           {!weekAgoAttrs && (
-            <div className="text-[10px] text-white/35 italic">
+            <div className="text-[10px] text-white/35">
               Sem snapshot anterior a 7 dias — o delta aparecerá após a próxima partida.
             </div>
           )}
@@ -920,23 +894,6 @@ export function ManagerScoutsPlayer() {
           </div>
         </section>
 
-        {/* ── Nota de honestidade (epígrafe Moret italic) ────────── */}
-        <div className="flex flex-col items-center gap-1.5 py-4">
-          <span aria-hidden className="block w-8 h-px bg-neon-yellow/40" />
-          <div
-            className="text-white/55 text-center max-w-md leading-snug px-4"
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontWeight: 400,
-              fontSize: '13px',
-              letterSpacing: '-0.01em',
-            }}
-          >
-            <Brain size={11} className="inline mr-1.5 -mt-0.5 opacity-50" />
-            Todos os números vêm de eventos reais — partidas, treinos, decisões.
-            Quando um valor mudar, você verá o motivo aqui.
-          </div>
-        </div>
       </div>
     </div>
   );

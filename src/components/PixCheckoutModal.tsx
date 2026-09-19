@@ -258,7 +258,7 @@ export function PixCheckoutModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[90] flex items-end justify-center bg-black/85 p-3 backdrop-blur-sm sm:items-center sm:p-4"
+          className="fixed inset-0 z-[90] flex items-end justify-center bg-black/85 p-3 sm:items-center sm:p-4"
           onClick={handleClose}
         >
           <motion.div
@@ -266,22 +266,22 @@ export function PixCheckoutModal({
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.96, y: 12 }}
             onClick={(e) => e.stopPropagation()}
-            className="my-auto flex max-h-[min(90dvh,calc(100dvh-3rem))] w-full max-w-md flex-col overflow-hidden rounded-sm border border-amber-400/40 bg-panel sm:max-h-[min(92dvh,800px)]"
+            className="my-auto flex max-h-[min(90dvh,calc(100dvh-3rem))] w-full max-w-md flex-col overflow-hidden rounded-sm border border-white/16 bg-panel sm:max-h-[min(92dvh,800px)]"
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-3 p-5 border-b border-white/10">
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-amber-300 uppercase tracking-[0.22em] font-display font-black mb-1">
+                <p className="text-[10px] text-neon-yellow uppercase tracking-[0.22em] font-display font-black mb-1">
                   Pagamento PIX
                 </p>
                 <h3 className="font-display text-lg font-black uppercase tracking-wide text-white truncate">
                   {title}
                 </h3>
                 <p className="text-[11px] text-white/60 mt-0.5">{description}</p>
-                <p className="text-[10px] text-amber-300/80 mt-1 font-bold tabular-nums">
+                <p className="text-[10px] text-cimento mt-1 font-bold tabular-nums">
                   {/* Depois da cobrança criada, o valor que vale é o do servidor —
                       é ele que está no QR (card: preço USDT × cotação da hora). */}
-                  Valor: <span className="text-amber-300 text-base">{fmtBrl(charge?.amountCents ?? amountCents)}</span>
+                  Valor: <span className="text-white text-base">{fmtBrl(charge?.amountCents ?? amountCents)}</span>
                 </p>
               </div>
               <button
@@ -310,7 +310,7 @@ export function PixCheckoutModal({
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full bg-black/50 border border-white/15 rounded-sm px-3 py-2.5 text-white focus:border-amber-400/60 focus:outline-none"
+                      className="w-full bg-deep-black border border-white/15 rounded-sm px-3 py-2.5 text-white focus:border-neon-yellow focus:outline-none"
                       placeholder="Como aparece no documento"
                     />
                   </div>
@@ -323,7 +323,7 @@ export function PixCheckoutModal({
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-black/50 border border-white/15 rounded-sm px-3 py-2.5 text-white focus:border-amber-400/60 focus:outline-none"
+                      className="w-full bg-deep-black border border-white/15 rounded-sm px-3 py-2.5 text-white focus:border-neon-yellow focus:outline-none"
                       placeholder="seu@email.com"
                     />
                   </div>
@@ -338,15 +338,15 @@ export function PixCheckoutModal({
                       value={cpf}
                       onChange={(e) => setCpf(formatCpf(e.target.value))}
                       className={cn(
-                        'w-full bg-black/50 border rounded-sm px-3 py-2.5 text-white font-mono tabular-nums focus:outline-none',
-                        cpf.length === 0 ? 'border-white/15 focus:border-amber-400/60'
-                          : cpfValid ? 'border-emerald-500/40' : 'border-rose-500/40',
+                        'w-full bg-deep-black border rounded-sm px-3 py-2.5 text-white font-mono tabular-nums focus:outline-none',
+                        cpf.length === 0 ? 'border-white/15 focus:border-neon-yellow'
+                          : cpfValid ? 'border-alta/50' : 'border-baixa/50',
                       )}
                       placeholder="000.000.000-00"
                       maxLength={14}
                     />
                     {cpf.length > 0 && !cpfValid && (
-                      <p className="text-[10px] text-rose-300 mt-1">CPF inválido</p>
+                      <p className="text-[10px] text-baixa mt-1">CPF inválido</p>
                     )}
                   </div>
 
@@ -359,7 +359,7 @@ export function PixCheckoutModal({
                       inputMode="tel"
                       value={cellphone}
                       onChange={(e) => setCellphone(e.target.value)}
-                      className="w-full bg-black/50 border border-white/15 rounded-sm px-3 py-2.5 text-white focus:border-amber-400/60 focus:outline-none"
+                      className="w-full bg-deep-black border border-white/15 rounded-sm px-3 py-2.5 text-white focus:border-neon-yellow focus:outline-none"
                       placeholder="(11) 99999-9999"
                     />
                   </div>
@@ -368,7 +368,7 @@ export function PixCheckoutModal({
                     type="button"
                     onClick={handleSubmit}
                     disabled={!formValid}
-                    className="w-full bg-amber-400 hover:bg-white text-black py-3.5 mt-2 rounded-sm font-display text-sm font-black uppercase tracking-[0.18em] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full bg-neon-yellow hover:bg-white text-black py-3.5 mt-2 rounded-sm font-display text-sm font-black uppercase tracking-[0.18em] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Gerar PIX
                   </button>
@@ -382,7 +382,7 @@ export function PixCheckoutModal({
 
               {stage === 'loading' && (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <Loader2 className="w-8 h-8 text-amber-300 animate-spin" />
+                  <Loader2 className="w-8 h-8 text-neon-yellow animate-spin" />
                   <p className="text-sm text-white/70 font-display uppercase tracking-wider">
                     Gerando seu PIX…
                   </p>
@@ -418,7 +418,7 @@ export function PixCheckoutModal({
                       Copia e cola PIX
                     </label>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0 bg-black/50 border border-white/15 rounded-sm px-3 py-2.5">
+                      <div className="flex-1 min-w-0 bg-deep-black border border-white/15 rounded-sm px-3 py-2.5">
                         <p className="font-mono text-[11px] text-white/70 truncate">
                           {charge.brCode}
                         </p>
@@ -426,43 +426,43 @@ export function PixCheckoutModal({
                       <button
                         type="button"
                         onClick={handleCopyBrCode}
-                        className="shrink-0 bg-amber-400 hover:bg-white text-black px-3 py-2.5 rounded-sm transition-colors"
+                        className="shrink-0 bg-neon-yellow hover:bg-white text-black px-3 py-2.5 rounded-sm transition-colors"
                         aria-label="Copiar código PIX"
                       >
                         {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       </button>
                     </div>
                     {copied && (
-                      <p className="text-[10px] text-emerald-300 mt-1 inline-flex items-center gap-1">
+                      <p className="text-[10px] text-alta mt-1 inline-flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" /> Código copiado
                       </p>
                     )}
                   </div>
 
                   {/* Countdown + polling status */}
-                  <div className="flex items-center justify-between bg-black/40 border border-white/5 rounded-sm px-3 py-2">
+                  <div className="flex items-center justify-between bg-deep-black border border-white/10 rounded-sm px-3 py-2">
                     <span className="text-[10px] text-white/50 uppercase tracking-wider inline-flex items-center gap-1.5">
                       <Clock className="w-3 h-3" />
                       Expira em
                     </span>
-                    <span className="font-display text-sm font-black text-amber-300 tabular-nums">
+                    <span className="font-display text-sm font-black text-neon-yellow tabular-nums">
                       {countdown > 0 ? formatCountdown(countdown) : 'expirado'}
                     </span>
                   </div>
 
-                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-sm p-3 flex items-start gap-2">
-                    <Loader2 className="w-4 h-4 text-cyan-300 animate-spin shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-cyan-200 leading-snug">
+                  <div className="bg-deep-black border border-white/10 rounded-sm p-3 flex items-start gap-2">
+                    <Loader2 className="w-4 h-4 text-giz animate-spin shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-giz leading-snug">
                       Aguardando confirmação do banco…
                       <br />
-                      <span className="text-cyan-300/70 text-[10px]">
+                      <span className="text-cimento text-[10px]">
                         Detectamos automaticamente assim que o PIX cair.
                       </span>
                     </p>
                   </div>
 
                   {charge.devMode && (
-                    <p className="text-[10px] text-amber-300/70 text-center italic">
+                    <p className="text-[10px] text-atencao text-center">
                       Modo sandbox (devMode) — pagamento simulado
                     </p>
                   )}
@@ -471,10 +471,10 @@ export function PixCheckoutModal({
 
               {stage === 'paid' && (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <div className="bg-emerald-500/20 p-3 rounded-full">
-                    <CheckCircle2 className="w-12 h-12 text-emerald-300" />
+                  <div className="border border-alta/40 bg-deep-black p-3 rounded-full">
+                    <CheckCircle2 className="w-12 h-12 text-alta" />
                   </div>
-                  <p className="font-display text-lg font-black uppercase tracking-wider text-emerald-300">
+                  <p className="font-display text-lg font-black uppercase tracking-wider text-alta">
                     Pagamento confirmado
                   </p>
                   <p className="text-xs text-white/60 text-center">
@@ -485,16 +485,16 @@ export function PixCheckoutModal({
 
               {stage === 'expired' && (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <div className="bg-rose-500/20 p-3 rounded-full">
-                    <Clock className="w-12 h-12 text-rose-300" />
+                  <div className="border border-baixa/40 bg-deep-black p-3 rounded-full">
+                    <Clock className="w-12 h-12 text-baixa" />
                   </div>
-                  <p className="font-display text-base font-black uppercase tracking-wider text-rose-300">
+                  <p className="font-display text-base font-black uppercase tracking-wider text-baixa">
                     QR Code expirado
                   </p>
                   <button
                     type="button"
                     onClick={() => setStage('form')}
-                    className="mt-2 bg-amber-400 hover:bg-white text-black px-5 py-2.5 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] transition-colors"
+                    className="mt-2 bg-neon-yellow hover:bg-white text-black px-5 py-2.5 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] transition-colors"
                   >
                     Gerar novo PIX
                   </button>
@@ -503,10 +503,10 @@ export function PixCheckoutModal({
 
               {stage === 'error' && (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <div className="bg-rose-500/20 p-3 rounded-full">
-                    <AlertTriangle className="w-12 h-12 text-rose-300" />
+                  <div className="border border-baixa/40 bg-deep-black p-3 rounded-full">
+                    <AlertTriangle className="w-12 h-12 text-baixa" />
                   </div>
-                  <p className="font-display text-base font-black uppercase tracking-wider text-rose-300">
+                  <p className="font-display text-base font-black uppercase tracking-wider text-baixa">
                     Falha no checkout
                   </p>
                   {errorMsg && (
@@ -515,7 +515,7 @@ export function PixCheckoutModal({
                   <button
                     type="button"
                     onClick={() => setStage('form')}
-                    className="mt-2 bg-amber-400 hover:bg-white text-black px-5 py-2.5 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] transition-colors"
+                    className="mt-2 bg-neon-yellow hover:bg-white text-black px-5 py-2.5 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] transition-colors"
                   >
                     Tentar novamente
                   </button>

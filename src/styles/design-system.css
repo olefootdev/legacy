@@ -17,12 +17,21 @@
  * Importado em src/index.css logo após o @theme.
  */
 
+/* VOLT2 · o corte do escudo. Declarado em TODO elemento (não só no :root):
+   variável que referencia variável é resolvida onde é declarada — no :root,
+   `[--corte:14px]` num botão não mudaria nada (herdaria o polígono já pronto
+   com 12px). Aqui cada elemento monta o polígono com o próprio --corte. */
+*,
+::before,
+::after {
+  --clip-corte: polygon(0 0, 100% 0, 100% calc(100% - var(--corte, 12px)), calc(100% - var(--corte, 12px)) 100%, 0 100%);
+}
+
 :root {
   /* ── VOLT2: o corte do escudo ─────────────────────────────────
      Canto inferior direito cortado — a única "forma" do botão primário.
      Sem sombra e sem inclinação: é isso que sobrevive a 320px. */
   --corte: 12px;
-  --clip-corte: polygon(0 0, 100% 0, 100% calc(100% - var(--corte)), calc(100% - var(--corte)) 100%, 0 100%);
 
   /* ── Aliases de cor (BVB-style names) ────────────────────────── */
   --stadium-night:  var(--color-deep-black);   /* #0D0D0D */
@@ -283,16 +292,15 @@
 }
 
 .ole-table__pos[data-rank="1"] {
-  color: #FFD700;
-  text-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
+  color: var(--color-neon-yellow);
 }
 
 .ole-table__pos[data-rank="2"] {
-  color: #C0C0C0;
+  color: var(--color-giz);
 }
 
 .ole-table__pos[data-rank="3"] {
-  color: #CD7F32;
+  color: var(--color-cimento);
 }
 
 /* Pills de forma recente (V/E/D) */
@@ -484,12 +492,13 @@
   to { opacity: 0; transform: translateY(-12%) scale(1.02); }
 }
 .ole-goal-hero-text {
-  font-family: var(--font-serif-hero);
-  font-style: italic;
-  font-weight: 900;
+  /* VOLT2: GOL em Anton chapado — sem serifa, sem halo. */
+  font-family: var(--font-impact);
+  font-style: normal;
+  font-weight: 400;
   font-size: clamp(72px, 14vw, 160px);
   color: var(--color-event-goal);
-  text-shadow: 0 0 32px rgba(253, 225, 0, 0.65), 0 0 8px rgba(0, 0, 0, 0.7);
+  text-shadow: none;
   letter-spacing: -0.02em;
   line-height: 1;
 }

@@ -74,34 +74,34 @@ export function QuickInteractiveMomentOverlay({ moment, onChoice }: Props) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md px-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 px-4"
       >
         <motion.div
           initial={{ scale: 0.9, y: 20 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.9, y: 20 }}
-          className="relative w-full max-w-2xl overflow-hidden rounded-xl border border-neon-yellow/30 bg-deep-black shadow-[0_0_40px_rgba(253,224,71,0.2)]"
+          className="relative w-full max-w-2xl overflow-hidden border border-neon-yellow/30 bg-deep-black"
         >
-          {/* Glow effect */}
+          {/* Trilho volt */}
           <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow" />
 
           {/* Header */}
-          <div className="border-b border-white/10 bg-gradient-to-br from-neon-yellow/10 to-transparent px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-neon-yellow/10 border border-neon-yellow/30">
+          <div className="border-b border-black bg-neon-yellow px-6 py-4 text-black">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-black">
                   {getMomentIcon()}
                 </div>
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wider text-white/50">
+                <div className="min-w-0">
+                  <div className="font-mono text-xs font-medium uppercase tracking-wider text-black/60">
                     Minuto {moment.minute}'
                   </div>
-                  <div className="font-display text-lg font-black uppercase tracking-tight text-white">
+                  <div className="truncate font-impact text-2xl uppercase leading-[1.1] text-black">
                     {getMomentLabel()}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 rounded-lg border border-neon-yellow/30 bg-black/60 px-4 py-2">
+              <div className="flex shrink-0 items-center gap-2 bg-black px-4 py-2">
                 <Clock className="h-4 w-4 text-neon-yellow" />
                 <span
                   className={cn(
@@ -130,16 +130,15 @@ export function QuickInteractiveMomentOverlay({ moment, onChoice }: Props) {
                 key={choice.id}
                 onClick={() => handleChoice(choice.id)}
                 disabled={selected !== null}
-                whileHover={{ scale: selected ? 1 : 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className={cn(
                   'group relative w-full overflow-hidden rounded-lg border p-4 text-left transition-all',
                   selected === choice.id
-                    ? 'border-neon-yellow bg-neon-yellow/10 shadow-[0_0_20px_rgba(253,224,71,0.3)]'
+                    ? 'border-neon-yellow bg-neon-yellow/10'
                     : selected
                       ? 'border-white/10 bg-black/20 opacity-40'
                       : 'border-white/10 bg-black/40 hover:border-neon-yellow/40 hover:bg-black/60',
-                  shouldPulse && 'animate-pulse border-neon-yellow/60 shadow-[0_0_16px_rgba(253,224,71,0.25)]'
+                  shouldPulse && 'animate-pulse border-neon-yellow/60'
                 )}
               >
                 {selected === choice.id && (

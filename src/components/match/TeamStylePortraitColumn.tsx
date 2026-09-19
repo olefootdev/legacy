@@ -57,7 +57,7 @@ export function TeamStylePortraitColumn({
       {badgeText != null && badgeText !== '' && (
         <div
           className={cn(
-            'absolute left-1 top-1 z-[1] rounded px-1 py-0.5 font-display text-[9px] font-black tabular-nums drop-shadow-md sm:left-1.5 sm:top-1.5 sm:px-1.5 sm:text-[10px]',
+            'absolute left-1 top-1 z-[1] rounded px-1 py-0.5 font-display text-[9px] font-black tabular-nums sm:left-1.5 sm:top-1.5 sm:px-1.5 sm:text-[10px]',
             playerStyle === 'neon-yellow'
               ? 'bg-neon-yellow text-black'
               : 'bg-black/80 text-white border border-white/20',

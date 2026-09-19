@@ -29,7 +29,7 @@ export function pickGoalOverlayStoryline(input: {
     () => `${n} aproveitou o espaço na ruptura e cravou.`,
     () => `${n} entrou na área em velocidade e fechou em beleza.`,
     () => `${n} leu o desvio e apareceu sozinho frente ao GR.`,
-    () => `${n} transformou a recuperação num golo de manual.`,
+    () => `${n} transformou a recuperação num gol de manual.`,
     () => `${n} foi letal no contra-golpe — bola na rede.`,
   ];
 
@@ -46,7 +46,7 @@ export function pickGoalOverlayStoryline(input: {
   ];
 
   const awayCounter = [
-    () => `${n} castigou a equipa da casa num lance rápido.`,
+    () => `${n} castigou o time da casa num lance rápido.`,
     () => `${n} fugiu ao fora-de-jogo e definiu com sangue frio.`,
     () => `${n} surgiu na segunda vaga e fez o inferno na baliza.`,
     () => `${n} fechou o contra-ataque com um toque preciso.`,

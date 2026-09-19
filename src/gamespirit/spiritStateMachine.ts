@@ -65,7 +65,7 @@ export function redCardBannerOverlay(args: {
   return {
     kind: 'red_card',
     title: 'Cartão vermelho',
-    lines: [`${args.minute}' — ${args.playerName} (${team})`, 'A equipa fica com menos um em campo.'],
+    lines: [`${args.minute}' — ${args.playerName} (${team})`, 'O time fica com um a menos em campo.'],
     startedAtMs: args.startedAtMs,
     autoDismissMs: RED_CARD_BANNER_MS,
   };
@@ -346,9 +346,9 @@ export function penaltyNarrativeLine(
 ): string {
   switch (outcome) {
     case 'goal':
-      return `${takerName} converte com frieza — golo!`;
+      return `${takerName} converte com frieza — gol!`;
     case 'post_in':
-      return `A trave ajuda: a bola picota por dentro — golo para ${takerName}!`;
+      return `A trave ajuda: a bola bate e entra — gol de ${takerName}!`;
     case 'save':
   return `${keeperHint} voa e defende o penalty de ${takerName}!`;
     case 'post_out':

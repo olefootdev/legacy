@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Bell, X, ChevronRight, Trophy, Users, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { Hashtag } from '@/components/ui';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import {
   isHiddenFromHomeInboxFeed,
@@ -94,7 +95,7 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
       to={getLink()}
       onClick={onClose}
       className={cn(
-        'group relative flex items-start gap-3 p-4 transition-all cursor-pointer border-b border-white/5 hover:bg-white/5',
+        'group relative flex items-start gap-3 p-4 transition-colors cursor-pointer border-b border-white/[0.07] hover:bg-white/5',
         notification.read ? 'opacity-70' : '',
       )}
     >
@@ -105,19 +106,17 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
 
       {/* Conteúdo */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-neon-yellow mb-1 leading-tight">
+        <p className="text-sm font-bold text-white mb-1 leading-tight">
           {notification.title}
         </p>
-        <p className="text-xs text-gray-400 leading-snug line-clamp-2 mb-1.5">
+        <p className="text-xs text-cimento leading-snug line-clamp-2 mb-1.5">
           {notification.body}
         </p>
-        <span className="text-[10px] uppercase tracking-wider text-gray-600 font-bold">
-          {notification.category}
-        </span>
+        <Hashtag className="text-poeira">#{notification.category.toLowerCase()}</Hashtag>
       </div>
 
       {/* Seta */}
-      <ChevronRight className="h-5 w-5 text-gray-600 group-hover:text-neon-yellow transition-colors shrink-0" />
+      <ChevronRight className="h-5 w-5 text-poeira group-hover:text-white transition-colors shrink-0" />
     </Link>
   );
 }
@@ -211,17 +210,17 @@ export function NotificationsDropdown() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="fixed sm:absolute right-2 sm:right-0 left-2 sm:left-auto top-16 sm:top-full sm:mt-3 w-auto sm:w-[420px] sm:max-w-[calc(100vw-2rem)] flex flex-col border border-white/10 bg-[#0a0a0a] shadow-2xl z-[100] rounded-lg overflow-hidden"
+              className="fixed sm:absolute right-2 sm:right-0 left-2 sm:left-auto top-16 sm:top-full sm:mt-3 w-auto sm:w-[420px] sm:max-w-[calc(100vw-2rem)] flex flex-col border border-white/16 bg-panel z-[100] overflow-hidden"
             >
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/10 px-5 py-3 bg-black/40">
-                <h3 className="font-display text-sm font-black uppercase tracking-wider text-white">
+              <div className="flex items-center justify-between border-b border-white/10 px-5 py-3 bg-nav">
+                <h3 className="font-impact text-[17px] uppercase leading-[1.1] text-white">
                   Notificações {unreadCount > 0 && `(${unreadCount})`}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="text-gray-500 hover:text-white transition-colors"
+                  className="text-cimento hover:text-white transition-colors"
                   aria-label="Fechar"
                 >
                   <X className="h-5 w-5" strokeWidth={2} />
@@ -232,11 +231,8 @@ export function NotificationsDropdown() {
               <div className="max-h-[360px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                 {notifications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-                    <Bell className="h-10 w-10 text-gray-700 mb-2" strokeWidth={1.5} />
-                    <p className="text-sm font-bold text-gray-400">Sem notificações</p>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Você verá suas atualizações aqui
-                    </p>
+                    <Bell className="h-10 w-10 text-poeira mb-2" strokeWidth={1.5} />
+                    <p className="text-sm font-bold text-cimento">Sem notificações</p>
                   </div>
                 ) : (
                   notifications.slice(0, 5).map((notification, i) => (
@@ -251,11 +247,11 @@ export function NotificationsDropdown() {
 
               {/* Footer */}
               {notifications.length > 5 && (
-                <div className="border-t border-white/10 bg-black/40">
+                <div className="border-t border-white/10 bg-nav">
                   <Link
                     to="/"
                     onClick={() => setIsOpen(false)}
-                    className="block w-full py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-neon-yellow transition-colors"
+                    className="ole-num block w-full py-3 text-center text-[12px] uppercase text-cimento hover:text-white transition-colors"
                   >
                     Ver todas ({notifications.length})
                   </Link>

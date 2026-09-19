@@ -64,60 +64,38 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
       className="relative bg-deep-black py-10 sm:py-14"
     >
       <div className="mx-auto max-w-3xl px-5 sm:px-8">
-        {/* Header editorial — Moret italic pra dar peso emocional */}
-        <header className="flex items-center gap-3 mb-6">
+        <header className="flex items-center gap-3 mb-3">
           <span aria-hidden className="w-1 h-8 bg-neon-yellow" />
           <h2
-            className="italic text-neon-yellow leading-none"
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
-              fontSize: 'clamp(28px, 4.5vw, 40px)',
-              letterSpacing: '-0.02em',
-            }}
+            className="font-impact uppercase text-neon-yellow leading-[1.1]"
+            style={{ fontSize: 'clamp(28px, 4.5vw, 40px)' }}
           >
             Mural dos Managers
           </h2>
         </header>
-        <p className="text-white/55 text-[13px] leading-relaxed mb-5 max-w-2xl">
-          Deixa o teu recado pra {legendName}. As mensagens aparecem no museu pra
-          todos os outros managers verem.
+        <p className="mb-5 truncate font-mono text-[11.5px] text-cimento">
+          Recado pra {legendName} · visível pra todos os managers
         </p>
 
         {/* Composer */}
         <form
           onSubmit={handleSubmit}
-          className="border border-l-[3px] border-[var(--color-border)] border-l-neon-yellow bg-dark-gray p-4 sm:p-5 mb-6"
-          style={{ borderRadius: 'var(--radius-md)' }}
+          className="border border-l-[3px] border-white/10 border-l-neon-yellow bg-panel p-4 sm:p-5 mb-6"
         >
           <div className="flex items-center gap-3 mb-3">
             <div
-              className="grid place-items-center h-9 w-9 bg-neon-yellow text-black font-display font-black uppercase shrink-0"
-              style={{
-                fontSize: '12px',
-                letterSpacing: '0.04em',
-                borderRadius: 'var(--radius-sm)',
-              }}
+              className="ole-num grid place-items-center h-9 w-9 bg-neon-yellow text-black uppercase shrink-0"
+              style={{ fontSize: '12px' }}
               aria-hidden
             >
               {managerInitials}
             </div>
             <div className="min-w-0">
-              <p
-                className="text-white uppercase truncate font-display"
-                style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.22em' }}
-              >
+              <p className="text-white uppercase truncate font-mono" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
                 {managerName}
               </p>
-              <p
-                className="text-white/45 mt-0.5"
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '10px',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                Postando como tu mesmo
+              <p className="text-cimento mt-0.5 font-mono" style={{ fontSize: '10px' }}>
+                Postando como você
               </p>
             </div>
           </div>
@@ -126,31 +104,20 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
             onChange={(e) => setDraft(e.target.value.slice(0, 180))}
             rows={3}
             placeholder={`Manda um recado pra ${legendName.split(' ')[0]}...`}
-            className="w-full resize-none border border-white/15 bg-deep-black/60 px-3 py-2.5 text-sm text-white placeholder:text-white/35 focus:border-neon-yellow/55 focus:outline-none"
-            style={{ borderRadius: 'var(--radius-sm)' }}
+            className="w-full resize-none border border-white/16 bg-deep-black px-3 py-2.5 text-sm text-white placeholder:text-poeira focus:border-neon-yellow/60 focus:outline-none"
           />
           <div className="mt-2.5 flex items-center justify-between gap-3">
             <span
-              className={`tabular-nums ${tooLong ? 'text-[var(--color-danger)]' : 'text-white/40'}`}
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '10px',
-                fontWeight: 700,
-                letterSpacing: '0.16em',
-              }}
+              className={`ole-num ${tooLong ? 'text-baixa' : 'text-cimento'}`}
+              style={{ fontSize: '10.5px' }}
             >
               {remaining}/150
             </span>
             <button
               type="submit"
               disabled={!draft.trim() || tooLong}
-              className="inline-flex items-center gap-2 bg-neon-yellow text-black font-display font-black uppercase px-5 py-2.5 transition-all hover:bg-white active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{
-                fontSize: '11px',
-                letterSpacing: '0.22em',
-                borderRadius: 'var(--radius-sm)',
-                boxShadow: '0 4px 14px rgba(253,225,0,0.18)',
-              }}
+              className="ole-num inline-flex h-11 items-center gap-2 bg-neon-yellow text-black uppercase px-5 transition-colors hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed [--corte:10px] [clip-path:var(--clip-corte)]"
+              style={{ fontSize: '12px' }}
             >
               <Send className="w-3.5 h-3.5" strokeWidth={2.5} />
               Publicar
@@ -160,17 +127,8 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
 
         {/* Lista */}
         {messages.length === 0 ? (
-          <div
-            className="border border-dashed border-white/15 bg-deep-black/40 px-5 py-8 text-center"
-            style={{ borderRadius: 'var(--radius-md)' }}
-          >
-            <p
-              className="italic text-white/55"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontSize: '15px',
-              }}
-            >
+          <div className="border border-dashed border-white/16 px-5 py-8 text-center">
+            <p className="text-cimento" style={{ fontSize: '15px' }}>
               Seja o primeiro a deixar uma mensagem.
             </p>
           </div>
@@ -179,40 +137,21 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
             {messages.map((msg) => (
               <li
                 key={msg.id}
-                className="border border-l-[3px] border-[var(--color-border)] border-l-white/15 bg-dark-gray p-4 transition-all hover:border-l-neon-yellow"
-                style={{ borderRadius: 'var(--radius-md)' }}
+                className="border border-l-[3px] border-white/10 border-l-white/16 bg-panel p-4 transition-colors hover:border-l-neon-yellow"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div
-                    className="grid place-items-center h-8 w-8 bg-deep-black border border-neon-yellow/45 text-neon-yellow font-display font-black uppercase shrink-0"
-                    style={{
-                      fontSize: '11px',
-                      letterSpacing: '0.04em',
-                      borderRadius: 'var(--radius-sm)',
-                    }}
+                    className="ole-num grid place-items-center h-8 w-8 bg-deep-black border border-neon-yellow/50 text-neon-yellow uppercase shrink-0"
+                    style={{ fontSize: '11px' }}
                     aria-hidden
                   >
                     {msg.managerInitials}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p
-                      className="text-white uppercase truncate font-display"
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 800,
-                        letterSpacing: '0.22em',
-                      }}
-                    >
+                    <p className="text-white uppercase truncate font-mono" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
                       {msg.managerName}
                     </p>
-                    <p
-                      className="text-white/40 mt-0.5"
-                      style={{
-                        fontFamily: 'var(--font-ui)',
-                        fontSize: '10px',
-                        letterSpacing: '0.06em',
-                      }}
-                    >
+                    <p className="text-cimento mt-0.5 font-mono" style={{ fontSize: '10px' }}>
                       {timeAgo(msg.createdAt)}
                     </p>
                   </div>
@@ -220,7 +159,7 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
                     <button
                       type="button"
                       onClick={() => onRemove(msg.id)}
-                      className="text-white/35 hover:text-[var(--color-danger)] transition-colors text-[10px] font-display font-bold uppercase tracking-widest"
+                      className="text-poeira hover:text-baixa transition-colors text-[14px] font-mono"
                       aria-label="Remover mensagem"
                     >
                       ×
@@ -228,8 +167,8 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
                   ) : null}
                 </div>
                 <p
-                  className="text-white/85 leading-relaxed whitespace-pre-line"
-                  style={{ fontFamily: 'var(--font-sans)', fontSize: '13px' }}
+                  className="text-giz leading-relaxed whitespace-pre-line"
+                  style={{ fontSize: '13px' }}
                 >
                   {msg.message}
                 </p>

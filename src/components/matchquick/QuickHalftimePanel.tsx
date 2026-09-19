@@ -67,8 +67,7 @@ function MiniCard({
       style={{ borderLeftColor: tone === 'top' ? 'var(--color-success)' : 'var(--color-warning)' }}
     >
       <span
-        className="font-serif italic text-xl text-white/90 tabular-nums w-7 text-center"
-        style={{ fontFamily: 'var(--font-serif-hero)' }}
+        className="ole-num text-base text-white/90 w-8 shrink-0 text-center"
       >
         {p.ovr}
       </span>
@@ -141,7 +140,7 @@ export function QuickHalftimePanel({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[95] flex items-center justify-center p-4 bg-black/92 backdrop-blur-md"
+      className="fixed inset-0 z-[95] flex items-center justify-center p-4 bg-black/92"
       role="dialog"
       aria-modal="true"
     >
@@ -245,8 +244,7 @@ export function QuickHalftimePanel({
                   className="w-full flex items-center gap-3 px-3 py-2 border border-zinc-800 hover:border-neon-yellow/60 hover:bg-neon-yellow/5 transition-colors text-left"
                 >
                   <span
-                    className="font-serif italic text-lg text-white/85 tabular-nums w-7 text-center"
-                    style={{ fontFamily: 'var(--font-serif-hero)' }}
+                    className="ole-num text-[15px] text-white/85 w-8 shrink-0 text-center"
                   >
                     {b.ovr}
                   </span>

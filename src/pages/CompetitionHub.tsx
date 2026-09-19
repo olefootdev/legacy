@@ -58,10 +58,7 @@ export function CompetitionHub() {
             Competição
           </h1>
 
-          <p
-            className="mt-3"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'rgba(13,13,13,0.62)' }}
-          >
+          <p className="mt-3 truncate font-mono text-[12px] text-black/70">
             {totalMatches} partida{totalMatches !== 1 ? 's' : ''} · forma {formStr} · {formatExp(finance.ole)} EXP
           </p>
 
@@ -72,21 +69,14 @@ export function CompetitionHub() {
               { n: draws, l: 'Empates' },
               { n: losses, l: 'Derrotas' },
             ].map((s) => (
-              <div
-                key={s.l}
-                className="min-w-0 bg-black px-3 py-3 sm:px-4 sm:py-4"
-                style={{ borderRadius: 'var(--radius-sm)' }}
-              >
+              <div key={s.l} className="min-w-0 bg-black px-3 py-3 sm:px-4 sm:py-4">
                 <p
-                  className="font-impact tabular-nums leading-none text-neon-yellow"
+                  className="ole-num leading-none text-neon-yellow"
                   style={{ fontSize: 'clamp(24px, 5vw, 38px)' }}
                 >
                   {s.n}
                 </p>
-                <p
-                  className="mt-1.5 font-display font-bold uppercase text-white/65"
-                  style={{ fontSize: '9px', letterSpacing: '0.18em' }}
-                >
+                <p className="mt-1.5 truncate font-mono text-[10px] uppercase tracking-[0.14em] text-cimento">
                   {s.l}
                 </p>
               </div>
@@ -99,16 +89,16 @@ export function CompetitionHub() {
       <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <HubSectionCard
           to="/competicao/ligas"
-          eyebrow="Competições"
+          eyebrow="#ligas"
           title="Ligas"
-          description="Competições ativas e classificação. Acompanha a tua posição na tabela e os próximos adversários."
+          description="Tabela e adversários"
           cta="Ver ligas"
           destaque
           delay={0.1}
         />
         <HubSectionCard
           to="/competicao/calendario"
-          eyebrow="Agenda"
+          eyebrow="#agenda"
           title="Calendário"
           description={
             fixture?.opponent
@@ -120,41 +110,41 @@ export function CompetitionHub() {
         />
         <HubSectionCard
           to="/competicao/ranking"
-          eyebrow="Mundial"
+          eyebrow="#mundial"
           title="Ranking"
-          description="Posição mundial por EXP. Compara o teu desempenho com outros managers e clubes."
+          description="Posição mundial por EXP"
           cta="Ver ranking"
           delay={0.3}
         />
         <HubSectionCard
           to="/competicao/standings"
-          eyebrow="PvP"
+          eyebrow="#pvp"
           title="Liga Rápida & Clássica"
-          description="Tabela de pontos das partidas vs managers. Vitória 3 pts, empate 1 pt."
+          description="Vitória 3 pts · empate 1 pt"
           cta="Ver classificação"
           delay={0.4}
         />
         <HubSectionCard
           to="/liga-global/registro"
-          eyebrow="Global"
+          eyebrow="#ligaglobal"
           title="Liga Global"
-          description="Competição mundial com 32 times. Playoffs, divisões e promoção/rebaixamento."
+          description="Divisões · playoffs · acesso e queda"
           cta="Entrar na liga"
           delay={0.5}
         />
         <HubSectionCard
           to="/liga-global/hoje"
-          eyebrow="Coroa do Dia"
+          eyebrow="#coroadodia"
           title="Mata-Mata Diário"
-          description="Classificação até as 19h, mata-mata com pênaltis e um campeão por dia. Mais coroas na temporada = título paralelo."
+          description="Corte às 19h · 1 campeão por dia · coroas valem título"
           cta="Ver a corrida de hoje"
           delay={0.6}
         />
         <HubSectionCard
           to="/rewards"
-          eyebrow="Premium"
+          eyebrow="#premiada"
           title="Liga Premiada"
-          description="Crie ou entre em torneios mata-mata com pote em EXP. Top 4 premiados. Convide amigos e ganhe 10% do pote como criador."
+          description="Pote em EXP · top 4 premiados · criador leva 10%"
           cta="Ver ligas premiadas"
           delay={0.7}
         />

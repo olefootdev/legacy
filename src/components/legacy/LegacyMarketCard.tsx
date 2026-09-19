@@ -8,8 +8,8 @@ import { rarityTierOf, RARITY_LABEL, type RarityTier } from '@/entities/rarityLa
  * LegacyMarketCard — carta colecionável do mercado de lendas (Legacy Tech).
  *
  * Tamanho ÚNICO (sem hero): pensada pra carrossel horizontal — o usuário arrasta
- * o dedo e vê todas as cartas do atleta. Foto 4/5 P&B→cor, OVR Moret italic, nome
- * Agency, raridade = GRAU DE AMARELO. Tilt 3D no mouse; clicar VIRA pra ficha
+ * o dedo e vê todas as cartas do atleta. Foto 4/5 P&B→cor, OVR em Anton (etiqueta
+ * chapada), nome Agency, raridade = GRAU DE AMARELO (cor chapada + borda, VOLT2). Tilt 3D no mouse; clicar VIRA pra ficha
  * (clicar de novo volta). Todo dado é real (attrs, ensino, booster, escassez do
  * lote). A ordenação (mais cara primeiro) vive no TransferLegaciesTab.
  */
@@ -102,8 +102,8 @@ export function LegacyMarketCard({
     tier === 'ultra' && 'border-neon-yellow/40',
     tier === 'raro' && 'border-l-[3px] border-l-white/15',
     tier === 'premium' && 'border-l-[3px] border-l-white/10',
-    tier === 'ai' && 'border-l-[3px] border-l-sky-400/40',
-    tier === 'revelacao' && 'border-l-[3px] border-l-emerald-400/50',
+    tier === 'ai' && 'border-l-[3px] border-l-cimento/60',
+    tier === 'revelacao' && 'border-l-[3px] border-l-alta/60',
   );
 
   const BuyButton = (
@@ -113,12 +113,12 @@ export function LegacyMarketCard({
         e.stopPropagation();
         onOpen();
       }}
-      className="flex w-full min-w-0 items-center justify-center gap-2 rounded-[4px] bg-neon-yellow px-2 py-3 font-display font-black uppercase text-black transition-colors hover:bg-white"
+      className="flex w-full min-w-0 items-center justify-center gap-2 rounded-sm bg-neon-yellow px-2 py-3 font-display font-black uppercase text-black transition-colors hover:bg-white"
     >
       <span className="min-w-0 truncate tabular-nums" style={{ fontSize: 13, letterSpacing: '0.02em' }}>
         {priceLabel}
       </span>
-      <span className="flex-none rounded-[3px] border border-black/25 px-1.5 py-0.5 text-[9px] tracking-[0.06em]">
+      <span className="flex-none rounded-sm border border-black/25 px-1.5 py-0.5 text-[9px] tracking-[0.06em]">
         {pixReady ? 'PIX' : 'OLE'}
       </span>
     </button>
@@ -130,7 +130,7 @@ export function LegacyMarketCard({
       style={{ perspective: 1100 }}
       onMouseMove={onMove}
       onMouseLeave={() => setTilt(null)}
-      className="group relative rounded-[7px]"
+      className="group relative"
     >
       <article
         className="relative transition-transform duration-500 ease-out"
@@ -138,14 +138,13 @@ export function LegacyMarketCard({
       >
         {/* ---------- FRENTE ---------- */}
         <div
-          className={cn('relative flex flex-col overflow-hidden bg-gradient-to-b from-[var(--color-card-hi)] to-[var(--color-card)]', faceBorder)}
-          style={{ borderRadius: 6, backfaceVisibility: 'hidden' }}
+          className={cn('relative flex flex-col overflow-hidden bg-card', faceBorder)}
+          style={{ borderRadius: 'var(--radius-sm)', backfaceVisibility: 'hidden' }}
         >
           {tier === 'epico' && (
             <span
               aria-hidden
-              className="absolute inset-x-0 top-0 z-[5] h-[2px]"
-              style={{ background: 'linear-gradient(90deg,#FDE100,transparent 65%)', boxShadow: '0 0 12px rgba(253,225,0,.45)' }}
+              className="absolute inset-x-0 top-0 z-[5] h-[2px] bg-neon-yellow"
             />
           )}
 
@@ -180,17 +179,13 @@ export function LegacyMarketCard({
                 {row.name.slice(0, 2)}
               </div>
             )}
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-0 z-[2] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-              style={{ background: `radial-gradient(600px circle at ${tilt?.mx ?? 50}% ${tilt?.my ?? 0}%, rgba(253,225,0,.10), transparent 42%)` }}
-            />
-            <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(0deg,var(--color-card) 2%,rgba(36,36,36,.1) 34%,transparent 55%)' }} />
+            {/* Scrim sobre a foto — legibilidade do nome (gradiente permitido no VOLT2) */}
+            <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(0deg,var(--color-card) 2%,rgba(27,29,31,.1) 34%,transparent 55%)' }} />
 
-            <div className="absolute left-3 top-2.5 z-[3] leading-[0.78]">
+            <div className="absolute left-3 top-2.5 z-[3] flex flex-col items-center bg-deep-black px-2 pb-1.5 pt-1.5 leading-none">
               <span
-                className="block text-neon-yellow"
-                style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: 34, textShadow: '0 2px 10px rgba(0,0,0,.8)', letterSpacing: '-0.03em' }}
+                className="block font-impact tabular-nums text-neon-yellow"
+                style={{ fontSize: 32, letterSpacing: '-0.01em' }}
               >
                 {ovr}
               </span>
@@ -201,15 +196,15 @@ export function LegacyMarketCard({
 
             <span
               className={cn(
-                'absolute right-3 top-3 z-[3] rounded-[4px] font-display font-black uppercase',
-                tier === 'epico' && 'bg-neon-yellow text-black shadow-[0_0_14px_rgba(253,225,0,0.45)]',
+                'absolute right-3 top-3 z-[3] rounded-sm bg-deep-black font-display font-black uppercase',
+                tier === 'epico' && 'bg-neon-yellow text-black',
                 tier === 'ultra' && 'border border-neon-yellow/60 text-neon-yellow',
                 tier === 'raro' && 'border border-white/20 text-white/60',
                 tier === 'premium' && 'border border-white/12 text-white/40',
                 // AI+ sai da escada de amarelo: card gerado por IA, não é prestígio.
-                tier === 'ai' && 'border border-sky-400/50 text-sky-300/80',
+                tier === 'ai' && 'border border-cimento/60 text-cimento',
                 // Revelação sai da escada de amarelo: é promessa, não prestígio.
-                tier === 'revelacao' && 'border border-emerald-400/50 text-emerald-300/85',
+                tier === 'revelacao' && 'border border-alta/60 text-alta',
               )}
               style={{ fontSize: 9, letterSpacing: '0.2em', padding: '4px 7px' }}
             >
@@ -218,7 +213,7 @@ export function LegacyMarketCard({
 
             {scarce && (
               <span
-                className="absolute left-3 top-[52px] z-[3] inline-flex items-center gap-1 rounded-full border border-neon-yellow/35 bg-deep-black/70 font-display font-bold uppercase text-neon-yellow"
+                className="absolute left-3 top-[68px] z-[3] inline-flex items-center gap-1 rounded-full border border-neon-yellow/35 bg-deep-black font-display font-bold uppercase text-neon-yellow"
                 style={{ fontSize: 9, letterSpacing: '0.14em', padding: '3px 7px' }}
               >
                 🔥 {scarce}
@@ -250,7 +245,7 @@ export function LegacyMarketCard({
               </>
             )}
             {owned ? (
-              <span className="flex w-full items-center justify-center gap-1.5 rounded-[4px] border border-[var(--color-success)] py-3 font-display text-[11px] font-black uppercase tracking-[0.12em] text-[var(--color-success)]">
+              <span className="flex w-full items-center justify-center gap-1.5 rounded-sm border border-[var(--color-success)] py-3 font-display text-[11px] font-black uppercase tracking-[0.12em] text-[var(--color-success)]">
                 ✓ No time
               </span>
             ) : (
@@ -262,8 +257,8 @@ export function LegacyMarketCard({
         {/* ---------- VERSO (ficha real) — clicar volta pra frente ---------- */}
         <div
           onClick={flip}
-          className={cn('absolute inset-0 flex cursor-pointer flex-col bg-gradient-to-b from-[var(--color-card-hi)] to-[var(--color-card)] p-3.5', faceBorder)}
-          style={{ borderRadius: 6, backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+          className={cn('absolute inset-0 flex cursor-pointer flex-col bg-card p-3.5', faceBorder)}
+          style={{ borderRadius: 'var(--radius-sm)', backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
           <div className="mb-2.5 flex items-baseline justify-between">
             <span className="font-display text-[11px] font-black uppercase tracking-[0.2em] text-neon-yellow">Ficha técnica</span>
@@ -271,10 +266,10 @@ export function LegacyMarketCard({
           </div>
           <div className="mb-3 grid grid-cols-3 gap-1.5">
             {ATTR_ROWS.map((a) => (
-              <div key={a.key} className="rounded-[4px] border border-white/[0.08] bg-deep-black/50 py-2 text-center">
+              <div key={a.key} className="rounded-sm border border-white/[0.08] bg-deep-black py-2 text-center">
                 <b
-                  className={cn('block leading-none', topTwo.has(a.key) ? 'text-neon-yellow' : 'text-white')}
-                  style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: 18 }}
+                  className={cn('block font-impact tabular-nums leading-none', topTwo.has(a.key) ? 'text-neon-yellow' : 'text-white')}
+                  style={{ fontSize: 18 }}
                 >
                   {attrs[a.key] ?? '—'}
                 </b>

@@ -57,7 +57,7 @@ export function StatTile({
   return (
     <div
       className={cn(
-        'flex flex-col gap-2 rounded-[var(--radius-card)] border border-white/[0.04] bg-[var(--color-panel-elevated)] px-5 py-4 shadow-[var(--shadow-card)]',
+        'flex flex-col gap-2 border border-white/10 bg-[var(--color-panel-elevated)] px-5 py-4',
         align === 'center' ? 'items-center text-center' : 'items-start text-left',
         className,
       )}

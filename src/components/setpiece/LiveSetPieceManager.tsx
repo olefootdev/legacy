@@ -112,8 +112,8 @@ export function LiveSetPieceManager({
 
       {/* Headline */}
       <h1
-        className="ole-headline-italic text-black text-center mb-1"
-        style={{ fontSize: 'clamp(40px, 7vw, 80px)', lineHeight: 1 }}
+        className="ole-headline text-black text-center mb-1"
+        style={{ fontSize: 'clamp(40px, 7vw, 80px)', lineHeight: 1.1 }}
       >
         {headline}
       </h1>
@@ -185,7 +185,7 @@ export function LiveSetPieceManager({
         type="button"
         onClick={handleConfirm}
         disabled={!takerId || !type}
-        className="bg-black text-neon-yellow px-10 py-3 font-display font-black uppercase tracking-wider -skew-x-6 hover:bg-white hover:text-black transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+        className="bg-black text-neon-yellow px-10 py-3 font-display font-black uppercase tracking-wider hover:bg-white hover:text-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
       >
         Confirmar batida
       </button>

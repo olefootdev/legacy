@@ -46,11 +46,11 @@ export function MarketOffersPanel() {
   };
 
   return (
-    <section className="rounded-[var(--radius-lg)] border border-white/10 bg-black/40 p-4 sm:p-5">
+    <section className="rounded-lg border border-white/10 bg-panel p-4 sm:p-5">
       <div className="font-display text-[10px] uppercase tracking-[0.2em] text-neon-yellow">Negociação</div>
       <h3 className="mt-1 font-impact text-2xl uppercase tracking-wide text-white">Propostas</h3>
 
-      {error && <p className="mt-3 text-xs font-medium text-red-400">{error}</p>}
+      {error && <p className="mt-3 text-xs font-medium text-baixa">{error}</p>}
 
       {/* RECEBIDAS */}
       {incoming.length > 0 && (
@@ -63,9 +63,9 @@ export function MarketOffersPanel() {
               const busy = busyId === o.offerId;
               const value = o.status === 'countered' && o.counterExp != null ? o.counterExp : o.offerExp;
               return (
-                <li key={o.offerId} className="rounded-[var(--radius-md)] border border-white/10 bg-white/[0.03] p-3">
+                <li key={o.offerId} className="rounded-md border border-white/10 bg-card p-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-impact text-base uppercase leading-none text-white">{o.playerName}</span>
+                    <span className="font-impact text-base uppercase leading-[1.1] text-white">{o.playerName}</span>
                     <span className="font-display text-sm font-black text-neon-yellow">{formatExp(value)}</span>
                   </div>
                   <p className="mt-0.5 text-[11px] text-white/50">
@@ -80,7 +80,7 @@ export function MarketOffersPanel() {
                           type="button"
                           disabled={busy}
                           onClick={() => setConfirmAccept(o)}
-                          className="rounded-[var(--radius-md)] bg-neon-green px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-black hover:bg-white disabled:opacity-40"
+                          className="rounded-md bg-neon-yellow px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-black transition-colors hover:bg-white disabled:opacity-40"
                         >
                           Aceitar
                         </button>
@@ -88,7 +88,7 @@ export function MarketOffersPanel() {
                           type="button"
                           disabled={busy}
                           onClick={() => run(o.offerId, () => respond(o, 'reject'))}
-                          className="rounded-[var(--radius-md)] border border-white/20 bg-white/[0.06] px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-white/80 hover:bg-white/10 disabled:opacity-40"
+                          className="rounded-md border border-white/30 bg-transparent px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:border-white hover:bg-white/5 disabled:opacity-40"
                         >
                           Negar
                         </button>
@@ -99,7 +99,7 @@ export function MarketOffersPanel() {
                             setCounterFor(counterFor === o.offerId ? null : o.offerId);
                             setCounterValue('');
                           }}
-                          className="rounded-[var(--radius-md)] border border-neon-yellow/40 bg-neon-yellow/10 px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-neon-yellow hover:bg-neon-yellow/20 disabled:opacity-40"
+                          className="rounded-md border border-neon-yellow/40 bg-transparent px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-neon-yellow transition-colors hover:border-neon-yellow disabled:opacity-40"
                         >
                           Contrapropor
                         </button>
@@ -113,7 +113,7 @@ export function MarketOffersPanel() {
                             value={counterValue}
                             onChange={(e) => setCounterValue(e.target.value)}
                             placeholder="Valor EXP"
-                            className="min-w-0 flex-1 rounded-[var(--radius-md)] border border-white/20 bg-black/60 px-3 py-2 font-display text-sm font-bold text-white focus:border-neon-yellow focus:outline-none"
+                            className="min-w-0 flex-1 rounded-md border border-white/20 bg-deep-black px-3 py-2 font-display text-sm font-bold text-white focus:border-neon-yellow focus:outline-none"
                           />
                           <button
                             type="button"
@@ -124,7 +124,7 @@ export function MarketOffersPanel() {
                                 setCounterFor(null);
                               })
                             }
-                            className="shrink-0 rounded-[var(--radius-md)] bg-neon-yellow px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-black hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
+                            className="shrink-0 rounded-md bg-neon-yellow px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
                           >
                             Enviar
                           </button>
@@ -149,9 +149,9 @@ export function MarketOffersPanel() {
             {outgoing.map((o) => {
               const busy = busyId === o.offerId;
               return (
-                <li key={o.offerId} className="rounded-[var(--radius-md)] border border-white/10 bg-white/[0.03] p-3">
+                <li key={o.offerId} className="rounded-md border border-white/10 bg-card p-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-impact text-base uppercase leading-none text-white">{o.playerName}</span>
+                    <span className="font-impact text-base uppercase leading-[1.1] text-white">{o.playerName}</span>
                     <span className="font-display text-sm font-black text-neon-yellow">{formatExp(o.offerExp)}</span>
                   </div>
                   <p className="mt-0.5 text-[11px] text-white/50">
@@ -167,7 +167,7 @@ export function MarketOffersPanel() {
                         type="button"
                         disabled={busy}
                         onClick={() => run(o.offerId, () => acceptCounterOffer(o.offerId))}
-                        className="rounded-[var(--radius-md)] bg-neon-green px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-black hover:bg-white disabled:opacity-40"
+                        className="rounded-md bg-neon-yellow px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-black transition-colors hover:bg-white disabled:opacity-40"
                       >
                         Aceitar contraproposta
                       </button>
@@ -177,7 +177,7 @@ export function MarketOffersPanel() {
                         type="button"
                         disabled={busy}
                         onClick={() => run(o.offerId, () => cancel(o.offerId))}
-                        className="rounded-[var(--radius-md)] border border-white/20 bg-white/[0.06] px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-white/80 hover:bg-white/10 disabled:opacity-40"
+                        className="rounded-md border border-white/30 bg-transparent px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:border-white hover:bg-white/5 disabled:opacity-40"
                       >
                         Cancelar
                       </button>
@@ -201,13 +201,13 @@ export function MarketOffersPanel() {
         eyebrow="Aceitar proposta"
         title={confirmAccept?.playerName ?? ''}
         confirmLabel="Aceitar e vender"
-        accent="var(--color-neon-green, #00FF66)"
+        accent="var(--color-neon-yellow)"
       >
         {confirmAccept && (
           <p className="mt-3 text-sm text-white/80">
             {confirmAccept.buyerClubName} oferece{' '}
             <span className="font-display font-bold text-white">{formatExp(confirmAccept.offerExp)}</span>. O
-            jogador sai do teu plantel e o EXP é creditado na carteira.
+            jogador sai do seu plantel e o EXP é creditado na carteira.
           </p>
         )}
       </ConfirmDialog>

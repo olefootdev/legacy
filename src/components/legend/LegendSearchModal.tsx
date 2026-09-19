@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, X } from 'lucide-react';
 import { LEGENDS_BY_SLUG, type LegendData } from '@/data/legends';
+import { Hashtag } from '@/components/ui';
 
 interface LegendSearchModalProps {
   open: boolean;
@@ -81,7 +82,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-[200] flex items-start justify-center bg-deep-black/95 backdrop-blur"
+          className="fixed inset-0 z-[200] flex items-start justify-center bg-deep-black/95"
           onClick={onClose}
           role="dialog"
           aria-label="Buscar lendas"
@@ -97,8 +98,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
           >
             {/* Header — input + close */}
             <div
-              className="flex items-stretch gap-2 border border-l-[3px] border-[var(--color-border)] border-l-neon-yellow bg-dark-gray p-2 sm:p-2.5"
-              style={{ borderRadius: 'var(--radius-md)' }}
+              className="flex items-stretch gap-2 border border-l-[3px] border-white/10 border-l-neon-yellow bg-panel p-2 sm:p-2.5"
             >
               <div className="flex items-center gap-3 flex-1 px-3">
                 <Search className="w-4 h-4 text-neon-yellow shrink-0" strokeWidth={2.5} />
@@ -108,7 +108,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Buscar lenda… (nome, epíteto, era)"
-                  className="flex-1 bg-transparent outline-none text-white placeholder:text-white/40"
+                  className="min-w-0 flex-1 bg-transparent outline-none text-white placeholder:text-poeira"
                   style={{
                     fontFamily: 'var(--font-sans)',
                     fontSize: '15px',
@@ -120,8 +120,8 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                   <button
                     type="button"
                     onClick={() => setQuery('')}
-                    className="text-white/45 hover:text-white text-[11px] uppercase font-display font-bold"
-                    style={{ letterSpacing: '0.16em' }}
+                    className="text-cimento hover:text-white text-[11px] uppercase font-mono"
+                    style={{ letterSpacing: '0.12em' }}
                     aria-label="Limpar busca"
                   >
                     Limpar
@@ -131,8 +131,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex items-center justify-center w-10 text-white/55 hover:text-neon-yellow hover:bg-white/5 transition-colors"
-                style={{ borderRadius: 'var(--radius-sm)' }}
+                className="inline-flex items-center justify-center w-10 text-cimento hover:text-neon-yellow hover:bg-white/5 transition-colors"
                 aria-label="Fechar busca"
               >
                 <X className="w-5 h-5" />
@@ -141,16 +140,8 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
 
             {/* Eyebrow editorial */}
             <div className="flex items-center justify-between gap-2 px-1 mt-4 mb-2">
-              <span
-                className="font-display font-black uppercase text-neon-yellow"
-                style={{ fontSize: '10px', letterSpacing: '0.32em' }}
-              >
-                Olefoot · Hall of Fame
-              </span>
-              <span
-                className="text-white/45 tabular-nums font-display"
-                style={{ fontSize: '10px', letterSpacing: '0.18em' }}
-              >
+              <Hashtag className="text-neon-yellow">#halldafama</Hashtag>
+              <span className="shrink-0 font-mono text-cimento" style={{ fontSize: '10.5px' }}>
                 {filtered.length} {filtered.length === 1 ? 'lenda' : 'lendas'}
               </span>
             </div>
@@ -161,17 +152,8 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
               style={{ scrollbarGutter: 'stable' }}
             >
               {filtered.length === 0 ? (
-                <div
-                  className="border border-dashed border-white/15 bg-deep-black/40 px-5 py-10 text-center"
-                  style={{ borderRadius: 'var(--radius-md)' }}
-                >
-                  <p
-                    className="italic text-white/55"
-                    style={{
-                      fontFamily: 'var(--font-serif-hero)',
-                      fontSize: '15px',
-                    }}
-                  >
+                <div className="border border-dashed border-white/16 px-5 py-10 text-center">
+                  <p className="text-cimento" style={{ fontSize: '15px' }}>
                     Nenhuma lenda encontrada para "{query}".
                   </p>
                 </div>
@@ -184,10 +166,9 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                       type="button"
                       onClick={() => handleNavigate(l.slug)}
                       aria-current={isCurrent ? 'page' : undefined}
-                      className={`group w-full flex items-stretch gap-0 overflow-hidden border border-l-[3px] border-[var(--color-border)] bg-dark-gray text-left transition-all hover:border-neon-yellow/45 hover:-translate-y-0.5 ${
-                        isCurrent ? 'border-l-neon-yellow ring-1 ring-neon-yellow/30' : 'border-l-white/15'
+                      className={`group w-full flex items-stretch gap-0 overflow-hidden border border-l-[3px] bg-panel text-left transition-colors hover:border-white/30 ${
+                        isCurrent ? 'border-neon-yellow/60 border-l-neon-yellow' : 'border-white/10 border-l-white/16'
                       }`}
-                      style={{ borderRadius: 'var(--radius-md)' }}
                     >
                       {/* Foto / fallback */}
                       <div className="relative w-[80px] sm:w-[96px] aspect-[4/5] shrink-0 overflow-hidden bg-black">
@@ -200,34 +181,21 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                             referrerPolicy="no-referrer"
                           />
                         ) : (
-                          <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-neon-yellow/10 to-transparent">
+                          <div className="absolute inset-0 grid place-items-center bg-card">
                             <span
-                              className="italic text-neon-yellow/70 leading-none"
-                              style={{
-                                fontFamily: 'var(--font-serif-hero)',
-                                fontWeight: 700,
-                                fontSize: '40px',
-                              }}
+                              className="font-impact uppercase text-neon-yellow/70 leading-none"
+                              style={{ fontSize: '40px' }}
                               aria-hidden
                             >
                               {l.name.charAt(0)}
                             </span>
                           </div>
                         )}
-                        <div
-                          aria-hidden
-                          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/45 via-black/10 to-black/55"
-                        />
                         {/* OVR */}
-                        <div className="absolute top-1.5 left-1.5 z-10">
+                        <div className="absolute top-1.5 left-1.5 z-10 bg-black px-1 py-0.5">
                           <p
-                            className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_8px_rgba(0,0,0,0.95)]"
-                            style={{
-                              fontFamily: 'var(--font-serif-hero)',
-                              fontWeight: 700,
-                              fontSize: 'clamp(20px, 3vw, 26px)',
-                              letterSpacing: '-0.04em',
-                            }}
+                            className="ole-num text-neon-yellow leading-none"
+                            style={{ fontSize: 'clamp(15px, 2.4vw, 19px)' }}
                           >
                             {l.ovr}
                           </p>
@@ -236,25 +204,20 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                       {/* Info */}
                       <div className="flex-1 min-w-0 flex flex-col justify-center px-3 py-3 sm:px-4">
                         <span
-                          className="font-display font-bold uppercase text-white/55"
-                          style={{ fontSize: '9px', letterSpacing: '0.28em' }}
+                          className="truncate font-mono uppercase text-cimento"
+                          style={{ fontSize: '9.5px', letterSpacing: '0.14em' }}
                         >
                           {l.epithet}
                         </span>
                         <p
-                          className="italic text-white mt-0.5 leading-tight"
-                          style={{
-                            fontFamily: 'var(--font-serif-hero)',
-                            fontWeight: 700,
-                            fontSize: 'clamp(20px, 3vw, 26px)',
-                            letterSpacing: '-0.02em',
-                          }}
+                          className="truncate font-impact uppercase text-white mt-0.5 leading-[1.1]"
+                          style={{ fontSize: 'clamp(20px, 3vw, 26px)' }}
                         >
                           {l.name.charAt(0) + l.name.slice(1).toLowerCase()}
                         </p>
                         <span
-                          className="font-display font-bold uppercase text-white/40 mt-1.5"
-                          style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+                          className="truncate font-mono uppercase text-poeira mt-1.5"
+                          style={{ fontSize: '10px', letterSpacing: '0.12em' }}
                         >
                           {l.era} · {l.nationality}
                         </span>
@@ -262,10 +225,10 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                       {/* Indicador current/seta */}
                       <div className="flex items-center pr-3 sm:pr-4">
                         <span
-                          className={`font-display font-black uppercase ${
-                            isCurrent ? 'text-neon-yellow' : 'text-white/35 group-hover:text-neon-yellow'
+                          className={`whitespace-nowrap font-mono uppercase ${
+                            isCurrent ? 'text-neon-yellow' : 'text-cimento group-hover:text-neon-yellow'
                           }`}
-                          style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+                          style={{ fontSize: '10.5px', letterSpacing: '0.12em' }}
                         >
                           {isCurrent ? 'Aqui' : 'Ver →'}
                         </span>
@@ -278,10 +241,10 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
 
             {/* Footer hint */}
             <p
-              className="text-center text-white/35 mt-3 font-display font-bold uppercase"
-              style={{ fontSize: '9px', letterSpacing: '0.28em' }}
+              className="text-center text-poeira mt-3 font-mono uppercase"
+              style={{ fontSize: '10px', letterSpacing: '0.14em' }}
             >
-              ESC pra fechar · O museu vivo do futebol
+              ESC pra fechar
             </p>
           </motion.div>
         </motion.div>

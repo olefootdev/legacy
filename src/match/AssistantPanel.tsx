@@ -143,7 +143,7 @@ export function AssistantPanel({
       transition={{ type: 'spring', stiffness: 380, damping: 38 }}
       className="fixed bottom-16 left-2 right-2 sm:bottom-[5rem] sm:left-0 sm:right-0 z-[90] sm:px-3 md:px-4 md:bottom-4"
     >
-      <div className="mx-auto max-w-lg flex flex-col overflow-hidden rounded-xl border border-neon-yellow/30 bg-deep-black shadow-[0_0_40px_rgba(253,224,71,0.2)] max-h-[min(72vh,32rem)]">
+      <div className="mx-auto max-w-lg flex flex-col overflow-hidden rounded-xl border border-neon-yellow/30 bg-deep-black max-h-[min(72vh,32rem)]">
 
         {/* Barra de progresso — auto-dismiss para eventos normais, inativa no intervalo */}
         <div className="h-[3px] bg-black">
@@ -162,7 +162,7 @@ export function AssistantPanel({
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 bg-gradient-to-br from-neon-yellow/10 to-transparent px-4 py-3">
+        <div className="flex items-center justify-between border-b border-white/10 bg-panel px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-neon-yellow/30 bg-neon-yellow/10">
               <svg
@@ -272,7 +272,7 @@ export function AssistantPanel({
             <button
               type="button"
               onClick={() => { interact(); onDismiss(); }}
-              className="w-full rounded-lg border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 py-3 font-display text-xs font-black uppercase tracking-wider text-black shadow-[0_0_18px_rgba(253,224,71,0.25)] transition-all hover:scale-[1.01] active:scale-[0.99]"
+              className="w-full rounded-lg border border-neon-yellow/40 bg-neon-yellow py-3 font-display text-xs font-black uppercase tracking-wider text-black transition-colors hover:bg-white active:scale-[0.99]"
             >
               ▶ Voltar ao Jogo
             </button>
@@ -295,7 +295,7 @@ export function AssistantPanel({
               disabled={!halftimeReady}
               className={`flex-[2] rounded-lg py-3 font-display text-xs font-black uppercase tracking-wide transition-all ${
                 halftimeReady
-                  ? 'border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 text-black shadow-[0_0_20px_rgba(253,224,71,0.3)] hover:scale-[1.02]'
+                  ? 'border border-neon-yellow/40 bg-neon-yellow text-black hover:bg-white'
                   : 'cursor-not-allowed border border-white/10 bg-black/40 text-white/40'
               }`}
             >
@@ -357,7 +357,7 @@ function Min15Check({
           </div>
         )}
 
-        <p className="mb-4 text-sm text-white/80">Como está a performance da equipa?</p>
+        <p className="mb-4 text-sm text-white/80">Como está o time?</p>
         <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
@@ -423,7 +423,7 @@ function InjuryWarning({
                     className="h-full rounded-full"
                     style={{
                       width: `${Math.min(100, outPlayer.fatigue)}%`,
-                      backgroundColor: outPlayer.fatigue >= 85 ? '#ef4444' : outPlayer.fatigue >= 70 ? '#f97316' : '#eab308',
+                      backgroundColor: outPlayer.fatigue >= 85 ? '#FF4D4D' : outPlayer.fatigue >= 70 ? '#FF9F1C' : '#FDE100',
                     }}
                   />
                 </div>
@@ -619,21 +619,9 @@ export function AssistantFab({ hasPending, onClick }: { hasPending: boolean; onC
     <motion.button
       type="button"
       onClick={onClick}
-      animate={hasPending ? {
-        boxShadow: [
-          '0 0 0 0 rgba(253, 224, 71, 0)',
-          '0 0 0 8px rgba(253, 224, 71, 0.4)',
-          '0 0 0 16px rgba(253, 224, 71, 0)',
-        ],
-      } : {}}
-      transition={hasPending ? {
-        duration: 2,
-        repeat: Infinity,
-        ease: 'easeInOut',
-      } : {}}
-      className="fixed bottom-[5.5rem] right-3 z-[85] flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full border-2 bg-deep-black shadow-2xl transition-all hover:scale-110 md:bottom-6"
+      className="fixed bottom-[5.5rem] right-3 z-[85] flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full border-2 bg-deep-black transition-colors md:bottom-6"
       style={{
-        borderColor: hasPending ? 'rgb(253, 224, 71)' : 'rgba(255, 255, 255, 0.1)',
+        borderColor: hasPending ? 'var(--color-neon-yellow)' : 'rgba(255, 255, 255, 0.16)',
       }}
       aria-label="Assistente técnico"
     >

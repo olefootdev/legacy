@@ -13,6 +13,7 @@ import { useGameStore, useGameDispatch } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { BackButton } from '@/components/BackButton';
 import { cn } from '@/lib/utils';
+import { Hashtag } from '@/components/ui';
 
 export default function GlobalLeagueRegistration() {
   const dispatch = useGameDispatch();
@@ -64,12 +65,12 @@ export default function GlobalLeagueRegistration() {
 
   const statusBadge =
     status === 'waiting_teams'
-      ? { label: 'Cadastros abertos', tone: 'text-neon-yellow border-neon-yellow/40 bg-neon-yellow/10' }
+      ? { label: 'Cadastros abertos', tone: 'text-neon-yellow border-neon-yellow/40' }
       : status === 'playoffs'
-        ? { label: 'Playoffs em curso', tone: 'text-fuchsia-300 border-fuchsia-400/40 bg-fuchsia-500/10' }
+        ? { label: 'Playoffs em curso', tone: 'text-giz border-white/30' }
         : status === 'active'
-          ? { label: 'Liga em curso', tone: 'text-emerald-300 border-emerald-400/40 bg-emerald-500/10' }
-          : { label: 'Temporada encerrada', tone: 'text-white/65 border-white/15 bg-white/[0.03]' };
+          ? { label: 'Liga em curso', tone: 'text-alta border-alta/40' }
+          : { label: 'Temporada encerrada', tone: 'text-cimento border-white/16' };
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6 pb-10">
@@ -79,23 +80,16 @@ export default function GlobalLeagueRegistration() {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="border border-white/10 bg-dark-gray overflow-hidden"
-        style={{ borderRadius: 'var(--radius-md)' }}
+        className="border border-white/10 bg-panel overflow-hidden"
       >
-        <div className="bg-black/40 p-6 md:p-8 border-b border-[var(--color-divider-yellow)]">
+        <div className="bg-deep-black p-6 md:p-8 border-b border-white/10">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <div
-                className="font-display font-bold uppercase text-neon-yellow/85 mb-3"
-                style={{ fontSize: '10px', letterSpacing: '0.28em' }}
-              >
-                Liga Global · Temporada 2026
-              </div>
-              <h1 className="leading-[0.92]">
+              <Hashtag className="mb-3 text-neon-yellow">#ligaglobal · temporada 2026</Hashtag>
+              <h1 className="leading-[1.1]">
                 <span
-                  className="block font-bold uppercase text-white"
+                  className="block font-impact uppercase text-white"
                   style={{
-                    fontFamily: 'var(--font-display)',
                     fontSize: 'clamp(2rem, 5.5vw, 3.5rem)',
                     letterSpacing: '0.005em',
                   }}
@@ -109,13 +103,8 @@ export default function GlobalLeagueRegistration() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.35 }}
-                    className="block italic text-neon-yellow mt-1"
-                    style={{
-                      fontFamily: 'var(--font-serif-hero)',
-                      fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
-                      fontWeight: 700,
-                      letterSpacing: '-0.02em',
-                    }}
+                    className="ole-num block uppercase text-neon-yellow mt-1"
+                    style={{ fontSize: 'clamp(1.2rem, 3.6vw, 2rem)' }}
                   >
                     {teamsCount}/{minTeams} times
                   </motion.span>
@@ -124,7 +113,7 @@ export default function GlobalLeagueRegistration() {
             </div>
             <span
               className={cn(
-                'inline-flex items-center rounded-[var(--radius-pill)] border px-3 py-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em]',
+                'inline-flex items-center border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em]',
                 statusBadge.tone,
               )}
             >
@@ -132,28 +121,18 @@ export default function GlobalLeagueRegistration() {
             </span>
           </div>
 
-          <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow mt-5" />
-
-          <p
-            className="text-white/55 max-w-md mt-4"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
-          >
-            Competição mundial OLE: 32 times disputam playoffs, depois divididos em 3 divisões com promoção e
-            rebaixamento contínuos.
-          </p>
-
           {/* Progress bar (só durante cadastros) */}
           {status === 'waiting_teams' ? (
             <div className="mt-6 max-w-md">
-              <div className="h-2 overflow-hidden rounded-full bg-white/8">
+              <div className="h-1.5 overflow-hidden bg-card-hi">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.6 }}
-                  className="h-full bg-neon-yellow shadow-[0_0_12px_rgba(253,225,0,0.4)]"
+                  className="h-full bg-neon-yellow"
                 />
               </div>
-              <p className="mt-2 text-[12px] text-white/55">
+              <p className="mt-2 truncate text-[12.5px] text-cimento">
                 {remaining > 0
                   ? `Faltam ${remaining} time${remaining === 1 ? '' : 's'} para iniciar os playoffs.`
                   : 'Quórum atingido — playoffs prestes a começar.'}
@@ -167,23 +146,23 @@ export default function GlobalLeagueRegistration() {
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <RuleCard
           rail="bg-neon-yellow"
-          eyebrow="Fase 1"
+          eyebrow="#fase1"
           title="Playoffs"
           description="3 rodadas ida e volta — 6 jogos para definir as divisões."
           delay={0.1}
         />
         <RuleCard
-          rail="bg-cyan-300"
-          eyebrow="Estrutura"
+          rail="bg-neon-yellow"
+          eyebrow="#estrutura"
           title="3 Divisões"
-          description="~11 times por divisão, baseado no desempenho dos playoffs."
+          description="~11 times por divisão, pelo desempenho nos playoffs."
           delay={0.2}
         />
         <RuleCard
-          rail="bg-emerald-400"
-          eyebrow="Ciclo"
-          title="Promoção & Descenso"
-          description="Top 10% sobem, bottom 10% descem a cada temporada."
+          rail="bg-neon-yellow"
+          eyebrow="#ciclo"
+          title="Promoção & Rebaixamento"
+          description="Top 10% sobem, últimos 10% descem a cada temporada."
           delay={0.3}
         />
       </section>
@@ -194,55 +173,35 @@ export default function GlobalLeagueRegistration() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="relative isolate overflow-hidden border border-[var(--color-divider-yellow-strong)]"
-          style={{
-            borderRadius: 'var(--radius-card)',
-            background: 'var(--color-panel-elevated)',
-            boxShadow: 'var(--shadow-card-hover)',
-          }}
+          className="relative isolate overflow-hidden border border-neon-yellow/40 bg-card"
         >
           <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
           <div className="relative p-6 md:p-7 pl-7 md:pl-8">
             <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
               <div className="min-w-0">
-                <div
-                  className="font-display font-bold uppercase text-neon-yellow/80 mb-2"
-                  style={{ fontSize: '10px', letterSpacing: '0.28em' }}
-                >
-                  Seu Time
-                </div>
-                <h3
-                  className="font-display text-[24px] font-black uppercase tracking-tight text-white leading-tight"
-                >
+                <Hashtag className="mb-2 text-neon-yellow">#seutime</Hashtag>
+                <h3 className="truncate font-impact text-[26px] uppercase leading-[1.1] text-white">
                   {club.name}
                 </h3>
-                <p className="mt-1 text-[12px] text-white/45 uppercase tracking-[0.22em]">
+                <p className="mt-1 truncate font-mono text-[11.5px] text-cimento">
                   {club.city ?? '—'} · {squadSize} jogador{squadSize === 1 ? '' : 'es'}
                 </p>
               </div>
               <div className="text-right">
                 <p
-                  className="italic tabular-nums leading-none text-neon-yellow"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontSize: 'clamp(40px, 7vw, 56px)',
-                    fontWeight: 700,
-                    letterSpacing: '-0.02em',
-                  }}
+                  className="ole-num leading-none text-neon-yellow"
+                  style={{ fontSize: 'clamp(38px, 6.5vw, 52px)' }}
                 >
                   {teamOverall || '—'}
                 </p>
-                <p className="mt-1 text-[10px] text-white/55 uppercase tracking-[0.22em]">
+                <p className="mt-1 font-mono text-[10px] text-cimento uppercase tracking-[0.14em]">
                   Overall do XI
                 </p>
               </div>
             </div>
 
             {squadSize === 0 ? (
-              <p className="mb-4 text-[13px] leading-relaxed text-white/55">
-                Cadastra jogadores em <span className="text-neon-yellow">/clube/elenco</span> antes de entrar — a
-                liga calcula o overall do teu XI titular.
-              </p>
+              <p className="mb-4 truncate text-[13px] text-cimento">Monte o elenco antes de entrar.</p>
             ) : null}
 
             <div className="flex flex-wrap gap-3">
@@ -251,12 +210,11 @@ export default function GlobalLeagueRegistration() {
                 onClick={handleRegister}
                 disabled={!canRegister}
                 className={cn(
-                  'inline-flex items-center px-6 py-3 font-display text-[12px] font-black uppercase tracking-[0.22em] transition-all',
+                  'ole-num inline-flex h-[50px] items-center whitespace-nowrap px-5 text-[13px] uppercase transition-colors',
                   canRegister
-                    ? 'bg-neon-yellow text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] hover:bg-white hover:scale-[1.02] active:scale-[0.98]'
-                    : 'cursor-not-allowed border border-white/15 bg-white/[0.03] text-white/35',
+                    ? 'bg-neon-yellow text-black hover:bg-white [--corte:12px] [clip-path:var(--clip-corte)]'
+                    : 'cursor-not-allowed border border-white/10 text-poeira',
                 )}
-                style={{ borderRadius: 'var(--radius-sm)' }}
               >
                 {squadSize === 0
                   ? 'Sem elenco'
@@ -268,8 +226,7 @@ export default function GlobalLeagueRegistration() {
                 <button
                   type="button"
                   onClick={() => navigate('/clube/elenco')}
-                  className="inline-flex items-center border border-white/20 bg-deep-black px-6 py-3 font-display text-[12px] font-black uppercase tracking-[0.22em] text-white/85 transition-colors hover:border-neon-yellow hover:text-neon-yellow"
-                  style={{ borderRadius: 'var(--radius-sm)' }}
+                  className="ole-num inline-flex h-[50px] items-center whitespace-nowrap border border-white/30 px-5 text-[13px] uppercase text-white transition-colors hover:border-white hover:bg-white/5"
                 >
                   Ir ao Elenco
                 </button>
@@ -282,27 +239,18 @@ export default function GlobalLeagueRegistration() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="relative isolate overflow-hidden border border-emerald-400/30"
-          style={{
-            borderRadius: 'var(--radius-card)',
-            background: 'var(--color-panel-elevated)',
-            boxShadow: 'var(--shadow-card-hover)',
-          }}
+          className="relative isolate overflow-hidden border border-alta/40 bg-card"
         >
-          <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-emerald-400" />
+          <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-alta" />
           <div className="relative p-6 md:p-7 pl-7 md:pl-8">
-            <div
-              className="font-display font-bold uppercase text-emerald-300/85 mb-2"
-              style={{ fontSize: '10px', letterSpacing: '0.28em' }}
-            >
+            <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-alta">
               Confirmado
-            </div>
-            <h3 className="font-display text-[22px] font-black uppercase tracking-tight text-white leading-tight">
+            </p>
+            <h3 className="font-impact text-[24px] uppercase leading-[1.1] text-white">
               {club.name} está na Liga
             </h3>
-            <p className="mt-2 text-[13px] leading-relaxed text-white/55">
-              Aguardando os outros managers — quando atingirmos {minTeams} times, os playoffs começam
-              automaticamente.
+            <p className="mt-2 text-[13px] text-cimento">
+              Playoffs começam com {minTeams} times.
             </p>
           </div>
         </motion.section>
@@ -313,64 +261,50 @@ export default function GlobalLeagueRegistration() {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="border border-white/[0.05] overflow-hidden"
-        style={{
-          borderRadius: 'var(--radius-card)',
-          background: 'var(--color-panel-elevated)',
-          boxShadow: 'var(--shadow-card)',
-        }}
+        className="border border-white/10 bg-card overflow-hidden"
       >
-        <div className="border-b border-[var(--color-divider-yellow)] p-5 md:p-6 flex items-baseline justify-between gap-3">
-          <h2 className="font-display text-[14px] font-black uppercase tracking-[0.22em] text-white">
+        <div className="border-b border-white/10 p-5 md:p-6 flex items-baseline justify-between gap-3">
+          <h2 className="truncate font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
             Times cadastrados
           </h2>
-          <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/40">
+          <span className="shrink-0 font-mono text-[11px] text-cimento">
             {teamsCount} {teamsCount === 1 ? 'manager' : 'managers'}
           </span>
         </div>
         <div className="p-5 md:p-6">
           {teamsCount === 0 ? (
-            <p className="text-[13px] leading-relaxed text-white/45">
-              Ninguém cadastrado ainda. Sê o primeiro a entrar na competição mundial — basta ter elenco e tática
-              prontos no <span className="text-neon-yellow">Plantel</span>.
-            </p>
+            <p className="truncate text-[13px] text-cimento">Ninguém cadastrado ainda.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[420px] overflow-y-auto pr-1">
-              {sortedTeams.map((team, index) => (
+              {sortedTeams.map((team, index) => {
+                const isMe = team.managerId === managerId;
+                return (
                 <div
                   key={team.id}
-                  className="flex items-center justify-between border border-white/[0.05] bg-[var(--color-panel-soft)] px-4 py-3"
-                  style={{ borderRadius: 'var(--radius-sm)' }}
+                  className={cn(
+                    'flex items-center justify-between gap-3 px-4 py-3',
+                    isMe ? 'bg-neon-yellow text-black' : 'border border-white/[0.06] bg-panel',
+                  )}
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className="shrink-0 font-display text-[12px] font-black tabular-nums text-white/40"
-                      style={{ width: '2rem' }}
-                    >
-                      #{index + 1}
+                    <span className={cn('ole-num w-8 shrink-0 text-[13px]', isMe ? 'text-black' : 'text-cimento')}>
+                      {index + 1}
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate font-display text-[13px] font-bold uppercase tracking-wide text-white">
+                      <p className={cn('truncate text-[14px]', isMe ? 'font-bold text-black' : 'text-giz')}>
                         {team.clubName}
                       </p>
-                      <p className="truncate text-[10px] uppercase tracking-[0.22em] text-white/40">
+                      <p className={cn('truncate font-mono text-[10px] uppercase tracking-[0.12em]', isMe ? 'text-black/70' : 'text-cimento')}>
                         {team.clubShort}
                       </p>
                     </div>
                   </div>
-                  <span
-                    className="shrink-0 italic tabular-nums leading-none text-neon-yellow"
-                    style={{
-                      fontFamily: 'var(--font-serif-hero)',
-                      fontSize: '22px',
-                      fontWeight: 700,
-                      letterSpacing: '-0.02em',
-                    }}
-                  >
+                  <span className={cn('ole-num shrink-0 text-[18px] leading-none', isMe ? 'text-black' : 'text-neon-yellow')}>
                     {team.overall}
                   </span>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -398,25 +332,15 @@ function RuleCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="relative isolate overflow-hidden border border-white/[0.05]"
-      style={{
-        borderRadius: 'var(--radius-card)',
-        background: 'var(--color-panel-elevated)',
-        boxShadow: 'var(--shadow-card)',
-      }}
+      className="relative isolate overflow-hidden border border-white/10 bg-card"
     >
       <span aria-hidden className={`absolute left-0 top-0 h-full w-[3px] ${rail}`} />
       <div className="relative flex h-full flex-col gap-3 p-5 pl-6 sm:p-6 sm:pl-7">
-        <span
-          className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80"
-          style={{ fontFamily: 'var(--font-ui)' }}
-        >
-          {eyebrow}
-        </span>
-        <h3 className="font-display text-[20px] font-black uppercase leading-tight tracking-tight text-white">
+        <Hashtag className="text-neon-yellow">{eyebrow}</Hashtag>
+        <h3 className="font-impact text-[22px] uppercase leading-[1.1] text-white">
           {title}
         </h3>
-        <p className="text-[12px] leading-relaxed text-white/55">{description}</p>
+        <p className="text-[12.5px] leading-snug text-cimento">{description}</p>
       </div>
     </motion.div>
   );

@@ -65,6 +65,7 @@ import {
 import { TACTICAL_INTENSITY_PRESETS, type TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
 import { detectLiveArc, getArcDescription } from '@/match/quickNarrativeArcs';
 import { QuickNarrativeArcIndicator } from '@/components/matchquick/QuickNarrativeArcIndicator';
+import { Hashtag } from '@/components/ui';
 import { buildAgentEcho, type AgentEchoTrait } from '@/match/quickAgentEcho';
 
 /** Lance importante ganha o palco central; construção só alimenta o momento.
@@ -302,8 +303,8 @@ function RosterRow({ card, isTop, rating, subbable, onSub }: {
         </span>
       )}
       <span
-        className="font-serif italic tabular-nums leading-none w-7 text-center shrink-0"
-        style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '20px', letterSpacing: '-0.03em', color: isTop ? 'var(--color-neon-yellow)' : '#fff' }}
+        className="ole-num leading-none w-8 text-center shrink-0"
+        style={{ fontSize: '16px', color: isTop ? 'var(--color-neon-yellow)' : '#fff' }}
       >
         {card.ovr}
       </span>
@@ -317,8 +318,8 @@ function RosterRow({ card, isTop, rating, subbable, onSub }: {
       </span>
       {rating !== undefined && (
         <span
-          className="font-serif italic tabular-nums leading-none shrink-0"
-          style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '17px', letterSpacing: '-0.02em', color: rating >= 7.5 ? 'var(--color-neon-yellow)' : 'rgba(255,255,255,0.85)' }}
+          className="ole-num leading-none shrink-0"
+          style={{ fontSize: '14px', color: rating >= 7.5 ? 'var(--color-neon-yellow)' : 'rgba(255,255,255,0.85)' }}
         >
           {rating.toFixed(1)}
         </span>
@@ -378,7 +379,7 @@ const FORMATION_TILT: Record<string, number> = {
 };
 
 const FEED_STYLE: Record<QuickPlanFeedItem['kind'], string> = {
-  insight: 'text-white/70 italic',
+  insight: 'text-white/70',
   decision: 'text-neon-yellow',
   goal_home: 'text-neon-yellow font-bold',
   goal_away: 'text-white/90 font-bold',
@@ -1304,10 +1305,10 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   return (
     <div
       className="relative w-full max-w-2xl mx-auto bg-deep-black border border-l-[3px] overflow-hidden"
-      style={{ borderColor: 'var(--color-border)', borderLeftColor: 'var(--color-neon-yellow)', borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
+      style={{ borderColor: 'var(--color-border)', borderLeftColor: 'var(--color-neon-yellow)', borderRadius: 'var(--radius-md)' }}
     >
-      {/* Placar cinematográfico: escudos + Moret gigante + minuto (design system) */}
-      <div className="px-4 pt-5 pb-4 bg-gradient-to-b from-zinc-950 to-deep-black border-b border-zinc-800">
+      {/* Placar: escudos + ole-num gigante + minuto (VOLT2, fundo chapado) */}
+      <div className="px-4 pt-5 pb-4 bg-panel border-b border-zinc-800">
         <div className="flex items-center justify-center gap-3 sm:gap-5">
           {/* Casa */}
           <div className="flex items-center gap-2.5 flex-1 justify-end min-w-0">
@@ -1326,15 +1327,15 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
             )}
           </div>
 
-          {/* Placar Moret */}
+          {/* Placar */}
           <div className="flex items-center gap-2 shrink-0">
-            <span className="font-serif italic text-neon-yellow tabular-nums leading-none"
-              style={{ fontFamily: 'var(--font-serif-hero)', fontSize: 'clamp(40px, 11vw, 64px)' }}>
+            <span className="ole-num text-neon-yellow leading-none"
+              style={{ fontSize: 'clamp(36px, 10vw, 56px)' }}>
               {homeScore}
             </span>
             <span className="text-white/25 text-2xl sm:text-3xl">–</span>
-            <span className="font-serif italic text-white tabular-nums leading-none"
-              style={{ fontFamily: 'var(--font-serif-hero)', fontSize: 'clamp(40px, 11vw, 64px)' }}>
+            <span className="ole-num text-white leading-none"
+              style={{ fontSize: 'clamp(36px, 10vw, 56px)' }}>
               {awayScore}
             </span>
           </div>
@@ -1392,7 +1393,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               animate={{ opacity: 1, y: -26, scale: 1 }}
               exit={{ opacity: 0, y: -44 }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
-              className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-0 z-20 font-display font-black tabular-nums whitespace-nowrap"
+              className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-0 z-20 bg-deep-black px-1.5 py-0.5 font-display font-black tabular-nums whitespace-nowrap"
               style={{
                 fontSize: floatFx.tier === 'crit' ? '15px' : '13px',
                 letterSpacing: '0.04em',
@@ -1400,7 +1401,6 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                   : floatFx.tier === 'pos' ? 'var(--color-success)'
                   : floatFx.tier === 'neg' ? 'var(--color-danger)'
                   : 'rgba(255,255,255,0.7)',
-                textShadow: floatFx.tier === 'crit' ? '0 0 14px rgba(167,139,250,0.7)' : '0 2px 8px rgba(0,0,0,0.6)',
               }}
             >
               {floatFx.text}
@@ -1501,6 +1501,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
             : hl ? `${eventKindLabel(hl)} · ${currentMinute}'` : `Ao vivo · ${currentMinute}'`;
           const headline = hl ? hl.text : liveRead.headline;
           const detail = hl ? hl.reason : liveRead.detail;
+          // VOLT2: lance épico vira placa volt chapada (impacto pela cor, sem brilho).
+          const solidVolt = yellow && !legendary && hl!.weight_tier === 'epic';
           return (
             <AnimatePresence mode="wait">
               <motion.div
@@ -1513,27 +1515,24 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 style={{
                   borderColor: 'var(--color-border)',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: legendary ? 'rgba(167,139,250,0.12)' : yellow ? 'rgba(253,225,0,0.10)' : 'var(--color-dark-gray)',
-                  borderLeftColor: legendary ? 'rgb(167,139,250)' : 'var(--color-neon-yellow)',
-                  boxShadow: legendary
-                    ? '0 0 28px rgba(167,139,250,0.45)'
-                    : yellow && hl!.weight_tier === 'epic' ? '0 0 24px rgba(253,225,0,0.30)' : undefined,
+                  backgroundColor: legendary ? 'var(--color-lenda)' : solidVolt ? 'var(--color-neon-yellow)' : yellow ? 'rgba(253,225,0,0.10)' : 'var(--color-dark-gray)',
+                  borderLeftColor: legendary ? 'var(--color-giz)' : solidVolt ? 'var(--color-deep-black)' : 'var(--color-neon-yellow)',
                 }}
               >
                 <p
                   className="font-display uppercase tracking-[0.3em] text-[9px] font-black mb-1.5"
-                  style={{ color: legendary ? 'rgb(196,181,253)' : 'var(--color-neon-yellow)' }}
+                  style={{ color: legendary ? 'var(--color-giz)' : solidVolt ? 'rgba(0,0,0,0.7)' : 'var(--color-neon-yellow)' }}
                 >
                   {eyebrow}
                 </p>
                 <p
-                  className="text-white leading-tight mb-1.5"
-                  style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: yellow ? 'clamp(19px, 4.4vw, 26px)' : 'clamp(22px, 5vw, 30px)', letterSpacing: '-0.02em' }}
+                  className="font-impact leading-[1.1] mb-1.5"
+                  style={{ color: solidVolt ? 'var(--color-deep-black)' : '#FFFFFF', fontSize: yellow ? 'clamp(20px, 4.6vw, 28px)' : 'clamp(22px, 5vw, 30px)' }}
                 >
                   {headline}
                 </p>
                 {detail && (
-                  <p className="text-[12px] text-white/65" style={{ fontFamily: 'var(--font-sans)' }}>
+                  <p className="text-[12px]" style={{ fontFamily: 'var(--font-sans)', color: solidVolt ? 'rgba(0,0,0,0.75)' : legendary ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.65)' }}>
                     {detail}
                   </p>
                 )}
@@ -1568,8 +1567,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                   Atenção
                 </motion.p>
                 <p
-                  className="text-white leading-[1.05]"
-                  style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(22px, 5.6vw, 32px)', letterSpacing: '-0.02em' }}
+                  className="font-impact text-white leading-[1.1]"
+                  style={{ fontSize: 'clamp(22px, 5.6vw, 32px)' }}
                 >
                   {leadIn.text}
                 </p>
@@ -1662,7 +1661,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                       <span className="h-7 w-7 rounded-full border border-neon-yellow/40 grid place-items-center text-neon-yellow"><Target className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /></span>
                     )}
                     <span className="flex-1 text-[13px] font-bold text-white group-hover:text-black">{t.name}</span>
-                    <span className="font-serif italic text-base text-neon-yellow group-hover:text-black tabular-nums" style={{ fontFamily: 'var(--font-serif-hero)' }}>
+                    <span className="ole-num text-[15px] text-neon-yellow group-hover:text-black">
                       {t.finalizacao}
                     </span>
                   </button>
@@ -1745,7 +1744,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                     onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-warning)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
                   >
-                    <span className="font-serif italic text-base tabular-nums w-7 text-center" style={{ fontFamily: 'var(--font-serif-hero)', color: 'var(--color-warning)' }}>{b.ovr}</span>
+                    <span className="ole-num text-[15px] w-8 shrink-0 text-center" style={{ color: 'var(--color-warning)' }}>{b.ovr}</span>
                     <span className="flex-1 text-[13px] font-bold text-white group-hover:text-black">{b.name}</span>
                     <span className="text-[10px] uppercase tracking-[0.12em] text-white/45 group-hover:text-black/60">{b.pos}</span>
                   </button>
@@ -1783,7 +1782,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                     onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-neon-yellow)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
                   >
-                    <span className="font-serif italic text-base text-neon-yellow group-hover:text-black tabular-nums w-7 text-center" style={{ fontFamily: 'var(--font-serif-hero)' }}>{b.ovr}</span>
+                    <span className="ole-num text-[15px] text-neon-yellow group-hover:text-black w-8 shrink-0 text-center">{b.ovr}</span>
                     <span className="flex-1 text-[13px] font-bold text-white group-hover:text-black">{b.name}</span>
                     <span className="text-[10px] uppercase tracking-[0.12em] text-white/45 group-hover:text-black/60">{b.pos} · fad {Math.round(b.fatigue)}%</span>
                   </button>
@@ -1888,13 +1887,11 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 if (mvp.assists > 0) parts.push(`${mvp.assists} ${mvp.assists === 1 ? 'assist.' : 'assist.'}`);
                 parts.push(`Nota ${mvp.rating.toFixed(1)}`);
                 return (
-                  <div className="mb-4 px-5 py-5 bg-neon-yellow" style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(253,225,0,0.18)' }}>
-                    <p className="font-display uppercase tracking-[0.32em] text-[10px] font-black text-black/70 mb-2">
-                      Craque do jogo · MVP
-                    </p>
+                  <div className="mb-4 px-5 py-5 bg-neon-yellow" style={{ borderRadius: 'var(--radius-md)' }}>
+                    <Hashtag className="mb-2 text-black/70">#craquedojogo #mvp</Hashtag>
                     <p
-                      className="text-black leading-[0.95]"
-                      style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(34px, 9vw, 52px)', letterSpacing: '-0.03em' }}
+                      className="font-impact uppercase text-black leading-[1.05]"
+                      style={{ fontSize: 'clamp(34px, 9vw, 52px)' }}
                     >
                       {shortName(mvp.name)}
                     </p>
@@ -1914,9 +1911,9 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                   { l: 'Defesas', h: doneInfo.stats.homeSaves, a: doneInfo.stats.awaySaves },
                 ].map((s) => (
                   <div key={s.l} className="bg-deep-black py-3">
-                    <p className="font-serif italic text-neon-yellow text-xl tabular-nums leading-none" style={{ fontFamily: 'var(--font-serif-hero)' }}>{s.h}</p>
+                    <p className="ole-num text-neon-yellow text-lg leading-none">{s.h}</p>
                     <p className="text-[8px] uppercase tracking-[0.18em] text-white/45 my-1">{s.l}</p>
-                    <p className="font-serif italic text-white/80 text-xl tabular-nums leading-none" style={{ fontFamily: 'var(--font-serif-hero)' }}>{s.a}</p>
+                    <p className="ole-num text-white/80 text-lg leading-none">{s.a}</p>
                   </div>
                 ))}
               </div>
@@ -1927,7 +1924,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                   Leitura de Jogo · {doneInfo.reading.good}/{doneInfo.reading.total}
                 </p>
                 {narration?.reading && (
-                  <p className="font-serif italic text-white/85 text-[15px] leading-snug text-center mb-3 px-2" style={{ fontFamily: 'var(--font-serif-hero)' }}>
+                  <p className="text-white/85 text-[15px] leading-snug text-center mb-3 px-2">
                     {narration.reading}
                   </p>
                 )}
@@ -1973,7 +1970,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               {portrait ? (
                 <img src={portrait} alt="" className="h-9 w-9 rounded-full object-cover object-top shrink-0 border border-neon-yellow/60" />
               ) : (
-                <span className="h-9 w-9 rounded-full shrink-0 border border-neon-yellow/40 bg-dark-gray grid place-items-center font-serif italic text-neon-yellow text-sm" style={{ fontFamily: 'var(--font-serif-hero)' }} aria-hidden>{latest.minute}</span>
+                <span className="h-9 w-9 rounded-full shrink-0 border border-neon-yellow/40 bg-dark-gray grid place-items-center ole-num text-neon-yellow text-[12px]" aria-hidden>{latest.minute}</span>
               )}
               <div className="min-w-0 flex-1">
                 <p className="font-display uppercase tracking-[0.24em] text-[9px] font-black text-neon-yellow mb-0.5">
@@ -1989,14 +1986,14 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       })()}
 
       {/* CONTROLES — Formação (só o número) | Legacy. Entre a narração e os jogadores.
-          Legacy ganha um glow fino GIRANDO quando há buff disponível pra usar. */}
+          Legacy ganha um contorno volt chapado quando há buff disponível pra usar. */}
       {phase !== 'done' && (() => {
         const noLegend = liveBoosters.length === 0;
         const allUsed = !noLegend && availableBoosters.length === 0;
         const canPick = !legacyActive && availableBoosters.length > 0;
         return (
           <div className="px-3 pt-1 pb-2">
-            <style>{`@property --lg-angle{syntax:'<angle>';initial-value:0deg;inherits:false}@keyframes lg-rotate{to{--lg-angle:360deg}}.legacy-ring::before{content:'';position:absolute;inset:0;z-index:2;border-radius:inherit;padding:1.5px;background:conic-gradient(from var(--lg-angle),transparent 0deg,#FDE047 55deg,transparent 130deg);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:lg-rotate 2.4s linear infinite;pointer-events:none}`}</style>
+            <style>{`.legacy-ring::before{content:'';position:absolute;inset:0;z-index:2;border-radius:inherit;border:1.5px solid var(--color-neon-yellow);pointer-events:none}`}</style>
 
             <div className="grid grid-cols-2 gap-2">
               {/* Formação — só o número, cicla ao toque */}
@@ -2006,7 +2003,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 className="py-2.5 flex items-center justify-center transition-colors active:scale-[0.98]"
                 style={{ borderRadius: 'var(--radius-sm)', backgroundColor: 'transparent', border: '1px solid var(--color-border)' }}
               >
-                <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: '18px', color: 'var(--color-neon-yellow)' }}>{formation}</span>
+                <span className="ole-num" style={{ fontSize: '16px', color: 'var(--color-neon-yellow)' }}>{formation}</span>
               </button>
 
               {/* Legacy — mostra a CONTAGEM de buffs; toque abre a lista pra escolher */}

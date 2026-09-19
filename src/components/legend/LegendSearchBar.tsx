@@ -18,8 +18,7 @@ export function LegendSearchBar({ onOpen, totalCount }: LegendSearchBarProps) {
       <button
         type="button"
         onClick={onOpen}
-        className="group inline-flex items-center gap-3 sm:gap-4 border-2 border-black bg-black/5 backdrop-blur-sm px-5 sm:px-7 py-3 sm:py-3.5 transition-all hover:bg-black hover:text-neon-yellow active:scale-[0.98] shadow-[0_4px_18px_rgba(0,0,0,0.18)]"
-        style={{ borderRadius: 'var(--radius-pill)' }}
+        className="group inline-flex h-12 items-center gap-3 sm:gap-4 border-2 border-black px-5 sm:px-7 transition-colors hover:bg-black hover:text-neon-yellow"
         aria-label="Buscar lenda"
       >
         <Search
@@ -27,28 +26,21 @@ export function LegendSearchBar({ onOpen, totalCount }: LegendSearchBarProps) {
           strokeWidth={2.5}
         />
         <span
-          className="font-display font-black uppercase text-black group-hover:text-neon-yellow transition-colors"
-          style={{
-            fontSize: 'clamp(12px, 1.4vw, 14px)',
-            letterSpacing: '0.26em',
-          }}
+          className="ole-num whitespace-nowrap uppercase text-black group-hover:text-neon-yellow transition-colors"
+          style={{ fontSize: '13px' }}
         >
           Buscar lenda
         </span>
         {totalCount && totalCount > 1 ? (
           <span
-            className="inline-flex items-center justify-center min-w-[26px] h-[22px] px-2 bg-black text-neon-yellow font-display font-black tabular-nums leading-none group-hover:bg-neon-yellow group-hover:text-black transition-colors"
-            style={{
-              fontSize: '11px',
-              letterSpacing: '0.04em',
-              borderRadius: 'var(--radius-pill)',
-            }}
+            className="ole-num inline-flex items-center justify-center min-w-[26px] h-[22px] px-2 bg-black text-neon-yellow leading-none group-hover:bg-neon-yellow group-hover:text-black transition-colors"
+            style={{ fontSize: '11px' }}
           >
             {totalCount}
           </span>
         ) : null}
         <ChevronDown
-          className="w-4 h-4 text-black/65 group-hover:text-neon-yellow/85 transition-colors"
+          className="w-4 h-4 text-black/65 group-hover:text-neon-yellow transition-colors"
           strokeWidth={2.5}
         />
       </button>

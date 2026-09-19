@@ -51,6 +51,16 @@
   box-sizing: border-box;
 }
 
+/* VOLT2: o "vidro" virou card chapado. Sem esta regra a classe não tinha fundo
+   nenhum (o texto flutuava sobre o asfalto). Utilitário de fundo no elemento
+   continua vencendo. */
+@layer components {
+  .glass-panel {
+    background: var(--color-panel);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    3. GRIDS RESPONSIVOS - Garantir colapso em mobile
    ═══════════════════════════════════════════════════════════════ */

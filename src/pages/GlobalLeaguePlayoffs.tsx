@@ -6,8 +6,10 @@
 import { motion } from 'motion/react';
 import { Trophy, Calendar } from 'lucide-react';
 import { useGameStore } from '@/game/store';
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import { BackButton } from '@/components/BackButton';
+import { Hashtag } from '@/components/ui';
+import { globalDivisionName } from '@/match/globalLeagueMVP';
 
 export default function GlobalLeaguePlayoffs() {
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
@@ -37,7 +39,7 @@ export default function GlobalLeaguePlayoffs() {
   if (!globalLeagueMVP || globalLeagueMVP.status !== 'playoffs') {
     return (
       <div className="mx-auto min-w-0 w-full max-w-4xl px-3 sm:px-4 lg:px-6 py-12 text-center">
-        <p className="text-white/60">Playoffs ainda não iniciados</p>
+        <p className="text-cimento">Playoffs ainda não iniciados</p>
       </div>
     );
   }
@@ -48,35 +50,17 @@ export default function GlobalLeaguePlayoffs() {
 
       {/* Hero */}
       <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-6">
-        <div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden">
-          <motion.span
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="font-serif-hero font-black text-black/[0.04]"
-            style={{
-              fontSize: 'clamp(180px, 32vw, 460px)',
-              lineHeight: '0.85',
-              letterSpacing: '-0.05em',
-            }}
-          >
-            {currentRound}
-          </motion.span>
-        </div>
-
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-14 text-center"
         >
-          <div className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-black mb-4 sm:mb-6">
-            <span>Liga Global · Playoffs</span>
-          </div>
+          <Hashtag className="mb-4 text-black/70 sm:mb-6">#ligaglobal · playoffs</Hashtag>
 
-          <h1 className="leading-[0.9]">
+          <h1 className="leading-[1.1]">
             <span
-              className="block font-bold uppercase text-black"
+              className="block font-impact uppercase text-black"
               style={{
-                fontFamily: 'var(--font-display)',
                 fontSize: 'clamp(2.75rem, 8vw, 6rem)',
                 letterSpacing: '0.005em',
               }}
@@ -84,23 +68,16 @@ export default function GlobalLeaguePlayoffs() {
               Rodada {currentRound}
             </span>
             <span
-              className="block italic text-black"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontSize: 'clamp(2.25rem, 7vw, 5rem)',
-                marginTop: '0.04em',
-                letterSpacing: '-0.01em',
-              }}
+              className="ole-num block uppercase text-black"
+              style={{ fontSize: 'clamp(1.5rem, 5vw, 3rem)' }}
             >
               de {totalRounds}
             </span>
           </h1>
 
-          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
-
           {/* Progress */}
           <div className="mt-8 max-w-md mx-auto">
-            <div className="h-3 bg-black/20 rounded-full overflow-hidden">
+            <div className="h-2 bg-black/20 overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${(currentRound / totalRounds) * 100}%` }}
@@ -108,7 +85,7 @@ export default function GlobalLeaguePlayoffs() {
                 className="h-full bg-black"
               />
             </div>
-            <p className="mt-2 text-xs text-black/70">
+            <p className="mt-2 font-mono text-[11.5px] text-black/70">
               {totalRounds - currentRound} rodadas restantes
             </p>
           </div>
@@ -120,97 +97,108 @@ export default function GlobalLeaguePlayoffs() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-panel border border-white/10 rounded-sm overflow-hidden"
+        className="bg-panel border border-white/10 overflow-hidden"
       >
-        <div className="bg-black/40 px-6 py-4 border-b border-white/10">
+        <div className="bg-deep-black px-6 py-4 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-neon-yellow" />
-            <h2 className="font-display text-base font-bold uppercase tracking-wider text-white">
-              Classificação dos Playoffs
+            <Trophy className="w-4 h-4 text-neon-yellow" />
+            <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
+              Classificação dos playoffs
             </h2>
           </div>
-          <p className="text-xs text-white/60 mt-1">
-            Top 11 → Divisão 1 · Meio 11 → Divisão 2 · Bottom 10 → Divisão 3
+          <p className="mt-1 font-mono text-[11px] text-cimento">
+            Top 11 → {globalDivisionName(1)} · meio 11 → {globalDivisionName(2)} · últimos 10 → {globalDivisionName(3)}
           </p>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-black/20">
+            <thead className="bg-deep-black">
               <tr className="text-left">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60">#</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60">Time</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">J</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">V</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">E</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">D</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">SG</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">PTS</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">Divisão</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">#</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Time</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">J</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">V</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">E</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">D</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">SG</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">PTS</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">Divisão</th>
               </tr>
             </thead>
             <tbody>
               {standings.map((team, index) => {
                 const position = index + 1;
                 const division = position <= 11 ? 1 : position <= 22 ? 2 : 3;
-                const divisionColor = division === 1 ? 'text-neon-yellow' : division === 2 ? 'text-slate-300' : 'text-amber-500';
+                const divisionColor = division === 1 ? 'text-neon-yellow' : division === 2 ? 'text-giz' : 'text-cimento';
                 const saldoGols = team.playoffGoalsFor - team.playoffGoalsAgainst;
                 const isMe = !!myTeamId && team.id === myTeamId;
                 const isLeader = index === 0;
                 const cutAfter = position === 11 || position === 22;
 
+                const tone = (normal: string) => (isMe ? 'text-black' : normal);
+
                 return (
+                  <Fragment key={team.id}>
                   <tr
-                    key={team.id}
-                    className={`border-t border-white/5 transition-colors ${
-                      isMe
-                        ? 'bg-neon-yellow/[0.10] ring-1 ring-inset ring-neon-yellow/50'
-                        : isLeader
-                          ? 'bg-neon-yellow/[0.05]'
-                          : 'hover:bg-white/5'
+                    className={`border-t border-white/[0.06] transition-colors ${
+                      isMe ? 'bg-neon-yellow text-black' : 'hover:bg-card'
                     }`}
-                    style={cutAfter ? { boxShadow: 'inset 0 -2px 0 0 rgba(253,225,0,0.35)' } : undefined}
                   >
                     <td className="px-4 py-3">
-                      <span className={`font-mono text-sm ${isMe ? 'text-neon-yellow' : 'text-white/60'}`}>{position}</span>
+                      <span className={`ole-num text-sm ${tone(isLeader ? 'text-white' : 'text-cimento')}`}>{position}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex min-w-0 items-center gap-1.5">
                         <div className="min-w-0">
-                          <p className={`font-display text-sm font-bold ${isMe ? 'text-neon-yellow' : 'text-white'}`}>{team.clubName}</p>
-                          <p className="text-xs text-white/40">{team.clubShort}</p>
+                          <p className={`truncate text-sm ${isMe ? 'font-bold text-black' : 'text-giz'}`}>{team.clubName}</p>
+                          <p className={`font-mono text-[10.5px] ${tone('text-cimento')}`}>{team.clubShort}</p>
                         </div>
                         {isMe && (
-                          <span className="shrink-0 rounded-sm bg-neon-yellow px-1.5 py-0.5 font-display text-[8px] font-black uppercase tracking-wider text-black">você</span>
+                          <span className="shrink-0 bg-black px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-neon-yellow">você</span>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className="font-mono text-sm text-white/80">{team.playoffMatchesPlayed}</span>
+                      <span className={`ole-num text-sm ${tone('text-giz')}`}>{team.playoffMatchesPlayed}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className="font-mono text-sm text-emerald-400">{team.playoffWins}</span>
+                      <span className={`ole-num text-sm ${tone('text-alta')}`}>{team.playoffWins}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className="font-mono text-sm text-amber-400">{team.playoffDraws}</span>
+                      <span className={`ole-num text-sm ${tone('text-cimento')}`}>{team.playoffDraws}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className="font-mono text-sm text-red-400">{team.playoffLosses}</span>
+                      <span className={`ole-num text-sm ${tone('text-baixa')}`}>{team.playoffLosses}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`font-mono text-sm ${saldoGols > 0 ? 'text-emerald-400' : saldoGols < 0 ? 'text-red-400' : 'text-white/60'}`}>
+                      <span className={`ole-num text-sm ${tone(saldoGols > 0 ? 'text-alta' : saldoGols < 0 ? 'text-baixa' : 'text-cimento')}`}>
                         {saldoGols > 0 ? '+' : ''}{saldoGols}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className="font-serif-hero text-base font-bold text-neon-yellow">{team.playoffPoints}</span>
+                      <span className={`ole-num text-base ${tone('text-white')}`}>{team.playoffPoints}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`font-display text-xs font-bold uppercase tracking-wider ${divisionColor}`}>
-                        Div {division}
+                      <span className={`whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.12em] ${tone(divisionColor)}`}>
+                        {globalDivisionName(division)}
                       </span>
                     </td>
                   </tr>
+                  {cutAfter && (
+                    <tr aria-hidden>
+                      <td colSpan={9} className="px-4 py-0">
+                        <div className="flex h-6 items-center gap-2">
+                          <span className="block h-0 grow border-t border-dashed border-alta" />
+                          <span className="whitespace-nowrap font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-alta">
+                            ↑ {globalDivisionName(division)}
+                          </span>
+                          <span className="block h-0 grow border-t border-dashed border-alta" />
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
             </tbody>
@@ -218,20 +206,15 @@ export default function GlobalLeaguePlayoffs() {
         </div>
 
         {/* Legenda */}
-        <div className="bg-black/20 px-6 py-4 border-t border-white/10">
-          <div className="flex flex-wrap gap-4 text-xs">
+        <div className="bg-deep-black px-6 py-4 border-t border-white/10">
+          <div className="flex flex-wrap gap-4 font-mono text-[11px]">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-neon-yellow rounded-sm" />
-              <span className="text-white/60">Divisão 1 (Top 11)</span>
+              <div className="w-3 h-3 bg-neon-yellow" />
+              <span className="text-cimento">Seu clube</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-blue-400 rounded-sm" />
-              <span className="text-white/60">Divisão 2 (Meio 11)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-white/20 rounded-sm" />
-              <span className="text-white/60">Divisão 3 (Bottom 10)</span>
-            </div>
+            <span className="text-neon-yellow">Div 1 · {globalDivisionName(1)} (top 11)</span>
+            <span className="text-giz">Div 2 · {globalDivisionName(2)} (meio 11)</span>
+            <span className="text-cimento">Div 3 · {globalDivisionName(3)} (últimos 10)</span>
           </div>
         </div>
       </motion.div>
@@ -241,11 +224,11 @@ export default function GlobalLeaguePlayoffs() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-panel border border-white/10 rounded-sm p-6"
+        className="bg-panel border border-white/10 p-6"
       >
         <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 text-blue-400" />
-          <h2 className="font-display text-base font-bold uppercase tracking-wider text-white">
+          <Calendar className="w-4 h-4 text-neon-yellow" />
+          <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
             Calendário
           </h2>
         </div>
@@ -254,37 +237,35 @@ export default function GlobalLeaguePlayoffs() {
           {globalLeagueMVP.playoffRounds.map((round) => (
             <div
               key={round.roundNumber}
-              className={`flex items-center justify-between px-4 py-3 rounded-sm ${
+              className={`flex items-center justify-between px-4 py-3 ${
                 round.roundNumber === currentRound
-                  ? 'bg-neon-yellow/10 border border-neon-yellow/20'
-                  : round.status === 'finished'
-                  ? 'bg-black/20'
-                  : 'bg-black/10'
+                  ? 'bg-card border border-neon-yellow/50'
+                  : 'bg-deep-black border border-white/[0.06]'
               }`}
             >
               <div className="flex items-center gap-3">
-                <span className={`font-display text-sm font-bold ${
-                  round.roundNumber === currentRound ? 'text-neon-yellow' : 'text-white/60'
+                <span className={`ole-num text-sm uppercase ${
+                  round.roundNumber === currentRound ? 'text-neon-yellow' : 'text-cimento'
                 }`}>
                   Rodada {round.roundNumber}
                 </span>
-                <span className="text-xs text-white/40">
-                  {round.isReturning ? '(Returno)' : '(Turno)'}
+                <span className="font-mono text-[11px] text-poeira">
+                  {round.isReturning ? 'Returno' : 'Turno'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 {round.status === 'finished' && (
-                  <span className="text-xs text-emerald-400 font-bold uppercase tracking-wider">
+                  <span className="font-mono text-[10.5px] text-alta uppercase tracking-[0.12em]">
                     Finalizada
                   </span>
                 )}
                 {round.status === 'live' && (
-                  <span className="text-xs text-neon-yellow font-bold uppercase tracking-wider animate-pulse">
-                    Ao Vivo
+                  <span className="font-mono text-[10.5px] text-neon-yellow uppercase tracking-[0.12em] animate-pulse">
+                    Ao vivo
                   </span>
                 )}
                 {round.status === 'scheduled' && (
-                  <span className="text-xs text-white/40 font-bold uppercase tracking-wider">
+                  <span className="font-mono text-[10.5px] text-cimento uppercase tracking-[0.12em]">
                     Agendada
                   </span>
                 )}

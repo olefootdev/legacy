@@ -44,25 +44,25 @@ function kindMeta(kind?: EventKind): { icon: string; color: string; pause: numbe
       return { icon: '⚽', color: NEON, pause: 1400 };
     case 'yellow_home':
     case 'yellow_away':
-      return { icon: '🟨', color: '#facc15', pause: 600 };
+      return { icon: '🟨', color: '#F5C518', pause: 600 };
     case 'red_home':
     case 'red_away':
-      return { icon: '🟥', color: '#ef4444', pause: 800 };
+      return { icon: '🟥', color: '#E11D2A', pause: 800 };
     case 'penalty_start':
       return { icon: '🎯', color: NEON, pause: 1000 };
     case 'penalty_result':
-      return { icon: '🥅', color: '#a3e635', pause: 700 };
+      return { icon: '🥅', color: '#22C55E', pause: 700 };
     case 'shot_home':
     case 'shot_away':
-      return { icon: '💨', color: '#94a3b8', pause: 300 };
+      return { icon: '💨', color: '#9A9C9F', pause: 300 };
     case 'whistle':
-      return { icon: '📣', color: '#cbd5e1', pause: 500 };
+      return { icon: '📣', color: '#ECECE7', pause: 500 };
     case 'sub':
-      return { icon: '🔄', color: '#7dd3fc', pause: 400 };
+      return { icon: '🔄', color: '#00C851', pause: 400 };
     case 'injury_home':
-      return { icon: '🩹', color: '#fb923c', pause: 600 };
+      return { icon: '🩹', color: '#FF9F1C', pause: 600 };
     default:
-      return { icon: '·', color: '#64748b', pause: 0 };
+      return { icon: '·', color: '#7E8185', pause: 0 };
   }
 }
 

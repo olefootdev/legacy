@@ -41,6 +41,7 @@ import { SmartShortcut } from '@/components/cards/SmartShortcut';
 import { normalizeWalletState } from '@/wallet/initial';
 import { inviteLinkForCode } from '@/wallet/referralCode';
 import { useFriendships } from '@/social/useFriendships';
+import { Hashtag, SecaoVolt } from '@/components/ui';
 
 const MISSION_TROPHY_KINDS = new Set(['onboarding', 'achievement', 'special']);
 
@@ -187,7 +188,7 @@ export function Manager() {
 
   return (
     <div className="mx-auto min-w-0 w-full max-w-6xl space-y-6 overflow-x-hidden pb-6 md:pb-8 px-3 sm:px-4 lg:px-6">
-      {/* ── HERO EDITORIAL — amarelo com watermark cinematográfico ── */}
+      {/* ── HERO — volt chapado ── */}
       <section
         aria-label="Perfil do Manager"
         className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-6"
@@ -241,8 +242,8 @@ export function Manager() {
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
               <p
-                className="font-impact text-neon-yellow tabular-nums leading-none truncate"
-                style={{ fontSize: 'clamp(20px, 4.4vw, 36px)' }}
+                className="ole-num text-white tabular-nums leading-none truncate"
+                style={{ fontSize: 'clamp(16px, 4.4vw, 32px)' }}
               >
                 {formatCompactNumber(finance.ole)}
               </p>
@@ -253,10 +254,11 @@ export function Manager() {
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
               <p
-                className="font-impact text-neon-yellow tabular-nums leading-none truncate"
-                style={{ fontSize: 'clamp(20px, 4.4vw, 36px)' }}
+                className="ole-num text-white tabular-nums leading-none truncate"
+                style={{ fontSize: 'clamp(16px, 4.4vw, 32px)' }}
               >
-                {broDisplay.primary}
+                {/* A unidade já está no rótulo abaixo — repetir "BRO" cortava o número em 375px. */}
+                {broDisplay.primary.replace(/\s*BRO$/i, '')}
               </p>
               <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
                 BRO
@@ -265,8 +267,8 @@ export function Manager() {
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
               <p
-                className="font-impact text-neon-yellow tabular-nums leading-none truncate"
-                style={{ fontSize: 'clamp(20px, 4.4vw, 36px)' }}
+                className="ole-num text-white tabular-nums leading-none truncate"
+                style={{ fontSize: 'clamp(16px, 4.4vw, 32px)' }}
               >
                 {squadSize}
               </p>
@@ -281,12 +283,7 @@ export function Manager() {
 
       {/* ── DESTINOS DO MANAGER — grade compacta, escaneável ─────── */}
       <section>
-        <div className="mb-3 flex items-center gap-2">
-          <span aria-hidden className="h-px w-8 bg-neon-yellow/55" />
-          <span className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80">
-            Sua central
-          </span>
-        </div>
+        <SecaoVolt label="Sua central" className="mb-3" />
         <div className="grid grid-cols-2 gap-3">
           {[
             {
@@ -301,7 +298,7 @@ export function Manager() {
               key: 'network',
               title: 'Network',
               icon: Network,
-              accent: '#e879f9',
+              accent: 'var(--color-lenda)',
               stat: `${social.friends.length} amigo${social.friends.length !== 1 ? 's' : ''}`,
               badge: social.incoming.length > 0 ? String(social.incoming.length) : null,
               onClick: () => navigate('/manager/network'),
@@ -333,10 +330,9 @@ export function Manager() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.08 + i * 0.04 }}
-                className="group relative isolate overflow-hidden border border-white/[0.06] p-4 pl-[18px] text-left transition-all duration-300 hover:border-white/15 hover:-translate-y-0.5"
-                style={{ borderRadius: 'var(--radius-card)', background: 'var(--color-panel-elevated)', boxShadow: 'var(--shadow-card)' }}
+                className="group relative isolate overflow-hidden border border-white/10 bg-card p-4 text-left transition-colors hover:border-white/30"
+                style={{ borderRadius: 'var(--radius-card)' }}
               >
-                <span aria-hidden className="absolute left-0 top-0 h-full w-[3px]" style={{ background: item.accent }} />
                 <div className="flex items-start justify-between gap-2">
                   <Icon className="h-5 w-5 text-neon-yellow" strokeWidth={2.2} aria-hidden />
                   <div className="flex items-center gap-1.5">
@@ -346,17 +342,17 @@ export function Manager() {
                       </span>
                     )}
                     {item.tag && (
-                      <span className="rounded-[var(--radius-pill)] border border-[var(--color-success)]/30 bg-[var(--color-success)]/15 px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-wider text-[var(--color-success)]">
+                      <span className="rounded-full border border-alta/30 bg-alta/15 px-2 py-0.5 font-mono text-[9.5px] font-medium uppercase tracking-wider text-alta">
                         {item.tag}
                       </span>
                     )}
                     <ChevronRight className="h-4 w-4 text-white/30 transition-colors group-hover:text-neon-yellow" />
                   </div>
                 </div>
-                <h3 className="mt-3 font-display text-[18px] font-black uppercase leading-none tracking-tight text-white transition-colors group-hover:text-neon-yellow">
+                <h3 className="mt-3 font-impact text-[20px] uppercase leading-[1.1] text-white transition-colors group-hover:text-neon-yellow">
                   {item.title}
                 </h3>
-                <p className="mt-1.5 truncate text-[11px] leading-snug text-white/50">{item.stat}</p>
+                <p className="mt-1.5 truncate text-[11.5px] leading-snug text-cimento">{item.stat}</p>
               </motion.button>
             );
           })}
@@ -365,12 +361,7 @@ export function Manager() {
 
       {/* ── TROFÉUS ─────────────────────────────────────────────── */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="ole-eyebrow-poster !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
-            <span>Troféus</span>
-          </div>
-          <Trophy className="h-3.5 w-3.5 text-neon-yellow/70" aria-hidden />
-        </div>
+        <SecaoVolt label="Troféus" />
 
         {/* Memoráveis */}
         <TrophyGroup
@@ -379,9 +370,7 @@ export function Manager() {
           total={MEMORABLE_TROPHY_SLOTS.length}
           defaultOpen
         >
-          <p className="text-[11px] text-white/50 mb-4">
-            Somente <span className="text-white/90 font-bold">campeonatos conquistados</span>: liga, copa e supercopa.
-          </p>
+          <Hashtag className="mb-4">#liga #copa #supercopa</Hashtag>
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {MEMORABLE_TROPHY_SLOTS.map((slot, i) => {
               const earned = memorableTrophyUnlockedIds.includes(slot.id);
@@ -392,17 +381,17 @@ export function Manager() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 + i * 0.05 }}
                   className={cn(
-                    'flex flex-col items-center gap-2 p-2 sm:p-3 rounded-sm border-2 transition-all',
+                    'flex flex-col items-center gap-2 p-2 sm:p-3 border-2 transition-colors',
                     earned
-                      ? 'bg-neon-yellow/5 border-neon-yellow/40 hover:border-neon-yellow/60 hover:shadow-[0_0_20px_rgba(253,225,0,0.15)]'
+                      ? 'bg-panel border-neon-yellow/40 hover:border-neon-yellow/60'
                       : 'bg-black/40 border-white/10 opacity-50',
                   )}
                 >
                   <div
                     className={cn(
-                      'flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-sm transition-transform hover:scale-110',
+                      'flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center',
                       earned
-                        ? 'bg-gradient-to-br from-neon-yellow via-neon-yellow to-neon-yellow text-black shadow-[0_0_20px_rgba(250,204,21,0.5)]'
+                        ? 'bg-neon-yellow text-black'
                         : 'bg-white/5 text-white/30',
                     )}
                   >
@@ -431,9 +420,7 @@ export function Manager() {
           count={dailyCrowns.length}
           defaultOpen={dailyCrowns.length > 0}
         >
-          <p className="text-[11px] text-white/50 mb-4">
-            Cada vitória no <span className="text-white/90 font-bold">mata-mata diário</span> da Liga Global vira uma Coroa eterna.
-          </p>
+          <Hashtag className="mb-4">#ligaglobal #matamata</Hashtag>
           {dailyCrowns.length === 0 ? (
             <div className="bg-black/30 border border-white/5 rounded-sm py-6 px-4 text-center">
               <Lock className="h-5 w-5 text-white/30 mx-auto mb-2" />
@@ -455,9 +442,9 @@ export function Manager() {
                     initial={{ opacity: 0, scale: 0.94 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.32 + Math.min(i * 0.04, 0.4) }}
-                    className="flex flex-col items-center gap-2 p-2 sm:p-3 rounded-sm border-2 bg-neon-yellow/5 border-neon-yellow/40 hover:border-neon-yellow/60 hover:shadow-[0_0_20px_rgba(253,225,0,0.18)] transition-all"
+                    className="flex flex-col items-center gap-2 p-2 sm:p-3 border-2 bg-panel border-neon-yellow/40 hover:border-neon-yellow/60 transition-colors"
                   >
-                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-sm bg-gradient-to-br from-neon-yellow via-neon-yellow to-neon-yellow text-black shadow-[0_0_20px_rgba(250,204,21,0.5)]">
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center bg-neon-yellow text-black">
                       <Crown className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
                     </div>
                     <div className="text-center">
@@ -494,9 +481,9 @@ export function Manager() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.4 + i * 0.03 }}
                 className={cn(
-                  'flex flex-col items-center gap-2 p-2 sm:p-3 rounded-sm border transition-all',
+                  'flex flex-col items-center gap-2 p-2 sm:p-3 border transition-colors',
                   t.earned
-                    ? 'bg-neon-yellow/5 border-neon-yellow/30 hover:border-neon-yellow/50'
+                    ? 'bg-panel border-neon-yellow/30 hover:border-neon-yellow/50'
                     : 'bg-black/40 border-white/10 opacity-50',
                 )}
               >
@@ -504,7 +491,7 @@ export function Manager() {
                   className={cn(
                     'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-sm',
                     t.earned
-                      ? 'bg-gradient-to-br from-neon-yellow via-neon-yellow to-neon-yellow text-black'
+                      ? 'bg-neon-yellow text-black'
                       : 'bg-white/5 text-white/30',
                   )}
                 >
@@ -541,9 +528,9 @@ export function Manager() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.45 + i * 0.03 }}
                 className={cn(
-                  'flex flex-col items-center gap-2 p-2 sm:p-3 rounded-sm border transition-all',
+                  'flex flex-col items-center gap-2 p-2 sm:p-3 border transition-colors',
                   t.earned
-                    ? 'bg-neon-yellow/5 border-neon-yellow/30 hover:border-neon-yellow/50'
+                    ? 'bg-panel border-neon-yellow/30 hover:border-neon-yellow/50'
                     : 'bg-black/40 border-white/10 opacity-50',
                 )}
               >
@@ -551,7 +538,7 @@ export function Manager() {
                   className={cn(
                     'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-sm',
                     t.earned
-                      ? 'bg-gradient-to-br from-[var(--color-success)] via-[var(--color-success)] to-[var(--color-success)] text-black'
+                      ? 'bg-alta text-black'
                       : 'bg-white/5 text-white/30',
                   )}
                 >
@@ -651,7 +638,7 @@ function DrawerShell({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:p-4"
       onClick={onClose}
       role="presentation"
     >
@@ -660,19 +647,19 @@ function DrawerShell({
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.96, y: 12, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="my-auto flex max-h-[min(90dvh,calc(100dvh-3rem))] w-full max-w-lg flex-col overflow-hidden rounded-md border border-white/10 bg-dark-gray shadow-2xl"
+        className="my-auto flex max-h-[min(90dvh,calc(100dvh-3rem))] w-full max-w-lg flex-col overflow-hidden border border-white/10 bg-panel"
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-black/40 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className={cn('h-1.5 w-6 rounded-full', accent)} aria-hidden />
-            <h3 className="font-display text-sm font-black uppercase tracking-wider text-white md:text-base">{title}</h3>
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-nav px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className={cn('h-0.5 w-[18px] shrink-0', accent)} aria-hidden />
+            <h3 className="truncate font-impact text-[17px] uppercase leading-[1.1] text-white md:text-lg">{title}</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+            className="p-2 text-cimento transition-colors hover:bg-white/10 hover:text-white"
             aria-label="Fechar"
           >
             <X className="h-5 w-5" />
@@ -696,18 +683,16 @@ function CareerDrawer({
   return (
     <DrawerShell title="Plano de Carreira" onClose={onClose}>
       <div className="space-y-4">
-        <div className="rounded-xl border border-neon-yellow/25 bg-neon-yellow/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">EXP acumulado</p>
-          <p className="mt-1 font-display text-3xl font-black text-neon-yellow">{formatExp(expLifetime)}</p>
+        <div className="border border-white/10 bg-card p-4">
+          <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">EXP acumulado</p>
+          <p className="ole-num mt-1 text-3xl text-white tabular-nums">{formatExp(expLifetime)}</p>
           <div className="mt-3">
             <CareerTierBadge expLifetimeEarned={expLifetime} showProgress />
           </div>
         </div>
 
         <div>
-          <p className="mb-4 font-display text-[10px] font-bold uppercase tracking-widest text-white/45">
-            Evolução ao longo dos tiers
-          </p>
+          <SecaoVolt label="Tiers" tone="neutro" className="mb-4" />
           <ol className="space-y-3">
             {CAREER_TIERS.map((t) => {
               const reached = t.id <= currentTierId;
@@ -718,61 +703,47 @@ function CareerDrawer({
                   key={t.id}
                   className={cn(
                     'relative isolate overflow-hidden',
-                    'flex items-center gap-4 rounded-lg border-2 p-4',
-                    'transition-all duration-300',
-                    isCurrent && 'border-neon-yellow/60 bg-gradient-to-r from-neon-yellow/15 to-neon-yellow/5 shadow-[0_0_20px_rgba(253,225,0,0.2)]',
-                    reached && !isCurrent && 'border-neon-yellow/30 bg-neon-yellow/[0.06]',
+                    'flex items-center gap-4 border-2 p-4',
+                    'transition-colors',
+                    isCurrent && 'border-neon-yellow bg-card',
+                    reached && !isCurrent && 'border-white/16 bg-panel',
                     !reached && 'border-white/10 bg-black/30 opacity-60',
                   )}
                 >
-                  {/* Diagonal accent no tier atual */}
-                  {isCurrent && (
-                    <div
-                      className="absolute -right-6 -top-6 h-24 w-24 bg-neon-yellow opacity-[0.08]"
-                      style={{ transform: 'rotate(34deg) skewX(-12deg)' }}
-                      aria-hidden
-                    />
-                  )}
-
-                  {/* Ícone GRANDE com glow */}
+                  {/* Ícone — chapado, sem brilho */}
                   <div
                     className={cn(
                       'relative z-10 flex shrink-0 items-center justify-center rounded-full',
-                      'border-3 transition-all duration-300',
-                      isCurrent && 'h-16 w-16 border-neon-yellow bg-neon-yellow/20 shadow-[0_0_20px_rgba(253,225,0,0.6)]',
-                      reached && !isCurrent && 'h-14 w-14 border-neon-yellow/50 bg-neon-yellow/10 shadow-[0_0_12px_rgba(253,225,0,0.3)]',
+                      'border-2',
+                      isCurrent && 'h-16 w-16 border-neon-yellow bg-neon-yellow',
+                      reached && !isCurrent && 'h-14 w-14 border-white/30 bg-card-hi',
                       !reached && 'h-12 w-12 border-white/20 bg-white/[0.03]',
                     )}
                   >
                     <Icon
                       className={cn(
-                        'transition-all duration-300',
-                        isCurrent && 'h-8 w-8 text-neon-yellow drop-shadow-[0_0_6px_rgba(253,225,0,0.8)]',
-                        reached && !isCurrent && 'h-7 w-7 text-neon-yellow/80',
+                        isCurrent && 'h-8 w-8 text-black',
+                        reached && !isCurrent && 'h-7 w-7 text-white',
                         !reached && 'h-6 w-6 text-white/40',
                       )}
                       strokeWidth={isCurrent ? 2.5 : 2.2}
                       aria-hidden
                     />
 
-                    {/* Pulse ring no tier atual */}
-                    {isCurrent && (
-                      <div className="absolute inset-0 rounded-full border-2 border-neon-yellow animate-ping opacity-75" />
-                    )}
                   </div>
 
                   {/* Conteúdo */}
                   <div className="relative z-10 min-w-0 flex-1">
                     <p
                       className={cn(
-                        'font-display font-black uppercase tracking-wide',
-                        isCurrent && 'text-base text-neon-yellow',
-                        !isCurrent && 'text-sm text-white',
+                        'font-impact uppercase leading-[1.1]',
+                        isCurrent && 'text-lg text-white',
+                        !isCurrent && 'text-base text-white',
                       )}
                     >
                       {t.name}
                       {isCurrent && (
-                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-neon-yellow px-2 py-0.5 font-mono text-[9px] font-black text-black">
+                        <span className="ml-2 inline-flex items-center gap-1 bg-neon-yellow px-2 py-0.5 align-middle font-mono text-[9px] font-medium text-black">
                           <span className="h-1.5 w-1.5 rounded-full bg-black animate-pulse" />
                           AGORA
                         </span>
@@ -780,7 +751,7 @@ function CareerDrawer({
                     </p>
                     <p className={cn(
                       'mt-1 text-[11px]',
-                      isCurrent ? 'text-white/70' : 'text-white/50',
+                      isCurrent ? 'text-giz' : 'text-cimento',
                     )}>
                       {t.minExp === 0 ? 'Nível inicial' : `A partir de ${formatExp(t.minExp)} EXP`}
                     </p>
@@ -791,7 +762,7 @@ function CareerDrawer({
                     <CheckCircle
                       className={cn(
                         'relative z-10 h-5 w-5 shrink-0',
-                        isCurrent ? 'text-neon-yellow' : 'text-neon-green',
+                        isCurrent ? 'text-neon-yellow' : 'text-alta',
                       )}
                       aria-hidden
                     />
@@ -802,14 +773,14 @@ function CareerDrawer({
           </ol>
         </div>
 
-        <div className="rounded-lg border border-white/10 bg-black/30 p-3 text-xs text-white/60">
-          <p className="flex items-center gap-1.5 font-display font-bold uppercase tracking-wider text-white/80">
-            <Sparkles className="h-3.5 w-3.5 text-neon-yellow" /> Como ganho EXP?
+        <div className="border border-white/10 bg-card p-3 text-xs text-giz">
+          <p className="flex items-center gap-1.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
+            <Sparkles className="h-3.5 w-3.5 text-cimento" /> Como ganho EXP?
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-4">
-            <li>Completa missões diárias, semanais e especiais</li>
-            <li>Vence partidas oficiais da liga</li>
-            <li>Evolui estruturas do clube e treina o plantel</li>
+            <li>Complete missões diárias, semanais e especiais</li>
+            <li>Vença partidas oficiais da liga</li>
+            <li>Evolua estruturas do clube e treine o plantel</li>
           </ul>
         </div>
       </div>
@@ -824,20 +795,18 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
     <DrawerShell title="Network" onClose={onClose} accent="bg-neon-yellow">
       <div className="space-y-5">
         <div>
-          <p className="text-[11px] text-white/60">Teu clube: <span className="font-bold text-white">{club.name}</span></p>
-          <p className="text-[10px] text-white/40">Quem entra pelo seu link de indicação já vira amigo.</p>
+          <p className="text-[11px] text-cimento">Seu clube: <span className="font-bold text-white">{club.name}</span></p>
+          <p className="text-[10.5px] text-poeira">Quem entra pelo seu link de indicação já vira amigo.</p>
         </div>
 
         {social.data.incoming.length > 0 ? (
           <section>
-            <h4 className="mb-2 font-display text-[10px] font-bold uppercase tracking-widest text-neon-yellow/85">
-              Solicitações
-            </h4>
+            <SecaoVolt label="Solicitações" className="mb-2" />
             <ul className="space-y-2">
               {social.data.incoming.map((req) => (
                 <li
                   key={req.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-neon-yellow/25 bg-black/40 px-3 py-2.5"
+                  className="flex items-center justify-between gap-2 border border-white/16 bg-card px-3 py-2.5"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-display text-sm font-bold text-white">{req.clubName}</p>
@@ -847,14 +816,14 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
                     <button
                       type="button"
                       onClick={() => void social.accept(req.id)}
-                      className="rounded bg-neon-green px-2 py-1 font-display text-[10px] font-black uppercase tracking-wider text-black hover:bg-white"
+                      className="ole-num bg-neon-yellow px-2.5 py-1.5 text-[11px] uppercase text-black hover:bg-white"
                     >
                       Aceitar
                     </button>
                     <button
                       type="button"
                       onClick={() => void social.decline(req.id)}
-                      className="rounded border border-white/20 px-2 py-1 font-display text-[10px] font-bold uppercase tracking-wider text-gray-300 hover:bg-white/10"
+                      className="ole-num border border-white/30 px-2.5 py-1.5 text-[11px] uppercase text-white hover:border-white"
                     >
                       Recusar
                     </button>
@@ -918,7 +887,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
         ) : null}
 
         <p className="text-[10px] text-white/30">
-          O teu link de indicação e o placar da rede ficam na Home.
+          Seu link de indicação e o placar da rede ficam na Home.
         </p>
       </div>
 

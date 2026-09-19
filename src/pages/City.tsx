@@ -76,11 +76,11 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     structureId: 'training_center',
     name: 'Centro de Treinamento',
     icon: Dumbbell,
-    desc: 'Mais campos e ciência do desporto: melhor ganho de atributos e mais planos de treino em simultâneo.',
+    desc: 'Mais ganho e planos de treino',
     statsForLevel: (lvl) => [
       { label: 'Slots por tipo de treino', value: String(maxSlotsByTrainingCenter(lvl)) },
       {
-        label: 'Colectivos simultâneos',
+        label: 'Coletivos simultâneos',
         value: String(trainingCenterMaxConcurrentCollectivePlans(lvl)),
       },
       {
@@ -95,7 +95,7 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     structureId: 'medical_dept',
     name: 'Departamento Médico',
     icon: Activity,
-    desc: 'Recuperação e prevenção: menos fadiga acumulada e risco de lesão conforme a evolução da estrutura.',
+    desc: 'Menos fadiga e lesão',
     statsForLevel: (lvl) => [
       { label: 'Slots de tratamento', value: String(medicalDeptTreatmentSlots(lvl)) },
       {
@@ -110,7 +110,7 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     structureId: 'youth_academy',
     name: 'Categoria de Base',
     icon: GraduationCap,
-    desc: 'Revela jovens promessas para o plantel ou para o mercado.',
+    desc: 'Revela jovens promessas',
     action: 'Buscar Promessas',
     actionIcon: Users,
     statsForLevel: (lvl) => [
@@ -126,7 +126,7 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     structureId: 'megastore',
     name: 'Megaloja',
     icon: Store,
-    desc: 'Reforça o apoio em casa e fora; em vitórias, converte confiança da torcida em EXP extra.',
+    desc: 'Torcida vira EXP nas vitórias',
     action: 'Campanha de Vendas',
     actionIcon: Coins,
     statsForLevel: (lvl) => [
@@ -285,9 +285,8 @@ export function City() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative isolate overflow-hidden bg-neon-yellow border border-black/15 w-full max-w-full min-w-0"
-          style={{ borderRadius: 'var(--radius-sm)', boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}
+          style={{ borderRadius: 'var(--radius-sm)' }}
         >
-          {/* Watermark gigante */}
           {/* Conteúdo */}
           <div className="relative z-10 p-6 sm:p-8">
             {/* Eyebrow */}
@@ -297,15 +296,11 @@ export function City() {
 
             {/* Título */}
             <h2
-              className="mt-2 mb-2 font-impact uppercase text-black leading-none"
+              className="mt-2 mb-5 font-impact uppercase text-black leading-none"
               style={{ fontSize: 'clamp(40px, 10vw, 72px)', letterSpacing: '-0.01em' }}
             >
               Estádio
             </h2>
-
-            <p className="text-black/70 text-sm sm:text-base mb-6 max-w-2xl">
-              O coração do clube. Cada nível reforça capacidade, receita em dias de jogo e o ambiente para a torcida.
-            </p>
 
             {/* Stats strip */}
             <div className="grid grid-cols-3 gap-3 mb-6">
@@ -356,9 +351,9 @@ export function City() {
               disabled={!stadiumUpgrade.hasUpgrade || !stadiumUpgrade.canAfford}
               onClick={() => setQuickPendingId('stadium')}
               className={cn(
-                'w-full px-5 py-3 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] transition-all flex items-center justify-center gap-2',
+                'w-full px-5 py-3 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] transition-colors flex items-center justify-center gap-2',
                 stadiumUpgrade.hasUpgrade && stadiumUpgrade.canAfford
-                  ? 'bg-black text-neon-yellow hover:bg-deep-black shadow-[0_4px_12px_rgba(0,0,0,0.4)]'
+                  ? 'bg-black text-neon-yellow hover:bg-deep-black'
                   : 'bg-black/60 text-black/40 cursor-not-allowed',
               )}
               style={{ borderRadius: 'var(--radius-sm)' }}
@@ -382,22 +377,11 @@ export function City() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + idx * 0.05 }}
-              className="relative isolate overflow-hidden bg-[#1c1c1c] border border-white/10 w-full max-w-full min-w-0 hover:border-white/20 transition-all"
+              className="relative isolate overflow-hidden bg-card border border-white/10 w-full max-w-full min-w-0 hover:border-white/30 transition-colors"
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
-              {/* Rail dourado — assinatura DS */}
+              {/* Rail volt — assinatura DS */}
               <span className="absolute inset-y-0 left-0 z-20 w-[3px] bg-neon-yellow" aria-hidden />
-              {/* Watermark do ícone */}
-              <div
-                className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
-                aria-hidden
-              >
-                <struct.icon
-                  className="text-neon-yellow opacity-[0.03]"
-                  style={{ width: 'clamp(120px, 30vw, 200px)', height: 'clamp(120px, 30vw, 200px)' }}
-                  strokeWidth={1}
-                />
-              </div>
 
               {/* Conteúdo */}
               <div className="relative z-10 p-5 sm:p-6 space-y-4">
@@ -405,7 +389,7 @@ export function City() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div
-                      className="flex h-12 w-12 shrink-0 items-center justify-center border-2 border-neon-yellow bg-neon-yellow/10 transition-transform hover:scale-110"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center border-2 border-neon-yellow bg-neon-yellow/10"
                       style={{ borderRadius: 'var(--radius-sm)' }}
                     >
                       <struct.icon className="h-6 w-6 text-neon-yellow" strokeWidth={2.2} />
@@ -422,7 +406,7 @@ export function City() {
                 </div>
 
                 {/* Descrição */}
-                <p className="text-xs text-white/50 leading-relaxed">
+                <p className="truncate text-xs text-white/50 leading-relaxed">
                   {struct.desc}
                 </p>
 
@@ -523,7 +507,7 @@ export function City() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
               onClick={upgradeModalState.phase === 'success' ? handleClose : undefined}
             >
               <motion.div
@@ -531,38 +515,29 @@ export function City() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-deep-black via-dark-gray to-deep-black shadow-2xl"
+                className="w-full max-w-md overflow-hidden rounded-xl border border-white/10 bg-panel"
               >
                 {/* Fase 1: Confirmação */}
                 {upgradeModalState.phase === 'confirm' && (
                   <>
                     <div className="border-b border-white/10 bg-black/40 p-6">
-                      <div className="flex items-center gap-3 mb-3">
+                      <div className="flex items-center gap-3">
                         {def && <def.icon className="h-8 w-8 text-neon-yellow" strokeWidth={2} />}
                         <h3 className="font-display text-xl font-black uppercase tracking-wider text-white">
                           Evoluir {def?.name}
                         </h3>
                       </div>
-                      <p className="text-sm text-white/50">
-                        Confirme a evolução da estrutura para o próximo nível
-                      </p>
                     </div>
 
                     <div className="p-6 space-y-4">
-                      {/* Custo em Moret */}
+                      {/* Custo (Archivo expandida) */}
                       <div className="rounded-lg border border-neon-yellow/20 bg-neon-yellow/5 p-4 text-center">
                         <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-neon-yellow/70">
                           Custo da Evolução
                         </p>
                         <p
-                          className="text-neon-yellow"
-                          style={{
-                            fontFamily: 'var(--font-sans)',
-                            fontStyle: 'italic',
-                            fontSize: '2rem',
-                            letterSpacing: '-0.02em',
-                            lineHeight: 1,
-                          }}
+                          className="ole-num text-neon-yellow"
+                          style={{ fontSize: '2rem', lineHeight: 1 }}
                         >
                           {cost?.currency === 'exp' ? formatExp(cost.amount) : formatBroFromCents(cost?.amount ?? 0)}
                         </p>
@@ -600,7 +575,7 @@ export function City() {
                         className={cn(
                           'flex-1 rounded-lg px-4 py-3 font-display text-sm font-black uppercase tracking-wider transition-all',
                           upgrade.canAfford
-                            ? 'bg-neon-yellow text-black shadow-[0_4px_16px_rgba(253,225,0,0.3)] hover:brightness-110'
+                            ? 'bg-neon-yellow text-black hover:bg-white'
                             : 'cursor-not-allowed bg-white/10 text-white/45',
                         )}
                       >
@@ -652,7 +627,7 @@ export function City() {
                       <button
                         type="button"
                         onClick={handleClose}
-                        className="w-full rounded-lg bg-neon-yellow px-4 py-3 font-display text-sm font-black uppercase tracking-wider text-black shadow-[0_4px_16px_rgba(253,225,0,0.3)] transition-all hover:brightness-110"
+                        className="w-full rounded-lg bg-neon-yellow px-4 py-3 font-display text-sm font-black uppercase tracking-wider text-black transition-colors hover:bg-white"
                       >
                         Continuar
                       </button>
@@ -695,8 +670,8 @@ export function City() {
                         className="text-sm text-white/50"
                       >
                         {cost?.currency === 'exp'
-                          ? `Precisas de ${formatExp(cost.amount)} EXP para evoluir ${def?.name}`
-                          : `Precisas de ${formatBroFromCents(cost?.amount ?? 0)} para evoluir ${def?.name}`
+                          ? `Precisa de ${formatExp(cost.amount)} EXP para evoluir ${def?.name}`
+                          : `Precisa de ${formatBroFromCents(cost?.amount ?? 0)} para evoluir ${def?.name}`
                         }
                       </motion.p>
                     </div>
@@ -725,7 +700,7 @@ export function City() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/80 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4"
+            className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:p-4"
             onClick={() => setQuickPendingId(null)}
             role="presentation"
           >
@@ -734,7 +709,7 @@ export function City() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 12 }}
               onClick={(e) => e.stopPropagation()}
-              className="my-auto flex w-full max-w-md shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-dark-gray shadow-2xl max-h-[min(88dvh,calc(100dvh-5rem))] sm:max-h-[min(92dvh,720px)]"
+              className="my-auto flex w-full max-w-md shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-dark-gray max-h-[min(88dvh,calc(100dvh-5rem))] sm:max-h-[min(92dvh,720px)]"
               role="dialog"
               aria-modal="true"
               aria-labelledby="city-quick-confirm-title"

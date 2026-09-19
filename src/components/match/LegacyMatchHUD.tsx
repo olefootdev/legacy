@@ -23,7 +23,7 @@ interface LegacyMatchHUDProps {
   awayClub?: { name: string; logo: string } | null;
 }
 
-const NEON = '#FDE100';
+const NEON = 'var(--color-neon-yellow)';
 
 export function LegacyMatchHUD({
   homeShort,
@@ -106,7 +106,7 @@ export function LegacyMatchHUD({
           )}
           <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{ width: 4, height: 4, borderRadius: '50%', background: possession === 'home' ? NEON : 'transparent', border: `1px solid ${possession === 'home' ? NEON : 'rgba(253,225,0,0.2)'}`, flexShrink: 0, transition: 'background 300ms', boxShadow: possession === 'home' ? `0 0 5px ${NEON}` : 'none' }} />
+              <div style={{ width: 4, height: 4, borderRadius: '50%', background: possession === 'home' ? NEON : 'transparent', border: `1px solid ${possession === 'home' ? NEON : 'rgba(253,225,0,0.2)'}`, flexShrink: 0, transition: 'background 300ms' }} />
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 9, fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase', color: homeLeads ? NEON : 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 72 }}>
                 {homeName ?? homeShort}
               </span>
@@ -118,11 +118,11 @@ export function LegacyMatchHUD({
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
           {/* Scores */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-            <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 36, fontWeight: 700, lineHeight: 1, color: homeLeads ? NEON : '#fff', letterSpacing: '-0.02em', transition: 'color 300ms', animation: shakeHome ? 'hudScoreShake 0.45s ease both' : 'none', display: 'inline-block' }}>
+            <span style={{ fontFamily: 'var(--font-impact)', fontSize: 36, fontWeight: 400, lineHeight: 1, color: homeLeads ? NEON : '#fff', transition: 'color 300ms', animation: shakeHome ? 'hudScoreShake 0.45s ease both' : 'none', display: 'inline-block' }}>
               {homeScore}
             </span>
-            <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 20, color: 'rgba(255,255,255,0.18)', lineHeight: 1, padding: '0 2px' }}>–</span>
-            <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 36, fontWeight: 700, lineHeight: 1, color: awayLeads ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)', letterSpacing: '-0.02em', transition: 'color 300ms', animation: shakeAway ? 'hudScoreShake 0.45s ease both' : 'none', display: 'inline-block' }}>
+            <span style={{ fontFamily: 'var(--font-impact)', fontSize: 20, color: 'rgba(255,255,255,0.18)', lineHeight: 1, padding: '0 2px' }}>–</span>
+            <span style={{ fontFamily: 'var(--font-impact)', fontSize: 36, fontWeight: 400, lineHeight: 1, color: awayLeads ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)', transition: 'color 300ms', animation: shakeAway ? 'hudScoreShake 0.45s ease both' : 'none', display: 'inline-block' }}>
               {awayScore}
             </span>
           </div>
@@ -151,7 +151,7 @@ export function LegacyMatchHUD({
 
           {/* Barra de momentum */}
           <div style={{ width: 110, height: 2, background: 'rgba(255,255,255,0.07)', marginTop: 3, position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${homePct}%`, background: NEON, transition: 'width 600ms cubic-bezier(0.4,0,0.2,1)', boxShadow: homePct > 65 ? `0 0 6px ${NEON}` : 'none' }} />
+            <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${homePct}%`, background: NEON, transition: 'width 600ms cubic-bezier(0.4,0,0.2,1)' }} />
             <div style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: `${awayPct}%`, background: 'rgba(255,255,255,0.5)', transition: 'width 600ms cubic-bezier(0.4,0,0.2,1)' }} />
             <div style={{ position: 'absolute', left: '50%', top: 0, height: '100%', width: 1, background: 'rgba(255,255,255,0.12)', transform: 'translateX(-50%)' }} />
           </div>
@@ -197,9 +197,8 @@ export function LegacyMatchHUD({
       {showClubPicker && (
         <div style={{
           position: 'absolute', top: '100%', right: 8, zIndex: 500,
-          background: '#0d0d0d', border: '1px solid rgba(253,225,0,0.2)',
+          background: 'var(--color-panel)', border: '1px solid rgba(253,225,0,0.2)',
           width: 200, maxHeight: 240, overflowY: 'auto',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.8)',
         }}>
           {BRAZILIAN_CLUBS.map((club) => (
             <button key={club.id} type="button"

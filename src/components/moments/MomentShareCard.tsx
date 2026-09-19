@@ -3,7 +3,7 @@
  *
  * Generaliza o `QuickShareCard` (que só servia a Partida Rápida) e o
  * `ChampionShareCard` local da Liga Ole (que só disparava no título). Mesma
- * anatomia visual dos dois — banner estático 9:16, manchete Moret sobreposta,
+ * anatomia visual dos dois — banner estático 9:16, manchete Anton sobreposta,
  * selo de raridade, CTA de indicação e Web Share da imagem real — mas dirigido
  * por um `Moment`, então serve Liga Ole, Legends Cup e Liga Global também.
  *
@@ -17,10 +17,11 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Share2, Sparkles, Star } from 'lucide-react';
 import { shareImageWithText } from '@/lib/shareImage';
+import { Hashtag } from '@/components/ui';
 import { track } from '@/analytics/track';
 import { momentTierLabel, type Moment, type MomentCompetition } from '@/systems/moments/detectMoment';
 
-const MORET = 'var(--font-serif-hero)';
+const MANCHETE = 'var(--font-impact)';
 
 /** Arte de fundo por competição — assets que já existem no repositório. */
 const BANNER: Record<MomentCompetition, string> = {
@@ -113,8 +114,7 @@ export function MomentShareCard({
         style={{
           borderRadius: 'var(--radius-md)',
           aspectRatio: '9 / 16',
-          border: '2px solid rgba(201,162,39,0.55)',
-          boxShadow: '0 12px 34px rgba(0,0,0,0.5)',
+          border: '2px solid var(--color-neon-yellow)',
         }}
       >
         <img
@@ -123,6 +123,7 @@ export function MomentShareCard({
           loading="eager"
           className="absolute inset-0 h-full w-full object-cover"
         />
+        {/* Scrim da foto: legibilidade do texto sobre o banner. */}
         <div
           aria-hidden
           className="absolute inset-0"
@@ -142,21 +143,14 @@ export function MomentShareCard({
               </span>
             </div>
           )}
+          <Hashtag className="mb-1 text-neon-yellow">{moment.competitionLabel}</Hashtag>
           <p
-            className="mb-1 font-display uppercase"
-            style={{ color: 'var(--color-neon-yellow)', fontSize: '10px', fontWeight: 800, letterSpacing: '0.26em' }}
-          >
-            {moment.competitionLabel}
-          </p>
-          <p
+            className="uppercase"
             style={{
-              color: '#f7ecd2',
-              fontFamily: MORET,
-              fontStyle: 'italic',
-              fontWeight: 700,
+              color: 'var(--color-giz)',
+              fontFamily: MANCHETE,
               fontSize: 'clamp(30px, 10vw, 46px)',
-              lineHeight: 0.9,
-              letterSpacing: '-0.03em',
+              lineHeight: 1.05,
             }}
           >
             {moment.headline}
@@ -179,7 +173,7 @@ export function MomentShareCard({
               style={{ borderRadius: 'var(--radius-sm)', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(253,225,0,0.4)' }}
             >
               <Star className="h-3.5 w-3.5 text-neon-yellow" strokeWidth={2.5} aria-hidden />
-              <span style={{ color: '#f7ecd2', fontSize: '11px', fontWeight: 600 }}>
+              <span style={{ color: 'var(--color-giz)', fontSize: '11px', fontWeight: 600 }}>
                 {highlight.label}: <span className="text-white">{highlight.name}</span>
                 {highlight.detail ? ` · ${highlight.detail}` : ''}
               </span>
@@ -195,7 +189,7 @@ export function MomentShareCard({
               padding: '11px',
               borderRadius: 'var(--radius-sm)',
               background: 'var(--color-neon-yellow)',
-              color: '#1a1405',
+              color: 'var(--color-deep-black)',
               fontWeight: 800,
               fontSize: '13px',
               letterSpacing: '0.04em',

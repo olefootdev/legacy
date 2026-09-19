@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { ChangePill } from './ChangePill';
 import { Sparkline } from './Sparkline';
+import { SecaoVolt } from '@/components/ui';
 
 export type WatchlistEntry = {
   id: string;
@@ -49,23 +50,13 @@ export function PlayerWatchlist({
   const copy = COPY[variant];
   return (
     <section className="space-y-3">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80">
-            {copy.eyebrow}
-          </p>
-          <h2
-            className="mt-1 font-display text-[22px] font-black uppercase leading-none tracking-tight text-white sm:text-[26px]"
-            style={{ letterSpacing: '0.005em' }}
-          >
-            {copy.title}
-          </h2>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <SecaoVolt label={copy.eyebrow} tone="neutro" className="min-w-0 grow" />
         {onScout ? (
           <button
             type="button"
             onClick={onScout}
-            className="text-[10px] font-display font-bold uppercase tracking-[0.2em] text-white/55 hover:text-neon-yellow transition-colors"
+            className="shrink-0 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento transition-colors hover:text-white"
           >
             {copy.cta}
           </button>
@@ -76,23 +67,20 @@ export function PlayerWatchlist({
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="border border-white/[0.06] divide-y divide-white/[0.04]"
-        style={{
-          borderRadius: 'var(--radius-card)',
-          background: 'var(--color-panel-elevated,#0b0b0b)',
-        }}
+        className="border border-white/10 bg-panel divide-y divide-white/[0.07]"
+        style={{ borderRadius: 'var(--radius-card)' }}
       >
         {players.length === 0 ? (
-          <div className="p-5 text-center text-[12px] text-white/55">{copy.empty}</div>
+          <div className="p-5 text-center text-[12px] text-cimento">{copy.empty}</div>
         ) : (
           players.map((p) => (
             <div key={p.id} className="flex items-center gap-3 p-3 sm:p-4">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neon-yellow/15 font-display text-[12px] font-black text-neon-yellow tabular-nums">
+              <div className="ole-num flex h-9 w-9 shrink-0 items-center justify-center bg-card-hi text-[12px] text-white tabular-nums">
                 {p.ovr}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-bold text-white truncate">{p.name}</p>
-                <p className="text-[10px] uppercase tracking-[0.15em] text-white/40">
+                <p className="truncate font-mono text-[10.5px] text-cimento">
                   {p.position} · {p.club}
                 </p>
               </div>
@@ -108,7 +96,7 @@ export function PlayerWatchlist({
                 </div>
               ) : null}
               <div className="flex flex-col items-end gap-1 shrink-0">
-                <p className="text-[13px] font-bold text-white tabular-nums">
+                <p className="font-mono text-[13px] font-medium text-white tabular-nums">
                   {formatOle(p.priceOle)} EXP
                 </p>
                 <ChangePill change={p.change24h} compact />

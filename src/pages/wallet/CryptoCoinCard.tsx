@@ -39,16 +39,10 @@ export function CryptoCoinCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay }}
       className={`relative isolate flex h-full flex-col overflow-hidden border text-left transition-colors ${
-        highlight
-          ? 'border-neon-yellow/30 bg-gradient-to-br from-neon-yellow/[0.08] to-transparent'
-          : 'border-white/[0.06] bg-[var(--color-panel-elevated,#0b0b0b)]'
+        highlight ? 'border-white/16 bg-card' : 'border-white/10 bg-panel'
       }`}
-      style={{ borderRadius: 'var(--radius-card)', boxShadow: 'var(--shadow-card)' }}
+      style={{ borderRadius: 'var(--radius-card)' }}
     >
-      {highlight ? (
-        <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
-      ) : null}
-
       <div className="relative flex h-full flex-col gap-4 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -62,17 +56,16 @@ export function CryptoCoinCard({
             </div>
             <div className="min-w-0">
               <p
-                className="font-display text-[15px] font-black uppercase leading-none tracking-tight text-white sm:text-[16px]"
-                style={{ letterSpacing: '0.005em' }}
+                className="font-impact text-[16px] uppercase leading-[1.1] text-white sm:text-[18px]"
               >
                 {ticker}
               </p>
-              <p className="mt-1 truncate text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+              <p className="mt-1 truncate font-mono text-[11px] text-cimento">
                 {name}
               </p>
               {spotPrice ? (
-                <p className="mt-1 text-[10px] tabular-nums text-white/55">
-                  {spotPrice} <span className="text-white/30">spot</span>
+                <p className="mt-1 font-mono text-[10.5px] tabular-nums text-cimento">
+                  {spotPrice} <span className="text-poeira">spot</span>
                 </p>
               ) : null}
             </div>
@@ -81,11 +74,7 @@ export function CryptoCoinCard({
           <div className="flex flex-col items-end gap-2 shrink-0">
             {badge ? (
               <span
-                className={`font-display text-[9px] font-bold uppercase tracking-[0.2em] px-2 py-1 rounded-full border ${
-                  highlight
-                    ? 'border-neon-yellow/40 text-neon-yellow bg-neon-yellow/[0.08]'
-                    : 'border-white/15 text-white/55 bg-white/[0.03]'
-                }`}
+                className="border border-white/16 px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-cimento"
               >
                 {badge}
               </span>
@@ -101,22 +90,17 @@ export function CryptoCoinCard({
         ) : null}
 
         <div className="mt-auto">
-          <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/40">
+          <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
             Saldo
           </p>
           <p
-            className={`mt-1 tabular-nums leading-none ${
-              highlight ? 'text-neon-yellow' : 'text-white'
-            }`}
-            style={{
-              fontFamily: 'var(--font-impact)',
-              fontSize: 'clamp(22px, 4vw, 30px)',
-            }}
+            className="mt-1 font-mono font-medium tabular-nums leading-none text-white [overflow-wrap:anywhere]"
+            style={{ fontSize: 'clamp(22px, 4vw, 30px)' }}
           >
             {balance}
           </p>
           {fiatRef ? (
-            <p className="mt-1 text-[10px] leading-tight text-white/35 tabular-nums">{fiatRef}</p>
+            <p className="mt-1.5 font-mono text-[10.5px] leading-tight text-poeira tabular-nums">{fiatRef}</p>
           ) : null}
         </div>
       </div>

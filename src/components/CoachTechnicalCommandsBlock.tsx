@@ -58,7 +58,7 @@ export function CoachTechnicalCommandsBlock({ disabled, minuteApprox }: Props) {
         >
           {headCmd.relevant
             ? 'Comando relevante: pesos do roteiro ajustados.'
-            : 'Comando registado — sem efeito tático nos pesos.'}
+            : 'Comando registrado — sem efeito tático nos pesos.'}
           <span className="text-white/30"> · {headCmd.text.slice(0, 48)}</span>
         </p>
       )}

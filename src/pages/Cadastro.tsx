@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { User, Shield, Heart, ArrowRight, ArrowLeft, Check, Sparkles, Trophy, Users, Briefcase, Mic, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Hashtag } from '@/components/ui';
 import { COUNTRY_DIAL_OPTIONS, isoToFlag, type CountryDialOption } from '@/lib/countryDialCodes';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -286,7 +287,19 @@ function simpleEmailOk(email: string): boolean {
 }
 
 const inputClass =
-  'w-full rounded-lg border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-white/35 focus:border-neon-yellow/50 focus:outline-none focus:ring-1 focus:ring-neon-yellow/30';
+  'w-full border border-white/16 bg-deep-black px-3 py-2.5 text-sm text-white placeholder:text-poeira focus:border-neon-yellow focus:outline-none';
+
+/** Rótulo de campo VOLT2 (mono, cimento). */
+const labelClass = 'mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento';
+/** Aviso inline de limite/caractere — mono, cor de atenção. */
+const warnClass = 'animate-pulse font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-atencao';
+const hintClass = 'text-[10.5px] text-poeira';
+/** Opção selecionável (perfil, clube): card chapado; selecionado = borda volt. */
+const opcao = (selected: boolean) =>
+  cn(
+    'border bg-deep-black transition-colors',
+    selected ? 'border-neon-yellow bg-neon-yellow/10' : 'border-white/10 hover:border-white/30',
+  );
 
 export function Cadastro() {
   const navigate = useNavigate();
@@ -486,11 +499,14 @@ export function Cadastro() {
         style={{ backgroundImage: 'url(/login-hero.png)' }}
         aria-hidden
       />
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/88 via-black/35 to-black/90" aria-hidden />
-      <div className="absolute inset-0 z-0 bg-gradient-to-t from-black via-black/50 to-black/25 opacity-[0.96]" aria-hidden />
+      {/* Scrim da foto (legibilidade) — único degradê permitido nesta tela. */}
       <div
-        className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_95%_60%_at_50%_75%,rgba(0,0,0,0.65),transparent_52%)]"
         aria-hidden
+        className="absolute inset-0 z-0"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(13,13,13,0.85) 0%, rgba(13,13,13,0.45) 20%, rgba(13,13,13,0.8) 45%, #0D0D0D 80%)',
+        }}
       />
 
       {/* Header */}
@@ -504,12 +520,10 @@ export function Cadastro() {
               height={72}
               decoding="async"
               fetchPriority="high"
-              className="h-10 w-auto max-h-11 max-w-[min(100%,280px)] object-contain object-left drop-shadow-[0_2px_16px_rgba(0,0,0,0.75)] sm:h-12 sm:max-h-[3.25rem]"
+              className="h-10 w-auto max-h-11 max-w-[min(100%,280px)] object-contain object-left sm:h-12 sm:max-h-[3.25rem]"
             />
           </Link>
-          <span className="shrink-0 rounded-full border border-white/20 bg-black/35 px-4 py-2 font-display text-[9px] font-bold uppercase tracking-[0.28em] text-white/95 sm:px-5 sm:text-[10px] sm:tracking-[0.32em]">
-            Cadastro
-          </span>
+          <Hashtag className="shrink-0 text-[12px] text-giz">#cadastro</Hashtag>
         </div>
       </header>
 
@@ -517,15 +531,7 @@ export function Cadastro() {
         <div className="min-h-[8vh] shrink-0 sm:min-h-[10vh]" aria-hidden />
 
         <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center">
-          <div
-            className={cn(
-              'relative overflow-hidden rounded-xl border border-white/[0.12]',
-              'bg-gradient-to-br from-black/60 via-black/50 to-black/70',
-              'shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_20px_50px_rgba(0,0,0,0.6)]',
-              'backdrop-blur-xl p-6 sm:p-8',
-            )}
-          >
-            <div className="absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b from-neon-yellow via-neon-yellow/80 to-neon-yellow/60" aria-hidden />
+          <div className="border border-white/10 bg-panel p-6 sm:p-8">
 
             {/* Step indicator */}
             <div className="mb-8 flex items-center justify-center gap-2">
@@ -537,12 +543,12 @@ export function Cadastro() {
                   <div key={n} className="flex items-center gap-2">
                     <div
                       className={cn(
-                        'flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all',
+                        'flex h-10 w-10 items-center justify-center border-2 transition-colors',
                         isActive
-                          ? 'border-neon-yellow bg-neon-yellow text-black shadow-[0_0_16px_rgba(253,224,71,0.4)]'
+                          ? 'border-neon-yellow bg-neon-yellow text-black'
                           : isComplete
-                            ? 'border-neon-yellow/60 bg-neon-yellow/20 text-neon-yellow'
-                            : 'border-white/20 bg-white/5 text-white/40',
+                            ? 'border-neon-yellow bg-deep-black text-neon-yellow'
+                            : 'border-white/16 bg-deep-black text-poeira',
                       )}
                     >
                       {isComplete ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
@@ -551,7 +557,7 @@ export function Cadastro() {
                       <div
                         className={cn(
                           'h-0.5 w-8 transition-colors',
-                          step > n ? 'bg-neon-yellow/60' : 'bg-white/10',
+                          step > n ? 'bg-neon-yellow' : 'bg-white/10',
                         )}
                       />
                     )}
@@ -562,23 +568,26 @@ export function Cadastro() {
 
             {/* Step title */}
             <div className="mb-6 text-center">
-              <h1 className="font-serif-hero text-[clamp(1.8rem,6vw,2.4rem)] font-normal italic leading-tight text-white">
+              <h1
+                className="font-impact uppercase leading-[1.05] text-white"
+                style={{ fontSize: 'clamp(30px, 8vw, 42px)' }}
+              >
                 {step === 1 && 'Crie sua conta'}
                 {step === 2 && 'Monte seu clube'}
                 {step === 3 && 'Escolha seu time'}
               </h1>
-              <p className="mt-2 font-sans text-sm text-white/65">
-                {step === 1 && 'Dados pessoais e credenciais de acesso'}
-                {step === 2 && 'Nome, iniciais e formação tática'}
-                {step === 3 && 'Selecione o time do coração'}
-              </p>
+              <Hashtag className="mt-2 text-[12px]">
+                {step === 1 && '#passo1 · dados e acesso'}
+                {step === 2 && '#passo2 · clube e formação'}
+                {step === 3 && '#passo3 · time do coração'}
+              </Hashtag>
             </div>
 
         {step === 1 && (
           <div className="mt-8 space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block sm:col-span-1">
-                <span className="mb-1 block text-xs font-medium text-white/65">Nome</span>
+                <span className={labelClass}>Nome</span>
                 <input
                   className={inputClass}
                   value={firstName}
@@ -587,7 +596,7 @@ export function Cadastro() {
                 />
               </label>
               <label className="block sm:col-span-1">
-                <span className="mb-1 block text-xs font-medium text-white/65">Sobrenome</span>
+                <span className={labelClass}>Sobrenome</span>
                 <input
                   className={inputClass}
                   value={lastName}
@@ -597,7 +606,7 @@ export function Cadastro() {
               </label>
             </div>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-white/65">E-mail</span>
+              <span className={labelClass}>E-mail</span>
               <input
                 type="email"
                 className={inputClass}
@@ -607,20 +616,21 @@ export function Cadastro() {
                 aria-invalid={emailTaken || undefined}
               />
               {simpleEmailOk(email) && emailChecking ? (
-                <p className="mt-1 text-[11px] text-white/45">Verificando…</p>
+                <p className="mt-1 text-[11px] text-poeira">Verificando…</p>
               ) : null}
               {emailTaken ? (
-                <p className="mt-1 text-[11px] text-rose-300">
+                <p className="mt-1 text-[11px] text-baixa">
                   ✗ E-mail já cadastrado.{' '}
-                  <Link to="/login" className="underline decoration-rose-300/50 hover:text-rose-200">
+                  <Link to="/login" className="underline decoration-baixa/50 hover:text-white">
                     Fazer login
                   </Link>
                 </p>
               ) : null}
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-white/65">
-                Senha <span className="text-white/35">(mín. 6 chars — usada pra entrar de qualquer dispositivo)</span>
+              <span className="mb-1 block text-[11px] text-cimento">
+                <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em]">Senha</span>{' '}
+                <span className="text-poeira">(mín. 6 chars — usada pra entrar de qualquer dispositivo)</span>
               </span>
               <input
                 type="password"
@@ -632,12 +642,12 @@ export function Cadastro() {
               />
             </label>
             <label className="block">
-              <span className="mb-1 flex items-center justify-between text-xs font-medium text-white/65">
-                <span>
-                  Código de indicação <span className="text-white/35">(opcional)</span>
+              <span className="mb-1 flex items-center justify-between gap-2">
+                <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">
+                  Código de indicação <span className="normal-case tracking-normal text-poeira">(opcional)</span>
                 </span>
                 {referrerFromInvite && normalizeReferralCode(referrerCode) ? (
-                  <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                  <span className="shrink-0 border border-alta/40 bg-alta/10 px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wide text-alta">
                     ✓ Convite aplicado
                   </span>
                 ) : null}
@@ -653,17 +663,17 @@ export function Cadastro() {
                 maxLength={8}
                 autoComplete="off"
               />
-              <p className="mt-1 text-[10px] text-white/35">
-                Se tiveres um link de convite, o código já vem preenchido. Não podes alterar depois de concluíres o cadastro.
+              <p className="mt-1 text-[10.5px] text-poeira">
+                Se você tiver um link de convite, o código já vem preenchido. Não dá pra alterar depois de concluir o cadastro.
               </p>
             </label>
             <div>
-              <span className="mb-2 block text-xs font-medium text-white/65">Telefone</span>
+              <span className={cn(labelClass, 'mb-2')}>Telefone</span>
               <div className="space-y-2.5">
                 {/* Linha 1: DDI + DDD */}
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <label className="mb-1 block text-[10px] font-medium text-white/50">DDI (País)</label>
+                    <label className="mb-1 block text-[10.5px] text-poeira">DDI (País)</label>
                     <select
                       className={inputClass}
                       value={dialOption.iso2}
@@ -687,7 +697,7 @@ export function Cadastro() {
                   </div>
                   {dialOption.iso2 === 'OTHER' && (
                     <div className="w-28">
-                      <label className="mb-1 block text-[10px] font-medium text-white/50">Código</label>
+                      <label className="mb-1 block text-[10.5px] text-poeira">Código</label>
                       <input
                         className={inputClass}
                         placeholder="ex. 352"
@@ -699,7 +709,7 @@ export function Cadastro() {
                   )}
                   {dialOption.iso2 === 'BR' ? (
                     <div className="w-20">
-                      <label className="mb-1 block text-[10px] font-medium text-white/50">UF</label>
+                      <label className="mb-1 block text-[10.5px] text-poeira">UF</label>
                       <select
                         className={inputClass}
                         value={brazilState}
@@ -719,7 +729,7 @@ export function Cadastro() {
                     </div>
                   ) : dialOption.iso2 !== 'OTHER' ? (
                     <div className="w-24">
-                      <label className="mb-1 block text-[10px] font-medium text-white/50">DDD</label>
+                      <label className="mb-1 block text-[10.5px] text-poeira">DDD</label>
                       <input
                         className={inputClass}
                         placeholder="DDD"
@@ -735,7 +745,7 @@ export function Cadastro() {
                 <div className="flex gap-2">
                   {dialOption.iso2 === 'BR' && brazilState ? (
                     <div className="flex-1">
-                      <label className="mb-1 block text-[10px] font-medium text-white/50">Cidade/Região</label>
+                      <label className="mb-1 block text-[10.5px] text-poeira">Cidade/Região</label>
                       <select
                         className={inputClass}
                         value={brazilCity}
@@ -758,7 +768,7 @@ export function Cadastro() {
                     </div>
                   ) : null}
                   <div className={dialOption.iso2 === 'BR' && brazilState ? 'flex-1' : 'w-full'}>
-                    <label className="mb-1 block text-[10px] font-medium text-white/50">Número</label>
+                    <label className="mb-1 block text-[10.5px] text-poeira">Número</label>
                     <input
                       className={inputClass}
                       placeholder="Número do telefone"
@@ -771,7 +781,7 @@ export function Cadastro() {
                 </div>
               </div>
               {phoneE164 ? (
-                <p className="mt-1.5 font-mono text-[10px] text-white/40">Seu telefone é {phoneE164}</p>
+                <p className="mt-1.5 font-mono text-[10.5px] text-cimento">Seu telefone é {phoneE164}</p>
               ) : null}
             </div>
           </div>
@@ -781,7 +791,7 @@ export function Cadastro() {
           <div className="mt-8 space-y-6">
             {/* Seleção de perfil */}
             <div>
-              <p className="mb-3 text-center font-display text-base font-bold uppercase tracking-wide text-white">
+              <p className="mb-3 text-center font-impact text-[20px] uppercase leading-[1.1] text-white">
                 Qual seu perfil?
               </p>
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
@@ -800,23 +810,18 @@ export function Cadastro() {
                       key={profile.id}
                       type="button"
                       onClick={() => setUserProfile(profile.id)}
-                      className={cn(
-                        'flex flex-col items-center gap-2 rounded-lg border bg-black/30 p-3 transition-all',
-                        selected
-                          ? 'border-neon-yellow bg-neon-yellow/10 shadow-[0_0_16px_rgba(234,255,0,0.2)]'
-                          : 'border-white/10 hover:border-white/30',
-                      )}
+                      className={cn('flex flex-col items-center gap-2 p-3', opcao(selected))}
                       aria-pressed={selected}
                     >
                       <div className={cn(
-                        'flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
-                        selected ? 'border-neon-yellow/70 bg-neon-yellow/20' : 'border-white/20 bg-white/5',
+                        'flex h-10 w-10 items-center justify-center border transition-colors',
+                        selected ? 'border-neon-yellow bg-neon-yellow text-black' : 'border-white/16 text-cimento',
                       )}>
-                        <Icon className={cn('h-5 w-5', selected ? 'text-neon-yellow' : 'text-white/60')} />
+                        <Icon className="h-5 w-5" />
                       </div>
                       <span className={cn(
                         'text-center text-[11px] font-bold leading-tight',
-                        selected ? 'text-neon-yellow' : 'text-white/75',
+                        selected ? 'text-neon-yellow' : 'text-giz',
                       )}>
                         {profile.label}
                       </span>
@@ -825,9 +830,9 @@ export function Cadastro() {
                 })}
               </div>
               {userProfile === 'ex_jogador' && (
-                <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2">
-                  <p className="text-center text-[11px] text-amber-200/90">
-                    ⭐ Entraremos em contato para validar seu perfil de ex-jogador
+                <div className="mt-3 border border-atencao/40 bg-atencao/10 px-3 py-2">
+                  <p className="text-center text-[11px] text-giz">
+                    Entraremos em contato para validar seu perfil de ex-jogador
                   </p>
                 </div>
               )}
@@ -837,27 +842,20 @@ export function Cadastro() {
             <div className="border-t border-white/10" />
 
             <div>
-              <p className="mb-1 text-center font-display text-sm font-bold uppercase tracking-wide text-white">
-                Escolhe o teu time do coração
+              <p className="mb-1 text-center font-impact text-[20px] uppercase leading-[1.1] text-white">
+                Time do coração
               </p>
-              <p className="text-center text-[11px] text-white/50">
-                13 ligas disponíveis. O escudo aparece ao lado do nome do teu clube nas telas do jogo.
-              </p>
+              <Hashtag className="text-center">{`#${LEAGUE_BUCKETS.length}ligas`}</Hashtag>
             </div>
 
             {/* Seleção Brasil em destaque (1 card cheio no topo) */}
             <button
               type="button"
               onClick={() => setFavoriteTeam(SELECAO_BRASIL)}
-              className={cn(
-                'flex w-full items-center gap-3 rounded-lg border bg-black/30 p-3 transition-colors',
-                favoriteTeam?.id === SELECAO_BRASIL.id
-                  ? 'border-neon-yellow bg-neon-yellow/10 shadow-[0_0_16px_rgba(234,255,0,0.2)]'
-                  : 'border-white/10 hover:border-white/30',
-              )}
+              className={cn('flex w-full items-center gap-3 p-3', opcao(favoriteTeam?.id === SELECAO_BRASIL.id))}
               aria-pressed={favoriteTeam?.id === SELECAO_BRASIL.id}
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-black/60">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/16 bg-panel">
                 {SELECAO_BRASIL.logo ? (
                   <img
                     src={SELECAO_BRASIL.logo}
@@ -870,8 +868,8 @@ export function Cadastro() {
                 ) : null}
               </div>
               <div className="min-w-0 flex-1 text-left">
-                <p className="font-display text-sm font-bold text-white">🇧🇷 Seleção Brasil</p>
-                <p className="text-[10px] text-white/50">Time do coração dos que torcem pela pátria.</p>
+                <p className="truncate font-impact text-[17px] uppercase leading-[1.1] text-white">🇧🇷 Seleção Brasil</p>
+                <Hashtag className="text-[11px]">#seleção</Hashtag>
               </div>
             </button>
 
@@ -883,10 +881,10 @@ export function Cadastro() {
                   type="button"
                   onClick={() => setLeagueBucketId(b.id)}
                   className={cn(
-                    'rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                    'border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors',
                     leagueBucketId === b.id
-                      ? 'border-neon-yellow/60 bg-neon-yellow/15 text-neon-yellow'
-                      : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/25 hover:text-white',
+                      ? 'border-neon-yellow bg-neon-yellow text-black'
+                      : 'border-white/10 bg-deep-black text-cimento hover:border-white/30 hover:text-white',
                   )}
                 >
                   <span className="mr-1">{b.flag}</span>
@@ -904,17 +902,12 @@ export function Cadastro() {
                     key={c.id}
                     type="button"
                     onClick={() => setFavoriteTeam(c)}
-                    className={cn(
-                      'group flex flex-col items-center gap-1 rounded-lg border bg-black/30 p-2 transition-colors',
-                      selected
-                        ? 'border-neon-yellow bg-neon-yellow/10 shadow-[0_0_16px_rgba(234,255,0,0.2)]'
-                        : 'border-white/10 hover:border-white/30',
-                    )}
+                    className={cn('group flex flex-col items-center gap-1 p-2', opcao(selected))}
                     aria-pressed={selected}
                   >
                     <div className={cn(
                       'flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border',
-                      selected ? 'border-neon-yellow/70 bg-black' : 'border-white/20 bg-black/60',
+                      selected ? 'border-neon-yellow bg-panel' : 'border-white/16 bg-panel',
                     )}>
                       {c.logo ? (
                         <img
@@ -929,7 +922,7 @@ export function Cadastro() {
                     </div>
                     <span className={cn(
                       'line-clamp-2 text-center text-[10px] font-bold leading-tight',
-                      selected ? 'text-neon-yellow' : 'text-white/75',
+                      selected ? 'text-neon-yellow' : 'text-giz',
                     )}>
                       {c.name}
                     </span>
@@ -939,8 +932,8 @@ export function Cadastro() {
             </div>
 
             {favoriteTeam ? (
-              <p className="text-center text-[11px] text-neon-yellow/80">
-                💛 {favoriteTeam.name} selecionado
+              <p className="text-center text-[11px] font-medium text-neon-yellow">
+                ✓ {favoriteTeam.name} selecionado
               </p>
             ) : null}
           </div>
@@ -950,15 +943,7 @@ export function Cadastro() {
           <div className="mt-8 space-y-5">
             {/* Nome do clube — limite 10 caracteres com aviso inline */}
             <label className="block">
-              <span
-                className="mb-2 block uppercase text-white/60"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  letterSpacing: '0.22em',
-                }}
-              >
+              <span className={cn(labelClass, 'mb-2')}>
                 Nome do clube
               </span>
               <input
@@ -996,39 +981,18 @@ export function Cadastro() {
               <div className="mt-1.5 flex items-center justify-between gap-3">
                 {clubNameWarn ? (
                   <p
-                    className="uppercase text-[var(--color-warning)] animate-pulse"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '9px',
-                      fontWeight: 800,
-                      letterSpacing: '0.22em',
-                    }}
+                    className={warnClass}
                     role="status"
                     aria-live="polite"
                   >
                     ⚠ {clubNameWarn}
                   </p>
                 ) : (
-                  <p
-                    className="text-white/40"
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: '10px',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
+                  <p className={hintClass}>
                     Máximo 10 caracteres
                   </p>
                 )}
-                <span
-                  className="tabular-nums text-white/35"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    letterSpacing: '0.12em',
-                  }}
-                >
+                <span className="ole-num text-[10.5px] text-poeira">
                   {clubName.length}/10
                 </span>
               </div>
@@ -1036,15 +1000,7 @@ export function Cadastro() {
 
             {/* Iniciais — só A–Z, máximo 3 letras, sem pontos/caracteres especiais */}
             <label className="block">
-              <span
-                className="mb-2 block uppercase text-white/60"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  letterSpacing: '0.22em',
-                }}
-              >
+              <span className={cn(labelClass, 'mb-2')}>
                 Iniciais
               </span>
               <input
@@ -1081,39 +1037,18 @@ export function Cadastro() {
               <div className="mt-1.5 flex items-center justify-between gap-3">
                 {initialsWarn ? (
                   <p
-                    className="uppercase text-[var(--color-warning)] animate-pulse"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '9px',
-                      fontWeight: 800,
-                      letterSpacing: '0.22em',
-                    }}
+                    className={warnClass}
                     role="status"
                     aria-live="polite"
                   >
                     ⚠ {initialsWarn}
                   </p>
                 ) : (
-                  <p
-                    className="text-white/40"
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: '10px',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
+                  <p className={hintClass}>
                     3 letras (sem pontos ou números)
                   </p>
                 )}
-                <span
-                  className="tabular-nums text-white/35"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    letterSpacing: '0.12em',
-                  }}
-                >
+                <span className="ole-num text-[10.5px] text-poeira">
                   {initials.length}/3
                 </span>
               </div>
@@ -1122,31 +1057,13 @@ export function Cadastro() {
               {initials.trim().length >= 2 && (
                 <div className="mt-1">
                   {initialsChecking ? (
-                    <p className="text-white/40" style={{ fontFamily: 'var(--font-ui)', fontSize: '10px' }}>
-                      Verificando…
-                    </p>
+                    <p className={hintClass}>Verificando…</p>
                   ) : initialsTaken ? (
-                    <p
-                      className="uppercase text-red-400"
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '9px',
-                        fontWeight: 800,
-                        letterSpacing: '0.22em',
-                      }}
-                    >
-                      ✗ Iniciais já em uso — escolhe outras
+                    <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-baixa">
+                      ✗ Iniciais já em uso — escolha outras
                     </p>
                   ) : (
-                    <p
-                      className="text-green-400"
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '9px',
-                        fontWeight: 700,
-                        letterSpacing: '0.18em',
-                      }}
-                    >
+                    <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-alta">
                       ✓ DISPONÍVEL
                     </p>
                   )}
@@ -1155,17 +1072,11 @@ export function Cadastro() {
 
               {/* Preview do @username */}
               {previewUsername && !initialsTaken && !initialsChecking && (
-                <div className="mt-2 flex items-center gap-1.5 rounded border border-neon-yellow/20 bg-neon-yellow/[0.04] px-3 py-1.5">
-                  <span
-                    className="text-neon-yellow/60"
-                    style={{ fontFamily: 'var(--font-display)', fontSize: '9px', letterSpacing: '0.15em' }}
-                  >
-                    TEU USERNAME:
+                <div className="mt-2 flex min-w-0 items-center gap-1.5 border border-white/10 bg-deep-black px-3 py-1.5">
+                  <span className="shrink-0 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">
+                    Seu username:
                   </span>
-                  <span
-                    className="text-neon-yellow font-semibold tabular-nums"
-                    style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}
-                  >
+                  <span className="min-w-0 truncate font-mono text-[12px] font-medium text-neon-yellow">
                     @{previewUsername}
                   </span>
                 </div>
@@ -1174,15 +1085,7 @@ export function Cadastro() {
 
             {/* Formação */}
             <label className="block">
-              <span
-                className="mb-2 block uppercase text-white/60"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  letterSpacing: '0.22em',
-                }}
-              >
+              <span className={cn(labelClass, 'mb-2')}>
                 Formação
               </span>
               <select
@@ -1196,16 +1099,9 @@ export function Cadastro() {
                   </option>
                 ))}
               </select>
-              <p
-                className="mt-1.5 text-white/45"
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '10px',
-                  letterSpacing: '0.04em',
-                }}
-              >
+              <p className="mt-1.5 text-[10.5px] text-cimento">
                 Estilo tático:{' '}
-                <span className="font-display font-bold uppercase tracking-[0.2em] text-neon-yellow/85">
+                <span className="font-mono font-medium uppercase tracking-[0.14em] text-neon-yellow">
                   {PRESET_LABEL_PT[FORMATION_TACTICAL_DEFAULTS[formationScheme].presetId]}
                 </span>
               </p>
@@ -1214,8 +1110,8 @@ export function Cadastro() {
         )}
 
         {finishError ? (
-          <div className="mt-6 flex items-start gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-            <span className="text-rose-400">✗</span>
+          <div className="mt-6 flex items-start gap-2 border border-baixa/50 bg-baixa/10 px-4 py-3 text-sm text-giz">
+            <span className="text-baixa">✗</span>
             <span>{finishError}</span>
           </div>
         ) : null}
@@ -1224,7 +1120,7 @@ export function Cadastro() {
           {step > 1 ? (
             <button
               type="button"
-              className="group flex items-center justify-center rounded-lg border border-white/20 bg-white/5 px-6 py-3 font-display text-sm font-bold uppercase tracking-wide text-white backdrop-blur-sm transition-all hover:border-white/30 hover:bg-white/10 active:scale-[0.98] sm:order-1"
+              className="btn-secondary flex h-12 items-center justify-center sm:order-1"
               onClick={() => setStep((step - 1) as 1 | 2 | 3)}
             >
               Voltar
@@ -1232,7 +1128,7 @@ export function Cadastro() {
           ) : (
             <Link
               to="/login"
-              className="group flex items-center justify-center rounded-lg border border-white/20 bg-white/5 px-6 py-3 font-display text-sm font-bold uppercase tracking-wide text-white backdrop-blur-sm transition-all hover:border-white/30 hover:bg-white/10 active:scale-[0.98] sm:order-1"
+              className="btn-secondary flex h-12 items-center justify-center sm:order-1"
             >
               Cancelar
             </Link>
@@ -1241,7 +1137,7 @@ export function Cadastro() {
             <button
               type="button"
               className={cn(
-                'group flex items-center justify-center rounded-lg border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 px-6 py-3 font-display text-sm font-black uppercase tracking-wide text-black shadow-[0_0_20px_rgba(253,224,71,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(253,224,71,0.5)] active:scale-[0.98] sm:order-2',
+                'btn-primary flex h-12 items-center justify-center sm:order-2',
                 (step === 1 && !step1Valid) || (step === 2 && !step2Valid) ? 'pointer-events-none opacity-40' : '',
               )}
               disabled={(step === 1 && !step1Valid) || (step === 2 && !step2Valid)}
@@ -1253,7 +1149,7 @@ export function Cadastro() {
             <button
               type="button"
               className={cn(
-                'group flex items-center justify-center rounded-lg border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 px-6 py-3 font-display text-sm font-black uppercase tracking-wide text-black shadow-[0_0_20px_rgba(253,224,71,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(253,224,71,0.5)] active:scale-[0.98] sm:order-2',
+                'btn-primary flex h-12 items-center justify-center sm:order-2',
                 !step3Valid || finishBusy ? 'pointer-events-none opacity-40' : '',
               )}
               disabled={!step3Valid || finishBusy}
@@ -1267,7 +1163,7 @@ export function Cadastro() {
       </div>
     </div>
 
-    <footer className="relative z-10 mx-auto mt-6 max-w-md text-center text-[10px] text-white/35 sm:text-[11px]">
+    <footer className="relative z-10 mx-auto mt-6 max-w-md text-center text-[10px] text-poeira sm:text-[11px]">
       Olefoot © 2026 · Todos os direitos reservados
     </footer>
   </div>

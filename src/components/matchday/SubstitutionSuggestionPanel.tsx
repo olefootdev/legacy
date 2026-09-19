@@ -81,7 +81,7 @@ export function SubstitutionSuggestionPanel({
               exit={{ opacity: 0, x: 20 }}
               transition={{ delay: i * 0.1 }}
               className={cn(
-                'relative overflow-hidden rounded-lg border backdrop-blur-sm',
+                'relative overflow-hidden rounded-lg border',
                 config.bgColor,
                 config.borderColor,
                 suggestion.urgency === 'high' && 'animate-pulse',
@@ -138,7 +138,7 @@ export function SubstitutionSuggestionPanel({
                 <div className="flex gap-2">
                   <button
                     onClick={() => onAccept(suggestion)}
-                    className="flex-1 rounded-md bg-yellow-400 px-3 py-2 text-sm font-bold uppercase tracking-wide text-black transition-all hover:bg-yellow-300 hover:shadow-lg"
+                    className="flex-1 rounded-md bg-neon-yellow px-3 py-2 text-sm font-bold uppercase tracking-wide text-black transition-colors hover:bg-white"
                   >
                     Substituir
                   </button>

@@ -50,7 +50,7 @@ export interface MatchdayHeroData {
     tone?: 'accent' | 'success' | 'warning' | 'danger' | 'muted';
   }[];
   highlight: {
-    /** Nome do jogador (vai no título grande em Moret italic). */
+    /** Nome do jogador (vai no título grande em Anton). */
     name: string;
     /** Número decorativo gigante atrás (camisa, OVR, etc.). 1-3 dígitos. */
     number: number;
@@ -164,24 +164,6 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
           aria-hidden
         />
       )}
-      {/* Linhas verticais sutis (textura de campo) — full width no solid, clipped no split */}
-      <svg
-        aria-hidden
-        className="absolute inset-0 pointer-events-none"
-        style={solid ? undefined : { clipPath: 'polygon(0 0, 62% 0, 38% 100%, 0% 100%)' }}
-        width="100%"
-        height="100%"
-        preserveAspectRatio="none"
-        viewBox="0 0 100 100"
-      >
-        <g stroke="#000" strokeOpacity="0.06" strokeWidth="0.15">
-          <line x1="20" y1="0" x2="20" y2="100" />
-          <line x1="40" y1="0" x2="40" y2="100" />
-          <line x1="60" y1="0" x2="60" y2="100" />
-          <line x1="80" y1="0" x2="80" y2="100" />
-        </g>
-      </svg>
-
       {/* Conteúdo */}
       <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-8 pt-5 sm:pt-7 pb-16 sm:pb-20">
         {/* Top bar */}
@@ -254,49 +236,33 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
             </div>
           </div>
 
-          {/* Score / vs em Moret italic gigante */}
+          {/* Score (Archivo expandida) / vs (Anton) */}
           <div className="self-stretch flex items-center justify-center px-1">
             {showScore ? (
               <>
                 <span
-                  className="leading-none text-black tabular-nums"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontStyle: 'italic',
-                    fontSize: 'clamp(64px, 14vw, 144px)',
-                  }}
+                  className="ole-num leading-none text-black tabular-nums"
+                  style={{ fontSize: 'clamp(52px, 12vw, 128px)' }}
                 >
                   {data.home.score}
                 </span>
                 <span
-                  className="leading-none mx-1 sm:mx-2 text-text-muted/60"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontStyle: 'italic',
-                    fontSize: 'clamp(48px, 10vw, 96px)',
-                  }}
+                  className="font-impact leading-none mx-1 sm:mx-2 text-text-muted/60"
+                  style={{ fontSize: 'clamp(48px, 10vw, 96px)' }}
                 >
                   –
                 </span>
                 <span
-                  className={`leading-none tabular-nums ${rightTextStrong}`}
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontStyle: 'italic',
-                    fontSize: 'clamp(64px, 14vw, 144px)',
-                  }}
+                  className={`ole-num leading-none tabular-nums ${rightTextStrong}`}
+                  style={{ fontSize: 'clamp(52px, 12vw, 128px)' }}
                 >
                   {data.away.score}
                 </span>
               </>
             ) : (
               <span
-                className="leading-none text-black/85 select-none"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
-                  fontSize: 'clamp(64px, 14vw, 144px)',
-                }}
+                className="font-impact uppercase leading-none text-black/85 select-none"
+                style={{ fontSize: 'clamp(64px, 14vw, 144px)' }}
               >
                 vs
               </span>
@@ -358,23 +324,19 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
           {data.stats.map((s, i) => {
             const toneColor =
               s.tone === 'success'
-                ? 'text-emerald-300'
+                ? 'text-alta'
                 : s.tone === 'warning'
-                  ? 'text-amber-300'
+                  ? 'text-atencao'
                   : s.tone === 'danger'
-                    ? 'text-red-300'
+                    ? 'text-baixa'
                     : s.tone === 'muted'
                       ? 'text-white/65'
                       : 'text-neon-yellow';
             const inner = (
               <>
                 <p
-                  className={cn('tabular-nums leading-none italic', toneColor)}
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontWeight: 700,
-                    fontSize: 'clamp(22px, 4.4vw, 44px)',
-                  }}
+                  className={cn('ole-num tabular-nums leading-none', toneColor)}
+                  style={{ fontSize: 'clamp(20px, 4vw, 40px)' }}
                 >
                   {s.value}
                 </p>
@@ -385,7 +347,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
             );
             const baseCls = cn(
               statsBg(i),
-              s.href && 'cursor-pointer transition-all hover:bg-black/85 hover:-translate-y-0.5',
+              s.href && 'cursor-pointer transition-colors hover:bg-black/85',
             );
             if (s.href) {
               return (
@@ -404,32 +366,14 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
 
         {/* MVP — Sprint C Fase F: foto cinemática + info CENTRADA verticalmente com a foto */}
         <div className="relative grid grid-cols-[180px_1fr] sm:grid-cols-[260px_1fr] md:grid-cols-[360px_1fr] gap-5 sm:gap-7 md:gap-9 items-center pb-2">
-          {/* Foto P&B + número decorativo — moldura editorial, ainda maior */}
+          {/* Foto P&B — moldura editorial */}
           <div className="relative flex items-center justify-center">
-            {/* Número decorativo atrás (oculto em viewports estreitos) */}
-            <span
-              aria-hidden
-              className="hidden md:flex absolute inset-0 items-center justify-center leading-none tabular-nums text-neon-yellow/15 select-none pointer-events-none"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 900,
-                fontSize: 'clamp(160px, 20vw, 320px)',
-                letterSpacing: '-0.04em',
-              }}
-            >
-              {String(data.highlight.number).padStart(2, '0')}
-            </span>
             {data.highlight.photoUrl ? (
               <div className="relative z-10 w-full aspect-[4/5]">
-                {/* Spotlight glow editorial atrás da foto */}
-                <div
-                  aria-hidden
-                  className="absolute -inset-3 -z-10 bg-gradient-to-br from-neon-yellow/0 via-neon-yellow/0 to-black/35 blur-2xl"
-                />
                 <img
                   src={data.highlight.photoUrl}
                   alt={data.highlight.name}
-                  className="w-full h-full object-cover object-top ole-player-photo-bw shadow-[0_24px_48px_rgba(0,0,0,0.45)]"
+                  className="w-full h-full object-cover object-top ole-player-photo-bw"
                   draggable={false}
                   referrerPolicy="no-referrer"
                 />
@@ -444,20 +388,20 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
                 <span
-                  className="inline-flex items-center rounded-[var(--radius-pill,9999px)] bg-black px-3 py-1 font-display text-[9px] font-black uppercase tracking-[0.22em] text-neon-yellow shadow-[0_2px_10px_rgba(0,0,0,0.25)]"
+                  className="inline-flex items-center rounded-full bg-black px-3 py-1 font-display text-[9px] font-black uppercase tracking-[0.22em] text-neon-yellow"
                 >
                   MVP
                 </span>
                 {data.highlight.tag ? (
                   <span
-                    className="inline-flex items-center rounded-[var(--radius-pill,9999px)] bg-black px-3 py-1 font-display text-[9px] font-black uppercase tracking-[0.22em] text-neon-yellow shadow-[0_2px_10px_rgba(0,0,0,0.25)]"
+                    className="inline-flex items-center rounded-full bg-black px-3 py-1 font-display text-[9px] font-black uppercase tracking-[0.22em] text-neon-yellow"
                   >
                     {data.highlight.tag}
                   </span>
                 ) : null}
               </div>
               <h3
-                className="ole-headline-italic text-black leading-[0.88] [overflow-wrap:anywhere]"
+                className="font-impact uppercase text-black leading-[0.95] [overflow-wrap:anywhere]"
                 style={{ fontSize: 'clamp(34px, 7vw, 88px)' }}
               >
                 {data.highlight.name.split(' ').slice(0, 1)}
@@ -472,8 +416,8 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                       className={cn(
                         'inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-black tracking-[0.18em]',
                         data.highlight.deltaOvr > 0
-                          ? 'bg-emerald-500/90 text-black'
-                          : 'bg-red-500/90 text-white',
+                          ? 'bg-alta text-black'
+                          : 'bg-baixa text-white',
                       )}
                     >
                       {data.highlight.deltaOvr > 0 ? '▲' : '▼'} {Math.abs(data.highlight.deltaOvr)} OVR
@@ -485,7 +429,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
 
             {/* Zona 2: Quote (centro vertical, opcional) */}
             <blockquote
-              className="ole-headline-italic text-black/80 max-w-md leading-snug"
+              className="font-sans font-semibold text-black/80 max-w-md leading-snug"
               style={{ fontSize: 'clamp(14px, 1.9vw, 19px)' }}
             >
               “{data.highlight.quote}”
@@ -500,13 +444,8 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                 {typeof data.highlight.goalsSeason === 'number' ? (
                   <div className="min-w-0">
                     <p
-                      className="italic text-black tabular-nums leading-none"
-                      style={{
-                        fontFamily: 'var(--font-serif-hero)',
-                        fontWeight: 700,
-                        fontSize: 'clamp(28px, 5vw, 44px)',
-                        letterSpacing: '-0.02em',
-                      }}
+                      className="ole-num text-black tabular-nums leading-none"
+                      style={{ fontSize: 'clamp(24px, 4.4vw, 40px)' }}
                     >
                       {data.highlight.goalsSeason}
                     </p>
@@ -518,13 +457,8 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                 {typeof data.highlight.assistsSeason === 'number' ? (
                   <div className="min-w-0">
                     <p
-                      className="italic text-black tabular-nums leading-none"
-                      style={{
-                        fontFamily: 'var(--font-serif-hero)',
-                        fontWeight: 700,
-                        fontSize: 'clamp(28px, 5vw, 44px)',
-                        letterSpacing: '-0.02em',
-                      }}
+                      className="ole-num text-black tabular-nums leading-none"
+                      style={{ fontSize: 'clamp(24px, 4.4vw, 40px)' }}
                     >
                       {data.highlight.assistsSeason}
                     </p>
@@ -536,13 +470,8 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                 {typeof data.highlight.mvpsSeason === 'number' ? (
                   <div className="min-w-0">
                     <p
-                      className="italic text-black tabular-nums leading-none"
-                      style={{
-                        fontFamily: 'var(--font-serif-hero)',
-                        fontWeight: 700,
-                        fontSize: 'clamp(28px, 5vw, 44px)',
-                        letterSpacing: '-0.02em',
-                      }}
+                      className="ole-num text-black tabular-nums leading-none"
+                      style={{ fontSize: 'clamp(24px, 4.4vw, 40px)' }}
                     >
                       {data.highlight.mvpsSeason}
                     </p>
@@ -558,14 +487,13 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                         <span
                           key={i}
                           className={cn(
-                            'inline-flex h-4 w-4 items-center justify-center font-display text-[9px] font-black uppercase',
+                            'inline-flex h-4 w-4 items-center justify-center rounded-sm font-display text-[9px] font-black uppercase',
                             r === 'W'
-                              ? 'bg-emerald-500 text-black'
+                              ? 'bg-alta text-black'
                               : r === 'D'
-                                ? 'bg-amber-400 text-black'
-                                : 'bg-red-500 text-white',
+                                ? 'bg-atencao text-black'
+                                : 'bg-baixa text-white',
                           )}
-                          style={{ borderRadius: '3px' }}
                           title={r === 'W' ? 'Vitória' : r === 'D' ? 'Empate' : 'Derrota'}
                         >
                           {r === 'W' ? 'V' : r === 'D' ? 'E' : 'D'}
@@ -587,7 +515,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                   data.highlight.ctaPrimary.href ? (
                     <Link
                       to={data.highlight.ctaPrimary.href}
-                      className="inline-flex items-center bg-black px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-neon-yellow shadow-[0_4px_14px_rgba(0,0,0,0.3)] transition-all hover:bg-deep-black hover:scale-[1.02]"
+                      className="inline-flex items-center bg-black px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-neon-yellow transition-colors hover:bg-deep-black"
                       style={{ borderRadius: 'var(--radius-sm)' }}
                     >
                       {data.highlight.ctaPrimary.label}
@@ -596,7 +524,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                     <button
                       type="button"
                       onClick={data.highlight.ctaPrimary.onClick}
-                      className="inline-flex items-center bg-black px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-neon-yellow shadow-[0_4px_14px_rgba(0,0,0,0.3)] transition-all hover:bg-deep-black hover:scale-[1.02]"
+                      className="inline-flex items-center bg-black px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-neon-yellow transition-colors hover:bg-deep-black"
                       style={{ borderRadius: 'var(--radius-sm)' }}
                     >
                       {data.highlight.ctaPrimary.label}
@@ -639,7 +567,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                 {actions.map((a) => {
                   const cls =
                     a.variant === 'primary'
-                      ? 'bg-neon-yellow text-black hover:bg-white px-4 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] transition-colors rounded-sm shadow-[0_4px_12px_rgba(253,225,0,0.25)]'
+                      ? 'bg-neon-yellow text-black hover:bg-white px-4 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] transition-colors rounded-sm'
                       : 'bg-black border border-white/15 text-white px-4 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] hover:border-neon-yellow hover:text-neon-yellow transition-colors rounded-sm';
                   if (a.href) {
                     return (
@@ -664,7 +592,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                   const el = document.getElementById(data.scrollCueTargetId!);
                   el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
-                className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:bg-neon-yellow transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.25)]"
+                className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:bg-neon-yellow transition-colors"
               >
                 <ChevronDown className="w-4 h-4" />
               </button>

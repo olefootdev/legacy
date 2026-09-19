@@ -2,8 +2,8 @@
  * Sprint L4 — Painel de controles contextuais de prensa.
  * Triggers + zona + intensidade. Lê/atualiza state.manager.pressing.
  *
- * Design system Legacy Tech:
- * — Botões de zona com -skew-x-6 + clip nas bordas, neon-yellow no ativo
+ * VOLT2:
+ * — Botões de zona retos, volt chapado no ativo
  * — Slider com track preto + fill amarelo + thumb destacado
  * — Eyebrow `tracking-[0.35em]` no header da seção
  */
@@ -75,18 +75,17 @@ export function PressingControls() {
                 key={z}
                 type="button"
                 onClick={() => setZone(z)}
-                className="relative -skew-x-6 transition-all"
+                className="relative transition-colors"
                 style={{
                   background: active ? 'var(--color-neon-yellow)' : 'var(--color-card)',
                   color: active ? '#000' : 'rgba(255,255,255,0.65)',
                   border: active
                     ? '1px solid transparent'
                     : '1px solid rgba(255,255,255,0.08)',
-                  boxShadow: active ? '0 0 14px rgba(253, 225, 0, 0.32)' : 'none',
                 }}
               >
                 <span
-                  className="block skew-x-6 py-2 text-[10px] uppercase tracking-[0.22em] font-display font-bold"
+                  className="block py-2 text-[10px] uppercase tracking-[0.22em] font-display font-bold"
                 >
                   {ZONE_LABEL[z]}
                 </span>

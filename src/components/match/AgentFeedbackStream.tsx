@@ -58,9 +58,9 @@ function getResponse(tier: FeedbackEntry['tier'], intent: VoiceIntent): string {
 const TIER_COLOR: Record<FeedbackEntry['tier'], string> = {
   critical_accept: '#FDE100',
   accept:          '#FDE100',
-  weak_accept:     '#f97316',
-  refuse:          '#ef4444',
-  protest:         '#ef4444',
+  weak_accept:     '#FF9F1C',
+  refuse:          '#FF4D4D',
+  protest:         '#FF4D4D',
 };
 
 interface AgentFeedbackStreamProps {
@@ -158,7 +158,6 @@ export function AgentFeedbackStream({ entries }: { entries: FeedbackEntry[] }) {
           </div>
           <div style={{
             fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
             fontSize: 12,
             color: '#fff',
             lineHeight: 1.2,
@@ -168,7 +167,6 @@ export function AgentFeedbackStream({ entries }: { entries: FeedbackEntry[] }) {
           </div>
           <div style={{
             fontFamily: 'var(--font-serif-hero)',
-            fontStyle: 'italic',
             fontSize: 10,
             color: TIER_COLOR[e.tier],
             lineHeight: 1.3,

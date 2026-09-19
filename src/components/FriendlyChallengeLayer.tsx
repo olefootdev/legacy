@@ -95,27 +95,27 @@ export function FriendlyChallengeLayer() {
   const left = secondsLeft(incoming.expires_at);
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/80 p-4 backdrop-blur-sm sm:items-center">
+    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/85 p-4 sm:items-center">
       <div
         className={cn(
-          'relative w-full max-w-md border border-neon-yellow/40 bg-[#0a0a0a] p-5 shadow-2xl',
+          'relative w-full max-w-md border border-neon-yellow/40 bg-panel p-5',
           'sports-panel',
         )}
       >
         <button
           type="button"
           onClick={() => void onDecline()}
-          className="absolute right-3 top-3 rounded-full p-2 text-gray-500 hover:text-white"
+          className="absolute right-3 top-3 p-2 text-cimento hover:text-white"
           aria-label="Fechar"
         >
           <X className="h-5 w-5" />
         </button>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-neon-yellow">Desafio amistoso</p>
-        <h2 className="mt-2 font-display text-xl font-black uppercase tracking-wide text-white">
+        <p className="font-mono text-[11.5px] font-medium text-neon-yellow">#desafio · amistoso</p>
+        <h2 className="mt-2 truncate pr-8 font-impact text-2xl uppercase leading-[1.1] text-white">
           {incoming.challenger_club_name}
         </h2>
-        <p className="mt-2 text-sm text-gray-400">
-          Convida-te para um {incoming.mode === 'live' ? 'jogo ao vivo' : 'jogo rápido'}.
+        <p className="mt-2 text-sm text-cimento">
+          Te convidou pra um {incoming.mode === 'live' ? 'jogo ao vivo' : 'jogo rápido'}.
           {incoming.bet_currency === 'BRO' && incoming.bet_bro_cents != null ? (
             <span className="mt-1 block text-white">
               Aposta: {(incoming.bet_bro_cents / 100).toFixed(2)} BRO (vencedor)
@@ -125,17 +125,17 @@ export function FriendlyChallengeLayer() {
             <span className="mt-1 block text-white">Aposta: {formatExp(incoming.bet_exp)} EXP</span>
           ) : null}
         </p>
-        <div className="mt-4 flex items-center justify-between rounded border border-white/10 bg-black/40 px-3 py-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Tempo para aceitar</span>
-          <span className="font-display text-2xl font-black text-neon-yellow">{left}s</span>
+        <div className="mt-4 flex items-center justify-between border border-white/10 bg-deep-black px-3 py-2">
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-cimento">Tempo para aceitar</span>
+          <span className="ole-num text-2xl text-neon-yellow">{left}s</span>
         </div>
-        <p className="mt-2 text-[10px] text-gray-600">Máximo {FRIENDLY_CHALLENGE_TTL_SEC}s — ambos os managers devem estar online.</p>
-        <div className="mt-5 grid grid-cols-2 gap-2">
+        <p className="mt-2 font-mono text-[10.5px] text-poeira">Máx. {FRIENDLY_CHALLENGE_TTL_SEC}s · os dois managers online</p>
+        <div className="mt-5 grid grid-cols-[auto_1fr] gap-2">
           <button
             type="button"
             disabled={busy || left <= 0}
             onClick={() => void onDecline()}
-            className="border border-white/15 py-2.5 text-xs font-bold uppercase text-gray-400 hover:bg-white/5 disabled:opacity-40"
+            className="ole-num h-[50px] whitespace-nowrap border border-white/30 px-4 text-[11.5px] uppercase text-white transition-colors hover:border-white hover:bg-white/5 disabled:opacity-40"
           >
             Recusar
           </button>
@@ -143,7 +143,7 @@ export function FriendlyChallengeLayer() {
             type="button"
             disabled={busy || left <= 0}
             onClick={() => void onAccept()}
-            className="bg-neon-yellow py-2.5 text-xs font-display font-black uppercase text-black hover:bg-neon-yellow/90 disabled:opacity-40"
+            className="ole-num h-[50px] min-w-0 whitespace-nowrap bg-neon-yellow px-3 text-[11.5px] uppercase text-black transition-colors hover:bg-white disabled:opacity-40 [--corte:12px] [clip-path:var(--clip-corte)]"
           >
             Aceitar e entrar
           </button>

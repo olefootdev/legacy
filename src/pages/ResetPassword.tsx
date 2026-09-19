@@ -68,35 +68,41 @@ export function ResetPassword() {
         style={{ backgroundImage: 'url(/login-hero.png)' }}
         aria-hidden
       />
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/88 via-black/35 to-black/90" aria-hidden />
-      <div className="absolute inset-0 z-0 bg-gradient-to-t from-black via-black/50 to-black/25 opacity-[0.96]" aria-hidden />
+      {/* Scrim da foto (legibilidade) — único degradê permitido nesta tela. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 z-0"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(13,13,13,0.85) 0%, rgba(13,13,13,0.45) 20%, rgba(13,13,13,0.8) 45%, #0D0D0D 80%)',
+        }}
+      />
 
       <div className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 py-10">
-        <div className="relative overflow-hidden rounded-sm border border-white/[0.1] bg-black/70 shadow-[0_16px_40px_rgba(0,0,0,0.55)] backdrop-blur-md">
-          <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow/90" aria-hidden />
-          <div className="relative px-5 py-5 pl-6 sm:px-6 sm:py-6 sm:pl-7">
-            <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white sm:text-2xl">
+        <div className="border border-white/10 bg-panel">
+          <div className="px-5 py-6 sm:px-6">
+            <h2 className="font-impact text-[30px] uppercase leading-[1.05] text-white">
               Redefinir Senha
             </h2>
             {!ready ? (
-              <p className="mt-4 text-[12px] text-white/60">Validando link…</p>
+              <p className="mt-4 text-[12px] text-cimento">Validando link…</p>
             ) : done ? (
-              <p className="mt-4 rounded-sm border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-[12px] text-emerald-200">
+              <p className="mt-4 border border-alta/40 bg-alta/10 px-3 py-2 text-[12px] text-giz">
                 ✓ Senha atualizada. Redirecionando ao login…
               </p>
             ) : !hasSession ? (
               <div className="mt-4 space-y-3">
-                <p className="rounded-sm border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-200">
-                  ✗ Link inválido ou expirado. Solicita um novo e-mail de recuperação.
+                <p className="border border-baixa/50 bg-baixa/10 px-3 py-2 text-[12px] text-giz">
+                  ✗ Link inválido ou expirado. Solicite um novo e-mail de recuperação.
                 </p>
-                <Link to="/login" className="btn-primary block w-full text-center">
+                <Link to="/login" className="btn-primary flex h-12 w-full items-center justify-center">
                   <span className="btn-primary-inner justify-center py-1">Voltar ao login</span>
                 </Link>
               </div>
             ) : (
               <form onSubmit={(e) => void onSubmit(e)} className="mt-4 space-y-3" autoComplete="off">
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Nova senha</span>
+                  <span className="mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">Nova senha</span>
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -104,11 +110,11 @@ export function ResetPassword() {
                     onChange={(e: import('react').ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                    className="w-full border border-white/16 bg-deep-black px-3 py-2.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Confirmar senha</span>
+                  <span className="mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">Confirmar senha</span>
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -116,18 +122,18 @@ export function ResetPassword() {
                     onChange={(e: import('react').ChangeEvent<HTMLInputElement>) => setConfirm(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                    className="w-full border border-white/16 bg-deep-black px-3 py-2.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
                   />
                 </label>
                 {error ? (
-                  <p className="rounded-sm border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200">
+                  <p className="border border-baixa/50 bg-baixa/10 px-3 py-2 text-[11px] text-giz">
                     ✗ {error}
                   </p>
                 ) : null}
                 <button
                   type="submit"
                   disabled={busy || !password || !confirm}
-                  className="btn-primary w-full disabled:pointer-events-none disabled:opacity-40"
+                  className="btn-primary flex h-12 w-full items-center justify-center disabled:pointer-events-none disabled:opacity-40"
                 >
                   <span className="btn-primary-inner justify-center py-1">
                     {busy ? 'Atualizando…' : 'Atualizar senha'}

@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ChangePill } from './ChangePill';
 import { Sparkline } from './Sparkline';
+import { SecaoVolt } from '@/components/ui';
 
 type SquadValuationCardProps = {
   /** Valor total do plantel em OLE, somado do plantel real. */
@@ -31,24 +32,14 @@ export function SquadValuationCard({
 
   return (
     <section className="space-y-3">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80">
-            Patrimônio Esportivo
-          </p>
-          <h2
-            className="mt-1 font-display text-[22px] font-black uppercase leading-none tracking-tight text-white sm:text-[26px]"
-            style={{ letterSpacing: '0.005em' }}
-          >
-            Valor do plantel
-          </h2>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <SecaoVolt label="Valor do plantel" tone="neutro" className="min-w-0 grow" />
         <button
           type="button"
           onClick={() => navigate('/team')}
-          className="text-[10px] font-display font-bold uppercase tracking-[0.2em] text-white/55 hover:text-neon-yellow transition-colors"
+          className="shrink-0 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento transition-colors hover:text-white"
         >
-          Ver plantel →
+          Plantel →
         </button>
       </div>
 
@@ -56,49 +47,44 @@ export function SquadValuationCard({
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="relative isolate overflow-hidden border border-neon-yellow/20 bg-gradient-to-br from-neon-yellow/[0.06] via-transparent to-transparent"
-        style={{ borderRadius: 'var(--radius-card)', boxShadow: 'var(--shadow-card)' }}
+        className="relative isolate overflow-hidden border border-white/10 bg-panel"
+        style={{ borderRadius: 'var(--radius-card)' }}
       >
-        <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
-
         <div className="relative grid grid-cols-1 sm:grid-cols-[1fr_auto] items-stretch gap-4 p-5 sm:p-6">
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
-              <span className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/40">
+              <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-cimento">
                 Total · {playerCount} jogadores
               </span>
               <ChangePill change={change24h} compact />
             </div>
 
             <p
-              className="font-impact tabular-nums leading-none text-neon-yellow"
-              style={{
-                fontFamily: 'var(--font-impact)',
-                fontSize: 'clamp(36px, 7vw, 56px)',
-              }}
+              className="ole-num tabular-nums leading-none text-white"
+              style={{ fontSize: 'clamp(30px, 7vw, 48px)' }}
             >
               {formatOle(totalOle)} EXP
             </p>
 
-            <p className="text-[11px] text-white/55 tabular-nums">
+            <p className="font-mono text-[11px] text-cimento tabular-nums">
               {totalOle.toLocaleString('pt-BR')} EXP · valor de mercado
             </p>
 
             {highlight ? (
-              <div className="mt-2 flex items-center gap-3 rounded-md border border-white/[0.06] bg-black/40 px-3 py-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neon-yellow/15 font-display text-[10px] font-black text-neon-yellow">
+              <div className="mt-2 flex items-center gap-3 border border-white/10 bg-card px-3 py-2">
+                <div className="flex h-8 w-8 items-center justify-center bg-card-hi text-[12px] text-white">
                   ★
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-poeira">
                     Maior valor
                   </p>
                   <p className="text-[12px] font-bold text-white truncate">
                     {highlight.name}{' '}
-                    <span className="text-white/45">· {highlight.position}</span>
+                    <span className="text-cimento">· {highlight.position}</span>
                   </p>
                 </div>
-                <p className="text-[12px] font-bold text-neon-yellow tabular-nums">
+                <p className="font-mono text-[12px] font-medium text-white tabular-nums">
                   {formatOle(highlight.valueOle)} EXP
                 </p>
               </div>

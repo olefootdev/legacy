@@ -43,7 +43,7 @@ function StatRow({ label, icon, homeValue, awayValue, homePercent, awayPercent, 
           <motion.div
             className={cn(
               'h-full origin-left',
-              homeDominant ? 'bg-yellow-500/15' : 'bg-white/5',
+              homeDominant ? 'bg-neon-yellow/15' : 'bg-white/5',
             )}
             initial={{ width: '50%' }}
             animate={{ width: `${homePercent}%` }}
@@ -71,7 +71,7 @@ function StatRow({ label, icon, homeValue, awayValue, homePercent, awayPercent, 
           transition={{ duration: 0.4 }}
           className={cn(
             'flex items-center gap-1.5 font-display text-sm font-bold tabular-nums',
-            homeDominant ? 'text-yellow-400' : 'text-white/90',
+            homeDominant ? 'text-neon-yellow' : 'text-white/90',
           )}
         >
           <span>{homeValue}{isPercentage ? '%' : ''}</span>
@@ -126,10 +126,10 @@ export function LiveStatsComparison({ stats, homeShort, awayShort, statsHistory,
     stats.shots.away > stats.shots.home + 3 ? 'away_up' : 'neutral';
 
   return (
-    <div className={cn('w-full overflow-hidden rounded-lg bg-black/40 backdrop-blur-sm', className)}>
+    <div className={cn('w-full overflow-hidden rounded-lg bg-panel', className)}>
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
-        <span className="font-display text-xs font-bold uppercase tracking-wider text-yellow-400">
+        <span className="font-display text-xs font-bold uppercase tracking-wider text-neon-yellow">
           {homeShort}
         </span>
         <div className="flex items-center gap-1.5">
@@ -221,9 +221,9 @@ export function LiveStatsComparison({ stats, homeShort, awayShort, statsHistory,
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="border-t border-yellow-500/20 bg-yellow-500/10 px-3 py-2 text-center"
+            className="border-t border-neon-yellow/20 bg-neon-yellow/10 px-3 py-2 text-center"
           >
-            <p className="text-xs font-bold uppercase tracking-wider text-yellow-400">
+            <p className="text-xs font-bold uppercase tracking-wider text-neon-yellow">
               🔥 {homeShort} domina a posse!
             </p>
           </motion.div>

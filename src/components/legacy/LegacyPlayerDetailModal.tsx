@@ -119,23 +119,25 @@ export function LegacyPlayerDetailModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[80] flex min-h-0 flex-col overflow-y-auto overscroll-y-contain bg-black/90 px-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom,0px)+5.5rem))] backdrop-blur-sm sm:items-center sm:justify-center sm:px-4 sm:pb-6 sm:pt-4">
+      <div className="fixed inset-0 z-[80] flex min-h-0 flex-col overflow-y-auto overscroll-y-contain bg-black/90 px-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom,0px)+5.5rem))] sm:items-center sm:justify-center sm:px-4 sm:pb-6 sm:pt-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.96, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 20 }}
-          className="my-2 flex w-full min-h-0 max-w-[min(100%,60rem)] flex-col overflow-hidden rounded-2xl border-2 border-amber-400/55 bg-deep-black shadow-[0_0_50px_-8px_rgba(245,158,11,0.45)] sm:my-4 max-h-[min(920px,calc(100dvh-7.5rem))] sm:max-h-[min(920px,calc(100dvh-4.5rem))]"
+          className="my-2 flex w-full min-h-0 max-w-[min(100%,60rem)] flex-col overflow-hidden rounded-2xl border-2 border-lenda/60 bg-deep-black sm:my-4 max-h-[min(920px,calc(100dvh-7.5rem))] sm:max-h-[min(920px,calc(100dvh-4.5rem))]"
         >
           {/* Topbar */}
           <div className="z-[60] flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
             <div className="flex min-w-0 items-center gap-2">
-              <Crown className="h-4 w-4 shrink-0 text-amber-300" strokeWidth={2.5} />
-              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-300">Legacy DNA</span>
+              <span className="inline-flex shrink-0 items-center gap-1.5 bg-lenda px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white">
+                <Crown className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} />
+                Lenda
+              </span>
               {row.collection_title && (
                 <span className="truncate text-[10px] text-white/40">· {row.collection_title}</span>
               )}
             </div>
-            <button type="button" onClick={onClose} className="rounded-full bg-black/50 p-2 text-gray-400 hover:text-white">
+            <button type="button" onClick={onClose} className="border border-white/16 bg-panel p-2 text-cimento hover:border-white/30 hover:text-white">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -146,17 +148,17 @@ export function LegacyPlayerDetailModal({
               {/* ESQUERDA — card */}
               <div className="flex w-full shrink-0 items-start justify-center border-b border-white/10 bg-black/20 p-4 sm:p-6 md:w-2/5 md:border-b-0 md:border-r">
                 <div className="w-full max-w-[300px]">
-                  <div className="overflow-hidden rounded-2xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/30 to-black">
-                    <div className="relative aspect-[11/15.6] w-full overflow-hidden bg-gradient-to-br from-amber-900/25 to-black">
+                  <div className="overflow-hidden rounded-2xl border-2 border-lenda/40 bg-panel">
+                    <div className="relative aspect-[11/15.6] w-full overflow-hidden bg-card">
                       {portrait ? (
                         <img src={portrait} alt={entity.name} style={legacyPortraitFocusStyle(row)} className="absolute inset-0 h-full w-full" />
                       ) : (
-                        <div className="grid h-full w-full place-items-center text-amber-400/40">
+                        <div className="grid h-full w-full place-items-center text-lenda/40">
                           <Crown className="h-16 w-16" />
                         </div>
                       )}
-                      <div className="absolute left-2.5 top-2.5 rounded-lg border border-amber-400/40 bg-black/70 px-2.5 py-1 backdrop-blur">
-                        <p className="italic leading-none tabular-nums text-amber-300" style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '24px' }}>
+                      <div className="absolute left-2.5 top-2.5 rounded-lg border border-lenda/40 bg-deep-black px-2.5 py-1">
+                        <p className="font-impact leading-none tabular-nums text-neon-yellow" style={{ fontSize: '24px' }}>
                           {ovr}
                         </p>
                       </div>
@@ -165,9 +167,9 @@ export function LegacyPlayerDetailModal({
                     </div>
                     <div className="grid grid-cols-3 gap-px bg-white/5">
                       {cardStats.map(([label, val]) => (
-                        <div key={label} className="bg-black/40 px-1 py-2 text-center">
+                        <div key={label} className="bg-deep-black px-1 py-2 text-center">
                           <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-white/40">{label}</p>
-                          <p className="italic leading-none tabular-nums text-neon-yellow" style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '16px' }}>
+                          <p className="font-impact leading-none tabular-nums text-neon-yellow" style={{ fontSize: '16px' }}>
                             {val}
                           </p>
                         </div>
@@ -182,10 +184,10 @@ export function LegacyPlayerDetailModal({
                 <div className="flex flex-col gap-5">
                   {/* Header */}
                   <div className="border-b border-white/10 pb-4">
-                    <h2 className="break-words font-display text-2xl font-black italic uppercase tracking-wider text-white sm:text-3xl">
+                    <h2 className="break-words font-display text-2xl font-black uppercase leading-[1.1] tracking-wider text-white sm:text-3xl">
                       {entity.name}
                     </h2>
-                    <p className="break-words text-sm font-bold uppercase tracking-widest text-amber-300">
+                    <p className="break-words text-sm font-bold uppercase tracking-widest text-neon-yellow">
                       {entity.pos} • Overall {ovr}
                     </p>
                     <p className="mt-1.5 text-[10px] text-gray-500">
@@ -217,7 +219,7 @@ export function LegacyPlayerDetailModal({
 
                     {/* Especialistas — bola parada, cabeça, pênalti. Bloco à parte
                         porque não entram no OVR: decidem quem marca cada lance. */}
-                    <h4 className="mb-3 mt-6 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-amber-300/70">
+                    <h4 className="mb-3 mt-6 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-cimento">
                       <Sparkles className="h-3.5 w-3.5" /> Especialista
                     </h4>
                     <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
@@ -229,13 +231,13 @@ export function LegacyPlayerDetailModal({
 
                   {/* Ensina aos companheiros */}
                   {taught.length > 0 && (
-                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
-                      <h3 className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-300/80">
+                    <div className="rounded-xl border border-lenda/30 bg-panel p-4">
+                      <h3 className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cimento">
                         <GraduationCap className="h-4 w-4" /> Ensina aos companheiros
                       </h3>
                       <div className="flex flex-wrap gap-1.5">
                         {taught.map((a) => (
-                          <span key={a} className="rounded-full bg-amber-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-200">
+                          <span key={a} className="rounded-full border border-lenda/50 bg-card px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-giz">
                             {a}
                           </span>
                         ))}
@@ -245,13 +247,13 @@ export function LegacyPlayerDetailModal({
 
                   {/* Booster do time */}
                   {boosterEntries.length > 0 && (
-                    <div className="rounded-xl border border-green-500/20 bg-green-500/[0.04] p-4">
-                      <h3 className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-green-300/80">
+                    <div className="rounded-xl border border-alta/30 bg-panel p-4">
+                      <h3 className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cimento">
                         <Sparkles className="h-4 w-4" /> Booster do time (titular)
                       </h3>
                       <div className="flex flex-wrap gap-1.5">
                         {boosterEntries.map(([k, v]) => (
-                          <span key={k} className="rounded-full bg-green-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-green-300">
+                          <span key={k} className="rounded-full border border-alta/40 bg-card px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-alta">
                             {k} +{v}
                           </span>
                         ))}
@@ -261,7 +263,7 @@ export function LegacyPlayerDetailModal({
 
                   {/* Compra — o preço vive NO botão (sem repetir em cima).
                       Tem saldo → carrinho de 1 clique. Sem saldo → aviso + PIX. */}
-                  <div className="relative overflow-hidden rounded-xl border border-amber-400/40 bg-gradient-to-br from-amber-500/15 to-transparent p-4 sm:p-5">
+                  <div className="relative overflow-hidden rounded-xl border border-white/10 bg-panel p-4 sm:p-5">
                     {isOwned ? (
                       <div className="rounded-lg bg-white/5 py-2.5 text-center text-[12px] font-bold uppercase tracking-wider text-gray-400">
                         Você já tem este jogador
@@ -284,9 +286,9 @@ export function LegacyPlayerDetailModal({
                       /* Tem saldo: carrinho direto, preço no botão. Alto valor pede 2º clique. */
                       <div className="space-y-2.5">
                         {errorMsg && (
-                          <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2">
-                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-400" strokeWidth={2.5} />
-                            <p className="text-[11px] text-red-300">{errorMsg}</p>
+                          <div className="flex items-start gap-2 rounded-lg border border-baixa/40 bg-deep-black px-3 py-2">
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-baixa" strokeWidth={2.5} />
+                            <p className="text-[11px] text-baixa">{errorMsg}</p>
                           </div>
                         )}
                         {confirming && needsConfirm && !buying ? (
@@ -298,14 +300,14 @@ export function LegacyPlayerDetailModal({
                               <button
                                 type="button"
                                 onClick={() => setConfirming(false)}
-                                className="rounded-xl border border-white/15 py-3 text-[12px] font-bold uppercase tracking-wider text-white/70 transition hover:border-white/40 hover:text-white"
+                                className="rounded-xl border border-white/30 py-3 text-[12px] font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-white hover:text-white"
                               >
                                 Cancelar
                               </button>
                               <button
                                 type="button"
                                 onClick={onBuy}
-                                className="flex items-center justify-center gap-2 rounded-xl bg-amber-400 py-3 text-[12px] font-black uppercase tracking-wider text-black transition hover:bg-white"
+                                className="flex items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3 text-[12px] font-black uppercase tracking-wider text-black transition-colors hover:bg-white"
                               >
                                 <ShoppingCart className="h-4 w-4" strokeWidth={2.5} /> Confirmar
                               </button>
@@ -319,7 +321,7 @@ export function LegacyPlayerDetailModal({
                               if (needsConfirm) setConfirming(true);
                               else onBuy();
                             }}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400 py-3.5 text-sm font-black uppercase tracking-wide text-black transition hover:bg-white disabled:opacity-60"
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3.5 text-sm font-black uppercase tracking-wide text-black transition-colors hover:bg-white disabled:opacity-60"
                           >
                             {buying ? (
                               <><Loader2 className="h-4 w-4 animate-spin" /> Comprando…</>
@@ -333,15 +335,15 @@ export function LegacyPlayerDetailModal({
                       /* Sem saldo: avisa e oferece recarga via PIX. */
                       <div className="space-y-3">
                         {errorMsg && (
-                          <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2">
-                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-400" strokeWidth={2.5} />
-                            <p className="text-[11px] text-red-300">{errorMsg}</p>
+                          <div className="flex items-start gap-2 rounded-lg border border-baixa/40 bg-deep-black px-3 py-2">
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-baixa" strokeWidth={2.5} />
+                            <p className="text-[11px] text-baixa">{errorMsg}</p>
                           </div>
                         )}
-                        <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2.5">
-                          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" strokeWidth={2.5} />
+                        <div className="flex items-start gap-2 rounded-lg border border-baixa/40 bg-deep-black px-3 py-2.5">
+                          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-baixa" strokeWidth={2.5} />
                           <div className="min-w-0">
-                            <p className="text-[12px] font-black uppercase tracking-wider text-red-300">Saldo insuficiente</p>
+                            <p className="text-[12px] font-black uppercase tracking-wider text-baixa">Saldo insuficiente</p>
                             <p className="text-[11px] text-white/55">
                               {balanceLabel ? `Você tem ${balanceLabel} · ` : ''}custa {priceExp.toLocaleString('pt-BR')} OLEFOOT
                             </p>
@@ -352,7 +354,7 @@ export function LegacyPlayerDetailModal({
                             type="button"
                             disabled={buying}
                             onClick={onPixBuy}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3.5 text-sm font-black uppercase tracking-wide text-black transition hover:brightness-110 disabled:opacity-60"
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3.5 text-sm font-black uppercase tracking-wide text-black transition-colors hover:bg-white disabled:opacity-60"
                           >
                             <ShoppingCart className="h-4 w-4" strokeWidth={2.5} />
                             Comprar com PIX · {fmtBrl(brlCents)}

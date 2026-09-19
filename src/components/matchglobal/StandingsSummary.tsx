@@ -69,7 +69,7 @@ export function StandingsSummary({ standings }: StandingsSummaryProps) {
             className="sports-panel rounded-lg overflow-hidden"
           >
             {/* Header da Divisão */}
-            <div className="bg-gradient-to-r from-neon-yellow/20 to-neon-green/20 border-b-2 border-neon-yellow/50 px-4 py-3">
+            <div className="bg-card border-b-2 border-neon-yellow/50 px-4 py-3">
               <h3 className="font-display text-xl font-bold uppercase tracking-wider text-neon-yellow text-center">
                 {standing.division}ª DIVISÃO
               </h3>

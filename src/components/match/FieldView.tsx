@@ -1,7 +1,7 @@
 /**
  * FieldView — campo ao vivo Legacy Tech Design System.
  *
- * Design: preto absoluto + neon-yellow (#FDE100), Oswald uppercase, Playfair itálico.
+ * Design: preto absoluto + neon-yellow (#FDE100), Oswald uppercase, número em Anton (VOLT2: sem serifa/itálico).
  * Campo: listras de grama escuras, marcações mínimas (sem detalhes), nada de verde brilhante.
  * Jogadores: cards posicionados no campo (não sprites).
  * Câmeras: aerial (visão tática inclinada) | broadcast (ângulo TV).
@@ -261,7 +261,7 @@ const PlayerCard = memo(function PlayerCard({ p, isHome, isOnBall, onClick, tran
         {p.pos.toUpperCase()}
       </text>
 
-      {/* Number (large italic) */}
+      {/* Number (Anton) */}
       <text
         x={CARD_W / 2}
         y={38}
@@ -269,9 +269,8 @@ const PlayerCard = memo(function PlayerCard({ p, isHome, isOnBall, onClick, tran
         dominantBaseline="middle"
         fill={isOnBall ? borderColor : '#ffffff'}
         fontSize={22}
-        fontFamily="'Playfair Display', 'Georgia', serif"
-        fontStyle="italic"
-        fontWeight={900}
+        fontFamily="Anton, Impact, 'Arial Narrow Bold', sans-serif"
+        fontWeight={400}
       >
         {p.num}
       </text>
@@ -338,7 +337,6 @@ const InclinedCard = memo(function InclinedCard({ p, isHome, isOnBall, onClick, 
       transform={`translate(${x},${y})`}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
       onClick={() => onClick?.(p)}
-      filter="url(#iv-card-shadow)"
     >
       {/* Shadow on ground (ellipse) */}
       <ellipse
@@ -397,7 +395,7 @@ const InclinedCard = memo(function InclinedCard({ p, isHome, isOnBall, onClick, 
         {p.pos.toUpperCase()} · {ovr}
       </text>
 
-      {/* Number (Playfair italic) */}
+      {/* Number (Anton) */}
       <text
         x={cw / 2}
         y={ch * 0.49}
@@ -405,9 +403,8 @@ const InclinedCard = memo(function InclinedCard({ p, isHome, isOnBall, onClick, 
         dominantBaseline="middle"
         fill={isOnBall ? borderColor : '#ffffff'}
         fontSize={28 * scale}
-        fontFamily="'Playfair Display', 'Georgia', serif"
-        fontStyle="italic"
-        fontWeight={900}
+        fontFamily="Anton, Impact, 'Arial Narrow Bold', sans-serif"
+        fontWeight={400}
       >
         {p.num}
       </text>
@@ -650,9 +647,6 @@ function InclinedField({
           <stop offset="0%" stopColor="#1a2a1c" stopOpacity="0.65" />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
-        <filter id="iv-card-shadow">
-          <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="#000" floodOpacity="0.7" />
-        </filter>
       </defs>
 
       {/* Background */}
@@ -867,9 +861,6 @@ function AerialField({
       style={{ display: 'block' }}
     >
       <defs>
-        <filter id="card-shadow">
-          <feDropShadow dx="0" dy="2" stdDeviation="5" floodColor="#000" floodOpacity="0.7" />
-        </filter>
         <radialGradient id="field-vignette" cx="50%" cy="50%" r="70%">
           <stop offset="0%" stopColor="transparent" />
           <stop offset="100%" stopColor="rgba(0,0,0,0.45)" />

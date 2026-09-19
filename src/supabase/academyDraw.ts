@@ -51,7 +51,7 @@ export async function fetchAcademyDrawConfig(): Promise<DrawConfigRow[]> {
 export async function drawAcademyPlayer(pos: string, year: number): Promise<DrawResponse> {
   const sb = getSupabase();
   const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
-  if (!token) return { ok: false, error: 'Precisas estar autenticado.' };
+  if (!token) return { ok: false, error: 'Você precisa estar logado.' };
   const base = olefootApiBase();
   try {
     const r = await fetch(`${base}/api/academy/draw`, {

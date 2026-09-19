@@ -80,7 +80,7 @@ export function DepositModal({
 
   return (
     <div
-      className="fixed inset-0 z-[190] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[190] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80"
       role="dialog"
       aria-modal="true"
       onClick={(e) => e.target === e.currentTarget && onClose()}
@@ -88,15 +88,15 @@ export function DepositModal({
       <motion.div
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="w-full max-w-md rounded-t-3xl sm:rounded-3xl border border-white/15 bg-[#0c0c0c] shadow-xl"
+        className="w-full max-w-md border border-white/16 bg-panel"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <Landmark className="w-5 h-5 text-neon-yellow" />
+            <Landmark className="w-5 h-5 text-white" />
             <div>
-              <h2 className="font-display font-bold text-lg">Depositar via PIX</h2>
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+              <h2 className="font-impact text-lg uppercase leading-[1.1] text-white">Depositar via PIX</h2>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-cimento">
                 Saldo BRO instantâneo após confirmação
               </p>
             </div>
@@ -104,7 +104,7 @@ export function DepositModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white rounded-lg"
+            className="p-2 text-cimento hover:text-white"
             aria-label="Fechar"
           >
             <X className="w-5 h-5" />
@@ -114,31 +114,31 @@ export function DepositModal({
         <div className="p-5 space-y-4">
           {/* Cotação */}
           {(quote.status === 'loading' || quote.status === 'idle') && (
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Nossa cotação</p>
-              <p className="text-sm text-gray-500 mt-1">A carregar…</p>
+            <div className="border border-white/10 bg-card px-3 py-3">
+              <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-cimento">Nossa cotação</p>
+              <p className="text-sm text-poeira mt-1">Carregando…</p>
             </div>
           )}
           {quote.status === 'error' && (
-            <div className="rounded-xl border border-neon-yellow/30 bg-neon-yellow/10 px-3 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-neon-yellow">Nossa cotação</p>
-              <p className="text-xs text-white/75 mt-1">{quote.message}</p>
+            <div className="border border-atencao/40 bg-atencao/10 px-3 py-3">
+              <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-atencao">Nossa cotação</p>
+              <p className="text-xs text-giz mt-1">{quote.message}</p>
             </div>
           )}
           {quote.status === 'ok' && (
-            <div className="rounded-xl border border-neon-green/30 bg-gradient-to-br from-neon-green/10 to-black/40 px-3 py-3 space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-neon-green">
+            <div className="border border-white/10 bg-card px-3 py-3 space-y-2">
+              <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-alta">
                 Nossa cotação (PIX → BRO)
               </p>
-              <p className="text-lg font-display font-black leading-tight text-white">
+              <p className="font-mono text-lg font-medium leading-tight text-white tabular-nums">
                 R$ 1 ≈ {fmtBrl(1 / quote.olefootVenda)} BRO
               </p>
-              <p className="text-[10px] leading-relaxed text-gray-400">
+              <p className="text-[10px] leading-relaxed text-cimento">
                 Referência API: R$ {fmtBrl(quote.apiVenda)} + {(OLEFOOT_BRL_MARKUP * 100).toFixed(0)}% custos operacionais.
                 Base 1 BRO ≈ 1 USD.
               </p>
               {quote.updatedAt && (
-                <p className="text-[9px] text-gray-600">
+                <p className="font-mono text-[9.5px] text-poeira">
                   Cotação atualizada: {fmtQuoteUpdated(quote.updatedAt)}
                 </p>
               )}
@@ -147,7 +147,7 @@ export function DepositModal({
 
           {/* Chips de valores rápidos */}
           <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-wider text-white/50 font-display font-bold block">
+            <label className="block font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
               Quanto quer depositar?
             </label>
             <div className="grid grid-cols-5 gap-2">
@@ -157,10 +157,10 @@ export function DepositModal({
                   type="button"
                   onClick={() => pickQuick(amount)}
                   className={cn(
-                    'py-2.5 rounded-xl border font-display text-xs font-black uppercase tracking-wider transition-colors',
+                    'min-w-0 border py-2.5 font-mono text-[12px] font-medium tabular-nums transition-colors',
                     selectedChip === amount
                       ? 'border-neon-yellow bg-neon-yellow text-black'
-                      : 'border-white/15 bg-black/40 text-white hover:border-white/30',
+                      : 'border-white/16 bg-deep-black text-white hover:border-white/30',
                   )}
                 >
                   R${amount}
@@ -171,31 +171,31 @@ export function DepositModal({
 
           {/* Input custom */}
           <div>
-            <label className="text-[10px] uppercase tracking-wider text-white/50 font-display font-bold block mb-1">
+            <label className="mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
               Ou valor customizado (BRL)
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">R$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-poeira">R$</span>
               <input
                 value={brl}
                 onChange={(e) => handleCustomInput(e.target.value)}
                 inputMode="decimal"
                 placeholder="0,00"
-                className="w-full bg-black/40 border border-white/15 rounded-xl pl-10 pr-3 py-2.5 text-white font-display tabular-nums text-lg focus:border-neon-yellow/60 focus:outline-none"
+                className="w-full border border-white/16 bg-deep-black py-2.5 pl-10 pr-3 font-mono text-lg tabular-nums text-white focus:border-neon-yellow/60 focus:outline-none"
               />
             </div>
             {numericAmount !== null && numericAmount < MIN_BRL && (
-              <p className="text-[10px] text-[var(--color-danger)] mt-1">Mínimo de R$ {MIN_BRL.toFixed(2)}</p>
+              <p className="text-[10px] text-baixa mt-1">Mínimo de R$ {MIN_BRL.toFixed(2)}</p>
             )}
           </div>
 
           {/* Preview BRO */}
           {broPreview !== null && (
-            <div className="bg-neon-yellow/10 border border-neon-yellow/30 rounded-xl px-3 py-2.5 flex items-center justify-between">
-              <span className="text-[11px] uppercase tracking-wider text-neon-yellow/80 font-display font-bold">
+            <div className="flex items-center justify-between gap-3 border border-white/10 bg-card px-3 py-2.5">
+              <span className="font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
                 Você receberá ≈
               </span>
-              <span className="font-display text-lg font-black text-neon-yellow tabular-nums">
+              <span className="font-mono text-lg font-medium text-white tabular-nums">
                 {fmtBrl(broPreview)} BRO
               </span>
             </div>
@@ -207,17 +207,17 @@ export function DepositModal({
             onClick={submit}
             disabled={!valid}
             className={cn(
-              'w-full py-3.5 rounded-xl font-display font-black uppercase tracking-[0.18em] text-sm inline-flex items-center justify-center gap-2 transition-colors',
+              'ole-num inline-flex h-[50px] w-full items-center justify-center gap-2 whitespace-nowrap text-[13px] uppercase transition-colors [--corte:12px] [clip-path:var(--clip-corte)]',
               valid
                 ? 'bg-neon-yellow text-black hover:bg-white'
-                : 'bg-white/10 text-gray-500 cursor-not-allowed',
+                : 'bg-card-hi text-poeira cursor-not-allowed',
             )}
           >
             <Zap className="w-4 h-4" />
             Continuar para PIX
           </button>
 
-          <p className="text-[10px] text-white/40 text-center">
+          <p className="font-mono text-[10.5px] text-poeira text-center">
             Pagamento instantâneo · QR Code + copia e cola
           </p>
         </div>

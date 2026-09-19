@@ -19,6 +19,7 @@ import { DailyCycleHero } from '@/components/matchglobal/DailyCycleHero';
 import { CrownsGallery } from '@/components/matchglobal/CrownsGallery';
 import { CoronationModal } from '@/components/matchglobal/CoronationModal';
 import { useCoronationListener } from '@/hooks/useCoronationListener';
+import { Hashtag } from '@/components/ui';
 
 type FilterMode = 'all' | 'division_1' | 'division_2' | 'division_3';
 
@@ -184,7 +185,7 @@ function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: G
       transition={{ delay: index * 0.05 }}
       className={`sports-panel rounded-lg px-3 py-2 transition-all group min-w-0 ${
         isLive
-          ? 'border border-neon-green/40 shadow-[0_0_12px_rgba(0,255,128,0.08)]'
+          ? 'border border-neon-green/40'
           : 'hover:border-neon-yellow/30'
       }`}
     >
@@ -773,7 +774,7 @@ function ProjectedDivisionsGrid({
             Classificação · Após rodada {roundNumber}
           </h2>
           <p className="text-[11px] text-white/40 mt-0.5">
-            Projeção de divisões caso os playoffs terminassem agora · Top 10% sobe · Bottom 10% desce
+            Projeção · Top 10% sobe · Bottom 10% desce
           </p>
         </div>
       </div>
@@ -871,9 +872,9 @@ export default function MatchGlobal() {
             Liga Global
           </h1>
 
-          <p className="font-serif-hero text-lg sm:text-xl italic text-white/70 max-w-xl mx-auto">
+          <p className="font-serif-hero text-lg sm:text-xl text-white/70 max-w-xl mx-auto">
             {ready
-              ? 'A primeira rodada vai começar automaticamente no próximo topo de 5 minutos do relógio.'
+              ? 'Começa sozinha em até 5 minutos.'
               : `Faltam ${Math.max(0, minTeams - teamsNow)} ${minTeams - teamsNow === 1 ? 'manager' : 'managers'} para destravar os playoffs.`}
           </p>
 
@@ -891,9 +892,9 @@ export default function MatchGlobal() {
 
           <button
             onClick={() => navigate('/liga-global/registro')}
-            className="mt-4 inline-flex items-center gap-2 bg-neon-yellow text-black px-6 py-3 font-display text-xs font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-white transition-colors"
+            className="mt-4 inline-flex items-center gap-2 bg-neon-yellow text-black px-6 py-3 font-display text-xs font-black uppercase tracking-[0.2em] hover:bg-white transition-colors"
           >
-            <span className="skew-x-6">Ver registro completo</span>
+            <span>Ver registro completo</span>
           </button>
         </motion.div>
         <CrownsGallery />
@@ -913,15 +914,6 @@ export default function MatchGlobal() {
 
         {/* Hero */}
         <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm">
-          {/* Watermark */}
-          <div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden" aria-hidden>
-            <span
-              className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
-              style={{ fontSize: 'clamp(120px, 24vw, 360px)', lineHeight: '0.85', letterSpacing: '-0.02em' }}
-            >
-              GLOBAL
-            </span>
-          </div>
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -934,7 +926,7 @@ export default function MatchGlobal() {
               Liga Global
             </h1>
             <span aria-hidden className="mx-auto mt-4 block w-16 h-[3px] bg-black" />
-            <p className="font-serif-hero text-xl sm:text-2xl italic text-black/80 mt-4">
+            <p className="font-serif-hero text-xl sm:text-2xl text-black/80 mt-4">
               {round?.status === 'live' ? 'Ao Vivo Agora' :
                round?.status === 'finished' ? 'Rodada Encerrada' :
                'Aguardando Kickoff'}
@@ -1015,28 +1007,18 @@ export default function MatchGlobal() {
         <DailyCycleHero />
         {/* Hero */}
         <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm">
-          <div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden" aria-hidden>
-            <span
-              className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
-              style={{ fontSize: 'clamp(80px, 18vw, 280px)', lineHeight: '0.85', letterSpacing: '-0.02em' }}
-            >
-              FIM
-            </span>
-          </div>
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-center"
           >
-            <p className="font-display text-xs font-bold uppercase tracking-[0.3em] text-black/60 mb-3">
-              Liga Global
-            </p>
+            <Hashtag className="mb-3 text-black/60">#ligaglobal</Hashtag>
             <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
               Temporada Encerrada
             </h1>
             <span aria-hidden className="mx-auto mt-4 block w-16 h-[3px] bg-black" />
             {globalLeagueMVP.seasonName && (
-              <p className="font-serif-hero text-xl sm:text-2xl italic text-black/80 mt-4">
+              <p className="font-serif-hero text-xl sm:text-2xl text-black/80 mt-4">
                 {globalLeagueMVP.seasonName}
               </p>
             )}
@@ -1049,7 +1031,7 @@ export default function MatchGlobal() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="sports-panel rounded-lg p-6 border border-neon-yellow/40 shadow-[0_0_24px_rgba(255,220,0,0.08)] text-center"
+            className="sports-panel rounded-lg p-6 border border-neon-yellow/40 text-center"
           >
             <Trophy className="w-10 h-10 text-neon-yellow mx-auto mb-3" />
             <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mb-1">Campeão</p>
@@ -1144,7 +1126,7 @@ export default function MatchGlobal() {
             </Link>
           </div>
           <p className="text-center font-display text-[11px] uppercase tracking-[0.2em] text-white/30">
-            Nova temporada em breve · Acompanhe os canais oficiais
+            Nova temporada em breve
           </p>
         </motion.div>
 
@@ -1171,23 +1153,12 @@ export default function MatchGlobal() {
 
       {/* Hero */}
       <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm">
-        {/* Watermark */}
-        <div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden" aria-hidden>
-          <span
-            className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
-            style={{ fontSize: 'clamp(120px, 24vw, 360px)', lineHeight: '0.85', letterSpacing: '-0.02em' }}
-          >
-            GLOBAL
-          </span>
-        </div>
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 text-center"
         >
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-black/60 mb-4">
-            Liga Global · Pirâmide de 3 divisões
-          </p>
+          <Hashtag className="mb-4 text-black/60">#ligaglobal #piramide</Hashtag>
           <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
             Liga Global
           </h1>

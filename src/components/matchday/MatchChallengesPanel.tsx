@@ -22,8 +22,8 @@ export function MatchChallengesPanel({ challenges, progress, completedIds, class
   return (
     <div className={cn('space-y-2', className)}>
       <div className="flex items-center gap-2 px-2">
-        <Trophy className="h-4 w-4 text-yellow-400" />
-        <span className="text-xs font-bold uppercase tracking-wider text-yellow-400">
+        <Trophy className="h-4 w-4 text-neon-yellow" />
+        <span className="text-xs font-bold uppercase tracking-wider text-neon-yellow">
           Desafios
         </span>
       </div>
@@ -39,13 +39,13 @@ export function MatchChallengesPanel({ challenges, progress, completedIds, class
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               className={cn(
-                'relative overflow-hidden rounded-lg border bg-black/40 p-2 backdrop-blur-sm',
-                isNearComplete ? 'border-yellow-400/50' : 'border-white/10',
+                'relative overflow-hidden rounded-lg border bg-panel p-2',
+                isNearComplete ? 'border-neon-yellow/50' : 'border-white/10',
               )}
             >
               {/* Progress bar de fundo */}
               {challengeProgress > 0 && (
-                <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/10 to-transparent" style={{ width: `${challengeProgress}%` }} />
+                <div className="absolute inset-0 bg-neon-yellow/10" style={{ width: `${challengeProgress}%` }} />
               )}
 
               <div className="relative flex items-center gap-2">
@@ -59,7 +59,7 @@ export function MatchChallengesPanel({ challenges, progress, completedIds, class
                     <span className={cn(
                       'rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase',
                       challenge.difficulty === 'easy' && 'bg-green-500/20 text-green-400',
-                      challenge.difficulty === 'medium' && 'bg-yellow-500/20 text-yellow-400',
+                      challenge.difficulty === 'medium' && 'bg-yellow-500/20 text-neon-yellow',
                       challenge.difficulty === 'hard' && 'bg-red-500/20 text-red-400',
                     )}>
                       {challenge.difficulty}
@@ -69,7 +69,7 @@ export function MatchChallengesPanel({ challenges, progress, completedIds, class
 
                   {/* Reward */}
                   <div className="mt-1 flex items-center gap-2 text-[10px]">
-                    <span className="text-yellow-400">+{challenge.reward.ole} OLE</span>
+                    <span className="text-neon-yellow">+{challenge.reward.ole} OLE</span>
                     <span className="text-blue-400">+{challenge.reward.exp} EXP</span>
                   </div>
                 </div>
@@ -79,7 +79,7 @@ export function MatchChallengesPanel({ challenges, progress, completedIds, class
                   <div className="text-right">
                     <div className={cn(
                       'text-xs font-bold tabular-nums',
-                      isNearComplete ? 'text-yellow-400' : 'text-gray-400'
+                      isNearComplete ? 'text-neon-yellow' : 'text-gray-400'
                     )}>
                       {Math.round(challengeProgress)}%
                     </div>
@@ -115,36 +115,13 @@ export function ChallengeCompletedNotification({ challenge, onDismiss }: Challen
         className="fixed left-1/2 top-20 z-[180] -translate-x-1/2"
       >
         <motion.div
-          className="relative overflow-hidden rounded-xl border-2 border-yellow-400 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 p-4 shadow-2xl backdrop-blur-md"
+          className="relative overflow-hidden rounded-xl border-2 border-neon-yellow bg-panel p-4"
           animate={{ scale: [1, 1.05, 1] }}
           transition={{ duration: 0.5, repeat: 2 }}
         >
-          {/* Sparkles */}
-          <div className="absolute inset-0 pointer-events-none">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute h-1 w-1 rounded-full bg-yellow-400"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                }}
-                animate={{
-                  scale: [0, 1, 0],
-                  opacity: [0, 1, 0],
-                }}
-                transition={{
-                  duration: 1.5,
-                  delay: Math.random() * 0.5,
-                  repeat: Infinity,
-                }}
-              />
-            ))}
-          </div>
-
           <div className="relative flex items-center gap-3">
             {/* Icon */}
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-400">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-neon-yellow">
               <Trophy className="h-6 w-6 text-black" />
             </div>
 
@@ -160,7 +137,7 @@ export function ChallengeCompletedNotification({ challenge, onDismiss }: Challen
                 {challenge.icon} {challenge.title}
               </h3>
               <div className="mt-1 flex items-center gap-3 text-sm font-bold">
-                <span className="text-yellow-400">+{challenge.reward.ole} OLE</span>
+                <span className="text-neon-yellow">+{challenge.reward.ole} OLE</span>
                 <span className="text-blue-400">+{challenge.reward.exp} EXP</span>
               </div>
             </div>
@@ -168,7 +145,7 @@ export function ChallengeCompletedNotification({ challenge, onDismiss }: Challen
 
           {/* Progress bar */}
           <motion.div
-            className="absolute bottom-0 left-0 h-1 bg-yellow-400"
+            className="absolute bottom-0 left-0 h-1 bg-neon-yellow"
             initial={{ width: '100%' }}
             animate={{ width: '0%' }}
             transition={{ duration: 4, ease: 'linear' }}

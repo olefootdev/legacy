@@ -26,7 +26,7 @@ export function RedCardOverlay({ player, reason }: RedCardOverlayProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-red-950/95 backdrop-blur-sm"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-deep-black/95"
     >
       <motion.div
         initial={{ scale: 0.8, y: 20 }}
@@ -38,7 +38,6 @@ export function RedCardOverlay({ player, reason }: RedCardOverlayProps) {
         <motion.div
           animate={{
             scale: [1, 1.1, 1],
-            rotate: [0, 5, -5, 0]
           }}
           transition={{
             duration: 0.5,
@@ -54,28 +53,14 @@ export function RedCardOverlay({ player, reason }: RedCardOverlayProps) {
           initial={{ rotateY: -90, opacity: 0 }}
           animate={{ rotateY: 0, opacity: 1 }}
           transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-          className="relative flex flex-col items-center gap-4 rounded-xl border-4 border-red-500 bg-gradient-to-br from-red-600/40 via-red-700/30 to-red-900/40 p-8 sm:p-10 min-w-[280px] sm:min-w-[320px] shadow-[0_0_60px_rgba(239,68,68,0.6)]"
+          className="relative flex flex-col items-center gap-4 bg-[var(--color-event-card-red)] p-8 sm:p-10 min-w-[280px] sm:min-w-[320px]"
         >
-          {/* Brilho animado */}
-          <motion.div
-            animate={{
-              opacity: [0.3, 0.6, 0.3],
-              scale: [1, 1.05, 1]
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: 'easeInOut'
-            }}
-            className="absolute inset-0 rounded-xl bg-gradient-to-br from-red-500/20 to-transparent"
-            aria-hidden
-          />
 
           {/* Conteúdo */}
           <div className="relative z-10 flex flex-col items-center gap-4">
             {/* Número do jogador */}
-            <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-red-500 border-4 border-white shadow-[0_0_30px_rgba(239,68,68,0.8)]">
-              <span className="font-display text-4xl sm:text-5xl font-black text-white">
+            <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-deep-black border-4 border-white">
+              <span className="ole-num text-3xl sm:text-4xl text-white">
                 {player.number}
               </span>
             </div>
@@ -86,9 +71,9 @@ export function RedCardOverlay({ player, reason }: RedCardOverlayProps) {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="font-display text-2xl sm:text-3xl font-black uppercase tracking-wider text-red-500 mb-2 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]"
+                className="font-impact text-3xl sm:text-4xl uppercase leading-[1.1] text-white mb-2"
               >
-                🟥 CARTÃO VERMELHO
+                Cartão vermelho
               </motion.p>
 
               <motion.p
@@ -110,9 +95,9 @@ export function RedCardOverlay({ player, reason }: RedCardOverlayProps) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="rounded-lg bg-black/40 border border-red-500/30 px-4 py-2"
+              className="bg-deep-black px-4 py-2"
             >
-              <p className="text-xs text-red-300 uppercase tracking-wider font-bold">
+              <p className="text-xs text-white uppercase tracking-wider font-bold">
                 {reasonLabel}
               </p>
             </motion.div>

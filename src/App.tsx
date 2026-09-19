@@ -366,15 +366,9 @@ function RootErrorFallback({ error, resetErrorBoundary }: { error: Error; resetE
           resetErrorBoundary();
           if (typeof window !== 'undefined') window.location.reload();
         }}
-        className="-skew-x-6 px-7 py-3 font-display font-black uppercase tracking-[0.18em] transition-all"
-        style={{
-          background: 'var(--color-neon-yellow, #FDE100)',
-          color: '#000',
-          fontSize: '14px',
-          boxShadow: '4px 4px 0 rgba(255,255,255,0.16)',
-        }}
+        className="btn-primary"
       >
-        <span className="skew-x-6 inline-block">Recarregar</span>
+        <span className="btn-primary-inner">Recarregar</span>
       </button>
       {!isChunkErr && (
         <details className="mt-3 max-w-md text-left" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '11px' }}>

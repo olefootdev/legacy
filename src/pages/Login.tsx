@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, Zap, ShoppingCart, Trophy, Users, Clock, Brain, Rocket, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Hashtag } from '@/components/ui';
 import { useGameDispatch, getGameState } from '@/game/store';
 import { signInWithEmail, fetchOnboardingProfile, sendPasswordResetEmail, saveOnboardingProfile } from '@/supabase/auth';
 import type { FormationSchemeId } from '@/match-engine/types';
@@ -58,8 +59,9 @@ const VALUE_PROPS: Record<ValueProposition, {
 };
 
 /**
- * Feature card unificado Legacy Tech — sem rainbow, sempre neon-yellow.
- * Foto-rail amarelo + ícone amarelo + Agency uppercase + descrição compacta.
+ * Feature card VOLT2 — card chapado (bg-panel), ícone volt em caixa de canto
+ * vivo, título em Anton. Sem trilho lateral, sem vidro, sem pular no hover.
+ * O texto é do A/B de proposta de valor: só a roupa mudou.
  */
 function FeatureCard({
   icon,
@@ -71,41 +73,24 @@ function FeatureCard({
   desc: string;
 }) {
   return (
-    <div
-      className="group relative overflow-hidden border border-l-[3px] border-white/10 border-l-neon-yellow bg-dark-gray/85 px-5 py-4 backdrop-blur-sm transition-all hover:border-neon-yellow/40 hover:-translate-y-0.5"
-      style={{ borderRadius: 'var(--radius-md)' }}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center bg-deep-black border border-neon-yellow/45 text-neon-yellow"
-          style={{ borderRadius: 'var(--radius-sm)' }}
-        >
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3
-            className="text-white uppercase truncate"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '13px',
-              fontWeight: 800,
-              letterSpacing: '0.18em',
-              lineHeight: 1.1,
-            }}
-          >
-            {title}
-          </h3>
-          <p
-            className="mt-1 leading-snug text-white/60"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}
-          >
-            {desc}
-          </p>
-        </div>
+    <div className="flex items-center gap-3 border border-white/10 bg-panel px-4 py-3.5">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-white/16 bg-deep-black text-neon-yellow">
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <h3 className="truncate font-impact text-[17px] uppercase leading-[1.1] text-white">{title}</h3>
+        <p className="mt-0.5 text-[12px] leading-snug text-cimento">{desc}</p>
       </div>
     </div>
   );
 }
+
+/** Campo de formulário VOLT2: asfalto chapado, canto vivo, foco em volt. */
+const INPUT =
+  'w-full border border-white/16 bg-deep-black px-3 py-2.5 text-sm text-white placeholder:text-poeira focus:border-neon-yellow focus:outline-none';
+const LABEL = 'mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento';
+const CAIXA = 'border border-white/10 bg-panel px-5 py-6 sm:px-6';
+const TITULO = 'font-impact text-[30px] uppercase leading-[1.05] text-white';
 
 export function Login() {
   const navigate = useNavigate();
@@ -177,7 +162,7 @@ export function Login() {
         } else if (errorMsg.includes('Email not confirmed')) {
           errorMsg = 'E-mail não confirmado. Verifica tua caixa de entrada.';
         } else if (errorMsg.includes('User not found')) {
-          errorMsg = 'Conta não encontrada. Verifica o e-mail ou cadastra-te.';
+          errorMsg = 'Conta não encontrada. Confira o e-mail ou cadastre-se.';
         }
         setError(errorMsg);
         return;
@@ -307,11 +292,15 @@ export function Login() {
         style={{ backgroundImage: 'url(/login-hero.png)' }}
         aria-hidden
       />
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/88 via-black/35 to-black/90" aria-hidden />
-      <div className="absolute inset-0 z-0 bg-gradient-to-t from-black via-black/50 to-black/25 opacity-[0.96]" aria-hidden />
+      {/* Scrim da foto (legibilidade) — o único degradê que o VOLT2 aceita aqui.
+          Clareia em cima pra foto respirar e fecha em asfalto onde mora o texto. */}
       <div
-        className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_95%_60%_at_50%_75%,rgba(0,0,0,0.65),transparent_52%)]"
         aria-hidden
+        className="absolute inset-0 z-0"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(13,13,13,0.85) 0%, rgba(13,13,13,0.35) 18%, rgba(13,13,13,0.7) 40%, rgba(13,13,13,0.93) 60%, #0D0D0D 85%)',
+        }}
       />
 
       <header
@@ -327,19 +316,10 @@ export function Login() {
               height={72}
               decoding="async"
               fetchPriority="high"
-              className="h-10 w-auto max-h-11 max-w-[min(100%,280px)] object-contain object-left drop-shadow-[0_2px_16px_rgba(0,0,0,0.75)] sm:h-12 sm:max-h-[3.25rem]"
+              className="h-10 w-auto max-h-11 max-w-[min(100%,280px)] object-contain object-left sm:h-12 sm:max-h-[3.25rem]"
             />
           </Link>
-          <span
-            className="shrink-0 border border-neon-yellow/35 bg-deep-black/65 px-4 py-2 font-display font-black uppercase text-neon-yellow sm:px-5"
-            style={{
-              fontSize: '10px',
-              letterSpacing: '0.32em',
-              borderRadius: 'var(--radius-pill)',
-            }}
-          >
-            Manager de Futebol
-          </span>
+          <Hashtag className="shrink-0 text-[12px] text-giz">#manager #futebol</Hashtag>
         </div>
       </header>
 
@@ -349,49 +329,30 @@ export function Login() {
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-end">
           {mode === 'landing' ? (
             <>
-              <div
-                className={cn(
-                  'relative overflow-hidden rounded-xl border border-white/[0.12]',
-                  'bg-gradient-to-br from-black/60 via-black/50 to-black/70',
-                  'shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_20px_50px_rgba(0,0,0,0.6)]',
-                  'backdrop-blur-xl',
-                )}
-              >
-                <div className="absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b from-neon-yellow via-neon-yellow/80 to-neon-yellow/60" aria-hidden />
-                <div className="relative px-6 py-8 pl-8 sm:px-8 sm:py-10 sm:pl-10">
-                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-neon-yellow/30 bg-neon-yellow/10 px-3 py-1">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-neon-yellow" />
-                    <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-neon-yellow">Jogue Agora</span>
-                  </div>
+              <div className="flex flex-col gap-4">
+                <span className="self-start bg-neon-yellow px-2.5 pb-1 pt-[5px] font-impact text-[14px] uppercase tracking-[0.06em] text-black">
+                  Jogue agora
+                </span>
 
-                  {/* Headline dinâmico baseado na variante A/B */}
-                  <h1 className="font-serif-hero text-[clamp(1.8rem,7vw,3rem)] font-normal italic leading-[1.05] tracking-tight [text-shadow:0_4px_32px_rgba(0,0,0,0.95)]">
-                    <span className="text-white">{VALUE_PROPS[variant].headline.white1} </span>
-                    <span className="text-neon-yellow">{VALUE_PROPS[variant].headline.yellow} </span>
-                    <span className="text-white">{VALUE_PROPS[variant].headline.white2}</span>
-                  </h1>
+                {/* Headline dinâmico baseado na variante A/B */}
+                <h1
+                  className="font-impact uppercase leading-[1.04] text-white"
+                  style={{ fontSize: 'clamp(32px, 9.5vw, 52px)' }}
+                >
+                  <span className="text-white">{VALUE_PROPS[variant].headline.white1} </span>
+                  <span className="text-neon-yellow">{VALUE_PROPS[variant].headline.yellow} </span>
+                  <span className="text-white">{VALUE_PROPS[variant].headline.white2}</span>
+                </h1>
 
-                  {/* Subheadline com Moret italic */}
-                  <p
-                    className="mt-6 italic text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.9)]"
-                    style={{
-                      fontFamily: 'var(--font-serif-hero)',
-                      fontSize: 'clamp(1.5rem, 5vw, 2rem)',
-                      fontWeight: 700,
-                      letterSpacing: '-0.02em',
-                    }}
-                  >
-                    {VALUE_PROPS[variant].subheadline}
-                  </p>
+                <p className="ole-eyebrow-poster">{VALUE_PROPS[variant].subheadline}</p>
 
-                  <div className="mt-6 flex flex-wrap gap-3 font-display text-[11px] font-bold uppercase tracking-[0.15em]">
-                    {VALUE_PROPS[variant].features.map((feature, i) => (
-                      <span key={i} className="flex items-center gap-1.5 text-white/70">
-                        <feature.icon className={cn('h-3.5 w-3.5', feature.color)} />
-                        {feature.text}
-                      </span>
-                    ))}
-                  </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-2 text-[12px] font-medium text-giz">
+                  {VALUE_PROPS[variant].features.map((feature, i) => (
+                    <span key={i} className="flex items-center gap-1.5">
+                      <feature.icon className={cn('h-3.5 w-3.5 shrink-0', feature.color)} />
+                      {feature.text}
+                    </span>
+                  ))}
                 </div>
               </div>
 
@@ -449,72 +410,68 @@ export function Login() {
               </div>
             </>
           ) : mode === 'complete' ? (
-            <div className="relative overflow-hidden rounded-sm border border-white/[0.1] bg-black/70 shadow-[0_16px_40px_rgba(0,0,0,0.55)] backdrop-blur-md">
-              <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow/90" aria-hidden />
-              <div className="relative px-5 py-5 pl-6 sm:px-6 sm:py-6 sm:pl-7">
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-neon-yellow/30 bg-neon-yellow/10 px-3 py-1">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-neon-yellow" />
-                  <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-neon-yellow">Bem-vindo de volta</span>
-                </div>
-                <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white sm:text-2xl">
+            <div className={CAIXA}>
+              <div>
+                <span className="ole-eyebrow-poster mb-3">Bem-vindo de volta</span>
+                <h2 className={TITULO}>
                   Completar Cadastro
                 </h2>
-                <p className="mt-2 text-[12px] text-white/60 leading-relaxed">
+                <p className="mt-2 text-[12px] leading-relaxed text-cimento">
                   Encontramos tua conta da era anterior. Completa os dados abaixo para entrar na nova plataforma.
                 </p>
                 <form onSubmit={(e) => void onCompleteSubmit(e)} className="mt-4 space-y-3" autoComplete="on">
                   <div className="grid grid-cols-2 gap-3">
                     <label className="block">
-                      <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Nome</span>
+                      <span className={LABEL}>Nome</span>
                       <input
                         type="text"
                         autoComplete="given-name"
                         value={compFirstName}
                         onChange={(e) => setCompFirstName(e.target.value)}
                         required
-                        className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                        className={INPUT}
                       />
                     </label>
                     <label className="block">
-                      <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Sobrenome</span>
+                      <span className={LABEL}>Sobrenome</span>
                       <input
                         type="text"
                         autoComplete="family-name"
                         value={compLastName}
                         onChange={(e) => setCompLastName(e.target.value)}
                         required
-                        className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                        className={INPUT}
                       />
                     </label>
                   </div>
                   <label className="block">
-                    <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Telefone (com DDD)</span>
+                    <span className={LABEL}>Telefone (com DDD)</span>
                     <input
                       type="tel"
                       autoComplete="tel"
                       value={compPhone}
                       onChange={(e) => setCompPhone(e.target.value)}
                       placeholder="+5511999999999"
-                      className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                      className={INPUT}
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Nome do Clube</span>
+                    <span className={LABEL}>Nome do Clube</span>
                     <input
                       type="text"
                       value={compClubName}
                       onChange={(e) => setCompClubName(e.target.value)}
                       required
                       placeholder="Ex: Olefoot FC"
-                      className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                      className={INPUT}
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Formação</span>
+                    <span className={LABEL}>Formação</span>
                     <select
                       value={compFormation}
                       onChange={(e) => setCompFormation(e.target.value as FormationSchemeId)}
-                      className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                      className={INPUT}
                     >
                       {(['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1', '5-3-2', '3-4-3'] as FormationSchemeId[]).map((f) => (
                         <option key={f} value={f}>{f}</option>
@@ -522,15 +479,15 @@ export function Login() {
                     </select>
                   </label>
                   {error ? (
-                    <div className="flex items-start gap-2 rounded-sm border border-rose-500/50 bg-rose-500/15 px-3 py-2.5 text-[12px] leading-snug text-rose-100">
-                      <span className="shrink-0 text-rose-300">✗</span>
+                    <div className="flex items-start gap-2 border border-baixa/50 bg-baixa/10 px-3 py-2.5 text-[12px] leading-snug text-giz">
+                      <span className="shrink-0 text-baixa">✗</span>
                       <span className="flex-1">{error}</span>
                     </div>
                   ) : null}
                   <button
                     type="submit"
                     disabled={busy || !compFirstName.trim() || !compLastName.trim() || !compClubName.trim()}
-                    className="btn-primary w-full disabled:pointer-events-none disabled:opacity-40"
+                    className="btn-primary flex h-12 w-full items-center justify-center disabled:pointer-events-none disabled:opacity-40"
                   >
                     <span className="btn-primary-inner justify-center py-1">
                       {busy ? 'Salvando…' : 'Entrar na Plataforma'}
@@ -540,47 +497,46 @@ export function Login() {
               </div>
             </div>
           ) : mode === 'forgot' ? (
-            <div className="relative overflow-hidden rounded-sm border border-white/[0.1] bg-black/70 shadow-[0_16px_40px_rgba(0,0,0,0.55)] backdrop-blur-md">
-              <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow/90" aria-hidden />
-              <div className="relative px-5 py-5 pl-6 sm:px-6 sm:py-6 sm:pl-7">
-                <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white sm:text-2xl">
+            <div className={CAIXA}>
+              <div>
+                <h2 className={TITULO}>
                   Recuperar Senha
                 </h2>
                 {forgotSent ? (
                   <div className="mt-4 space-y-3">
-                    <p className="rounded-sm border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-[12px] text-emerald-200">
+                    <p className="border border-alta/40 bg-alta/10 px-3 py-2 text-[12px] text-giz">
                       ✓ Enviamos um link de recuperação para <strong>{email}</strong>. Abre o e-mail para definir uma nova senha.
                     </p>
-                    <p className="text-[11px] text-white/55">
+                    <p className="text-[11px] text-cimento">
                       Não recebeu? Verifica a pasta de spam ou tenta novamente.
                     </p>
                   </div>
                 ) : (
                   <form onSubmit={(e) => void onForgotSubmit(e)} className="mt-4 space-y-3" autoComplete="on">
-                    <p className="text-[12px] text-white/70">
+                    <p className="text-[12px] text-giz">
                       Informa o e-mail da tua conta. Te enviaremos um link para redefinir a senha.
                     </p>
                     <label className="block">
-                      <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">E-mail</span>
+                      <span className={LABEL}>E-mail</span>
                       <input
                         type="email"
                         autoComplete="email"
                         value={email}
                         onChange={(e: import('react').ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                         required
-                        className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                        className={INPUT}
                       />
                     </label>
                     {error ? (
-                      <div className="flex items-start gap-2 rounded-sm border border-rose-500/50 bg-rose-500/15 px-3 py-2.5 text-[12px] leading-snug text-rose-100">
-                        <span className="shrink-0 text-rose-300">✗</span>
+                      <div className="flex items-start gap-2 border border-baixa/50 bg-baixa/10 px-3 py-2.5 text-[12px] leading-snug text-giz">
+                        <span className="shrink-0 text-baixa">✗</span>
                         <span className="flex-1">{error}</span>
                       </div>
                     ) : null}
                     <button
                       type="submit"
                       disabled={busy || !email}
-                      className="btn-primary w-full disabled:pointer-events-none disabled:opacity-40"
+                      className="btn-primary flex h-12 w-full items-center justify-center disabled:pointer-events-none disabled:opacity-40"
                     >
                       <span className="btn-primary-inner justify-center py-1">
                         {busy ? 'Enviando…' : 'Enviar link'}
@@ -595,33 +551,32 @@ export function Login() {
                     setError(null);
                     setForgotSent(false);
                   }}
-                  className="mt-3 w-full text-center text-[11px] text-white/50 hover:text-white"
+                  className="mt-4 w-full text-center text-[12px] text-cimento transition-colors hover:text-white"
                 >
                   ← Voltar
                 </button>
               </div>
             </div>
           ) : (
-            <div className="relative overflow-hidden rounded-sm border border-white/[0.1] bg-black/70 shadow-[0_16px_40px_rgba(0,0,0,0.55)] backdrop-blur-md">
-              <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow/90" aria-hidden />
-              <div className="relative px-5 py-5 pl-6 sm:px-6 sm:py-6 sm:pl-7">
-                <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white sm:text-2xl">
+            <div className={CAIXA}>
+              <div>
+                <h2 className={TITULO}>
                   Entrar
                 </h2>
                 <form onSubmit={(e) => void onSubmit(e)} className="mt-4 space-y-3" autoComplete="on">
                   <label className="block">
-                    <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">E-mail</span>
+                    <span className={LABEL}>E-mail</span>
                     <input
                       type="email"
                       autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                      className={INPUT}
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Senha</span>
+                    <span className={LABEL}>Senha</span>
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -630,12 +585,12 @@ export function Login() {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         minLength={6}
-                        className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 pr-10 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                        className={cn(INPUT, 'pr-10')}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-cimento transition-colors hover:text-white"
                         aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                       >
                         {showPassword ? (
@@ -647,15 +602,15 @@ export function Login() {
                     </div>
                   </label>
                   {error ? (
-                    <div className="flex items-start gap-2 rounded-sm border border-rose-500/50 bg-rose-500/15 px-3 py-2.5 text-[12px] leading-snug text-rose-100">
-                      <span className="shrink-0 text-rose-300">✗</span>
+                    <div className="flex items-start gap-2 border border-baixa/50 bg-baixa/10 px-3 py-2.5 text-[12px] leading-snug text-giz">
+                      <span className="shrink-0 text-baixa">✗</span>
                       <span className="flex-1">{error}</span>
                     </div>
                   ) : null}
                   <button
                     type="submit"
                     disabled={busy || !email || !password}
-                    className="btn-primary w-full disabled:pointer-events-none disabled:opacity-40"
+                    className="btn-primary flex h-12 w-full items-center justify-center disabled:pointer-events-none disabled:opacity-40"
                   >
                     <span className="btn-primary-inner justify-center py-1">
                       {busy ? 'Entrando…' : 'Entrar'}
@@ -665,7 +620,7 @@ export function Login() {
                 <button
                   type="button"
                   onClick={() => setMode('landing')}
-                  className="mt-3 w-full text-center text-[11px] text-white/50 hover:text-white"
+                  className="mt-4 w-full text-center text-[12px] text-cimento transition-colors hover:text-white"
                 >
                   ← Voltar
                 </button>
@@ -683,12 +638,7 @@ export function Login() {
                   console.log('[A/B Test] User clicked "Entrar" on variant:', variant);
                   localStorage.setItem('olefoot_ab_converted', variant);
                 }}
-                className="relative overflow-hidden bg-neon-yellow px-6 py-4 font-display font-black uppercase text-black shadow-[0_8px_24px_rgba(253,224,71,0.28)] transition-all hover:bg-white hover:scale-[1.005] active:scale-[0.99]"
-                style={{
-                  fontSize: '14px',
-                  letterSpacing: '0.24em',
-                  borderRadius: 'var(--radius-sm)',
-                }}
+                className="btn-primary flex h-14 w-full items-center justify-center text-[16px]"
               >
                 Entrar
               </button>
@@ -699,18 +649,13 @@ export function Login() {
                   console.log('[A/B Test] User clicked "Cadastrar" on variant:', variant);
                   localStorage.setItem('olefoot_ab_converted', variant);
                 }}
-                className="flex items-center justify-center border border-white/20 bg-deep-black/60 px-6 py-4 font-display font-black uppercase text-white backdrop-blur-sm transition-all hover:border-neon-yellow/50 hover:text-neon-yellow active:scale-[0.99]"
-                style={{
-                  fontSize: '14px',
-                  letterSpacing: '0.24em',
-                  borderRadius: 'var(--radius-sm)',
-                }}
+                className="btn-secondary flex h-14 w-full items-center justify-center text-[16px]"
               >
                 Cadastrar
               </Link>
               <button
                 type="button"
-                className="mt-2 pt-1 text-center font-sans text-xs font-bold uppercase tracking-wider text-white/55 underline decoration-white/25 underline-offset-4 transition hover:text-neon-yellow/90 hover:decoration-neon-yellow/40"
+                className="mt-2 pt-1 text-center font-sans text-xs font-bold uppercase tracking-wider text-cimento underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60"
                 onClick={() => {
                   setError(null);
                   setForgotSent(false);
@@ -730,7 +675,7 @@ export function Login() {
               href="https://www.instagram.com/olefootgame"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white/70 transition-all hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow"
+              className="flex h-10 w-10 items-center justify-center border border-white/16 text-cimento transition-colors hover:border-white/30 hover:text-white"
               aria-label="Instagram"
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -741,7 +686,7 @@ export function Login() {
               href="https://www.youtube.com/@olefoot"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white/70 transition-all hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow"
+              className="flex h-10 w-10 items-center justify-center border border-white/16 text-cimento transition-colors hover:border-white/30 hover:text-white"
               aria-label="YouTube"
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -752,7 +697,7 @@ export function Login() {
               href="https://x.com/olefootgame"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white/70 transition-all hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow"
+              className="flex h-10 w-10 items-center justify-center border border-white/16 text-cimento transition-colors hover:border-white/30 hover:text-white"
               aria-label="X (Twitter)"
             >
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -760,7 +705,7 @@ export function Login() {
               </svg>
             </a>
           </div>
-          <p className="text-[10px] text-white/35 sm:text-[11px]">
+          <p className="text-[10px] text-poeira sm:text-[11px]">
             Olefoot © 2026 · Todos os direitos reservados
           </p>
         </footer>

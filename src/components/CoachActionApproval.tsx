@@ -46,22 +46,22 @@ export function CoachActionApproval() {
   const getUrgencyColor = (urgency: CoachAction['urgency']) => {
     switch (urgency) {
       case 'high':
-        return 'border-red-500/50 bg-red-500/10';
+        return 'border-baixa/60 bg-panel';
       case 'medium':
-        return 'border-yellow-500/50 bg-yellow-500/10';
+        return 'border-atencao/60 bg-panel';
       case 'low':
-        return 'border-blue-500/50 bg-blue-500/10';
+        return 'border-white/16 bg-panel';
     }
   };
 
   const getUrgencyBadge = (urgency: CoachAction['urgency']) => {
     switch (urgency) {
       case 'high':
-        return 'bg-red-500/20 text-red-400';
+        return 'bg-baixa/20 text-baixa';
       case 'medium':
-        return 'bg-yellow-500/20 text-yellow-400';
+        return 'bg-atencao/20 text-atencao';
       case 'low':
-        return 'bg-blue-500/20 text-blue-400';
+        return 'bg-white/10 text-cimento';
     }
   };
 
@@ -79,15 +79,15 @@ export function CoachActionApproval() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, x: 100, scale: 0.95 }}
               className={cn(
-                'mb-3 rounded-lg border-2 backdrop-blur-sm shadow-xl',
+                'mb-3 border-2',
                 getUrgencyColor(action.urgency)
               )}
             >
               <div className="p-4">
                 {/* Header */}
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-neon-yellow/20 flex items-center justify-center shrink-0">
-                    <Icon className="w-5 h-5 text-neon-yellow" />
+                  <div className="w-10 h-10 bg-card-hi flex items-center justify-center shrink-0">
+                    <Icon className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -96,14 +96,14 @@ export function CoachActionApproval() {
                       </h4>
                       <span
                         className={cn(
-                          'shrink-0 px-2 py-0.5 rounded text-[9px] font-bold uppercase',
+                          'shrink-0 px-2 py-0.5 font-mono text-[9.5px] font-medium uppercase',
                           getUrgencyBadge(action.urgency)
                         )}
                       >
                         {action.urgency}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-300">{action.description}</p>
+                    <p className="text-xs text-giz">{action.description}</p>
                   </div>
                 </div>
 
@@ -114,7 +114,7 @@ export function CoachActionApproval() {
                   }
                   className="w-full text-left mb-3"
                 >
-                  <div className="flex items-center gap-2 text-[10px] text-gray-400 hover:text-gray-300 transition-colors">
+                  <div className="flex items-center gap-2 text-[10px] text-cimento hover:text-white transition-colors">
                     <Clock className="w-3 h-3" />
                     <span>
                       {isExpanded ? 'Ocultar' : 'Ver'} justificativa do coach
@@ -130,7 +130,7 @@ export function CoachActionApproval() {
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden mb-3"
                     >
-                      <div className="bg-black/40 rounded p-2.5 text-xs text-gray-300 leading-relaxed">
+                      <div className="bg-card p-2.5 text-xs text-giz leading-relaxed">
                         {action.reasoning}
                       </div>
                     </motion.div>
@@ -141,14 +141,14 @@ export function CoachActionApproval() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleApprove(action.id)}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 bg-neon-yellow text-black px-3 py-2 rounded text-xs font-bold uppercase hover:bg-neon-yellow/90 transition-colors"
+                    className="ole-num flex-1 inline-flex items-center justify-center gap-1.5 bg-neon-yellow text-black px-3 py-2 text-[12px] uppercase hover:bg-white transition-colors"
                   >
                     <Check className="w-4 h-4" />
                     Aprovar
                   </button>
                   <button
                     onClick={() => handleReject(action.id)}
-                    className="inline-flex items-center justify-center gap-1.5 bg-white/10 text-white px-3 py-2 rounded text-xs font-bold uppercase hover:bg-white/20 transition-colors"
+                    className="ole-num inline-flex items-center justify-center gap-1.5 border border-white/30 text-white px-3 py-2 text-[12px] uppercase hover:border-white transition-colors"
                   >
                     <X className="w-4 h-4" />
                     Rejeitar

@@ -449,18 +449,18 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[70] flex min-h-0 flex-col justify-end bg-black/80 px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-8 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4">
+        <div className="fixed inset-0 z-[70] flex min-h-0 flex-col justify-end bg-black/85 px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-8 sm:items-center sm:justify-center sm:p-4">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
-            className="relative mx-auto flex max-h-[min(92dvh,920px)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-neon-yellow/30 bg-dark-gray shadow-[0_0_40px_rgba(234,255,0,0.12)] sm:max-w-2xl sm:rounded-2xl"
+            className="relative mx-auto flex max-h-[min(92dvh,920px)] w-full max-w-lg flex-col overflow-hidden border border-white/16 bg-panel sm:max-w-2xl"
           >
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
               <div className="flex min-w-0 items-center gap-2">
                 <Sparkles className="h-5 w-5 shrink-0 text-neon-yellow" aria-hidden />
                 <div className="min-w-0">
-                  <h3 className="font-display text-sm font-black uppercase italic tracking-wide text-white">
+                  <h3 className="font-impact text-[17px] uppercase leading-[1.1] text-white">
                     Academia OLE
                   </h3>
                   <p className="text-[10px] text-gray-500">
@@ -809,7 +809,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                         placeholder="Ex.: Brasil, ascendência cabo-verdiana."
                         className={cn(
                           'w-full resize-none rounded-lg border bg-black/50 px-2 py-2 text-xs text-white outline-none focus:border-neon-yellow',
-                          heritageValid ? 'border-white/15' : 'border-amber-500/40',
+                          heritageValid ? 'border-white/15' : 'border-atencao/40',
                         )}
                       />
                       <span className="text-[9px] text-gray-600">

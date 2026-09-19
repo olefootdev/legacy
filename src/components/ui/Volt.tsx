@@ -50,12 +50,12 @@ export function SecaoVolt({
           aria-hidden
           className={cn('block h-0.5 w-[18px] shrink-0', tone === 'volt' ? 'bg-neon-yellow' : 'bg-[#3A3D40]')}
         />
-        <h2 className="min-w-0 truncate font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
+        <h2 className="min-w-0 truncate font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-giz">
           {label}
         </h2>
         <span
           aria-hidden
-          className="block h-px min-w-6 grow"
+          className="block h-px min-w-3 grow"
           style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0))' }}
         />
       </div>

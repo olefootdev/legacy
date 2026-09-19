@@ -48,10 +48,8 @@ export function DataCard({
         ? 'bg-[var(--color-panel-elevated)]'
         : 'bg-[var(--color-panel-elevated)]';
 
-  const shadow =
-    variant === 'hero'
-      ? 'shadow-[var(--shadow-card-hover)] before:absolute before:inset-0 before:pointer-events-none before:rounded-[var(--radius-card)] before:shadow-[var(--shadow-glow-yellow)]'
-      : 'shadow-[var(--shadow-card)]';
+  // VOLT2: sem sombra nem halo — o destaque do hero é a borda.
+  const shadow = variant === 'hero' ? 'border-white/16' : '';
 
   const interactive = typeof onClick === 'function';
 
@@ -59,10 +57,10 @@ export function DataCard({
     <Tag
       onClick={onClick}
       className={cn(
-        'relative isolate rounded-[var(--radius-card)] border border-white/[0.04] overflow-hidden',
+        'relative isolate border border-white/10 overflow-hidden',
         surface,
         shadow,
-        interactive && 'cursor-pointer transition-shadow hover:shadow-[var(--shadow-card-hover)]',
+        interactive && 'cursor-pointer transition-colors hover:border-white/30',
         className,
       )}
     >

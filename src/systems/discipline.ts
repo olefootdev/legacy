@@ -51,6 +51,6 @@ export function rollMatchDiscipline(player: PlayerEntity): {
       },
       outForMatches: Math.max(player.outForMatches, 1),
     },
-    narrative: `${player.name} recebe vermelho direto; o relvado fica em polvorosa.`,
+    narrative: `${player.name} recebe vermelho direto; o estádio fica em polvorosa.`,
   };
 }

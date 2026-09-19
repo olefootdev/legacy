@@ -68,7 +68,7 @@ export function NarrativeBar({ lastEventText, lastEventKind, possession, ballX, 
       display: 'flex', alignItems: 'center', gap: 8,
       padding: '0 12px',
       height: 28,
-      background: flash ? 'rgba(253,225,0,0.12)' : 'rgba(5,5,5,0.95)',
+      background: flash ? 'rgba(253,225,0,0.12)' : 'var(--color-nav)',
       borderBottom: `1px solid ${flash ? 'rgba(253,225,0,0.35)' : 'rgba(255,255,255,0.05)'}`,
       transition: 'background 300ms ease, border-color 300ms ease',
       flexShrink: 0,
@@ -80,8 +80,7 @@ export function NarrativeBar({ lastEventText, lastEventKind, possession, ballX, 
 
       {/* Texto do evento */}
       <span style={{
-        fontFamily: 'var(--font-serif-hero)',
-        fontStyle: 'italic',
+        fontFamily: 'var(--font-sans)',
         fontSize: 11,
         color: flash ? NEON : 'rgba(255,255,255,0.65)',
         flex: 1,
@@ -101,7 +100,6 @@ export function NarrativeBar({ lastEventText, lastEventKind, possession, ballX, 
         <div style={{
           width: 5, height: 5, borderRadius: '50%',
           background: momentumColor,
-          boxShadow: `0 0 6px ${momentumColor}`,
           transition: 'background 600ms ease',
         }} />
         <span style={{

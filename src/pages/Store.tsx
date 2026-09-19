@@ -39,64 +39,60 @@ type StorePurchaseOutcome =
  * Agora a raridade se lê pela quantidade de amarelo: comum não tem, raro tem um
  * fio, épico tem trilho e etiqueta, mítico vem sólido. A informação continua
  * inteira; o vocabulário passa a ser um só.
+ *
+ * VOLT2 (2026-09-19): sem brilho, sem sombra de adesivo e sem degradê de fundo.
+ * A escada fica só na borda (`frame`), no trilho e na etiqueta chapada.
  */
 function rarityStyles(r: ShopRarity): {
   border: string;
-  glow: string;
+  /** Moldura do card por raridade — cor chapada; o topo ganha borda volt 2px. */
+  frame: string;
   label: string;
   labelClass: string;
   /** Cor sólida do trilho lateral. */
   rail: string;
-  /** Fundo do bloco visual superior. */
-  bgWash: string;
 } {
   switch (r) {
     case 'comum':
       return {
         border: 'border-white/12',
-        glow: '',
+        frame: 'hover:border-white/30',
         label: 'COMUM',
         labelClass: 'bg-white/10 text-white/70',
         rail: 'bg-white/25',
-        bgWash: 'bg-gradient-to-br from-white/[0.04] to-black',
       };
     case 'raro':
       return {
         border: 'border-neon-yellow/25',
-        glow: '',
+        frame: 'hover:border-white/30',
         label: 'RARO',
         labelClass: 'bg-neon-yellow/12 text-neon-yellow/85',
         rail: 'bg-neon-yellow/45',
-        bgWash: 'bg-gradient-to-br from-neon-yellow/[0.05] to-black',
       };
     case 'epico':
       return {
         border: 'border-neon-yellow/55',
-        glow: 'shadow-[0_0_28px_rgba(253,225,0,0.14)]',
+        frame: 'border-neon-yellow/55',
         label: 'ÉPICO',
         labelClass: 'bg-neon-yellow/25 text-neon-yellow',
         rail: 'bg-neon-yellow',
-        bgWash: 'bg-gradient-to-br from-neon-yellow/[0.10] to-black',
       };
     case 'mitico':
-      // O topo da escada: amarelo sólido, etiqueta invertida e sombra dura —
-      // o mesmo tratamento que o layer final dá ao que é mais importante.
+      // O topo da escada: borda volt 2px + etiqueta volt chapada invertida.
       return {
         border: 'border-neon-yellow',
-        glow: 'shadow-[5px_5px_0_rgba(237,235,228,0.13)]',
+        frame: 'border-2 border-neon-yellow',
         label: 'MÍTICO',
         labelClass: 'bg-neon-yellow text-black',
         rail: 'bg-neon-yellow',
-        bgWash: 'bg-gradient-to-br from-neon-yellow/20 to-black',
       };
     default:
       return {
         border: 'border-white/12',
-        glow: '',
+        frame: 'hover:border-white/30',
         label: '',
         labelClass: '',
         rail: 'bg-white/25',
-        bgWash: 'bg-gradient-to-br from-white/[0.03] to-black',
       };
   }
 }
@@ -198,9 +194,9 @@ export function Store() {
       setConfirmItem(null);
       setPurchaseOutcome({
         kind: 'error',
-        title: 'Compra não registada',
+        title: 'Compra não registrada',
         message:
-          'O pagamento não foi aplicado (saldo pode ter mudado ou o item não está disponível). Abre a Wallet, confirma EXP/BRO e tenta outra vez.',
+          'O pagamento não foi aplicado (saldo pode ter mudado ou o item não está disponível). Abra a Wallet, confira EXP/BRO e tente outra vez.',
       });
       return;
     }
@@ -289,7 +285,7 @@ export function Store() {
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link
               to="/wallet"
-              className="inline-flex items-center gap-2 bg-black px-7 py-3 text-neon-yellow font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
+              className="inline-flex items-center gap-2 bg-black px-7 py-3 text-neon-yellow font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-deep-black/80 transition-colors"
               style={{
                 fontFamily: 'var(--font-display)',
                 borderRadius: 'var(--radius-sm)',
@@ -376,14 +372,13 @@ export function Store() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.02, type: 'spring', stiffness: 380, damping: 28 }}
                   className={cn(
-                    'group relative isolate flex h-full cursor-pointer overflow-hidden border border-white/[0.05]',
-                    'transition-all duration-300 hover:border-white/15 hover:-translate-y-0.5',
-                    rs.glow,
+                    'group relative isolate flex h-full cursor-pointer overflow-hidden border border-white/10',
+                    'transition-colors duration-300',
+                    rs.frame,
                   )}
                   style={{
                     borderRadius: 'var(--radius-card)',
                     background: 'var(--color-panel-elevated)',
-                    boxShadow: 'var(--shadow-card)',
                   }}
                 >
                   {/* Trilho lateral colorido (raridade) — texto-claro, sem ícone solto */}
@@ -400,14 +395,14 @@ export function Store() {
                     <div className="flex items-center justify-between gap-2">
                       <span
                         className={cn(
-                          'inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-1 font-display text-[9px] font-black uppercase tracking-[0.22em]',
+                          'inline-flex items-center rounded-sm px-2.5 py-1 font-display text-[9px] font-black uppercase tracking-[0.22em]',
                           rs.labelClass,
                         )}
                       >
                         {rs.label || 'Item'}
                       </span>
                       {item.consumable && inv > 0 ? (
-                        <span className="rounded-[var(--radius-pill)] bg-[var(--color-success)]/15 px-2.5 py-1 font-display text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--color-success)]">
+                        <span className="rounded-sm bg-[var(--color-success)]/15 px-2.5 py-1 font-display text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--color-success)]">
                           {inv}× inventário
                         </span>
                       ) : null}
@@ -456,14 +451,12 @@ export function Store() {
                         e.stopPropagation();
                         handleSelect();
                       }}
-                      className="mt-auto inline-flex items-center justify-center rounded-[var(--radius-sm)] bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all hover:bg-white hover:scale-[1.02] active:scale-[0.98]"
+                      className="mt-auto inline-flex items-center justify-center rounded-sm bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black transition-colors hover:bg-white"
                     >
                       Comprar
                     </button>
                   </div>
 
-                  {/* Wash de raridade — discreto, no fundo */}
-                  <div className={cn('pointer-events-none absolute inset-0 opacity-30 mix-blend-soft-light', rs.bgWash)} aria-hidden />
                 </motion.article>
               </PremiumPriceReveal>
             );
@@ -476,7 +469,7 @@ export function Store() {
           <motion.div
             key="store-checkout-overlay"
             role="presentation"
-            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/75 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:items-center sm:p-6"
+            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/75 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -490,9 +483,9 @@ export function Store() {
               transition={{ type: 'spring', stiffness: 380, damping: 32 }}
               className={cn(
                 "relative w-full max-w-md overflow-hidden rounded-md border bg-panel",
-                confirmItem.rarity === 'mitico' || confirmItem.rarity === 'epico'
-                  ? 'border-neon-yellow/35 shadow-[0_0_48px_rgba(253,225,0,0.18)]'
-                  : 'border-neon-yellow/35 shadow-[0_0_48px_rgba(234,255,0,0.12)]'
+                confirmItem.rarity === 'mitico'
+                  ? 'border-2 border-neon-yellow'
+                  : 'border-neon-yellow/35'
               )}
               role="dialog"
               aria-modal="true"
@@ -501,7 +494,7 @@ export function Store() {
             >
               <div className={cn(
                 "flex items-start justify-between gap-2 border-b px-4 py-4",
-                confirmItem.rarity === 'mitico' ? 'border-neon-yellow/20 bg-gradient-to-r from-neon-yellow/[0.07] to-transparent' : 'border-white/10'
+                confirmItem.rarity === 'mitico' ? 'border-neon-yellow/20 bg-card' : 'border-white/10'
               )}>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[9px] font-bold uppercase tracking-widest text-neon-yellow/90">
@@ -610,7 +603,7 @@ export function Store() {
                     className="btn-primary flex flex-1 items-center justify-center gap-2 py-3 font-display text-[10px] font-black uppercase tracking-wide disabled:opacity-40"
                   >
                     <Zap className="h-4 w-4" />
-                    Pagar EXP
+                    Pagar {checkoutPrices?.exp ?? 'EXP'}
                   </button>
                 ) : null}
                 {confirmItem.priceBroCents != null && confirmItem.priceBroCents > 0 ? (
@@ -621,7 +614,7 @@ export function Store() {
                     className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 py-3 font-display text-[10px] font-black uppercase tracking-wide text-white transition hover:bg-white/20 disabled:opacity-40"
                   >
                     <Wallet className="h-4 w-4" />
-                    Pagar BRO
+                    Pagar {checkoutPrices?.bro ?? 'BRO'}
                   </button>
                 ) : null}
               </div>
@@ -644,8 +637,8 @@ export function Store() {
           purchaseOutcome?.kind === 'success'
             ? `Pagamento em ${purchaseOutcome.currency === 'exp' ? 'EXP' : 'BRO'} às ${purchaseOutcome.atLabel}. ${
                 purchaseOutcome.item.consumable
-                  ? 'O item está no inventário: abre Meu Time, escolhe um jogador e aplica o consumível.'
-                  : 'O pedido do pack foi registado; vê também a mensagem na caixa do clube.'
+                  ? 'O item está no inventário: abra Meu Time, escolha um jogador e aplique o consumível.'
+                  : 'O pedido do pack foi registrado; veja também a mensagem na caixa do clube.'
               }`
             : purchaseOutcome?.kind === 'error'
               ? purchaseOutcome.message

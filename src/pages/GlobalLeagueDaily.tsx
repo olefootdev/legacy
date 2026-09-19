@@ -1,14 +1,14 @@
 /**
  * /liga-global/hoje — Ciclo Diário (Coroa do Dia)
  *
- * Aplica o hero pattern editorial Olefoot (BG neon-yellow + watermark gigante
- * "COROA" + hero text preto + divider + serif-hero italic). Ranking polido,
- * bracket integrado e galeria de coroas no rodapé.
+ * VOLT2: hero volt chapado + manchete Anton preta (sem marca d'água). Linha do
+ * manager em faixa volt, corte do mata-mata em linha tracejada; bracket
+ * integrado e galeria de coroas no rodapé.
  */
 
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Crown, Flag, Swords, Clock, ArrowLeft, Trophy, Scale, Check } from 'lucide-react';
+import { Crown, Flag, Swords, Clock, ArrowLeft, Scale, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDailyCycle } from '@/hooks/useDailyCycle';
 import { DailyBracket } from '@/components/matchglobal/DailyBracket';
@@ -16,6 +16,7 @@ import { CrownsGallery } from '@/components/matchglobal/CrownsGallery';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { decreeForWeek, isoWeekKey, type DecreeOption } from '@/systems/weeklyDecree';
 import { submitDecreeVote, fetchDecreeTally, type DecreeTally } from '@/supabase/weeklyDecree';
+import { Hashtag } from '@/components/ui';
 
 function fmtCountdown(ms: number): string {
   if (ms <= 0) return 'agora';
@@ -83,36 +84,25 @@ export default function GlobalLeagueDaily() {
         <button
           type="button"
           onClick={() => navigate('/match/global')}
-          className="inline-flex items-center gap-2 text-[10px] font-display uppercase tracking-[0.25em] text-white/40 hover:text-neon-yellow transition-colors"
+          className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-cimento hover:text-neon-yellow transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Liga Global
         </button>
       </div>
 
-      {/* HERO EDITORIAL — BG neon-yellow + watermark COROA + hero text preto */}
-      <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm">
-        <div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden" aria-hidden>
-          <span
-            className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
-            style={{ fontSize: 'clamp(120px, 24vw, 360px)', lineHeight: '0.85', letterSpacing: '-0.02em' }}
-          >
-            COROA
-          </span>
-        </div>
+      {/* HERO — volt chapado + manchete preta */}
+      <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 text-center"
         >
-          <p className="font-display text-[10px] sm:text-xs font-bold uppercase tracking-[0.3em] text-black/60 mb-2">
-            Liga Global · Ciclo Diário
-          </p>
-          <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black leading-none">
+          <Hashtag className="mb-2 text-black/70">#ligaglobal · ciclo diário</Hashtag>
+          <h1 className="font-impact text-5xl sm:text-7xl uppercase text-black leading-[1.1]">
             Coroa do Dia
           </h1>
-          <span aria-hidden className="mx-auto mt-4 block w-16 h-[3px] bg-black" />
-          <p className="font-serif-hero text-xl sm:text-2xl italic text-black/80 mt-4">
+          <p className="mt-3 truncate font-impact text-xl sm:text-3xl uppercase leading-[1.1] text-black">
             {daily.phase === 'qualifying' && 'A corrida está aberta'}
             {daily.phase === 'knockout' && 'Mata-Mata em andamento'}
             {daily.phase === 'crowned' && daily.todayCrown
@@ -123,12 +113,12 @@ export default function GlobalLeagueDaily() {
       </section>
 
       {/* Indicador de fase + countdown */}
-      <div className="sports-panel rounded-lg p-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="sports-panel p-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm flex-wrap">
           <PhaseChip active={daily.phase === 'qualifying'} icon={<Flag className="w-3.5 h-3.5" />} label="Classificação" />
-          <span className="text-white/30">›</span>
+          <span className="text-poeira">›</span>
           <PhaseChip active={daily.phase === 'knockout'} icon={<Swords className="w-3.5 h-3.5" />} label="Mata-Mata" />
-          <span className="text-white/30">›</span>
+          <span className="text-poeira">›</span>
           <PhaseChip active={daily.phase === 'crowned'} icon={<Crown className="w-3.5 h-3.5" />} label="Coroa" />
         </div>
         <div className="flex items-center gap-2">
@@ -145,7 +135,7 @@ export default function GlobalLeagueDaily() {
               <Clock className="w-4 h-4" />
               <span className="font-mono text-sm">
                 {liveRound ? (
-                  <span className="text-neon-green font-bold animate-pulse">● ao vivo</span>
+                  <span className="text-alta font-bold animate-pulse">● ao vivo</span>
                 ) : (
                   <>próxima em <span className="font-bold text-white">{fmtCountdown(Math.max(0, nextRound.scheduledKickoffMs - now))}</span></>
                 )}
@@ -157,18 +147,18 @@ export default function GlobalLeagueDaily() {
 
       {/* FABLE — DECRETO DA SEMANA: a decisão de reinado. O voto muda como o
           SEU mundo joga a semana (pisos em MatchContextModifiers). */}
-      <section className="sports-panel rounded-lg overflow-hidden">
-        <div className="px-4 py-3 bg-gradient-to-r from-neon-yellow/15 via-neon-yellow/5 to-transparent border-b border-neon-yellow/30 flex items-center justify-between gap-3">
-          <div>
-            <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-neon-yellow/80">
+      <section className="sports-panel overflow-hidden">
+        <div className="px-4 py-3 bg-deep-black border-b border-white/10 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-neon-yellow">
               {decree.title} · {weekKey}
             </p>
-            <h2 className="font-display text-lg font-bold uppercase tracking-wider text-white flex items-center gap-2">
-              <Scale className="w-4 h-4 text-neon-yellow" /> {decree.question}
+            <h2 className="mt-0.5 flex items-center gap-2 text-[15px] font-bold leading-snug text-white">
+              <Scale className="w-4 h-4 shrink-0 text-neon-yellow" /> {decree.question}
             </h2>
           </div>
           {activeVote && (
-            <span className="text-[9px] font-display uppercase tracking-wider bg-neon-yellow text-black px-2 py-1 rounded-sm shrink-0">
+            <span className="shrink-0 bg-neon-yellow px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-black">
               Decretado
             </span>
           )}
@@ -184,30 +174,30 @@ export default function GlobalLeagueDaily() {
                 type="button"
                 onClick={() => voteDecree(key)}
                 disabled={!!activeVote}
-                className={`text-left rounded-md border p-3.5 transition-colors ${
+                className={`text-left border p-3.5 transition-colors ${
                   chosen || reigning
-                    ? 'border-neon-yellow bg-neon-yellow/10'
+                    ? 'border-neon-yellow bg-card'
                     : activeVote
                       ? 'border-white/10 opacity-40'
-                      : 'border-white/15 hover:border-neon-yellow/60 hover:bg-white/[0.03]'
+                      : 'border-white/16 hover:border-white/30'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className={`font-display text-sm font-black uppercase tracking-wider ${chosen || reigning ? 'text-neon-yellow' : 'text-white'}`}>
+                  <p className={`ole-num min-w-0 truncate text-[13px] uppercase ${chosen || reigning ? 'text-neon-yellow' : 'text-white'}`}>
                     {opt.label}
                   </p>
                   {votes != null && (
-                    <span className="font-mono text-xs text-text-soft shrink-0">{votes} voto{votes === 1 ? '' : 's'}</span>
+                    <span className="font-mono text-xs text-cimento shrink-0">{votes} voto{votes === 1 ? '' : 's'}</span>
                   )}
                 </div>
-                <p className="text-xs text-text-soft mt-1">{opt.effectText}</p>
+                <p className="text-xs text-cimento mt-1">{opt.effectText}</p>
                 {reigning && (
-                  <p className="inline-flex items-center gap-1 text-[10px] font-display uppercase tracking-[0.2em] text-neon-yellow/80 mt-2">
-                    <Crown className="h-3 w-3" strokeWidth={2.2} /> Decreto do reino — em vigor até domingo
+                  <p className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.12em] text-neon-yellow mt-2">
+                    <Crown className="h-3 w-3" strokeWidth={2.2} /> Decreto do reino · até domingo
                   </p>
                 )}
                 {chosen && !reigning && (
-                  <p className="inline-flex items-center gap-1 text-[10px] font-display uppercase tracking-[0.2em] text-white/50 mt-2">
+                  <p className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.12em] text-cimento mt-2">
                     <Check className="h-3 w-3" strokeWidth={2.2} /> Seu voto
                   </p>
                 )}
@@ -216,9 +206,8 @@ export default function GlobalLeagueDaily() {
           })}
         </div>
         {globalWinner && activeVote && globalWinner !== activeVote && (
-          <p className="px-4 pb-3 -mt-1 text-[11px] text-text-soft">
-            O reino escolheu <span className="text-neon-yellow font-bold">{decree.options[globalWinner].label}</span> —
-            a decisão da maioria vale pra todos, inclusive pra quem votou vencido.
+          <p className="px-4 pb-3 -mt-1 text-[12px] text-cimento">
+            O reino escolheu <span className="text-neon-yellow font-bold">{decree.options[globalWinner].label}</span> · vale pra todos.
           </p>
         )}
       </section>
@@ -228,22 +217,18 @@ export default function GlobalLeagueDaily() {
         <motion.section
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="relative overflow-hidden rounded-lg border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow/10 via-black to-black p-6 sm:p-8"
+          className="relative overflow-hidden border-l-4 border-l-neon-yellow border border-white/10 bg-panel p-6 sm:p-8"
         >
-          <div className="absolute -top-8 -right-8 text-neon-yellow/10 select-none pointer-events-none" aria-hidden>
-            <Trophy className="w-48 h-48" strokeWidth={1} />
-          </div>
           <div className="relative z-10 flex items-start gap-4 sm:gap-6">
-            <Crown className="w-12 h-12 sm:w-16 sm:h-16 text-neon-yellow shrink-0 drop-shadow-[0_0_24px_rgba(255,220,0,0.4)]" />
+            <Crown className="w-12 h-12 sm:w-16 sm:h-16 text-neon-yellow shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-neon-yellow/80 mb-2">
+              <p className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-neon-yellow mb-2">
                 Campeão de {daily.todayCrown.dailyDate}
               </p>
-              <h2 className="font-display text-3xl sm:text-5xl font-black uppercase text-white leading-none">
+              <h2 className="truncate font-impact text-4xl sm:text-6xl uppercase text-white leading-[1.1]">
                 {daily.todayCrown.clubName}
               </h2>
-              <span aria-hidden className="block w-12 h-[2px] bg-neon-yellow mt-3" />
-              <p className="font-serif-hero italic text-base sm:text-lg text-white/70 mt-3">
+              <p className="mt-3 truncate font-mono text-[12px] text-giz">
                 {daily.todayCrown.runnerUpClubName && daily.todayCrown.finalScoreHome != null && daily.todayCrown.finalScoreAway != null
                   ? `final ${daily.todayCrown.finalScoreHome}–${daily.todayCrown.finalScoreAway} vs ${daily.todayCrown.runnerUpClubName}${daily.todayCrown.finalWentToPens ? ' (pênaltis)' : ''}`
                   : `bracket de ${daily.todayCrown.bracketSize} clubes`}
@@ -255,33 +240,31 @@ export default function GlobalLeagueDaily() {
 
       {/* QUALIFYING — corrida do dia */}
       {daily.phase === 'qualifying' && (
-        <section className="sports-panel rounded-lg overflow-hidden">
-          <div className="px-4 py-3 bg-gradient-to-r from-neon-yellow/15 via-neon-yellow/5 to-transparent border-b border-neon-yellow/30 flex items-center justify-between gap-3">
-            <div>
-              <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-neon-yellow/80">
-                Classificação
-              </p>
-              <h2 className="font-display text-lg font-bold uppercase tracking-wider text-white">
+        <section className="sports-panel overflow-hidden">
+          <div className="px-4 py-3 bg-deep-black border-b border-white/10 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <Hashtag className="text-neon-yellow">#classificação</Hashtag>
+              <h2 className="truncate font-impact text-xl uppercase leading-[1.1] text-white">
                 Corrida do Dia
               </h2>
             </div>
-            <span className="font-mono text-xs text-text-soft text-right">
-              top <span className="text-neon-green font-bold">{daily.cutSize || '—'}</span> avançam<br />
-              <span className="text-[10px] uppercase tracking-wider text-text-soft/70">às {daily.qualifyHour}h BRT</span>
+            <span className="shrink-0 font-mono text-xs text-cimento text-right">
+              top <span className="text-alta font-bold">{daily.cutSize || '—'}</span> avançam<br />
+              <span className="text-[10px] uppercase tracking-[0.12em] text-poeira">às {daily.qualifyHour}h BRT</span>
             </span>
           </div>
 
           {daily.standings.length === 0 ? (
-            <div className="text-center text-text-soft py-12 px-4">
-              <Flag className="w-10 h-10 mx-auto mb-3 text-text-soft/40" />
-              <p className="font-display text-sm uppercase tracking-wider text-white/60 mb-1">Nenhuma partida hoje</p>
-              <p className="text-xs text-text-soft max-w-md mx-auto">
-                As partidas de liga somam pontos na corrida. Jogue para entrar no mata-mata das {daily.qualifyHour}h.
+            <div className="text-center text-cimento py-12 px-4">
+              <Flag className="w-10 h-10 mx-auto mb-3 text-poeira" />
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-giz mb-1">Nenhuma partida hoje</p>
+              <p className="text-xs text-cimento max-w-md mx-auto">
+                Partidas de liga somam na corrida · mata-mata às {daily.qualifyHour}h
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-white/5">
-              <div className="grid grid-cols-[44px_1fr_36px_36px_44px_56px] gap-2 px-3 py-2 bg-black/30 text-[10px] font-display uppercase tracking-wider text-text-soft">
+            <div>
+              <div className="grid grid-cols-[44px_1fr_36px_36px_44px_56px] gap-2 px-3 py-2 bg-deep-black border-b border-white/10 font-mono text-[10px] uppercase tracking-[0.12em] text-cimento">
                 <div className="text-center">#</div>
                 <div>Clube</div>
                 <div className="text-center">J</div>
@@ -298,43 +281,41 @@ export default function GlobalLeagueDaily() {
                       initial={{ opacity: 0, x: -4 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: Math.min(row.rank * 0.01, 0.3) }}
-                      className={`grid grid-cols-[44px_1fr_36px_36px_44px_56px] gap-2 px-3 py-2.5 items-center transition-colors ${
+                      className={`grid h-11 grid-cols-[44px_1fr_36px_36px_44px_56px] gap-2 px-3 items-center transition-colors ${
                         row.isMe
-                          ? 'bg-neon-yellow/10 border-l-4 border-neon-yellow'
-                          : inZone
-                            ? 'bg-neon-green/[0.04] border-l-4 border-neon-green/40 hover:bg-neon-green/[0.08]'
-                            : 'border-l-4 border-transparent hover:bg-white/[0.03]'
+                          ? 'bg-neon-yellow text-black'
+                          : 'border-b border-white/[0.06] hover:bg-card'
                       }`}
                     >
-                      <div className="text-center font-mono font-bold text-white">{row.rank}</div>
+                      <div className={`ole-num text-center text-[15px] ${row.isMe ? 'text-black' : inZone ? 'text-alta' : 'text-cimento'}`}>{row.rank}</div>
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-bold text-white truncate">{row.team.clubName}</span>
+                        <span className={`min-w-0 text-[14px] truncate ${row.isMe ? 'font-bold text-black' : 'text-giz'}`}>{row.team.clubName}</span>
                         {row.isMe && (
-                          <span className="text-[9px] font-display uppercase tracking-wider bg-neon-yellow text-black px-1.5 py-0.5 rounded-sm shrink-0">
+                          <span className="shrink-0 bg-black px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-neon-yellow">
                             você
                           </span>
                         )}
                         {(row.team.seasonCrowns ?? 0) > 0 && (
-                          <span className="flex items-center gap-0.5 text-[10px] text-neon-yellow shrink-0">
+                          <span className={`ole-num flex items-center gap-0.5 text-[10px] shrink-0 ${row.isMe ? 'text-black' : 'text-neon-yellow'}`}>
                             <Crown className="w-3 h-3" />{row.team.seasonCrowns}
                           </span>
                         )}
                       </div>
-                      <div className="text-center font-mono text-xs text-text-soft">{row.team.dailyMatchesPlayed ?? 0}</div>
-                      <div className="text-center font-mono text-xs text-neon-green">{row.team.dailyWins ?? 0}</div>
-                      <div className={`text-center font-mono text-xs ${(row.team.dailyGoalDifference ?? 0) >= 0 ? 'text-text-soft' : 'text-red-400/70'}`}>
+                      <div className={`ole-num text-center text-xs ${row.isMe ? 'text-black' : 'text-cimento'}`}>{row.team.dailyMatchesPlayed ?? 0}</div>
+                      <div className={`ole-num text-center text-xs ${row.isMe ? 'text-black' : 'text-alta'}`}>{row.team.dailyWins ?? 0}</div>
+                      <div className={`ole-num text-center text-xs ${row.isMe ? 'text-black' : (row.team.dailyGoalDifference ?? 0) >= 0 ? 'text-cimento' : 'text-baixa'}`}>
                         {(row.team.dailyGoalDifference ?? 0) > 0 ? '+' : ''}{row.team.dailyGoalDifference ?? 0}
                       </div>
-                      <div className="text-center font-mono text-sm font-bold text-neon-yellow">{row.team.dailyPoints ?? 0}</div>
+                      <div className={`ole-num text-center text-[15px] ${row.isMe ? 'text-black' : 'text-white'}`}>{row.team.dailyPoints ?? 0}</div>
                     </motion.div>
                     {isCut && (
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-black/50">
-                        <div className="h-px flex-1 bg-neon-green/40" />
-                        <span className="text-[9px] font-display font-bold uppercase tracking-[0.25em] text-neon-green flex items-center gap-1.5">
+                      <div className="flex h-6 items-center gap-2 px-3" aria-label="Corte do mata-mata acima desta linha">
+                        <span className="block h-0 grow border-t border-dashed border-alta" />
+                        <span className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-alta">
                           <Swords className="w-3 h-3" />
                           Corte · top {daily.cutSize} ao mata-mata
                         </span>
-                        <div className="h-px flex-1 bg-neon-green/40" />
+                        <span className="block h-0 grow border-t border-dashed border-alta" />
                       </div>
                     )}
                   </div>
@@ -347,19 +328,17 @@ export default function GlobalLeagueDaily() {
 
       {/* KNOCKOUT / CROWNED — bracket */}
       {(daily.phase === 'knockout' || daily.phase === 'crowned') && (
-        <section className="sports-panel rounded-lg overflow-hidden">
-          <div className="px-4 py-3 bg-gradient-to-r from-neon-yellow/15 via-neon-yellow/5 to-transparent border-b border-neon-yellow/30 flex items-center justify-between">
-            <div>
-              <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-neon-yellow/80">
-                Bracket
-              </p>
-              <h2 className="font-display text-lg font-bold uppercase tracking-wider text-white">
+        <section className="sports-panel overflow-hidden">
+          <div className="px-4 py-3 bg-deep-black border-b border-white/10 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <Hashtag className="text-neon-yellow">#chave</Hashtag>
+              <h2 className="truncate font-impact text-xl uppercase leading-[1.1] text-white">
                 Mata-Mata{daily.phase === 'crowned' ? ' — encerrado' : ''}
               </h2>
             </div>
             {liveRound && (
-              <span className="font-display text-[10px] font-bold uppercase tracking-wider text-neon-green animate-pulse flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-neon-green inline-block" />
+              <span className="shrink-0 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-alta animate-pulse flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-alta inline-block" />
                 ao vivo · {phaseSizeLabel(liveRound.size)}
               </span>
             )}
@@ -379,10 +358,10 @@ export default function GlobalLeagueDaily() {
 function PhaseChip({ active, icon, label }: { active: boolean; icon: React.ReactNode; label: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1 text-[10px] font-display font-bold uppercase tracking-[0.2em] transition-all ${
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] transition-colors ${
         active
-          ? 'bg-neon-yellow text-black shadow-[0_0_12px_rgba(255,220,0,0.3)]'
-          : 'bg-white/5 text-text-soft border border-white/10'
+          ? 'bg-neon-yellow text-black'
+          : 'text-cimento border border-white/10'
       }`}
     >
       {icon}

@@ -10,6 +10,7 @@ import { useGameStore } from '@/game/store';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { BackButton } from '@/components/BackButton';
+import { Hashtag } from '@/components/ui';
 import { ArrowLeft, Trophy, Star } from 'lucide-react';
 import type { GlobalFixture } from '@/match/globalMatch';
 import type { LeagueRound } from '@/match/globalLeagueMVP';
@@ -26,49 +27,49 @@ function HistoryFixtureRow({ fixture, myTeamId }: { fixture: GlobalFixture; myTe
   const isMyAway = myTeamId && fixture.awayTeamId === myTeamId;
 
   let resultLabel = '';
-  let resultColor = 'text-white/50';
+  let resultColor = 'text-cimento';
   if (isMyMatch) {
     const myGoals = isMyHome ? fixture.scoreHome : fixture.scoreAway;
     const theirGoals = isMyHome ? fixture.scoreAway : fixture.scoreHome;
-    if (myGoals > theirGoals) { resultLabel = 'V'; resultColor = 'text-emerald-400'; }
-    else if (myGoals === theirGoals) { resultLabel = 'E'; resultColor = 'text-yellow-400'; }
-    else { resultLabel = 'D'; resultColor = 'text-red-400'; }
+    if (myGoals > theirGoals) { resultLabel = 'V'; resultColor = 'text-alta'; }
+    else if (myGoals === theirGoals) { resultLabel = 'E'; resultColor = 'text-giz'; }
+    else { resultLabel = 'D'; resultColor = 'text-baixa'; }
   }
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
-      isMyMatch ? 'bg-neon-yellow/[0.06] border border-neon-yellow/20' : 'bg-white/[0.02] border border-white/5'
+    <div className={`flex h-11 items-center gap-2 px-3 transition-colors ${
+      isMyMatch ? 'bg-neon-yellow text-black' : 'bg-deep-black border border-white/[0.06]'
     }`}>
       {/* Resultado do manager */}
       <div className="w-6 shrink-0 text-center">
         {isMyMatch && (
-          <span className={`font-display font-black text-sm ${resultColor}`}>{resultLabel}</span>
+          <span className={`ole-num inline-block bg-black px-1 text-[12px] ${resultColor}`}>{resultLabel}</span>
         )}
       </div>
 
       {/* Time casa */}
       <div className="flex-1 text-right min-w-0">
-        <span className={`font-display text-xs font-bold uppercase truncate ${isMyHome ? 'text-neon-yellow' : 'text-white/80'}`}>
+        <span className={`block truncate text-[13px] ${isMyMatch ? (isMyHome ? 'font-bold text-black' : 'text-black/70') : 'text-giz'}`}>
           {fixture.homeTeamName}
         </span>
       </div>
 
       {/* Placar */}
       <div className="flex items-center gap-1 px-2 shrink-0">
-        <span className="font-serif-hero text-lg font-bold text-neon-yellow">{fixture.scoreHome}</span>
-        <span className="text-white/30 text-xs">×</span>
-        <span className="font-serif-hero text-lg font-bold text-neon-yellow">{fixture.scoreAway}</span>
+        <span className={`ole-num text-[16px] ${isMyMatch ? 'text-black' : 'text-white'}`}>{fixture.scoreHome}</span>
+        <span className={`text-xs ${isMyMatch ? 'text-black/60' : 'text-poeira'}`}>×</span>
+        <span className={`ole-num text-[16px] ${isMyMatch ? 'text-black' : 'text-white'}`}>{fixture.scoreAway}</span>
       </div>
 
       {/* Time fora */}
       <div className="flex-1 text-left min-w-0">
-        <span className={`font-display text-xs font-bold uppercase truncate ${isMyAway ? 'text-neon-yellow' : 'text-white/80'}`}>
+        <span className={`block truncate text-[13px] ${isMyMatch ? (isMyAway ? 'font-bold text-black' : 'text-black/70') : 'text-giz'}`}>
           {fixture.awayTeamName}
         </span>
       </div>
 
       {/* Divisão */}
-      <span className="text-[9px] text-white/30 font-mono shrink-0">Div {fixture.division}</span>
+      <span className={`text-[9.5px] font-mono shrink-0 ${isMyMatch ? 'text-black/70' : 'text-poeira'}`}>Div {fixture.division}</span>
     </div>
   );
 }
@@ -88,18 +89,18 @@ function RoundSection({ round, myTeamId, index }: { round: LeagueRound; myTeamId
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
-      className="sports-panel rounded-lg overflow-hidden"
+      className="sports-panel overflow-hidden"
     >
       {/* Header */}
-      <div className="bg-deep-black px-4 py-3 border-b border-white/10 flex items-center justify-between">
+      <div className="bg-deep-black px-4 py-3 border-b border-white/10 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Trophy className="w-4 h-4 text-neon-yellow" />
-          <span className="font-display text-xs font-bold uppercase tracking-wider text-white">
+          <span className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
             Rodada {round.roundNumber}
           </span>
           {myFixture && <Star className="w-3 h-3 text-neon-yellow fill-neon-yellow" />}
         </div>
-        <span className="text-[10px] text-white/40 font-mono">
+        <span className="text-[10.5px] text-cimento font-mono">
           {formatKickoff(round.scheduledKickoffMs)}
         </span>
       </div>
@@ -160,50 +161,46 @@ export default function GlobalLeagueHistory() {
       {/* Header editorial */}
       <div>
         <BackButton to="/match/global" label="Liga Global" />
-        <div className="mt-4 font-display font-bold uppercase text-neon-yellow/80" style={{ fontSize: '10px', letterSpacing: '0.28em' }}>
-          Liga Global · Arquivo
-        </div>
+        <Hashtag className="mt-4 text-neon-yellow">#ligaglobal · arquivo</Hashtag>
         <h1
-          className="mt-1 font-bold uppercase text-white leading-[0.95]"
-          style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 5.5vw, 3rem)', letterSpacing: '0.005em' }}
+          className="mt-1 font-impact uppercase text-white leading-[1.1]"
+          style={{ fontSize: 'clamp(2rem, 5.5vw, 3rem)', letterSpacing: '0.005em' }}
         >
           Rodadas Passadas
         </h1>
-        <span aria-hidden className="mt-3 block w-12 h-[3px] bg-neon-yellow" />
-        <p className="mt-3 text-sm text-white/55">Resultados oficiais da Liga Global</p>
       </div>
 
       {/* Stats do manager */}
       {myStats && myStats.matches > 0 && (
-        <div className="sports-panel rounded-lg p-4 border border-neon-yellow/20">
-          <p className="text-[10px] font-display font-bold uppercase tracking-wider text-white/40 mb-2">
+        <div className="sports-panel p-4 border border-white/10">
+          <p className="truncate font-mono text-[10.5px] uppercase tracking-[0.14em] text-cimento mb-2">
             Meu desempenho · {myTeam?.clubName}
           </p>
           <div className="flex items-center gap-6 flex-wrap">
             <div className="text-center">
-              <span className="font-serif-hero text-2xl font-bold text-neon-yellow">{myStats.matches}</span>
-              <p className="text-[9px] text-white/40 uppercase">Jogos</p>
+              <span className="ole-num text-2xl text-neon-yellow">{myStats.matches}</span>
+              <p className="font-mono text-[9.5px] text-cimento uppercase">Jogos</p>
             </div>
             <div className="text-center">
-              <span className="font-serif-hero text-2xl font-bold text-emerald-400">{myStats.wins}</span>
-              <p className="text-[9px] text-white/40 uppercase">Vitórias</p>
+              <span className="ole-num text-2xl text-alta">{myStats.wins}</span>
+              <p className="font-mono text-[9.5px] text-cimento uppercase">Vitórias</p>
             </div>
             <div className="text-center">
-              <span className="font-serif-hero text-2xl font-bold text-yellow-400">{myStats.draws}</span>
-              <p className="text-[9px] text-white/40 uppercase">Empates</p>
+              <span className="ole-num text-2xl text-giz">{myStats.draws}</span>
+              <p className="font-mono text-[9.5px] text-cimento uppercase">Empates</p>
             </div>
             <div className="text-center">
-              <span className="font-serif-hero text-2xl font-bold text-red-400">{myStats.losses}</span>
-              <p className="text-[9px] text-white/40 uppercase">Derrotas</p>
+              <span className="ole-num text-2xl text-baixa">{myStats.losses}</span>
+              <p className="font-mono text-[9.5px] text-cimento uppercase">Derrotas</p>
             </div>
             <div className="h-8 w-px bg-white/10" />
             <div className="text-center">
-              <span className="font-serif-hero text-2xl font-bold text-white">{myStats.goalsFor}</span>
-              <p className="text-[9px] text-white/40 uppercase">Gols Pró</p>
+              <span className="ole-num text-2xl text-white">{myStats.goalsFor}</span>
+              <p className="font-mono text-[9.5px] text-cimento uppercase">Gols pró</p>
             </div>
             <div className="text-center">
-              <span className="font-serif-hero text-2xl font-bold text-white/60">{myStats.goalsAgainst}</span>
-              <p className="text-[9px] text-white/40 uppercase">Gols Contra</p>
+              <span className="ole-num text-2xl text-cimento">{myStats.goalsAgainst}</span>
+              <p className="font-mono text-[9.5px] text-cimento uppercase">Gols contra</p>
             </div>
           </div>
         </div>
@@ -212,10 +209,10 @@ export default function GlobalLeagueHistory() {
       {/* Lista de rodadas */}
       {finishedRounds.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-white/50 font-serif-hero text-lg italic">
+          <p className="text-cimento text-base">
             Nenhuma rodada finalizada ainda.
           </p>
-          <p className="text-white/30 text-sm mt-2">
+          <p className="font-mono text-poeira text-[11.5px] mt-2">
             As rodadas são processadas nos slots: 05:30, 11:00, 15:00, 19:00, 21:30 UTC
           </p>
         </div>

@@ -78,7 +78,7 @@ export function suggestBestLineup(
   const avg = starters.reduce((a, p) => a + p.ovr, 0) / starters.length;
   const note =
     avg >= 82
-      ? 'GameSpirit: onze forte em OVR; confirma no relvado se encaixa no teu plano tático.'
+      ? 'GameSpirit: onze forte em OVR; confira em campo se encaixa no seu plano tático.'
       : avg >= 72
         ? 'GameSpirit: equilíbrio entre posição e força; rever titulares antes de gravar.'
         : 'GameSpirit: prioridade à posição certa; pensa em reforços no mercado.';

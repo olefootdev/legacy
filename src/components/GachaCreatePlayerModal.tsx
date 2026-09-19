@@ -103,7 +103,7 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
     }
     if (res.code === 'REFERRAL_GATE') {
       setError(
-        `Precisas de ${res.required ?? 5} indicados ativos (que já jogaram) pra criar um jogador. Tens ${res.activeReferrals ?? 0}. Convida mais gente!`,
+        `Você precisa de ${res.required ?? 5} indicados ativos (que já jogaram) pra criar um jogador. Você tem ${res.activeReferrals ?? 0}. Convide mais gente!`,
       );
     } else if (res.code === 'ALREADY_DREW') {
       setError('Já fizeste o teu sorteio — é único por manager.');
@@ -139,18 +139,18 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center">
+      <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/85 sm:items-center">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24 }}
-          className="relative mx-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-neon-yellow/30 bg-dark-gray shadow-lg sm:rounded-2xl"
+          className="relative mx-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden border border-white/16 bg-panel"
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
             <div className="flex items-center gap-2">
               <Dices className="h-5 w-5 text-neon-yellow" />
-              <h2 className="font-display text-lg font-black uppercase tracking-tight text-white">
+              <h2 className="font-impact text-xl uppercase leading-[1.1] text-white">
                 Criar jogador
               </h2>
             </div>
@@ -162,9 +162,9 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
           <div className="flex-1 overflow-y-auto px-5 py-5">
             {slotFull && step === 'setup' ? (
               <div className="rounded-xl border border-white/10 bg-black/30 p-6 text-center">
-                <p className="font-display text-base font-black text-white">Já tens o teu jogador</p>
+                <p className="font-display text-base font-black text-white">Você já tem seu jogador</p>
                 <p className="mt-2 text-sm text-white/55">
-                  A criação é única: 1 jogador por manager. Esse é o teu craque.
+                  A criação é única: 1 jogador por manager.
                 </p>
               </div>
             ) : null}
@@ -289,10 +289,10 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
                   </p>
                   <p className="text-sm text-white/55">{result.year}</p>
                   <div className="mt-4 flex items-center justify-center gap-2">
-                    <span className="font-serif-hero text-4xl font-black text-white">{result.overall}</span>
+                    <span className="ole-num text-4xl text-white">{result.overall}</span>
                     <span className="text-xs uppercase tracking-wide text-white/40">OVR</span>
                   </div>
-                  {result.bio && <p className="mt-2 text-xs italic text-white/45">{result.bio}</p>}
+                  {result.bio && <p className="mt-2 text-xs text-white/45">{result.bio}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -335,10 +335,10 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
                 </div>
                 <div className="rounded-xl border border-white/10 bg-black/30 p-4 text-left">
                   <p className="flex items-center gap-2 text-sm font-bold text-white">
-                    <Camera className="h-4 w-4 text-neon-yellow" /> Último passo: a tua foto
+                    <Camera className="h-4 w-4 text-neon-yellow" /> Último passo: sua foto
                   </p>
                   <p className="mt-1.5 text-xs text-white/55">
-                    Manda uma foto tua no WhatsApp e a equipa monta o teu card oficial à mão.
+                    Mande sua foto no WhatsApp e o time monta seu card oficial à mão.
                     A mensagem já vai preenchida com os dados do jogador — é só anexar a foto.
                   </p>
                 </div>
@@ -352,7 +352,7 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
                   })}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3.5 font-display text-sm font-black uppercase tracking-wide text-black transition hover:brightness-110"
+                  className="btn-primary flex w-full items-center justify-center gap-2 px-3 py-3.5 text-sm [--corte:12px]"
                 >
                   <MessageCircle className="h-4 w-4" /> Enviar minha foto no WhatsApp
                 </a>

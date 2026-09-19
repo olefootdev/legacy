@@ -302,7 +302,7 @@ export function MatchPreviewModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[105] flex items-center justify-center p-4 bg-black/92 backdrop-blur-md"
+      className="fixed inset-0 z-[105] flex items-center justify-center p-4 bg-black/92"
       role="dialog"
       aria-modal="true"
     >
@@ -374,10 +374,7 @@ export function MatchPreviewModal({
                     onClick={() => doSub(pickingSlot.id, b.id)}
                     className="w-full flex items-center gap-3 px-3 py-2 border border-zinc-800 hover:border-neon-yellow/60 hover:bg-neon-yellow/5 transition-colors text-left"
                   >
-                    <span
-                      className="font-serif italic text-lg text-white/85 tabular-nums w-7 text-center"
-                      style={{ fontFamily: 'var(--font-serif-hero)' }}
-                    >
+                    <span className="ole-num text-[14px] text-white/85 w-8 shrink-0 text-center">
                       {overallFromAttributes(b.attrs, b.pos)}
                     </span>
                     <div className="flex-1 min-w-0">

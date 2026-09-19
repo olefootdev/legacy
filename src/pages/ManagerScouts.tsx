@@ -136,7 +136,7 @@ interface StatCardProps {
 }
 
 function StatCard({ label, value, hint, tone = 'neutral', Icon }: StatCardProps) {
-  // Legacy Tech: número em Moret italic, label em Agency uppercase tracking-wide.
+  // VOLT2: número chapado, label em caixa alta.
   const tones = {
     neutral: 'text-white border-white/8 border-l-white/15',
     positive: 'text-[var(--color-success)] border-[var(--color-success)]/30 border-l-[var(--color-success)]',
@@ -285,10 +285,7 @@ function DimensionCard({
         'border border-white/8 border-l-[3px] bg-[var(--color-card)] p-4',
         meta.rail,
       )}
-      style={{
-        borderRadius: 'var(--radius-md)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-      }}
+      style={{ borderRadius: 'var(--radius-md)' }}
     >
       {/* Header com eyebrow Agency tracking-wide */}
       <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/5">
@@ -307,7 +304,7 @@ function DimensionCard({
             {meta.label}
           </span>
         </div>
-        {/* Contador Moret italic */}
+        {/* Contador */}
         <span
           className="text-white/65 tabular-nums leading-none"
           style={{
@@ -321,7 +318,7 @@ function DimensionCard({
       </div>
       {entries.length === 0 ? (
         <div
-          className="text-white/35 italic py-2"
+          className="text-white/35 py-2"
           style={{ fontFamily: 'var(--font-ui)', fontSize: '11.5px' }}
         >
           Nada ativo.
@@ -354,8 +351,7 @@ function DimensionCard({
 // ─── Night report ──────────────────────────────────────────────────
 
 function NightReportSection({ report }: { report: NightReport }) {
-  // Hero card editorial Legacy Tech: eyebrow Agency + headline Moret italic.
-  // Counters em Moret italic. Cards de destaque com rail tonal + Agency uppercase.
+  // VOLT2: eyebrow + manchete sem serifa/itálico; contadores chapados, sem brilho.
   const time = new Date(report.generated_at).toLocaleTimeString('pt-BR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -368,10 +364,7 @@ function NightReportSection({ report }: { report: NightReport }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       className="relative border border-white/8 border-l-[3px] border-l-neon-yellow bg-[var(--color-card)] p-5 sm:p-6 overflow-hidden"
-      style={{
-        borderRadius: 'var(--radius-md)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.18), 0 0 18px rgba(253,225,0,0.06)',
-      }}
+      style={{ borderRadius: 'var(--radius-md)' }}
     >
       {/* Header editorial */}
       <header className="flex items-start justify-between gap-3 mb-5">
@@ -392,7 +385,7 @@ function NightReportSection({ report }: { report: NightReport }) {
               Relatório da Noite
             </span>
           </div>
-          {/* Headline Moret italic editorial */}
+          {/* Headline */}
           <h3
             className="text-white leading-snug"
             style={{
@@ -437,10 +430,7 @@ function NightReportSection({ report }: { report: NightReport }) {
               className={cn('leading-none tabular-nums', c.color)}
               style={{
                 fontFamily: 'var(--font-impact)',
-                fontStyle: 'italic',
-                fontWeight: 700,
                 fontSize: 'clamp(22px, 3.5vw, 28px)',
-                letterSpacing: '-0.03em',
               }}
             >
               {c.value}
@@ -519,7 +509,7 @@ function NightReportSection({ report }: { report: NightReport }) {
         </div>
       ) : (
         <div
-          className="text-center text-white/40 italic py-3"
+          className="text-center text-white/40 py-3"
           style={{ fontFamily: 'var(--font-ui)', fontSize: '12px' }}
         >
           Sem destaques no momento.
@@ -672,14 +662,10 @@ export function ManagerScouts() {
                   Olefoot · Inteligência
                 </span>
               </div>
-              {/* Headline Moret italic */}
+              {/* Headline */}
               <h1
-                className="text-neon-yellow leading-[0.95] truncate"
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: 'clamp(36px, 6vw, 52px)',
-                  letterSpacing: '-0.03em',
-                }}
+                className="font-impact uppercase text-white leading-[1.1] truncate"
+                style={{ fontSize: 'clamp(36px, 6vw, 52px)' }}
               >
                 Scouts
               </h1>
@@ -756,19 +742,18 @@ export function ManagerScouts() {
                 type="button"
                 onClick={() => setTab(t)}
                 className={cn(
-                  'px-4 py-2 transition-all',
+                  'px-4 py-2 transition-colors',
                   active
-                    ? 'bg-neon-yellow/[0.08] text-neon-yellow shadow-[0_0_12px_rgba(253,225,0,0.18)]'
+                    ? 'bg-white text-black'
                     : 'text-white/55 hover:text-white',
                 )}
                 style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 800,
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 500,
                   fontSize: '11px',
-                  letterSpacing: '0.24em',
+                  letterSpacing: '0.2em',
                   textTransform: 'uppercase',
                   borderRadius: 'var(--radius-sm)',
-                  borderLeft: active ? '3px solid var(--color-neon-yellow)' : '3px solid transparent',
                 }}
               >
                 {label}
@@ -823,7 +808,7 @@ export function ManagerScouts() {
 
         {/* ── Rodapé de status — explica em texto o que o badge representa ─── */}
         {badgeState !== 'service-up' && (
-          <div className="text-[11px] text-white/40 italic text-center py-2">
+          <div className="text-[11px] text-white/40 text-center py-2">
             {badgeState === 'service-down' && (
               <>Serviço /insights offline — mostrando dados locais.</>
             )}

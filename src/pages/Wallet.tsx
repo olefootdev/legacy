@@ -22,6 +22,7 @@ import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
 import { fetchLegacyBalance } from '@/wallet/applyLegacyOlefootCredit';
 import { OLE_INTERNAL_PRICE_DISPLAY, oleToUsd } from '@/wallet/constants';
 import { useTrackScreen } from '@/progression/trackEvent';
+import { SecaoVolt } from '@/components/ui';
 
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
@@ -160,7 +161,6 @@ export function Wallet() {
   return (
     <WalletShell
       title="Conta SPOT"
-      subtitle="Carteira multi-ativos: USDT e OLEFOOT. Use USDT para comprar EXP ou OLE, e EXP/OLE para contratar jogadores."
       heroStats={heroStats}
       heroVariant="compact"
     >
@@ -203,20 +203,10 @@ export function Wallet() {
 
       {/* ── SUAS CRYPTOS ──────────────────────────────────────────── */}
       <section className="space-y-4">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <p className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80">
-              Suas Cryptos
-            </p>
-            <h2
-              className="mt-1 font-display text-[22px] font-black uppercase leading-none tracking-tight text-white sm:text-[26px]"
-              style={{ letterSpacing: '0.005em' }}
-            >
-              Carteira Multi-Ativos
-            </h2>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <SecaoVolt label="Suas cryptos" tone="neutro" className="min-w-0 grow" />
           {usdBrlQuote.status === 'ok' && (
-            <span className="hidden sm:block text-[10px] uppercase tracking-[0.2em] text-white/35 tabular-nums">
+            <span className="hidden shrink-0 font-mono text-[10.5px] tabular-nums text-poeira sm:block">
               1 USDT ≈ R$ {usdBrlQuote.olefootVenda.toFixed(2)}
             </span>
           )}

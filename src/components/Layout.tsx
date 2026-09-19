@@ -699,7 +699,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 to={item.path}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'relative flex min-h-16 min-w-0 flex-col items-center gap-[5px] px-1 pt-3 pb-2 transition-colors [-webkit-tap-highlight-color:transparent]',
+                  'relative flex min-h-16 min-w-0 flex-col items-center gap-[5px] px-0.5 pt-3 pb-2 transition-colors [-webkit-tap-highlight-color:transparent]',
                   isActive ? 'text-white' : 'text-poeira hover:text-white/90',
                 )}
               >
@@ -707,7 +707,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   <span aria-hidden className="absolute left-1/2 top-[-1px] h-0.5 w-6 -translate-x-1/2 bg-neon-yellow" />
                 ) : null}
                 <Icon className="h-[22px] w-[22px] shrink-0" strokeWidth={isActive ? 2.2 : 1.8} />
-                <span className={cn('block max-w-full truncate text-[10.5px] leading-none', isActive ? 'font-semibold' : 'font-medium')}>
+                <span className={cn('block max-w-full truncate text-[10px] leading-none', isActive ? 'font-semibold' : 'font-medium')}>
                   {item.label.charAt(0) + item.label.slice(1).toLowerCase()}
                 </span>
               </Link>

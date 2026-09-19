@@ -52,8 +52,8 @@ export function ReferralLanding() {
   }, [inviteCode, registered, sponsorId, navigate, dispatch]);
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-deep-black text-sm text-white/60">
-      A abrir convite…
+    <div className="flex min-h-svh items-center justify-center bg-deep-black font-mono text-[12px] text-cimento">
+      Abrindo convite…
     </div>
   );
 }

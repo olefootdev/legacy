@@ -193,7 +193,7 @@ export function CommandProgressBar({
     <div className="absolute -top-8 left-0 right-0 z-10">
       <div className="mx-auto w-full max-w-[80px]">
         {/* Barra de progresso */}
-        <div className="h-1 overflow-hidden rounded-full bg-white/20 backdrop-blur-sm">
+        <div className="h-1 overflow-hidden rounded-full bg-white/20">
           <div
             className="h-full bg-neon-yellow transition-all duration-300 ease-out"
             style={{ width: `${progress}%` }}
@@ -203,9 +203,6 @@ export function CommandProgressBar({
         {/* Narrativa */}
         <p
           className="mt-0.5 text-center text-[8px] font-bold text-white/90"
-          style={{
-            textShadow: '0 1px 2px rgba(0,0,0,0.8)',
-          }}
         >
           {narrative}
         </p>

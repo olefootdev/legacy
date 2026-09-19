@@ -34,7 +34,7 @@ interface SmartPanelProps {
 export function SmartPanel({ formation, onFormationChange, fanMood, cameraTrack = 'static', onCameraTrackChange }: SmartPanelProps) {
   const [showFormations, setShowFormations] = useState(false);
 
-  const moodColor = fanMood >= 70 ? NEON : fanMood >= 40 ? '#f97316' : '#ef4444';
+  const moodColor = fanMood >= 70 ? NEON : fanMood >= 40 ? '#FF9F1C' : '#FF4D4D';
   const moodLabel = fanMood >= 70 ? 'ANIMADA' : fanMood >= 40 ? 'NERVOSA' : 'VAIANDO';
 
   return (
@@ -51,7 +51,7 @@ export function SmartPanel({ formation, onFormationChange, fanMood, cameraTrack 
       <div style={{ borderRight: '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
         <button type="button" onClick={() => setShowFormations(v => !v)}
           style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'transparent', border: 'none', padding: '7px 14px', cursor: 'pointer' }}>
-          <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 14, fontWeight: 700, color: NEON, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{formation}</span>
+          <span style={{ fontFamily: 'var(--font-serif-hero)', fontSize: 14, fontWeight: 700, color: NEON, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{formation}</span>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 7, color: 'rgba(255,255,255,0.35)', marginLeft: 4 }}>▾</span>
         </button>
         {showFormations && (
@@ -59,7 +59,7 @@ export function SmartPanel({ formation, onFormationChange, fanMood, cameraTrack 
             {FORMATIONS.map(f => (
               <button key={f} type="button"
                 onClick={() => { onFormationChange(f); setShowFormations(false); }}
-                style={{ display: 'block', width: '100%', background: f === formation ? 'rgba(253,225,0,0.08)' : 'transparent', border: 'none', padding: '6px 12px', cursor: 'pointer', fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 13, color: f === formation ? NEON : 'rgba(255,255,255,0.6)', textAlign: 'left', transition: 'background 120ms' }}
+                style={{ display: 'block', width: '100%', background: f === formation ? 'rgba(253,225,0,0.08)' : 'transparent', border: 'none', padding: '6px 12px', cursor: 'pointer', fontFamily: 'var(--font-serif-hero)', fontSize: 13, color: f === formation ? NEON : 'rgba(255,255,255,0.6)', textAlign: 'left', transition: 'background 120ms' }}
                 onMouseEnter={e => { if (f !== formation) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                 onMouseLeave={e => { if (f !== formation) e.currentTarget.style.background = 'transparent'; }}
               >

@@ -72,7 +72,7 @@ export function QuickMatchFeed({
             exit={{ opacity: 0, x: 8 }}
             transition={{ duration: 0.25, delay: i * 0.05 }}
             className={cn(
-              'px-3 py-2.5 sm:px-4 sm:py-3 bg-deep-black/60 backdrop-blur-sm',
+              'px-3 py-2.5 sm:px-4 sm:py-3 bg-panel',
               quickFeedLineClass(ev.kind),
             )}
             style={{ borderRadius: 'var(--radius-sm)' }}

@@ -105,7 +105,7 @@ export function MatchFindingOverlay({ opponent, homeShort, onComplete }: Props) 
   }
 
   return (
-    <div className="fixed inset-0 z-[120] flex flex-col items-center justify-center gap-8 bg-deep-black/95 px-6 py-12 backdrop-blur">
+    <div className="fixed inset-0 z-[120] flex flex-col items-center justify-center gap-8 bg-deep-black/95 px-6 py-12">
       {/* Bola olefoot pulsando no centro — asset de /public/soccer_ball */}
       <motion.div
         className="relative"
@@ -121,7 +121,7 @@ export function MatchFindingOverlay({ opponent, homeShort, onComplete }: Props) 
         <img
           src="/soccer_ball/olefoot-Ball.png"
           alt="Olefoot"
-          className="h-20 w-20 sm:h-24 sm:w-24 select-none drop-shadow-[0_4px_20px_rgba(253,225,0,0.35)]"
+          className="h-20 w-20 sm:h-24 sm:w-24 select-none"
           draggable={false}
         />
       </motion.div>

@@ -55,38 +55,32 @@ export function MatchCountdownChip({
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="relative flex w-full items-center gap-3 overflow-hidden border border-neon-yellow/20 bg-gradient-to-r from-neon-yellow/[0.06] via-transparent to-transparent px-4 py-3 text-left transition-colors hover:border-neon-yellow/40"
+      className="relative flex w-full items-center gap-3 overflow-hidden border border-white/10 bg-panel px-4 py-3 text-left transition-colors hover:border-white/30"
       style={{ borderRadius: 'var(--radius-card)' }}
     >
-      <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
-
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neon-yellow/15 text-neon-yellow text-[16px]">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center bg-card-hi text-white text-[16px]">
         {isLive ? '●' : '⏱'}
       </span>
 
       <div className="min-w-0 flex-1">
-        <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
+        <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
           {isLive ? 'Partida ao vivo' : 'Próxima partida'}
         </p>
         <p className="mt-0.5 text-[13px] font-bold text-white truncate">
           {isHome ? 'vs' : 'fora —'} {opponent}
-          {roundLabel ? <span className="text-white/45"> · {roundLabel}</span> : null}
-          {venue ? <span className="text-white/35"> · {venue}</span> : null}
+          {roundLabel ? <span className="text-cimento"> · {roundLabel}</span> : null}
+          {venue ? <span className="text-poeira"> · {venue}</span> : null}
         </p>
       </div>
 
       <div className="shrink-0 text-right">
         <p
-          className={`tabular-nums ${isLive ? 'text-red-400' : 'text-neon-yellow'}`}
-          style={{
-            fontFamily: 'var(--font-impact)',
-            fontSize: '20px',
-            lineHeight: 1,
-          }}
+          className={`ole-num tabular-nums ${isLive ? 'text-baixa' : 'text-white'}`}
+          style={{ fontSize: '18px', lineHeight: 1 }}
         >
           {formatCountdown(remaining)}
         </p>
-        <p className="mt-0.5 font-display text-[9px] font-bold uppercase tracking-[0.18em] text-white/35">
+        <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-poeira">
           {isLive ? 'Em campo' : 'Pra começar'}
         </p>
       </div>

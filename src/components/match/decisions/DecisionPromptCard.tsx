@@ -165,8 +165,8 @@ function Arrow({ kind }: { kind: DecisionArrow }) {
 
 const TONE_COLORS: Record<NonNullable<DecisionChoice['tone']>, string> = {
   safe: NEON,
-  mid: '#F97316',
-  risk: '#EF4444',
+  mid: '#FF9F1C',
+  risk: '#FF4D4D',
 };
 
 export const DecisionPromptCard = memo(function DecisionPromptCard({
@@ -195,10 +195,10 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
     return () => window.clearInterval(id);
   }, [timeoutMs, onTimeout]);
 
-  // ── Inline (painel) — Legacy Tech: Agency FB + Moret italic para números ────
+  // ── Inline (painel) — rótulo em display, número em .ole-num ────────────────
   if (inline) {
     return (
-      <div style={{ width: '100%', overflow: 'hidden', background: 'rgba(20,20,20,0.97)', borderTop: '1px solid rgba(253,225,0,0.18)' }}>
+      <div style={{ width: '100%', overflow: 'hidden', background: 'var(--color-panel)', borderTop: '1px solid rgba(253,225,0,0.18)' }}>
         {/* Timer bar — gold shrinks */}
         <div style={{ background: 'rgba(253,225,0,0.08)', height: 2 }}>
           <div style={{ background: NEON, width: `${progress * 100}%`, height: '100%', transition: 'width 60ms linear' }} />
@@ -241,7 +241,7 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
           })}
         </div>
 
-        {/* Footer — Agency eyebrow + Moret italic para o timer */}
+        {/* Footer — eyebrow + timer em .ole-num */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 12px 4px' }}>
           <span style={{
             fontFamily: 'var(--font-display)', fontWeight: 800,
@@ -250,11 +250,9 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
           }}>
             {title}
           </span>
-          <span style={{
-            fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
-            fontSize: 13, letterSpacing: '-0.02em',
+          <span className="ole-num" style={{
+            fontSize: 12,
             color: 'rgba(253,225,0,0.35)',
-            fontVariantNumeric: 'tabular-nums',
           }}>
             {Math.ceil((timeoutMs * progress) / 1000)}s
           </span>
@@ -271,8 +269,7 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
           background: NEON,
           color: '#000',
           border: '2px solid #000',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.6), 0 0 0 4px rgba(253,225,0,0.18)',
-          borderRadius: 6,
+          borderRadius: 2,
           overflow: 'hidden',
         }}
       >
@@ -284,10 +281,8 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
           }}>
             {title}
           </span>
-          <span style={{
-            fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
-            fontSize: 16, letterSpacing: '-0.02em',
-            fontVariantNumeric: 'tabular-nums', opacity: 0.7,
+          <span className="ole-num" style={{
+            fontSize: 14, opacity: 0.7,
           }}>
             {Math.ceil((timeoutMs * progress) / 1000)}s
           </span>
@@ -311,7 +306,7 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
                   background: '#000',
                   color: isYellow ? NEON : color,
                   border: `2px solid ${isYellow ? '#000' : color}`,
-                  borderRadius: 4,
+                  borderRadius: 2,
                   padding: '14px 6px 10px',
                   minHeight: 88,
                   cursor: 'pointer',

@@ -107,7 +107,6 @@ export function TeamMoraleBadge() {
           style={{
             width: `${morale.confidence}%`,
             background: tone.color,
-            boxShadow: `0 0 8px ${tone.color}66`,
           }}
         />
       </div>

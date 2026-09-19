@@ -42,19 +42,6 @@ function getStreakColor(streak: MomentumStreak): string {
   }
 }
 
-function getStreakGlow(streak: MomentumStreak): string {
-  switch (streak) {
-    case 'fire':
-      return 'shadow-[0_0_30px_rgba(255,61,0,0.55)]';
-    case 'hot':
-      return 'shadow-[0_0_22px_rgba(255,179,0,0.42)]';
-    case 'cold':
-      return 'shadow-[0_0_18px_rgba(74,144,226,0.35)]';
-    default:
-      return 'shadow-[0_0_18px_rgba(253,225,0,0.32)]';
-  }
-}
-
 function getStreakIcon(streak: MomentumStreak) {
   switch (streak) {
     case 'fire':
@@ -183,7 +170,6 @@ export function MomentumVisualBar({ momentum, homeShort, awayShort, className }:
           className={cn(
             'absolute left-0 top-0 h-full origin-left',
             getStreakColor(homeStreak),
-            getStreakGlow(homeStreak),
             homeStreak === 'fire' && 'animate-pulse',
           )}
           initial={{ width: '50%' }}
@@ -196,7 +182,6 @@ export function MomentumVisualBar({ momentum, homeShort, awayShort, className }:
           className={cn(
             'absolute right-0 top-0 h-full origin-right',
             getStreakColor(awayStreak),
-            getStreakGlow(awayStreak),
             awayStreak === 'fire' && 'animate-pulse',
           )}
           initial={{ width: '50%' }}

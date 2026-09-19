@@ -13,7 +13,7 @@ export type TrainerAvatarResult =
  */
 export async function fileToTrainerAvatarDataUrl(file: File): Promise<TrainerAvatarResult> {
   if (!file.type.startsWith('image/')) {
-    return { ok: false as const, error: 'Escolhe um ficheiro de imagem.' };
+    return { ok: false as const, error: 'Escolha um arquivo de imagem.' };
   }
   if (file.size > MAX_INPUT_BYTES) {
     return { ok: false as const, error: 'Ficheiro demasiado grande (máx. 8 MB).' };
@@ -49,7 +49,7 @@ export async function fileToTrainerAvatarDataUrl(file: File): Promise<TrainerAva
     if (dataUrl.length > TRAINER_AVATAR_MAX_DATA_URL_LENGTH) {
       return {
         ok: false as const,
-        error: 'A imagem continua grande demais. Tenta outra foto.',
+        error: 'A imagem continua grande demais. Tente outra foto.',
       };
     }
     return { ok: true as const, dataUrl };

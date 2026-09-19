@@ -107,7 +107,7 @@ export function PenaltyKickModalV2(props: Props) {
                 Pênalti pra nós · {countdown}s
               </div>
               <h2
-                className="ole-headline-italic text-white"
+                className="ole-headline text-white leading-[1.1]"
                 style={{ fontSize: 'clamp(36px, 6vw, 64px)' }}
               >
                 Quem bate?

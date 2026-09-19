@@ -50,9 +50,9 @@ function getTendency(role: string, lastAction: string | null): string {
 const TIER_COLOR: Record<string, string> = {
   critical_accept: NEON,
   accept:          NEON,
-  weak_accept:     '#f97316',
-  refuse:          '#ef4444',
-  protest:         '#ef4444',
+  weak_accept:     '#FF9F1C',
+  refuse:          '#FF4D4D',
+  protest:         '#FF4D4D',
 };
 
 interface PlayerBrainCardProps {
@@ -88,7 +88,7 @@ export function PlayerBrainCard({ player, onClose, onSubstitute }: PlayerBrainCa
   // Fadiga
   const fatigue = player.fatigue ?? 0;
   const energy = 100 - fatigue;
-  const energyColor = energy > 65 ? '#10b981' : energy > 35 ? '#f97316' : '#ef4444';
+  const energyColor = energy > 65 ? '#22C55E' : energy > 35 ? '#FF9F1C' : '#FF4D4D';
 
   // Tendência
   const tendency = getTendency(player.role, lastAction);
@@ -120,7 +120,7 @@ export function PlayerBrainCard({ player, onClose, onSubstitute }: PlayerBrainCa
           </span>
         </div>
         <div style={{
-          fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
+          fontFamily: 'var(--font-serif-hero)', 
           fontSize: 20, fontWeight: 700, color: '#fff', lineHeight: 1, marginBottom: 10,
         }}>
           {firstName}
@@ -140,7 +140,7 @@ export function PlayerBrainCard({ player, onClose, onSubstitute }: PlayerBrainCa
         {/* Última ação */}
         <div style={{ marginBottom: 8 }}>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 7, fontWeight: 700, letterSpacing: '0.22em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', display: 'block', marginBottom: 3 }}>ÚLTIMA AÇÃO</span>
-          <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>
+          <span style={{ fontFamily: 'var(--font-serif-hero)', fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>
             {actionLabel}
           </span>
         </div>

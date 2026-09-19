@@ -234,7 +234,7 @@ function applyUserMatchResolution(
     'COMPETIÇÃO',
     `${fx.homeName} ${officialSH}–${officialSA} ${fx.awayName}`,
     {
-      body: `Não estiveste no relvado à hora marcada — o GameSpirit correu a partida. ${walkover && walkoverUserLoses ? 'WO por plantel incompleto.' : 'Vê o calendário para a próxima jornada.'}`,
+      body: `Você não estava em campo na hora marcada — o GameSpirit jogou a partida. ${walkover && walkoverUserLoses ? 'WO por elenco incompleto.' : 'Veja o calendário da próxima rodada.'}`,
       deepLink: '/calendar',
     },
   );

@@ -1,16 +1,16 @@
 /**
  * GlobalChampionHonor — o pódio do campeão da Liga Global.
  *
- * Dá HONRA de verdade a quem vence: tratamento cinematográfico (preto+dourado,
- * troféu em brasa, imagem Legacy ao fundo), o TIME em destaque e o MANAGER
+ * Dá HONRA de verdade a quem vence: preto + volt chapado, Anton grande,
+ * imagem Legacy ao fundo (com scrim), o TIME em destaque e o MANAGER
  * logo abaixo. Dois formatos:
  *   • variant="hero"    → banner cheio no topo de /match/global (pós-coroação)
  *   • variant="compact" → módulo da Home ("Último Campeão Liga Global")
  */
 import { motion } from 'motion/react';
 import { Crown, Trophy, ChevronRight } from 'lucide-react';
+import { Hashtag } from '@/components/ui';
 
-const MORET = 'var(--font-serif-hero)';
 const IMPACT = 'var(--font-impact)';
 
 export interface GlobalChampionHonorProps {
@@ -52,8 +52,7 @@ export function GlobalChampionHonor({
       <button
         type="button"
         onClick={onClick}
-        className="group relative w-full overflow-hidden rounded-lg border border-neon-yellow/30 text-left transition-transform hover:-translate-y-0.5"
-        style={{ background: 'linear-gradient(135deg, rgba(253,225,0,0.10) 0%, rgba(10,10,10,0.96) 46%, #050505 100%)' }}
+        className="group relative w-full overflow-hidden rounded-lg border border-neon-yellow/30 bg-panel text-left transition-colors hover:border-white/30"
       >
         <img
           src="/hero-legacy-full.png"
@@ -64,12 +63,10 @@ export function GlobalChampionHonor({
         />
         <div className="relative z-10 flex items-center gap-4 p-4">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-md border border-neon-yellow/40 bg-black/60">
-            <Trophy className="h-6 w-6 text-neon-yellow drop-shadow-[0_0_10px_rgba(253,225,0,0.5)]" strokeWidth={2} />
+            <Trophy className="h-6 w-6 text-neon-yellow" strokeWidth={2} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-display text-[9px] font-bold uppercase tracking-[0.24em] text-neon-yellow/80">
-              Último campeão · Liga Global
-            </p>
+            <Hashtag className="text-neon-yellow/80">#ligaglobal · último campeão</Hashtag>
             <p
               className="truncate text-white"
               style={{ fontFamily: IMPACT, fontSize: 'clamp(20px, 6vw, 28px)', lineHeight: 1, letterSpacing: '0.01em' }}
@@ -98,8 +95,7 @@ export function GlobalChampionHonor({
     <motion.div
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="relative overflow-hidden rounded-lg border border-neon-yellow/40"
-      style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}
+      className="relative overflow-hidden rounded-lg border border-neon-yellow/40 bg-deep-black"
     >
       <img
         src="/hero-legacy-full.png"
@@ -112,7 +108,7 @@ export function GlobalChampionHonor({
       <div
         aria-hidden
         className="absolute inset-0"
-        style={{ background: 'radial-gradient(120% 90% at 50% 8%, rgba(253,225,0,0.16) 0%, rgba(6,6,6,0.86) 52%, #030303 100%)' }}
+        style={{ background: 'linear-gradient(180deg, rgba(13,13,13,0.72) 0%, rgba(13,13,13,0.88) 55%, #0D0D0D 100%)' }}
       />
 
       <div className="relative z-10 flex flex-col items-center px-5 py-8 text-center">
@@ -124,20 +120,20 @@ export function GlobalChampionHonor({
         </span>
 
         <Trophy
-          className="mb-4 h-14 w-14 text-neon-yellow drop-shadow-[0_0_28px_rgba(253,225,0,0.55)]"
+          className="mb-4 h-14 w-14 text-neon-yellow"
           strokeWidth={1.5}
           aria-hidden
         />
 
         <h3
           className="text-neon-yellow"
-          style={{ fontFamily: IMPACT, fontSize: 'clamp(40px, 12vw, 76px)', lineHeight: 0.9, letterSpacing: '0.01em' }}
+          style={{ fontFamily: IMPACT, fontSize: 'clamp(40px, 12vw, 76px)', lineHeight: 1.05, letterSpacing: '0.01em' }}
         >
           {clubName}
         </h3>
 
         {managerName && (
-          <p className="mt-3 text-white/70" style={{ fontFamily: MORET, fontStyle: 'italic', fontSize: 'clamp(16px, 4vw, 22px)' }}>
+          <p className="mt-3 text-white/70" style={{ fontFamily: 'var(--font-sans)', fontSize: 'clamp(16px, 4vw, 22px)' }}>
             comandado por {managerName}
           </p>
         )}

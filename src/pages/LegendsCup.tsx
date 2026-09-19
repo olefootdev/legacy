@@ -8,7 +8,7 @@
  * A campanha mora no estado do jogo (não em localStorage): o resultado da
  * Partida Rápida volta pelo FINALIZE_QUICK_PLAN, igual à Liga Ole.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { Loader2, Play, Trophy, RotateCcw, ArrowLeft, Info, Users, Check } from 'lucide-react';
@@ -27,6 +27,7 @@ import { coachPersonaFor, personaLine } from '@/match/ligaOle/coachPersona';
 import { MomentShareCard } from '@/components/moments/MomentShareCard';
 import { detectMoment, stageFromRoundName } from '@/systems/moments';
 import { fetchMyReferralCode } from '@/supabase/referrals';
+import { Hashtag } from '@/components/ui';
 
 const YELLOW = 'var(--color-neon-yellow)';
 
@@ -192,19 +193,16 @@ export function LegendsCup() {
         <button
           type="button"
           onClick={() => navigate('/')}
-          className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/10 bg-black text-white/70 hover:bg-white/10"
-          style={{ borderRadius: 'var(--radius-sm)' }}
+          className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/16 bg-black text-cimento hover:border-white/30 hover:text-white"
           aria-label="Voltar"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/40">
-          Modo torneio
-        </span>
+        <Hashtag>#torneio</Hashtag>
         {titles > 0 && (
-          <div className="ml-auto flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-2">
+          <div className="ml-auto flex items-center gap-1.5 border border-white/16 px-3 py-2">
             <Trophy className="h-4 w-4" style={{ color: YELLOW }} />
-            <span className="font-display text-sm font-black tabular-nums">{titles}</span>
+            <span className="ole-num text-sm">{titles}</span>
           </div>
         )}
       </div>
@@ -214,7 +212,7 @@ export function LegendsCup() {
         objectPosition="center 22%"
         badgeLabel="Legends Cup"
         BadgeIcon={Trophy}
-        eyebrow="Respeito máximo às lendas"
+        eyebrow="#legendscup"
         title="Legends Cup"
         caption={
           titles > 0
@@ -237,24 +235,24 @@ export function LegendsCup() {
 
       {flash && (
         <div
-          className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 ${
-            flash.outcome === 'champion' ? 'border-neon-yellow/40 bg-neon-yellow/[0.07]' : 'border-white/12 bg-white/[0.03]'
+          className={`flex flex-wrap items-center gap-3 px-4 py-3 ${
+            flash.outcome === 'champion' ? 'bg-neon-yellow text-black' : 'border border-white/10 bg-panel'
           }`}
         >
-          <span className="inline-flex items-center gap-1.5 font-display text-sm font-black uppercase tracking-wider">
+          <span className="inline-flex items-center gap-2 font-impact text-2xl uppercase leading-[1.1]">
             {flash.outcome === 'champion' ? (
               <>
-                <Trophy className="h-4 w-4" style={{ color: YELLOW }} aria-hidden strokeWidth={2.4} />
+                <Trophy className="h-5 w-5" aria-hidden strokeWidth={2.4} />
                 Campeão
               </>
             ) : (
               'Eliminado'
             )}
           </span>
-          <span className="text-sm text-white/60">chegou até {flash.reachedRound}.</span>
+          <span className={`text-sm ${flash.outcome === 'champion' ? 'text-black/70' : 'text-cimento'}`}>chegou até {flash.reachedRound}.</span>
           <button
             onClick={() => dispatch({ type: 'DISMISS_LEGENDS_CUP_RESULT' })}
-            className="ml-auto text-[11px] uppercase tracking-wider text-white/40 hover:text-white"
+            className={`ml-auto font-mono text-[11px] uppercase tracking-[0.12em] ${flash.outcome === 'champion' ? 'text-black/70 hover:text-black' : 'text-cimento hover:text-white'}`}
           >
             Fechar
           </button>
@@ -262,7 +260,7 @@ export function LegendsCup() {
       )}
 
       {error && (
-        <p className="rounded-xl border border-red-500/30 bg-red-500/[0.07] px-4 py-3 text-sm text-red-200">{error}</p>
+        <p className="border border-baixa/50 bg-panel px-4 py-3 text-sm text-baixa">{error}</p>
       )}
 
       {!cup ? (
@@ -288,7 +286,7 @@ export function LegendsCup() {
 
           <button
             onClick={() => dispatch({ type: 'RESET_LEGENDS_CUP' })}
-            className="mx-auto flex items-center gap-2 text-[11px] uppercase tracking-wider text-white/30 hover:text-white/70"
+            className="mx-auto flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.12em] text-poeira hover:text-white"
           >
             <RotateCcw className="h-3 w-3" /> Abandonar campanha
           </button>
@@ -313,15 +311,15 @@ function StartCard({ onStart, drawing }: { onStart: () => void; drawing: boolean
   }, []);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#121214] p-7">
+    <div className="border border-white/10 bg-panel p-7">
       {finalLegends.length > 0 && (
         <div className="mb-7">
-          <p className="mb-3 text-center font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
+          <p className="mb-3 text-center font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
             Quem espera na final
           </p>
           <div className="grid grid-cols-5 gap-2">
             {finalLegends.map((l) => (
-              <div key={l.id} className="overflow-hidden rounded-lg border border-white/10 bg-[#0c0c0d]">
+              <div key={l.id} className="overflow-hidden border border-white/10 bg-deep-black">
                 <div className="relative aspect-[3/4] bg-black">
                   {l.portraitUrl ? (
                     <img
@@ -332,23 +330,23 @@ function StartCard({ onStart, drawing }: { onStart: () => void; drawing: boolean
                       className="h-full w-full object-cover object-[50%_34%] grayscale"
                     />
                   ) : (
-                    <div className="grid h-full place-items-center text-[9px] text-white/20">sem foto</div>
+                    <div className="grid h-full place-items-center font-mono text-[9px] text-poeira">sem foto</div>
                   )}
                   <span
-                    className="absolute left-1 top-1 rounded px-1 py-0.5 font-display text-[10px] font-black text-black"
+                    className="ole-num absolute left-1 top-1 px-1 py-0.5 text-[10px] text-black"
                     style={{ background: YELLOW }}
                   >
                     {overallFromAttributes(l.attrs, l.pos)}
                   </span>
                 </div>
-                <p className="truncate px-1.5 py-1 font-display text-[9px] font-black">{l.name}</p>
+                <p className="truncate px-1.5 py-1 text-[10px] font-bold text-giz">{l.name}</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <h2 className="ole-headline-italic text-center text-2xl">Enfrente as lendas</h2>
+      <h2 className="text-center font-impact text-3xl uppercase leading-[1.1]">Enfrente as lendas</h2>
 
       <ol className="mx-auto mt-6 max-w-xl space-y-3.5">
         <Rule n={1} title="Fase de grupos">
@@ -373,8 +371,7 @@ function StartCard({ onStart, drawing }: { onStart: () => void; drawing: boolean
         <button
           onClick={onStart}
           disabled={drawing}
-          className="inline-flex items-center gap-2 rounded-xl px-8 py-4 font-display text-sm font-black uppercase tracking-wider text-black transition-transform hover:-translate-y-0.5 disabled:opacity-60"
-          style={{ background: YELLOW }}
+          className="ole-num inline-flex h-[50px] items-center justify-center gap-2 whitespace-nowrap px-6 text-[13px] uppercase text-black transition-colors hover:bg-white disabled:opacity-60 [--corte:12px] [clip-path:var(--clip-corte)] bg-neon-yellow"
         >
           {drawing ? <><Loader2 className="h-4 w-4 animate-spin" /> Sorteando grupo…</> : <><Play className="h-4 w-4" /> Sortear grupo e começar</>}
         </button>
@@ -387,14 +384,14 @@ function Rule({ n, title, children }: { n: number; title: string; children: Reac
   return (
     <li className="flex gap-3">
       <span
-        className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md font-display text-xs font-black text-black"
+        className="ole-num mt-0.5 grid h-6 w-6 shrink-0 place-items-center text-xs text-black"
         style={{ background: YELLOW }}
       >
         {n}
       </span>
-      <div className="min-w-0 text-sm leading-relaxed text-white/60">
-        <span className="font-display font-black uppercase tracking-wider text-white">{title}</span>
-        <span className="mx-1.5 text-white/25">·</span>
+      <div className="min-w-0 text-sm leading-relaxed text-cimento">
+        <span className="font-mono text-[11.5px] font-medium uppercase tracking-[0.12em] text-white">{title}</span>
+        <span className="mx-1.5 text-poeira">·</span>
         {children}
       </div>
     </li>
@@ -411,8 +408,8 @@ function Trail({ roundIndex }: { roundIndex: number }) {
         return (
           <div
             key={r}
-            className={`rounded-lg border px-3 py-2 text-[11px] font-bold uppercase tracking-wider ${
-              active ? 'text-black' : done ? 'border-white/20 text-white/50' : 'border-white/10 text-white/25'
+            className={`border px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-[0.12em] ${
+              active ? 'text-black' : done ? 'border-white/16 text-cimento' : 'border-white/10 text-poeira'
             }`}
             style={active ? { background: YELLOW, borderColor: 'transparent' } : undefined}
           >
@@ -436,11 +433,11 @@ function GroupStage({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-white/10 bg-[#121214] p-5 sm:p-6">
+      <div className="border border-white/10 bg-panel p-5 sm:p-6">
         <div className="flex flex-wrap items-baseline gap-x-3">
           <Users className="h-4 w-4" style={{ color: YELLOW }} />
-          <h2 className="ole-headline-italic text-xl">Grupo A</h2>
-          <span className="ml-auto font-display text-[10px] uppercase tracking-[0.2em] text-white/40">
+          <h2 className="font-impact text-2xl uppercase leading-[1.1]">Grupo A</h2>
+          <span className="ml-auto font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
             Rodada {Math.min(rodada + 1, GROUP_MATCHES)} de {GROUP_MATCHES}
           </span>
         </div>
@@ -448,11 +445,11 @@ function GroupStage({
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[440px] border-collapse text-sm">
             <thead>
-              <tr className="text-[10px] uppercase tracking-wider text-white/35">
-                <th className="px-2 py-2 text-left font-bold">#</th>
-                <th className="px-2 py-2 text-left font-bold">Clube</th>
+              <tr className="font-mono text-[10px] uppercase tracking-[0.12em] text-cimento">
+                <th className="px-2 py-2 text-left font-medium">#</th>
+                <th className="px-2 py-2 text-left font-medium">Clube</th>
                 {['J', 'V', 'E', 'D', 'SG', 'Pts'].map((h) => (
-                  <th key={h} className="px-2 py-2 text-right font-bold">{h}</th>
+                  <th key={h} className="px-2 py-2 text-right font-medium">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -460,65 +457,72 @@ function GroupStage({
               {sorted.map((r, i) => {
                 const isMe = r.teamId === MANAGER_TEAM_ID;
                 const qualifies = i < GROUP_QUALIFIERS;
+                const num = `ole-num px-2 py-2.5 text-right ${isMe ? 'text-black' : 'text-cimento'}`;
                 return (
+                  <Fragment key={r.teamId}>
                   <tr
-                    key={r.teamId}
-                    className={`border-t border-white/[0.06] ${isMe ? 'bg-neon-yellow/[0.07]' : ''}`}
+                    className={isMe ? 'bg-neon-yellow text-black' : 'border-t border-white/[0.06]'}
                   >
                     <td className="px-2 py-2.5">
-                      <span
-                        className="inline-grid h-5 w-5 place-items-center rounded font-display text-[11px] font-black"
-                        style={qualifies
-                          ? { background: YELLOW, color: '#000' }
-                          : { border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.4)' }}
-                      >
+                      <span className={`ole-num text-[14px] ${isMe ? 'text-black' : qualifies ? 'text-alta' : 'text-cimento'}`}>
                         {i + 1}
                       </span>
                     </td>
-                    <td className={`px-2 py-2.5 font-bold ${isMe ? 'text-neon-yellow' : 'text-white/85'}`}>
+                    <td className={`max-w-[160px] truncate px-2 py-2.5 ${isMe ? 'font-bold text-black' : 'text-giz'}`}>
                       {nameOf(r.teamId)}
                     </td>
-                    <td className="px-2 py-2.5 text-right tabular-nums text-white/60">{r.played}</td>
-                    <td className="px-2 py-2.5 text-right tabular-nums text-white/60">{r.wins}</td>
-                    <td className="px-2 py-2.5 text-right tabular-nums text-white/60">{r.draws}</td>
-                    <td className="px-2 py-2.5 text-right tabular-nums text-white/60">{r.losses}</td>
-                    <td className="px-2 py-2.5 text-right tabular-nums text-white/60">
+                    <td className={num}>{r.played}</td>
+                    <td className={num}>{r.wins}</td>
+                    <td className={num}>{r.draws}</td>
+                    <td className={num}>{r.losses}</td>
+                    <td className={num}>
                       {goalDiff(r) > 0 ? `+${goalDiff(r)}` : goalDiff(r)}
                     </td>
-                    <td className="px-2 py-2.5 text-right font-display font-black tabular-nums">{r.points}</td>
+                    <td className={`ole-num px-2 py-2.5 text-right ${isMe ? 'text-black' : 'text-white'}`}>{r.points}</td>
                   </tr>
+                  {i === GROUP_QUALIFIERS - 1 && i < sorted.length - 1 && (
+                    <tr aria-hidden>
+                      <td colSpan={8} className="px-2 py-0">
+                        <div className="flex h-6 items-center gap-2">
+                          <span className="block h-0 grow border-t border-dashed border-alta" />
+                          <span className="whitespace-nowrap font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-alta">Zona de classificação</span>
+                          <span className="block h-0 grow border-t border-dashed border-alta" />
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
             </tbody>
           </table>
         </div>
 
-        <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-white/35">
+        <p className="mt-3 flex items-start gap-2 font-mono text-[11px] leading-snug text-cimento">
           <Info className="mt-px h-3.5 w-3.5 shrink-0" />
-          Os {GROUP_QUALIFIERS} primeiros avançam ao Playoff. Os outros jogos da rodada são
-          resolvidos junto com o seu — a tabela anda inteira.
+          Os {GROUP_QUALIFIERS} primeiros vão ao Playoff · a rodada inteira roda junto com o seu jogo
         </p>
       </div>
 
       {/* Jogos do grupo, rodada a rodada */}
-      <div className="rounded-2xl border border-white/10 bg-[#121214] p-5 sm:p-6">
-        <h3 className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Jogos</h3>
+      <div className="border border-white/10 bg-panel p-5 sm:p-6">
+        <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">Jogos</h3>
         <div className="mt-3 space-y-1">
           {Array.from({ length: GROUP_MATCHES }, (_, r) => (
             <div key={r}>
-              <div className="mt-3 text-[10px] uppercase tracking-wider text-white/25">Rodada {r + 1}</div>
+              <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-poeira">Rodada {r + 1}</div>
               {cup.groupFixtures.filter((f) => f.round === r).map((f) => {
                 const played = f.scoreHome !== undefined;
                 return (
                   <div
                     key={`${f.round}-${f.homeId}-${f.awayId}`}
-                    className={`flex items-center gap-2 py-1.5 text-sm ${f.isManager ? '' : 'text-white/45'}`}
+                    className={`flex items-center gap-2 py-1.5 text-sm ${f.isManager ? 'text-giz' : 'text-cimento'}`}
                   >
                     <span className={`flex-1 truncate text-right ${f.isManager && f.homeId === MANAGER_TEAM_ID ? 'font-bold text-neon-yellow' : ''}`}>
                       {shortOf(f.homeId)}
                     </span>
-                    <span className="w-14 shrink-0 text-center font-display font-black tabular-nums">
-                      {played ? `${f.scoreHome}-${f.scoreAway}` : <span className="text-white/20">·</span>}
+                    <span className="ole-num w-14 shrink-0 text-center">
+                      {played ? `${f.scoreHome}-${f.scoreAway}` : <span className="text-poeira">·</span>}
                     </span>
                     <span className={`flex-1 truncate ${f.isManager && f.awayId === MANAGER_TEAM_ID ? 'font-bold text-neon-yellow' : ''}`}>
                       {shortOf(f.awayId)}
@@ -533,13 +537,13 @@ function GroupStage({
 
       {/* Próxima partida do manager */}
       {rival && (
-        <div className="rounded-2xl border border-white/10 bg-[#121214] p-6">
+        <div className="border border-white/10 bg-panel p-6">
           <div className="flex flex-wrap items-baseline gap-x-3">
-            <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
+            <span className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
               Sua partida — rodada {rodada + 1}
             </span>
-            <h2 className="ole-headline-italic text-2xl">{rival.name}</h2>
-            <span className="ml-auto font-display text-sm font-black tabular-nums" style={{ color: YELLOW }}>
+            <h2 className="min-w-0 truncate font-impact text-2xl uppercase leading-[1.1]">{rival.name}</h2>
+            <span className="ole-num ml-auto text-sm" style={{ color: YELLOW }}>
               força {rival.overall}
             </span>
           </div>
@@ -562,42 +566,42 @@ function KnockoutStage({
   const line = personaLine(teamId, 'pre', round);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#121214] p-6">
+    <div className="border border-white/10 bg-panel p-6">
       <div className="flex flex-wrap items-baseline gap-x-3">
-        <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
+        <span className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
           {cup.roundIndex === LEGENDS_CUP_ROUNDS.length - 1 ? 'A decisão' : 'Próximo desafio'}
         </span>
-        <h2 className="ole-headline-italic text-2xl">{LEGENDS_CUP_OPPONENT_NAME[round as never]}</h2>
+        <h2 className="min-w-0 truncate font-impact text-2xl uppercase leading-[1.1]">{LEGENDS_CUP_OPPONENT_NAME[round as never]}</h2>
         {opp && (
-          <span className="ml-auto font-display text-sm font-black tabular-nums" style={{ color: YELLOW }}>
+          <span className="ole-num ml-auto text-sm" style={{ color: YELLOW }}>
             força {opp.stub.strength}
           </span>
         )}
       </div>
 
-      <p className="mt-2 flex items-start gap-1.5 text-[13px] italic leading-snug text-white/45">
-        <Users className="mt-0.5 h-3.5 w-3.5 shrink-0 not-italic text-white/30" aria-hidden />
-        <span><span className="not-italic font-display text-[11px] font-bold uppercase tracking-wider text-white/55">{persona.label}</span>: “{line}”</span>
+      <p className="mt-2 flex items-start gap-1.5 text-[13px] leading-snug text-cimento">
+        <Users className="mt-0.5 h-3.5 w-3.5 shrink-0 text-poeira" aria-hidden />
+        <span><span className="font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-giz">{persona.label}</span>: “{line}”</span>
       </p>
 
       {loading ? (
-        <div className="grid place-items-center py-10 text-white/40"><Loader2 className="h-6 w-6 animate-spin" /></div>
+        <div className="grid place-items-center py-10 text-cimento"><Loader2 className="h-6 w-6 animate-spin" /></div>
       ) : opp && opp.legends.length > 0 ? (
         <div className="mt-5 grid grid-cols-3 gap-2.5 sm:grid-cols-5">
           {opp.legends.map((l) => (
-            <div key={l.id} className="overflow-hidden rounded-xl border border-white/10 bg-[#0c0c0d]">
+            <div key={l.id} className="overflow-hidden border border-white/10 bg-deep-black">
               <div className="relative aspect-[3/4] bg-black">
                 {l.portraitUrl ? (
                   <img src={l.portraitUrl} alt={l.name} loading="lazy" referrerPolicy="no-referrer"
                     className="h-full w-full object-cover object-[50%_34%]" />
                 ) : (
-                  <div className="grid h-full place-items-center text-white/20">sem foto</div>
+                  <div className="grid h-full place-items-center font-mono text-[10px] text-poeira">sem foto</div>
                 )}
-                <span className="absolute left-1.5 top-1.5 rounded px-1.5 py-0.5 font-display text-xs font-black text-black" style={{ background: YELLOW }}>
+                <span className="ole-num absolute left-1.5 top-1.5 px-1.5 py-0.5 text-xs text-black" style={{ background: YELLOW }}>
                   {overallFromAttributes(l.attrs, l.pos)}
                 </span>
               </div>
-              <p className="truncate px-2 py-1.5 font-display text-[11px] font-black">{l.name}</p>
+              <p className="truncate px-2 py-1.5 text-[11.5px] font-bold text-giz">{l.name}</p>
             </div>
           ))}
         </div>
@@ -616,16 +620,15 @@ function PlayBar({
       <button
         onClick={onPlay}
         disabled={loading}
-        className="flex flex-1 items-center justify-center gap-2 rounded-xl py-4 font-display text-sm font-black uppercase tracking-wider text-black transition-transform hover:-translate-y-0.5 disabled:opacity-60"
-        style={{ background: YELLOW }}
+        className="ole-num inline-flex h-[50px] items-center justify-center gap-2 whitespace-nowrap px-6 text-[13px] uppercase text-black transition-colors hover:bg-white disabled:opacity-60 [--corte:12px] [clip-path:var(--clip-corte)] flex-1 bg-neon-yellow"
       >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />} Jogar
       </button>
       <div className="text-right">
-        <div className="font-display text-base font-black tabular-nums" style={{ color: YELLOW }}>
+        <div className="ole-num text-base" style={{ color: YELLOW }}>
           {phaseExp.toLocaleString('pt-BR')}
         </div>
-        <div className="text-[10px] uppercase tracking-wider text-white/35">{expLabel}</div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-cimento">{expLabel}</div>
       </div>
     </div>
   );
@@ -634,8 +637,8 @@ function PlayBar({
 /** Chaveamento: o caminho inteiro até a final, com o que espera em cada degrau. */
 function Bracket({ roundIndex, runNumber }: { roundIndex: number; runNumber: number }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#121214] p-5 sm:p-6">
-      <h3 className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
+    <div className="border border-white/10 bg-panel p-5 sm:p-6">
+      <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
         O caminho até o título
       </h3>
       <div className="mt-4 space-y-1.5">
@@ -646,20 +649,20 @@ function Bracket({ roundIndex, runNumber }: { roundIndex: number; runNumber: num
           return (
             <div
               key={r}
-              className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-2.5 ${
-                active ? 'border-neon-yellow/40 bg-neon-yellow/[0.06]' : 'border-white/[0.07]'
+              className={`flex flex-wrap items-center gap-x-3 gap-y-1 border px-3 py-2.5 ${
+                active ? 'border-neon-yellow bg-card' : 'border-white/[0.07]'
               }`}
             >
-              <span className={`font-display text-xs font-black uppercase tracking-wider ${
-                active ? 'text-neon-yellow' : done ? 'text-white/45' : 'text-white/70'
+              <span className={`ole-num text-xs uppercase ${
+                active ? 'text-neon-yellow' : done ? 'text-cimento' : 'text-giz'
               }`}>
                 {r}
               </span>
-              <span className="text-[13px] text-white/40">{LEGENDS_CUP_OPPONENT_NAME[r]}</span>
-              <span className="text-[11px] text-white/30">
+              <span className="text-[13px] text-cimento">{LEGENDS_CUP_OPPONENT_NAME[r]}</span>
+              <span className="font-mono text-[11px] text-poeira">
                 {legends > 0 ? `${legends} lendas + Jiva` : `${GROUP_SIZE - 1} managers reais`}
               </span>
-              <span className="ml-auto font-display text-[11px] font-black tabular-nums text-white/50">
+              <span className="ole-num ml-auto text-[11px] text-cimento">
                 {legendsCupPhaseExp(i, runNumber).toLocaleString('pt-BR')} EXP
               </span>
               {done && <Check className="h-3.5 w-3.5 text-neon-yellow" aria-hidden strokeWidth={3} />}

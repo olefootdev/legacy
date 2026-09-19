@@ -3,7 +3,7 @@
  *
  * Manager escolhe:
  *  1. Período do contrato (tiers: 50 / 250 / 500 / 1000 jogos)
- *  2. Moeda de pagamento (EXP off-chain ou OLEFOOT on-chain)
+ *  2. Moeda de pagamento (EXP ou OLEFOOT — ambos saldo do jogo, nada on-chain)
  *
  * Custo EXP:       50% do custo base + prêmio do tier
  * Custo OLEFOOT:   custo EXP ÷ 100, arredondado pra cima
@@ -119,22 +119,22 @@ export function RenewContractModal({ open, onClose, player }: Props) {
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[70] flex min-h-0 flex-col justify-end bg-black/80 px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-8 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4">
+        <div className="fixed inset-0 z-[70] flex min-h-0 flex-col justify-end bg-black/85 px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-8 sm:items-center sm:justify-center sm:p-4">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
-            className="relative mx-auto flex max-h-[min(92dvh,640px)] w-full max-w-md flex-col overflow-hidden rounded-t-2xl border border-cyan-500/30 bg-dark-gray shadow-[0_0_40px_rgba(6,182,212,0.12)] sm:rounded-2xl"
+            className="relative mx-auto flex max-h-[min(92dvh,640px)] w-full max-w-md flex-col overflow-hidden border border-white/16 bg-panel"
           >
             {/* Header */}
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-black/40 px-4 py-3">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-nav px-4 py-3">
               <div className="flex min-w-0 items-center gap-2">
-                <RefreshCw className="h-5 w-5 shrink-0 text-cyan-400" aria-hidden />
+                <RefreshCw className="h-5 w-5 shrink-0 text-white" aria-hidden />
                 <div className="min-w-0">
-                  <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
+                  <h3 className="font-impact text-[17px] uppercase leading-[1.1] text-white">
                     Renovar Contrato
                   </h3>
-                  <p className="text-[10px] text-gray-500">
+                  <p className="truncate font-mono text-[10.5px] text-cimento">
                     {player.name} · {player.pos}
                   </p>
                 </div>
@@ -142,7 +142,7 @@ export function RenewContractModal({ open, onClose, player }: Props) {
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-full p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                className="p-2 text-cimento transition-colors hover:bg-white/10 hover:text-white"
                 aria-label="Fechar"
               >
                 <X className="h-5 w-5" />
@@ -152,12 +152,12 @@ export function RenewContractModal({ open, onClose, player }: Props) {
             {/* Body */}
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-4 py-4">
               {/* Aviso contrato expirado */}
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+              <div className="border border-atencao/40 bg-atencao/10 p-3">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
+                  <AlertCircle className="h-4 w-4 shrink-0 text-atencao mt-0.5" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-amber-200">Contrato expirado</p>
-                    <p className="mt-1 text-[10px] leading-relaxed text-amber-300/80">
+                    <p className="text-xs font-bold text-atencao">Contrato expirado</p>
+                    <p className="mt-1 text-[10px] leading-relaxed text-giz">
                       Este jogador não pode entrar em XI oficial. Renove pra reativar no plantel.
                     </p>
                   </div>
@@ -165,8 +165,8 @@ export function RenewContractModal({ open, onClose, player }: Props) {
               </div>
 
               {/* Seleção de duração */}
-              <div className="space-y-2 rounded-lg border border-white/10 bg-black/30 p-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+              <div className="space-y-2 border border-white/10 bg-card p-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-cimento">
                   Período do contrato (jogos)
                 </span>
                 <div className="grid grid-cols-4 gap-1.5">
@@ -176,24 +176,24 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                       type="button"
                       onClick={() => setContractMatches(n)}
                       className={cn(
-                        'rounded-lg border px-2 py-2 text-[11px] font-bold uppercase transition-colors',
+                        'ole-num border px-2 py-2 text-[12px] uppercase transition-colors',
                         contractMatches === n
-                          ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
-                          : 'border-white/15 text-gray-400 hover:border-white/30 hover:text-white',
+                          ? 'border-neon-yellow bg-neon-yellow text-black'
+                          : 'border-white/16 text-cimento hover:border-white/30 hover:text-white',
                       )}
                     >
                       {n}
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] leading-relaxed text-gray-500">
+                <p className="text-[10px] leading-relaxed text-poeira">
                   Cada partida oficial em que o jogador participar decrementa 1.
                 </p>
               </div>
 
               {/* Seleção de moeda */}
-              <div className="space-y-2 rounded-lg border border-white/10 bg-black/30 p-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+              <div className="space-y-2 border border-white/10 bg-card p-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-cimento">
                   Forma de pagamento
                 </span>
                 <div className="grid grid-cols-2 gap-2">
@@ -201,22 +201,22 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                     type="button"
                     onClick={() => setPaymentMethod('exp')}
                     className={cn(
-                      'rounded-lg border px-3 py-3 text-left transition-colors',
+                      'border px-3 py-3 text-left transition-colors',
                       paymentMethod === 'exp'
-                        ? 'border-cyan-400 bg-cyan-500/20'
-                        : 'border-white/15 hover:border-white/30',
+                        ? 'border-neon-yellow bg-card'
+                        : 'border-white/16 hover:border-white/30',
                     )}
                   >
                     <div className={cn(
                       'text-[10px] font-bold uppercase',
-                      paymentMethod === 'exp' ? 'text-cyan-300' : 'text-gray-400',
+                      paymentMethod === 'exp' ? 'text-white' : 'text-cimento',
                     )}>
                       EXP
                     </div>
                     <div className="mt-1 text-[10px] text-white/70">In-game</div>
                     <div className={cn(
-                      'mt-1 font-display text-sm font-black',
-                      paymentMethod === 'exp' ? 'text-cyan-200' : 'text-white/80',
+                      'mt-1 font-mono text-sm font-medium tabular-nums',
+                      paymentMethod === 'exp' ? 'text-white' : 'text-giz',
                     )}>
                       {formatExp(totalExpCost)}
                     </div>
@@ -226,39 +226,39 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                     type="button"
                     onClick={() => setPaymentMethod('olefoot')}
                     className={cn(
-                      'rounded-lg border px-3 py-3 text-left transition-colors',
+                      'border px-3 py-3 text-left transition-colors',
                       paymentMethod === 'olefoot'
-                        ? 'border-amber-400 bg-amber-500/20'
-                        : 'border-white/15 hover:border-white/30',
+                        ? 'border-neon-yellow bg-card'
+                        : 'border-white/16 hover:border-white/30',
                     )}
                   >
                     <div className={cn(
                       'text-[10px] font-bold uppercase',
-                      paymentMethod === 'olefoot' ? 'text-amber-300' : 'text-gray-400',
+                      paymentMethod === 'olefoot' ? 'text-white' : 'text-cimento',
                     )}>
                       OLEFOOT
                     </div>
-                    <div className="mt-1 text-[10px] text-white/70">On-chain</div>
+                    <div className="mt-1 text-[10px] text-white/70">Saldo do jogo</div>
                     <div className={cn(
-                      'mt-1 font-display text-sm font-black',
-                      paymentMethod === 'olefoot' ? 'text-amber-200' : 'text-white/80',
+                      'mt-1 font-mono text-sm font-medium tabular-nums',
+                      paymentMethod === 'olefoot' ? 'text-white' : 'text-giz',
                     )}>
                       {formatOle(totalOlefootCost)}
                     </div>
                   </button>
                 </div>
-                <p className="text-[10px] leading-relaxed text-gray-500">
-                  Taxa: 1 OLEFOOT = {EXP_PER_OLEFOOT_FOR_RENEWAL} EXP. OLEFOOT debita on-chain via wallet.
+                <p className="text-[10px] leading-relaxed text-poeira">
+                  Taxa: 1 OLEFOOT = {EXP_PER_OLEFOOT_FOR_RENEWAL} EXP. Sai do saldo do jogo.
                 </p>
               </div>
 
               {/* Resumo de custos */}
               <div
                 className={cn(
-                  'rounded-lg border px-3 py-3 text-[10px]',
+                  'border px-3 py-3 text-[10px]',
                   canAfford
-                    ? 'border-white/10 bg-black/30 text-gray-400'
-                    : 'border-red-500/40 bg-red-950/30 text-red-200',
+                    ? 'border-white/10 bg-card text-cimento'
+                    : 'border-baixa/40 bg-baixa/10 text-giz',
                 )}
               >
                 <div className="space-y-1">
@@ -280,8 +280,8 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                     <span className="font-bold">Total ({paymentMethod === 'exp' ? 'EXP' : 'OLEFOOT'}):</span>
                     <span
                       className={cn(
-                        'font-display font-black',
-                        paymentMethod === 'exp' ? 'text-cyan-300' : 'text-amber-300',
+                        'font-mono font-medium tabular-nums',
+                        'text-white',
                       )}
                     >
                       {paymentMethod === 'exp'
@@ -291,7 +291,7 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                   </div>
                   <div className="flex justify-between">
                     <span>Saldo:</span>
-                    <span className={cn('font-bold', canAfford ? 'text-white' : 'text-red-300')}>
+                    <span className={cn('font-bold', canAfford ? 'text-white' : 'text-baixa')}>
                       {paymentMethod === 'exp'
                         ? `${formatExp(expBal)} EXP`
                         : olefootLoading
@@ -301,29 +301,27 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                   </div>
                 </div>
                 {!canAfford && !olefootLoading && (
-                  <p className="mt-2 text-[10px] text-red-300">
+                  <p className="mt-2 text-[10px] text-baixa">
                     ⚠️ {paymentMethod === 'exp' ? 'EXP' : 'OLEFOOT'} insuficiente
                   </p>
                 )}
                 {errorMsg && (
-                  <p className="mt-2 text-[10px] text-red-300">⚠️ {errorMsg}</p>
+                  <p className="mt-2 text-[10px] text-baixa">⚠️ {errorMsg}</p>
                 )}
               </div>
             </div>
 
             {/* Footer */}
-            <div className="shrink-0 border-t border-white/10 bg-black/40 px-4 py-3">
+            <div className="shrink-0 border-t border-white/10 bg-nav px-4 py-3">
               <button
                 type="button"
                 disabled={!canAfford || submitting || olefootLoading}
                 onClick={handleRenew}
                 className={cn(
-                  'flex w-full items-center justify-center gap-2 rounded-lg py-3 font-display text-sm font-black uppercase tracking-wide transition-all',
+                  'flex h-[50px] w-full items-center justify-center gap-2 font-display text-[15px] uppercase tracking-wide transition-colors [--corte:12px] [clip-path:var(--clip-corte)]',
                   canAfford && !submitting
-                    ? paymentMethod === 'exp'
-                      ? 'bg-cyan-500 text-black hover:bg-cyan-400 active:scale-[0.98]'
-                      : 'bg-amber-500 text-black hover:bg-amber-400 active:scale-[0.98]'
-                    : 'bg-white/10 text-white/30 cursor-not-allowed',
+                    ? 'bg-neon-yellow text-black hover:bg-white'
+                    : 'bg-card-hi text-poeira cursor-not-allowed',
                 )}
               >
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}

@@ -34,25 +34,25 @@ export type ManagerOutcomePanelProps = {
 
 const shell: Record<ManagerOutcomeVariant, { border: string; bg: string; icon: typeof CheckCircle2; iconWrap: string; iconClass: string }> = {
   success: {
-    border: 'border-emerald-500/45',
-    bg: 'bg-[#0a1210]',
+    border: 'border-alta/45',
+    bg: 'bg-panel',
     icon: CheckCircle2,
-    iconWrap: 'border-emerald-400/40 bg-emerald-500/15',
-    iconClass: 'text-emerald-300',
+    iconWrap: 'border-alta/40 bg-alta/15',
+    iconClass: 'text-alta',
   },
   error: {
-    border: 'border-rose-500/45',
-    bg: 'bg-[#120a0c]',
+    border: 'border-baixa/45',
+    bg: 'bg-panel',
     icon: AlertCircle,
-    iconWrap: 'border-rose-400/40 bg-rose-500/15',
-    iconClass: 'text-rose-300',
+    iconWrap: 'border-baixa/40 bg-baixa/15',
+    iconClass: 'text-baixa',
   },
   info: {
-    border: 'border-cyan-500/40',
-    bg: 'bg-[#0a1014]',
+    border: 'border-white/16',
+    bg: 'bg-panel',
     icon: Info,
-    iconWrap: 'border-cyan-400/35 bg-cyan-500/12',
-    iconClass: 'text-cyan-200',
+    iconWrap: 'border-white/16 bg-card-hi',
+    iconClass: 'text-white',
   },
 };
 
@@ -73,7 +73,7 @@ export function ManagerOutcomePanel({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/80 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-6"
       role="presentation"
       onClick={() => onDismiss?.()}
     >
@@ -84,7 +84,7 @@ export function ManagerOutcomePanel({
         aria-describedby="manager-outcome-desc"
         aria-live={ariaLive}
         className={cn(
-          'relative w-full max-w-md overflow-hidden rounded-2xl border shadow-2xl',
+          'relative w-full max-w-md overflow-hidden border',
           s.border,
           s.bg,
         )}
@@ -94,7 +94,7 @@ export function ManagerOutcomePanel({
           <button
             type="button"
             onClick={onDismiss}
-            className="absolute right-2 top-2 rounded-full p-2 text-gray-400 transition hover:bg-white/10 hover:text-white"
+            className="absolute right-2 top-2 p-2 text-cimento transition hover:bg-white/10 hover:text-white"
             aria-label="Fechar"
           >
             <X className="h-5 w-5" aria-hidden />
@@ -103,17 +103,17 @@ export function ManagerOutcomePanel({
         <div className="flex gap-3 px-4 pb-4 pt-5 sm:px-5">
           <div
             className={cn(
-              'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border',
+              'flex h-11 w-11 shrink-0 items-center justify-center border',
               s.iconWrap,
             )}
           >
             <Icon className={cn('h-5 w-5', s.iconClass)} aria-hidden />
           </div>
           <div className="min-w-0 flex-1 pr-6">
-            <h2 id="manager-outcome-title" className="font-display text-sm font-black uppercase tracking-wide text-white">
+            <h2 id="manager-outcome-title" className="font-impact text-lg uppercase leading-[1.1] text-white">
               {title}
             </h2>
-            <p id="manager-outcome-desc" className="mt-2 text-sm leading-relaxed text-gray-300">
+            <p id="manager-outcome-desc" className="mt-2 text-sm leading-relaxed text-giz">
               {message}
             </p>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -123,12 +123,12 @@ export function ManagerOutcomePanel({
                   type="button"
                   onClick={a.onClick}
                   className={cn(
-                    'min-h-[44px] rounded-xl px-4 py-3 font-display text-[10px] font-black uppercase tracking-wide transition sm:flex-1',
+                    'ole-num min-h-[44px] px-4 py-3 text-[12px] uppercase transition sm:flex-1',
                     a.variant === 'primary' || (!a.variant && i === 0)
                       ? 'btn-primary border-0'
                       : a.variant === 'ghost'
-                        ? 'text-gray-400 hover:bg-white/5 hover:text-white'
-                        : 'border border-white/20 bg-white/[0.06] text-white hover:bg-white/10',
+                        ? 'text-cimento hover:bg-white/5 hover:text-white'
+                        : 'border border-white/30 text-white hover:border-white',
                   )}
                 >
                   {a.label}

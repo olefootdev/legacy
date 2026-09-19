@@ -12,22 +12,22 @@ export function EngagementBadge() {
       ? 'text-white/60 border-white/20'
       : pct <= 10
         ? 'text-neon-yellow/80 border-neon-yellow/30'
-        : 'text-neon-green border-neon-green/40';
+        : 'text-alta border-alta/40';
 
   const barColor = pct === 0
     ? 'bg-white/10'
     : pct <= 10
       ? 'bg-neon-yellow/60'
-      : 'bg-neon-green/80';
+      : 'bg-alta';
 
   return (
     <div
-      className={`relative overflow-hidden border ${color} bg-black/40 backdrop-blur-sm px-4 py-3`}
+      className={`relative overflow-hidden border ${color} bg-panel px-4 py-3`}
       style={{ borderRadius: 'var(--radius-md)' }}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/40">
+          <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
             Engajamento
           </p>
           <p className="mt-0.5 font-display text-[15px] font-black uppercase tracking-tight text-white">
@@ -35,7 +35,7 @@ export function EngagementBadge() {
           </p>
         </div>
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 font-display text-[11px] font-black tabular-nums"
+          className="ole-num flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-card text-[11px] tabular-nums"
           style={{ color: pct > 0 ? undefined : 'rgba(255,255,255,0.25)' }}
         >
           {score}
@@ -47,8 +47,8 @@ export function EngagementBadge() {
           style={{ width: `${score}%` }}
         />
       </div>
-      <p className="mt-1.5 text-[10px] text-white/30">
-        Buff na Liga Global · Reseta após 48h sem login
+      <p className="mt-1.5 font-mono text-[10.5px] text-poeira">
+        #ligaglobal · reseta após 48h sem login
       </p>
     </div>
   );

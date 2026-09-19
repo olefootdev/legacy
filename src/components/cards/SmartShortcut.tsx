@@ -1,12 +1,10 @@
 /**
- * SmartShortcut — Atalho contextual ÉPICO BVB com split diagonal.
+ * SmartShortcut — Atalho contextual.
  *
- * PADRÃO VISUAL BVB:
- * - Split diagonal sutil (15% colorido, 85% preto)
- * - Ícone com glow pulsante
- * - Tipografia Druk Wide Bold
- * - Hover lift + glow intenso
- * - Animação cinematográfica
+ * VOLT2 (2026-09-19):
+ * - Superfície chapada; ícone em bloco na cor do tom
+ * - Sem brilho, sem pulsar, sem inclinar, sem crescer no hover
+ * - No hover, só a borda acende
  */
 
 import { ChevronRight, type LucideIcon } from 'lucide-react';
@@ -28,66 +26,47 @@ interface SmartShortcutProps {
   onClick?: () => void;
 }
 
+/** Tons mapeados para a paleta VOLT2 — nomes mantidos por compatibilidade. */
 const TONE_STYLES = {
   yellow: {
-    splitBg: 'bg-neon-yellow',
-    mainBg: 'bg-black',
+    mainBg: 'bg-panel',
     border: 'border-neon-yellow/50',
-    borderHover: 'group-hover:border-neon-yellow/90',
-    glow: 'group-hover:shadow-[0_0_32px_rgba(253,225,0,0.3)]',
+    borderHover: 'group-hover:border-neon-yellow',
     iconBg: 'bg-neon-yellow',
     iconText: 'text-black',
-    iconGlow: 'shadow-[0_0_20px_rgba(253,225,0,0.5)]',
     text: 'text-neon-yellow',
-    pulse: 'group-hover:animate-pulse',
   },
   fuchsia: {
-    splitBg: 'bg-fuchsia-500',
-    mainBg: 'bg-black',
-    border: 'border-fuchsia-500/50',
-    borderHover: 'group-hover:border-fuchsia-500/90',
-    glow: 'group-hover:shadow-[0_0_32px_rgba(217,70,239,0.3)]',
-    iconBg: 'bg-fuchsia-500',
+    mainBg: 'bg-panel',
+    border: 'border-lenda/50',
+    borderHover: 'group-hover:border-lenda',
+    iconBg: 'bg-lenda',
     iconText: 'text-white',
-    iconGlow: 'shadow-[0_0_20px_rgba(217,70,239,0.5)]',
-    text: 'text-fuchsia-300',
-    pulse: 'group-hover:animate-pulse',
+    text: 'text-lenda',
   },
   cyan: {
-    splitBg: 'bg-cyan-500',
-    mainBg: 'bg-black',
-    border: 'border-cyan-500/50',
-    borderHover: 'group-hover:border-cyan-500/90',
-    glow: 'group-hover:shadow-[0_0_32px_rgba(6,182,212,0.3)]',
-    iconBg: 'bg-cyan-500',
+    mainBg: 'bg-panel',
+    border: 'border-white/30',
+    borderHover: 'group-hover:border-white',
+    iconBg: 'bg-giz',
     iconText: 'text-black',
-    iconGlow: 'shadow-[0_0_20px_rgba(6,182,212,0.5)]',
-    text: 'text-cyan-300',
-    pulse: 'group-hover:animate-pulse',
+    text: 'text-giz',
   },
   emerald: {
-    splitBg: 'bg-emerald-500',
-    mainBg: 'bg-black',
-    border: 'border-emerald-500/50',
-    borderHover: 'group-hover:border-emerald-500/90',
-    glow: 'group-hover:shadow-[0_0_32px_rgba(16,185,129,0.3)]',
-    iconBg: 'bg-emerald-500',
+    mainBg: 'bg-panel',
+    border: 'border-alta/50',
+    borderHover: 'group-hover:border-alta',
+    iconBg: 'bg-alta',
     iconText: 'text-black',
-    iconGlow: 'shadow-[0_0_20px_rgba(16,185,129,0.5)]',
-    text: 'text-emerald-300',
-    pulse: 'group-hover:animate-pulse',
+    text: 'text-alta',
   },
   rose: {
-    splitBg: 'bg-rose-500',
-    mainBg: 'bg-black',
-    border: 'border-rose-500/50',
-    borderHover: 'group-hover:border-rose-500/90',
-    glow: 'group-hover:shadow-[0_0_32px_rgba(244,63,94,0.3)]',
-    iconBg: 'bg-rose-500',
+    mainBg: 'bg-panel',
+    border: 'border-baixa/50',
+    borderHover: 'group-hover:border-baixa',
+    iconBg: 'bg-baixa',
     iconText: 'text-white',
-    iconGlow: 'shadow-[0_0_20px_rgba(244,63,94,0.5)]',
-    text: 'text-rose-300',
-    pulse: 'group-hover:animate-pulse',
+    text: 'text-baixa',
   },
 };
 
@@ -103,41 +82,23 @@ export function SmartShortcut({
 
   const inner = (
     <>
-      {/* Split diagonal sutil — 15% colorido no topo */}
-      <div
-        className={cn(
-          'absolute inset-0 transition-all duration-500',
-          style.splitBg,
-        )}
-        style={{
-          clipPath: 'polygon(0 0, 100% 0, 100% 15%, 0 18%)',
-          opacity: 0.08,
-        }}
-        aria-hidden
-      />
+      {/* Superfície chapada */}
       <div
         className={cn(
           'absolute inset-0',
           style.mainBg,
         )}
-        style={{
-          clipPath: 'polygon(0 18%, 100% 15%, 100% 100%, 0 100%)',
-        }}
         aria-hidden
       />
 
       {/* Conteúdo */}
       <div className="relative z-10 flex items-center gap-4">
-        {/* Ícone com glow pulsante */}
+        {/* Ícone em bloco chapado */}
         <div
           className={cn(
             'flex h-14 w-14 shrink-0 items-center justify-center',
-            'transition-all duration-300',
-            'group-hover:scale-110 group-hover:rotate-3',
             style.iconBg,
             style.iconText,
-            style.iconGlow,
-            style.pulse,
           )}
           style={{ borderRadius: 'var(--radius-sm)' }}
         >
@@ -178,11 +139,9 @@ export function SmartShortcut({
   const baseClasses = cn(
     'group relative isolate overflow-hidden',
     'flex items-center px-5 py-4',
-    'border-2 transition-all duration-300',
-    'hover:scale-[1.01] active:scale-[0.99]',
+    'border-2 transition-colors duration-300',
     style.border,
     style.borderHover,
-    style.glow,
   );
 
   const baseStyle = { borderRadius: 'var(--radius-sm)' };

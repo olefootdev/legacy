@@ -43,7 +43,7 @@ export function PackCard({
     <article
       className={cn(
         'ole-player-card ole-yellow-glow relative cursor-pointer transition-all duration-200',
-        'hover:border-neon-yellow hover:-translate-y-1',
+        'hover:border-neon-yellow',
         featured && 'col-span-full',
         disabled && 'opacity-60 pointer-events-none',
         className,

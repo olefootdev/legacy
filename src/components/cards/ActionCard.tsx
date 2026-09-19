@@ -1,12 +1,10 @@
 /**
- * ActionCard — Card de ação ÉPICO BVB com split diagonal.
+ * ActionCard — Card de ação com faixa de cor chapada no topo.
  *
- * PADRÃO VISUAL BVB:
- * - Split diagonal amarelo/preto (inspirado no hero)
+ * VOLT2 (2026-09-19):
+ * - Faixa reta (32%) na cor do tom + corpo chapado — nada torto
  * - Watermark sutil do ícone em fundo
- * - Tipografia Druk Wide Bold
- * - Glow amarelo neon intenso
- * - Animações cinematográficas
+ * - Sem brilho, sem sombra, sem crescer no hover (a borda acende)
  */
 
 import { ChevronRight, Lock, type LucideIcon } from 'lucide-react';
@@ -34,61 +32,60 @@ interface ActionCardProps {
   locked?: boolean;
 }
 
+/**
+ * VOLT2: tons mapeados para a paleta (sem hex solto, sem brilho). A prop
+ * `tone` continua aceitando os mesmos nomes — só o que cada um pinta mudou.
+ */
 const TONE_STYLES = {
   yellow: {
     splitBg: 'bg-neon-yellow',
     splitText: 'text-black',
-    mainBg: 'bg-black',
+    mainBg: 'bg-panel',
     mainText: 'text-neon-yellow',
     border: 'border-neon-yellow/40',
-    borderHover: 'group-hover:border-neon-yellow/80',
-    glow: 'group-hover:shadow-[0_0_40px_rgba(253,225,0,0.35)]',
+    borderHover: 'group-hover:border-neon-yellow',
     watermark: 'text-neon-yellow/[0.03]',
-    badge: 'bg-rose-500',
+    badge: 'bg-baixa',
   },
   fuchsia: {
-    splitBg: 'bg-fuchsia-500',
+    splitBg: 'bg-lenda',
     splitText: 'text-white',
-    mainBg: 'bg-black',
-    mainText: 'text-fuchsia-300',
-    border: 'border-fuchsia-500/40',
-    borderHover: 'group-hover:border-fuchsia-500/80',
-    glow: 'group-hover:shadow-[0_0_40px_rgba(217,70,239,0.35)]',
-    watermark: 'text-fuchsia-500/[0.03]',
-    badge: 'bg-rose-500',
+    mainBg: 'bg-panel',
+    mainText: 'text-lenda',
+    border: 'border-lenda/40',
+    borderHover: 'group-hover:border-lenda',
+    watermark: 'text-lenda/[0.03]',
+    badge: 'bg-baixa',
   },
   cyan: {
-    splitBg: 'bg-cyan-500',
+    splitBg: 'bg-giz',
     splitText: 'text-black',
-    mainBg: 'bg-black',
-    mainText: 'text-cyan-300',
-    border: 'border-cyan-500/40',
-    borderHover: 'group-hover:border-cyan-500/80',
-    glow: 'group-hover:shadow-[0_0_40px_rgba(6,182,212,0.35)]',
-    watermark: 'text-cyan-500/[0.03]',
-    badge: 'bg-rose-500',
+    mainBg: 'bg-panel',
+    mainText: 'text-giz',
+    border: 'border-white/30',
+    borderHover: 'group-hover:border-white',
+    watermark: 'text-giz/[0.03]',
+    badge: 'bg-baixa',
   },
   emerald: {
-    splitBg: 'bg-emerald-500',
+    splitBg: 'bg-alta',
     splitText: 'text-black',
-    mainBg: 'bg-black',
-    mainText: 'text-emerald-300',
-    border: 'border-emerald-500/40',
-    borderHover: 'group-hover:border-emerald-500/80',
-    glow: 'group-hover:shadow-[0_0_40px_rgba(16,185,129,0.35)]',
-    watermark: 'text-emerald-500/[0.03]',
-    badge: 'bg-rose-500',
+    mainBg: 'bg-panel',
+    mainText: 'text-alta',
+    border: 'border-alta/40',
+    borderHover: 'group-hover:border-alta',
+    watermark: 'text-alta/[0.03]',
+    badge: 'bg-baixa',
   },
   rose: {
-    splitBg: 'bg-rose-500',
+    splitBg: 'bg-baixa',
     splitText: 'text-white',
-    mainBg: 'bg-black',
-    mainText: 'text-rose-300',
-    border: 'border-rose-500/40',
-    borderHover: 'group-hover:border-rose-500/80',
-    glow: 'group-hover:shadow-[0_0_40px_rgba(244,63,94,0.35)]',
-    watermark: 'text-rose-500/[0.03]',
-    badge: 'bg-rose-500',
+    mainBg: 'bg-panel',
+    mainText: 'text-baixa',
+    border: 'border-baixa/40',
+    borderHover: 'group-hover:border-baixa',
+    watermark: 'text-baixa/[0.03]',
+    badge: 'bg-baixa',
   },
 };
 
@@ -112,22 +109,20 @@ export function ActionCard({
       className={cn(
         'group relative isolate overflow-hidden',
         'flex flex-col h-full min-h-[200px]',
-        'border-2 transition-all duration-300',
-        'hover:scale-[1.02] active:scale-[0.98]',
+        'border-2 transition-colors duration-300',
         style.border,
         style.borderHover,
-        style.glow,
       )}
       style={{ borderRadius: 'var(--radius-sm)' }}
     >
-      {/* Split diagonal — 30% amarelo, 70% preto */}
+      {/* Faixa reta — 32% na cor do tom, 68% chapado */}
       <div
         className={cn(
-          'absolute inset-0 transition-all duration-500',
+          'absolute inset-0',
           style.splitBg,
         )}
         style={{
-          clipPath: 'polygon(0 0, 100% 0, 100% 30%, 0 35%)',
+          clipPath: 'polygon(0 0, 100% 0, 100% 32%, 0 32%)',
         }}
         aria-hidden
       />
@@ -137,7 +132,7 @@ export function ActionCard({
           style.mainBg,
         )}
         style={{
-          clipPath: 'polygon(0 35%, 100% 30%, 100% 100%, 0 100%)',
+          clipPath: 'polygon(0 32%, 100% 32%, 100% 100%, 0 100%)',
         }}
         aria-hidden
       />
@@ -148,10 +143,7 @@ export function ActionCard({
         aria-hidden
       >
         <Icon
-          className={cn(
-            'transition-all duration-500 group-hover:scale-110',
-            style.watermark,
-          )}
+          className={style.watermark}
           style={{
             width: 'clamp(120px, 18vw, 180px)',
             height: 'clamp(120px, 18vw, 180px)',
@@ -164,7 +156,7 @@ export function ActionCard({
       {badge && (
         <span className={cn(
           'absolute right-3 top-3 z-10 flex h-6 min-w-[24px] items-center justify-center rounded-full px-2',
-          'font-display text-[11px] font-black text-white shadow-[0_4px_12px_rgba(244,63,94,0.5)] animate-pulse',
+          'font-display text-[11px] font-black text-white',
           style.badge,
         )}>
           {badge}
@@ -179,7 +171,6 @@ export function ActionCard({
           <div
             className={cn(
               'flex h-12 w-12 shrink-0 items-center justify-center',
-              'transition-all duration-300 group-hover:scale-110',
               style.splitBg,
               style.splitText,
             )}
@@ -214,18 +205,15 @@ export function ActionCard({
           {locked && <Lock className="h-4 w-4 text-white/30 shrink-0" aria-hidden />}
         </div>
 
-        {/* Métrica GIGANTE em Druk Wide Bold */}
+        {/* Métrica GIGANTE */}
         <div className="relative z-10 flex-1 flex items-center">
           <div
             className={cn(
-              'font-black uppercase leading-none transition-all duration-300',
-              'group-hover:scale-105',
+              'ole-num uppercase leading-none',
               style.mainText,
             )}
             style={{
-              fontFamily: 'var(--font-display)',
               fontSize: 'clamp(2rem, 5vw, 3rem)',
-              letterSpacing: '-0.02em',
             }}
           >
             {metric}

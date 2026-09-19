@@ -13,10 +13,9 @@
  *   - Subtítulo: text-soft, leading-snug abaixo
  *   - rightLabel (opcional): pill outline no canto direito
  *   - Sem ícone, sem badge colorido — minimalismo BVB
- *   - variant='moret': título maior em Anton, com trilho pulsante (seção premium)
+ *   - variant='moret': título maior em Anton, trilho volt chapado (seção premium)
  */
 
-import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 interface StoreSectionHeadlineProps {
@@ -43,24 +42,13 @@ export function StoreSectionHeadline({
     return (
       <header className={cn('flex items-start justify-between gap-3 px-0.5', className)}>
         <div className="flex items-start gap-3 min-w-0 flex-1">
-          {/* Barra vertical com glow */}
-          <motion.span
-            animate={{
-              boxShadow: [
-                '0 0 10px rgba(253,225,0,0.4)',
-                '0 0 20px rgba(253,225,0,0.7)',
-                '0 0 10px rgba(253,225,0,0.4)',
-              ],
-            }}
-            transition={{ duration: 2, repeat: Infinity }}
-            aria-hidden
-            className="block w-[3px] h-10 bg-neon-yellow shrink-0"
-          />
+          {/* Barra vertical volt — chapada, sem brilho (VOLT2) */}
+          <span aria-hidden className="block w-[3px] h-10 bg-neon-yellow shrink-0" />
           <div className="min-w-0 flex-1">
             {/* Título em Anton — serifa itálica é assinatura de nome de LENDA,
                 não de cabeçalho de seção. */}
             <h2
-              className="font-impact uppercase leading-none text-neon-yellow"
+              className="font-impact uppercase leading-[1.1] text-neon-yellow"
               style={{ fontSize: 'clamp(1.6rem, 3.2vw, 2.1rem)', letterSpacing: '-0.01em' }}
             >
               {title}

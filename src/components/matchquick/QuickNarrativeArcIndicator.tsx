@@ -19,15 +19,15 @@ export function QuickNarrativeArcIndicator({ arc, intensity }: Props) {
   const getArcColor = () => {
     switch (arc) {
       case 'late_drama':
-        return 'from-red-500/30 to-orange-500/30 border-red-400/50';
+        return 'bg-panel border-atencao';
       case 'collapse':
-        return 'from-red-600/30 to-pink-500/30 border-red-500/50';
+        return 'bg-panel border-baixa';
       case 'underdog_fight':
-        return 'from-yellow-500/30 to-orange-500/30 border-yellow-400/50';
+        return 'bg-panel border-neon-yellow';
       case 'dominant_control':
-        return 'from-green-500/30 to-teal-500/30 border-green-400/50';
+        return 'bg-panel border-alta';
       default:
-        return 'from-gray-500/30 to-gray-600/30 border-gray-400/50';
+        return 'bg-panel border-white/30';
     }
   };
 
@@ -53,10 +53,8 @@ export function QuickNarrativeArcIndicator({ arc, intensity }: Props) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         className={cn(
-          'px-3 py-2 rounded-lg border-2',
-          'bg-gradient-to-r',
+          'px-3 py-2 border-2',
           getArcColor(),
-          'shadow-lg',
         )}
       >
         <div className="flex items-center gap-2">

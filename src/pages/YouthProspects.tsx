@@ -14,6 +14,7 @@ import { BackButton } from '@/components/BackButton';
 import { EditorialHero } from '@/components/EditorialHero';
 import { RailStat } from '@/components/ui/RailStat';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Hashtag } from '@/components/ui';
 import { trackMissionEvent } from '@/progression/trackEvent';
 
 /** Fonte de número do layer final: Anton. (Era serifa itálica.) */
@@ -66,7 +67,6 @@ export function YouthProspects() {
         watermark="BASE"
         eyebrow="Gestão do clube · Categoria de base"
         title="Academia"
-        subtitle="Onde as crias viram craque."
         stats={`${allCrias.length} cria(s) no elenco · nível ${youthLvl}/5`}
         icon={
           <div className="relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28" style={{ borderRadius: 'var(--radius-sm)' }}>
@@ -91,21 +91,20 @@ export function YouthProspects() {
           <div className="max-w-lg">
             <h3 className="font-display text-[16px] font-bold uppercase tracking-[0.04em]">Como a base evolui</h3>
             <p className="mt-1.5 text-[12.5px] leading-relaxed text-white/60">
-              O nível da academia turbina o <span className="text-white">ganho de treino</span> das tuas crias (novo talento).
-              Suba o nível aqui e desenvolva elas no{' '}
-              <Link to="/team/treino" className="text-neon-yellow underline hover:text-white">Treino</Link>.
+              Nível turbina o <span className="text-white">ganho de treino</span> das crias ·{' '}
+              <Link to="/team/treino" className="text-neon-yellow underline hover:text-white">Treino</Link>
             </p>
           </div>
           <div className="shrink-0">
             {upCost ? (
               <button
                 onClick={() => setConfirmUpgrade(true)}
-                className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-neon-yellow px-5 py-3 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-black transition-transform hover:-translate-y-0.5"
+                className="inline-flex items-center gap-1.5 rounded-md bg-neon-yellow px-5 py-3 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-black transition-colors hover:bg-white"
               >
                 <TrendingUp className="h-4 w-4" /> Evoluir · {upLabel}
               </button>
             ) : (
-              <span className="inline-flex items-center rounded-[var(--radius-md)] border border-white/15 px-5 py-3 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-white/40">
+              <span className="inline-flex items-center rounded-md border border-white/15 px-5 py-3 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-white/40">
                 Nível máximo
               </span>
             )}
@@ -116,8 +115,8 @@ export function YouthProspects() {
       {allCrias.length === 0 ? (
         <div className="sports-panel p-8 text-center">
           <GraduationCap className="mx-auto h-8 w-8 text-neon-yellow/70" aria-hidden />
-          <p className="mt-3 text-sm text-white/80">Ainda não tens crias no elenco.</p>
-          <p className="mt-1 text-xs text-gray-500">Jogadores criados como «novo talento» aparecem aqui e ganham o booster de treino da academia.</p>
+          <p className="mt-3 text-sm text-white/80">Nenhuma cria no elenco.</p>
+          <p className="mt-1 text-xs text-gray-500">Jogadores «novo talento» aparecem aqui.</p>
         </div>
       ) : (
         <>
@@ -148,7 +147,6 @@ export function YouthProspects() {
                   className="group relative flex items-stretch overflow-hidden ole-poster text-left transition-colors hover:border-white/25">
                   <span className="absolute inset-y-0 left-0 z-10 w-[3px] bg-neon-yellow" aria-hidden />
                   <div className="relative flex w-[86px] shrink-0 flex-col justify-center overflow-hidden bg-black/60 py-3 pl-4">
-                    <span className="tabular-nums pointer-events-none absolute -bottom-3 -right-1 leading-none text-white/[0.05]" style={{ fontFamily: NUM, fontSize: '72px' }} aria-hidden>{p.name.charAt(0)}</span>
                     <span className="tabular-nums leading-none text-neon-yellow" style={{ fontFamily: NUM, fontSize: '32px' }}>{ovr}</span>
                     <span className="mt-1 font-display text-[10px] uppercase tracking-[0.1em] text-white/45">{p.pos}</span>
                   </div>
@@ -174,15 +172,14 @@ export function YouthProspects() {
 
       {/* ── MODAL: detalhe da cria (sem compra — só desenvolvimento) ── */}
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/85 p-4 backdrop-blur-sm" onClick={() => setSelectedId(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/85 p-4" onClick={() => setSelectedId(null)}>
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="relative w-full max-w-3xl overflow-hidden rounded-[var(--radius-lg)] border border-neon-yellow/40 bg-[#161616]" onClick={(e) => e.stopPropagation()}>
+            className="relative w-full max-w-3xl overflow-hidden rounded-lg border border-neon-yellow/40 bg-panel" onClick={(e) => e.stopPropagation()}>
             <button type="button" onClick={() => setSelectedId(null)} className="absolute right-4 top-4 z-10 rounded-full bg-black/60 p-2 text-gray-300 hover:text-white"><X className="h-5 w-5" /></button>
             <div className="grid grid-cols-1 md:grid-cols-2">
               <div className="border-b border-white/10 bg-black/40 p-6 md:border-b-0 md:border-r">
-                <div className="font-display text-[10px] uppercase tracking-widest text-neon-yellow">Novo talento</div>
+                <Hashtag>#novotalento #base</Hashtag>
                 <h3 className="mt-1 font-display text-3xl font-black uppercase">{selected.name}</h3>
-                <p className="mt-2 text-xs text-gray-400">Promessa da base com ritmo de evolução acelerado — desenvolve no treino pra puxar o overall até o teto.</p>
                 <div className="mt-5 space-y-2">
                   <AttrRow label="Passe" value={selected.attrs.passe} />
                   <AttrRow label="Drible" value={selected.attrs.drible} />
@@ -203,7 +200,7 @@ export function YouthProspects() {
                 <div className="mt-5 rounded-xl border border-neon-yellow/30 bg-neon-yellow/10 p-4">
                   <div className="font-display text-[10px] uppercase tracking-widest text-white/50">Booster da academia</div>
                   <div className="tabular-nums mt-1 text-neon-yellow" style={{ fontFamily: NUM, fontSize: '30px' }}>+{boosterPct}%</div>
-                  <p className="mt-1 text-[11px] text-gray-400">de ganho extra no treino desta cria, pelo nível {youthLvl} da academia.</p>
+                  <p className="mt-1 text-[11px] text-gray-400">ganho extra de treino · academia nível {youthLvl}</p>
                 </div>
                 <Link to="/team/treino"
                   className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3 font-display text-sm font-black uppercase tracking-wider text-black transition-colors hover:bg-white">

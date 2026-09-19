@@ -30,7 +30,7 @@ export function MomentumFieldEffect({ momentum, className }: MomentumFieldEffect
         className={cn(
           'absolute inset-0',
           isHome
-            ? 'bg-gradient-to-r from-yellow-500/10 via-transparent to-transparent'
+            ? 'bg-gradient-to-r from-neon-yellow/10 via-transparent to-transparent'
             : 'bg-gradient-to-l from-blue-500/10 via-transparent to-transparent',
         )}
         animate={{ opacity: [opacity * 0.5, opacity, opacity * 0.5] }}
@@ -43,7 +43,7 @@ export function MomentumFieldEffect({ momentum, className }: MomentumFieldEffect
           key={i}
           className={cn(
             'absolute h-2 w-2 rounded-full',
-            isHome ? 'bg-yellow-400/30' : 'bg-blue-400/30',
+            isHome ? 'bg-neon-yellow/30' : 'bg-blue-400/30',
           )}
           style={{
             top: `${20 + i * 15}%`,
@@ -67,7 +67,7 @@ export function MomentumFieldEffect({ momentum, className }: MomentumFieldEffect
       <motion.div
         className={cn(
           'absolute top-0 h-full w-1',
-          isHome ? 'left-0 bg-yellow-400/40' : 'right-0 bg-blue-400/40',
+          isHome ? 'left-0 bg-neon-yellow/40' : 'right-0 bg-blue-400/40',
         )}
         animate={{
           scaleY: [1, 1.5, 1],

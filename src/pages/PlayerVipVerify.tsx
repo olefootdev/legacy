@@ -17,8 +17,6 @@ import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react';
 import { getSupabase } from '@/supabase/client';
 
-const YELLOW = '#FDE100';
-
 export function PlayerVipVerify() {
   const [params] = useSearchParams();
   const { handle } = useParams<{ handle?: string }>();
@@ -52,28 +50,27 @@ export function PlayerVipVerify() {
   }, [params, navigate]);
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-5 bg-[#0a0a0b] px-6 text-center text-white">
+    <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-5 bg-deep-black px-6 text-center text-white">
       <div className="flex items-center gap-3">
         <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="w-auto shrink-0" style={{ height: 22 }} />
-        <span className="font-display text-[15px] font-black uppercase tracking-wide text-white/40">PLAYERVIP</span>
+        <span className="font-impact text-[15px] uppercase tracking-wide text-cimento">PLAYERVIP</span>
       </div>
 
       {error ? (
         <>
-          <h1 className="ole-headline-italic text-3xl">Link expirado</h1>
-          <p className="text-sm leading-relaxed text-white/55">{error}</p>
+          <h1 className="font-impact text-[32px] uppercase leading-[1.05]">Link expirado</h1>
+          <p className="text-sm leading-relaxed text-cimento">{error}</p>
           <Link
             to="/playervip"
-            className="mt-1 rounded-xl px-6 py-3.5 font-display text-sm font-black uppercase tracking-wider text-black"
-            style={{ background: YELLOW }}
+            className="btn-primary mt-1 flex h-12 items-center justify-center"
           >
             Receber novo link
           </Link>
         </>
       ) : (
         <>
-          <Loader2 className="h-7 w-7 animate-spin" style={{ color: YELLOW }} />
-          <p className="text-sm text-white/55">
+          <Loader2 className="h-7 w-7 animate-spin text-neon-yellow" />
+          <p className="text-sm text-cimento">
             {handle ? `Entrando…` : 'Verificando seu acesso…'}
           </p>
         </>
