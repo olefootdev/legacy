@@ -27,14 +27,9 @@ export function CareerTierBadge({
 
   return (
     <div className={cn('inline-flex flex-col gap-1', className)}>
-      <div
-        className={cn(
-          'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-display text-[10px] font-black uppercase tracking-wider',
-          tier.badgeClass,
-          tier.textClass,
-        )}
-      >
-        <span className="text-[11px]">{tier.glyph}</span>
+      {/* VOLT2: etiqueta volt chapada — sem emoji e sem a cor por tier (a paleta
+          não tem escala pra isso; o nome do tier já diz o degrau). */}
+      <div className="ole-num inline-flex items-center self-start whitespace-nowrap bg-neon-yellow px-2 py-1 text-[11px] uppercase text-black">
         {compact ? (
           <span>TIER {tier.id}</span>
         ) : (
@@ -43,19 +38,19 @@ export function CareerTierBadge({
       </div>
       {showProgress ? (
         <div className="w-full">
-          <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="h-1.5 w-full bg-card-hi">
             <div
-              className={cn('h-full transition-all', tier.textClass.replace('text-', 'bg-'))}
-              style={{ width: `${Math.round(progress * 100)}%` }}
+              className="h-full bg-neon-yellow transition-all"
+              style={{ width: `${Math.max(2, Math.round(progress * 100))}%` }}
             />
           </div>
-          <p className="mt-0.5 text-[9px] text-white/40">
+          <p className="mt-1.5 truncate font-mono text-[11px] text-cimento">
             {next ? (
               <>
-                {Math.round(progress * 100)}% → <strong>{next.name}</strong> ({next.minExp.toLocaleString('pt-BR')} EXP)
+                {Math.round(progress * 100)}% → <span className="text-white">{next.name}</span> · {next.minExp.toLocaleString('pt-BR')} EXP
               </>
             ) : (
-              <>Máximo atingido</>
+              <>Topo da carreira</>
             )}
           </p>
         </div>

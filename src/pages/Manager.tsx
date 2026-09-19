@@ -1,16 +1,13 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  User,
   Trophy,
   Lock,
-  UserPlus,
   TrendingUp,
   Network,
   ChevronRight,
   Flag,
   Target,
-  ShieldCheck,
   CircleDot,
   Zap,
   Medal,
@@ -20,28 +17,22 @@ import {
   X,
   CheckCircle,
   Sparkles,
-  Users,
-  Copy,
   Brain,
   type LucideIcon,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
-import { formatExp, formatBroDisplay, formatCompactNumber } from '@/systems/economy';
+import { formatExp } from '@/systems/economy';
 import { useProgressionStore } from '@/progression/progressionStore';
 import { MISSION_CATALOG } from '@/progression/missions/catalog';
 import { COMPETITION_TROPHY_CATALOG } from '@/trophies/competitionCatalog';
 import { MEMORABLE_TROPHY_SLOTS } from '@/trophies/memorableCatalog';
 import { useManagerCrowns } from '@/hooks/useManagerCrowns';
 import { CAREER_TIERS, computeCareerTier, nextCareerTier, tierProgress01 } from '@/systems/careerTiers';
-import { TrophyCard } from '@/components/cards/TrophyCard';
 import { CareerTierBadge } from '@/components/CareerTierBadge';
-import { SmartShortcut } from '@/components/cards/SmartShortcut';
-import { normalizeWalletState } from '@/wallet/initial';
-import { inviteLinkForCode } from '@/wallet/referralCode';
 import { useFriendships } from '@/social/useFriendships';
-import { Hashtag, SecaoVolt } from '@/components/ui';
+import { Hashtag, SecaoVolt, UmaLinha } from '@/components/ui';
 
 const MISSION_TROPHY_KINDS = new Set(['onboarding', 'achievement', 'special']);
 
@@ -59,6 +50,23 @@ const TIER_ICONS: Record<number, LucideIcon> = {
 
 type DrawerKind = 'career' | 'network' | null;
 
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'M';
+  const first = parts[0]![0] ?? '';
+  const last = parts.length > 1 ? parts[parts.length - 1]![0] ?? '' : '';
+  return (first + last).toUpperCase();
+}
+
+/**
+ * Manager — VOLT2 (2026-09-19).
+ *
+ * Mesma gramática da Home: quem é o manager (foto + nome em Anton), o degrau
+ * da carreira com a barra até o próximo, três números que NÃO são saldo
+ * (saldo mora só na Carteira), UMA mesa de decisão com a consequência dentro
+ * do botão, a central em 2×2 e os troféus. Nome, foto e atalhos já eram
+ * calculados aqui e não apareciam — agora aparecem.
+ */
 export function Manager() {
   const club = useGameStore((s) => s.club);
   const finance = useGameStore((s) => s.finance);
@@ -75,15 +83,8 @@ export function Manager() {
   const missionRuntime = useProgressionStore((s) => s.missions);
 
   const [drawer, setDrawer] = useState<DrawerKind>(null);
-  const [copiedInvite, setCopiedInvite] = useState(false);
+  const [avatarOk, setAvatarOk] = useState(true);
   const navigate = useNavigate();
-
-  const wallet = useMemo(
-    () => normalizeWalletState(finance.wallet ?? undefined),
-    [finance.wallet],
-  );
-  const myReferralCode = wallet.myReferralCode ?? '';
-  const inviteLink = myReferralCode ? inviteLinkForCode(myReferralCode) : '';
 
   useEffect(() => {
     ensureResets();
@@ -93,6 +94,8 @@ export function Manager() {
   const currentTier = useMemo(() => computeCareerTier(expLifetime), [expLifetime]);
   const nextTier = useMemo(() => nextCareerTier(currentTier.id), [currentTier.id]);
   const tierFrac = useMemo(() => tierProgress01(expLifetime), [expLifetime]);
+  const missingToNext = nextTier ? Math.max(0, nextTier.minExp - expLifetime) : 0;
+  const TierIcon = TIER_ICONS[currentTier.id] ?? Medal;
 
   const managerName = useMemo(() => {
     const mp = userSettings.managerProfile;
@@ -102,7 +105,6 @@ export function Manager() {
   }, [userSettings.managerProfile]);
 
   const avatarSrc = userSettings.trainerAvatarDataUrl;
-  const favoriteTeam = userSettings.favoriteRealTeam;
 
   const missionsReady = useMemo(() => {
     let count = 0;
@@ -132,435 +134,302 @@ export function Manager() {
   }, [missionRuntime]);
 
   const squadSize = Object.keys(players).length;
-  const broDisplay = formatBroDisplay(finance.broCents);
+  const trophiesEarned =
+    memorableTrophyUnlockedIds.length +
+    dailyCrowns.length +
+    competitionTrophies.filter((t) => t.earned).length +
+    missionTrophies.filter((t) => t.earned).length;
 
-  function handleCopyInviteLink() {
-    if (!inviteLink) return;
-    navigator.clipboard.writeText(inviteLink).catch(() => {});
-    setCopiedInvite(true);
-    setTimeout(() => setCopiedInvite(false), 2000);
-  }
-
-  /** Smart shortcuts (sugestão C): 2-3 atalhos contextuais. */
-  const shortcuts = useMemo(() => {
+  /** Mesa do manager: só o que pede ação agora, com a consequência no botão. */
+  const mesa = useMemo(() => {
     const out: Array<{
       key: string;
-      icon: typeof Target;
-      label: string;
-      sub: string;
-      to?: string;
-      onClick?: () => void;
-      tone: 'yellow' | 'fuchsia' | 'cyan';
+      text: string;
+      tag: string;
+      cta: string;
+      primary: boolean;
+      onClick: () => void;
     }> = [];
     if (missionsReady.count > 0) {
       out.push({
         key: 'missions',
-        icon: Target,
-        label: `Resgatar ${missionsReady.count} missões${missionsReady.count > 1 ? ' ' : ''}`,
-        sub: `+${formatExp(missionsReady.expTotal)} EXP prontos`,
-        to: '/missions',
-        tone: 'yellow',
+        text: `${missionsReady.count} miss${missionsReady.count > 1 ? 'ões' : 'ão'}`,
+        tag: '#prontas',
+        cta: `Resgatar +${formatExp(missionsReady.expTotal)} EXP`,
+        primary: true,
+        onClick: () => navigate('/manager/missoes'),
       });
     }
     if (social.incoming.length > 0) {
       out.push({
         key: 'requests',
-        icon: UserPlus,
-        label: `${social.incoming.length} solicitaç${social.incoming.length > 1 ? 'ões' : 'ão'}`,
-        sub: 'Aceitar ou recusar',
+        text: `${social.incoming.length} solicitaç${social.incoming.length > 1 ? 'ões' : 'ão'}`,
+        tag: '#network',
+        cta: 'Responder',
+        primary: false,
         onClick: () => setDrawer('network'),
-        tone: 'fuchsia',
       });
     }
     if (nextTier && tierFrac >= 0.85) {
-      const missing = Math.max(0, nextTier.minExp - expLifetime);
       out.push({
         key: 'nextTier',
-        icon: TrendingUp,
-        label: `Perto de ${nextTier.name}`,
-        sub: `Faltam ${formatExp(missing)} EXP`,
+        text: `Perto de ${nextTier.name}`,
+        tag: `#carreira · faltam ${formatExp(missingToNext)} EXP`,
+        cta: 'Ver plano',
+        primary: false,
         onClick: () => setDrawer('career'),
-        tone: 'cyan',
       });
     }
     return out;
-  }, [missionsReady, social.incoming.length, nextTier, tierFrac, expLifetime]);
+  }, [missionsReady, social.incoming.length, nextTier, tierFrac, missingToNext, navigate]);
+
+  const tilePanel =
+    'relative flex min-w-0 flex-col justify-between border border-white/10 bg-panel p-4 text-left text-white transition-colors hover:border-white/30';
+  const tileTitle = 'block min-w-0 truncate font-impact text-[clamp(20px,6.6vw,26px)] uppercase leading-[1.25]';
 
   return (
-    <div className="mx-auto min-w-0 w-full max-w-6xl space-y-6 overflow-x-hidden pb-6 md:pb-8 px-3 sm:px-4 lg:px-6">
-      {/* ── HERO — volt chapado ── */}
-      <section
-        aria-label="Perfil do Manager"
-        className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-6"
-      >
-        {/* ── HERO no layer final ──────────────────────────────────────────
-            Saíram: o tier em marca-d'água gigante atrás do título, o nome do
-            tier em serifa itálica do tamanho da manchete, régua decorativa e a
-            frase entre aspas. Ficou quem é o manager, em que degrau está, e o
-            que ele tem no bolso (logo abaixo). */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative z-10 px-4 sm:px-6 lg:px-8"
-          style={{ paddingBlock: 'clamp(26px, 5vw, 46px)' }}
-        >
-          <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-            {club.name} · {club.city}
-          </span>
-
-          <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <h1
-              className="font-impact uppercase"
-              style={{
-                color: 'var(--color-deep-black)',
-                fontSize: 'clamp(42px, 11vw, 88px)',
-                lineHeight: 0.84,
-                letterSpacing: '-0.01em',
-              }}
-            >
-              Manager
+    <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col gap-7 overflow-x-hidden px-3 pb-6 sm:px-4">
+      {/* ── 1. QUEM É O MANAGER ─────────────────────────────────────────── */}
+      <section aria-label="Perfil do manager" className="flex flex-col gap-4">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="relative flex h-[76px] w-[76px] shrink-0 items-center justify-center overflow-hidden border border-white/16 bg-card">
+            {avatarSrc && avatarOk ? (
+              <img
+                src={avatarSrc}
+                alt=""
+                onError={() => setAvatarOk(false)}
+                className="absolute inset-0 object-cover"
+                // Inline: `img { height: auto }` fora de camada vence o h-full do Tailwind.
+                style={{ width: '100%', height: '100%', maxWidth: 'none' }}
+              />
+            ) : (
+              <span className="font-impact text-[30px] leading-none text-neon-yellow">{initialsOf(managerName)}</span>
+            )}
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <Hashtag>#manager</Hashtag>
+            <h1 className="block min-w-0 truncate font-impact uppercase leading-[1.2] text-white" style={{ fontSize: 'clamp(30px, 9vw, 52px)' }}>
+              {managerName}
             </h1>
-            {/* O tier é o degrau da carreira — chip preto, como um distintivo. */}
-            <span
-              className="inline-flex items-center font-impact uppercase"
-              style={{
-                background: 'var(--color-deep-black)',
-                color: 'var(--color-neon-yellow)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '4px 10px',
-                fontSize: 'clamp(15px, 3.6vw, 22px)',
-                lineHeight: 1,
-              }}
-            >
-              {currentTier.name}
+            <UmaLinha className="text-[13px] text-cimento">
+              {[club.name, club.city].filter(Boolean).join(' · ')}
+            </UmaLinha>
+          </div>
+        </div>
+
+        {/* O degrau da carreira — toca e abre o plano */}
+        <button
+          type="button"
+          onClick={() => setDrawer('career')}
+          className="block w-full border border-white/10 bg-panel p-4 text-left transition-colors hover:border-white/30"
+        >
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center bg-neon-yellow text-black">
+                <TierIcon className="h-6 w-6" strokeWidth={2.4} aria-hidden />
+              </span>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="font-mono text-[10.5px] font-medium tracking-[0.2em] text-cimento">CARREIRA</span>
+                <UmaLinha className="font-impact text-[26px] uppercase leading-[1.25] text-white">{currentTier.name}</UmaLinha>
+              </div>
+            </div>
+            <span className="ole-num flex shrink-0 items-center gap-1 text-[12px] uppercase text-neon-yellow">
+              Plano
+              <ChevronRight aria-hidden className="h-4 w-4" strokeWidth={2.6} />
             </span>
           </div>
-
-          {/* Stats strip — 3 métricas principais */}
-          <div className="mt-6 grid max-w-lg grid-cols-3 gap-2 sm:gap-3">
-            <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
-                 style={{ borderRadius: 'var(--radius-sm)' }}>
-              <p
-                className="ole-num text-white tabular-nums leading-none truncate"
-                style={{ fontSize: 'clamp(16px, 4.4vw, 32px)' }}
-              >
-                {formatCompactNumber(finance.ole)}
-              </p>
-              <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
-                EXP
-              </p>
+          {nextTier ? (
+            <div className="mt-3.5 flex flex-col gap-2">
+              <div className="flex min-w-0 items-baseline justify-between gap-3">
+                <UmaLinha className="text-[13.5px] font-semibold text-white">
+                  −{formatExp(missingToNext)} EXP pro {nextTier.name}
+                </UmaLinha>
+                <span className="shrink-0 font-mono text-[11px] text-cimento">{Math.round(tierFrac * 100)}%</span>
+              </div>
+              <div className="h-1.5 bg-card-hi" aria-hidden>
+                <span className="block h-1.5 bg-neon-yellow" style={{ width: `${Math.max(2, Math.min(100, tierFrac * 100))}%` }} />
+              </div>
             </div>
-            <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
-                 style={{ borderRadius: 'var(--radius-sm)' }}>
-              <p
-                className="ole-num text-white tabular-nums leading-none truncate"
-                style={{ fontSize: 'clamp(16px, 4.4vw, 32px)' }}
-              >
-                {/* A unidade já está no rótulo abaixo — repetir "BRO" cortava o número em 375px. */}
-                {broDisplay.primary.replace(/\s*BRO$/i, '')}
-              </p>
-              <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
-                BRO
-              </p>
-            </div>
-            <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
-                 style={{ borderRadius: 'var(--radius-sm)' }}>
-              <p
-                className="ole-num text-white tabular-nums leading-none truncate"
-                style={{ fontSize: 'clamp(16px, 4.4vw, 32px)' }}
-              >
-                {squadSize}
-              </p>
-              <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
-                Elenco
-              </p>
-            </div>
-          </div>
+          ) : (
+            <UmaLinha className="mt-3.5 text-[13.5px] font-semibold text-alta">Topo da carreira</UmaLinha>
+          )}
+        </button>
 
-        </motion.div>
-      </section>
-
-      {/* ── DESTINOS DO MANAGER — grade compacta, escaneável ─────── */}
-      <section>
-        <SecaoVolt label="Sua central" className="mb-3" />
-        <div className="grid grid-cols-2 gap-3">
+        {/* Três números — nenhum é saldo (saldo é da Carteira) */}
+        <div className="grid grid-cols-3 divide-x divide-white/10 border border-white/10 bg-panel">
           {[
-            {
-              key: 'career',
-              title: 'Carreira',
-              icon: TrendingUp,
-              accent: 'var(--color-neon-yellow)',
-              stat: currentTier.name,
-              onClick: () => setDrawer('career'),
-            },
-            {
-              key: 'network',
-              title: 'Network',
-              icon: Network,
-              accent: 'var(--color-lenda)',
-              stat: `${social.friends.length} amigo${social.friends.length !== 1 ? 's' : ''}`,
-              badge: social.incoming.length > 0 ? String(social.incoming.length) : null,
-              onClick: () => navigate('/manager/network'),
-            },
-            {
-              key: 'scouts',
-              title: 'Scouts',
-              icon: Brain,
-              accent: 'var(--color-neon-yellow)',
-              stat: 'Relatório da noite',
-              tag: 'Novo',
-              onClick: () => navigate('/manager/scouts'),
-            },
-            {
-              key: 'pro',
-              title: 'PRO',
-              icon: Gem,
-              accent: 'rgba(255,255,255,0.45)',
-              stat: 'Vendas e indicadores',
-              onClick: () => navigate('/manager/pro'),
-            },
-          ].map((item, i) => {
-            const Icon = item.icon;
-            return (
-              <motion.button
-                key={item.key}
-                type="button"
-                onClick={item.onClick}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.08 + i * 0.04 }}
-                className="group relative isolate overflow-hidden border border-white/10 bg-card p-4 text-left transition-colors hover:border-white/30"
-                style={{ borderRadius: 'var(--radius-card)' }}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <Icon className="h-5 w-5 text-neon-yellow" strokeWidth={2.2} aria-hidden />
-                  <div className="flex items-center gap-1.5">
-                    {item.badge && (
-                      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--color-danger)] px-1.5 font-display text-[10px] font-black text-white">
-                        {item.badge}
-                      </span>
-                    )}
-                    {item.tag && (
-                      <span className="rounded-full border border-alta/30 bg-alta/15 px-2 py-0.5 font-mono text-[9.5px] font-medium uppercase tracking-wider text-alta">
-                        {item.tag}
-                      </span>
-                    )}
-                    <ChevronRight className="h-4 w-4 text-white/30 transition-colors group-hover:text-neon-yellow" />
-                  </div>
-                </div>
-                <h3 className="mt-3 font-impact text-[20px] uppercase leading-[1.1] text-white transition-colors group-hover:text-neon-yellow">
-                  {item.title}
-                </h3>
-                <p className="mt-1.5 truncate text-[11.5px] leading-snug text-cimento">{item.stat}</p>
-              </motion.button>
-            );
-          })}
+            { label: 'ELENCO', value: squadSize },
+            { label: 'TROFÉUS', value: trophiesEarned },
+            { label: social.friends.length === 1 ? 'AMIGO' : 'AMIGOS', value: social.friends.length },
+          ].map((s) => (
+            <div key={s.label} className="flex min-w-0 flex-col items-center gap-1.5 px-2 py-3.5">
+              <span className="ole-num block leading-none text-white" style={{ fontSize: 'clamp(22px, 6.4vw, 30px)' }}>
+                {s.value}
+              </span>
+              <span className="font-mono text-[10px] font-medium tracking-[0.18em] text-cimento">{s.label}</span>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* ── TROFÉUS ─────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <SecaoVolt label="Troféus" />
+      {/* ── 2. MESA DO MANAGER — só aparece quando há o que fazer ───────── */}
+      {mesa.length > 0 && (
+        <section aria-label="Mesa do manager" className="flex flex-col gap-3">
+          <SecaoVolt label="Mesa do manager" />
+          <ul className="border border-white/10 bg-panel">
+            {mesa.map((m) => (
+              // Sem espaço (320px), o botão desce pra baixo do texto em vez de espremê-lo.
+              <li key={m.key} className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-white/[0.06] px-4 py-3 last:border-b-0">
+                <div className="flex min-w-[7.5rem] grow basis-0 flex-col gap-0.5">
+                  <UmaLinha className="text-[15px] font-bold text-white">{m.text}</UmaLinha>
+                  <Hashtag>{m.tag}</Hashtag>
+                </div>
+                <button
+                  type="button"
+                  onClick={m.onClick}
+                  className={cn(
+                    'ole-num inline-flex h-10 shrink-0 items-center whitespace-nowrap px-3 text-[12px] uppercase transition-colors',
+                    m.primary
+                      ? 'bg-neon-yellow text-black hover:bg-white [--corte:10px] [clip-path:var(--clip-corte)]'
+                      : 'border border-white/30 text-white hover:border-white',
+                  )}
+                >
+                  {m.cta}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-        {/* Memoráveis */}
+      {/* ── 3. SUA CENTRAL — mosaico 2×2 ─────────────────────────────────── */}
+      <section aria-label="Sua central" className="flex flex-col gap-3">
+        <SecaoVolt label="Sua central" />
+        <div className="grid auto-rows-[152px] grid-cols-2 gap-3.5">
+          <button
+            type="button"
+            onClick={() => setDrawer('career')}
+            className="flex min-w-0 flex-col justify-between bg-neon-yellow p-4 text-left text-black transition-colors hover:bg-white"
+          >
+            <TrendingUp aria-hidden className="h-[28px] w-[28px]" strokeWidth={2.2} />
+            <span className="flex min-w-0 flex-col gap-1">
+              <span className={tileTitle}>Carreira</span>
+              <span className="block min-w-0 truncate font-mono text-[11.5px] font-semibold text-[#1A1700]">
+                #{currentTier.name.toLowerCase().replace(/\s+/g, '')}
+              </span>
+            </span>
+          </button>
+
+          <button type="button" onClick={() => navigate('/manager/network')} className={tilePanel}>
+            <span className="flex items-start justify-between gap-2">
+              <Network aria-hidden className="h-[28px] w-[28px] text-neon-yellow" strokeWidth={2.2} />
+              {social.incoming.length > 0 && (
+                <span className="ole-num flex h-6 min-w-6 items-center justify-center bg-neon-yellow px-1.5 text-[12px] text-black">
+                  {social.incoming.length}
+                </span>
+              )}
+            </span>
+            <span className="flex min-w-0 flex-col gap-1">
+              <span className={tileTitle}>Network</span>
+              <Hashtag>{`${social.friends.length} amigo${social.friends.length !== 1 ? 's' : ''}`}</Hashtag>
+            </span>
+          </button>
+
+          <button type="button" onClick={() => navigate('/manager/scouts')} className={tilePanel}>
+            <Brain aria-hidden className="h-[28px] w-[28px] text-neon-yellow" strokeWidth={2.2} />
+            <span className="flex min-w-0 flex-col gap-1">
+              <span className={tileTitle}>Scouts</span>
+              <Hashtag>#relatório</Hashtag>
+            </span>
+          </button>
+
+          <button type="button" onClick={() => navigate('/manager/pro')} className={tilePanel}>
+            <Gem aria-hidden className="h-[28px] w-[28px] text-neon-yellow" strokeWidth={2.2} />
+            <span className="flex min-w-0 flex-col gap-1">
+              <span className={tileTitle}>PRO</span>
+              <Hashtag>#vendas</Hashtag>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      {/* ── 4. TROFÉUS ─────────────────────────────────────────────────── */}
+      <section aria-label="Troféus" className="flex flex-col gap-3">
+        <SecaoVolt label="Troféus">
+          <Hashtag>{`${trophiesEarned} conquistado${trophiesEarned !== 1 ? 's' : ''}`}</Hashtag>
+        </SecaoVolt>
+
         <TrophyGroup
           title="Memoráveis"
           count={memorableTrophyUnlockedIds.length}
           total={MEMORABLE_TROPHY_SLOTS.length}
           defaultOpen
         >
-          <Hashtag className="mb-4">#liga #copa #supercopa</Hashtag>
+          <Hashtag className="mb-3">#liga #copa #supercopa</Hashtag>
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {MEMORABLE_TROPHY_SLOTS.map((slot, i) => {
-              const earned = memorableTrophyUnlockedIds.includes(slot.id);
-              return (
-                <motion.div
-                  key={slot.id}
-                  initial={{ opacity: 0, scale: 0.94 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.3 + i * 0.05 }}
-                  className={cn(
-                    'flex flex-col items-center gap-2 p-2 sm:p-3 border-2 transition-colors',
-                    earned
-                      ? 'bg-panel border-neon-yellow/40 hover:border-neon-yellow/60'
-                      : 'bg-black/40 border-white/10 opacity-50',
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center',
-                      earned
-                        ? 'bg-neon-yellow text-black'
-                        : 'bg-white/5 text-white/30',
-                    )}
-                  >
-                    {earned ? (
-                      <Trophy className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
-                    ) : (
-                      <Lock className="h-4 w-4 sm:h-5 sm:w-5" />
-                    )}
-                  </div>
-                  <p className={cn(
-                    'text-center text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-tight',
-                    earned ? 'text-neon-yellow' : 'text-white/45',
-                  )}>
-                    {slot.name}
-                  </p>
-                </motion.div>
-              );
-            })}
+            {MEMORABLE_TROPHY_SLOTS.map((slot) => (
+              <TrophySlot key={slot.id} name={slot.name} earned={memorableTrophyUnlockedIds.includes(slot.id)} />
+            ))}
           </div>
         </TrophyGroup>
 
-        {/* Coroas do Dia (Liga Global · mata-mata diário) */}
         <TrophyGroup
           title="Coroas do Dia"
-          icon={<Crown className="h-3.5 w-3.5 text-neon-yellow" />}
           count={dailyCrowns.length}
           defaultOpen={dailyCrowns.length > 0}
         >
-          <Hashtag className="mb-4">#ligaglobal #matamata</Hashtag>
+          <Hashtag className="mb-3">#ligaglobal #matamata</Hashtag>
           {dailyCrowns.length === 0 ? (
-            <div className="bg-black/30 border border-white/5 rounded-sm py-6 px-4 text-center">
-              <Lock className="h-5 w-5 text-white/30 mx-auto mb-2" />
-              <p className="text-[11px] text-white/45 uppercase tracking-wider font-display">
-                Nenhuma coroa ainda
-              </p>
-              <p className="text-[10px] text-white/30 mt-1">
-                Vença o mata-mata das 19h pra ganhar a sua primeira.
-              </p>
+            <div className="flex min-w-0 items-center gap-3 border border-dashed border-white/10 px-4 py-4">
+              <Lock aria-hidden className="h-5 w-5 shrink-0 text-poeira" />
+              <UmaLinha className="text-[13px] text-cimento">Vença o mata-mata das 19h</UmaLinha>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-              {dailyCrowns.map((c, i) => {
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+              {dailyCrowns.map((c) => {
                 const [y, m, d] = c.dailyDate.split('-');
-                const displayDate = `${d}/${m}/${y.slice(2)}`;
                 return (
-                  <motion.div
-                    key={c.id}
-                    initial={{ opacity: 0, scale: 0.94 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.32 + Math.min(i * 0.04, 0.4) }}
-                    className="flex flex-col items-center gap-2 p-2 sm:p-3 border-2 bg-panel border-neon-yellow/40 hover:border-neon-yellow/60 transition-colors"
-                  >
-                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center bg-neon-yellow text-black">
-                      <Crown className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
-                    </div>
-                    <div className="text-center">
-                      <p className="font-display text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-neon-yellow leading-none">
-                        Campeão
-                      </p>
-                      <p className="font-mono text-[10px] sm:text-[11px] text-white/90 mt-1">
-                        {displayDate}
-                      </p>
-                      <p className="font-mono text-[8px] text-white/40 mt-0.5">
-                        bracket {c.bracketSize}
-                      </p>
-                    </div>
-                  </motion.div>
+                  <div key={c.id} className="flex min-w-0 items-center gap-3 border border-neon-yellow/40 bg-card p-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center bg-neon-yellow text-black">
+                      <Crown aria-hidden className="h-5 w-5" strokeWidth={2.4} />
+                    </span>
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="ole-num text-[14px] leading-none text-white">{`${d}/${m}/${y.slice(2)}`}</span>
+                      <span className="block truncate font-mono text-[10.5px] text-cimento">#chave{c.bracketSize}</span>
+                    </span>
+                  </div>
                 );
               })}
             </div>
           )}
         </TrophyGroup>
 
-        {/* Competição */}
         <TrophyGroup
           title="Competição"
-          accentClass="border-l-neon-yellow"
-          countClass="text-neon-yellow"
           count={competitionTrophies.filter((t) => t.earned).length}
           total={competitionTrophies.length}
         >
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-            {competitionTrophies.map((t, i) => (
-              <motion.div
-                key={t.id}
-                initial={{ opacity: 0, scale: 0.94 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4 + i * 0.03 }}
-                className={cn(
-                  'flex flex-col items-center gap-2 p-2 sm:p-3 border transition-colors',
-                  t.earned
-                    ? 'bg-panel border-neon-yellow/30 hover:border-neon-yellow/50'
-                    : 'bg-black/40 border-white/10 opacity-50',
-                )}
-              >
-                <div
-                  className={cn(
-                    'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-sm',
-                    t.earned
-                      ? 'bg-neon-yellow text-black'
-                      : 'bg-white/5 text-white/30',
-                  )}
-                >
-                  {t.earned ? (
-                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} />
-                  ) : (
-                    <Lock className="h-3 w-3 sm:h-4 sm:w-4" />
-                  )}
-                </div>
-                <p className={cn(
-                  'text-center text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-tight',
-                  t.earned ? 'text-neon-yellow' : 'text-white/45',
-                )}>
-                  {t.name}
-                </p>
-              </motion.div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+            {competitionTrophies.map((t) => (
+              <TrophySlot key={t.id} name={t.name} earned={t.earned} />
             ))}
           </div>
         </TrophyGroup>
 
-        {/* Missões */}
         <TrophyGroup
           title="Missões"
-          accentClass="border-l-neon-yellow"
-          countClass="text-neon-yellow"
           count={missionTrophies.filter((t) => t.earned).length}
           total={missionTrophies.length}
         >
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-            {missionTrophies.map((t, i) => (
-              <motion.div
-                key={t.def.id}
-                initial={{ opacity: 0, scale: 0.94 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.45 + i * 0.03 }}
-                className={cn(
-                  'flex flex-col items-center gap-2 p-2 sm:p-3 border transition-colors',
-                  t.earned
-                    ? 'bg-panel border-neon-yellow/30 hover:border-neon-yellow/50'
-                    : 'bg-black/40 border-white/10 opacity-50',
-                )}
-              >
-                <div
-                  className={cn(
-                    'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-sm',
-                    t.earned
-                      ? 'bg-alta text-black'
-                      : 'bg-white/5 text-white/30',
-                  )}
-                >
-                  {t.earned ? (
-                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} />
-                  ) : (
-                    <Lock className="h-3 w-3 sm:h-4 sm:w-4" />
-                  )}
-                </div>
-                <p className={cn(
-                  'text-center text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-tight',
-                  t.earned ? 'text-neon-yellow' : 'text-white/45',
-                )}>
-                  {t.trophy.name}
-                </p>
-              </motion.div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+            {missionTrophies.map((t) => (
+              <TrophySlot key={t.def.id} name={t.trophy.name} earned={t.earned} />
             ))}
           </div>
         </TrophyGroup>
       </section>
 
-      {/* ── DRAWERS ─────────────────────────────────────────────── */}
+      {/* ── GAVETAS ────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {drawer === 'career' ? (
           <CareerDrawer
@@ -575,6 +444,37 @@ export function Manager() {
   );
 }
 
+/** Um troféu da galeria: conquistado = placa volt; bloqueado = cadeado apagado. */
+function TrophySlot({ name, earned }: { name: string; earned: boolean }) {
+  return (
+    <div
+      className={cn(
+        'flex min-w-0 flex-col items-center gap-2 border p-3',
+        earned ? 'border-neon-yellow/40 bg-card' : 'border-white/10 bg-panel opacity-55',
+      )}
+    >
+      <span
+        className={cn(
+          'flex h-10 w-10 items-center justify-center',
+          earned ? 'bg-neon-yellow text-black' : 'bg-white/5 text-poeira',
+        )}
+      >
+        {earned ? <Trophy aria-hidden className="h-5 w-5" strokeWidth={2.4} /> : <Lock aria-hidden className="h-4 w-4" />}
+      </span>
+      <span
+        title={name}
+        // Nome de troféu é conteúdo, não rótulo: até 2 linhas pra não virar "Campeão da…".
+        className={cn(
+          'line-clamp-2 block w-full min-w-0 text-center text-[11px] font-semibold leading-[1.25]',
+          earned ? 'text-neon-yellow' : 'text-cimento',
+        )}
+      >
+        {name}
+      </span>
+    </div>
+  );
+}
+
 /* ── Sub-components ───────────────────────────────────────────── */
 
 /** Grupo de troféus colapsável — mostra a contagem no relance, abre a galeria sob demanda. */
@@ -583,7 +483,7 @@ function TrophyGroup({
   icon,
   count,
   total,
-  accentClass = 'border-l-neon-yellow',
+  accentClass = '',
   countClass = 'text-neon-yellow',
   defaultOpen = false,
   children,
@@ -599,20 +499,21 @@ function TrophyGroup({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={cn('overflow-hidden rounded-sm border border-white/10 border-l-4 bg-panel', accentClass)}>
+    <div className={cn('overflow-hidden border border-white/10 bg-panel', accentClass)}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-white/[0.02] sm:px-5"
+        className="flex min-h-[56px] w-full items-center justify-between gap-3 px-4 text-left transition-colors hover:bg-white/[0.02] sm:px-5"
       >
-        <h3 className="flex items-center gap-2 font-display text-xs font-black uppercase tracking-wider text-white">
+        {/* leading 1.3: com truncate, leading curto corta o til (MISSÕES). */}
+        <h3 className="flex min-w-0 items-center gap-2 font-impact text-[18px] uppercase leading-[1.3] text-white">
           {icon}
-          {title}
+          <span className="truncate">{title}</span>
         </h3>
-        <div className="flex items-center gap-2.5">
-          <span className={cn('font-mono text-[10px]', countClass)}>
-            {total != null ? `${count} de ${total}` : count > 0 ? `${count}` : '—'}
+        <div className="flex shrink-0 items-center gap-2.5">
+          <span className={cn('ole-num text-[13px]', count > 0 ? countClass : 'text-cimento')}>
+            {total != null ? `${count}/${total}` : count > 0 ? `${count}` : '—'}
           </span>
           <ChevronRight className={cn('h-4 w-4 text-white/40 transition-transform', open && 'rotate-90')} strokeWidth={2.5} aria-hidden />
         </div>
@@ -685,7 +586,7 @@ function CareerDrawer({
       <div className="space-y-4">
         <div className="border border-white/10 bg-card p-4">
           <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">EXP acumulado</p>
-          <p className="ole-num mt-1 text-3xl text-white tabular-nums">{formatExp(expLifetime)}</p>
+          <p className="ole-num mt-1 truncate leading-none text-white" style={{ fontSize: 'clamp(22px, 7vw, 30px)' }}>{formatExp(expLifetime)}</p>
           <div className="mt-3">
             <CareerTierBadge expLifetimeEarned={expLifetime} showProgress />
           </div>
@@ -743,8 +644,7 @@ function CareerDrawer({
                     >
                       {t.name}
                       {isCurrent && (
-                        <span className="ml-2 inline-flex items-center gap-1 bg-neon-yellow px-2 py-0.5 align-middle font-mono text-[9px] font-medium text-black">
-                          <span className="h-1.5 w-1.5 rounded-full bg-black animate-pulse" />
+                        <span className="ml-2 inline-flex items-center bg-neon-yellow px-2 py-0.5 align-middle font-mono text-[9.5px] font-medium text-black">
                           AGORA
                         </span>
                       )}
@@ -795,8 +695,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
     <DrawerShell title="Network" onClose={onClose} accent="bg-neon-yellow">
       <div className="space-y-5">
         <div>
-          <p className="text-[11px] text-cimento">Seu clube: <span className="font-bold text-white">{club.name}</span></p>
-          <p className="text-[10.5px] text-poeira">Quem entra pelo seu link de indicação já vira amigo.</p>
+          <Hashtag>{`#network · ${club.name}`}</Hashtag>
         </div>
 
         {social.data.incoming.length > 0 ? (
@@ -809,8 +708,8 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
                   className="flex items-center justify-between gap-2 border border-white/16 bg-card px-3 py-2.5"
                 >
                   <div className="min-w-0">
-                    <p className="truncate font-display text-sm font-bold text-white">{req.clubName}</p>
-                    <p className="text-[10px] text-white/45">Quer entrar na sua rede</p>
+                    <p className="truncate text-[14px] font-semibold text-white">{req.clubName}</p>
+                    <Hashtag>#solicitação</Hashtag>
                   </div>
                   <div className="flex shrink-0 gap-1.5">
                     <button
@@ -835,26 +734,23 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
         ) : null}
 
         <section>
-          <h4 className="mb-2 flex items-center gap-1.5 font-display text-[10px] font-bold uppercase tracking-widest text-white/60">
-            <Users className="h-3.5 w-3.5" />
-            Amigos ({social.data.friends.length})
-          </h4>
+          <SecaoVolt label={`Amigos · ${social.data.friends.length}`} tone="neutro" className="mb-2" />
           {social.data.friends.length === 0 ? (
-            <p className="rounded border border-dashed border-white/10 bg-black/20 px-3 py-3 text-sm text-white/45">
-              Nenhum amigo ainda. Quem entrar pelo seu link de indicação vira amigo automaticamente.
+            <p className="border border-dashed border-white/10 px-3 py-3 text-[13px] text-cimento">
+              Quem entra pelo seu link vira amigo.
             </p>
           ) : (
             <ul className="grid gap-1.5 sm:grid-cols-2">
               {social.data.friends.map((f) => (
                 <li
                   key={f.managerId}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2"
+                  className="flex min-w-0 items-center justify-between gap-2 border border-white/10 bg-card px-3 py-2.5"
                 >
-                  <span className="truncate font-display text-sm font-bold text-white">{f.clubName}</span>
+                  <span className="min-w-0 truncate text-[14px] font-semibold text-white">{f.clubName}</span>
                   <button
                     type="button"
                     onClick={() => void social.remove(f.id)}
-                    className="shrink-0 text-[10px] font-bold uppercase text-white/45 hover:text-[var(--color-danger)]"
+                    className="ole-num shrink-0 text-[11px] uppercase text-cimento hover:text-baixa"
                   >
                     Remover
                   </button>
@@ -866,17 +762,15 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
 
         {social.data.outgoing.length > 0 ? (
           <section>
-            <h4 className="mb-2 font-display text-[10px] font-bold uppercase tracking-widest text-white/40">
-              Convites enviados
-            </h4>
+            <SecaoVolt label="Convites enviados" tone="neutro" className="mb-2" />
             <ul className="space-y-1.5">
               {social.data.outgoing.map((o) => (
-                <li key={o.id} className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                  <span className="truncate font-display text-sm font-bold text-gray-300">{o.clubName}</span>
+                <li key={o.id} className="flex min-w-0 items-center justify-between gap-2 border border-white/10 bg-panel px-3 py-2.5">
+                  <span className="min-w-0 truncate text-[14px] font-semibold text-giz">{o.clubName}</span>
                   <button
                     type="button"
                     onClick={() => void social.remove(o.id)}
-                    className="shrink-0 text-[10px] font-bold uppercase text-white/45 hover:text-white"
+                    className="ole-num shrink-0 text-[11px] uppercase text-cimento hover:text-white"
                   >
                     Cancelar
                   </button>
@@ -886,9 +780,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
           </section>
         ) : null}
 
-        <p className="text-[10px] text-white/30">
-          Seu link de indicação e o placar da rede ficam na Home.
-        </p>
+        <Hashtag className="text-poeira">Seu link de convite fica na Home</Hashtag>
       </div>
 
     </DrawerShell>
