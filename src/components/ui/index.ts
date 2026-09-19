@@ -14,3 +14,4 @@ export { Headline } from './Headline';
 export { PackCard } from './PackCard';
 export { PlayerCard } from './PlayerCard';
 export { SectionSeparator } from './SectionSeparator';
+export { UmaLinha, Hashtag, SecaoVolt, BotaoConsequencia, Placa, SeloRede } from './Volt';

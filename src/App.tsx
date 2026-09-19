@@ -63,7 +63,9 @@ function SessionGuard() {
       path.startsWith('/cadastro/') ||
       path.startsWith('/admin') ||
       path === '/reset-password' ||
-      path.startsWith('/playervip')
+      path.startsWith('/playervip') ||
+      // Prévias de desenvolvimento (rotas que só existem em DEV).
+      (import.meta.env.DEV && path.startsWith('/dev/'))
     )
       return;
 
@@ -109,6 +111,8 @@ const AgentsDebugLog = lazy(() => import('./pages/AgentsDebugLog').then((m) => (
 const AgentsFieldView = lazy(() => import('./pages/AgentsFieldView').then((m) => ({ default: m.AgentsFieldView })));
 const OleFieldLab = lazy(() => import('./pages/OleFieldLab').then((m) => ({ default: m.OleFieldLab })));
 const OleFieldLabLegacy = lazy(() => import('./pages/OleFieldLabLegacy').then((m) => ({ default: m.OleFieldLabLegacy })));
+// Prévia com dados de exemplo: o import só existe em DEV, pra o chunk não ir pro build.
+const HomeVolt2Preview = import.meta.env.DEV ? lazy(() => import('./pages/dev/HomeVolt2Preview')) : () => null;
 const OleFieldLabAerea = lazy(() => import('./pages/OleFieldLabAerea').then((m) => ({ default: m.OleFieldLabAerea })));
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
@@ -679,6 +683,14 @@ as a nice MVP. Let's Play Together! ⚽
           </Route>
           {import.meta.env.DEV && (
             <>
+              <Route
+                path="/dev/home-volt2"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <HomeVolt2Preview />
+                  </Suspense>
+                }
+              />
               <Route
                 path="/dev/field-lab"
                 element={
