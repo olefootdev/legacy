@@ -1,0 +1,4 @@
+/*
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://xtuveikgwlgbcleloxia.supabase.co wss://xtuveikgwlgbcleloxia.supabase.co https://legacy-production-de1e.up.railway.app; object-src 'none'; base-uri 'self'; frame-ancestors 'self'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

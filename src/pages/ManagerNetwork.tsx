@@ -118,7 +118,6 @@ import {
   fetchCareerLeaderboard,
   type LeaderboardEntry,
 } from '@/wallet/careerProgress';
-import { getTokenPrice, type TokenEconomyConfig } from '@/economy/tokenEconomyConfig';
 import {
   fetchMyActivationStatus,
   ACTIVATION_AMOUNT_USD,
@@ -245,7 +244,6 @@ export function ManagerNetwork() {
   const [career, setCareer] = useState<CareerProgress | null>(null);
   const [affiliateSummaries, setAffiliateSummaries] = useState<AffiliateCommissionSummary[]>([]);
   const [cards, setCards] = useState<PremiumCardGrant[]>([]);
-  const [tokenConfig, setTokenConfig] = useState<TokenEconomyConfig | null>(null);
   const [activation, setActivation] = useState<ActivationStatus | null>(null);
   const [claimingCareer, setClaimingCareer] = useState(false);
   const [claimingAffiliate, setClaimingAffiliate] = useState(false);
@@ -261,21 +259,18 @@ export function ManagerNetwork() {
       careerData,
       affData,
       cardsData,
-      tokenData,
       activationData,
       leaderboardData,
     ] = await Promise.all([
       fetchMyCareerProgress(),
       fetchMyAffiliateCommissions(),
       fetchMyPremiumCards(true),
-      getTokenPrice(),
       fetchMyActivationStatus(),
       fetchCareerLeaderboard(20),
     ]);
     setCareer(careerData);
     setAffiliateSummaries(affData);
     setCards(cardsData);
-    setTokenConfig(tokenData);
     setActivation(activationData);
     setLeaderboard(leaderboardData);
   };

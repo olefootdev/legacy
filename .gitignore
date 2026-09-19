@@ -85,3 +85,7 @@ olefoot-db/
 
 # Cloudflare Wrangler — cache local (contém id de conta, não versionar)
 .wrangler/
+
+# Documentação oficial da Solana clonada como referência local (35M, sem histórico git)
+# Regenerar: docs/SOLANA_DOCS_INDEX.md explica como
+vendor/solana-docs/
