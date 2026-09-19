@@ -130,9 +130,11 @@ export function useGlobalConsequencesSync() {
     };
   }, [players, createCostExp]);
 
-  // ── Prêmio de Campeão de Temporada: lê coroações não-reclamadas e credita ───
-  // Idempotência forte: marca claimed=true (condicional a claimed=false) ANTES
-  // de dispatchar o crédito — se a linha já foi reclamada, não credita 2×.
+  // ── Prêmio de Campeão de Temporada: reclama via RPC e credita ───────────────
+  // claim_my_season_champion_prizes() trava as linhas do próprio manager,
+  // marca claimed=true e devolve só as recém-reclamadas — atômico no servidor,
+  // sem o cliente ler/escrever a tabela direto (ver migration
+  // 20260918230000_global_league_prizes_lockdown.sql).
   useEffect(() => {
     const email = managerProfile?.email;
     if (!email) return;
@@ -140,21 +142,14 @@ export function useGlobalConsequencesSync() {
     if (!sb) return;
     let cancelled = false;
     (async () => {
-      const { data } = await sb
-        .from('global_league_season_champions')
-        .select('*')
-        .eq('manager_id', email)
-        .eq('claimed', false);
+      const { data, error } = await sb.rpc('claim_my_season_champion_prizes');
+      if (error) {
+        console.warn('[globalSync] claim_my_season_champion_prizes:', error.message);
+        return;
+      }
       if (cancelled || !data || data.length === 0) return;
       const items = [];
       for (const c of data as Array<Record<string, any>>) {
-        const { data: upd } = await sb
-          .from('global_league_season_champions')
-          .update({ claimed: true })
-          .eq('id', c.id)
-          .eq('claimed', false)
-          .select('id');
-        if (!upd || upd.length === 0) continue; // reclamado em outra aba/sessão
         const ole = Number(c.prize_ole ?? 0);
         const exp = Number(c.prize_exp ?? 0);
         dispatchGame({ type: 'CLAIM_SEASON_CHAMPION_PRIZE', ole, exp, division: Number(c.division) });
@@ -172,9 +167,8 @@ export function useGlobalConsequencesSync() {
     };
   }, [managerProfile?.email, globalLeagueMVP?.seasonId]);
 
-  // ── Prêmio do Mata-Mata Diário (Coroa do Dia): credita EXP por fase ─────────
-  // Mesmo padrão do campeão sazonal: marca claimed=true (condicional) ANTES de
-  // creditar, pra nunca pagar 2×. Uma linha por (time, fase) na Edge.
+  // ── Prêmio do Mata-Mata Diário (Coroa do Dia): reclama via RPC ──────────────
+  // Mesmo padrão do campeão sazonal — claim_my_ko_prizes() atômico no servidor.
   useEffect(() => {
     const email = managerProfile?.email;
     if (!email) return;
@@ -182,11 +176,11 @@ export function useGlobalConsequencesSync() {
     if (!sb) return;
     let cancelled = false;
     (async () => {
-      const { data } = await sb
-        .from('global_league_ko_prizes')
-        .select('*')
-        .eq('manager_id', email)
-        .eq('claimed', false);
+      const { data, error } = await sb.rpc('claim_my_ko_prizes');
+      if (error) {
+        console.warn('[globalSync] claim_my_ko_prizes:', error.message);
+        return;
+      }
       if (cancelled || !data || data.length === 0) return;
       const STAGE_LABEL: Record<string, string> = {
         qualified: 'Classificado pro Mata-Mata!', r16: 'Venceu as oitavas!',
@@ -194,13 +188,6 @@ export function useGlobalConsequencesSync() {
       };
       const items = [];
       for (const c of data as Array<Record<string, any>>) {
-        const { data: upd } = await sb
-          .from('global_league_ko_prizes')
-          .update({ claimed: true })
-          .eq('id', c.id)
-          .eq('claimed', false)
-          .select('id');
-        if (!upd || upd.length === 0) continue; // reclamado em outra aba/sessão
         const exp = Number(c.prize_exp ?? 0);
         if (exp <= 0) continue;
         dispatchGame({ type: 'CLAIM_KO_PRIZE', exp, stage: String(c.stage ?? '') });
