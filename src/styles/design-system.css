@@ -18,9 +18,15 @@
  */
 
 :root {
+  /* ── VOLT2: o corte do escudo ─────────────────────────────────
+     Canto inferior direito cortado — a única "forma" do botão primário.
+     Sem sombra e sem inclinação: é isso que sobrevive a 320px. */
+  --corte: 12px;
+  --clip-corte: polygon(0 0, 100% 0, 100% calc(100% - var(--corte)), calc(100% - var(--corte)) 100%, 0 100%);
+
   /* ── Aliases de cor (BVB-style names) ────────────────────────── */
   --stadium-night:  var(--color-deep-black);   /* #0D0D0D */
-  --surface-dark:   var(--color-card);         /* #242424 */
+  --surface-dark:   var(--color-card);         /* #1B1D1F (VOLT2) */
   --yellow:         var(--color-neon-yellow);  /* #FDE100 */
   --text-primary:   #FFFFFF;
   --text-secondary: var(--color-text-soft);    /* #A0A0A0 */

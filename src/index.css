@@ -1,6 +1,5 @@
-/* Fontes locais (prioridade) + Google Fonts (fallback) */
+/* Fontes do próprio domínio (ver styles/fonts.css e o import em main.tsx). */
 @import "./styles/fonts.css";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:ital,wght@0,500;0,700;1,500;1,700&family=Montserrat:ital,wght@0,400;0,600;0,800;1,800;1,900&display=swap');
 @import "tailwindcss";
 @import "./styles/design-system.css";
 @import "./styles/mobile-responsive.css";
@@ -11,20 +10,46 @@
   --color-neon-yellow-dark: #C9B000;
   --color-neon-green: #00FF66;
   --color-deep-black: #0D0D0D;
-  --color-dark-gray: #1A1A1A;
-  --color-panel: #1A1A1A;
-  --color-card: #242424;
-  --color-card-hi: #2E2E2E;
-  --color-text-soft: #A0A0A0;
-  --color-text-muted: #555555;
 
-  /* Tipografia — alinhada ao site */
-  --font-sans: "Inter", "Montserrat", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Agency FB", "AgencyFB", Impact, "Oswald", ui-sans-serif, sans-serif;
+  /* VOLT2 (2026-09-19) — superfícies em escada, neutros com viés frio.
+     Mesmos nomes de antes pra não mexer em componente: só o valor mudou,
+     degrau por degrau (panel < card < card-hi continuam distintos). */
+  --color-dark-gray: #141516;
+  --color-panel: #141516;
+  --color-card: #1B1D1F;
+  --color-card-hi: #25282B;
+  --color-text-soft: #9A9C9F;   /* cimento */
+  --color-text-muted: #7E8185;  /* poeira — era #555, abaixo do contraste mínimo */
+
+  /* Vocabulário do VOLT2. Ouro é SÓ da carteira e SÓ de ativo que está na
+     rede: EXP e OLEFOOT do jogo são fictícios e nunca usam ouro. */
+  --color-asfalto: #0D0D0D;
+  --color-nav: #08090A;
+  --color-sheet: #25282B;
+  --color-giz: #ECECE7;
+  --color-cimento: #9A9C9F;
+  --color-poeira: #7E8185;
+  --color-ouro: #E8B331;
+  --color-lenda: #8B5CF6;
+  --color-alta: #22C55E;
+  --color-baixa: #FF4D4D;
+  --color-atencao: #FF9F1C;
+
+  /* Tipografia. Todas as pilhas terminam em fonte de sistema, e a de título
+     (--font-display) é EXATAMENTE a que produção mostrava até hoje — a classe
+     .fonts-fallback aplicava essa pilha em todo acesso, porque Inter/Oswald
+     nunca carregavam. Trocar a fonte de título é tela a tela (VOLT2 V4/V7):
+     a Archivo expandida é mais larga e estouraria rótulo nas 1.792 ocorrências. */
+  --font-sans: "Inter Tight Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: Impact, "Arial Black", "Helvetica Neue", Arial, sans-serif;
   /* Impacto de pôster — Anton (embutida, OFL). Nomes, números de placar, manchetes. */
-  --font-impact: "Anton", "Arial Narrow Bold", Impact, "Oswald", sans-serif;
+  --font-impact: "Anton", "Arial Narrow Bold", Impact, sans-serif;
   --font-serif-hero: "Moret", Georgia, "Times New Roman", serif;
-  --font-ui: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", ui-sans-serif, sans-serif;
+  --font-ui: "Inter Tight Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  /* Números e rótulo de botão do VOLT2 — usar com .ole-num (largura 125%). */
+  --font-num: "Archivo Variable", "Arial Black", Impact, sans-serif;
+  /* Dinheiro e #hashtag. */
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* === Escala tipográfica (Brief v2) === */
   --text-xs:     11px;
@@ -60,8 +85,8 @@
   /* === Sprint A — Legacy Tech tokens (Apr/2026) ===
    * Aditivos sobre a paleta atual; não substituem nada.
    * Usar em primitivos novos: LegacyHeader, DataCard, PlayerPortrait, StatTile. */
-  --color-panel-elevated: #1F1F1F;
-  --color-panel-soft: #161616;
+  --color-panel-elevated: #1B1D1F;  /* VOLT2: elevado */
+  --color-panel-soft: #141516;      /* VOLT2: card */
   --color-divider-soft: rgba(255, 255, 255, 0.06);
   --color-divider-yellow: rgba(253, 225, 0, 0.12);
   --color-divider-yellow-strong: rgba(253, 225, 0, 0.35);
@@ -260,17 +285,21 @@
   .panel-accent {
     @apply border-l-4 border-l-neon-yellow;
   }
+  /* VOLT2: volt chapado + corte do escudo. Sem sombra, sem inclinação, sem
+     crescer no hover — o layout real não aceita enfeite que só vive no mockup.
+     O foco é desenhado POR DENTRO porque o clip-path corta o outline de fora. */
   .btn-primary {
-    @apply bg-neon-yellow text-black font-display font-bold uppercase tracking-wider px-8 py-3 -skew-x-6 hover:bg-white hover:scale-105 transition-all shadow-[4px_4px_0px_rgba(255,255,255,0.2)] active:shadow-[0px_0px_0px_rgba(255,255,255,0.2)] active:translate-y-1 active:translate-x-1;
+    @apply bg-neon-yellow text-black font-display font-bold uppercase tracking-wider px-8 py-3 hover:bg-white transition-colors focus-visible:outline-2 focus-visible:outline-black focus-visible:-outline-offset-4;
+    clip-path: var(--clip-corte);
   }
   .btn-primary-inner {
-    @apply skew-x-6 block flex items-center justify-center gap-2;
+    @apply block flex items-center justify-center gap-2;
   }
   .btn-secondary {
-    @apply bg-dark-gray text-white border border-white/20 font-display font-bold uppercase tracking-wider px-6 py-2 -skew-x-6 hover:bg-white/10 transition-all;
+    @apply bg-transparent text-white border border-white/30 font-display font-bold uppercase tracking-wider px-6 py-2 hover:border-white hover:bg-white/5 transition-colors focus-visible:outline-2 focus-visible:outline-neon-yellow focus-visible:outline-offset-2;
   }
   .btn-secondary-inner {
-    @apply skew-x-6 block flex items-center justify-center gap-2;
+    @apply block flex items-center justify-center gap-2;
   }
   .text-outline {
     -webkit-text-stroke: 1px rgba(255,255,255,0.2);
@@ -344,8 +373,18 @@
     @apply transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)];
   }
 
+  /* Número do VOLT2: Archivo expandida. Placar, OVR, preço, rótulo de botão novo. */
+  .ole-num {
+    font-family: var(--font-num);
+    font-stretch: 125%;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+
   .btn-on-yellow {
-    @apply bg-black text-neon-yellow font-display font-bold uppercase tracking-wider px-6 py-2 -skew-x-6 hover:bg-deep-black transition-all;
+    @apply bg-black text-neon-yellow font-display font-bold uppercase tracking-wider px-6 py-2 hover:bg-deep-black transition-colors;
+    clip-path: var(--clip-corte);
   }
 
   /* === Scoreboard (Brief v2 COMP-01) === */

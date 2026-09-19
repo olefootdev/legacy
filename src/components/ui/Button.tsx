@@ -5,20 +5,24 @@ type ButtonVariant = 'primary' | 'secondary' | 'angular' | 'on-yellow';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 const VARIANT: Record<ButtonVariant, string> = {
+  // VOLT2: cor chapada + corte do escudo. Sem sombra, sem inclinação, sem
+  // crescer no hover. O foco é desenhado por dentro porque o clip-path corta
+  // qualquer outline de fora.
   primary:
-    'bg-neon-yellow text-black hover:bg-white hover:scale-105 hover:shadow-[0_8px_24px_rgba(253,225,0,0.3)] -skew-x-6',
+    'bg-neon-yellow text-black hover:bg-white [clip-path:var(--clip-corte)] focus-visible:outline-2 focus-visible:outline-black focus-visible:-outline-offset-4',
   secondary:
-    'bg-transparent text-white border border-[var(--border)] hover:border-neon-yellow hover:text-neon-yellow -skew-x-6',
+    'bg-transparent text-white border border-white/30 hover:border-white hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-neon-yellow focus-visible:outline-offset-2',
   angular:
-    'bg-neon-yellow text-black clip-angular-btn hover:bg-white hover:translate-y-[-2px] hover:shadow-[0_8px_24px_rgba(253,225,0,0.3)]',
+    'bg-neon-yellow text-black clip-angular-btn hover:bg-white focus-visible:outline-2 focus-visible:outline-black focus-visible:-outline-offset-4',
   'on-yellow':
-    'bg-black text-neon-yellow hover:bg-deep-black -skew-x-6',
+    'bg-black text-neon-yellow hover:bg-deep-black [clip-path:var(--clip-corte)] focus-visible:outline-2 focus-visible:outline-neon-yellow focus-visible:-outline-offset-4',
 };
 
+// O corte acompanha a altura: 14px num botão de 28px comeria metade dele.
 const SIZE: Record<ButtonSize, string> = {
-  sm: 'text-[12px] px-4 py-1.5',
-  md: 'text-[14px] px-6 py-2.5',
-  lg: 'text-[16px] px-10 py-3.5',
+  sm: 'text-[12px] px-4 py-1.5 [--corte:8px]',
+  md: 'text-[14px] px-6 py-2.5 [--corte:12px]',
+  lg: 'text-[16px] px-10 py-3.5 [--corte:14px]',
 };
 
 /**
@@ -36,7 +40,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
     variant === 'angular'
       ? children
       : (
-        <span className="block flex items-center justify-center gap-2 skew-x-6">
+        <span className="block flex items-center justify-center gap-2">
           {children}
         </span>
       );
@@ -44,7 +48,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
     <button
       ref={ref}
       className={cn(
-        'font-display font-bold uppercase tracking-[0.12em] transition-all',
+        'font-display font-bold uppercase tracking-[0.12em] transition-colors',
         VARIANT[variant],
         SIZE[size],
         className,

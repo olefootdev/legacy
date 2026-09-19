@@ -29,6 +29,8 @@ import { adminPaymentsRoutes } from './routes/adminPayments.js';
 import { revelaAdminRoutes } from './routes/revelaAdmin.js';
 import { legendImportRoutes } from './routes/legendImport.js';
 import { insightsRoutes } from './routes/insights.js';
+import { solanaWalletRoutes } from './routes/solanaWallet.js';
+import { cspReportRoutes } from './routes/cspReport.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
 // Railway scheduler decomissionado em 2026-05-07. A Liga Global agora é
 // gerenciada autonomamente pela Edge Function v7 do Supabase + pg_cron.
@@ -101,6 +103,12 @@ app.use('/api/academy/upload-selfie', bodyLimit(10 * 1024 * 1024));   // selfie 
 app.use('/api/academy/generate-portrait', bodyLimit(10 * 1024 * 1024)); // selfie + camisa + bg (modo auto)
 app.use('/api/academy/upload-admin-image', bodyLimit(10 * 1024 * 1024)); // arte final do admin (portrait | promo)
 
+// Relatório de CSP ANTES do csrfGuard: o navegador manda o relatório sozinho,
+// às vezes sem Origin, e a rota só agrega diretiva/origem/caminho (ver
+// routes/cspReport.ts). Registrada antes, o handler responde e o guard não roda.
+app.use('/api/csp-report', bodyLimit(32 * 1024));
+app.route('/', cspReportRoutes);
+
 app.use('*', csrfGuard);
 
 app.route('/', healthRoutes);
@@ -113,6 +121,7 @@ app.route('/', pinataMediaRoutes);
 app.route('/', positionCoachRoutes);
 app.route('/', marketRoutes);
 app.route('/', marketOffersRoutes);
+app.route('/', solanaWalletRoutes);
 app.route('/', academyRoutes);
 app.route('/', academyAdminRoutes);
 app.route('/', academyArtRoutes);

@@ -1,128 +1,26 @@
 /**
- * Fontes locais do Olefoot
+ * Fontes do Olefoot — VOLT2
  *
- * Este arquivo define as fontes hospedadas localmente no projeto
- * para garantir que funcionem em todos os navegadores, mesmo offline.
+ * Todas servidas do PRÓPRIO domínio: a CSP só aceita `font-src 'self'`, então
+ * nada de Google Fonts em produção.
  *
- * IMPORTANTE: As fontes devem ser baixadas e colocadas em /public/fonts/
+ *   Anton              — manchete de pôster (arquivo local em /public/fonts)
+ *   Archivo Variable   — números e rótulo de botão, largura 125% (Fontsource)
+ *   Inter Tight Variable — texto de interface (Fontsource)
+ *   IBM Plex Mono      — dinheiro e #hashtag (Fontsource)
  *
- * Para baixar as fontes:
- * 1. Inter: https://fonts.google.com/specimen/Inter
- * 2. Oswald: https://fonts.google.com/specimen/Oswald
- * 3. Montserrat: https://fonts.google.com/specimen/Montserrat
- *
- * Formatos necessários: woff2 (moderno, melhor compressão)
+ * As três do Fontsource entram por `import` em src/main.tsx; o Vite empacota os
+ * .woff2 em /assets. Até 2026-09-19 este arquivo apontava para Inter, Oswald e
+ * Montserrat em /public/fonts — arquivos que nunca existiram. Produção devolvia
+ * o index.html no lugar da fonte e o jogo inteiro caía no fallback.
  */
 
-/* Inter — Fonte principal do corpo de texto */
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/Inter-Regular.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/Inter-Medium.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/Inter-SemiBold.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/Inter-Bold.woff2') format('woff2');
-}
-
-/* Anton — Fonte de IMPACTO (nomes, números de placar, manchetes de pôster).
-   A dupla street × legado: Anton grita, Moret sussurra. Arquivo local real. */
 @font-face {
   font-family: 'Anton';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
   src: url('/fonts/anton-latin.woff2') format('woff2');
-}
-
-/* Oswald — Fonte display para títulos e números */
-@font-face {
-  font-family: 'Oswald';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/Oswald-Medium.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Oswald';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/Oswald-Bold.woff2') format('woff2');
-}
-
-/* Montserrat — Fonte alternativa para destaques */
-@font-face {
-  font-family: 'Montserrat';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/Montserrat-Regular.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Montserrat';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/Montserrat-SemiBold.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Montserrat';
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url('/fonts/Montserrat-ExtraBold.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Montserrat';
-  font-style: italic;
-  font-weight: 800;
-  font-display: swap;
-  src: url('/fonts/Montserrat-ExtraBoldItalic.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Montserrat';
-  font-style: italic;
-  font-weight: 900;
-  font-display: swap;
-  src: url('/fonts/Montserrat-BlackItalic.woff2') format('woff2');
-}
-
-/**
- * Fallback para quando as fontes não carregarem
- * Usa fontes de sistema que são visualmente similares
- */
-.fonts-fallback {
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: Impact, "Arial Black", "Helvetica Neue", Arial, sans-serif;
-  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 /**
