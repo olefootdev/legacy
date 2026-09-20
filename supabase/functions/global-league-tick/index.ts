@@ -674,13 +674,34 @@ const SEASON_POINT_TARGET = 1000; // ~2,5 dias no ritmo nonstop → fim da tempo
 // da noite e da virada de meia-noite, nunca durante o dia. A liga continua
 // estendendo (acumulando pontos) até a janela da madrugada chegar.
 const SEASON_RESET_HOUR = 6;
-// Prêmio do campeão por divisão (D1 > D2 > D3). Creditado client-side via tabela
-// global_league_season_champions (claimed). Constantes — fáceis de tunar.
+// Prêmio do campeão por divisão. Creditado via global_league_season_champions.
+// 🔴 TEM QUE TER UMA ENTRADA PARA CADA DIVISÃO ATÉ `DIVISIONS` (linha 542).
+// A Várzea (D4) entrou em 2026-08-03 e esta tabela não foi estendida junto:
+// por 48 dias todo campeão da D4 foi gravado valendo ZERO, sem erro no log.
+// Nove títulos, duas pessoas — uma delas venceu oito temporadas de graça.
+// Corrigido e pago em 2026-09-20 — ver a mensagem do commit deste arquivo.
 const SEASON_PRIZES: Record<number, { ole: number; exp: number }> = {
   1: { ole: 500_000, exp: 250_000 },
   2: { ole: 250_000, exp: 125_000 },
   3: { ole: 100_000, exp: 50_000 },
+  4: { ole: 50_000, exp: 25_000 },
 };
+
+/**
+ * Prêmio da divisão. Divisão sem entrada na tabela NÃO paga zero calado: cai
+ * no valor da divisão mais baixa que existe e grita no log. Zero silencioso foi
+ * exatamente o que deixou a D4 sem prêmio por 48 dias.
+ */
+function seasonPrizeFor(division: number): { ole: number; exp: number } {
+  const prize = SEASON_PRIZES[division];
+  if (prize) return prize;
+  const ultima = Math.max(...Object.keys(SEASON_PRIZES).map(Number));
+  console.error(
+    `[global-league-tick] SEASON_PRIZES não tem a divisão ${division}. ` +
+    `Pagando o valor da divisão ${ultima}. Acrescente a entrada certa.`,
+  );
+  return SEASON_PRIZES[ultima];
+}
 
 // ── Prêmio EXP do MATA-MATA DIÁRIO (Coroa do Dia) ────────────────────────────
 // Creditado client-side via a tabela global_league_ko_prizes (claimed). Pago ao
@@ -741,7 +762,7 @@ async function crownDivisionChampions(
   for (let division = 1; division <= DIVISIONS; division++) {
     const champ = divisionLeader(teams, division);
     if (!champ) continue;
-    const prize = SEASON_PRIZES[division] ?? { ole: 0, exp: 0 };
+    const prize = seasonPrizeFor(division);
     const id = `champ_${state.competition_id}_${state.season_id}_d${division}`;
     const { error } = await supabase.from('global_league_season_champions').insert({
       id,
