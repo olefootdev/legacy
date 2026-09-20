@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, Zap, ShoppingCart, Trophy, Users, Clock, Brain, Rocket, Eye, EyeOff } from 'lucide-react';
+import { Zap, ShoppingCart, Trophy, Users, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Hashtag } from '@/components/ui';
 import { useGameDispatch, getGameState } from '@/game/store';
@@ -9,59 +9,34 @@ import type { FormationSchemeId } from '@/match-engine/types';
 import { fetchMyReferralCode, syncMyExpLifetime } from '@/supabase/referrals';
 import { FORMATION_TACTICAL_DEFAULTS } from '@/tactics/formationDefaults';
 
-// A/B Test: 3 propostas de valor
-type ValueProposition = 'nostalgia' | 'ai' | 'speed';
-
-const VALUE_PROPS: Record<ValueProposition, {
-  headline: { white1: string; yellow: string; white2: string };
-  subheadline: string;
-  features: Array<{ icon: typeof Clock; text: string; color: string }>;
-}> = {
-  nostalgia: {
-    headline: {
-      white1: 'A gente sabe que',
-      yellow: 'você já virou noite para ser o melhor',
-      white2: 'clube do mundo!',
-    },
-    subheadline: 'Bem vindo ao OLEFOOT',
-    features: [
-      { icon: ShoppingCart, text: 'Revele novos talentos no mercado', color: 'text-neon-yellow' },
-      { icon: Trophy, text: 'Construa sua cidade do futebol', color: 'text-neon-yellow' },
-      { icon: Users, text: 'Dispute ligas contra gringos', color: 'text-neon-yellow' },
-    ],
+/**
+ * Proposta de valor da landing.
+ *
+ * Aqui havia um "A/B" de 3 propostas: sorteava uma, guardava no localStorage e
+ * fazia console.log. Ninguém conseguia ler o resultado — `product_events` só
+ * aceita escrita de quem JÁ está logado, e esta tela é pré-sessão. Medido em
+ * 2026-09-20: 5 logins em 30 dias. Um experimento assim não fecharia nunca.
+ * Ficou a proposta que o jogo de fato é: revelar talento, construir clube,
+ * disputar liga. Trocar o texto é editar aqui.
+ */
+const VALUE_PROP = {
+  headline: {
+    white1: 'A gente sabe que',
+    yellow: 'você já virou noite para ser o melhor',
+    white2: 'clube do mundo!',
   },
-  ai: {
-    headline: {
-      white1: 'A gente sabe que',
-      yellow: 'você já virou noite para ser o melhor',
-      white2: 'clube do mundo',
-    },
-    subheadline: 'Bem vindo ao OLEFOOT',
-    features: [
-      { icon: Brain, text: 'Assistente tático com IA', color: 'text-neon-yellow' },
-      { icon: Sparkles, text: 'Crie jogadores com prompt', color: 'text-neon-yellow' },
-      { icon: Zap, text: 'Análise em tempo real', color: 'text-neon-yellow' },
-    ],
-  },
-  speed: {
-    headline: {
-      white1: 'A gente sabe que',
-      yellow: 'você já virou noite para ser o melhor',
-      white2: 'clube do mundo',
-    },
-    subheadline: 'Bem vindo ao OLEFOOT',
-    features: [
-      { icon: Rocket, text: 'Partidas de 30 segundos', color: 'text-neon-yellow' },
-      { icon: Clock, text: 'Temporada completa em 5min', color: 'text-neon-yellow' },
-      { icon: Trophy, text: 'Progressão transparente', color: 'text-neon-yellow' },
-    ],
-  },
+  subheadline: 'Bem vindo ao OLEFOOT',
+  features: [
+    { icon: ShoppingCart, text: 'Revele novos talentos no mercado' },
+    { icon: Trophy, text: 'Construa sua cidade do futebol' },
+    { icon: Users, text: 'Dispute ligas contra gringos' },
+  ],
 };
 
 /**
  * Feature card VOLT2 — card chapado (bg-panel), ícone volt em caixa de canto
  * vivo, título em Anton. Sem trilho lateral, sem vidro, sem pular no hover.
- * O texto é do A/B de proposta de valor: só a roupa mudou.
+ * O texto vem de VALUE_PROP.
  */
 function FeatureCard({
   icon,
@@ -109,26 +84,6 @@ export function Login() {
   const [compPhone, setCompPhone] = useState('');
   const [compClubName, setCompClubName] = useState('');
   const [compFormation, setCompFormation] = useState<FormationSchemeId>('4-3-3');
-
-  // A/B Test: rotaciona proposta de valor a cada visita
-  const [variant, setVariant] = useState<ValueProposition>('nostalgia');
-
-  useEffect(() => {
-    // Detecta qual variante mostrar (baseado em hash do timestamp ou localStorage)
-    const stored = localStorage.getItem('olefoot_ab_variant');
-    if (stored && ['nostalgia', 'ai', 'speed'].includes(stored)) {
-      setVariant(stored as ValueProposition);
-    } else {
-      // Distribui aleatoriamente entre as 3 variantes
-      const variants: ValueProposition[] = ['nostalgia', 'ai', 'speed'];
-      const selected = variants[Math.floor(Math.random() * variants.length)];
-      setVariant(selected);
-      localStorage.setItem('olefoot_ab_variant', selected);
-    }
-
-    // Track impressão da variante (para analytics futuro)
-    console.log('[A/B Test] Variant shown:', stored || variant);
-  }, []);
 
   const onForgotSubmit = async (e: import('react').FormEvent) => {
     e.preventDefault();
@@ -334,79 +289,44 @@ export function Login() {
                   Jogue agora
                 </span>
 
-                {/* Headline dinâmico baseado na variante A/B */}
-                <h1
+                                <h1
                   className="font-impact uppercase leading-[1.04] text-white"
                   style={{ fontSize: 'clamp(32px, 9.5vw, 52px)' }}
                 >
-                  <span className="text-white">{VALUE_PROPS[variant].headline.white1} </span>
-                  <span className="text-neon-yellow">{VALUE_PROPS[variant].headline.yellow} </span>
-                  <span className="text-white">{VALUE_PROPS[variant].headline.white2}</span>
+                  <span className="text-white">{VALUE_PROP.headline.white1} </span>
+                  <span className="text-neon-yellow">{VALUE_PROP.headline.yellow} </span>
+                  <span className="text-white">{VALUE_PROP.headline.white2}</span>
                 </h1>
 
-                <p className="ole-eyebrow-poster">{VALUE_PROPS[variant].subheadline}</p>
+                <p className="ole-eyebrow-poster">{VALUE_PROP.subheadline}</p>
 
                 <div className="flex flex-wrap gap-x-4 gap-y-2 text-[12px] font-medium text-giz">
-                  {VALUE_PROPS[variant].features.map((feature, i) => (
+                  {VALUE_PROP.features.map((feature, i) => (
                     <span key={i} className="flex items-center gap-1.5">
-                      <feature.icon className={cn('h-3.5 w-3.5 shrink-0', feature.color)} />
+                      <feature.icon className="h-3.5 w-3.5 shrink-0 text-neon-yellow" />
                       {feature.text}
                     </span>
                   ))}
                 </div>
               </div>
 
-              {/* Feature Highlights — adapta ao contexto da variante */}
+              {/* Os destaques da proposta acima, em card. */}
               <div className="mt-6 space-y-3">
-                {variant === 'nostalgia' && (
-                  <>
-                    <FeatureCard
-                      icon={<ShoppingCart className="h-5 w-5" strokeWidth={2.5} />}
-                      title="Mercado Real"
-                      desc="Leilões ao vivo, garimpe talentos baratos e venda por fortuna"
-                    />
-                    <FeatureCard
-                      icon={<Trophy className="h-5 w-5" strokeWidth={2.5} />}
-                      title="Construa Sua Dinastia"
-                      desc="Décadas de carreira, jogadores envelhecem e novos talentos surgem"
-                    />
-                    <FeatureCard
-                      icon={<Zap className="h-5 w-5" strokeWidth={2.5} />}
-                      title="O Jogo Começou"
-                      desc="Mostre que você entende de futebol e domine o ranking mundial"
-                    />
-                  </>
-                )}
-
-                {variant === 'ai' && (
-                  <>
-                    <FeatureCard
-                      icon={<span className="font-display text-base font-black">AI</span>}
-                      title="Crie Jogadores com IA"
-                      desc="Descreva o perfil e gere jogadores únicos com atributos reais"
-                    />
-                    <FeatureCard
-                      icon={<Zap className="h-5 w-5" strokeWidth={2.5} />}
-                      title="Análise Tática em Tempo Real"
-                      desc="IA analisa partidas e sugere mudanças táticas instantâneas"
-                    />
-                  </>
-                )}
-
-                {variant === 'speed' && (
-                  <>
-                    <FeatureCard
-                      icon={<Rocket className="h-5 w-5" strokeWidth={2.5} />}
-                      title="Partidas Ultrarrápidas"
-                      desc="Jogue uma partida completa em 30 segundos, gratificação instantânea"
-                    />
-                    <FeatureCard
-                      icon={<Clock className="h-5 w-5" strokeWidth={2.5} />}
-                      title="Temporada Completa em 5 Minutos"
-                      desc="Simule 38 jogos rapidamente e veja seu time subir na tabela"
-                    />
-                  </>
-                )}
+                <FeatureCard
+                  icon={<ShoppingCart className="h-5 w-5" strokeWidth={2.5} />}
+                  title="Mercado Real"
+                  desc="Leilões ao vivo, garimpe talentos baratos e venda por fortuna"
+                />
+                <FeatureCard
+                  icon={<Trophy className="h-5 w-5" strokeWidth={2.5} />}
+                  title="Construa Sua Dinastia"
+                  desc="Décadas de carreira, jogadores envelhecem e novos talentos surgem"
+                />
+                <FeatureCard
+                  icon={<Zap className="h-5 w-5" strokeWidth={2.5} />}
+                  title="O Jogo Começou"
+                  desc="Mostre que você entende de futebol e domine o ranking mundial"
+                />
               </div>
             </>
           ) : mode === 'complete' ? (
@@ -634,9 +554,6 @@ export function Login() {
                 type="button"
                 onClick={() => {
                   setMode('form');
-                  // Track conversão do A/B test
-                  console.log('[A/B Test] User clicked "Entrar" on variant:', variant);
-                  localStorage.setItem('olefoot_ab_converted', variant);
                 }}
                 className="btn-primary flex h-14 w-full items-center justify-center text-[16px]"
               >
@@ -644,11 +561,6 @@ export function Login() {
               </button>
               <Link
                 to="/cadastro"
-                onClick={() => {
-                  // Track conversão do A/B test
-                  console.log('[A/B Test] User clicked "Cadastrar" on variant:', variant);
-                  localStorage.setItem('olefoot_ab_converted', variant);
-                }}
                 className="btn-secondary flex h-14 w-full items-center justify-center text-[16px]"
               >
                 Cadastrar
