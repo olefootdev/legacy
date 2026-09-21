@@ -23,6 +23,7 @@ import { fetchListedGenesisEntitiesByCatalogId, fetchGenesisMarketAuctionCards }
 import { fetchOtherManagerListings, type OtherManagerListing } from '@/supabase/academyManagers';
 import { TransferLegaciesTab } from './TransferLegaciesTab';
 import { MARKET_POSITIONS, MARKET_SORTS, type SortKey } from '@/transfer/marketFilters';
+import { MOEDA_JOGO } from '@/wallet/constants';
 import {
   fetchListedLegacyPlayerRows,
   legacyRowToPlayerEntity,
@@ -585,10 +586,10 @@ export function Transfer() {
   const legacyHighlightFixedSale = (row: LegacyPlayerRow) => {
     const brl = legacyQuote.status === 'ok' && row.currency === 'USDT' && row.price_unit_cents
       ? Math.round(row.price_unit_cents * legacyQuote.olefootVenda) : null;
-    const oleTxt = `${Math.max(1, Math.round(row.price_bro_cents)).toLocaleString('pt-BR')} OLE`;
+    const oleTxt = `${Math.max(1, Math.round(row.price_bro_cents)).toLocaleString('pt-BR')} ${MOEDA_JOGO}`;
     const price = brl != null ? `R$ ${(brl / 100).toFixed(2).replace('.', ',')}` : oleTxt;
     const isOwned = !!playersById[legacyRowToPlayerEntity(row).id];
-    return { price, cta: isOwned ? 'Adquirido' : 'Comprar', badge: brl != null ? 'PIX' : 'OLE' };
+    return { price, cta: isOwned ? 'Adquirido' : 'Comprar', badge: brl != null ? 'PIX' : MOEDA_JOGO };
   };
 
   useHighlightRailSizing(highlightsScrollRef, !isFiltered, highlightsShownLen);

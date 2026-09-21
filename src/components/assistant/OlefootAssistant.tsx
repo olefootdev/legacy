@@ -103,13 +103,15 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'economy',
     title: 'Sistema de economia',
-    description: 'Olefoot tem 4 moedas: EXP (progressão), OLE (saldo genérico), BRO (mercado) e OLEFOOT (token do jogo).',
+    // Dizia "OLEFOOT (token do jogo)". Nenhum saldo do jogo é token: OLEFOOT
+    // passou a ser o nome do token na Solana, e o saldo virou OLEXP.
+    description: 'Olefoot tem 3 saldos, todos do jogo: EXP (progressão), OLEXP (lendas e contratos) e BRO (crédito comprado).',
     icon: Wallet,
     category: 'economia',
     tips: [
       'EXP: ganhe em partidas e missões, use para evoluir',
       'BRO: moeda premium para leilões e compras especiais',
-      'OLEFOOT: compre cards de lenda e renove contratos',
+      'OLEXP: compre cards de lenda e renove contratos',
     ],
     action: {
       label: 'Ver carteira',

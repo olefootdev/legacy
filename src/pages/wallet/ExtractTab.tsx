@@ -7,6 +7,7 @@ import { useGameStore } from '@/game/store';
 import { queryLedger } from '@/wallet/ledger';
 import { createInitialWalletState } from '@/wallet/initial';
 import type { WalletLedgerType, WalletCurrencyExt, WalletLedgerEntry } from '@/wallet/types';
+import { MOEDA_JOGO } from '@/wallet/constants';
 
 const LEDGER_TYPE_OPTIONS: { value: WalletLedgerType | ''; label: string }[] = [
   { value: '', label: 'Todos' },
@@ -24,7 +25,7 @@ const CURRENCY_OPTIONS: { value: WalletCurrencyExt | ''; label: string }[] = [
   { value: '', label: 'Todas' },
   { value: 'BRO', label: 'BRO' },
   { value: 'EXP', label: 'EXP' },
-  { value: 'OLEFOOT', label: 'OLEFOOT' },
+  { value: 'OLEFOOT', label: MOEDA_JOGO },
 ];
 
 /**

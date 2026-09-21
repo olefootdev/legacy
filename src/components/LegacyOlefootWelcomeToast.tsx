@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MOEDA_JOGO } from '@/wallet/constants';
 import {
   applyLegacyOlefootCredit,
   hasShownLegacyToast,
@@ -15,7 +16,7 @@ function formatBalance(human: string): string {
 
 /**
  * Toast de boas-vindas exibido uma única vez no primeiro login de usuário
- * migrado do Olefoot v1, mostrando o saldo OLEFOOT herdado da carteira BSC antiga.
+ * migrado do Olefoot v1, mostrando o saldo OLEXP herdado da carteira BSC antiga.
  * Idempotente: o RPC marca credited_at; o flag local evita reabrir após dismiss.
  */
 export function LegacyOlefootWelcomeToast() {
@@ -61,12 +62,12 @@ export function LegacyOlefootWelcomeToast() {
           Seu saldo da era anterior foi recuperado
         </div>
         <div className="mt-5 border border-white/10 bg-card p-4">
-          <div className="font-mono text-[10.5px] text-cimento uppercase tracking-wider">Saldo OLEFOOT</div>
+          <div className="font-mono text-[10.5px] text-cimento uppercase tracking-wider">Saldo {MOEDA_JOGO}</div>
           <div className="mt-1 font-mono text-3xl font-medium text-white tabular-nums">
             {formatBalance(balanceHuman)}
           </div>
           <div className="mt-1 font-mono text-[11px] text-poeira">
-            ({balanceHuman} OLEFOOT — snapshot da carteira BSC)
+            ({balanceHuman} {MOEDA_JOGO} — snapshot da carteira BSC)
           </div>
         </div>
         <p className="mt-4 text-sm text-white/70 leading-relaxed">

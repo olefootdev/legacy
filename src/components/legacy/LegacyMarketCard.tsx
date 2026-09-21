@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import type { LegacyPlayerRow, LegacyLotInfo } from '@/supabase/legacyPlayers';
 import { legacyPortraitFocusStyle } from '@/supabase/legacyPlayers';
 import { rarityTierOf, RARITY_LABEL, type RarityTier } from '@/entities/rarityLabels';
+import { MOEDA_JOGO } from '@/wallet/constants';
 
 /**
  * LegacyMarketCard — carta colecionável do mercado de lendas (Legacy Tech).
@@ -124,7 +125,7 @@ export function LegacyMarketCard({
         {priceLabel}
       </span>
       <span className="flex-none rounded-sm border border-black/25 px-1.5 py-0.5 text-[9px] tracking-[0.06em]">
-        {pixReady ? 'PIX' : 'OLE'}
+        {pixReady ? 'PIX' : MOEDA_JOGO}
       </span>
     </button>
   );

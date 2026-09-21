@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { MOEDA_JOGO } from '@/wallet/constants';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import {
@@ -467,7 +468,7 @@ export function TransferLegaciesTab({
               ? null
               : olefootBalance >= Math.max(1, Math.round(detailRow.price_bro_cents))
         }
-        balanceLabel={olefootBalance == null ? null : `${olefootBalance.toLocaleString('pt-BR')} OLEFOOT`}
+        balanceLabel={olefootBalance == null ? null : `${olefootBalance.toLocaleString('pt-BR')} ${MOEDA_JOGO}`}
         buying={!!detailRow && buyingId === detailRow.id}
         errorMsg={buyError}
         pixState={detailRow ? pixStateFor(detailRow) : 'none'}
@@ -487,7 +488,7 @@ export function TransferLegaciesTab({
         playerOvr={receipt?.ovr ?? 0}
         playerPos={receipt?.pos ?? ''}
         portrait={receipt?.portrait ?? null}
-        newBalanceLabel={receipt?.balance != null ? `${receipt.balance.toLocaleString('pt-BR')} OLEFOOT` : null}
+        newBalanceLabel={receipt?.balance != null ? `${receipt.balance.toLocaleString('pt-BR')} ${MOEDA_JOGO}` : null}
         paidWith={receipt?.paidWith ?? 'olefoot'}
         onClose={() => setReceipt(null)}
       />

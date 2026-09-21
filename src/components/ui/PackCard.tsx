@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Badge } from './Badge';
+import { MOEDA_JOGO } from '@/wallet/constants';
 
 type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
 
@@ -20,7 +21,7 @@ export function PackCard({
   description,
   rarity,
   priceLabel,
-  priceCurrency = 'OLE',
+  priceCurrency = MOEDA_JOGO,
   imageUrl,
   onPurchase,
   disabled = false,
