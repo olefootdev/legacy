@@ -62,6 +62,14 @@ export const REFERRAL_ELIGIBLE_SOURCES: readonly string[] = [
  */
 export const MOEDA_JOGO = 'OLEXP';
 
+/**
+ * ⚠️ SEM CONSUMIDOR desde 2026-09-21. Este preço só aparecia embaixo do saldo
+ * na Carteira ("≈ $0.000001/OLEXP"), e o fundador mandou tirar: OLEXP é saldo
+ * de jogo e não converte em nada — um valor em dólar ao lado dele, na véspera
+ * do token na Solana, volta como cobrança. A constante fica porque o preço
+ * ainda precisa ser reconciliado quando o token real existir (Onda 3), mas
+ * hoje nada no app a lê. Antes de voltar a exibi-la, decidir o que ela diz.
+ */
 export const OLE_INTERNAL_PRICE_USD = 0.000001;
 
 /** Formata o preço OLE para exibição: "$0.000001" */

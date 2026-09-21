@@ -20,7 +20,7 @@ import {
 } from './wallet/useWalletPlayerData';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
 import { fetchLegacyBalance } from '@/wallet/applyLegacyOlefootCredit';
-import { MOEDA_JOGO, OLE_INTERNAL_PRICE_DISPLAY, oleToUsd } from '@/wallet/constants';
+import { MOEDA_JOGO } from '@/wallet/constants';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { SecaoVolt } from '@/components/ui';
 
@@ -160,8 +160,12 @@ export function Wallet() {
       name: 'Saldo do jogo',
       logoSrc: '/wallet-olefoot-logo.png',
       balance: `${formatCompact(olefootBalance)} ${MOEDA_JOGO}`,
-      // Preço interno fixo, não cotação de mercado — por isso não vai em `spotPrice`.
-      fiatRef: `≈ $${oleToUsd(olefootBalance).toFixed(6)} · ${OLE_INTERNAL_PRICE_DISPLAY}/${MOEDA_JOGO} (preço interno)`,
+      // SEM preço em dólar. Trazia `≈ $0.000000 · $0.000001/OLEXP (preço interno)`
+      // embaixo do saldo. OLEXP é saldo de jogo e não converte em nada: um valor
+      // em dólar ao lado dele é a própria confusão que o rename veio matar, e na
+      // véspera do token na Solana isso volta como cobrança. Com esta linha
+      // fora, `OLE_INTERNAL_PRICE_USD` ficou SEM NENHUM consumidor no app.
+      fiatRef: undefined,
       highlight: true,
     },
   ];
