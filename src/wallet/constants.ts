@@ -39,6 +39,29 @@ export const REFERRAL_ELIGIBLE_SOURCES: readonly string[] = [
  * `current` ainda em 0,00001 — reconciliar quando o token real existir (Onda 3),
  * que é quando um preço formado por mercado passa a fazer sentido.
  */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * OLEXP — o nome do saldo do jogo. FONTE ÚNICA.
+ * ════════════════════════════════════════════════════════════════════════════
+ * Decidido pelo fundador em 2026-09-21, antes de lançar o token na Solana:
+ *
+ *   OLEXP   = saldo DO JOGO, fictício, existe pra sempre, não é dinheiro
+ *   OLEFOOT = o TOKEN na rede Solana (fora do jogo)
+ *
+ * Até aqui os dois se chamavam OLEFOOT, e a Carteira ainda chamava o saldo de
+ * "Olefoot Token". Lançado o token com esse nome, todo extrato do jogo viraria
+ * extrato de token — e o que é fictício passaria a parecer dinheiro.
+ *
+ * 🔴 REGRA: em texto que o manager lê, saldo do jogo é OLEXP. A palavra
+ * OLEFOOT na tela só pode significar a MARCA (o jogo, a empresa) ou, depois do
+ * lançamento, o token. Nunca um saldo.
+ *
+ * Os identificadores internos (`legacy_olefoot_credits`, `fetchMyOlefootBalance`)
+ * seguem com o nome antigo de propósito: renomear tabela em produção é risco
+ * sem ganho pro manager. O que o manager lê vem daqui.
+ */
+export const MOEDA_JOGO = 'OLEXP';
+
 export const OLE_INTERNAL_PRICE_USD = 0.000001;
 
 /** Formata o preço OLE para exibição: "$0.000001" */

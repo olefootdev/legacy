@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, X, Wallet } from 'lucide-react';
 
 /**
- * PurchaseReceiptModal — recibo visual após uma compra (OLE/OLEFOOT ou PIX).
+ * PurchaseReceiptModal — recibo visual após uma compra (OLEXP ou PIX).
  * Substitui o window.alert: mostra o jogador que entrou no elenco e o novo saldo.
  */
 export function PurchaseReceiptModal({
@@ -20,7 +20,7 @@ export function PurchaseReceiptModal({
   playerOvr: number;
   playerPos: string;
   portrait?: string | null;
-  /** Saldo OLEFOOT atualizado, já formatado (ex.: "12.500 OLEFOOT"). null esconde. */
+  /** Saldo OLEFOOT atualizado, já formatado (ex.: "12.500 OLEXP"). null esconde. */
   newBalanceLabel?: string | null;
   paidWith: 'olefoot' | 'pix';
   onClose: () => void;

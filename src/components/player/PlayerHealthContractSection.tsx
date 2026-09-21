@@ -17,6 +17,7 @@
 import { useState } from 'react';
 import { Activity, ShieldCheck, FileText, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MOEDA_JOGO } from '@/wallet/constants';
 import { useGameStore, dispatchGame } from '@/game/store';
 import { getPlayerHealth } from '@/systems/playerHealth/selectors';
 import { INJURY_LABEL_PT, INJURY_MATCHES_OUT } from '@/systems/injury';
@@ -399,7 +400,7 @@ export function PlayerHealthContractSection({ player }: Props) {
               </button>
             ) : null}
 
-            {/* Auto-renovação opt-in (OLEFOOT) — protege o time do WO sem ação manual. */}
+            {/* Auto-renovação opt-in (OLEXP) — protege o time do WO sem ação manual. */}
             {isRenewable ? (
               <button
                 type="button"
@@ -419,7 +420,7 @@ export function PlayerHealthContractSection({ player }: Props) {
                   className="uppercase"
                   style={{ fontFamily: 'var(--font-display)', fontSize: '9.5px', fontWeight: 800, letterSpacing: '0.18em' }}
                 >
-                  Auto-renovar (OLEFOOT)
+                  Auto-renovar ({MOEDA_JOGO})
                 </span>
                 <span
                   className={cn(

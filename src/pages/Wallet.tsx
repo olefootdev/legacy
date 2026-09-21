@@ -20,7 +20,7 @@ import {
 } from './wallet/useWalletPlayerData';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
 import { fetchLegacyBalance } from '@/wallet/applyLegacyOlefootCredit';
-import { OLE_INTERNAL_PRICE_DISPLAY, oleToUsd } from '@/wallet/constants';
+import { MOEDA_JOGO, OLE_INTERNAL_PRICE_DISPLAY, oleToUsd } from '@/wallet/constants';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { SecaoVolt } from '@/components/ui';
 
@@ -36,9 +36,10 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-function formatUsdt(cents: number): string {
+/** Crédito interno em BRO. Trazia o sufixo "USDT" — não é Tether, é crédito do jogo. */
+function formatBro(cents: number): string {
   const value = cents / 100;
-  return `${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
+  return `${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BRO`;
 }
 
 function formatUsdtUsdRef(cents: number): string {
@@ -46,9 +47,11 @@ function formatUsdtUsdRef(cents: number): string {
   return `≈ ${value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`;
 }
 
-function formatPatrimonioUsd(cents: number): string {
+/** Mesmo número do card abaixo, mesma unidade: o topo dizia "$0.00" embaixo do
+ *  rótulo "Crédito (BRO)" — dois nomes pro mesmo saldo na mesma tela. */
+function formatBroCompacto(cents: number): string {
   const value = cents / 100;
-  return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  return `${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BRO`;
 }
 
 /** 11.965.198 → "11.9M"; 1.234 → "1.2K"; 950 → "950" — trunca, não arredonda. */
@@ -116,8 +119,8 @@ export function Wallet() {
 
   const heroStats = [
     {
-      label: 'Saldo USDT',
-      value: formatPatrimonioUsd(finance.broCents),
+      label: 'Crédito (BRO)',
+      value: formatBroCompacto(finance.broCents),
       highlight: true,
     },
     {
@@ -141,19 +144,24 @@ export function Wallet() {
     spotPrice?: string;
   }> = [
     {
-      ticker: 'USDT',
-      name: 'Tether',
-      logoSrc: '/wallet-usdt-logo.png',
-      balance: formatUsdt(finance.broCents),
+      // Era "USDT · Tether", com o logo da Tether, em cima de `finance.broCents`
+      // — que é crédito INTERNO comprado no PIX, não Tether nenhum. Com o
+      // stablecoin de verdade chegando na Solana, esse rótulo deixaria de ser gafe.
+      ticker: 'BRO',
+      name: 'Crédito Olefoot',
+      logoSrc: '/wallet-olefoot-logo.png',
+      balance: formatBro(finance.broCents),
       fiatRef: formatUsdtUsdRef(finance.broCents),
     },
     {
-      ticker: 'OLEFOOT',
-      name: 'Olefoot Token',
+      // Era "OLEFOOT · Olefoot Token" — o mesmo nome do token da Solana, com a
+      // palavra "Token" no rótulo. Agora é OLEXP: saldo do jogo (constants.ts).
+      ticker: MOEDA_JOGO,
+      name: 'Saldo do jogo',
       logoSrc: '/wallet-olefoot-logo.png',
-      balance: `${formatCompact(olefootBalance)} OLEFOOT`,
+      balance: `${formatCompact(olefootBalance)} ${MOEDA_JOGO}`,
       // Preço interno fixo, não cotação de mercado — por isso não vai em `spotPrice`.
-      fiatRef: `≈ $${oleToUsd(olefootBalance).toFixed(6)} · ${OLE_INTERNAL_PRICE_DISPLAY}/OLE (preço interno)`,
+      fiatRef: `≈ $${oleToUsd(olefootBalance).toFixed(6)} · ${OLE_INTERNAL_PRICE_DISPLAY}/${MOEDA_JOGO} (preço interno)`,
       highlight: true,
     },
   ];
@@ -201,13 +209,13 @@ export function Wallet() {
         highlight={squadCardData.highlight}
       />
 
-      {/* ── SUAS CRYPTOS ──────────────────────────────────────────── */}
+      {/* ── SEUS SALDOS ───────────────────────────────────────────── */}
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <SecaoVolt label="Suas cryptos" tone="neutro" className="min-w-0 grow" />
+          <SecaoVolt label="Seus saldos" tone="neutro" className="min-w-0 grow" />
           {usdBrlQuote.status === 'ok' && (
             <span className="hidden shrink-0 font-mono text-[10.5px] tabular-nums text-poeira sm:block">
-              1 USDT ≈ R$ {usdBrlQuote.olefootVenda.toFixed(2)}
+              1 BRO ≈ US$ 1 ≈ R$ {usdBrlQuote.olefootVenda.toFixed(2)}
             </span>
           )}
         </div>

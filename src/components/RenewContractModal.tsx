@@ -3,10 +3,10 @@
  *
  * Manager escolhe:
  *  1. Período do contrato (tiers: 50 / 250 / 500 / 1000 jogos)
- *  2. Moeda de pagamento (EXP ou OLEFOOT — ambos saldo do jogo, nada on-chain)
+ *  2. Moeda de pagamento (EXP ou OLEXP — ambos saldo do jogo, nada on-chain)
  *
  * Custo EXP:       50% do custo base + prêmio do tier
- * Custo OLEFOOT:   custo EXP ÷ 100, arredondado pra cima
+ * Custo OLEXP:     custo EXP ÷ 100, arredondado pra cima
  */
 
 import { useEffect, useState } from 'react';
@@ -15,6 +15,7 @@ import { X, RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { formatExp, formatOle } from '@/systems/economy';
+import { MOEDA_JOGO } from '@/wallet/constants';
 import {
   MANAGER_PROSPECT_CONTRACT_GAMES,
   managerProspectContractPremiumExp,
@@ -58,7 +59,7 @@ export function RenewContractModal({ open, onClose, player }: Props) {
   const canAffordOlefoot = olefootBal !== null && olefootBal >= totalOlefootCost;
   const canAfford = paymentMethod === 'exp' ? canAffordExp : canAffordOlefoot;
 
-  // Busca saldo OLEFOOT só quando o modal abre + quando o user troca pra OLEFOOT.
+  // Busca o saldo OLEXP só quando o modal abre + quando o user troca pra ele.
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -236,7 +237,7 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                       'text-[10px] font-bold uppercase',
                       paymentMethod === 'olefoot' ? 'text-white' : 'text-cimento',
                     )}>
-                      OLEFOOT
+                      {MOEDA_JOGO}
                     </div>
                     <div className="mt-1 text-[10px] text-white/70">Saldo do jogo</div>
                     <div className={cn(
@@ -248,7 +249,7 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                   </button>
                 </div>
                 <p className="text-[10px] leading-relaxed text-poeira">
-                  Taxa: 1 OLEFOOT = {EXP_PER_OLEFOOT_FOR_RENEWAL} EXP. Sai do saldo do jogo.
+                  Taxa: 1 {MOEDA_JOGO} = {EXP_PER_OLEFOOT_FOR_RENEWAL} EXP. Sai do saldo do jogo.
                 </p>
               </div>
 
@@ -277,7 +278,7 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                     </div>
                   )}
                   <div className="flex justify-between border-t border-white/10 pt-1 mt-1">
-                    <span className="font-bold">Total ({paymentMethod === 'exp' ? 'EXP' : 'OLEFOOT'}):</span>
+                    <span className="font-bold">Total ({paymentMethod === 'exp' ? 'EXP' : MOEDA_JOGO}):</span>
                     <span
                       className={cn(
                         'font-mono font-medium tabular-nums',
@@ -286,7 +287,7 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                     >
                       {paymentMethod === 'exp'
                         ? `${formatExp(totalExpCost)} EXP`
-                        : `${formatOle(totalOlefootCost)} OLEFOOT`}
+                        : `${formatOle(totalOlefootCost)} ${MOEDA_JOGO}`}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -296,13 +297,13 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                         ? `${formatExp(expBal)} EXP`
                         : olefootLoading
                           ? '—'
-                          : `${formatOle(olefootBal ?? 0)} OLEFOOT`}
+                          : `${formatOle(olefootBal ?? 0)} ${MOEDA_JOGO}`}
                     </span>
                   </div>
                 </div>
                 {!canAfford && !olefootLoading && (
                   <p className="mt-2 text-[10px] text-baixa">
-                    ⚠️ {paymentMethod === 'exp' ? 'EXP' : 'OLEFOOT'} insuficiente
+                    ⚠️ {paymentMethod === 'exp' ? 'EXP' : MOEDA_JOGO} insuficiente
                   </p>
                 )}
                 {errorMsg && (
@@ -328,8 +329,8 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                 {submitting
                   ? 'Processando...'
                   : !canAfford
-                    ? `${paymentMethod === 'exp' ? 'EXP' : 'OLEFOOT'} Insuficiente`
-                    : `Renovar com ${paymentMethod === 'exp' ? 'EXP' : 'OLEFOOT'}`}
+                    ? `${paymentMethod === 'exp' ? 'EXP' : MOEDA_JOGO} Insuficiente`
+                    : `Renovar com ${paymentMethod === 'exp' ? 'EXP' : MOEDA_JOGO}`}
               </button>
             </div>
           </motion.div>
