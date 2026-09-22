@@ -1,0 +1,705 @@
+# PRIORITARIAS — ganham qualquer choque de prefixo (a mais "de futebol" vence)
+striker sweeper keeper winger marker penalty offside corner header tackle dribble volley
+assist captain referee midfield defender forward goalkick freekick handball crossbar
+chant terrace dugout kickoff halftime scorer nutmeg volley pitch turf golazo boot
+# AÇÕES
+pass cross shoot score save tackle dribble header volley sprint press mark clear block chip curl flick nutmeg feint juggle trap lob strike kick punt throw catch dive slide foul dodge swerve bend blast chase cover drop duck evade guard hustle jump launch lunge nudge pivot pounce push race rush shield shove steal swipe turn weave wheel batter bury clip crash creep cut deny divert drill escape fetch gather glide grab hurl intercept lash leap nick outrun parry peel poke pump punch rake rally ream reach reset roam rob roll scoop scuff seal seize shank shrug skip slam slip smash snatch spin spray sprawl squeeze stab stall stoop stride strip stun surge swat sweep swing thread thump tip toe track trick trip veer vault whip wrap
+# POSIÇÕES E PESSOAS
+striker winger keeper sweeper captain referee coach manager scout physio pundit anchor target poacher libero stopper fullback wingback midfield forward defender attacker marker gaffer skipper trainer medic steward linesman official rookie veteran starter sub squad roster lineup bench reserve youth cadet junior senior legend idol hero rival keeper mascot vendor porter usher ranger guru
+# CAMPO E ESTÁDIO
+pitch turf grass field lawn goal post bar net mesh corner flag spot arc box area line edge wing flank half third zone tunnel dugout stand tier terrace gate seat aisle roof pylon clock arena bowl cauldron kop curva stadium ground park oval court track rail fence banner screen booth kiosk locker shower lounge suite lobby ramp stair
+# EQUIPAMENTO
+boot stud cleat sock shirt jersey short kit glove shin pad band tape ball whistle cone bib cap badge crest strip number sponsor collar cuff hem lace sole grip visor towel bottle cooler cart crate kitbag bag strap buckle helmet guard shorts vest hoodie tracksuit scarf beanie
+# PARTIDA E EVENTOS
+kickoff halftime fulltime offside card yellow booking caution penalty free assist brace hattrick screamer worldie cracker rebound deflect clean sheet shutout draw tie win loss defeat victory upset rout thrash comeback collapse scramble stoppage injury added extra replay shootout goalless thriller tiebreak margin scoreline
+# COMPETIÇÃO
+league cup group pool round semi final heat seed bracket knockout playoff season term fixture table chart rank place points tally form streak run title crown trophy medal glory treble double promote demote relegate ascend climb ladder tier podium prize purse stake charity friendly derby classic
+# TÁTICA
+shape system plan counter overlap underlap false nine libero zonal block high deep wide narrow tight loose open compact spread switch rotate recycle retain tempo rhythm pace burst pivot screen decoy dummy bait lure channel corridor halfspace outlet trigger cue shell wall arrow diamond
+# TORCIDA
+chant anthem banner scarf ultra crowd roar cheer jeer hiss clap wave tifo mosaic drum horn siren rattle support loyal diehard away home travel trip pilgrim ticket season stub queue gate riot bonfire flare smoke confetti
+# MERCADO E CARREIRA
+loan transfer signing contract wages bonus clause buyout release window deadline agent trial debut rotation fitness stamina recovery strain sprain knock bruise rehab massage taping medical clearance swap fee valuation asset
+# CLUBE E IDENTIDADE
+united rovers albion athletic sporting olympic academy city town county borough district village harbour port river valley forest heath moor
+# BOLA EM MOVIMENTO
+bounce spin dip rise fall loop curve skid slice hook drive hammer rocket bullet arrow missile daisy skimmer floater screwball knuckle topspin backspin sidespin
+# TEMPO E CLIMA
+rain frost snow wind heat cold damp dusk dawn night glare shadow echo noise buzz storm gale drizzle sleet haze fog sunshine breeze humid
+# PAÍSES
+brazil spain italy france england wales scotland ireland germany holland belgium portugal croatia serbia poland sweden norway denmark finland iceland austria hungary greece turkey russia ukraine romania bulgaria albania morocco algeria tunisia egypt ghana nigeria senegal cameroon kenya japan korea china iran iraq qatar saudi mexico canada peru chile uruguay bolivia ecuador panama jamaica cuba haiti india nepal thailand vietnam malaysia fiji samoa tonga angola zambia uganda sudan libya syria oman yemen israel jordan cyprus malta latvia estonia georgia armenia belarus slovakia slovenia bosnia kosovo
+# CIDADES
+#! media
+madrid lisbon porto milan rome turin naples munich berlin hamburg vienna prague warsaw moscow athens cairo lagos accra tokyo osaka seoul sydney perth boston dallas denver miami austin ottawa quebec havana lima quito bogota cusco belem recife natal bahia parana santos bilbao sevilla valencia genoa verona parma bremen mainz leeds derby hull york bath truro exeter dover luton wigan stoke burnley norwich ipswich reading crewe yeovil
+# MAIS PAISES
+#! baixa
+argentina colombia paraguay venezuela honduras salvador guyana suriname belize
+nicaragua costarica bermuda bahamas barbados grenada trinidad curacao aruba
+norway estonia lithuania moldova macedonia montenegro luxembourg liechtenstein
+andorra monaco vatican ireland gibraltar faroe greenland azores madeira
+senegal guinea mali niger chad congo gabon togo benin burkina liberia
+somalia eritrea djibouti rwanda burundi malawi botswana namibia lesotho
+mozambique madagascar mauritius seychelles comoros
+pakistan bangladesh srilanka bhutan maldives myanmar laos cambodia brunei
+singapore indonesia philippines mongolia kazakh uzbek turkmen tajik kyrgyz
+lebanon kuwait bahrain emirates afghan palestine
+zealand vanuatu solomon kiribati palau nauru tuvalu
+# MAIS CIDADES
+glasgow cardiff belfast dublin cork galway limerick swansea newport wrexham
+liverpool manchester sheffield bradford coventry brighton bournemouth watford
+sunderland blackpool preston bolton oldham rochdale salford stockport
+barcelona zaragoza malaga vigo gijon oviedo granada murcia cadiz huelva
+bologna palermo catania cagliari udine brescia perugia livorno bergamo
+lyon marseille toulouse nantes rennes lille nice metz reims caen brest
+dortmund cologne leipzig dresden essen bochum wolfsburg freiburg augsburg
+rotterdam eindhoven utrecht arnhem tilburg breda nijmegen groningen
+antwerp bruges ghent liege charleroi namur mons hasselt
+zurich basel geneva bern lausanne lugano
+oslo bergen malmo uppsala aarhus odense tampere turku bergen
+krakow gdansk poznan wroclaw lodz katowice lublin
+budapest debrecen szeged zagreb split rijeka osijek belgrade skopje sofia
+bucharest timisoara cluj iasi galati brasov
+istanbul ankara izmir bursa adana konya antalya trabzon
+kazan sochi samara omsk perm ufa rostov volgograd
+santiago rosario cordoba mendoza salta tucuman
+medellin cali barranquilla cartagena guayaquil arequipa trujillo
+montevideo asuncion caracas maracaibo valencia
+curitiba salvador fortaleza manaus belo goiania maceio cuiaba londrina
+guadalajara monterrey puebla tijuana merida cancun toluca leon
+chicago seattle portland phoenix atlanta orlando houston detroit
+toronto montreal calgary edmonton winnipeg halifax
+nairobi kampala lusaka harare gaborone maputo luanda dakar abidjan bamako
+casablanca rabat tangier tunis algiers tripoli khartoum addis
+riyadh jeddah dubai muscat manama amman beirut tehran karachi lahore
+mumbai delhi kolkata chennai jakarta manila bangkok hanoi saigon
+shanghai beijing guangzhou shenzhen chengdu wuhan
+kyoto nagoya sapporo fukuoka kobe sendai busan incheon daegu
+melbourne brisbane adelaide canberra auckland wellington
+# ESPORTE EM GERAL
+sport team club side match game play contest duel bout rival champion medal
+podium record trophy winner loser draw rematch leg series final semifinal
+tourney event meeting clash showdown battle war fight scrap tussle
+athlete player squad roster camp session drill practice warmup cooldown
+stretch circuit gym weight barbell treadmill sprintbox cardio endurance
+referee umpire judge linesman timer keeper scorer marshal marshal
+# MATCHDAY
+ticket turnstile program pennant rosette souvenir replica kiosk stall
+pie beer soda snack popcorn peanut sausage burger pretzel chips
+parking shuttle metro tram bus taxi ferry coachbus platform station
+security scanner barrier cordon steward crowdsafe exit emergency
+# MEDIA
+camera studio anchor column headline story quote rumour gossip tabloid
+podcast stream replay highlight montage preview review analysis rating
+commentary interview presser mixzone press media outlet channel network
+# EMOÇÃO E TENSÃO
+joy agony hope fear pride shame relief tension nerve calm fury rage bliss
+thrill panic dread doubt faith trust belief despair elation sorrow
+delight regret wonder shock awe gasp sigh tears smile frown scream shout
+roar silence hush murmur uproar frenzy ecstasy heartbreak
+# TEMPO E NÚMEROS
+minute second hour moment instant period phase stage spell stretch
+opener equaliser winner clincher decider leveller consolation
+first second third fourth fifth sixth seventh eighth ninth tenth
+dozen hundred thousand million zero one two three four five six
+# APELIDOS DE CLUBE E MASCOTES
+lion eagle wolf bear tiger shark falcon hawk magpie canary robin owl ram bull
+horse dragon viking spartan titan giant wizard saint devil angel ghost phantom
+panther jaguar puma cheetah leopard rhino hippo zebra gazelle stallion mustang
+raven crow swan heron stork pelican seagull albatross condor osprey kestrel
+cobra viper python gator crocodile dolphin whale orca marlin barracuda
+fox badger otter beaver bison buffalo moose elk stag doe hare rabbit
+hornet wasp bee spider scorpion mantis beetle cricket locust
+knight baron duke earl squire herald warrior soldier legion pirate corsair
+miner potter brewer smith baker mariner sailor ranger forester hunter
+comet meteor rocket thunder lightning storm cyclone tornado hurricane
+# CORES E HERÁLDICA
+red blue green white black amber claret navy maroon royal gold silver purple
+orange pink grey cream ivory scarlet crimson azure cobalt teal olive lime
+bronze copper pearl jade ruby amethyst onyx opal topaz coral
+stripe hoop chevron sash quarter halved plain trim piping panel emblem
+shield banner pennant standard motto scroll wreath laurel crown tiara
+# CORPO E MOVIMENTO
+knee ankle thigh calf hip chest foot heel elbow wrist palm finger groin
+back neck spine muscle tendon bone joint lung rib jaw brow temple
+balance posture gait stance reach span leap bound stride pivot twist
+# LEIS DO JOGO
+law rule code caution dissent restart dropball goalline advantage
+whistle signal flagged awarded denied allowed banned suspend appeal
+review verdict ruling protest charge sanction fine ban warning
+# TREINO
+rondo hurdle ladder shuttle cooldown warmdown tempo interval repeat
+circuit routine regimen program schedule workload volume intensity
+# TERMOS GLOBAIS DO FUTEBOL
+rabona panenka libero regista mezzala volante enganche falso trivela
+gol golazo clasico boca river derbi hinchada torcida barra curva
+catenacio tikitaka rondos pressing gegen counterpress overload underload
+# ARQUITETURA DO ESTÁDIO
+arch beam column girder span vault tower spire dome facade pillar truss
+canopy awning concourse mezzanine balcony gallery parapet railing
+turnstyle floodlit scoreboard jumbotron speaker rostrum podium plinth
+# ESFORÇO E DISPUTA
+battle strive endure persist conquer resist defend attack repel repulse
+outlast outwork outclass outplay outshine dominate control dictate impose
+scrape survive cling hold grind toil labour sweat bleed suffer triumph
+prevail overcome rally revive recover rebound bounce respond retort
+# COMIDA E VIAGEM DE JOGO
+pie beer soda snack popcorn peanut sausage burger pretzel chips crisps
+kebab falafel taco arepa empanada churros gelato espresso coffee tea
+hostel hotel motel lodge inn cabin tent bunk berth cabinet
+flight train ferry cruise convoy caravan shuttle transit route detour
+# MAIS CIDADES DO MUNDO
+#! baixa
+newcastle southampton portsmouth plymouth blackburn huddersfield middlesbrough
+rotherham barnsley doncaster grimsby scunthorpe carlisle chester shrewsbury
+aberdeen dundee falkirk kilmarnock motherwell paisley inverness stirling
+santander valladolid pamplona logrono almeria cordoba jaerez leganes
+cesena ferrara ancona pescara lecce foggia salerno trieste vicenza treviso
+bordeaux montpellier grenoble angers dijon amiens troyes auxerre nancy
+hannover nurnberg karlsruhe duisburg krefeld munster kiel rostock jena
+alkmaar heerenveen zwolle venlo sittard emmen deventer almelo
+oporto braga guimaraes coimbra faro setubal aveiro leiria evora
+thessaloniki patras larissa volos heraklion rhodes corfu
+gothenburg helsingborg norrkoping vasteras orebro linkoping
+trondheim stavanger kristiansand drammen fredrikstad
+reykjavik akureyri torshavn nuuk
+riga vilnius kaunas klaipeda tallinn tartu narva daugavpils
+minsk gomel brest grodno vitebsk mogilev
+lviv odessa kharkiv donetsk dnipro zaporizhia mykolaiv
+tbilisi batumi yerevan gyumri baku ganja sumqayit
+almaty astana shymkent tashkent samarkand bukhara ashgabat bishkek dushanbe
+lahore multan peshawar quetta faisalabad rawalpindi hyderabad
+bangalore pune ahmedabad surat jaipur lucknow kanpur nagpur indore patna
+colombo kandy galle dhaka chittagong sylhet khulna rajshahi
+yangon mandalay naypyidaw vientiane phnom siemreap danang haiphong
+surabaya bandung medan semarang makassar palembang denpasar
+cebu davao quezon caloocan taguig pasig makati
+kualalumpur johor penang ipoh malacca kuching kotabaru
+ulaanbaatar erdenet darkhan
+tianjin chongqing nanjing hangzhou xian qingdao dalian shenyang harbin
+jinan zhengzhou changsha kunming guiyang nanning fuzhou xiamen ningbo
+yokohama kawasaki saitama chiba hiroshima kitakyushu niigata hamamatsu
+kumamoto okayama shizuoka kagoshima matsuyama nagasaki toyama kanazawa
+gwangju daejeon ulsan suwon changwon seongnam goyang bucheon ansan anyang
+perthcity darwin hobart geelong townsville cairns newcastle wollongong
+christchurch dunedin hamilton tauranga napier rotorua
+suva apia nukualofa portmoresby honiara portvila noumea papeete
+johannesburg pretoria durban capetown bloemfontein soweto polokwane
+ibadan kano abuja benincity enugu jos ilorin onitsha warri kaduna
+kumasi tamale takoradi cape sekondi tema
+abidjan bouake yamoussoukro korhogo daloa
+conakry freetown monrovia banjul bissau praia
+douala yaounde garoua bamenda bafoussam
+brazzaville kinshasa lubumbashi mbuji kananga goma
+luanda benguela huambo lobito namibe
+windhoek swakopmund walvis
+antananarivo toamasina mahajanga fianarantsoa
+portlouis victoria moroni
+arusha mwanza dodoma zanzibar mombasa kisumu nakuru eldoret
+jinja entebbe mbarara gulu
+ndola kitwe livingstone chipata
+bulawayo mutare gweru masvingo
+beira nampula tete quelimane
+blantyre mzuzu zomba
+maseru mbabane manzini
+gaborone francistown maun kasane
+# LETRAS MAGRAS — E
+effort elite empire energy engine enter entry equal error exact expert eject
+elder elect eleven embark emerge empty enable encore enemy engage enjoy enrol
+ensign envoy epic equip erupt essay estate ether euro evolve exalt exceed
+excel excite exert exhale expand expel expose extend eager early earth ease
+east edit eight elbow elope embrace emit enact encase endure enforce engrave
+enhance enlist enrich ensure entice entrust envelop equate erase errand escort
+estuary eternal evade event evict evoke exam exile expand expire explain
+explore export express extract exult eyebrow
+# LETRAS MAGRAS — I
+indoor infield inside instep intent invite inward iron island issue item image
+impact incline index infer inform inject injure inland inlet inner input
+insert intake invade invent invest invoke ionic irate irish idea ideal
+identify idle ignite ignore illness imagine imitate immense impair impel
+implant imply improve impulse incident incline include income indeed indent
+indulge industry infant inflate inflict influx inhabit inhale initial inmate
+innate inquire inscribe insight inspect install instant instead insure intact
+integer intense intern intro invalid inverse invoice iodine ironic irony
+isolate italic itself
+# LETRAS MAGRAS — J
+jockey join joker jolt jostle journey jubilee judo juice jumble jungle junk
+juror just jab jam jar jaunt javelin jazz jeep jelly jet jewel jigsaw jingle
+jinx jetty jacket jackpot jagged jail jamboree janitor jargon jaunty jealous
+jerk jibe jiffy jitter jovial jowl joyous jumbo junction juncture juniper
+junta jurist jury juvenile
+# LETRAS MAGRAS — Q
+quest quick quiet quill quirk quake quarry quartz quay queen query quench
+quilt quash quaint qualm quantum quarrel quasar quaver quell quench querulous
+quibble quiche quicken quiescent quintet quip quirky quiver quizzed quorum
+quotient
+# LETRAS MAGRAS — U
+unbeaten uphill upper upward urban urge usual utmost utter unify union unique
+unit unlock unseen untold unwind uphold uplift urgent usage useful unity
+udder ugly ulcer ultimate umbrella unable unarmed unaware unbend uncle
+uncover under undo unequal unfair unfold unhappy uniform unison unjust unkind
+unless unlike unload unmask unpack unrest unroll unsafe unsure untie unusual
+unveil unwell upbeat update upgrade upkeep upland uproar upright uproot
+upscale upstage upstream upturn urchin urea usher utensil utopia
+# LETRAS MAGRAS — V
+value valid vapor vary vase vast vector veil vein velvet venue verb verge
+verify verse vessel vibe vice video view vigor vinyl viral virtue visa vision
+visit vital vivid vocal vogue voice void volume vote voyage vacant vaccine
+vagrant vague vain valet valor vandal vanish vanity variant varnish vassal
+vector veer vegan vehicle velocity vendetta veneer vengeance venom vent
+venture venus verbal verdant verdict verify vermin versus vertex vertigo
+verve vestige veto viable viaduct vial vibrant vicar vicinity victor vigil
+vigour villa vindicate vine vintage violet violin virgin virile virus viscous
+visible visor vista visual vitamin vivacious vixen vocation vodka volcano
+volley voltage voluble volunteer voracious vortex vouch vowel voyager vulgar
+vulture
+# LETRAS MAGRAS — W
+wagon waist wait wake walk wander ward warn wash watch water weak wealth wear
+weather week weigh weird welcome weld well west wharf wheat whirl whisk whole
+width wild will wine wipe wire wise wish witch wood wool word world worm worry
+worth wound woven wreck write wrong wade wafer wag wail waiver wallet walnut
+walrus waltz wane wanton warble warden wardrobe warfare warhead warlock warmth
+warp warrant warren wary wasp waste watchful watermark watershed wattle
+waver wax wayward weapon weary weasel weave webbing wedding wedge weekday
+weep weevil weigh welfare welt wench western wetland whack whale wharf what
+wheeze whence whether whiff while whim whimper whine whisker whisper whistle
+whither whittle whizz whom whoop whose wick wicker wicket widen widow wield
+wiggle wigwam wilderness wildfire wilful willow wilt wince winch windfall
+window windmill windward wink winnow winsome wintry wiper wiring wisdom wisp
+wistful withdraw wither within without witness wizardry wobble woeful wolfish
+wonder wondrous wont woodland woodwork woozy wordplay workshop workday
+worldwide worrier worsen worship worthy wrangle wrath wreath wrench wrest
+wretch wriggle wrinkle wrought wry
+# LETRAS MAGRAS — Y, Z, X
+yard yarn year yield yoga young yeast yolk yacht yank yearn yellowish yeoman
+yesterday yew yodel yoke yonder yore youthful yowl yucca yuletide
+zeal zenith zest zigzag zinc zip zodiac zoom zulu zany zeppelin zephyr zeroed
+zesty zigzagged zillion zipper zircon zither zodiacal zombie zonal zoology
+xenon xerox xylem xylophone
+# LETRAS MAGRAS — N e O
+nation native nature naval near neat need needle nest never newly niche
+nimble noble node nomad none noon norm north nose note notice novel novice
+nurse nylon nag nail naive naked namely nap narrate nasal nasty nautical
+navigate navy nearby nebula necktie nectar needy negate neigh neither nephew
+nerveless nettle neutral newborn newcomer newsroom nibble nickel nifty
+nightfall nimbus ninety nitrate noble nocturne nodule noisy nominal nonstop
+noodle nook noose normal nostril notable notch nourish novelty nowhere
+nozzle nuclear nucleus nugget numb numeral nuptial nurture nutmeg nutrient
+oath obey object oblige observe obtain occupy ocean octave offer often omen
+onset onward opera oppose optic option oral orbit order organ origin ornate
+other ounce outer outfit outing output outset oven overt oxide oyster
+oak oasis obelisk obese oblique oblong obscure obsess obstacle obtuse obvious
+occasion occult octagon odd ode odor offhand offset offshore offspring ogre
+ohm oily ointment okay olden omega omelet ominous omission onboard oncoming
+onlooker onshore onslaught onus onyx ooze opaque openly operate opinion
+opponent opposite optimal opulent oracle orange orator orchid ordeal ordinary
+ore organic orient ornament orphan orthodox oscillate ostrich ought oust
+outback outbreak outburst outcast outcome outcry outdoor outflow outgrow
+outlaw outlet outline outlook outnumber outpost outrage outreach outright
+outside outskirt outsmart outward oval overall overcast overdue overflow
+overhaul overhead overlap overlook override oversee overt overtake overtime
+overture overturn owlet ownership
+# CIENCIA DO ESPORTE
+aerobic agility cadence calorie cardiac fatigue hydrate mobility protein
+therapy traction workout dosage lactate oxygen pulse rehabil sinew posture
+flexion tension torque impulse tracking wellness bracing cooling heating
+# NEGOCIO DO FUTEBOL
+revenue royalty turnover licence dividend equity invoice payroll salary
+subsidy budget forecast audit ledger receipt refund deposit balance capital
+profit expense funding grant sponsorship endorse premium rebate margin
+# GOVERNANCA
+congress statute mandate charter bylaw ballot motion arbiter tribunal
+delegate assembly council chairman bureau registry archive dossier
+# PAISAGEM
+glacier cascade lagoon plateau prairie savanna tundra canyon gorge ravine
+summit ridge slope meadow pasture thicket vineyard orchard marsh swamp
+dune cliff bluff gully basin delta fjord isthmus peninsula reef atoll
+mountain hillside lowland highland wetlands grassland heathland
+# CLIMA FORTE
+blizzard monsoon typhoon tempest downpour hailstorm thundery squall
+whirlwind cloudburst sunbeam rainbow twilight moonlight starlight
+# VIAGEM
+passport terminal boarding arrival baggage carriage lounge concourse
+departure gateway corridor transfer layover excursion pilgrimage
+# CELEBRACAO
+fanfare parade carnival banquet ceremony ovation applause serenade
+samba tango reggae calypso fiesta gala revelry jamboree pageant
+# ANIMAIS
+penguin flamingo mongoose meerkat lemur sloth koala wombat dingo camel
+llama alpaca manatee narwhal gazelle antelope caribou reindeer
+salamander chameleon iguana tortoise terrapin
+# MATERIAIS
+granite marble sapphire emerald diamond crystal ceramic concrete asphalt
+timber lumber leather canvas cotton nylon polyester rubber plastic
+# ABSTRATO
+ambition prestige destiny dynasty epoch saga ballad chronicle folklore
+mythology heritage tradition ritual custom legend parable proverb
+# MAIS CIDADES LONGAS
+#! baixa
+stuttgart frankfurt dusseldorf hannover monchengladbach leverkusen
+saarbrucken oldenburg paderborn regensburg ingolstadt heidelberg
+strasbourg clermont valenciennes montbeliard sochaux guingamp lorient
+alessandria benevento crotone spezia empoli frosinone reggiana
+albacete tenerife oviedo alaves espanyol mallorca villarreal getafe
+sporting benfica boavista maritimo nacional estoril famalicao
+feyenoord vitesse fortuna willem excelsior telstar
+anderlecht standard genk mechelen westerlo eupen
+grasshopper servette sionfc luzern winterthur
+rosenborg molde valerenga viking haugesund sarpsborg
+hammarby djurgarden elfsborg hacken sirius varberg
+copenhagen brondby midtjylland randers silkeborg viborg
+legia lechia jagiellonia radomiak piast cracovia
+ferencvaros ujpest paksi kisvarda puskas
+dinamo lokomotiv shakhtar zorya kryvbas polissya
+galatasaray fenerbahce besiktas trabzonspor alanyaspor
+olympiakos panathinaikos aris atromitos volos
+ludogorets levski slavia botev cherno
+steaua craiova arges petrolul hermannstadt
+maccabi hapoel beitar ashdod netanya
+esteghlal persepolis sepahan tractor foolad
+alhilal alnassr ittihad alahli shabab
+sadd rayyan duhail gharafa arabi
+kashima urawa gamba cerezo sanfrecce vissel kashiwa
+jeonbuk pohang seongnam suwon incheon gangwon
+guangzhou shandong beijing shanghai chengdu wuhan
+melbourne adelaide brisbane newcastle wellington auckland
+palmeiras corinthians flamengo vasco botafogo fluminense
+gremio internacional cruzeiro atletico bahia sport ceara
+boca river racing independiente lanus tigre banfield
+colocolo universidad catolica huachipato palestino
+nacional penarol danubio cerro wanderers
+millonarios junior tolima pereira envigado
+ldu barcelona emelec delfin macara
+alianza cristal cienciano melgar ayacucho
+bolivar strongest oriente blooming guabira
+olimpia cerrito libertad guarani sportivo
+america pumas tigres monterrey pachuca toluca necaxa
+sounders timbers galaxy revolution impact crew
+alajuelense saprissa herediano cartagines
+motagua olimpiaEOF
+# FECHAMENTO
+matchday playbook teamwork ballboy sideline baseline midpoint halfway
+kitman trialist loanee prospect talent phenom maestro virtuoso dynamo
+juggler finisher predator creator enforcer magician tormentor grafter
+workhorse metronome sentinel custodian marksman goalscorer
+# INGLES COMUM — fácil de soletrar em qualquer lugar do mundo
+#! media
+about above accept across action active actual adapt adjust admire adopt
+advance advice afford afraid after again agree ahead alarm album alert alive
+allow almost alone along aloud alter always amaze among amount ample amuse
+anchor ancient anger angle animal announce annual answer anxious apart apply
+argue arise armor around arrange arrive artist aside asleep aspect assist
+assume astonish attach attempt attend attract author autumn avenue average
+avoid awake aware awesome awful basic basket batch bathe beacon beard beast
+became become before began begin behalf behave behind belief belong below
+beside better between beyond bicycle bigger binder birth biscuit bitter
+blanket blend blink bloom blossom bluff blunt blush boast bodily boiler
+bolder bonnet border borrow bother bottom boulder bounty bowler brain branch
+brave bread break breath breed bribe bridge brief bright bring brisk broad
+broken bronze brook broom brother brown brush bubble bucket budge buffer
+builder bulge bundle bunker burden bureau burrow bushel butter button
+cabbage cabin cable cactus cage calm camp candle canoe canvas canyon
+capture carbon career careful cargo carpet carrot carve casual cattle
+caught cause caution cavern cease cedar cellar cement census center
+century cereal certain chain chair chalk champion change chapter charm
+chase cheap check cheek cheese cherry chief child chilly choice choose
+chorus chosen chunk cider cinema circle citrus civil claim clamp clash
+classic clause clever client climate clinic cloak clock closet cloth
+cloud clover clumsy cluster coarse coastal cobweb cocoa coffee coil
+collar collect colony column combat comedy comfort comic command
+comment commit common compare compete complex concept concern concert
+conduct confirm confuse connect consent consist console consume contact
+contain content contest context contrast control convert convey convince
+cookie cooper copper corridor cosmic costly cottage cotton couple courage
+course cousin cradle craft crane crater crawl crayon create credit creek
+crescent crisp critic crooked crop crowd crown crucial cruise crumb
+crunch crush crystal cubic cuckoo cultural cunning cupboard curious
+current curtain cushion custom cycle cypress
+daily dainty damage danger daring darken dashing dazzle dealer debate
+decade decent decide declare decline decode decor decrease dedicate deepen
+defeat defer define degree delay delete delicate deliver demand demise
+denote dense dental depart depend depict deploy deprive derive descend
+describe desert design desire despite dessert detail detect develop device
+devote diagram dialect diamond diary dictate differ digest digital dilute
+dinner direct disable disc discard discern discuss disease dismiss display
+dispute distant distinct disturb ditch diverse divide divine doctor
+document dodge dolphin domain domestic donate donkey double doubt dozen
+draft drama drapery drastic drawer dreadful dream drench dresser drier
+drift drink drive drizzle drone drown drowsy drummer dryer duchess duet
+dugout duplex durable duster duties dwarf dwell dynamic
+eagerly earnest earring earthen easily eastern eatery echoing eclipse
+ecology economy edible editor educate eerie effect efficient eggshell
+eighteen either elastic elbowed elderly election electric elegant element
+elevate eligible eliminate eloquent elsewhere embassy emblem embrace
+emerald emotion emperor emphasis employ empower enamel enclose encounter
+encourage endless endorse endure enforce engineer engrave enhance enjoyable
+enlarge enormous enrich enroll enslave entail entire entitle entrance
+envelope envious episode equator equator erode errant escalate especial
+essence establish esteem estimate eternal ethical evaluate evening
+eventual everyday evidence exactly examine example exceed excellent except
+excerpt exchange excited exclude excuse execute exempt exercise exhaust
+exhibit exotic expand expect expend expert expire explain explore export
+expose extent external extreme
+fabric facade facing faction factory faculty faded failure fainted fairly
+falcon fallen falter famine famous fancy fantasy farewell farming fashion
+fasten fatal fathom fatigue faucet faulty favour feather feature federal
+feeble feeling fellow female fence ferment fertile festive fetch feudal
+fever fiber fiction fiddle fidget fierce fiery fifteen figure filter final
+finance finding finest finger finish firmly fiscal fishing fitting fixture
+flagged flake flame flank flannel flash flavor flawless fleet flesh
+flexible flicker flight flimsy fling flirt float flock flood floral flour
+flower fluent fluffy fluid flurry flush flutter foamy focal foggy foliage
+folklore follow fondly footing forbid forced forearm forecast forehead
+foreign foremost forest forever forgave forget forgive fork formal format
+former formula fortify fortune forward fossil foster foundry fountain
+fourteen fraction fragile fragment frame frantic fraud freckle freedom
+freely freeze freight frenzy frequent freshen friction friendly frighten
+fringe frolic frontal frosty frown frozen frugal fruitful fulfil fumble
+function funeral funnel furnace furnish further fusion future
+# INGLES COMUM G-Z
+#! media
+gadget gallant gallery gamble garage garden garland garment garnish gasket
+gather gauge gazette gearbox general genius gentle genuine gesture getaway
+ghostly giant giddy gifted gigantic ginger giraffe girdle glamour glance
+glassy gleam glimpse glisten global gloomy glorious glossy glowing
+goblet golden goodbye gorgeous gospel gothic govern gracious gradual
+grammar grandeur granular graphic grateful gravel gravity graze greatly
+greedy greeting grimace grinder gripping grocery groove grotto grouchy
+growing grumble guarded guessing guidance guilty guitar gullible gymnast
+habitat hairpin hallway hamlet hammock handful handle handy haphazard
+happen harbor hardly hardware harmful harmony harness harsh harvest
+hasten hatchet haughty haunted hazard headway healthy hearing hearth
+heavenly hectic hedgehog height helpful hemlock herbal herself hesitant
+hiccup hidden hideous highway hijack hillock hinder hinge hinted historic
+hoarse hobble hockey holder hollow homage honest honey hooded hopeful
+horizon hormone hornet horrid hospice hostage hostile hourly household
+however howling huddle humane humble humid humor hunger hurdle hurried
+hurtful husband hushed hustle hybrid hydrant hygiene hymnal
+iceberg icing ideally idiom idolize igloo ignition illegal illicit
+illness illusion imagery imitate immense immerse immune impair impart
+impatient imperial implant implore imposing improper impulse inbound
+incense incident incline include increase incubate indeed indent indigo
+indoor induce indulge inertia infant infect inferior infinite inflame
+informal infringe ingrain inhabit inherit initial injustice inkling
+inlaid innocent inquire insane inscribe insect insert inshore insider
+insight insomnia inspire install instinct insulate intact integral
+intellect intended interact interior interval intimate intrigue introduce
+intrude invalid invasion inventor inverse invisible invoice involve
+inward island isolate itching itinerary ivory
+jackal jacket jaguar janitor jasmine jaunt jealous jeopardy jerky
+jetlag jewelry jigsaw jingle jockey jogging joiner jointly jolly
+jostle journal joyful jubilant judgment jukebox jumbled junction juniper
+junket juryman justice justify juvenile
+karate kayak kennel kernel kettle keyhole keynote kidney kilogram
+kindly kindred kinetic kingdom kinship kiosk kitchen kitten knapsack
+kneecap knitted knobby knocker knotted knowing knuckle
+labor lacquer ladder lagoon lament landmark languid lantern lapdog
+lapel lapse largely lasting lately lateral lather latitude lattice
+laughter launder laundry lavish lawful lawyer layered layout lazily
+leaflet leaking leaning leased leather lecture ledger leftover legacy
+legible legion leisure lemonade lengthy lenient leopard lesson lethal
+letter levity liable liberal library license lifeboat lifted lightly
+likable likeness limber liming limited limping linear linger lining
+linkage lionize liquid listen literal litter lively livestock loaded
+loafer lobster locally locker locket lodging lofty logical loiter
+lonely longing loosely lopsided lordly lottery lounge lovable loyalty
+lucky luggage lukewarm lullaby luminous lumpy lunar luncheon lurking
+lustrous luxury lyrical
+machine madness magenta magnet magnify mainland maintain majesty
+makeup malice mammal manage mandate manhood manifest mankind manner
+mansion mantle manual manure marble margin marina marital marked
+markup marmot marquee marshal martial marvel mascot masonry massive
+mastery matched material matron mattress maximum mayhem meadow meager
+meaning measure meddle medical medium meekly meeting mellow melody
+melting member memoir mending mental mentor merchant mercury merely
+merger mermaid merrily message metallic method metric midday midland
+midnight midway mighty migrate mildew mileage military milkman millions
+mimicry mineral mingle minimal mining minister minority minstrel minute
+miracle mirage mirror mischief miserly misfit mishap mislead missile
+mission mistake mistrust mixture mobile mockery modern modest modify
+module moisture molar moment monarch monetary monitor monkey monsoon
+monthly monument moody moonlit mopping moral morbid moreover morning
+mortal mosaic mostly motive motorway mottled mountain mournful movable
+movement mower muffin muggy mulberry mullet multiply mumble mundane
+municipal mural murky muscle museum musical mustard mutiny mutual
+myriad mystery mystic
+# INGLES COMUM N-Z
+#! media
+narrate narrow nasty nation natural naughty nearby neatly nebula necklace
+needle negative neglect neighbor neither nephew nervous nestle network
+neutral nibble nicely nickname nightly nimble nineteen nitrogen nobleman
+nocturnal noisy nomadic nominate nonsense noodle normal northern notable
+notably notably nothing notice notion nourish novelty nowhere nuclear
+nugget numeral nursery nurture nutshell
+obedient obelisk obey object oblige oblong obscure observe obstacle obtain
+obvious occasion occupy October octopus oddity offense offering official
+offshore often oldest olive omelet omission onboard ongoing onward opening
+operate opinion opossum opponent optical optimism option oracle orbital
+orchard ordeal ordinary organic origin ornament orphan ostrich otherwise
+ottoman outcome outdoor outfit outgoing outlaw outline outlook outpost
+output outrage outside outward oval overall overcome overdue overflow
+overhaul overhead overlap overlook oversee overtake owner oxygen oyster
+package padding paddle pageant painful painter palace pallid palmtop
+pamphlet panel panic panorama pantry paper parade parcel pardon parent
+parish parking parlor parole parrot parsley partial particle partner
+passage passion passive pasture patch patent pathway patient patriot
+pattern pavement paving payment peaceful peanut pebble peculiar pedal
+peddler pedestal peeling pelican penalty pencil pending penguin peninsula
+pension people pepper percent perfect perform perfume perhaps peril
+perish permit persist person persuade pesky petal petition phantom
+phase phone photo phrase physical piano picked picnic picture piece
+pierce pigeon pilgrim pillar pillow pilot pinched pioneer pipeline
+pirate pistol pitcher pitfall pivotal placard placid plaid plainly
+planet planner plaster plastic plateau platform playful pleasant pledge
+plenty pliable plotted plucky plumber plunge plural pocket poetic
+pointed poison polar policy polish polite pollen pollute pompous
+poncho pontoon poodle popular porcelain porch portable portion portrait
+posture potent pottery poultry powder powerful practice prairie praise
+prance precede precious predict preface prefer premier premise prepare
+prescribe present preserve preside pressure presume pretend pretty
+prevail prevent preview previous priceless pricing primary primate
+prince printer priority prison private privilege prized probable problem
+proceed process produce profile profit profound program progress project
+prolong promise promote prompt pronoun proof propel proper proposal
+prospect protect protein protest proud proverb provide province provoke
+prowess prudent pruning public pudding puddle pulley pulpit pumpkin
+punctual pungent punish pupil puppet purchase purely purple purpose
+pursuit pushing puzzle pyramid
+quaint quality quantity quarrel quarter quartz queenly quench query
+quicken quiet quilted quirky quiver quizzes quota quotient
+rabbit racial racket radar radiant radical radio rafter ragged railway
+rainbow rainfall raising rally ramble rampart ranch random ranger ransom
+rapid rarely rascal rather ration rattle ravage raven reaching reactor
+readily realism reality realize really reaper reason rebel rebuild
+recall receipt receive recent recipe recital reckon recline recognize
+recoil record recover recruit rectify recycle reduce reefy refer refine
+reflect reform refresh refuge refund refuse regard regime region
+register regret regular rehearse reign reject rejoice relate relax
+release relevant relied relief religion relish reluctant remain remark
+remedy remind remnant remote removal render renew rental repair repeat
+repel replace reply report repose represent reptile republic request
+require rescue research resemble reserve reside resign resist resolve
+resort resource respect respond restore restrain result resume retail
+retain retire retreat return reunion reveal revenge revenue reverse
+review revise revive revolt reward rhythm ribbon riddle riding rifle
+rigging righteous rigid rimmed ringing rinsing ripple rising risky
+ritual rivalry riverbed roadway roaming roasted robbery robust rocky
+rodeo rolling romance roofing roomy rooster rotary rotten rough rounded
+routine rowing royal rubbish rudder ruddy rugged ruining rumble rumor
+runner running runway rupture rural rustic rusty
+saddle safari safely sailor salad salary salmon saloon salute salvage
+sample sanction sandal sandwich sanity sapling sardine satin satisfy
+saucer sausage savage saving savory sawdust saying scale scamper scandal
+scanner scarce scarlet scatter scenery scented scheme scholar school
+science scissor scolding scooter scorch scornful scouting scowling
+scrape scratch scrawl screech screen scribble scruple sculpt seafood
+seagull sealing seaman search seaside season seating seclude second
+secret section secure sediment seeing seeker seemly seesaw segment
+seize seldom select selfish seller seminar senate sender sensible
+sensor sentence sentry separate sequel sequence serene serial sermon
+serpent servant session setback setting settle seventh several severe
+sewing shabby shading shadow shaggy shaken shallow shampoo shapely
+sharing sharpen shatter shaving shelter shepherd sheriff shifting
+shimmer shingle shipment shipping shirt shiver shocking shopping
+shoreline shorten shortly shoulder shovel showcase shower shrewd
+shriek shrimp shrine shrink shrug shudder shuffle shutter shyness
+sibling sickness sideways sighted signal signify silence silken silly
+silver similar simmer simple sincere singer single sinister sinking
+sitting situated sixteen sizable sizzle skating sketch skilled skimming
+skipper skirmish skyline slacken slander slanted slapping slashing
+slavery sledge sleeper sleeve slender slicing slicker sliding slightly
+slipper slogan sloping sloppy slumber smaller smartly smashing smelting
+smiling smitten smoking smolder smoothly smuggle snapping snarling
+sneaker sneeze sniffle snippet snorkel snowfall snuggle soaking soaring
+sociable society socket softly software soiled solace soldier solemn
+solid solitary soluble solvent somber somehow someone sonata soothe
+sorcery sorrow sorted soulful sounding soupy sourly souvenir sovereign
+sowing spacious spanning sparkle sparrow spatial speaker special
+species specify speckle spectacle speech speedy spelling spending
+sphere spicy spider spillage spinach spindle spiral spirit splash
+splendid splinter spoken sponge spontaneous spooky spoonful sporadic
+spotless spotted sprawl spreading springy sprinkle sprout spurious
+spying squadron squalid squander squarely squeaky squeeze squirrel
+stable stacking stadium staffing staging stained stairway stalking
+stamina stamping standard stapler starchy stardom staring starling
+startle starve stately station statue stature staunch staying steadily
+stealth steamer steeple steerage stellar stemming stencil stepping
+sterile sternly stewing sticky stiffly stifling stigma stillness
+stimulus stinging stipend stirring stitching stocking stoically stolen
+stomach stonework stopping storage stormy storybook stoutly stowaway
+straggle straight strainer strangely strategy strawberry straying
+streamer strengthen stressful stretching strewn stricken strident
+strife striking stringent stripping strive stroking stronghold
+structure struggle strumming stubborn student studio stuffing stumble
+stunning stupendous sturdy stylish subdued subject submarine submerge
+submit subscribe subside substance subtle suburb subway succeed success
+sudden suffer sufficient suggest suitable suitcase sullen summary
+summit summon sunbeam sunburn sundown sunlight sunrise sunset sunshine
+superb superior supper supply support suppose supreme surely surface
+surgeon surging surname surpass surplus surprise surrender surround
+survey survive suspect suspend sustain swallow swampy swanky swarming
+swaying sweater sweeping sweetly swelling swerving swiftly swimmer
+swindle swinging switching swollen swooping symbol symmetry sympathy
+symphony symptom syndicate syntax system
+tackle tactful tailor taking talented talking tallest tambourine tangle
+tanker tapestry tardy target tariff tarnish tasking tasteful tattered
+taunting taxation teaching teamwork tearful teasing technical tedious
+teeming telegram telephone telescope telling temperate tempest template
+temporal tempting tenant tendency tender tennis tension tentacle tenure
+terminal terrace terrain terrible territory terror testify testimony
+texture thankful thawing theater theme theory therapy thereby thermal
+thicket thief thimble thinker thirsty thirteen thorough thoughtful
+thousand thrashing threaded threat thrifty thrilling thriving throbbing
+throttle throwing thumping thunder thwarted ticket tickle tidings tidying
+tighten tilling timber timely timid tingle tinkle tinted tiptoe tireless
+tissue titanic toaster together toiling tolerant tollgate tomato tonight
+toolbox topical topping torment tornado torrent tortoise tossing totally
+touching tourism towards towering township toxic tracing tractor trading
+traffic tragedy trailer trainer traitor tramping tranquil transfer
+transit transmit transport trapping trashy travel treason treasure
+treatise treaty trellis trembling trending trespass triangle tribute
+trickle trifle trigger trimming trinket triple triumph trivial trolley
+trophy tropical trouble trousers trowel truancy trucking trudging truly
+trumpet trunking trusting truthful trying tsunami tubing tucking tuition
+tumbling tundra tuneful tunnel turban turbine turmoil turning turnip
+turquoise turtle tussle tutorial twelve twenty twiggy twilight twinkle
+twisting twitch typical typing tyranny
+ultimate umbrella unaware unbroken uncanny uncertain uncle uncommon
+uncover undergo underline understand undertake undoing uneasy unequal
+uneven unfair unfold unfortunate unhappy unicorn uniform unify unique
+unite unity universe unkind unknown unlawful unless unlikely unlimited
+unload unlock unlucky unmarked unnatural unpack unpaid unplug unravel
+unruly unsafe unseen unsettled unsteady untidy until unusual unveil
+unwilling unwind upbeat upcoming update upgrade upheaval uphill uphold
+upkeep upland uplift upmost upper upright uprising uproar uproot upset
+upstairs upstream upturn upward urban urgency usable useful useless
+usher usually utensil utility utmost utopia utter
+vacancy vacant vacation vaccine vagrant vaguely valiant valid valley
+valuable valve vanilla vanish vanity vapor variable variety various
+varnish vastly vaulted vector vegetable vehicle veiled velocity velvet
+vendor veneer vengeance venison venomous ventilate venture veranda
+verbal verdict verify veritable vernacular versatile version versus
+vertical vessel vested veteran vibrant vicinity victory viewer vigilant
+vigor viking village villain vinegar vintage violate violent violet
+violin viper virtual virtue visible vision visitor visual vitality
+vitamin vivid vocation vogue voiced volcano volume voluntary volunteer
+voting voucher vowel voyage vulgar vulture
+wading wafer wagging wagon waiting waiver waken walking wallet walnut
+walrus wander waning wanting warden wardrobe warehouse warfare warily
+warmly warning warrant warrior wartime washing wasteful watchful
+watercourse waterfall watering watermark watery wavering waving waxen
+wayside weakness wealthy weapon wearing weary weather weaving webbing
+wedding wedge weeding weekend weekly weeping weighty welcome welding
+welfare wellness western wetland whaling wharf whatever wheelbarrow
+wheezing whenever wherever whether whiff whimper whining whipping
+whirling whisker whisper whistle whitening wholesome wicked wicker
+widely widespread wielding wiggle wilderness wildlife willing willow
+wilting windmill window windshield windy wineglass wingspan winner
+winning winsome wintry wiper wireless wisdom wishful wistful withdraw
+withhold within without witness wizard wobble woeful wolfish wonder
+wooded woodland woolen wording workable workshop worldly worried
+worship worthy wounded wrapping wreckage wrestle wriggle wrinkle
+wristband writing written wrongful
+yachting yearbook yearly yearning yeasty yellow yelping yesterday
+yielding yogurt yonder youngster youthful
+zealous zebra zenith zeppelin zestful zigzag zipper zodiac zombie
+zoning zoology
