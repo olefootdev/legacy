@@ -4,20 +4,22 @@
  * A régua fechada pelo fundador: 50 depositante / 10 MyClub / 5 Manager /
  * 5 Capitão / 5 Pro / 25 OLEFOOT. Soma 100 — a versão anterior somava 110, e é
  * por isso que a soma é conferida em tempo de carga aqui embaixo, não num
- * comentário.
+ * comentário. Os quatro papéis da rede são os quatro primeiros ancestrais na
+ * árvore de indicação — MyClub, Manager, Capitão, Pro (decisão do fundador,
+ * 2026-09-22). Nenhum é atribuído à mão: a árvore resolve os quatro.
  *
  * O PROBLEMA QUE ESTE ARQUIVO EXISTE PRA RESOLVER. Medido em produção em
  * 2026-09-22: a árvore de indicação tem UM nível de profundidade. 78 perfis,
- * 16 com código de indicador, 11 que resolvem; nível 2 e nível 3: zero pessoas,
- * zero. Ou seja, hoje, para todo mundo, as fatias de Manager e Capitão não têm
- * a quem pagar — e para 67 dos 78, MyClub também não. Somando o Pro, que ainda
- * é papel indefinido, 15% a 25% de cada colheita não tem endereço.
+ * 16 com código de indicador, 11 que resolvem; níveis 2, 3 e 4: zero pessoas,
+ * zero. Ou seja, hoje, para todo mundo, as fatias de Manager, Capitão e Pro não
+ * têm a quem pagar — e para 67 dos 78, MyClub também não. São 15% a 25% de cada
+ * colheita sem endereço.
  *
  * Fatia sem dono é exatamente por onde dinheiro vaza em silêncio. Aqui ela é
- * uma DECISÃO NOMEADA (`PoliticaVaga`), sempre reportada linha a linha, e o
- * padrão é `reinvestir`: o valor não sai do livro, sobe o NAV de todos os
- * cotistas pro rata. Ninguém é enriquecido por sorteio, nada some, e a resposta
- * pra "cadê os 20%?" é "continua seu, na pool".
+ * uma DECISÃO NOMEADA (`PoliticaVaga`), sempre reportada linha a linha. O
+ * fundador escolheu `reinvestir` em 2026-09-22: o valor não sai do livro, sobe
+ * o NAV de todos os cotistas pro rata. Ninguém é enriquecido por sorteio, nada
+ * some, e a resposta pra "cadê os 25%?" é "continua seu, na pool".
  *
  * Puro: bigint na menor unidade, sem float, sem banco.
  */
@@ -26,13 +28,10 @@ import type { Unidades } from './vaultBook.js';
 
 export type IdFatia = 'voce' | 'myclub' | 'manager' | 'captain' | 'pro' | 'olefoot';
 
-export type Papel =
-  | 'depositante'
-  | 'nivel1'
-  | 'nivel2'
-  | 'nivel3'
-  | 'indefinido'
-  | 'casa';
+export type Papel = 'depositante' | 'nivel1' | 'nivel2' | 'nivel3' | 'nivel4' | 'casa';
+
+/** Papel da rede → posição em `Rede.ancestrais` (0 = indicador direto). */
+const PROFUNDIDADE: Partial<Record<Papel, number>> = { nivel1: 0, nivel2: 1, nivel3: 2, nivel4: 3 };
 
 export interface Fatia {
   readonly id: IdFatia;
@@ -47,7 +46,7 @@ export const FATIAS: readonly Fatia[] = [
   { id: 'myclub',  bps: 1000, papel: 'nivel1',      rotulo: 'MyClub' },
   { id: 'manager', bps:  500, papel: 'nivel2',      rotulo: 'Manager' },
   { id: 'captain', bps:  500, papel: 'nivel3',      rotulo: 'Capitão' },
-  { id: 'pro',     bps:  500, papel: 'indefinido',  rotulo: 'Pro' },
+  { id: 'pro',     bps:  500, papel: 'nivel4',      rotulo: 'Pro' },
   { id: 'olefoot', bps: 2500, papel: 'casa',        rotulo: 'OLEFOOT' },
 ] as const;
 
@@ -70,6 +69,7 @@ export type PoliticaVaga =
   /** Fica com a casa. Nomeado de propósito: é o que mais parece vazamento. */
   | 'casa';
 
+/** Decidido pelo fundador em 2026-09-22. Mudar aqui muda o produto inteiro. */
 export const POLITICA_VAGA_PADRAO: PoliticaVaga = 'reinvestir';
 
 export interface Rede {
@@ -79,16 +79,11 @@ export interface Rede {
   readonly casa: string;
   /**
    * Ancestrais na árvore, do mais próximo pro mais distante:
-   * [0] = nível 1 (MyClub), [1] = nível 2 (Manager), [2] = nível 3 (Capitão).
-   * Lista curta é o caso normal hoje, não erro.
+   * [0] MyClub, [1] Manager, [2] Capitão, [3] Pro. Lista curta é o caso normal
+   * hoje (a árvore tem profundidade 1), não erro: cada posição que falta vira
+   * vaga nomeada e cai na política — nunca na casa por omissão.
    */
   readonly ancestrais: readonly string[];
-  /**
-   * Quem ocupa o papel "Pro". Enquanto o fundador não definir o que é Pro, isto
-   * fica `undefined` e a fatia cai na política de vaga — nunca na casa por
-   * omissão.
-   */
-  readonly pro?: string;
 }
 
 export interface Pagamento {
@@ -122,15 +117,12 @@ function destinoDe(fatia: Fatia, rede: Rede): { destino?: string; motivo?: strin
       return { destino: rede.depositante };
     case 'casa':
       return { destino: rede.casa };
-    case 'nivel1':
-    case 'nivel2':
-    case 'nivel3': {
-      const profundidade = fatia.papel === 'nivel1' ? 0 : fatia.papel === 'nivel2' ? 1 : 2;
+    default: {
+      const profundidade = PROFUNDIDADE[fatia.papel];
+      if (profundidade === undefined) throw new Error(`papel sem destino: ${fatia.papel}`);
       const quem = rede.ancestrais[profundidade];
       return quem ? { destino: quem } : { motivo: `sem ancestral de nível ${profundidade + 1}` };
     }
-    case 'indefinido':
-      return rede.pro ? { destino: rede.pro } : { motivo: 'papel Pro ainda não definido' };
   }
 }
 

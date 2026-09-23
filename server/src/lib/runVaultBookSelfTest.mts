@@ -116,7 +116,7 @@ console.log('\n🧮 harvestSplit — fatia sem dono é decisão, não sobra\n');
 
 const CASA = 'tesouraria-olefoot';
 const EU = 'manager-eu';
-const redeCompleta: Rede = { depositante: EU, casa: CASA, ancestrais: ['n1', 'n2', 'n3'], pro: 'pro' };
+const redeCompleta: Rede = { depositante: EU, casa: CASA, ancestrais: ['n1', 'n2', 'n3', 'n4'] };
 const redeDeHoje: Rede = { depositante: EU, casa: CASA, ancestrais: ['n1'] };          // 11 dos 78
 const redeSemRede: Rede = { depositante: EU, casa: CASA, ancestrais: [] };             // 67 dos 78
 
@@ -146,7 +146,7 @@ check('as fatias somam 100%', FATIAS.reduce((s, f) => s + f.bps, 0) === BPS_TOTA
 {
   const r = ratear(100n * SOL, redeDeHoje);
   const vagos = r.vagas.map((v) => v.fatia).sort().join(',');
-  check('árvore de hoje deixa manager, captain e pro vagos', vagos === 'captain,manager,pro', vagos);
+  check('árvore de hoje (profundidade 1) deixa manager, captain e pro vagos', vagos === 'captain,manager,pro', vagos);
   check('e isso são 15% reinvestidos', r.reinvestido === 15n * SOL);
   check('as vagas aparecem no extrato com valor', r.vagas.every((v) => v.unidades > 0n && v.motivo.length > 0));
 }
@@ -184,11 +184,15 @@ check('as fatias somam 100%', FATIAS.reduce((s, f) => s + f.bps, 0) === BPS_TOTA
   check("política 'casa': as 4 vagas continuam visíveis no extrato", r.vagas.length === 4);
 }
 
-// 18 — Pro indefinido nunca vira pagamento pra ninguém.
+// 18 — o Pro é o 4º nível: resolve sozinho pela árvore, e some quando não há.
 {
-  const r = ratear(100n * SOL, redeCompleta ? { ...redeCompleta, pro: undefined } : redeCompleta);
-  check('Pro sem definição não paga ninguém', !r.pagamentos.some((p) => p.papel === 'indefinido'));
-  check('Pro sem definição vira vaga nomeada', r.vagas.some((v) => v.fatia === 'pro' && v.motivo.includes('Pro')));
+  const comQuatro = ratear(100n * SOL, redeCompleta).pagamentos.find((p) => p.fatia === 'pro');
+  check('Pro paga o 4º ancestral quando existe', comQuatro?.destino === 'n4' && comQuatro.unidades === 5n * SOL);
+
+  const soTres = ratear(100n * SOL, { depositante: EU, casa: CASA, ancestrais: ['n1', 'n2', 'n3'] });
+  const vaga = soTres.vagas.find((v) => v.fatia === 'pro');
+  check('sem 4º ancestral, Pro vira vaga nomeada', vaga?.motivo === 'sem ancestral de nível 4');
+  check('e a casa continua em 25% mesmo assim', soTres.pagamentos.find((p) => p.papel === 'casa')?.unidades === 25n * SOL);
 }
 
 // 19 — recusas do rateio.
