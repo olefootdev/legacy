@@ -1,5 +1,15 @@
 {
-  // Só o app Vite principal (./src). web/match-pitch, server e mobile: `tsc -p` nesses dirs (npm run lint faz os três).
+  // Só o app Vite principal (./src).
+  //
+  // ⚠️ Este comentário já MENTIU: dizia que `npm run lint` fazia server e
+  // mobile também, e não fazia — o script só rodava este arquivo. Resultado:
+  // código de servidor que não compila passou por "lint ok" aqui e só quebrou
+  // no build do Railway, em produção, com o deploy falhando calado enquanto eu
+  // procurava o motivo do 404.
+  //
+  // Agora `npm run lint` roda, nesta ordem: este + server + mobile +
+  // tsconfig.carteira.json (strict, só a carteira) + dex. Se acrescentar um
+  // projeto novo, acrescente no script — comentário não roda.
   "compilerOptions": {
     "target": "ES2022",
     "experimentalDecorators": true,

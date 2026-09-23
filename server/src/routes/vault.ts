@@ -59,7 +59,7 @@ function erro(e: unknown): { status: 400 | 409 | 500; msg: string } {
 /** GET /api/vault/:slug — o estado do fundo. Público por desenho. */
 vaultRoutes.get('/api/vault/:slug', rateLimit(60), async (c) => {
   try {
-    const fundo = await lerFundo(c.req.param('slug'));
+    const fundo = await lerFundo(c.req.param('slug') ?? '');
     if (!fundo) return c.json({ ok: false, error: 'fundo não encontrado' }, 404);
     return c.json({
       ok: true,
@@ -83,7 +83,7 @@ vaultRoutes.get('/api/vault/:slug/minha-posicao', rateLimit(60), async (c) => {
   const uid = await usuarioDaSessao(c.req.header('authorization'));
   if (!uid) return c.json({ ok: false, error: 'Entre na sua conta.' }, 401);
   try {
-    const fundo = await lerFundo(c.req.param('slug'));
+    const fundo = await lerFundo(c.req.param('slug') ?? '');
     if (!fundo) return c.json({ ok: false, error: 'fundo não encontrado' }, 404);
     const cotas = await lerCotas(fundo.id, uid);
     return c.json({
@@ -108,7 +108,7 @@ vaultRoutes.get('/api/vault/:slug/meu-extrato', rateLimit(30), async (c) => {
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ ok: false, error: 'servidor sem service role' }, 500);
   try {
-    const fundo = await lerFundo(c.req.param('slug'));
+    const fundo = await lerFundo(c.req.param('slug') ?? '');
     if (!fundo) return c.json({ ok: false, error: 'fundo não encontrado' }, 404);
 
     const { data: mov } = await sb
@@ -166,7 +166,7 @@ vaultAdminRoutes.post('/api/admin/vault/criar', async (c) => {
  * ele, reentrega credita duas vezes.
  */
 vaultAdminRoutes.post('/api/admin/vault/:slug/aportar', async (c) => {
-  const slug = c.req.param('slug');
+  const slug = c.req.param('slug') ?? '';
   const body = await c.req.json().catch(() => null) as
     { userId?: unknown; unidades?: unknown; ref?: unknown } | null;
   if (typeof body?.userId !== 'string' || typeof body.ref !== 'string' || !body.ref.trim()) {
@@ -193,7 +193,7 @@ vaultAdminRoutes.post('/api/admin/vault/:slug/aportar', async (c) => {
 
 /** POST /api/admin/vault/:slug/sacar — { userId, cotas, ref } */
 vaultAdminRoutes.post('/api/admin/vault/:slug/sacar', async (c) => {
-  const slug = c.req.param('slug');
+  const slug = c.req.param('slug') ?? '';
   const body = await c.req.json().catch(() => null) as
     { userId?: unknown; cotas?: unknown; ref?: unknown } | null;
   if (typeof body?.userId !== 'string' || typeof body.ref !== 'string' || !body.ref.trim()) {
@@ -227,7 +227,7 @@ vaultAdminRoutes.post('/api/admin/vault/:slug/marcar', async (c) => {
     const patrimonio = paraInteiro(body?.patrimonio, 'patrimonio');
     const motivo = typeof body?.motivo === 'string' ? body.motivo : undefined;
     const ref = typeof body?.ref === 'string' && body.ref.trim() ? body.ref : undefined;
-    const { plano, versao } = await marcarAMercado(c.req.param('slug'), patrimonio, motivo, ref);
+    const { plano, versao } = await marcarAMercado(c.req.param('slug') ?? '', patrimonio, motivo, ref);
     return c.json({ ok: true, versao: versao.toString(), patrimonio: plano.livro.patrimonio.toString() });
   } catch (e) {
     if ((e as { duplicado?: boolean }).duplicado) return c.json({ ok: true, jaAplicado: true });
@@ -240,7 +240,7 @@ vaultAdminRoutes.post('/api/admin/vault/:slug/marcar', async (c) => {
  * A tesouraria vem de env: inventar um uuid aqui mandaria 25% pra lugar nenhum.
  */
 vaultAdminRoutes.post('/api/admin/vault/:slug/colher', async (c) => {
-  const slug = c.req.param('slug');
+  const slug = c.req.param('slug') ?? '';
   const casa = process.env.OLEFOOT_TREASURY_USER_ID?.trim();
   if (!casa) {
     return c.json({ ok: false, error: 'OLEFOOT_TREASURY_USER_ID não configurado — sem tesouraria não se colhe' }, 500);

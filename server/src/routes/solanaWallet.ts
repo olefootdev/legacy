@@ -100,8 +100,8 @@ solanaWalletRoutes.post('/api/wallet/solana/link', rateLimit(10), async (c) => {
  * requisição — senão isto vira um proxy aberto pra qualquer string.
  */
 solanaWalletRoutes.get('/api/wallet/solana/saldo/:endereco', rateLimit(30), async (c) => {
-  const endereco = c.req.param('endereco');
-  const pub = solanaAddressToPublicKey(endereco);
+  const endereco = c.req.param('endereco') ?? '';
+  const pub = endereco ? solanaAddressToPublicKey(endereco) : null;
   if (!pub) return c.json({ ok: false, error: 'endereço Solana inválido' }, 400);
 
   const rpc = process.env.SOLANA_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
