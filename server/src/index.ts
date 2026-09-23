@@ -31,6 +31,7 @@ import { revelaAdminRoutes } from './routes/revelaAdmin.js';
 import { legendImportRoutes } from './routes/legendImport.js';
 import { insightsRoutes } from './routes/insights.js';
 import { solanaWalletRoutes } from './routes/solanaWallet.js';
+import { vaultRoutes, vaultAdminRoutes } from './routes/vault.js';
 import { cspReportRoutes } from './routes/cspReport.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
 // Railway scheduler decomissionado em 2026-05-07. A Liga Global agora é
@@ -124,6 +125,8 @@ app.route('/', positionCoachRoutes);
 app.route('/', marketRoutes);
 app.route('/', marketOffersRoutes);
 app.route('/', solanaWalletRoutes);
+app.route('/', vaultRoutes);       // leitura do Vault (sessão do jogador)
+app.route('/', vaultAdminRoutes);  // escrita do Vault (gate de admin no próprio router)
 app.route('/', academyRoutes);
 app.route('/', academyAdminRoutes);
 app.route('/', academyArtRoutes);

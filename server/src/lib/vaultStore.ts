@@ -63,6 +63,25 @@ export interface Plano {
   readonly ledger: readonly LinhaLedger[];
 }
 
+// ----------------------------------------------------------------- entrada ---
+
+/**
+ * Dinheiro entra como STRING de dígitos, nunca como `number`.
+ *
+ * Não é preciosismo: 250 SOL em micro-cotas é 2,5×10²⁰, e `JSON.parse` de um
+ * número desse tamanho já volta arredondado — sem erro, sem aviso, com o dígito
+ * errado. O tipo `number` não consegue nem representar o que este livro guarda.
+ */
+export function paraInteiro(v: unknown, campo: string): bigint {
+  if (typeof v === 'number') {
+    throw new TypeError(`${campo}: mande string de dígitos, não number — acima de 2^53 o JSON já perde precisão`);
+  }
+  if (typeof v !== 'string' || !/^[0-9]{1,40}$/.test(v)) {
+    throw new TypeError(`${campo}: esperava string só de dígitos (recebi ${JSON.stringify(v)?.slice(0, 40)})`);
+  }
+  return BigInt(v);
+}
+
 // ------------------------------------------------------------ planejadores ---
 
 export interface PlanoAporte extends Plano {
@@ -128,7 +147,12 @@ export function planejarResgate(
 }
 
 /** Marcação a mercado: muda o patrimônio, não emite nem queima cota. */
-export function planejarMarcacao(fundo: Fundo, patrimonio: Unidades, motivo?: string): Plano {
+export function planejarMarcacao(
+  fundo: Fundo,
+  patrimonio: Unidades,
+  motivo?: string,
+  ref?: string,
+): Plano {
   return {
     livro: marcar(fundo.livro, patrimonio),
     posicoes: [],
@@ -138,6 +162,7 @@ export function planejarMarcacao(fundo: Fundo, patrimonio: Unidades, motivo?: st
       unidades: patrimonio.toString(),
       cotas: '0',
       motivo: motivo ?? 'marcação a mercado',
+      ref,
     }],
   };
 }
@@ -160,6 +185,7 @@ export function planejarColheita(
   rede: Rede,
   colheita: Unidades,
   politica: PoliticaVaga = POLITICA_VAGA_PADRAO,
+  ref?: string,
 ): PlanoColheita {
   if (colheita <= 0n) throw new RangeError('colheita tem que ser positiva');
   if (colheita > fundo.livro.patrimonio) {
@@ -174,8 +200,10 @@ export function planejarColheita(
   let livro = marcar(fundo.livro, fundo.livro.patrimonio - colheita);
   if (rateio.reinvestido > 0n) livro = reinvestir(livro, rateio.reinvestido);
 
+  // O ref vai só nesta linha: as outras duas são detalhe do mesmo evento, e o
+  // índice único é por (fund_id, ref).
   const ledger: LinhaLedger[] = [
-    { user_id: null, tipo: 'colheita', unidades: colheita.toString(), cotas: '0', motivo: 'produzido pela pool' },
+    { user_id: null, tipo: 'colheita', unidades: colheita.toString(), cotas: '0', motivo: 'produzido pela pool', ref },
   ];
   if (aPagar > 0n) {
     ledger.push({ user_id: null, tipo: 'rateio', unidades: aPagar.toString(), cotas: '0', motivo: `${rateio.pagamentos.length} fatias com dono` });
@@ -253,8 +281,12 @@ async function aplicar(fundo: Fundo, plano: Plano): Promise<bigint> {
   });
   if (error) {
     const conflito = error.code === '40001' || /conflito de vers/i.test(error.message);
-    const e = new Error(`vault: ${error.message}`) as Error & { conflito?: boolean };
+    // 23505 = o índice `vault_ledger_ref_unico` barrou um ref repetido. Não é
+    // erro do chamador: é a reentrega fazendo o que devia, e nada foi gravado.
+    const duplicado = error.code === '23505' || /vault_ledger_ref_unico/.test(error.message);
+    const e = new Error(`vault: ${error.message}`) as Error & { conflito?: boolean; duplicado?: boolean };
     e.conflito = conflito;
+    e.duplicado = duplicado;
     throw e;
   }
   return BigInt(data as string | number);
@@ -295,8 +327,24 @@ export async function sacar(slug: string, userId: string, cotas: Cotas, ref?: st
     planejarResgate(fundo, userId, cotas, await lerCotas(fundo.id, userId), ref));
 }
 
-export async function marcarAMercado(slug: string, patrimonio: Unidades, motivo?: string) {
-  return comRetry(slug, (fundo) => planejarMarcacao(fundo, patrimonio, motivo));
+export async function marcarAMercado(slug: string, patrimonio: Unidades, motivo?: string, ref?: string) {
+  return comRetry(slug, (fundo) => planejarMarcacao(fundo, patrimonio, motivo, ref));
+}
+
+/**
+ * Esse `ref` já entrou neste fundo? Resposta amigável antes de tentar gravar —
+ * quem garante de verdade é o índice único, esta consulta só evita devolver
+ * erro pra uma reentrega que é normal.
+ */
+export async function refJaAplicado(fundId: string, ref: string): Promise<boolean> {
+  const { data, error } = await sb()
+    .from('vault_ledger')
+    .select('id')
+    .eq('fund_id', fundId)
+    .eq('ref', ref)
+    .maybeSingle();
+  if (error) throw new Error(`vault: falha ao conferir o ref: ${error.message}`);
+  return Boolean(data);
 }
 
 /**
@@ -309,13 +357,15 @@ export async function colher(
   depositante: string,
   colheita: Unidades,
   casa: string,
+  ref: string,
   politica: PoliticaVaga = POLITICA_VAGA_PADRAO,
 ) {
   if (!casa) throw new Error('vault: sem tesouraria da casa configurada');
+  if (!ref) throw new Error('vault: colheita sem ref — sem ele a reentrega paga duas vezes');
 
   const { plano, versao } = await comRetry(slug, async (fundo) => {
     const rede: Rede = { depositante, casa, ancestrais: await lerAncestrais(depositante) };
-    return planejarColheita(fundo, rede, colheita, politica);
+    return planejarColheita(fundo, rede, colheita, politica, ref);
   });
 
   const fundo = await lerFundo(slug);

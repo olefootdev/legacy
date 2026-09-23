@@ -28,6 +28,7 @@ import {
   type Rede,
 } from './harvestSplit.js';
 import {
+  paraInteiro,
   planejarAporte,
   planejarColheita,
   planejarMarcacao,
@@ -277,6 +278,19 @@ const fundoCom = (cotas: bigint, patrim: bigint): Fundo => ({
   recusa('colher acima do patrimônio é recusado', () => planejarColheita(f, redeDeHoje, 101n * SOL));
   recusa('colheita zero é recusada', () => planejarColheita(f, redeDeHoje, 0n));
   recusa('aporte zero é recusado', () => planejarAporte(f, EU, 0n, 0n));
+}
+
+// P8 — dinheiro entra como string. `number` não representa 2,5e20, e o JSON
+// arredonda sem avisar: o valor chega errado sem ninguém errar nada.
+{
+  check('string grande atravessa sem perder dígito',
+    paraInteiro('250000000000000000000', 'x') === 250000000000000000000n);
+  recusa('number é recusado na porta', () => paraInteiro(250000000000000000000, 'x'));
+  recusa('notação científica é recusada', () => paraInteiro('1e9', 'x'));
+  recusa('negativo é recusado', () => paraInteiro('-1', 'x'));
+  recusa('decimal é recusado', () => paraInteiro('1.5', 'x'));
+  recusa('vazio é recusado', () => paraInteiro('', 'x'));
+  recusa('null é recusado', () => paraInteiro(null, 'x'));
 }
 
 console.log(`\n${fail === 0 ? '🟢' : '🔴'} ${pass} passaram, ${fail} falharam\n`);
