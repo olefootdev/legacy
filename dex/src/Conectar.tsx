@@ -2,20 +2,23 @@
  * /conectar — outro site pede uma assinatura.
  *
  * É a tela mais perigosa da carteira, porque é a única em que alguém de fora
- * fala com ela. Três coisas a defendem, e nenhuma é opcional:
+ * fala com ela. Três coisas a defendem:
  *
  *   1. A ORIGEM VEM DO NAVEGADOR. Não do `document.referrer`, não de um
  *      parâmetro. Ela chega no `event.origin` de um postMessage, que o browser
- *      preenche e nenhum site consegue falsificar. Sem esse aperto de mão, a
- *      tela não mostra botão nenhum.
- *   2. O QUE SE ASSINA É MONTADO AQUI. A mensagem sai de
- *      `buildSolanaLinkMessage(uid, endereço, data)` com o endereço que ESTA
- *      carteira tem — quem pede não escolhe o texto. Se pudesse, "assine este
- *      texto" viraria "assine esta transferência".
- *   3. A PESSOA VÊ E DECIDE. Quem pediu, qual endereço, e dois botões. Carteira
- *      que assina porque a página abriu não é carteira.
+ *      preenche e nenhum site consegue falsificar.
+ *   2. O QUE SE ASSINA É MONTADO AQUI, com o endereço que ESTA carteira tem.
+ *      Se quem pede escolhesse o texto, "assine este texto" viraria "assine
+ *      esta transferência".
+ *   3. A PESSOA VÊ QUEM PEDIU E DECIDE.
  *
- * E a resposta volta pra AQUELA origem, nunca pra '*'.
+ * ⚠️ A ORDEM DAS TELAS É PARTE DA CORREÇÃO. A primeira versão prendia TUDO
+ * atrás da confirmação da origem — quem abria caía num "Confirmando quem
+ * pediu…" sem botão nenhum, nem pra entrar na própria carteira. Mas a trava só
+ * precisa valer pra ASSINAR: entrar e criar são ações da pessoa na carteira
+ * dela, e quem pediu não tem nada a ver com isso. Agora ela entra ou cria na
+ * hora, e o aperto de mão corre em paralelo; a confirmação da origem gateia
+ * apenas o botão de assinar.
  */
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -30,9 +33,9 @@ import {
 import { buildSolanaLinkMessage } from '@/wallet/solanaLinkMessage';
 import { assinar } from '@/wallet/seed/derive';
 import { useCarteira } from '@/wallet/seed/useCarteira';
-import CriarOuRestaurar, { type Passo } from './CriarOuRestaurar';
 import { tradutor } from '@/i18n/idioma';
 import { useIdioma } from '@/i18n/useIdioma';
+import CriarOuRestaurar, { type Passo } from './CriarOuRestaurar';
 import { TEXTOS } from './textos';
 import { BOTAO_LINHA, BOTAO_VOLT, Barra, CAMPO } from './ui';
 
@@ -56,7 +59,7 @@ export default function Conectar() {
   const [passo, setPasso] = useState<Passo>('inicio');
   const janela = useRef<Window | null>(null);
 
-  // O aperto de mão: avisa que carregou e espera o "olá" pra saber QUEM é.
+  // O aperto de mão roda desde o começo, em paralelo com o que a pessoa faz.
   useEffect(() => {
     const abriu = window.opener as Window | null;
     if (!abriu) return;
@@ -64,7 +67,7 @@ export default function Conectar() {
     const aoReceber = (e: MessageEvent) => {
       if (!ehOla(e.data)) return;
       if (!origemPermitida(e.origin)) {
-        setMsg(`${e.origin} não está na lista de sites que podem pedir assinatura.`);
+        setMsg(`${e.origin} → ✕`);
         return;
       }
       janela.current = (e.source as Window | null) ?? abriu;
@@ -110,10 +113,24 @@ export default function Conectar() {
     catch (e) { setMsg(e instanceof Error ? e.message : t('naoDeu')); }
   };
 
-  const Moldura = ({ children }: { children: React.ReactNode }) => (
+  const Moldura = ({ titulo, onVoltar, children }: { titulo?: string; onVoltar?: () => void; children: React.ReactNode }) => (
     <div className="flex min-h-full flex-col bg-asfalto">
-      <Barra titulo={t('tituloConectar')} />
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 pb-8 pt-5">{children}</div>
+      <Barra titulo={titulo ?? t('tituloConectar')} onVoltar={onVoltar} />
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3.5 px-4 pb-8 pt-5">{children}</div>
+    </div>
+  );
+
+  /** Quem pediu, quando já se sabe. Enquanto não, diz que está conferindo. */
+  const Pedinte = () => (
+    <div className="border border-white/10 bg-panel px-3.5 py-2.5">
+      {quemPediu ? (
+        <p className="text-[12px] text-cimento">
+          <span className="font-mono text-white">{quemPediu.replace(/^https?:\/\//, '')}</span>{' '}
+          {t('pediuConexao')}
+        </p>
+      ) : (
+        <p className="font-mono text-[11px] text-poeira">{t('conferindo')}</p>
+      )}
     </div>
   );
 
@@ -126,89 +143,81 @@ export default function Conectar() {
     );
   }
 
-  if (!pedido) {
-    return (
-      <Moldura>
-        <p className="font-display text-[26px] uppercase">{t('pedidoInvalido')}</p>
-        <p className="text-[13px] leading-relaxed text-cimento">{t('pedidoInvTexto')}</p>
-        <a href="/" className={`${BOTAO_LINHA} mt-2`}>{t('irParaCarteira')}</a>
-      </Moldura>
-    );
-  }
+  if (w.estado === 'carregando') return <div className="min-h-full bg-asfalto" />;
 
-  if (!quemPediu) {
-    return (
-      <Moldura>
-        <p className="font-mono text-[11px] text-poeira">#conectar</p>
-        <p className="font-display text-[26px] uppercase leading-[1.1]">{t('confirmando')}</p>
-        <p className="text-[13px] leading-relaxed text-cimento">{t('confirmandoTexto')}</p>
-        {msg && <p className="text-[12px] text-baixa">{msg}</p>}
-      </Moldura>
-    );
-  }
-
-  /**
-   * Sem carteira neste aparelho — e é aqui que estava o beco sem saída: a
-   * versão anterior mandava a pessoa criar em outro lugar e "voltar a pedir a
-   * conexão pelo jogo". Ela clicou em OLEWALLET justamente porque decidiu
-   * querer uma; mandá-la recomeçar é perder a pessoa no exato momento do sim.
-   *
-   * Agora cria aqui dentro, com o pedido esperando. Quando a carteira nasce, o
-   * estado muda e a própria tela de assinar aparece — sem voltar pro jogo.
-   */
+  // --- SEM CARTEIRA: cria aqui dentro, sem esperar o aperto de mão ---------
   if (w.estado === 'sem-cofre') {
-    const naFrase = passo !== 'inicio';
+    const naEtapa = passo !== 'inicio';
     return (
-      <div className="flex min-h-full flex-col bg-asfalto">
-        <Barra
-          titulo={passo === 'frase' ? t('tituloFrase') : passo === 'restaurar' ? t('tituloRestaurar') : passo === 'senha' ? t('tituloSenha') : t('tituloConectar')}
-          onVoltar={naFrase ? () => setPasso(passo === 'senha' ? 'frase' : 'inicio') : undefined}
+      <Moldura
+        titulo={passo === 'frase' ? t('tituloFrase') : passo === 'restaurar' ? t('tituloRestaurar') : passo === 'senha' ? t('tituloSenha') : undefined}
+        onVoltar={naEtapa ? () => setPasso(passo === 'senha' ? 'frase' : 'inicio') : undefined}
+      >
+        {!naEtapa && <Pedinte />}
+        <CriarOuRestaurar
+          w={w} passo={passo} setPasso={setPasso}
+          chamada={{ titulo: t('criarAquiTitulo'), texto: t('criarAquiTexto') }}
         />
-        <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3.5 px-4 pb-8 pt-4">
-          {!naFrase && (
-            <div className="border border-white/10 bg-panel px-3.5 py-3">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cimento">{t('quemPediu')}</p>
-              <p className="mt-1 font-mono text-[14px] text-white">{quemPediu.replace(/^https?:\/\//, '')}</p>
-            </div>
-          )}
-          <CriarOuRestaurar
-            w={w}
-            passo={passo}
-            setPasso={setPasso}
-            chamada={{ titulo: t('criarAquiTitulo'), texto: t('criarAquiTexto') }}
-          />
-          {!naFrase && (
-            <button type="button" className={BOTAO_LINHA} onClick={recusar}>{t('agoraNao')}</button>
-          )}
-        </div>
-      </div>
+        {!naEtapa && quemPediu && (
+          <button type="button" className={BOTAO_LINHA} onClick={recusar}>{t('agoraNao')}</button>
+        )}
+      </Moldura>
     );
   }
 
+  // --- TRANCADA: entrar, sem esperar o aperto de mão -----------------------
   if (w.estado === 'trancada') {
     return (
       <Moldura>
-        <p className="font-mono text-[11px] text-poeira">{t('trancada')}</p>
-        <p className="font-display text-[26px] uppercase leading-[1.1]">{t('suaSenha')}</p>
-        <p className="text-[13px] text-cimento">
-          <span className="font-mono text-white">{quemPediu.replace(/^https?:\/\//, '')}</span> → {t('vincularTitulo').toLowerCase()}
-        </p>
+        <Pedinte />
+        <h1 className="mt-1 whitespace-pre-line font-display text-[30px] uppercase leading-[1.1]">{t('entrarTitulo')}</h1>
+        <p className="text-[13px] leading-relaxed text-cimento">{t('entrarTexto')}</p>
+        {w.endereco && <p className="truncate font-mono text-[12px] text-poeira">{w.endereco}</p>}
         <input type="password" className={CAMPO} placeholder={t('senha')} value={senha} autoFocus
           onChange={(e) => setSenha(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void destrancar(); }} />
         {(msg ?? w.erro) && <p className="text-[12px] text-baixa">{msg ?? w.erro}</p>}
         <button type="button" className={BOTAO_VOLT} disabled={w.ocupado || !senha} onClick={() => void destrancar()}>
-          {w.ocupado ? t('abrindo') : t('abrirCarteira')}
+          {w.ocupado ? t('abrindo') : t('entrar')}
         </button>
-        <button type="button" className={BOTAO_LINHA} onClick={recusar}>{t('agoraNao')}</button>
+        <button type="button" className="text-[12px] text-poeira underline"
+          onClick={() => { if (confirm(t('confirmaApagar'))) w.esquecer(); }}>
+          {t('esqueciSenha')}
+        </button>
+        {quemPediu && (
+          <button type="button" className={`${BOTAO_LINHA} mt-auto`} onClick={recusar}>{t('agoraNao')}</button>
+        )}
       </Moldura>
     );
   }
 
-  if (w.estado === 'aberta' && w.chave) {
+  // --- ABERTA, mas o pedido não vale: diz o que fazer ----------------------
+  if (!pedido) {
     return (
       <Moldura>
-        <p className="font-mono text-[11px] text-poeira">#conectar</p>
+        <p className="font-display text-[26px] uppercase">{t('pedidoInvalido')}</p>
+        <p className="text-[13px] leading-relaxed text-cimento">{t('pedidoInvTexto')}</p>
+        <a href="/" className={`${BOTAO_VOLT} mt-2`}>{t('irParaCarteira')}</a>
+      </Moldura>
+    );
+  }
+
+  // --- ABERTA, mas ninguém confirmou quem pediu ----------------------------
+  if (!quemPediu) {
+    return (
+      <Moldura>
+        <p className="font-display text-[26px] uppercase leading-[1.1]">{t('quaseLa')}</p>
+        <p className="text-[13px] leading-relaxed text-cimento">{t('abraPeloJogo')}</p>
+        {msg && <p className="font-mono text-[12px] text-baixa">{msg}</p>}
+        <a href="/" className={`${BOTAO_VOLT} mt-2`}>{t('irParaCarteira')}</a>
+      </Moldura>
+    );
+  }
+
+  // --- ABERTA e origem confirmada: a única tela com botão de assinar -------
+  if (w.chave) {
+    return (
+      <Moldura>
         <h1 className="font-display text-[28px] uppercase leading-[1.1]">{t('vincularTitulo')}</h1>
 
         <div className="border border-white/10 bg-panel px-3.5 py-3">

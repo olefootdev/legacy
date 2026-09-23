@@ -126,6 +126,17 @@ export const TEXTOS = {
   carregandoLista: { pt: 'Buscando na Solana…', en: 'Reading from Solana…' },
   naoDeuLista:     { pt: 'Não consegui falar com a Solana agora.', en: 'Could not reach Solana right now.' },
   voltar:          { pt: 'Voltar', en: 'Back' },
+
+  // --- entrada na tela de conexão ---
+  entrar:          { pt: 'Entrar', en: 'Log in' },
+  entrarTitulo:    { pt: 'Entrar na sua\nOLEWALLET', en: 'Log in to your\nOLEWALLET' },
+  entrarTexto:     { pt: 'Sua carteira está neste aparelho, trancada. A senha abre — e só depois disso você decide se assina.',
+                     en: 'Your wallet is on this device, locked. The password opens it — only then do you decide whether to sign.' },
+  quaseLa:         { pt: 'Quase lá', en: 'Almost there' },
+  abraPeloJogo:    { pt: 'Não identifiquei quem pediu a conexão. Isso acontece quando esta página é aberta direto, em vez de pelo botão OLEWALLET dentro do jogo. Abra por lá e a assinatura aparece aqui.',
+                     en: 'I could not identify who requested the connection. That happens when this page is opened directly instead of through the OLEWALLET button inside the game. Open it from there and the request shows up here.' },
+  conferindo:      { pt: 'conferindo quem pediu…', en: 'checking who is asking…' },
+  pediuConexao:    { pt: 'pediu para conectar', en: 'is asking to connect' },
 } as const satisfies Dicionario<string>;
 
 export type ChaveTexto = keyof typeof TEXTOS;
