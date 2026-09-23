@@ -7,8 +7,11 @@
     "directory": "./dist",
     "not_found_handling": "single-page-application"
   }
-  // Domínio: apontar olefoot.com para este Worker no painel Cloudflare
+  // Domínio: apontar dex.olefoot.com para este Worker no painel Cloudflare
   // (Workers & Pages → olefoot-dex → Settings → Domains & Routes).
+  //
+  // O host precisa entrar TAMBÉM no CORS_ORIGIN do Railway, senão o saldo não
+  // carrega — é a única chamada de rede que esta origem faz.
   //
   // SEM Worker de propósito: o REVELA tem um porque precisa injetar meta tag
   // por rota. Aqui é o contrário — quanto menos código roda nesta origem,

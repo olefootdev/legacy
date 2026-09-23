@@ -26,19 +26,37 @@
  * público, tudo inútil pra quem interceptar.
  */
 
-/** Origens que podem PEDIR uma assinatura à carteira. Lista fechada. */
+/**
+ * Origens que podem PEDIR uma assinatura à carteira.
+ *
+ * MÍNIMA de propósito. Cada entrada aqui é um site que, se for comprometido,
+ * consegue abrir um pedido de vínculo. `olefoot.com` e `www.olefoot.com`
+ * estavam nesta lista e saíram: não pedem assinatura nenhuma, e origem que não
+ * pede não entra. Só se acrescenta quando existir um pedinte de verdade.
+ *
+ * Comparação EXATA — nunca `includes`, nunca `endsWith`. O self-test tem casos
+ * (`game.olefoot.com.evil.com`, `evil-game.olefoot.com`) que existem pra impedir
+ * que alguém "simplifique" isso um dia.
+ */
 export const ORIGENS_QUE_PODEM_PEDIR: readonly string[] = [
   'https://game.olefoot.com',
-  'https://olefoot.com',
-  'https://www.olefoot.com',
   'http://localhost:5173',
   'http://localhost:4173',
 ];
 
-/** Onde a carteira mora. O jogo só aceita resposta vinda daqui. */
+/**
+ * Onde a carteira mora: `dex.olefoot.com`. O jogo só aceita resposta vinda
+ * daqui.
+ *
+ * Subdomínio do mesmo domínio do jogo, e isso basta pro que importa:
+ * localStorage é isolado POR ORIGEM, então o cofre de dex.olefoot.com não é
+ * legível por game.olefoot.com nem o contrário. O que um subdomínio não dá, e
+ * um domínio separado daria, é distância de um eventual subdomain takeover na
+ * vizinhança — risco menor, anotado de propósito em vez de esquecido.
+ */
 export const ORIGEM_DA_CARTEIRA: string =
   (typeof import.meta !== 'undefined' && (import.meta as { env?: Record<string, string> }).env?.VITE_OLEWALLET_ORIGIN) ||
-  'https://olefoot.com';
+  'https://dex.olefoot.com';
 
 export function origemPermitida(origem: string | null | undefined): boolean {
   if (!origem) return false;

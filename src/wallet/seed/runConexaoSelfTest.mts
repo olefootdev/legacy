@@ -56,6 +56,12 @@ console.log('\n🤝 conexão — quem pode pedir, e o que a carteira aceita ouvi
   check('localhost do dev pode pedir', origemPermitida('http://localhost:5173'));
   check('site qualquer NÃO pode', !origemPermitida('https://evil.com'));
 
+  // Saíram da lista em 2026-09-23 por não pedirem assinatura nenhuma. Ficam
+  // aqui como teste pra não voltarem sem alguém decidir que voltam.
+  check('olefoot.com (site) NÃO pede assinatura', !origemPermitida('https://olefoot.com'));
+  check('www.olefoot.com NÃO pede assinatura', !origemPermitida('https://www.olefoot.com'));
+  check('a própria carteira não consta como pedinte', !origemPermitida('https://dex.olefoot.com'));
+
   // O ataque clássico de lista por substring. A comparação é exata; estes
   // testes existem pra ninguém "otimizar" pra `includes()` um dia.
   check('sufixo colado no domínio NÃO passa', !origemPermitida('https://game.olefoot.com.evil.com'));
