@@ -27,6 +27,13 @@ import {
   ratear,
   type Rede,
 } from './harvestSplit.js';
+import {
+  planejarAporte,
+  planejarColheita,
+  planejarMarcacao,
+  planejarResgate,
+  type Fundo,
+} from './vaultStore.js';
 
 let pass = 0;
 let fail = 0;
@@ -199,6 +206,78 @@ check('as fatias somam 100%', FATIAS.reduce((s, f) => s + f.bps, 0) === BPS_TOTA
 recusa('rateio sem depositante é recusado', () => ratear(SOL, { ...redeCompleta, depositante: '' }));
 recusa('rateio sem tesouraria é recusado', () => ratear(SOL, { ...redeCompleta, casa: '' }));
 recusa('colheita negativa é recusada', () => ratear(-1n, redeCompleta));
+
+console.log('\n🪡 vaultStore — o planejador é o que vai pro banco\n');
+
+const fundoCom = (cotas: bigint, patrim: bigint): Fundo => ({
+  id: 'f', slug: 'sol-lp', ativo: 'SOL', decimais: 9, versao: 7n,
+  livro: { cotasEmitidas: cotas, patrimonio: patrim },
+});
+
+// P1 — o aporte SOMA na posição, não substitui. Trocar isso apaga o saldo de quem
+// já estava dentro, e o banco aceitaria porque a soma continuaria fechando.
+{
+  const f = fundoCom(100n * SOL * MICRO_POR_COTA, 100n * SOL);
+  const jaTinha = 30n * SOL * MICRO_POR_COTA;
+  const plano = planejarAporte(f, EU, 10n * SOL, jaTinha, 'pix-123');
+  const pos = plano.posicoes[0];
+  check('aporte soma na posição existente', pos?.cotas === (jaTinha + plano.cotasEmitidas).toString());
+  check('aporte anota a referência no ledger', plano.ledger[0]?.ref === 'pix-123' && plano.ledger[0]?.tipo === 'aporte');
+  check('aporte não mexe no patrimônio além do que entrou', plano.livro.patrimonio === 110n * SOL);
+}
+
+// P2 — ninguém saca a cota do vizinho, mesmo o fundo tendo saldo de sobra.
+{
+  const f = fundoCom(100n * SOL * MICRO_POR_COTA, 100n * SOL);
+  recusa('resgate acima da própria posição é recusado',
+    () => planejarResgate(f, EU, 50n * SOL * MICRO_POR_COTA, 10n * SOL * MICRO_POR_COTA));
+  const plano = planejarResgate(f, EU, 10n * SOL * MICRO_POR_COTA, 10n * SOL * MICRO_POR_COTA);
+  check('sacar tudo deixa a posição em zero (o banco apaga a linha)', plano.posicoes[0]?.cotas === '0');
+}
+
+// P3 — marcação mexe em patrimônio e em nada mais.
+{
+  const f = fundoCom(100n * SOL * MICRO_POR_COTA, 100n * SOL);
+  const plano = planejarMarcacao(f, 137n * SOL, 'tick diário');
+  check('marcação não emite nem queima cota', plano.livro.cotasEmitidas === f.livro.cotasEmitidas);
+  check('marcação não toca em posição', plano.posicoes.length === 0);
+}
+
+// P4 — A IDENTIDADE DA COLHEITA: o patrimônio cai SÓ pelo que sai do fundo.
+// Se cair pela colheita inteira, o reinvestido some do livro e ninguém percebe:
+// o rateio continua fechando, as posições continuam batendo, e o NAV encolhe.
+{
+  const f = fundoCom(100n * SOL * MICRO_POR_COTA, 100n * SOL);
+  const plano = planejarColheita(f, redeDeHoje, 10n * SOL);
+  check('aPagar + reinvestido = colheita', plano.aPagar + plano.rateio.reinvestido === 10n * SOL);
+  check('reinvestido é 15% com a árvore de hoje', plano.rateio.reinvestido === 15n * SOL / 10n);
+  check('patrimônio cai só pelo que sai', plano.livro.patrimonio === 100n * SOL - plano.aPagar);
+  check('colheita não emite cota', plano.livro.cotasEmitidas === f.livro.cotasEmitidas);
+}
+
+// P5 — e o reinvestido vira NAV de verdade pra quem ficou.
+{
+  const f = fundoCom(100n * SOL * MICRO_POR_COTA, 100n * SOL);
+  const plano = planejarColheita(f, redeDeHoje, 10n * SOL);
+  const vale = resgatar(plano.livro, f.livro.cotasEmitidas).unidadesPagas;
+  check('cotista único resgata 91,5 SOL depois da colheita', vale === 915n * SOL / 10n, `deu ${vale}`);
+}
+
+// P6 — sem rede nenhuma, 25% não sai do fundo.
+{
+  const f = fundoCom(100n * SOL * MICRO_POR_COTA, 100n * SOL);
+  const plano = planejarColheita(f, redeSemRede, 20n * SOL);
+  check('sem rede: 5 dos 20 SOL ficam no livro', plano.rateio.reinvestido === 5n * SOL && plano.aPagar === 15n * SOL);
+  check('e o ledger explica cada vaga pelo nome', plano.ledger.some((l) => l.tipo === 'reinvestimento' && (l.motivo ?? '').includes('MyClub')));
+}
+
+// P7 — recusas.
+{
+  const f = fundoCom(100n * SOL * MICRO_POR_COTA, 100n * SOL);
+  recusa('colher acima do patrimônio é recusado', () => planejarColheita(f, redeDeHoje, 101n * SOL));
+  recusa('colheita zero é recusada', () => planejarColheita(f, redeDeHoje, 0n));
+  recusa('aporte zero é recusado', () => planejarAporte(f, EU, 0n, 0n));
+}
 
 console.log(`\n${fail === 0 ? '🟢' : '🔴'} ${pass} passaram, ${fail} falharam\n`);
 process.exit(fail === 0 ? 0 : 1);
