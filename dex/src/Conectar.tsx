@@ -30,6 +30,7 @@ import {
 import { buildSolanaLinkMessage } from '@/wallet/solanaLinkMessage';
 import { assinar } from '@/wallet/seed/derive';
 import { useCarteira } from '@/wallet/seed/useCarteira';
+import CriarOuRestaurar, { type Passo } from './CriarOuRestaurar';
 import { BOTAO_LINHA, BOTAO_VOLT, Barra, CAMPO } from './ui';
 
 const paraB64 = (b: Uint8Array): string => {
@@ -47,6 +48,7 @@ export default function Conectar() {
   const [senha, setSenha] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [fim, setFim] = useState<Fim>(null);
+  const [passo, setPasso] = useState<Passo>('inicio');
   const janela = useRef<Window | null>(null);
 
   // O aperto de mão: avisa que carregou e espera o "olá" pra saber QUEM é.
@@ -145,16 +147,45 @@ export default function Conectar() {
     );
   }
 
+  /**
+   * Sem carteira neste aparelho — e é aqui que estava o beco sem saída: a
+   * versão anterior mandava a pessoa criar em outro lugar e "voltar a pedir a
+   * conexão pelo jogo". Ela clicou em OLEWALLET justamente porque decidiu
+   * querer uma; mandá-la recomeçar é perder a pessoa no exato momento do sim.
+   *
+   * Agora cria aqui dentro, com o pedido esperando. Quando a carteira nasce, o
+   * estado muda e a própria tela de assinar aparece — sem voltar pro jogo.
+   */
   if (w.estado === 'sem-cofre') {
+    const naFrase = passo !== 'inicio';
     return (
-      <Moldura>
-        <p className="font-display text-[26px] uppercase leading-[1.1]">Sem carteira aqui</p>
-        <p className="text-[13px] leading-relaxed text-cimento">
-          Crie ou restaure uma OLEWALLET neste aparelho e volte a pedir a conexão pelo jogo.
-        </p>
-        <a href="/" className={`${BOTAO_VOLT} mt-2`}>Criar carteira</a>
-        <button type="button" className={BOTAO_LINHA} onClick={recusar}>Cancelar</button>
-      </Moldura>
+      <div className="flex min-h-full flex-col bg-asfalto">
+        <Barra
+          titulo={passo === 'frase' ? 'SUA FRASE' : passo === 'restaurar' ? 'RESTAURAR' : passo === 'senha' ? 'SENHA' : 'CONECTAR'}
+          onVoltar={naFrase ? () => setPasso(passo === 'senha' ? 'frase' : 'inicio') : undefined}
+        />
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3.5 px-4 pb-8 pt-4">
+          {!naFrase && (
+            <div className="border border-white/10 bg-panel px-3.5 py-3">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cimento">Quem está pedindo</p>
+              <p className="mt-1 font-mono text-[14px] text-white">{quemPediu.replace(/^https?:\/\//, '')}</p>
+            </div>
+          )}
+          <CriarOuRestaurar
+            w={w}
+            passo={passo}
+            setPasso={setPasso}
+            chamada={{
+              titulo: <>Criar sua<br />OLEWALLET</>,
+              texto:
+                'Seu time, seu EXP e suas compras continuam no jogo, do jeito que estão. A carteira é só pro que vive na Solana — e ela nasce aqui, agora, sem sair desta janela.',
+            }}
+          />
+          {!naFrase && (
+            <button type="button" className={BOTAO_LINHA} onClick={recusar}>Agora não</button>
+          )}
+        </div>
+      </div>
     );
   }
 

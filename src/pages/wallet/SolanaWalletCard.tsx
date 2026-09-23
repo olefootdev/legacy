@@ -96,14 +96,24 @@ export function SolanaWalletCard() {
             </p>
           ) : (
             <p className="mt-1 truncate text-[13px] text-giz">
-              {link ? 'Confirme com a carteira' : 'Vincule sua carteira'}
+              {link ? 'Confirme com a carteira' : 'Carteira na Solana'}
             </p>
           )}
         </div>
       </div>
 
       {!verified && (
-        <div className="mt-3 flex flex-wrap gap-2">
+        /* A fronteira, dita onde a dúvida nasce: quem só quer jogar não precisa
+           disto. Sem esta linha, o card parece uma etapa obrigatória do cadastro
+           — e a carteira é a única parte do produto que a pessoa pode perder
+           sozinha. Ninguém deve ser empurrado pra ela. */
+        <p className="mt-2 text-[12px] leading-relaxed text-cimento">
+          Opcional. Seu time, seu EXP e suas compras continuam funcionando sem ela.
+        </p>
+      )}
+
+      {!verified && (
+        <div className="mt-2.5 flex flex-wrap gap-2">
           {oleWalletDisponivel() && (
             <button
               type="button"
