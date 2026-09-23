@@ -64,7 +64,15 @@ export async function conectarOleWallet(): Promise<ResultadoOleWallet> {
   const url = urlDoPedido(ORIGEM_DA_CARTEIRA, { uid: sessao.user.id, issuedAt });
 
   // Tem que ser aberto DENTRO do clique, senão o navegador bloqueia o popup.
-  const janela = window.open(url, 'olewallet', 'width=420,height=760,noopener=no');
+  //
+  // ⚠️ NÃO acrescente `noopener` aqui, nem como `noopener=no`. Eu escrevi
+  // exatamente isso na primeira versão querendo dizer "não aplique noopener", e
+  // é ambíguo: o parser de features vê o TOKEN e pode aplicar mesmo assim. Com
+  // noopener a janela filha tem `window.opener === null`, o aperto de mão nunca
+  // começa, e a carteira fica pra sempre em "Confirmando quem pediu…" — porque
+  // ela se recusa, com razão, a mostrar botão de assinar sem saber quem pediu.
+  // Sem passar nada, o opener é preservado, que é o que este fluxo precisa.
+  const janela = window.open(url, 'olewallet', 'width=420,height=760');
   if (!janela) {
     return { ok: false, address: null, error: 'O navegador bloqueou a janela. Libere popups para este site.' };
   }

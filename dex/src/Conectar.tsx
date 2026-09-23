@@ -31,6 +31,9 @@ import { buildSolanaLinkMessage } from '@/wallet/solanaLinkMessage';
 import { assinar } from '@/wallet/seed/derive';
 import { useCarteira } from '@/wallet/seed/useCarteira';
 import CriarOuRestaurar, { type Passo } from './CriarOuRestaurar';
+import { tradutor } from '@/i18n/idioma';
+import { useIdioma } from '@/i18n/useIdioma';
+import { TEXTOS } from './textos';
 import { BOTAO_LINHA, BOTAO_VOLT, Barra, CAMPO } from './ui';
 
 const paraB64 = (b: Uint8Array): string => {
@@ -43,6 +46,8 @@ type Fim = 'assinado' | 'recusado' | null;
 
 export default function Conectar() {
   const w = useCarteira();
+  const [idioma] = useIdioma();
+  const t = tradutor(TEXTOS, idioma);
   const [pedido] = useState<PedidoDeAssinatura | null>(() => lerPedido(window.location.search));
   const [quemPediu, setQuemPediu] = useState<string | null>(null);
   const [senha, setSenha] = useState('');
@@ -79,7 +84,7 @@ export default function Conectar() {
   };
 
   const recusar = () => {
-    responder({ tipo: 'recusado', motivo: 'você recusou' });
+    responder({ tipo: 'recusado', motivo: t('vocêRecusou') });
     setFim('recusado');
     setTimeout(() => window.close(), 800);
   };
@@ -102,12 +107,12 @@ export default function Conectar() {
   const destrancar = async () => {
     setMsg(null);
     try { await w.destrancar(senha); setSenha(''); }
-    catch (e) { setMsg(e instanceof Error ? e.message : 'não deu'); }
+    catch (e) { setMsg(e instanceof Error ? e.message : t('naoDeu')); }
   };
 
   const Moldura = ({ children }: { children: React.ReactNode }) => (
     <div className="flex min-h-full flex-col bg-asfalto">
-      <Barra titulo="CONECTAR" />
+      <Barra titulo={t('tituloConectar')} />
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 pb-8 pt-5">{children}</div>
     </div>
   );
@@ -115,8 +120,8 @@ export default function Conectar() {
   if (fim) {
     return (
       <Moldura>
-        <p className="font-display text-[26px] uppercase">{fim === 'assinado' ? 'Assinado' : 'Recusado'}</p>
-        <p className="text-[13px] text-cimento">Pode fechar esta janela.</p>
+        <p className="font-display text-[26px] uppercase">{fim === 'assinado' ? t('assinado') : t('recusado')}</p>
+        <p className="text-[13px] text-cimento">{t('podeFechar')}</p>
       </Moldura>
     );
   }
@@ -124,12 +129,9 @@ export default function Conectar() {
   if (!pedido) {
     return (
       <Moldura>
-        <p className="font-display text-[26px] uppercase">Pedido inválido</p>
-        <p className="text-[13px] leading-relaxed text-cimento">
-          Este endereço só funciona quando o pedido parte do jogo — e vale por 5 minutos.
-          Abra a Carteira no jogo e escolha OLEWALLET.
-        </p>
-        <a href="/" className={`${BOTAO_LINHA} mt-2`}>Ir para a carteira</a>
+        <p className="font-display text-[26px] uppercase">{t('pedidoInvalido')}</p>
+        <p className="text-[13px] leading-relaxed text-cimento">{t('pedidoInvTexto')}</p>
+        <a href="/" className={`${BOTAO_LINHA} mt-2`}>{t('irParaCarteira')}</a>
       </Moldura>
     );
   }
@@ -138,10 +140,8 @@ export default function Conectar() {
     return (
       <Moldura>
         <p className="font-mono text-[11px] text-poeira">#conectar</p>
-        <p className="font-display text-[26px] uppercase leading-[1.1]">Confirmando quem pediu…</p>
-        <p className="text-[13px] leading-relaxed text-cimento">
-          A carteira não mostra nada pra assinar antes de o navegador confirmar de onde veio o pedido.
-        </p>
+        <p className="font-display text-[26px] uppercase leading-[1.1]">{t('confirmando')}</p>
+        <p className="text-[13px] leading-relaxed text-cimento">{t('confirmandoTexto')}</p>
         {msg && <p className="text-[12px] text-baixa">{msg}</p>}
       </Moldura>
     );
@@ -161,13 +161,13 @@ export default function Conectar() {
     return (
       <div className="flex min-h-full flex-col bg-asfalto">
         <Barra
-          titulo={passo === 'frase' ? 'SUA FRASE' : passo === 'restaurar' ? 'RESTAURAR' : passo === 'senha' ? 'SENHA' : 'CONECTAR'}
+          titulo={passo === 'frase' ? t('tituloFrase') : passo === 'restaurar' ? t('tituloRestaurar') : passo === 'senha' ? t('tituloSenha') : t('tituloConectar')}
           onVoltar={naFrase ? () => setPasso(passo === 'senha' ? 'frase' : 'inicio') : undefined}
         />
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3.5 px-4 pb-8 pt-4">
           {!naFrase && (
             <div className="border border-white/10 bg-panel px-3.5 py-3">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cimento">Quem está pedindo</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cimento">{t('quemPediu')}</p>
               <p className="mt-1 font-mono text-[14px] text-white">{quemPediu.replace(/^https?:\/\//, '')}</p>
             </div>
           )}
@@ -175,14 +175,10 @@ export default function Conectar() {
             w={w}
             passo={passo}
             setPasso={setPasso}
-            chamada={{
-              titulo: <>Criar sua<br />OLEWALLET</>,
-              texto:
-                'Seu time, seu EXP e suas compras continuam no jogo, do jeito que estão. A carteira é só pro que vive na Solana — e ela nasce aqui, agora, sem sair desta janela.',
-            }}
+            chamada={{ titulo: t('criarAquiTitulo'), texto: t('criarAquiTexto') }}
           />
           {!naFrase && (
-            <button type="button" className={BOTAO_LINHA} onClick={recusar}>Agora não</button>
+            <button type="button" className={BOTAO_LINHA} onClick={recusar}>{t('agoraNao')}</button>
           )}
         </div>
       </div>
@@ -192,19 +188,19 @@ export default function Conectar() {
   if (w.estado === 'trancada') {
     return (
       <Moldura>
-        <p className="font-mono text-[11px] text-poeira">#trancada</p>
-        <p className="font-display text-[26px] uppercase leading-[1.1]">Sua senha</p>
+        <p className="font-mono text-[11px] text-poeira">{t('trancada')}</p>
+        <p className="font-display text-[26px] uppercase leading-[1.1]">{t('suaSenha')}</p>
         <p className="text-[13px] text-cimento">
-          <span className="font-mono text-white">{quemPediu.replace(/^https?:\/\//, '')}</span> quer vincular sua carteira.
+          <span className="font-mono text-white">{quemPediu.replace(/^https?:\/\//, '')}</span> → {t('vincularTitulo').toLowerCase()}
         </p>
-        <input type="password" className={CAMPO} placeholder="senha" value={senha} autoFocus
+        <input type="password" className={CAMPO} placeholder={t('senha')} value={senha} autoFocus
           onChange={(e) => setSenha(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void destrancar(); }} />
         {(msg ?? w.erro) && <p className="text-[12px] text-baixa">{msg ?? w.erro}</p>}
         <button type="button" className={BOTAO_VOLT} disabled={w.ocupado || !senha} onClick={() => void destrancar()}>
-          {w.ocupado ? 'Abrindo…' : 'Abrir carteira'}
+          {w.ocupado ? t('abrindo') : t('abrirCarteira')}
         </button>
-        <button type="button" className={BOTAO_LINHA} onClick={recusar}>Cancelar</button>
+        <button type="button" className={BOTAO_LINHA} onClick={recusar}>{t('agoraNao')}</button>
       </Moldura>
     );
   }
@@ -213,32 +209,31 @@ export default function Conectar() {
     return (
       <Moldura>
         <p className="font-mono text-[11px] text-poeira">#conectar</p>
-        <h1 className="font-display text-[28px] uppercase leading-[1.1]">Vincular sua carteira</h1>
+        <h1 className="font-display text-[28px] uppercase leading-[1.1]">{t('vincularTitulo')}</h1>
 
         <div className="border border-white/10 bg-panel px-3.5 py-3">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cimento">Quem está pedindo</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cimento">{t('quemPediu')}</p>
           <p className="mt-1 font-mono text-[14px] text-white">{quemPediu.replace(/^https?:\/\//, '')}</p>
         </div>
 
         <div className="border border-white/10 bg-panel px-3.5 py-3">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cimento">Sua carteira</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cimento">{t('suaCarteira')}</p>
           <p className="mt-1 font-mono text-[13px]" style={{ wordBreak: 'break-all' }}>{w.chave.endereco}</p>
         </div>
 
         <div className="border-l-[3px] border-alta bg-sheet px-3.5 py-3">
           <p className="text-[12px] leading-relaxed text-giz">
-            Isto é uma <strong className="text-white">assinatura</strong>, não uma transação.
-            Não move fundos, não custa taxa, e o texto assinado é montado aqui — não por quem pediu.
+            {t('ehAssinaturaA')}<strong className="text-white">{t('ehAssinaturaB')}</strong>{t('ehAssinaturaC')}
           </p>
         </div>
 
         <div className="mt-auto flex flex-col gap-2.5">
-          <button type="button" className={BOTAO_VOLT} onClick={assinarEDevolver}>Assinar e vincular</button>
-          <button type="button" className={BOTAO_LINHA} onClick={recusar}>Recusar</button>
+          <button type="button" className={BOTAO_VOLT} onClick={assinarEDevolver}>{t('assinarEVincular')}</button>
+          <button type="button" className={BOTAO_LINHA} onClick={recusar}>{t('recusar')}</button>
         </div>
       </Moldura>
     );
   }
 
-  return <Moldura><p className="text-[13px] text-cimento">Carregando…</p></Moldura>;
+  return <Moldura><p className="text-[13px] text-cimento">{t('carregando')}</p></Moldura>;
 }
