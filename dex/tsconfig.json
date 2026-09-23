@@ -1,0 +1,22 @@
+{
+  // strict LIGADO, ao contrário do tsconfig.json do jogo. Esta origem guarda o
+  // cofre; não tem por que ela andar no regime frouxo do app grande.
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "types": ["vite/client"],
+    "baseUrl": "..",
+    "paths": { "@/*": ["./src/*"], "~dex/*": ["./dex/src/*"] }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts", "../src/wallet/seed/**/*.ts"]
+}

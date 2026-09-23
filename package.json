@@ -9,7 +9,7 @@
     "builder": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit && tsc -p tsconfig.carteira.json",
+    "lint": "tsc --noEmit && tsc -p tsconfig.carteira.json && tsc --noEmit -p dex/tsconfig.json",
     "sync:smartfield": "cp smartfield/match_simulator.py smartfield/xg_model.py smartfield/narrative_weighter.py server/smartfield/",
     "test:no-bro-profit": "tsx src/game/runNoBroProfitSelfTest.mts",
     "test:exchange-refund": "tsx src/game/runExchangeRefundSelfTest.mts",
@@ -103,7 +103,12 @@
     "test:vault-book": "tsx server/src/lib/runVaultBookSelfTest.mts",
     "test:wallet-seed": "tsx src/wallet/seed/runSeedSelfTest.mts",
     "test:wallet-cofre": "tsx src/wallet/seed/runCofreSelfTest.mts",
-    "lint:carteira": "tsc -p tsconfig.carteira.json"
+    "lint:carteira": "tsc -p tsconfig.carteira.json",
+    "dev:dex": "vite --config dex/vite.config.ts",
+    "build:dex": "vite build --config dex/vite.config.ts",
+    "lint:dex": "tsc --noEmit -p dex/tsconfig.json",
+    "deploy:dex": "VITE_OLEFOOT_API_URL=https://legacy-production-de1e.up.railway.app npm run build:dex && wrangler deploy -c dex/wrangler.jsonc",
+    "test:wallet-conexao": "tsx src/wallet/seed/runConexaoSelfTest.mts"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",

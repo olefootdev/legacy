@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
+import { conectarOleWallet, oleWalletDisponivel } from '@/supabase/oleWalletConnect';
 import {
   connectAndLinkSolanaWallet,
   fetchMyLinkedSolanaWallet,
@@ -42,6 +43,27 @@ export function SolanaWalletCard() {
     };
   }, []);
 
+  /**
+   * A OLEWALLET não é extensão: ela mora em olefoot.com e abre numa janela.
+   * Fica em PRIMEIRO na lista de propósito — é a nossa, e é a única que quem
+   * nunca teve carteira consegue criar na hora.
+   */
+  const onLinkOleWallet = async () => {
+    if (busy) return;
+    setBusy('OLEWALLET');
+    setError(null);
+    try {
+      const r = await conectarOleWallet();
+      if (!r.ok || !r.address) {
+        setError(r.error ?? 'Não foi possível vincular a OLEWALLET.');
+        return;
+      }
+      setLink({ walletAddress: r.address, verified: true, linkedAt: new Date().toISOString() });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const onLink = async (option: SolanaWalletOption) => {
     if (busy) return;
     setBusy(option.name);
@@ -81,8 +103,26 @@ export function SolanaWalletCard() {
       </div>
 
       {!verified && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {oleWalletDisponivel() && (
+            <button
+              type="button"
+              onClick={() => void onLinkOleWallet()}
+              disabled={busy != null}
+              className="btn-primary px-3 py-1.5 text-[12px] disabled:pointer-events-none disabled:opacity-40"
+            >
+              <span className="btn-primary-inner flex items-center gap-1.5">
+                <img src="/brand/olefoot-icone-yellow-01.svg" alt="" className="h-4 w-4" />
+                {busy === 'OLEWALLET' ? 'Aguardando…' : 'OLEWALLET'}
+              </span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {!verified && (
         wallets.length > 0 ? (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             {wallets.map((w) => (
               <button
                 key={w.name}
@@ -100,8 +140,8 @@ export function SolanaWalletCard() {
           </div>
         ) : (
           <div className="mt-2 space-y-1">
-            <p className="truncate text-[12px] text-cimento">Nenhuma carteira Solana neste navegador</p>
-            <p className="truncate text-[12px] text-poeira">No celular, abra o jogo pelo app da Phantom ou da MetaMask</p>
+            <p className="text-[12px] text-cimento">Nenhuma extensão de carteira neste navegador</p>
+            <p className="text-[12px] text-poeira">Use a OLEWALLET acima — ou abra o jogo pelo app da Phantom ou da MetaMask</p>
           </div>
         )
       )}

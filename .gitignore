@@ -89,3 +89,7 @@ olefoot-db/
 # Documentação oficial da Solana clonada como referência local (35M, sem histórico git)
 # Regenerar: docs/SOLANA_DOCS_INDEX.md explica como
 vendor/solana-docs/
+
+# cache do Vite da OLEWALLET (dex/) — próprio, pra não brigar com o do jogo
+dex/.vite
+dex/dist

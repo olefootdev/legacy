@@ -1,0 +1,16 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "olefoot-dex",
+  "compatibility_date": "2026-04-13",
+  "observability": { "enabled": true, "head_sampling_rate": 0.25 },
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+  // Domínio: apontar olefoot.com para este Worker no painel Cloudflare
+  // (Workers & Pages → olefoot-dex → Settings → Domains & Routes).
+  //
+  // SEM Worker de propósito: o REVELA tem um porque precisa injetar meta tag
+  // por rota. Aqui é o contrário — quanto menos código roda nesta origem,
+  // melhor. É a origem que guarda o cofre.
+}
