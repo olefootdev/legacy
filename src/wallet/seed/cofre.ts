@@ -139,11 +139,31 @@ export async function abrir(cofre: Cofre, senha: string): Promise<string[]> {
 const CHAVE_LOCAL = 'olefoot.carteira.cofre.v1';
 
 /**
+ * O QUE PODE FICAR NO APARELHO: só o cofre. Mais nada.
+ *
+ * `olefoot.carteira.endereco.v1` guardava o endereço em CLARO, pra a tela
+ * trancada poder exibi-lo. Parecia inofensivo — endereço é público na
+ * blockchain —, mas o que vazava não era o endereço: era a LIGAÇÃO entre este
+ * aparelho e aquele endereço. Quem abrisse o navegador num computador
+ * compartilhado descobria de quem é a carteira sem senha nenhuma, e daí via
+ * saldo e histórico inteiros. Some daqui, e some retroativamente de quem já
+ * tinha.
+ */
+const CHAVES_LEGADAS = ['olefoot.carteira.endereco.v1'] as const;
+
+function limparLegado(): void {
+  for (const k of CHAVES_LEGADAS) {
+    try { localStorage.removeItem(k); } catch { /* segue */ }
+  }
+}
+
+/**
  * localStorage pode estourar (aba anônima, site bloqueado) e pode voltar
  * vazio. Quem chama tem que aguentar os dois — e por isso `ler` devolve null
  * em vez de explodir.
  */
 export function guardar(cofre: Cofre): void {
+  limparLegado();
   try {
     localStorage.setItem(CHAVE_LOCAL, JSON.stringify(cofre));
   } catch {
@@ -152,6 +172,7 @@ export function guardar(cofre: Cofre): void {
 }
 
 export function ler(): Cofre | null {
+  limparLegado();
   try {
     const cru = localStorage.getItem(CHAVE_LOCAL);
     if (!cru) return null;
@@ -168,5 +189,6 @@ export function existeCofre(): boolean {
 
 /** Apaga o cofre DESTE aparelho. Sem a frase escrita, não volta. */
 export function esquecer(): void {
+  limparLegado();
   try { localStorage.removeItem(CHAVE_LOCAL); } catch { /* nada a fazer */ }
 }

@@ -109,5 +109,35 @@ const frase = gerarFrase();
   memoria.clear();
 }
 
+// ⭐ A REGRA DE PRIVACIDADE, travada em teste.
+//
+// O endereço é público na blockchain, mas a LIGAÇÃO entre este aparelho e ele
+// não é: quem abre o navegador de outra pessoa não pode descobrir de quem é a
+// carteira sem a senha. Uma versão anterior guardava o endereço em claro numa
+// chave separada, e a tela trancada o exibia. Este teste existe pra isso não
+// voltar — inclusive apagando a chave antiga de quem já tinha.
+{
+  const cofre = await fechar(frase, SENHA);
+  const endereco = fraseParaChave(frase).endereco;
+
+  // alguém com a versão antiga instalada
+  memoria.set('olefoot.carteira.endereco.v1', endereco);
+  guardar(cofre);
+  check('guardar apaga o endereço em claro que a versão antiga deixou',
+    !memoria.has('olefoot.carteira.endereco.v1'));
+
+  memoria.set('olefoot.carteira.endereco.v1', endereco);
+  ler();
+  check('só de LER o cofre a chave antiga já some', !memoria.has('olefoot.carteira.endereco.v1'));
+
+  guardar(cofre);
+  const tudoNoDisco = [...memoria.entries()].map(([k, v]) => `${k}=${v}`).join('|');
+  check('NENHUMA chave no aparelho contém o endereço', !tudoNoDisco.includes(endereco),
+    tudoNoDisco.slice(0, 120));
+  check('nem a frase, nem a senha', frase.every((p) => !tudoNoDisco.includes(p)) && !tudoNoDisco.includes(SENHA));
+  esquecer();
+  memoria.clear();
+}
+
 console.log(`\n${fail === 0 ? '🟢' : '🔴'} ${pass} passaram, ${fail} falharam\n`);
 process.exit(fail === 0 ? 0 : 1);

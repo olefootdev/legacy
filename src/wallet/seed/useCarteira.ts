@@ -14,24 +14,20 @@ import { abrir, esquecer as esquecerCofre, fechar, guardar, ler, type Cofre } fr
 import { fraseParaChave, type ChaveSolana } from './derive.js';
 import { gerarFrase } from './mnemonic.js';
 
-/** O endereço é público: fica em claro pra tela trancada poder mostrá-lo. */
-const CHAVE_ENDERECO = 'olefoot.carteira.endereco.v1';
-
-function lerEndereco(): string | null {
-  try { return localStorage.getItem(CHAVE_ENDERECO); } catch { return null; }
-}
-function guardarEndereco(e: string): void {
-  try { localStorage.setItem(CHAVE_ENDERECO, e); } catch { /* segue sem */ }
-}
-function apagarEndereco(): void {
-  try { localStorage.removeItem(CHAVE_ENDERECO); } catch { /* segue */ }
-}
-
 export type EstadoCarteira = 'carregando' | 'sem-cofre' | 'trancada' | 'aberta';
 
 export interface Carteira {
   estado: EstadoCarteira;
-  /** Conhecido mesmo trancada — é público. */
+  /**
+   * SÓ EXISTE COM A CARTEIRA ABERTA. Nasce da chave e some quando tranca.
+   *
+   * A versão anterior guardava o endereço em claro pra mostrar na tela
+   * trancada. O raciocínio era "endereço é público" — e é, na blockchain. O que
+   * não é público é a LIGAÇÃO entre este aparelho e aquele endereço: quem
+   * abrisse o navegador de outra pessoa descobria de quem é a carteira sem
+   * senha, e daí via saldo e histórico. Ou a carteira está aberta, ou não
+   * mostra nada.
+   */
   endereco: string | null;
   /** Só quando aberta. Nunca sai daqui. */
   chave: ChaveSolana | null;
@@ -53,8 +49,8 @@ export function useCarteira(): Carteira {
   const [ocupado, setOcupado] = useState(false);
 
   useEffect(() => {
+    // `ler()` também apaga a chave legada do endereço em claro, se existir.
     const cofre = ler();
-    setEndereco(lerEndereco());
     setEstado(cofre ? 'trancada' : 'sem-cofre');
   }, []);
 
@@ -67,7 +63,6 @@ export function useCarteira(): Carteira {
       const k = fraseParaChave(palavras);
       const cofre: Cofre = await fechar(palavras, senha);
       guardar(cofre);
-      guardarEndereco(k.endereco);
       setChave(k); setEndereco(k.endereco); setEstado('aberta');
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'não consegui criar a carteira');
@@ -82,7 +77,6 @@ export function useCarteira(): Carteira {
       if (!cofre) { setEstado('sem-cofre'); return; }
       const palavras = await abrir(cofre, senha);
       const k = fraseParaChave(palavras);
-      guardarEndereco(k.endereco);
       setChave(k); setEndereco(k.endereco); setEstado('aberta');
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'não consegui abrir');
@@ -91,12 +85,13 @@ export function useCarteira(): Carteira {
   }, []);
 
   const trancar = useCallback(() => {
-    setChave(null);
+    // O endereço some junto com a chave: trancar tem que apagar a tela toda.
+    setChave(null); setEndereco(null);
     setEstado(ler() ? 'trancada' : 'sem-cofre');
   }, []);
 
   const esquecer = useCallback(() => {
-    esquecerCofre(); apagarEndereco();
+    esquecerCofre();
     setChave(null); setEndereco(null); setEstado('sem-cofre');
   }, []);
 

@@ -48,7 +48,6 @@ export default function Carteira() {
           <div>
             <p className="font-mono text-[11px] text-poeira">{t('trancada')}</p>
             <h1 className="mt-1 font-display text-[30px] uppercase leading-[1.1]">{t('suaSenha')}</h1>
-            {w.endereco && <p className="mt-1 truncate font-mono text-[12px] text-cimento">{w.endereco}</p>}
           </div>
           <input type="password" className={CAMPO} placeholder={t('senha')} value={senha} autoFocus
             onChange={(e) => setSenha(e.target.value)}

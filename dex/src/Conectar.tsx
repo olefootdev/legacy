@@ -172,7 +172,6 @@ export default function Conectar() {
         <Pedinte />
         <h1 className="mt-1 whitespace-pre-line font-display text-[30px] uppercase leading-[1.1]">{t('entrarTitulo')}</h1>
         <p className="text-[13px] leading-relaxed text-cimento">{t('entrarTexto')}</p>
-        {w.endereco && <p className="truncate font-mono text-[12px] text-poeira">{w.endereco}</p>}
         <input type="password" className={CAMPO} placeholder={t('senha')} value={senha} autoFocus
           onChange={(e) => setSenha(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void destrancar(); }} />
