@@ -81,25 +81,30 @@ console.log('\n🔤 a frase — BIP-39 com a nossa lista\n');
 }
 
 // O checksum é o que separa "12 palavras da lista" de "a frase certa".
+//
+// EXAUSTIVO E DETERMINÍSTICO de propósito: a primeira versão deste teste
+// sorteava as trocas e comparava com uma faixa de porcentagem — e piscou
+// vermelho uma vez em oito. Teste de cripto que pisca ensina a rodar de novo
+// até passar, que é o contrário do que ele serve. Aqui a frase é fixa e as
+// trocas são TODAS as 2047 palavras possíveis em cada posição: o número que
+// sai é sempre o mesmo, e se mudar, mudou o algoritmo.
 {
-  const frase = entropiaParaFrase(new Uint8Array(randomBytes(16)));
-  let recusadas = 0, tentativas = 0;
-  for (let pos = 0; pos < 12; pos++) {
-    for (let k = 0; k < 40; k++) {
-      const troca = [...frase];
-      troca[pos] = WORDLIST[Math.floor(Math.random() * 2048)] as string;
-      if (troca[pos] === frase[pos]) continue;
-      tentativas++;
-      if (!fraseValida(troca)) recusadas++;
+  const fraseFixa = entropiaParaFrase(new Uint8Array(16).fill(0x5a));
+  let testadas = 0, pegas = 0;
+  for (let pos = 0; pos < PALAVRAS_NA_FRASE; pos++) {
+    for (const outra of WORDLIST) {
+      if (outra === fraseFixa[pos]) continue;
+      const troca = [...fraseFixa];
+      troca[pos] = outra;
+      testadas++;
+      if (!fraseValida(troca)) pegas++;
     }
   }
-  const taxa = recusadas / tentativas;
-  // 4 bits de checksum ⇒ ~15/16 = 93,75% dos erros de uma palavra são pegos.
-  check('trocar 1 palavra é pego em ~94% das vezes', taxa > 0.90 && taxa < 0.98,
-    `pegou ${(taxa * 100).toFixed(1)}% de ${tentativas}`);
-
-  const invertida = [...frase].reverse();
-  check('frase na ordem errada é recusada', !fraseValida(invertida));
+  const taxa = pegas / testadas;
+  // 4 bits de checksum ⇒ 15/16 das trocas de uma palavra são pegas.
+  check(`trocar 1 palavra é pego em ${(taxa * 100).toFixed(2)}% das ${testadas} trocas possíveis`,
+    Math.abs(taxa - 15 / 16) < 0.005, `taxa=${taxa}`);
+  check('frase na ordem errada é recusada', !fraseValida([...fraseFixa].reverse()));
 }
 
 {

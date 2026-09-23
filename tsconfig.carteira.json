@@ -1,0 +1,24 @@
+{
+  // O tsconfig.json do app NÃO liga `strict` — logo `npm run lint` checa a
+  // carteira sem strictNullChecks, e foi assim que uma união discriminada
+  // textbook deixou de estreitar no ramo `else` sem ninguém notar.
+  //
+  // Cripto não pode andar nesse regime. Este arquivo checa SÓ a pasta da
+  // carteira, com strict ligado, e entra no `npm run lint`. Se um dia o app
+  // inteiro virar strict, este arquivo deixa de ter razão de existir.
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "paths": { "@/*": ["./src/*"] },
+    "noEmit": true
+  },
+  "include": ["src/wallet/seed/**/*.ts", "src/wallet/seed/**/*.mts", "src/vite-env.d.ts"]
+}

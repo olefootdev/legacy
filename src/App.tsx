@@ -138,6 +138,7 @@ const LiveAuctionsPage = lazy(() =>
 );
 const Store = lazy(() => import('./pages/Store').then((m) => ({ default: m.Store })));
 const Wallet = lazy(() => import('./pages/Wallet').then((m) => ({ default: m.Wallet })));
+const Carteira = lazy(() => import('./pages/Carteira'));
 const ReferralTab = lazy(() => import('./pages/wallet/ReferralTab').then((m) => ({ default: m.ReferralTab })));
 const CollectionTab = lazy(() => import('./pages/wallet/CollectionTab').then((m) => ({ default: m.CollectionTab })));
 const ExtractTab = lazy(() => import('./pages/wallet/ExtractTab').then((m) => ({ default: m.ExtractTab })));
@@ -512,6 +513,17 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/cadastro/:inviteCode" element={<Cadastro />} />
           </Route>
           <Route path="/reset-password" element={<ResetPassword />} />
+          {/* CARTEIRA — standalone, fora do GameShell de propósito: é a tela onde a
+              frase de 12 palavras aparece, e ela não divide espaço com nav,
+              notificação e barra de baixo. */}
+          <Route
+            path="/carteira"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <Carteira />
+              </Suspense>
+            }
+          />
           {/* PLAYERVIP — cockpit standalone da lenda (auth própria por link mágico, sem GameShell). */}
           <Route
             path="/playervip"

@@ -12,7 +12,7 @@
 import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { rateLimit } from '../lib/rateLimit.js';
-import { verifySolanaLinkProof } from '../lib/solanaLinkProof.js';
+import { solanaAddressToPublicKey, verifySolanaLinkProof } from '../lib/solanaLinkProof.js';
 
 export const solanaWalletRoutes = new Hono();
 
@@ -84,4 +84,48 @@ solanaWalletRoutes.post('/api/wallet/solana/link', rateLimit(10), async (c) => {
   }
 
   return c.json({ ok: true, link: data });
+});
+
+/**
+ * GET /api/wallet/solana/saldo/:endereco
+ *
+ * O saldo passa por aqui, e não pelo navegador falando direto com um RPC, por
+ * dois motivos concretos: o cliente não carrega chave de RPC nenhuma, e a CSP
+ * do jogo não precisa abrir `connect-src` pra um domínio de terceiro — que é
+ * exatamente o tipo de exceção que enfraquece a política justo na tela onde a
+ * frase de 12 palavras aparece.
+ *
+ * Público: endereço Solana não é segredo, e o saldo dele é leitura pública na
+ * blockchain de qualquer jeito. Mas o endereço é VALIDADO antes de virar
+ * requisição — senão isto vira um proxy aberto pra qualquer string.
+ */
+solanaWalletRoutes.get('/api/wallet/solana/saldo/:endereco', rateLimit(30), async (c) => {
+  const endereco = c.req.param('endereco');
+  const pub = solanaAddressToPublicKey(endereco);
+  if (!pub) return c.json({ ok: false, error: 'endereço Solana inválido' }, 400);
+
+  const rpc = process.env.SOLANA_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
+  try {
+    const r = await fetch(rpc, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [endereco] }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) return c.json({ ok: false, error: `RPC respondeu ${r.status}` }, 502);
+    const j = await r.json() as { result?: { value?: number }; error?: { message?: string } };
+    if (j.error) return c.json({ ok: false, error: j.error.message ?? 'RPC recusou' }, 502);
+
+    const lamports = j.result?.value ?? 0;
+    return c.json(
+      { ok: true, endereco, lamports: String(lamports), sol: lamports / 1e9 },
+      200,
+      // Endereço novo tem saldo 0 e vai ser consultado toda hora; 15s de cache
+      // segura a enxurrada sem a pessoa achar que o saldo travou.
+      { 'Cache-Control': 'public, max-age=15' },
+    );
+  } catch (e) {
+    const msg = e instanceof Error && e.name === 'TimeoutError' ? 'o RPC demorou demais' : 'não consegui falar com a Solana';
+    return c.json({ ok: false, error: msg }, 504);
+  }
 });
