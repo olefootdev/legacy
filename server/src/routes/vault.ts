@@ -133,14 +133,29 @@ vaultRoutes.get('/api/vault/:slug/meu-extrato', rateLimit(30), async (c) => {
 // ============================================================ ESCRITA =========
 
 /**
- * GATE DE ADMIN EM TUDO DESTE ROUTER. Middleware, não checagem por handler:
- * rota nova neste arquivo já nasce protegida (mesmo padrão de adminPayments.ts).
+ * GATE DE ADMIN NESTE ROUTER. Middleware, não checagem por handler: rota nova
+ * neste arquivo já nasce protegida (mesmo padrão de adminPayments.ts).
+ *
+ * ⚠️ ESCOPADO NO PREFIXO, e não em '*'. A primeira versão usava '*', e como
+ * este router é montado em `app.route('/', …)` — porque as rotas carregam o
+ * caminho inteiro —, o gate virou middleware GLOBAL: toda requisição que não
+ * casava com rota nenhuma caía nele e voltava 403 "Acesso de admin negado" em
+ * vez de 404. Pior que a mensagem errada, cada caminho inventado disparava uma
+ * consulta de sessão no Supabase — amplificação de graça pra quem quisesse
+ * bater no servidor.
+ *
+ * Os outros routers de admin não tinham isso porque são montados em
+ * `/api/admin`, o que já escopa o '*' deles. Aqui o escopo é explícito. Os dois
+ * padrões cobrem a rota-raiz e tudo abaixo dela.
  */
-vaultAdminRoutes.use('*', async (c, next) => {
-  const authErr = await requireAdminToken(c);
-  if (authErr) return authErr;
-  await next();
-});
+const GATE: Parameters<typeof vaultAdminRoutes.use>[0][] = ['/api/admin/vault', '/api/admin/vault/*'];
+for (const caminho of GATE) {
+  vaultAdminRoutes.use(caminho, async (c, next) => {
+    const authErr = await requireAdminToken(c);
+    if (authErr) return authErr;
+    await next();
+  });
+}
 
 /** POST /api/admin/vault/criar — { slug, ativo, decimais } */
 vaultAdminRoutes.post('/api/admin/vault/criar', async (c) => {
