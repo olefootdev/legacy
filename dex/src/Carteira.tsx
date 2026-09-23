@@ -10,6 +10,8 @@ import { useCarteira } from '@/wallet/seed/useCarteira';
 import { tradutor } from '@/i18n/idioma';
 import { useIdioma } from '@/i18n/useIdioma';
 import CriarOuRestaurar, { type Passo } from './CriarOuRestaurar';
+import Receber from './Receber';
+import Extrato from './Extrato';
 import { buscarSaldo, type Saldo } from './api';
 import { TEXTOS } from './textos';
 import { BOTAO_LINHA, BOTAO_VOLT, Barra, CAMPO } from './ui';
@@ -22,6 +24,7 @@ export default function Carteira() {
   const [senha, setSenha] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [saldo, setSaldo] = useState<Saldo | null>(null);
+  const [vista, setVista] = useState<'carteira' | 'receber' | 'extrato'>('carteira');
 
   const atualizarSaldo = useCallback(async (e: string) => { setSaldo(await buscarSaldo(e)); }, []);
 
@@ -63,6 +66,13 @@ export default function Carteira() {
     );
   }
 
+  if (w.estado === 'aberta' && w.chave && vista === 'receber') {
+    return <Receber endereco={w.chave.endereco} onVoltar={() => setVista('carteira')} />;
+  }
+  if (w.estado === 'aberta' && w.chave && vista === 'extrato') {
+    return <Extrato endereco={w.chave.endereco} onVoltar={() => setVista('carteira')} />;
+  }
+
   if (w.estado === 'aberta' && w.chave) {
     const endereco = w.chave.endereco;
     return (
@@ -73,6 +83,11 @@ export default function Carteira() {
             <p className="font-mono text-[11px] text-poeira">#solana</p>
             <p className="ole-num mt-0.5 text-[40px] leading-[1.05]">{saldo ? saldo.sol.toFixed(4) : '—'}</p>
             <p className="text-[12px] text-cimento">{t('solNesteEnd')}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" className={BOTAO_VOLT} onClick={() => setVista('receber')}>{t('receber')}</button>
+            <button type="button" className={BOTAO_LINHA} onClick={() => setVista('extrato')}>{t('extrato')}</button>
           </div>
 
           <div className="border border-white/10 bg-panel px-3.5 py-3">

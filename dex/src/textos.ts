@@ -102,6 +102,30 @@ export const TEXTOS = {
   semCarteiraAqui: { pt: 'Sem carteira aqui', en: 'No wallet here' },
   carregando:      { pt: 'Carregando…', en: 'Loading…' },
   naoDeu:          { pt: 'não deu', en: 'that did not work' },
+
+  // --- receber ---
+  tituloReceber:   { pt: 'RECEBER', en: 'RECEIVE' },
+  receber:         { pt: 'Receber', en: 'Receive' },
+  soSolana:        { pt: 'Só Solana', en: 'Solana only' },
+  soSolanaTexto:   { pt: 'Mandar de outra rede — Ethereum, BSC — perde os fundos pra sempre. Este endereço só existe na Solana.',
+                     en: 'Sending from another network — Ethereum, BSC — loses the funds for good. This address only exists on Solana.' },
+  compartilhar:    { pt: 'Compartilhar', en: 'Share' },
+  apontarCamera:   { pt: 'Aponte a câmera de quem vai mandar', en: 'Point the sender\u2019s camera here' },
+
+  // --- extrato ---
+  tituloExtrato:   { pt: 'EXTRATO', en: 'ACTIVITY' },
+  extrato:         { pt: 'Extrato', en: 'Activity' },
+  semMovimento:    { pt: 'Nada ainda', en: 'Nothing yet' },
+  semMovimentoTxt: { pt: 'Quando algo entrar ou sair deste endereço, aparece aqui — e no explorador da Solana, que não é nosso.',
+                     en: 'When anything moves in or out of this address, it shows up here — and on the Solana explorer, which is not ours.' },
+  tudoOnChain:     { pt: 'Toda linha aqui está na blockchain. Confira qualquer uma sem depender da gente.',
+                     en: 'Every line here is on chain. Check any of them without relying on us.' },
+  falhou:          { pt: 'falhou', en: 'failed' },
+  verNoExplorador: { pt: 'ver', en: 'view' },
+  atualizar:       { pt: 'Atualizar', en: 'Refresh' },
+  carregandoLista: { pt: 'Buscando na Solana…', en: 'Reading from Solana…' },
+  naoDeuLista:     { pt: 'Não consegui falar com a Solana agora.', en: 'Could not reach Solana right now.' },
+  voltar:          { pt: 'Voltar', en: 'Back' },
 } as const satisfies Dicionario<string>;
 
 export type ChaveTexto = keyof typeof TEXTOS;

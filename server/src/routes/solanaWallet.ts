@@ -129,3 +129,55 @@ solanaWalletRoutes.get('/api/wallet/solana/saldo/:endereco', rateLimit(30), asyn
     return c.json({ ok: false, error: msg }, 504);
   }
 });
+
+/**
+ * GET /api/wallet/solana/historico/:endereco
+ *
+ * As últimas movimentações do endereço, pelo mesmo motivo do saldo: o browser
+ * não fala com RPC de terceiro, e a CSP não abre exceção na origem que guarda
+ * o cofre.
+ *
+ * Devolve SÓ o que `getSignaturesForAddress` dá — assinatura, data, se deu
+ * erro. NÃO devolve valor nem direção de propósito: pra isso seria um
+ * `getTransaction` por linha, 20 chamadas de RPC por abertura de tela, e a
+ * conta de quanto entrou ou saiu teria que ser feita aqui, do zero, a partir
+ * dos saldos antes e depois de cada conta envolvida. Fazer isso mal é pior que
+ * não fazer: número errado de dinheiro na tela é o tipo de coisa que destrói
+ * confiança. Cada linha leva o link do explorador, que já faz essa conta certa.
+ */
+solanaWalletRoutes.get('/api/wallet/solana/historico/:endereco', rateLimit(20), async (c) => {
+  const endereco = c.req.param('endereco') ?? '';
+  const pub = endereco ? solanaAddressToPublicKey(endereco) : null;
+  if (!pub) return c.json({ ok: false, error: 'endereço Solana inválido' }, 400);
+
+  const rpc = process.env.SOLANA_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
+  try {
+    const r = await fetch(rpc, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1,
+        method: 'getSignaturesForAddress',
+        params: [endereco, { limit: 20 }],
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!r.ok) return c.json({ ok: false, error: `RPC respondeu ${r.status}` }, 502);
+    const j = await r.json() as {
+      result?: { signature: string; blockTime: number | null; err: unknown; memo: string | null }[];
+      error?: { message?: string };
+    };
+    if (j.error) return c.json({ ok: false, error: j.error.message ?? 'RPC recusou' }, 502);
+
+    const linhas = (j.result ?? []).map((s) => ({
+      assinatura: s.signature,
+      quando: s.blockTime ? new Date(s.blockTime * 1000).toISOString() : null,
+      falhou: s.err != null,
+      memo: s.memo,
+    }));
+    return c.json({ ok: true, endereco, linhas }, 200, { 'Cache-Control': 'public, max-age=15' });
+  } catch (e) {
+    const msg = e instanceof Error && e.name === 'TimeoutError' ? 'o RPC demorou demais' : 'não consegui falar com a Solana';
+    return c.json({ ok: false, error: msg }, 504);
+  }
+});

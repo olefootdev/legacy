@@ -8,6 +8,24 @@ const BASE =
 
 export interface Saldo { lamports: string; sol: number }
 
+export interface LinhaExtrato {
+  assinatura: string;
+  quando: string | null;
+  falhou: boolean;
+  memo: string | null;
+}
+
+/** As últimas movimentações. Vem sem valor de propósito — ver o comentário na rota. */
+export async function buscarHistorico(endereco: string): Promise<LinhaExtrato[] | null> {
+  try {
+    const r = await fetch(`${BASE}/api/wallet/solana/historico/${endereco}`);
+    const j = (await r.json()) as { ok: boolean; linhas?: LinhaExtrato[] };
+    return j.ok ? (j.linhas ?? []) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function buscarSaldo(endereco: string): Promise<Saldo | null> {
   try {
     const r = await fetch(`${BASE}/api/wallet/solana/saldo/${endereco}`);

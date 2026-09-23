@@ -69,7 +69,17 @@ function buildOriginMatcher(): (origin: string) => string | null {
       console.error('[olefoot-server] FATAL: CORS_ORIGIN não definido em produção. A encerrar.');
       process.exit(1);
     }
-    list = ['http://localhost:5173', 'http://localhost:5180'];
+    // 5173 jogo · 5180 (legado) · 5273 REVELA · 5373 OLEWALLET.
+    // Sem a porta da carteira aqui, o Extrato e o saldo falham em dev com
+    // "não consegui falar com a Solana" — que é erro de CORS disfarçado de
+    // erro de rede, e leva meia hora pra descobrir.
+    list = [
+      'http://localhost:5173',
+      'http://localhost:5180',
+      'http://localhost:5273',
+      'http://localhost:5373',
+      'http://localhost:4373',
+    ];
   }
 
   console.log(`[olefoot-server] CORS allow-list (${list.length}): ${list.join(' | ')}`);
