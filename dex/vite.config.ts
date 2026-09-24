@@ -43,7 +43,23 @@ function cabecalhosDeSeguranca(destino: string) {
         "  Content-Security-Policy: frame-ancestors 'none'",
         '  Referrer-Policy: strict-origin-when-cross-origin',
         '  X-Content-Type-Options: nosniff',
-        '  Cross-Origin-Opener-Policy: same-origin-allow-popups',
+        // ⚠️ `unsafe-none` (o padrão) É OBRIGATÓRIO AQUI, e não é descuido.
+        //
+        // Eu tinha posto `same-origin-allow-popups` lendo como "permito
+        // popups". Significa quase o contrário do que este fluxo precisa: um
+        // documento com QUALQUER COOP diferente de unsafe-none, quando aberto
+        // por uma ORIGEM DIFERENTE, entra em outro grupo de contexto de
+        // navegação e recebe `window.opener === null`. Como o jogo é
+        // game.olefoot.com e a carteira é dex.olefoot.com — origens
+        // diferentes —, o aperto de mão nunca podia começar, e a pessoa caía
+        // em "não identifiquei quem pediu". Não deu pra pegar em dev: o
+        // servidor do Vite não serve este arquivo.
+        //
+        // COOP defende de ataques entre janelas; aqui a janela CRUZADA é o
+        // produto. O que protege esta tela é frame-ancestors + X-Frame-Options,
+        // que continuam, mais o fato de a origem de quem pede vir do
+        // `event.origin` e ser conferida contra lista fechada.
+        '  Cross-Origin-Opener-Policy: unsafe-none',
         '  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()',
         '',
       ].join('\n');
