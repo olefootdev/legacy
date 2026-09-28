@@ -9,7 +9,7 @@ import {
 } from '@/supabase/legacyPlayers';
 import { overallFromAttributes } from '@/entities/player';
 import type { PlayerAttributes } from '@/entities/types';
-import { MOEDA_JOGO } from '@/wallet/constants';
+import { moedaDoJogo } from '@/wallet/constants';
 
 const ATTR_LABELS: Array<[keyof PlayerAttributes, string]> = [
   ['velocidade', 'Velocidade'],
@@ -295,7 +295,7 @@ export function LegacyPlayerDetailModal({
                         {confirming && needsConfirm && !buying ? (
                           <>
                             <p className="text-center text-[12px] text-white/70">
-                              Confirmar a compra de <span className="font-bold text-neon-yellow">{priceExp.toLocaleString('pt-BR')} {MOEDA_JOGO}</span>?
+                              Confirmar a compra de <span className="font-bold text-neon-yellow">{priceExp.toLocaleString('pt-BR')} {moedaDoJogo()}</span>?
                             </p>
                             <div className="grid grid-cols-2 gap-2">
                               <button
@@ -327,7 +327,7 @@ export function LegacyPlayerDetailModal({
                             {buying ? (
                               <><Loader2 className="h-4 w-4 animate-spin" /> Comprando…</>
                             ) : (
-                              <><ShoppingCart className="h-4 w-4" strokeWidth={2.5} /> Comprar · {priceExp.toLocaleString('pt-BR')} {MOEDA_JOGO}</>
+                              <><ShoppingCart className="h-4 w-4" strokeWidth={2.5} /> Comprar · {priceExp.toLocaleString('pt-BR')} {moedaDoJogo()}</>
                             )}
                           </button>
                         )}
@@ -346,7 +346,7 @@ export function LegacyPlayerDetailModal({
                           <div className="min-w-0">
                             <p className="text-[12px] font-black uppercase tracking-wider text-baixa">Saldo insuficiente</p>
                             <p className="text-[11px] text-white/55">
-                              {balanceLabel ? `Você tem ${balanceLabel} · ` : ''}custa {priceExp.toLocaleString('pt-BR')} {MOEDA_JOGO}
+                              {balanceLabel ? `Você tem ${balanceLabel} · ` : ''}custa {priceExp.toLocaleString('pt-BR')} {moedaDoJogo()}
                             </p>
                           </div>
                         </div>
@@ -366,7 +366,7 @@ export function LegacyPlayerDetailModal({
                           </p>
                         ) : (
                           <p className="rounded-lg bg-white/5 py-2.5 text-center text-[11px] text-white/45">
-                            Recarregue {MOEDA_JOGO} na carteira para adquirir esta lenda.
+                            Recarregue {moedaDoJogo()} na carteira para adquirir esta lenda.
                           </p>
                         )}
                       </div>

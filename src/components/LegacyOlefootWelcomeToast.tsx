@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MOEDA_JOGO } from '@/wallet/constants';
+import { moedaDoJogo } from '@/wallet/constants';
 import {
   applyLegacyOlefootCredit,
   hasShownLegacyToast,
@@ -62,12 +62,12 @@ export function LegacyOlefootWelcomeToast() {
           Seu saldo da era anterior foi recuperado
         </div>
         <div className="mt-5 border border-white/10 bg-card p-4">
-          <div className="font-mono text-[10.5px] text-cimento uppercase tracking-wider">Saldo {MOEDA_JOGO}</div>
+          <div className="font-mono text-[10.5px] text-cimento uppercase tracking-wider">Saldo {moedaDoJogo()}</div>
           <div className="mt-1 font-mono text-3xl font-medium text-white tabular-nums">
             {formatBalance(balanceHuman)}
           </div>
           <div className="mt-1 font-mono text-[11px] text-poeira">
-            ({balanceHuman} {MOEDA_JOGO} — snapshot da carteira BSC)
+            ({balanceHuman} {moedaDoJogo()} — snapshot da carteira BSC)
           </div>
         </div>
         <p className="mt-4 text-sm text-white/70 leading-relaxed">

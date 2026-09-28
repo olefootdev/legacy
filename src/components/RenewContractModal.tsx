@@ -15,7 +15,7 @@ import { X, RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { formatExp, formatOle } from '@/systems/economy';
-import { MOEDA_JOGO } from '@/wallet/constants';
+import { moedaDoJogo } from '@/wallet/constants';
 import {
   MANAGER_PROSPECT_CONTRACT_GAMES,
   managerProspectContractPremiumExp,
@@ -237,7 +237,7 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                       'text-[10px] font-bold uppercase',
                       paymentMethod === 'olefoot' ? 'text-white' : 'text-cimento',
                     )}>
-                      {MOEDA_JOGO}
+                      {moedaDoJogo()}
                     </div>
                     <div className="mt-1 text-[10px] text-white/70">Saldo do jogo</div>
                     <div className={cn(
@@ -249,7 +249,7 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                   </button>
                 </div>
                 <p className="text-[10px] leading-relaxed text-poeira">
-                  Taxa: 1 {MOEDA_JOGO} = {EXP_PER_OLEFOOT_FOR_RENEWAL} EXP. Sai do saldo do jogo.
+                  Taxa: 1 {moedaDoJogo()} = {EXP_PER_OLEFOOT_FOR_RENEWAL} EXP. Sai do saldo do jogo.
                 </p>
               </div>
 
@@ -278,7 +278,7 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                     </div>
                   )}
                   <div className="flex justify-between border-t border-white/10 pt-1 mt-1">
-                    <span className="font-bold">Total ({paymentMethod === 'exp' ? 'EXP' : MOEDA_JOGO}):</span>
+                    <span className="font-bold">Total ({paymentMethod === 'exp' ? 'EXP' : moedaDoJogo()}):</span>
                     <span
                       className={cn(
                         'font-mono font-medium tabular-nums',
@@ -287,7 +287,7 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                     >
                       {paymentMethod === 'exp'
                         ? `${formatExp(totalExpCost)} EXP`
-                        : `${formatOle(totalOlefootCost)} ${MOEDA_JOGO}`}
+                        : `${formatOle(totalOlefootCost)} ${moedaDoJogo()}`}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -297,13 +297,13 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                         ? `${formatExp(expBal)} EXP`
                         : olefootLoading
                           ? '—'
-                          : `${formatOle(olefootBal ?? 0)} ${MOEDA_JOGO}`}
+                          : `${formatOle(olefootBal ?? 0)} ${moedaDoJogo()}`}
                     </span>
                   </div>
                 </div>
                 {!canAfford && !olefootLoading && (
                   <p className="mt-2 text-[10px] text-baixa">
-                    ⚠️ {paymentMethod === 'exp' ? 'EXP' : MOEDA_JOGO} insuficiente
+                    ⚠️ {paymentMethod === 'exp' ? 'EXP' : moedaDoJogo()} insuficiente
                   </p>
                 )}
                 {errorMsg && (
@@ -329,8 +329,8 @@ export function RenewContractModal({ open, onClose, player }: Props) {
                 {submitting
                   ? 'Processando...'
                   : !canAfford
-                    ? `${paymentMethod === 'exp' ? 'EXP' : MOEDA_JOGO} Insuficiente`
-                    : `Renovar com ${paymentMethod === 'exp' ? 'EXP' : MOEDA_JOGO}`}
+                    ? `${paymentMethod === 'exp' ? 'EXP' : moedaDoJogo()} Insuficiente`
+                    : `Renovar com ${paymentMethod === 'exp' ? 'EXP' : moedaDoJogo()}`}
               </button>
             </div>
           </motion.div>

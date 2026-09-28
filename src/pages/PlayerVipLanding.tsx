@@ -16,7 +16,7 @@ import { fetchPlayerVipLanding, type LandingCard, type PlayerVipLandingData } fr
 import { setPendingReferrerCode } from '@/wallet/referralCode';
 import { keyAttrsForPosition } from '@/admin/legendAttrCalibration';
 import { Hashtag } from '@/components/ui';
-import { MOEDA_JOGO } from '@/wallet/constants';
+import { moedaDoJogo } from '@/wallet/constants';
 
 /**
  * O OVR vem do `mint_overall` gravado no banco — mesma conta que o jogo faz,
@@ -33,7 +33,7 @@ function cardOvr(card: LandingCard): number | null {
 }
 
 function priceLabel(card: LandingCard): string {
-  if (card.currency === 'OLEFOOT') return `${card.priceCents.toLocaleString('pt-BR')} ${MOEDA_JOGO}`;
+  if (card.currency === 'OLEFOOT') return `${card.priceCents.toLocaleString('pt-BR')} ${moedaDoJogo()}`;
   const dollars = card.priceCents / 100;
   return `$${Number.isInteger(dollars) ? dollars : dollars.toFixed(2)}`;
 }

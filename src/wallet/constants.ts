@@ -8,6 +8,8 @@
 // ---------------------------------------------------------------------------
 
 /** Comissão por nível (mesma taxa nos 3 níveis) */
+import { idiomaAtual, type Idioma } from '@/i18n/idioma';
+
 export const REFERRAL_RATE = 0.05;
 
 export const REFERRAL_MAX_LEVELS = 3;
@@ -41,26 +43,44 @@ export const REFERRAL_ELIGIBLE_SOURCES: readonly string[] = [
  */
 /**
  * ════════════════════════════════════════════════════════════════════════════
- * OLEXP — o nome do saldo do jogo. FONTE ÚNICA.
+ * VERBA / VRB — o nome do saldo do jogo. FONTE ÚNICA.
  * ════════════════════════════════════════════════════════════════════════════
- * Decidido pelo fundador em 2026-09-21, antes de lançar o token na Solana:
+ * Decidido pelo fundador em 2026-09-28, abrindo espaço pro bônus de expansão:
  *
- *   OLEXP   = saldo DO JOGO, fictício, existe pra sempre, não é dinheiro
- *   OLEFOOT = o TOKEN na rede Solana (fora do jogo)
+ *   VERBA (pt) / VRB (en)  = saldo DO JOGO: compra lenda, renova contrato
+ *   OLEXP                  = unidade de EXPANSÃO da rede (Time 1 / Time 2)
+ *   OLEFOOT                = o TOKEN na rede Solana
+ *   BRO                    = crédito comprado no Pix
+ *   Pontos                 = classificação na liga
  *
- * Até aqui os dois se chamavam OLEFOOT, e a Carteira ainda chamava o saldo de
- * "Olefoot Token". Lançado o token com esse nome, todo extrato do jogo viraria
- * extrato de token — e o que é fictício passaria a parecer dinheiro.
+ * Cinco coisas, cinco palavras, nenhuma repetida. Chegar aqui custou duas
+ * trocas: o saldo já se chamou OLEFOOT (e virou OLEXP em 21/09 pra não virar
+ * extrato de token), e OLEXP agora passa pra expansão. PONTOS foi cogitado e
+ * RECUSADO: a liga já usa a palavra em 13 telas — inclusive na tela da Rede,
+ * vizinha desta —, e trocaria uma colisão por outra pior.
  *
- * 🔴 REGRA: em texto que o manager lê, saldo do jogo é OLEXP. A palavra
- * OLEFOOT na tela só pode significar a MARCA (o jogo, a empresa) ou, depois do
- * lançamento, o token. Nunca um saldo.
+ * "verba" é a palavra do futebol pra dinheiro de contratação, e estava livre:
+ * zero ocorrências na UI e no banco. Fora do Brasil ninguém entende, então em
+ * inglês é o ticker VRB — o roadmap é o produto inteiro rodar nos dois idiomas.
  *
- * Os identificadores internos (`legacy_olefoot_credits`, `fetchMyOlefootBalance`)
- * seguem com o nome antigo de propósito: renomear tabela em produção é risco
- * sem ganho pro manager. O que o manager lê vem daqui.
+ * 🔴 É FUNÇÃO, NÃO CONSTANTE, e de propósito: o nome depende do idioma, e uma
+ * constante resolvida no load congelaria a escolha de quem troca de idioma no
+ * meio da sessão.
+ *
+ * ⚠️ `affiliate_commissions.currency` tem `'OLEXP'` no CHECK do banco, hoje
+ * significando ESTE saldo. É o sistema de comissão de NFT e a regra é não
+ * encostar — então o código lá continua 'OLEXP' e quer dizer verba. Está
+ * documentado aqui em vez de alterado.
+ *
+ * Os identificadores internos (`legacy_olefoot_credits`,
+ * `fetchMyOlefootBalance`) seguem com o nome antigo: renomear tabela em
+ * produção é risco sem ganho pro manager. O que o manager lê vem daqui.
  */
-export const MOEDA_JOGO = 'OLEXP';
+export const MOEDA_JOGO_VERBETE = { pt: 'VERBA', en: 'VRB' } as const;
+
+export function moedaDoJogo(idioma?: Idioma): string {
+  return MOEDA_JOGO_VERBETE[idioma ?? idiomaAtual()];
+}
 
 /**
  * ⚠️ SEM CONSUMIDOR desde 2026-09-21. Este preço só aparecia embaixo do saldo

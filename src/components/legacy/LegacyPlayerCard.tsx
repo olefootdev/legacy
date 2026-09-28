@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { MOEDA_JOGO } from '@/wallet/constants';
+import { moedaDoJogo } from '@/wallet/constants';
 
 /**
  * Card canônico Legadão — preto + dourado ornamentado.
@@ -476,7 +476,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           letterSpacing="0.22em"
           textAnchor="end"
         >
-          {MOEDA_JOGO}
+          {moedaDoJogo()}
         </text>
         <text
           x={VB_W - 100}

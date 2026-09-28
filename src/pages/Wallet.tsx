@@ -20,7 +20,7 @@ import {
 } from './wallet/useWalletPlayerData';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
 import { fetchLegacyBalance } from '@/wallet/applyLegacyOlefootCredit';
-import { MOEDA_JOGO } from '@/wallet/constants';
+import { moedaDoJogo } from '@/wallet/constants';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { SecaoVolt } from '@/components/ui';
 
@@ -156,10 +156,10 @@ export function Wallet() {
     {
       // Era "OLEFOOT · Olefoot Token" — o mesmo nome do token da Solana, com a
       // palavra "Token" no rótulo. Agora é OLEXP: saldo do jogo (constants.ts).
-      ticker: MOEDA_JOGO,
+      ticker: moedaDoJogo(),
       name: 'Saldo do jogo',
       logoSrc: '/wallet-olefoot-logo.png',
-      balance: `${formatCompact(olefootBalance)} ${MOEDA_JOGO}`,
+      balance: `${formatCompact(olefootBalance)} ${moedaDoJogo()}`,
       // SEM preço em dólar. Trazia `≈ $0.000000 · $0.000001/OLEXP (preço interno)`
       // embaixo do saldo. OLEXP é saldo de jogo e não converte em nada: um valor
       // em dólar ao lado dele é a própria confusão que o rename veio matar, e na

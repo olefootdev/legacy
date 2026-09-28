@@ -7,7 +7,7 @@ import { useGameStore } from '@/game/store';
 import { queryLedger } from '@/wallet/ledger';
 import { createInitialWalletState } from '@/wallet/initial';
 import type { WalletLedgerType, WalletCurrencyExt, WalletLedgerEntry } from '@/wallet/types';
-import { MOEDA_JOGO } from '@/wallet/constants';
+import { moedaDoJogo } from '@/wallet/constants';
 
 const LEDGER_TYPE_OPTIONS: { value: WalletLedgerType | ''; label: string }[] = [
   { value: '', label: 'Todos' },
@@ -21,11 +21,13 @@ const LEDGER_TYPE_OPTIONS: { value: WalletLedgerType | ''; label: string }[] = [
   { value: 'STRUCTURE_UPGRADE', label: 'Estrutura' },
 ];
 
-const CURRENCY_OPTIONS: { value: WalletCurrencyExt | ''; label: string }[] = [
+// Função, não const de módulo: `moedaDoJogo()` depende do idioma, e uma lista
+// avaliada no import congelaria o rótulo de quem troca de idioma na sessão.
+const currencyOptions = (): { value: WalletCurrencyExt | ''; label: string }[] => [
   { value: '', label: 'Todas' },
   { value: 'BRO', label: 'BRO' },
   { value: 'EXP', label: 'EXP' },
-  { value: 'OLEFOOT', label: MOEDA_JOGO },
+  { value: 'OLEFOOT', label: moedaDoJogo() },
 ];
 
 /**
@@ -109,7 +111,7 @@ export function ExtractTab() {
           onChange={(e) => setFilterCurrency(e.target.value as WalletCurrencyExt | '')}
           className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-neon-yellow transition-colors appearance-none"
         >
-          {CURRENCY_OPTIONS.map((o) => (
+          {currencyOptions().map((o) => (
             <option key={o.value} value={o.value} className="bg-black">
               {o.label}
             </option>

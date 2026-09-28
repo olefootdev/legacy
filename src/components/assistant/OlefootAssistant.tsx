@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Hashtag } from '@/components/ui';
+import { moedaDoJogo } from '@/wallet/constants';
 
 interface TutorialStep {
   id: string;
@@ -104,14 +105,15 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     id: 'economy',
     title: 'Sistema de economia',
     // Dizia "OLEFOOT (token do jogo)". Nenhum saldo do jogo é token: OLEFOOT
-    // passou a ser o nome do token na Solana, e o saldo virou OLEXP.
-    description: 'Olefoot tem 3 saldos, todos do jogo: EXP (progressão), OLEXP (lendas e contratos) e BRO (crédito comprado).',
+    // passou a ser o nome do token na Solana; o saldo virou OLEXP e, em
+    // 2026-09-28, VERBA — OLEXP passou a ser a unidade de expansão da rede.
+    description: `Olefoot tem 3 saldos, todos do jogo: EXP (progressão), ${moedaDoJogo()} (lendas e contratos) e BRO (crédito comprado).`,
     icon: Wallet,
     category: 'economia',
     tips: [
       'EXP: ganhe em partidas e missões, use para evoluir',
       'BRO: moeda premium para leilões e compras especiais',
-      'OLEXP: compre cards de lenda e renove contratos',
+      `${moedaDoJogo()}: compre cards de lenda e renove contratos`,
     ],
     action: {
       label: 'Ver carteira',
