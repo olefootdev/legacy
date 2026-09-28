@@ -1,6 +1,6 @@
 # TOKENOMICS FINAL — $OLEFOOT na Solana
 
-> **Revisão 4 — 2026-09-28 · PARA APROVAÇÃO DO FUNDADOR**
+> **Revisão 5 — 2026-09-28 · TABELA APROVADA (opção B)**
 >
 > Régua do token, como `VOLT2.md` é a régua do visual. Número aqui vira constante em
 > código; constante em código não muda sem mudar este arquivo.
@@ -25,21 +25,35 @@ token**. A única porta é o **REFUND PROGRAM**, com validação de conta, caso 
 
 ---
 
-## 2. A TABELA FINAL
+## 2. A TABELA FINAL — APROVADA
 
-**Supply: 5.000.000.000** · **Decimais: 9** · **Rede: Solana**
+**Supply: 5.000.000.000** · **Decimais: 9** · **Rede: Solana (Token-2022)**
 
 | Alocação | % | Tokens | Liberação |
 |---|---|---|---|
-| **Expansão (bônus de equiparação)** | **25%** | **1.250.000.000** | por tranche, limitada pela receita · claim com teto de 1%/dia |
-| Claim holders antigos (v1) | 20% | 1.000.000.000 | degraus (§5) · topo travado por profundidade de pool |
-| Ecossistema / recompensas in-game | 20% | 1.000.000.000 | emissão por jogo, 5 anos, **atrelada a sink** |
-| Tesouraria / reserva | 12% | 600.000.000 | travado, governança, 6 meses de aviso |
-| Equipe / fundadores | 12% | 600.000.000 | 12 meses de carência, linear 36 meses |
-| **Pré-venda** | **5%** | **250.000.000** | 10% no lançamento, 1 mês de carência, linear 12 meses |
-| **Liquidez DEX** | **4%** | **200.000.000** | 80M na pool no lançamento, 120M conforme a receita aprofunda |
-| Marketing / parcerias / advisors | 2% | 100.000.000 | 5% no lançamento, linear 24 meses, teto mensal publicado |
-| **TOTAL** | **100%** | **5.000.000.000** | |
+| **Expansão (bônus de equiparação)** | 25,00% | 1.250.000.000 | tranche limitada pela receita · claim com teto de 1%/dia |
+| Ecossistema / recompensas in-game | 20,00% | 1.000.000.000 | emissão por jogo, 5 anos, **atrelada a sink** |
+| **Claim holders antigos v1** | **12,78%** | **639.037.272** | **razão 1:1** · degraus (§5) |
+| Tesouraria / reserva | 12,00% | 600.000.000 | travado, governança, 6 meses de aviso |
+| Equipe / fundadores | 12,00% | 600.000.000 | 12 meses de carência, linear 36 meses |
+| **Liquidez DEX** | **11,22%** | **560.962.728** | 250M na pool no esgotamento · 310.962.728 guardados |
+| **Pré-venda** | 5,00% | 250.000.000 | 10% no lançamento, linear 12 meses |
+| Marketing / parcerias / advisors | 2,00% | 100.000.000 | 5% no lançamento, linear 24 meses, teto ⏳ |
+| **TOTAL** | **100,00%** | **5.000.000.000** | |
+
+### Opção B, aprovada em 2026-09-28
+
+O claim v1 passa a ser **1:1 com o snapshot** — 639.037.272 tokens para
+639.037.272 unidades, sem bônus de conversão. Os **360.962.728 liberados (7,22%) vão
+para Liquidez**, que sai de 4% para 11,22%.
+
+O que isso resolve, medido:
+
+| | Opção A (1.000M) | **Opção B (639M)** |
+|---|---|---|
+| Maior credor, % do supply | 5,25% | **3,36%** |
+| Balde de Liquidez | 200.000.000 | **560.962.728** |
+| Pool no esgotamento | 250M tokens | 250M tokens **+ 310.962.728 de reserva** |
 
 ### De onde saiu cada mudança (fecha em zero)
 
@@ -47,58 +61,119 @@ token**. A única porta é o **REFUND PROGRAM**, com validação de conta, caso 
 |---|---|
 | Comissões Marketing 10% + Comunidade 15% → **Expansão 25%** | 0% |
 | Advisors 4% → 2% (junta com marketing/parcerias) | −2% |
-| Pré-venda 4% → **5%** (250M, decisão do fundador) | +1% |
-| Liquidez DEX 3% → **4%** | +1% |
+| Pré-venda 4% → **5%** | +1% |
+| Liquidez 3% → 4% | +1% |
+| **Claim v1 20% → 12,78% (razão 1:1) → Liquidez** | **−7,22% / +7,22%** |
 
-**Por que Marketing + Comunidade viram Expansão:** o bônus de equiparação **é** o motor
-de marketing e de comunidade — nas suas palavras, "serve pra gente alavancar e criar
-comunidade". Manter três baldes para o mesmo trabalho é contar o mesmo dinheiro três
-vezes. Sobram 2% de verba discricionária para listagem, design e parceria pontual.
+**Por que Marketing + Comunidade viraram Expansão:** o bônus de equiparação **é** o
+motor de marketing e comunidade. Três baldes para o mesmo trabalho é contar o mesmo
+dinheiro três vezes. Sobram 2% de verba discricionária.
 
-**Por que Advisors caiu de 4% para 2%:** na tabela original advisors (200M) recebiam
-80% da pré-venda inteira (250M). Advisor quase em paridade com quem pagou dinheiro é a
-linha que vai ser printada — e com razão. Os 2% liberados pagam exatamente o +1% da
-pré-venda e o +1% da liquidez.
+**Por que Advisors caiu de 4% para 2%:** recebiam 80% da pré-venda inteira. Os 2%
+liberados pagam exatamente o +1% da pré-venda e o +1% da liquidez.
 
 ---
 
 ## 3. A pré-venda e o lançamento
 
+**Decisão do fundador: a liquidez só é anunciada quando os 250.000.000 estiverem
+vendidos.** Então a meta não é \$10.000 — é o esgotamento.
+
 | | |
 |---|---|
 | Preço | **\$0,000125** |
-| Meta de arrecadação | **\$10.000** |
-| Tokens vendidos na meta | **80.000.000** (1,6% do supply · 32% do balde) |
-| FDV no preço da pré-venda | **\$625.000** |
+| Alocação | **250.000.000** |
+| **Meta (esgotamento)** | **\$31.250** |
+| FDV no preço da pré-venda | \$625.000 |
 
-**FDV de \$625k é honesto** e é ponto forte destes números — muito mais defensável que
-lançamento de FDV inflado.
-
-### A pool no lançamento
+### A pool no esgotamento
 
 | | |
 |---|---|
-| Tokens na pool | **80.000.000** (do balde de Liquidez) |
-| USDC na pool | **\$10.000** (a arrecadação inteira) |
-| Abre em | \$0,000125 |
-| TVL | \$20.000 |
-| Guardado do balde | 120.000.000, para aprofundar com a receita |
+| Tokens na pool | **250.000.000** (do balde de Liquidez) |
+| USDC na pool | **\$31.250** (a arrecadação inteira) |
+| TVL | **\$62.500** |
+| Guardado do balde | 310.962.728 |
+| vs. o cenário de \$10.000 | **3,1× mais profunda** |
 
-🔴 **Achado que muda a estratégia: preço não é alavanca.** Para abrir no preço da
-pré-venda, `USDC = tokens × preço` — dobrar o preço dobra os dois lados, então a razão
-`token vendido / token na pool` é **invariante ao preço**. A \$0,000125 ou a \$0,002, a
-tranche derruba o mesmo tanto. Só três coisas protegem o gráfico: mais token na pool,
-menos token saindo por dia, ou menos supply.
+✅ **E isso satisfaz sozinho o portão de profundidade.** Eu tinha proposto travar o
+vesting grande até a pool chegar a 194M tokens; condicionar o anúncio ao esgotamento
+entrega **250M** — o portão passa a estar cumprido por construção, sem regra extra.
 
-### Float no lançamento
+### O efeito combinado das duas decisões
 
-| Origem | Tokens |
+| Origem | Tokens/dia |
 |---|---|
-| Pré-venda, 10% dos 80M vendidos | 8.000.000 |
-| Marketing, 5% de 100M | 5.000.000 |
-| Expansão | **0** (estrangulada pelo teto) |
-| **TOTAL** | **13.000.000 = 16,2% da reserva** |
-| Impacto se tudo vender de uma vez | **−26,0%** |
+| Expansão (teto de 1%) | 1.259.453 |
+| Pré-venda (225M em 12 meses) | 625.000 |
+| Ecossistema (5 anos) | 547.945 |
+| Claim v1 (degraus) | 446.450 |
+| Marketing (24 meses) | 130.136 |
+| **TOTAL** | **3.008.986/dia = 90,3M/mês** |
+
+**36,1% da reserva da pool por mês — contra 109,2% da tabela original.** Saiu de
+insustentável para saudável, e as duas decisões que fizeram isso foram suas: razão 1:1
+e esgotamento antes da liquidez.
+
+🔴 **Achado que continua valendo: preço não é alavanca.** Para abrir no preço da
+pré-venda, `USDC = tokens × preço` — dobrar o preço dobra os dois lados, então a razão
+`token vendido / token na pool` é invariante ao preço.
+
+---
+
+## 3b. PACKS da pré-venda
+
+Valor entra em **USD**, sai em **OLEFOOT**, vira **reais** para o Pix do Mercado Pago.
+
+| Pack | OLEFOOT bruto | **Recebe (95%)** | Pix a R$5,42/USD |
+|---|---|---|---|
+| **\$10** | 80.000 | **76.000** | R\$54,20 |
+| **\$50** | 400.000 | **380.000** | R\$271,00 |
+| **\$250** | 2.000.000 | **1.900.000** | R\$1.355,00 |
+| **\$500** | 4.000.000 | **3.800.000** | R\$2.710,00 |
+| **\$1.250** | 10.000.000 | **9.500.000** | R\$6.775,00 |
+| **Outro** | digitado, mínimo \$10 | | aceita digitar em USD **ou em R\$** |
+
+✨ **A \$0,000125 cada centavo de dólar compra exatamente 80 tokens.** Nenhum pack em
+centavo inteiro tem arredondamento — a conversão é exata, não aproximada. Se o preço
+mudar e essa divisão deixar de fechar, o self-test acusa.
+
+### 🔴 O que precisa aparecer na tela de compra
+
+A taxa de 5% morde **na entrega**. Quem compra \$10 recebe **76.000**, não 80.000 — e o
+preço efetivo por token entregue é **\$0,00013158**, não \$0,000125.
+
+**Anunciar o líquido, não o bruto.** Um comprador que lê 80.000 e recebe 76.000 abre
+reclamação, e com razão. O módulo devolve os dois números de propósito; a tela mostra o
+que chega na wallet.
+
+### Arredondamento — cada direção é decisão
+
+| | Direção | Por quê |
+|---|---|---|
+| Tokens | pra **baixo** | melhor entregar de menos que prometer token que a alocação não tem |
+| Reais a cobrar | pra **cima**, no centavo | a casa nunca cobra menos que o dólar valia; erro máximo R\$0,01 |
+| "Outro" digitado em R\$ → USD | pra **baixo** | fração de centavo de dólar fica de fora, nunca cobrada a mais |
+
+### Travas
+
+🔴 **Preço é sempre do servidor.** `payments.ts` já diz isso no comentário e o projeto
+pagou para aprender — "preço PIX client-side" foi um dos furos de dinheiro fechados no
+card. O cliente manda **qual** pack, nunca **quanto custa**.
+
+| Trava | Estado |
+|---|---|
+| Mínimo \$10 | ✅ em código |
+| Valor não inteiro recusado | ✅ |
+| Cotação inválida recusa em vez de cobrar errado | ✅ |
+| Alocação insuficiente recusa (não vende token que não existe) | ✅ |
+| **Teto por conta** | ✅ em código, **número a definir** |
+
+⚠️ **O maior pack é 4% da pré-venda — 25 compradores esgotam tudo.** O teto por conta
+está implementado mas sem número; sem ele a pré-venda repete a concentração do airdrop
+(onde 1 carteira ficou com 26,3%).
+
+→ `server/src/lib/presale/packs.ts` · `npm run test:presale-packs` (25 testes)
 
 ---
 
@@ -155,7 +230,7 @@ nunca pelo preço do momento do claim.
 
 ---
 
-## 5. Claim dos holders antigos — degraus e o portão de profundidade
+## 5. Claim dos holders antigos — razão 1:1 e degraus
 
 Medido em produção (`airdrop_v1_snapshot`, congelado em 2026-09-21):
 
@@ -168,21 +243,22 @@ Medido em produção (`airdrop_v1_snapshot`, congelado em 2026-09-21):
 | **Nunca logaram na v11** | **46 pessoas = 76,0% do valor** |
 | **Com wallet Solana assinada** | **0** |
 
-### ⚠️ Decisão pendente: a razão de conversão
+### ✅ Razão de conversão: 1:1 (decidido em 2026-09-28)
 
-20% = 1.000M contra um snapshot de 639.037.272. A razão implícita é **1,564854
-token/unidade** e não está escrita em lugar nenhum.
+O balde é **exatamente o snapshot**: 639.037.272 tokens para 639.037.272 unidades, sem
+bônus de conversão. Os 360.962.728 liberados (7,22%) foram para Liquidez.
 
-| Opção | Balde | Consequência |
+| | Opção A (1.000M, razão 1,564854) | **Opção B — escolhida** |
 |---|---|---|
-| **A** — manter 20%, gravar a razão 1,564854 | 1.000M | v1 ganha 56% de bônus sobre o de face. Maior credor fica com **262.722.918 = 5,25% do supply, 3,3× a pool** |
-| **B** — razão 1:1, balde = 639M (12,8%) | 639M | os 7,2% liberados vão para Liquidez → pool **3,6× mais profunda**. Maior credor cai para 3,36% do supply |
+| Balde | 1.000.000.000 | **639.037.272** |
+| Maior credor, em token | 262.722.918 | **167.889.737** |
+| Maior credor, % do supply | 5,25% | **3,36%** |
+| vs. a pool no esgotamento | 1,05× a pool | **0,67× a pool** |
 
-**Recomendo B.** É a única mudança que resolve os dois problemas de uma vez — a
-concentração e a profundidade da pool — e ela sai de um balde cujos donos, 76% deles,
-nunca entraram na v11.
+O maior credor deixa de valer mais que a pool inteira. Era o risco de uma pessoa
+sozinha encerrar o token, e ele saiu da mesa.
 
-### Degraus (valem nas duas opções)
+### Degraus de liberação
 
 | Faixa | Pessoas | % do balde | Liberação |
 |---|---|---|---|
@@ -194,32 +270,21 @@ Liberar 22 pessoas na hora custa 1,3% do balde e compra 22 evangelistas. Segurar
 que são 80% do balde é o que protege o gráfico — e é defensável porque é proporcional
 ao risco de cada faixa.
 
-### 🔴 O portão de profundidade
+### ✅ O portão de profundidade — cumprido por construção
 
-Mesmo com o vesting mais conservador, o desbloqueio mensal é **72,6% da reserva da
-pool**:
+Eu tinha proposto travar o vesting dos baldes grandes até a pool chegar a **194.000.000
+tokens**, porque nenhum calendário fechava contra uma pool de 80M:
 
-| Cenário de vesting | Desbloqueio/mês | % da pool de 80M |
+| Cenário | Desbloqueio/mês | % da pool de 80M |
 |---|---|---|
-| A — o do original (claim 24m, pré 6m) | 87,4M | **109,2%** |
-| B — degraus, topo em 36m | 82,2M | **102,7%** |
-| C — degraus, topo em 60m, pré 12m | 58,1M | **72,6%** |
+| Tabela original | 87,4M | 109,2% |
+| Degraus, topo em 36m | 82,2M | 102,7% |
+| Degraus, topo em 60m | 58,1M | 72,6% |
 
-**A 5 bilhões de supply com \$10.000 de pool, nenhum calendário de vesting deixa essa
-razão saudável.** Então o vesting dos baldes grandes **não começa por data — começa por
-profundidade**:
-
-| | |
-|---|---|
-| Gatilho | reserva da pool ≥ **194.000.000 tokens** (\$24.204 no lado USDC) |
-| Hoje | 80.000.000 (\$10.000) — falta **2,4×** |
-| Receita acumulada a injetar | **~\$14.204** |
-
-Antes do gatilho só se movem: a faixa ≤1M do claim, o marketing e a expansão (já
-estrangulada). Isso protege inclusive os holders — eles recebem um token com mercado,
-em vez de um gráfico morto.
-
----
+Condicionar o anúncio da liquidez ao esgotamento da pré-venda entrega **250.000.000**
+na pool. O portão está cumprido sem precisar de regra extra, e o desbloqueio cai para
+**36,1% da pool por mês** (§3). A regra continua no documento como rede de segurança:
+**se a pré-venda não esgotar, o vesting grande não começa.**
 
 ## 6. A taxa de transferência de 5% — DECIDIDA
 
@@ -295,13 +360,14 @@ porque alguém vai calcular, e é melhor que o número venha de nós.
 | # | Decisão | Recomendação |
 |---|---|---|
 | 1 | Tabela final da §2 | **aprovar** |
-| 2 | Razão do claim v1: A (1,564854) ou B (1:1) | **B** |
+| 2 | ~~Razão do claim v1~~ | ✅ **DECIDIDO: opção B, 1:1** |
 | 3 | ~~Taxa de transferência~~ | ✅ **DECIDIDO: 5% on-chain desde o momento zero** |
-| 4 | Portão de profundidade em 194M tokens | **aprovar** |
-| 5 | Teto mensal do marketing (número) | definir |
+| 4 | ~~Portão de profundidade~~ | ✅ **cumprido por construção** (esgotamento entrega 250M) |
+| 5 | Teto mensal do marketing (número) | ⏳ **fundador anuncia na próxima semana** |
 | 7 | `maximumFee`: sem teto (5% literal) ou teto absoluto | sem teto, como decidido |
 | 8 | Pool: Raydium **CPMM** ou CLMM (AMM v4 está fora) | CPMM |
 | 6 | Destino do claim v1 não resgatado após 24 meses | Liquidez, anunciado no dia 1 |
+| 9 | **Teto por conta na pré-venda** | ⏳ sem ele 25 compradores esgotam |
 
 ## 8. Travas técnicas não negociáveis no lançamento
 
@@ -317,12 +383,14 @@ porque alguém vai calcular, e é melhor que o número venha de nós.
 | # | Etapa | Estado |
 |---|---|---|
 | 0 | **Renovar `olefoot.com`** + NS `memphis`/`rita.ns.cloudflare.com` | 🔴 **bloqueado, vencido em 17/09** |
-| 1 | Aprovar este documento | ⏳ |
-| 2 | Criar o mint em **devnet** — **Token-2022 + TransferFee 500bps** | ⏳ |
-| 3 | Teste de faucet (§10) | ⏳ |
-| 4 | Migrations + rota do ciclo horário + claim | ⏳ motor pronto, **sem persistência** |
-| 5 | Pré-venda | ⏳ |
-| 6 | Pool + lançamento | ⏳ |
+| 1 | Tabela final (§2) | ✅ **aprovada** |
+| 2 | Criar o mint em **devnet** — Token-2022 + TransferFee 500bps | ⏳ |
+| 3 | **Rotina de colheita da taxa** (sem ela a receita é zero) | ⏳ |
+| 4 | Teste de faucet (§10) | ⏳ |
+| 5 | Rota + migration dos packs, ligadas no Pix que já existe | ⏳ módulo puro pronto |
+| 6 | Pré-venda até esgotar os 250M (\$31.250) | ⏳ |
+| 7 | Migration + rota do ciclo horário + claim | ⏳ motor pronto, **sem persistência** |
+| 8 | Pool + anúncio da liquidez | ⏳ gatilho = esgotamento |
 
 ## 10. O que o teste no faucet tem que provar
 
