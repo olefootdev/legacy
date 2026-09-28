@@ -16,6 +16,7 @@
  * Puro: recebe fatos, devolve veredito. Quem coleta os fatos é a rota.
  */
 import type { Olexp } from './unidade.js';
+import { restanteHoje, impactoEmBps, IMPACTO_MAX_BPS_PADRAO } from './tetoDeClaim.js';
 
 export interface Achado {
   readonly regra: string;
@@ -120,6 +121,21 @@ export interface FatosDoClaim {
   readonly refJaPago: boolean;
   /** A conta está sinalizada pela administração. */
   readonly contaSinalizada: boolean;
+  /** Quanto OLEFOOT este claim moveria, na menor unidade do token. */
+  readonly olefootPedido: bigint;
+  /** OLEFOOT no lado token da pool agora. 0n = desconhecida (fecha o portão). */
+  readonly reservaDaPool: bigint;
+  /** Soma dos claims já pagos hoje, na mesma unidade. */
+  readonly olefootJaPagoHoje: bigint;
+  /** Impacto máximo tolerado por dia, em bps. */
+  readonly impactoMaxBps: number;
+  /**
+   * Preço de referência REGISTRADO no ciclo que gerou este bônus, em micro.
+   * null = o claim não trouxe o ciclo — não dá pra conferir a conversão.
+   */
+  readonly precoDoCicloMicro: bigint | null;
+  /** Preço que a conversão deste claim usou de fato. */
+  readonly precoUsadoNoClaimMicro: bigint;
   /**
    * Pagamentos que financiaram AS DUAS pernas da própria rede — o atalho
    * clássico: a pessoa põe dinheiro dos dois lados e colhe a equiparação.
@@ -205,5 +221,52 @@ export function auditarClaim(f: FatosDoClaim): Veredito {
     a.push({ regra: 'conta_sinalizada', grave: true, detalhe: 'conta sob revisão da administração' });
   }
 
+  // Ataque: esperar a queda pra claimar. Como o bônus é contábil e a conversão
+  // pra OLEFOOT divide pelo preço, claimar num preço mais baixo leva MAIS
+  // token pelo mesmo bônus. Quem senta no claim esperando dip está sacando a
+  // diferença da tesouraria. Por isso a conversão é pelo preço REGISTRADO no
+  // ciclo, nunca pelo preço do momento do claim.
+  if (f.precoDoCicloMicro === null) {
+    a.push({
+      regra: 'ciclo_sem_preco', grave: true,
+      detalhe: 'o claim não trouxe o preço registrado do ciclo — conversão não conferível',
+    });
+  } else if (f.precoUsadoNoClaimMicro !== f.precoDoCicloMicro) {
+    a.push({
+      regra: 'preco_divergente_do_ciclo', grave: true,
+      detalhe: `a conversão usou ${f.precoUsadoNoClaimMicro}, o ciclo registrou ${f.precoDoCicloMicro}`,
+    });
+  }
+
+  // Não é ataque, é solvência de mercado: um dia de claims não pode afundar a
+  // pool. A tranche de bônus é maior que a pool aguenta (docs/TOKENOMICS.md),
+  // então o teto é o que transforma um despejo de -50% em saída gradual.
+  // Reserva desconhecida (0n) fecha o portão — o padrão seguro é não pagar.
+  if (f.olefootPedido < 0n) {
+    a.push({ regra: 'pedido_negativo', grave: true, detalhe: `pedido ${f.olefootPedido}` });
+  } else if (f.reservaDaPool <= 0n) {
+    a.push({
+      regra: 'pool_desconhecida', grave: true,
+      detalhe: 'reserva da pool indisponível — claim retido até a leitura voltar',
+    });
+  } else {
+    const cabe = restanteHoje({
+      reservaPool: f.reservaDaPool,
+      impactoMaxBps: f.impactoMaxBps,
+      jaPagoHoje: f.olefootJaPagoHoje,
+    });
+    if (f.olefootPedido > cabe) {
+      a.push({
+        regra: 'teto_diario_de_claim', grave: true,
+        detalhe: `pedido ${f.olefootPedido} passa do que cabe hoje (${cabe}); `
+          + `impacto seria ${impactoEmBps(f.reservaDaPool, f.olefootPedido)}bps, `
+          + `o teto é ${f.impactoMaxBps}bps`,
+      });
+    }
+  }
+
   return vereditoDe(a);
 }
+
+/** Valor padrão do teto, reexportado pra rota não ter que saber de dois módulos. */
+export { IMPACTO_MAX_BPS_PADRAO };

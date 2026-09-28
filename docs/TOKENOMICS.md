@@ -1,6 +1,6 @@
 # TOKENOMICS — $OLEFOOT na Solana
 
-> Revisão 2 — 2026-09-28. Régua do token, como `VOLT2.md` é a régua do visual e
+> Revisão 3 — 2026-09-28. Régua do token, como `VOLT2.md` é a régua do visual e
 > `FRONTEIRA-TOKEN.md` é a régua da fronteira de dados. Número aqui vira constante em
 > código; constante em código não se muda sem mudar este arquivo.
 >
@@ -120,6 +120,46 @@ que os lançamentos de FDV inflado. O problema não é o FDV. É o que \$31.250 
 | **Sobra para operação** | **~\$12.000** |
 
 Não cobre: auditoria, market maker, listagem em CEX, marketing pago.
+
+---
+
+## 3b. A meta real: \$10.000 para lançar
+
+**Decisão do fundador:** levantar **\$10.000** para lançar, e depois as próprias
+compras alimentam a liquidez.
+
+| | |
+|---|---|
+| Tokens vendidos a \$0,000125 | **80.000.000** |
+| % do supply | 1,60% |
+| % do balde de pré-venda (250M) | 32,0% |
+
+### O que \$10.000 constrói
+
+| USDC na pool | Operação | Tokens na pool | TVL | Venda de \$1k derruba | Teto de claim 1% |
+|---|---|---|---|---|---|
+| \$10.000 | \$0 | 80.000.000 | \$20.000 | −17,4% | 403.025/dia |
+| **\$8.000** | **\$2.000** | **64.000.000** | **\$16.000** | **−21,0%** | **322.420/dia** |
+| \$6.000 | \$4.000 | 48.000.000 | \$12.000 | −26,5% | 241.815/dia |
+
+Uma venda de \$1.000 derrubando 17–21% é a realidade de um lançamento de \$10k. Não é
+defeito do desenho — é o tamanho do cheque. A saída é a que já está na seção 6:
+estrangular toda saída e crescer a pool pela receita.
+
+### 🔴 A tranche NÃO pode ser fixa em 5%
+
+| | Tokens | Valor |
+|---|---|---|
+| 5% do balde (regra fixa) | 62.500.000 | \$7.812,50 |
+| 25% da receita de \$10.000 | 20.000.000 | \$2.500,00 |
+| | | **a regra fixa libera 3,1× mais do que a receita cobre** |
+
+Se liberar 5% do balde tendo arrecadado \$10.000, o "a cada \$1 destino \$0,25" deixa de
+ser verdade — libera \$0,78 por dólar. **A tranche é o MENOR entre o degrau do balde e o
+que a receita cobre.** O degrau é teto administrativo; a receita é o chão da realidade.
+
+Está em código: `trancheLiberavel()` em `equiparacao.ts`, com `limitadoPor` dizendo
+qual dos três limites pegou.
 
 ---
 
@@ -267,6 +307,98 @@ maior credor sozinho é 0,9% da reserva por dia.
 
 ---
 
+## 7b. 🔴 A taxa de 5% na transferência — a conta antes da decisão
+
+**Pedido:** taxa de 5% em toda transferência de OLEFOOT, indo para wallet dos
+founders. Levantei o estado atual da Solana e rodei a economia. O objetivo é
+legítimo; **o instrumento cobra do lugar errado.**
+
+### O lado técnico (melhor do que eu esperava)
+
+SPL Token padrão **não tem taxa de transferência** — não é configuração, não existe.
+Exige **Token-2022** com a extensão `TransferFee`. E, ao contrário do que eu supunha,
+o suporte hoje existe: pela doc da Raydium, **CPMM suporta Token-2022 incluindo mints
+com transfer-fee**, e CLMM suporta via contas `SwapV2`. Mas **AMM v4 — a pool padrão,
+a mais comum — não suporta Token-2022 de jeito nenhum.**
+
+⚠️ A verificar antes de decidir, não assumir: (a) política das CEX para token com
+transfer-fee, que costuma ser restritiva; (b) se a extensão permite **isentar
+endereços** (pool, tesouraria) — pelo que conheço a taxa é uniforme para todo
+transfer do mint, sem allowlist. Se for uniforme, a pool paga taxa em cada swap e em
+cada depósito/retirada de LP. Isso entra no teste do faucet (seção 9).
+
+### O lado econômico (é aqui que dói)
+
+Pool de 80M tokens + \$10.000. Round trip de \$1.000, **ninguém mais mexendo no preço**:
+
+| | |
+|---|---|
+| Compra: pool entrega | 7.272.727 |
+| Taxa 5% | −363.636 |
+| Venda: manda 6.909.090, chega na pool | 6.563.636 (taxa −345.454) |
+| **Pagou \$1.000,00 → recebeu \$910,57** | **−8,94%** |
+| Founders levaram | 709.090 tokens ≈ \$88,64 |
+
+**Sem a taxa o mesmo round trip é 0,00%.** A taxa é o custo inteiro — o trader perde
+\$89,43 e os founders ganham \$88,64. É quase uma transferência direta, o que é o
+desenho pretendido. O problema é o que ela faz com o resto.
+
+### 🔴 A taxa tributa o próprio motor de retro-alimentação
+
+O ciclo que você desenhou é: claim → vende → alguém compra → gasta no game →
+tesouraria → volta pro bônus. **Cada hop é uma transferência de OLEFOOT:**
+
+| Transferências no ciclo | Sobra | Evapora |
+|---|---|---|
+| 2 | 90,2% | 9,8% |
+| 3 | 85,7% | 14,3% |
+| 4 | 81,5% | **18,5%** |
+| 5 | 77,4% | **22,6%** |
+
+A retro-alimentação é a solução que salva um lançamento de \$10k (seção 6). A taxa de
+5% cobra ~20% dela por volta. **A taxa e a retro-alimentação são a mesma moeda disputada
+duas vezes.**
+
+E dois efeitos de segunda ordem:
+
+- **Gross-up:** para *entregar* a tranche líquida é preciso mandar 5,26% mais
+  (20.000.000 → 21.052.631). O balde drena mais rápido e `auditarCiclo` passa a
+  reportar um número diferente do que chegou na wallet — falha de auditoria real.
+- **Sobre o claim já estrangulado:** o teto de 1%/dia existe porque a pool é rasa.
+  Cada claim perdendo 5% significa que o teto entrega menos do que promete.
+
+### O que eu recomendo no lugar — mesma receita, zero dano
+
+**Cobrar os 5% na camada do JOGO, não na do token.** OLEFOOT já passa pelo nosso
+servidor em: compra de card, compra de lenda, negociação no mercado, aporte no Vault,
+buy-in de liga premiada. A máquina existe — `harvestSplit.ts` já põe a casa em 25%.
+
+| | Taxa no token | 5% na camada do jogo |
+|---|---|---|
+| Receita dos founders | 5% do volume on-chain | 5% do volume do produto |
+| Token-2022 obrigatório | sim | **não** |
+| AMM v4 disponível | **não** | sim |
+| Risco de CEX | alto | **nenhum** |
+| Tributa o bônus | sim | **não** |
+| Tributa a retro-alimentação | ~20%/ciclo | **não** |
+| Tributa swap de terceiro | sim | não |
+
+Terceira via, se a meta é renda ligada a volume on-chain: **a tesouraria fica com a
+posição de LP e recebe a taxa de trading da pool.** Exige **travar** o LP em vez de
+queimar (LP queimado não coleta taxa) — trade-off honesto e comunicável.
+
+E vale lembrar: **founders já têm 12% / 600M alocados.** Essa é a remuneração.
+
+### A ressalva que eu devo registrar uma vez
+
+Taxa de 5% roteada para wallet de founders, num token vendido em pré-venda com bônus
+binário de recrutamento por cima, é o conjunto de fatos que comunidade e regulador leem
+como extração. Não muda a legalidade de nada; muda como o pacote inteiro é lido. Dito
+isso, se a decisão for manter a taxa on-chain, ela precisa no mínimo ser **1%, não 5%**,
+e o teste do faucet precisa medir o efeito dela na pool antes do mainnet.
+
+---
+
 ## 8. O que continua faltando por completo
 
 1. **Nenhum sink.** 1.000M de emissão in-game sem destruição é torneira, não
@@ -297,6 +429,9 @@ maior credor sozinho é 0,9% da reserva por dia.
    tem `paraInteiro()` recusando `number`; o caminho do claim precisa do mesmo.
 6. Limite de tamanho de transação e compute budget ao pagar muitos claims em lote.
 7. **O teto diário de claim (seção 5) recusando** um claim acima do teto.
+8. Se a taxa de transferência for mantida: **se a extensão permite isentar a pool e a
+   tesouraria**, e quanto a taxa custa por swap e por depósito de LP na prática
+   (seção 7b).
 
 ---
 

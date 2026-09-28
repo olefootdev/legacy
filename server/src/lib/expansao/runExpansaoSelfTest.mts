@@ -7,7 +7,9 @@ import { ELEGIBILIDADE_PADRAO, olexpDaCompra, podeEquiparar } from './unidade.js
 import { arvoreVazia, creditar, equipeMenor, inserir, inserirRaiz, volumeDaPerna, type Pernas } from './arvore.js';
 import { DEGRAUS, carreiraDe } from './carreira.js';
 import { MICRO, bonusContabil, equiparar, fecharCiclo, olefootAPagar, poolDoCiclo } from './equiparacao.js';
+import { trancheLiberavel, abaixoDoPiso, PISO_DO_BALDE_BPS } from './equiparacao.js';
 import { CARENCIA_TROCA_WALLET_HORAS, auditarCiclo, auditarClaim, type FatosDoClaim } from './auditoria.js';
+import { raizInteira, raizInteiraTeto, tetoDiarioDeClaim, impactoEmBps, restanteHoje, IMPACTO_MAX_BPS_PADRAO } from './tetoDeClaim.js';
 
 let pass = 0, fail = 0;
 const check = (n: string, c: boolean, d = '') => { if (c) { pass++; console.log(`  ✅ ${n}`); } else { fail++; console.log(`  ❌ ${n} ${d}`); } };
@@ -148,6 +150,52 @@ check('crédito sem origem BARRA', !auditarCiclo({ ...cicloOk, creditosSemOrigem
 check('débito acima do crédito só AVISA (é carry-over legítimo)',
   auditarCiclo({ ...cicloOk, debitadoNoCiclo: 99_000n }).liberado);
 
+console.log('\n🪣 tranche do balde — a receita é o chão, o degrau é o teto\n');
+
+// Os números exatos do docs/TOKENOMICS.md, com a aritmética escrita porque eu
+// já errei esta unidade duas vezes:
+//   moeda contábil = CENTAVO de dólar
+//   preço de $0,000125/token = 0,0125 centavo = 12.500 MICRO-centavos
+//   $31.250 de receita        = 3.125.000 centavos
+//   pool 25%                  =   781.250 centavos
+//   781.250 ÷ 0,0125          = 62.500.000 tokens  ✓ os 5% do balde
+// Balde e tranche aqui estão em TOKEN INTEIRO (mesma unidade dos dois lados).
+const BALDE = 1_250_000_000n;                // 1,25B tokens
+const PRECO = 12_500n;                       // micro-centavos por token
+const base = { baldeTotal: BALDE, degrauBps: 500, percentualBps: 2500, precoMicro: PRECO, jaLiberado: 0n };
+
+{
+  const r = trancheLiberavel({ ...base, receitaAcumulada: 3_125_000n });
+  check('pré-venda de $31.250: degrau e receita empatam em 62,5M',
+    r.tranche === 62_500_000n);
+}
+
+// 🔴 O caso real: levantando $10.000, a regra fixa liberaria 3,1x demais.
+{
+  const r = trancheLiberavel({ ...base, receitaAcumulada: 1_000_000n });
+  check('🔴 receita de $10.000 limita a tranche a 20M (não 62,5M)',
+    r.tranche === 20_000_000n && r.limitadoPor === 'receita');
+  check('   e o degrau fixo seria 3,1x maior',
+    (62_500_000n * 10n) / r.tranche === 31n);
+}
+
+check('sem receita não libera nada',
+  trancheLiberavel({ ...base, receitaAcumulada: 0n }).tranche === 0n);
+check('balde quase vazio limita, mesmo com receita de sobra',
+  trancheLiberavel({ ...base, receitaAcumulada: 10n ** 12n, jaLiberado: BALDE - 7n }).limitadoPor === 'balde');
+check('balde estourado devolve zero, nunca negativo',
+  trancheLiberavel({ ...base, receitaAcumulada: 10n ** 12n, jaLiberado: BALDE * 2n }).tranche === 0n);
+check('preço zero estoura',
+  (() => { try { trancheLiberavel({ ...base, receitaAcumulada: 1n, precoMicro: 0n }); return false; } catch { return true; } })());
+
+// Piso: abaixo dele a liquidação troca de régua e a espiral não acontece.
+const tranche = 20_000_000n;
+check(`piso de ${PISO_DO_BALDE_BPS / 100}% detecta balde afundado`,
+  abaixoDoPiso(tranche / 10n, tranche));
+check('balde folgado não está abaixo do piso', !abaixoDoPiso(tranche / 2n, tranche));
+check('exatamente no piso não está abaixo',
+  !abaixoDoPiso((tranche * BigInt(PISO_DO_BALDE_BPS)) / 10_000n, tranche));
+
 console.log('\n🔐 auditoria do CLAIM — o segundo portão\n');
 
 const claimOk: FatosDoClaim = {
@@ -155,6 +203,9 @@ const claimOk: FatosDoClaim = {
   walletPedida: 'WALLET_A', walletVinculada: 'WALLET_A', walletVerificada: true,
   horasDesdeTrocaDeWallet: null, contasComAMesmaWallet: 0,
   comprasNaoLiquidadas: 0, refJaPago: false, contaSinalizada: false, origensNasDuasPernas: 0,
+  olefootPedido: 1_000n, reservaDaPool: 80_000_000_000_000_000n, olefootJaPagoHoje: 0n,
+  impactoMaxBps: IMPACTO_MAX_BPS_PADRAO,
+  precoDoCicloMicro: 125n, precoUsadoNoClaimMicro: 125n,
 };
 check('claim limpo libera', auditarClaim(claimOk).liberado);
 
@@ -178,6 +229,81 @@ check('saldo zero BARRA', !auditarClaim({ ...claimOk, saldoDeclarado: 0n, saldoR
 check('mesma origem nas duas pernas AVISA, não barra (casal, sócio)',
   auditarClaim({ ...claimOk, origensNasDuasPernas: 2 }).liberado
   && auditarClaim({ ...claimOk, origensNasDuasPernas: 2 }).achados.length === 1);
+
+console.log('\n📉 teto diário de claim — a pool não afunda num dia\n');
+
+// Raiz inteira: sem isso a fórmula do teto precisaria de float.
+check('raiz inteira exata em quadrado perfeito', raizInteira(144n) === 12n);
+check('raiz inteira trunca pra baixo', raizInteira(143n) === 11n);
+check('raiz de 0 e 1', raizInteira(0n) === 0n && raizInteira(1n) === 1n);
+check('raiz de negativo estoura', (() => { try { raizInteira(-1n); return false; } catch { return true; } })());
+check('raiz inteira aguenta número grande',
+  raizInteira(10n ** 40n) === 10n ** 20n);
+check('raiz por cima arredonda pra cima', raizInteiraTeto(143n) === 12n);
+check('raiz por cima não mexe em quadrado perfeito', raizInteiraTeto(144n) === 12n);
+
+// A conta de referência do docs/TOKENOMICS.md: pool de 80M tokens (9 casas),
+// teto de 1% => ~403.025 tokens/dia. Confere a ordem de grandeza e o sinal.
+const POOL_80M = 80_000_000_000_000_000n; // 80M tokens com 9 decimais
+const teto1pct = tetoDiarioDeClaim(POOL_80M, 100);
+check('teto de 1% na pool de 80M bate com a planilha (~403.025 tokens)',
+  teto1pct / 1_000_000_000n === 403_025n);
+check('teto maior libera mais', tetoDiarioDeClaim(POOL_80M, 200) > teto1pct);
+check('pool mais profunda libera mais', tetoDiarioDeClaim(POOL_80M * 2n, 100) > teto1pct);
+check('teto é linear na reserva',
+  tetoDiarioDeClaim(POOL_80M * 2n, 100) === teto1pct * 2n);
+
+// 🔴 O padrão seguro: sem pool, não sai nada.
+check('🔴 reserva zero devolve teto zero', tetoDiarioDeClaim(0n, 100) === 0n);
+check('reserva negativa estoura',
+  (() => { try { tetoDiarioDeClaim(-1n, 100); return false; } catch { return true; } })());
+check('bps fora de faixa estoura', (() => {
+  for (const b of [0, 10_000, 10_001, -1, 1.5]) {
+    try { tetoDiarioDeClaim(POOL_80M, b); return false; } catch { /* esperado */ }
+  }
+  return true;
+})());
+
+// O teto tem que ser CONSERVADOR: o impacto real do teto não pode passar do
+// alvo. Se truncasse pra cima, cada dia estouraria um pouco a régua.
+for (const bps of [50, 100, 200, 500, 1000]) {
+  const v = tetoDiarioDeClaim(POOL_80M, bps);
+  check(`teto de ${bps}bps não estoura o próprio alvo (real ${impactoEmBps(POOL_80M, v)}bps)`,
+    impactoEmBps(POOL_80M, v) <= bps);
+}
+
+check('restanteHoje desconta o que já saiu',
+  restanteHoje({ reservaPool: POOL_80M, impactoMaxBps: 100, jaPagoHoje: teto1pct / 2n }) === teto1pct - teto1pct / 2n);
+check('restanteHoje nunca fica negativo',
+  restanteHoje({ reservaPool: POOL_80M, impactoMaxBps: 100, jaPagoHoje: teto1pct * 3n }) === 0n);
+
+// As regras no portão do claim.
+check('🔴 claim acima do teto do dia BARRA',
+  !auditarClaim({ ...claimOk, olefootPedido: teto1pct + 1n }).liberado);
+check('claim no limite exato do teto passa',
+  auditarClaim({ ...claimOk, olefootPedido: teto1pct }).liberado);
+// 🐞 a primeira versão deste teste usava teto/2 + 1 e quebrava quando o teto
+// era ímpar (a divisão inteira comia o +1). O certo é perguntar ao próprio
+// restanteHoje quanto cabe e pedir um a mais.
+{
+  const jaPago = teto1pct / 3n;
+  const cabe = restanteHoje({ reservaPool: POOL_80M, impactoMaxBps: 100, jaPagoHoje: jaPago });
+  check('🔴 teto considera o que já foi pago hoje',
+    !auditarClaim({ ...claimOk, olefootPedido: cabe + 1n, olefootJaPagoHoje: jaPago }).liberado);
+  check('e libera exatamente o que ainda cabe',
+    auditarClaim({ ...claimOk, olefootPedido: cabe, olefootJaPagoHoje: jaPago }).liberado);
+}
+check('🔴 pool desconhecida RETÉM o claim (padrão seguro)',
+  !auditarClaim({ ...claimOk, reservaDaPool: 0n }).liberado);
+check('pedido negativo BARRA', !auditarClaim({ ...claimOk, olefootPedido: -1n }).liberado);
+
+// A conversão é pelo preço do CICLO, não pelo preço do momento do claim.
+check('🔴 conversão num preço diferente do ciclo BARRA (sentar no claim esperando dip)',
+  !auditarClaim({ ...claimOk, precoUsadoNoClaimMicro: 60n }).liberado);
+check('🔴 claim sem o preço do ciclo BARRA (não conferível)',
+  !auditarClaim({ ...claimOk, precoDoCicloMicro: null }).liberado);
+check('preço igual ao do ciclo passa',
+  auditarClaim({ ...claimOk, precoDoCicloMicro: 999n, precoUsadoNoClaimMicro: 999n }).liberado);
 
 console.log(`\n${fail === 0 ? '🟢' : '🔴'} ${pass} passaram, ${fail} falharam\n`);
 process.exit(fail === 0 ? 0 : 1);

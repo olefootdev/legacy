@@ -130,3 +130,69 @@ export function olefootAPagar(bonusContabil: bigint, precoMicro: bigint): bigint
   if (bonusContabil < 0n) throw new RangeError('bônus negativo');
   return (bonusContabil * MICRO) / precoMicro;
 }
+
+// ------------------------------------------------- tranche do balde ---------
+
+/**
+ * Quanto do balde de expansão pode ser LIBERADO.
+ *
+ * 🔴 A tranche NÃO pode ser um percentual fixo do balde. Medido em
+ * `docs/TOKENOMICS.md`: 5% do balde de 1,25B são 62,5M tokens = $7.812,50 no
+ * preço da pré-venda, mas uma pré-venda que arrecade $10.000 só cobre 20M
+ * (25% de $10.000). A regra fixa liberaria **3,1× mais do que a receita
+ * sustenta** — e aí o "a cada $1 destino $0,25" deixa de ser verdade.
+ *
+ * Então a tranche é o MENOR entre o degrau do balde e o que a receita cobre.
+ * O degrau é teto administrativo; a receita é o chão da realidade.
+ */
+export function trancheLiberavel(args: {
+  /** Tamanho total do balde de expansão, em token (menor unidade). */
+  readonly baldeTotal: bigint;
+  /** Degrau administrativo, em bps do balde. 500 = 5%. */
+  readonly degrauBps: number;
+  /** Receita elegível acumulada, na menor unidade da moeda contábil. */
+  readonly receitaAcumulada: bigint;
+  /** Fatia da receita destinada à expansão, em bps. 2500 = 25%. */
+  readonly percentualBps: number;
+  /** Preço de referência de 1 token na moeda contábil, em micro. */
+  readonly precoMicro: bigint;
+  /** Já liberado do balde até agora, em token. */
+  readonly jaLiberado: bigint;
+}): { readonly tranche: bigint; readonly limitadoPor: 'degrau' | 'receita' | 'balde' } {
+  const { baldeTotal, degrauBps, receitaAcumulada, percentualBps, precoMicro, jaLiberado } = args;
+  if (baldeTotal < 0n || receitaAcumulada < 0n || jaLiberado < 0n) {
+    throw new RangeError('valores do balde não podem ser negativos');
+  }
+  if (!Number.isInteger(degrauBps) || degrauBps < 0 || degrauBps > 10_000) {
+    throw new RangeError(`degrau fora de 0–10000 bps: ${degrauBps}`);
+  }
+  exigePositivo('preço de referência', precoMicro);
+
+  const porDegrau = (baldeTotal * BigInt(degrauBps)) / 10_000n;
+  const porReceita = olefootAPagar(poolDoCiclo(receitaAcumulada, { percentualBps }), precoMicro);
+  const restaNoBalde = baldeTotal > jaLiberado ? baldeTotal - jaLiberado : 0n;
+
+  let tranche = porDegrau;
+  let limitadoPor: 'degrau' | 'receita' | 'balde' = 'degrau';
+  if (porReceita < tranche) { tranche = porReceita; limitadoPor = 'receita'; }
+  if (restaNoBalde < tranche) { tranche = restaNoBalde; limitadoPor = 'balde'; }
+  return { tranche, limitadoPor };
+}
+
+/**
+ * Piso do balde: abaixo dele a liquidação troca de régua.
+ *
+ * Enquanto há folga, o ciclo liquida denominado em DINHEIRO (pool ÷ equiparado)
+ * — o que é certo, porque o bônus é uma promessa em valor. Mas se o balde
+ * afunda, continuar denominando em dinheiro obriga a emitir mais token conforme
+ * o preço cai, que é exatamente a espiral que `docs/TOKENOMICS.md` descreve.
+ *
+ * Abaixo do piso o ciclo passa a distribuir FRAÇÃO DO BALDE RESTANTE. Assim o
+ * balde nunca fica insolvente e nunca é forçado a emitir num mercado caindo.
+ */
+export const PISO_DO_BALDE_BPS = 2_000; // 20% da tranche
+
+export function abaixoDoPiso(saldoDoBalde: bigint, tamanhoDaTranche: bigint, pisoBps = PISO_DO_BALDE_BPS): boolean {
+  if (saldoDoBalde < 0n || tamanhoDaTranche < 0n) throw new RangeError('valores negativos');
+  return saldoDoBalde < (tamanhoDaTranche * BigInt(pisoBps)) / 10_000n;
+}
