@@ -1,6 +1,6 @@
 # TOKENOMICS FINAL — $OLEFOOT na Solana
 
-> **Revisão 5 — 2026-09-28 · TABELA APROVADA (opção B)**
+> **Revisão 6 — 2026-09-28 · TABELA APROVADA · a casa cobre a taxa (opção 2)**
 >
 > Régua do token, como `VOLT2.md` é a régua do visual. Número aqui vira constante em
 > código; constante em código não muda sem mudar este arquivo.
@@ -90,11 +90,17 @@ vendidos.** Então a meta não é \$10.000 — é o esgotamento.
 
 | | |
 |---|---|
-| Tokens na pool | **250.000.000** (do balde de Liquidez) |
+| Tokens que CHEGAM na pool | **250.000.000** |
+| Enviados do balde de Liquidez | **263.157.894** (a taxa morde no depósito) |
 | USDC na pool | **\$31.250** (a arrecadação inteira) |
 | TVL | **\$62.500** |
-| Guardado do balde | 310.962.728 |
+| Sobra do balde | 284.646.940 |
 | vs. o cenário de \$10.000 | **3,1× mais profunda** |
+
+🔴 **Depósito de LP paga a taxa de 5%.** Não existe isenção por endereço no Token-2022
+(§6), então enviar 250M para a pool entregaria 237,5M. Para a pool abrir com 250M de
+verdade, o balde envia **263.157.894**. Cada reforço futuro da pool perde 5% do mesmo
+jeito — o que encarece aprofundar a pool com a receita.
 
 ✅ **E isso satisfaz sozinho o portão de profundidade.** Eu tinha proposto travar o
 vesting grande até a pool chegar a 194M tokens; condicionar o anúncio ao esgotamento
@@ -125,39 +131,51 @@ pré-venda, `USDC = tokens × preço` — dobrar o preço dobra os dois lados, e
 
 Valor entra em **USD**, sai em **OLEFOOT**, vira **reais** para o Pix do Mercado Pago.
 
-| Pack | OLEFOOT bruto | **Recebe (95%)** | Pix a R$5,42/USD |
+**Decisão de 2026-09-28 (opção 2): o número anunciado é o número ENTREGUE.** A casa
+cobre a taxa de 5%.
+
+| Pack | **RECEBE** (anunciado) | Tesouraria debita | Pix a R\$5,42/USD |
 |---|---|---|---|
-| **\$10** | 80.000 | **76.000** | R\$54,20 |
-| **\$50** | 400.000 | **380.000** | R\$271,00 |
-| **\$250** | 2.000.000 | **1.900.000** | R\$1.355,00 |
-| **\$500** | 4.000.000 | **3.800.000** | R\$2.710,00 |
-| **\$1.250** | 10.000.000 | **9.500.000** | R\$6.775,00 |
+| **\$10** | **80.000** | 84.210,52 | R\$54,20 |
+| **\$50** | **400.000** | 421.052,63 | R\$271,00 |
+| **\$250** | **2.000.000** | 2.105.263,15 | R\$1.355,00 |
+| **\$500** | **4.000.000** | 4.210.526,31 | R\$2.710,00 |
+| **\$1.250** | **10.000.000** | 10.526.315,78 | R\$6.775,00 |
 | **Outro** | digitado, mínimo \$10 | | aceita digitar em USD **ou em R\$** |
 
-✨ **A \$0,000125 cada centavo de dólar compra exatamente 80 tokens.** Nenhum pack em
-centavo inteiro tem arredondamento — a conversão é exata, não aproximada. Se o preço
-mudar e essa divisão deixar de fechar, o self-test acusa.
+✨ **A \$0,000125 cada centavo de dólar entrega exatamente 80 tokens.** Nenhum pack em
+centavo inteiro tem arredondamento no lado do comprador. Se o preço mudar e essa divisão
+deixar de fechar, o self-test acusa.
 
-### 🔴 O que precisa aparecer na tela de compra
+✅ **E o preço efetivo é \$0,000125 exato, em todos os cinco packs** — o anunciado é o
+verdadeiro, não há rodapé a escrever.
 
-A taxa de 5% morde **na entrega**. Quem compra \$10 recebe **76.000**, não 80.000 — e o
-preço efetivo por token entregue é **\$0,00013158**, não \$0,000125.
+### O que a decisão custa
 
-**Anunciar o líquido, não o bruto.** Um comprador que lê 80.000 e recebe 76.000 abre
-reclamação, e com razão. O módulo devolve os dois números de propósito; a tela mostra o
-que chega na wallet.
+| | |
+|---|---|
+| Pré-venda entrega | 250.000.000 |
+| Tesouraria debita | **263.157.894,7** |
+| Coberto pelo balde de Liquidez | **13.157.894,7 = 0,263% do supply** |
+| Founders recebem de taxa | 13.157.894,7 (contra 12.500.000 na opção 1 — **um pouco mais**) |
+
+**O balde de Liquidez paga a taxa duas vezes:** 13,16M no gross-up da pré-venda e
+13,16M no depósito da pool. Total **26.315.788 = 4,7% do balde**, que fica com
+284.646.940 de sobra. É caro? Não: compra número redondo na tela e preço honesto, e numa
+pré-venda a pergunta *"por que recebi menos do que dizia?"* custa mais que isso.
 
 ### Arredondamento — cada direção é decisão
 
 | | Direção | Por quê |
 |---|---|---|
-| Tokens | pra **baixo** | melhor entregar de menos que prometer token que a alocação não tem |
+| Tokens entregues | exato (80/centavo) | não há fração a arredondar no lado do comprador |
+| Bruto a debitar | pra **cima** | a sobra fica com a tesouraria; o comprador nunca recebe menos |
 | Reais a cobrar | pra **cima**, no centavo | a casa nunca cobra menos que o dólar valia; erro máximo R\$0,01 |
 | "Outro" digitado em R\$ → USD | pra **baixo** | fração de centavo de dólar fica de fora, nunca cobrada a mais |
 
 ### Travas
 
-🔴 **Preço é sempre do servidor.** `payments.ts` já diz isso no comentário e o projeto
+🔴 **Preço é sempre do servidor.** `payments.ts` já manda isso no comentário e o projeto
 pagou para aprender — "preço PIX client-side" foi um dos furos de dinheiro fechados no
 card. O cliente manda **qual** pack, nunca **quanto custa**.
 
@@ -167,13 +185,13 @@ card. O cliente manda **qual** pack, nunca **quanto custa**.
 | Valor não inteiro recusado | ✅ |
 | Cotação inválida recusa em vez de cobrar errado | ✅ |
 | Alocação insuficiente recusa (não vende token que não existe) | ✅ |
-| **Teto por conta** | ✅ em código, **número a definir** |
+| **Teto por conta** | ✅ em código, 🔴 **número a definir** |
 
-⚠️ **O maior pack é 4% da pré-venda — 25 compradores esgotam tudo.** O teto por conta
-está implementado mas sem número; sem ele a pré-venda repete a concentração do airdrop
-(onde 1 carteira ficou com 26,3%).
+⚠️ **O maior pack é 4% da pré-venda — 25 compradores esgotam tudo.** Sem teto a
+pré-venda repete a concentração do airdrop, onde 1 carteira ficou com 26,3%.
+Sugestão: \$2.500/conta (80 compradores mínimos) ou \$1.250 (200).
 
-→ `server/src/lib/presale/packs.ts` · `npm run test:presale-packs` (25 testes)
+→ `server/src/lib/presale/packs.ts` · `npm run test:presale-packs` (32 testes)
 
 ---
 
@@ -303,6 +321,8 @@ funcionar.
 | `maximumFee` | **sem teto** — 5% literal em qualquer tamanho |
 | Pool | **Raydium CPMM** ou CLMM. **AMM v4 está fora**, não suporta Token-2022 |
 | CEX | risco alto; a maioria restringe token com transfer-fee |
+| **Isenção por endereço** | **NÃO EXISTE.** Sem whitelist, sem exceção pra tesouraria ou pool |
+| Taxa condicional | só via *transfer hook* — e **a Raydium não suporta transfer hook** |
 
 ### 🔴 Não é contabilidade, é bloqueio de transação
 
@@ -351,9 +371,10 @@ porque alguém vai calcular, e é melhor que o número venha de nós.
    pool. Já em código.
 4. **ATA + taxa.** O recebedor precisa de ~0,002 SOL para a ATA e a primeira
    transferência já chega 5% menor. Comunicar os dois juntos, senão vira suporte.
-5. **A pool paga taxa em cada swap e possivelmente em cada depósito/retirada de LP.**
-   A medir no faucet (§10) — se depósito de LP paga, aprofundar a pool com a receita
-   custa 5% a cada injeção, e o portão de profundidade (§5) fica mais lento.
+5. 🔴 **A pool paga taxa em cada swap E em cada depósito de LP** — confirmado, porque
+   não há isenção. Aprofundar a pool com a receita custa 5% a cada injeção, e o depósito
+   inicial precisa de gross-up (§3). Não existe escapatória: sem isenção por endereço e
+   sem transfer hook na Raydium, a taxa é uniforme para sempre.
 
 ## 7. Decisões que precisam da sua assinatura
 
@@ -367,7 +388,8 @@ porque alguém vai calcular, e é melhor que o número venha de nós.
 | 7 | `maximumFee`: sem teto (5% literal) ou teto absoluto | sem teto, como decidido |
 | 8 | Pool: Raydium **CPMM** ou CLMM (AMM v4 está fora) | CPMM |
 | 6 | Destino do claim v1 não resgatado após 24 meses | Liquidez, anunciado no dia 1 |
-| 9 | **Teto por conta na pré-venda** | ⏳ sem ele 25 compradores esgotam |
+| 9 | **Teto por conta na pré-venda** | 🔴 sem ele 25 compradores esgotam. Sugestão \$2.500 |
+| 10 | ~~Quem absorve os 5% na entrega~~ | ✅ **DECIDIDO: opção 2, a casa cobre** |
 
 ## 8. Travas técnicas não negociáveis no lançamento
 
@@ -406,9 +428,8 @@ porque alguém vai calcular, e é melhor que o número venha de nós.
 5. Valor que estoura `Number` atravessa como **bigint de ponta a ponta**.
 6. Limite de tamanho de transação ao pagar claims em lote.
 7. **O teto diário recusando** um claim acima do limite. ✅ já coberto em self-test
-8. **A taxa de 5% na prática:** se a extensão permite **isentar a pool e a tesouraria**;
-   quanto custa por swap; **se depósito e retirada de LP pagam taxa** (isso encarece
-   aprofundar a pool em 5% por injeção).
+8. **A taxa de 5% na prática:** quanto custa por swap e por depósito de LP na Raydium
+   CPMM. (Isenção por endereço já está respondida: **não existe**.)
 9. **A rotina de colheita** (`withdrawWithheldTokensFromAccounts`) varrendo contas e
    entregando na wallet dos founders — sem ela a receita da taxa é zero.
 10. A taxa que **nosso código calcula** batendo com a que **o programa cobra**, numa

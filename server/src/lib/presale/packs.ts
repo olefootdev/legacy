@@ -14,12 +14,25 @@
  * inteiro tem arredondamento — a conversão é exata, não aproximada. Se algum dia
  * o preço mudar e essa divisão deixar de fechar, o self-test acusa.
  *
- * 🔴 E o comprador recebe 95%, não 100%. A taxa de transferência de 5% do
- * Token-2022 morde na entrega. Este módulo devolve os DOIS números — bruto e
- * líquido — porque anunciar só o bruto e entregar o líquido é o tipo de
- * surpresa que destrói uma pré-venda.
+ * 🔴 A TAXA DE 5% É COBERTA PELA CASA (opção 2, decidida em 2026-09-28).
+ *
+ * O Token-2022 retém 5% em toda transferência e **não existe isenção por
+ * endereço** — nem whitelist, nem exceção pra tesouraria (transfer hook seria o
+ * único jeito, e a Raydium não suporta). Então alguém tem que absorver.
+ *
+ * A decisão: **o número anunciado é o número ENTREGUE**. Quem compra $10 vê
+ * 80.000 e recebe 80.000. A tesouraria debita 84.211 e a diferença sai do balde
+ * de Liquidez. O preço anunciado passa a ser o preço verdadeiro.
+ *
+ * Custa 13.157.895 tokens na pré-venda inteira (0,263% do supply, 2,3% do balde
+ * de Liquidez) e compra: número redondo na tela, preço honesto, e nenhuma
+ * explicação de rodapé sobre por que faltaram 4.000 tokens. Numa pré-venda a
+ * pergunta "por que recebi menos do que dizia?" custa mais que isso.
+ *
+ * ⚠️ O founder recebe a taxa nas duas opções — na 2 recebe até um pouco mais
+ * (13.157.895 contra 12.500.000). A escolha foi só de quem cobre o buraco.
  */
-import { liquidoDe, taxaDe, TAXA_LANCAMENTO, type ConfigTaxa } from '../expansao/taxaDeTransferencia.js';
+import { brutoParaEntregar, taxaDe, TAXA_LANCAMENTO, type ConfigTaxa } from '../expansao/taxaDeTransferencia.js';
 
 /** Casas decimais do mint. 1 OLEFOOT = 10^9 na menor unidade. */
 export const DECIMAIS = 9;
@@ -29,12 +42,16 @@ export const UNIDADE = 10n ** BigInt(DECIMAIS);
 export const PRECO_USD_POR_TOKEN = '0.000125';
 
 /**
- * Tokens (inteiros) por CENTAVO de dólar. Derivado do preço, não inventado:
+ * Tokens ENTREGUES por CENTAVO de dólar. Derivado do preço, não inventado:
  *   1 centavo = $0,01 ; $0,01 ÷ $0,000125 = 80 tokens
+ *
+ * 🔑 Entregues, não vendidos: com a opção 2 este é o número que a pessoa VÊ e o
+ * número que CHEGA. O bruto que a tesouraria debita é maior e sai daqui por
+ * `brutoParaEntregar`.
  */
 export const TOKENS_POR_CENTAVO_USD = 80n;
 
-/** Alocação total da pré-venda, em token inteiro. */
+/** Alocação da pré-venda, em token inteiro ENTREGUE. */
 export const ALOCACAO_PRESALE = 250_000_000n;
 
 /** Os packs oferecidos, em centavos de dólar. */
@@ -54,16 +71,19 @@ export interface Cotacao {
 export interface Orcamento {
   readonly usdCents: number;
   readonly brlCents: bigint;
-  /** OLEFOOT comprado, em token inteiro. */
-  readonly tokensBrutos: bigint;
-  /** O que SAI da tesouraria, na menor unidade. */
-  readonly brutoNaMenorUnidade: bigint;
-  /** O que CHEGA na wallet, na menor unidade (depois da taxa de 5%). */
+  /** 🔑 OLEFOOT que a pessoa RECEBE, em token inteiro. É o número anunciado. */
+  readonly tokensEntregues: bigint;
+  /** O mesmo, na menor unidade. */
   readonly liquidoNaMenorUnidade: bigint;
-  /** A taxa retida, na menor unidade. */
+  /** O que SAI da tesouraria, na menor unidade — maior, por causa da taxa. */
+  readonly brutoNaMenorUnidade: bigint;
+  /** A taxa retida pelo Token-2022, coberta pela casa (balde de Liquidez). */
   readonly taxaNaMenorUnidade: bigint;
   readonly cotacao: Cotacao;
-  /** Preço efetivo por token ENTREGUE, em micro-centavos de dólar. */
+  /**
+   * Preço por token entregue, em micro-centavos de dólar.
+   * Com a opção 2 tem que dar exatamente 12.500 = $0,000125 — o anunciado.
+   */
   readonly precoEfetivoMicroCents: bigint;
 }
 
@@ -115,17 +135,18 @@ export function orcar(
     return { ok: false, motivo: 'acima_do_teto_por_conta', tetoUsdCents: teto };
   }
 
-  const tokensBrutos = (BigInt(usdCents) * TOKENS_POR_CENTAVO_USD);
-  if (tokensBrutos > limites.restamTokens) {
+  // A alocação é medida no que é ENTREGUE — é isso que a pessoa recebe e é
+  // isso que os 250M da tabela significam. O bruto a mais sai de Liquidez.
+  const tokensEntregues = BigInt(usdCents) * TOKENS_POR_CENTAVO_USD;
+  if (tokensEntregues > limites.restamTokens) {
     return { ok: false, motivo: 'alocacao_insuficiente', restamTokens: limites.restamTokens };
   }
 
-  const brutoNaMenorUnidade = tokensBrutos * UNIDADE;
+  const liquidoNaMenorUnidade = tokensEntregues * UNIDADE;
+  const brutoNaMenorUnidade = brutoParaEntregar(liquidoNaMenorUnidade, taxa);
   const taxaNaMenorUnidade = taxaDe(brutoNaMenorUnidade, taxa);
-  const liquidoNaMenorUnidade = liquidoDe(brutoNaMenorUnidade, taxa);
   const brlCents = porCima(BigInt(usdCents) * cotacao.brlPorUsdMicro, 1_000_000n);
 
-  // Preço por token ENTREGUE, em micro-centavos: (usdCents × 1e6 × UNIDADE) / líquido
   const precoEfetivoMicroCents = liquidoNaMenorUnidade > 0n
     ? (BigInt(usdCents) * 1_000_000n * UNIDADE) / liquidoNaMenorUnidade
     : 0n;
@@ -133,8 +154,8 @@ export function orcar(
   return {
     ok: true,
     orcamento: {
-      usdCents, brlCents, tokensBrutos,
-      brutoNaMenorUnidade, liquidoNaMenorUnidade, taxaNaMenorUnidade,
+      usdCents, brlCents, tokensEntregues,
+      liquidoNaMenorUnidade, brutoNaMenorUnidade, taxaNaMenorUnidade,
       cotacao, precoEfetivoMicroCents,
     },
   };
@@ -156,4 +177,18 @@ export function usdCentsDeBrlCents(brlCents: bigint, cotacao: Cotacao): number {
 /** Quanto vale a alocação inteira, em dólares. Serve pra meta da pré-venda. */
 export function metaDaPresaleUsdCents(): number {
   return Number(ALOCACAO_PRESALE / TOKENS_POR_CENTAVO_USD);
+}
+
+/**
+ * O que a pré-venda inteira custa à tesouraria, entregando os 250M líquidos.
+ * A diferença contra a alocação é a taxa que o balde de Liquidez cobre.
+ */
+export function custoBrutoDaPresale(taxa: ConfigTaxa = TAXA_LANCAMENTO): {
+  readonly entregue: bigint;
+  readonly bruto: bigint;
+  readonly cobertoPelaCasa: bigint;
+} {
+  const entregue = ALOCACAO_PRESALE * UNIDADE;
+  const bruto = brutoParaEntregar(entregue, taxa);
+  return { entregue, bruto, cobertoPelaCasa: bruto - entregue };
 }

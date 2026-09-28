@@ -7,7 +7,7 @@
  */
 import {
   PACKS_USD_CENTS, TOKENS_POR_CENTAVO_USD, ALOCACAO_PRESALE, MINIMO_USD_CENTS,
-  UNIDADE, orcar, usdCentsDeBrlCents, metaDaPresaleUsdCents,
+  UNIDADE, orcar, usdCentsDeBrlCents, metaDaPresaleUsdCents, custoBrutoDaPresale,
   type Cotacao, type Limites,
 } from './packs.js';
 
@@ -29,29 +29,30 @@ check('a $0,000125 cada centavo de dólar compra exatamente 80 tokens',
 check('a alocação inteira vale exatamente $31.250',
   metaDaPresaleUsdCents() === 3_125_000);
 
-console.log('\n  pack      →     OLEFOOT bruto      líquido (95%)          Pix');
+console.log('\n  pack      →   RECEBE (anunciado)   tesouraria debita          Pix');
 for (const p of PACKS_USD_CENTS) {
   const r = orcar(p, cot, livre);
   if (!r.ok) { check(`pack $${p / 100} orça`, false); continue; }
   const o = r.orcamento;
-  console.log(`  $${String(p / 100).padStart(6)}  →  ${br(o.tokensBrutos).padStart(14)}  ${br(o.liquidoNaMenorUnidade / UNIDADE).padStart(14)}  R$ ${br(Number(o.brlCents) / 100).padStart(10)}`);
+  console.log(`  $${String(p / 100).padStart(6)}  →  ${br(o.tokensEntregues).padStart(18)}  ${br(o.brutoNaMenorUnidade / UNIDADE).padStart(17)}  R$ ${br(Number(o.brlCents) / 100).padStart(10)}`);
 }
 
 // Os cinco packs, conferidos um por um contra a conta na mão.
-const esperado: Array<[number, bigint, bigint, bigint]> = [
-  //  usdCents, tokens brutos, líquido, brlCents a 5,42
-  [1_000, 80_000n, 76_000n, 5_420n],
-  [5_000, 400_000n, 380_000n, 27_100n],
-  [25_000, 2_000_000n, 1_900_000n, 135_500n],
-  [50_000, 4_000_000n, 3_800_000n, 271_000n],
-  [125_000, 10_000_000n, 9_500_000n, 677_500n],
+// O anunciado é o ENTREGUE. O bruto é 5,26% maior e sai de Liquidez.
+const esperado: Array<[number, bigint, bigint]> = [
+  //  usdCents, tokens ENTREGUES (o anunciado), brlCents a 5,42
+  [1_000, 80_000n, 5_420n],
+  [5_000, 400_000n, 27_100n],
+  [25_000, 2_000_000n, 135_500n],
+  [50_000, 4_000_000n, 271_000n],
+  [125_000, 10_000_000n, 677_500n],
 ];
-for (const [cents, tok, liq, brl] of esperado) {
+for (const [cents, tok, brl] of esperado) {
   const r = orcar(cents, cot, livre);
   const o = r.ok ? r.orcamento : null;
-  check(`$${cents / 100}: ${br(tok)} brutos, ${br(liq)} líquidos, R$${Number(brl) / 100}`,
-    !!o && o.tokensBrutos === tok
-      && o.liquidoNaMenorUnidade === liq * UNIDADE
+  check(`$${cents / 100}: entrega ${br(tok)} (o anunciado), cobra R$${Number(brl) / 100}`,
+    !!o && o.tokensEntregues === tok
+      && o.liquidoNaMenorUnidade === tok * UNIDADE
       && o.brlCents === brl);
 }
 
@@ -60,11 +61,37 @@ for (const [cents, tok, liq, brl] of esperado) {
   const o = (orcar(1_000, cot, livre) as { ok: true; orcamento: any }).orcamento;
   check('🔴 bruto = líquido + taxa (a conta fecha na menor unidade)',
     o.brutoNaMenorUnidade === o.liquidoNaMenorUnidade + o.taxaNaMenorUnidade);
-  check('🔴 o comprador de $10 recebe 76.000, não 80.000',
-    o.liquidoNaMenorUnidade / UNIDADE === 76_000n);
-  // $10 por 76.000 tokens = $0,00013158/token, contra os $0,000125 anunciados.
-  check('🔴 preço efetivo por token ENTREGUE é $0,00013158, não $0,000125',
-    o.precoEfetivoMicroCents === 13_157n);
+  check('✅ quem compra $10 RECEBE 80.000 — o anunciado é o entregue',
+    o.liquidoNaMenorUnidade / UNIDADE === 80_000n);
+  // Valor exato em lamports, não arredondado: 80.000 líquidos exigem
+  // 84.210,526316 tokens de bruto, e a taxa retida é 4.210,526316.
+  check('✅ e a tesouraria debita exatamente 84.210,526315790 tokens',
+    o.brutoNaMenorUnidade === 84_210_526_315_790n);
+  check('   com taxa de 4.210,526315790 — e o net bate em 80.000 redondos',
+    o.taxaNaMenorUnidade === 4_210_526_315_790n
+    && o.brutoNaMenorUnidade - o.taxaNaMenorUnidade === 80_000n * UNIDADE);
+  check('🔴 preço efetivo = $0,000125 EXATO (o anunciado é o verdadeiro)',
+    o.precoEfetivoMicroCents === 12_500n);
+  check('a taxa é sempre ~5,26% do líquido, coberta pela casa',
+    (o.brutoNaMenorUnidade * 10_000n) / o.liquidoNaMenorUnidade === 10_526n);
+}
+
+// O preço efetivo tem que ser 12.500 em TODOS os packs, não só no de $10.
+check('🔴 preço efetivo é $0,000125 em todos os 5 packs',
+  PACKS_USD_CENTS.every((p) => {
+    const r = orcar(p, cot, livre);
+    return r.ok && r.orcamento.precoEfetivoMicroCents === 12_500n;
+  }));
+
+// O custo da decisão, para o documento e para o balde de Liquidez.
+{
+  const c = custoBrutoDaPresale();
+  check('a pré-venda inteira entrega 250.000.000', c.entregue === 250_000_000n * UNIDADE);
+  check('e custa exatamente 263.157.894.736.842.106 lamports à tesouraria',
+    c.bruto === 263_157_894_736_842_106n);
+  check('🔑 Liquidez cobre 13.157.894.736.842.106 = 0,263% do supply',
+    c.cobertoPelaCasa === 13_157_894_736_842_106n
+    && (c.cobertoPelaCasa * 100_000n) / (5_000_000_000n * UNIDADE) === 263n);
 }
 
 console.log('\n🧮 arredondamento — cada direção é decisão\n');
