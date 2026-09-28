@@ -80,7 +80,7 @@ async function findIntent(
   intentFromMeta: string | undefined,
   mpPaymentId: string,
 ): Promise<IntentRow | null> {
-  const cols = 'id, status, user_id, amount_cents';
+  const cols = 'id, status, user_id, amount_cents, product_kind, metadata, external_id';
   if (externalRef) {
     const { data } = await supabase.from('payment_intents').select(cols).eq('external_id', externalRef).maybeSingle();
     if (data) return data as IntentRow;
@@ -245,7 +245,40 @@ Deno.serve(async (req: Request) => {
               if (confirmErr) {
                 errorMessage = `confirm_rpc_failed: ${confirmErr.message}`;
               } else {
-                processedAt = new Date().toISOString();
+                // Pré-venda do OLEFOOT: credita a posição TRAVADA. Os números
+                // vêm do metadata que o servidor gravou na criação do intent —
+                // nunca do body do cliente, nunca recalculados aqui (a cotação
+                // já mudou). A RPC é idempotente pelo ref, então webhook
+                // reentregue não credita duas vezes.
+                if (intent.product_kind === 'presale_pack') {
+                  const ps = (intent.metadata as Record<string, unknown> | null)
+                    ?.presale as Record<string, string> | undefined;
+                  if (!ps) {
+                    errorMessage = 'presale_metadata_ausente';
+                  } else {
+                    const { data: credData, error: credErr } = await supabase.rpc('presale_creditar', {
+                      p_user: intent.user_id,
+                      p_ref: intent.external_id ?? intent.id,
+                      p_usd_cents: Number(ps.usd_cents),
+                      p_brl_cents: Number(ps.brl_cents),
+                      p_brl_por_usd_micro: Number(ps.brl_por_usd_micro),
+                      p_tokens_entregues: ps.tokens_entregues,
+                      p_tokens_brutos: ps.tokens_brutos,
+                    });
+                    if (credErr) {
+                      errorMessage = `presale_creditar_failed: ${credErr.message}`;
+                    } else {
+                      const r = Array.isArray(credData) ? credData[0] : credData;
+                      if (r && r.creditou === false && r.motivo !== 'ref_ja_creditado') {
+                        errorMessage = `presale_nao_creditou: ${r.motivo}`;
+                      } else {
+                        processedAt = new Date().toISOString();
+                      }
+                    }
+                  }
+                } else {
+                  processedAt = new Date().toISOString();
+                }
               }
             }
           }

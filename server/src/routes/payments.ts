@@ -19,17 +19,22 @@ import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { rateLimit } from '../lib/rateLimit.js';
 import { resolveCardCheckout } from '../lib/cardPricing.js';
+import { fetchUsdBrlVenda } from '../lib/usdBrlQuote.js';
+import { orcar, ALOCACAO_PRESALE, UNIDADE, MINIMO_USD_CENTS } from '../lib/presale/packs.js';
 
 const MP_API_BASE = 'https://api.mercadopago.com';
 
 /** Pack de ativação — preço fixo de produto (R$125). */
+// Pré-venda do OLEFOOT. Preço e conversão vêm de packs.ts — nunca do body.
 const ACTIVATION_PACK_CENTS = 12_500;
 
 /** Depósito mínimo (R$1). Recarga é 1:1 (paga R$X → recebe R$X em BRO). */
 const RECHARGE_MIN_CENTS = 100;
 
 interface CreatePixBody {
-  product_kind?: 'activation_pack' | 'card' | 'recharge';
+  product_kind?: 'activation_pack' | 'card' | 'recharge' | 'presale_pack';
+  /** presale_pack: valor do pack em centavos de DÓLAR. O servidor converte. */
+  usd_cents?: number;
   product_ref?: string;
   amount_cents?: number;
   customer?: {
@@ -104,7 +109,7 @@ export const paymentsRoutes = new Hono();
  * POST /api/payments/pix/create
  *
  * Body:
- *   product_kind: 'activation_pack' | 'card' | 'recharge'
+ *   product_kind: 'activation_pack' | 'card' | 'recharge' | 'presale_pack'
  *   product_ref?: string (uuid do card, etc — null pra activation_pack)
  *   amount_cents: número (default 12500 = R$125 / activation pack)
  *   customer: { name, email, tax_id (CPF), cellphone }  ← name/email/CPF obrigatórios
@@ -124,7 +129,7 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
   const body = await c.req.json<CreatePixBody>().catch(() => ({} as CreatePixBody));
 
   const productKind = body.product_kind;
-  if (!productKind || !['activation_pack', 'card', 'recharge'].includes(productKind)) {
+  if (!productKind || !['activation_pack', 'card', 'recharge', 'presale_pack'].includes(productKind)) {
     return c.json({ ok: false, error: 'product_kind inválido' }, 400);
   }
 
@@ -155,6 +160,63 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
     metadata = { ...metadata, player: resolved.checkout.player };
   } else if (productKind === 'activation_pack') {
     amountCents = ACTIVATION_PACK_CENTS;
+  } else if (productKind === 'presale_pack') {
+    // O cliente manda QUANTOS DÓLARES. O servidor decide quantos tokens e
+    // quantos reais — preço em packs.ts, cotação em usdBrlQuote.ts. É a regra
+    // que o comentário acima já manda: nada de valor autoritativo vindo do body.
+    const usdCents = Math.floor(Number(body.usd_cents) || 0);
+    if (!Number.isInteger(usdCents) || usdCents < MINIMO_USD_CENTS) {
+      return c.json({ ok: false, error: `usd_cents mínimo de ${MINIMO_USD_CENTS}.` }, 400);
+    }
+
+    let brlPorUsd: number;
+    try {
+      brlPorUsd = await fetchUsdBrlVenda();
+    } catch {
+      return c.json({ ok: false, error: 'Cotação do dólar indisponível.' }, 502);
+    }
+
+    const cfgRes = await sb.from('presale_config')
+      .select('aberta, teto_conta_usd_cents, degrau_vendido_bps, teto_apos_degrau_usd_cents, tokens_vendidos')
+      .eq('id', true).maybeSingle();
+    const cfg = cfgRes.data;
+    if (!cfg?.aberta) return c.json({ ok: false, error: 'Pré-venda fechada.' }, 409);
+
+    const vendidos = BigInt(String(cfg.tokens_vendidos ?? '0'));
+    const alocacao = ALOCACAO_PRESALE * UNIDADE;
+    const restamTokens = alocacao > vendidos ? (alocacao - vendidos) / UNIDADE : 0n;
+
+    // Teto em degrau: acima de degrau_vendido_bps vendido, vale o teto de cima.
+    const vendidoBps = Number((vendidos * 10_000n) / alocacao);
+    const teto = vendidoBps >= (cfg.degrau_vendido_bps ?? 5_000)
+      ? (cfg.teto_apos_degrau_usd_cents ?? cfg.teto_conta_usd_cents)
+      : cfg.teto_conta_usd_cents;
+
+    const jaRes = await sb.from('presale_purchase')
+      .select('usd_cents').eq('user_id', user.id).eq('status', 'pago');
+    const jaComprado = (jaRes.data ?? []).reduce((acc, r) => acc + Number(r.usd_cents || 0), 0);
+
+    const orc = orcar(
+      usdCents,
+      { brlPorUsdMicro: BigInt(Math.round(brlPorUsd * 1_000_000)), lidaEm: new Date().toISOString() },
+      { tetoPorContaUsdCents: teto ?? null, jaCompradoUsdCents: jaComprado, restamTokens },
+    );
+    if (!orc.ok) return c.json({ ok: false, step: 'presale', error: orc.motivo, detalhe: orc }, 409);
+
+    const o = orc.orcamento;
+    amountCents = Number(o.brlCents);
+    // O webhook credita a posição a partir deste metadata — e como os números
+    // saem daqui (servidor), não há como o cliente inflar o que recebe.
+    metadata = {
+      ...metadata,
+      presale: {
+        usd_cents: o.usdCents,
+        brl_cents: String(o.brlCents),
+        brl_por_usd_micro: String(o.cotacao.brlPorUsdMicro),
+        tokens_entregues: String(o.liquidoNaMenorUnidade),
+        tokens_brutos: String(o.brutoNaMenorUnidade),
+      },
+    };
   } else {
     amountCents = Math.floor(Number(body.amount_cents) || 0);
     if (amountCents < RECHARGE_MIN_CENTS) {

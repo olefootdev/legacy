@@ -34,6 +34,7 @@ import { solanaWalletRoutes } from './routes/solanaWallet.js';
 import { vaultRoutes, vaultAdminRoutes } from './routes/vault.js';
 import { cspReportRoutes } from './routes/cspReport.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
+import { presaleRoutes } from './routes/presale.js';
 // Railway scheduler decomissionado em 2026-05-07. A Liga Global agora é
 // gerenciada autonomamente pela Edge Function v7 do Supabase + pg_cron.
 // Ver supabase/functions/global-league-tick/index.ts.
@@ -126,6 +127,7 @@ app.use('*', csrfGuard);
 app.route('/', healthRoutes);
 app.route('/', quoteRoutes);
 app.route('/', paymentsRoutes);
+app.route('/', presaleRoutes);   // leitura da pré-venda (compra é pelo Pix acima)
 app.route('/', matchPlanRoutes);
 app.route('/', quickNarrateRoutes);
 app.route('/', opponentRosterRoutes);
