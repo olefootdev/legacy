@@ -8,6 +8,9 @@ import { arvoreVazia, creditar, equipeMenor, inserir, inserirRaiz, volumeDaPerna
 import { DEGRAUS, carreiraDe } from './carreira.js';
 import { MICRO, bonusContabil, equiparar, fecharCiclo, olefootAPagar, poolDoCiclo } from './equiparacao.js';
 import { trancheLiberavel, abaixoDoPiso, PISO_DO_BALDE_BPS } from './equiparacao.js';
+import { taxaDe, liquidoDe, brutoParaEntregar, liquidarComTaxa, TAXA_LANCAMENTO,
+  type ConfigTaxa } from './taxaDeTransferencia.js';
+
 import { CARENCIA_TROCA_WALLET_HORAS, auditarCiclo, auditarClaim, type FatosDoClaim } from './auditoria.js';
 import { raizInteira, raizInteiraTeto, tetoDiarioDeClaim, impactoEmBps, restanteHoje, IMPACTO_MAX_BPS_PADRAO } from './tetoDeClaim.js';
 
@@ -150,6 +153,81 @@ check('crédito sem origem BARRA', !auditarCiclo({ ...cicloOk, creditosSemOrigem
 check('débito acima do crédito só AVISA (é carry-over legítimo)',
   auditarCiclo({ ...cicloOk, debitadoNoCiclo: 99_000n }).liberado);
 
+console.log('\n🧾 taxa de transferência de 5% — espelhar o programa ou a tx reverte\n');
+
+check('a configuração de lançamento é 5% sem teto',
+  TAXA_LANCAMENTO.bps === 500 && TAXA_LANCAMENTO.maximoPorTransferencia === null);
+
+// A fórmula do spl-token-2022 é ceiling, não truncada. Truncar daria uma taxa 1
+// lamport menor que a do programa e TODA transferência reverteria.
+check('🔴 taxa arredonda pra CIMA (ceiling), como o programa',
+  taxaDe(1n) === 1n && taxaDe(19n) === 1n && taxaDe(21n) === 2n);
+check('taxa exata quando divide redondo', taxaDe(10_000n) === 500n && taxaDe(100n) === 5n);
+check('taxa de zero é zero', taxaDe(0n) === 0n);
+check('alíquota zero não cobra nada',
+  taxaDe(10n ** 12n, { bps: 0, maximoPorTransferencia: null }) === 0n);
+check('bruto negativo estoura',
+  (() => { try { taxaDe(-1n); return false; } catch { return true; } })());
+check('alíquota fora de faixa estoura', (() => {
+  for (const b of [-1, 10_001, 1.5]) {
+    try { taxaDe(100n, { bps: b, maximoPorTransferencia: null }); return false; } catch { /* ok */ }
+  }
+  return true;
+})());
+
+const comTeto: ConfigTaxa = { bps: 500, maximoPorTransferencia: 1_000n };
+check('teto absoluto limita a taxa', taxaDe(10_000_000n, comTeto) === 1_000n);
+check('abaixo do teto cobra o percentual', taxaDe(10_000n, comTeto) === 500n);
+
+check('líquido = bruto − taxa', liquidoDe(10_000n) === 9_500n);
+
+// 🔴 O inverso é o que a tesouraria usa pra saber quanto debitar. Um inverso de
+// fórmula com arredondamento não se prova por álgebra — se prova varrendo.
+{
+  let ok = true; let minimo = true;
+  for (let n = 1n; n <= 3_000n; n += 1n) {
+    const g = brutoParaEntregar(n);
+    if (liquidoDe(g) < n) ok = false;                    // entrega o prometido
+    if (g > 0n && liquidoDe(g - 1n) >= n) minimo = false; // e é o MENOR que entrega
+  }
+  check('🔴 gross-up entrega o prometido em 3.000 valores seguidos', ok);
+  check('🔴 e é sempre o MENOR bruto que entrega (tesouraria não gasta a mais)', minimo);
+}
+{
+  // Faixas grandes e irregulares, onde o ceiling morde.
+  let ok = true;
+  for (const n of [10n ** 6n, 10n ** 9n, 10n ** 12n, 10n ** 15n, 123_456_789n, 999_999_999_999n, 7n, 19n, 20n, 21n]) {
+    const g = brutoParaEntregar(n);
+    if (liquidoDe(g) < n || liquidoDe(g - 1n) >= n) ok = false;
+  }
+  check('gross-up correto em valores grandes e irregulares', ok);
+}
+{
+  // Com teto o bruto vira liquido + teto assim que o percentual estoura o teto.
+  let ok = true;
+  for (const n of [1n, 100n, 10_000n, 1_000_000n, 10n ** 12n]) {
+    const g = brutoParaEntregar(n, comTeto);
+    if (liquidoDe(g, comTeto) < n) ok = false;
+  }
+  check('gross-up correto também com teto absoluto', ok);
+}
+check('gross-up de zero é zero', brutoParaEntregar(0n) === 0n);
+check('gross-up com alíquota zero é identidade',
+  brutoParaEntregar(12_345n, { bps: 0, maximoPorTransferencia: null }) === 12_345n);
+check('🔴 alíquota de 100% sem teto: impossível entregar, e estoura em vez de mentir',
+  (() => { try { brutoParaEntregar(1n, { bps: 10_000, maximoPorTransferencia: null }); return false; } catch { return true; } })());
+
+// A liquidação reporta os TRÊS números. Reportar só um lado é o furo que a taxa
+// abriu na auditoria do ciclo.
+{
+  const l = liquidarComTaxa(20_000_000n);
+  check('liquidação entrega ao menos o prometido', l.liquidoEntregue >= l.liquidoPrometido);
+  check('liquidação fecha: bruto = líquido + taxa',
+    l.brutoDebitado === l.liquidoEntregue + l.taxaRetida);
+  check('🔴 a tesouraria gasta ~5,26% mais que o prometido',
+    (l.brutoDebitado * 10_000n) / l.liquidoPrometido === 10_526n);
+}
+
 console.log('\n🪣 tranche do balde — a receita é o chão, o degrau é o teto\n');
 
 // Os números exatos do docs/TOKENOMICS.md, com a aritmética escrita porque eu
@@ -203,7 +281,9 @@ const claimOk: FatosDoClaim = {
   walletPedida: 'WALLET_A', walletVinculada: 'WALLET_A', walletVerificada: true,
   horasDesdeTrocaDeWallet: null, contasComAMesmaWallet: 0,
   comprasNaoLiquidadas: 0, refJaPago: false, contaSinalizada: false, origensNasDuasPernas: 0,
-  olefootPedido: 1_000n, reservaDaPool: 80_000_000_000_000_000n, olefootJaPagoHoje: 0n,
+  olefootPedido: 1_000n, olefootBrutoDebitado: brutoParaEntregar(1_000n),
+  taxa: TAXA_LANCAMENTO,
+  reservaDaPool: 80_000_000_000_000_000n, olefootJaPagoHoje: 0n,
   impactoMaxBps: IMPACTO_MAX_BPS_PADRAO,
   precoDoCicloMicro: 125n, precoUsadoNoClaimMicro: 125n,
 };
@@ -279,9 +359,9 @@ check('restanteHoje nunca fica negativo',
 
 // As regras no portão do claim.
 check('🔴 claim acima do teto do dia BARRA',
-  !auditarClaim({ ...claimOk, olefootPedido: teto1pct + 1n }).liberado);
+  !auditarClaim({ ...claimOk, olefootPedido: teto1pct + 1n, olefootBrutoDebitado: brutoParaEntregar(teto1pct + 1n) }).liberado);
 check('claim no limite exato do teto passa',
-  auditarClaim({ ...claimOk, olefootPedido: teto1pct }).liberado);
+  auditarClaim({ ...claimOk, olefootPedido: teto1pct, olefootBrutoDebitado: brutoParaEntregar(teto1pct) }).liberado);
 // 🐞 a primeira versão deste teste usava teto/2 + 1 e quebrava quando o teto
 // era ímpar (a divisão inteira comia o +1). O certo é perguntar ao próprio
 // restanteHoje quanto cabe e pedir um a mais.
@@ -289,13 +369,24 @@ check('claim no limite exato do teto passa',
   const jaPago = teto1pct / 3n;
   const cabe = restanteHoje({ reservaPool: POOL_80M, impactoMaxBps: 100, jaPagoHoje: jaPago });
   check('🔴 teto considera o que já foi pago hoje',
-    !auditarClaim({ ...claimOk, olefootPedido: cabe + 1n, olefootJaPagoHoje: jaPago }).liberado);
+    !auditarClaim({ ...claimOk, olefootPedido: cabe + 1n, olefootBrutoDebitado: brutoParaEntregar(cabe + 1n), olefootJaPagoHoje: jaPago }).liberado);
   check('e libera exatamente o que ainda cabe',
-    auditarClaim({ ...claimOk, olefootPedido: cabe, olefootJaPagoHoje: jaPago }).liberado);
+    auditarClaim({ ...claimOk, olefootPedido: cabe, olefootBrutoDebitado: brutoParaEntregar(cabe), olefootJaPagoHoje: jaPago }).liberado);
 }
 check('🔴 pool desconhecida RETÉM o claim (padrão seguro)',
   !auditarClaim({ ...claimOk, reservaDaPool: 0n }).liberado);
 check('pedido negativo BARRA', !auditarClaim({ ...claimOk, olefootPedido: -1n }).liberado);
+
+// A taxa de 5% no portão: o bruto tem que ser exatamente o inverso do líquido.
+check('🔴 bruto que não bate com a taxa BARRA (tx reverteria on-chain)',
+  !auditarClaim({ ...claimOk, olefootBrutoDebitado: 1_000n }).liberado);
+check('🔴 bruto não informado BARRA',
+  !auditarClaim({ ...claimOk, olefootBrutoDebitado: null }).liberado);
+check('bruto correto passa',
+  auditarClaim({ ...claimOk, olefootPedido: 50_000n, olefootBrutoDebitado: brutoParaEntregar(50_000n) }).liberado);
+check('🔴 o teto mede o LÍQUIDO, não o bruto (é o líquido que pode ser vendido)',
+  auditarClaim({ ...claimOk, olefootPedido: teto1pct, olefootBrutoDebitado: brutoParaEntregar(teto1pct) }).liberado
+  && brutoParaEntregar(teto1pct) > teto1pct);
 
 // A conversão é pelo preço do CICLO, não pelo preço do momento do claim.
 check('🔴 conversão num preço diferente do ciclo BARRA (sentar no claim esperando dip)',

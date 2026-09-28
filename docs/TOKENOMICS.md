@@ -221,75 +221,74 @@ em vez de um gráfico morto.
 
 ---
 
-## 6. A taxa de transferência de 5%
+## 6. A taxa de transferência de 5% — DECIDIDA
 
-**Decisão do fundador:** 5% em transferência de OLEFOOT, para wallet dos founders, a
-partir do lançamento do token.
+**Decisão do fundador, 2026-09-28: 5% em toda transferência de OLEFOOT, para a wallet
+dos founders, desde o momento zero.** Levantei o custo duas vezes e ele reafirmou.
+Decisão dele. O que segue não é objeção — é o que a decisão obriga a fazer para
+funcionar.
 
-### 🔴 O que é irreversível e precisa ser decidido AGORA
-
-SPL Token padrão **não tem taxa de transferência** — não existe como configuração.
-Exige **Token-2022** com a extensão `TransferFee`. E, confirmado na doc da Solana:
+### O que fica travado por ela
 
 | | |
 |---|---|
-| **A extensão NÃO pode ser adicionada depois** | tem que estar na criação do mint |
-| **A ALÍQUOTA pode ser alterada depois** | via `SetTransferFee`, valendo 2 épocas adiante |
-| Existe `maximumFee` absoluto por transferência | limita o dano em transferência grande |
+| Padrão do token | **Token-2022** com extensão `TransferFee` (SPL padrão não tem taxa) |
+| Extensão | **tem que estar na criação do mint** — não dá pra adicionar depois |
+| Alíquota | **500 bps**, ajustável depois via `SetTransferFee` (2 épocas adiante) |
+| `maximumFee` | **sem teto** — 5% literal em qualquer tamanho |
+| Pool | **Raydium CPMM** ou CLMM. **AMM v4 está fora**, não suporta Token-2022 |
+| CEX | risco alto; a maioria restringe token com transfer-fee |
 
-Ou seja: **a alíquota é ajustável — o que não é ajustável é a escolha do Token-2022.**
-E essa escolha vence no próximo passo do seu roadmap, que é criar o mint. Depois de
-criado, não tem volta.
+### 🔴 Não é contabilidade, é bloqueio de transação
 
-### O custo, com a conta feita
+Na instrução `transfer_checked_with_fee` **o cliente informa a taxa esperada e o
+programa confere**. Divergência de **um lamport** faz a transação falhar. Nosso código
+espelha a fórmula exata do `spl-token-2022`:
 
-Pool de 80M + \$10.000. Round trip de \$1.000, ninguém mais mexendo no preço:
+```
+taxa = min( ceil(bruto × bps / 10_000), maximumFee )
+```
 
-> pagou \$1.000,00 → recebeu **\$910,57** = **−8,94%** · founders levaram ≈ \$88,64
-> · **sem a taxa o mesmo round trip é 0,00%**
+⚠️ A divisão é por **CIMA**. Truncar daria taxa 1 lamport menor que a do programa e
+**toda transferência reverteria**.
+→ `server/src/lib/expansao/taxaDeTransferencia.ts`, 20 testes, o gross-up varrido em
+3.000 valores seguidos provando que entrega o prometido **e** é o menor bruto que entrega.
 
-Suporte de DEX: **Raydium CPMM aceita mints com transfer-fee**, CLMM aceita via
-`SwapV2` — mas **AMM v4, a pool padrão, não suporta Token-2022 de jeito nenhum.**
+### O que a taxa custa a cada balde
 
-### 🔴 A taxa tributa o motor de realimentação
+Com 5% e **uma** transferência de saída por balde:
 
-O ciclo é claim → vende → alguém compra → gasta no game → tesouraria → volta pro bônus.
-**Cada hop é uma transferência:**
+| Balde | Face | Entrega | Vai p/ founders |
+|---|---|---|---|
+| Expansão (bônus) | 1.250.000.000 | 1.187.500.000 | 62.500.000 |
+| Claim holders v1 | 1.000.000.000 | 950.000.000 | 50.000.000 |
+| Ecossistema in-game | 1.000.000.000 | 950.000.000 | 50.000.000 |
+| Equipe | 600.000.000 | 570.000.000 | 30.000.000 |
+| Pré-venda | 250.000.000 | 237.500.000 | 12.500.000 |
+| Marketing / parcerias | 100.000.000 | 95.000.000 | 5.000.000 |
+| **Taxa retida só na 1ª saída** | | | **210.000.000 = 4,20% do supply** |
 
-| Transferências no ciclo | Evapora |
-|---|---|
-| 3 | 14,3% |
-| 4 | **18,5%** |
-| 5 | **22,6%** |
+**Captura efetiva dos founders: 12% alocado + 4,20% de taxa só na primeira volta =
+16,20%** — e isso antes de qualquer swap, revenda ou reciclagem, que pagam 5% de novo em
+cada hop. **Isto precisa estar no material público da pré-venda.** Não por regulação —
+porque alguém vai calcular, e é melhor que o número venha de nós.
 
-A realimentação é o que salva um lançamento de \$10k (§5). A taxa cobra ~20% dela por
-volta. **A taxa e a realimentação disputam a mesma moeda duas vezes.** Mais: gross-up
-de 5,26% para entregar a tranche líquida, e `auditarCiclo` reportando número diferente
-do que chega na wallet.
+### Consequências operacionais que ainda não existem em código
 
-### Recomendação
-
-| | Taxa no token (5%) | 5% na camada do JOGO |
-|---|---|---|
-| Receita dos founders | 5% do volume on-chain | 5% do volume do produto |
-| Token-2022 obrigatório | sim | **não** |
-| AMM v4 disponível | **não** | sim |
-| Risco de CEX | alto | **nenhum** |
-| Tributa o bônus | sim | **não** |
-| Tributa a realimentação | ~20%/ciclo | **não** |
-
-OLEFOOT já passa pelo nosso servidor em card, lenda, mercado, Vault e buy-in —
-`harvestSplit.ts` já põe a casa em 25%. **Mesma receita, zero dano ao token.**
-
-**Se a decisão for manter on-chain**, três ajustes que não custam nada:
-1. **1%, não 5%** — a alíquota é ajustável depois, então começar baixa não fecha porta.
-2. **`maximumFee` absoluto** para a taxa não escalar em transferência grande.
-3. Medir no faucet o efeito por swap e por depósito de LP **antes** do mainnet.
-
-E vale registrar: **founders já têm 12% / 600M alocados** — essa é a remuneração
-estrutural, e ela captura toda a valorização sem custo para a liquidez.
-
----
+1. 🔴 **Rotina de colheita da taxa.** O Token-2022 **retém** a taxa na conta de destino;
+   ela não chega sozinha na wallet dos founders. Precisa de
+   `withdrawWithheldTokensFromAccounts` varrendo as contas periodicamente. Sem essa
+   rotina a taxa fica presa e a receita é zero.
+2. **Gross-up em todo pagamento.** Para entregar a tranche de 20.000.000 a tesouraria
+   debita **21.052.632** e retém 1.052.632. Já em código
+   (`liquidarComTaxa`), e `auditarClaim` **barra** claim cujo bruto não corresponda.
+3. **O teto diário mede o LÍQUIDO**, não o bruto — é o líquido que pode ser vendido na
+   pool. Já em código.
+4. **ATA + taxa.** O recebedor precisa de ~0,002 SOL para a ATA e a primeira
+   transferência já chega 5% menor. Comunicar os dois juntos, senão vira suporte.
+5. **A pool paga taxa em cada swap e possivelmente em cada depósito/retirada de LP.**
+   A medir no faucet (§10) — se depósito de LP paga, aprofundar a pool com a receita
+   custa 5% a cada injeção, e o portão de profundidade (§5) fica mais lento.
 
 ## 7. Decisões que precisam da sua assinatura
 
@@ -297,9 +296,11 @@ estrutural, e ela captura toda a valorização sem custo para a liquidez.
 |---|---|---|
 | 1 | Tabela final da §2 | **aprovar** |
 | 2 | Razão do claim v1: A (1,564854) ou B (1:1) | **B** |
-| 3 | Taxa de transferência: on-chain 5% · on-chain 1% · camada do jogo | **camada do jogo**; se on-chain, **1%** |
+| 3 | ~~Taxa de transferência~~ | ✅ **DECIDIDO: 5% on-chain desde o momento zero** |
 | 4 | Portão de profundidade em 194M tokens | **aprovar** |
 | 5 | Teto mensal do marketing (número) | definir |
+| 7 | `maximumFee`: sem teto (5% literal) ou teto absoluto | sem teto, como decidido |
+| 8 | Pool: Raydium **CPMM** ou CLMM (AMM v4 está fora) | CPMM |
 | 6 | Destino do claim v1 não resgatado após 24 meses | Liquidez, anunciado no dia 1 |
 
 ## 8. Travas técnicas não negociáveis no lançamento
@@ -317,7 +318,7 @@ estrutural, e ela captura toda a valorização sem custo para a liquidez.
 |---|---|---|
 | 0 | **Renovar `olefoot.com`** + NS `memphis`/`rita.ns.cloudflare.com` | 🔴 **bloqueado, vencido em 17/09** |
 | 1 | Aprovar este documento | ⏳ |
-| 2 | Criar o mint em **devnet** (decide Token-2022 vs SPL) | ⏳ |
+| 2 | Criar o mint em **devnet** — **Token-2022 + TransferFee 500bps** | ⏳ |
 | 3 | Teste de faucet (§10) | ⏳ |
 | 4 | Migrations + rota do ciclo horário + claim | ⏳ motor pronto, **sem persistência** |
 | 5 | Pré-venda | ⏳ |
@@ -337,5 +338,10 @@ estrutural, e ela captura toda a valorização sem custo para a liquidez.
 5. Valor que estoura `Number` atravessa como **bigint de ponta a ponta**.
 6. Limite de tamanho de transação ao pagar claims em lote.
 7. **O teto diário recusando** um claim acima do limite. ✅ já coberto em self-test
-8. Se a taxa for mantida: se a extensão permite **isentar a pool e a tesouraria**, e o
-   custo por swap e por depósito de LP.
+8. **A taxa de 5% na prática:** se a extensão permite **isentar a pool e a tesouraria**;
+   quanto custa por swap; **se depósito e retirada de LP pagam taxa** (isso encarece
+   aprofundar a pool em 5% por injeção).
+9. **A rotina de colheita** (`withdrawWithheldTokensFromAccounts`) varrendo contas e
+   entregando na wallet dos founders — sem ela a receita da taxa é zero.
+10. A taxa que **nosso código calcula** batendo com a que **o programa cobra**, numa
+    transferência real. Se divergir em 1 lamport, a tx reverte. ✅ fórmula em self-test

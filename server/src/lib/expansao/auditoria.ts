@@ -17,6 +17,7 @@
  */
 import type { Olexp } from './unidade.js';
 import { restanteHoje, impactoEmBps, IMPACTO_MAX_BPS_PADRAO } from './tetoDeClaim.js';
+import { brutoParaEntregar, taxaDe, TAXA_LANCAMENTO, type ConfigTaxa } from './taxaDeTransferencia.js';
 
 export interface Achado {
   readonly regra: string;
@@ -121,8 +122,18 @@ export interface FatosDoClaim {
   readonly refJaPago: boolean;
   /** A conta está sinalizada pela administração. */
   readonly contaSinalizada: boolean;
-  /** Quanto OLEFOOT este claim moveria, na menor unidade do token. */
+  /**
+   * OLEFOOT que CHEGA na wallet (líquido, depois da taxa de transferência).
+   * É este que o teto mede, porque é este que pode ser vendido na pool.
+   */
   readonly olefootPedido: bigint;
+  /**
+   * O que sai da tesouraria (bruto). Com taxa de 5% é ~5,26% maior que o
+   * líquido. null = o claim não informou — a rota tem que calcular.
+   */
+  readonly olefootBrutoDebitado: bigint | null;
+  /** Configuração da taxa vigente no momento do claim. */
+  readonly taxa: ConfigTaxa;
   /** OLEFOOT no lado token da pool agora. 0n = desconhecida (fecha o portão). */
   readonly reservaDaPool: bigint;
   /** Soma dos claims já pagos hoje, na mesma unidade. */
@@ -238,6 +249,26 @@ export function auditarClaim(f: FatosDoClaim): Veredito {
     });
   }
 
+  // A taxa de transferência do Token-2022 é verificada PELO PROGRAMA: se o
+  // bruto não corresponder exatamente ao líquido prometido, ou a transação
+  // reverte, ou a tesouraria gasta a mais do que devia. Conferir aqui é mais
+  // barato que descobrir on-chain.
+  if (f.olefootBrutoDebitado === null) {
+    a.push({
+      regra: 'bruto_nao_informado', grave: true,
+      detalhe: 'o claim não trouxe o bruto a debitar — sem ele não dá pra montar a transferência',
+    });
+  } else if (f.olefootPedido > 0n) {
+    const esperado = brutoParaEntregar(f.olefootPedido, f.taxa);
+    if (f.olefootBrutoDebitado !== esperado) {
+      a.push({
+        regra: 'bruto_divergente_da_taxa', grave: true,
+        detalhe: `pra entregar ${f.olefootPedido} o bruto é ${esperado} `
+          + `(taxa ${taxaDe(esperado, f.taxa)}), o claim trouxe ${f.olefootBrutoDebitado}`,
+      });
+    }
+  }
+
   // Não é ataque, é solvência de mercado: um dia de claims não pode afundar a
   // pool. A tranche de bônus é maior que a pool aguenta (docs/TOKENOMICS.md),
   // então o teto é o que transforma um despejo de -50% em saída gradual.
@@ -269,4 +300,4 @@ export function auditarClaim(f: FatosDoClaim): Veredito {
 }
 
 /** Valor padrão do teto, reexportado pra rota não ter que saber de dois módulos. */
-export { IMPACTO_MAX_BPS_PADRAO };
+export { IMPACTO_MAX_BPS_PADRAO, TAXA_LANCAMENTO };
