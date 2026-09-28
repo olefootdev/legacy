@@ -108,7 +108,8 @@
     "build:dex": "vite build --config dex/vite.config.ts",
     "lint:dex": "tsc --noEmit -p dex/tsconfig.json",
     "deploy:dex": "VITE_OLEFOOT_API_URL=https://legacy-production-de1e.up.railway.app npm run build:dex && wrangler deploy -c dex/wrangler.jsonc",
-    "test:wallet-conexao": "tsx src/wallet/seed/runConexaoSelfTest.mts"
+    "test:wallet-conexao": "tsx src/wallet/seed/runConexaoSelfTest.mts",
+    "test:expansao": "tsx server/src/lib/expansao/runExpansaoSelfTest.mts"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",
