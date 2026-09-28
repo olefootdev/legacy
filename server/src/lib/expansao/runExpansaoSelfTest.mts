@@ -3,10 +3,11 @@
  *
  * Roda: npm run test:expansao
  */
-import { ELEGIBILIDADE_PADRAO, olexpDaCompra, podeEquiparar } from './unidade.js';
+import { ELEGIBILIDADE_PADRAO, olexpDaCompra, podeEquiparar, podeQualificar } from './unidade.js';
 import { arvoreVazia, creditar, equipeMenor, inserir, inserirRaiz, volumeDaPerna, type Pernas } from './arvore.js';
 import { DEGRAUS, carreiraDe } from './carreira.js';
 import { MICRO, bonusContabil, equiparar, fecharCiclo, olefootAPagar, poolDoCiclo } from './equiparacao.js';
+
 import { trancheLiberavel, abaixoDoPiso, PISO_DO_BALDE_BPS } from './equiparacao.js';
 import { taxaDe, liquidoDe, brutoParaEntregar, liquidarComTaxa, TAXA_LANCAMENTO,
   type ConfigTaxa } from './taxaDeTransferencia.js';
@@ -152,6 +153,27 @@ check('a mesma compra contada duas vezes BARRA',
 check('crédito sem origem BARRA', !auditarCiclo({ ...cicloOk, creditosSemOrigem: 1 }).liberado);
 check('débito acima do crédito só AVISA (é carry-over legítimo)',
   auditarCiclo({ ...cicloOk, debitadoNoCiclo: 99_000n }).liberado);
+
+console.log('\n🚫 compra na DEX não gera comissão\n');
+
+// Decisão do fundador: depois do lançamento da liquidez, market buy na Raydium
+// não contabiliza comissão. Comissão sai de RECEITA, e market buy não gera
+// receita — o dinheiro entra na pool e sai pra quem vendeu.
+check('🔴 compra_dex NÃO gera equiparação', !podeEquiparar('compra_dex'));
+check('🔴 compra_dex NÃO gera nem qualificação', !podeQualificar('compra_dex'));
+check('e é a ÚNICA fonte que não qualifica', (['compra_olefoot','nft','marketplace',
+  'produto_jogo','assinatura','evento','campanha','ajuste_admin'] as const)
+  .every((f) => podeQualificar(f)));
+check('compra pelo nosso canal continua gerando equiparação',
+  podeEquiparar('compra_olefoot') && podeQualificar('compra_olefoot'));
+check('🔴 e a trava é DURA: configuração permissiva não libera compra_dex',
+  !podeEquiparar('compra_dex', {
+    ...ELEGIBILIDADE_PADRAO,
+    compra_dex: { qualificacao: true, equiparacao: true },
+  }) && !podeQualificar('compra_dex', {
+    ...ELEGIBILIDADE_PADRAO,
+    compra_dex: { qualificacao: true, equiparacao: true },
+  }));
 
 console.log('\n🧾 taxa de transferência de 5% — espelhar o programa ou a tx reverte\n');
 

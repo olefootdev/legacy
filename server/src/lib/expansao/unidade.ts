@@ -40,7 +40,8 @@ export interface Elegibilidade {
 
 /** De onde o OLEXP veio. Tudo que credita tem que declarar origem. */
 export type FonteOlexp =
-  | 'compra_olefoot'   // v1: a única que gera equiparação
+  | 'compra_olefoot'   // entrada nova pelo nosso canal (Pix/USDT) — gera equiparação
+  | 'compra_dex'       // 🔴 comprou na Raydium: NÃO gera comissão nenhuma
   | 'nft'
   | 'marketplace'
   | 'produto_jogo'
@@ -50,8 +51,16 @@ export type FonteOlexp =
   | 'ajuste_admin';
 
 /**
- * A régua de v1. Só compra de OLEFOOT vira dinheiro; o resto, quando existir,
- * entra como qualificação até o administrador decidir o contrário.
+ * A régua de v1. Só compra de OLEFOOT pelo NOSSO canal vira dinheiro; o resto,
+ * quando existir, entra como qualificação até o administrador decidir o
+ * contrário.
+ *
+ * 🔴 `compra_dex` NÃO gera NEM qualificação NEM equiparação, e é a única fonte
+ * assim. Decisão do fundador (2026-09-28): depois do lançamento da liquidez,
+ * quem compra direto na Raydium não contabiliza comissão. A razão é econômica,
+ * não arbitrária — comissão sai de RECEITA, e market buy não gera receita
+ * nenhuma pra empresa: o dinheiro entra na pool e sai pra quem vendeu. Pagar
+ * comissão sobre isso seria pagar com dinheiro que nunca entrou.
  *
  * ⚠️ `ajuste_admin` NUNCA gera equiparação, e isso não é configurável aqui de
  * propósito: crédito manual que vira saque é o caminho mais curto entre uma
@@ -59,6 +68,7 @@ export type FonteOlexp =
  */
 export const ELEGIBILIDADE_PADRAO: Readonly<Record<FonteOlexp, Elegibilidade>> = {
   compra_olefoot: { qualificacao: true, equiparacao: true },
+  compra_dex:     { qualificacao: false, equiparacao: false },
   nft:            { qualificacao: true, equiparacao: false },
   marketplace:    { qualificacao: true, equiparacao: false },
   produto_jogo:   { qualificacao: true, equiparacao: false },
@@ -70,7 +80,14 @@ export const ELEGIBILIDADE_PADRAO: Readonly<Record<FonteOlexp, Elegibilidade>> =
 
 export function podeEquiparar(fonte: FonteOlexp, regra = ELEGIBILIDADE_PADRAO): boolean {
   if (fonte === 'ajuste_admin') return false; // trava dura, acima da configuração
+  if (fonte === 'compra_dex') return false;   // trava dura: market buy não gera receita
   return regra[fonte].equiparacao;
+}
+
+/** Compra na DEX não conta nem pra graduar. Trava dura, acima da configuração. */
+export function podeQualificar(fonte: FonteOlexp, regra = ELEGIBILIDADE_PADRAO): boolean {
+  if (fonte === 'compra_dex') return false;
+  return regra[fonte].qualificacao;
 }
 
 /**
