@@ -1,5 +1,5 @@
 /**
- * OLEWALLET — olefoot.com, build separado do jogo.
+ * OLEWALLET — olefoot.ai, build separado do jogo.
  *
  * A separação é de ORIGEM, não de código. O alias `@` continua apontando pra
  * `src/` do jogo, então a derivação de chave, o cofre e o protocolo de conexão
@@ -50,7 +50,7 @@ function cabecalhosDeSeguranca(destino: string) {
         // documento com QUALQUER COOP diferente de unsafe-none, quando aberto
         // por uma ORIGEM DIFERENTE, entra em outro grupo de contexto de
         // navegação e recebe `window.opener === null`. Como o jogo é
-        // game.olefoot.com e a carteira é dex.olefoot.com — origens
+        // game.olefoot.ai e a carteira é dex.olefoot.ai — origens
         // diferentes —, o aperto de mão nunca podia começar, e a pessoa caía
         // em "não identifiquei quem pediu". Não deu pra pegar em dev: o
         // servidor do Vite não serve este arquivo.

@@ -2,7 +2,7 @@
  * Legends Data — fonte única de verdade do "museu vivo" Olefoot.
  *
  * Cada lenda fica indexada por slug (ex: 'pele') que vira a URL pública:
- *   game.olefoot.com/legend/pele
+ *   game.olefoot.ai/legend/pele
  *
  * Campos extras (achievements, era, openGraph) servem a SEO e ao
  * carrossel comercial. Quando o Hall of Fame backend estiver disponível,

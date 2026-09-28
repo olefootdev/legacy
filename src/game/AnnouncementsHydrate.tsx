@@ -44,7 +44,7 @@ export function AnnouncementsHydrate() {
       const body = hasSquad
         ? 'Lançámos o Pack Genesis de boas-vindas (11 titulares + 9 reservas + 500.000 EXP). ' +
           'Como já tens plantel formado, o pack não é entregue automaticamente — se quiseres recomeçar e receber o pack, ' +
-          'fala connosco em ajuda@olefoot.com e fazemos o reset do teu plantel.'
+          'fala connosco em contact@olefoot.ai e fazemos o reset do teu plantel.'
         : 'O Pack Genesis de boas-vindas (11 titulares + 9 reservas + 500.000 EXP) está disponível ' +
           'para o teu primeiro plantel. Vai a Equipe para começar.';
       const claim = makeInboxItem(claimId, 'SHOP_PACK', 'PLANTEL', 'Pack Genesis disponível', {

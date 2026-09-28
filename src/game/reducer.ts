@@ -12,7 +12,7 @@
  * I created this game by myself using AI tools just to share my IDEA
  * as a nice MVP. Let's Play Together! ⚽
  *
- * 📧 Contact: exp@olefoot.com
+ * 📧 Contact: contact@olefoot.ai
  */
 
 import { pitchPlayersFromLineup, roleFromPos } from '@/engine/pitchFromLineup';

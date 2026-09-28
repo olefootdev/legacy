@@ -1,7 +1,7 @@
 /**
  * /carteira — agora só uma ponte pra OLEWALLET.
  *
- * A carteira nasceu aqui dentro e saiu de propósito: ela mora em olefoot.com,
+ * A carteira nasceu aqui dentro e saiu de propósito: ela mora em olefoot.ai,
  * origem separada, pra que um XSS em qualquer canto do jogo — nome de jogador,
  * legenda de foto do REVELA, painel admin, script de terceiro — não alcance o
  * cofre. Mesma origem seria o mesmo localStorage e o mesmo contexto de JS.

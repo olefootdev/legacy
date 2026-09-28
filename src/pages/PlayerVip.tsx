@@ -1,5 +1,5 @@
 /**
- * PLAYERVIP — game.olefoot.com/playervip
+ * PLAYERVIP — game.olefoot.ai/playervip
  *
  * Cockpit dedicado da lenda. Rota STANDALONE (fora do RequireRegistration e
  * do GameShell): a lenda não precisa ter clube — entra por link mágico e vê

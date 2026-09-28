@@ -5,7 +5,7 @@
  * formado (verified = false). Agora o cliente só consegue vincular mandando uma
  * assinatura da própria carteira; quem grava é este servidor, com service role.
  *
- * Este vínculo é a ponte com olefoot.com/wallet e o cadastro do airdrop da v1:
+ * Este vínculo é a ponte com olefoot.ai/wallet e o cadastro do airdrop da v1:
  * o endereço que sai daqui é onde o saldo novo cai. Por isso nada entra sem
  * assinatura. Ver lib/solanaLinkProof.ts.
  */

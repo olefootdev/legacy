@@ -162,7 +162,7 @@ export function AdminRevelaProvasPanel() {
                 </div>
                 {p.slug && (
                   <a
-                    href={`https://revela.olefoot.com/t/${p.slug}`}
+                    href={`https://revela.olefoot.ai/t/${p.slug}`}
                     target="_blank"
                     rel="noreferrer"
                     className="shrink-0 text-[11px] text-neon-yellow underline-offset-2 hover:underline"

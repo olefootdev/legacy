@@ -1,5 +1,5 @@
 /**
- * OLEWALLET — a carteira, em dex.olefoot.com.
+ * OLEWALLET — a carteira, em dex.olefoot.ai.
  *
  * Note o que esta tela NÃO tem: botão de vincular. Vincular é assinar pra outro
  * site, e isso acontece em /conectar, com o pedido na tela e a pessoa dizendo

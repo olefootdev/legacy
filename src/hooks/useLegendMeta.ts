@@ -5,7 +5,7 @@
  * diretamente, marcando os tags com `data-legend-meta` para limpeza
  * idempotente quando o usuário navega para outra lenda.
  *
- * Útil pra divulgação social: game.olefoot.com/legend/pele
+ * Útil pra divulgação social: game.olefoot.ai/legend/pele
  */
 import { useEffect } from 'react';
 import type { LegendData } from '@/data/legends';

@@ -12,7 +12,7 @@
  *  - Store CTA: banner amarelo levando ao Legacy Pack
  *
  * Dados em src/data/legends.ts (LEGENDS_BY_SLUG, indexado por slug URL-safe).
- * Rota pública: game.olefoot.com/legend/{slug}
+ * Rota pública: game.olefoot.ai/legend/{slug}
  */
 
 import { useMemo, useState } from 'react';

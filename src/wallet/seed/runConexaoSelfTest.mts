@@ -52,22 +52,22 @@ console.log('\n🤝 conexão — quem pode pedir, e o que a carteira aceita ouvi
 
 // --------------------------------------------------------------- a origem ---
 {
-  check('o jogo pode pedir', origemPermitida('https://game.olefoot.com'));
+  check('o jogo pode pedir', origemPermitida('https://game.olefoot.ai'));
   check('localhost do dev pode pedir', origemPermitida('http://localhost:5173'));
   check('site qualquer NÃO pode', !origemPermitida('https://evil.com'));
 
   // Saíram da lista em 2026-09-23 por não pedirem assinatura nenhuma. Ficam
   // aqui como teste pra não voltarem sem alguém decidir que voltam.
-  check('olefoot.com (site) NÃO pede assinatura', !origemPermitida('https://olefoot.com'));
-  check('www.olefoot.com NÃO pede assinatura', !origemPermitida('https://www.olefoot.com'));
-  check('a própria carteira não consta como pedinte', !origemPermitida('https://dex.olefoot.com'));
+  check('olefoot.ai (site) NÃO pede assinatura', !origemPermitida('https://olefoot.ai'));
+  check('www.olefoot.ai NÃO pede assinatura', !origemPermitida('https://www.olefoot.ai'));
+  check('a própria carteira não consta como pedinte', !origemPermitida('https://dex.olefoot.ai'));
 
   // O ataque clássico de lista por substring. A comparação é exata; estes
   // testes existem pra ninguém "otimizar" pra `includes()` um dia.
-  check('sufixo colado no domínio NÃO passa', !origemPermitida('https://game.olefoot.com.evil.com'));
-  check('prefixo colado NÃO passa', !origemPermitida('https://evil-game.olefoot.com'));
-  check('http no lugar de https NÃO passa', !origemPermitida('http://game.olefoot.com'));
-  check('porta a mais NÃO passa', !origemPermitida('https://game.olefoot.com:8443'));
+  check('sufixo colado no domínio NÃO passa', !origemPermitida('https://game.olefoot.ai.evil.com'));
+  check('prefixo colado NÃO passa', !origemPermitida('https://evil-game.olefoot.ai'));
+  check('http no lugar de https NÃO passa', !origemPermitida('http://game.olefoot.ai'));
+  check('porta a mais NÃO passa', !origemPermitida('https://game.olefoot.ai:8443'));
   check('vazio, null e undefined NÃO passam',
     !origemPermitida('') && !origemPermitida(null) && !origemPermitida(undefined));
 }
@@ -97,7 +97,7 @@ console.log('\n🤝 conexão — quem pode pedir, e o que a carteira aceita ouvi
   check('"pronto" é reconhecido', ehPronto({ canal: CANAL, tipo: 'pronto' }));
   check('"olá" é reconhecido', ehOla({ canal: CANAL, tipo: 'ola' }));
   check('"olá" de outro canal não é olá', !ehOla({ canal: 'x', tipo: 'ola' }));
-  const u = new URL(urlDoPedido('https://olefoot.com', { uid: UID, issuedAt: '2026-09-23T00:00:00.000Z' }));
+  const u = new URL(urlDoPedido('https://olefoot.ai', { uid: UID, issuedAt: '2026-09-23T00:00:00.000Z' }));
   check('a url do pedido aponta pra /conectar com uid e data',
     u.pathname === '/conectar' && u.searchParams.get('uid') === UID);
 }

@@ -7,7 +7,7 @@
     "directory": "./dist",
     "not_found_handling": "single-page-application"
   }
-  // Domínio: apontar dex.olefoot.com para este Worker no painel Cloudflare
+  // Domínio: apontar dex.olefoot.ai para este Worker no painel Cloudflare
   // (Workers & Pages → olefoot-dex → Settings → Domains & Routes).
   //
   // O host precisa entrar TAMBÉM no CORS_ORIGIN do Railway, senão o saldo não

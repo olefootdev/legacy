@@ -1,4 +1,4 @@
-Contact: mailto:exp@olefoot.com
+Contact: mailto:contact@olefoot.ai
 Expires: 2027-05-21T00:00:00.000Z
 Preferred-Languages: en, pt
 
@@ -17,6 +17,6 @@ We are open and truly believe in the power of community.
 I created this game by myself using AI tools just to share my IDEA
 as a nice MVP. Let's Play Together! ⚽
 
-📧 Contact: exp@olefoot.com
+📧 Contact: contact@olefoot.ai
 
 ---

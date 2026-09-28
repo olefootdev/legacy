@@ -1,7 +1,7 @@
 /**
  * PLAYERVIP LANDING — vitrine pública de uma lenda (link de convite viral).
  *
- * game.olefoot.com/playervip/<handle>
+ * game.olefoot.ai/playervip/<handle>
  *   • Página ABERTA (sem login). Explica a lenda + mostra os cards.
  *   • NÃO vende aqui: manda pro jogo (/mercado/transfer) pra comprar.
  *   • Abrir o link guarda o código de indicação do dono → cadastro credita a rede.
@@ -81,7 +81,7 @@ export function PlayerVipLanding() {
         <Brand />
         <h1 className="mt-4 font-impact text-[32px] uppercase leading-[1.05]">Página não encontrada</h1>
         <p className="text-sm text-cimento">Esse link de lenda não existe ou foi removido.</p>
-        <a href="https://game.olefoot.com" className="mt-2 text-xs font-bold uppercase tracking-wider text-neon-yellow transition-colors hover:text-white">
+        <a href="https://game.olefoot.ai" className="mt-2 text-xs font-bold uppercase tracking-wider text-neon-yellow transition-colors hover:text-white">
           Ir para a OLEFOOT
         </a>
       </div>

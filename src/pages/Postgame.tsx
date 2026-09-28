@@ -333,7 +333,7 @@ export default function Postgame() {
           <button
             type="button"
             onClick={async () => {
-              const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.com';
+              const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.ai';
               const text = `${resultLabel} ${clubName} ${homeScore}×${awayScore} ${live.awayShort ?? ''} — no Olefoot. Monta teu time e vem: ${origin}`;
               try {
                 if (navigator.share) await navigator.share({ text });

@@ -31,7 +31,7 @@ console.log(found ? `✓ ${TARGET} existe em auth.users (id ${found.id.slice(0,8
 if (!found) process.exit(3);
 
 const { error } = await sb.auth.resetPasswordForEmail(TARGET, {
-  redirectTo: 'https://game.olefoot.com/reset-password',
+  redirectTo: 'https://game.olefoot.ai/reset-password',
 });
 if (error) {
   console.error('✗ erro disparando recovery:', error.message);
@@ -39,4 +39,4 @@ if (error) {
 }
 console.log('✓ recovery email disparado pra', TARGET);
 console.log('  agora confere a caixa de entrada (e spam) em ~30s');
-console.log('  esperado: FROM noreply@olefoot.com, subject "Resgate seu acesso na Olefoot"');
+console.log('  esperado: FROM noreply@olefoot.ai, subject "Resgate seu acesso na Olefoot"');

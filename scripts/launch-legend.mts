@@ -28,7 +28,7 @@ const get = (k: string) => args.find((a) => a.startsWith(`--${k}=`))?.split('=')
 const RUN = args.includes('--run');
 const beneficiaryEmail = (get('beneficiary') ?? '').trim().toLowerCase();
 const facilitatorEmail = (get('facilitator') ?? '').trim().toLowerCase();
-const REDIRECT = 'https://game.olefoot.com/playervip';
+const REDIRECT = 'https://game.olefoot.ai/playervip';
 const API = process.env.VITE_OLEFOOT_API_URL || process.env.OLEFOOT_API_URL || 'https://legacy-production-de1e.up.railway.app';
 const ADMIN_TOKEN = process.env.OLEFOOT_ADMIN_TOKEN || process.env.ADMIN_API_TOKEN || process.env.GLOBAL_LEAGUE_ADMIN_TOKEN;
 

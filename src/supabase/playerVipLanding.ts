@@ -1,5 +1,5 @@
 /**
- * PLAYERVIP LANDING — vitrine pública por handle (game.olefoot.com/playervip/<handle>).
+ * PLAYERVIP LANDING — vitrine pública por handle (game.olefoot.ai/playervip/<handle>).
  *
  * Lê o RPC público `get_playervip_landing` (SECURITY DEFINER, sem e-mail).
  * Sem sessão: é uma página aberta que qualquer um pode ver e compartilhar.

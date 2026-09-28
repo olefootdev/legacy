@@ -12,7 +12,7 @@
  *      (POST /api/wallet/solana/link); a RPC antiga, que aceitava qualquer
  *      endereço, foi revogada na migration 20260919110000.
  *
- * Esse endereço é o cadastro do airdrop da v1 e a ponte com olefoot.com/wallet.
+ * Esse endereço é o cadastro do airdrop da v1 e a ponte com olefoot.ai/wallet.
  * A assinatura NÃO move fundos e NÃO custa taxa — é só uma mensagem.
  */
 import { getWallets } from '@wallet-standard/app';

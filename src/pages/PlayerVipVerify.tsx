@@ -1,8 +1,8 @@
 /**
  * PLAYERVIP VERIFY — troca o token do link mágico por sessão, NO NOSSO DOMÍNIO.
  *
- *   game.olefoot.com/playervip/verify/<handle>?t=<token_hash>
- *   game.olefoot.com/playervip/verify?t=<token_hash>          (e-mail, sem handle)
+ *   game.olefoot.ai/playervip/verify/<handle>?t=<token_hash>
+ *   game.olefoot.ai/playervip/verify?t=<token_hash>          (e-mail, sem handle)
  *
  * Por que existe: o link padrão do Supabase aponta pro domínio do banco
  * (<projeto>.supabase.co/auth/v1/verify?token=…) — feio e vaza infraestrutura

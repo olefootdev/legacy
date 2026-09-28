@@ -44,7 +44,7 @@ export function SolanaWalletCard() {
   }, []);
 
   /**
-   * A OLEWALLET não é extensão: ela mora em olefoot.com e abre numa janela.
+   * A OLEWALLET não é extensão: ela mora em olefoot.ai e abre numa janela.
    * Fica em PRIMEIRO na lista de propósito — é a nossa, e é a única que quem
    * nunca teve carteira consegue criar na hora.
    */

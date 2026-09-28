@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Label de seção com linhas laterais — assinatura do site oficial olefoot.com.
+ * Label de seção com linhas laterais — assinatura do site oficial olefoot.ai.
  * Wrapper sobre `.ole-eyebrow` (já no tema).
  */
 export function Eyebrow({

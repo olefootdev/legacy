@@ -430,7 +430,7 @@ We are open and truly believe in the power of community.
 I created this game by myself using AI tools just to share my IDEA
 as a nice MVP. Let's Play Together! ⚽
 
-📧 Contact: exp@olefoot.com
+📧 Contact: contact@olefoot.ai
     `, 'font-size: 16px; font-weight: bold; color: #00ff00;', 'color: #00ff00;');
   }, []);
 

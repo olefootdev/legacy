@@ -55,7 +55,7 @@ export function QuickShareCard({
   referralCode,
 }: Props) {
   const [shared, setShared] = useState<'idle' | 'done' | 'copied'>('idle');
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.com';
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.ai';
   const referralUrl = referralCode ? `${origin}/cadastro/${referralCode}` : `${origin}/cadastro`;
   const displayUrl = referralUrl.replace(/^https?:\/\//, '');
 

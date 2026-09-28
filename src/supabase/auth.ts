@@ -74,7 +74,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
  *
  * O `redirectTo` sai de `window.location.origin` DE PROPÓSITO: o REVELA usa esta
  * mesma função, e sessão do supabase-js mora em localStorage — que é por origem.
- * Se o e-mail pedido no revela.olefoot.com voltasse pro domínio do jogo, a
+ * Se o e-mail pedido no revela.olefoot.ai voltasse pro domínio do jogo, a
  * pessoa criaria a senha e continuaria deslogada no REVELA.
  *
  * `path` existe porque as duas rotas se chamam diferente: o jogo é em inglês

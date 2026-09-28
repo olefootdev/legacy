@@ -1,7 +1,7 @@
 /**
  * O aperto de mão entre o jogo e a OLEWALLET (A VIRADA · V1).
  *
- * A OLEWALLET mora em outra origem (olefoot.com), e é ESSE o ponto: um XSS em
+ * A OLEWALLET mora em outra origem (olefoot.ai), e é ESSE o ponto: um XSS em
  * qualquer canto do jogo não alcança o cofre dela. O preço dessa separação é
  * que não dá pra compartilhar sessão — então a ligação é uma ASSINATURA, não
  * um cookie. É o mesmo desenho que o jogo já usa com a Phantom, e por isso ele
@@ -30,33 +30,33 @@
  * Origens que podem PEDIR uma assinatura à carteira.
  *
  * MÍNIMA de propósito. Cada entrada aqui é um site que, se for comprometido,
- * consegue abrir um pedido de vínculo. `olefoot.com` e `www.olefoot.com`
+ * consegue abrir um pedido de vínculo. `olefoot.ai` e `www.olefoot.ai`
  * estavam nesta lista e saíram: não pedem assinatura nenhuma, e origem que não
  * pede não entra. Só se acrescenta quando existir um pedinte de verdade.
  *
  * Comparação EXATA — nunca `includes`, nunca `endsWith`. O self-test tem casos
- * (`game.olefoot.com.evil.com`, `evil-game.olefoot.com`) que existem pra impedir
+ * (`game.olefoot.ai.evil.com`, `evil-game.olefoot.ai`) que existem pra impedir
  * que alguém "simplifique" isso um dia.
  */
 export const ORIGENS_QUE_PODEM_PEDIR: readonly string[] = [
-  'https://game.olefoot.com',
+  'https://game.olefoot.ai',
   'http://localhost:5173',
   'http://localhost:4173',
 ];
 
 /**
- * Onde a carteira mora: `dex.olefoot.com`. O jogo só aceita resposta vinda
+ * Onde a carteira mora: `dex.olefoot.ai`. O jogo só aceita resposta vinda
  * daqui.
  *
  * Subdomínio do mesmo domínio do jogo, e isso basta pro que importa:
- * localStorage é isolado POR ORIGEM, então o cofre de dex.olefoot.com não é
- * legível por game.olefoot.com nem o contrário. O que um subdomínio não dá, e
+ * localStorage é isolado POR ORIGEM, então o cofre de dex.olefoot.ai não é
+ * legível por game.olefoot.ai nem o contrário. O que um subdomínio não dá, e
  * um domínio separado daria, é distância de um eventual subdomain takeover na
  * vizinhança — risco menor, anotado de propósito em vez de esquecido.
  */
 export const ORIGEM_DA_CARTEIRA: string =
   (typeof import.meta !== 'undefined' && (import.meta as { env?: Record<string, string> }).env?.VITE_OLEWALLET_ORIGIN) ||
-  'https://dex.olefoot.com';
+  'https://dex.olefoot.ai';
 
 export function origemPermitida(origem: string | null | undefined): boolean {
   if (!origem) return false;

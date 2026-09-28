@@ -2,7 +2,7 @@
  * Self-test da prova de posse de carteira Solana (A VIRADA · C1).
  *
  * Guarda a porta do vínculo: esse endereço é onde o airdrop da v1 cai e é a
- * ponte com olefoot.com/wallet. Antes, `link_my_solana_wallet` aceitava
+ * ponte com olefoot.ai/wallet. Antes, `link_my_solana_wallet` aceitava
  * qualquer endereço bem formado, sem assinatura.
  *
  * Gera chaves ed25519 reais (as mesmas de uma carteira Solana), assina como a

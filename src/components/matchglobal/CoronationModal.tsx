@@ -139,7 +139,7 @@ export function CoronationModal({ crown, onClose }: Props) {
   const onShare = async () => {
     if (!crown || !moment) return;
     setHoldOpen(true);
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.com';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.ai';
     const referralUrl = referralCode ? `${origin}/cadastro/${referralCode}` : `${origin}/cadastro`;
     const scoreLine =
       crown.finalScoreHome != null && crown.finalScoreAway != null && crown.runnerUpClubName

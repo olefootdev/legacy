@@ -5,7 +5,7 @@
 @import "./styles/mobile-responsive.css";
 
 @theme {
-  /* Cores — alinhadas ao olefoot.com */
+  /* Cores — alinhadas ao olefoot.ai */
   --color-neon-yellow: #FDE100;
   --color-neon-yellow-dark: #C9B000;
   --color-neon-green: #00FF66;
@@ -173,7 +173,7 @@
   /* Letterbox cinema — bandas pretas para zoom dramático. */
   --letterbox-h:    72px;
 
-  /* ═══ REVELA — a linguagem de pôster que nasceu em revela.olefoot.com ═════
+  /* ═══ REVELA — a linguagem de pôster que nasceu em revela.olefoot.ai ═════
    * Trazida pro jogo em 2026-07-23 a pedido do fundador, pra que o portal e o
    * game não pareçam produtos diferentes. Marca já era a mesma (#FDE100,
    * #0D0D0D, Anton); o que faltava era a COMPOSIÇÃO.
@@ -238,7 +238,7 @@
    * Eyebrow de PÔSTER — risco sólido só à esquerda, título em Anton.
    *
    * ⚠️ NÃO confundir com `.ole-eyebrow`, que já existe neste arquivo e é outra
-   * coisa: centralizado, linha fina dos dois lados, assinatura do olefoot.com,
+   * coisa: centralizado, linha fina dos dois lados, assinatura do olefoot.ai,
    * usado em 26 telas. Este aqui é a gramática do portal REVELA — assimétrico,
    * pesado, abrindo bloco de dado. Dois nomes porque são duas ideias.
    */

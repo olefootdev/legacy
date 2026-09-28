@@ -806,7 +806,7 @@ legendImportRoutes.post('/legend-access-link', async (c) => {
   if (!email || !email.includes('@')) {
     return c.json({ error: 'email obrigatório' }, 400);
   }
-  const redirectTo = body.redirectTo?.trim() || 'https://game.olefoot.com/playervip';
+  const redirectTo = body.redirectTo?.trim() || 'https://game.olefoot.ai/playervip';
 
   // Garante a conta (passwordless). Ignora "já existe" — idempotente.
   const created = await sb.auth.admin.createUser({ email, email_confirm: true });
