@@ -121,6 +121,24 @@ entrega **250M** — o portão passa a estar cumprido por construção, sem regr
 insustentável para saudável, e as duas decisões que fizeram isso foram suas: razão 1:1
 e esgotamento antes da liquidez.
 
+### Quanto na pool mantém o token atrativo
+
+Num AMM de produto constante, o slippage de uma **compra** de \$X é exatamente
+`X ÷ Q`, onde Q é o lado USDC. **O lado token não entra na conta.**
+
+| Q (USDC na pool) | Tokens @ \$0,000125 | \$250 | \$500 | \$1.250 | \$5.000 |
+|---|---|---|---|---|---|
+| **\$31.250** (o nosso) | 250.000.000 | 0,80% | 1,60% | **4,00%** | 16,00% |
+| \$62.500 | 500.000.000 | 0,40% | 0,80% | 2,00% | 8,00% |
+| \$100.000 | 800.000.000 | 0,25% | 0,50% | 1,25% | 5,00% |
+
+**Regra: para um ticket de \$T custar no máximo 2%, Q ≥ 50 × T.** Com \$31.250 a pool
+serve confortavelmente até **~\$625 de ticket**; o pack de \$1.250 custa 4%.
+
+🔴 **E não se escolhem os três.** Você escolhe dois de {tokens na pool, USDC na pool,
+preço de abertura} — o terceiro sai da conta. A arrecadação fixa o USDC e a pré-venda
+fixa o preço, então os **250.000.000 estão forçados**. Não é decisão, é consequência.
+
 🔴 **Achado que continua valendo: preço não é alavanca.** Para abrir no preço da
 pré-venda, `USDC = tokens × preço` — dobrar o preço dobra os dois lados, então a razão
 `token vendido / token na pool` é invariante ao preço.
@@ -189,9 +207,97 @@ card. O cliente manda **qual** pack, nunca **quanto custa**.
 
 ⚠️ **O maior pack é 4% da pré-venda — 25 compradores esgotam tudo.** Sem teto a
 pré-venda repete a concentração do airdrop, onde 1 carteira ficou com 26,3%.
-Sugestão: \$2.500/conta (80 compradores mínimos) ou \$1.250 (200).
+**Correção de uma sugestão minha:** eu havia sugerido \$2.500, raciocinando sobre uma
+arrecadação maior. Com \$31.250 de meta isso dá **12 compradores**. O teto tem que ser
+baixo:
+
+| Teto/conta | Compradores mínimos | % da pré-venda cada |
+|---|---|---|
+| \$2.500 | 12 | 8,0% |
+| \$1.250 | 25 | 4,0% |
+| **\$500** | **62** | **1,6%** |
+| \$250 | 125 | 0,8% |
+
+**Recomendo teto em degrau:** \$500/conta até 50% vendido, depois libera até \$1.250.
+Distribuição larga na largada, cauda preenchida por ticket grande.
 
 → `server/src/lib/presale/packs.ts` · `npm run test:presale-packs` (32 testes)
+
+---
+
+## 3c. Política de trava da pré-venda
+
+**Decisões do fundador (2026-09-28):** token da pré-venda entra **travado**; libera por
+**tempo** ou **comprando de novo**; a porta de compra vai até **85% da posição**; e a
+compra que destrava tem que ser **entrada nova (Pix/USDT)**, nunca market buy.
+
+### A fórmula, e o furo que ela tinha
+
+A proposta: *"comprou \$1.000, faz compra nova de \$250, libera 25%"*. No preço de
+lançamento isso dá 2.000.000 de 8.000.000 — exatamente o que \$250 compra. **Multiplicador
+m = 1, a fronteira exata do não-arbitragem.**
+
+🐞 **Mas a razão de dólar sozinha quebra se o preço mudar.** Com o preço dobrado, \$250
+compraria 1.000.000 e a fórmula continuaria liberando 2.000.000 — pagar \$250 e soltar
+\$500 em token. Todo mundo faria no dia 1.
+
+**A correção:** a liberação é o **MENOR** entre a razão de dólar e a **paridade em token**
+no preço atual.
+
+| Preço | Razão de dólar | Paridade em token | Libera | Quem segurou |
+|---|---|---|---|---|
+| lançamento | 2.000.000 | 2.000.000 | **2.000.000** | empatam (m = 1) |
+| dobrou | 2.000.000 | 1.000.000 | **1.000.000** | paridade |
+| caiu à metade | 2.000.000 | 4.000.000 | **2.000.000** | razão de dólar |
+
+A proposta original fica intacta no preço de lançamento; fora dele, o menor segura o
+abuso dos dois lados.
+
+### 🔑 A compra que destrava não precisa ser de token
+
+Como a régua é "quanto esse dinheiro valeria em token no preço atual", **card, lenda e
+pack do jogo contam igual**. Isso faz a trava empurrar receita de **produto**, não só de
+token — e sem abrir brecha, porque a paridade se aplica do mesmo jeito.
+
+### Por que a compra tem que ser entrada nova
+
+Modelei as duas versões e **o efeito no preço é idêntico**: −1,58% tanto exigindo market
+buy quanto liberando por tempo puro, numa posição de \$1.000. O dinheiro do market buy
+entra na pool e sai no mesmo movimento.
+
+**A compra não protege o gráfico. Ela FILTRA.** A maioria não paga para destravar, então
+a maioria fica travada — o valor está em reduzir o **número** de liberações, não o impacto
+de cada uma. E se for market buy, a empresa não recebe nada.
+
+### 🔴 A consequência do 85%, em número
+
+As duas portas somam. Com 10% liberados no lançamento pelo cronograma de tempo:
+
+| | |
+|---|---|
+| Porta de compra esgotada | 85% |
+| Tempo, no dia 0 | +10% |
+| **Disponível no dia 0** | **95%** |
+| 100% líquido no dia | **50** |
+
+Pior caso, todos os compradores esgotando a porta:
+
+| | |
+|---|---|
+| Entrada nova (Pix/USDT) | **\$26.562** |
+| Disponível no dia 0 | **237.500.000 = 95% da pré-venda** |
+| Se tudo vender na pool de \$31.250 | **−73,7%** |
+| Se os \$26.562 novos forem **todos** para liquidez antes | **−56,3%** |
+
+⚠️ **Se a intenção do "85%" era que no máximo 85% saia cedo**, falta um ajuste de uma
+linha: fazer o teto valer sobre a **liberação total antecipada**, não só sobre a porta de
+compra. Aí o máximo no dia 0 é 85% e os 15% finais dependem do tempo de verdade.
+Como está escrito agora, é 95%.
+
+E a trava que vale nos dois casos: **todo real de entrada nova tem que ir para a
+liquidez** — é o que tira o pior caso de −73,7% para −56,3%.
+
+→ `server/src/lib/presale/travas.ts` · `npm run test:presale-travas` (26 testes)
 
 ---
 
@@ -388,7 +494,9 @@ porque alguém vai calcular, e é melhor que o número venha de nós.
 | 7 | `maximumFee`: sem teto (5% literal) ou teto absoluto | sem teto, como decidido |
 | 8 | Pool: Raydium **CPMM** ou CLMM (AMM v4 está fora) | CPMM |
 | 6 | Destino do claim v1 não resgatado após 24 meses | Liquidez, anunciado no dia 1 |
-| 9 | **Teto por conta na pré-venda** | 🔴 sem ele 25 compradores esgotam. Sugestão \$2.500 |
+| 9 | **Teto por conta na pré-venda** | 🔴 **\$500 → \$1.250 em degrau** (\$2.500 daria 12 compradores) |
+| 11 | ~~Trava da pré-venda~~ | ✅ **85% por compra, entrada nova, m=1** |
+| 12 | O teto de 85% é só da porta de compra ou da liberação total? | como está = **95% no dia 0** |
 | 10 | ~~Quem absorve os 5% na entrega~~ | ✅ **DECIDIDO: opção 2, a casa cobre** |
 
 ## 8. Travas técnicas não negociáveis no lançamento

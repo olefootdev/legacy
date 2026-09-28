@@ -110,7 +110,8 @@
     "deploy:dex": "VITE_OLEFOOT_API_URL=https://legacy-production-de1e.up.railway.app npm run build:dex && wrangler deploy -c dex/wrangler.jsonc",
     "test:wallet-conexao": "tsx src/wallet/seed/runConexaoSelfTest.mts",
     "test:expansao": "tsx server/src/lib/expansao/runExpansaoSelfTest.mts",
-    "test:presale-packs": "tsx server/src/lib/presale/runPacksSelfTest.mts"
+    "test:presale-packs": "tsx server/src/lib/presale/runPacksSelfTest.mts",
+    "test:presale-travas": "tsx server/src/lib/presale/runTravasSelfTest.mts"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",
