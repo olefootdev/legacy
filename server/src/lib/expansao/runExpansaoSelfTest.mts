@@ -4,7 +4,8 @@
  * Roda: npm run test:expansao
  */
 import { ELEGIBILIDADE_PADRAO, olexpDaCompra, podeEquiparar, podeQualificar } from './unidade.js';
-import { arvoreVazia, creditar, equipeMenor, inserir, inserirRaiz, volumeDaPerna, type Pernas } from './arvore.js';
+import { arvoreVazia, creditar, equipeMenor, inserir, inserirRaiz, volumeDaPerna,
+  acervoVazio, consumirEquiparado, type Acervo } from './arvore.js';
 import { DEGRAUS, carreiraDe } from './carreira.js';
 import { MICRO, bonusContabil, equiparar, fecharCiclo, olefootAPagar, poolDoCiclo } from './equiparacao.js';
 
@@ -48,19 +49,51 @@ recusa('não entra duas vezes', () => inserir(a, 'a1', 'raiz', 2));
 
 console.log('\n📊 volume de perna — sobe, não desce\n');
 
-let p: Pernas = new Map();
-p = creditar(a, p, 'c1', 1000n);
+let ac: Acervo = acervoVazio();
+ac = creditar(a, ac, 'c1', 1000n, 'compra_olefoot');
+const p = ac.equiparacao;
 check('crédito no fundo soma na perna certa da raiz', volumeDaPerna(p, 'raiz', 1) === 1000n);
 check('e não vaza pra outra perna', volumeDaPerna(p, 'raiz', 2) === 0n);
 check('e soma em TODO ancestral no caminho',
   volumeDaPerna(p, 'a1', 1) === 1000n && volumeDaPerna(p, 'b1', 1) === 1000n);
 
 // ⭐ A trava contra o atalho mais óbvio do binário.
-p = creditar(a, p, 'a2', 500n);
+// 🐞 `creditar` devolve mapa NOVO — reler de `ac`, não do `p` de antes.
+ac = creditar(a, ac, 'a2', 500n, 'compra_olefoot');
 check('a compra da própria pessoa NÃO conta pra perna dela',
-  volumeDaPerna(p, 'a2', 1) === 0n && volumeDaPerna(p, 'a2', 2) === 0n);
-check('ela conta pro patrocinador', volumeDaPerna(p, 'raiz', 2) === 500n);
-check('equipe menor é o MIN dos dois lados', equipeMenor(p, 'raiz') === 500n);
+  volumeDaPerna(ac.equiparacao, 'a2', 1) === 0n && volumeDaPerna(ac.equiparacao, 'a2', 2) === 0n);
+check('ela conta pro patrocinador', volumeDaPerna(ac.equiparacao, 'raiz', 2) === 500n);
+check('equipe menor é o MIN dos dois lados', equipeMenor(ac.equiparacao, 'raiz') === 500n);
+
+// 🔴 OS DOIS TRILHOS — o que a varredura de 2026-09-28 separou.
+{
+  let t: Acervo = acervoVazio();
+  t = creditar(a, t, 'c1', 900n, 'campanha');
+  check('🔴 campanha GRADUA mas não entra no que paga',
+    volumeDaPerna(t.qualificacao, 'raiz', 1) === 900n
+    && volumeDaPerna(t.equiparacao, 'raiz', 1) === 0n);
+
+  t = creditar(a, t, 'c1', 700n, 'compra_dex');
+  check('🔴 compra na DEX não entra em NENHUM trilho',
+    volumeDaPerna(t.qualificacao, 'raiz', 1) === 900n
+    && volumeDaPerna(t.equiparacao, 'raiz', 1) === 0n);
+
+  t = creditar(a, t, 'c1', 1_000n, 'compra_olefoot');
+  check('compra pelo nosso canal entra nos DOIS trilhos',
+    volumeDaPerna(t.qualificacao, 'raiz', 1) === 1_900n
+    && volumeDaPerna(t.equiparacao, 'raiz', 1) === 1_000n);
+
+  t = creditar(a, t, 'a2', 1_000n, 'compra_olefoot'); // enche a perna 2
+  const gradAntes = volumeDaPerna(t.qualificacao, 'raiz', 1);
+  t = consumirEquiparado(t, 'raiz', 1_000n);
+  check('🔑 consumir o equiparado NÃO rebaixa a graduação',
+    volumeDaPerna(t.qualificacao, 'raiz', 1) === gradAntes);
+  check('   e tira dos DOIS lados do trilho que paga',
+    volumeDaPerna(t.equiparacao, 'raiz', 1) === 0n
+    && volumeDaPerna(t.equiparacao, 'raiz', 2) === 0n);
+  check('consumir mais do que a perna tem estoura',
+    (() => { try { consumirEquiparado(t, 'raiz', 1n); return false; } catch { return true; } })());
+}
 
 console.log('\n🏆 carreira\n');
 

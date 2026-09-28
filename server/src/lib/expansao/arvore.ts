@@ -22,7 +22,7 @@
  *
  * Puro: sem banco, sem IO. Recebe o estado, devolve o que mudou.
  */
-import { LADOS, exigePositivo, type Lado, type Olexp } from './unidade.js';
+import { LADOS, exigePositivo, podeQualificar, podeEquiparar, type FonteOlexp, type Lado, type Olexp } from './unidade.js';
 
 export interface No {
   readonly userId: string;
@@ -131,23 +131,79 @@ export function volumeDaPerna(p: Pernas, userId: string, lado: Lado): Olexp {
 }
 
 /**
- * Credita OLEXP de uma pessoa e propaga pra cima.
+ * 🔴 DOIS acumuladores, não um. A varredura de 2026-09-28 achou isto:
+ *
+ * `unidade.ts` sempre separou as fontes em `qualificacao` e `equiparacao`, e
+ * `carreira.ts` diz por escrito que a equiparação consome o segundo e não pode
+ * tocar o primeiro. Mas existia um mapa só — e daí saíam dois erros de dinheiro:
+ *
+ *   1. fonte que qualifica mas NÃO paga (nft, campanha, evento, produto do
+ *      jogo…) caía no mesmo balaio e seria EQUIPARADA. Pagaria bônus por OLEXP
+ *      que nunca devia pagar.
+ *   2. consumir o equiparado do mesmo mapa BAIXARIA a equipe menor — e
+ *      rebaixaria a graduação de quem acabou de receber bônus.
+ *
+ * Separados: `qualificacao` só cresce e é o que gradua; `equiparacao` é o que
+ * o ciclo consome.
+ */
+export interface Acervo {
+  readonly qualificacao: Pernas;
+  readonly equiparacao: Pernas;
+}
+
+export const acervoVazio = (): Acervo => ({ qualificacao: new Map(), equiparacao: new Map() });
+
+/**
+ * Credita OLEXP de uma pessoa e propaga pra cima, em cada trilho que a fonte
+ * permitir.
  *
  * ⚠️ NÃO credita na própria pessoa. O volume de perna de alguém é o que a
  * REDE DELA produziu; a compra dela mesma conta pros ancestrais, não pra ela.
  * Se contasse, dava pra graduar sozinho comprando nos dois lados — que é o
  * atalho mais óbvio do binário.
  */
-export function creditar(a: Arvore, pernas: Pernas, userId: string, olexp: Olexp): Pernas {
+export function creditar(
+  a: Arvore,
+  acervo: Acervo,
+  userId: string,
+  olexp: Olexp,
+  fonte: FonteOlexp,
+): Acervo {
   exigePositivo('olexp', olexp);
   if (!a.nos.has(userId)) throw new Error(`${userId} não está na árvore`);
 
-  const novo: Pernas = new Map(pernas);
+  const qualifica = podeQualificar(fonte);
+  const equipara = podeEquiparar(fonte);
+  if (!qualifica && !equipara) return acervo; // compra na DEX cai aqui
+
+  const q: Pernas = new Map(acervo.qualificacao);
+  const e: Pernas = new Map(acervo.equiparacao);
   for (const { ancestralId, lado } of ancestraisComLado(a, userId)) {
     const k = chavePerna(ancestralId, lado);
-    novo.set(k, (novo.get(k) ?? 0n) + olexp);
+    if (qualifica) q.set(k, (q.get(k) ?? 0n) + olexp);
+    if (equipara) e.set(k, (e.get(k) ?? 0n) + olexp);
   }
-  return novo;
+  return { qualificacao: q, equiparacao: e };
+}
+
+/**
+ * Debita o que foi equiparado — SÓ do trilho de equiparação.
+ *
+ * O ciclo equipara o MIN e tira dos dois lados. A graduação não se mexe, que é
+ * o ponto de existirem dois trilhos.
+ */
+export function consumirEquiparado(acervo: Acervo, userId: string, quanto: Olexp): Acervo {
+  if (quanto < 0n) throw new RangeError(`consumo negativo: ${quanto}`);
+  if (quanto === 0n) return acervo;
+
+  const e: Pernas = new Map(acervo.equiparacao);
+  for (const lado of LADOS) {
+    const k = chavePerna(userId, lado);
+    const atual = e.get(k) ?? 0n;
+    if (atual < quanto) throw new RangeError(`consumo ${quanto} maior que a perna ${lado} (${atual})`);
+    e.set(k, atual - quanto);
+  }
+  return { qualificacao: acervo.qualificacao, equiparacao: e };
 }
 
 /** A equipe menor — é ela que gradua e é ela que limita a equiparação. */
