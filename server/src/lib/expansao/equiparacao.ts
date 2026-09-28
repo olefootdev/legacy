@@ -19,6 +19,7 @@
  * hora parada.)
  */
 import { exigePositivo, type Olexp } from './unidade.js';
+import type { Ativacao } from './arvore.js';
 
 /** O elegível de cada perna, no momento em que o ciclo fecha. */
 export interface SaldoElegivel {
@@ -40,6 +41,41 @@ export function equiparar(s: SaldoElegivel): Equiparacao {
   const sobra = { time1: s.time1 - eq, time2: s.time2 - eq };
   const pernaZerada = sobra.time1 === 0n && sobra.time2 === 0n ? null : sobra.time1 === 0n ? 1 : 2;
   return { equiparado: eq, sobra, pernaZerada };
+}
+
+/**
+ * A equiparação COM a trava de ativação.
+ *
+ * Regra do fundador: só equipara quem indicou pelo menos 1 pessoa em CADA perna
+ * (ver `ativacaoDe` em `arvore.ts`). Quem não indicou os dois lados não perde
+ * nada — o saldo fica RETIDO e equipara inteiro no ciclo em que ativar.
+ *
+ * 🔴 Reter em vez de zerar não é generosidade, é a única leitura honesta: o
+ * OLEXP foi gerado por compra que aconteceu de verdade. Zerar seria confiscar
+ * volume real por uma condição que a pessoa ainda pode cumprir. E reter é o que
+ * faz a trava virar INCENTIVO ("ative e destrave tudo") em vez de punição.
+ *
+ * O pico que isso pode criar não quebra nada: o pool do ciclo é fixo, então
+ * mais gente equiparando dilui o valor por OLEXP daquela hora — não estoura o
+ * caixa.
+ */
+export interface EquiparacaoComTrava extends Equiparacao {
+  readonly retidoPorInatividade: boolean;
+  readonly faltaNaPerna: 1 | 2 | null;
+}
+
+export function equipararSeAtivo(s: SaldoElegivel, a: Ativacao): EquiparacaoComTrava {
+  if (!a.ativo) {
+    if (s.time1 < 0n || s.time2 < 0n) throw new RangeError('saldo elegível negativo');
+    return {
+      equiparado: 0n,
+      sobra: { time1: s.time1, time2: s.time2 },  // nada é debitado
+      pernaZerada: null,
+      retidoPorInatividade: true,
+      faltaNaPerna: a.faltaNaPerna,
+    };
+  }
+  return { ...equiparar(s), retidoPorInatividade: false, faltaNaPerna: null };
 }
 
 // ------------------------------------------------------------------ ciclo ---

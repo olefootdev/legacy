@@ -156,3 +156,80 @@ export function equipeMenor(p: Pernas, userId: string): Olexp {
   const t2 = volumeDaPerna(p, userId, 2);
   return t1 < t2 ? t1 : t2;
 }
+
+// ─────────────────────────────────────────────────── ativação ───────────────
+
+/**
+ * ATIVAÇÃO: só equipara quem indicou pelo menos UMA pessoa em CADA perna.
+ *
+ * Regra do fundador (2026-09-28): "a pessoa tem que indicar sempre 2 pessoas
+ * para ativar o bônus — no mínimo 1 no Time 1 e 1 no Time 2, não é apenas uma
+ * abaixo da outra."
+ *
+ * 🔴 POR QUE ISSO NÃO ERA REDUNDANTE COM O `equiparar()`:
+ * o MIN das pernas já dá zero quando um lado tem volume zero — mas isso é
+ * consequência do VOLUME, não da indicação. Com derramamento, alguém pode
+ * receber volume nos dois lados **sem nunca ter indicado ninguém**: a perna
+ * enche sozinha porque um upline colocou gente ali. Sem esta trava, essa pessoa
+ * equipararia e receberia. Com ela, não.
+ *
+ * O teste é sobre PATROCÍNIO, não sobre posição: conta quem a pessoa trouxe
+ * (`patrocinadorId === ela`), e em qual das pernas dela essa gente caiu.
+ */
+
+/**
+ * Em qual perna de `raizId` o `alvoId` está. null se não for descendente.
+ *
+ * Sobe pelo `paiId` até achar a raiz; o `lado` do último passo é a perna.
+ */
+export function pernaDoDescendente(a: Arvore, raizId: string, alvoId: string): Lado | null {
+  if (raizId === alvoId) return null;
+  let atual = a.nos.get(alvoId);
+  const visitados = new Set<string>();
+  while (atual?.paiId && atual.lado) {
+    if (visitados.has(atual.userId)) return null; // ciclo: árvore corrompida
+    visitados.add(atual.userId);
+    if (atual.paiId === raizId) return atual.lado;
+    atual = a.nos.get(atual.paiId);
+  }
+  return null;
+}
+
+/** Os indicados diretos de `userId`, separados pela perna onde ficaram. */
+export function diretosPorPerna(a: Arvore, userId: string): { time1: string[]; time2: string[] } {
+  const time1: string[] = [];
+  const time2: string[] = [];
+  for (const no of a.nos.values()) {
+    if (no.patrocinadorId !== userId) continue;
+    const perna = pernaDoDescendente(a, userId, no.userId);
+    if (perna === 1) time1.push(no.userId);
+    else if (perna === 2) time2.push(no.userId);
+  }
+  return { time1, time2 };
+}
+
+export interface Ativacao {
+  readonly ativo: boolean;
+  readonly diretosTime1: number;
+  readonly diretosTime2: number;
+  /** Qual perna ainda falta. null quando já está ativo. */
+  readonly faltaNaPerna: Lado | null;
+}
+
+/**
+ * Está ativo para equiparar?
+ *
+ * ⚠️ Indicado que caiu por derramamento LONGE — vários níveis abaixo — continua
+ * contando: ele é indicação da pessoa e está na perna dela. O que não conta é
+ * gente que ela não indicou.
+ */
+export function ativacaoDe(a: Arvore, userId: string): Ativacao {
+  const { time1, time2 } = diretosPorPerna(a, userId);
+  const ativo = time1.length >= 1 && time2.length >= 1;
+  return {
+    ativo,
+    diretosTime1: time1.length,
+    diretosTime2: time2.length,
+    faltaNaPerna: ativo ? null : time1.length === 0 ? 1 : 2,
+  };
+}

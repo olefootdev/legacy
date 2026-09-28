@@ -8,6 +8,8 @@ import { arvoreVazia, creditar, equipeMenor, inserir, inserirRaiz, volumeDaPerna
 import { DEGRAUS, carreiraDe } from './carreira.js';
 import { MICRO, bonusContabil, equiparar, fecharCiclo, olefootAPagar, poolDoCiclo } from './equiparacao.js';
 
+import { ativacaoDe, diretosPorPerna, pernaDoDescendente, inserir, inserirRaiz, arvoreVazia } from './arvore.js';
+import { equipararSeAtivo } from './equiparacao.js';
 import { trancheLiberavel, abaixoDoPiso, PISO_DO_BALDE_BPS } from './equiparacao.js';
 import { taxaDe, liquidoDe, brutoParaEntregar, liquidarComTaxa, TAXA_LANCAMENTO,
   type ConfigTaxa } from './taxaDeTransferencia.js';
@@ -153,6 +155,55 @@ check('a mesma compra contada duas vezes BARRA',
 check('crédito sem origem BARRA', !auditarCiclo({ ...cicloOk, creditosSemOrigem: 1 }).liberado);
 check('débito acima do crédito só AVISA (é carry-over legítimo)',
   auditarCiclo({ ...cicloOk, debitadoNoCiclo: 99_000n }).liberado);
+
+console.log('\n🔑 ativação — 2 indicados, 1 em cada perna\n');
+
+// A regra do fundador: só equipara quem indicou pelo menos 1 em CADA perna.
+// Monta: raiz A. A indica B (T1) e C (T2). B indica D (na perna T1 de B).
+let arv = inserirRaiz(arvoreVazia(), 'A');
+arv = inserir(arv, 'B', 'A', 1);
+check('com só 1 indicado no T1, A NÃO está ativo', !ativacaoDe(arv, 'A').ativo);
+check('e o painel diz qual perna falta', ativacaoDe(arv, 'A').faltaNaPerna === 2);
+
+arv = inserir(arv, 'C', 'A', 2);
+check('🔑 com 1 em cada perna, A ATIVA', ativacaoDe(arv, 'A').ativo);
+check('e não falta perna nenhuma', ativacaoDe(arv, 'A').faltaNaPerna === null);
+
+// 🔴 O caso que o MIN sozinho não pegava: B tem dois indicados, mas os DOIS
+// caem na mesma perna. Volume existe, indicação nos dois lados não.
+arv = inserir(arv, 'D', 'B', 1);
+arv = inserir(arv, 'E', 'B', 1);   // derrama, mas continua na perna 1 de B
+check('🔴 dois indicados na MESMA perna NÃO ativam', !ativacaoDe(arv, 'B').ativo);
+check('   (são 2 diretos no T1 e 0 no T2)',
+  ativacaoDe(arv, 'B').diretosTime1 === 2 && ativacaoDe(arv, 'B').diretosTime2 === 0);
+arv = inserir(arv, 'F', 'B', 2);
+check('   e ao indicar o outro lado, ativa', ativacaoDe(arv, 'B').ativo);
+
+// Indicado que derramou fundo continua contando — é indicação dele.
+check('indicado que caiu vários níveis abaixo ainda conta pra perna',
+  pernaDoDescendente(arv, 'B', 'E') === 1);
+check('quem não é descendente devolve null', pernaDoDescendente(arv, 'B', 'A') === null);
+check('a própria pessoa não é descendente de si', pernaDoDescendente(arv, 'B', 'B') === null);
+
+// 🔴 O furo que a regra fecha: volume nas duas pernas SEM ter indicado ninguém.
+// D não indicou nada; se um upline derramar gente nas duas pernas dele, o MIN
+// pagaria. A trava impede.
+check('🔴 quem não indicou NINGUÉM não ativa, mesmo com volume dos dois lados',
+  !ativacaoDe(arv, 'D').ativo);
+{
+  const saldoCheio = { time1: 50_000n, time2: 40_000n };
+  const r = equipararSeAtivo(saldoCheio, ativacaoDe(arv, 'D'));
+  check('   e a equiparação dele é ZERO', r.equiparado === 0n);
+  check('   🔑 mas o saldo fica RETIDO, não é confiscado',
+    r.sobra.time1 === 50_000n && r.sobra.time2 === 40_000n && r.retidoPorInatividade);
+}
+
+// Quem está ativo equipara normal.
+{
+  const r = equipararSeAtivo({ time1: 50_000n, time2: 40_000n }, ativacaoDe(arv, 'A'));
+  check('ativo equipara o MIN normalmente', r.equiparado === 40_000n && !r.retidoPorInatividade);
+  check('e a sobra do lado maior é a de sempre', r.sobra.time1 === 10_000n);
+}
 
 console.log('\n🚫 compra na DEX não gera comissão\n');
 
