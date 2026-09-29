@@ -255,42 +255,92 @@ function MapaHorizontal({ nos }: { nos: NoDoMapa[] }) {
       </div>
     );
   }
+
+  const L = 340, A = 220, X0 = 56, EIXO = A / 2;
   const maxNivel = Math.max(...nos.map((n) => n.nivel));
-  const colX = (n: number) => 62 + ((n - 1) / Math.max(1, maxNivel - 1 || 1)) * 250;
-  const porPerna = (lado: 1 | 2) => nos.filter((n) => n.perna === lado);
-  const yDe = (lado: 1 | 2, i: number, total: number) =>
-    lado === 1 ? 95 - ((i + 1) / (total + 1)) * 78 : 125 + ((i + 1) / (total + 1)) * 78;
+  const colX = (n: number) => X0 + (n / Math.max(1, maxNivel)) * (L - X0 - 26);
+
+  // 🐞 A primeira versão ligava TODO nó direto na raiz — virava leque, não
+  // árvore. O `paiId` vinha do banco e não era usado. Agora cada nó é
+  // posicionado e a ligação sai do PAI de verdade; quando o pai está fora da
+  // janela carregada, a ligação sai da raiz e fica pontilhada, dizendo que há
+  // caminho que a tela não está mostrando.
+  const pos = new Map<string, { x: number; y: number; perna: 1 | 2 }>();
+  for (const lado of [1, 2] as const) {
+    const daPerna = nos.filter((n) => n.perna === lado).sort((a, b) => a.nivel - b.nivel || a.yOrdem - b.yOrdem);
+    const porNivel = new Map<number, NoDoMapa[]>();
+    for (const n of daPerna) porNivel.set(n.nivel, [...(porNivel.get(n.nivel) ?? []), n]);
+    for (const [nivel, lista] of porNivel) {
+      // Até 6 por nível desenha um a um; acima disso a coluna vira densidade.
+      const mostrar = lista.slice(0, 6);
+      mostrar.forEach((n, i) => {
+        const faixa = 82;
+        const passo = faixa / (mostrar.length + 1);
+        const dy = passo * (i + 1);
+        pos.set(n.userId, { x: colX(nivel), y: lado === 1 ? EIXO - dy : EIXO + dy, perna: lado });
+      });
+    }
+  }
+
+  const excedente = (lado: 1 | 2, nivel: number) =>
+    nos.filter((n) => n.perna === lado && n.nivel === nivel).length - 6;
+
+  const niveisComExcesso = [...new Set(nos.map((n) => n.nivel))]
+    .flatMap((nv) => ([1, 2] as const).map((l) => ({ nivel: nv, lado: l, resto: excedente(l, nv) })))
+    .filter((e) => e.resto > 0);
 
   return (
     <div className="mt-6 border border-white/10 bg-panel">
       <div className="flex items-baseline justify-between px-4 pb-1 pt-3.5">
         <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">Sua rede</span>
-        <span className="font-mono text-[10px] text-cimento">{nos.length} pessoas</span>
+        <span className="font-mono text-[10px] text-cimento">
+          {nos.length} {nos.length === 1 ? 'pessoa' : 'pessoas'} · até o nível {maxNivel}
+        </span>
       </div>
-      <svg viewBox="0 0 340 220" className="block h-[220px] w-full">
-        <line x1="62" y1="110" x2="332" y2="110" stroke="#1B1D1F" strokeWidth="1" />
-        <text x="6" y="34" fill="#4A4C4F" fontSize="8" fontFamily="monospace">TIME 1</text>
-        <text x="6" y="192" fill="#4A4C4F" fontSize="8" fontFamily="monospace">TIME 2</text>
-        {([1, 2] as const).map((lado) => {
-          const lista = porPerna(lado);
-          return lista.map((n, i) => {
-            const x = colX(n.nivel);
-            const y = yDe(lado, i, lista.length);
-            return (
-              <g key={n.userId}>
-                <line x1={62} y1={110} x2={x} y2={y}
-                      stroke={n.daMinhaEquipe ? '#8A7A18' : '#2E3033'} strokeWidth="1.5" />
-                <circle cx={x} cy={y} r={5} fill={n.daMinhaEquipe ? '#FDE100' : '#5A5C5F'} />
-              </g>
-            );
-          });
+      <svg viewBox={`0 0 ${L} ${A}`} className="block h-[220px] w-full">
+        <line x1={X0} y1={EIXO} x2={L - 8} y2={EIXO} stroke="#1B1D1F" strokeWidth="1" />
+        <text x="4" y="26" fill="#4A4C4F" fontSize="8" fontFamily="monospace">TIME 1</text>
+        <text x="4" y={A - 14} fill="#4A4C4F" fontSize="8" fontFamily="monospace">TIME 2</text>
+
+        {nos.map((n) => {
+          const p = pos.get(n.userId);
+          if (!p) return null;                      // está no excedente da coluna
+          const pai = n.paiId ? pos.get(n.paiId) : null;
+          const origem = pai ?? { x: X0, y: EIXO };
+          const forade = !pai && n.nivel > 1;       // pai fora da janela
+          return (
+            <line key={`l-${n.userId}`}
+              x1={origem.x} y1={origem.y} x2={p.x} y2={p.y}
+              stroke={n.daMinhaEquipe ? '#8A7A18' : '#2E3033'}
+              strokeWidth={1.5}
+              strokeDasharray={forade ? '3 3' : undefined} />
+          );
         })}
-        <circle cx="62" cy="110" r="8" fill="#ECECE7" />
-        <text x="44" y="130" fill="#ECECE7" fontSize="8" fontFamily="monospace" fontWeight="bold">VOCÊ</text>
+
+        {nos.map((n) => {
+          const p = pos.get(n.userId);
+          if (!p) return null;
+          return (
+            <circle key={`c-${n.userId}`} cx={p.x} cy={p.y} r={n.nivel === 1 ? 6 : 4.5}
+              fill={n.daMinhaEquipe ? '#FDE100' : '#5A5C5F'} />
+          );
+        })}
+
+        {niveisComExcesso.map((e) => (
+          <text key={`e-${e.lado}-${e.nivel}`}
+            x={colX(e.nivel)} y={e.lado === 1 ? EIXO - 92 : EIXO + 98}
+            fill="#7E8185" fontSize="9" fontFamily="monospace" textAnchor="middle">
+            +{e.resto}
+          </text>
+        ))}
+
+        <circle cx={X0} cy={EIXO} r="8" fill="#ECECE7" />
+        <text x={X0 - 18} y={EIXO + 22} fill="#ECECE7" fontSize="8" fontFamily="monospace" fontWeight="bold">VOCÊ</text>
       </svg>
-      <div className="flex gap-4 border-t border-white/10 px-4 py-2.5 font-mono text-[9px] text-poeira">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-white/10 px-4 py-2.5 font-mono text-[9px] text-poeira">
         <span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-neon-yellow align-middle" />sua equipe</span>
         <span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#5A5C5F] align-middle" />derramou</span>
+        {niveisComExcesso.length > 0 && <span>+N = mais gente no nível</span>}
       </div>
     </div>
   );
