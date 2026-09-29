@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OLEFOOT</title>
+<meta name="description" content="Monte seu time, dispute ligas e leve o que construiu para a rede. OLEFOOT na Solana.">
+<link rel="icon" href="/olefoot.svg" type="image/svg+xml">
+<meta property="og:title" content="OLEFOOT">
+<meta property="og:description" content="Monte seu time, dispute ligas e leve o que construiu para a rede.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://olefoot.ai/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@700;800&family=Inter+Tight:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* VOLT2 — docs/VOLT2.md. Cor chapada, sem gradiente em superfície, sem
+     sombra atrás de card ou botão, raio 2px, corte por clip-path. */
+  :root{
+    --asfalto:#0D0D0D; --nav:#08090A; --panel:#141516; --card:#1B1D1F; --sheet:#25282B;
+    --giz:#ECECE7; --cimento:#9A9C9F; --poeira:#7E8185;
+    --volt:#FDE100; --ouro:#E8B331; --alta:#22C55E;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--asfalto); color:var(--giz);
+    font-family:'Inter Tight',-apple-system,system-ui,sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  /* 🐞 Quem também for .wrap usa padding-block, nunca `padding: A 0 B` —
+     a forma curta zera o gutter lateral e o título encosta na borda. */
+  .wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+
+  /* barra */
+  header{background:var(--nav);border-bottom:1px solid var(--panel)}
+  .bar{display:flex;align-items:center;justify-content:space-between;height:60px}
+  .bar img{height:19px;display:block}
+  .lang{display:flex;gap:2px;font-family:'IBM Plex Mono',monospace;font-size:10px}
+  .lang button{
+    background:transparent;border:1px solid var(--sheet);color:var(--poeira);
+    padding:5px 9px;cursor:pointer;font:inherit;letter-spacing:.06em;
+  }
+  .lang button[aria-pressed="true"]{background:var(--volt);border-color:var(--volt);color:var(--asfalto);font-weight:500}
+
+  /* herói — título + 2-3 palavras, nada mais */
+  .hero{padding-block:72px 64px;border-bottom:1px solid var(--panel)}
+  h1{
+    font-family:'Anton',Impact,sans-serif;font-weight:400;
+    font-size:clamp(46px,11vw,104px);line-height:1.04;letter-spacing:-.005em;
+    text-transform:uppercase;color:#fff;max-width:14ch;
+  }
+  h1 em{font-style:normal;color:var(--volt)}
+  .sub{margin-top:20px;font-size:clamp(15px,2.4vw,19px);color:var(--cimento);max-width:46ch}
+
+  /* as três portas */
+  .portas{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:1px;background:var(--panel);border-bottom:1px solid var(--panel)}
+  .porta{background:var(--asfalto);padding:34px 22px 30px;display:flex;flex-direction:column;min-height:214px}
+  .tag{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--poeira);margin-bottom:14px}
+  .porta h2{font-family:'Anton',Impact,sans-serif;font-weight:400;font-size:27px;line-height:1.12;text-transform:uppercase;color:#fff;margin-bottom:9px}
+  .porta p{font-size:13.5px;color:var(--cimento);flex:1;margin-bottom:20px}
+  /* consequência DENTRO do botão, nunca embaixo */
+  .btn{
+    display:block;text-align:center;text-decoration:none;font-weight:700;font-size:13px;
+    padding:14px 12px;background:var(--volt);color:var(--asfalto);
+    clip-path:polygon(0 0,calc(100% - 11px) 0,100% 11px,100% 100%,11px 100%,0 calc(100% - 11px));
+  }
+  .btn.linha{background:transparent;color:var(--giz);border:1px solid var(--sheet);clip-path:none}
+  .btn.linha:hover{border-color:var(--cimento)}
+
+  /* faixa do token */
+  .token{background:var(--panel);padding-block:46px}
+  .token .k{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--poeira)}
+  .token h3{font-family:'Anton',Impact,sans-serif;font-weight:400;font-size:clamp(28px,5vw,40px);text-transform:uppercase;color:#fff;margin:12px 0 10px}
+  .token p{font-size:14px;color:var(--cimento);max-width:54ch}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--sheet);margin-top:30px}
+  .cel{background:var(--panel);padding:18px 16px}
+  .cel .r{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.1em;color:var(--poeira)}
+  .cel .v{font-family:'Archivo',sans-serif;font-weight:800;font-size:22px;color:#fff;margin-top:6px;line-height:1}
+  .cel .v.volt{color:var(--volt)}
+
+  footer{padding-block:30px 40px;font-size:12px;color:var(--poeira);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  footer a{color:var(--cimento);text-decoration:none}
+  footer a:hover{color:var(--giz)}
+  [data-en]{display:none}
+  html[lang="en"] [data-pt]{display:none}
+  html[lang="en"] [data-en]{display:inline}
+</style>
+</head>
+<body>
+
+<header><div class="wrap bar">
+  <a href="/" aria-label="OLEFOOT"><img src="/olefoot.svg" alt="OLEFOOT"></a>
+  <div class="lang" role="group" aria-label="Idioma">
+    <button id="pt" aria-pressed="true">PT</button><button id="en" aria-pressed="false">EN</button>
+  </div>
+</div></header>
+
+<main>
+  <section class="wrap hero">
+    <h1><span data-pt>Seu time.<br>Sua <em>rede</em>.</span><span data-en>Your team.<br>Your <em>network</em>.</span></h1>
+    <p class="sub">
+      <span data-pt>Monte o elenco, dispute as ligas e leve o que construiu para a rede.</span>
+      <span data-en>Build the squad, play the leagues, and take what you built on-chain.</span>
+    </p>
+  </section>
+
+  <section class="portas">
+    <div class="porta">
+      <div class="tag">#JOGO</div>
+      <h2><span data-pt>Entrar em campo</span><span data-en>Take the field</span></h2>
+      <p><span data-pt>Elenco, tática e partida ao vivo. Começa de graça, sem carteira.</span><span data-en>Squad, tactics and live matches. Free to start, no wallet needed.</span></p>
+      <a class="btn" href="https://game.olefoot.ai"><span data-pt>JOGAR AGORA</span><span data-en>PLAY NOW</span></a>
+    </div>
+    <div class="porta">
+      <div class="tag">#CARTEIRA</div>
+      <h2>OLEWALLET</h2>
+      <p><span data-pt>Sua frase, sua chave. A carteira mora em outra origem — o jogo nunca a lê.</span><span data-en>Your phrase, your key. The wallet lives on its own origin — the game never reads it.</span></p>
+      <a class="btn linha" href="https://dex.olefoot.ai"><span data-pt>ABRIR A CARTEIRA</span><span data-en>OPEN THE WALLET</span></a>
+    </div>
+    <div class="porta">
+      <div class="tag">#REVELA</div>
+      <h2><span data-pt>Talentos</span><span data-en>Talent</span></h2>
+      <p><span data-pt>Atleta de verdade, ficha de verdade. O portal de quem quer ser descoberto.</span><span data-en>Real athletes, real profiles. The portal for those who want to be found.</span></p>
+      <a class="btn linha" href="https://revela.olefoot.ai"><span data-pt>CONHECER O REVELA</span><span data-en>SEE REVELA</span></a>
+    </div>
+  </section>
+
+  <section class="token"><div class="wrap">
+    <div class="k">$OLEFOOT · SOLANA</div>
+    <h3><span data-pt>O token do jogo</span><span data-en>The game's token</span></h3>
+    <p>
+      <span data-pt>Quem joga não precisa de carteira. Quem quiser levar para a rede, pode — e a conta é pública.</span>
+      <span data-en>Playing needs no wallet. Taking it on-chain is optional — and the math is public.</span>
+    </p>
+    <div class="grid">
+      <div class="cel"><div class="r">SUPPLY</div><div class="v">5.000.000.000</div></div>
+      <div class="cel"><div class="r"><span data-pt>REDE</span><span data-en>NETWORK</span></div><div class="v">SOLANA</div></div>
+      <div class="cel"><div class="r"><span data-pt>PRÉ-VENDA</span><span data-en>PRE-SALE</span></div><div class="v volt">250.000.000</div></div>
+      <div class="cel"><div class="r"><span data-pt>LIQUIDEZ</span><span data-en>LIQUIDITY</span></div><div class="v">11,22%</div></div>
+    </div>
+  </div></section>
+</main>
+
+<footer class="wrap">
+  <span>© 2026 OLEFOOT</span>
+  <span><a href="mailto:contact@olefoot.ai">contact@olefoot.ai</a></span>
+</footer>
+
+<script>
+  // i18n de 10 linhas: o seletor troca o lang do <html> e o CSS faz o resto.
+  // Sem framework de propósito — é uma landing, não um app.
+  var pt = document.getElementById('pt'), en = document.getElementById('en');
+  function set(l){
+    document.documentElement.lang = l === 'en' ? 'en' : 'pt-BR';
+    pt.setAttribute('aria-pressed', String(l !== 'en'));
+    en.setAttribute('aria-pressed', String(l === 'en'));
+    try { localStorage.setItem('olefoot.idioma', l); } catch (e) { /* modo privado */ }
+  }
+  pt.onclick = function(){ set('pt'); };
+  en.onclick = function(){ set('en'); };
+  // Mesma chave que o jogo e a carteira usam, então o idioma acompanha.
+  var salvo = null;
+  try { salvo = localStorage.getItem('olefoot.idioma'); } catch (e) { /* idem */ }
+  if (salvo === 'pt' || salvo === 'en') {
+    set(salvo);
+  } else {
+    var nav = (navigator.language || '').toLowerCase();
+    set(nav.indexOf('pt') === 0 ? 'pt' : 'en');
+  }
+</script>
+</body>
+</html>

@@ -113,7 +113,8 @@
     "test:presale-packs": "tsx server/src/lib/presale/runPacksSelfTest.mts",
     "test:presale-travas": "tsx server/src/lib/presale/runTravasSelfTest.mts",
     "test:presale-migration": "node scripts/valida-migration-presale.mjs",
-    "test:expansao-migration": "node scripts/valida-migration-expansao.mjs"
+    "test:expansao-migration": "node scripts/valida-migration-expansao.mjs",
+    "deploy:site": "wrangler deploy -c site/wrangler.jsonc"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",
