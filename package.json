@@ -112,7 +112,8 @@
     "test:expansao": "tsx server/src/lib/expansao/runExpansaoSelfTest.mts",
     "test:presale-packs": "tsx server/src/lib/presale/runPacksSelfTest.mts",
     "test:presale-travas": "tsx server/src/lib/presale/runTravasSelfTest.mts",
-    "test:presale-migration": "node scripts/valida-migration-presale.mjs"
+    "test:presale-migration": "node scripts/valida-migration-presale.mjs",
+    "test:expansao-migration": "node scripts/valida-migration-expansao.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",
