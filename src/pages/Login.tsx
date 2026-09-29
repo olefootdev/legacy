@@ -9,6 +9,7 @@ import type { FormationSchemeId } from '@/match-engine/types';
 import { fetchMyReferralCode, syncMyExpLifetime } from '@/supabase/referrals';
 import { FORMATION_TACTICAL_DEFAULTS } from '@/tactics/formationDefaults';
 import { FaixaConvitePendente } from '@/components/FaixaConvitePendente';
+import { destinoAposEntrar } from '@/supabase/expansaoConvite';
 
 /**
  * Proposta de valor da landing.
@@ -177,7 +178,13 @@ export function Login() {
       }
       // Full reload para que os hydrators re-montem com sessão válida.
       // Sem isso, os hydrators já rodaram (e falharam) antes do login.
-      window.location.href = '/';
+      //
+      // 🐞 E é por isso que o destino tem que ser resolvido AQUI. Eu tinha
+      // posto a volta-pro-convite no RedirectIfRegistered, que nunca roda:
+      // `window.location.href` recarrega a página e passa por cima do React
+      // Router inteiro. O fundador clicou no convite, logou, e teve que colar
+      // a URL de novo.
+      window.location.href = destinoAposEntrar();
     } finally {
       setBusy(false);
     }
@@ -235,7 +242,7 @@ export function Login() {
         },
       });
 
-      window.location.href = '/';
+      window.location.href = destinoAposEntrar();
     } finally {
       setBusy(false);
     }

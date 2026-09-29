@@ -5,6 +5,7 @@ import {
   Users,
   ArrowRightLeft,
   Wallet,
+  Network,
   Target,
   Trophy,
   Crown,
@@ -37,6 +38,7 @@ import { ManagerScoreToast } from '@/components/ManagerScoreToast';
 import { useTotalManagers } from '@/hooks/useTotalManagers';
 import { MatchModeBottomSheet } from '@/components/MatchModeBottomSheet';
 import { OleSmartHubPanel, OleSmartHubDrawer, OleSmartHubTrigger } from '@/components/OleSmartHub';
+import { ORIGEM_DA_CARTEIRA } from '@/wallet/seed/conexao';
 
 type NavItem = {
   icon: typeof Home;
@@ -45,6 +47,12 @@ type NavItem = {
   /** Item editorial — usa Moret italic neon-yellow + ícone amarelo
    *  permanente (sem depender do estado active). */
   accent?: boolean;
+  /**
+   * Sai do jogo para OUTRA ORIGEM (a DEX). Vira <a> em vez de <Link>: o React
+   * Router não navega entre origens, e é exatamente por serem origens
+   * separadas que o cofre da carteira não é legível pelo jogo.
+   */
+  externo?: boolean;
 };
 
 const mainNavItems: NavItem[] = [
@@ -55,6 +63,10 @@ const mainNavItems: NavItem[] = [
   { icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
   { icon: User, label: 'MANAGER', path: '/manager' },
   { icon: Wallet, label: 'WALLET', path: '/wallet' },
+  // A DEX é o lado de negócios: expansão + carteira on-chain, fora do jogo.
+  // Antes disto não existia NENHUMA rota do jogo pra ela — quem ativava a
+  // expansão voltava pro game e nunca achava o caminho de volta.
+  { icon: Network, label: 'DEX', path: ORIGEM_DA_CARTEIRA, externo: true },
 ];
 
 /** Bottom nav (mobile <lg) — 5 slots fixos.
@@ -253,12 +265,15 @@ export function Layout({ children }: { children: ReactNode }) {
 
         <nav className="flex-1 overflow-y-auto space-y-1 px-4">
           {mainNavItems.map((item) => {
-            const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+            const isActive = !item.externo
+              && (location.pathname === item.path || location.pathname.startsWith(item.path + '/'));
             const isAccent = item.accent === true;
+            const Tag = (item.externo ? 'a' : Link) as React.ElementType;
+            const destino = item.externo ? { href: item.path } : { to: item.path };
             return (
-              <Link
+              <Tag
                 key={item.path}
-                to={item.path}
+                {...destino}
                 className={cn(
                   'flex items-center gap-4 px-4 py-3 transition-all duration-200 group relative',
                   isAccent
@@ -294,7 +309,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 ) : (
                   <span className="font-display font-bold tracking-wider text-lg">{item.label}</span>
                 )}
-              </Link>
+              </Tag>
             );
           })}
         </nav>
