@@ -207,7 +207,12 @@ check('compra de OLEFOOT gera equiparação', podeEquiparar('compra_olefoot'));
 check('campanha e evento NÃO geram', !podeEquiparar('campanha') && !podeEquiparar('evento'));
 check('ajuste manual de admin NUNCA gera, nem se configurarem',
   !podeEquiparar('ajuste_admin', { ...ELEGIBILIDADE_PADRAO, ajuste_admin: { qualificacao: true, equiparacao: true } }));
-check('1 OLEFOOT comprada = 1 OLEXP', olexpDaCompra(1_000n) === 1_000n);
+check('🔑 $1 comprado = 1 OLEXP: pack de $10 dá 10', olexpDaCompra(1_000n) === 10n);
+check('pack de $1.250 dá 1.250', olexpDaCompra(125_000n) === 1_250n);
+check('centavo que sobra não vira fração: $15,99 dá 15', olexpDaCompra(1_599n) === 15n);
+check('menos de $1 não gera OLEXP', olexpDaCompra(99n) === 0n);
+check('🔴 o pack de $10 NÃO gradua ninguém sozinho (antes dava DUPLO com dois)',
+  carreiraDe(olexpDaCompra(1_000n)).atual === null);
 
 console.log('\n🛡️ auditoria do ciclo\n');
 

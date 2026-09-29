@@ -15,7 +15,7 @@
  * `0.1 + 0.2` numa contabilidade de rede vira divergência que ninguém acha.
  */
 
-/** OLEXP em unidades inteiras. 1 OLEFOOT comprada = 1 OLEXP (regra inicial). */
+/** OLEXP em unidades inteiras. $1 comprado = 1 OLEXP. */
 export type Olexp = bigint;
 
 /** Lado da árvore binária. Os nomes que o manager lê são Time 1 e Time 2. */
@@ -91,14 +91,30 @@ export function podeQualificar(fonte: FonteOlexp, regra = ELEGIBILIDADE_PADRAO):
 }
 
 /**
- * Compra de OLEFOOT → OLEXP. Hoje 1:1, mas passa por aqui pra a regra ter um
- * lugar só quando mudar.
+ * Compra → OLEXP: **$1 comprado = 1 OLEXP**. Decisão do fundador, 2026-09-29.
+ *
+ * 🔴 A regra anterior era 1 OLEFOOT = 1 OLEXP, e ela quebrava a carreira sem
+ * ninguém ter notado, porque nenhuma compra tinha virado OLEXP ainda. A
+ * $0,000125 por token, um pack de $10 dava 80.000 OLEXP. Os degraus são 10 mil,
+ * 50 mil, 100 mil, 250 mil e 500 mil — então duas compras de $10, uma em cada
+ * time, já faziam um DUPLO CAMPEÃO, e sete de cada lado faziam um PENTA. O topo
+ * da carreira saía por $70 de cada lado.
+ *
+ * Em dólar os degraus voltam a ser o que os números sugerem: CAMPEÃO é
+ * $10 mil equiparados, PENTA é $500 mil. E o OLEXP deixa de depender do preço
+ * do token — se o preço mudar na próxima fase, a rede não muda de régua.
+ *
+ * Entra em CENTAVOS de dólar e arredonda pra BAIXO: OLEXP é inteiro, e centavo
+ * que sobra não vira fração de unidade.
+ *
+ * ⚠️ Espelhado em SQL por `expansao_olexp_da_compra` — é a função que o
+ * pagamento chama. `npm run test:fase0-pix` confere que as duas concordam.
  */
-export const OLEXP_POR_OLEFOOT = 1n;
+export const CENTAVOS_DE_DOLAR_POR_OLEXP = 100n;
 
-export function olexpDaCompra(olefoot: bigint): Olexp {
-  if (olefoot < 0n) throw new RangeError(`compra negativa: ${olefoot}`);
-  return olefoot * OLEXP_POR_OLEFOOT;
+export function olexpDaCompra(usdCents: bigint): Olexp {
+  if (usdCents < 0n) throw new RangeError(`compra negativa: ${usdCents}`);
+  return usdCents / CENTAVOS_DE_DOLAR_POR_OLEXP;
 }
 
 export function exigePositivo(nome: string, v: bigint): void {

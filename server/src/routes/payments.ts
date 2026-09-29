@@ -21,15 +21,21 @@ import { rateLimit } from '../lib/rateLimit.js';
 import { resolveCardCheckout } from '../lib/cardPricing.js';
 import { fetchUsdBrlVenda } from '../lib/usdBrlQuote.js';
 import { orcar, ALOCACAO_PRESALE, UNIDADE, MINIMO_USD_CENTS } from '../lib/presale/packs.js';
+import { converterRecarga, cotacaoEmMicro } from '../lib/recarga.js';
 
 const MP_API_BASE = 'https://api.mercadopago.com';
 
 /** Pack de ativação — preço fixo de produto (R$125). */
-// Pré-venda do OLEFOOT. Preço e conversão vêm de packs.ts — nunca do body.
 const ACTIVATION_PACK_CENTS = 12_500;
 
-/** Depósito mínimo (R$1). Recarga é 1:1 (paga R$X → recebe R$X em BRO). */
-const RECHARGE_MIN_CENTS = 100;
+/**
+ * Depósito mínimo: R$5 — o mesmo que a tela aceita (`MIN_BRL` no DepositModal).
+ * Eram R$1 aqui e R$5 lá; quem chamasse a rota direto depositava o que a tela
+ * recusava.
+ *
+ * O depósito NÃO é 1:1. 1 BRO = 1 dólar, e a conversão está em `recarga.ts`.
+ */
+const RECHARGE_MIN_CENTS = 500;
 
 interface CreatePixBody {
   product_kind?: 'activation_pack' | 'card' | 'recharge' | 'presale_pack';
@@ -146,6 +152,12 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
   const clientMetadata = body.metadata ?? {};
   let amountCents: number;
   let metadata: Record<string, unknown> = { source: 'olefoot_app', ...clientMetadata };
+  // 🔴 Número que vira dinheiro NÃO vai em `metadata`. Ela entra pelo RPC
+  // `create_payment_intent`, que é executável por qualquer conta logada: o
+  // cliente pode chamar o RPC direto e escrever o que quiser ali. O que a
+  // confirmação lê é `server_data`, gravado logo abaixo com a service_role —
+  // coluna que não tem caminho de escrita pro cliente.
+  let serverData: Record<string, unknown> | null = null;
 
   if (productKind === 'card') {
     const resolved = await resolveCardCheckout({
@@ -205,10 +217,9 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
 
     const o = orc.orcamento;
     amountCents = Number(o.brlCents);
-    // O webhook credita a posição a partir deste metadata — e como os números
-    // saem daqui (servidor), não há como o cliente inflar o que recebe.
-    metadata = {
-      ...metadata,
+    // `confirm_payment_intent` credita a posição, põe a pessoa na árvore e gera
+    // o OLEXP a partir destes números — webhook e reconcile entregam igual.
+    serverData = {
       presale: {
         usd_cents: o.usdCents,
         brl_cents: String(o.brlCents),
@@ -220,8 +231,29 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
   } else {
     amountCents = Math.floor(Number(body.amount_cents) || 0);
     if (amountCents < RECHARGE_MIN_CENTS) {
-      return c.json({ ok: false, error: 'amount_cents mínimo de 100 (R$1).' }, 400);
+      return c.json({ ok: false, error: `amount_cents mínimo de ${RECHARGE_MIN_CENTS} (R$5).` }, 400);
     }
+  }
+
+  // ─── Depósito e pack de ativação: quanto BRO isto compra ─────────────────
+  // A cotação é congelada AGORA, que é quando a pessoa vê o preço. O Pix pode
+  // ser pago uma hora depois e o crédito é o que ela viu.
+  if (productKind === 'recharge' || productKind === 'activation_pack') {
+    let brlPorUsd: number;
+    try {
+      brlPorUsd = await fetchUsdBrlVenda();
+    } catch {
+      return c.json({ ok: false, error: 'Cotação do dólar indisponível.' }, 502);
+    }
+    const conv = converterRecarga(amountCents, cotacaoEmMicro(brlPorUsd));
+    if (!conv.ok) return c.json({ ok: false, step: 'recarga', error: conv.motivo }, 409);
+    serverData = {
+      recarga: {
+        bro_cents: String(conv.recarga.broCents),
+        brl_por_usd_micro: String(conv.recarga.brlPorUsdMicro),
+        cotado_em: new Date().toISOString(),
+      },
+    };
   }
 
   // 1. Cria payment_intent server-side
@@ -260,6 +292,23 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
   const intent = Array.isArray(rpcCreateData) ? rpcCreateData[0] : (rpcCreateData as any);
   if (!intent?.intent_id) {
     return c.json({ ok: false, step: 'create_intent', error: 'empty rpc response' }, 500);
+  }
+
+  // 1b. Grava os números autoritativos, com a service_role. Vem ANTES de criar
+  // a cobrança: sem `server_data` a confirmação recusa creditar, então uma
+  // cobrança sem ele seria um Pix que a pessoa paga e não recebe.
+  if (serverData) {
+    const { error: sdErr } = await sb
+      .from('payment_intents')
+      .update({ server_data: serverData })
+      .eq('id', intent.intent_id)
+      .eq('user_id', user.id);
+    if (sdErr) {
+      await sb.from('payment_intents')
+        .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+        .eq('id', intent.intent_id).eq('status', 'pending');
+      return c.json({ ok: false, step: 'server_data', error: sdErr.message }, 500);
+    }
   }
 
   // 2. Chama Mercado Pago — POST /v1/payments com payment_method_id='pix'
@@ -357,6 +406,9 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
       expires_at: mp.date_of_expiration ?? expiresAt,
       status: mp.status ?? 'pending',
       dev_mode: devMode,
+      // O que este Pix entrega, já com a cotação congelada — pra tela mostrar o
+      // número que vai ser creditado, e não uma conta refeita no navegador.
+      entrega: serverData,
     });
   } catch (e) {
     return c.json({ ok: false, step: 'mp_create', error: bracketsFromError(e) }, 502);

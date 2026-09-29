@@ -20,6 +20,7 @@ import {
 } from './wallet/useWalletPlayerData';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
 import { fetchLegacyBalance } from '@/wallet/applyLegacyOlefootCredit';
+import { applyPendingCredits } from '@/wallet/applyPendingCredits';
 import { moedaDoJogo } from '@/wallet/constants';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { SecaoVolt } from '@/components/ui';
@@ -194,7 +195,10 @@ export function Wallet() {
         onClose={() => setPixOpen(false)}
         onSuccess={() => {
           setPixOpen(false);
-          // applyPendingCredits no Layout vai pegar o wallet_credit criado pelo webhook
+          // 🐞 O comentário aqui dizia "applyPendingCredits no Layout vai pegar",
+          // mas o Layout só resgata ao MONTAR e quando a sessão muda. Quem
+          // pagava e continuava na tela via o saldo parado até recarregar.
+          void applyPendingCredits();
         }}
       />
 

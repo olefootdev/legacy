@@ -12,8 +12,18 @@
 
 const BR_DOLAR_API_URL = 'https://br.dolarapi.com/v1/cotacoes';
 
-/** Margem Olefoot sobre a cotação de referência. Espelha OLEFOOT_BRL_MARKUP no front. */
-export const OLEFOOT_BRL_MARKUP = 0.05;
+/**
+ * Margem Olefoot sobre a cotação de referência: 2,5%.
+ *
+ * Decisão do fundador em 2026-09-29 — era 5%. Vale pra TUDO que é cotado em
+ * dólar e cobrado em reais: pack da pré-venda, card e o BRO do depósito. É uma
+ * margem só porque a cotação é uma só; duas margens seriam dois preços do
+ * dólar na mesma tela.
+ *
+ * O front não tem cópia desta constante: ele lê `olefootVenda` pronto de
+ * GET /api/quote/usd-brl e deriva a margem de lá pra exibir.
+ */
+export const OLEFOOT_BRL_MARKUP = 0.025;
 
 export interface UsdBrlQuote {
   apiCompra: number;

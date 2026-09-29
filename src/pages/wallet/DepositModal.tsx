@@ -135,9 +135,13 @@ export function DepositModal({
               <p className="text-[10px] leading-relaxed text-cimento">
                 {/* A margem sai da própria cotação (servidor), não de uma constante
                     copiada aqui — copiada, ela divergiria em silêncio. */}
+                {/* Uma casa decimal: a margem é 2,5%, e arredondada pra inteiro a
+                    tela dizia "2%" ou "3%" conforme o dia. */}
                 Referência API: R$ {fmtBrl(quote.apiVenda)} +{' '}
-                {Math.round((quote.olefootVenda / quote.apiVenda - 1) * 100)}% custos operacionais.
-                Base 1 BRO ≈ 1 USD.
+                {((quote.olefootVenda / quote.apiVenda - 1) * 100).toLocaleString('pt-BR', {
+                  maximumFractionDigits: 1,
+                })}
+                % custos operacionais. Base 1 BRO = 1 USD.
               </p>
               {quote.fetchedAt && (
                 <p className="font-mono text-[9.5px] text-poeira">
