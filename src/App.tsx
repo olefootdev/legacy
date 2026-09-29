@@ -131,6 +131,7 @@ const OleFieldLabLegacy = lazy(() => import('./pages/OleFieldLabLegacy').then((m
 // Prévia com dados de exemplo: o import só existe em DEV, pra o chunk não ir pro build.
 const HomeVolt2Preview = import.meta.env.DEV ? lazy(() => import('./pages/dev/HomeVolt2Preview')) : () => null;
 const NetworkPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/NetworkPreview')) : () => null;
+const EarningsPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/EarningsPreview')) : () => null;
 const OleFieldLabAerea = lazy(() => import('./pages/OleFieldLabAerea').then((m) => ({ default: m.OleFieldLabAerea })));
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
@@ -722,6 +723,16 @@ as a nice MVP. Let's Play Together! ⚽
           </Route>
           {import.meta.env.DEV && (
             <>
+              <Route
+                path="/dev/earnings"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <Layout>
+                      <EarningsPreview />
+                    </Layout>
+                  </Suspense>
+                }
+              />
               <Route
                 path="/dev/network"
                 element={

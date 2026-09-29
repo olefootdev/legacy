@@ -35,6 +35,7 @@ import { vaultRoutes, vaultAdminRoutes } from './routes/vault.js';
 import { cspReportRoutes } from './routes/cspReport.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
 import { presaleRoutes } from './routes/presale.js';
+import { earningsRoutes } from './routes/earnings.js';
 // Railway scheduler decomissionado em 2026-05-07. A Liga Global agora é
 // gerenciada autonomamente pela Edge Function v7 do Supabase + pg_cron.
 // Ver supabase/functions/global-league-tick/index.ts.
@@ -137,6 +138,7 @@ app.route('/', positionCoachRoutes);
 app.route('/', marketRoutes);
 app.route('/', marketOffersRoutes);
 app.route('/', solanaWalletRoutes);
+app.route('/', earningsRoutes);    // regras de Vault, Produção e Stake (públicas)
 app.route('/', vaultRoutes);       // leitura do Vault (sessão do jogador)
 app.route('/', vaultAdminRoutes);  // escrita do Vault (gate de admin no próprio router)
 app.route('/', academyRoutes);

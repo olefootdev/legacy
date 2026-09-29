@@ -4,6 +4,8 @@ import { ArrowUpRight } from 'lucide-react';
 import { WalletShell } from './WalletShell';
 import { WalletAtalhos } from './WalletAtalhos';
 import { SolanaWalletCard } from './SolanaWalletCard';
+import { Earnings } from './dex/Earnings';
+import { LinhaDeValor } from './dex/LinhaDeValor';
 import { SecaoVolt, Hashtag } from '@/components/ui';
 import { ORIGEM_DA_CARTEIRA } from '@/wallet/seed/conexao';
 import { lerMinhaPosicao, POSICAO_VAZIA, type PosicaoOlefoot } from '@/supabase/presalePosicao';
@@ -86,9 +88,9 @@ export function DexTab() {
           <Hashtag>#prevenda</Hashtag>
         </SecaoVolt>
         <div className="border border-white/10 bg-panel">
-          <Linha rotulo="Comprado" valor={carregando ? '…' : `${br(p.tokens)} OLEFOOT`} forte />
-          <Linha rotulo="Travado" valor={carregando ? '…' : `${br(p.travado)} OLEFOOT`} />
-          <Linha rotulo="Liberado" valor={carregando ? '…' : `${br(p.liberado)} OLEFOOT`} />
+          <LinhaDeValor rotulo="Comprado" valor={carregando ? '…' : `${br(p.tokens)} OLEFOOT`} forte />
+          <LinhaDeValor rotulo="Travado" valor={carregando ? '…' : `${br(p.travado)} OLEFOOT`} />
+          <LinhaDeValor rotulo="Liberado" valor={carregando ? '…' : `${br(p.liberado)} OLEFOOT`} />
         </div>
         <button
           type="button"
@@ -105,21 +107,10 @@ export function DexTab() {
           custódia é sua.
         </p>
       </section>
+
+      {/* ── EARNINGS: Vault, Produção e Stake ────────────────────── */}
+      <Earnings />
     </WalletShell>
   );
 }
 
-function Linha({ rotulo, valor, forte }: { rotulo: string; valor: string; forte?: boolean }) {
-  return (
-    <div className="flex min-w-0 items-baseline justify-between gap-3 border-b border-white/10 px-4 py-3.5 last:border-b-0">
-      <span className="shrink-0 font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-poeira">
-        {rotulo}
-      </span>
-      <span
-        className={`ole-num min-w-0 truncate tabular-nums ${forte ? 'text-[18px] text-white' : 'text-[14px] text-giz'}`}
-      >
-        {valor}
-      </span>
-    </div>
-  );
-}
