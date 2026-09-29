@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { NoDoMapa, Carreira } from '@/supabase/expansaoPainel';
+import { definirPernaPadrao, type NoDoMapa, type Carreira, type MeuBonus, type CicloFechado } from '@/supabase/expansaoPainel';
+import { cn } from '@/lib/utils';
 import type { MinhaExpansao } from './useMinhaExpansao';
 
 /**
@@ -58,7 +59,7 @@ function BotaoAtivar() {
 }
 
 export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
-  const { carregando, naArvore, padrinho, ativacao, pernas, carreira, mapa, username, convida } = dados;
+  const { carregando, naArvore, padrinho, ativacao, pernas, carreira, mapa, username, convida, bonus, ciclos, reler } = dados;
   const [copiado, setCopiado] = useState(false);
 
   const link = username ? `${ORIGEM_DO_CONVITE}/convite-expansao/${username}` : null;
@@ -184,6 +185,9 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
         </div>
       )}
 
+      {/* ── o que o ciclo já pagou ── */}
+      <BlocoBonus bonus={bonus} />
+
       {/* ── carreira: conta o que foi PAGO, e por isso nunca cai ── */}
       <div className="mt-6 border border-white/10 bg-panel px-4 py-4">
         <div className="flex items-baseline justify-between">
@@ -212,6 +216,9 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
         )}
       </div>
 
+      {/* ── os ciclos que pagaram, de toda a rede ── */}
+      <BlocoCiclos ciclos={ciclos} />
+
       {/* ── mapa ── */}
       <MapaHorizontal nos={mapa} />
 
@@ -226,6 +233,7 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
               className="mt-3 w-full bg-neon-yellow px-4 py-3 text-[13px] font-bold text-deep-black">
               {copiado ? 'COPIADO' : 'COPIAR LINK'}
             </button>
+            <PernaPadrao atual={bonus?.pernaPadrao ?? null} aoMudar={reler} />
           </>
         ) : (
           <p className="mt-2 text-[12.5px] leading-relaxed text-cimento">
@@ -346,6 +354,134 @@ function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
         <span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#5A5C5F] align-middle" />derramou</span>
         {niveisComExcesso.length > 0 && <span>+N = mais gente no nível</span>}
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════ o bônus ═══
+
+/** Centavos de dólar → "$12,34". */
+const dolar = (cents: bigint) => {
+  const inteiro = cents / 100n;
+  const resto = (cents % 100n).toString().padStart(2, '0');
+  return `$${inteiro.toLocaleString('pt-BR')},${resto}`;
+};
+
+/**
+ * O que os ciclos já liquidaram. Em OLEFOOT pelo preço gravado em cada ciclo,
+ * e em dólar do lado — o dólar é a conta de verdade, o token é a entrega.
+ *
+ * Sem botão de saque: não existe token pra entregar. A frase diz quando abre,
+ * em vez de um botão que não faz nada.
+ */
+function BlocoBonus({ bonus }: { bonus: MeuBonus | null }) {
+  const aReceber = bonus ? bonus.olefoot - bonus.olefootSacado : 0n;
+  return (
+    <div className="mt-6 border border-white/10 bg-panel px-4 py-4">
+      <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">Bônus a receber</div>
+      <div className="mt-1.5 whitespace-nowrap">
+        <span className="ole-num text-[26px] font-bold leading-none text-white tabular-nums">{br(aReceber)}</span>
+        <span className="ml-2 text-[12px] font-semibold text-cimento">OLEFOOT</span>
+      </div>
+      <p className="mt-1.5 font-mono text-[11px] text-poeira">
+        {bonus && bonus.ciclosPagos > 0
+          ? `${dolar(bonus.usdCents)} em ${bonus.ciclosPagos} ${bonus.ciclosPagos === 1 ? 'ciclo' : 'ciclos'}`
+          : 'Nenhum ciclo pagou você ainda'}
+      </p>
+      <p className="mt-2.5 border-t border-white/10 pt-2.5 text-[11.5px] leading-relaxed text-cimento">
+        O saque abre quando o OLEFOOT for lançado na Solana, para a carteira vinculada.
+      </p>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════ os ciclos ═════
+
+function quando(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  } catch { return iso.slice(0, 16); }
+}
+
+/**
+ * Os últimos ciclos que pagaram, da rede inteira. É o registro público de que
+ * o pool saiu da receita da hora e foi dividido pelo equiparado: quem olha vê
+ * o valor por OLEXP mudar de ciclo pra ciclo, e é isso que impede alguém de
+ * ler o bônus como taxa fixa.
+ */
+function BlocoCiclos({ ciclos }: { ciclos: readonly CicloFechado[] }) {
+  return (
+    <div className="mt-6 border border-white/10 bg-panel">
+      <div className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-3.5">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">Ciclos pagos</span>
+        <span className="font-mono text-[10px] text-cimento">a cada hora</span>
+      </div>
+      {ciclos.length === 0 ? (
+        <p className="px-4 pb-4 text-[12.5px] leading-relaxed text-cimento">
+          Nenhum ainda. Um ciclo paga quando a hora tem compra e alguém equipara.
+        </p>
+      ) : (
+        ciclos.map((c) => (
+          <div key={c.abreEm} className="border-t border-white/10 px-4 py-2.5">
+            <div className="flex min-w-0 items-baseline justify-between gap-3">
+              <span className="shrink-0 font-mono text-[11px] text-giz">{quando(c.abreEm)}</span>
+              <span className="ole-num whitespace-nowrap text-[13px] text-white tabular-nums">pool {dolar(c.poolUsdCents)}</span>
+            </div>
+            <div className="mt-0.5 font-mono text-[10.5px] text-poeira">
+              {br(c.equiparadoTotal)} OLEXP equiparados
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════ o próximo indicado ════
+
+/**
+ * Em que time cai o próximo indicado. Automático manda pro time com menos
+ * indicados diretos — é o que leva à ativação. Escolher um lado serve pra quem
+ * está montando um time de propósito.
+ *
+ * A escolha vale pro PRÓXIMO. Quem já está na árvore não muda de lugar.
+ */
+function PernaPadrao({ atual, aoMudar }: { atual: 1 | 2 | null; aoMudar: () => void }) {
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState(false);
+  const opcoes: ReadonlyArray<{ readonly valor: 1 | 2 | null; readonly rotulo: string }> = [
+    { valor: null, rotulo: 'Auto' }, { valor: 1, rotulo: 'Time 1' }, { valor: 2, rotulo: 'Time 2' },
+  ];
+  const escolher = async (v: 1 | 2 | null) => {
+    if (salvando || v === atual) return;
+    setSalvando(true);
+    setErro(false);
+    const ok = await definirPernaPadrao(v);
+    setSalvando(false);
+    if (ok) aoMudar(); else setErro(true);
+  };
+  return (
+    <div className="mt-4 border-t border-white/10 pt-3.5">
+      <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">Próximo indicado entra no</div>
+      <div className="mt-2 grid grid-cols-3 gap-1 border border-white/16 p-1" role="radiogroup" aria-label="Time do próximo indicado">
+        {opcoes.map((o) => (
+          <button
+            key={o.rotulo}
+            type="button"
+            role="radio"
+            aria-checked={atual === o.valor}
+            disabled={salvando}
+            onClick={() => void escolher(o.valor)}
+            className={cn(
+              'py-2 text-center font-mono text-[11px] font-medium uppercase tracking-[0.12em] transition-colors disabled:opacity-50',
+              atual === o.valor ? 'bg-white text-black' : 'text-cimento hover:text-white',
+            )}
+          >
+            {o.rotulo}
+          </button>
+        ))}
+      </div>
+      {erro && <p className="mt-2 text-[11px] text-baixa">Não deu para salvar agora. Tente de novo.</p>}
     </div>
   );
 }

@@ -162,3 +162,83 @@ export async function podeConvidar(): Promise<boolean> {
   const { data, error } = await sb.rpc('expansao_pode_convidar', { p_user: sess.user.id });
   return !error && data === true;
 }
+
+// ───────────────────────────────────────────────────────────── o bônus ─────
+
+export interface MeuBonus {
+  /** Tudo que já foi liquidado pra mim, em centavos de dólar. */
+  readonly usdCents: bigint;
+  /** O mesmo, em OLEFOOT, pelo preço gravado em CADA ciclo. */
+  readonly olefoot: bigint;
+  /** Já sacado (claims aprovados ou pagos). */
+  readonly olefootSacado: bigint;
+  readonly ciclosPagos: number;
+  /** null = automático. */
+  readonly pernaPadrao: 1 | 2 | null;
+}
+
+const inteiro = (v: unknown): bigint => {
+  try { return BigInt(String(v ?? '0').split('.')[0] || '0'); } catch { return 0n; }
+};
+
+/** RPC que age sobre `auth.uid()`: não recebe id, não lê de outro. */
+export async function lerMeuBonus(): Promise<MeuBonus | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc('expansao_meu_bonus');
+  if (error) return null;
+  const l = Array.isArray(data) ? data[0] : data;
+  if (!l) return null;
+  const perna = l.perna_padrao == null ? null : (Number(l.perna_padrao) as 1 | 2);
+  return {
+    usdCents: inteiro(l.bonus_usd_cents),
+    olefoot: inteiro(l.olefoot),
+    olefootSacado: inteiro(l.olefoot_sacado),
+    ciclosPagos: Number(l.ciclos_pagos ?? 0),
+    pernaPadrao: perna === 1 || perna === 2 ? perna : null,
+  };
+}
+
+// ──────────────────────────────────────────────────────────── os ciclos ────
+
+export interface CicloFechado {
+  readonly abreEm: string;
+  readonly status: 'SETTLED' | 'HELD' | string;
+  readonly poolUsdCents: bigint;
+  readonly equiparadoTotal: bigint;
+  /** Micro-centavos de dólar por OLEXP. null = ciclo não liquidou. */
+  readonly valorPorOlexpMicro: bigint | null;
+}
+
+/**
+ * Os últimos ciclos que PAGARAM. A tabela é pública de leitura por desenho —
+ * é o registro que prova que o pool saiu da receita. Os retidos ficam de fora
+ * da tela: sem compra na hora, o ciclo é HELD, e uma lista de HELD esconde os
+ * que importam.
+ */
+export async function lerCiclosPagos(quantos = 6): Promise<CicloFechado[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from('expansao_ciclo')
+    .select('abre_em, status, pool, equiparado_total, valor_por_olexp_micro')
+    .eq('status', 'SETTLED')
+    .order('abre_em', { ascending: false })
+    .limit(quantos);
+  if (error || !Array.isArray(data)) return [];
+  return data.map((c) => ({
+    abreEm: String(c.abre_em),
+    status: String(c.status),
+    poolUsdCents: inteiro(c.pool),
+    equiparadoTotal: inteiro(c.equiparado_total),
+    valorPorOlexpMicro: c.valor_por_olexp_micro == null ? null : inteiro(c.valor_por_olexp_micro),
+  }));
+}
+
+/** null = automático (o time com menos indicados diretos). */
+export async function definirPernaPadrao(lado: 1 | 2 | null): Promise<boolean> {
+  const sb = getSupabase();
+  if (!sb) return false;
+  const { error } = await sb.rpc('expansao_definir_perna_padrao', { p_lado: lado });
+  return !error;
+}

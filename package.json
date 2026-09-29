@@ -121,7 +121,8 @@
     "test:carreira-paga": "node scripts/valida-carreira-paga.mjs",
     "test:fase0-pix": "node scripts/valida-fase0-pix.mjs",
     "test:recarga": "tsx server/src/lib/runRecargaSelfTest.mts",
-    "test:earnings": "tsx server/src/lib/runEarningsSelfTest.mts && node scripts/valida-earnings-sem-constante.mjs"
+    "test:earnings": "tsx server/src/lib/runEarningsSelfTest.mts && node scripts/valida-earnings-sem-constante.mjs",
+    "test:ciclo-paridade": "tsx scripts/valida-ciclo-expansao.mts"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",
