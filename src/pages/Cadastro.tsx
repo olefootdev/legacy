@@ -19,6 +19,8 @@ import type { FavoriteRealTeamRef } from '@/game/types';
 import { signUpWithEmail, checkEmailExists } from '@/supabase/auth';
 import { fetchMyReferralCode } from '@/supabase/referrals';
 import { checkClubShortAvailable, computeUsername } from '@/supabase/managerUsername';
+import { destinoAposEntrar } from '@/supabase/expansaoConvite';
+import { FaixaConvitePendente } from '@/components/FaixaConvitePendente';
 
 type UserProfile =
   | 'apaixonado'
@@ -485,7 +487,7 @@ export function Cadastro() {
 
       await syncProfileManagerFirstName(firstName.trim());
 
-      navigate('/');
+      navigate(destinoAposEntrar());
     } finally {
       setFinishBusy(false);
     }
@@ -493,6 +495,9 @@ export function Cadastro() {
 
   return (
     <div className="relative flex min-h-svh flex-col overflow-hidden bg-deep-black">
+      {/* Quem veio de um convite de expansão precisa ver isso aqui — senão a
+          tela de venda apaga o motivo pelo qual a pessoa clicou. */}
+      <div className="relative z-20"><FaixaConvitePendente /></div>
       {/* Background layers */}
       <div
         className="absolute inset-0 z-0 scale-105 bg-cover bg-[center_22%] bg-no-repeat sm:bg-center"

@@ -8,6 +8,7 @@ import { signInWithEmail, fetchOnboardingProfile, sendPasswordResetEmail, saveOn
 import type { FormationSchemeId } from '@/match-engine/types';
 import { fetchMyReferralCode, syncMyExpLifetime } from '@/supabase/referrals';
 import { FORMATION_TACTICAL_DEFAULTS } from '@/tactics/formationDefaults';
+import { FaixaConvitePendente } from '@/components/FaixaConvitePendente';
 
 /**
  * Proposta de valor da landing.
@@ -242,6 +243,9 @@ export function Login() {
 
   return (
     <div className="relative flex min-h-svh flex-col overflow-hidden bg-deep-black">
+      {/* Quem veio de um convite de expansão precisa ver isso aqui — senão a
+          tela de venda apaga o motivo pelo qual a pessoa clicou. */}
+      <div className="relative z-20"><FaixaConvitePendente /></div>
       <div
         className="absolute inset-0 z-0 scale-105 bg-cover bg-[center_22%] bg-no-repeat sm:bg-center"
         style={{ backgroundImage: 'url(/login-hero.png)' }}

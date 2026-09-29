@@ -46,6 +46,7 @@ import { useGlobalConsequencesSync } from './hooks/useGlobalConsequencesSync';
 import { EmergencyTransferWindow } from './components/EmergencyTransferWindow';
 import { useRecoverOrphanManager } from './onboarding/recoverOrphanManager';
 import { getSupabase, isSupabaseConfigured } from './supabase/client';
+import { destinoAposEntrar } from '@/supabase/expansaoConvite';
 
 /**
  * SessionGuard — verifica no boot se há sessão válida no Supabase atual.
@@ -75,6 +76,10 @@ function SessionGuard() {
       path.startsWith('/cadastro/') ||
       path.startsWith('/admin') ||
       path === '/reset-password' ||
+      // O convite de expansão é público: quem clica pode nem ter sessão, e o
+      // guard apagaria o save e mandaria pro /login — perdendo o convite no
+      // caminho. A própria tela trata o "precisa entrar".
+      path.startsWith('/convite-expansao/') ||
       path.startsWith('/playervip') ||
       // Prévias de desenvolvimento (rotas que só existem em DEV).
       (import.meta.env.DEV && path.startsWith('/dev/'))
@@ -197,6 +202,7 @@ const Cadastro = lazy(() => import('./pages/Cadastro').then((m) => ({ default: m
 const ResetPassword = lazy(() => import('./pages/ResetPassword').then((m) => ({ default: m.ResetPassword })));
 const AdminLogin = lazy(() => import('./pages/AdminLogin').then((m) => ({ default: m.AdminLogin })));
 const ReferralLanding = lazy(() => import('./pages/ReferralLanding').then((m) => ({ default: m.ReferralLanding })));
+const ConviteExpansao = lazy(() => import('./pages/ConviteExpansao'));
 
 function RequireAdmin() {
   const [isValid, setIsValid] = useState<boolean | null>(null);
@@ -265,7 +271,9 @@ function RequireSquad() {
 function RedirectIfRegistered() {
   /** Só perfil real — em dev o bypass atua só em `RequireRegistration`, para `/login` e `/cadastro` continuarem testáveis. */
   const registered = useGameStore((s) => !!s.userSettings?.managerProfile);
-  if (registered) return <Navigate to="/" replace />;
+  // Quem chegou por um convite de expansão volta PRO CONVITE depois de entrar,
+  // não pro jogo — senão o convite se perde no login e ninguém descobre.
+  if (registered) return <Navigate to={destinoAposEntrar()} replace />;
   return (
     <Suspense fallback={<RouteFallback />}>
       <Outlet />
@@ -513,6 +521,18 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/cadastro/:inviteCode" element={<Cadastro />} />
           </Route>
           <Route path="/reset-password" element={<ResetPassword />} />
+          {/* CONVITE DE EXPANSÃO — público de propósito: quem clica ainda não
+              logou e precisa ver de quem é o convite ANTES de criar conta.
+              Fora do RedirectIfRegistered, porque quem JÁ tem conta é
+              justamente o caso principal: o login é o mesmo de sempre. */}
+          <Route
+            path="/convite-expansao/:username"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <ConviteExpansao />
+              </Suspense>
+            }
+          />
           {/* CARTEIRA — standalone, fora do GameShell de propósito: é a tela onde a
               frase de 12 palavras aparece, e ela não divide espaço com nav,
               notificação e barra de baixo. */}
