@@ -124,6 +124,9 @@ Campeão → Penta.
 
 > A graduação sai do **time menor** — por isso não dá para forjar. É reconhecimento e nunca cai: volume acumulado não diminui.
 
+**Como se pontua (linha de apoio):** 1 OLEFOOT comprado = 1 OLEXP. A compra soma no time de quem te convidou, subindo até o topo. A sua própria compra não gradua você. Card, missão e evento também qualificam, mas só a compra pelo canal oficial equipara. Compra na DEX não conta.
+⚠️ Prêmio por graduação: o catálogo antigo (`careerProgress.ts`) tem valores em dólar nos mesmos limiares, com outros nomes. Não citar valor até confirmar. Ver `COPY_GROWTH_TECNICO.md` §2b.
+
 ### 11 · O TOKEN, COM A CONTA À MESA
 **$OLEFOOT · SOLANA**
 5 bilhões. Tabela pública.

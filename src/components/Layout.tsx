@@ -38,7 +38,6 @@ import { ManagerScoreToast } from '@/components/ManagerScoreToast';
 import { useTotalManagers } from '@/hooks/useTotalManagers';
 import { MatchModeBottomSheet } from '@/components/MatchModeBottomSheet';
 import { OleSmartHubPanel, OleSmartHubDrawer, OleSmartHubTrigger } from '@/components/OleSmartHub';
-import { ORIGEM_DA_CARTEIRA } from '@/wallet/seed/conexao';
 
 type NavItem = {
   icon: typeof Home;
@@ -63,10 +62,14 @@ const mainNavItems: NavItem[] = [
   { icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
   { icon: User, label: 'MANAGER', path: '/manager' },
   { icon: Wallet, label: 'WALLET', path: '/wallet' },
-  // A DEX é o lado de negócios: expansão + carteira on-chain, fora do jogo.
-  // Antes disto não existia NENHUMA rota do jogo pra ela — quem ativava a
-  // expansão voltava pro game e nunca achava o caminho de volta.
-  { icon: Network, label: 'DEX', path: ORIGEM_DA_CARTEIRA, externo: true },
+  // A DEX é o lado de negócios: expansão + carteira on-chain.
+  //
+  // 🔑 O item leva ao PAINEL (rota interna), não direto pra outra origem. Os
+  // dados da árvore estão no Supabase atrás de RLS e a DEX não tem sessão —
+  // pôr o SDK do Supabase na origem que guarda a frase de 12 palavras
+  // enfraqueceria justamente o que a separa (ver conexao.ts). Do painel, a
+  // carteira fica a um clique.
+  { icon: Network, label: 'DEX', path: '/expansao' },
 ];
 
 /** Bottom nav (mobile <lg) — 5 slots fixos.

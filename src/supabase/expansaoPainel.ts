@@ -1,0 +1,133 @@
+import { getSupabase } from './client';
+
+/**
+ * Leitura do painel de expansão.
+ *
+ * Fala direto com o Supabase: `expansao_mapa` e `expansao_ativacao` são
+ * executáveis por `authenticated`, e `expansao_perna` tem RLS de linha própria.
+ * Não precisa de rota no Hono — e o que a pessoa vê é o que o banco deixa ela
+ * ver, não o que o cliente resolveu pedir.
+ */
+
+export interface Ativacao {
+  readonly ativo: boolean;
+  readonly diretosT1: number;
+  readonly diretosT2: number;
+  /** Qual perna ainda falta. null quando já está ativo. */
+  readonly faltaNaPerna: 1 | 2 | null;
+}
+
+export interface Pernas {
+  readonly t1: bigint;
+  readonly t2: bigint;
+  /** O MIN — é ele que paga e é ele que gradua. */
+  readonly menor: bigint;
+}
+
+export interface NoDoMapa {
+  readonly userId: string;
+  readonly nivel: number;
+  readonly yOrdem: number;
+  readonly perna: 1 | 2;
+  /** Falso = chegou por derramamento: mostra graduação, não username. */
+  readonly daMinhaEquipe: boolean;
+  readonly paiId: string | null;
+}
+
+export async function lerAtivacao(): Promise<Ativacao | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data: sess } = await sb.auth.getUser();
+  if (!sess.user) return null;
+  const { data, error } = await sb.rpc('expansao_ativacao', { p_user: sess.user.id });
+  if (error) return null;
+  const l = Array.isArray(data) ? data[0] : data;
+  if (!l) return null;
+  return {
+    ativo: l.ativo === true,
+    diretosT1: Number(l.diretos_t1 ?? 0),
+    diretosT2: Number(l.diretos_t2 ?? 0),
+    faltaNaPerna: (l.falta_na_perna ?? null) as 1 | 2 | null,
+  };
+}
+
+/** Volume das duas pernas no trilho que PAGA (equiparação). */
+export async function lerPernas(): Promise<Pernas | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb
+    .from('expansao_perna')
+    .select('lado, volume')
+    .eq('trilho', 'equiparacao');
+  if (error) return null;
+  const achar = (lado: number) => {
+    const linha = (data ?? []).find((d) => Number(d.lado) === lado);
+    return linha ? BigInt(String(linha.volume)) : 0n;
+  };
+  const t1 = achar(1);
+  const t2 = achar(2);
+  return { t1, t2, menor: t1 < t2 ? t1 : t2 };
+}
+
+/** Volume no trilho que GRADUA — nunca é consumido pela equiparação. */
+export async function lerPernasQualificacao(): Promise<Pernas | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb
+    .from('expansao_perna')
+    .select('lado, volume')
+    .eq('trilho', 'qualificacao');
+  if (error) return null;
+  const achar = (lado: number) => {
+    const linha = (data ?? []).find((d) => Number(d.lado) === lado);
+    return linha ? BigInt(String(linha.volume)) : 0n;
+  };
+  const t1 = achar(1);
+  const t2 = achar(2);
+  return { t1, t2, menor: t1 < t2 ? t1 : t2 };
+}
+
+export async function lerMapa(ate = 5): Promise<NoDoMapa[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data: sess } = await sb.auth.getUser();
+  if (!sess.user) return [];
+  const { data, error } = await sb.rpc('expansao_mapa', {
+    p_raiz: sess.user.id, p_de: 1, p_ate: ate,
+  });
+  if (error) return [];
+  return (data ?? []).map((d: Record<string, unknown>) => ({
+    userId: String(d.user_id),
+    nivel: Number(d.nivel),
+    yOrdem: Number(d.y_ordem),
+    perna: Number(d.perna) as 1 | 2,
+    daMinhaEquipe: d.da_minha_equipe === true,
+    paiId: (d.pai_id as string | null) ?? null,
+  }));
+}
+
+/** Estou na árvore? E por quem entrei? */
+export async function lerMinhaEntrada(): Promise<{ naArvore: boolean; padrinho: string | null }> {
+  const sb = getSupabase();
+  if (!sb) return { naArvore: false, padrinho: null };
+  const { data } = await sb.from('expansao_confirmacao').select('username_convite').maybeSingle();
+  return { naArvore: !!data, padrinho: data?.username_convite ?? null };
+}
+
+/** Meu username — é ele que vira o link de convite. */
+export async function lerMeuUsername(): Promise<string | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data } = await sb.from('profiles').select('username').maybeSingle();
+  return data?.username ?? null;
+}
+
+/** Posso convidar? (pack de $10 pago ou ativação da casa) */
+export async function podeConvidar(): Promise<boolean> {
+  const sb = getSupabase();
+  if (!sb) return false;
+  const { data: sess } = await sb.auth.getUser();
+  if (!sess.user) return false;
+  const { data, error } = await sb.rpc('expansao_pode_convidar', { p_user: sess.user.id });
+  return !error && data === true;
+}

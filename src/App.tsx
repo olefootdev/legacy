@@ -203,6 +203,7 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword').then((m) => ({ 
 const AdminLogin = lazy(() => import('./pages/AdminLogin').then((m) => ({ default: m.AdminLogin })));
 const ReferralLanding = lazy(() => import('./pages/ReferralLanding').then((m) => ({ default: m.ReferralLanding })));
 const ConviteExpansao = lazy(() => import('./pages/ConviteExpansao'));
+const Expansao = lazy(() => import('./pages/Expansao'));
 
 function RequireAdmin() {
   const [isValid, setIsValid] = useState<boolean | null>(null);
@@ -581,6 +582,14 @@ as a nice MVP. Let's Play Together! ⚽
             }
           />
           <Route element={<RequireRegistration />}>
+            <Route
+              path="/expansao"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <Expansao />
+                </Suspense>
+              }
+            />
             <Route element={<GameShell />}>
               <Route path="/" element={<Home />} />
 

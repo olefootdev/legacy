@@ -42,6 +42,86 @@ publicado num ciclo bom vira expectativa nos seguintes.
 
 ---
 
+## 2b. Plano de carreira: como se pontua
+
+Existem três réguas no produto. Elas medem coisas diferentes e não se somam.
+
+### Régua 1: OLEXP, a pontuação da rede (`unidade.ts`, `carreira.ts`)
+**1 OLEFOOT comprado = 1 OLEXP.** Uma compra de US$ 10 (80.000 OLEFOOT) soma 80.000 OLEXP.
+O OLEXP é somado na perna de cada ancestral, até a raiz. A compra da própria pessoa não conta
+para a perna dela, só para quem está acima.
+
+Cada fonte gera dois tipos de OLEXP: o que **qualifica** (conta para graduar) e o que **equipara**
+(pode virar pagamento).
+
+| Fonte | Qualifica | Equipara |
+|---|---|---|
+| Compra de OLEFOOT pelo canal oficial (Pix/USDT) | sim | sim |
+| Card / NFT | sim | não |
+| Mercado (marketplace) | sim | não |
+| Produto do jogo | sim | não |
+| Assinatura | sim | não |
+| Evento | sim | não |
+| Campanha | sim | não |
+| Ajuste de administrador | sim | nunca (trava fixa) |
+| Compra na DEX (Raydium) | não | não |
+
+Efeito prático: dá para distribuir OLEXP por missão, evento ou item de jogo e fazer o time
+avançar de graduação sem criar obrigação de pagamento.
+
+### Régua 2: graduação, sobre o time MENOR
+A graduação usa o OLEXP que qualifica, no lado mais fraco. Nunca cai: o volume acumulado não
+diminui, e a equiparação só consome o OLEXP de equiparação.
+
+| Graduação | OLEXP no time menor | Rede total mínima |
+|---|---|---|
+| Campeão | 10.000 | 20.000 |
+| Duplo Campeão | 50.000 | 100.000 |
+| Tri-Campeão | 100.000 | 200.000 |
+| Tetra | 250.000 | 500.000 |
+| Penta | 500.000 | 1.000.000 |
+
+Em compras de US$ 10 (80.000 OLEXP cada), o time menor chega a Campeão com 1 compra e meia.
+Em compras de US$ 250 (2.000.000 OLEXP), uma única compra no time menor já leva a Penta.
+Isso muda o desenho da carreira quando a pré-venda começar: as faixas foram pensadas na escala
+antiga e precisam ser conferidas contra a escala dos packs.
+
+### Régua 3: o que já existe no jogo (não é da expansão)
+**Pontuação do Manager** (`managerScore.ts`), por ação, nunca decai:
+
+| Ação | Pontos |
+|---|---|
+| Comprar Legend | 60 |
+| Vitória oficial (Liga Ole, Legends Cup, Liga Global) | 25 |
+| Vender jogador | 20 |
+| Comprar jogador | 15 |
+| Negociação com manager real | 15 |
+| Upgrade de estrutura | 12 |
+| Vitória amistosa | 10 |
+| Upgrade de staff | 10 |
+| Treino concluído | 8 |
+| Negociação no livro de EXP | 5 |
+| Derrota | 2 |
+
+**Patamares de EXP do manager** (`careerTiers.ts`): Fraldinha 0, Juvenil 100 mil, Amador 500 mil,
+Profissional 2 mi, Campeão 8 mi, Internacional 20 mi, Raro 80 mi, Lenda 250 mi.
+
+**Marcos de indicação em EXP** (`milestones.ts`): 1 indicado ativo, 200 mil EXP; 10, 1 mi; 25, 3 mi;
+50, 8 mi; 100, 25 mi. A perna vale os descendentes do direto, só as 2 maiores contam, e só
+indicado que já jogou conta.
+
+### O que precisa de decisão antes de publicar
+1. **Prêmio por graduação.** O código da expansão só define os limiares. O catálogo anterior
+   (`careerProgress.ts`) usa os mesmos limiares (10 mil, 50 mil, 100 mil, 250 mil, 500 mil) com
+   prêmios de US$ 50, 250, 500, 2.500 e 5.000 e outros nomes (Júnior, Pro, Diretor, Campeão,
+   Legend). Não encontrei prêmio em dinheiro ligado às cinco graduações novas. Confirmar se o
+   catálogo antigo segue valendo e sob qual nome, antes de qualquer texto citar valor.
+2. **Nomes.** Duas escadas com "Campeão" (a de rede e a de EXP do manager) vão confundir. Vale
+   diferenciar na tela.
+3. **Escala.** Ver o parágrafo acima sobre packs de US$ 250.
+
+---
+
 ## 3. O funil, etapa por etapa
 
 | # | Etapa | Evento a medir | Observação |
