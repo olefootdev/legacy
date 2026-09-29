@@ -3,9 +3,13 @@
   "name": "olefoot-site",
   "compatibility_date": "2026-04-13",
   "observability": { "enabled": true, "head_sampling_rate": 0.25 },
-  "assets": { "directory": "./public" }
-  // Domínio: olefoot.ai e www.olefoot.ai apontam pra este Worker
-  // (Workers & Pages → olefoot-site → Domains → Add Domain, subdomínio vazio).
+  "assets": { "directory": "./public" },
+  // Domínio declarado aqui, não clicado no painel: assim ele fica versionado e
+  // um `deploy` numa máquina nova reconstrói o mesmo estado.
+  "routes": [
+    { "pattern": "olefoot.ai", "custom_domain": true },
+    { "pattern": "www.olefoot.ai", "custom_domain": true }
+  ]
   //
   // SEM build de propósito: é HTML estático. Sem Vite, sem bundle, sem React —
   // uma landing que depende de pipeline é uma landing que quebra na véspera.
