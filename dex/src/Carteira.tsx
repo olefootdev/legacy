@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useCarteira } from '@/wallet/seed/useCarteira';
 import { ORIGENS_QUE_PODEM_PEDIR } from '@/wallet/seed/conexao';
 import { Abas, type Aba } from './Abas';
-import { TelaComprar, TelaDepositar, TelaEnviar, TelaRender } from './Telas';
+import { TelaComprar, TelaDepositar, TelaEnviar, TelaRender, TelaProducao } from './Telas';
 
 /**
  * O split da colheita, com os MESMOS números de server/src/lib/harvestSplit.ts.
@@ -48,7 +48,7 @@ export default function Carteira() {
   const [senha, setSenha] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [saldo, setSaldo] = useState<Saldo | null>(null);
-  type Vista = 'carteira' | 'receber' | 'extrato' | 'enviar' | 'depositar' | 'comprar' | 'render';
+  type Vista = 'carteira' | 'receber' | 'extrato' | 'enviar' | 'depositar' | 'comprar' | 'render' | 'producao';
   const [vista, setVista] = useState<Vista>('carteira');
   const [aba, setAba] = useState<Aba>('carteira');
 
@@ -97,18 +97,21 @@ export default function Carteira() {
   if (w.estado === 'aberta' && w.chave && vista === 'extrato') {
     return <Extrato endereco={w.chave.endereco} onVoltar={() => setVista('carteira')} />;
   }
-  if (vista === 'enviar' || vista === 'depositar' || vista === 'comprar' || vista === 'render') {
+  if (vista === 'enviar' || vista === 'depositar' || vista === 'comprar' || vista === 'render' || vista === 'producao') {
     const titulo = vista === 'enviar' ? t('acaoEnviar')
       : vista === 'depositar' ? t('acaoDepositar')
-      : vista === 'comprar' ? t('acaoComprar') : t('abaRender');
+      : vista === 'comprar' ? t('acaoComprar')
+      : vista === 'producao' ? t('splitTitulo') : t('abaRender');
     return (
       <div className="flex min-h-full flex-col bg-asfalto">
-        <Barra titulo={titulo} onVoltar={() => { setVista('carteira'); setAba('carteira'); }} />
+        <Barra titulo={titulo}
+               onVoltar={() => { if (vista === 'producao') { setVista('render'); return; } setVista('carteira'); setAba('carteira'); }} />
         <div className="mx-auto w-full max-w-md flex-1 px-4 pb-8 pt-5">
           {vista === 'enviar' && <TelaEnviar />}
           {vista === 'depositar' && <TelaDepositar />}
           {vista === 'comprar' && <TelaComprar linkPreVenda={`${ORIGEM_DO_JOGO}/expansao`} />}
-          {vista === 'render' && <TelaRender split={SPLIT_DA_COLHEITA} />}
+          {vista === 'render' && <TelaRender split={SPLIT_DA_COLHEITA} linkProducao={() => setVista('producao')} />}
+          {vista === 'producao' && <TelaProducao split={SPLIT_DA_COLHEITA} />}
         </div>
         <Abas atual={aba} linkRede={`${ORIGEM_DO_JOGO}/expansao`}
               ir={(a) => { setAba(a); setVista(a === 'carteira' ? 'carteira' : a === 'comprar' ? 'comprar' : 'render'); }} />
