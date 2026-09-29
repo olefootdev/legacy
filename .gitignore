@@ -93,3 +93,4 @@ vendor/solana-docs/
 # cache do Vite da OLEWALLET (dex/) — próprio, pra não brigar com o do jogo
 dex/.vite
 dex/dist
+.seed-plano.json
