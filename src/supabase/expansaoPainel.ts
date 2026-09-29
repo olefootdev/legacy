@@ -114,6 +114,37 @@ export async function lerMinhaEntrada(): Promise<{ naArvore: boolean; padrinho: 
   return { naArvore: !!data, padrinho: data?.username_convite ?? null };
 }
 
+export interface Carreira {
+  /** O que já foi PAGO em equiparação, somado. É a base do degrau. */
+  readonly acumulado: bigint;
+  readonly degrau: string | null;
+  readonly proximo: string | null;
+  readonly falta: bigint;
+}
+
+/**
+ * A graduação conta o OLEXP já PAGO, não o volume parado na perna menor.
+ * Regra do fundador: quando entra um volume grande de um lado só, a perna menor
+ * troca de lado — e lendo "a menor agora" o degrau olharia outro número. Somando
+ * o pago, ele só sobe.
+ */
+export async function lerCarreira(): Promise<Carreira | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data: sess } = await sb.auth.getUser();
+  if (!sess.user) return null;
+  const { data, error } = await sb.rpc('expansao_carreira', { p_user: sess.user.id });
+  if (error) return null;
+  const l = Array.isArray(data) ? data[0] : data;
+  if (!l) return null;
+  return {
+    acumulado: BigInt(String(l.equiparado_acumulado ?? '0')),
+    degrau: l.degrau ?? null,
+    proximo: l.proximo ?? null,
+    falta: BigInt(String(l.falta ?? '0')),
+  };
+}
+
 /** Meu username — é ele que vira o link de convite. */
 export async function lerMeuUsername(): Promise<string | null> {
   const sb = getSupabase();

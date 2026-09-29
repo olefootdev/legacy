@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ORIGEM_DA_CARTEIRA } from '@/wallet/seed/conexao';
 import {
-  lerAtivacao, lerPernas, lerPernasQualificacao, lerMapa, lerMinhaEntrada,
+  lerAtivacao, lerPernas, lerMapa, lerMinhaEntrada, lerCarreira,
   lerMeuUsername, podeConvidar,
-  type Ativacao, type Pernas, type NoDoMapa,
+  type Ativacao, type Pernas, type NoDoMapa, type Carreira,
 } from '@/supabase/expansaoPainel';
 
 /**
@@ -20,13 +20,17 @@ import {
  * errado — então o herói é o equiparado, e os times são contexto.
  */
 
-const DEGRAUS = [
-  { nome: 'CAMPEÃO', exige: 10_000n },
-  { nome: 'DUPLO', exige: 50_000n },
-  { nome: 'TRI', exige: 100_000n },
-  { nome: 'TETRA', exige: 250_000n },
-  { nome: 'PENTA', exige: 500_000n },
-] as const;
+const NOME_DEGRAU: Record<string, string> = {
+  CAMPEAO: 'CAMPEÃO', DUPLO_CAMPEAO: 'DUPLO', TRI_CAMPEAO: 'TRI',
+  TETRA: 'TETRA', PENTA: 'PENTA',
+};
+
+/** Quanto do caminho ATÉ o próximo degrau já andou. */
+function pctDegrau(c: Carreira): number {
+  const alvo = c.acumulado + c.falta;
+  if (alvo <= 0n) return 100;
+  return Math.min(100, Number((c.acumulado * 100n) / alvo));
+}
 
 const br = (v: bigint) => v.toLocaleString('pt-BR');
 
@@ -36,7 +40,7 @@ export default function Expansao() {
   const [padrinho, setPadrinho] = useState<string | null>(null);
   const [ativacao, setAtivacao] = useState<Ativacao | null>(null);
   const [pernas, setPernas] = useState<Pernas | null>(null);
-  const [qualif, setQualif] = useState<Pernas | null>(null);
+  const [carreira, setCarreira] = useState<Carreira | null>(null);
   const [mapa, setMapa] = useState<NoDoMapa[]>([]);
   const [username, setUsername] = useState<string | null>(null);
   const [convida, setConvida] = useState(false);
@@ -51,11 +55,11 @@ export default function Expansao() {
       setPadrinho(entrada.padrinho);
       setUsername(u);
       if (entrada.naArvore) {
-        const [a, p, q, m, c] = await Promise.all([
-          lerAtivacao(), lerPernas(), lerPernasQualificacao(), lerMapa(5), podeConvidar(),
+        const [a, p, k, m, c] = await Promise.all([
+          lerAtivacao(), lerPernas(), lerCarreira(), lerMapa(5), podeConvidar(),
         ]);
         if (!vivo) return;
-        setAtivacao(a); setPernas(p); setQualif(q); setMapa(m); setConvida(c);
+        setAtivacao(a); setPernas(p); setCarreira(k); setMapa(m); setConvida(c);
       }
       if (vivo) setCarregando(false);
     })();
@@ -95,10 +99,6 @@ export default function Expansao() {
   const total = t1 + t2;
   // Largura da barra espelhada: proporção do equiparado em cada lado.
   const pct = (v: bigint) => (total === 0n ? 50 : Number((v * 100n) / (t1 > t2 ? t1 : t2 || 1n)));
-
-  const menorQualif = qualif?.menor ?? 0n;
-  const atual = [...DEGRAUS].reverse().find((d) => menorQualif >= d.exige) ?? null;
-  const proxima = DEGRAUS.find((d) => menorQualif < d.exige) ?? null;
 
   return (
     <Casca>
@@ -184,20 +184,29 @@ export default function Expansao() {
         </div>
       )}
 
-      {/* ── carreira: enche pelo lado FRACO, senão ensina errado ── */}
+      {/* ── carreira: conta o que foi PAGO, e por isso nunca cai ── */}
       <div className="mt-6 border border-white/10 bg-panel px-4 py-4">
         <div className="flex items-baseline justify-between">
           <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">Carreira</span>
-          <span className="font-display text-[15px] font-bold text-giz">{atual?.nome ?? '—'}</span>
+          <span className="font-display text-[15px] font-bold text-giz">
+            {carreira?.degrau ? NOME_DEGRAU[carreira.degrau] ?? carreira.degrau : '—'}
+          </span>
         </div>
-        {proxima && (
+        <div className="mt-2 flex items-baseline gap-2">
+          <span className="ole-num text-[20px] font-bold leading-none text-giz">
+            {br(carreira?.acumulado ?? 0n)}
+          </span>
+          <span className="text-[11px] text-cimento">já pagos em equiparação</span>
+        </div>
+        {carreira?.proximo && (
           <>
             <div className="mt-3 h-1.5 w-full bg-sheet">
               <div className="h-full bg-neon-yellow"
-                   style={{ width: `${Math.min(100, Number((menorQualif * 100n) / proxima.exige))}%` }} />
+                   style={{ width: `${pctDegrau(carreira)}%` }} />
             </div>
             <p className="mt-2 font-mono text-[10.5px] text-poeira">
-              {br(proxima.exige - menorQualif)} para {proxima.nome} · conta pela equipe menor
+              {br(carreira.falta)} para {NOME_DEGRAU[carreira.proximo] ?? carreira.proximo}
+              {' '}· conta o que foi pago, não o que está parado
             </p>
           </>
         )}

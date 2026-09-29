@@ -95,7 +95,42 @@ check('equipe menor é o MIN dos dois lados', equipeMenor(ac.equiparacao, 'raiz'
     (() => { try { consumirEquiparado(t, 'raiz', 1n); return false; } catch { return true; } })());
 }
 
-console.log('\n🏆 carreira\n');
+console.log('\n🏆 carreira — conta o que foi PAGO, não o que está parado\n');
+
+// 🔑 O cenário exato do fundador (2026-09-29). O ponto é o ciclo 2: a perna
+// MENOR troca de lado quando entra um volume grande de um lado só. Lendo "a
+// menor agora", a graduação olharia outro número; somando o que foi pago, ela
+// sobe e nunca volta.
+{
+  let acumulado = 0n;
+  let s1 = { time1: 1_000n, time2: 500n };
+  const r1 = equiparar(s1);
+  acumulado += r1.equiparado;
+  check('ciclo 1: T1=1000 T2=500 equipara 500', r1.equiparado === 500n);
+  check('   e sobra T1=500 T2=0', r1.sobra.time1 === 500n && r1.sobra.time2 === 0n);
+  check('   carreira conta 500', carreiraDe(acumulado).equiparadoAcumulado === 500n);
+
+  // entra investidor: T1 +500, T2 +5000 → a menor VIRA o T1
+  const s2 = { time1: r1.sobra.time1 + 500n, time2: r1.sobra.time2 + 5_000n };
+  check('🔑 no ciclo 2 a perna menor TROCOU de lado', s2.time1 < s2.time2);
+  const r2 = equiparar(s2);
+  acumulado += r2.equiparado;
+  check('ciclo 2: equipara 1000 (o MIN, que agora é o T1)', r2.equiparado === 1_000n);
+  check('   e sobra T2=4000', r2.sobra.time2 === 4_000n && r2.sobra.time1 === 0n);
+  check('🔑 carreira SOMA: 1500, não troca de número', carreiraDe(acumulado).equiparadoAcumulado === 1_500n);
+}
+
+// Monotônico por construção: soma de parcelas não-negativas nunca desce.
+check('🔑 a graduação nunca cai — o acumulado só cresce', (() => {
+  let acc = 0n; let ultimo = -1;
+  for (const passo of [10_000n, 1n, 39_999n, 50_000n, 0n, 150_000n]) {
+    acc += passo;
+    const i = DEGRAUS.findIndex((d) => d.id === carreiraDe(acc).atual?.id);
+    if (i < ultimo) return false;
+    ultimo = i;
+  }
+  return true;
+})());
 
 check('abaixo de 10k não graduou', carreiraDe(9_999n).atual === null);
 check('10k vira CAMPEÃO', carreiraDe(10_000n).atual?.id === 'CAMPEAO');

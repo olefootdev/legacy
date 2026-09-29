@@ -1,12 +1,29 @@
 /**
  * O plano de carreira — as cinco graduações (BÔNUS DE EQUIPARAÇÃO · v1).
  *
- * A graduação sai da EQUIPE MENOR, e é isso que a torna difícil de forjar:
- * não adianta empilhar tudo de um lado. Pra virar PENTA é preciso 500.000
- * OLEXP no lado mais fraco — ou seja, pelo menos 1.000.000 na rede.
+ * 🔑 A graduação conta o OLEXP que JÁ FOI PAGO em equiparação — a soma de todos
+ * os `equiparado` dos ciclos, acumulada. Regra do fundador, 2026-09-29.
  *
- * Usa OLEXP de QUALIFICAÇÃO (todas as fontes), não o de equiparação. Graduar
- * é reconhecimento; pagar é outra coisa, e vive em equiparacao.ts.
+ * Antes eu lia o volume atual da equipe menor, e isso tinha um furo que o
+ * exemplo dele expõe:
+ *
+ *   ciclo 1:  T1=1000  T2=500   → equipara 500 → T1=500  T2=0
+ *   ciclo 2:  entra investidor no T2
+ *             T1=1000  T2=5000  → equipara 1000 → T1=0  T2=4000
+ *
+ * No ciclo 2 a perna MENOR TROCOU DE LADO. Lendo "a menor agora", a graduação
+ * passaria a olhar outro número e poderia até cair. Somando o que foi pago,
+ * ela vai a 1500 e nunca volta.
+ *
+ * Por que isso é melhor, e não só diferente:
+ *   · é MONOTÔNICO POR CONSTRUÇÃO — soma de parcelas não-negativas não desce,
+ *     então a graduação não precisa de um trilho protegido pra não cair;
+ *   · é imune à troca de lado da perna menor, que acontece toda vez que um
+ *     volume grande entra de um lado só;
+ *   · e conta o que a rede PRODUZIU de verdade, não o que está parado nela.
+ *
+ * Continua difícil de forjar pelo mesmo motivo de antes: só entra aqui o que
+ * passou pelo MIN das duas pernas, e empilhar um lado só equipara zero.
  */
 import type { Olexp } from './unidade.js';
 
@@ -16,7 +33,7 @@ export interface Degrau {
   readonly id: Graduacao;
   /** O que o manager lê. Em inglês a tradução vive no dicionário da UI. */
   readonly nome: string;
-  /** OLEXP exigido na equipe menor. */
+  /** OLEXP acumulado em equiparação para alcançar o degrau. */
   readonly exige: Olexp;
 }
 
@@ -46,7 +63,8 @@ export interface Carreira {
   readonly atual: Degrau | null;
   /** null = já é PENTA. */
   readonly proxima: Degrau | null;
-  readonly equipeMenor: Olexp;
+  /** O que já foi pago em equiparação, somado ao longo de todos os ciclos. */
+  readonly equiparadoAcumulado: Olexp;
   /** Quanto falta pra próxima. 0n quando não há próxima. */
   readonly falta: Olexp;
   /** 0–100, quanto do caminho ATÉ a próxima já andou. 100 quando é PENTA. */
@@ -54,32 +72,34 @@ export interface Carreira {
 }
 
 /**
- * A graduação nunca cai por si só: ela é função do volume acumulado, e volume
- * acumulado não diminui. A equiparação CONSOME o OLEXP de equiparação, mas não
- * o de qualificação — senão quem recebesse bônus seria rebaixado por isso.
+ * A graduação nunca cai: o acumulado só cresce, então o degrau só sobe.
+ * Receber bônus AUMENTA a graduação em vez de gastá-la — é a mesma equiparação
+ * contada duas vezes de propósito: uma paga, a outra reconhece.
  */
-export function carreiraDe(equipeMenor: Olexp): Carreira {
-  if (equipeMenor < 0n) throw new RangeError(`equipe menor negativa: ${equipeMenor}`);
+export function carreiraDe(equiparadoAcumulado: Olexp): Carreira {
+  if (equiparadoAcumulado < 0n) {
+    throw new RangeError(`equiparado acumulado negativo: ${equiparadoAcumulado}`);
+  }
 
   let atual: Degrau | null = null;
   for (const d of DEGRAUS) {
-    if (equipeMenor >= d.exige) atual = d;
+    if (equiparadoAcumulado >= d.exige) atual = d;
     else break;
   }
 
   const i = atual ? DEGRAUS.findIndex((d) => d.id === atual?.id) : -1;
   const proxima = i + 1 < DEGRAUS.length ? (DEGRAUS[i + 1] as Degrau) : null;
 
-  if (!proxima) return { atual, proxima: null, equipeMenor, falta: 0n, progresso: 100 };
+  if (!proxima) return { atual, proxima: null, equiparadoAcumulado, falta: 0n, progresso: 100 };
 
   const piso = atual ? atual.exige : 0n;
   const faixa = proxima.exige - piso;
-  const andou = equipeMenor - piso;
+  const andou = equiparadoAcumulado - piso;
   return {
     atual,
     proxima,
-    equipeMenor,
-    falta: proxima.exige - equipeMenor,
+    equiparadoAcumulado,
+    falta: proxima.exige - equiparadoAcumulado,
     progresso: Number((andou * 100n) / faixa),
   };
 }
