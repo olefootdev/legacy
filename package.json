@@ -116,7 +116,8 @@
     "test:expansao-migration": "node scripts/valida-migration-expansao.mjs",
     "deploy:site": "wrangler deploy -c site/wrangler.jsonc",
     "test:bfs-paridade": "tsx scripts/valida-bfs-ts-vs-sql.mts",
-    "test:convite-expansao": "node scripts/valida-convite-expansao.mjs"
+    "test:convite-expansao": "node scripts/valida-convite-expansao.mjs",
+    "test:ativacao-casa": "node scripts/valida-ativacao-casa.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",
