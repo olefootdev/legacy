@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getSupabase } from '@/supabase/client';
-import { ORIGEM_DA_CARTEIRA } from '@/wallet/seed/conexao';
 import {
   buscarConvite, confirmarConvite, jaConfirmou, guardarConvitePendente,
   type ConviteInfo, type MotivoRecusa,
@@ -153,15 +152,17 @@ export default function ConviteExpansao() {
           </Bloco>
         )}
 
-        {/* 🔴 Depois de ativar, o destino é a DEX — não o jogo.
+        {/* 🔴 Depois de ativar, o destino é o NETWORK — não a home do jogo.
             O fundador ativou e foi mandado de volta pro game: "nunca fui para
             a DEX nova, muito menos para a ativação de conta". A expansão é o
-            lado de negócios, e mandar pro jogo apaga o motivo de ter entrado. */}
+            lado de negócios, e mandar pra home apaga o motivo de ter entrado.
+            O NETWORK mora na carteira do jogo desde 2026-09-29, então agora o
+            caminho não sai mais do domínio. */}
         {estado.t === 'ja_estava' && (
           <Bloco titulo="Você já está na expansão"
                  texto={`Sua ativação foi por @${estado.padrinho}.`}>
-            <BotaoVolt onClick={() => { window.location.href = ORIGEM_DA_CARTEIRA; }}>
-              ABRIR A DEX
+            <BotaoVolt onClick={() => navigate('/wallet/network')}>
+              ABRIR O NETWORK
             </BotaoVolt>
             <div className="h-2.5" />
             <BotaoLinha onClick={() => navigate('/')}>IR PARA O JOGO</BotaoLinha>
@@ -170,8 +171,8 @@ export default function ConviteExpansao() {
 
         {estado.t === 'pronto' && (
           <Bloco titulo="Ativado" texto={`Você entrou na expansão por @${estado.padrinho}.`}>
-            <BotaoVolt onClick={() => { window.location.href = ORIGEM_DA_CARTEIRA; }}>
-              ABRIR A DEX
+            <BotaoVolt onClick={() => navigate('/wallet/network')}>
+              ABRIR O NETWORK
             </BotaoVolt>
             <div className="h-2.5" />
             <BotaoLinha onClick={() => navigate('/')}>IR PARA O JOGO</BotaoLinha>

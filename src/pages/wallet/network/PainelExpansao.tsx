@@ -1,19 +1,18 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ORIGEM_DA_CARTEIRA } from '@/wallet/seed/conexao';
-import {
-  lerAtivacao, lerPernas, lerMapa, lerMinhaEntrada, lerCarreira,
-  lerMeuUsername, podeConvidar,
-  type Ativacao, type Pernas, type NoDoMapa, type Carreira,
-} from '@/supabase/expansaoPainel';
+import { useState } from 'react';
+import type { NoDoMapa, Carreira } from '@/supabase/expansaoPainel';
+import type { MinhaExpansao } from './useMinhaExpansao';
 
 /**
- * Painel de expansão — o lado de negócios.
+ * Painel de expansão — o lado de negócios, dentro do NETWORK da carteira.
  *
- * Mora no JOGO e não na DEX de propósito: os dados da árvore estão no Supabase
- * atrás de RLS, e a DEX não tem sessão. Pôr o SDK do Supabase na origem que
- * guarda a frase de 12 palavras enfraqueceria justamente o que a separa
- * (ver o comentário em `conexao.ts`).
+ * Era a tela `/expansao`, solta fora do menu. O desenho é o mesmo que o
+ * fundador aprovou; o que mudou é o endereço (`/wallet/network`) e de onde vêm
+ * os dados — o NETWORK lê uma vez e entrega pra este painel e pro herói.
+ *
+ * Mora no JOGO e não na OLEWALLET de propósito: os dados da árvore estão no
+ * Supabase atrás de RLS, e a OLEWALLET não tem sessão. Pôr o SDK do Supabase na
+ * origem que guarda a frase de 12 palavras enfraqueceria justamente o que a
+ * separa (ver o comentário em `conexao.ts`).
  *
  * 🔑 A regra de leitura que o desenho segue: num binário quem paga é a perna
  * MENOR. Painel que dá dois números grandes iguais faz a pessoa engordar o lado
@@ -34,39 +33,14 @@ function pctDegrau(c: Carreira): number {
 
 const br = (v: bigint) => v.toLocaleString('pt-BR');
 
-export default function Expansao() {
-  const [carregando, setCarregando] = useState(true);
-  const [naArvore, setNaArvore] = useState(false);
-  const [padrinho, setPadrinho] = useState<string | null>(null);
-  const [ativacao, setAtivacao] = useState<Ativacao | null>(null);
-  const [pernas, setPernas] = useState<Pernas | null>(null);
-  const [carreira, setCarreira] = useState<Carreira | null>(null);
-  const [mapa, setMapa] = useState<NoDoMapa[]>([]);
-  const [username, setUsername] = useState<string | null>(null);
-  const [convida, setConvida] = useState(false);
+/** O convite sai sempre com o domínio público, mesmo visto de outro lugar. */
+const ORIGEM_DO_CONVITE = 'https://game.olefoot.ai';
+
+export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
+  const { carregando, naArvore, padrinho, ativacao, pernas, carreira, mapa, username, convida } = dados;
   const [copiado, setCopiado] = useState(false);
 
-  useEffect(() => {
-    let vivo = true;
-    (async () => {
-      const [entrada, u] = await Promise.all([lerMinhaEntrada(), lerMeuUsername()]);
-      if (!vivo) return;
-      setNaArvore(entrada.naArvore);
-      setPadrinho(entrada.padrinho);
-      setUsername(u);
-      if (entrada.naArvore) {
-        const [a, p, k, m, c] = await Promise.all([
-          lerAtivacao(), lerPernas(), lerCarreira(), lerMapa(5), podeConvidar(),
-        ]);
-        if (!vivo) return;
-        setAtivacao(a); setPernas(p); setCarreira(k); setMapa(m); setConvida(c);
-      }
-      if (vivo) setCarregando(false);
-    })();
-    return () => { vivo = false; };
-  }, []);
-
-  const link = username ? `https://game.olefoot.ai/convite-expansao/${username}` : null;
+  const link = username ? `${ORIGEM_DO_CONVITE}/convite-expansao/${username}` : null;
   const copiar = async () => {
     if (!link) return;
     try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000); }
@@ -74,20 +48,23 @@ export default function Expansao() {
   };
 
   if (carregando) {
-    return <Casca><p className="font-mono text-[12px] text-cimento">Carregando…</p></Casca>;
+    return <p className="font-mono text-[12px] text-cimento">Carregando…</p>;
   }
 
   if (!naArvore) {
+    // 🔑 Desde 2026-09-29 são DUAS portas: o convite confirmado, como sempre, e
+    // a compra do primeiro pack — quem compra entra na árvore sozinho. A tela
+    // dizia que só havia o convite, e mandava a pessoa de volta pro jogo.
     return (
-      <Casca>
-        <h1 className="font-impact text-[28px] uppercase leading-[1.1] text-white">Você ainda não está na expansão</h1>
-        <p className="mt-2.5 text-[14px] leading-relaxed text-cimento">
-          A entrada é por convite de quem já está — e só com o convite confirmado.
+      <div className="border border-white/10 bg-panel px-4 py-5">
+        <h3 className="font-impact text-[24px] uppercase leading-[1.1] text-white">
+          Você ainda não entrou
+        </h3>
+        <p className="mt-2.5 text-[13px] leading-relaxed text-cimento">
+          Entra quem compra o primeiro pack de <strong className="text-giz">$10</strong> de OLEFOOT,
+          ou quem confirma o convite de alguém que já está.
         </p>
-        <Link to="/" className="mt-6 block border border-white/15 px-4 py-3.5 text-center text-[13px] font-bold text-giz">
-          VOLTAR AO JOGO
-        </Link>
-      </Casca>
+      </div>
     );
   }
 
@@ -101,7 +78,7 @@ export default function Expansao() {
   const pct = (v: bigint) => (total === 0n ? 50 : Number((v * 100n) / (t1 > t2 ? t1 : t2 || 1n)));
 
   return (
-    <Casca>
+    <div className="min-w-0">
       {/* ── o próximo passo, e só um por vez ──────────────────────────────
           🐞 A primeira versão dizia "falta 1 indicado no Time X" para quem
           AINDA NÃO PODE CONVIDAR — mandando fazer o que o sistema não deixa.
@@ -239,12 +216,7 @@ export default function Expansao() {
           Você entrou por @{padrinho}
         </p>
       )}
-
-      <a href={ORIGEM_DA_CARTEIRA}
-         className="mt-6 block border border-white/15 px-4 py-3.5 text-center text-[13px] font-bold text-giz">
-        ABRIR A CARTEIRA
-      </a>
-    </Casca>
+    </div>
   );
 }
 
@@ -255,7 +227,7 @@ export default function Expansao() {
  * 0 ou 1 filho), então o horizontal renderiza a forma VERDADEIRA — e o
  * desequilíbrio entre as pernas vira assimetria, que é a mesma lição da barra.
  */
-function MapaHorizontal({ nos }: { nos: NoDoMapa[] }) {
+function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
   if (nos.length === 0) {
     return (
       <div className="mt-6 border border-white/10 bg-panel px-4 py-6 text-center">
@@ -351,15 +323,6 @@ function MapaHorizontal({ nos }: { nos: NoDoMapa[] }) {
         <span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#5A5C5F] align-middle" />derramou</span>
         {niveisComExcesso.length > 0 && <span>+N = mais gente no nível</span>}
       </div>
-    </div>
-  );
-}
-
-function Casca({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mx-auto min-w-0 max-w-[560px] px-4 pb-10 pt-6">
-      <h2 className="mb-5 font-impact text-[22px] uppercase leading-[1.1] text-white">Expansão</h2>
-      {children}
     </div>
   );
 }

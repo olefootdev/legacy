@@ -130,6 +130,7 @@ const OleFieldLab = lazy(() => import('./pages/OleFieldLab').then((m) => ({ defa
 const OleFieldLabLegacy = lazy(() => import('./pages/OleFieldLabLegacy').then((m) => ({ default: m.OleFieldLabLegacy })));
 // Prévia com dados de exemplo: o import só existe em DEV, pra o chunk não ir pro build.
 const HomeVolt2Preview = import.meta.env.DEV ? lazy(() => import('./pages/dev/HomeVolt2Preview')) : () => null;
+const NetworkPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/NetworkPreview')) : () => null;
 const OleFieldLabAerea = lazy(() => import('./pages/OleFieldLabAerea').then((m) => ({ default: m.OleFieldLabAerea })));
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
@@ -143,8 +144,8 @@ const LiveAuctionsPage = lazy(() =>
 );
 const Store = lazy(() => import('./pages/Store').then((m) => ({ default: m.Store })));
 const Wallet = lazy(() => import('./pages/Wallet').then((m) => ({ default: m.Wallet })));
-const Carteira = lazy(() => import('./pages/Carteira'));
-const ReferralTab = lazy(() => import('./pages/wallet/ReferralTab').then((m) => ({ default: m.ReferralTab })));
+const DexTab = lazy(() => import('./pages/wallet/DexTab').then((m) => ({ default: m.DexTab })));
+const NetworkTab = lazy(() => import('./pages/wallet/NetworkTab').then((m) => ({ default: m.NetworkTab })));
 const CollectionTab = lazy(() => import('./pages/wallet/CollectionTab').then((m) => ({ default: m.CollectionTab })));
 const ExtractTab = lazy(() => import('./pages/wallet/ExtractTab').then((m) => ({ default: m.ExtractTab })));
 const LiveMatch = lazy(() => import('./pages/LiveMatch').then((m) => ({ default: m.LiveMatch })));
@@ -203,7 +204,6 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword').then((m) => ({ 
 const AdminLogin = lazy(() => import('./pages/AdminLogin').then((m) => ({ default: m.AdminLogin })));
 const ReferralLanding = lazy(() => import('./pages/ReferralLanding').then((m) => ({ default: m.ReferralLanding })));
 const ConviteExpansao = lazy(() => import('./pages/ConviteExpansao'));
-const Expansao = lazy(() => import('./pages/Expansao'));
 
 function RequireAdmin() {
   const [isValid, setIsValid] = useState<boolean | null>(null);
@@ -534,17 +534,9 @@ as a nice MVP. Let's Play Together! ⚽
               </Suspense>
             }
           />
-          {/* CARTEIRA — standalone, fora do GameShell de propósito: é a tela onde a
-              frase de 12 palavras aparece, e ela não divide espaço com nav,
-              notificação e barra de baixo. */}
-          <Route
-            path="/carteira"
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <Carteira />
-              </Suspense>
-            }
-          />
+          {/* /carteira mandava pra FORA do jogo, pra OLEWALLET. A porta agora é a
+              aba DEX da carteira; link salvo cai nela, não em 404. */}
+          <Route path="/carteira" element={<Navigate to="/wallet/dex" replace />} />
           {/* PLAYERVIP — cockpit standalone da lenda (auth própria por link mágico, sem GameShell). */}
           <Route
             path="/playervip"
@@ -582,14 +574,9 @@ as a nice MVP. Let's Play Together! ⚽
             }
           />
           <Route element={<RequireRegistration />}>
-            <Route
-              path="/expansao"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <Expansao />
-                </Suspense>
-              }
-            />
+            {/* O painel de expansão entrou na carteira (NETWORK). O convite que
+                já circula e a OLEWALLET ainda apontam pra cá. */}
+            <Route path="/expansao" element={<Navigate to="/wallet/network" replace />} />
             <Route element={<GameShell />}>
               <Route path="/" element={<Home />} />
 
@@ -640,11 +627,16 @@ as a nice MVP. Let's Play Together! ⚽
             {/* Ajuda subpages */}
             <Route path="/ajuda/como-jogar" element={<HowToPlay />} />
 
-            {/* Wallet (mantém estrutura atual) */}
+            {/* Wallet — a porta única do dinheiro.
+                  /wallet          SPOT: BRO, EXP e VERBA
+                  /wallet/dex      DEX: OLEWALLET e posição de OLEFOOT
+                  /wallet/network  expansão, equiparação e indicação */}
             <Route path="/wallet" element={<Wallet />} />
-            <Route path="/wallet/referrals" element={<ReferralTab />} />
+            <Route path="/wallet/dex" element={<DexTab />} />
+            <Route path="/wallet/network" element={<NetworkTab />} />
             <Route path="/wallet/colecao" element={<CollectionTab />} />
             <Route path="/wallet/extract" element={<ExtractTab />} />
+            <Route path="/wallet/referrals" element={<Navigate to="/wallet/network" replace />} />
 
             {/* Redirects - URLs antigas → novas */}
             {/* OLEXP e GAT removidos (2026-07-16) — link salvo cai na Wallet, não em 404. */}
@@ -730,6 +722,16 @@ as a nice MVP. Let's Play Together! ⚽
           </Route>
           {import.meta.env.DEV && (
             <>
+              <Route
+                path="/dev/network"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <Layout>
+                      <NetworkPreview />
+                    </Layout>
+                  </Suspense>
+                }
+              />
               <Route
                 path="/dev/home-volt2"
                 element={

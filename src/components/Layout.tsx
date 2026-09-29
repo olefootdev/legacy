@@ -5,7 +5,6 @@ import {
   Users,
   ArrowRightLeft,
   Wallet,
-  Network,
   Target,
   Trophy,
   Crown,
@@ -38,7 +37,6 @@ import { ManagerScoreToast } from '@/components/ManagerScoreToast';
 import { useTotalManagers } from '@/hooks/useTotalManagers';
 import { MatchModeBottomSheet } from '@/components/MatchModeBottomSheet';
 import { OleSmartHubPanel, OleSmartHubDrawer, OleSmartHubTrigger } from '@/components/OleSmartHub';
-import { ORIGEM_DA_CARTEIRA } from '@/wallet/seed/conexao';
 
 type NavItem = {
   icon: typeof Home;
@@ -47,12 +45,6 @@ type NavItem = {
   /** Item editorial — usa Moret italic neon-yellow + ícone amarelo
    *  permanente (sem depender do estado active). */
   accent?: boolean;
-  /**
-   * Sai do jogo para OUTRA ORIGEM (a DEX). Vira <a> em vez de <Link>: o React
-   * Router não navega entre origens, e é exatamente por serem origens
-   * separadas que o cofre da carteira não é legível pelo jogo.
-   */
-  externo?: boolean;
 };
 
 const mainNavItems: NavItem[] = [
@@ -62,16 +54,13 @@ const mainNavItems: NavItem[] = [
   { icon: Crown, label: 'LEGENDS', path: '/legend' },
   { icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
   { icon: User, label: 'MANAGER', path: '/manager' },
-  { icon: Wallet, label: 'WALLET', path: '/wallet' },
-  // DEX abre a CARTEIRA, e a expansão é um botão DENTRO dela.
+  // A WALLET é a porta única do dinheiro: SPOT, DEX e NETWORK moram dentro dela.
   //
-  // 🐞 Eu tinha feito o contrário — DEX ia pro painel, e do painel abria a
-  // carteira. O fundador percorreu e cortou: "jogo → DEX → abrir carteira,
-  // chega em carteira e a DEX não está lá. A jornada está completamente
-  // confusa". Estava certo: eu resolvi pela arquitetura e entreguei um
-  // caminho que ninguém percorre. A carteira é o lugar de negócios; a
-  // expansão mora dentro dela.
-  { icon: Network, label: 'DEX', path: ORIGEM_DA_CARTEIRA, externo: true },
+  // Havia um item DEX aqui, que saía do jogo pra OLEWALLET. O fundador percorreu
+  // e cortou: "jogo → DEX → abrir carteira, chega em carteira e a DEX não está
+  // lá. A jornada está completamente confusa". Dois itens de menu pro mesmo
+  // assunto é um caminho a mais pra se perder.
+  { icon: Wallet, label: 'WALLET', path: '/wallet' },
 ];
 
 /** Bottom nav (mobile <lg) — 5 slots fixos.
@@ -270,15 +259,13 @@ export function Layout({ children }: { children: ReactNode }) {
 
         <nav className="flex-1 overflow-y-auto space-y-1 px-4">
           {mainNavItems.map((item) => {
-            const isActive = !item.externo
-              && (location.pathname === item.path || location.pathname.startsWith(item.path + '/'));
+            const isActive =
+              location.pathname === item.path || location.pathname.startsWith(item.path + '/');
             const isAccent = item.accent === true;
-            const Tag = (item.externo ? 'a' : Link) as React.ElementType;
-            const destino = item.externo ? { href: item.path } : { to: item.path };
             return (
-              <Tag
+              <Link
                 key={item.path}
-                {...destino}
+                to={item.path}
                 className={cn(
                   'flex items-center gap-4 px-4 py-3 transition-all duration-200 group relative',
                   isAccent
@@ -314,7 +301,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 ) : (
                   <span className="font-display font-bold tracking-wider text-lg">{item.label}</span>
                 )}
-              </Tag>
+              </Link>
             );
           })}
         </nav>

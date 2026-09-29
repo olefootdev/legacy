@@ -4647,7 +4647,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               'WALLET_SPONSOR_FAIL',
               'FINANCEIRO',
               result.error,
-              { colorClass: 'text-red-400', deepLink: '/wallet/referrals' },
+              { colorClass: 'text-red-400', deepLink: '/wallet/network' },
             ),
             ...state.inbox,
           ].slice(0, 14),

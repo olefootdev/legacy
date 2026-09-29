@@ -68,7 +68,9 @@ export function CollectionTab() {
   return (
     <WalletShell
       title="Coleção"
+      hashtag="#colecao"
       heroVariant="compact"
+      voltar
       heroStats={[{ label: 'Cards', value: String(items.length) }]}
     >
       <section className="space-y-4">

@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import { WalletSpotToggle } from './WalletSpotToggle';
@@ -9,10 +11,21 @@ export function WalletShell({
   subtitle,
   heroStats,
   heroVariant = 'cinematic',
+  hashtag = '#carteira',
+  voltar = false,
   children,
 }: {
   title: string;
   subtitle?: string;
+  /** Categoria em mono acima do título. */
+  hashtag?: string;
+  /**
+   * Tela de DENTRO da carteira (Coleção, Network): troca o toggle SPOT | DEX
+   * por um voltar. O toggle só escolhe entre as duas contas — numa tela que não
+   * é nenhuma das duas ele aparecia sem nada aceso, prometendo uma troca que
+   * não existia.
+   */
+  voltar?: boolean;
   heroStats?: {
     label: string;
     value: string;
@@ -36,9 +49,20 @@ export function WalletShell({
       <section className={`relative w-full border-b border-white/10 bg-deep-black ${heroMinH}`}>
         {/* Conteúdo */}
         <div className="relative mx-auto max-w-6xl px-4 sm:px-8 py-5 sm:py-7">
-          <div className="mb-8 flex items-center justify-center sm:mb-10">
-            <WalletSpotToggle />
-          </div>
+          {voltar ? (
+            <div className="mb-8 sm:mb-10">
+              <Link
+                to="/wallet"
+                className="inline-flex items-center gap-2 font-mono text-[11.5px] font-medium uppercase tracking-[0.14em] text-cimento transition-colors hover:text-white"
+              >
+                <ArrowLeft className="h-4 w-4" strokeWidth={2.2} /> Carteira
+              </Link>
+            </div>
+          ) : (
+            <div className="mb-8 flex items-center justify-center sm:mb-10">
+              <WalletSpotToggle />
+            </div>
+          )}
 
           {/* Grid: esquerda + direita */}
           <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-12">
@@ -50,7 +74,7 @@ export function WalletShell({
                 transition={{ duration: 0.4, delay: 0.1 }}
                 className="text-center font-mono text-[11.5px] font-medium text-cimento lg:text-left"
               >
-                #carteira
+                {hashtag}
               </motion.p>
 
               <motion.h1

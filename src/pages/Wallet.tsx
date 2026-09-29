@@ -1,18 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowDown, Layers, Repeat, Menu } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import { createInitialWalletState } from '@/wallet/initial';
 import { WalletShell } from './wallet/WalletShell';
-import { DepositModal } from './wallet/DepositModal';
-import { PixCheckoutModal } from '@/components/PixCheckoutModal';
+import { WalletAtalhos } from './wallet/WalletAtalhos';
 import { CryptoCoinCard } from './wallet/CryptoCoinCard';
 import { ActivityStrip } from './wallet/ActivityStrip';
 import { SquadValuationCard } from './wallet/SquadValuationCard';
 import { TrophyShowcase } from './wallet/TrophyShowcase';
 import { PlayerWatchlist } from './wallet/PlayerWatchlist';
-import { WalletQuickActions, type QuickAction } from './wallet/WalletQuickActions';
-import { SolanaWalletCard } from './wallet/SolanaWalletCard';
 import {
   useSquadValuation,
   useTopSquadPlayers,
@@ -20,7 +16,6 @@ import {
 } from './wallet/useWalletPlayerData';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
 import { fetchLegacyBalance } from '@/wallet/applyLegacyOlefootCredit';
-import { applyPendingCredits } from '@/wallet/applyPendingCredits';
 import { moedaDoJogo } from '@/wallet/constants';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { SecaoVolt } from '@/components/ui';
@@ -78,9 +73,6 @@ export function Wallet() {
   const finance = useGameStore((s) => s.finance);
   const wallet = finance.wallet ?? createInitialWalletState();
   const reducedMotion = usePrefersReducedMotion();
-  const [depositOpen, setDepositOpen] = useState(false);
-  const [pixOpen, setPixOpen] = useState(false);
-  const [pixAmountCents, setPixAmountCents] = useState(0);
   const usdBrlQuote = useOlefootUsdBrlQuote(true);
 
   const [legacyBalance, setLegacyBalance] = useState<string | null>(null);
@@ -99,13 +91,6 @@ export function Wallet() {
   const squadValuation = useSquadValuation();
   const topSquadPlayers = useTopSquadPlayers(3);
   const trophies = useUnlockedTrophies();
-
-  const quickActions: QuickAction[] = [
-    { key: 'deposit', label: 'Depositar', icon: <ArrowDown className="h-5 w-5" strokeWidth={2.2} />, accent: 'green', onClick: () => setDepositOpen(true) },
-    { key: 'collection', label: 'Coleção', icon: <Layers className="h-5 w-5" strokeWidth={2.2} />, accent: 'yellow', onClick: () => navigate('/wallet/colecao') },
-    { key: 'referrals', label: 'Indicações', icon: <Repeat className="h-5 w-5" strokeWidth={2.2} />, accent: 'amber', onClick: () => navigate('/wallet/referrals') },
-    { key: 'extract', label: 'Extrato', icon: <Menu className="h-5 w-5" strokeWidth={2.2} />, accent: 'cyan', onClick: () => navigate('/wallet/extract') },
-  ];
 
   // Squad Valuation — tudo vem do store real (playerEvolutionTimeline alimenta
   // spark + change ponderado). Sem timeline, `spark` fica vazio e o gráfico
@@ -177,36 +162,9 @@ export function Wallet() {
       heroStats={heroStats}
       heroVariant="compact"
     >
-      <DepositModal
-        open={depositOpen}
-        onClose={() => setDepositOpen(false)}
-        quote={usdBrlQuote}
-        onContinueToPix={(cents) => {
-          setPixAmountCents(cents);
-          setPixOpen(true);
-        }}
-      />
-      <PixCheckoutModal
-        open={pixOpen}
-        productKind="recharge"
-        amountCents={pixAmountCents}
-        title="Depósito Olefoot"
-        description={`Saldo BRO instantâneo após confirmação · R$ ${(pixAmountCents / 100).toFixed(2).replace('.', ',')}`}
-        onClose={() => setPixOpen(false)}
-        onSuccess={() => {
-          setPixOpen(false);
-          // 🐞 O comentário aqui dizia "applyPendingCredits no Layout vai pegar",
-          // mas o Layout só resgata ao MONTAR e quando a sessão muda. Quem
-          // pagava e continuava na tela via o saldo parado até recarregar.
-          void applyPendingCredits();
-        }}
-      />
-
-      {/* ── QUICK ACTIONS (Revolut-style strip) ──────────────────── */}
-      <WalletQuickActions actions={quickActions} />
-
-      {/* ── CARTEIRA SOLANA (vínculo, não é claim real ainda) ─────── */}
-      <SolanaWalletCard />
+      {/* ── ATALHOS: os mesmos quatro em SPOT e em DEX ───────────────
+          O vínculo com a carteira Solana saiu daqui: ele é da conta DEX. */}
+      <WalletAtalhos />
 
       {/* ── PATRIMÔNIO ESPORTIVO (Squad Valuation — dados reais) ── */}
       <SquadValuationCard

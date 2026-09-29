@@ -341,7 +341,7 @@ export function Missions() {
                 </div>
               </div>
               <Link
-                to="/wallet/referrals"
+                to="/wallet/network"
                 className="shrink-0 inline-flex items-center gap-1.5 bg-neon-yellow/10 border border-neon-yellow/40 px-3 py-2 hover:bg-neon-yellow/20 transition-colors"
                 style={{
                   fontFamily: 'var(--font-display)',
