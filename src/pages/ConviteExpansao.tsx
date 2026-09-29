@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getSupabase } from '@/supabase/client';
+import { lembrarConviteVisto, esquecerConviteVisto } from '@/wallet/conviteVisto';
 import {
   buscarConvite, confirmarConvite, jaConfirmou, guardarConvitePendente,
   type ConviteInfo, type MotivoRecusa,
@@ -62,7 +63,11 @@ export default function ConviteExpansao() {
 
       const padrinho = await jaConfirmou();
       if (!vivo) return;
-      if (padrinho) { setEstado({ t: 'ja_estava', padrinho }); return; }
+      if (padrinho) { esquecerConviteVisto(); setEstado({ t: 'ja_estava', padrinho }); return; }
+      // A pessoa viu o convite e ainda pode dizer "agora não". Se depois ela
+      // for comprar um pack, a tela de compra pergunta por ESTE convite antes
+      // — comprar põe na árvore, e a posição não muda mais.
+      lembrarConviteVisto(info.username);
       setEstado({ t: 'confirmar', info });
     })();
     return () => { vivo = false; };
@@ -73,7 +78,10 @@ export default function ConviteExpansao() {
     const info = estado.info;
     setEstado({ t: 'enviando', info });
     const r = await confirmarConvite(info.username);
-    if (r.entrou) setEstado({ t: 'pronto', padrinho: r.patrocinador ?? info.username });
+    if (r.entrou) {
+      esquecerConviteVisto();
+      setEstado({ t: 'pronto', padrinho: r.patrocinador ?? info.username });
+    }
     else setEstado({ t: 'recusado', info, motivo: r.motivo ?? 'erro' });
   }, [estado]);
 

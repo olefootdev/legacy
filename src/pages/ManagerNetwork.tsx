@@ -1213,6 +1213,7 @@ export function ManagerNetwork() {
         open={pixOpen}
         productKind="activation_pack"
         amountCents={12500}
+        paidMessage="Sua ativação foi processada com sucesso."
         title="Ativação Olefoot"
         description="Pack vitalício — Plano de Carreira completo"
         defaultName={club?.name ?? ''}

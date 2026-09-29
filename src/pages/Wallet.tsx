@@ -181,7 +181,7 @@ export function Wallet() {
           <SecaoVolt label="Seus saldos" tone="neutro" className="min-w-0 grow" />
           {usdBrlQuote.status === 'ok' && (
             <span className="hidden shrink-0 font-mono text-[10.5px] tabular-nums text-poeira sm:block">
-              1 BRO ≈ US$ 1 ≈ R$ {usdBrlQuote.olefootVenda.toFixed(2)}
+              1 BRO = US$ 1 = R$ {usdBrlQuote.olefootVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           )}
         </div>

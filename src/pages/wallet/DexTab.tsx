@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import { WalletShell } from './WalletShell';
 import { WalletAtalhos } from './WalletAtalhos';
@@ -6,6 +7,7 @@ import { SolanaWalletCard } from './SolanaWalletCard';
 import { SecaoVolt, Hashtag } from '@/components/ui';
 import { ORIGEM_DA_CARTEIRA } from '@/wallet/seed/conexao';
 import { lerMinhaPosicao, POSICAO_VAZIA, type PosicaoOlefoot } from '@/supabase/presalePosicao';
+import { aoMudarAPosicao } from '@/wallet/eventosDaCarteira';
 import { useTrackScreen } from '@/progression/trackEvent';
 
 /**
@@ -25,20 +27,25 @@ import { useTrackScreen } from '@/progression/trackEvent';
 
 const br = (v: bigint) => v.toLocaleString('pt-BR');
 
+// Dólar escrito como o resto da tela: ponto no milhar, vírgula no centavo.
 function dolar(cents: number): string {
-  return (cents / 100).toLocaleString('en-US', {
-    style: 'currency', currency: 'USD', maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
-  });
+  return `$${(cents / 100).toLocaleString('pt-BR', {
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2,
+  })}`;
 }
 
 export function DexTab() {
   useTrackScreen('screen_wallet');
+  const navigate = useNavigate();
   const [posicao, setPosicao] = useState<PosicaoOlefoot | null>(null);
 
   useEffect(() => {
     let vivo = true;
-    void lerMinhaPosicao().then((p) => { if (vivo) setPosicao(p); });
-    return () => { vivo = false; };
+    const ler = () => { void lerMinhaPosicao().then((p) => { if (vivo) setPosicao(p); }); };
+    ler();
+    // Quem compra sem sair desta tela vê a posição nova na hora.
+    const parar = aoMudarAPosicao(ler);
+    return () => { vivo = false; parar(); };
   }, []);
 
   const p = posicao ?? POSICAO_VAZIA;
@@ -83,6 +90,13 @@ export function DexTab() {
           <Linha rotulo="Travado" valor={carregando ? '…' : `${br(p.travado)} OLEFOOT`} />
           <Linha rotulo="Liberado" valor={carregando ? '…' : `${br(p.liberado)} OLEFOOT`} />
         </div>
+        <button
+          type="button"
+          onClick={() => navigate('/wallet/dex?adicionar=olefoot')}
+          className="ole-num inline-flex h-[50px] w-full items-center justify-center whitespace-nowrap bg-neon-yellow text-[13px] uppercase text-black transition-colors hover:bg-white [--corte:12px] [clip-path:var(--clip-corte)]"
+        >
+          Comprar OLEFOOT no Pix
+        </button>
         {/* Texto de custódia: não é enfeite, é o que a pessoa precisa saber
             antes de achar que tem token na carteira. */}
         <p className="border-l-2 border-cimento bg-card px-3.5 py-3 text-[12px] leading-relaxed text-cimento">

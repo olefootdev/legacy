@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { aoMudarAPosicao } from '@/wallet/eventosDaCarteira';
 import {
   lerAtivacao, lerPernas, lerMapa, lerMinhaEntrada, lerCarreira,
   lerMeuUsername, podeConvidar,
@@ -35,7 +36,7 @@ export function useMinhaExpansao(): MinhaExpansao {
 
   useEffect(() => {
     let vivo = true;
-    (async () => {
+    const ler = async () => {
       const [entrada, username] = await Promise.all([lerMinhaEntrada(), lerMeuUsername()]);
       if (!vivo) return;
       if (!entrada.naArvore) {
@@ -50,8 +51,12 @@ export function useMinhaExpansao(): MinhaExpansao {
         carregando: false, naArvore: true, padrinho: entrada.padrinho, username,
         convida, ativacao, pernas, carreira, mapa,
       });
-    })();
-    return () => { vivo = false; };
+    };
+    void ler();
+    // Comprar o primeiro pack põe a pessoa na árvore e libera o convite: a tela
+    // que dizia "você ainda não entrou" tem que mudar sem recarregar.
+    const parar = aoMudarAPosicao(() => { void ler(); });
+    return () => { vivo = false; parar(); };
   }, []);
 
   return estado;

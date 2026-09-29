@@ -40,10 +40,17 @@ interface Props {
   productKind: ProductKind;
   productRef?: string;
   amountCents: number; // BRL cents (R$125 = 12500)
+  /** Pré-venda: o valor do pack em centavos de DÓLAR. O servidor converte. */
+  usdCents?: number;
   /** Metadata extra guardada na intent (ex: { player } pra entrega de card). */
   metadata?: Record<string, unknown>;
   title: string;
   description: string;
+  /**
+   * O que dizer quando o Pix cai. O texto era fixo — "Sua ativação foi
+   * processada" — e aparecia igual pra quem tinha depositado ou comprado card.
+   */
+  paidMessage?: string;
   defaultName?: string;
   defaultEmail?: string;
   onClose: () => void;
@@ -85,28 +92,47 @@ function friendlyCheckoutError(raw?: string): string {
   return 'Não foi possível gerar o PIX agora. Tente novamente em instantes.';
 }
 
-// Pré-preenchimento do checkout PIX — guarda os dados do pagador entre compras
-// (sem re-digitar CPF/telefone). Só dados de contato, nada sensível de pagamento.
+// Pré-preenchimento do checkout PIX — guarda NOME e E-MAIL entre compras.
+//
+// 🔴 CPF e telefone NÃO são guardados. Eram, em claro, no localStorage — que
+// qualquer script rodando na página lê, e que sobrevive ao logout. O comentário
+// antigo dizia "nada sensível": CPF é o dado que abre conta em banco. Digitar
+// onze números de novo custa menos do que isso.
 const PIX_PREFILL_KEY = 'olefoot.pix-prefill-v1';
 interface PixPrefill {
   name?: string;
   email?: string;
-  cpf?: string;
-  cellphone?: string;
 }
 function readPixPrefill(): PixPrefill {
   try {
-    return JSON.parse(localStorage.getItem(PIX_PREFILL_KEY) || '{}') as PixPrefill;
+    const bruto = JSON.parse(localStorage.getItem(PIX_PREFILL_KEY) || '{}') as Record<string, unknown>;
+    const limpo: PixPrefill = {
+      name: typeof bruto.name === 'string' ? bruto.name : undefined,
+      email: typeof bruto.email === 'string' ? bruto.email : undefined,
+    };
+    // Quem já tinha comprado tem CPF gravado da versão anterior: apaga na
+    // primeira leitura, em vez de esperar a próxima compra.
+    if ('cpf' in bruto || 'cellphone' in bruto) writePixPrefill(limpo);
+    return limpo;
   } catch {
     return {};
   }
 }
 function writePixPrefill(v: PixPrefill): void {
   try {
-    localStorage.setItem(PIX_PREFILL_KEY, JSON.stringify(v));
+    localStorage.setItem(PIX_PREFILL_KEY, JSON.stringify({ name: v.name, email: v.email }));
   } catch {
     /* ignore */
   }
+}
+
+function Entrega({ valor }: { valor: string }) {
+  return (
+    <div className="flex min-w-0 items-baseline justify-between gap-3 border border-white/10 bg-deep-black px-3 py-2.5">
+      <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-white/50">Você recebe</span>
+      <span className="ole-num min-w-0 truncate text-[15px] text-white tabular-nums">{valor}</span>
+    </div>
+  );
 }
 
 function secondsLeft(expiresAt: string | null): number {
@@ -125,9 +151,11 @@ export function PixCheckoutModal({
   productKind,
   productRef,
   amountCents,
+  usdCents,
   metadata,
   title,
   description,
+  paidMessage = 'Pagamento recebido e entregue.',
   defaultName = '',
   defaultEmail = '',
   onClose,
@@ -163,8 +191,8 @@ export function PixCheckoutModal({
       const saved = readPixPrefill();
       setName(saved.name || defaultName);
       setEmail(saved.email || defaultEmail);
-      setCpf(saved.cpf ? formatCpf(saved.cpf) : '');
-      setCellphone(saved.cellphone || '');
+      setCpf('');
+      setCellphone('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -182,6 +210,7 @@ export function PixCheckoutModal({
       productKind,
       productRef,
       amountCents,
+      ...(usdCents != null ? { usdCents } : {}),
       ...(metadata ? { metadata } : {}),
       customer: {
         name: name.trim(),
@@ -200,13 +229,8 @@ export function PixCheckoutModal({
       return;
     }
 
-    // Dados aceitos pelo gateway → guarda pra próxima compra não re-digitar.
-    writePixPrefill({
-      name: name.trim(),
-      email: email.trim(),
-      cpf: cpf.replace(/\D/g, ''),
-      cellphone: cellphone.replace(/\D/g, ''),
-    });
+    // Dados aceitos pelo gateway → guarda nome e e-mail pra próxima compra.
+    writePixPrefill({ name: name.trim(), email: email.trim() });
 
     setCharge(result);
     setStage('waiting');
@@ -439,6 +463,15 @@ export function PixCheckoutModal({
                     )}
                   </div>
 
+                  {/* O que este Pix entrega — número do SERVIDOR, com a cotação
+                      congelada. É o que vai ser creditado, não uma prévia. */}
+                  {charge.entrega?.broCents != null && (
+                    <Entrega valor={`${(charge.entrega.broCents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BRO`} />
+                  )}
+                  {charge.entrega?.olefoot != null && (
+                    <Entrega valor={`${charge.entrega.olefoot.toLocaleString('pt-BR')} OLEFOOT`} />
+                  )}
+
                   {/* Countdown + polling status */}
                   <div className="flex items-center justify-between bg-deep-black border border-white/10 rounded-sm px-3 py-2">
                     <span className="text-[10px] text-white/50 uppercase tracking-wider inline-flex items-center gap-1.5">
@@ -477,9 +510,7 @@ export function PixCheckoutModal({
                   <p className="font-display text-lg font-black uppercase tracking-wider text-alta">
                     Pagamento confirmado
                   </p>
-                  <p className="text-xs text-white/60 text-center">
-                    Sua ativação foi processada com sucesso.
-                  </p>
+                  <p className="text-xs text-white/60 text-center">{paidMessage}</p>
                 </div>
               )}
 

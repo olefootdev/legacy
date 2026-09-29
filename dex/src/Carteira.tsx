@@ -109,11 +109,11 @@ export default function Carteira() {
         <div className="mx-auto w-full max-w-md flex-1 px-4 pb-8 pt-5">
           {vista === 'enviar' && <TelaEnviar />}
           {vista === 'depositar' && <TelaDepositar />}
-          {vista === 'comprar' && <TelaComprar linkPreVenda={`${ORIGEM_DO_JOGO}/expansao`} />}
+          {vista === 'comprar' && <TelaComprar linkPreVenda={`${ORIGEM_DO_JOGO}/wallet/dex?adicionar=olefoot`} />}
           {vista === 'render' && <TelaRender split={SPLIT_DA_COLHEITA} linkProducao={() => setVista('producao')} />}
           {vista === 'producao' && <TelaProducao split={SPLIT_DA_COLHEITA} />}
         </div>
-        <Abas atual={aba} linkRede={`${ORIGEM_DO_JOGO}/expansao`}
+        <Abas atual={aba} linkRede={`${ORIGEM_DO_JOGO}/wallet/network`}
               ir={(a) => { setAba(a); setVista(a === 'carteira' ? 'carteira' : a === 'comprar' ? 'comprar' : 'render'); }} />
       </div>
     );
@@ -169,7 +169,7 @@ export default function Carteira() {
               frase de 12 palavras. Quanto menos código roda aqui, melhor. Pra
               quem usa, é um toque; a troca de origem não aparece. */}
           <a
-            href={`${ORIGEM_DO_JOGO}/expansao`}
+            href={`${ORIGEM_DO_JOGO}/wallet/network`}
             className="block border border-neon-yellow/30 bg-panel px-3.5 py-3.5 transition-colors hover:border-neon-yellow/60"
           >
             <div className="flex items-center justify-between">
@@ -203,7 +203,7 @@ export default function Carteira() {
             </button>
           </div>
         </div>
-        <Abas atual={aba} linkRede={`${ORIGEM_DO_JOGO}/expansao`}
+        <Abas atual={aba} linkRede={`${ORIGEM_DO_JOGO}/wallet/network`}
               ir={(a) => { setAba(a); setVista(a === 'carteira' ? 'carteira' : a === 'comprar' ? 'comprar' : 'render'); }} />
       </div>
     );

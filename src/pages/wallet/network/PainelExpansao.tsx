@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { NoDoMapa, Carreira } from '@/supabase/expansaoPainel';
 import type { MinhaExpansao } from './useMinhaExpansao';
 
@@ -36,6 +37,26 @@ const br = (v: bigint) => v.toLocaleString('pt-BR');
 /** O convite sai sempre com o domínio público, mesmo visto de outro lugar. */
 const ORIGEM_DO_CONVITE = 'https://game.olefoot.ai';
 
+/**
+ * A compra que ativa. Abre a gaveta Adicionar já no pack de $10.
+ *
+ * 🐞 O painel mandava "ative com um pack de $10" e não existia onde comprar:
+ * a OLEWALLET apontava pra cá e aqui não havia botão. Era o beco que fazia a
+ * pessoa achar que o sistema tinha travado.
+ */
+const ATIVAR = '/wallet/dex?adicionar=olefoot&pack=1000';
+
+function BotaoAtivar() {
+  return (
+    <Link
+      to={ATIVAR}
+      className="ole-num mt-4 flex h-[50px] w-full items-center justify-center whitespace-nowrap bg-neon-yellow text-[13px] uppercase text-black transition-colors hover:bg-white [--corte:12px] [clip-path:var(--clip-corte)]"
+    >
+      Ativar com $10
+    </Link>
+  );
+}
+
 export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
   const { carregando, naArvore, padrinho, ativacao, pernas, carreira, mapa, username, convida } = dados;
   const [copiado, setCopiado] = useState(false);
@@ -64,6 +85,7 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
           Entra quem compra o primeiro pack de <strong className="text-giz">$10</strong> de OLEFOOT,
           ou quem confirma o convite de alguém que já está.
         </p>
+        <BotaoAtivar />
       </div>
     );
   }
@@ -93,6 +115,7 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
           <p className="mt-1.5 font-mono text-[11px] leading-relaxed text-poeira">
             Depois de ativar: 1 indicado em cada time e o bônus começa a contar.
           </p>
+          <BotaoAtivar />
         </div>
       ) : ativacao && !ativacao.ativo ? (
         <div className="mb-6 border-l-2 border-atencao bg-card px-4 py-3.5">

@@ -13,13 +13,22 @@ const API_BASE =
   (import.meta.env.VITE_API_URL as string) ||
   'http://localhost:4000';
 
-export type ProductKind = 'activation_pack' | 'card' | 'recharge';
+export type ProductKind = 'activation_pack' | 'card' | 'recharge' | 'presale_pack';
 export type PaymentStatus = 'pending' | 'paid' | 'expired' | 'cancelled' | 'failed';
 
 export interface CreatePixInput {
   productKind: ProductKind;
   productRef?: string;
+  /**
+   * Reais, em centavos. Só o DEPÓSITO é dirigido por este valor. Em card e em
+   * pré-venda o servidor ignora o que vier aqui e calcula o dele.
+   */
   amountCents: number;
+  /**
+   * Pré-venda: quantos DÓLARES, em centavos. É a única coisa que a tela decide
+   * — quantos tokens isso dá e quanto custa em reais sai do servidor.
+   */
+  usdCents?: number;
   customer: {
     name: string;
     email: string;
@@ -41,6 +50,40 @@ export interface CreatePixResult {
   expiresAt?: string;
   status: string;
   devMode: boolean;
+  /** O que este Pix entrega, com a cotação já congelada pelo servidor. */
+  entrega?: EntregaDoPix;
+}
+
+/**
+ * O que o servidor se comprometeu a entregar quando este Pix for pago. Vem de
+ * `payment_intents.server_data` — é o mesmo número que a confirmação vai usar.
+ */
+export interface EntregaDoPix {
+  /** Depósito: centavos de BRO. 1806 = 18,06 BRO. */
+  broCents?: number;
+  /** Pré-venda: OLEFOOT em token inteiro. */
+  olefoot?: bigint;
+  /** Pré-venda: o valor do pack, em centavos de dólar. */
+  usdCents?: number;
+}
+
+function lerEntrega(bruta: unknown): EntregaDoPix | undefined {
+  if (!bruta || typeof bruta !== 'object') return undefined;
+  const e = bruta as { recarga?: { bro_cents?: string }; presale?: { tokens_entregues?: string; usd_cents?: number } };
+  if (e.recarga?.bro_cents) {
+    const n = Number(e.recarga.bro_cents);
+    return Number.isFinite(n) ? { broCents: n } : undefined;
+  }
+  if (e.presale?.tokens_entregues) {
+    try {
+      // O servidor manda na menor unidade (9 casas); a tela fala em token inteiro.
+      return {
+        olefoot: BigInt(e.presale.tokens_entregues) / 10n ** 9n,
+        usdCents: Number(e.presale.usd_cents ?? 0),
+      };
+    } catch { return undefined; }
+  }
+  return undefined;
 }
 
 export interface CreatePixError {
@@ -70,6 +113,7 @@ export async function createPixCharge(input: CreatePixInput): Promise<CreatePixR
       product_kind: input.productKind,
       product_ref: input.productRef ?? null,
       amount_cents: input.amountCents,
+      ...(input.usdCents != null ? { usd_cents: input.usdCents } : {}),
       customer: {
         name: input.customer.name,
         email: input.customer.email,
@@ -96,6 +140,7 @@ export async function createPixCharge(input: CreatePixInput): Promise<CreatePixR
     expiresAt: body.expires_at,
     status: body.status,
     devMode: !!body.dev_mode,
+    entrega: lerEntrega(body.entrega),
   };
 }
 
