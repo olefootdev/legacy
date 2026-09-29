@@ -7,6 +7,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { useCarteira } from '@/wallet/seed/useCarteira';
+import { ORIGENS_QUE_PODEM_PEDIR } from '@/wallet/seed/conexao';
 import { tradutor } from '@/i18n/idioma';
 import { useIdioma } from '@/i18n/useIdioma';
 import CriarOuRestaurar, { type Passo } from './CriarOuRestaurar';
@@ -15,6 +16,13 @@ import Extrato from './Extrato';
 import { buscarSaldo, type Saldo } from './api';
 import { TEXTOS } from './textos';
 import { BOTAO_LINHA, BOTAO_VOLT, Barra, CAMPO } from './ui';
+
+/**
+ * Onde o jogo mora, tirado do MESMO allowlist que autoriza pedido de
+ * assinatura — pra não existirem dois lugares dizendo onde o jogo está, que é
+ * como um deles envelhece sem ninguém perceber.
+ */
+const ORIGEM_DO_JOGO = ORIGENS_QUE_PODEM_PEDIR.find((o) => o.startsWith('https://')) ?? 'https://game.olefoot.ai';
 
 export default function Carteira() {
   const w = useCarteira();
@@ -88,6 +96,22 @@ export default function Carteira() {
             <button type="button" className={BOTAO_VOLT} onClick={() => setVista('receber')}>{t('receber')}</button>
             <button type="button" className={BOTAO_LINHA} onClick={() => setVista('extrato')}>{t('extrato')}</button>
           </div>
+
+          {/* EXPANSÃO — o lado de negócios, dentro da carteira.
+              🔑 O painel é servido pela origem do JOGO de propósito: os dados
+              da árvore estão no Supabase atrás de RLS, e esta origem guarda a
+              frase de 12 palavras. Quanto menos código roda aqui, melhor. Pra
+              quem usa, é um toque; a troca de origem não aparece. */}
+          <a
+            href={`${ORIGEM_DO_JOGO}/expansao`}
+            className="block border border-neon-yellow/30 bg-panel px-3.5 py-3.5 transition-colors hover:border-neon-yellow/60"
+          >
+            <div className="flex items-center justify-between">
+              <p className="font-num text-[13px] font-extrabold uppercase text-neon-yellow">{t('expansao')}</p>
+              <span className="font-mono text-[14px] text-neon-yellow">→</span>
+            </div>
+            <p className="mt-1 text-[12px] leading-relaxed text-cimento">{t('expansaoTexto')}</p>
+          </a>
 
           <div className="border border-white/10 bg-panel px-3.5 py-3">
             <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cimento">{t('seuEndereco')}</p>

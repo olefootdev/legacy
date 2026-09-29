@@ -38,6 +38,7 @@ import { ManagerScoreToast } from '@/components/ManagerScoreToast';
 import { useTotalManagers } from '@/hooks/useTotalManagers';
 import { MatchModeBottomSheet } from '@/components/MatchModeBottomSheet';
 import { OleSmartHubPanel, OleSmartHubDrawer, OleSmartHubTrigger } from '@/components/OleSmartHub';
+import { ORIGEM_DA_CARTEIRA } from '@/wallet/seed/conexao';
 
 type NavItem = {
   icon: typeof Home;
@@ -62,14 +63,15 @@ const mainNavItems: NavItem[] = [
   { icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
   { icon: User, label: 'MANAGER', path: '/manager' },
   { icon: Wallet, label: 'WALLET', path: '/wallet' },
-  // A DEX é o lado de negócios: expansão + carteira on-chain.
+  // DEX abre a CARTEIRA, e a expansão é um botão DENTRO dela.
   //
-  // 🔑 O item leva ao PAINEL (rota interna), não direto pra outra origem. Os
-  // dados da árvore estão no Supabase atrás de RLS e a DEX não tem sessão —
-  // pôr o SDK do Supabase na origem que guarda a frase de 12 palavras
-  // enfraqueceria justamente o que a separa (ver conexao.ts). Do painel, a
-  // carteira fica a um clique.
-  { icon: Network, label: 'DEX', path: '/expansao' },
+  // 🐞 Eu tinha feito o contrário — DEX ia pro painel, e do painel abria a
+  // carteira. O fundador percorreu e cortou: "jogo → DEX → abrir carteira,
+  // chega em carteira e a DEX não está lá. A jornada está completamente
+  // confusa". Estava certo: eu resolvi pela arquitetura e entreguei um
+  // caminho que ninguém percorre. A carteira é o lugar de negócios; a
+  // expansão mora dentro dela.
+  { icon: Network, label: 'DEX', path: ORIGEM_DA_CARTEIRA, externo: true },
 ];
 
 /** Bottom nav (mobile <lg) — 5 slots fixos.

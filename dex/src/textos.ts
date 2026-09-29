@@ -115,6 +115,9 @@ export const TEXTOS = {
   // --- extrato ---
   tituloExtrato:   { pt: 'EXTRATO', en: 'ACTIVITY' },
   extrato:         { pt: 'Extrato', en: 'Activity' },
+  expansao:        { pt: 'Expansão', en: 'Network' },
+  expansaoTexto:   { pt: 'Sua rede, seus times e o bônus de equiparação.',
+                     en: 'Your network, your teams and the matching bonus.' },
   semMovimento:    { pt: 'Nada ainda', en: 'Nothing yet' },
   semMovimentoTxt: { pt: 'Quando algo entrar ou sair deste endereço, aparece aqui — e no explorador da Solana, que não é nosso.',
                      en: 'When anything moves in or out of this address, it shows up here — and on the Solana explorer, which is not ours.' },
