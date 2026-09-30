@@ -63,6 +63,27 @@ presaleRoutes.get('/api/presale/estado', async (c) => {
     };
   });
 
+  // A Ativação 3× não é um pack do catálogo — é um PLANO: o pack próprio de
+  // $10 + uma conta de $10 em cada time (satélites do comprador). O orçamento
+  // são três packs de $10; as contas são distintas, então o teto por conta
+  // não soma — mas a alocação precisa caber os três.
+  const plano3x = (() => {
+    const um = orcar(1_000, cotacao, limites);
+    if (!um.ok) {
+      return { kind: 'ativacao_3x' as const, usdCents: 3_000, disponivel: false as const, motivo: um.motivo };
+    }
+    if (restamTokens < um.orcamento.tokensEntregues * 3n) {
+      return { kind: 'ativacao_3x' as const, usdCents: 3_000, disponivel: false as const, motivo: 'alocacao_insuficiente' };
+    }
+    return {
+      kind: 'ativacao_3x' as const,
+      usdCents: 3_000,
+      disponivel: true as const,
+      recebePorConta: String(um.orcamento.tokensEntregues),
+      brlCents: String(um.orcamento.brlCents * 3n),
+    };
+  })();
+
   return c.json({
     ok: true,
     aberta: cfg?.aberta === true,
@@ -76,5 +97,6 @@ presaleRoutes.get('/api/presale/estado', async (c) => {
     vendidoBps,
     metaUsdCents: metaDaPresaleUsdCents(),
     packs,
+    planos: [plano3x],
   });
 });

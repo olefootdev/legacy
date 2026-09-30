@@ -29,6 +29,11 @@ export interface CreatePixInput {
    * — quantos tokens isso dá e quanto custa em reais sai do servidor.
    */
   usdCents?: number;
+  /**
+   * Pré-venda: 'ativacao_3x' = pack próprio de $10 + 1 conta-satélite de $10
+   * em cada time. É INTENÇÃO: todo número (e as contas) sai do servidor.
+   */
+  plano?: 'ativacao_3x';
   customer: {
     name: string;
     email: string;
@@ -65,11 +70,17 @@ export interface EntregaDoPix {
   olefoot?: bigint;
   /** Pré-venda: o valor do pack, em centavos de dólar. */
   usdCents?: number;
+  /** Ativação 3×: quantas contas-satélite este Pix cria (1 por time). */
+  satelites?: number;
 }
 
 function lerEntrega(bruta: unknown): EntregaDoPix | undefined {
   if (!bruta || typeof bruta !== 'object') return undefined;
-  const e = bruta as { recarga?: { bro_cents?: string }; presale?: { tokens_entregues?: string; usd_cents?: number } };
+  const e = bruta as {
+    recarga?: { bro_cents?: string };
+    presale?: { tokens_entregues?: string; usd_cents?: number };
+    ativacao_3x?: { satelites?: unknown[] };
+  };
   if (e.recarga?.bro_cents) {
     const n = Number(e.recarga.bro_cents);
     return Number.isFinite(n) ? { broCents: n } : undefined;
@@ -80,6 +91,8 @@ function lerEntrega(bruta: unknown): EntregaDoPix | undefined {
       return {
         olefoot: BigInt(e.presale.tokens_entregues) / 10n ** 9n,
         usdCents: Number(e.presale.usd_cents ?? 0),
+        ...(Array.isArray(e.ativacao_3x?.satelites) && e.ativacao_3x.satelites.length > 0
+          ? { satelites: e.ativacao_3x.satelites.length } : {}),
       };
     } catch { return undefined; }
   }
@@ -114,6 +127,7 @@ export async function createPixCharge(input: CreatePixInput): Promise<CreatePixR
       product_ref: input.productRef ?? null,
       amount_cents: input.amountCents,
       ...(input.usdCents != null ? { usd_cents: input.usdCents } : {}),
+      ...(input.plano ? { plano: input.plano } : {}),
       customer: {
         name: input.customer.name,
         email: input.customer.email,

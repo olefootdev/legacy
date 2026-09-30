@@ -95,14 +95,21 @@ export function WalletAtalhos() {
         open={pixOlefoot !== null}
         productKind="presale_pack"
         amountCents={pixOlefoot?.brlCents ?? 0}
-        usdCents={pixOlefoot?.usdCents}
-        title="Comprar OLEFOOT"
+        usdCents={pixOlefoot?.plano === 'ativacao_3x' ? 1000 : pixOlefoot?.usdCents}
+        plano={pixOlefoot?.plano}
+        title={pixOlefoot?.plano === 'ativacao_3x' ? 'Ativação 3×' : 'Comprar OLEFOOT'}
         description={
-          pixOlefoot
-            ? `${pixOlefoot.recebe.toLocaleString('pt-BR')} OLEFOOT · pack de ${dolar(pixOlefoot.usdCents)}`
-            : ''
+          pixOlefoot?.plano === 'ativacao_3x'
+            ? `${pixOlefoot.recebe.toLocaleString('pt-BR')} OLEFOOT × 3 contas · você + Time 1 + Time 2`
+            : pixOlefoot
+              ? `${pixOlefoot.recebe.toLocaleString('pt-BR')} OLEFOOT · pack de ${dolar(pixOlefoot.usdCents)}`
+              : ''
         }
-        paidMessage="Seu OLEFOOT está na sua posição, travado."
+        paidMessage={
+          pixOlefoot?.plano === 'ativacao_3x'
+            ? 'Suas 3 contas estão ativas — 1 em cada time. O bônus já conta.'
+            : 'Seu OLEFOOT está na sua posição, travado.'
+        }
         onClose={() => setPixOlefoot(null)}
         onSuccess={() => {
           setPixOlefoot(null);

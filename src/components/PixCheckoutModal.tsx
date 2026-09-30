@@ -42,6 +42,8 @@ interface Props {
   amountCents: number; // BRL cents (R$125 = 12500)
   /** Pré-venda: o valor do pack em centavos de DÓLAR. O servidor converte. */
   usdCents?: number;
+  /** Pré-venda: 'ativacao_3x' = pack próprio + 1 conta de $10 em cada time. */
+  plano?: 'ativacao_3x';
   /** Metadata extra guardada na intent (ex: { player } pra entrega de card). */
   metadata?: Record<string, unknown>;
   title: string;
@@ -152,6 +154,7 @@ export function PixCheckoutModal({
   productRef,
   amountCents,
   usdCents,
+  plano,
   metadata,
   title,
   description,
@@ -211,6 +214,7 @@ export function PixCheckoutModal({
       productRef,
       amountCents,
       ...(usdCents != null ? { usdCents } : {}),
+      ...(plano ? { plano } : {}),
       ...(metadata ? { metadata } : {}),
       customer: {
         name: name.trim(),
@@ -470,6 +474,9 @@ export function PixCheckoutModal({
                   )}
                   {charge.entrega?.olefoot != null && (
                     <Entrega valor={`${charge.entrega.olefoot.toLocaleString('pt-BR')} OLEFOOT`} />
+                  )}
+                  {(charge.entrega?.satelites ?? 0) > 0 && (
+                    <Entrega valor={`+ ${charge.entrega!.satelites} contas de $10 · 1 em cada time`} />
                   )}
 
                   {/* Countdown + polling status */}

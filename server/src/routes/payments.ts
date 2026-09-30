@@ -38,6 +38,8 @@ interface CreatePixBody {
   product_kind?: 'card' | 'recharge' | 'presale_pack';
   /** presale_pack: valor do pack em centavos de DÓLAR. O servidor converte. */
   usd_cents?: number;
+  /** presale_pack: 'ativacao_3x' = pack próprio + 1 conta de $10 em cada time. */
+  plano?: string;
   product_ref?: string;
   amount_cents?: number;
   customer?: {
@@ -189,6 +191,14 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
     if (!Number.isInteger(usdCents) || usdCents < MINIMO_USD_CENTS) {
       return c.json({ ok: false, error: `usd_cents mínimo de ${MINIMO_USD_CENTS}.` }, 400);
     }
+    // A intenção do plano vem do cliente; TODO número dele sai do servidor.
+    const plano3x = body.plano === 'ativacao_3x';
+    if (body.plano != null && !plano3x) {
+      return c.json({ ok: false, error: 'plano inválido' }, 400);
+    }
+    if (plano3x && usdCents !== 1_000) {
+      return c.json({ ok: false, error: 'A Ativação 3× é sobre o pack de $10.' }, 400);
+    }
 
     let brlPorUsd: number;
     try {
@@ -237,6 +247,40 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
         tokens_brutos: String(o.brutoNaMenorUnidade),
       },
     };
+
+    // ─── Ativação 3×: mais duas contas-satélite de $10, uma por perna ─────
+    // Contas DISTINTAS: o teto por conta não soma com o do comprador; a
+    // alocação anda em série (cada orçamento vê o que sobrou do anterior).
+    // A cobrança vira a soma dos três; a confirmação lê `ativacao_3x` do
+    // server_data e cria conta + posição + volume de cada satélite.
+    if (plano3x) {
+      const sats: Array<Record<string, unknown>> = [];
+      let restam = restamTokens - o.tokensEntregues;
+      let totalBrl = o.brlCents;
+      for (const lado of [1, 2] as const) {
+        const rs = orcar(
+          1_000,
+          { brlPorUsdMicro: BigInt(Math.round(brlPorUsd * 1_000_000)), lidaEm: new Date().toISOString() },
+          { tetoPorContaUsdCents: teto ?? null, jaCompradoUsdCents: 0, restamTokens: restam },
+        );
+        if (!rs.ok) {
+          return c.json({ ok: false, step: 'presale_3x', error: rs.motivo, detalhe: rs }, 409);
+        }
+        const os = rs.orcamento;
+        restam -= os.tokensEntregues;
+        totalBrl += os.brlCents;
+        sats.push({
+          lado,
+          usd_cents: os.usdCents,
+          brl_cents: String(os.brlCents),
+          brl_por_usd_micro: String(os.cotacao.brlPorUsdMicro),
+          tokens_entregues: String(os.liquidoNaMenorUnidade),
+          tokens_brutos: String(os.brutoNaMenorUnidade),
+        });
+      }
+      amountCents = Number(totalBrl);
+      serverData = { ...serverData, ativacao_3x: { satelites: sats } };
+    }
   } else {
     amountCents = Math.floor(Number(body.amount_cents) || 0);
     if (amountCents < RECHARGE_MIN_CENTS) {

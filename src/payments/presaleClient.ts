@@ -26,6 +26,17 @@ export interface PackDaPresale {
   readonly motivo?: MotivoPackFechado;
 }
 
+export interface PlanoAtivacao3x {
+  readonly kind: 'ativacao_3x';
+  readonly usdCents: number;
+  readonly disponivel: boolean;
+  /** OLEFOOT que CADA uma das 3 contas recebe, em token inteiro. */
+  readonly recebePorConta: bigint;
+  /** Custo total em reais agora, em centavos. */
+  readonly brlCents: number;
+  readonly motivo?: MotivoPackFechado;
+}
+
 export interface EstadoDaPresale {
   readonly aberta: boolean;
   /** Preço de 1 OLEFOOT em dólar, como texto ("0.000125"). */
@@ -36,6 +47,8 @@ export interface EstadoDaPresale {
   readonly tetoPorContaUsdCents: number | null;
   readonly restam: bigint;
   readonly packs: readonly PackDaPresale[];
+  /** A Ativação 3× (e planos futuros). Servidor antigo: lista vazia. */
+  readonly planos: readonly PlanoAtivacao3x[];
 }
 
 export type EstadoDaPresaleCarregado =
@@ -66,6 +79,16 @@ export async function lerEstadoDaPresale(): Promise<EstadoDaPresale> {
       brlCents: Number(p.brlCents ?? 0),
       motivo: p.motivo as MotivoPackFechado | undefined,
     })),
+    planos: (Array.isArray(body.planos) ? body.planos : [])
+      .filter((p: Record<string, unknown>) => p.kind === 'ativacao_3x')
+      .map((p: Record<string, unknown>) => ({
+        kind: 'ativacao_3x' as const,
+        usdCents: Number(p.usdCents ?? 0),
+        disponivel: p.disponivel === true,
+        recebePorConta: inteiro(p.recebePorConta),
+        brlCents: Number(p.brlCents ?? 0),
+        motivo: p.motivo as MotivoPackFechado | undefined,
+      })),
   };
 }
 

@@ -28,8 +28,13 @@ export async function montarBanco({ extras = [], antesDosExtras } = {}) {
 
   await db.exec(`
     create schema if not exists auth;
+    -- As colunas extras são as que expansao_criar_satelite preenche no molde
+    -- do GoTrue (tokens '', instance_id zerado). No PGlite são só colunas.
     create table auth.users (id uuid primary key default gen_random_uuid(), email text,
-      raw_user_meta_data jsonb, created_at timestamptz default now());
+      raw_user_meta_data jsonb, created_at timestamptz default now(),
+      instance_id uuid, aud text, role text, encrypted_password text,
+      email_confirmed_at timestamptz, raw_app_meta_data jsonb, updated_at timestamptz,
+      confirmation_token text, email_change text, email_change_token_new text, recovery_token text);
     -- Igual ao Supabase: quem está logado sai do JWT que o PostgREST põe na sessão.
     create or replace function auth.jwt() returns jsonb language sql stable as $$
       select nullif(current_setting('request.jwt.claims', true), '')::jsonb $$;

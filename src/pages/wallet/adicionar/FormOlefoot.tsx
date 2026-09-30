@@ -28,6 +28,8 @@ export interface PedidoOlefoot {
   /** Reais de agora, em centavos — só pra mostrar antes do QR. */
   readonly brlCents: number;
   readonly recebe: bigint;
+  /** Ativação 3×: pack próprio + 1 conta de $10 em cada time. */
+  readonly plano?: 'ativacao_3x';
 }
 
 const FECHADO: Record<MotivoPackFechado, string> = {
@@ -59,7 +61,7 @@ export function FormOlefoot({
 }) {
   const navigate = useNavigate();
   const [carga, setCarga] = useState<EstadoDaPresaleCarregado>({ status: 'carregando' });
-  const [escolhido, setEscolhido] = useState<number | null>(packInicial ?? null);
+  const [escolhido, setEscolhido] = useState<number | 'ativacao_3x' | null>(packInicial ?? null);
   const [outro, setOutro] = useState('');
   // null = ainda não sei; '' = não há convite a perguntar.
   const [convite, setConvite] = useState<string | null>(null);
@@ -97,6 +99,12 @@ export function FormOlefoot({
       if (outroCents < estado.minimoUsdCents) return null;
       const p = previaDoValor(outroCents, estado);
       return p ? { usdCents: outroCents, brlCents: p.brlCents, recebe: p.recebe } : null;
+    }
+    if (escolhido === 'ativacao_3x') {
+      const plano = estado.planos.find((p) => p.kind === 'ativacao_3x' && p.disponivel);
+      return plano
+        ? { usdCents: plano.usdCents, brlCents: plano.brlCents, recebe: plano.recebePorConta, plano: 'ativacao_3x' }
+        : null;
     }
     const pack = estado.packs.find((p) => p.usdCents === escolhido && p.disponivel);
     return pack ? { usdCents: pack.usdCents, brlCents: pack.brlCents, recebe: pack.recebe } : null;
@@ -189,6 +197,36 @@ export function FormOlefoot({
         })}
       </div>
 
+      {/* ── ATIVAÇÃO 3×: você + 1 conta de $10 em cada time ─────────────────
+          As duas contas são SUAS: entram uma em cada perna (primeira posição
+          ou derramamento) e ativam o seu bônus na hora — "1 em cada time". */}
+      {estado.planos.filter((p) => p.kind === 'ativacao_3x').map((plano) => {
+        const ativo = outroCents == null && escolhido === 'ativacao_3x';
+        return (
+          <button
+            key={plano.kind}
+            type="button"
+            disabled={!plano.disponivel}
+            onClick={() => { setEscolhido('ativacao_3x'); setOutro(''); }}
+            className={cn(
+              'block w-full border px-4 py-3.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+              ativo ? 'border-neon-yellow bg-neon-yellow text-black' : 'border-neon-yellow/40 bg-deep-black text-white hover:bg-card',
+            )}
+          >
+            <span className="flex items-center justify-between gap-3">
+              <span className="ole-num shrink-0 text-[15px] uppercase">Ativação 3× · {dolar(plano.usdCents)}</span>
+              <span className="whitespace-nowrap font-mono text-[11px] tabular-nums">
+                {plano.disponivel ? `R$ ${reais(plano.brlCents)}` : FECHADO[plano.motivo ?? 'cotacao_invalida']}
+              </span>
+            </span>
+            <span className={cn('mt-1.5 block text-[12px] leading-relaxed', ativo ? 'text-black' : 'text-cimento')}>
+              Seu pack de $10 + 1 conta de $10 no Time 1 e no Time 2 — as duas são suas.
+              Ativa o bônus na hora, com 1 em cada time.
+            </span>
+          </button>
+        );
+      })}
+
       <div>
         <label className="mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
           Ou outro valor, em dólar
@@ -214,7 +252,9 @@ export function FormOlefoot({
             Você recebe
           </span>
           <span className="ole-num min-w-0 truncate text-[16px] text-white tabular-nums">
-            {br(pedido.recebe)} OLEFOOT
+            {pedido.plano === 'ativacao_3x'
+              ? `${br(pedido.recebe)} OLEFOOT × 3 contas`
+              : `${br(pedido.recebe)} OLEFOOT`}
           </span>
         </div>
       )}
