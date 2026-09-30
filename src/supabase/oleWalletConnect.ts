@@ -53,7 +53,9 @@ export function oleWalletDisponivel(): boolean {
   return typeof window !== 'undefined' && Boolean(ORIGEM_DA_CARTEIRA);
 }
 
-export async function conectarOleWallet(): Promise<ResultadoOleWallet> {
+// `pin` segue a mesma regra do caminho da Phantom: o servidor só o exige na
+// TROCA de endereço de quem criou PIN.
+export async function conectarOleWallet(pin?: string): Promise<ResultadoOleWallet> {
   const sb = getSupabase();
   if (!sb) return { ok: false, address: null, error: 'Sem conexão com a sua conta agora.' };
   const { data } = await sb.auth.getSession();
@@ -142,6 +144,7 @@ export async function conectarOleWallet(): Promise<ResultadoOleWallet> {
         issuedAt: r.issuedAt,
         signature: r.signature,
         signedMessage: r.signedMessage,
+        ...(pin ? { pin } : {}),
       }),
     });
     const json = (await res.json().catch(() => null)) as

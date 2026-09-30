@@ -235,10 +235,31 @@ export async function lerCiclosPagos(quantos = 6): Promise<CicloFechado[]> {
   }));
 }
 
-/** null = automático (o time com menos indicados diretos). */
-export async function definirPernaPadrao(lado: 1 | 2 | null): Promise<boolean> {
+/**
+ * null = automático (o time com menos indicados diretos).
+ *
+ * Conta COM PIN assina com ele: sem `pin` o servidor responde
+ * `pin_obrigatorio`, e a tela pede antes de repetir a chamada. Motivos
+ * possíveis: pin_obrigatorio · pin_errado · muitas_tentativas · erro.
+ */
+export async function definirPernaPadrao(
+  lado: 1 | 2 | null,
+  pin?: string,
+): Promise<{ ok: boolean; motivo: string | null; tentaDeNovoEm: number }> {
   const sb = getSupabase();
-  if (!sb) return false;
+  if (!sb) return { ok: false, motivo: 'erro', tentaDeNovoEm: 0 };
+  if (pin != null) {
+    const { data, error } = await sb.rpc('expansao_definir_perna_padrao', { p_lado: lado, p_pin: pin });
+    const r = (Array.isArray(data) ? data[0] : data) as
+      { ok: boolean; motivo: string | null; tenta_de_novo_em?: number } | null;
+    if (error || !r) return { ok: false, motivo: 'erro', tentaDeNovoEm: 0 };
+    return { ok: r.ok === true, motivo: r.motivo ?? null, tentaDeNovoEm: Number(r.tenta_de_novo_em ?? 0) };
+  }
   const { error } = await sb.rpc('expansao_definir_perna_padrao', { p_lado: lado });
-  return !error;
+  if (!error) return { ok: true, motivo: null, tentaDeNovoEm: 0 };
+  return {
+    ok: false,
+    motivo: error.message.includes('PIN_OBRIGATORIO') ? 'pin_obrigatorio' : 'erro',
+    tentaDeNovoEm: 0,
+  };
 }

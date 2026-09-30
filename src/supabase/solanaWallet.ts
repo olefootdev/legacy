@@ -86,8 +86,12 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
+// `pin` só é exigido pelo servidor quando a conta TEM PIN e o endereço muda
+// (trocar o vínculo redireciona o airdrop) — aí a resposta vem 403 e a tela
+// pede o PIN antes de repetir a chamada.
 export async function connectAndLinkSolanaWallet(
   option: SolanaWalletOption,
+  pin?: string,
 ): Promise<{ ok: boolean; address?: string; error?: string }> {
   const sb = getSupabase();
   if (!sb) return { ok: false, error: 'Supabase não configurado.' };
@@ -136,6 +140,7 @@ export async function connectAndLinkSolanaWallet(
         issuedAt,
         signature: toBase64(signature),
         signedMessage: toBase64(signedMessage),
+        ...(pin ? { pin } : {}),
       }),
     });
     const json = (await res.json().catch(() => null)) as

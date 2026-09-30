@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { definirPernaPadrao, type NoDoMapa, type Carreira, type MeuBonus, type CicloFechado } from '@/supabase/expansaoPainel';
+import { mensagemDoPin } from '@/wallet/pinClient';
+import { CampoPin } from '@/pages/wallet/PinDaCarteira';
 import { cn } from '@/lib/utils';
 import type { MinhaExpansao } from './useMinhaExpansao';
 import { AtivarComLicenca } from './AtivarComLicenca';
@@ -453,17 +455,28 @@ function BlocoCiclos({ ciclos }: { ciclos: readonly CicloFechado[] }) {
  */
 function PernaPadrao({ atual, aoMudar }: { atual: 1 | 2 | null; aoMudar: () => void }) {
   const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  // Conta com PIN: o servidor recusa a troca sem ele, e a escolha fica
+  // pendente aqui até a pessoa digitar. Quem não criou PIN nem vê este passo.
+  const [pendente, setPendente] = useState<{ lado: 1 | 2 | null } | null>(null);
+  const [pin, setPin] = useState('');
   const opcoes: ReadonlyArray<{ readonly valor: 1 | 2 | null; readonly rotulo: string }> = [
     { valor: null, rotulo: 'Auto' }, { valor: 1, rotulo: 'Time 1' }, { valor: 2, rotulo: 'Time 2' },
   ];
+  const aplicar = async (v: 1 | 2 | null, comPin?: string) => {
+    setSalvando(true);
+    setErro(null);
+    const r = await definirPernaPadrao(v, comPin);
+    setSalvando(false);
+    if (r.ok) { setPendente(null); setPin(''); aoMudar(); return; }
+    if (r.motivo === 'pin_obrigatorio' && comPin == null) { setPendente({ lado: v }); return; }
+    setPin('');
+    setErro(mensagemDoPin(r.motivo, r.tentaDeNovoEm));
+  };
   const escolher = async (v: 1 | 2 | null) => {
     if (salvando || v === atual) return;
-    setSalvando(true);
-    setErro(false);
-    const ok = await definirPernaPadrao(v);
-    setSalvando(false);
-    if (ok) aoMudar(); else setErro(true);
+    setPendente(null);
+    await aplicar(v);
   };
   return (
     <div className="mt-4 border-t border-white/10 pt-3.5">
@@ -486,7 +499,21 @@ function PernaPadrao({ atual, aoMudar }: { atual: 1 | 2 | null; aoMudar: () => v
           </button>
         ))}
       </div>
-      {erro && <p className="mt-2 text-[11px] text-baixa">Não deu para salvar agora. Tente de novo.</p>}
+      {pendente && (
+        <div className="mt-2.5 flex gap-2">
+          <CampoPin valor={pin} aoMudar={setPin} foco
+            aoEnviar={() => void aplicar(pendente.lado, pin)} />
+          <button
+            type="button"
+            disabled={salvando || pin.length !== 6}
+            onClick={() => void aplicar(pendente.lado, pin)}
+            className="ole-num shrink-0 bg-neon-yellow px-4 text-[12px] uppercase text-black disabled:opacity-50"
+          >
+            OK
+          </button>
+        </div>
+      )}
+      {erro && <p className="mt-2 text-[11px] text-baixa">{erro}</p>}
     </div>
   );
 }

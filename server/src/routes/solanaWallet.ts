@@ -29,14 +29,14 @@ async function resolveUser(authHeader: string | undefined): Promise<string | nul
 /**
  * POST /api/wallet/solana/link
  * Auth: Bearer (sessão Supabase do jogo).
- * Body: { address, issuedAt, signature (base64), signedMessage? (base64) }
+ * Body: { address, issuedAt, signature (base64), signedMessage? (base64), pin? }
  */
 solanaWalletRoutes.post('/api/wallet/solana/link', rateLimit(10), async (c) => {
   const uid = await resolveUser(c.req.header('authorization'));
   if (!uid) return c.json({ ok: false, error: 'Entre na sua conta pra vincular a carteira.' }, 401);
 
   const body = await c.req.json().catch(() => null) as {
-    address?: unknown; issuedAt?: unknown; signature?: unknown; signedMessage?: unknown;
+    address?: unknown; issuedAt?: unknown; signature?: unknown; signedMessage?: unknown; pin?: unknown;
   } | null;
   if (!body || typeof body.address !== 'string' || typeof body.issuedAt !== 'string' || typeof body.signature !== 'string') {
     return c.json({ ok: false, error: 'campos obrigatórios: address, issuedAt, signature' }, 400);
@@ -56,6 +56,41 @@ solanaWalletRoutes.post('/api/wallet/solana/link', rateLimit(10), async (c) => {
 
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ ok: false, error: 'Servidor sem acesso ao banco.' }, 503);
+
+  // TROCAR o endereço vinculado é redirecionar o destino do airdrop. Com PIN
+  // criado, quem exige é ESTE servidor — a tela pedir não bastaria, porque a
+  // rota aceita qualquer chamada com um Bearer válido. Primeiro vínculo e
+  // re-assinatura do mesmo endereço seguem livres: não mudam o destino.
+  const { data: vinculo, error: vinculoErr } = await sb
+    .from('solana_wallet_links')
+    .select('wallet_address')
+    .eq('user_id', uid)
+    .maybeSingle();
+  if (vinculoErr) {
+    console.error('[solanaWallet] leitura do vínculo falhou:', vinculoErr.message);
+    return c.json({ ok: false, error: 'Não foi possível conferir o vínculo atual.' }, 500);
+  }
+  if (vinculo && vinculo.wallet_address !== body.address) {
+    const pin = typeof body.pin === 'string' ? body.pin : null;
+    const { data: conf, error: confErr } = await sb
+      .rpc('carteira_pin_conferir_interno', { p_user: uid, p_pin: pin });
+    const r = (Array.isArray(conf) ? conf[0] : conf) as
+      { ok: boolean; motivo: string | null; tenta_de_novo_em: number } | null;
+    if (confErr || !r) {
+      console.error('[solanaWallet] conferir PIN falhou:', confErr?.message);
+      return c.json({ ok: false, error: 'Não foi possível conferir o PIN.' }, 500);
+    }
+    // `sem_pin` passa: a porta só fecha pra quem a trancou.
+    if (!r.ok && r.motivo !== 'sem_pin') {
+      const status = r.motivo === 'muitas_tentativas' ? 429 : 403;
+      const erro = r.motivo === 'muitas_tentativas'
+        ? 'Muitas tentativas de PIN. Espere pra tentar de novo.'
+        : r.motivo === 'pin_obrigatorio'
+          ? 'Trocar a carteira vinculada exige o seu PIN.'
+          : 'PIN errado.';
+      return c.json({ ok: false, error: erro, motivo: r.motivo, tentaDeNovoEm: r.tenta_de_novo_em }, status);
+    }
+  }
 
   const now = new Date().toISOString();
   const { data, error } = await sb

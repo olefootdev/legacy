@@ -4,6 +4,7 @@ import { ArrowUpRight } from 'lucide-react';
 import { WalletShell } from './WalletShell';
 import { WalletAtalhos } from './WalletAtalhos';
 import { SolanaWalletCard } from './SolanaWalletCard';
+import { GateDePin, PinCard } from './PinDaCarteira';
 import { Earnings } from './dex/Earnings';
 import { LinhaDeValor } from './dex/LinhaDeValor';
 import { SecaoVolt, Hashtag } from '@/components/ui';
@@ -38,6 +39,16 @@ function dolar(cents: number): string {
 
 export function DexTab() {
   useTrackScreen('screen_wallet');
+  // O gate vem antes do conteúdo de propósito: trancada, a aba nem busca a
+  // posição — número protegido não viaja pra uma tela que não abriu.
+  return (
+    <GateDePin>
+      <DexConteudo />
+    </GateDePin>
+  );
+}
+
+function DexConteudo() {
   const navigate = useNavigate();
   const [posicao, setPosicao] = useState<PosicaoOlefoot | null>(null);
 
@@ -80,6 +91,7 @@ export function DexTab() {
           <span className="ole-num min-w-0 truncate text-[13px] uppercase">Abrir OLEWALLET</span>
           <ArrowUpRight className="h-4 w-4 shrink-0" strokeWidth={2.2} />
         </a>
+        <PinCard />
       </section>
 
       {/* ── POSIÇÃO: o que foi comprado e o que ainda está travado ── */}
