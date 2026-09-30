@@ -169,6 +169,18 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
     }
     amountCents = resolved.checkout.amountCents;
     metadata = { ...metadata, player: resolved.checkout.player };
+    // O que a confirmação LÊ (migration 20260930200000): o preço do card em
+    // dólar — que o split reparte em BRO — e o jogador saneado. Congelados
+    // aqui, gravados pela service_role logo abaixo; sem eles o Pix pago fica
+    // pendente em vez de creditar centavo de real como BRO (~5,5× a mais).
+    serverData = {
+      card: {
+        usd_cents: String(resolved.checkout.usdCents),
+        brl_por_usd_micro: resolved.checkout.brlPorUsdMicro,
+        cotado_em: new Date().toISOString(),
+        player: resolved.checkout.player,
+      },
+    };
   } else if (productKind === 'presale_pack') {
     // O cliente manda QUANTOS DÓLARES. O servidor decide quantos tokens e
     // quantos reais — preço em packs.ts, cotação em usdBrlQuote.ts. É a regra

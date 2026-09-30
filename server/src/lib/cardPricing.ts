@@ -2,9 +2,10 @@
  * Preço e entrega autoritativos do card no checkout PIX.
  *
  * Nem o valor nem o jogador entregue podem vir do cliente: `confirm_payment_intent`
- * credita o split sobre `payment_intents.amount_cents` e insere `metadata->'player'`
- * direto no `manager_squad` do comprador. Quem monta a intent é o servidor, então é
- * aqui que os dois são recalculados a partir de `legacy_players`.
+ * credita o split e entrega o jogador a partir de `server_data.card` (migration
+ * 20260930200000) — e é daqui que esses números saem. `usdCents` é o preço do
+ * card em dólar (= BRO, desde a Fase 0): é ELE que o split reparte; o
+ * `amountCents` em real existe só pra cobrança do Pix.
  *
  * Espelha o front — `legacyRowToPlayerEntity` (src/supabase/legacyPlayers.ts),
  * `overallFromAttributes` (src/entities/player.ts) e a cotação de
@@ -15,6 +16,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { fetchUsdBrlVenda } from './usdBrlQuote.js';
+import { cotacaoEmMicro } from './recarga.js';
 
 const ATTR_KEYS = [
   'passe', 'marcacao', 'velocidade', 'drible', 'finalizacao',
@@ -121,7 +123,12 @@ function sanitizeCardPlayer(row: LegacyRow, clientPlayer: unknown): Record<strin
 }
 
 export interface CardCheckout {
+  /** Centavos de REAL — o que o Pix cobra. */
   amountCents: number;
+  /** Centavos de DÓLAR (= BRO) — o que o split reparte. */
+  usdCents: number;
+  /** A cotação congelada (micro-BRL por USD), pra auditoria da intent. */
+  brlPorUsdMicro: string;
   player: Record<string, unknown>;
 }
 
@@ -187,6 +194,11 @@ export async function resolveCardCheckout(params: {
 
   return {
     ok: true,
-    checkout: { amountCents, player: sanitizeCardPlayer(row, params.clientPlayer) },
+    checkout: {
+      amountCents,
+      usdCents: priceUnitCents,
+      brlPorUsdMicro: String(cotacaoEmMicro(venda)),
+      player: sanitizeCardPlayer(row, params.clientPlayer),
+    },
   };
 }
