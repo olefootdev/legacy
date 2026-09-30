@@ -4,14 +4,16 @@ import { useIdioma } from '@/i18n/useIdioma';
 import { TEXTOS } from './textos';
 
 /**
- * A barra de abas do desenho: Carteira · Comprar · Render · Rede.
+ * A barra de abas: Carteira · Rede.
  *
  * Sem router de biblioteca — a carteira existe pra ser pequena. A aba é estado
  * do App, e a rede (expansão) é a única que sai desta origem, porque o painel
  * é servido pelo jogo (os dados estão no Supabase atrás de RLS e esta origem
- * guarda a frase de 12 palavras).
+ * guarda a frase de 12 palavras). Comprar e Render moraram aqui até a Fase 6:
+ * viviam de números copiados do servidor, e agora quem os diz é a aba DEX do
+ * jogo, lendo de GET /api/earnings.
  */
-export type Aba = 'carteira' | 'comprar' | 'render' | 'rede';
+export type Aba = 'carteira' | 'rede';
 
 const Icone = ({ d, ativo }: { d: string; ativo: boolean }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -22,8 +24,6 @@ const Icone = ({ d, ativo }: { d: string; ativo: boolean }) => (
 
 const CAMINHOS: Record<Aba, string> = {
   carteira: 'M3 6h18v13H3zM16 12h3',
-  comprar: 'M6 6h15l-1.5 9h-12z',
-  render: 'M4 18V9M10 18V5M16 18v-7M2 18h20',
   rede: 'M12 4v6M6 20l6-10 6 10',
 };
 
@@ -34,13 +34,11 @@ export function Abas({ atual, ir, linkRede }: {
   const t = tradutor(TEXTOS, idioma);
   const itens: Array<{ id: Aba; rotulo: string }> = [
     { id: 'carteira', rotulo: t('abaCarteira') },
-    { id: 'comprar', rotulo: t('abaComprar') },
-    { id: 'render', rotulo: t('abaRender') },
     { id: 'rede', rotulo: t('abaRede') },
   ];
 
   return (
-    <nav className="grid shrink-0 grid-cols-4 border-t border-white/10 bg-nav"
+    <nav className="grid shrink-0 grid-cols-2 border-t border-white/10 bg-nav"
          style={{ height: 62 }} aria-label={t('abaCarteira')}>
       {itens.map((i) => {
         const ativo = atual === i.id;

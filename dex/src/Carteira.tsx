@@ -9,21 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useCarteira } from '@/wallet/seed/useCarteira';
 import { ORIGENS_QUE_PODEM_PEDIR } from '@/wallet/seed/conexao';
 import { Abas, type Aba } from './Abas';
-import { TelaComprar, TelaDepositar, TelaEnviar, TelaRender, TelaProducao } from './Telas';
-
-/**
- * O split da colheita, com os MESMOS números de server/src/lib/harvestSplit.ts.
- * Mostrar a régua antes de existir rendimento é o que deixa a conta conferível
- * quando ele existir — e a casa fica travada em 25%, como no servidor.
- */
-const SPLIT_DA_COLHEITA = [
-  { rotulo: 'VOCÊ', pct: 50, nota: 'voce' },
-  { rotulo: 'MEU CLUBE', pct: 10 },
-  { rotulo: 'MANAGER', pct: 5 },
-  { rotulo: 'CAPITÃO', pct: 5 },
-  { rotulo: 'PRO', pct: 5 },
-  { rotulo: 'OLEFOOT', pct: 25, nota: 'casa' },
-] as const;
+import { TelaDepositar, TelaEnviar } from './Telas';
 import { tradutor } from '@/i18n/idioma';
 import { useIdioma } from '@/i18n/useIdioma';
 import CriarOuRestaurar, { passoAnterior, type Passo } from './CriarOuRestaurar';
@@ -48,7 +34,7 @@ export default function Carteira() {
   const [senha, setSenha] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [saldo, setSaldo] = useState<Saldo | null>(null);
-  type Vista = 'carteira' | 'receber' | 'extrato' | 'enviar' | 'depositar' | 'comprar' | 'render' | 'producao';
+  type Vista = 'carteira' | 'receber' | 'extrato' | 'enviar' | 'depositar';
   const [vista, setVista] = useState<Vista>('carteira');
   const [aba, setAba] = useState<Aba>('carteira');
 
@@ -102,24 +88,16 @@ export default function Carteira() {
   if (w.estado === 'aberta' && w.chave && vista === 'extrato') {
     return <Extrato endereco={w.chave.endereco} onVoltar={() => setVista('carteira')} />;
   }
-  if (vista === 'enviar' || vista === 'depositar' || vista === 'comprar' || vista === 'render' || vista === 'producao') {
-    const titulo = vista === 'enviar' ? t('acaoEnviar')
-      : vista === 'depositar' ? t('acaoDepositar')
-      : vista === 'comprar' ? t('acaoComprar')
-      : vista === 'producao' ? t('splitTitulo') : t('abaRender');
+  if (vista === 'enviar' || vista === 'depositar') {
     return (
       <div className="flex min-h-full flex-col bg-asfalto">
-        <Barra titulo={titulo}
-               onVoltar={() => { if (vista === 'producao') { setVista('render'); return; } setVista('carteira'); setAba('carteira'); }} />
+        <Barra titulo={vista === 'enviar' ? t('acaoEnviar') : t('acaoDepositar')}
+               onVoltar={() => { setVista('carteira'); setAba('carteira'); }} />
         <div className="mx-auto w-full max-w-md flex-1 px-4 pb-8 pt-5">
-          {vista === 'enviar' && <TelaEnviar />}
-          {vista === 'depositar' && <TelaDepositar />}
-          {vista === 'comprar' && <TelaComprar linkPreVenda={`${ORIGEM_DO_JOGO}/wallet?adicionar=olefoot`} />}
-          {vista === 'render' && <TelaRender split={SPLIT_DA_COLHEITA} linkProducao={() => setVista('producao')} />}
-          {vista === 'producao' && <TelaProducao split={SPLIT_DA_COLHEITA} />}
+          {vista === 'enviar' ? <TelaEnviar /> : <TelaDepositar />}
         </div>
         <Abas atual={aba} linkRede={`${ORIGEM_DO_JOGO}/wallet/network`}
-              ir={(a) => { setAba(a); setVista(a === 'carteira' ? 'carteira' : a === 'comprar' ? 'comprar' : 'render'); }} />
+              ir={(a) => { setAba(a); setVista('carteira'); }} />
       </div>
     );
   }
@@ -137,25 +115,38 @@ export default function Carteira() {
           </div>
 
           {/* Grade de 4 ações, como o desenho pede. Enviar e Depositar abrem
-              a tela que diz o que falta — melhor que botão que não existe. */}
+              a tela que diz o que falta — melhor que botão que não existe.
+              Comprar vai direto à gaveta do jogo: o preço mora lá, lido do
+              servidor, e é assim que não existem dois lugares dizendo números. */}
           <div className="grid grid-cols-4 gap-2">
             {([
               ['enviar', t('acaoEnviar'), 'M12 19V5M5 12l7-7 7 7', true],
               ['receber', t('acaoReceber'), 'M12 5v14M19 12l-7 7-7-7', false],
               ['depositar', t('acaoDepositar'), 'M12 3v12M8 11l4 4 4-4M4 21h16', false],
               ['comprar', t('acaoComprar'), 'M6 6h15l-1.5 9h-12z', false],
-            ] as const).map(([id, rotulo, d, destaque]) => (
-              <button key={id} type="button" onClick={() => setVista(id)}
-                className="flex h-16 flex-col items-center justify-center gap-1 border"
-                style={destaque
-                  ? { background: '#FDE100', borderColor: '#FDE100', color: '#0D0D0D',
-                      clipPath: 'polygon(0 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%)' }
-                  : { background: '#1B1D1F', borderColor: 'rgba(255,255,255,0.10)', color: '#FFF' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                     stroke={destaque ? '#0D0D0D' : '#FFF'} strokeWidth="2.4"><path d={d} /></svg>
-                <span className="font-num text-[10px] font-extrabold uppercase">{rotulo}</span>
-              </button>
-            ))}
+            ] as const).map(([id, rotulo, d, destaque]) => {
+              const classe = 'flex h-16 flex-col items-center justify-center gap-1 border';
+              const estilo = destaque
+                ? { background: '#FDE100', borderColor: '#FDE100', color: '#0D0D0D',
+                    clipPath: 'polygon(0 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%)' }
+                : { background: '#1B1D1F', borderColor: 'rgba(255,255,255,0.10)', color: '#FFF' };
+              const conteudo = (
+                <>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                       stroke={destaque ? '#0D0D0D' : '#FFF'} strokeWidth="2.4"><path d={d} /></svg>
+                  <span className="font-num text-[10px] font-extrabold uppercase">{rotulo}</span>
+                </>
+              );
+              return id === 'comprar' ? (
+                <a key={id} href={`${ORIGEM_DO_JOGO}/wallet?adicionar=olefoot`} className={classe} style={estilo}>
+                  {conteudo}
+                </a>
+              ) : (
+                <button key={id} type="button" onClick={() => setVista(id)} className={classe} style={estilo}>
+                  {conteudo}
+                </button>
+              );
+            })}
           </div>
 
           {/* NA REDE — o que está on-chain de verdade */}
@@ -211,7 +202,7 @@ export default function Carteira() {
           </div>
         </div>
         <Abas atual={aba} linkRede={`${ORIGEM_DO_JOGO}/wallet/network`}
-              ir={(a) => { setAba(a); setVista(a === 'carteira' ? 'carteira' : a === 'comprar' ? 'comprar' : 'render'); }} />
+              ir={(a) => { setAba(a); setVista('carteira'); }} />
       </div>
     );
   }

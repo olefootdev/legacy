@@ -14,10 +14,16 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-const PASTA = 'src/pages/wallet/dex';
+const listar = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+  e.isDirectory() ? listar(join(dir, e.name))
+    : /\.tsx?$/.test(e.name) ? [join(dir, e.name)] : []);
+
+// `dex/src` inteira entra na varredura desde a Fase 6: foi de lá que a cópia
+// do split saiu, e é pra lá que ela não pode voltar.
 const ARQUIVOS = [
-  ...readdirSync(PASTA).filter((a) => /\.tsx?$/.test(a)).map((a) => join(PASTA, a)),
+  ...listar('src/pages/wallet/dex'),
   'src/pages/wallet/DexTab.tsx',
+  ...listar('dex/src'),
 ];
 
 const PROIBIDO = [
@@ -42,8 +48,10 @@ for (const arq of ARQUIVOS) {
     }
     if (/^\s*\*/.test(linha)) return;
     linha = semComentario(linha);
-    // Classe do Tailwind não é regra de negócio.
-    linha = linha.replace(/className="[^"]*"/g, '').replace(/className=\{`[^`]*`\}/g, '');
+    // Classe do Tailwind não é regra de negócio. O clipPath também não: é o
+    // recorte do canto do botão, e polígono se escreve em %.
+    linha = linha.replace(/className="[^"]*"/g, '').replace(/className=\{`[^`]*`\}/g, '')
+                 .replace(/clipPath: '[^']*'/g, '');
     for (const p of PROIBIDO) {
       if (p.re.test(linha)) {
         achados++;
