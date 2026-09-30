@@ -124,7 +124,7 @@ export function buildRivalChallengeHook(
     preferredSlotKind: 'short',
     validFrom: nowMs,
     validUntil: nowMs + 3 * MS_PER_HOUR,
-    route: '/manager/network',
+    route: '/manager/amigos',
     priority: 75,
   };
 }

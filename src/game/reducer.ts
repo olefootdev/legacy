@@ -192,7 +192,7 @@ import {
   handleResetGlobalLeagueMVP,
 } from './globalLeagueMVPReducer';
 import { writeSwapKycToStorage } from '@/wallet/swapKycStorage';
-import { registerSponsor as walletRegisterSponsor, applyReferralCredits } from '@/wallet/referral';
+import { registerSponsor as walletRegisterSponsor } from '@/wallet/referral';
 // Imports estáticos — substituem chamadas legadas de require() que quebravam
 // no browser ("require is not defined") quando os reducers eram acionados.
 import { registerTeam } from '@/match/globalLeagueMVP';
@@ -2157,18 +2157,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         if (tb > 0) finance = addBroCents(finance, tb);
       }
 
-      // Referral commissions: distribute 5% per level (up to 3) to the referral tree
-      const walletBeforeRef = finance.wallet ?? createInitialWalletState();
-      if (walletBeforeRef.sponsorId) {
-        const walletAfterRef = applyReferralCredits(
-          walletBeforeRef,
-          'self',
-          oleGain,
-          'ole_game',
-          'BRO',
-        );
-        finance = mergeWalletIntoFinance(finance, walletAfterRef, true);
-      }
+      // A comissão de indicação que era simulada AQUI (5% por nível, gravada no
+      // livro local como se a pessoa tivesse recebido) saiu com o plano de
+      // marketing antigo, cancelado em 2026-09-30. A rede que paga é a expansão.
 
       let inbox = [staffNote, financeNote, ...state.inbox].slice(0, 14);
       if (newTrophies.length > 0) {
@@ -3363,18 +3354,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         metadata: { playerId: pid, playerName: action.player.name },
       });
 
-      // Referral commissions on genesis purchase
-      const walletGenesis = financeGenesis.wallet ?? createInitialWalletState();
-      if (walletGenesis.sponsorId) {
-        const walletAfterGenesis = applyReferralCredits(
-          walletGenesis,
-          'self',
-          action.priceExp,
-          'nft_primary',
-          'BRO',
-        );
-        financeGenesis = mergeWalletIntoFinance(financeGenesis, walletAfterGenesis, true);
-      }
 
       return {
         ...state,
@@ -3494,18 +3473,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         metadata: { playerId: pid, playerName: action.player.name },
       });
 
-      // Referral commissions on legacy purchase
-      const walletLegacy = financeLegacy.wallet ?? createInitialWalletState();
-      if (walletLegacy.sponsorId) {
-        const walletAfterLegacy = applyReferralCredits(
-          walletLegacy,
-          'self',
-          action.priceExp,
-          'nft_primary',
-          'BRO',
-        );
-        financeLegacy = mergeWalletIntoFinance(financeLegacy, walletAfterLegacy, true);
-      }
 
       return {
         ...state,

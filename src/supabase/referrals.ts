@@ -68,81 +68,8 @@ export async function fetchMyReferrals(): Promise<ReferredProfile[]> {
   }));
 }
 
-export interface NetworkStatus {
-  /** Indicados diretos que já jogaram. Régua do marco 1. */
-  directsActive: number;
-  /** Indicados diretos no total, ativos ou não. */
-  directsTotal: number;
-  /** Soma das 2 maiores equipes — régua dos marcos 10/25/50/100. */
-  qualifyingCount: number;
-  /** Nº de pernas. A regra futura do Plano de Carreira exige 4 (equipe D). */
-  legsTotal: number;
-}
-
-const EMPTY_STATUS: NetworkStatus = {
-  directsActive: 0,
-  directsTotal: 0,
-  qualifyingCount: 0,
-  legsTotal: 0,
-};
-
-/** Estado da rede pros marcos. Ver src/systems/network/milestones.ts pra regra. */
-export async function getMyNetworkStatus(): Promise<NetworkStatus> {
-  const sb = getSupabase();
-  if (!sb) return EMPTY_STATUS;
-  const { data, error } = await sb.rpc('get_my_network_status');
-  if (error) {
-    console.warn('[referrals] getMyNetworkStatus:', error.message);
-    return EMPTY_STATUS;
-  }
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) return EMPTY_STATUS;
-  return {
-    directsActive: Number(row.directs_active ?? 0),
-    directsTotal: Number(row.directs_total ?? 0),
-    qualifyingCount: Number(row.qualifying_count ?? 0),
-    legsTotal: Number(row.legs_total ?? 0),
-  };
-}
-
-/** Marcos já resgatados (targets). */
-export async function fetchClaimedMilestones(): Promise<number[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
-  const { data, error } = await sb
-    .from('network_milestone_claims')
-    .select('milestone');
-  if (error || !Array.isArray(data)) return [];
-  return data.map((r) => Number((r as { milestone: number }).milestone));
-}
-
-export type ClaimMilestoneResult =
-  | { ok: true; exp: number }
-  | { ok: false; error: string };
-
-/**
- * Resgata um marco. O servidor decide o valor (`network_milestone_exp`) e credita
- * via `wallet_credits` — o cliente só chama `applyPendingCredits()` depois.
- *
- * Isso conserta a fragilidade do sistema antigo, onde o RPC marcava resgatado e o
- * crédito era client-side: se o dispatch falhasse, o EXP sumia. Agora o crédito
- * fica pendente no banco e é reaplicado no próximo boot.
- */
-export async function claimNetworkMilestone(target: number): Promise<ClaimMilestoneResult> {
-  const sb = getSupabase();
-  if (!sb) return { ok: false, error: 'Serviço indisponível.' };
-  const { data, error } = await sb.rpc('claim_network_milestone', { p_milestone: target });
-  if (error) {
-    const m = error.message || '';
-    if (m.includes('MILESTONE_NOT_REACHED')) return { ok: false, error: 'Você ainda não atingiu este marco.' };
-    if (m.includes('ALREADY_CLAIMED')) return { ok: false, error: 'Este marco já foi resgatado.' };
-    if (m.includes('INVALID_MILESTONE')) return { ok: false, error: 'Marco inválido.' };
-    if (m.includes('NOT_AUTHENTICATED')) return { ok: false, error: 'Faça login novamente.' };
-    console.warn('[referrals] claimNetworkMilestone:', m);
-    return { ok: false, error: 'Não foi possível resgatar agora.' };
-  }
-  return { ok: true, exp: Number(data ?? 0) };
-}
+// Marcos da rede (getMyNetworkStatus / claimNetworkMilestone) saíram com o
+// plano de marketing antigo, cancelado pelo fundador em 2026-09-30.
 
 /**
  * Sincroniza o lifetime EXP local com o profile do servidor.

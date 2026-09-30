@@ -119,7 +119,8 @@ await db.query(`select * from public.expansao_entrar($1,$2)`, [U.carlos, U.raiz]
 await db.query(`insert into public.expansao_ativacao_casa (user_id, motivo, ativado_por) values ($1,'teste','teste')`, [U.carlos]);
 
 // ─── as duas migrations da Fase 0 ─────────────────────────────────────────
-for (const arq of ['20260929210000_expansao_leitura_so_do_dono.sql', '20260929220000_fase0_pix_credita_certo.sql']) {
+for (const arq of ['20260929210000_expansao_leitura_so_do_dono.sql', '20260929220000_fase0_pix_credita_certo.sql',
+  '20260930120000_cancela_plano_de_marketing.sql']) {
   try { await db.exec(readFileSync(M + arq, 'utf8')); }
   catch (e) { console.log(`❌ ${arq}: ${e.message}`); process.exit(1); }
   console.log(`✅ ${arq} aplica — e a verificação de dentro passou`);
@@ -247,11 +248,12 @@ await t('🔴 depósito sem cotação do servidor estoura em vez de creditar 1:1
 await t('🔴 BRO maior que os centavos pagos é recusado', async () => {
   const i = await intent('estranho', 'recharge', 10000, { recarga: { bro_cents: '10001' } }, 'acima');
   return estoura(() => confirma(i, 'mp-9'), 'RECARGA_ACIMA_DO_PAGO'); });
-await t('   pack de ativação antigo também converte, e ativa', async () => {
+await t('🔴 pack de ativação antigo, se pago, vira só depósito — não ativa nada', async () => {
   const i = await intent('fulano', 'activation_pack', 12500, { recarga: { bro_cents: '2258' } });
   const r = await confirma(i, 'mp-10');
   const c = await um(`select bro_cents from public.wallet_credits where id=$1`, [r.wallet_credit_id]);
-  return Number(c.bro_cents) === 2258 && r.activation_id !== null; });
+  const a = await um(`select count(*) n from public.activation_packs where user_id=$1`, [U.fulano]);
+  return Number(c.bro_cents) === 2258 && r.activation_id === null && Number(a.n) === 0; });
 
 // ═══ 5. um pagamento, uma intent ══════════════════════════════════════════
 await t('🔴 o mesmo pagamento não confirma uma segunda intent', async () => {
@@ -276,7 +278,7 @@ await t('   ramo de CARD intacto: entrega o jogador e não credita o comprador',
 await t('🐞 o contador de vendidos do lote anda (nunca tinha andado)', async () =>
   Number((await um(`select sold from public.legacy_player_lots where legacy_player_id='lp1'`)).sold) === 1
   && Number((await um(`select count(*) c from public.market_activities where player_name='Lenda'`)).c) === 1);
-await t('   a comissão de CARD continua: 5% pra quem indicou o comprador', async () => {
+await t('🔴 compra de card NÃO gera comissão de rede (plano antigo cancelado)', async () => {
   // fulano não tem indicação; gil ← dora ← carlos ← raiz
   await servidor();
   const i = await intent('gil', 'card', 10000, null, 'lp1', { player: { id: 'legacy-lp1b', name: 'Lenda', pos: 'ATA' } });
@@ -284,12 +286,12 @@ await t('   a comissão de CARD continua: 5% pra quem indicou o comprador', asyn
   const r = (await db.query(`select level, amount_cents, status from public.affiliate_commissions
                               where source_ref = $1 order by level`, ['card_purchase:' + i])).rows;
   iCardGil = i;
-  return r.length === 3 && r.every((x) => Number(x.amount_cents) === 500 && x.status === 'confirmed'); });
-await t('🐞 estorno de card funciona e reverte a comissão (todo estorno estourava)', async () => {
+  return r.length === 0; });
+await t('🐞 estorno de card funciona (todo estorno estourava)', async () => {
   const r = await um(`select * from public.reverse_payment_intent($1,'mp-13','refunded')`, [iCardGil]);
   const c = await um(`select count(*) c from public.affiliate_commissions where source_ref=$1 and status='reversed'`,
     ['card_purchase:' + iCardGil]);
-  return r.status === 'refunded' && r.commissions_reversed === 3 && Number(c.c) === 3 && r.needs_manual === true; });
+  return r.status === 'refunded' && r.commissions_reversed === 0 && Number(c.c) === 0 && r.needs_manual === true; });
 await t('🐞 estorno de intent que nunca foi paga só cancela', async () => {
   const i = await intent('gil', 'recharge', 5000, { recarga: { bro_cents: '903' } }, 'nuncapaga');
   await servidor();

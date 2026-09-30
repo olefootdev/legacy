@@ -1,22 +1,17 @@
 import { WalletShell } from './WalletShell';
 import { PainelExpansao } from './network/PainelExpansao';
-import { IndicacaoDoJogo } from './network/IndicacaoDoJogo';
 import { useMinhaExpansao } from './network/useMinhaExpansao';
 import { SecaoVolt, Hashtag } from '@/components/ui';
 import { useTrackScreen } from '@/progression/trackEvent';
 
 /**
- * Wallet → NETWORK. A rede inteira num endereço.
+ * Wallet → NETWORK. A rede que paga: a expansão, e só ela.
  *
- * Eram três telas falando de rede, cada uma com um pedaço:
- *   `/expansao`         a árvore binária e a equiparação, solta fora do menu
- *   `/wallet/referrals` o código de cadastro e os indicados
- *   `/manager/network`  marcos, carreira do jogo e amizades
- * As duas primeiras moram aqui agora. A terceira ainda não migrou — os blocos
- * de dinheiro dela entram aqui, e as amizades ficam no Manager.
- *
- * A ordem é de propósito: EXPANSÃO em cima, porque é ela que paga; a indicação
- * do jogo embaixo, porque é por ela que a rede começa.
+ * Desde 2026-09-30 é a ÚNICA rede do produto. O plano de marketing antigo —
+ * ativação de R$ 125, carreira com bônus em dólar, comissão de 5% em três
+ * níveis e marcos em EXP — foi cancelado pelo fundador. O código de cadastro
+ * (`profiles.referred_by_code`) continua existindo por baixo: é por ele que
+ * quem compra um pack sem convite acha o patrocinador na árvore.
  *
  * Abre SEM PIN: é daqui que se copia o convite, e convite atrás de senha é
  * convite que não sai.
@@ -38,7 +33,6 @@ export function NetworkTab() {
         <PainelExpansao dados={expansao} />
       </section>
 
-      <IndicacaoDoJogo />
     </WalletShell>
   );
 }

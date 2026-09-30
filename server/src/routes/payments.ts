@@ -25,9 +25,6 @@ import { converterRecarga, cotacaoEmMicro } from '../lib/recarga.js';
 
 const MP_API_BASE = 'https://api.mercadopago.com';
 
-/** Pack de ativação — preço fixo de produto (R$125). */
-const ACTIVATION_PACK_CENTS = 12_500;
-
 /**
  * Depósito mínimo: R$5 — o mesmo que a tela aceita (`MIN_BRL` no DepositModal).
  * Eram R$1 aqui e R$5 lá; quem chamasse a rota direto depositava o que a tela
@@ -38,7 +35,7 @@ const ACTIVATION_PACK_CENTS = 12_500;
 const RECHARGE_MIN_CENTS = 500;
 
 interface CreatePixBody {
-  product_kind?: 'activation_pack' | 'card' | 'recharge' | 'presale_pack';
+  product_kind?: 'card' | 'recharge' | 'presale_pack';
   /** presale_pack: valor do pack em centavos de DÓLAR. O servidor converte. */
   usd_cents?: number;
   product_ref?: string;
@@ -115,8 +112,8 @@ export const paymentsRoutes = new Hono();
  * POST /api/payments/pix/create
  *
  * Body:
- *   product_kind: 'activation_pack' | 'card' | 'recharge' | 'presale_pack'
- *   product_ref?: string (uuid do card, etc — null pra activation_pack)
+ *   product_kind: 'card' | 'recharge' | 'presale_pack'
+ *   product_ref?: string (uuid do card)
  *   amount_cents: número (default 12500 = R$125 / activation pack)
  *   customer: { name, email, tax_id (CPF), cellphone }  ← name/email/CPF obrigatórios
  */
@@ -135,7 +132,9 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
   const body = await c.req.json<CreatePixBody>().catch(() => ({} as CreatePixBody));
 
   const productKind = body.product_kind;
-  if (!productKind || !['activation_pack', 'card', 'recharge', 'presale_pack'].includes(productKind)) {
+  // `activation_pack` (R$ 125) saiu com o plano de marketing antigo, cancelado
+  // pelo fundador em 2026-09-30. A ativação agora é o pack de $10 da pré-venda.
+  if (!productKind || !['card', 'recharge', 'presale_pack'].includes(productKind)) {
     return c.json({ ok: false, error: 'product_kind inválido' }, 400);
   }
 
@@ -170,8 +169,6 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
     }
     amountCents = resolved.checkout.amountCents;
     metadata = { ...metadata, player: resolved.checkout.player };
-  } else if (productKind === 'activation_pack') {
-    amountCents = ACTIVATION_PACK_CENTS;
   } else if (productKind === 'presale_pack') {
     // O cliente manda QUANTOS DÓLARES. O servidor decide quantos tokens e
     // quantos reais — preço em packs.ts, cotação em usdBrlQuote.ts. É a regra
@@ -238,7 +235,7 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
   // ─── Depósito e pack de ativação: quanto BRO isto compra ─────────────────
   // A cotação é congelada AGORA, que é quando a pessoa vê o preço. O Pix pode
   // ser pago uma hora depois e o crédito é o que ela viu.
-  if (productKind === 'recharge' || productKind === 'activation_pack') {
+  if (productKind === 'recharge') {
     let brlPorUsd: number;
     try {
       brlPorUsd = await fetchUsdBrlVenda();
@@ -329,9 +326,7 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
       },
       body: JSON.stringify({
         transaction_amount: Number((amountCents / 100).toFixed(2)), // reais decimais
-        description: productKind === 'activation_pack'
-          ? 'Ativação Olefoot Plano de Carreira'
-          : `Olefoot · ${productKind}`,
+        description: `Olefoot · ${productKind}`,
         payment_method_id: 'pix',
         external_reference: intent.external_id,
         date_of_expiration: expiresAt,

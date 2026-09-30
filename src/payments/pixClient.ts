@@ -13,7 +13,7 @@ const API_BASE =
   (import.meta.env.VITE_API_URL as string) ||
   'http://localhost:4000';
 
-export type ProductKind = 'activation_pack' | 'card' | 'recharge' | 'presale_pack';
+export type ProductKind = 'card' | 'recharge' | 'presale_pack';
 export type PaymentStatus = 'pending' | 'paid' | 'expired' | 'cancelled' | 'failed';
 
 export interface CreatePixInput {

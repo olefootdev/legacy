@@ -320,7 +320,7 @@ export function Manager() {
             </span>
           </button>
 
-          <button type="button" onClick={() => navigate('/manager/network')} className={tilePanel}>
+          <button type="button" onClick={() => navigate('/manager/amigos')} className={tilePanel}>
             <span className="flex items-start justify-between gap-2">
               <Network aria-hidden className="h-[28px] w-[28px] text-neon-yellow" strokeWidth={2.2} />
               {social.incoming.length > 0 && (
@@ -330,7 +330,7 @@ export function Manager() {
               )}
             </span>
             <span className="flex min-w-0 flex-col gap-1">
-              <span className={tileTitle}>Network</span>
+              <span className={tileTitle}>Amigos</span>
               <Hashtag>{`${social.friends.length} amigo${social.friends.length !== 1 ? 's' : ''}`}</Hashtag>
             </span>
           </button>

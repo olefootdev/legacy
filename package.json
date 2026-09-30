@@ -20,7 +20,6 @@
     "test:card-pricing": "tsx server/src/lib/runCardPricingSelfTest.mts",
     "test:solana-link": "tsx server/src/lib/runSolanaLinkSelfTest.mts",
     "test:division-standings": "tsx src/ranking/runDivisionStandingsSelfTest.mts",
-    "test:network-milestones": "tsx src/systems/network/runMilestonesSelfTest.mts",
     "test:causal": "tsx src/match/causal/runCausalSelfTest.ts",
     "test:impact-ledger": "tsx src/match/runImpactLedgerSelfTest.ts",
     "test:spirit-machine": "tsx src/gamespirit/runSpiritStateMachineSelfTest.ts",

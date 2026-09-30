@@ -180,7 +180,7 @@ const PlayerVipVerify = lazy(() =>
   import('./pages/PlayerVipVerify').then((m) => ({ default: m.PlayerVipVerify })),
 );
 const ManagerMessages = lazy(() => import('./pages/ManagerMessages').then((m) => ({ default: m.ManagerMessages })));
-const ManagerNetwork = lazy(() => import('./pages/ManagerNetwork').then((m) => ({ default: m.ManagerNetwork })));
+const ManagerAmigos = lazy(() => import('./pages/ManagerAmigos').then((m) => ({ default: m.ManagerAmigos })));
 const ManagerScouts = lazy(() => import('./pages/ManagerScouts').then((m) => ({ default: m.ManagerScouts })));
 const ManagerScoutsPlayer = lazy(() => import('./pages/ManagerScoutsPlayer').then((m) => ({ default: m.ManagerScoutsPlayer })));
 const Config = lazy(() => import('./pages/Config').then((m) => ({ default: m.Config })));
@@ -616,9 +616,12 @@ as a nice MVP. Let's Play Together! ⚽
             {/* Manager subpages */}
             <Route path="/manager" element={<Manager />} />
             <Route path="/manager/mensagens" element={<ManagerMessages />} />
-            <Route path="/manager/network" element={<ManagerNetwork />} />
-            {/* Carreira de afiliados consolidada no Network (hub único). Página órfã aposentada. */}
-            <Route path="/manager/career" element={<Navigate to="/manager/network" replace />} />
+            {/* O plano de marketing antigo (ativação R$ 125, carreira com bônus em
+                dólar, comissão 5% em 3 níveis, marcos em EXP) foi cancelado pelo
+                fundador em 2026-09-30. Do /manager/network ficou só a amizade. */}
+            <Route path="/manager/amigos" element={<ManagerAmigos />} />
+            <Route path="/manager/network" element={<Navigate to="/manager/amigos" replace />} />
+            <Route path="/manager/career" element={<Navigate to="/wallet/network" replace />} />
             <Route path="/manager/scouts" element={<ManagerScouts />} />
             <Route path="/manager/scouts/player/:playerId" element={<ManagerScoutsPlayer />} />
             <Route path="/manager/pro" element={<ManagerPro />} />

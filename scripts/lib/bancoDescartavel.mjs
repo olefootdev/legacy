@@ -16,6 +16,7 @@ export const M = 'supabase/migrations/';
 export const MIGRATIONS_DA_FASE0 = [
   '20260929210000_expansao_leitura_so_do_dono.sql',
   '20260929220000_fase0_pix_credita_certo.sql',
+  '20260930120000_cancela_plano_de_marketing.sql',
 ];
 
 export async function montarBanco({ extras = [], antesDosExtras } = {}) {
