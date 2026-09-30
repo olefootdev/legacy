@@ -26,12 +26,12 @@ const SPLIT_DA_COLHEITA = [
 ] as const;
 import { tradutor } from '@/i18n/idioma';
 import { useIdioma } from '@/i18n/useIdioma';
-import CriarOuRestaurar, { type Passo } from './CriarOuRestaurar';
+import CriarOuRestaurar, { passoAnterior, type Passo } from './CriarOuRestaurar';
 import Receber from './Receber';
 import Extrato from './Extrato';
 import { buscarSaldo, type Saldo } from './api';
 import { TEXTOS } from './textos';
-import { BOTAO_LINHA, BOTAO_VOLT, Barra, CAMPO } from './ui';
+import { Aviso, BOTAO_LINHA, BOTAO_VOLT, Barra, CAMPO } from './ui';
 
 /**
  * Onde o jogo mora, tirado do MESMO allowlist que autoriza pedido de
@@ -75,6 +75,11 @@ export default function Carteira() {
             <p className="font-mono text-[11px] text-poeira">{t('trancada')}</p>
             <h1 className="mt-1 font-display text-[30px] uppercase leading-[1.1]">{t('suaSenha')}</h1>
           </div>
+          {w.trancouSozinha && (
+            <p className="border-l-2 border-atencao bg-panel px-3 py-2.5 text-[12px] leading-relaxed text-giz">
+              {t('trancouSozinha')}
+            </p>
+          )}
           <input type="password" className={CAMPO} placeholder={t('senha')} value={senha} autoFocus
             onChange={(e) => setSenha(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') void destrancar(); }} />
@@ -109,7 +114,7 @@ export default function Carteira() {
         <div className="mx-auto w-full max-w-md flex-1 px-4 pb-8 pt-5">
           {vista === 'enviar' && <TelaEnviar />}
           {vista === 'depositar' && <TelaDepositar />}
-          {vista === 'comprar' && <TelaComprar linkPreVenda={`${ORIGEM_DO_JOGO}/wallet/dex?adicionar=olefoot`} />}
+          {vista === 'comprar' && <TelaComprar linkPreVenda={`${ORIGEM_DO_JOGO}/wallet?adicionar=olefoot`} />}
           {vista === 'render' && <TelaRender split={SPLIT_DA_COLHEITA} linkProducao={() => setVista('producao')} />}
           {vista === 'producao' && <TelaProducao split={SPLIT_DA_COLHEITA} />}
         </div>
@@ -190,6 +195,8 @@ export default function Carteira() {
             </div>
           </div>
 
+          <VerFrase verFrase={w.verFrase} />
+
           <div className="border border-white/10 bg-panel px-3.5 py-3.5">
             <p className="font-num text-[13px] font-extrabold uppercase">{t('ligarAoJogo')}</p>
             <p className="mt-1 text-[12px] leading-relaxed text-cimento">{t('ligarTexto')}</p>
@@ -210,12 +217,13 @@ export default function Carteira() {
   }
 
   const titulo = passo === 'frase' ? t('tituloFrase')
+    : passo === 'conferir' ? t('tituloConferir')
     : passo === 'restaurar' ? t('tituloRestaurar')
     : passo === 'senha' ? t('tituloSenha') : undefined;
 
   return (
     <div className="flex min-h-full flex-col bg-asfalto">
-      <Barra titulo={titulo} onVoltar={passo === 'inicio' ? undefined : () => setPasso(passo === 'senha' ? 'frase' : 'inicio')} />
+      <Barra titulo={titulo} onVoltar={passo === 'inicio' ? undefined : () => setPasso(passoAnterior(passo))} />
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-3.5 px-5 pb-8 pt-4">
         <CriarOuRestaurar w={w} passo={passo} setPasso={setPasso} />
       </div>
@@ -241,6 +249,70 @@ function Moeda({ sigla, sub, valor, nota }: {
         <div className="ole-num text-[15px] font-bold" style={{ color: nota ? '#7E8185' : '#E8B331' }}>{valor}</div>
         {nota && <div className="font-mono text-[10px] text-poeira">{nota}</div>}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Ver a frase depois de criada. Pede a senha deste aparelho de novo — estar
+ * com a carteira aberta não basta, porque a carteira aberta pode ser o celular
+ * de outra pessoa esquecido na mesa. A frase fica em estado local, some em
+ * 60 segundos e não tem botão de copiar.
+ */
+function VerFrase({ verFrase }: { verFrase: (senha: string) => Promise<string[]> }) {
+  const [idioma] = useIdioma();
+  const t = tradutor(TEXTOS, idioma);
+  const [aberto, setAberto] = useState(false);
+  const [senha, setSenha] = useState('');
+  const [palavras, setPalavras] = useState<string[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!palavras) return;
+    const id = setTimeout(() => setPalavras(null), 60_000);
+    return () => clearTimeout(id);
+  }, [palavras]);
+
+  const fechar = () => { setAberto(false); setSenha(''); setPalavras(null); setErro(null); };
+  const mostrar = async () => {
+    setErro(null);
+    try { setPalavras(await verFrase(senha)); setSenha(''); }
+    catch (e) { setErro(e instanceof Error ? e.message : t('naoDeu')); }
+  };
+
+  if (!aberto) {
+    return (
+      <button type="button" className={BOTAO_LINHA} onClick={() => setAberto(true)}>{t('verFrase')}</button>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2.5 border border-white/10 bg-panel px-3.5 py-3.5">
+      <p className="font-num text-[13px] font-extrabold uppercase">{t('verFrase')}</p>
+      {palavras ? (
+        <>
+          <Aviso titulo={t('anoteNoPapel')}>{t('anoteTexto')}</Aviso>
+          <div className="grid grid-cols-3 gap-2">
+            {palavras.map((p, i) => (
+              <div key={`${i}-${p}`} className="flex items-baseline gap-1.5 border border-white/10 bg-asfalto px-2 py-2.5">
+                <span className="font-mono text-[10px] text-poeira">{String(i + 1).padStart(2, '0')}</span>
+                <span className="font-mono text-[13px]">{p}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-[12px] leading-relaxed text-cimento">{t('verFraseTexto')}</p>
+          <input type="password" className={CAMPO} placeholder={t('senha')} value={senha} autoFocus
+            onChange={(e) => setSenha(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && senha) void mostrar(); }} />
+          {erro && <p className="text-[12px] text-baixa">{erro}</p>}
+          <button type="button" className={BOTAO_VOLT} disabled={!senha} onClick={() => void mostrar()}>
+            {t('mostrar')}
+          </button>
+        </>
+      )}
+      <button type="button" className="text-[12px] text-poeira underline" onClick={fechar}>{t('esconder')}</button>
     </div>
   );
 }

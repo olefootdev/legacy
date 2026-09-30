@@ -35,7 +35,7 @@ import { assinar } from '@/wallet/seed/derive';
 import { useCarteira } from '@/wallet/seed/useCarteira';
 import { tradutor } from '@/i18n/idioma';
 import { useIdioma } from '@/i18n/useIdioma';
-import CriarOuRestaurar, { type Passo } from './CriarOuRestaurar';
+import CriarOuRestaurar, { passoAnterior, type Passo } from './CriarOuRestaurar';
 import { TEXTOS } from './textos';
 import { BOTAO_LINHA, BOTAO_VOLT, Barra, CAMPO } from './ui';
 
@@ -150,8 +150,8 @@ export default function Conectar() {
     const naEtapa = passo !== 'inicio';
     return (
       <Moldura
-        titulo={passo === 'frase' ? t('tituloFrase') : passo === 'restaurar' ? t('tituloRestaurar') : passo === 'senha' ? t('tituloSenha') : undefined}
-        onVoltar={naEtapa ? () => setPasso(passo === 'senha' ? 'frase' : 'inicio') : undefined}
+        titulo={passo === 'frase' ? t('tituloFrase') : passo === 'conferir' ? t('tituloConferir') : passo === 'restaurar' ? t('tituloRestaurar') : passo === 'senha' ? t('tituloSenha') : undefined}
+        onVoltar={naEtapa ? () => setPasso(passoAnterior(passo)) : undefined}
       >
         {!naEtapa && <Pedinte />}
         <CriarOuRestaurar

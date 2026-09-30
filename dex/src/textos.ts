@@ -34,8 +34,25 @@ export const TEXTOS = {
   listaPropriaC:   { pt: ' A lista é pública, então qualquer desenvolvedor reconstrói esta carteira — com ou sem a gente.',
                      en: ' The list is public, so any developer can rebuild this wallet — with or without us.' },
   copiar:          { pt: 'Copiar', en: 'Copy' },
-  copiado:         { pt: 'Copiado', en: 'Copied' },
   anotei:          { pt: 'Anotei as 12 palavras', en: 'I wrote the 12 words down' },
+
+  // --- conferir a frase ---
+  tituloConferir:  { pt: 'CONFERIR', en: 'CHECK' },
+  conferirTexto:   { pt: 'Digite as palavras que o papel diz. Assim a gente sabe que a frase ficou anotada antes de a tela sumir.',
+                     en: 'Type the words your paper says. That is how we know the phrase was written down before this screen goes away.' },
+  palavraN:        { pt: 'palavra', en: 'word' },
+  conferirBotao:   { pt: 'Conferir', en: 'Check' },
+  conferirErrou:   { pt: 'Alguma não bate com o papel. Volte e confira a frase.',
+                     en: 'Something does not match your paper. Go back and check the phrase.' },
+
+  // --- ver a frase depois ---
+  verFrase:        { pt: 'Ver minha frase', en: 'Show my phrase' },
+  verFraseTexto:   { pt: 'A senha deste aparelho abre a frase. Ela some sozinha em 60 segundos.',
+                     en: 'This device password shows the phrase. It hides itself after 60 seconds.' },
+  mostrar:         { pt: 'Mostrar', en: 'Show' },
+  esconder:        { pt: 'Esconder', en: 'Hide' },
+  trancouSozinha:  { pt: 'A carteira trancou sozinha: ficou parada ou fora da tela.',
+                     en: 'The wallet locked itself: it was idle or out of view.' },
 
   // --- senha e restauração ---
   tituloSenha:     { pt: 'SENHA', en: 'PASSWORD' },

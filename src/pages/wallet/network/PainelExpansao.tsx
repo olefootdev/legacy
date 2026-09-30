@@ -45,7 +45,9 @@ const ORIGEM_DO_CONVITE = 'https://game.olefoot.ai';
  * a OLEWALLET apontava pra cá e aqui não havia botão. Era o beco que fazia a
  * pessoa achar que o sistema tinha travado.
  */
-const ATIVAR = '/wallet/dex?adicionar=olefoot&pack=1000';
+// Pela SPOT e não pela DEX: comprar não pede PIN, e a primeira compra é a
+// última hora de pôr fricção no caminho.
+const ATIVAR = '/wallet?adicionar=olefoot&pack=1000';
 
 function BotaoAtivar() {
   return (

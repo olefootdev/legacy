@@ -9,6 +9,7 @@
  * `extras` são migrations aplicadas DEPOIS da base, na ordem dada.
  */
 import { PGlite } from '@electric-sql/pglite';
+import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { readFileSync } from 'node:fs';
 
 export const M = 'supabase/migrations/';
@@ -20,7 +21,10 @@ export const MIGRATIONS_DA_FASE0 = [
 ];
 
 export async function montarBanco({ extras = [], antesDosExtras } = {}) {
-  const db = new PGlite();
+  // pgcrypto no schema `extensions`, como no Supabase: função que chama
+  // `crypt` sem o schema some sob `search_path = public` (já mordeu uma vez).
+  const db = new PGlite({ extensions: { pgcrypto } });
+  await db.exec(`create schema if not exists extensions; create extension if not exists pgcrypto with schema extensions;`);
 
   await db.exec(`
     create schema if not exists auth;

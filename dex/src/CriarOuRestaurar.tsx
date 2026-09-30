@@ -9,13 +9,35 @@
  */
 import { useState } from 'react';
 import { useCarteira } from '@/wallet/seed/useCarteira';
-import { PALAVRAS_NA_FRASE, fraseValida, normalizarFrase } from '@/wallet/seed/mnemonic';
+import { fraseValida, normalizarFrase } from '@/wallet/seed/mnemonic';
 import { tradutor } from '@/i18n/idioma';
 import { useIdioma } from '@/i18n/useIdioma';
 import { TEXTOS } from './textos';
 import { Aviso, BOTAO_LINHA, BOTAO_VOLT, CAMPO, Logo } from './ui';
 
-export type Passo = 'inicio' | 'frase' | 'senha' | 'restaurar';
+export type Passo = 'inicio' | 'frase' | 'conferir' | 'senha' | 'restaurar';
+
+/** De onde o "voltar" leva. Um lugar só, pras duas telas que usam o fluxo. */
+export function passoAnterior(p: Passo): Passo {
+  if (p === 'senha') return 'conferir';
+  if (p === 'conferir') return 'frase';
+  return 'inicio';
+}
+
+/**
+ * Quais palavras perguntar na conferência: três posições diferentes, sorteadas
+ * com o gerador do navegador. Três é o bastante pra saber que o papel existe,
+ * e pouco o bastante pra ninguém desistir no meio.
+ */
+function sortearPosicoes(total: number, quantas = 3): number[] {
+  const escolhidas = new Set<number>();
+  const buf = new Uint32Array(1);
+  while (escolhidas.size < Math.min(quantas, total)) {
+    crypto.getRandomValues(buf);
+    escolhidas.add((buf[0] as number) % total);
+  }
+  return [...escolhidas].sort((a, b) => a - b);
+}
 
 interface Props {
   w: ReturnType<typeof useCarteira>;
@@ -32,7 +54,8 @@ export default function CriarOuRestaurar({ w, passo, setPasso, onPronto, chamada
   const [idioma] = useIdioma();
   const t = tradutor(TEXTOS, idioma);
   const [frase, setFrase] = useState<string[]>([]);
-  const [copiado, setCopiado] = useState(false);
+  const [posicoes, setPosicoes] = useState<number[]>([]);
+  const [respostas, setRespostas] = useState<string[]>([]);
   const [senha, setSenha] = useState('');
   const [senha2, setSenha2] = useState('');
   const [digitada, setDigitada] = useState('');
@@ -74,12 +97,45 @@ export default function CriarOuRestaurar({ w, passo, setPasso, onPronto, chamada
             {t('listaPropriaC')}
           </p>
         </div>
-        <button type="button" className={BOTAO_LINHA}
-          onClick={() => { void navigator.clipboard.writeText(frase.join(' ')).then(() => setCopiado(true)); }}>
-          {copiado ? t('copiado') : t('copiar')}
-        </button>
-        <button type="button" className={`${BOTAO_VOLT} mt-auto`} onClick={() => { limpar(); setPasso('senha'); }}>
+        {/* 🔴 Sem botão de copiar. A frase copiada vai pra área de
+            transferência, que outros apps e teclados leem, e costuma parar
+            num bloco de notas sincronizado na nuvem. Papel e caneta. */}
+        <button type="button" className={`${BOTAO_VOLT} mt-auto`} onClick={() => {
+          limpar();
+          const pos = sortearPosicoes(frase.length);
+          setPosicoes(pos); setRespostas(pos.map(() => ''));
+          setPasso('conferir');
+        }}>
           {t('anotei')}
+        </button>
+      </>
+    );
+  }
+
+  if (passo === 'conferir') {
+    const confere = () => {
+      const ok = posicoes.every((p, i) => normalizarFrase(respostas[i] ?? '')[0] === frase[p]);
+      if (!ok) { setMsg(t('conferirErrou')); return; }
+      setMsg(null); setPasso('senha');
+    };
+    return (
+      <>
+        <p className="text-[13px] leading-relaxed text-cimento">{t('conferirTexto')}</p>
+        {posicoes.map((p, i) => (
+          <label key={p} className="flex flex-col gap-1.5">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-cimento">
+              {t('palavraN')} {String(p + 1).padStart(2, '0')}
+            </span>
+            <input className={CAMPO} autoFocus={i === 0} autoComplete="off" autoCapitalize="none"
+              spellCheck={false} value={respostas[i] ?? ''}
+              onChange={(e) => setRespostas((r) => r.map((v, j) => (j === i ? e.target.value : v)))}
+              onKeyDown={(e) => { if (e.key === 'Enter') confere(); }} />
+          </label>
+        ))}
+        {msg && <p className="text-[12px] text-baixa">{msg}</p>}
+        <button type="button" className={`${BOTAO_VOLT} mt-auto`}
+          disabled={respostas.some((r) => !r.trim())} onClick={confere}>
+          {t('conferirBotao')}
         </button>
       </>
     );
@@ -127,7 +183,7 @@ export default function CriarOuRestaurar({ w, passo, setPasso, onPronto, chamada
       </div>
       <div className="flex flex-col gap-2.5">
         <button type="button" className={BOTAO_VOLT}
-          onClick={() => { setFrase(w.novaFrase()); setCopiado(false); setPasso('frase'); }}>
+          onClick={() => { setFrase(w.novaFrase()); setPasso('frase'); }}>
           {t('criarCarteira')}
         </button>
         <button type="button" className={BOTAO_LINHA} onClick={() => { limpar(); setPasso('restaurar'); }}>

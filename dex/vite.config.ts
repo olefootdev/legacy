@@ -33,14 +33,38 @@ const dexRoot = __dirname;
  * Vai como arquivo `_headers` porque é assim que o Cloudflare serve asset
  * estático — e porque esta origem não tem Worker de propósito.
  */
-function cabecalhosDeSeguranca(destino: string) {
+function cabecalhosDeSeguranca(destino: string, api: string) {
+  /**
+   * CSP de BLOQUEIO, não de relatório. Esta origem guarda o cofre da frase:
+   * qualquer script de fora que rodasse aqui leria o cofre e esperaria a
+   * senha. Então só roda o que sai do próprio build.
+   *   · script, estilo e fonte: só 'self' (as fontes vêm do build, não do
+   *     Google — era a única origem externa que a página carregava)
+   *   · connect: só a API do jogo, que dá saldo e extrato
+   *   · nada de form, base, objeto ou iframe
+   * O QR é SVG montado pelo React, não HTML injetado: não precisa de
+   * 'unsafe-inline' em lugar nenhum.
+   */
+  const csp = [
+    "default-src 'none'",
+    "script-src 'self'",
+    "style-src 'self'",
+    "font-src 'self'",
+    "img-src 'self' data:",
+    `connect-src 'self' ${new URL(api).origin}`,
+    "manifest-src 'self'",
+    "base-uri 'none'",
+    "form-action 'none'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+  ].join('; ');
   return {
     name: 'olewallet-headers',
     closeBundle() {
       const conteudo = [
         '/*',
         '  X-Frame-Options: DENY',
-        "  Content-Security-Policy: frame-ancestors 'none'",
+        `  Content-Security-Policy: ${csp}`,
         '  Referrer-Policy: strict-origin-when-cross-origin',
         '  X-Content-Type-Options: nosniff',
         // ⚠️ `unsafe-none` (o padrão) É OBRIGATÓRIO AQUI, e não é descuido.
@@ -77,7 +101,8 @@ export default defineConfig(() => {
       cloudflare({ configPath: path.join(dexRoot, 'wrangler.jsonc') }),
       react(),
       tailwindcss(),
-      cabecalhosDeSeguranca(path.join(dexRoot, 'dist')),
+      cabecalhosDeSeguranca(path.join(dexRoot, 'dist'),
+        process.env.VITE_OLEFOOT_API_URL || 'https://legacy-production-de1e.up.railway.app'),
     ],
     root: dexRoot,
     envDir: repoRoot,
