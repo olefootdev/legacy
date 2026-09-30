@@ -51,9 +51,14 @@ const FALTA_ATIVAR: MinhaExpansao = {
   mapa: [no(1, 1, 1, null)],
 };
 
+// As duas telas que mostram "Tenho uma licença".
+const SEM_ATIVACAO: MinhaExpansao = { ...FALTA_ATIVAR, convida: false };
+const FORA: MinhaExpansao = { ...EXEMPLO, naArvore: false, convida: false };
+
 export default function NetworkPreview() {
   const qual = new URLSearchParams(window.location.search).get('estado');
-  const dados = qual === 'falta' ? FALTA_ATIVAR : EXEMPLO;
+  const dados = qual === 'falta' ? FALTA_ATIVAR : qual === 'semativacao' ? SEM_ATIVACAO
+    : qual === 'fora' ? FORA : EXEMPLO;
   return (
     <WalletShell title="Network" hashtag="#network · exemplo" heroVariant="compact" voltar>
       <section className="min-w-0 space-y-3">

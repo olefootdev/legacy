@@ -27,6 +27,7 @@ import { classicCoachRoutes } from './routes/classicCoach.js';
 import { globalLeagueRoutes } from './routes/globalLeague.js';
 import { adminRoutes } from './routes/admin.js';
 import { adminPaymentsRoutes } from './routes/adminPayments.js';
+import { adminLicencasRoutes } from './routes/adminLicencas.js';
 import { revelaAdminRoutes } from './routes/revelaAdmin.js';
 import { legendImportRoutes } from './routes/legendImport.js';
 import { insightsRoutes } from './routes/insights.js';
@@ -150,6 +151,7 @@ app.route('/api/classic', classicCoachRoutes);
 app.route('/api/global-league', globalLeagueRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/admin', adminPaymentsRoutes);
+app.route('/api/admin', adminLicencasRoutes); // licenças da expansão (gate no próprio router)
 app.route('/api/revela-admin', revelaAdminRoutes);
 app.route('/api/admin', legendImportRoutes);
 // OLEFOOT PYTHON MODE — proxy pro serviço FastAPI /insights

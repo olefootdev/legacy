@@ -53,7 +53,7 @@ function adminToken(): string {
   }
 }
 
-async function headers(json = false): Promise<Record<string, string>> {
+export async function headers(json = false): Promise<Record<string, string>> {
   const h: Record<string, string> = {};
   if (json) h['Content-Type'] = 'application/json';
   const tok = adminToken();
@@ -68,7 +68,7 @@ async function headers(json = false): Promise<Record<string, string>> {
   return h;
 }
 
-async function fail(r: Response): Promise<never> {
+export async function fail(r: Response): Promise<never> {
   let msg = `HTTP ${r.status}`;
   try {
     const body = (await r.json()) as { error?: string };

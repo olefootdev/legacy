@@ -33,6 +33,7 @@ import { AdminOverviewPanel } from './panels/AdminOverviewPanel';
 import { AdminLeaguesPanel } from './panels/AdminLeaguesPanel';
 import { AdminUsuariosPanel } from './panels/AdminUsuariosPanel';
 import { AdminFinanceiroPanel } from './panels/AdminFinanceiroPanel';
+import { AdminLicencasPanel } from './panels/AdminLicencasPanel';
 import { AdminGameSpiritPanel } from './panels/AdminGameSpiritPanel';
 import { AdminProspectArtPanel } from './panels/AdminProspectArtPanel';
 import { AdminRevelaScoutPanel } from './panels/AdminRevelaScoutPanel';
@@ -81,6 +82,7 @@ type SubTabId =
   | 'financeiro'
   | 'shop'
   | 'market'
+  | 'licencas'
   | 'prospectArt'
   | 'gachaTemplates'
   | 'playerEvolution'
@@ -115,6 +117,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
       { id: 'financeiro', label: 'Financeiro' },
       { id: 'shop', label: 'Loja' },
       { id: 'market', label: 'Market' },
+      { id: 'licencas', label: 'Licenças' },
     ],
   },
   {
@@ -372,6 +375,7 @@ export function AdminDashboard() {
               {tab === 'economia' && subTab === 'financeiro' ? <AdminFinanceiroPanel /> : null}
               {tab === 'economia' && subTab === 'shop' ? <AdminShopPanel /> : null}
               {tab === 'economia' && subTab === 'market' ? <AdminMarketPanel /> : null}
+              {tab === 'economia' && subTab === 'licencas' ? <AdminLicencasPanel /> : null}
               {tab === 'economia' && !subTab ? <AdminFinanceiroPanel /> : null}
 
               {/* Jogadores group */}

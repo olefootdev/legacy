@@ -51,6 +51,17 @@ async function adminSessionInfo(c: Context): Promise<{ email: string | null; rea
 }
 
 /**
+ * Quem está agindo como admin, pra ficar ESCRITO no que ele cria ou revoga.
+ * Chamar DEPOIS do `requireAdminToken`: aqui não se decide acesso, só se nomeia.
+ * Pelo token do painel (sem sessão) volta 'token-admin'.
+ */
+export async function adminQuemAge(c: Context): Promise<string> {
+  const info = await adminSessionInfo(c);
+  if (info.email && ADMIN_EMAILS.has(info.email)) return info.email;
+  return 'token-admin';
+}
+
+/**
  * Gate de admin. Aceita DOIS modos:
  *   1) Header X-Admin-Token == segredo configurado (legado / painel Global).
  *   2) Sessão Supabase de um admin (login do OLEFOOT) cujo e-mail está em ADMIN_EMAILS.

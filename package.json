@@ -117,6 +117,7 @@
     "test:bfs-paridade": "tsx scripts/valida-bfs-ts-vs-sql.mts",
     "test:convite-expansao": "node scripts/valida-convite-expansao.mjs",
     "test:ativacao-casa": "node scripts/valida-ativacao-casa.mjs",
+    "test:licenca-expansao": "node scripts/valida-licenca-expansao.mjs",
     "test:carreira-paga": "node scripts/valida-carreira-paga.mjs",
     "test:fase0-pix": "node scripts/valida-fase0-pix.mjs",
     "test:recarga": "tsx server/src/lib/runRecargaSelfTest.mts",

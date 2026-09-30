@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { definirPernaPadrao, type NoDoMapa, type Carreira, type MeuBonus, type CicloFechado } from '@/supabase/expansaoPainel';
 import { cn } from '@/lib/utils';
 import type { MinhaExpansao } from './useMinhaExpansao';
+import { AtivarComLicenca } from './AtivarComLicenca';
 
 /**
  * Painel de expansão — o lado de negócios, dentro do NETWORK da carteira.
@@ -89,6 +90,7 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
           ou quem confirma o convite de alguém que já está.
         </p>
         <BotaoAtivar />
+        <AtivarComLicenca aoAtivar={reler} />
       </div>
     );
   }
@@ -119,6 +121,7 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
             Depois de ativar: 1 indicado em cada time e o bônus começa a contar.
           </p>
           <BotaoAtivar />
+          <AtivarComLicenca aoAtivar={reler} />
         </div>
       ) : ativacao && !ativacao.ativo ? (
         <div className="mb-6 border-l-2 border-atencao bg-card px-4 py-3.5">
