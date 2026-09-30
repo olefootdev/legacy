@@ -19,6 +19,7 @@ import {
   TETO_DIARIO_CENTAVOS,
 } from '../server/src/lib/expansao/equiparacao.js';
 import { olexpDaCompra } from '../server/src/lib/expansao/unidade.js';
+import { premiosAoCruzar } from '../server/src/lib/expansao/carreira.js';
 
 // ── números previsíveis ─────────────────────────────────────────────────────
 let semente = 20260930;
@@ -43,7 +44,7 @@ const criarUsuarios = async (db: any, n: number) => {
 let usuarios: string[] = [];
 const db: any = await montarBanco({
   extras: [...MIGRATIONS_DA_FASE0, '20260930100000_expansao_ciclo_horario.sql',
-           '20260930180000_expansao_ponto_fixo_teto_diario.sql'],
+           '20260930180000_expansao_ponto_fixo_teto_diario.sql', '20260930220000_expansao_premio_carreira.sql'],
   // A verificação de dentro da migration do ciclo precisa de contas pra montar
   // a rede dela. Criadas antes, ficam disponíveis pra simulação também.
   antesDosExtras: async (d: any) => { usuarios = await criarUsuarios(d, USUARIOS); },
@@ -190,6 +191,23 @@ await t(`   e por retenção de quem não tinha 1 indicado em cada time (${reten
   () => retencoesPorInatividade > 0);
 await t(`   e pela perna menor trocando de lado (${trocasDeLado} vezes)`, () => trocasDeLado > 0);
 
+await t('🎖️ o prêmio da carreira no banco é o que o TS manda pagar pelo acumulado', async () => {
+  const nos = await q(`select user_id, equiparado_acumulado::text a from public.expansao_no`);
+  const premios = await q(`select user_id, degrau, olefoot::text o from public.expansao_premio_carreira`);
+  let cruzou = 0;
+  for (const n of nos) {
+    const esperado = premiosAoCruzar(0n, BigInt(n.a));
+    const tem = premios.filter((p: any) => p.user_id === n.user_id);
+    cruzou += esperado.length;
+    if (tem.length !== esperado.length) return false;
+    for (const d of esperado) {
+      const p = tem.find((x: any) => x.degrau === d.id);
+      if (!p || BigInt(p.o) !== d.premioOlefoot) return false;
+    }
+  }
+  console.log(`       ${cruzou} degraus premiados na simulação`);
+  return true;
+});
 await t('🔑 a carreira de cada um é a soma do que o TS equiparou', async () => {
   const nos = await q(`select user_id, equiparado_acumulado::text a from public.expansao_no`);
   return nos.every((n: any) => BigInt(n.a) === (carreiraTs.get(n.user_id) ?? 0n));
@@ -257,7 +275,10 @@ await t('🔑 o bônus lido pela tela é a soma das liquidações, convertido pe
   const l = (await q(`select coalesce(sum(bonus_contabil),0)::text usd,
       coalesce(sum(floor(bonus_contabil*1000000/c.preco_micro)),0)::text tok
       from public.expansao_liquidacao li join public.expansao_ciclo c on c.id=li.ciclo_id where li.user_id=$1`, [raiz]))[0];
-  return String(m.bonus_usd_cents) === l.usd && String(m.olefoot) === l.tok && BigInt(l.tok) === BigInt(l.usd) * 80n
+  // O OLEFOOT a receber = bônus convertido + prêmios da carreira.
+  const premios = (await q(`select coalesce(sum(olefoot),0)::text p from public.expansao_premio_carreira where user_id=$1`, [raiz]))[0].p;
+  return String(m.bonus_usd_cents) === l.usd && BigInt(l.tok) === BigInt(l.usd) * 80n
+    && BigInt(String(m.olefoot)) === BigInt(l.tok) + BigInt(premios) && String(m.premios_olefoot) === premios
     && String(m.teto_diario_cents) === '250000' && m.hoje_usd_cents != null;
 });
 await t('🔒 sem login, o bônus não responde', async () => {

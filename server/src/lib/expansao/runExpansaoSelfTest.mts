@@ -6,7 +6,7 @@
 import { ELEGIBILIDADE_PADRAO, olexpDaCompra, podeEquiparar, podeQualificar } from './unidade.js';
 import { arvoreVazia, creditar, equipeMenor, inserir, inserirRaiz, volumeDaPerna,
   acervoVazio, consumirEquiparado, type Acervo } from './arvore.js';
-import { DEGRAUS, carreiraDe } from './carreira.js';
+import { DEGRAUS, carreiraDe, premiosAoCruzar } from './carreira.js';
 import {
   MICRO, TETO_DIARIO_CENTAVOS, VALOR_DO_PONTO_MICRO, aplicarTetoDiario, bonusContabil, equiparar, fecharCiclo,
   olefootAPagar, poolDoCiclo,
@@ -145,6 +145,17 @@ check('500k é PENTA e não tem próxima',
 check('progresso é 0–100', DEGRAUS.every((d) => { const c = carreiraDe(d.exige); return c.progresso >= 0 && c.progresso <= 100; }));
 check('graduação não cai: mais volume nunca rebaixa',
   DEGRAUS.every((d) => (carreiraDe(d.exige + 1n).atual?.exige ?? 0n) >= d.exige));
+
+console.log('\n🎖️ prêmio da carreira — OLEFOOT ao atingir cada degrau\n');
+check('prêmios do fundador: 1k / 5k / 10k / 25k / 50k',
+  DEGRAUS.map((d) => d.premioOlefoot).join(',') === '1000,5000,10000,25000,50000');
+check('a carreira inteira paga 91.000 OLEFOOT',
+  premiosAoCruzar(0n, 500_000n).reduce((s, d) => s + d.premioOlefoot, 0n) === 91_000n);
+check('9.999 → 10.000 paga CAMPEÃO', premiosAoCruzar(9_999n, 10_000n).map((d) => d.id).join() === 'CAMPEAO');
+check('pular dois degraus num ciclo paga os dois',
+  premiosAoCruzar(10_000n, 120_000n).map((d) => d.id).join() === 'DUPLO_CAMPEAO,TRI_CAMPEAO');
+check('ficar no mesmo degrau não paga de novo', premiosAoCruzar(10_000n, 49_999n).length === 0);
+recusa('acumulado descendo é recusado', () => premiosAoCruzar(20_000n, 10_000n));
 
 console.log('\n⚖️ equiparação — consome os dois lados\n');
 

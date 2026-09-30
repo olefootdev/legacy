@@ -35,15 +35,21 @@ export interface Degrau {
   readonly nome: string;
   /** OLEXP acumulado em equiparação para alcançar o degrau. */
   readonly exige: Olexp;
+  /**
+   * Prêmio em OLEFOOT (token inteiro) ao atingir o degrau, uma vez por pessoa.
+   * Regra do fundador, 2026-09-30. Espelha `expansao_degraus()` no banco.
+   * Não passa pelo preço de referência e não entra no teto diário.
+   */
+  readonly premioOlefoot: bigint;
 }
 
 /** Em ordem crescente. A ordem é usada pra achar atual e próxima. */
 export const DEGRAUS: readonly Degrau[] = [
-  { id: 'CAMPEAO',       nome: 'Campeão',       exige: 10_000n },
-  { id: 'DUPLO_CAMPEAO', nome: 'Duplo Campeão', exige: 50_000n },
-  { id: 'TRI_CAMPEAO',   nome: 'Tri-Campeão',   exige: 100_000n },
-  { id: 'TETRA',         nome: 'Tetra',         exige: 250_000n },
-  { id: 'PENTA',         nome: 'Penta',         exige: 500_000n },
+  { id: 'CAMPEAO',       nome: 'Campeão',       exige: 10_000n,  premioOlefoot: 1_000n },
+  { id: 'DUPLO_CAMPEAO', nome: 'Duplo Campeão', exige: 50_000n,  premioOlefoot: 5_000n },
+  { id: 'TRI_CAMPEAO',   nome: 'Tri-Campeão',   exige: 100_000n, premioOlefoot: 10_000n },
+  { id: 'TETRA',         nome: 'Tetra',         exige: 250_000n, premioOlefoot: 25_000n },
+  { id: 'PENTA',         nome: 'Penta',         exige: 500_000n, premioOlefoot: 50_000n },
 ] as const;
 
 // Não é comentário, é checagem: degrau fora de ordem faria a graduação pular
@@ -102,4 +108,14 @@ export function carreiraDe(equiparadoAcumulado: Olexp): Carreira {
     falta: proxima.exige - equiparadoAcumulado,
     progresso: Number((andou * 100n) / faixa),
   };
+}
+
+/**
+ * Os degraus cruzados ao sair de `antes` e chegar em `depois` — os que pagam
+ * prêmio agora. Pular dois degraus num ciclo paga os dois; ficar parado não
+ * paga nada. A trava de "uma vez por degrau" é o acumulado só crescer.
+ */
+export function premiosAoCruzar(antes: Olexp, depois: Olexp): readonly Degrau[] {
+  if (antes < 0n || depois < antes) throw new RangeError(`acumulado não pode descer: ${antes} → ${depois}`);
+  return DEGRAUS.filter((d) => d.exige > antes && d.exige <= depois);
 }

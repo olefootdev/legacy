@@ -28,7 +28,7 @@ const EXEMPLO: MinhaExpansao = {
   convida: true,
   ativacao: { ativo: true, diretosT1: 2, diretosT2: 1, faltaNaPerna: null },
   pernas: { t1: 1_260n, t2: 510n, menor: 510n },
-  carreira: { acumulado: 6_400n, degrau: null, proximo: 'CAMPEAO', falta: 3_600n },
+  carreira: { acumulado: 6_400n, degrau: null, proximo: 'CAMPEAO', falta: 3_600n, premioProximo: 1_000n, premiosOlefoot: 0n },
   mapa: [
     no(1, 1, 1, null), no(2, 1, 2, null),
     no(3, 2, 1, 1), no(4, 2, 1, 1, false), no(5, 2, 2, 2),
@@ -36,7 +36,7 @@ const EXEMPLO: MinhaExpansao = {
     no(9, 4, 1, 6),
   ],
   bonus: { usdCents: 4_185n, olefoot: 334_800n, olefootSacado: 0n, ciclosPagos: 3, pernaPadrao: null,
-    hojeUsdCents: 1_850_00n, tetoDiarioCents: 2_500_00n },
+    hojeUsdCents: 1_850_00n, tetoDiarioCents: 2_500_00n, premiosOlefoot: 0n },
   ciclos: [
     { abreEm: '2026-09-30T14:00:00Z', status: 'SETTLED', poolUsdCents: 1_562n, equiparadoTotal: 740n, valorPorOlexpMicro: 25_000_000n, bonusTotalUsdCents: 18_500n },
     { abreEm: '2026-09-30T11:00:00Z', status: 'SETTLED', poolUsdCents: 31_250n, equiparadoTotal: 9_400n, valorPorOlexpMicro: 25_000_000n, bonusTotalUsdCents: 2_350_00n },
@@ -48,7 +48,7 @@ const FALTA_ATIVAR: MinhaExpansao = {
   ...EXEMPLO,
   ativacao: { ativo: false, diretosT1: 1, diretosT2: 0, faltaNaPerna: 2 },
   pernas: { t1: 80n, t2: 0n, menor: 0n },
-  carreira: { acumulado: 0n, degrau: null, proximo: 'CAMPEAO', falta: 10_000n },
+  carreira: { acumulado: 0n, degrau: null, proximo: 'CAMPEAO', falta: 10_000n, premioProximo: 1_000n, premiosOlefoot: 0n },
   mapa: [no(1, 1, 1, null)],
 };
 

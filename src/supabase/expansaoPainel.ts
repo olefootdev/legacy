@@ -120,6 +120,10 @@ export interface Carreira {
   readonly degrau: string | null;
   readonly proximo: string | null;
   readonly falta: bigint;
+  /** OLEFOOT que o próximo degrau paga ao ser atingido. null = já é PENTA. */
+  readonly premioProximo: bigint | null;
+  /** OLEFOOT já ganho em prêmios de carreira. */
+  readonly premiosOlefoot: bigint;
 }
 
 /**
@@ -142,6 +146,8 @@ export async function lerCarreira(): Promise<Carreira | null> {
     degrau: l.degrau ?? null,
     proximo: l.proximo ?? null,
     falta: BigInt(String(l.falta ?? '0')),
+    premioProximo: l.premio_proximo == null ? null : BigInt(String(l.premio_proximo).split('.')[0]),
+    premiosOlefoot: BigInt(String(l.premios_olefoot ?? '0').split('.')[0]),
   };
 }
 
@@ -179,6 +185,8 @@ export interface MeuBonus {
   readonly hojeUsdCents: bigint;
   /** O teto diário por pessoa ($2.500 = 250.000), vindo do banco. */
   readonly tetoDiarioCents: bigint;
+  /** Quanto do `olefoot` veio de prêmios da carreira. */
+  readonly premiosOlefoot: bigint;
 }
 
 const inteiro = (v: unknown): bigint => {
@@ -202,6 +210,7 @@ export async function lerMeuBonus(): Promise<MeuBonus | null> {
     pernaPadrao: perna === 1 || perna === 2 ? perna : null,
     hojeUsdCents: inteiro(l.hoje_usd_cents),
     tetoDiarioCents: inteiro(l.teto_diario_cents),
+    premiosOlefoot: inteiro(l.premios_olefoot),
   };
 }
 

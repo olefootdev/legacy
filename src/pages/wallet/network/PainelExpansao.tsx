@@ -219,7 +219,17 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
               {br(carreira.falta)} para {NOME_DEGRAU[carreira.proximo] ?? carreira.proximo}
               {' '}· conta o que foi pago, não o que está parado
             </p>
+            {carreira.premioProximo != null && (
+              <p className="mt-2 text-[12px] text-giz">
+                Chegou, ganhou <strong className="text-neon-yellow">{br(carreira.premioProximo)} OLEFOOT</strong>
+              </p>
+            )}
           </>
+        )}
+        {carreira && carreira.premiosOlefoot > 0n && (
+          <p className="mt-2 border-t border-white/10 pt-2 font-mono text-[10.5px] text-poeira">
+            {br(carreira.premiosOlefoot)} OLEFOOT já ganhos em prêmios de carreira
+          </p>
         )}
       </div>
 
