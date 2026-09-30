@@ -6,17 +6,25 @@
  * e DEBITA dos dois lados. O que sobra do lado maior fica pro próximo ciclo —
  * é o carry-over, e é ele que faz a rede valer a pena no longo prazo.
  *
- * 🔴 O QUE ESTE ARQUIVO SE RECUSA A FAZER: dizer quanto vale um OLEXP antes de
- * existir pool. Não há constante de preço aqui, e não pode haver. O valor sai
- * de uma divisão que só é possível depois do ciclo fechado:
- *   valor de liquidação = pool do ciclo ÷ OLEXP equiparado no ciclo
+ * 🔑 O VALOR DO PONTO É FIXO (decisão do fundador, 2026-09-30):
+ *   1 OLEXP equiparado = $0,25 — 25% de cada $1 que o time menor comprou.
+ * E o limite é por PESSOA: no máximo $2.500 de bônus por dia (fuso de São
+ * Paulo), pago em OLEFOOT pelo preço de referência gravado no ciclo.
  *
- * 🔴 CICLO SEM POOL NÃO LIQUIDA. Se a hora não teve receita elegível, o pool é
- * zero e o valor de liquidação é INDEFINIDO — não zero. Equiparar nesse ciclo
- * debitaria OLEXP das duas pernas em troca de nada. Então a equiparação fica
- * RETIDA e entra no próximo ciclo que tiver pool: ninguém perde unidade sem
- * receber. (Decisão de 2026-09-28; mudar isso muda quem paga a conta de uma
- * hora parada.)
+ * Por que mudou (até 2026-09-30 o valor era pool ÷ equiparado da hora):
+ *   · com valor flutuante, uma hora com um único pack de $10 consumia os
+ *     pontos acumulados de todo mundo por centavos;
+ *   · e uma hora forte com pouca gente equiparando pagava mais de $1 por ponto.
+ * O ponto fixo resolve os dois; o teto diário é o que segura a emissão.
+ *
+ * 🔴 O EXCEDENTE DO TETO NÃO VOLTA. O time menor é equiparado inteiro (debitado
+ * dos dois lados, como sempre) e o que passar de $2.500 no dia é cortado e
+ * REGISTRADO na liquidação (`cortadoPeloTeto`). Guardar o excedente pra outro
+ * dia faria o saldo devido crescer sem fim — num binário nasce mais ponto do
+ * que dinheiro, porque cada $1 vira ponto pra todos os ancestrais.
+ *
+ * O pool (25% da receita da hora) continua calculado e gravado: não limita mais
+ * o pagamento, mas é a régua pra comparar o que saiu com o que entrou.
  */
 import { exigePositivo, type Olexp } from './unidade.js';
 import type { Ativacao } from './arvore.js';
@@ -119,29 +127,46 @@ export interface Liquidacao {
 
 export const MICRO = 1_000_000n;
 
+/** $0,25 por OLEXP equiparado, em micro-centavos de dólar. */
+export const VALOR_DO_PONTO_MICRO = 25n * MICRO;
+
+/** $2.500 por pessoa por dia, em centavos de dólar. */
+export const TETO_DIARIO_CENTAVOS = 2_500_00n;
+
+/** O dia do teto é o de São Paulo: é o dia que a pessoa vê no relógio. */
+export const FUSO_DO_TETO = 'America/Sao_Paulo';
+
 /**
- * Fecha o ciclo. Devolve READY com valor, ou HELD com o motivo.
+ * Fecha o ciclo. READY quando há o que equiparar — a hora não precisa ter
+ * receita, porque o ponto tem valor fixo. HELD só quando ninguém equipara.
  *
- * Nunca devolve valor zero como se fosse liquidação: um ciclo que não pode
- * pagar precisa dizer que não pagou, e por quê.
+ * `pool` entra só pra ficar registrado junto (a régua do que entrou).
  */
-export function fecharCiclo(pool: bigint, equiparadoTotal: Olexp): Liquidacao {
+export function fecharCiclo(
+  pool: bigint, equiparadoTotal: Olexp, valorDoPontoMicro: bigint = VALOR_DO_PONTO_MICRO,
+): Liquidacao {
   if (pool < 0n) throw new RangeError(`pool negativo: ${pool}`);
   if (equiparadoTotal < 0n) throw new RangeError(`equiparado negativo: ${equiparadoTotal}`);
+  exigePositivo('valor do ponto', valorDoPontoMicro);
 
   if (equiparadoTotal === 0n) {
     return { status: 'HELD', pool, equiparadoTotal, valorPorOlexpMicro: null, motivo: 'nada a equiparar neste ciclo' };
   }
-  if (pool === 0n) {
-    return {
-      status: 'HELD', pool, equiparadoTotal, valorPorOlexpMicro: null,
-      motivo: 'ciclo sem receita elegível — equiparação retida para o próximo ciclo com pool',
-    };
-  }
-  return {
-    status: 'READY', pool, equiparadoTotal,
-    valorPorOlexpMicro: (pool * MICRO) / equiparadoTotal,
-  };
+  return { status: 'READY', pool, equiparadoTotal, valorPorOlexpMicro: valorDoPontoMicro };
+}
+
+/**
+ * O teto diário. `jaRecebidoNoDia` é o que a pessoa já levou nos ciclos
+ * anteriores do MESMO dia; o corte é registrado, nunca some calado.
+ */
+export function aplicarTetoDiario(
+  bruto: bigint, jaRecebidoNoDia: bigint, teto: bigint = TETO_DIARIO_CENTAVOS,
+): { readonly pago: bigint; readonly cortado: bigint } {
+  if (bruto < 0n || jaRecebidoNoDia < 0n) throw new RangeError('valor negativo no teto');
+  if (teto < 0n) throw new RangeError('teto negativo');
+  const cabe = jaRecebidoNoDia >= teto ? 0n : teto - jaRecebidoNoDia;
+  const pago = bruto < cabe ? bruto : cabe;
+  return { pago, cortado: bruto - pago };
 }
 
 /**

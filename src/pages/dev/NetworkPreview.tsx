@@ -35,10 +35,11 @@ const EXEMPLO: MinhaExpansao = {
     no(6, 3, 1, 3), no(7, 3, 1, 4, false), no(8, 3, 2, 5, false),
     no(9, 4, 1, 6),
   ],
-  bonus: { usdCents: 4_185n, olefoot: 334_800n, olefootSacado: 0n, ciclosPagos: 3, pernaPadrao: null },
+  bonus: { usdCents: 4_185n, olefoot: 334_800n, olefootSacado: 0n, ciclosPagos: 3, pernaPadrao: null,
+    hojeUsdCents: 1_850_00n, tetoDiarioCents: 2_500_00n },
   ciclos: [
-    { abreEm: '2026-09-30T14:00:00Z', status: 'SETTLED', poolUsdCents: 1_562n, equiparadoTotal: 740n, valorPorOlexpMicro: 2_110_810n },
-    { abreEm: '2026-09-30T11:00:00Z', status: 'SETTLED', poolUsdCents: 31_250n, equiparadoTotal: 9_400n, valorPorOlexpMicro: 3_324_468n },
+    { abreEm: '2026-09-30T14:00:00Z', status: 'SETTLED', poolUsdCents: 1_562n, equiparadoTotal: 740n, valorPorOlexpMicro: 25_000_000n, bonusTotalUsdCents: 18_500n },
+    { abreEm: '2026-09-30T11:00:00Z', status: 'SETTLED', poolUsdCents: 31_250n, equiparadoTotal: 9_400n, valorPorOlexpMicro: 25_000_000n, bonusTotalUsdCents: 2_350_00n },
   ],
   reler: () => {},
 };

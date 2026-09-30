@@ -395,9 +395,34 @@ function BlocoBonus({ bonus }: { bonus: MeuBonus | null }) {
           ? `${dolar(bonus.usdCents)} em ${bonus.ciclosPagos} ${bonus.ciclosPagos === 1 ? 'ciclo' : 'ciclos'}`
           : 'Nenhum ciclo pagou você ainda'}
       </p>
+      {bonus && bonus.tetoDiarioCents > 0n ? <TetoDeHoje hoje={bonus.hojeUsdCents} teto={bonus.tetoDiarioCents} /> : null}
       <p className="mt-2.5 border-t border-white/10 pt-2.5 text-[11.5px] leading-relaxed text-cimento">
         O saque abre quando o OLEFOOT for lançado na Solana, para a carteira vinculada.
       </p>
+    </div>
+  );
+}
+
+/**
+ * O teto do dia. Quem chega perto precisa ver ANTES, não descobrir pelo corte:
+ * o que passar de $2.500 no dia não é pago e não volta.
+ */
+function TetoDeHoje({ hoje, teto }: { hoje: bigint; teto: bigint }) {
+  const pct = teto === 0n ? 0 : Math.min(100, Number((hoje * 100n) / teto));
+  return (
+    <div className="mt-3">
+      <div className="flex items-baseline justify-between gap-3 font-mono text-[10.5px]">
+        <span className="uppercase tracking-wider text-poeira">Hoje</span>
+        <span className={cn('tabular-nums', pct >= 100 ? 'text-atencao' : 'text-giz')}>
+          {dolar(hoje)} de {dolar(teto)}
+        </span>
+      </div>
+      <div className="mt-1 h-1.5 w-full bg-white/10">
+        <div className={cn('h-full', pct >= 100 ? 'bg-atencao' : 'bg-neon-yellow')} style={{ width: `${pct}%` }} />
+      </div>
+      {pct >= 100 ? (
+        <p className="mt-1.5 font-mono text-[10.5px] text-atencao">Teto do dia batido. Volta amanhã.</p>
+      ) : null}
     </div>
   );
 }
@@ -411,10 +436,9 @@ function quando(iso: string): string {
 }
 
 /**
- * Os últimos ciclos que pagaram, da rede inteira. É o registro público de que
- * o pool saiu da receita da hora e foi dividido pelo equiparado: quem olha vê
- * o valor por OLEXP mudar de ciclo pra ciclo, e é isso que impede alguém de
- * ler o bônus como taxa fixa.
+ * Os últimos ciclos que pagaram, da rede inteira: quanto foi equiparado e
+ * quanto saiu de bônus. O ponto vale fixo $0,25 desde 2026-09-30; a diferença
+ * entre equiparado × $0,25 e o pago é o que o teto diário cortou.
  */
 function BlocoCiclos({ ciclos }: { ciclos: readonly CicloFechado[] }) {
   return (
@@ -425,14 +449,14 @@ function BlocoCiclos({ ciclos }: { ciclos: readonly CicloFechado[] }) {
       </div>
       {ciclos.length === 0 ? (
         <p className="px-4 pb-4 text-[12.5px] leading-relaxed text-cimento">
-          Nenhum ainda. Um ciclo paga quando a hora tem compra e alguém equipara.
+          Nenhum ainda. Um ciclo paga quando alguém equipara na hora.
         </p>
       ) : (
         ciclos.map((c) => (
           <div key={c.abreEm} className="border-t border-white/10 px-4 py-2.5">
             <div className="flex min-w-0 items-baseline justify-between gap-3">
               <span className="shrink-0 font-mono text-[11px] text-giz">{quando(c.abreEm)}</span>
-              <span className="ole-num whitespace-nowrap text-[13px] text-white tabular-nums">pool {dolar(c.poolUsdCents)}</span>
+              <span className="ole-num whitespace-nowrap text-[13px] text-white tabular-nums">pago {dolar(c.bonusTotalUsdCents)}</span>
             </div>
             <div className="mt-0.5 font-mono text-[10.5px] text-poeira">
               {br(c.equiparadoTotal)} OLEXP equiparados

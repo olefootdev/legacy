@@ -175,6 +175,10 @@ export interface MeuBonus {
   readonly ciclosPagos: number;
   /** null = automático. */
   readonly pernaPadrao: 1 | 2 | null;
+  /** O que já entrou hoje (dia de São Paulo), em centavos de dólar. */
+  readonly hojeUsdCents: bigint;
+  /** O teto diário por pessoa ($2.500 = 250.000), vindo do banco. */
+  readonly tetoDiarioCents: bigint;
 }
 
 const inteiro = (v: unknown): bigint => {
@@ -196,6 +200,8 @@ export async function lerMeuBonus(): Promise<MeuBonus | null> {
     olefootSacado: inteiro(l.olefoot_sacado),
     ciclosPagos: Number(l.ciclos_pagos ?? 0),
     pernaPadrao: perna === 1 || perna === 2 ? perna : null,
+    hojeUsdCents: inteiro(l.hoje_usd_cents),
+    tetoDiarioCents: inteiro(l.teto_diario_cents),
   };
 }
 
@@ -208,20 +214,21 @@ export interface CicloFechado {
   readonly equiparadoTotal: bigint;
   /** Micro-centavos de dólar por OLEXP. null = ciclo não liquidou. */
   readonly valorPorOlexpMicro: bigint | null;
+  /** O que o ciclo pagou de fato, depois do teto diário. */
+  readonly bonusTotalUsdCents: bigint;
 }
 
 /**
  * Os últimos ciclos que PAGARAM. A tabela é pública de leitura por desenho —
- * é o registro que prova que o pool saiu da receita. Os retidos ficam de fora
- * da tela: sem compra na hora, o ciclo é HELD, e uma lista de HELD esconde os
- * que importam.
+ * é o registro do que cada hora pagou. Os retidos ficam de fora da tela: HELD
+ * é hora em que ninguém equiparou, e uma lista deles esconde os que importam.
  */
 export async function lerCiclosPagos(quantos = 6): Promise<CicloFechado[]> {
   const sb = getSupabase();
   if (!sb) return [];
   const { data, error } = await sb
     .from('expansao_ciclo')
-    .select('abre_em, status, pool, equiparado_total, valor_por_olexp_micro')
+    .select('abre_em, status, pool, equiparado_total, valor_por_olexp_micro, bonus_total')
     .eq('status', 'SETTLED')
     .order('abre_em', { ascending: false })
     .limit(quantos);
@@ -232,6 +239,7 @@ export async function lerCiclosPagos(quantos = 6): Promise<CicloFechado[]> {
     poolUsdCents: inteiro(c.pool),
     equiparadoTotal: inteiro(c.equiparado_total),
     valorPorOlexpMicro: c.valor_por_olexp_micro == null ? null : inteiro(c.valor_por_olexp_micro),
+    bonusTotalUsdCents: inteiro(c.bonus_total),
   }));
 }
 

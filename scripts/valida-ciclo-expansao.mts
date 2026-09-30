@@ -15,7 +15,8 @@
  */
 import { MIGRATIONS_DA_FASE0, montarBanco } from './lib/bancoDescartavel.mjs';
 import {
-  bonusContabil, equipararSeAtivo, fecharCiclo, poolDoCiclo, PERCENTUAL_BPS_PADRAO,
+  aplicarTetoDiario, bonusContabil, equipararSeAtivo, fecharCiclo, poolDoCiclo, PERCENTUAL_BPS_PADRAO,
+  TETO_DIARIO_CENTAVOS,
 } from '../server/src/lib/expansao/equiparacao.js';
 import { olexpDaCompra } from '../server/src/lib/expansao/unidade.js';
 
@@ -24,7 +25,8 @@ let semente = 20260930;
 const sorteio = () => { semente = (semente * 1103515245 + 12345) % 2147483648; return semente / 2147483648; };
 const um = <T,>(xs: readonly T[]): T => xs[Math.floor(sorteio() * xs.length)] as T;
 
-const PACKS = [1_000, 5_000, 25_000, 50_000, 125_000, 1_599] as const;
+// O pack de $10.000 existe pra simulação bater no teto diário de $2.500.
+const PACKS = [1_000, 5_000, 25_000, 50_000, 125_000, 1_599, 1_000_000] as const;
 const USUARIOS = 24;
 const HORAS = 40;
 
@@ -40,7 +42,8 @@ const criarUsuarios = async (db: any, n: number) => {
 
 let usuarios: string[] = [];
 const db: any = await montarBanco({
-  extras: [...MIGRATIONS_DA_FASE0, '20260930100000_expansao_ciclo_horario.sql'],
+  extras: [...MIGRATIONS_DA_FASE0, '20260930100000_expansao_ciclo_horario.sql',
+           '20260930180000_expansao_ponto_fixo_teto_diario.sql'],
   // A verificação de dentro da migration do ciclo precisa de contas pra montar
   // a rede dela. Criadas antes, ficam disponíveis pra simulação também.
   antesDosExtras: async (d: any) => { usuarios = await criarUsuarios(d, USUARIOS); },
@@ -72,7 +75,10 @@ const iso = (ms: number) => new Date(ms).toISOString();
 
 const carreiraTs = new Map<string, bigint>();
 let divergencias: string[] = [];
-let ciclosPagos = 0, ciclosRetidos = 0, retencoesPorInatividade = 0, trocasDeLado = 0;
+let ciclosPagos = 0, ciclosRetidos = 0, retencoesPorInatividade = 0, trocasDeLado = 0, cortes = 0, horasSemReceitaPagas = 0;
+// O que cada um já recebeu no dia de São Paulo — a mesma chave do SQL.
+const diaSP = (ms: number) => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+const noDia = new Map<string, bigint>();
 const ladoMenorAntes = new Map<string, 1 | 2>();
 
 for (let h = 0; h < HORAS; h++) {
@@ -133,16 +139,22 @@ for (let h = 0; h < HORAS; h++) {
 
   if (liq.status === 'READY') {
     ciclosPagos++;
+    if (receita === 0n) horasSemReceitaPagas++;
     const linhas = await q(`select user_id, equiparado::text eq, bonus_contabil::text b, retido_inativo r,
-                                   sobra_t1::text s1, sobra_t2::text s2
+                                   sobra_t1::text s1, sobra_t2::text s2, cortado_teto::text ct
                               from public.expansao_liquidacao where ciclo_id=$1`, [c.ciclo_id]);
     if (linhas.length !== esperado.size) divergencias.push(`${onde}: ${linhas.length} linhas SQL, ${esperado.size} TS`);
     for (const l of linhas) {
       const e = esperado.get(l.user_id);
       if (!e) { divergencias.push(`${onde}: SQL liquidou quem o TS não esperava`); continue; }
-      const bonus = bonusContabil(e.eq, liq.valorPorOlexpMicro as bigint);
+      const chave = `${l.user_id}|${diaSP(abre)}`;
+      const bruto = e.retido ? 0n : bonusContabil(e.eq, liq.valorPorOlexpMicro as bigint);
+      const teto = aplicarTetoDiario(bruto, noDia.get(chave) ?? 0n);
+      noDia.set(chave, (noDia.get(chave) ?? 0n) + teto.pago);
+      if (teto.cortado > 0n) cortes++;
       if (BigInt(l.eq) !== e.eq) divergencias.push(`${onde}: equiparado ${l.eq} ≠ ${e.eq}`);
-      if (BigInt(l.b) !== bonus) divergencias.push(`${onde}: bônus ${l.b} ≠ ${bonus}`);
+      if (BigInt(l.b) !== teto.pago) divergencias.push(`${onde}: bônus ${l.b} ≠ ${teto.pago}`);
+      if (BigInt(l.ct) !== teto.cortado) divergencias.push(`${onde}: cortado ${l.ct} ≠ ${teto.cortado}`);
       if (l.r !== e.retido) divergencias.push(`${onde}: retido ${l.r} ≠ ${e.retido}`);
       if (BigInt(l.s1) !== e.t1 - e.eq || BigInt(l.s2) !== e.t2 - e.eq) divergencias.push(`${onde}: sobra errada`);
       if (e.retido) retencoesPorInatividade++;
@@ -182,9 +194,34 @@ await t('🔑 a carreira de cada um é a soma do que o TS equiparou', async () =
   const nos = await q(`select user_id, equiparado_acumulado::text a from public.expansao_no`);
   return nos.every((n: any) => BigInt(n.a) === (carreiraTs.get(n.user_id) ?? 0n));
 });
-await t('🔒 nenhum ciclo pagou mais que o próprio pool', async () =>
+await t(`   e pelo teto diário cortando (${cortes} vezes)`, () => cortes > 0);
+// Hora SEM receita e com ponto a equiparar. Na rede de verdade acontece quando
+// alguém ativa (ganha o 2º direto) numa hora sem venda. A simulação aleatória
+// quase nunca cai nisso, então o caso é montado: volume nas duas pernas da raiz
+// e uma hora antiga, sem compra nenhuma.
+await t(`🔑 hora sem receita paga pelo valor fixo (sorteadas: ${horasSemReceitaPagas})`, async () => {
+  const [a1, b1] = (await q(`select user_id, lado from public.expansao_no where pai_id=$1 order by lado`, [raiz]));
+  await q(`select public.expansao_creditar($1, 300, 'compra_olefoot', 'sem-receita-1')`, [a1.user_id]);
+  await q(`select public.expansao_creditar($1, 300, 'compra_olefoot', 'sem-receita-2')`, [b1.user_id]);
+  const hora = iso(hora0 - 5 * 3_600_000);
+  const c = (await q(`select * from public.expansao_fechar_ciclo($1)`, [hora]))[0];
+  const ciclo = (await q(`select * from public.expansao_ciclo where id=$1`, [c.ciclo_id]))[0];
+  const l = (await q(`select equiparado::text eq, (bonus_contabil + cortado_teto)::text bruto
+                        from public.expansao_liquidacao where ciclo_id=$1 and user_id=$2`, [c.ciclo_id, raiz]))[0];
+  return c.status === 'SETTLED' && BigInt(ciclo.receita_menor_unid) === 0n
+    && l && BigInt(l.bruto) === BigInt(l.eq) * 25n && BigInt(l.eq) >= 300n;
+});
+await t('🔒 ninguém passou de $2.500 num dia de São Paulo', async () =>
+  (await q(`select count(*)::int n from (
+     select l.user_id from public.expansao_liquidacao l join public.expansao_ciclo c on c.id=l.ciclo_id
+      group by l.user_id, public.expansao_dia_do_teto(c.abre_em)
+     having sum(l.bonus_contabil) > $1) x`, [String(TETO_DIARIO_CENTAVOS)]))[0].n === 0);
+await t('🔑 cada ciclo grava o total pago e o cortado', async () =>
   (await q(`select count(*)::int n from public.expansao_ciclo c
-             where (select coalesce(sum(bonus_contabil),0) from public.expansao_liquidacao l where l.ciclo_id=c.id) > c.pool`))[0].n === 0);
+     where c.bonus_total <> (select coalesce(sum(bonus_contabil),0) from public.expansao_liquidacao l where l.ciclo_id=c.id)
+        or c.cortado_total <> (select coalesce(sum(cortado_teto),0) from public.expansao_liquidacao l where l.ciclo_id=c.id)`))[0].n === 0);
+await t('🔑 o valor gravado em todo ciclo pago é $0,25', async () =>
+  (await q(`select count(*)::int n from public.expansao_ciclo where status='SETTLED' and valor_por_olexp_micro <> 25000000`))[0].n === 0);
 await t('🔒 o trilho de qualificação nunca é debitado', async () => {
   const q1 = (await q(`select coalesce(sum(volume),0)::text v from public.expansao_perna where trilho='qualificacao'`))[0].v;
   const e1 = (await q(`select coalesce(sum(volume),0)::text v from public.expansao_perna where trilho='equiparacao'`))[0].v;
@@ -220,7 +257,8 @@ await t('🔑 o bônus lido pela tela é a soma das liquidações, convertido pe
   const l = (await q(`select coalesce(sum(bonus_contabil),0)::text usd,
       coalesce(sum(floor(bonus_contabil*1000000/c.preco_micro)),0)::text tok
       from public.expansao_liquidacao li join public.expansao_ciclo c on c.id=li.ciclo_id where li.user_id=$1`, [raiz]))[0];
-  return String(m.bonus_usd_cents) === l.usd && String(m.olefoot) === l.tok && BigInt(l.tok) === BigInt(l.usd) * 80n;
+  return String(m.bonus_usd_cents) === l.usd && String(m.olefoot) === l.tok && BigInt(l.tok) === BigInt(l.usd) * 80n
+    && String(m.teto_diario_cents) === '250000' && m.hoje_usd_cents != null;
 });
 await t('🔒 sem login, o bônus não responde', async () => {
   await loga(null);
@@ -241,7 +279,7 @@ await t('🔒 lado inválido é recusado', async () => {
 });
 const priv = async (f: string, r: string) =>
   (await q(`select has_function_privilege($1,$2,'execute') p`, [r, f]))[0].p as boolean;
-for (const f of ['public.expansao_fechar_ciclo(timestamptz,integer,numeric)',
+for (const f of ['public.expansao_fechar_ciclo(timestamptz,integer,numeric,numeric,numeric)',
   'public.expansao_fechar_ciclos_pendentes(integer)', 'public.expansao_ativo_interno(uuid)',
   'public.expansao_receita_da_janela(timestamptz,timestamptz)']) {
   await t(`🔒 ${f.replace('public.', '').split('(')[0]} fechada pro cliente`, async () =>

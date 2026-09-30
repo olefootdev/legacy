@@ -7,7 +7,10 @@ import { ELEGIBILIDADE_PADRAO, olexpDaCompra, podeEquiparar, podeQualificar } fr
 import { arvoreVazia, creditar, equipeMenor, inserir, inserirRaiz, volumeDaPerna,
   acervoVazio, consumirEquiparado, type Acervo } from './arvore.js';
 import { DEGRAUS, carreiraDe } from './carreira.js';
-import { MICRO, bonusContabil, equiparar, fecharCiclo, olefootAPagar, poolDoCiclo } from './equiparacao.js';
+import {
+  MICRO, TETO_DIARIO_CENTAVOS, VALOR_DO_PONTO_MICRO, aplicarTetoDiario, bonusContabil, equiparar, fecharCiclo,
+  olefootAPagar, poolDoCiclo,
+} from './equiparacao.js';
 
 import { ativacaoDe, diretosPorPerna, pernaDoDescendente, inserir, inserirRaiz, arvoreVazia } from './arvore.js';
 import { equipararSeAtivo } from './equiparacao.js';
@@ -167,31 +170,40 @@ check('percentual é configurável, não cravado', poolDoCiclo(100_000_00n, { pe
 recusa('percentual acima de 100% é recusado', () => poolDoCiclo(100n, { percentualBps: 10_001 }));
 
 {
-  // O exemplo da spec: pool R$ 10.000, 50.000 OLEXP → R$ 0,20 por OLEXP.
-  //
-  // ⚠️ A unidade contábil é a MENOR da moeda (centavo), e MICRO são 1e6
-  // subdivisões dela. Então R$ 0,20 = 20 centavos = 20 × MICRO micro-centavos.
-  // Eu mesmo errei isto na primeira versão do teste, escrevendo como se a
-  // unidade fosse o real — por isso a conta está explícita aqui.
-  const l = fecharCiclo(10_000_00n, 50_000n);            // pool: 1.000.000 centavos
-  check('valor de liquidação sai da divisão', l.status === 'READY' && l.valorPorOlexpMicro === 20n * MICRO);
-  check('R$ 0,20 por OLEXP no exemplo da spec', bonusContabil(50_000n, l.valorPorOlexpMicro as bigint) === 10_000_00n);
-}
-{
-  // Outro ciclo, outro valor — é esse o ponto do desenho.
-  const a1 = fecharCiclo(10_000_00n, 50_000n).valorPorOlexpMicro as bigint;
-  const a2 = fecharCiclo(4_000_00n, 50_000n).valorPorOlexpMicro as bigint;
-  check('ciclos diferentes dão valores diferentes', a1 !== a2 && a2 * 5n === a1 * 2n);
+  // Decisão do fundador (2026-09-30): o ponto vale fixo $0,25.
+  // $0,25 = 25 centavos = 25 × MICRO micro-centavos.
+  check('o ponto vale $0,25', VALOR_DO_PONTO_MICRO === 25n * MICRO);
+  const l = fecharCiclo(10_000_00n, 50_000n);
+  check('ciclo com equiparado liquida pelo valor fixo', l.status === 'READY' && l.valorPorOlexpMicro === VALOR_DO_PONTO_MICRO);
+  check('18.000 pontos = $4.500', bonusContabil(18_000n, VALOR_DO_PONTO_MICRO) === 4_500_00n);
+  // O pool não muda o valor: é só registro.
+  check('pool diferente, mesmo valor', fecharCiclo(4_000_00n, 50_000n).valorPorOlexpMicro === l.valorPorOlexpMicro);
 }
 
-// ⭐ A trava financeira: hora sem receita não debita ninguém.
+// Hora sem receita: com valor fixo, paga do mesmo jeito — os pontos vieram de
+// compras de horas anteriores.
 {
   const l = fecharCiclo(0n, 5_000n);
-  check('ciclo SEM POOL fica retido, não liquida', l.status === 'HELD');
-  check('e o valor é INDEFINIDO, não zero', l.valorPorOlexpMicro === null);
-  check('com motivo escrito', (l.motivo ?? '').includes('retida'));
+  check('ciclo sem receita também liquida', l.status === 'READY' && l.valorPorOlexpMicro === VALOR_DO_PONTO_MICRO);
 }
-check('ciclo sem nada a equiparar também fica retido', fecharCiclo(10_000_00n, 0n).status === 'HELD');
+check('ciclo sem nada a equiparar fica retido', fecharCiclo(10_000_00n, 0n).status === 'HELD');
+check('e o valor é INDEFINIDO, não zero', fecharCiclo(10_000_00n, 0n).valorPorOlexpMicro === null);
+
+console.log('\n🧢 teto diário — $2.500 por pessoa por dia\n');
+check('o teto é $2.500', TETO_DIARIO_CENTAVOS === 2_500_00n);
+{
+  const a = aplicarTetoDiario(4_500_00n, 0n);
+  check('18.000 pontos num dia: paga $2.500, corta $2.000', a.pago === 2_500_00n && a.cortado === 2_000_00n);
+  const b = aplicarTetoDiario(1_000_00n, 2_000_00n);
+  check('já levou $2.000: o ciclo seguinte paga só $500', b.pago === 500_00n && b.cortado === 500_00n);
+  const c = aplicarTetoDiario(1_00n, 2_500_00n);
+  check('teto batido: não paga mais nada no dia', c.pago === 0n && c.cortado === 1_00n);
+  const d = aplicarTetoDiario(300_00n, 0n);
+  check('abaixo do teto: paga inteiro', d.pago === 300_00n && d.cortado === 0n);
+  check('pago + cortado = bruto, sempre', [a, b, c, d].every((x, i) =>
+    x.pago + x.cortado === [4_500_00n, 1_000_00n, 1_00n, 300_00n][i]));
+}
+recusa('valor do ponto zero é recusado', () => fecharCiclo(0n, 1n, 0n));
 
 {
   // US$ 500 a US$ 0,05 = 10.000 OLEFOOT (o exemplo da spec).
