@@ -38,8 +38,13 @@ export async function montarBanco({ extras = [], antesDosExtras } = {}) {
     -- Igual ao Supabase: quem está logado sai do JWT que o PostgREST põe na sessão.
     create or replace function auth.jwt() returns jsonb language sql stable as $$
       select nullif(current_setting('request.jwt.claims', true), '')::jsonb $$;
+    -- Como no Supabase real: aceita o claim antigo (request.jwt.claim.sub) e o
+    -- novo (request.jwt.claims json) — migrations de épocas diferentes usam os dois.
     create or replace function auth.uid() returns uuid language sql stable as $$
-      select nullif(auth.jwt() ->> 'sub', '')::uuid $$;
+      select coalesce(
+        nullif(current_setting('request.jwt.claim.sub', true), ''),
+        nullif(auth.jwt() ->> 'sub', '')
+      )::uuid $$;
     create or replace function auth.role() returns text language sql stable as $$
       select auth.jwt() ->> 'role' $$;
     do $$ begin create role anon; exception when duplicate_object then null; end $$;

@@ -126,7 +126,8 @@
     "test:pin": "node scripts/valida-carteira-pin.mjs",
     "test:card-bro": "node scripts/valida-card-bro.mjs",
     "test:ativacao-3x": "node scripts/valida-ativacao-3x.mjs",
-    "test:admin-login": "node scripts/valida-admin-login.mjs"
+    "test:admin-login": "node scripts/valida-admin-login.mjs",
+    "test:claim-expansao": "node scripts/valida-claim-expansao.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",

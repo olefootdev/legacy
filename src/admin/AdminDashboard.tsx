@@ -25,6 +25,7 @@ import {
   ShieldAlert,
   BookOpen,
   LogOut,
+  GitBranch,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatBroFromCents } from '@/systems/economy';
@@ -34,6 +35,11 @@ import { AdminLeaguesPanel } from './panels/AdminLeaguesPanel';
 import { AdminUsuariosPanel } from './panels/AdminUsuariosPanel';
 import { AdminFinanceiroPanel } from './panels/AdminFinanceiroPanel';
 import { AdminLicencasPanel } from './panels/AdminLicencasPanel';
+import { AdminExpansaoPanel } from './panels/AdminExpansaoPanel';
+import { AdminExpansaoRedePanel } from './panels/AdminExpansaoRedePanel';
+import { AdminExpansaoClaimsPanel } from './panels/AdminExpansaoClaimsPanel';
+import { AdminPreVendaPanel } from './panels/AdminPreVendaPanel';
+import { AdminSuportePanel } from './panels/AdminSuportePanel';
 import { AdminGameSpiritPanel } from './panels/AdminGameSpiritPanel';
 import { AdminProspectArtPanel } from './panels/AdminProspectArtPanel';
 import { AdminRevelaScoutPanel } from './panels/AdminRevelaScoutPanel';
@@ -69,6 +75,7 @@ type TabId =
   | 'usuarios'
   | 'audit'
   | 'economia'
+  | 'expansao'
   | 'jogadores'
   | 'ia'
   | 'leagues'
@@ -83,6 +90,11 @@ type SubTabId =
   | 'shop'
   | 'market'
   | 'licencas'
+  | 'preVenda'
+  | 'expCiclos'
+  | 'expRede'
+  | 'expClaims'
+  | 'suporte'
   | 'prospectArt'
   | 'gachaTemplates'
   | 'playerEvolution'
@@ -118,6 +130,17 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
       { id: 'shop', label: 'Loja' },
       { id: 'market', label: 'Market' },
       { id: 'licencas', label: 'Licenças' },
+      { id: 'preVenda', label: 'Pré-venda' },
+    ],
+  },
+  {
+    id: 'expansao',
+    label: 'Expansão',
+    icon: GitBranch,
+    subTabs: [
+      { id: 'expCiclos', label: 'Ciclos' },
+      { id: 'expRede', label: 'Rede' },
+      { id: 'expClaims', label: 'Saques' },
     ],
   },
   {
@@ -160,6 +183,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
     subTabs: [
       { id: 'global', label: 'Global' },
       { id: 'olefootLiga', label: 'Liga Global (legado)' },
+      { id: 'suporte', label: 'Suporte' },
       { id: 'security', label: 'Segurança' },
       { id: 'platformConfig', label: 'Plataforma' },
       { id: 'broadcast', label: 'Broadcast' },
@@ -182,6 +206,14 @@ const HASH_TO_TAB: Record<string, TabId | SubTabId> = {
   financeiro: 'financeiro',
   shop: 'shop',
   market: 'market',
+  'pre-venda': 'preVenda',
+  presale: 'preVenda',
+  'expansao-ciclos': 'expCiclos',
+  'expansao-rede': 'expRede',
+  'expansao-saques': 'expClaims',
+  claims: 'expClaims',
+  suporte: 'suporte',
+  pin: 'suporte',
   legacy: 'legacy',
   legendCreator: 'legendCreator',
   'legend-creator': 'legendCreator',
@@ -376,7 +408,14 @@ export function AdminDashboard() {
               {tab === 'economia' && subTab === 'shop' ? <AdminShopPanel /> : null}
               {tab === 'economia' && subTab === 'market' ? <AdminMarketPanel /> : null}
               {tab === 'economia' && subTab === 'licencas' ? <AdminLicencasPanel /> : null}
+              {tab === 'economia' && subTab === 'preVenda' ? <AdminPreVendaPanel /> : null}
               {tab === 'economia' && !subTab ? <AdminFinanceiroPanel /> : null}
+
+              {/* Expansão group */}
+              {tab === 'expansao' && subTab === 'expCiclos' ? <AdminExpansaoPanel /> : null}
+              {tab === 'expansao' && subTab === 'expRede' ? <AdminExpansaoRedePanel /> : null}
+              {tab === 'expansao' && subTab === 'expClaims' ? <AdminExpansaoClaimsPanel /> : null}
+              {tab === 'expansao' && !subTab ? <AdminExpansaoPanel /> : null}
 
               {/* Jogadores group */}
               {tab === 'jogadores' && subTab === 'revelaScout' ? <AdminRevelaScoutPanel /> : null}
@@ -404,6 +443,7 @@ export function AdminDashboard() {
               {/* Sistema group */}
               {tab === 'sistema' && subTab === 'global' ? <AdminGlobalPanel /> : null}
               {tab === 'sistema' && subTab === 'olefootLiga' ? <AdminOlefootLigaPanel /> : null}
+              {tab === 'sistema' && subTab === 'suporte' ? <AdminSuportePanel /> : null}
               {tab === 'sistema' && subTab === 'security' ? <AdminSecurityPanel /> : null}
               {tab === 'sistema' && subTab === 'platformConfig' ? <AdminPlatformConfigPanel /> : null}
               {tab === 'sistema' && subTab === 'broadcast' ? <AdminBroadcastPanel /> : null}

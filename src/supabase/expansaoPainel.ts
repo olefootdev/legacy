@@ -252,6 +252,75 @@ export async function lerCiclosPagos(quantos = 6): Promise<CicloFechado[]> {
   }));
 }
 
+// ─────────────────────────────────────────────────────────────── o saque ────
+
+export interface PedidoDeSaque {
+  readonly ok: boolean;
+  /** carteira_nao_vinculada · pin_obrigatorio · pin_errado · muitas_tentativas
+   *  · claim_pendente · sem_saldo · erro. null quando ok. */
+  readonly motivo: string | null;
+  readonly tentaDeNovoEm: number;
+  /** OLEFOOT líquido do pedido (o que vai chegar). null quando não ok. */
+  readonly olefoot: bigint | null;
+  /** A carteira vinculada que vai receber. null quando não ok. */
+  readonly wallet: string | null;
+}
+
+/**
+ * Pede o saque de TUDO que está disponível, pra carteira Solana VINCULADA e
+ * verificada (não existe campo de endereço: o destino é o que a assinatura
+ * provou). Conta com PIN assina com ele. Vira um claim `pendente` que o admin
+ * aprova e paga com a transação on-chain.
+ *
+ * ⚠️ A TELA ainda não chama isto de propósito: o BlocoBonus diz "o saque abre
+ * quando o OLEFOOT for lançado na Solana" — ligar o botão é decisão de
+ * lançamento do fundador. A máquina (banco + fila do admin) já está pronta.
+ */
+export async function pedirSaque(pin?: string): Promise<PedidoDeSaque> {
+  const sb = getSupabase();
+  if (!sb) return { ok: false, motivo: 'erro', tentaDeNovoEm: 0, olefoot: null, wallet: null };
+  const { data, error } = await sb.rpc('expansao_claim_pedir', { p_pin: pin ?? null });
+  const l = (Array.isArray(data) ? data[0] : data) as
+    { ok: boolean; motivo: string | null; tenta_de_novo_em?: number; olefoot?: unknown; wallet?: string | null } | null;
+  if (error || !l) return { ok: false, motivo: 'erro', tentaDeNovoEm: 0, olefoot: null, wallet: null };
+  return {
+    ok: l.ok === true,
+    motivo: l.motivo ?? null,
+    tentaDeNovoEm: Number(l.tenta_de_novo_em ?? 0),
+    olefoot: l.ok ? inteiro(l.olefoot) : null,
+    wallet: l.ok ? (l.wallet ?? null) : null,
+  };
+}
+
+export interface MeuSaque {
+  readonly id: number;
+  readonly olefoot: bigint;
+  readonly wallet: string;
+  readonly status: 'pendente' | 'aprovado' | 'pago' | 'recusado' | string;
+  readonly criadoEm: string;
+  readonly pagoEm: string | null;
+}
+
+/** Meus claims, do mais novo pro mais velho (RLS: só as linhas próprias). */
+export async function lerMeusSaques(): Promise<MeuSaque[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from('expansao_claim')
+    .select('id, olefoot_liquido, wallet, status, criado_em, pago_em')
+    .order('criado_em', { ascending: false })
+    .limit(20);
+  if (error || !Array.isArray(data)) return [];
+  return data.map((c) => ({
+    id: Number(c.id),
+    olefoot: inteiro(c.olefoot_liquido),
+    wallet: String(c.wallet),
+    status: String(c.status),
+    criadoEm: String(c.criado_em),
+    pagoEm: c.pago_em ? String(c.pago_em) : null,
+  }));
+}
+
 /**
  * null = automático (o time com menos indicados diretos).
  *
