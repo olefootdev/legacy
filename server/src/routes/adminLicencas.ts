@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
-import { adminQuemAge, requireAdminToken } from '../lib/adminAuth.js';
+import { adminQuemAge, requireAdminFresco, requireAdminToken } from '../lib/adminAuth.js';
 
 /**
  * Licenças de ativação da expansão — gerar, listar, revogar.
@@ -46,6 +46,10 @@ adminLicencasRoutes.get('/licencas', async (c) => {
  * → { codigos: [{ licencaId, codigo }] }
  */
 adminLicencasRoutes.post('/licencas', async (c) => {
+  // 🔒 Dinheiro exige login RECENTE (P0 do raio-x 30/09): sessão roubada do
+  // navegador de jogar não move dinheiro depois da janela.
+  const fresco = await requireAdminFresco(c);
+  if (fresco) return fresco;
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ error: 'Supabase admin não configurado.' }, 503);
 
@@ -96,6 +100,10 @@ adminLicencasRoutes.post('/licencas', async (c) => {
 
 /** POST /api/admin/licencas/:id/revogar { motivo? } */
 adminLicencasRoutes.post('/licencas/:id/revogar', async (c) => {
+  // 🔒 Dinheiro exige login RECENTE (P0 do raio-x 30/09): sessão roubada do
+  // navegador de jogar não move dinheiro depois da janela.
+  const fresco = await requireAdminFresco(c);
+  if (fresco) return fresco;
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ error: 'Supabase admin não configurado.' }, 503);
   const id = Number(c.req.param('id'));

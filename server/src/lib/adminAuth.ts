@@ -94,3 +94,54 @@ export async function requireAdminToken(c: Context): Promise<Response | null> {
     : `não autenticado — ${info.reason}`;
   return c.json({ error: `Acesso de admin negado: ${detail}.` }, 403);
 }
+
+/**
+ * Minutos desde a última AUTENTICAÇÃO de verdade da sessão do Bearer.
+ *
+ * Lê o `amr` do JWT — a hora de cada login real; refresh de token renova o
+ * `iat` mas não mexe no `amr` (o mesmo relógio que o PIN da carteira usa no
+ * SQL). O payload é decodificado sem conferir assinatura DE PROPÓSITO: quem
+ * confere é o `requireAdminToken` logo antes, via `sb.auth.getUser(token)` —
+ * aqui só se lê um campo de um token que já provou ser autêntico.
+ */
+function minutosDesdeLogin(c: Context): number | null {
+  const auth = c.req.header('Authorization');
+  const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : null;
+  const payloadB64 = token?.split('.')[1];
+  if (!payloadB64) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8')) as {
+      amr?: Array<{ timestamp?: number }>;
+    };
+    const ts = Math.max(0, ...(payload.amr ?? []).map((e) => Number(e?.timestamp) || 0));
+    if (ts <= 0) return null;
+    return (Date.now() / 1000 - ts) / 60;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Gate das rotas de DINHEIRO (estorno, licenças, Vault): além de ser admin,
+ * exige que o login seja recente. Uma sessão roubada do navegador de jogar
+ * para de valer pra mover dinheiro depois da janela.
+ *
+ * O modo X-Admin-Token (automação) passa direto: o segredo é o fator.
+ */
+export async function requireAdminFresco(c: Context, maxMinutos = 30): Promise<Response | null> {
+  const authErr = await requireAdminToken(c);
+  if (authErr) return authErr;
+
+  const expected = configuredAdminToken();
+  if (expected && c.req.header('X-Admin-Token')?.trim() === expected) return null;
+
+  const min = minutosDesdeLogin(c);
+  if (min == null && !expected && process.env.NODE_ENV === 'development') return null;
+  if (min == null || min > maxMinutos) {
+    return c.json({
+      error: `Operação de dinheiro exige login recente: saia e entre na conta de novo (vale ${maxMinutos} min).`,
+      motivo: 'login_antigo',
+    }, 403);
+  }
+  return null;
+}

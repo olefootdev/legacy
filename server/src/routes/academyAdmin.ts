@@ -8,7 +8,20 @@ import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { requireAdminToken } from '../lib/adminAuth.js';
 
+// 🔒 Gate no ROUTER (P0 do raio-x 30/09): rota nova neste arquivo nasce
+// protegida. Os guards por rota continuam — redundância barata.
+// (Caminhos absolutos: o router é montado na raiz, então o escopo é explícito,
+// como no vault.ts.)
+
 export const academyAdminRoutes = new Hono();
+
+for (const caminho of ['/api/admin/academy', '/api/admin/academy/*']) {
+  academyAdminRoutes.use(caminho, async (c, next) => {
+    const authErr = await requireAdminToken(c);
+    if (authErr) return authErr;
+    await next();
+  });
+}
 
 const ATTR_KEYS = [
   'passe', 'marcacao', 'velocidade', 'drible', 'finalizacao',

@@ -1,4 +1,5 @@
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
+import { adminBearer } from '@/admin/adminBearer';
 
 export type TeachKind = 'narrative' | 'tactical' | 'position';
 
@@ -23,7 +24,7 @@ export async function requestGameSpiritTeach(body: {
   try {
     const r = await fetch(`${base}/api/game-spirit/teach`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await adminBearer()) },
       body: JSON.stringify(body),
     });
     const j = (await r.json()) as { ok?: boolean; error?: string; data?: unknown; rawAssistant?: string };
@@ -61,7 +62,7 @@ export async function requestAdminPlayerFromPrompt(body: {
   try {
     const r = await fetch(`${base}/api/admin/player-from-prompt`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await adminBearer()) },
       body: JSON.stringify(body),
     });
     const j = (await r.json()) as { ok?: boolean; error?: string; rawAssistant?: string };

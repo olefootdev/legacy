@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { rateLimit } from '../lib/rateLimit.js';
+import { requireAdminToken } from '../lib/adminAuth.js';
 import { uploadBufferToPinata } from '../services/pinata/uploadToPinata.js';
 import { uploadToSupabaseStorage } from '../services/supabaseStorage/uploadToSupabaseStorage.js';
 
@@ -402,6 +403,10 @@ academyArtRoutes.post('/api/academy/generate-portrait', rateLimit(5), async (c) 
  * Auth: Bearer Supabase. env: PINATA_JWT.
  */
 academyArtRoutes.post('/api/academy/upload-admin-image', rateLimit(20), async (c) => {
+  // 🔒 P0 (raio-x 30/09): a rota se chama admin e aceitava qualquer jogador
+  // logado. Agora exige admin; o userId continua resolvido pra atribuição.
+  const naoAdmin = await requireAdminToken(c);
+  if (naoAdmin) return naoAdmin;
   const userId = await resolveUser(c.req.header('Authorization'));
   if (!userId) return c.json({ ok: false, error: 'Unauthorized' }, 401);
 

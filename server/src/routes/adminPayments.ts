@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
-import { requireAdminToken } from '../lib/adminAuth.js';
+import { requireAdminFresco, requireAdminToken } from '../lib/adminAuth.js';
 
 /**
  * Rotas admin de pagamentos — lista de intents + estorno manual.
@@ -78,6 +78,10 @@ adminPaymentsRoutes.get('/payments/refunds', async (c) => {
  * (status, comissões revertidas, créditos anulados, needs_manual).
  */
 adminPaymentsRoutes.post('/payments/refund/:intentId', async (c) => {
+  // 🔒 Dinheiro exige login RECENTE (P0 do raio-x 30/09): sessão roubada do
+  // navegador de jogar não move dinheiro depois da janela.
+  const fresco = await requireAdminFresco(c);
+  if (fresco) return fresco;
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ error: 'Supabase admin não configurado.' }, 503);
 

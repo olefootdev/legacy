@@ -293,6 +293,14 @@ function buildInitialLot(playerId: string, pricing: ResolvedPricing) {
 
 export const legendImportRoutes = new Hono();
 
+// 🔒 Gate no ROUTER (P0 do raio-x 30/09): montado em /api/admin com caminhos
+// relativos, o '*' fica escopado — rota nova neste arquivo nasce protegida.
+legendImportRoutes.use('*', async (c, next) => {
+  const authErr = await requireAdminToken(c);
+  if (authErr) return authErr;
+  await next();
+});
+
 legendImportRoutes.post('/legend-import', async (c) => {
   const authErr = await requireAdminToken(c);
   if (authErr) return authErr;

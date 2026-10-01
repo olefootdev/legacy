@@ -6,6 +6,7 @@
  */
 
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
+import { adminBearer } from '@/admin/adminBearer';
 
 export interface ScoutResearch {
   full_name: string;
@@ -64,7 +65,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   try {
     const r = await fetch(`${olefootApiBase()}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await adminBearer()) },
       body: JSON.stringify(body),
       signal: controller.signal,
     });

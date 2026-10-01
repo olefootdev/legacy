@@ -19,7 +19,7 @@
  * move o livro é o operador, com o comprovante na mão.
  */
 import { Hono } from 'hono';
-import { requireAdminToken } from '../lib/adminAuth.js';
+import { requireAdminFresco, requireAdminToken } from '../lib/adminAuth.js';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { rateLimit } from '../lib/rateLimit.js';
 import { MICRO_POR_COTA, unidadesPorResgate } from '../lib/vaultBook.js';
@@ -151,7 +151,11 @@ vaultRoutes.get('/api/vault/:slug/meu-extrato', rateLimit(30), async (c) => {
 const GATE: Parameters<typeof vaultAdminRoutes.use>[0][] = ['/api/admin/vault', '/api/admin/vault/*'];
 for (const caminho of GATE) {
   vaultAdminRoutes.use(caminho, async (c, next) => {
-    const authErr = await requireAdminToken(c);
+    // 🔒 Escrita no Vault é dinheiro: além de admin, login recente (step-up,
+    // P0 do raio-x 30/09). Leitura continua só com o gate normal.
+    const authErr = c.req.method === 'GET'
+      ? await requireAdminToken(c)
+      : await requireAdminFresco(c);
     if (authErr) return authErr;
     await next();
   });

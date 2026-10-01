@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { postGameSpiritDecision } from '../controllers/gameSpiritDecisionController.js';
 import { rateLimit } from '../lib/rateLimit.js';
+import { requireAdminToken } from '../lib/adminAuth.js';
 import { sanitizePrompt } from '../lib/inputGuards.js';
 import { hasAnthropicKey, MODELS } from '../lib/anthropic.js';
 import {
@@ -40,6 +41,10 @@ gameSpiritRoutes.get('/api/game-spirit/status', (c) => {
 
 /** Admin Create Player — modo combined (compat). Preferir os 4 agentes abaixo. */
 gameSpiritRoutes.post('/api/admin/player-from-prompt', rateLimit(20), async (c) => {
+  // 🔒 P0 (raio-x 30/09): rota de admin que queima crédito Anthropic estava
+  // aberta — só rate-limit por IP. Agora exige admin de verdade.
+  const naoAdmin = await requireAdminToken(c);
+  if (naoAdmin) return naoAdmin;
   if (!hasAnthropicKey()) {
     return c.json({ ok: false, error: 'ANTHROPIC_API_KEY em falta no servidor.' }, 503);
   }
@@ -74,6 +79,10 @@ gameSpiritRoutes.post('/api/admin/player-from-prompt', rateLimit(20), async (c) 
 // Cada passo pode ser editado pelo admin antes de prosseguir.
 
 gameSpiritRoutes.post('/api/admin/player/scout', rateLimit(10), async (c) => {
+  // 🔒 P0 (raio-x 30/09): rota de admin que queima crédito Anthropic estava
+  // aberta — só rate-limit por IP. Agora exige admin de verdade.
+  const naoAdmin = await requireAdminToken(c);
+  if (naoAdmin) return naoAdmin;
   if (!hasAnthropicKey()) return c.json({ ok: false, error: 'ANTHROPIC_API_KEY ausente.' }, 503);
   const body = await c.req.json().catch(() => ({}));
   const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -92,6 +101,10 @@ gameSpiritRoutes.post('/api/admin/player/scout', rateLimit(10), async (c) => {
 });
 
 gameSpiritRoutes.post('/api/admin/player/attributes', rateLimit(10), async (c) => {
+  // 🔒 P0 (raio-x 30/09): rota de admin que queima crédito Anthropic estava
+  // aberta — só rate-limit por IP. Agora exige admin de verdade.
+  const naoAdmin = await requireAdminToken(c);
+  if (naoAdmin) return naoAdmin;
   if (!hasAnthropicKey()) return c.json({ ok: false, error: 'ANTHROPIC_API_KEY ausente.' }, 503);
   const body = await c.req.json().catch(() => ({}));
   if (!body || typeof body !== 'object' || !body.research) {
@@ -106,6 +119,10 @@ gameSpiritRoutes.post('/api/admin/player/attributes', rateLimit(10), async (c) =
 });
 
 gameSpiritRoutes.post('/api/admin/player/bio', rateLimit(10), async (c) => {
+  // 🔒 P0 (raio-x 30/09): rota de admin que queima crédito Anthropic estava
+  // aberta — só rate-limit por IP. Agora exige admin de verdade.
+  const naoAdmin = await requireAdminToken(c);
+  if (naoAdmin) return naoAdmin;
   if (!hasAnthropicKey()) return c.json({ ok: false, error: 'ANTHROPIC_API_KEY ausente.' }, 503);
   const body = await c.req.json().catch(() => ({}));
   if (!body || typeof body !== 'object' || !body.research) {
@@ -120,6 +137,10 @@ gameSpiritRoutes.post('/api/admin/player/bio', rateLimit(10), async (c) => {
 });
 
 gameSpiritRoutes.post('/api/admin/player/valuation', rateLimit(10), async (c) => {
+  // 🔒 P0 (raio-x 30/09): rota de admin que queima crédito Anthropic estava
+  // aberta — só rate-limit por IP. Agora exige admin de verdade.
+  const naoAdmin = await requireAdminToken(c);
+  if (naoAdmin) return naoAdmin;
   if (!hasAnthropicKey()) return c.json({ ok: false, error: 'ANTHROPIC_API_KEY ausente.' }, 503);
   const body = await c.req.json().catch(() => ({}));
   if (!body?.attrs) return c.json({ ok: false, error: 'attrs obrigatório.' }, 400);
@@ -139,6 +160,10 @@ type TeachBody = {
 };
 
 gameSpiritRoutes.post('/api/admin/growth-analyst', rateLimit(20), async (c) => {
+  // 🔒 P0 (raio-x 30/09): rota de admin que queima crédito Anthropic estava
+  // aberta — só rate-limit por IP. Agora exige admin de verdade.
+  const naoAdmin = await requireAdminToken(c);
+  if (naoAdmin) return naoAdmin;
   if (!hasAnthropicKey()) {
     return c.json({ ok: false, error: 'ANTHROPIC_API_KEY em falta no servidor.' }, 503);
   }
@@ -162,6 +187,10 @@ gameSpiritRoutes.post('/api/admin/growth-analyst', rateLimit(20), async (c) => {
 });
 
 gameSpiritRoutes.post('/api/game-spirit/teach', rateLimit(20), async (c) => {
+  // 🔒 P0 (raio-x 30/09): rota de admin que queima crédito Anthropic estava
+  // aberta — só rate-limit por IP. Agora exige admin de verdade.
+  const naoAdmin = await requireAdminToken(c);
+  if (naoAdmin) return naoAdmin;
   if (!hasAnthropicKey()) {
     return c.json({ ok: false, error: 'ANTHROPIC_API_KEY em falta no servidor.' }, 503);
   }

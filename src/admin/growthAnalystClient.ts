@@ -1,4 +1,5 @@
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
+import { adminBearer } from '@/admin/adminBearer';
 
 export interface GrowthAnalystBriefing {
   /** Resumo executivo do dia / período */
@@ -57,7 +58,7 @@ export async function requestGrowthAnalyst(body: {
   try {
     const r = await fetch(`${base}/api/admin/growth-analyst`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await adminBearer()) },
       body: JSON.stringify({
         snapshot: body.snapshot,
         founderNote: body.founderNote?.trim() || undefined,
