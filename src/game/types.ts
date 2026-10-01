@@ -968,6 +968,7 @@ export type GameAction =
   | { type: 'SET_MARKET_OFFERS'; incoming: MarketOffer[]; outgoing: MarketOffer[] }
   | { type: 'APPLY_OFFER_ACCEPTED_AS_BUYER'; player: PlayerEntity; priceExp: number; ole: number; ledgerEntry?: { id: string; amount: number; source: string; createdAt: string } }
   | { type: 'APPLY_OFFER_SETTLED_AS_SELLER'; playerId: string; playerName: string; creditExp: number; buyerClubName: string }
+  | { type: 'APPLY_SQUAD_SALE_AS_SELLER'; playerIds: string[]; titulo: string; priceOlefoot: number; buyerClubName: string }
   | {
       type: 'BUY_GENESIS_MARKET_PLAYER';
       player: import('@/entities/types').PlayerEntity;

@@ -26,6 +26,13 @@ const quickActions: Array<{
     href: '/clube/elenco',
   },
   {
+    eyebrow: '#mercado',
+    title: 'Valores',
+    description: 'Preço vivo e vendas',
+    cta: 'Ver valores',
+    href: '/clube/valores',
+  },
+  {
     eyebrow: '#desenvolvimento',
     title: 'Treino',
     description: 'Individual e coletivo',

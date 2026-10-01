@@ -43,6 +43,7 @@ const EVENT_LABELS: Record<MissionEvent, string> = {
   session_login: 'fazer login',
   screen_home: 'abrir Home',
   screen_team: 'abrir Meu Time',
+  screen_team_valores: 'abrir Valores do elenco',
   screen_wallet: 'abrir Wallet',
   screen_city: 'abrir Cidade',
   screen_transfer: 'abrir Transfer',

@@ -3333,6 +3333,45 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ].slice(0, 60),
       };
     }
+    case 'APPLY_SQUAD_SALE_AS_SELLER': {
+      // Venda no MERCADO DE ELENCO (OLEFOOT) liquidada no servidor: removo os
+      // jogadores vendidos do estado local (um ou o time inteiro). O OLEFOOT
+      // já está no saldo do servidor (legacy_olefoot_credits) — aqui não se
+      // credita nada, só se aplica a saída e se conta o feito.
+      const vendidos = action.playerIds.filter((pid) => state.players[pid]);
+      if (vendidos.length === 0) return state;
+      const players = { ...state.players };
+      for (const pid of vendidos) delete players[pid];
+      const lineup = { ...state.lineup };
+      for (const [slot, pid] of Object.entries(lineup)) {
+        if (vendidos.includes(pid)) delete lineup[slot];
+      }
+      return {
+        ...state,
+        players,
+        lineup,
+        managerScore: addManagerScore(
+          state.managerScore,
+          'venda_jogador',
+          `Vendeu ${action.titulo} para ${action.buyerClubName} por OLEFOOT`,
+          Date.now(),
+        ),
+        inbox: [
+          makeInboxItem(
+            `squad-sale-${Date.now()}`,
+            'PLAYER_SOLD',
+            'FINANCEIRO',
+            `Vendeste ${action.titulo} por ${action.priceOlefoot.toLocaleString('pt-BR')} OLEFOOT.`,
+            {
+              body: `${action.buyerClubName} comprou no mercado de elenco. O OLEFOOT já está na tua carteira.`,
+              deepLink: '/wallet',
+              hideFromHomeFeed: false,
+            },
+          ),
+          ...state.inbox,
+        ].slice(0, 60),
+      };
+    }
     case 'BUY_GENESIS_MARKET_PLAYER': {
       const pid = action.player.id;
       if (!pid.startsWith('genesis-')) return state;

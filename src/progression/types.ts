@@ -18,6 +18,7 @@ export type MissionEvent =
   | 'session_login'
   | 'screen_home'
   | 'screen_team'
+  | 'screen_team_valores'
   | 'screen_wallet'
   | 'screen_city'
   | 'screen_transfer'

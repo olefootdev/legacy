@@ -135,6 +135,7 @@ const EarningsPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/Ear
 const OleFieldLabAerea = lazy(() => import('./pages/OleFieldLabAerea').then((m) => ({ default: m.OleFieldLabAerea })));
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
+const TeamValores = lazy(() => import('./pages/TeamValores').then((m) => ({ default: m.TeamValores })));
 const TeamStaff = lazy(() => import('./pages/TeamStaff').then((m) => ({ default: m.TeamStaff })));
 const CoachChat = lazy(() => import('./pages/CoachChat').then((m) => ({ default: m.CoachChat })));
 const YouthProspects = lazy(() => import('./pages/YouthProspects').then((m) => ({ default: m.YouthProspects })));
@@ -590,6 +591,7 @@ as a nice MVP. Let's Play Together! ⚽
 
             {/* Clube subpages */}
             <Route path="/clube/elenco" element={<Team />} />
+            <Route path="/clube/valores" element={<TeamValores />} />
             <Route path="/clube/treino" element={<TeamTraining />} />
             <Route path="/clube/staff" element={<TeamStaff />} />
             <Route path="/coach/chat" element={<CoachChat />} />
