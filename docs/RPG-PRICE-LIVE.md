@@ -2,6 +2,20 @@
 
 *2026-10-01 · análise a pedido do fundador, junto com a entrega do Mercado de Elenco em OLEFOOT.*
 
+> **STATUS (mesmo dia, decisão do fundador: "executa todas as 7"):** TUDO NO AR.
+> O gap nº 1 fechou (`player_value_snapshots` + rating por partida no servidor,
+> push automático pós-jogo) e as 7 viraram código: ① Ticker + OLE-100 + índice
+> horário em `/mercado/vivo` · ② royalty de formador 3% dentro da liquidação
+> (`player_formador`) · ③ salário invertido (`yield_reivindicar`, contado pelo
+> BANCO nos snapshots de partida, teto 30/dia) · ④ empréstimo com opção
+> (`squad_loans`, devolução automática com a evolução) · ⑤ leilão-relâmpago do
+> MVP (cron diário 20h SP, escrow de lance, 50% pro dono) · ⑥ cotas de clube
+> até 49% com dividendo automático em toda venda (`club_shares`) · ⑦ IPO de
+> clube (banner de estreia no ClubHub → vitrine de times prontos).
+> Decisão 2 também: `presale_config.liquidez_adicionada` (nasce FALSE) trava
+> qualquer liberação da pré-venda até a liquidez entrar — toggle no admin.
+> Migrations `rpg_price_live_fundacao` + `squad_market_v2` aplicadas em prod.
+
 ## O conceito em uma linha
 
 **RPG** (atributo que evolui) → **PRICE** (atributo vira preço) → **LIVE** (o preço se move em tempo

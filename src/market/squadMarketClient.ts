@@ -49,21 +49,23 @@ export interface VitrineTeam {
 
 export interface SquadListing {
   id: string;
-  kind: 'player' | 'team';
+  kind: 'player' | 'team' | 'loan';
   mine: boolean;
   seller: { username: string | null; club: string | null };
   gamePlayerId: string | null;
   player: VitrinePlayer | null;
   team: VitrineTeam | null;
-  /** OLEFOOT inteiro, como string (numeric(78,0) do banco). */
+  /** OLEFOOT inteiro, como string (numeric(78,0) do banco). Em loan = aluguel. */
   priceOlefoot: string;
   refOlefoot: string | null;
+  loanDays: number | null;
+  buyoutOlefoot: string | null;
   createdAt: string;
 }
 
 export interface MeuAnuncio {
   id: string;
-  kind: 'player' | 'team';
+  kind: 'player' | 'team' | 'loan';
   gamePlayerId: string | null;
   player: VitrinePlayer | null;
   team: VitrineTeam | null;
@@ -73,7 +75,7 @@ export interface MeuAnuncio {
 
 export interface VendaNaoAplicada {
   id: string;
-  kind: 'player' | 'team';
+  kind: 'player' | 'team' | 'loan';
   gamePlayerId: string | null;
   player: VitrinePlayer | null;
   team: VitrineTeam | null;
@@ -82,11 +84,26 @@ export interface VendaNaoAplicada {
   soldAt: string | null;
 }
 
+export interface MeuEmprestimo {
+  id: string;
+  gamePlayerId: string;
+  papel: 'dono' | 'locatario';
+  rentOlefoot: string;
+  buyoutOlefoot: string | null;
+  endsAt: string;
+}
+
 export const fetchVitrine = () =>
   chamar<{ ok: true; listings: SquadListing[] }>('/api/squad-market/listings').then((r) => r.listings);
 
 export const fetchMeusAnuncios = () =>
-  chamar<{ ok: true; ativos: MeuAnuncio[]; vendidosNaoAplicados: VendaNaoAplicada[] }>('/api/squad-market/mine');
+  chamar<{
+    ok: true;
+    ativos: MeuAnuncio[];
+    vendidosNaoAplicados: VendaNaoAplicada[];
+    emprestimos: MeuEmprestimo[];
+    devolucoesNaoAplicadas: { id: string; gamePlayerId: string }[];
+  }>('/api/squad-market/mine');
 
 export const anunciarJogador = (playerId: string, priceOlefoot: number) =>
   chamar<{ ok: true; listingId: string }>('/api/squad-market/list', { playerId, priceOlefoot });
@@ -106,3 +123,22 @@ export const comprarAnuncio = (listingId: string) =>
 
 export const confirmarVendasAplicadas = (listingIds: string[]) =>
   chamar<{ ok: true }>('/api/squad-market/ack-sold', { listingIds });
+
+export const anunciarEmprestimo = (playerId: string, priceOlefoot: number, loanDays: number, buyoutOlefoot?: number | null) =>
+  chamar<{ ok: true; listingId: string }>('/api/squad-market/list-loan', {
+    playerId, priceOlefoot, loanDays, buyoutOlefoot: buyoutOlefoot ?? null,
+  });
+
+/** Aluga: o jogador VIVO entra no teu plantel até endsAt (evolução fica nele). */
+export const alugarAnuncio = (listingId: string) =>
+  chamar<{ ok: true; player: PlayerEntity; loanId: string; rentOlefoot: string; endsAt: string }>(
+    '/api/squad-market/rent',
+    { listingId },
+  );
+
+export const confirmarDevolucoesAplicadas = (loanIds: string[]) =>
+  chamar<{ ok: true }>('/api/squad-market/ack-loan', { loanIds });
+
+/** O vencedor do leilão do MVP retira a cópia única pro plantel. */
+export const retirarMvp = (auctionId: string) =>
+  chamar<{ ok: true; player: PlayerEntity; bidOlefoot: string }>('/api/squad-market/mvp/claim', { auctionId });

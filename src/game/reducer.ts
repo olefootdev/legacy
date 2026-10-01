@@ -264,6 +264,7 @@ import {
 } from '@/match/impactLedger';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { queueMatchEvents, finalizeMatch, persistPlayers, persistPlayerGoals } from '@/supabase/matchPersistence';
+import { pushValueSnapshots } from '@/market/marketLiveClient';
 import { makeInboxItem } from './inboxItem';
 import { buildPostMatchStaffInboxItem } from './postMatchStaffInbox';
 import { defaultShopCatalog, findShopItem, normalizeShopCatalog, shopEffectNeedsPlayer } from './shopCatalog';
@@ -2135,6 +2136,24 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       }
       void persistPlayers(state.club.id, playerPersistPayload);
 
+      // RPG-PRICE-LIVE: o preço sobe pro SERVIDOR a cada partida — é daqui que
+      // ticker, OLE-100 e o salário (yield com teto no banco) leem. Só quem
+      // jogou (tem stat) e já tem valor dinâmico entra; fire-and-forget.
+      void pushValueSnapshots(
+        playedUnique
+          .map((pid) => players[pid])
+          .filter((p): p is PlayerEntity => !!p && p.marketValueBroCents != null && p.marketValueBroCents > 0)
+          .map((p) => ({
+            gamePlayerId: p.id,
+            name: p.name,
+            pos: p.pos,
+            ovr: overallFromAttributes(p.attrs, p.pos),
+            marketBroCents: p.marketValueBroCents!,
+            rating: lm.homeStats[p.id]?.rating ?? null,
+            source: 'match' as const,
+          })),
+      );
+
       const leagueSeason = applyResultToLeagueSeason(state.leagueSeason, lastRow);
 
       const prevMem = state.memorableTrophyUnlockedIds ?? [];
@@ -3367,6 +3386,33 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               deepLink: '/wallet',
               hideFromHomeFeed: false,
             },
+          ),
+          ...state.inbox,
+        ].slice(0, 60),
+      };
+    }
+    case 'APPLY_LOAN_RETURNED_AS_BORROWER': {
+      // Fim do empréstimo: o jogador ALUGADO volta pro dono (o servidor já
+      // moveu). Aqui só se aplica a saída local — sem pontuação, não é venda.
+      const devolvidos = action.playerIds.filter((pid) => state.players[pid]);
+      if (devolvidos.length === 0) return state;
+      const players = { ...state.players };
+      for (const pid of devolvidos) delete players[pid];
+      const lineup = { ...state.lineup };
+      for (const [slot, pid] of Object.entries(lineup)) {
+        if (devolvidos.includes(pid)) delete lineup[slot];
+      }
+      return {
+        ...state,
+        players,
+        lineup,
+        inbox: [
+          makeInboxItem(
+            `loan-returned-${Date.now()}`,
+            'PLAYER_SOLD',
+            'FINANCEIRO',
+            `Empréstimo encerrado: ${action.titulo} voltou pro dono.`,
+            { body: 'O contrato venceu. Toda a evolução que ele ganhou aqui vai junto.', deepLink: '/clube/valores', hideFromHomeFeed: true },
           ),
           ...state.inbox,
         ].slice(0, 60),

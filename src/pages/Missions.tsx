@@ -44,6 +44,7 @@ const EVENT_LABELS: Record<MissionEvent, string> = {
   screen_home: 'abrir Home',
   screen_team: 'abrir Meu Time',
   screen_team_valores: 'abrir Valores do elenco',
+  screen_mercado_vivo: 'abrir o Mercado ao Vivo',
   screen_wallet: 'abrir Wallet',
   screen_city: 'abrir Cidade',
   screen_transfer: 'abrir Transfer',

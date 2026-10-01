@@ -26,16 +26,22 @@ import { previewMarketValue } from '@/economy/marketValue';
 import type { PlayerEntity } from '@/entities/types';
 import { fetchMyOlefootBalance } from '@/wallet/olefoot';
 import {
+  alugarAnuncio,
+  anunciarEmprestimo,
   anunciarJogador,
   anunciarTime,
   cancelarAnuncio,
   comprarAnuncio,
+  confirmarDevolucoesAplicadas,
   confirmarVendasAplicadas,
   fetchMeusAnuncios,
   fetchVitrine,
   type MeuAnuncio,
+  type MeuEmprestimo,
   type SquadListing,
 } from '@/market/squadMarketClient';
+import { exercerOpcaoDeCompra, pushValueSnapshots, reivindicarSalario } from '@/market/marketLiveClient';
+import { SociedadeSection } from '@/market/SociedadeSection';
 
 /**
  * OLEFOOT por centavo de BRO (≈USD): $0,000125/token ⇒ 80 tokens/centavo.
@@ -68,7 +74,7 @@ export function TeamValores() {
   const playersRef = useRef(players);
   useEffect(() => { playersRef.current = players; }, [players]);
 
-  const [saldoOlefoot, setSaldoOlefoot] = useState<bigint | null>(null);
+  const [saldoOlefoot, setSaldoOlefoot] = useState<number | null>(null);
   const [vitrine, setVitrine] = useState<SquadListing[]>([]);
   const [meusAnuncios, setMeusAnuncios] = useState<MeuAnuncio[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -80,6 +86,13 @@ export function TeamValores() {
   const [preco, setPreco] = useState('');
   const [comprar, setComprar] = useState<SquadListing | null>(null);
   const [agindo, setAgindo] = useState(false);
+
+  const [emprestimos, setEmprestimos] = useState<MeuEmprestimo[]>([]);
+  const [emprestar, setEmprestar] = useState<PlayerEntity | null>(null);
+  const [dias, setDias] = useState('7');
+  const [buyout, setBuyout] = useState('');
+  const [salario, setSalario] = useState<{ pago: number; atuacoes: number } | null>(null);
+  const [coletando, setColetando] = useState(false);
 
   const lista = useMemo(() => {
     return Object.values(players)
@@ -106,7 +119,9 @@ export function TeamValores() {
   const totalCents = useMemo(() => lista.reduce((s, r) => s + r.cents, 0), [lista]);
   const anuncioPorJogador = useMemo(() => {
     const m = new Map<string, MeuAnuncio>();
-    for (const a of meusAnuncios) if (a.kind === 'player' && a.gamePlayerId) m.set(a.gamePlayerId, a);
+    for (const a of meusAnuncios) {
+      if ((a.kind === 'player' || a.kind === 'loan') && a.gamePlayerId) m.set(a.gamePlayerId, a);
+    }
     return m;
   }, [meusAnuncios]);
   const anuncioDoTime = useMemo(() => meusAnuncios.find((a) => a.kind === 'team') ?? null, [meusAnuncios]);
@@ -122,7 +137,41 @@ export function TeamValores() {
       ]);
       setVitrine(v.filter((l) => !l.mine));
       setMeusAnuncios(meus.ativos);
+      setEmprestimos(meus.emprestimos);
       setSaldoOlefoot(saldo);
+
+      // Fim de empréstimo (sou locatário): tira o devolvido do estado local e
+      // dá o ack — sem isso o persist ressuscitaria o jogador no plantel errado.
+      if (meus.devolucoesNaoAplicadas.length > 0) {
+        for (const dev of meus.devolucoesNaoAplicadas) {
+          const nome = playersRef.current[dev.gamePlayerId]?.name ?? 'um jogador emprestado';
+          dispatch({ type: 'APPLY_LOAN_RETURNED_AS_BORROWER', playerIds: [dev.gamePlayerId], titulo: nome });
+        }
+        await confirmarDevolucoesAplicadas(meus.devolucoesNaoAplicadas.map((x) => x.id));
+      }
+
+      // Checkpoint do preço no servidor (ticker/OLE-100), no máximo 1×/hora.
+      try {
+        const marca = localStorage.getItem('olefoot-pvs-checkpoint');
+        if (!marca || Date.now() - Number(marca) > 3_600_000) {
+          const atuais = Object.values(playersRef.current)
+            .filter((p) => p.marketValueBroCents != null && p.marketValueBroCents > 0)
+            .slice(0, 40)
+            .map((p) => ({
+              gamePlayerId: p.id,
+              name: p.name,
+              pos: p.pos,
+              ovr: overallFromAttributes(p.attrs, p.pos),
+              marketBroCents: p.marketValueBroCents!,
+              rating: null,
+              source: 'checkpoint' as const,
+            }));
+          if (atuais.length > 0) {
+            void pushValueSnapshots(atuais);
+            localStorage.setItem('olefoot-pvs-checkpoint', String(Date.now()));
+          }
+        }
+      } catch { /* localStorage indisponível — sem checkpoint */ }
 
       // ── O CONTRATO DO VENDEDOR: aplica vendas liquidadas e dá o ack. ─────
       if (meus.vendidosNaoAplicados.length > 0) {
@@ -204,6 +253,92 @@ export function TeamValores() {
     }
   };
 
+  const coletarSalario = async () => {
+    if (coletando) return;
+    setColetando(true);
+    setErro(null);
+    try {
+      const r = await reivindicarSalario();
+      setSalario({ pago: r.pago, atuacoes: r.atuacoesHoje });
+      if (r.pago > 0) {
+        setAviso(`Salário do elenco: +${r.pago} OLEFOOT (${r.atuacoesHoje} atuação(ões) nota ≥ 7 hoje).`);
+        setSaldoOlefoot(await fetchMyOlefootBalance().catch(() => saldoOlefoot));
+      }
+    } finally {
+      setColetando(false);
+    }
+  };
+
+  const confirmarEmprestimo = async () => {
+    if (!emprestar || agindo) return;
+    setAgindo(true);
+    setErro(null);
+    try {
+      await anunciarEmprestimo(
+        emprestar.id,
+        Number(preco.replace(/\./g, '')),
+        Number(dias),
+        buyout.trim() ? Number(buyout.replace(/\./g, '')) : null,
+      );
+      setEmprestar(null);
+      setPreco('');
+      setBuyout('');
+      await carregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao anunciar o empréstimo.');
+    } finally {
+      setAgindo(false);
+    }
+  };
+
+  const alugar = async (l: SquadListing) => {
+    if (agindo) return;
+    setAgindo(true);
+    setErro(null);
+    try {
+      const r = await alugarAnuncio(l.id);
+      dispatch({ type: 'MERGE_PLAYERS', players: { [r.player.id]: r.player } });
+      setAviso(`${r.player.name} é teu até ${new Date(r.endsAt).toLocaleDateString('pt-BR')} — a evolução fica nele.`);
+      await carregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha no aluguel.');
+    } finally {
+      setAgindo(false);
+    }
+  };
+
+  const comprarAlugado = async (loan: MeuEmprestimo) => {
+    if (agindo) return;
+    setAgindo(true);
+    setErro(null);
+    try {
+      const r = await exercerOpcaoDeCompra(loan.id);
+      if (!r.ok) {
+        const mapa: Record<string, string> = {
+          saldo_insuficiente: 'Saldo OLEFOOT insuficiente.',
+          emprestimo_vencido: 'O empréstimo venceu — o jogador já voltou.',
+          sem_opcao_de_compra: 'Este contrato não tem opção de compra.',
+        };
+        setErro(mapa[r.motivo ?? ''] ?? 'Falha na opção de compra.');
+        return;
+      }
+      setAviso(`Opção exercida por ${tok(r.price ?? 0)} OLEFOOT — o jogador agora é TEU.`);
+      await carregar();
+    } finally {
+      setAgindo(false);
+    }
+  };
+
+  const alugadoPorMim = useMemo(() => {
+    const m = new Map<string, MeuEmprestimo>();
+    for (const e of emprestimos) if (e.papel === 'locatario') m.set(e.gamePlayerId, e);
+    return m;
+  }, [emprestimos]);
+  const emprestadosFora = useMemo(
+    () => emprestimos.filter((e) => e.papel === 'dono'),
+    [emprestimos],
+  );
+
   const precoNum = Number(preco.replace(/\./g, ''));
   const campo = 'w-full border border-white/15 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30';
 
@@ -245,6 +380,15 @@ export function TeamValores() {
             <span className="text-[11px] text-white/45">
               Teu saldo: {saldoOlefoot == null ? '—' : `${saldoOlefoot.toLocaleString('pt-BR')} OLEFOOT`}
             </span>
+            <button
+              type="button"
+              onClick={() => void coletarSalario()}
+              disabled={coletando}
+              title="Atuação com nota ≥ 7 hoje rende 1 OLEFOOT (teto 30/dia). Contado pelo servidor."
+              className="border border-emerald-500/40 bg-emerald-500/5 px-3 py-1.5 font-display text-[10px] font-black uppercase tracking-wider text-emerald-200 hover:bg-emerald-500/15 disabled:opacity-50"
+            >
+              {coletando ? 'Coletando…' : salario ? `Salário: ${salario.atuacoes} atuação(ões) hoje` : 'Coletar salário do elenco'}
+            </button>
           </div>
         </div>
       </section>
@@ -311,17 +455,36 @@ export function TeamValores() {
                       <span className="ml-1 text-[10px] text-white/40">OLEFOOT · {dolar(cents)}</span>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">
-                      {anuncio ? (
+                      {alugadoPorMim.has(p.id) ? (
+                        <span className="inline-flex items-center gap-2">
+                          <span className="border border-sky-500/40 bg-sky-500/10 px-2 py-1 font-display text-[9px] font-black uppercase text-sky-200">
+                            Alugado até {new Date(alugadoPorMim.get(p.id)!.endsAt).toLocaleDateString('pt-BR')}
+                          </span>
+                          {alugadoPorMim.get(p.id)!.buyoutOlefoot ? (
+                            <button type="button" onClick={() => void comprarAlugado(alugadoPorMim.get(p.id)!)} disabled={agindo}
+                              className="border border-emerald-500/40 px-2.5 py-1 font-display text-[10px] font-black uppercase text-emerald-200 hover:bg-emerald-500/10 disabled:opacity-50">
+                              Comprar por {tok(Number(alugadoPorMim.get(p.id)!.buyoutOlefoot))}
+                            </button>
+                          ) : null}
+                        </span>
+                      ) : anuncio ? (
                         <button type="button" onClick={() => void cancelar(anuncio.id)} disabled={agindo}
                           className="border border-rose-500/40 px-2.5 py-1 font-display text-[10px] font-black uppercase text-rose-200 hover:bg-rose-500/10 disabled:opacity-50">
-                          À venda por {tok(Number(anuncio.priceOlefoot))} · tirar
+                          {anuncio.kind === 'loan' ? 'Pra alugar' : 'À venda'} por {tok(Number(anuncio.priceOlefoot))} · tirar
                         </button>
                       ) : (
-                        <button type="button"
-                          onClick={() => { setVender(p); setPreco(String(olefoot)); }}
-                          className="border border-neon-yellow/50 px-2.5 py-1 font-display text-[10px] font-black uppercase text-neon-yellow hover:bg-neon-yellow/10">
-                          Vender
-                        </button>
+                        <>
+                          <button type="button"
+                            onClick={() => { setVender(p); setPreco(String(olefoot)); }}
+                            className="mr-1 border border-neon-yellow/50 px-2.5 py-1 font-display text-[10px] font-black uppercase text-neon-yellow hover:bg-neon-yellow/10">
+                            Vender
+                          </button>
+                          <button type="button"
+                            onClick={() => { setEmprestar(p); setPreco(String(Math.max(1, Math.round(olefoot / 20)))); setBuyout(String(olefoot)); }}
+                            className="border border-sky-500/50 px-2.5 py-1 font-display text-[10px] font-black uppercase text-sky-200 hover:bg-sky-500/10">
+                            Emprestar
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>
@@ -339,6 +502,16 @@ export function TeamValores() {
           O valor é o preço dinâmico do jogo (OVR, forma, idade, raridade, escassez), convertido a OLEFOOT pelo
           preço real da pré-venda ($0,000125). Quem tu vendes sai TREINADO — é esse o negócio.
         </p>
+        {emprestadosFora.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {emprestadosFora.map((e) => (
+              <span key={e.id} className="border border-sky-500/30 bg-sky-500/5 px-2.5 py-1.5 text-[11px] text-sky-200">
+                Emprestado: <span className="font-mono text-[10px] text-white/50">{e.gamePlayerId.slice(0, 12)}</span>{' '}
+                volta {new Date(e.endsAt).toLocaleDateString('pt-BR')} · aluguel {tok(Number(e.rentOlefoot))} já na carteira
+              </span>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       {/* ── VITRINE DA COMUNIDADE ────────────────────────────────────────── */}
@@ -359,7 +532,7 @@ export function TeamValores() {
                 : null;
               return (
                 <div key={l.id} className="ole-poster ole-rail flex flex-col gap-2 p-4">
-                  {l.kind === 'player' && l.player ? (
+                  {(l.kind === 'player' || l.kind === 'loan') && l.player ? (
                     <>
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="font-impact text-[18px] uppercase text-white">{l.player.name}</span>
@@ -386,20 +559,35 @@ export function TeamValores() {
                   )}
                   <div className="mt-auto flex items-end justify-between gap-2 border-t border-white/10 pt-2">
                     <div>
-                      <p className="font-mono text-[16px] font-bold text-neon-yellow tabular-nums">{tok(precoL)} <span className="text-[10px] text-white/50">OLEFOOT</span></p>
+                      <p className="font-mono text-[16px] font-bold text-neon-yellow tabular-nums">
+                        {tok(precoL)} <span className="text-[10px] text-white/50">OLEFOOT{l.kind === 'loan' ? ` · ${l.loanDays}d` : ''}</span>
+                      </p>
                       <p className="text-[10px] text-white/40">
-                        ≈ {dolar(precoL / TOKENS_POR_CENTAVO * 1)}{' '}
-                        {agio != null ? (
-                          <span className={agio > 0 ? 'text-amber-300' : 'text-emerald-300'}>
-                            · {agio > 0 ? '+' : ''}{agio.toFixed(0)}% vs referência
-                          </span>
-                        ) : null}
+                        {l.kind === 'loan' ? (
+                          <>aluguel · {l.buyoutOlefoot ? `opção de compra: ${tok(Number(l.buyoutOlefoot))}` : 'sem opção de compra'}</>
+                        ) : (
+                          <>
+                            ≈ {dolar(precoL / TOKENS_POR_CENTAVO * 1)}{' '}
+                            {agio != null ? (
+                              <span className={agio > 0 ? 'text-amber-300' : 'text-emerald-300'}>
+                                · {agio > 0 ? '+' : ''}{agio.toFixed(0)}% vs referência
+                              </span>
+                            ) : null}
+                          </>
+                        )}
                       </p>
                     </div>
-                    <button type="button" onClick={() => setComprar(l)}
-                      className="bg-neon-yellow px-3 py-1.5 font-display text-[11px] font-black uppercase text-black hover:bg-white">
-                      Comprar
-                    </button>
+                    {l.kind === 'loan' ? (
+                      <button type="button" onClick={() => void alugar(l)} disabled={agindo}
+                        className="bg-sky-400 px-3 py-1.5 font-display text-[11px] font-black uppercase text-black hover:bg-white disabled:opacity-50">
+                        Alugar
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => setComprar(l)}
+                        className="bg-neon-yellow px-3 py-1.5 font-display text-[11px] font-black uppercase text-black hover:bg-white">
+                        Comprar
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -407,6 +595,45 @@ export function TeamValores() {
           </div>
         )}
       </section>
+
+      {/* ── SOCIEDADE: cotas do clube ────────────────────────────────────── */}
+      <SociedadeSection />
+
+      {/* ── EMPRESTAR ────────────────────────────────────────────────────── */}
+      <ConfirmDialog
+        open={emprestar != null}
+        onClose={() => (agindo ? null : setEmprestar(null))}
+        onConfirm={() => void confirmarEmprestimo()}
+        eyebrow="Empréstimo"
+        title={`Emprestar ${emprestar?.name ?? ''}?`}
+        confirmLabel={agindo ? 'Anunciando…' : 'Anunciar empréstimo'}
+        confirmDisabled={agindo || !Number.isInteger(precoNum) || precoNum < 1 || !Number(dias)}
+        accent="#38bdf8"
+      >
+        <div className="mt-3 space-y-2 text-sm text-white/75">
+          <p>
+            Ele joga no time do locatário e <strong>volta sozinho</strong> no fim do prazo — com
+            toda a evolução que ganhar lá (tu lucras o aluguel E o treino alheio).
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="text-[10px] uppercase text-white/45">Aluguel (OLEFOOT)</span>
+              <input className={campo} value={preco} inputMode="numeric"
+                onChange={(e) => setPreco(e.target.value.replace(/[^\d]/g, ''))} />
+            </label>
+            <label className="block">
+              <span className="text-[10px] uppercase text-white/45">Dias (1–30)</span>
+              <input className={campo} value={dias} inputMode="numeric"
+                onChange={(e) => setDias(e.target.value.replace(/[^\d]/g, ''))} />
+            </label>
+          </div>
+          <label className="block">
+            <span className="text-[10px] uppercase text-white/45">Opção de compra (OLEFOOT · em branco = sem opção)</span>
+            <input className={campo} value={buyout} inputMode="numeric"
+              onChange={(e) => setBuyout(e.target.value.replace(/[^\d]/g, ''))} placeholder="preço travado pro locatário ficar com ele" />
+          </label>
+        </div>
+      </ConfirmDialog>
 
       {/* ── VENDER (jogador ou time) ─────────────────────────────────────── */}
       <ConfirmDialog
@@ -455,7 +682,7 @@ export function TeamValores() {
         eyebrow="Mercado de elenco"
         title={comprar?.kind === 'team' ? 'Comprar o time inteiro?' : `Comprar ${comprar?.player?.name ?? ''}?`}
         confirmLabel={agindo ? 'Comprando…' : `Pagar ${tok(Number(comprar?.priceOlefoot ?? 0))} OLEFOOT`}
-        confirmDisabled={agindo || (saldoOlefoot != null && comprar != null && saldoOlefoot < BigInt(comprar.priceOlefoot))}
+        confirmDisabled={agindo || (saldoOlefoot != null && comprar != null && saldoOlefoot < Number(comprar.priceOlefoot))}
         accent="#fde100"
       >
         {comprar ? (
@@ -469,7 +696,7 @@ export function TeamValores() {
               Débito de {tok(Number(comprar.priceOlefoot))} OLEFOOT na tua carteira
               {saldoOlefoot != null ? ` (saldo: ${saldoOlefoot.toLocaleString('pt-BR')})` : ''}. Sem estorno — mercado é mercado.
             </p>
-            {saldoOlefoot != null && saldoOlefoot < BigInt(comprar.priceOlefoot) ? (
+            {saldoOlefoot != null && saldoOlefoot < Number(comprar.priceOlefoot) ? (
               <p className="text-[11px] font-bold text-rose-300">Saldo OLEFOOT insuficiente.</p>
             ) : null}
           </div>

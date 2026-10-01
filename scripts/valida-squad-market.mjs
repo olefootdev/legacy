@@ -20,6 +20,8 @@ const db = await montarBanco({
     '20260531000000_legacy_v1_olefoot_credits.sql',
     ...MIGRATIONS_DA_FASE0,
     '20261001150000_squad_market_olefoot.sql',
+    '20261001200000_rpg_price_live_fundacao.sql',
+    '20261001210000_squad_market_v2.sql',
   ],
   antesDosExtras: async (d) => {
     for (const n of NOMES) {

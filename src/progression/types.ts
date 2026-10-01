@@ -19,6 +19,7 @@ export type MissionEvent =
   | 'screen_home'
   | 'screen_team'
   | 'screen_team_valores'
+  | 'screen_mercado_vivo'
   | 'screen_wallet'
   | 'screen_city'
   | 'screen_transfer'

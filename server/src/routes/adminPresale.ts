@@ -74,7 +74,7 @@ adminPresaleRoutes.get('/presale', async (c) => {
 
 /**
  * POST /presale/config
- * { aberta?, tetoContaUsdCents?, degrauVendidoBps?, tetoAposDegrauUsdCents? }
+ * { aberta?, tetoContaUsdCents?, degrauVendidoBps?, tetoAposDegrauUsdCents?, liquidezAdicionada? }
  * Só muda o que vier no corpo. Teto null = sem teto (explícito, não omissão).
  */
 adminPresaleRoutes.post('/presale/config', async (c) => {
@@ -91,6 +91,13 @@ adminPresaleRoutes.post('/presale/config', async (c) => {
   if ('aberta' in body) {
     if (typeof body.aberta !== 'boolean') return c.json({ error: '`aberta` é true/false.' }, 400);
     patch.aberta = body.aberta;
+  }
+  // Decisão do fundador (2026-10-01): a pré-venda só LIBERA token quando a
+  // liquidez for adicionada na moeda. O flag é a trava que as pontes de
+  // unlock são obrigadas a checar.
+  if ('liquidezAdicionada' in body) {
+    if (typeof body.liquidezAdicionada !== 'boolean') return c.json({ error: '`liquidezAdicionada` é true/false.' }, 400);
+    patch.liquidez_adicionada = body.liquidezAdicionada;
   }
   const cents = (campo: string, rotulo: string): string | null => {
     const v = body[campo];

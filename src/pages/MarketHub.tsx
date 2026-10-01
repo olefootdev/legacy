@@ -102,6 +102,14 @@ export function MarketHub() {
           delay={0.1}
         />
         <HubSectionCard
+          to="/mercado/vivo"
+          eyebrow="Bolsa"
+          title="Mercado ao Vivo"
+          description="Ticker, OLE-100 e leilão do MVP"
+          cta="Ver a bolsa"
+          delay={0.2}
+        />
+        <HubSectionCard
           to="/mercado/loja"
           eyebrow="Itens"
           title="Loja"

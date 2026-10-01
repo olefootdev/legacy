@@ -196,6 +196,8 @@ export interface PresaleConfigAdmin {
   tokens_vendidos: string;
   lancada_em: string | null;
   atualizado_em: string | null;
+  /** Trava do fundador: liberação de token só depois de adicionar liquidez. */
+  liquidez_adicionada?: boolean;
 }
 
 export interface PresaleAdmin {
@@ -233,6 +235,7 @@ export const mudarPresaleConfig = (patch: {
   tetoContaUsdCents?: number | null;
   degrauVendidoBps?: number;
   tetoAposDegrauUsdCents?: number | null;
+  liquidezAdicionada?: boolean;
 }) => postar<{ config: PresaleConfigAdmin }>('/presale/config', patch);
 
 // ─── suporte ─────────────────────────────────────────────────────────────────

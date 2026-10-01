@@ -18,6 +18,7 @@ export function AdminPreVendaPanel() {
 
   // O formulário edita em DÓLARES; o servidor fala em centavos.
   const [aberta, setAberta] = useState(false);
+  const [liquidez, setLiquidez] = useState(false);
   const [tetoUsd, setTetoUsd] = useState('');
   const [degrauBps, setDegrauBps] = useState('');
   const [tetoAposUsd, setTetoAposUsd] = useState('');
@@ -31,6 +32,7 @@ export function AdminPreVendaPanel() {
       const d = await lerPresaleAdmin();
       setDados(d);
       setAberta(d.config?.aberta === true);
+      setLiquidez(d.config?.liquidez_adicionada === true);
       setTetoUsd(d.config?.teto_conta_usd_cents != null ? String(d.config.teto_conta_usd_cents / 100) : '');
       setDegrauBps(d.config?.degrau_vendido_bps != null ? String(d.config.degrau_vendido_bps) : '');
       setTetoAposUsd(d.config?.teto_apos_degrau_usd_cents != null ? String(d.config.teto_apos_degrau_usd_cents / 100) : '');
@@ -49,6 +51,7 @@ export function AdminPreVendaPanel() {
     try {
       await mudarPresaleConfig({
         aberta,
+        liquidezAdicionada: liquidez,
         tetoContaUsdCents: tetoUsd.trim() === '' ? null : Math.round(Number(tetoUsd) * 100),
         degrauVendidoBps: degrauBps.trim() === '' ? undefined : Number(degrauBps),
         tetoAposDegrauUsdCents: tetoAposUsd.trim() === '' ? null : Math.round(Number(tetoAposUsd) * 100),
@@ -74,9 +77,18 @@ export function AdminPreVendaPanel() {
           <h3 className="flex items-center gap-2 font-display text-xs font-bold uppercase tracking-widest text-neon-yellow/90">
             <Settings2 className="h-4 w-4" /> Torneira
           </h3>
-          <span className={cn('rounded border px-2 py-0.5 text-[10px] font-bold uppercase',
-            dados?.config?.aberta ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200' : 'border-rose-500/40 bg-rose-500/15 text-rose-200')}>
-            {dados?.config?.aberta ? 'Aberta' : 'Fechada'}
+          <span className="flex items-center gap-2">
+            <span className={cn('rounded border px-2 py-0.5 text-[10px] font-bold uppercase',
+              dados?.config?.liquidez_adicionada
+                ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200'
+                : 'border-amber-500/40 bg-amber-500/15 text-amber-200')}
+              title="Decisão do fundador: nenhuma liberação de token da pré-venda acontece antes de adicionar liquidez na moeda">
+              {dados?.config?.liquidez_adicionada ? 'Liquidez OK — liberação destravada' : 'Liberação TRAVADA (sem liquidez)'}
+            </span>
+            <span className={cn('rounded border px-2 py-0.5 text-[10px] font-bold uppercase',
+              dados?.config?.aberta ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200' : 'border-rose-500/40 bg-rose-500/15 text-rose-200')}>
+              {dados?.config?.aberta ? 'Aberta' : 'Fechada'}
+            </span>
           </span>
         </div>
 
@@ -96,6 +108,11 @@ export function AdminPreVendaPanel() {
           <label className="flex items-center gap-2 rounded-lg border border-white/15 bg-black/40 px-3 py-2">
             <input type="checkbox" checked={aberta} onChange={(e) => setAberta(e.target.checked)} className="h-4 w-4 accent-yellow-400" />
             <span className="text-xs font-bold uppercase text-white/80">Pré-venda aberta</span>
+          </label>
+          <label className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-black/40 px-3 py-2"
+            title="Enquanto desligado, NENHUMA liberação de token da pré-venda pode acontecer — é a trava que as pontes de unlock checam.">
+            <input type="checkbox" checked={liquidez} onChange={(e) => setLiquidez(e.target.checked)} className="h-4 w-4 accent-yellow-400" />
+            <span className="text-xs font-bold uppercase text-amber-200/90">Liquidez adicionada (destrava liberação)</span>
           </label>
           <label className="space-y-1">
             <span className="text-[10px] uppercase text-white/45">Teto por conta (US$)</span>

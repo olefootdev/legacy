@@ -136,6 +136,7 @@ const OleFieldLabAerea = lazy(() => import('./pages/OleFieldLabAerea').then((m) 
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
 const TeamValores = lazy(() => import('./pages/TeamValores').then((m) => ({ default: m.TeamValores })));
+const MercadoVivo = lazy(() => import('./pages/MercadoVivo').then((m) => ({ default: m.MercadoVivo })));
 const TeamStaff = lazy(() => import('./pages/TeamStaff').then((m) => ({ default: m.TeamStaff })));
 const CoachChat = lazy(() => import('./pages/CoachChat').then((m) => ({ default: m.CoachChat })));
 const YouthProspects = lazy(() => import('./pages/YouthProspects').then((m) => ({ default: m.YouthProspects })));
@@ -613,6 +614,7 @@ as a nice MVP. Let's Play Together! ⚽
             {/* Exchange (câmbio EXP↔BRO) removido em 2026-08-01 — link salvo cai no Mercado. */}
             <Route path="/mercado/exchange" element={<Navigate to="/mercado" replace />} />
             <Route path="/mercado/leiloes" element={<LiveAuctionsPage />} />
+            <Route path="/mercado/vivo" element={<MercadoVivo />} />
             <Route path="/mercado/loja" element={<Store />} />
 
             {/* Manager subpages */}

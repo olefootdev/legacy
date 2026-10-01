@@ -163,6 +163,31 @@ export function ClubHub() {
         </div>
       </section>
 
+      {/* IPO DE CLUBE: manager sem time completo pode ESTREAR comprando um
+          pronto — a vitrine de times inteiros do mercado de elenco. */}
+      {playerCount < 11 ? (
+        <section aria-label="Comprar um time pronto">
+          <a
+            href="/clube/valores"
+            className="ole-poster ole-rail flex flex-wrap items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-white/[0.04]"
+          >
+            <div>
+              <p className="font-display text-[10px] font-bold uppercase tracking-[0.24em] text-neon-yellow">
+                Estreia de dono
+              </p>
+              <p className="mt-1 text-sm text-white/75">
+                Teu plantel tem {playerCount} jogador(es). Dá pra começar do zero — ou{' '}
+                <strong className="text-white">comprar um time PRONTO</strong>, treinado por outro manager,
+                na vitrine em OLEFOOT.
+              </p>
+            </div>
+            <span className="bg-neon-yellow px-4 py-2 font-display text-[11px] font-black uppercase text-black">
+              Ver times à venda
+            </span>
+          </a>
+        </section>
+      ) : null}
+
       {/* Ações do clube — o primeiro card vem em destaque amarelo. */}
       <section>
         <h2 className="ole-eyebrow-poster mb-4" style={{ fontSize: '13px' }}>
