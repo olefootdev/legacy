@@ -348,7 +348,7 @@ export function MeuPerfilPage({
 }
 
 /**
- * O LINK DE INDICAÇÃO — `revela.olefoot.com/<handle>`.
+ * O LINK DE INDICAÇÃO — `revela.olefoot.ai/<handle>`.
  *
  * POR QUE ELE É DIFERENTE DO LINK DO PERFIL: os dois abrem a mesma página, mas
  * só este CREDITA A REDE de quem o atleta trouxe. É o `revela_resolve_handle`
@@ -612,7 +612,7 @@ function LinkDeIndicacao({ talento }: { talento: MeuTalento }) {
     );
   }
 
-  const url = `revela.olefoot.com/${talento.handle}`;
+  const url = `revela.olefoot.ai/${talento.handle}`;
   const ativo = talento.indicacaoAtiva === true;
 
   async function copiar() {

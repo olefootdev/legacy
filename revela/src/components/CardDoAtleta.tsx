@@ -40,7 +40,7 @@ export interface CardInput {
   /** `true` quando o overall veio do SCOUT autônomo e ninguém revisou. */
   inicial: boolean;
   portrait: string | null;
-  /** revela.olefoot.com/<handle> — o que a pessoa digita depois de ver o card. */
+  /** revela.olefoot.ai/<handle> — o que a pessoa digita depois de ver o card. */
   url: string;
 }
 

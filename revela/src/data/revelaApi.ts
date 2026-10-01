@@ -34,7 +34,7 @@ export async function fetchTalent(slug: string): Promise<Talent | null> {
   return rpc<Talent>('revela_get_talent', { p_slug: slug });
 }
 
-/** Resolução do link curto revela.olefoot.com/<handle>. */
+/** Resolução do link curto revela.olefoot.ai/<handle>. */
 export interface ResolvedHandle {
   found: boolean;
   kind?: 'talent' | 'legend';
@@ -157,7 +157,7 @@ export interface SubmitTalentInput {
   pos: string;
   /** Obrigatório: sem conta, o WhatsApp é a identidade do cadastro. */
   contactPhone: string;
-  /** @username OBRIGATÓRIO — vira revela.olefoot.com/<handle> (perfil + indicação). */
+  /** @username OBRIGATÓRIO — vira revela.olefoot.ai/<handle> (perfil + indicação). */
   handle: string;
   nickname?: string;
   category?: string;
@@ -380,7 +380,7 @@ export async function claimTalent(talentId: string, phone: string): Promise<Clai
 export interface MeuTalento {
   id: string;
   slug: string;
-  /** O @ curto: revela.olefoot.com/<handle>. Null enquanto ele não escolheu. */
+  /** O @ curto: revela.olefoot.ai/<handle>. Null enquanto ele não escolheu. */
   handle: string | null;
   /**
    * Se o link curto já CREDITA rede. Só vira true depois que o atleta cria o

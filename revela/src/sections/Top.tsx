@@ -441,7 +441,7 @@ export function Footer() {
             Como funciona
           </a>
           <a href={GAME_URL} className="rev-label rev-focus text-[11px]" style={{ color: 'rgba(237,235,228,.45)' }}>
-            game.olefoot.com
+            game.olefoot.ai
           </a>
         </div>
         <p className="text-[11px]" style={{ color: 'rgba(237,235,228,.28)' }}>

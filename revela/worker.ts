@@ -86,7 +86,7 @@ async function metaParaRota(url: URL, env: Env): Promise<Meta | null> {
     return metaDeLenda(env, base, partes[1]);
   }
 
-  // Link CURTO: revela.olefoot.com/<handle-ou-código>. É o que o crawler pede
+  // Link CURTO: revela.olefoot.ai/<handle-ou-código>. É o que o crawler pede
   // quando o jogador posta o link dele — sem isto, o preview seria o da home.
   if (partes.length === 1) {
     const seg = partes[0];

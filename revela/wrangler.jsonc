@@ -19,7 +19,7 @@
     // Por padrão, quando existe um arquivo pro caminho pedido, o Cloudflare o
     // serve direto e nem invoca o Worker. Como `/` casa com o index.html, a home
     // saía sem as tags injetadas.
-    // Agora roda em `/*` por causa do LINK CURTO revela.olefoot.com/<handle>: o
+    // Agora roda em `/*` por causa do LINK CURTO revela.olefoot.ai/<handle>: o
     // crawler pede o handle solto, e sem o Worker o preview seria o da home. O
     // Worker devolve asset não-HTML intocado (guard de content-type em worker.ts),
     // então o custo é um hop a mais por request — o preço do link curto com preview.
@@ -30,7 +30,10 @@
     // A anon key já é pública — ela viaja no bundle do front. Não é segredo.
     "SUPABASE_URL": "",
     "SUPABASE_ANON_KEY": ""
-  }
-  // Domínio: apontar revela.olefoot.com para este Worker no painel Cloudflare
-  // (Workers & Pages → olefoot-revela → Settings → Domains & Routes).
+  },
+  // 2026-10-01: o domínio mudou de revela.olefoot.com (zona morta) pra
+  // revela.olefoot.ai. Declarado AQUI em vez de no painel: o próximo
+  // `npm run deploy:revela` pendura o custom domain sozinho — a zona
+  // olefoot.ai já vive na mesma conta Cloudflare (game.olefoot.ai prova).
+  "routes": [{ "pattern": "revela.olefoot.ai", "custom_domain": true }]
 }

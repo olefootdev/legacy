@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { Eyebrow } from './primitives';
 import { BotaoStory, type StoryInput } from './StoryCard';
 import { enviarProva, fetchMinhasProvas, type MinhasProvas } from '../data/revelaApi';
+import { GAME_URL } from '../data/session';
 import { uploadPrint } from '../data/upload';
 import {
   CHAVES,
@@ -274,7 +275,7 @@ function OndeVoceEsta({ dados }: { dados: TrajetoriaData }) {
             minutos e é grátis.
           </p>
           <a
-            href="https://game.olefoot.com/cadastro"
+            href={`${GAME_URL}/cadastro`}
             className="rev-btn rev-focus mt-4 inline-flex"
             data-variant="yellow"
             data-on="dark"

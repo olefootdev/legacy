@@ -116,7 +116,7 @@ export default function App() {
             funcionando se apontarem pra este domínio. A estrutura de divulgação
             do playervip fica de pé; só a casca mudou. */}
         <Route path="/playervip/:slug" element={<LegendPage onNote={push} />} />
-        {/* O link CURTO do jogador: revela.olefoot.com/<handle>. Menos específico
+        {/* O link CURTO do jogador: revela.olefoot.ai/<handle>. Menos específico
             que as rotas acima (/comecar, /t/... vencem), mais que o catch-all.
             Resolve o @ → perfil + indicação, ou trata como código de indicação. */}
         <Route path="/:short" element={<ShortLink />} />

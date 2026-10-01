@@ -11,16 +11,16 @@
  * ── POR QUE NÃO RESOLVE COM MAGIC LINK DO DASHBOARD ─────────────────────────
  * Duas razões, e as duas são fatais:
  *   1. O link do painel do Supabase redireciona pra Site URL do projeto, que é o
- *      domínio do JOGO. A sessão nasceria em game.olefoot.com.
+ *      domínio do JOGO. A sessão nasceria em game.olefoot.ai.
  *   2. Sessão do supabase-js vive em localStorage, e localStorage é POR ORIGEM.
- *      game.olefoot.com e revela.olefoot.com são origens diferentes — logar num
+ *      game.olefoot.ai e revela.olefoot.ai são origens diferentes — logar num
  *      não loga no outro.
  * Aqui o `redirectTo` é montado a partir de `window.location.origin`, então o
  * e-mail disparado do REVELA volta pro REVELA. E isso vale pra qualquer atleta,
  * sem ninguém do time precisar abrir o Supabase.
  *
  * ── PRECISA DA LISTA DE REDIRECT ────────────────────────────────────────────
- * `https://revela.olefoot.com/**` tem que estar em Authentication → URL
+ * `https://revela.olefoot.ai/**` tem que estar em Authentication → URL
  * Configuration → Redirect URLs. Sem isso o Supabase ignora o `redirectTo` e
  * manda pra Site URL — o atleta cai no jogo e a tela abaixo nunca aparece.
  */

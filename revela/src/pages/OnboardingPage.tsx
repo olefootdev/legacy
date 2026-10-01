@@ -422,7 +422,7 @@ function HandleField({
         style={{ border: `2px solid ${borda}`, background: '#0f0f0f', borderRadius: 'var(--radius-rev-btn)', minHeight: 46 }}
       >
         <span style={{ paddingLeft: 14, color: 'rgba(237,235,228,.38)', fontSize: 14, whiteSpace: 'nowrap' }}>
-          revela.olefoot.com/
+          revela.olefoot.ai/
         </span>
         <input
           value={value}
@@ -445,7 +445,7 @@ function HandleField({
         />
       </div>
       <p className="text-[12px]" style={{ color: cor }}>
-        {status === 'ok' ? `revela.olefoot.com/${value} está ${fb.text}` : fb.text}
+        {status === 'ok' ? `revela.olefoot.ai/${value} está ${fb.text}` : fb.text}
       </p>
     </label>
   );

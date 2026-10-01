@@ -1,5 +1,5 @@
 /**
- * revela.olefoot.com/<x> — um caminho, dois destinos.
+ * revela.olefoot.ai/<x> — um caminho, dois destinos.
  *
  * O jogador escolheu um @ no cadastro (breno11). Este é o link curto que ele
  * posta: abre o perfil dele E credita a rede dele. E se o <x> for um código de

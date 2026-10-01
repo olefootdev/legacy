@@ -1,8 +1,8 @@
 /**
  * Sessão do REVELA.
  *
- * ⚠️ REVELA e o jogo são ORIGENS DIFERENTES (revela.olefoot.com vs
- * game.olefoot.com). O Supabase guarda a sessão em localStorage, que é por
+ * ⚠️ REVELA e o jogo são ORIGENS DIFERENTES (revela.olefoot.ai vs
+ * game.olefoot.ai). O Supabase guarda a sessão em localStorage, que é por
  * origem — então estar logado no jogo NÃO loga aqui. É o mesmo projeto Supabase
  * e a MESMA conta; o que não viaja é o token.
  *
@@ -15,7 +15,8 @@
 import { getSupabase } from '@/supabase/client';
 import { normalizeReferralCode } from '@/wallet/referralCode';
 
-export const GAME_URL = 'https://game.olefoot.com';
+// 2026-10-01: game.olefoot.com MORREU — o jogo mudou pra olefoot.ai.
+export const GAME_URL = 'https://game.olefoot.ai';
 
 /** Chave própria do REVELA — nunca escrever na do jogo. */
 const REF_KEY = 'olefoot-revela-ref';
