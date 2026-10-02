@@ -237,6 +237,7 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
       <BlocoCiclos ciclos={ciclos} />
 
       {/* ── mapa ── */}
+      <SeusIndicados nos={mapa} />
       <MapaHorizontal nos={mapa} />
 
       {/* ── convite ── */}
@@ -275,7 +276,94 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
  * 0 ou 1 filho), então o horizontal renderiza a forma VERDADEIRA — e o
  * desequilíbrio entre as pernas vira assimetria, que é a mesma lição da barra.
  */
+const PELA_ORIGEM: Record<string, string> = {
+  convite: 'pelo seu convite', compra: 'pela compra do pack', licenca: 'por licença',
+  ativacao_3x: 'pela Ativação 3×',
+};
+
+function dataCurta(iso: string | null): string {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); }
+  catch { return iso.slice(0, 10); }
+}
+
+/**
+ * Quem EU trouxe — a resposta pra "entrou uma pessoa, quem é?".
+ * O mapa mostra a forma da rede; esta lista mostra os nomes.
+ */
+function SeusIndicados({ nos }: { nos: readonly NoDoMapa[] }) {
+  const diretos = nos.filter((n) => n.direto);
+  return (
+    <div className="mt-6 border border-white/10 bg-panel">
+      <div className="flex items-baseline justify-between px-4 pb-2 pt-3.5">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">Seus indicados</span>
+        <span className="font-mono text-[10px] text-cimento">{diretos.length}</span>
+      </div>
+      {diretos.length === 0 ? (
+        <p className="px-4 pb-4 text-[12.5px] text-cimento">Ninguém ainda. Quem entrar pelo seu convite aparece aqui.</p>
+      ) : (
+        diretos.map((n) => (
+          <div key={n.userId} className="border-t border-white/10 px-4 py-3">
+            <div className="flex min-w-0 items-baseline justify-between gap-3">
+              <span className="min-w-0 truncate text-[14px] font-semibold text-white">
+                {n.username ? `@${n.username}` : 'Sem nome de usuário'}
+              </span>
+              <span className="ole-num shrink-0 text-[12px] uppercase text-neon-yellow">Time {n.perna}</span>
+            </div>
+            <div className="mt-0.5 truncate font-mono text-[10.5px] text-poeira">
+              {[n.clube, n.entrouEm ? `entrou ${dataCurta(n.entrouEm)}` : null,
+                n.ativado ? 'conta ativada' : 'sem ativação'].filter(Boolean).join(' · ')}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+/** A ficha de quem foi tocado no mapa. */
+function FichaDoNo({ n }: { n: NoDoMapa }) {
+  if (!n.daMinhaEquipe) {
+    return (
+      <div className="border-t border-white/10 px-4 py-3">
+        <div className="text-[13px] font-semibold text-giz">Chegou por derramamento</div>
+        <p className="mt-1 text-[12px] leading-relaxed text-cimento">
+          Time {n.perna} · nível {n.nivel}. Não foi indicado pela sua equipe: ocupa a vaga e soma pontos
+          no seu Time {n.perna}, mas o nome não aparece pra você.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="border-t border-white/10 px-4 py-3">
+      <div className="flex min-w-0 items-baseline justify-between gap-3">
+        <span className="min-w-0 truncate text-[15px] font-semibold text-white">
+          {n.username ? `@${n.username}` : 'Sem nome de usuário'}
+        </span>
+        <span className="ole-num shrink-0 text-[12px] uppercase text-neon-yellow">Time {n.perna}</span>
+      </div>
+      {n.clube && <div className="mt-0.5 truncate text-[12px] text-giz">{n.clube}</div>}
+      <p className="mt-1.5 font-mono text-[10.5px] leading-relaxed text-poeira">
+        {[`nível ${n.nivel}`, n.direto ? 'indicado direto seu' : 'da sua equipe',
+          n.entrouEm ? `entrou ${dataCurta(n.entrouEm)}${n.origem && PELA_ORIGEM[n.origem] ? ` ${PELA_ORIGEM[n.origem]}` : ''}` : null,
+        ].filter(Boolean).join(' · ')}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <span className={cn('px-2 py-0.5 font-mono text-[10px] uppercase',
+          n.ativado ? 'bg-neon-yellow text-black' : 'border border-white/20 text-cimento')}>
+          {n.ativado ? 'Conta ativada' : 'Sem ativação'}
+        </span>
+        <span className={cn('px-2 py-0.5 font-mono text-[10px] uppercase',
+          n.binarioAtivo ? 'bg-white text-black' : 'border border-white/20 text-cimento')}>
+          {n.binarioAtivo ? 'Binário ativo' : 'Binário inativo'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
+  const [selecionado, setSelecionado] = useState<string | null>(null);
   if (nos.length === 0) {
     return (
       <div className="mt-6 border border-white/10 bg-panel px-4 py-6 text-center">
@@ -349,9 +437,17 @@ function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
         {nos.map((n) => {
           const p = pos.get(n.userId);
           if (!p) return null;
+          const ativo = selecionado === n.userId;
           return (
-            <circle key={`c-${n.userId}`} cx={p.x} cy={p.y} r={n.nivel === 1 ? 6 : 4.5}
-              fill={n.daMinhaEquipe ? '#FDE100' : '#5A5C5F'} />
+            <g key={`c-${n.userId}`} className="cursor-pointer"
+              onClick={() => setSelecionado(ativo ? null : n.userId)}>
+              {/* Área de toque maior que a bolinha: no celular 4,5px não se acerta. */}
+              <circle cx={p.x} cy={p.y} r={11} fill="transparent" />
+              <circle cx={p.x} cy={p.y} r={n.nivel === 1 ? 6 : 4.5}
+                fill={n.daMinhaEquipe ? '#FDE100' : '#5A5C5F'}
+                stroke={ativo ? '#FFFFFF' : 'none'} strokeWidth={ativo ? 2 : 0} />
+              <title>{n.username ? `@${n.username}` : 'derramamento'}</title>
+            </g>
           );
         })}
 
@@ -366,6 +462,14 @@ function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
         <circle cx={X0} cy={EIXO} r="8" fill="#ECECE7" />
         <text x={X0 - 18} y={EIXO + 22} fill="#ECECE7" fontSize="8" fontFamily="monospace" fontWeight="bold">VOCÊ</text>
       </svg>
+      {(() => {
+        const n = nos.find((x) => x.userId === selecionado);
+        return n ? <FichaDoNo n={n} /> : (
+          <p className="border-t border-white/10 px-4 py-2.5 font-mono text-[10px] text-cimento">
+            Toque numa bolinha pra ver quem é.
+          </p>
+        );
+      })()}
       <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-white/10 px-4 py-2.5 font-mono text-[9px] text-poeira">
         <span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-neon-yellow align-middle" />sua equipe</span>
         <span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#5A5C5F] align-middle" />derramou</span>

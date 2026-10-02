@@ -15,9 +15,13 @@ import { PainelExpansao } from '@/pages/wallet/network/PainelExpansao';
 import type { MinhaExpansao } from '@/pages/wallet/network/useMinhaExpansao';
 import { SecaoVolt, Hashtag } from '@/components/ui';
 
+const NOMES = ['', 'tiago_tri', 'carla_fc', 'beto_10', 'derramou', 'lu_gol', 'derramou', 'derramou', 'rafa_9', 'nina'];
 const no = (i: number, nivel: number, perna: 1 | 2, pai: number | null, minha = true) => ({
   userId: `ex-${i}`, nivel, yOrdem: i, perna, daMinhaEquipe: minha,
   paiId: pai === null ? null : `ex-${pai}`,
+  direto: nivel === 1, username: minha ? NOMES[i] ?? null : null,
+  clube: minha ? `Clube ${i}` : null, entrouEm: minha ? '2026-10-02T16:27:00Z' : null,
+  origem: minha ? 'convite' : null, ativado: minha ? i % 2 === 1 : null, binarioAtivo: minha ? i === 1 : null,
 });
 
 const EXEMPLO: MinhaExpansao = {

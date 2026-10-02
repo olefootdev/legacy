@@ -32,6 +32,19 @@ export interface NoDoMapa {
   /** Falso = chegou por derramamento: mostra graduação, não username. */
   readonly daMinhaEquipe: boolean;
   readonly paiId: string | null;
+  /** Fui eu que indiquei (patrocinador direto). */
+  readonly direto: boolean;
+  /** Só pra quem é da minha equipe; null pra quem derramou. */
+  readonly username: string | null;
+  readonly clube: string | null;
+  /** Quando entrou na árvore. */
+  readonly entrouEm: string | null;
+  /** Por onde entrou: convite, compra, licença… null pra quem derramou. */
+  readonly origem: string | null;
+  /** Conta ativada (pode convidar). null pra quem derramou. */
+  readonly ativado: boolean | null;
+  /** Tem 1 direto em cada time. null pra quem derramou. */
+  readonly binarioAtivo: boolean | null;
 }
 
 export async function lerAtivacao(): Promise<Ativacao | null> {
@@ -87,11 +100,40 @@ export async function lerPernasQualificacao(): Promise<Pernas | null> {
   return { t1, t2, menor: t1 < t2 ? t1 : t2 };
 }
 
+/**
+ * A minha rede, com nome de quem é da minha equipe.
+ *
+ * `expansao_minha_equipe` lê a árvore de auth.uid() — não recebe id. Se ainda
+ * não existir no banco (deploy do front antes da migration), cai no mapa
+ * antigo, sem nomes, em vez de mostrar a rede vazia.
+ */
 export async function lerMapa(ate = 5): Promise<NoDoMapa[]> {
   const sb = getSupabase();
   if (!sb) return [];
   const { data: sess } = await sb.auth.getUser();
   if (!sess.user) return [];
+  const texto = (v: unknown) => (typeof v === 'string' && v ? v : null);
+  const sim = (v: unknown) => (v == null ? null : v === true);
+
+  const equipe = await sb.rpc('expansao_minha_equipe', { p_ate: ate });
+  if (!equipe.error) {
+    return (equipe.data ?? []).map((d: Record<string, unknown>) => ({
+      userId: String(d.user_id),
+      nivel: Number(d.nivel),
+      yOrdem: Number(d.y_ordem),
+      perna: Number(d.perna) as 1 | 2,
+      daMinhaEquipe: d.da_minha_equipe === true,
+      paiId: texto(d.pai_id),
+      direto: d.direto === true,
+      username: texto(d.username),
+      clube: texto(d.clube),
+      entrouEm: texto(d.entrou_em),
+      origem: texto(d.origem),
+      ativado: sim(d.ativado),
+      binarioAtivo: sim(d.binario_ativo),
+    }));
+  }
+
   const { data, error } = await sb.rpc('expansao_mapa', {
     p_raiz: sess.user.id, p_de: 1, p_ate: ate,
   });
@@ -102,7 +144,9 @@ export async function lerMapa(ate = 5): Promise<NoDoMapa[]> {
     yOrdem: Number(d.y_ordem),
     perna: Number(d.perna) as 1 | 2,
     daMinhaEquipe: d.da_minha_equipe === true,
-    paiId: (d.pai_id as string | null) ?? null,
+    paiId: texto(d.pai_id),
+    direto: false, username: null, clube: null, entrouEm: null,
+    origem: null, ativado: null, binarioAtivo: null,
   }));
 }
 
