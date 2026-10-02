@@ -18,6 +18,8 @@ import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
 import { fetchLegacyBalance } from '@/wallet/applyLegacyOlefootCredit';
 import { fetchMyLinkedSolanaWallet } from '@/supabase/solanaWallet';
 import { fetchSaldoOnChain, olefootMintAddress } from '@/token/olefootMint';
+import { lerMinhaPosicao, type PosicaoOlefoot } from '@/supabase/presalePosicao';
+import { aoMudarAPosicao } from '@/wallet/eventosDaCarteira';
 import { moedaDoJogo } from '@/wallet/constants';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { SecaoVolt } from '@/components/ui';
@@ -98,6 +100,22 @@ export function Wallet() {
     return () => { cancelled = true; };
   }, []);
 
+  // OLEFOOT comprado na pré-venda. Fica na posição (travado) até liberar e ir
+  // pra carteira vinculada — mas é da pessoa desde o Pix, e a primeira tela da
+  // carteira TEM que mostrar. Antes só a aba DEX mostrava, e quem pagou abria a
+  // SPOT e não achava o que comprou (1ª venda real, 02/10).
+  const [posicao, setPosicao] = useState<PosicaoOlefoot | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    const ler = () => { void lerMinhaPosicao().then((p) => { if (vivo) setPosicao(p); }); };
+    ler();
+    const parar = aoMudarAPosicao(ler);
+    return () => { vivo = false; parar(); };
+  }, []);
+  const temPosicao = posicao != null && posicao.tokens > 0n;
+  const brInt = (v: bigint) => v.toLocaleString('pt-BR');
+  const dolarCents = (c: number) => `$${(c / 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`;
+
   const expBalance = finance.ole ?? 0;
   const olefootBalance = legacyBalance != null ? Number(legacyBalance) : 0;
 
@@ -118,10 +136,13 @@ export function Wallet() {
   };
 
   const heroStats = [
+    ...(temPosicao && posicao
+      ? [{ label: 'OLEFOOT', value: brInt(posicao.tokens), highlight: true }]
+      : []),
     {
       label: 'Crédito (BRO)',
       value: formatBroCompacto(finance.broCents),
-      highlight: true,
+      highlight: !temPosicao,
     },
     {
       label: 'EXP',
@@ -143,6 +164,21 @@ export function Wallet() {
     spark?: number[];
     spotPrice?: string;
   }> = [
+    // OLEFOOT DA PRÉ-VENDA — o que a pessoa comprou no Pix. Primeiro da lista
+    // porque é o que ela pagou pra ter.
+    ...(temPosicao && posicao
+      ? [{
+          ticker: 'OLEFOOT',
+          name: 'Comprado na pré-venda',
+          logoSrc: '/token/olefoot-token.svg',
+          balance: `${brInt(posicao.tokens)} OLEFOOT`,
+          fiatRef: posicao.travado > 0n
+            ? `${dolarCents(posicao.compradoUsdCents)} pagos · ${brInt(posicao.travado)} travados — liberam com o tempo ou com nova compra`
+            : `${dolarCents(posicao.compradoUsdCents)} pagos · liberado`,
+          badge: 'Seu',
+          highlight: true,
+        }]
+      : []),
     {
       // Era "USDT · Tether", com o logo da Tether, em cima de `finance.broCents`
       // — que é crédito INTERNO comprado no PIX, não Tether nenhum. Com o
@@ -166,7 +202,7 @@ export function Wallet() {
       // véspera do token na Solana isso volta como cobrança. Com esta linha
       // fora, `OLE_INTERNAL_PRICE_USD` ficou SEM NENHUM consumidor no app.
       fiatRef: undefined,
-      highlight: true,
+      highlight: !temPosicao,
     },
     // $OLEFOOT ON-CHAIN — aparece sozinho quando o mint existir (pós-TGE).
     // Antes da liquidez o token não tem preço de mercado e a linha diz isso.

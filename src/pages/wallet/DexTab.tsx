@@ -114,9 +114,9 @@ function DexConteudo() {
         {/* Texto de custódia: não é enfeite, é o que a pessoa precisa saber
             antes de achar que tem token na carteira. */}
         <p className="border-l-2 border-cimento bg-card px-3.5 py-3 text-[12px] leading-relaxed text-cimento">
-          O token ainda não foi lançado na Solana. Até lá este número é a sua posição
-          registrada. A entrega vai para a carteira vinculada, e a partir dela a
-          custódia é sua.
+          Este OLEFOOT é seu desde o Pix e está registrado na sua posição. Ele entra
+          travado e libera com o tempo ou com uma nova compra; o que for liberado vai
+          para a carteira Solana vinculada, e a partir dela a custódia é sua.
         </p>
       </section>
 
