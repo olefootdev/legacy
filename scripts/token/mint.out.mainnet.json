@@ -1,0 +1,14 @@
+{
+  "rede": "mainnet",
+  "mint": "HJ5DJ6T7SW4n2u3dPn5uKnFQF7SXTjxpzkkEi53SwdeP",
+  "tesouraria": "5L6ADn7CNKphaVygDRcEipTDE2yKfVk1xftTPnd87cK8",
+  "ata": "DZpyhXVF4KMHfkqayjGaAnMkpjbppTpSvvsT6dEiZqmu",
+  "supply": "5000000000",
+  "decimais": 9,
+  "taxaBps": 500,
+  "mintAuthorityRevogada": true,
+  "txCriacao": "3YoVrYedRwLjtTjJFi9gKUZb95ygsMVh5sC6BbTuCDQnS14XDqvH3WzpWEZg4zdhMZ5721GN4P3K9yHJmzT3WcJP",
+  "txSupply": "2FMyBwogYSfW62ZU5ok1ENH2YteZ6kLvjotnY9p7mRmLZ564KmuWDkRFLuCxaw1hkxoCDmKw3q1pjmQ5BYV3k3am",
+  "rpc": "https://api.mainnet-beta.solana.com/",
+  "criadoEm": "2026-10-02T03:06:59.751Z"
+}
