@@ -82,17 +82,37 @@ líquidos com `taxaDeTransferencia.ts`). Equipe/marketing via vesting
 (Streamflow ou equivalente); claim v1 e expansão ficam na tesouraria até as
 pontes de claim abrirem.
 
-## 6. Liquidez — o gatilho de $10.000 (decisão 4)
+## 6. Liquidez — o gatilho de $10.000 (decisão 4) · par OLEFOOT/SOL
 
-O admin → Pré-venda mostra a régua **"Gatilho da liquidez: $X de $10.000"**.
-Quando bater:
-1. criar a pool no DEX (Raydium/Orca), par OLEFOOT/USDC, preço **$0,000125**;
-   o TOKENOMICS manda enviar **263.157.894** do balde de Liquidez pra entregar
-   250M na pool (a taxa morde no depósito);
-2. ligar **"Liquidez adicionada"** no admin → Pré-venda (destrava a liberação
+> **DECISÃO DO FUNDADOR (2026-10-01): o par é OLEFOOT/SOL** — porque o OLEFOOT
+> vai ser a MOEDA-BASE do ecossistema: os tokens de jogador (ex.: KAKA/OLEFOOT)
+> vão parear contra ele. SOL↔OLEFOOT é a ponte de entrada; todo volume de
+> jogador roteia pelo OLEFOOT. Consequência aceita: o preço do OLEFOOT em
+> dólar flutua junto com o SOL (a pré-venda continua vendendo a $0,000125
+> fixo — quem define o câmbio da POOL é o preço do SOL no dia da criação).
+
+O admin → Pré-venda mostra a régua **"Gatilho da liquidez: $X de $10.000"**
+(a régua é de VENDAS em dólar e não muda). Quando bater:
+1. converter os ~R$ dos Pix em **SOL** (~$10.000 ao câmbio do dia);
+2. criar a pool **OLEFOOT/SOL** (Raydium ou Orca — ambos aceitam Token-2022
+   com taxa) com os $10.000 em SOL + **80.000.000 OLEFOOT na pool** — a
+   tesouraria envia **84.210.527** (a taxa de 5% morde no depósito). A razão
+   dos dois lados TEM que dar $0,000125/token no preço do SOL daquele dia —
+   conferir a conta na hora: `tokens = 10.000 ÷ 0,000125 = 80M`, sempre;
+   reforços futuros conforme as vendas (cada um paga os 5% de novo);
+3. ligar **"Liquidez adicionada"** no admin → Pré-venda (destrava a liberação
    da pré-venda — o flag `liquidez_adicionada` é a trava que as pontes checam);
-3. a partir daí, todo token que já estiver nas carteiras tem preço de mercado
+4. a partir daí, todo token que já estiver nas carteiras tem preço de mercado
    sozinho — era exatamente o plano.
+
+## 7. Depois da pool — tokens de jogador pareados em OLEFOOT (visão)
+
+A fase seguinte do fundador: cada lenda/jogador vira token próprio com pool
+**JOGADOR/OLEFOOT** (ex.: KAKA/OLEFOOT). O jogo já tem a fundação inteira:
+preço vivo por jogador em OLEFOOT (marketValue + snapshots no servidor),
+mercado de elenco, royalty de formador e leilão do MVP. O token de jogador é
+a exportação on-chain desse preço. Projeto próprio quando chegar a hora —
+não entra no TGE.
 
 ## O que NUNCA fazer
 

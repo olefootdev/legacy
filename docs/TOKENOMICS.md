@@ -2,6 +2,15 @@
 
 > **Revisão 6 — 2026-09-28 · TABELA APROVADA · a casa cobre a taxa (opção 2)**
 >
+> **Rev 6.1 — 2026-10-01 (fundador): o par da pool é OLEFOOT/SOL**, não USDC.
+> Motivo estratégico: o OLEFOOT será a moeda-base do ecossistema — tokens de
+> jogador vão parear contra ele (ex.: KAKA/OLEFOOT), e SOL↔OLEFOOT é a ponte.
+> Consequência aceita e entendida: o preço em dólar flutua com o SOL. As
+> CONTAS em USD deste doc (pool no esgotamento = $31.250 etc.) seguem valendo
+> como VALOR do lado SOL no momento de cada depósito. TGE executado em
+> 2026-10-01: mint `HJ5DJ6T7SW4n2u3dPn5uKnFQF7SXTjxpzkkEi53SwdeP`, supply
+> travado. Runbook: docs/TOKEN-LAUNCH-RUNBOOK.md.
+>
 > Régua do token, como `VOLT2.md` é a régua do visual. Número aqui vira constante em
 > código; constante em código não muda sem mudar este arquivo.
 >
