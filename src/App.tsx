@@ -137,6 +137,7 @@ const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
 const TeamValores = lazy(() => import('./pages/TeamValores').then((m) => ({ default: m.TeamValores })));
 const MercadoVivo = lazy(() => import('./pages/MercadoVivo').then((m) => ({ default: m.MercadoVivo })));
+const TokenPage = lazy(() => import('./pages/TokenPage').then((m) => ({ default: m.TokenPage })));
 const TeamStaff = lazy(() => import('./pages/TeamStaff').then((m) => ({ default: m.TeamStaff })));
 const CoachChat = lazy(() => import('./pages/CoachChat').then((m) => ({ default: m.CoachChat })));
 const YouthProspects = lazy(() => import('./pages/YouthProspects').then((m) => ({ default: m.YouthProspects })));
@@ -522,6 +523,8 @@ as a nice MVP. Let's Play Together! ⚽
           <Route element={<RedirectIfRegistered />}>
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
+            {/* Página PÚBLICA do $OLEFOOT — contrato, baldes, pré-venda. */}
+            <Route path="/token" element={<TokenPage />} />
             <Route path="/cadastro/:inviteCode" element={<Cadastro />} />
           </Route>
           <Route path="/reset-password" element={<ResetPassword />} />

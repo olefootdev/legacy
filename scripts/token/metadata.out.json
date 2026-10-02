@@ -1,0 +1,7 @@
+{
+  "name": "OLEFOOT",
+  "symbol": "OLEFOOT",
+  "uri": "https://game.olefoot.ai/token/olefoot-metadata.json",
+  "image": "https://game.olefoot.ai/token/olefoot-token.png",
+  "nota": "Servido pelo worker do jogo (public/token/). Re-pinar no IPFS é opcional: rodar scripts/token/pinar-metadata.mts onde o PINATA_JWT for válido e atualizar a URI do mint (update authority permite)."
+}

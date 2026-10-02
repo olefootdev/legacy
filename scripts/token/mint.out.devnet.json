@@ -1,0 +1,14 @@
+{
+  "rede": "devnet",
+  "mint": "8v99J2WgJhQZYV3wDKYYARoaHakdazQDkdZx3VntzeMN",
+  "tesouraria": "2o7jr419QpjCrq23MFU5M8uhTCnwL1KGVT7WiH2uSPZF",
+  "ata": "3Fo1a54KovxgqAr3n4njwvfsn9ktaLBo34sJkAKQsuN8",
+  "supply": "5000000000",
+  "decimais": 9,
+  "taxaBps": 500,
+  "mintAuthorityRevogada": true,
+  "txCriacao": "2LXZdfSdtJTmKqfaKHq4CdGNXne14VPc1UzDUQHKPsHSMKtCo2jWF8as53wVs9q3iB7SHdPzJG9GasREoFb4BXi2",
+  "txSupply": "3gJ4aN38UMenYDRNgUVZ3kXad7qKXuWCBaJkwAWvngfNj2ngPSJeJHsQ7gixZbL3KiXJDsguFH9DtMoCaRtRXhQ",
+  "rpc": "http://127.0.0.1:8899",
+  "criadoEm": "2026-10-02T02:26:04.717Z"
+}

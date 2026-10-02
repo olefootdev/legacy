@@ -16,6 +16,8 @@ import {
 } from './wallet/useWalletPlayerData';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
 import { fetchLegacyBalance } from '@/wallet/applyLegacyOlefootCredit';
+import { fetchMyLinkedSolanaWallet } from '@/supabase/solanaWallet';
+import { fetchSaldoOnChain, olefootMintAddress } from '@/token/olefootMint';
 import { moedaDoJogo } from '@/wallet/constants';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { SecaoVolt } from '@/components/ui';
@@ -76,11 +78,23 @@ export function Wallet() {
   const usdBrlQuote = useOlefootUsdBrlQuote(true);
 
   const [legacyBalance, setLegacyBalance] = useState<string | null>(null);
+  /** Saldo on-chain de $OLEFOOT da carteira vinculada. null = pré-TGE / sem leitura. */
+  const [onchainOlefoot, setOnchainOlefoot] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
     void fetchLegacyBalance().then((lb) => {
       if (!cancelled && lb.balanceHuman) setLegacyBalance(lb.balanceHuman);
     });
+    // $OLEFOOT ON-CHAIN: só existe depois do TGE (VITE_OLEFOOT_MINT setado).
+    // A carteira recebe token desde o dia zero — o que mostramos aqui é o que
+    // o explorer mostra pra carteira VINCULADA, não um saldo interno.
+    if (olefootMintAddress()) {
+      void fetchMyLinkedSolanaWallet().then(async (link) => {
+        if (cancelled || !link?.walletAddress) return;
+        const saldo = await fetchSaldoOnChain(link.walletAddress);
+        if (!cancelled && saldo != null) setOnchainOlefoot(saldo.olefoot);
+      });
+    }
     return () => { cancelled = true; };
   }, []);
 
@@ -154,6 +168,18 @@ export function Wallet() {
       fiatRef: undefined,
       highlight: true,
     },
+    // $OLEFOOT ON-CHAIN — aparece sozinho quando o mint existir (pós-TGE).
+    // Antes da liquidez o token não tem preço de mercado e a linha diz isso.
+    ...(olefootMintAddress() && onchainOlefoot != null
+      ? [{
+          ticker: '$OLEFOOT',
+          name: 'Token na Solana (on-chain)',
+          logoSrc: '/token/olefoot-token.svg',
+          balance: `${formatCompact(onchainOlefoot)} OLEFOOT`,
+          fiatRef: 'na tua carteira vinculada · preço de mercado chega com a pool de liquidez',
+          badge: 'Solana',
+        }]
+      : []),
   ];
 
   return (

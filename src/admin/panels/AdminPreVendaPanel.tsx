@@ -102,6 +102,29 @@ export function AdminPreVendaPanel() {
           <div className="mt-1 h-1.5 w-full bg-white/10">
             <div className="h-full bg-neon-yellow" style={{ width: `${Math.min(100, Number(pct))}%` }} />
           </div>
+          {/* Gatilho da LIQUIDEZ (fundador, 2026-10-01): pool no DEX quando as
+              vendas pagas cruzarem $10.000 — esta régua é o relógio disso. */}
+          {(() => {
+            const pagosCents = Number(dados?.totais.usdCentsPagos ?? 0);
+            const metaCents = 1_000_000; // $10.000,00
+            const pctLiq = Math.min(100, (pagosCents / metaCents) * 100);
+            return (
+              <div className="mt-3">
+                <div className="flex items-baseline justify-between font-mono text-[11px]">
+                  <span className="uppercase tracking-wider text-amber-200/80">Gatilho da liquidez</span>
+                  <span className="text-white/55">{dolarCents(pagosCents)} de $10.000,00 ({pctLiq.toFixed(1)}%)</span>
+                </div>
+                <div className="mt-1 h-1.5 w-full bg-white/10">
+                  <div className={cn('h-full', pctLiq >= 100 ? 'bg-emerald-400' : 'bg-amber-400')} style={{ width: `${pctLiq}%` }} />
+                </div>
+                {pctLiq >= 100 ? (
+                  <p className="mt-1 text-[11px] font-bold text-emerald-300">
+                    Meta batida — hora de adicionar a pool no DEX e ligar "Liquidez adicionada".
+                  </p>
+                ) : null}
+              </div>
+            );
+          })()}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-4">

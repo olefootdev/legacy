@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    OLEFOOT TOKEN — logo oficial do mint (Token-2022, Solana).
+    Régua da marca: cor chapada, sem enfeite. Amarelo neon #FDE100 sobre preto
+    #0D0D0D; bola geométrica clássica (pentágono + 5 gomos + 5 arcos de borda),
+    simétrica, legível a 24px. Sem texto — texto some em ícone de carteira.
+  -->
+  <circle cx="256" cy="256" r="256" fill="#0D0D0D"/>
+  <circle cx="256" cy="256" r="238" fill="#FDE100"/>
+  <g fill="none" stroke="#0D0D0D" stroke-width="30" stroke-linecap="round">
+    <!-- 5 gomos: do vértice do pentágono até perto da borda -->
+    <line x1="256"   y1="184"   x2="256"   y2="68"/>
+    <line x1="324.5" y1="233.8" x2="434.6" y2="198"/>
+    <line x1="298.3" y1="314.2" x2="366.3" y2="407.8"/>
+    <line x1="213.7" y1="314.2" x2="145.7" y2="407.8"/>
+    <line x1="187.5" y1="233.8" x2="77.4"  y2="198"/>
+    <!-- 5 arcos de borda, um entre cada par de gomos -->
+    <path d="M 298.8 54.5  A 206 206 0 0 1 434.4 153"/>
+    <path d="M 460.9 234.5 A 206 206 0 0 1 409.1 393.8"/>
+    <path d="M 339.8 444.2 A 206 206 0 0 1 172.2 444.2"/>
+    <path d="M 102.9 393.8 A 206 206 0 0 1 51.1  234.5"/>
+    <path d="M 77.6  153   A 206 206 0 0 1 213.2 54.5"/>
+  </g>
+  <!-- pentágono central (ponta pra cima) -->
+  <polygon fill="#0D0D0D" points="256,184 324.5,233.8 298.3,314.2 213.7,314.2 187.5,233.8"/>
+</svg>
