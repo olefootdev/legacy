@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Hashtag } from '@/components/ui';
@@ -8,6 +7,7 @@ import {
   type EstadoDaPresaleCarregado, type MotivoPackFechado,
 } from '@/payments/presaleClient';
 import { lerMinhaEntrada } from '@/supabase/expansaoPainel';
+import { escolherPatrocinador, meuIndicador, FRASE_DA_INDICACAO } from '@/supabase/expansaoConvite';
 import { conviteVisto, esquecerConviteVisto } from '@/wallet/conviteVisto';
 
 /**
@@ -17,10 +17,13 @@ import { conviteVisto, esquecerConviteVisto } from '@/wallet/conviteVisto';
  * servidor, na lista e de novo na criação do Pix. O que aparece aqui antes do
  * checkout é o preço de agora; o que vale é o do QR.
  *
- * 🔒 Antes de comprar, o convite. Quem compra entra na árvore sozinho, e a
- * posição é permanente. Se a pessoa abriu o convite de alguém e não confirmou,
- * a tela pergunta — senão ela entraria debaixo de outro patrocinador e quem
- * convidou perderia o indicado sem ninguém ter escolhido isso.
+ * 🔒 "Quem te indicou?" — pra quem ainda está FORA da rede. Quem compra entra
+ * na árvore na hora, e a posição é permanente. A 1ª venda real (02/10) caiu na
+ * ORIGEM porque o código de cadastro do comprador não era de ninguém e ele não
+ * abriu o convite. Agora a pessoa declara o @ antes do Pix, e a compra usa
+ * isso antes do código de cadastro (`expansao_entrar_por_compra`).
+ * Pré-preenchido: escolha já feita > convite aberto neste aparelho > código do
+ * cadastro por link.
  */
 
 export interface PedidoOlefoot {
@@ -59,12 +62,15 @@ export function FormOlefoot({
   onPagar: (pedido: PedidoOlefoot) => void;
   onFechar: () => void;
 }) {
-  const navigate = useNavigate();
   const [carga, setCarga] = useState<EstadoDaPresaleCarregado>({ status: 'carregando' });
   const [escolhido, setEscolhido] = useState<number | 'ativacao_3x' | null>(packInicial ?? null);
   const [outro, setOutro] = useState('');
-  // null = ainda não sei; '' = não há convite a perguntar.
-  const [convite, setConvite] = useState<string | null>(null);
+  // null = ainda não sei se a pessoa está na rede.
+  const [naArvore, setNaArvore] = useState<boolean | null>(null);
+  const [indicador, setIndicador] = useState('');
+  const [ninguem, setNinguem] = useState(false);
+  const [erroIndicador, setErroIndicador] = useState<string | null>(null);
+  const [conferindo, setConferindo] = useState(false);
 
   useEffect(() => {
     let vivo = true;
@@ -73,16 +79,15 @@ export function FormOlefoot({
       .catch((e: unknown) => {
         if (vivo) setCarga({ status: 'erro', mensagem: e instanceof Error ? e.message : 'erro' });
       });
-    // O convite só importa pra quem ainda está FORA da árvore.
-    const visto = conviteVisto();
-    if (!visto) { setConvite(''); }
-    else {
-      void lerMinhaEntrada().then((entrada) => {
-        if (!vivo) return;
-        if (entrada.naArvore) { esquecerConviteVisto(); setConvite(''); }
-        else setConvite(visto);
-      });
-    }
+    // "Quem te indicou?" só pra quem ainda está FORA da rede.
+    void Promise.all([lerMinhaEntrada(), meuIndicador()]).then(([entrada, sugestao]) => {
+      if (!vivo) return;
+      if (entrada.naArvore) { esquecerConviteVisto(); setNaArvore(true); return; }
+      const visto = conviteVisto();
+      const preenche = sugestao?.fonte === 'escolhido' ? sugestao.sugerido : visto ?? sugestao?.sugerido ?? null;
+      if (preenche) setIndicador(preenche);
+      setNaArvore(false);
+    });
     return () => { vivo = false; };
   }, []);
 
@@ -110,7 +115,7 @@ export function FormOlefoot({
     return pack ? { usdCents: pack.usdCents, brlCents: pack.brlCents, recebe: pack.recebe } : null;
   }, [estado, escolhido, outroCents]);
 
-  if (carga.status === 'carregando' || convite === null) {
+  if (carga.status === 'carregando' || naArvore === null) {
     return <p className="py-6 font-mono text-[12px] text-cimento">Carregando a pré-venda…</p>;
   }
   if (carga.status === 'erro' || !estado) {
@@ -129,40 +134,55 @@ export function FormOlefoot({
     );
   }
 
-  // ── o convite vem antes da compra ─────────────────────────────────────────
-  if (convite) {
-    return (
-      <div className="space-y-3">
-        <div className="border-l-2 border-atencao bg-card px-4 py-3.5">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-atencao">Antes de comprar</div>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-giz">
-            Você abriu o convite de <strong>@{convite}</strong> e ainda não confirmou.
-          </p>
-          <p className="mt-1.5 text-[12px] leading-relaxed text-cimento">
-            Quem compra entra na rede na hora, e a posição é definitiva. Sem confirmar, você entra
-            debaixo de outra pessoa.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => { onFechar(); navigate(`/convite-expansao/${encodeURIComponent(convite)}`); }}
-          className="ole-num inline-flex h-[50px] w-full items-center justify-center whitespace-nowrap bg-neon-yellow text-[13px] uppercase text-black transition-colors hover:bg-white [--corte:12px] [clip-path:var(--clip-corte)]"
-        >
-          Confirmar @{convite}
-        </button>
-        <button
-          type="button"
-          onClick={() => { esquecerConviteVisto(); setConvite(''); }}
-          className="h-[50px] w-full border border-white/30 text-[13px] font-bold text-white transition-colors hover:border-white"
-        >
-          COMPRAR SEM O CONVITE
-        </button>
-      </div>
-    );
-  }
+  const precisaIndicador = !naArvore;
+  const indicadorPronto = !precisaIndicador || ninguem || indicador.trim().replace(/^@/, '').length > 0;
+
+  const pagar = async () => {
+    if (!pedido || conferindo) return;
+    if (!precisaIndicador) { onPagar(pedido); return; }
+    if (!indicadorPronto) { setErroIndicador('Diga quem te indicou ou marque "Ninguém me indicou".'); return; }
+    setErroIndicador(null);
+    setConferindo(true);
+    const r = await escolherPatrocinador(ninguem ? null : indicador.trim());
+    setConferindo(false);
+    if ('motivo' in r) { setErroIndicador(FRASE_DA_INDICACAO[r.motivo]); return; }
+    esquecerConviteVisto();
+    onPagar(pedido);
+  };
 
   return (
     <div className="space-y-4">
+      {precisaIndicador && (
+        <div className="border border-white/10 bg-card px-3.5 py-3">
+          <label htmlFor="quem-indicou" className="font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
+            Quem te indicou?
+          </label>
+          <div className="relative mt-1.5">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-poeira">@</span>
+            <input
+              id="quem-indicou"
+              value={indicador}
+              disabled={ninguem}
+              onChange={(e) => { setIndicador(e.target.value.replace(/^@+/, '').replace(/\s/g, '')); setErroIndicador(null); }}
+              placeholder="usuario"
+              autoCapitalize="none"
+              autoComplete="off"
+              spellCheck={false}
+              className="w-full border border-white/16 bg-deep-black py-2.5 pl-8 pr-3 font-mono text-[15px] text-white placeholder:text-poeira focus:border-neon-yellow/60 focus:outline-none disabled:opacity-40"
+            />
+          </div>
+          <label className="mt-2 flex cursor-pointer items-center gap-2 font-mono text-[11px] text-cimento">
+            <input type="checkbox" checked={ninguem}
+              onChange={(e) => { setNinguem(e.target.checked); setErroIndicador(null); }} />
+            Ninguém me indicou
+          </label>
+          <p className="mt-1.5 font-mono text-[10.5px] leading-relaxed text-poeira">
+            Você entra no time de quem te indicou. A posição na rede é definitiva.
+          </p>
+          {erroIndicador && <p role="alert" className="mt-1.5 text-[12px] text-atencao">{erroIndicador}</p>}
+        </div>
+      )}
+
       <Hashtag>#prevenda · ${estado.preco.replace('.', ',')} por OLEFOOT</Hashtag>
 
       <div className="border border-white/10">
@@ -261,22 +281,22 @@ export function FormOlefoot({
 
       <button
         type="button"
-        onClick={() => pedido && onPagar(pedido)}
-        disabled={!pedido}
+        onClick={() => void pagar()}
+        disabled={!pedido || conferindo}
         className={cn(
           'ole-num inline-flex h-[50px] w-full items-center justify-center gap-2 whitespace-nowrap text-[13px] uppercase transition-colors [--corte:12px] [clip-path:var(--clip-corte)]',
           pedido ? 'bg-neon-yellow text-black hover:bg-white' : 'cursor-not-allowed bg-card-hi text-poeira',
         )}
       >
         <Zap className="h-4 w-4" />
-        {pedido ? `Pagar R$ ${reais(pedido.brlCents)} no Pix` : 'Escolha o pack'}
+        {conferindo ? 'Conferindo…' : pedido ? `Pagar R$ ${reais(pedido.brlCents)} no Pix` : 'Escolha o pack'}
       </button>
 
       {/* Texto de custódia e de trava: a pessoa precisa saber ANTES de pagar
           que o token entra travado e ainda não está na carteira dela. */}
       <p className="border-l-2 border-cimento bg-card px-3.5 py-3 text-[12px] leading-relaxed text-cimento">
-        O OLEFOOT entra travado na sua posição. O token ainda não foi lançado na Solana; a entrega
-        vai para a carteira vinculada.
+        O OLEFOOT entra travado na sua posição e libera com o tempo ou com nova compra. O que for
+        liberado vai para a sua carteira Solana vinculada.
       </p>
     </div>
   );

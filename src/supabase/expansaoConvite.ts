@@ -100,3 +100,53 @@ export function destinoAposEntrar(): string {
   } catch { /* idem */ }
   return u ? `/convite-expansao/${encodeURIComponent(u)}` : '/';
 }
+
+// ─────────────────────────────────────────────── quem te indicou ───────────
+
+export type MotivoIndicacao = 'inexistente' | 'auto_indicacao' | 'nao_ativado' | 'ja_esta_na_arvore' | 'sem_sessao' | 'erro';
+
+export const FRASE_DA_INDICACAO: Record<MotivoIndicacao, string> = {
+  inexistente: 'Não achamos esse @. Confira com quem te indicou.',
+  auto_indicacao: 'Você não pode se indicar.',
+  nao_ativado: 'Essa conta ainda não ativou o convite.',
+  ja_esta_na_arvore: 'Você já está na rede.',
+  sem_sessao: 'Entre na sua conta para continuar.',
+  erro: 'Não deu para confirmar agora. Tente de novo.',
+};
+
+/**
+ * Declara quem me indicou (ou "ninguém", com null). Vale pra compra que me
+ * põe na rede: `expansao_entrar_por_compra` usa esta escolha antes do código
+ * de cadastro. Age sobre auth.uid().
+ */
+export async function escolherPatrocinador(
+  username: string | null,
+): Promise<{ ok: true; patrocinador: string | null } | { ok: false; motivo: MotivoIndicacao }> {
+  const sb = getSupabase();
+  if (!sb) return { ok: false, motivo: 'erro' };
+  const { data, error } = await sb.rpc('expansao_escolher_patrocinador', { p_username: username ?? '' });
+  if (error) return { ok: false, motivo: /must be authenticated/i.test(error.message) ? 'sem_sessao' : 'erro' };
+  const l = Array.isArray(data) ? data[0] : data;
+  if (l?.ok === true) return { ok: true, patrocinador: l.patrocinador ?? null };
+  return { ok: false, motivo: ((l?.motivo as MotivoIndicacao) ?? 'erro') };
+}
+
+/** O @ que pré-preenche o checkout: escolha já feita > dono do código de cadastro. */
+export async function meuIndicador(): Promise<{ sugerido: string | null; fonte: 'escolhido' | 'cadastro' | null; naArvore: boolean } | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc('expansao_meu_indicador');
+  if (error) return null;
+  const l = Array.isArray(data) ? data[0] : data;
+  if (!l) return null;
+  const fonte = l.fonte === 'escolhido' || l.fonte === 'cadastro' ? l.fonte : null;
+  return { sugerido: l.sugerido ?? null, fonte, naArvore: l.na_arvore === true };
+}
+
+/** Código de cadastro de quem convida — pro link /cadastro/<código>. */
+export async function codigoDeIndicacaoDe(username: string): Promise<string | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc('codigo_de_indicacao_de', { p_username: username });
+  return error || typeof data !== 'string' || !data ? null : data;
+}

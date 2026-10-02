@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getSupabase } from '@/supabase/client';
 import { lembrarConviteVisto, esquecerConviteVisto } from '@/wallet/conviteVisto';
 import {
-  buscarConvite, confirmarConvite, jaConfirmou, guardarConvitePendente,
+  buscarConvite, confirmarConvite, jaConfirmou, guardarConvitePendente, codigoDeIndicacaoDe,
   type ConviteInfo, type MotivoRecusa,
 } from '@/supabase/expansaoConvite';
 
@@ -131,7 +131,13 @@ export default function ConviteExpansao() {
               JÁ TENHO CONTA
             </BotaoVolt>
             <div className="h-2.5" />
-            <BotaoLinha onClick={() => { guardaDestino(); navigate('/cadastro'); }}>
+            {/* Cadastro novo pelo convite grava quem indicou: vai pra
+                /cadastro/<código de quem convidou>, não pra /cadastro solto. */}
+            <BotaoLinha onClick={() => {
+              guardaDestino();
+              void codigoDeIndicacaoDe(estado.info.username).then((c) =>
+                navigate(c ? `/cadastro/${encodeURIComponent(c)}` : '/cadastro'));
+            }}>
               CRIAR CONTA
             </BotaoLinha>
           </Bloco>
