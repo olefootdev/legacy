@@ -125,6 +125,10 @@ export async function escolherPatrocinador(
   const sb = getSupabase();
   if (!sb) return { ok: false, motivo: 'erro' };
   const { data, error } = await sb.rpc('expansao_escolher_patrocinador', { p_username: username ?? '' });
+  // Função ainda não existe no banco (front publicado antes da migration):
+  // a compra segue como antes — código de cadastro, depois ORIGEM. Travar o
+  // Pix por causa de uma pergunta seria pior que não perguntar.
+  if (error?.code === 'PGRST202') return { ok: true, patrocinador: null };
   if (error) return { ok: false, motivo: /must be authenticated/i.test(error.message) ? 'sem_sessao' : 'erro' };
   const l = Array.isArray(data) ? data[0] : data;
   if (l?.ok === true) return { ok: true, patrocinador: l.patrocinador ?? null };
