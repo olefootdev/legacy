@@ -10,14 +10,14 @@ import type {
   PastResult,
   PlayerEntity,
 } from '@/entities/types';
-import type { InboxItem, InboxCategory } from './inboxTypes';
+import type { InboxItem } from './inboxTypes';
 import type { ClubStructuresState, ClubStructureId } from '@/clubStructures/types';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
 import type { LeagueSeasonState } from '@/match/leagueSeason';
 import type { LeagueScheduleState } from '@/match/leagueSchedule';
 import type { AdminLeagueConfig } from '@/match/adminLeagues';
 import type { FormationSchemeId } from '@/match-engine/types';
-import type { BannerSlotId, UiBannerEntry, UiBannersState } from '@/ui/banners';
+import type {   UiBannersState } from '@/ui/banners';
 import type {
   ManagerProspectHeritageBrief,
   ManagerProspectVisualBrief,
@@ -542,27 +542,9 @@ export type GameAction =
       /** Seed partilhado (ex.: desafio amistoso aceite online) para alinhar RNG do motor. */
       simulationSeed?: number;
     }
-  | { type: 'BEGIN_PLAY_FROM_PREGAME' }
   | { type: 'TICK_MATCH_MINUTE' }
   /** TESTE 2D: após coreografia bola (causal→visual), revela `deferredFeedEvent` no feed. */
-  | { type: 'COMMIT_TEST2D_VISUAL_BEAT_FEED' }
   /** ultralive2d: idem com `ultralive2dStagedPlay`. */
-  | { type: 'COMMIT_ULTRALIVE2D_STAGED_FEED' }
-  | { type: 'TICK_MATCH_BULK'; steps: number }
-  | {
-      type: 'SIM_SYNC';
-      minute: number;
-      homeScore: number;
-      awayScore: number;
-      possession: import('@/engine/types').PossessionSide;
-      events: import('@/engine/types').MatchEventEntry[];
-      stats: Record<string, { passesOk: number; passesAttempt: number; tackles: number; km: number; shots: number; goals: number; shotsOn?: number; shotsOff?: number; saves?: number; dribblesOk?: number }>;
-      carrierId: string | null;
-      fullTime: boolean;
-      clockPeriod: import('@/engine/types').LiveMatchClockPeriod;
-    }
-  | { type: 'CLEAR_SPIRIT_PENDING_RESTART' }
-  | { type: 'SET_SPIRIT_OVERLAY'; overlay: import('@/engine/types').SpiritOverlay | null }
   | { type: 'DISMISS_SPIRIT_OVERLAY' }
   | {
       type: 'APPLY_SPIRIT_OUTCOME';
@@ -570,10 +552,8 @@ export type GameAction =
     }
   | { type: 'COACH_TECHNICAL_COMMAND'; text: string }
   /** Partida ao vivo: troca dois titulares de posição (slot ↔ slot); atualiza `lineup` + `liveMatch.homePlayers`. */
-  | { type: 'LIVE_MATCH_SWAP_HOME_SLOTS'; slotA: string; slotB: string }
   /** Partida ao vivo: muda esquema tático mantendo os 11 em campo; recalcula posições no snapshot. */
   | { type: 'LIVE_MATCH_SET_FORMATION'; formationScheme: import('@/match-engine/types').FormationSchemeId }
-  | { type: 'REGENERATE_LIVE_SECOND_HALF_STORY'; topPlayerImpactScore?: number }
   | { type: 'MATCH_SUBSTITUTE'; outPlayerId: string; inPlayerId: string }
   | { type: 'RECALCULATE_TEAM_STRENGTH'; reason?: string; minute?: number }
   | { type: 'QUICK_ENFORCE_CARD_RULES'; playerId: string; reason?: 'injury_red' | 'two_yellows' | 'direct_red' }
@@ -586,13 +566,6 @@ export type GameAction =
   | { type: 'END_MATCH_TO_POST' }
   /** Desistência em partida rápida/automática: 0–5 para o visitante e fase pós-jogo. */
   | { type: 'FORFEIT_MATCH'; mode: 'quick' | 'auto' | 'test2d' }
-  | {
-      type: 'AWARD_LIVE_PENALTY';
-      attackingSide: 'home' | 'away';
-      takerId: string;
-      takerName: string;
-      minute: number;
-    }
   /** Sprint L3 — escanteio/falta interativo: dispara overlay no manager. */
   | {
       type: 'AWARD_SET_PIECE';
@@ -614,7 +587,6 @@ export type GameAction =
       outcome: 'goal' | 'shot_saved' | 'cleared' | 'recycled';
     }
   /** Cancela set-piece pendente (timeout, etc). */
-  | { type: 'CANCEL_SET_PIECE' }
   /** Sprint L4 — Atualiza instruções de prensa (parcial). */
   | {
       type: 'SET_PRESSING_CONTEXT';
@@ -647,9 +619,7 @@ export type GameAction =
       assistantEffectiveness?: number;
       payload?: Record<string, unknown>;
     }
-  | { type: 'VOICE_COMMAND_EXPIRED'; playerId: string }
   | { type: 'VOICE_COMMANDS_SWEEP'; nowMs: number }
-  | { type: 'TEAM_OBEDIENCE_BUMP'; delta: number }
   | { type: 'REFEREE_WARNING_LANGUAGE'; minute: number }
   | {
       type: 'REFEREE_RED_FOR_LANGUAGE';
@@ -719,7 +689,6 @@ export type GameAction =
   /** Atualizar arco narrativo da partida rápida em andamento */
   | { type: 'SET_NARRATIVE_ARC'; arc: import('@/match/quickNarrativeArcs').NarrativeArcState }
   /** Sprint 3: Atualizar progresso dos desafios semanais */
-  | { type: 'UPDATE_STREAK_CHALLENGES'; currentStreak: number; won: boolean }
   /** Sprint 3: Renovar desafios semanais */
   | { type: 'REFRESH_STREAK_CHALLENGES' }
   /** Resgatar recompensa de desafio semanal completado (credita reward.ole + reward.exp em finance.ole) */
@@ -727,11 +696,9 @@ export type GameAction =
   | { type: 'MERGE_PLAYERS'; players: Record<string, PlayerEntity> }
   /** Substitui o plantel (ex.: sincronizar só com genesis_market_players); sanitiza escalação e mercado. */
   | { type: 'SET_PLAYERS_RECORD'; players: Record<string, PlayerEntity> }
-  | { type: 'UPSERT_CARD_COLLECTION'; collection: CardCollection }
   | { type: 'SET_MANAGER_SLIDERS'; partial: Partial<OlefootGameState['manager']> }
   | { type: 'SET_PLAYING_STYLE_PRESET'; presetId: import('@/tactics/playingStyle').PlayingStylePresetId }
   | { type: 'SAVE_TACTIC_PLAN'; name: string }
-  | { type: 'START_TACTIC_TRAINING'; tacticId: string }
   | {
       type: 'START_TEAM_TRAINING_PLAN';
       mode: TrainingMode;
@@ -746,15 +713,9 @@ export type GameAction =
   | { type: 'ASSIGN_STAFF_TO_PLAYER'; playerId: string; roleIds: StaffRoleId[] }
   | { type: 'ASSIGN_STAFF_TO_COLLECTIVE'; group: 'defensivo' | 'criativo' | 'ataque'; roleIds: StaffRoleId[] }
   | { type: 'WORLD_CATCH_UP'; nowMs: number }
-  | { type: 'TRAINING_SESSION' }
-  | { type: 'BUY_OLE_PACK' }
-  | { type: 'SELL_SCOUT_INTEL' }
   | { type: 'UPGRADE_STRUCTURE'; structureId: ClubStructureId }
   /** Ações rápidas na Cidade (custo EXP + efeito em plantel / finanças / treino). */
-  | { type: 'CITY_QUICK_MEDICAL_MUTIRAO' }
   | { type: 'CITY_QUICK_STORE_CAMPAIGN' }
-  | { type: 'CITY_QUICK_TRAINING_INTENSIVO' }
-  | { type: 'WALLET_SAVE_SWAP_KYC'; profile: import('@/wallet/types').WalletKycProfile }
   | { type: 'WALLET_SET_SPONSOR'; sponsorId: string }
   /** Sincroniza o código de indicação local com o autoritativo do servidor. */
   | { type: 'WALLET_SYNC_REFERRAL_CODE'; code: string }
@@ -770,23 +731,7 @@ export type GameAction =
    *  spot (dinheiro vem do servidor via créditos). Guarda contra sobrescrever
    *  estado local com dados duráveis já presentes. */
   | { type: 'WALLET_RESTORE_SNAPSHOT'; snapshot: import('@/wallet/types').WalletState }
-  | {
-      type: 'START_FRIENDLY_CHALLENGE';
-      opponentName: string;
-      opponentId: string;
-      mode: 'live' | 'quick' | 'penalty';
-      currency: 'BRO' | 'EXP';
-      /** BRO: valor em unidades BRO (ex.: 10.5). EXP: valor inteiro de EXP. */
-      prizeAmount: number;
-    }
   /** Reverte escrow de `START_FRIENDLY_CHALLENGE` (convite recusado / expirado / cancelado). */
-  | {
-      type: 'REFUND_FRIENDLY_CHALLENGE';
-      opponentName: string;
-      mode: 'live' | 'quick' | 'penalty';
-      currency: 'BRO' | 'EXP';
-      prizeAmount: number;
-    }
   | { type: 'DISMISS_INBOX_ITEM'; id: string }
   | { type: 'MARK_INBOX_READ'; id: string }
   | { type: 'MARK_ALL_INBOX_READ' }
@@ -801,24 +746,6 @@ export type GameAction =
   | { type: 'GLOBAL_LEAGUE_MATCH_RESULT'; win: boolean; draw: boolean; goalsFor: number; goalsAgainst: number }
   // Coach Agent Actions
   | { type: 'COACH_ADD_PENDING_ACTION'; action: CoachAction }
-  | { type: 'COACH_GENERATE_HEALTH_ACTIONS' }
-  | { type: 'COACH_GENERATE_TRAINING_ACTIONS' }
-  | { type: 'COACH_GENERATE_TACTICAL_ACTIONS'; opponentContext?: string }
-  | { type: 'COACH_GENERATE_BRIEFING'; opponentContext?: string }
-  | {
-      type: 'OLEFOOT_RECORD_MATCH';
-      matchId: string;
-      homeManagerId: string;
-      homeManagerName: string;
-      awayManagerId: string;
-      awayManagerName: string;
-      homeGoals: number;
-      awayGoals: number;
-      /** IDs dos jogadores que atuaram (atualizam moral). */
-      homePlayerIds: string[];
-      awayPlayerIds: string[];
-    }
-  | { type: 'CONSUME_SHOP_BOOSTER'; itemId: string; targetPlayerId?: string }
   | { type: 'COACH_APPROVE_ACTION'; actionId: string }
   | { type: 'COACH_REJECT_ACTION'; actionId: string }
   | { type: 'COACH_EXECUTE_ACTION'; actionId: string }
@@ -848,35 +775,26 @@ export type GameAction =
       /** BRO no SPOT da wallet. */
       spotBroCentsDelta?: number;
     }
-  | { type: 'ADMIN_POST_INBOX'; title: string; body?: string; deepLink?: string }
-  | { type: 'ADMIN_SET_LEAGUE_SEASON'; partial: Partial<import('@/match/leagueSeason').LeagueSeasonState> }
   | { type: 'APPLY_CASUAL_RESULT_TO_LEAGUE'; result: { scoreHome: number; scoreAway: number; result: 'win' | 'draw' | 'loss' } }
-  | { type: 'ADMIN_SET_FORM'; form: import('@/entities/types').FormLetter[] }
   | { type: 'ADMIN_PATCH_CLUB'; partial: Partial<import('@/entities/types').ClubEntity> }
   /** Simula depósito fiat→BRO no SPOT (ledger FIAT_DEPOSIT + crédito SPOT). */
   /** Match Global: Define o estado da liga global */
   | { type: 'SET_GLOBAL_LEAGUE_STATE'; payload: import('@/match/globalMatch').GlobalLeagueState }
   | { type: 'SET_OLEFOOT_LEAGUE'; payload: import('@/match/olefootLeague').OlefootLeagueState }
-  | { type: 'FINALIZE_OLEFOOT_ROUND'; roundNumber: number; fixtures: import('@/match/globalMatch').GlobalFixture[] }
-  | { type: 'ADVANCE_OLEFOOT_ROUND' }
   /** Match Global Scheduler: Ciclo de vida automático das rodadas */
   | { type: 'CREATE_GLOBAL_ROUND'; scheduledKickoffMs: number }
-  | { type: 'START_COMMAND_WINDOW' }
   | { type: 'START_GLOBAL_ROUND' }
   | { type: 'UPDATE_LIVE_ROUND'; nowMs: number }
   | { type: 'FINISH_GLOBAL_ROUND'; nowMs: number }
   | { type: 'ADVANCE_GLOBAL_ROUND'; nowMs: number }
   /** Partida Rápida Competitiva: Atualiza ranking após partida */
-  | { type: 'UPDATE_COMPETITIVE_RANKING'; homeScore: number; awayScore: number; isCompetitive: boolean }
   | { type: 'ADMIN_SET_MANAGER_PROSPECT_CONFIG'; createCostExp: number }
-  | { type: 'ADMIN_MARK_PROSPECT_ART_FULFILLED'; requestId: string }
   | { type: 'ADMIN_PLAYER_CREATION_SET_PHOTO'; requestId: string; portraitUrl: string }
   | { type: 'ADMIN_PLAYER_CREATION_SET_PROMOTIONAL'; requestId: string; promotionalCardUrl: string }
   | { type: 'ADMIN_PLAYER_CREATION_VALIDATE'; requestId: string }
   | { type: 'ADMIN_PLAYER_CREATION_APPROVE'; requestId: string }
   | { type: 'ADMIN_PLAYER_CREATION_LAUNCH'; requestId: string; priceExp?: number }
   | { type: 'ADMIN_PATCH_PLAYER'; playerId: string; partial: Partial<import('@/entities/types').PlayerEntity> }
-  | { type: 'ADMIN_REMOVE_PLAYER'; playerId: string }
   | {
       type: 'ADMIN_PATCH_NEXT_FIXTURE';
       partial: {
@@ -890,22 +808,6 @@ export type GameAction =
         opponent?: Partial<import('@/entities/types').OpponentStub>;
       };
     }
-  | { type: 'ADMIN_SET_STRUCTURE_LEVEL'; structureId: ClubStructureId; level: number }
-  | { type: 'ADMIN_PATCH_CROWD'; partial: Partial<import('@/entities/types').CrowdState> }
-  | { type: 'ADMIN_PATCH_CLUB_LOGISTICS'; partial: Partial<import('@/entities/types').ClubLogisticsState> }
-  | { type: 'ADMIN_SET_MEMORABLE_TROPHIES'; ids: string[] }
-  | { type: 'ADMIN_SET_RESULTS'; results: import('@/entities/types').PastResult[] }
-  | { type: 'ADMIN_CLEAR_LIVE_MATCH' }
-  | { type: 'ADMIN_REMOVE_CARD_COLLECTION'; id: string }
-  | {
-      type: 'ADMIN_PATCH_WALLET_BALANCES';
-      spotBroCents?: number;
-      spotExpBalance?: number;
-      sponsorId?: string | null;
-    }
-  | { type: 'ADMIN_CLEAR_TRAINING_PLANS' }
-  | { type: 'ADMIN_PATCH_STAFF_ROLES'; roles: Partial<Record<StaffRoleId, number>> }
-  | { type: 'ADMIN_SET_UI_BANNER'; slot: BannerSlotId; entry: UiBannerEntry }
   | { type: 'ADMIN_SET_PLAYER_LISTED'; playerId: string; listed: boolean }
   | { type: 'ADMIN_SET_PLAYER_COLLECTION'; playerId: string; collectionId: string | undefined }
   | { type: 'ADMIN_SET_COACH'; coach: import('@/coach/types').CoachAgent }
@@ -961,7 +863,6 @@ export type GameAction =
   | { type: 'SET_AUTO_RENEW_CONTRACT'; playerId: string; enabled: boolean }
   | { type: 'CLAIM_SEASON_CHAMPION_PRIZE'; ole: number; exp: number; division: number }
   | { type: 'CLAIM_KO_PRIZE'; exp: number; stage: string }
-  | { type: 'LIST_MANAGER_PROSPECT'; playerId: string; priceExp: number }
   | { type: 'DELIST_MANAGER_PROSPECT'; listingId: string }
   | { type: 'MARKET_MAKER_ACCEPT'; playerId: string; offerExp: number }
   // ── Negociação P2P entre managers (proposta → aceite/negação) ──
@@ -1017,20 +918,14 @@ export type GameAction =
         legacyPositionKnowledge?: import('@/gamespirit/legacy/positionKnowledgeTypes').PositionKnowledge;
       }>;
     }
-  | { type: 'BUY_MANAGER_NPC_OFFER'; listingId: string }
   /** Gera ofertas NPC no mercado EXP (olheiro afecta qualidade e preço). */
-  | { type: 'REFRESH_MANAGER_NPC_MARKET' }
   /** Ganho de EXP “canónico” (missões, prémios) — actualiza saldo + lifetime + histórico. */
   | { type: 'GRANT_EARNED_EXP'; amount: number; historySource?: string }
   /** Anunciar venda de EXP por BRO (EXP retido até venda ou cancelamento). */
-  | { type: 'EXP_EXCHANGE_ANNOUNCE_SELL'; expAmount: number; broCents: number }
-  | { type: 'EXP_EXCHANGE_CANCEL_SELL'; orderId: string }
   /** Comprar lote do livro (ordens NPC; P2P quando existir match de clube). */
-  | { type: 'EXP_EXCHANGE_BUY'; orderId: string }
   | { type: 'SHOP_PURCHASE_ITEM'; itemId: string; currency: 'exp' | 'bro' }
   | { type: 'CONSUME_SHOP_ITEM'; itemId: string; playerId?: string }
   | { type: 'ADMIN_SET_SHOP_CATALOG'; items: ShopCatalogItem[] }
-  | { type: 'ADMIN_GRANT_SHOP_ITEM'; itemId: string; qty: number }
   | { type: 'RESET_DAILY_CHALLENGES' }
   | { type: 'UPDATE_CHALLENGE_PROGRESS'; challengeType: import('./dailyChallenges').ChallengeType; increment?: number }
   | { type: 'CLAIM_CHALLENGE_REWARD'; challengeId: string }
@@ -1053,10 +948,6 @@ export type GameAction =
   | { type: 'UPDATE_GLOBAL_PLAYOFF_LIVE'; nowMs: number }
   | { type: 'RESCHEDULE_PLAYOFF_ROUND'; roundNumber: number; scheduledKickoffMs: number }
   | { type: 'FINISH_GLOBAL_PLAYOFF_ROUND'; roundNumber: number; finishedFixtures: import('@/match/globalMatch').GlobalFixture[] }
-  | { type: 'START_GLOBAL_LEAGUE_ROUND'; roundNumber: number }
-  | { type: 'UPDATE_GLOBAL_LEAGUE_LIVE'; nowMs: number }
-  | { type: 'FINISH_GLOBAL_LEAGUE_ROUND'; roundNumber: number; finishedFixtures: import('@/match/globalMatch').GlobalFixture[] }
-  | { type: 'APPLY_GLOBAL_PROMOTION_RELEGATION' }
   | { type: 'RESET_GLOBAL_LEAGUE_MVP' }
   | {
       type: 'APPLY_GLOBAL_ROUND_MORAL';

@@ -18,14 +18,14 @@
 import { L, LOCALE } from '@/i18n/L';
 import { pitchPlayersFromLineup, roleFromPos } from '@/engine/pitchFromLineup';
 import { runMatchMinute } from '@/engine/runMatchMinute';
-import { advanceMatchToPostgame, runMatchMinuteBulk } from '@/engine/matchBulk';
+import { advanceMatchToPostgame } from '@/engine/matchBulk';
 import { applySubstitution } from '@/engine/substitution';
 import { applyRedCardAutoSub } from '@/engine/redCardAutoSub';
 import type { GameAction, ManagerProspectArtRequest, OlefootGameState } from './types';
 import { createInitialGameState, defaultLiveMatchShell } from './initialState';
 import { rehydrateGameState } from './persistence';
 import { awayStartingElevenFromSquad, buildDefaultLineup, mergeLineupWithDefaults } from '@/entities/lineup';
-import { buildFatigueByIdMap, getEffectiveFatigue } from '@/systems/fatigue';
+import { buildFatigueByIdMap } from '@/systems/fatigue';
 import { normalizeFixture, normalizeOpponentStub } from '@/entities/team';
 import { createPlayer, overallFromAttributes, samePersonKey } from '@/entities/player';
 import type { PlayerEntity } from '@/entities/types';
@@ -37,18 +37,17 @@ import {
   DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP,
   isValidManagerHeritage,
   MANAGER_PROSPECT_CREATE_MAX_OVR,
-  MANAGER_PROSPECT_EVOLVED_MAX_OVR,
+  
   MAX_ACTIVE_ACADEMY_PROSPECTS,
-  scaleAttrsToMaxOvr,
-  type ManagerProspectHeritageBrief,
-} from '@/entities/managerProspect';
+  
+  type ManagerProspectHeritageBrief } from '@/entities/managerProspect';
 import {
   applyMatchPerformanceEvolution,
   clampPlayerToEvolutionCap,
   ensureMintOverall,
 } from '@/entities/playerEvolution';
 import { validateAcademyProspectName } from '@/entities/managerProspectReservedNames';
-import { addBroCents, addOle, friendlyChallengeBroFeeCents, grantEarnedExp } from '@/systems/economy';
+import { addBroCents, addOle,  grantEarnedExp } from '@/systems/economy';
 import { tripKmForFixture, applyTravelFatigueToSquad } from '@/systems/logistics';
 import { updateStreak } from './quickMatchStreak';
 import {
@@ -96,27 +95,10 @@ import {
 import { applyHealthEffect } from '@/systems/playerHealth/reducer';
 import { generateProactiveHealthActions } from '@/coach/proactiveHealthActions';
 import { applyMatchResultToMoral, createDefaultMoral, updateFormStreak } from '@/systems/playerMoral/types';
-import type { MatchResult, PlayerMoral } from '@/systems/playerMoral/types';
-import {
-  OLEFOOT_LEAGUE_CONSTANTS,
-  createDefaultEloRating,
-  createEmptyOlefootRankedState,
-} from '@/olefootLeague/types';
-import type {
-  EloRating,
-  OlefootLeaderboardRow,
-  OlefootMatchRecord,
-  OlefootRankedState,
-} from '@/olefootLeague/types';
-import { updateElo, scoreFromGoals } from '@/olefootLeague/elo';
-import { generateProactiveTrainingActions } from '@/coach/proactiveTrainingActions';
-import { generateProactiveTacticalActions } from '@/coach/proactiveTacticalActions';
-import { buildPreMatchBriefing } from '@/coach/coachBriefing';
+import type { PlayerMoral } from '@/systems/playerMoral/types';
 import { createDefaultCoachAgent } from '@/coach/defaultCoach';
 import { applyWorldCatchUp } from './worldCatchUp';
 import { mergeWalletIntoFinance } from './financeWalletSync';
-import { applySquadTraining } from '@/systems/training';
-import { buyOlePack } from '@/systems/market';
 import type { MatchEventEntry } from '@/engine/types';
 import { computeMatchMvp, finalizeScoutTallies } from '@/gamespirit/scoutScoring';
 import { clearNarrativeHistory } from '@/gamespirit/narrativeVariation';
@@ -124,10 +106,9 @@ import {
   ledgerTouchMarketAfterMatch,
   marketBroSnapshotFromPlayers,
   mergeLedgerAfterMatch,
-  mergeLedgerAfterTrainingLightSession,
+  
   mergeLedgerAfterTrainingPlan,
-  sanitizePlayerSeasonLedger,
-} from '@/team/playerSeasonLedger';
+  sanitizePlayerSeasonLedger } from '@/team/playerSeasonLedger';
 import {
   appendEvolutionTimelinePoints,
   sanitizePlayerEvolutionTimeline,
@@ -145,13 +126,12 @@ import { DEFAULT_BRO_PRICES_CENTS } from '@/clubStructures/broDefaults';
 import { STRUCTURE_LABELS, LEDGER_REASON_EXP, LEDGER_REASON_BRO } from '@/clubStructures/types';
 import {
   effectiveCrowdSupportPercent,
-  medicalDeptRecoverySpeedBonusPercent,
+  
   medicalDeptTreatmentSlots,
   structureMatchExpBonuses,
   trainingCenterAttributeGainMultiplier,
   trainingCenterMaxConcurrentCollectivePlans,
-  youthAcademyProspectTrainingMultiplier,
-} from '@/clubStructures/benefits';
+  youthAcademyProspectTrainingMultiplier } from '@/clubStructures/benefits';
 import {
   applyTreatmentCompletionToPlayer,
   splitDueTreatments,
@@ -170,15 +150,14 @@ import {
   roundOf as legendsCupRoundOf,
 } from '@/match/legendsCup/legendsCupModel';
 import {
-  CITY_QUICK_MEDICAL_COST_EXP,
-  CITY_QUICK_MEDICAL_FATIGUE_DELTA,
-  CITY_QUICK_MEDICAL_INJURY_RISK_DELTA,
+  
+  
+  
   CITY_QUICK_STORE_COST_EXP,
   CITY_QUICK_STORE_CROWD_DELTA,
-  CITY_QUICK_TRAINING_COST_EXP,
-  CITY_QUICK_TRAINING_DURATION_H,
-  STADIUM_UPGRADE_CROWD_DELTA,
-} from './cityQuickConstants';
+  
+  
+  STADIUM_UPGRADE_CROWD_DELTA } from './cityQuickConstants';
 import { createInitialWalletState } from '@/wallet/initial';
 import { createInitialCompetitiveRanking, updateCompetitiveRanking } from './competitiveRanking';
 import {
@@ -187,12 +166,10 @@ import {
   handleAdminStartGlobalPlayoffs,
   handleStartGlobalPlayoffRound,
   handleFinishGlobalPlayoffRound,
-  handleStartGlobalLeagueRound,
-  handleFinishGlobalLeagueRound,
-  handleApplyPromotionRelegation,
-  handleResetGlobalLeagueMVP,
-} from './globalLeagueMVPReducer';
-import { writeSwapKycToStorage } from '@/wallet/swapKycStorage';
+  
+  
+  
+  handleResetGlobalLeagueMVP } from './globalLeagueMVPReducer';
 import { registerSponsor as walletRegisterSponsor } from '@/wallet/referral';
 // Imports estáticos — substituem chamadas legadas de require() que quebravam
 // no browser ("require is not defined") quando os reducers eram acionados.
@@ -208,14 +185,14 @@ import {
   applyResultToLocalLeague,
   emptyLocalLeaguesState,
 } from '@/match/localLeagues';
-import { finalizeRound, advanceToNextRound } from '@/match/olefootLeague';
+import { finalizeRound } from '@/match/olefootLeague';
 import { createScheduledRound, autoAdvanceRound } from '@/match/globalRoundScheduler';
 import { simulateGlobalRound } from '@/match/globalMatchSimulator';
 import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
 import { STYLE_PRESETS } from '@/tactics/playingStyle';
 import { applyResultToLeagueSeason } from '@/match/leagueSeason';
 import { buildRoundRobinSchedule } from '@/match/leagueSchedule';
-import { evaluateOfficialSquad, isOfficialSquadGateRelaxedForTests } from '@/match/squadEligibility';
+import { evaluateOfficialSquad } from '@/match/squadEligibility';
 import { selectEffectiveTeamStrength } from '@/match/availabilityReport';
 import { computeMatchContextModifiers } from '@/match/contextFactors';
 import { applyQuickMatchToDna } from '@/systems/clubDna';
@@ -230,10 +207,9 @@ import {
   amplifyTrainingResult,
   applyNutritionRecovery,
   maxStaffSlotsByLevel,
-  scoutExpReward,
+  
   trainingGainMultiplier,
-  tryUpgradeStaffRole,
-} from '@/systems/staff';
+  tryUpgradeStaffRole } from '@/systems/staff';
 import {
   nutritionPostMatchFatigueRecoveryBonus,
   npcProspectBasePriceExp,
@@ -246,25 +222,18 @@ import { FORMATION_BASES } from '@/match-engine/formations/catalog';
 import { appendMemorableTrophyUnlocks } from '@/trophies/memorableCatalog';
 import { diffNewMemorableTrophyIds, memorableTrophyFinanceReward } from '@/trophies/memorablePrizes';
 import {
-  EXP_EXCHANGE_MAX_LOT,
-  EXP_EXCHANGE_MIN_BRO_CENTS,
-  EXP_EXCHANGE_MIN_LOT,
-  replenishNpcExpOrders,
-} from '@/economy/expExchange';
-import {
   advancePenaltyStage,
-  initialPenaltyState,
+  
   penaltyNarrativeLine,
   penaltyOverlayForStage,
-  rollPenaltyOutcome,
-} from '@/gamespirit/spiritStateMachine';
+  rollPenaltyOutcome } from '@/gamespirit/spiritStateMachine';
 import {
   appendGoalScorerHome,
   appendTeamGoalConcededHome,
   appendTeamGoalScoredHome,
 } from '@/match/impactLedger';
 import type { FormationSchemeId } from '@/match-engine/types';
-import { queueMatchEvents, finalizeMatch, persistPlayers, persistPlayerGoals } from '@/supabase/matchPersistence';
+import {  finalizeMatch, persistPlayers, persistPlayerGoals } from '@/supabase/matchPersistence';
 import { pushValueSnapshots } from '@/market/marketLiveClient';
 import { makeInboxItem } from './inboxItem';
 import { buildPostMatchStaffInboxItem } from './postMatchStaffInbox';
@@ -377,27 +346,6 @@ function withExpHistory(
   return { ...finance, expHistory: next };
 }
 
-/** Funde feed do sim (novos primeiro) com eventos só no store (ex.: apito inicial). */
-function mergeSimSyncEvents(
-  prev: import('@/engine/types').MatchEventEntry[],
-  fromSim: import('@/engine/types').MatchEventEntry[],
-): import('@/engine/types').MatchEventEntry[] {
-  if (fromSim.length === 0) return prev;
-  const seen = new Set<string>();
-  const out: import('@/engine/types').MatchEventEntry[] = [];
-  for (const e of fromSim) {
-    if (seen.has(e.id)) continue;
-    seen.add(e.id);
-    out.push(e);
-  }
-  for (const e of prev) {
-    if (seen.has(e.id)) continue;
-    seen.add(e.id);
-    out.push(e);
-  }
-  if (out.length > 60) out.length = 60;
-  return out;
-}
 
 function syncWalletSpotBro(finance: import('@/entities/types').FinanceState): import('@/entities/types').FinanceState {
   if (!finance.wallet) return finance;
@@ -578,65 +526,7 @@ function applyCoachActionEffects(
   return newState;
 }
 
-/** Aplica resultado nas morais dos jogadores das duas equipes. */
-function applyMoralToPlayers(
-  moralMap: Record<string, PlayerMoral> | undefined,
-  homeIds: string[],
-  homeResult: MatchResult,
-  awayIds: string[],
-  awayResult: MatchResult,
-): Record<string, PlayerMoral> {
-  const next: Record<string, PlayerMoral> = { ...(moralMap ?? {}) };
-  const now = Date.now();
-  for (const pid of homeIds) {
-    const cur = next[pid] ?? createDefaultMoral(pid, now);
-    next[pid] = applyMatchResultToMoral(cur, homeResult, now);
-  }
-  for (const pid of awayIds) {
-    const cur = next[pid] ?? createDefaultMoral(pid, now);
-    next[pid] = applyMatchResultToMoral(cur, awayResult, now);
-  }
-  return next;
-}
 
-/** Recalcula leaderboard a partir do mapa de ratings + histórico recente. */
-function recomputeLeaderboard(
-  ratings: Record<string, EloRating>,
-  recentMatches: OlefootMatchRecord[],
-  knownNames: Record<string, string>,
-): OlefootLeaderboardRow[] {
-  const goalsFor: Record<string, number> = {};
-  const goalsAgainst: Record<string, number> = {};
-  const names: Record<string, string> = { ...knownNames };
-  for (const m of recentMatches) {
-    goalsFor[m.homeManagerId] = (goalsFor[m.homeManagerId] ?? 0) + m.homeGoals;
-    goalsFor[m.awayManagerId] = (goalsFor[m.awayManagerId] ?? 0) + m.awayGoals;
-    goalsAgainst[m.homeManagerId] = (goalsAgainst[m.homeManagerId] ?? 0) + m.awayGoals;
-    goalsAgainst[m.awayManagerId] = (goalsAgainst[m.awayManagerId] ?? 0) + m.homeGoals;
-    if (!names[m.homeManagerId]) names[m.homeManagerId] = m.homeManagerName;
-    if (!names[m.awayManagerId]) names[m.awayManagerId] = m.awayManagerName;
-  }
-  const rows: OlefootLeaderboardRow[] = Object.values(ratings).map((r) => ({
-    managerId: r.managerId,
-    managerName: names[r.managerId] ?? r.managerId,
-    points: r.wins * 3 + r.draws,
-    matchesPlayed: r.matchesPlayed,
-    wins: r.wins,
-    draws: r.draws,
-    losses: r.losses,
-    goalsFor: goalsFor[r.managerId] ?? 0,
-    goalsAgainst: goalsAgainst[r.managerId] ?? 0,
-    rating: r.rating,
-  }));
-  rows.sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    const gdA = a.goalsFor - a.goalsAgainst;
-    const gdB = b.goalsFor - b.goalsAgainst;
-    if (gdB !== gdA) return gdB - gdA;
-    return b.rating - a.rating;
-  });
-  return rows;
-}
 
 /** Mapeia CoachActionType → CoachDecision['type'] para o learning loop. */
 function mapActionTypeToDecisionType(
@@ -657,52 +547,6 @@ function mapActionTypeToDecisionType(
   }
 }
 
-/**
- * Merge de ações proativas no coach + auto-execução (autonomia >= 80, urgency >= medium).
- * Usado por COACH_GENERATE_{HEALTH,TRAINING,TACTICAL}_ACTIONS.
- */
-function mergeProactiveActions(
-  state: OlefootGameState,
-  proactive: import('@/coach/types').CoachAction[],
-): OlefootGameState {
-  if (!state.manager.coach) return state;
-  if (!proactive.length) return state;
-  const existing = state.manager.coach.pendingActions;
-  const existingTitles = new Set(existing.filter((a) => a.status === 'pending').map((a) => a.title));
-  const fresh = proactive.filter((a) => !existingTitles.has(a.title));
-  if (!fresh.length) return state;
-
-  const autonomy = state.manager.coach.autonomyLevel ?? 0;
-  const autoExecute = autonomy >= 80;
-  const merged = [...existing, ...fresh];
-
-  if (!autoExecute) {
-    return {
-      ...state,
-      manager: { ...state.manager, coach: { ...state.manager.coach, pendingActions: merged } },
-    };
-  }
-
-  let nextState: OlefootGameState = state;
-  const finalActions = merged.map((a) => ({ ...a }));
-  for (const a of fresh) {
-    if (a.urgency !== 'high' && a.urgency !== 'medium') continue;
-    const before = nextState;
-    const after = applyCoachActionEffects(before, a);
-    if (after !== before) {
-      nextState = after;
-      const idx = finalActions.findIndex((x) => x.id === a.id);
-      if (idx >= 0) finalActions[idx] = { ...finalActions[idx], status: 'executed' };
-    }
-  }
-  return {
-    ...nextState,
-    manager: {
-      ...nextState.manager,
-      coach: { ...nextState.manager.coach!, pendingActions: finalActions },
-    },
-  };
-}
 
 export function gameReducer(state: OlefootGameState, action: GameAction): OlefootGameState {
   switch (action.type) {
@@ -1009,23 +853,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       };
     }
 
-    case 'UPDATE_STREAK_CHALLENGES': {
-      if (!state.streakChallenges) return state;
-
-      const updated = updateStreakProgress(
-        state.streakChallenges.challenges,
-        action.currentStreak,
-        action.won,
-      );
-
-      return {
-        ...state,
-        streakChallenges: {
-          ...state.streakChallenges,
-          challenges: updated,
-        },
-      };
-    }
 
     case 'REFRESH_STREAK_CHALLENGES': {
       return {
@@ -1074,116 +901,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         },
       };
     }
-    case 'BEGIN_PLAY_FROM_PREGAME': {
-      if (!state.liveMatch || state.liveMatch.phase !== 'pregame') return state;
-      const kick: MatchEventEntry = {
-        id: uid(),
-        minute: 0,
-        text: L(`0' — Bola rolando. ${state.liveMatch.homeShort} x ${state.liveMatch.awayShort}.`, `0' — Kick-off. ${state.liveMatch.homeShort} x ${state.liveMatch.awayShort}.`),
-        kind: 'whistle',
-      };
-      return {
-        ...state,
-        liveMatch: {
-          ...state.liveMatch,
-          phase: 'playing',
-          minute: 0,
-          clockPeriod: 'first_half',
-          events: [kick, ...state.liveMatch.events],
-        },
-      };
-    }
     case 'TICK_MATCH_MINUTE': {
       return runTick(state);
-    }
-    case 'COMMIT_TEST2D_VISUAL_BEAT_FEED': {
-      const lm = state.liveMatch;
-      if (!lm?.test2dVisualBeat) return state;
-      const ev = lm.test2dVisualBeat.deferredFeedEvent;
-      const nextEvents = [ev, ...lm.events];
-      if (nextEvents.length > 40) nextEvents.length = 40;
-      return {
-        ...state,
-        liveMatch: {
-          ...lm,
-          test2dVisualBeat: undefined,
-          events: nextEvents,
-        },
-      };
-    }
-    case 'COMMIT_ULTRALIVE2D_STAGED_FEED': {
-      const lm = state.liveMatch;
-      if (!lm?.ultralive2dStagedPlay) return state;
-      const ev = lm.ultralive2dStagedPlay.deferredFeedEvent;
-      const nextEvents = [ev, ...lm.events];
-      if (nextEvents.length > 40) nextEvents.length = 40;
-      return {
-        ...state,
-        liveMatch: {
-          ...lm,
-          ultralive2dStagedPlay: undefined,
-          events: nextEvents,
-        },
-      };
-    }
-    case 'SIM_SYNC': {
-      if (!state.liveMatch || state.liveMatch.phase !== 'playing') return state;
-      const lm = state.liveMatch;
-      const simStats: Record<string, { passesOk: number; passesAttempt: number; tackles: number; km: number; rating: number; shotsOn: number; shotsOff: number; saves: number; dribblesOk: number }> = {};
-      for (const [pid, s] of Object.entries(action.stats)) {
-        const comp = s.passesAttempt > 0 ? s.passesOk / s.passesAttempt : 0.75;
-        simStats[pid] = {
-          passesOk: s.passesOk,
-          passesAttempt: s.passesAttempt,
-          tackles: s.tackles,
-          km: s.km,
-          rating: Math.min(9.2, 6 + comp * 2.2 + s.tackles * 0.08 + Math.min(1.2, s.km / 12)),
-          shotsOn: s.shotsOn ?? 0,
-          shotsOff: s.shotsOff ?? 0,
-          saves: s.saves ?? 0,
-          dribblesOk: s.dribblesOk ?? 0,
-        };
-      }
-      const homeScore = action.homeScore;
-      const awayScore = action.awayScore;
-      const mergedEvents =
-        action.events.length > 0 ? mergeSimSyncEvents(lm.events, action.events) : [...lm.events];
-
-      let nextLive: import('@/engine/types').LiveMatchSnapshot = {
-        ...lm,
-        minute: action.minute,
-        clockPeriod: action.clockPeriod,
-        homeScore,
-        awayScore,
-        possession: action.possession,
-        onBallPlayerId: action.carrierId ?? undefined,
-        events: mergedEvents,
-        homeStats: { ...lm.homeStats, ...simStats },
-      };
-
-      if (lm.supabaseMatchId && action.events.length > 0) {
-        const newEvents = action.events.filter((ev) => !lm.events.some((e) => e.id === ev.id));
-        if (newEvents.length > 0) queueMatchEvents(lm.supabaseMatchId, newEvents);
-      }
-
-      if (action.fullTime && nextLive.phase === 'playing') {
-        nextLive = promoteToPostgame(nextLive);
-      }
-      return { ...state, liveMatch: nextLive };
-    }
-    case 'CLEAR_SPIRIT_PENDING_RESTART': {
-      if (!state.liveMatch) return state;
-      return {
-        ...state,
-        liveMatch: { ...state.liveMatch, spiritPendingRestart: null },
-      };
-    }
-    case 'SET_SPIRIT_OVERLAY': {
-      if (!state.liveMatch) return state;
-      return {
-        ...state,
-        liveMatch: { ...state.liveMatch, spiritOverlay: action.overlay },
-      };
     }
     case 'DISMISS_SPIRIT_OVERLAY': {
       if (!state.liveMatch) return state;
@@ -1317,33 +1036,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     case 'COACH_TECHNICAL_COMMAND': {
       return state;
     }
-    case 'LIVE_MATCH_SWAP_HOME_SLOTS': {
-      const lm = state.liveMatch;
-      if (!lm || lm.phase !== 'playing') return state;
-      const { slotA, slotB } = action;
-      if (slotA === slotB) return state;
-      const lu = mergeLineupWithDefaults(state.lineup, state.players);
-      const idA = lu[slotA];
-      const idB = lu[slotB];
-      if (!idA || !idB) return state;
-      const fs = state.manager.formationScheme;
-      const nextLineup = { ...lu, [slotA]: idB, [slotB]: idA };
-      const homePlayers = pitchPlayersFromLineup(nextLineup, state.players, fs);
-      const matchLineupBySlot: Record<string, string> = {};
-      for (const hp of homePlayers) {
-        matchLineupBySlot[hp.slotId] = hp.playerId;
-      }
-      return {
-        ...state,
-        lineup: { ...state.lineup, [slotA]: idB, [slotB]: idA },
-        liveMatch: {
-          ...lm,
-          homePlayers,
-          matchLineupBySlot,
-          homeFormationScheme: fs,
-        },
-      };
-    }
     case 'LIVE_MATCH_SET_FORMATION': {
       const lm = state.liveMatch;
       if (!lm || lm.phase !== 'playing') return state;
@@ -1369,48 +1061,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           homeFormationScheme: fs,
         },
       };
-    }
-    case 'REGENERATE_LIVE_SECOND_HALF_STORY': {
-      return state;
-    }
-    case 'TICK_MATCH_BULK': {
-      if (!state.liveMatch || state.liveMatch.phase !== 'playing') return state;
-      const roster = homeRosterFromLineup(state);
-      // Fase 3 — Bulk simulation respeita modificadores também.
-      const bulkEffective = selectEffectiveTeamStrength({
-        players: state.players, health: state.playerHealth,
-      });
-      const bulkMods = bulkEffective.startersCounted > 0
-        ? computeMatchContextModifiers({
-            isHome: state.nextFixture.isHome,
-            effectiveTeamStrength: bulkEffective,
-            isDerby: nemesisIsDerby({
-              opponentId: state.nextFixture.opponent?.id,
-              ligaOleNemesisId: state.ligaOleNemesis?.id,
-            }),
-            decree: activeDecreeOption(state.weeklyDecree, Date.now()),
-          })
-        : undefined;
-      const { snapshot, updatedPlayers } = runMatchMinuteBulk({
-        snapshot: state.liveMatch,
-        homeRoster: roster,
-        allPlayers: state.players,
-        crowdSupport: crowdSupportForMatchSimulation(state),
-        tacticalMentality: state.manager.tacticalMentality,
-        tacticalStyle: state.manager.tacticalStyle,
-        opponentStrength: state.nextFixture.opponent.strength,
-        awayShort: state.nextFixture.opponent.shortName,
-        steps: action.steps,
-        clubDnaAxis: state.clubDna?.axis,
-        staffMatchEffects: staffRunMatchMinuteEffects(state.manager.staff),
-        contextModifiers: bulkMods,
-      });
-      let liveMatch = snapshot;
-      const players = { ...state.players, ...updatedPlayers };
-      if (liveMatch.minute >= 90 && liveMatch.phase === 'playing') {
-        liveMatch = promoteToPostgame(liveMatch);
-      }
-      return { ...state, liveMatch, players };
     }
     case 'MATCH_SUBSTITUTE': {
       if (!state.liveMatch) return state;
@@ -1568,11 +1218,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         },
       };
     }
-    case 'CANCEL_SET_PIECE': {
-      const lm = state.liveMatch;
-      if (!lm) return state;
-      return { ...state, liveMatch: { ...lm, pendingSetPiece: null } };
-    }
     case 'ADD_LIVE_MATCH_EVENT': {
       const lm = state.liveMatch;
       if (!lm) return state;
@@ -1667,38 +1312,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         clubLogistics: { lastTripKm: travelKm },
       };
     }
-    case 'AWARD_LIVE_PENALTY': {
-      if (!state.liveMatch || state.liveMatch.phase !== 'playing') return state;
-      const lm = state.liveMatch;
-      if (lm.penalty) return state; // já existe pênalti em curso
-      const { attackingSide, takerId, takerName, minute } = action;
-      const penalty = initialPenaltyState(attackingSide, takerName, takerId);
-      const nowMs = Date.now();
-      const overlay = penaltyOverlayForStage(
-        'banner',
-        takerName,
-        lm.homeShort,
-        lm.awayShort,
-        nowMs,
-        2000,
-      );
-      const whistleEv: MatchEventEntry = {
-        id: uid(),
-        minute,
-        text: L(`${minute}' — PÊNALTI para ${attackingSide === 'home' ? lm.homeShort : lm.awayShort}!`, `${minute}' — PENALTY to ${attackingSide === 'home' ? lm.homeShort : lm.awayShort}!`),
-        kind: 'whistle',
-      };
-      return {
-        ...state,
-        liveMatch: {
-          ...lm,
-          penalty,
-          spiritPhase: 'penalty',
-          spiritOverlay: overlay,
-          events: [whistleEv, ...lm.events].slice(0, 40),
-        },
-      };
-    }
     case 'VOICE_COMMAND_ISSUED': {
       if (!state.liveMatch || state.liveMatch.phase !== 'playing') return state;
       const lm = state.liveMatch;
@@ -1747,13 +1360,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         },
       };
     }
-    case 'VOICE_COMMAND_EXPIRED': {
-      if (!state.liveMatch) return state;
-      const lm = state.liveMatch;
-      const { [action.playerId]: _, ...rest } = lm.voiceCommands ?? {};
-      void _;
-      return { ...state, liveMatch: { ...lm, voiceCommands: rest } };
-    }
     case 'VOICE_COMMANDS_SWEEP': {
       if (!state.liveMatch) return state;
       const lm = state.liveMatch;
@@ -1769,10 +1375,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       }
       if (!changed) return state;
       return { ...state, liveMatch: { ...lm, voiceCommands: next } };
-    }
-    case 'TEAM_OBEDIENCE_BUMP': {
-      const next = Math.max(30, Math.min(100, (state.tacticalObedience ?? 30) + action.delta));
-      return { ...state, tacticalObedience: next };
     }
     case 'REFEREE_WARNING_LANGUAGE': {
       if (!state.liveMatch) return state;
@@ -3187,35 +2789,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         },
       };
     }
-    case 'LIST_MANAGER_PROSPECT': {
-      const pl = state.players[action.playerId];
-      if (!pl) return state;
-      if (pl.listedOnMarket) return state;
-      if (state.managerProspectMarket.ownListings.some((l) => l.playerId === action.playerId)) return state;
-      const priceExp = Math.max(50_000, Math.min(5_000_000, Math.round(action.priceExp)));
-      const listingId = `lst_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-      const listedAtIso = new Date().toISOString();
-      const lineup = { ...state.lineup };
-      for (const [slot, pid] of Object.entries(lineup)) {
-        if (pid === action.playerId) delete lineup[slot];
-      }
-      const players = {
-        ...state.players,
-        [action.playerId]: { ...pl, listedOnMarket: true },
-      };
-      return {
-        ...state,
-        lineup,
-        players,
-        managerProspectMarket: {
-          ...state.managerProspectMarket,
-          ownListings: [
-            { listingId, playerId: action.playerId, priceExp, listedAtIso },
-            ...state.managerProspectMarket.ownListings,
-          ],
-        },
-      };
-    }
     case 'MARKET_MAKER_ACCEPT': {
       const pl = state.players[action.playerId];
       if (!pl) return state;
@@ -3490,69 +3063,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         },
       };
     }
-    case 'APPLY_LEGACY_LEARNED': {
-      const ATTR_KEYS: Array<keyof import('@/entities/types').PlayerAttributes> = [
-        'passe', 'marcacao', 'velocidade', 'drible', 'finalizacao',
-        'fisico', 'tatico', 'mentalidade', 'confianca', 'fairPlay',
-      ];
-      const nextPlayers = { ...state.players };
-      let changed = false;
-      for (const upd of action.updates) {
-        const pl = nextPlayers[upd.studentPlayerId];
-        if (!pl) continue;
-        const nextAttrs = { ...pl.attrs };
-        let anyDelta = false;
-        for (const k of ATTR_KEYS) {
-          const learned = upd.learnedAttributes[k as string];
-          const legacyCap = upd.legacyAttributes[k as string];
-          if (typeof learned !== 'number' || !Number.isFinite(learned)) continue;
-          if (typeof legacyCap !== 'number' || !Number.isFinite(legacyCap)) continue;
-          const base = nextAttrs[k] ?? 0;
-          if (base >= legacyCap) continue;
-          const effective = Math.min(legacyCap, base + learned);
-          if (effective > base) {
-            nextAttrs[k] = Math.round(effective);
-            anyDelta = true;
-          }
-        }
-
-        // Transfere positionKnowledge do mentor, com sessionsCompleted escalado pelo progresso.
-        let nextPk = pl.positionKnowledge;
-        if (upd.legacyPositionKnowledge) {
-          const taught = upd.taughtAttributes && upd.taughtAttributes.length > 0
-            ? upd.taughtAttributes
-            : Object.keys(upd.legacyAttributes);
-          let sum = 0;
-          let count = 0;
-          for (const k of taught) {
-            const cap = upd.legacyAttributes[k];
-            const learned = upd.learnedAttributes[k] ?? 0;
-            if (typeof cap !== 'number' || cap <= 0) continue;
-            sum += Math.min(1, learned / cap);
-            count += 1;
-          }
-          const progress = count > 0 ? sum / count : 0;
-          const srcSessions = upd.legacyPositionKnowledge.sessionsCompleted || 0;
-          const scaledSessions = Math.round(progress * Math.max(srcSessions, 5));
-          nextPk = {
-            ...upd.legacyPositionKnowledge,
-            sessionsCompleted: scaledSessions,
-            legendSource: upd.legacyPositionKnowledge.legendSource ?? 'legacy_mentor',
-          };
-        }
-
-        if (anyDelta || nextPk !== pl.positionKnowledge) {
-          nextPlayers[upd.studentPlayerId] = {
-            ...pl,
-            attrs: nextAttrs,
-            ...(nextPk ? { positionKnowledge: nextPk } : {}),
-          };
-          changed = true;
-        }
-      }
-      if (!changed) return state;
-      return { ...state, players: nextPlayers };
-    }
     case 'BUY_LEGACY_PLAYER': {
       const pid = action.player.id;
       if (!pid.startsWith('legacy-')) return state;
@@ -3593,59 +3103,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         // FABLE — Renome: contratar uma lenda é evento SOCIAL (+50).
         clubRenown: addRenown(state.clubRenown, 50, L(`Contratou a lenda ${action.player.name}`, `Signed the legend ${action.player.name}`), Date.now()),
         managerScore: addManagerScore(state.managerScore, 'compra_legend', L(`Garantiu a lenda ${action.player.name}`, `Secured the legend ${action.player.name}`), Date.now()),
-      };
-    }
-    case 'RECRUIT_YOUTH_PROSPECT': {
-      const pid = action.player.id;
-      if (state.players[pid]) return state; // já no plantel
-      if (state.finance.broCents < action.priceBroCents) return state; // saldo insuficiente
-      const num = nextKitNumber(state.players);
-      const finance = addBroCents(state.finance, -action.priceBroCents);
-      return {
-        ...state,
-        finance,
-        players: { ...state.players, [pid]: { ...action.player, num, listedOnMarket: false } },
-      };
-    }
-    case 'BUY_MANAGER_NPC_OFFER': {
-      const offer = state.managerProspectMarket.npcOffers.find((o) => o.listingId === action.listingId);
-      if (!offer) return state;
-      if (state.finance.ole < offer.priceExp) return state;
-      const newId = `mgr_imp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
-      const num = nextKitNumber(state.players);
-      let attrs = offer.snapshot.attrs;
-      if (overallFromAttributes(attrs, offer.snapshot.pos) > MANAGER_PROSPECT_EVOLVED_MAX_OVR) {
-        attrs = scaleAttrsToMaxOvr(attrs, MANAGER_PROSPECT_EVOLVED_MAX_OVR, offer.snapshot.pos);
-      }
-      const importMint = overallFromAttributes(attrs, offer.snapshot.pos);
-      const added: import('@/entities/types').PlayerEntity = {
-        ...offer.snapshot,
-        id: newId,
-        num,
-        attrs,
-        mintOverall: importMint,
-        evolutionRate: offer.snapshot.evolutionRate ?? 1,
-        listedOnMarket: false,
-        evolutionXp: offer.snapshot.evolutionXp ?? 0,
-      };
-      const price = offer.priceExp;
-      const finance = withExpHistory(addOle(state.finance, -price), -price, 'mercado_academia_npc');
-      const npcOffers = state.managerProspectMarket.npcOffers.filter((o) => o.listingId !== action.listingId);
-      return {
-        ...state,
-        finance,
-        players: { ...state.players, [added.id]: added },
-        managerProspectMarket: {
-          ...state.managerProspectMarket,
-          npcOffers,
-        },
-      };
-    }
-    case 'REFRESH_MANAGER_NPC_MARKET': {
-      const npcOffers = buildNpcOffersForShop(state);
-      return {
-        ...state,
-        managerProspectMarket: { ...state.managerProspectMarket, npcOffers },
       };
     }
     case 'GRANT_EARNED_EXP': {
@@ -3694,98 +3151,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         Date.now(),
       );
       return { ...state, finance, clubRenown };
-    }
-    case 'EXP_EXCHANGE_ANNOUNCE_SELL': {
-      const expAmount = Math.round(action.expAmount);
-      const broCents = Math.round(action.broCents);
-      if (
-        expAmount < EXP_EXCHANGE_MIN_LOT ||
-        expAmount > EXP_EXCHANGE_MAX_LOT ||
-        broCents < EXP_EXCHANGE_MIN_BRO_CENTS ||
-        state.finance.ole < expAmount
-      ) {
-        return state;
-      }
-      const finance = financeWithLedger(
-        withExpHistory(addOle(state.finance, -expAmount), -expAmount, L('Exchange · anúncio EXP', 'Exchange · EXP listing')),
-        { type: 'SPOT_EXP', currency: 'EXP', amount: -expAmount, source: 'exchange_sell_announce' },
-      );
-      const order = {
-        id: `ex_pl_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-        kind: 'player' as const,
-        sellerClubId: state.club.id,
-        teamName: state.club.name,
-        expAmount,
-        broCents,
-        createdAtIso: new Date().toISOString(),
-      };
-      return {
-        ...state,
-        finance,
-        managerScore: addManagerScore(state.managerScore, 'negociacao_exchange', L(`Anunciou ${expAmount.toLocaleString(LOCALE)} EXP no Exchange`, `Listed ${expAmount.toLocaleString(LOCALE)} EXP on the Exchange`), Date.now()),
-        expExchange: {
-          ...state.expExchange,
-          playerOrders: [order, ...state.expExchange.playerOrders],
-        },
-      };
-    }
-    case 'EXP_EXCHANGE_CANCEL_SELL': {
-      const o = state.expExchange.playerOrders.find((x) => x.id === action.orderId);
-      if (!o || o.sellerClubId !== state.club.id) return state;
-      const finance = financeWithLedger(
-        withExpHistory(addOle(state.finance, o.expAmount), o.expAmount, L('Exchange · cancelar venda', 'Exchange · cancel sale')),
-        { type: 'SPOT_EXP', currency: 'EXP', amount: o.expAmount, source: 'exchange_sell_cancel', refId: `ex-cancel-${o.id}` },
-      );
-      return {
-        ...state,
-        finance,
-        expExchange: {
-          ...state.expExchange,
-          playerOrders: state.expExchange.playerOrders.filter((x) => x.id !== action.orderId),
-        },
-      };
-    }
-    case 'EXP_EXCHANGE_BUY': {
-      const ex = state.expExchange;
-      const npcIdx = ex.npcOrders.findIndex((o) => o.id === action.orderId);
-      if (npcIdx < 0) return state;
-      const o = ex.npcOrders[npcIdx]!;
-      // Guard: order deve ter valores dentro de limites razoáveis.
-      if (o.broCents <= 0 || o.expAmount <= 0 || o.expAmount > 10_000_000) return state;
-      if (state.finance.broCents < o.broCents) return state;
-      let finance = addBroCents(state.finance, -o.broCents);
-      finance = grantEarnedExp(finance, o.expAmount);
-      finance = withExpHistory(finance, o.expAmount, L('Exchange · compra EXP', 'Exchange · EXP purchase'));
-      finance = financeWithLedger(finance, {
-        type: 'SPOT_BRO', currency: 'BRO', amount: -o.broCents, source: 'exchange_buy', refId: `ex-buy-bro-${o.id}`,
-      });
-      finance = financeWithLedger(finance, {
-        type: 'SPOT_EXP', currency: 'EXP', amount: o.expAmount, source: 'exchange_buy', refId: `ex-buy-exp-${o.id}`,
-      });
-      const npcOrders = ex.npcOrders.filter((x) => x.id !== o.id);
-      const expExchange = replenishNpcExpOrders({ ...ex, npcOrders });
-      return {
-        ...state, finance, expExchange,
-        managerScore: addManagerScore(state.managerScore, 'negociacao_exchange', L(`Comprou ${o.expAmount.toLocaleString(LOCALE)} EXP no Exchange`, `Bought ${o.expAmount.toLocaleString(LOCALE)} EXP on the Exchange`), Date.now()),
-      };
-    }
-    case 'UPSERT_CARD_COLLECTION': {
-      const c = action.collection;
-      const maxSupply = Math.max(1, Math.floor(c.maxSupply));
-      const name = c.name?.trim();
-      if (!c.id?.trim() || !name) return state;
-      return {
-        ...state,
-        cardCollections: {
-          ...state.cardCollections,
-          [c.id]: {
-            id: c.id,
-            name,
-            maxSupply,
-            createdAt: c.createdAt?.trim() || new Date().toISOString(),
-          },
-        },
-      };
     }
     case 'SET_MANAGER_SLIDERS': {
       return { ...state, manager: { ...state.manager, ...action.partial } };
@@ -3869,28 +3234,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             'TACTIC_SAVED',
             'TREINO',
             L(`Tática "${name}" salva e pronta para partidas.`, `Tactic "${name}" saved and ready for matches.`),
-            { deepLink: '/team' },
-          ),
-          ...state.inbox,
-        ].slice(0, 14),
-      };
-    }
-    case 'START_TACTIC_TRAINING': {
-      const tactic = state.manager.savedTactics.find((t) => t.id === action.tacticId);
-      if (!tactic) return state;
-      return {
-        ...state,
-        manager: {
-          ...state.manager,
-          tacticalStyle: tactic.style,
-          activeTrainingTacticId: tactic.id,
-        },
-        inbox: [
-          makeInboxItem(
-            `tactic-train-${Date.now()}`,
-            'TACTIC_TRAINING_FOCUS',
-            'TREINO',
-            L(`Treino com foco na tática "${tactic.name}" iniciado.`, `Training focused on the "${tactic.name}" tactic started.`),
             { deepLink: '/team' },
           ),
           ...state.inbox,
@@ -4201,115 +3544,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         crowd: { ...next.crowd, moodLabel: crowdMood(next.crowd.supportPercent) },
       };
     }
-    case 'TRAINING_SESSION': {
-      const r = applySquadTraining(state.players, state.finance, 40);
-      if (!r.ok) {
-        return {
-          ...state,
-          inbox: [
-            makeInboxItem(
-              `train-fail-${Date.now()}`,
-              'TRAINING_SESSION_FAIL',
-              'FINANCEIRO',
-              L('Treino leve cancelado: saldo EXP insuficiente.', 'Light training cancelled: not enough EXP.'),
-              { colorClass: 'text-red-400', deepLink: '/wallet' },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      const trainedPlayers: Record<string, import('@/entities/types').PlayerEntity> = {};
-      for (const [id, p] of Object.entries(r.players)) {
-        trainedPlayers[id] = clampPlayerToEvolutionCap(ensureMintOverall(p));
-      }
-      const marketSnap = marketBroSnapshotFromPlayers(state.players);
-      const trainedIds = Object.keys(trainedPlayers);
-      const playerSeasonLedger = mergeLedgerAfterTrainingLightSession(
-        state.playerSeasonLedger,
-        trainedIds,
-        marketSnap,
-      );
-      const playerEvolutionTimeline = appendEvolutionTimelinePoints(
-        state.playerEvolutionTimeline,
-        trainedIds,
-        trainedPlayers,
-        playerSeasonLedger,
-        'training_light',
-      );
-      return {
-        ...state,
-        players: trainedPlayers,
-        playerSeasonLedger,
-        playerEvolutionTimeline,
-        finance: withExpHistory(r.finance, -40, L('Treino leve', 'Light training')),
-        inbox: [
-          makeInboxItem(
-            `train-${Date.now()}`,
-            'TRAINING_SESSION_LIGHT',
-            'TREINO',
-            L('Sessão leve concluída: elenco recuperou fôlego.', 'Light session done: squad got its breath back.'),
-            { body: L('EXP debitado conforme o plano de treino.', 'EXP charged per the training plan.'), deepLink: '/team' },
-          ),
-          ...state.inbox,
-        ].slice(0, 14),
-      };
-    }
-    case 'BUY_OLE_PACK': {
-      const packBroCents = 999;
-      const f = buyOlePack(state.finance, packBroCents, 500);
-      if (!f) {
-        return {
-          ...state,
-          inbox: [
-            makeInboxItem(
-              `buy-fail-${Date.now()}`,
-              'SHOP_PACK_FAIL',
-              'FINANCEIRO',
-              L('Saldo BRO insuficiente para o pacote de EXP.', 'Not enough BRO for the EXP pack.'),
-              { colorClass: 'text-red-400', deepLink: '/store' },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      const nextState = {
-        ...state,
-        finance: withExpHistory(f, 500, L('Pacote de EXP (BRO)', 'EXP pack (BRO)')),
-      };
-      return {
-        ...nextState,
-        inbox: [
-          makeInboxItem(
-            `buy-${Date.now()}`,
-            'SHOP_PACK',
-            'FINANCEIRO',
-            L('+500 EXP creditados na tesouraria (compra com BRO).', '+500 EXP credited to the treasury (BRO purchase).'),
-            {
-              body: L('Não contabiliza como EXP “ganho” no histórico de recompensas de jogo.', 'Doesn\'t count as “earned” EXP in the game reward history.'),
-              deepLink: '/wallet',
-            },
-          ),
-          ...nextState.inbox,
-        ].slice(0, 14),
-      };
-    }
-    case 'SELL_SCOUT_INTEL': {
-      const exp = scoutExpReward(state.manager.staff);
-      return {
-        ...state,
-        finance: withExpHistory(grantEarnedExp(state.finance, exp), exp, L('Relatório de olheiro', 'Scout report')),
-        inbox: [
-          makeInboxItem(
-            `scout-${Date.now()}`,
-            'MARKET_SCOUT_REPORT',
-            'PLANTEL',
-            L(`Olheiro: +${exp} EXP creditados pelo relatório.`, `Scout: +${exp} EXP credited for the report.`),
-            { body: L('Consulta o mercado e o staff para próximos alvos.', 'Check the market and staff for next targets.'), deepLink: '/transfer' },
-          ),
-          ...state.inbox,
-        ].slice(0, 14),
-      };
-    }
     case 'UPGRADE_STAFF_ROLE': {
       const result = tryUpgradeStaffRole(state.manager.staff, state.finance, action.roleId);
       if (result.ok === false) {
@@ -4388,59 +3622,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         },
       };
     }
-    case 'CITY_QUICK_MEDICAL_MUTIRAO': {
-      if (state.finance.ole < CITY_QUICK_MEDICAL_COST_EXP) {
-        return {
-          ...state,
-          inbox: [
-            makeInboxItem(
-              `city-med-fail-${Date.now()}`,
-              'STRUCTURE_UPGRADE_FAIL',
-              'CLUBE',
-              L('Mutirão médico cancelado: EXP insuficiente.', 'Medical drive cancelled: not enough EXP.'),
-              { colorClass: 'text-red-400', deepLink: '/city' },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      const medMult = 1 + medicalDeptRecoverySpeedBonusPercent(state.structures.medical_dept ?? 1) / 100;
-      const players = { ...state.players };
-      for (const id of Object.keys(players)) {
-        const p = players[id];
-        if (!p) continue;
-        players[id] = {
-          ...p,
-          fatigue: Math.max(0, p.fatigue - Math.round(CITY_QUICK_MEDICAL_FATIGUE_DELTA * medMult)),
-          injuryRisk: Math.max(0, p.injuryRisk - Math.round(CITY_QUICK_MEDICAL_INJURY_RISK_DELTA * medMult)),
-        };
-      }
-      const finance = withExpHistory(
-        addOle(state.finance, -CITY_QUICK_MEDICAL_COST_EXP),
-        -CITY_QUICK_MEDICAL_COST_EXP,
-        L('Mutirão médico (cidade)', 'Medical drive (city)'),
-      );
-      return {
-        ...state,
-        players,
-        finance,
-        inbox: [
-          makeInboxItem(
-            `city-med-${Date.now()}`,
-            'STAFF_ADVICE',
-            'STAFF',
-            L('Mutirão médico: recuperação acelerada no grupo.', 'Medical drive: faster recovery across the squad.'),
-            {
-              body: L(`Investimento de **${CITY_QUICK_MEDICAL_COST_EXP} EXP** em fisioterapia e enfermagem. Fadiga e risco de lesão reduzidos em todo o plantel.`, `**${CITY_QUICK_MEDICAL_COST_EXP} EXP** invested in physio and nursing. Fatigue and injury risk reduced across the squad.`),
-              advisorLabel: L('Departamento médico', 'Medical department'),
-              deepLink: '/team',
-              staffRole: 'nutricao',
-            },
-          ),
-          ...state.inbox,
-        ].slice(0, 14),
-      };
-    }
     case 'CITY_QUICK_STORE_CAMPAIGN': {
       if (state.finance.ole < CITY_QUICK_STORE_COST_EXP) {
         return {
@@ -4480,99 +3661,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             {
               body: L(`**${CITY_QUICK_STORE_COST_EXP} EXP** em marketing e logística. Pico de vendas e reforço do apoio da torcida.`, `**${CITY_QUICK_STORE_COST_EXP} EXP** in marketing and logistics. Sales spike and stronger fan support.`),
               deepLink: '/wallet',
-            },
-          ),
-          ...state.inbox,
-        ].slice(0, 14),
-      };
-    }
-    case 'CITY_QUICK_TRAINING_INTENSIVO': {
-      const slots = maxSlotsByTrainingCenter(state.structures.training_center ?? 1);
-      const runningFisico = state.manager.trainingPlans.filter(
-        (p) => p.status === 'running' && p.trainingType === 'fisico',
-      ).length;
-      if (runningFisico >= slots) {
-        return {
-          ...state,
-          inbox: [
-            makeInboxItem(
-              `city-train-slot-${Date.now()}`,
-              'TRAINING_SLOT_BLOCKED',
-              'TREINO',
-              L(`Treino intensivo indisponível: limite de ${slots} plano(s) físico(s) coletivo(s).`, `Intensive training unavailable: limit of ${slots} team fitness plan(s).`),
-              { colorClass: 'text-red-400', deepLink: '/team/treino' },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      const maxColl = trainingCenterMaxConcurrentCollectivePlans(state.structures.training_center ?? 1);
-      const runningColl = state.manager.trainingPlans.filter((p) => p.status === 'running' && p.mode === 'coletivo')
-        .length;
-      if (runningColl >= maxColl) {
-        return {
-          ...state,
-          inbox: [
-            makeInboxItem(
-              `city-train-coll-${Date.now()}`,
-              'TRAINING_SLOT_BLOCKED',
-              'TREINO',
-              L(`Treino intensivo indisponível: limite de ${maxColl} treino(s) colectivo(s) em simultâneo.`, `Intensive training unavailable: limit of ${maxColl} simultaneous team training(s).`),
-              { colorClass: 'text-red-400', deepLink: '/team/treino' },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      const resolvedIds = resolveGroupPlayerIds(state.players, 'all');
-      if (resolvedIds.length === 0) return state;
-      if (state.finance.ole < CITY_QUICK_TRAINING_COST_EXP) {
-        return {
-          ...state,
-          inbox: [
-            makeInboxItem(
-              `city-train-exp-${Date.now()}`,
-              'TRAINING_SESSION_FAIL',
-              'TREINO',
-              L('Treino intensivo cancelado: EXP insuficiente.', 'Intensive training cancelled: not enough EXP.'),
-              { colorClass: 'text-red-400', deepLink: '/city' },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      const now = new Date().toISOString();
-      const plan = {
-        id: `tr-city-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        mode: 'coletivo' as const,
-        trainingType: 'fisico' as const,
-        playerIds: resolvedIds.slice(0, slots),
-        group: 'all' as const,
-        startedAt: now,
-        endAt: addHoursIso(now, Math.max(1, CITY_QUICK_TRAINING_DURATION_H)),
-        status: 'running' as const,
-      };
-      const finance = withExpHistory(
-        addOle(state.finance, -CITY_QUICK_TRAINING_COST_EXP),
-        -CITY_QUICK_TRAINING_COST_EXP,
-        L('Treino intensivo (cidade)', 'Intensive training (city)'),
-      );
-      return {
-        ...state,
-        finance,
-        manager: {
-          ...state.manager,
-          trainingPlans: [plan, ...state.manager.trainingPlans].slice(0, 60),
-        },
-        inbox: [
-          makeInboxItem(
-            `city-train-${Date.now()}`,
-            'TRAINING_PLAN_STARTED',
-            'TREINO',
-            L(`Treino físico intensivo (${plan.playerIds.length} jogador(es)).`, `Intensive fitness training (${plan.playerIds.length} player(s)).`),
-            {
-              body: L(`**${CITY_QUICK_TRAINING_COST_EXP} EXP** em microciclo físico. Conclusão em ~${CITY_QUICK_TRAINING_DURATION_H}h — acompanha em Treino.`, `**${CITY_QUICK_TRAINING_COST_EXP} EXP** on a fitness microcycle. Done in ~${CITY_QUICK_TRAINING_DURATION_H}h — follow it in Training.`),
-              deepLink: '/team/treino',
             },
           ),
           ...state.inbox,
@@ -4659,13 +3747,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ].slice(0, 14),
       };
     }
-    case 'WALLET_SAVE_SWAP_KYC': {
-      const w = walletOf(state);
-      const profile = { ...action.profile, confirmedAt: action.profile.confirmedAt || new Date().toISOString() };
-      const next = { ...w, kycProfile: profile, hasCompletedSwapKyc: true };
-      writeSwapKycToStorage({ kycProfile: profile, hasCompletedSwapKyc: true });
-      return syncWalletToFinance(state, next);
-    }
     case 'WALLET_SYNC_REFERRAL_CODE': {
       const w = walletOf(state);
       const norm = String(action.code ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -4740,166 +3821,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         spotExpBalance: w.spotExpBalance,
       };
       return syncWalletToFinance(state, restored);
-    }
-    case 'START_FRIENDLY_CHALLENGE': {
-      const opponentName = action.opponentName.trim();
-      const opponentId = action.opponentId.trim();
-      if (!opponentName || !opponentId) {
-        return {
-          ...state,
-          inbox: [
-            makeInboxItem(
-              `amistoso-req-${Date.now()}`,
-              'FRIENDLY_CHALLENGE_FAIL',
-              'COMPETIÇÃO',
-              L('Desafio amistoso: falta nome do clube ou ID do adversário.', 'Friendly challenge: missing club name or opponent ID.'),
-              { colorClass: 'text-red-400' },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      if (action.currency === 'BRO') {
-        const prizeCents = Math.max(1, Math.round(action.prizeAmount * 100));
-        const feeCents = friendlyChallengeBroFeeCents(prizeCents);
-        const totalCents = prizeCents + feeCents;
-        if (state.finance.broCents < totalCents) {
-          return {
-            ...state,
-            inbox: [
-              makeInboxItem(
-                `amistoso-bro-${Date.now()}`,
-                'FRIENDLY_CHALLENGE_FAIL',
-                'FINANCEIRO',
-                L('BRO insuficiente para prémio em escrow + taxa da plataforma (5%).', 'Not enough BRO for the escrow prize + platform fee (5%).'),
-                { deepLink: '/wallet' },
-              ),
-              ...state.inbox,
-            ].slice(0, 14),
-          };
-        }
-        let f = addBroCents(state.finance, -totalCents);
-        const out = (f.broLifetimeOutCents ?? 0) + totalCents;
-        f = {
-          ...f,
-          broLifetimeOutCents: out,
-          companyTreasuryBroCents: (f.companyTreasuryBroCents ?? 0) + feeCents,
-          friendlyChallengeEscrowBroCents: (f.friendlyChallengeEscrowBroCents ?? 0) + prizeCents,
-        };
-        f = syncWalletSpotBro(f);
-        return {
-          ...state,
-          finance: f,
-          inbox: [
-            makeInboxItem(
-              `amistoso-${Date.now()}`,
-              'FINANCE_ESCROW',
-              'FINANCEIRO',
-              L(`Desafio amistoso vs ${opponentName}: prémio em escrow (BRO).`, `Friendly challenge vs ${opponentName}: prize in escrow (BRO).`),
-              {
-                body: L(`Retido ${(prizeCents / 100).toFixed(2)} BRO para o vencedor; taxa registrada ${(feeCents / 100).toFixed(2)} BRO. O resultado fica no histórico após o jogo.`, `${(prizeCents / 100).toFixed(2)} BRO held for the winner; fee recorded ${(feeCents / 100).toFixed(2)} BRO. The result goes to the history after the match.`),
-                deepLink: '/wallet',
-              },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      const prizeExp = Math.max(1, Math.round(action.prizeAmount));
-      if (state.finance.ole < prizeExp) {
-        return {
-          ...state,
-          inbox: [
-            makeInboxItem(
-              `amistoso-exp-${Date.now()}`,
-              'FRIENDLY_CHALLENGE_FAIL',
-              'FINANCEIRO',
-              L('EXP insuficiente para constituir o prémio em escrow do desafio.', 'Not enough EXP to fund the challenge escrow prize.'),
-              { deepLink: '/wallet' },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      const f = withExpHistory(addOle(state.finance, -prizeExp), -prizeExp, L(`Amistoso: prêmio travado vs ${opponentName}`, `Friendly: prize locked vs ${opponentName}`));
-      return {
-        ...state,
-        finance: f,
-        inbox: [
-          makeInboxItem(
-            `amistoso-${Date.now()}`,
-            'FINANCE_ESCROW',
-            'FINANCEIRO',
-            L(`Desafio amistoso vs ${opponentName}: prémio em escrow (EXP).`, `Friendly challenge vs ${opponentName}: prize in escrow (EXP).`),
-            {
-              body: L(`${prizeExp} EXP retidos até liquidação após o jogo — consulta histórico e carteira.`, `${prizeExp} EXP held until settlement after the match — check history and wallet.`),
-              deepLink: '/wallet',
-            },
-          ),
-          ...state.inbox,
-        ].slice(0, 14),
-      };
-    }
-    case 'REFUND_FRIENDLY_CHALLENGE': {
-      const opponentName = action.opponentName.trim();
-      const currency = action.currency;
-      if (currency === 'BRO') {
-        const prizeCents = Math.max(1, Math.round(action.prizeAmount * 100));
-        const feeCents = friendlyChallengeBroFeeCents(prizeCents);
-        const totalCents = prizeCents + feeCents;
-        const escrow = state.finance.friendlyChallengeEscrowBroCents ?? 0;
-        if (prizeCents > escrow) {
-          return state;
-        }
-        let f = addBroCents(state.finance, totalCents);
-        const out = Math.max(0, (f.broLifetimeOutCents ?? 0) - totalCents);
-        f = {
-          ...f,
-          broLifetimeOutCents: out,
-          companyTreasuryBroCents: Math.max(0, (f.companyTreasuryBroCents ?? 0) - feeCents),
-          friendlyChallengeEscrowBroCents: Math.max(
-            0,
-            (f.friendlyChallengeEscrowBroCents ?? 0) - prizeCents,
-          ),
-        };
-        f = syncWalletSpotBro(f);
-        return {
-          ...state,
-          finance: f,
-          inbox: [
-            makeInboxItem(
-              `amistoso-refund-${Date.now()}`,
-              'FRIENDLY_CHALLENGE',
-              'COMPETIÇÃO',
-              L(`Desafio amistoso vs ${opponentName || 'adversário'}: devolução (BRO).`, `Friendly challenge vs ${opponentName || 'opponent'}: refund (BRO).`),
-              {
-                body: L('O convite expirou ou foi recusado/cancelado; prémio e taxa foram estornados ao saldo.', 'The invite expired or was declined/cancelled; prize and fee were refunded to your balance.'),
-                colorClass: 'text-gray-300',
-              },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      const prizeExp = Math.max(1, Math.round(action.prizeAmount));
-      const f = withExpHistory(addOle(state.finance, prizeExp), prizeExp, L(`Amistoso: estorno vs ${opponentName}`, `Friendly: refund vs ${opponentName}`));
-      return {
-        ...state,
-        finance: f,
-        inbox: [
-          makeInboxItem(
-            `amistoso-refund-${Date.now()}`,
-            'FRIENDLY_CHALLENGE',
-            'COMPETIÇÃO',
-            L(`Desafio amistoso vs ${opponentName || 'adversário'}: devolução (EXP).`, `Friendly challenge vs ${opponentName || 'opponent'}: refund (EXP).`),
-            {
-              body: L('O convite expirou ou foi recusado/cancelado; EXP retidos foram devolvidos.', 'The invite expired or was declined/cancelled; held EXP was returned.'),
-              colorClass: 'text-gray-300',
-            },
-          ),
-          ...state.inbox,
-        ].slice(0, 14),
-      };
     }
     case 'DISMISS_INBOX_ITEM': {
       return {
@@ -5052,19 +3973,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       }
       return next;
     }
-    case 'ADMIN_POST_INBOX': {
-      const item = makeInboxItem(uid(), 'COMPANY_ANNOUNCEMENT', 'CLUBE', action.title, {
-        body: action.body,
-        deepLink: action.deepLink,
-      });
-      return { ...state, inbox: [item, ...state.inbox].slice(0, 50) };
-    }
-    case 'ADMIN_SET_LEAGUE_SEASON': {
-      return {
-        ...state,
-        leagueSeason: { ...state.leagueSeason, ...action.partial },
-      };
-    }
     case 'APPLY_CASUAL_RESULT_TO_LEAGUE': {
       // Resultado de partida casual (CLASSIC / Quick) que conta na liga
       // olefoot — manager passa a querer vencer mesmo nos modos rápidos.
@@ -5074,9 +3982,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         result: action.result.result,
       });
       return { ...state, leagueSeason };
-    }
-    case 'ADMIN_SET_FORM': {
-      return { ...state, form: [...action.form].slice(0, 10) };
     }
     case 'ADMIN_PATCH_CLUB': {
       return {
@@ -5098,23 +4003,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       };
     }
 
-    case 'FINALIZE_OLEFOOT_ROUND': {
-      if (!state.olefootLeague) return state;
-      const updated = finalizeRound(state.olefootLeague, action.roundNumber, action.fixtures);
-      return {
-        ...state,
-        olefootLeague: updated,
-      };
-    }
 
-    case 'ADVANCE_OLEFOOT_ROUND': {
-      if (!state.olefootLeague) return state;
-      const updated = advanceToNextRound(state.olefootLeague);
-      return {
-        ...state,
-        olefootLeague: updated,
-      };
-    }
 
     case 'CREATE_GLOBAL_ROUND': {
       if (!state.olefootLeague) return state;
@@ -5129,19 +4018,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       };
     }
 
-    case 'START_COMMAND_WINDOW': {
-      if (!state.globalLeague?.currentRound) return state;
-      return {
-        ...state,
-        globalLeague: {
-          ...state.globalLeague,
-          currentRound: {
-            ...state.globalLeague.currentRound,
-            status: 'pre_match',
-          },
-        },
-      };
-    }
 
     case 'START_GLOBAL_ROUND': {
       if (!state.globalLeague?.currentRound) return state;
@@ -5276,29 +4152,12 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         olefootLeague,
       };
     }
-    case 'UPDATE_COMPETITIVE_RANKING': {
-      if (!action.isCompetitive) return state;
-
-      const current = state.competitiveRanking ?? createInitialCompetitiveRanking();
-      const updated = updateCompetitiveRanking(current, action.homeScore, action.awayScore);
-
-      return {
-        ...state,
-        competitiveRanking: updated,
-      };
-    }
     case 'ADMIN_SET_MANAGER_PROSPECT_CONFIG': {
       const createCostExp = Math.max(0, Math.min(50_000_000, Math.round(action.createCostExp)));
       return {
         ...state,
         managerProspectConfig: { createCostExp },
       };
-    }
-    case 'ADMIN_MARK_PROSPECT_ART_FULFILLED': {
-      const managerProspectArtQueue = (state.managerProspectArtQueue ?? []).map((r) =>
-        r.id === action.requestId ? { ...r, playerCreationStep: 'launched' as const } : r,
-      );
-      return { ...state, managerProspectArtQueue };
     }
     case 'ADMIN_PATCH_PLAYER': {
       const pl = state.players[action.playerId];
@@ -5447,12 +4306,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const next = normalizeShopCatalog(action.items);
       return { ...state, shopCatalog: next.length ? next : defaultShopCatalog() };
     }
-    case 'ADMIN_SET_UI_BANNER': {
-      return {
-        ...state,
-        uiBanners: { ...state.uiBanners, [action.slot]: action.entry },
-      };
-    }
     case 'ADMIN_SET_PLAYER_LISTED': {
       const pl = state.players[action.playerId];
       if (!pl) return state;
@@ -5483,16 +4336,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return {
         ...state,
         manager: { ...state.manager, coach: createDefaultCoachAgent() },
-      };
-    }
-    case 'ADMIN_GRANT_SHOP_ITEM': {
-      const item = state.shopCatalog.find((x) => x.id === action.itemId);
-      if (!item?.consumable) return state;
-      const q = Math.max(1, Math.min(999, Math.round(action.qty)));
-      const have = state.shopInventory[item.id] ?? 0;
-      return {
-        ...state,
-        shopInventory: { ...state.shopInventory, [item.id]: Math.min(9999, have + q) },
       };
     }
     case 'SHOP_PURCHASE_ITEM': {
@@ -5757,146 +4600,11 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
     // ============================================================================
 
-    case 'COACH_GENERATE_HEALTH_ACTIONS': {
-      return mergeProactiveActions(state, generateProactiveHealthActions(state));
-    }
 
-    case 'COACH_GENERATE_TRAINING_ACTIONS': {
-      return mergeProactiveActions(state, generateProactiveTrainingActions(state));
-    }
 
-    case 'COACH_GENERATE_TACTICAL_ACTIONS': {
-      return mergeProactiveActions(state, generateProactiveTacticalActions(state, action.opponentContext));
-    }
 
-    case 'OLEFOOT_RECORD_MATCH': {
-      const league = state.olefootRanked ?? createEmptyOlefootRankedState();
-      const ratings = { ...league.ratings };
 
-      const home = ratings[action.homeManagerId] ?? createDefaultEloRating(action.homeManagerId);
-      const away = ratings[action.awayManagerId] ?? createDefaultEloRating(action.awayManagerId);
-      const homeBefore = home.rating;
-      const awayBefore = away.rating;
 
-      const homeScore = scoreFromGoals(action.homeGoals, action.awayGoals);
-      const elo = updateElo(homeBefore, awayBefore, homeScore);
-
-      const isHomeWin = action.homeGoals > action.awayGoals;
-      const isDraw = action.homeGoals === action.awayGoals;
-
-      ratings[action.homeManagerId] = {
-        ...home,
-        rating: elo.newHome,
-        matchesPlayed: home.matchesPlayed + 1,
-        wins: home.wins + (isHomeWin ? 1 : 0),
-        draws: home.draws + (isDraw ? 1 : 0),
-        losses: home.losses + (!isHomeWin && !isDraw ? 1 : 0),
-      };
-      ratings[action.awayManagerId] = {
-        ...away,
-        rating: elo.newAway,
-        matchesPlayed: away.matchesPlayed + 1,
-        wins: away.wins + (!isHomeWin && !isDraw ? 1 : 0),
-        draws: away.draws + (isDraw ? 1 : 0),
-        losses: away.losses + (isHomeWin ? 1 : 0),
-      };
-
-      const record: OlefootMatchRecord = {
-        matchId: action.matchId,
-        homeManagerId: action.homeManagerId,
-        awayManagerId: action.awayManagerId,
-        homeManagerName: action.homeManagerName,
-        awayManagerName: action.awayManagerName,
-        homeGoals: action.homeGoals,
-        awayGoals: action.awayGoals,
-        finishedAt: Date.now(),
-        homeRatingBefore: homeBefore,
-        awayRatingBefore: awayBefore,
-        homeRatingDelta: elo.deltaHome,
-        awayRatingDelta: elo.deltaAway,
-      };
-      const recentMatches = [record, ...league.recentMatches].slice(
-        0,
-        OLEFOOT_LEAGUE_CONSTANTS.RECENT_MATCHES_CAP,
-      );
-
-      const homeResult: MatchResult = isHomeWin ? 'win' : isDraw ? 'draw' : 'loss';
-      const awayResult: MatchResult = isHomeWin ? 'loss' : isDraw ? 'draw' : 'win';
-      const playerMoral = applyMoralToPlayers(
-        state.playerMoral,
-        action.homePlayerIds,
-        homeResult,
-        action.awayPlayerIds,
-        awayResult,
-      );
-
-      const leaderboard = recomputeLeaderboard(ratings, recentMatches, {
-        [action.homeManagerId]: action.homeManagerName,
-        [action.awayManagerId]: action.awayManagerName,
-      });
-
-      const olefootRanked: OlefootRankedState = {
-        ratings,
-        leaderboard,
-        recentMatches,
-      };
-
-      return { ...state, olefootRanked, playerMoral };
-    }
-
-    case 'COACH_GENERATE_BRIEFING': {
-      if (!state.manager.coach) return state;
-      const msg = buildPreMatchBriefing(state, action.opponentContext);
-      if (!msg) return state;
-      return {
-        ...state,
-        manager: {
-          ...state.manager,
-          coach: {
-            ...state.manager.coach,
-            conversationContext: [...state.manager.coach.conversationContext, msg].slice(-50),
-          },
-        },
-      };
-    }
-
-    case 'CONSUME_SHOP_BOOSTER': {
-      const item = findShopItem(state.shopCatalog, action.itemId);
-      if (!item || !item.consumable || !item.effect) return state;
-      const inv = { ...state.shopInventory };
-      if ((inv[item.id] ?? 0) <= 0) return state;
-      inv[item.id] = inv[item.id] - 1;
-      if (inv[item.id] <= 0) delete inv[item.id];
-
-      let playerHealth = state.playerHealth;
-      switch (item.effect.kind) {
-        case 'reset_squad_fatigue': {
-          const next: typeof playerHealth = {};
-          for (const [pid, h] of Object.entries(playerHealth)) {
-            next[pid] = applyHealthEffect(h, { kind: 'reset_fatigue' });
-          }
-          playerHealth = next;
-          break;
-        }
-        case 'reduce_player_injury': {
-          const target = action.targetPlayerId;
-          if (!target || !playerHealth[target]) return state;
-          const matches = (item.effect as { matches?: number }).matches ?? 1;
-          const cur = playerHealth[target];
-          playerHealth = {
-            ...playerHealth,
-            [target]: {
-              ...cur,
-              outForMatches: Math.max(0, cur.outForMatches - matches),
-            },
-          };
-          break;
-        }
-        default:
-          return state;
-      }
-      return { ...state, shopInventory: inv, playerHealth };
-    }
 
     case 'COACH_ADD_PENDING_ACTION': {
       if (!state.manager.coach) return state;
@@ -6273,15 +4981,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         },
       };
     }
-
-    case 'START_GLOBAL_LEAGUE_ROUND':
-      return handleStartGlobalLeagueRound(state, action.roundNumber);
-
-    case 'FINISH_GLOBAL_LEAGUE_ROUND':
-      return handleFinishGlobalLeagueRound(state, action.roundNumber, action.finishedFixtures);
-
-    case 'APPLY_GLOBAL_PROMOTION_RELEGATION':
-      return handleApplyPromotionRelegation(state);
 
     case 'RESET_GLOBAL_LEAGUE_MVP':
       return handleResetGlobalLeagueMVP(state);
