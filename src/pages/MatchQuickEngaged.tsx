@@ -21,7 +21,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { overallFromAttributes } from '@/entities/player';
 import { Hashtag } from '@/components/ui';
 import { motion, AnimatePresence } from 'motion/react';
-import { useGameStore, useGameDispatch } from '@/game/store';
+import { useGameStore, useGameDispatch, getGameState } from '@/game/store';
+import { relatarPartidaSombra } from '@/smartProfile/sombra';
 import { getEffectiveFatigue } from '@/systems/fatigue';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
@@ -499,6 +500,8 @@ export default function MatchQuickEngaged() {
       const t = r.playerStats[p.id];
       homeStats[p.id] = { passesOk: 0, passesAttempt: 0, tackles: 0, km: 0, rating: matchRating(p.ovr, t), shotsOn: t?.shots ?? 0, goals: t?.goals ?? 0 };
     }
+    // SMART-PROFILE Fase 2A: foto do estado ANTES do crédito, pro modo sombra.
+    const antesDoCredito = getGameState();
     dispatch({
       type: 'FINALIZE_QUICK_PLAN',
       homeScore: r.homeScore,
@@ -514,6 +517,16 @@ export default function MatchQuickEngaged() {
       formation: formationRef.current,
       shootoutKicks: r.shootout?.homeKicks,
       lateHeroIds: r.lateHeroIds,
+    });
+    relatarPartidaSombra({
+      seed: _p.seed,
+      homeScore: r.homeScore,
+      awayScore: r.awayScore,
+      shootoutWin: r.shootout?.winner,
+      readingGood: r.reading.good,
+      homeStats,
+      antes: antesDoCredito,
+      depois: getGameState(),
     });
   }, [dispatch]);
 
