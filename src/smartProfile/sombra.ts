@@ -11,7 +11,7 @@ import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import { getSupabase } from '@/supabase/client';
 import { styleAttrWeights } from '@/tactics/styleAttrWeights';
 
-type Linha = { passesOk: number; passesAttempt: number; tackles: number; km: number; rating: number };
+type Linha = { passesOk: number; passesAttempt: number; tackles: number; km: number; rating: number; shotsOn?: number; goals?: number };
 
 export function relatarPartidaSombra(args: {
   seed: string;
@@ -20,6 +20,8 @@ export function relatarPartidaSombra(args: {
   shootoutWin: 'home' | 'away' | null | undefined;
   readingGood: number;
   homeStats: Record<string, Linha>;
+  /** Ids da custódia: plano do 1º tempo e, se houve, o replano do 2º (Fase 2B). */
+  planos: (string | null | undefined)[];
   antes: OlefootGameState;
   depois: OlefootGameState;
 }): void {
@@ -37,6 +39,8 @@ export function relatarPartidaSombra(args: {
           pos: a.pos,
           antes: { attrs: a.attrs, xp: a.evolutionXp ?? 0, ovrNascimento: a.mintOverall ?? null, taxa: a.evolutionRate ?? null, criadoPeloManager: !!a.managerCreated },
           linha: { rating: linha.rating, passesOk: linha.passesOk, passesAttempt: linha.passesAttempt, tackles: linha.tackles, km: linha.km },
+          gols: linha.goals ?? 0,
+          chutes: linha.shotsOn ?? 0,
           depois: { attrs: d.attrs, xp: d.evolutionXp ?? 0 },
         }];
       });
@@ -50,6 +54,7 @@ export function relatarPartidaSombra(args: {
           penaltis: args.shootoutWin ?? null,
           leitura: args.readingGood,
           estilo: styleAttrWeights(args.antes.manager?.tacticalStyle),
+          planos: args.planos.filter((x): x is string => typeof x === 'string'),
           jogadores,
         }),
         keepalive: true,

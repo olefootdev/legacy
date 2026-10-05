@@ -1,8 +1,10 @@
 import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
+import { donoDaSessao } from '../lib/sessao.js';
 import { rateLimit } from '../lib/rateLimit.js';
 import { semTabela, sincronizarFichas } from '../lib/smartProfile/sincronizar.js';
 import { compararPartida, lerRelato } from '../lib/smartProfile/sombra.js';
+import { validarRelato, type ResumoDoPlano } from '../lib/smartProfile/custodia.js';
 import type { Ficha } from '../lib/smartProfile/tipos.js';
 
 /**
@@ -16,19 +18,10 @@ import type { Ficha } from '../lib/smartProfile/tipos.js';
  */
 export const playerProfilesRoutes = new Hono();
 
-async function donoDoPedido(authHeader: string | undefined): Promise<string | null> {
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return null;
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb.auth.getUser(token);
-  return error || !data.user ? null : data.user.id;
-}
-
 playerProfilesRoutes.get('/api/player-profiles', rateLimit(30), async (c) => {
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ ok: false, erro: 'banco indisponível' }, 503);
-  const dono = await donoDoPedido(c.req.header('Authorization'));
+  const dono = await donoDaSessao(c.req.header('Authorization'));
   if (!dono) return c.json({ ok: false, erro: 'sessão inválida' }, 401);
   try {
     const r = await sincronizarFichas(sb, dono);
@@ -48,7 +41,7 @@ playerProfilesRoutes.get('/api/player-profiles', rateLimit(30), async (c) => {
 playerProfilesRoutes.get('/api/player-profiles/:playerId/memoria', rateLimit(60), async (c) => {
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ ok: false, erro: 'banco indisponível' }, 503);
-  const dono = await donoDoPedido(c.req.header('Authorization'));
+  const dono = await donoDaSessao(c.req.header('Authorization'));
   if (!dono) return c.json({ ok: false, erro: 'sessão inválida' }, 401);
   const playerId = c.req.param('playerId') ?? '';
   if (!/^[\w-]{1,120}$/.test(playerId)) return c.json({ ok: false, erro: 'jogador inválido' }, 400);
@@ -70,7 +63,7 @@ playerProfilesRoutes.get('/api/player-profiles/:playerId/memoria', rateLimit(60)
 playerProfilesRoutes.post('/api/player-profiles/sombra/partida', rateLimit(30), async (c) => {
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ ok: false }, 503);
-  const dono = await donoDoPedido(c.req.header('Authorization'));
+  const dono = await donoDaSessao(c.req.header('Authorization'));
   if (!dono) return c.json({ ok: false, erro: 'sessão inválida' }, 401);
   const relato = lerRelato(await c.req.json().catch(() => null));
   if (!relato) return c.json({ ok: false, erro: 'relato inválido' }, 400);
@@ -80,13 +73,33 @@ playerProfilesRoutes.post('/api/player-profiles/sombra/partida', rateLimit(30), 
   const porId = new Map((fichas ?? []).map((f) => [f.player_id as string, f as unknown as Pick<Ficha, 'atributos'>]));
   const cmp = compararPartida(relato, porId);
 
+  // CUSTÓDIA (2B): os planos citados são deste manager e ainda não foram usados?
+  // O update é a trava: marca usado só o que estava livre — relato repetido não credita de novo.
+  let custodia: 'valida' | 'suspeita' | 'sem_custodia' = 'sem_custodia';
+  let custodia_motivos: string[] = [];
+  if (relato.planos.length) {
+    const { data: usados, error: eUso } = await sb.from('quick_plans_emitidos')
+      .update({ usado_em: new Date().toISOString() })
+      .eq('owner_id', dono).in('id', relato.planos).is('usado_em', null)
+      .select('id, resumo');
+    if (!eUso) {
+      const resumos = (usados ?? []).map((u) => u.resumo as ResumoDoPlano);
+      const v = validarRelato({ placar: relato.placar, jogadores: relato.jogadores.map((j) => ({
+        id: j.id, pos: j.pos, attrsAntes: j.antes.attrs, nota: j.linha.rating, gols: j.gols, chutes: j.chutes })) }, resumos);
+      custodia_motivos = v.motivos;
+      if ((usados ?? []).length < relato.planos.length) custodia_motivos.unshift('plano já usado, inexistente ou de outro manager');
+      custodia = custodia_motivos.length ? 'suspeita' : 'valida';
+    }
+  }
+
   const { error } = await sb.from('evolucao_sombra').upsert(
-    { owner_id: dono, seed: relato.seed, ...cmp },
+    { owner_id: dono, seed: relato.seed, ...cmp, planos: relato.planos, custodia, custodia_motivos },
     { onConflict: 'owner_id,seed', ignoreDuplicates: true },
   );
   if (error && !semTabela(error) && !/evolucao_sombra/.test(error.message)) {
     console.error('[sombra]', error.message);
   }
   if (cmp.divergencias > 0) console.warn(`[sombra] ${cmp.divergencias}/${cmp.jogadores} divergência(s) seed=${relato.seed}`);
-  return c.json({ ok: true, divergencias: cmp.divergencias, jogadores: cmp.jogadores });
+  if (custodia === 'suspeita') console.warn(`[custodia] suspeita seed=${relato.seed}: ${custodia_motivos.slice(0, 3).join('; ')}`);
+  return c.json({ ok: true, divergencias: cmp.divergencias, jogadores: cmp.jogadores, custodia });
 });

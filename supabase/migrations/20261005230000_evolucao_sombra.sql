@@ -22,6 +22,10 @@ create table if not exists public.evolucao_sombra (
   -- (ficha desatualizada ou save adulterado) — informativo nesta fase.
   antes_diferente  smallint not null default 0 check (antes_diferente >= 0),
   detalhes         jsonb not null default '[]'::jsonb,
+  -- Fase 2B: o relato bate com o plano que o servidor emitiu? (ver quick_plans_emitidos)
+  planos           uuid[] not null default '{}',
+  custodia         text not null default 'sem_custodia' check (custodia in ('valida','suspeita','sem_custodia')),
+  custodia_motivos jsonb not null default '[]'::jsonb,
   criado_em        timestamptz not null default now(),
   unique (owner_id, seed)
 );

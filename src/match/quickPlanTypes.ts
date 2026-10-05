@@ -141,6 +141,8 @@ export interface MatchPlan {
   seed: string;
   /** 'full' = 90'; 'second_half' = replan dos minutos 46-90 (v1.1+). */
   mode?: 'full' | 'second_half';
+  /** Id da custódia no servidor (SMART-PROFILE 2B). Só existe com manager logado. */
+  plano_id?: string | null;
   /** 1 no full; 46 no replan de 2º tempo (v1.1+). */
   start_minute?: number;
   home_short: string;

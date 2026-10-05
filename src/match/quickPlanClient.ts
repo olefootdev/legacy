@@ -11,6 +11,7 @@
 
 import type { MatchPlan, QuickPlanDecision, QuickPlanFirstHalfState } from './quickPlanTypes';
 import type { PlayerEntity, PlayerBehavior } from '@/entities/types';
+import { getSupabase } from '@/supabase/client';
 
 // optional chaining: em runtime de teste (tsx/node) import.meta.env é undefined.
 const ENV = (import.meta as { env?: Record<string, string | undefined> }).env;
@@ -181,9 +182,12 @@ export function applyLegacyBoostToLineup(
 
 export async function fetchQuickPlan(input: FetchQuickPlanInput): Promise<MatchPlan | null> {
   try {
+    // Com sessão, o servidor guarda a custódia do plano (SMART-PROFILE 2B).
+    const sb = getSupabase();
+    const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
     const res = await fetch(`${API_BASE}/api/match/quick-plan`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({
         seed: input.seed,
         home_short: input.homeShort,
@@ -209,7 +213,7 @@ export async function fetchQuickPlan(input: FetchQuickPlanInput): Promise<MatchP
     }
     const body = await res.json();
     if (!body?.ok || !body?.plan) return null;
-    return body.plan as MatchPlan;
+    return { ...(body.plan as MatchPlan), plano_id: typeof body.plano_id === 'string' ? body.plano_id : null };
   } catch (e) {
     console.warn('[quickPlan] fetch failed', e);
     return null;

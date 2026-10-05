@@ -138,6 +138,8 @@ export default function MatchQuickEngaged() {
   const formationRef = useRef<string>((lineup as { formation?: string })?.formation ?? '4-4-2');
   const awayLineupRef = useRef<import('@/match/quickPlanClient').QuickPlanPlayerPayload[]>([]);
   const seedRef = useRef<string>('');
+  /** Custódia (SMART-PROFILE 2B): ids dos planos emitidos pelo servidor nesta partida. */
+  const planIdsRef = useRef<(string | null | undefined)[]>([]);
   const baseStrengthRef = useRef<{ home: number; away: number }>({ home: 70, away: 70 });
   const htResolverRef = useRef<((p: MatchPlan | null) => void) | null>(null);
   const startedRef = useRef(false);
@@ -236,6 +238,7 @@ export default function MatchQuickEngaged() {
           setPhase('error');
           return;
         }
+        planIdsRef.current = [fetched.plano_id];
         setPlan(fetched);
         setPhase('kickoff');
         // Pré-busca a narração IA (Sonnet) em paralelo ao kickoff — não bloqueia.
@@ -414,6 +417,7 @@ export default function MatchQuickEngaged() {
             weight: d.weight,
           })),
         });
+        if (replan) planIdsRef.current = [...planIdsRef.current, replan.plano_id];
         resolve(replan);
         // Re-narra o 2º tempo (novos beats/gols 46-90) e mescla na narração viva.
         if (replan) {
@@ -525,6 +529,7 @@ export default function MatchQuickEngaged() {
       shootoutWin: r.shootout?.winner,
       readingGood: r.reading.good,
       homeStats,
+      planos: planIdsRef.current,
       antes: antesDoCredito,
       depois: getGameState(),
     });

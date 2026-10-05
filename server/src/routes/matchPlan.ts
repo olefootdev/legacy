@@ -13,6 +13,9 @@
 
 import { Hono } from 'hono';
 import { rateLimit } from '../lib/rateLimit.js';
+import { donoDaSessao } from '../lib/sessao.js';
+import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
+import { resumirPlano } from '../lib/smartProfile/custodia.js';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -113,6 +116,28 @@ function runPython(scriptPath: string, inputJson: string, timeoutMs = 5000): Pro
   });
 }
 
+/**
+ * CUSTÓDIA (SMART-PROFILE, Fase 2B): com manager logado, o plano emitido fica
+ * registrado em `quick_plans_emitidos` e o id volta ao celular, que o cita no
+ * relato do fim da partida. Sem login (visitante) ou sem a tabela, a partida
+ * segue igual — só não há custódia. Nunca derruba a geração do plano.
+ */
+async function guardarCustodia(auth: string | undefined, body: QuickPlanRequestBody, plan: unknown): Promise<string | null> {
+  try {
+    const dono = await donoDaSessao(auth);
+    const sb = getSupabaseAdmin();
+    if (!dono || !sb) return null;
+    const resumo = resumirPlano(plan, body.home_team.lineup.map((p) => p.id));
+    const { data, error } = await sb.from('quick_plans_emitidos')
+      .insert({ owner_id: dono, seed: String(body.seed).slice(0, 200), modo: resumo.modo, resumo })
+      .select('id').single();
+    if (error) return null;
+    return (data as { id: string }).id;
+  } catch {
+    return null;
+  }
+}
+
 export const matchPlanRoutes = new Hono();
 
 matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
@@ -145,7 +170,7 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
   });
   const cached = simpleCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
-    return c.json({ ok: true, plan: cached.plan, cached: true });
+    return c.json({ ok: true, plan: cached.plan, cached: true, plano_id: await guardarCustodia(c.req.header('Authorization'), body, cached.plan) });
   }
 
   const scriptPath = resolveScriptPath();
@@ -157,7 +182,7 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     const stdout = await runPython(scriptPath, JSON.stringify(body));
     const plan = JSON.parse(stdout);
     simpleCache.set(cacheKey, { ts: Date.now(), plan });
-    return c.json({ ok: true, plan, cached: false });
+    return c.json({ ok: true, plan, cached: false, plano_id: await guardarCustodia(c.req.header('Authorization'), body, plan) });
   } catch (e) {
     return c.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 502);
   }

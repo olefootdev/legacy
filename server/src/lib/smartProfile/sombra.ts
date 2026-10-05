@@ -13,6 +13,8 @@ export interface RelatoJogador {
   pos: string;
   antes: { attrs: Record<string, unknown>; xp: number; ovrNascimento: number | null; taxa: number | null; criadoPeloManager: boolean };
   linha: LinhaDaPartida;
+  gols: number;
+  chutes: number;
   depois: { attrs: Record<string, unknown>; xp: number };
 }
 export interface RelatoPartida {
@@ -21,6 +23,8 @@ export interface RelatoPartida {
   penaltis: 'home' | 'away' | null;
   leitura: number;
   estilo: unknown;
+  /** Ids dos planos emitidos (1º tempo e, se houve, 2º tempo) — Fase 2B. */
+  planos: string[];
   jogadores: RelatoJogador[];
 }
 
@@ -49,10 +53,14 @@ export function lerRelato(b: unknown): RelatoPartida | null {
         ovrNascimento: Number.isFinite(n(a.ovrNascimento)) ? n(a.ovrNascimento) : null,
         taxa: Number.isFinite(n(a.taxa)) ? n(a.taxa) : null, criadoPeloManager: a.criadoPeloManager === true },
       linha,
+      gols: Number.isInteger(n(j.gols)) && n(j.gols) >= 0 ? n(j.gols) : 0,
+      chutes: Number.isInteger(n(j.chutes)) && n(j.chutes) >= 0 ? n(j.chutes) : 0,
       depois: { attrs: d.attrs, xp: Number.isFinite(n(d.xp)) ? n(d.xp) : 0 },
     });
   }
-  return { seed, placar: placar as [number, number], penaltis, leitura: Number.isFinite(leitura) ? leitura : 0, estilo: b.estilo, jogadores };
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const planos = Array.isArray(b.planos) ? [...new Set(b.planos.filter((x): x is string => typeof x === 'string' && UUID.test(x)))].slice(0, 2) : [];
+  return { seed, placar: placar as [number, number], penaltis, leitura: Number.isFinite(leitura) ? leitura : 0, estilo: b.estilo, planos, jogadores };
 }
 
 /** Mesma regra do celular (computeQuickPlanCredit): empate no tempo normal vai aos pênaltis. */
