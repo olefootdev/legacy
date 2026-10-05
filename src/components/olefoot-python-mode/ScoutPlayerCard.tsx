@@ -33,7 +33,7 @@ import { useGameStore } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { formatBroFromCents } from '@/systems/economy';
 import { cn } from '@/lib/utils';
-import type { SquadPlayerEntry } from '@/insights/client';
+import type { SquadPlayerEntry } from '@/systems/consequenceViews';
 import { getPlayerLevelInfo } from '@/entities/playerLevel';
 
 interface Props {

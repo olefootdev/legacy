@@ -7,15 +7,16 @@
  *   - Header com player card (foto + nome + OVR + valor de mercado)
  *   - Stats da temporada
  *   - Status físico/moral/forma (dados locais)
- *   - Consequências ativas com explicação humana (Python)
- *   - Timeline cronológica de eventos (Python: aplicada/expirada nos últimos 7d)
+ *   - Consequências ativas com explicação humana (local, consequenceViews)
+ *   - Timeline cronológica: aplicação das consequências ativas nos últimos 7d
+ *     (o store local não guarda as expiradas — não inventamos histórico)
  *   - Evolução de atributos (delta dos últimos 7d via playerEvolutionTimeline)
  *   - Histórico de valor de mercado (snapshots em playerEvolutionTimeline)
  *
  * Regra principal: tudo que mudou tem explicação visível. Se algum dado
  * está em fallback, o painel anuncia isso textualmente em vez de mentir.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { motion } from 'motion/react';
 import {
   ChevronLeft,
@@ -35,30 +36,22 @@ import {
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
-import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
 import { overallFromAttributes } from '@/entities/player';
 import { formatBroFromCents } from '@/systems/economy';
-import { useInsightsPlayerTransparency, useInsightsServiceHealth } from '@/hooks/useInsights';
+import { usePlayerConsequences } from '@/hooks/useConsequences';
 import type { PlayerAttributes } from '@/entities/types';
 import type { PlayerEvolutionPoint } from '@/team/playerEvolutionTimeline';
-import type { PlayerTimelineEvent, Severity } from '@/insights/client';
+import {
+  buildPlayerTransparency,
+  type ExplainedConsequence,
+  type PlayerTimelineEvent,
+  type Severity,
+} from '@/systems/consequenceViews';
 import { cn } from '@/lib/utils';
 import { L } from '@/i18n/L';
 import { rotuloPosicao } from '@/transfer/marketFilters';
 
 // ─── Helpers ───────────────────────────────────────────────────────
-
-function useAuthUid(): string | null {
-  const [uid, setUid] = useState<string | null>(null);
-  useEffect(() => {
-    if (!isSupabaseConfigured()) return;
-    const sb = getSupabase();
-    sb?.auth.getSession().then(({ data }) => {
-      setUid(data?.session?.user?.id ?? null);
-    });
-  }, []);
-  return uid;
-}
 
 function formatTimeAgo(iso: string): string {
   const now = Date.now();
@@ -430,7 +423,7 @@ function SeasonStats({
 function ActiveConsequences({
   list,
 }: {
-  list: import('@/insights/client').ExplainedConsequence[];
+  list: ExplainedConsequence[];
 }) {
   if (list.length === 0) {
     return (
@@ -724,7 +717,6 @@ function SectionHeader({ kicker, title }: { kicker: string; title: string }) {
 export function ManagerScoutsPlayer() {
   const navigate = useNavigate();
   const { playerId } = useParams<{ playerId: string }>();
-  const authUid = useAuthUid();
 
   const player = useGameStore((s) => (playerId ? s.players?.[playerId] : undefined));
   const health = useGameStore((s) => (playerId ? s.playerHealth?.[playerId] : undefined));
@@ -756,8 +748,12 @@ export function ManagerScoutsPlayer() {
       : undefined,
   );
 
-  const { data: transparency } = useInsightsPlayerTransparency(authUid ? playerId ?? null : null);
-  const { status: serviceStatus } = useInsightsServiceHealth();
+  // Transparência 100% local: consequências ativas do jogador + explicação.
+  const playerConsequences = usePlayerConsequences(playerId);
+  const transparency = useMemo(
+    () => buildPlayerTransparency(playerId ?? '', playerConsequences),
+    [playerId, playerConsequences],
+  );
 
   const weekAgoAttrs = useMemo(() => {
     if (!timeline || timeline.length === 0) return null;
@@ -814,10 +810,7 @@ export function ManagerScoutsPlayer() {
   const marketCents =
     (player as { marketValueBroCents?: number }).marketValueBroCents ?? 0;
 
-  const isUnavailable = transparency?.is_unavailable || outForMatches > 0;
-
-  // Fonte de transparência: prefere Python, fallback claro pro usuário
-  const showFallbackNotice = !transparency && (serviceStatus === 'down' || !authUid);
+  const isUnavailable = transparency.is_unavailable || outForMatches > 0;
 
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
@@ -871,41 +864,20 @@ export function ManagerScoutsPlayer() {
           />
         </section>
 
-        {/* ── Consequências ativas (do Python, com explicação) ──── */}
+        {/* ── Consequências ativas (local, com explicação) ──────── */}
         <section className="space-y-2">
           <SectionHeader
             kicker={L('Efeitos pendentes', 'Pending effects')}
-            title={`${L('Consequências ativas', 'Active consequences')}${
-              transparency ? ` · ${transparency.total_active}` : ''
-            }`}
+            title={`${L('Consequências ativas', 'Active consequences')} · ${transparency.total_active}`}
           />
-          {transparency ? (
-            <ActiveConsequences list={transparency.active} />
-          ) : showFallbackNotice ? (
-            <div className="text-[11px] text-white/40 text-center py-4">
-              {L(
-                'Serviço /insights indisponível — não foi possível listar consequências com explicação humana. Tente entrar na conta ou aguarde reconexão.',
-                '/insights service unavailable — could not list consequences with explanations. Try signing in or wait for it to reconnect.',
-              )}
-            </div>
-          ) : (
-            <div className="text-[11px] text-white/40 text-center py-4">
-              {L('Carregando consequências...', 'Loading consequences...')}
-            </div>
-          )}
+          <ActiveConsequences list={transparency.active} />
         </section>
 
-        {/* ── Timeline (do Python) ──────────────────────────────── */}
+        {/* ── Timeline (aplicações das consequências ativas) ────── */}
         <section className="space-y-2">
           <SectionHeader kicker={L('Trace cronológico', 'Chronological trace')} title={L('Linha do tempo · 7 dias', 'Timeline · 7 days')} />
           <div className="rounded-sm border border-white/8 bg-[var(--color-card)] p-4">
-            {transparency ? (
-              <Timeline events={transparency.timeline} />
-            ) : (
-              <div className="text-[11px] text-white/40 text-center py-3">
-                {L('Timeline disponível só com /insights online.', 'Timeline only available with /insights online.')}
-              </div>
-            )}
+            <Timeline events={transparency.timeline} />
           </div>
         </section>
 

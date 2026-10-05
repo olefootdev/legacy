@@ -12,13 +12,10 @@ import { Search, Users } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import type { PlayerEntity } from '@/entities/types';
-import type { SquadOverview } from '@/insights/client';
+import { useClubConsequences } from '@/hooks/useConsequences';
+import { buildSquadOverview } from '@/systems/consequenceViews';
 import { cn } from '@/lib/utils';
 import { ScoutPlayerCard } from './ScoutPlayerCard';
-
-interface Props {
-  overview: SquadOverview | null;
-}
 
 type PosFilter = 'all' | 'GK' | 'DEF' | 'MID' | 'ATK';
 
@@ -80,7 +77,10 @@ function FilterChip({
   );
 }
 
-export function ScoutsPlantelTab({ overview }: Props) {
+export function ScoutsPlantelTab() {
+  // Visão por jogador calculada LOCALMENTE das consequências ativas do clube.
+  const local = useClubConsequences();
+  const overview = useMemo(() => buildSquadOverview(local), [local]);
   const players = useGameStore((s) => s.players);
   const playerHealth = useGameStore((s) => s.playerHealth);
   const [search, setSearch] = useState('');
@@ -88,10 +88,8 @@ export function ScoutsPlantelTab({ overview }: Props) {
   const [hideHealthy, setHideHealthy] = useState(false);
 
   const entriesById = useMemo(() => {
-    const map = new Map<string, SquadOverview['players'][number]>();
-    if (overview?.players) {
-      for (const e of overview.players) map.set(e.player_id, e);
-    }
+    const map = new Map<string, (typeof overview.players)[number]>();
+    for (const e of overview.players) map.set(e.player_id, e);
     return map;
   }, [overview]);
 
@@ -129,8 +127,8 @@ export function ScoutsPlantelTab({ overview }: Props) {
   }, [players, search, posFilter, hideHealthy, entriesById, playerHealth]);
 
   const totalCount = players ? Object.keys(players).length : 0;
-  const affectedCount = overview?.total_players_affected ?? 0;
-  const unavailableCount = overview?.total_unavailable ?? 0;
+  const affectedCount = overview.total_players_affected;
+  const unavailableCount = overview.total_unavailable;
 
   // Counters por grupo
   const groupCounts = useMemo(() => {
@@ -195,8 +193,8 @@ export function ScoutsPlantelTab({ overview }: Props) {
         <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow mt-2" />
       </header>
 
-      {/* ── Status agregado (se Python entregou) ──────────────── */}
-      {overview && (affectedCount > 0 || unavailableCount > 0) && (
+      {/* ── Status agregado ───────────────────────────────────── */}
+      {(affectedCount > 0 || unavailableCount > 0) && (
         <div
           className="flex items-center gap-4 px-3 py-2 bg-[var(--color-card)] border border-white/8"
           style={{

@@ -36,7 +36,6 @@ import { adminPresaleRoutes } from './routes/adminPresale.js';
 import { adminSuporteRoutes } from './routes/adminSuporte.js';
 import { revelaAdminRoutes } from './routes/revelaAdmin.js';
 import { legendImportRoutes } from './routes/legendImport.js';
-import { insightsRoutes } from './routes/insights.js';
 import { solanaWalletRoutes } from './routes/solanaWallet.js';
 import { vaultRoutes, vaultAdminRoutes } from './routes/vault.js';
 import { cspReportRoutes } from './routes/cspReport.js';
@@ -170,8 +169,8 @@ app.route('/api/admin', adminPresaleRoutes);  // torneira e vitrine da pré-vend
 app.route('/api/admin', adminSuporteRoutes);  // PIN travado e vendas de card (gate no router)
 app.route('/api/revela-admin', revelaAdminRoutes);
 app.route('/api/admin', legendImportRoutes);
-// OLEFOOT PYTHON MODE — proxy pro serviço FastAPI /insights
-app.route('/', insightsRoutes);
+// Serviço Python /insights (e seu proxy /api/insights/*, OLEFOOT_INSIGHTS_URL)
+// APOSENTADO em 2026-10-05 — o SCOUTS calcula tudo localmente no cliente.
 
 const port = Number(process.env.PORT) || 4000;
 

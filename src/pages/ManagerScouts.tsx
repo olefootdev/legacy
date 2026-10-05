@@ -1,17 +1,17 @@
 /**
  * OLEFOOT PYTHON MODE — Página SCOUTS.
  *
- * Hub central de inteligência do manager. Consome o serviço Python
- * (/api/insights/*) pra mostrar:
- *   - Relatório da Noite (o que aconteceu enquanto eu dormi)
- *   - Resumo do clube (counts + jogador mais impactado)
+ * Hub central de inteligência do manager. 100% LOCAL: tudo sai do store
+ * (`consequenceStore`) via `useClubConsequences` e os builders de
+ * `@/systems/consequenceViews`:
+ *   - Resumo do clube (ativas, indisponíveis, alertas, celebrações)
+ *   - Plantel com efeitos por jogador
  *   - Mapa de consequências por dimensão (físico, psicológico, reputacional, financeiro)
  *
- * Estratégia de fallback: se o Python estiver offline, lê do store local
- * via hooks `useConsequenceCounts` / `useClubConsequences` — a página NUNCA
- * fica em branco. Badge no header indica fonte dos dados.
+ * O serviço Python /insights que alimentava esta página foi aposentado em
+ * 2026-10-05 — ele só relia as mesmas consequências do Supabase.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   ChevronLeft,
@@ -20,111 +20,23 @@ import {
   TrendingUp,
   DollarSign,
   Sparkles,
-  AlertOctagon,
   AlertTriangle,
-  Trophy,
-  Clock,
   ShieldOff,
   BadgeCheck,
-  Wifi,
-  WifiOff,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
-import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
-import {
-  useInsightsClubSummary,
-  useInsightsConsequences,
-  useInsightsNightReport,
-  useInsightsServiceHealth,
-  useInsightsSquadOverview,
-} from '@/hooks/useInsights';
 import { ScoutsPlantelTab } from '@/components/olefoot-python-mode/ScoutsPlantelTab';
-import {
-  useClubConsequences,
-  useConsequenceCounts,
-} from '@/hooks/useConsequences';
+import { useClubConsequences } from '@/hooks/useConsequences';
 import { cn } from '@/lib/utils';
-import { L, LOCALE } from '@/i18n/L';
-import type {
-  ClubSummary,
-  ConsequencesByDimension,
-  InsightsEvaluatedConsequence,
-  NightReport,
-} from '@/insights/client';
-
-// ─── Auth uid hook (necessário pra paths do Python) ────────────────
-
-function useAuthUid(): string | null {
-  const [uid, setUid] = useState<string | null>(null);
-  useEffect(() => {
-    if (!isSupabaseConfigured()) return;
-    const sb = getSupabase();
-    sb?.auth.getSession().then(({ data }) => {
-      setUid(data?.session?.user?.id ?? null);
-    });
-  }, []);
-  return uid;
-}
-
-// ─── Status badge ──────────────────────────────────────────────────
-//
-// Distingue 4 estados verdadeiros — em vez de um booleano que mistura
-// "serviço up?" com "consegui buscar meus dados?":
-//
-//   service-up  → Python health 200, summary chegou. Tudo OK.
-//   no-auth     → Python health 200, MAS sem JWT do Supabase. Não é offline,
-//                 é o user que não está logado. Badge cinza, tooltip explícito.
-//   data-error  → Python health 200, com JWT, mas summary deu erro
-//                 (RLS, 5xx, timeout). Sinaliza problema de DADOS, não do serviço.
-//   service-down → Python health falhou ou Hono não conseguiu falar com Python.
-//                 Este é o "offline" genuíno.
-
-type BadgeState = 'service-up' | 'no-auth' | 'data-error' | 'service-down';
-
-const BADGE_META: Record<BadgeState, { label: string; tooltip: string; cls: string; Icon: typeof Wifi }> = {
-  'service-up': {
-    label: 'Python · online',
-    tooltip: L('Serviço /insights respondendo e dados do clube carregados.', 'The /insights service is responding and club data has loaded.'),
-    cls: 'bg-[var(--color-success)]/15 text-[var(--color-success)] border-[var(--color-success)]/30',
-    Icon: Wifi,
-  },
-  'no-auth': {
-    label: L('Sem login Supabase', 'No Supabase login'),
-    tooltip: L('O serviço /insights está online, mas você precisa estar autenticado no Supabase para ver seus dados.', 'The /insights service is online, but you need to be signed in to Supabase to see your data.'),
-    cls: 'bg-white/5 text-white/50 border-white/15',
-    Icon: WifiOff,
-  },
-  'data-error': {
-    label: L('Sem dados', 'No data'),
-    tooltip: L('Serviço /insights respondeu, mas o resumo do clube falhou (RLS, 5xx ou timeout). Mostrando fallback local.', 'The /insights service responded, but the club summary failed (RLS, 5xx or timeout). Showing local fallback.'),
-    cls: 'bg-neon-yellow/10 text-neon-yellow border-neon-yellow/30',
-    Icon: AlertTriangle,
-  },
-  'service-down': {
-    label: L('Serviço offline', 'Service offline'),
-    tooltip: L('O serviço /insights (Python) não respondeu ao health-check. Mostrando dados locais.', 'The /insights (Python) service did not answer the health check. Showing local data.'),
-    cls: 'bg-[var(--color-danger)]/10 text-[var(--color-danger)] border-[var(--color-danger)]/30',
-    Icon: WifiOff,
-  },
-};
-
-function PythonStatusBadge({ state, detail }: { state: BadgeState; detail?: string | null }) {
-  const meta = BADGE_META[state];
-  const title = detail ? `${meta.tooltip}\n\n${detail}` : meta.tooltip;
-  return (
-    <div
-      title={title}
-      className={cn(
-        'inline-flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-display font-bold uppercase tracking-[0.18em] border cursor-help',
-        meta.cls,
-      )}
-    >
-      <meta.Icon size={11} />
-      <span>{meta.label}</span>
-    </div>
-  );
-}
+import { L } from '@/i18n/L';
+import {
+  buildClubSummary,
+  explainConsequence,
+  groupByDimension,
+  type ConsequencesByDimension,
+  type EvaluatedConsequenceView,
+} from '@/systems/consequenceViews';
 
 // ─── Stat card ─────────────────────────────────────────────────────
 
@@ -231,19 +143,10 @@ function formatTimeLeft(ms: number): string {
   return `${Math.floor(h / 24)}d`;
 }
 
-function formatKindLabel(kind: string): string {
-  return kind
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function ConsequenceRow({ entry }: { entry: InsightsEvaluatedConsequence }) {
+function ConsequenceRow({ entry }: { entry: EvaluatedConsequenceView }) {
   const c = entry.consequence;
-  const isNegative =
-    entry.current_value < 0 ||
-    c.kind.includes('drop') ||
-    c.kind.includes('out') ||
-    c.kind.includes('suspension');
+  const ex = explainConsequence(c.kind, c.magnitude);
+  const isNegative = ex.severity === 'alert';
   return (
     <div className="flex items-center gap-2.5 py-1.5">
       <span
@@ -256,7 +159,7 @@ function ConsequenceRow({ entry }: { entry: InsightsEvaluatedConsequence }) {
         className="flex-1 text-white/85 truncate"
         style={{ fontFamily: 'var(--font-ui)', fontSize: '12.5px' }}
       >
-        {formatKindLabel(c.kind)}
+        {ex.title}
       </span>
       <span
         className="text-white/45 tabular-nums shrink-0 leading-none"
@@ -277,7 +180,7 @@ function DimensionCard({
   entries,
 }: {
   dimension: keyof ConsequencesByDimension;
-  entries: InsightsEvaluatedConsequence[];
+  entries: EvaluatedConsequenceView[];
 }) {
   const meta = DIMENSION_META[dimension];
   return (
@@ -349,216 +252,13 @@ function DimensionCard({
   );
 }
 
-// ─── Night report ──────────────────────────────────────────────────
+// ─── Dados locais (única fonte) ────────────────────────────────────
 
-function NightReportSection({ report }: { report: NightReport }) {
-  // VOLT2: eyebrow + manchete sem serifa/itálico; contadores chapados, sem brilho.
-  const time = new Date(report.generated_at).toLocaleTimeString(LOCALE, {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-  return (
-    <motion.section
-      aria-label={L('Relatório da noite', 'Overnight report')}
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="relative border border-white/8 border-l-[3px] border-l-neon-yellow bg-[var(--color-card)] p-5 sm:p-6 overflow-hidden"
-      style={{ borderRadius: 'var(--radius-md)' }}
-    >
-      {/* Header editorial */}
-      <header className="flex items-start justify-between gap-3 mb-5">
-        <div className="min-w-0 flex-1 space-y-1.5">
-          {/* Eyebrow */}
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="block h-px w-6 bg-neon-yellow/55" />
-            <span
-              className="text-neon-yellow"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: '10px',
-                letterSpacing: '0.32em',
-                textTransform: 'uppercase',
-              }}
-            >
-              {L('Relatório da Noite', 'Overnight Report')}
-            </span>
-          </div>
-          {/* Headline */}
-          <h3
-            className="text-white leading-snug"
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'clamp(20px, 3.2vw, 26px)',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            {report.one_line_summary}
-          </h3>
-        </div>
-        {/* Timestamp em Agency */}
-        <div
-          className="shrink-0 inline-flex items-center gap-1.5 px-2 py-1 bg-deep-black/40 border border-white/10 text-white/55"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: '10px',
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-            borderRadius: 'var(--radius-sm)',
-          }}
-        >
-          <Clock size={10} />
-          {time}
-        </div>
-      </header>
-
-      {/* 3 Counters: Resolvidas / Ativas / Novos */}
-      <div className="grid grid-cols-3 gap-2 mb-5">
-        {[
-          { key: 'resolved', label: L('Resolvidas', 'Resolved'), value: report.resolved_overnight, color: 'text-[var(--color-success)]' },
-          { key: 'active', label: L('Ativas', 'Active'), value: report.still_active, color: 'text-white' },
-          { key: 'new', label: L('Novos', 'New'), value: report.new_alerts, color: 'text-[var(--color-warning)]' },
-        ].map((c) => (
-          <div
-            key={c.key}
-            className="text-center p-3 bg-deep-black/40 border border-white/8"
-            style={{ borderRadius: 'var(--radius-sm)' }}
-          >
-            <div
-              className={cn('leading-none tabular-nums', c.color)}
-              style={{
-                fontFamily: 'var(--font-impact)',
-                fontSize: 'clamp(22px, 3.5vw, 28px)',
-              }}
-            >
-              {c.value}
-            </div>
-            <div
-              className="text-white/50 mt-1.5"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: '9px',
-                letterSpacing: '0.24em',
-                textTransform: 'uppercase',
-              }}
-            >
-              {c.label}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Lista de destaques */}
-      {report.cards.length > 0 ? (
-        <div className="space-y-1.5">
-          {report.cards.map((card) => {
-            const Icon =
-              card.kind === 'alert' || card.tone === 'urgent'
-                ? AlertOctagon
-                : card.kind === 'celebration'
-                ? Trophy
-                : Sparkles;
-            const toneColor = {
-              positive: 'text-[var(--color-success)]',
-              negative: 'text-[var(--color-warning)]',
-              urgent: 'text-[var(--color-danger)]',
-              neutral: 'text-white/70',
-            }[card.tone];
-            const toneRail = {
-              positive: 'border-l-[var(--color-success)]',
-              negative: 'border-l-[var(--color-warning)]',
-              urgent: 'border-l-[var(--color-danger)]',
-              neutral: 'border-l-white/20',
-            }[card.tone];
-            return (
-              <div
-                key={card.id}
-                className={cn(
-                  'flex items-start gap-3 py-2.5 px-3 border border-white/6 border-l-[3px] bg-deep-black/30',
-                  toneRail,
-                )}
-                style={{ borderRadius: 'var(--radius-sm)' }}
-              >
-                <Icon size={13} className={cn('shrink-0 mt-0.5', toneColor)} />
-                <div className="flex-1 min-w-0">
-                  <div
-                    className={cn('truncate leading-tight', toneColor)}
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontWeight: card.tone === 'urgent' ? 900 : 800,
-                      fontSize: '12px',
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {card.title}
-                  </div>
-                  <div
-                    className="text-white/50 truncate mt-0.5"
-                    style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}
-                  >
-                    {card.subtitle}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div
-          className="text-center text-white/40 py-3"
-          style={{ fontFamily: 'var(--font-ui)', fontSize: '12px' }}
-        >
-          {L('Sem destaques no momento.', 'No highlights right now.')}
-        </div>
-      )}
-    </motion.section>
-  );
-}
-
-// ─── Fallback (Python offline) ─────────────────────────────────────
-
-function LocalFallbackSummary() {
-  const counts = useConsequenceCounts();
+function useLocalScoutsData() {
   const local = useClubConsequences();
-
-  const byDim = useMemo(() => {
-    const out: ConsequencesByDimension = {
-      physical: [],
-      psychological: [],
-      reputational: [],
-      financial: [],
-    };
-    for (const e of local) {
-      out[e.consequence.dimension].push({
-        consequence: {
-          id: e.consequence.id,
-          manager_id: e.consequence.managerId,
-          club_id: e.consequence.clubId,
-          player_id: e.consequence.playerId ?? null,
-          kind: e.consequence.kind,
-          dimension: e.consequence.dimension,
-          scope: e.consequence.scope,
-          magnitude: e.consequence.magnitude,
-          decay_curve: e.consequence.decayCurve,
-          starts_at: new Date(e.consequence.startsAt).toISOString(),
-          expires_at: new Date(e.consequence.expiresAt).toISOString(),
-          source_event_id: e.consequence.sourceEventId ?? null,
-          metadata: e.consequence.metadata ?? null,
-        },
-        current_value: e.currentValue,
-        life_remaining: e.lifeRemaining,
-        ms_until_expiry: e.msUntilExpiry,
-      });
-    }
-    return out;
-  }, [local]);
-
-  return { counts, byDim };
+  const stats = useMemo(() => buildClubSummary(local), [local]);
+  const byDimension = useMemo(() => groupByDimension(local), [local]);
+  return { stats, byDimension };
 }
 
 // ─── Main page ─────────────────────────────────────────────────────
@@ -568,57 +268,9 @@ type ScoutsTab = 'plantel' | 'impacto';
 export function ManagerScouts() {
   const navigate = useNavigate();
   const club = useGameStore((s) => s.club);
-  const authUid = useAuthUid();
   const [tab, setTab] = useState<ScoutsTab>('plantel');
 
-  // Python endpoints (passa null se sem auth — hook não dispara fetch)
-  const { data: summary, error: summaryError } = useInsightsClubSummary(authUid);
-  const { data: consequences } = useInsightsConsequences(authUid);
-  const { data: nightReport } = useInsightsNightReport(authUid);
-  const { data: squadOverview } = useInsightsSquadOverview(authUid);
-
-  // Probe de saúde do upstream — sem JWT, mede só o serviço
-  const { status: serviceStatus, reason: serviceDownReason, lastCheckedAt } =
-    useInsightsServiceHealth();
-
-  // Local fallback (sempre disponível)
-  const fallback = LocalFallbackSummary();
-
-  // Estado HONESTO do badge — separa "serviço up" de "consegui buscar meus dados"
-  const badgeState: BadgeState =
-    serviceStatus === 'down'
-      ? 'service-down'
-      : !authUid
-      ? 'no-auth'
-      : summary
-      ? 'service-up'
-      : serviceStatus === 'unknown'
-      ? 'no-auth' // ainda probando — mostra cinza neutro
-      : 'data-error';
-
-  const badgeDetail =
-    badgeState === 'service-down'
-      ? serviceDownReason
-      : badgeState === 'data-error'
-      ? (summaryError ?? null)
-      : lastCheckedAt
-      ? L(`Última verificação: ${new Date(lastCheckedAt).toLocaleTimeString(LOCALE)}`, `Last check: ${new Date(lastCheckedAt).toLocaleTimeString(LOCALE)}`)
-      : null;
-
-  // Compatibilidade interna — algumas condicionais legadas usam pythonOnline
-  const pythonOnline = badgeState === 'service-up';
-
-  // Decide qual fonte usar
-  const stats: ClubSummary | null = summary ?? {
-    total_active: fallback.counts.total,
-    unavailable_players: fallback.counts.unavailablePlayers,
-    alerts: fallback.counts.alerts,
-    celebrations: 0,
-    next_expiry_at: null,
-    most_impacted_player_id: null,
-  };
-
-  const byDimension: ConsequencesByDimension = consequences ?? fallback.byDim;
+  const { stats, byDimension } = useLocalScoutsData();
 
   const totalDimensionEntries =
     byDimension.physical.length +
@@ -687,7 +339,6 @@ export function ManagerScouts() {
               </div>
             </div>
           </div>
-          <PythonStatusBadge state={badgeState} detail={badgeDetail} />
         </motion.header>
 
         {/* ── Stats row ──────────────────────────────────────────── */}
@@ -721,9 +372,6 @@ export function ManagerScouts() {
             Icon={BadgeCheck}
           />
         </section>
-
-        {/* ── Night report (só se Python entregou) ───────────────── */}
-        {nightReport && <NightReportSection report={nightReport} />}
 
         {/* ── Tabs Legacy Tech (DS §7.6) ────────────────────────── */}
         <div
@@ -765,7 +413,7 @@ export function ManagerScouts() {
 
         {/* ── Conteúdo da tab ──────────────────────────────────── */}
         {tab === 'plantel' ? (
-          <ScoutsPlantelTab overview={squadOverview} />
+          <ScoutsPlantelTab />
         ) : (
           <section aria-label={L('Mapa de consequências', 'Consequence map')}>
             <div className="flex items-baseline justify-between mb-3">
@@ -807,20 +455,6 @@ export function ManagerScouts() {
           </section>
         )}
 
-        {/* ── Rodapé de status — explica em texto o que o badge representa ─── */}
-        {badgeState !== 'service-up' && (
-          <div className="text-[11px] text-white/40 text-center py-2">
-            {badgeState === 'service-down' && (
-              <>{L('Serviço /insights offline — mostrando dados locais.', '/insights service offline — showing local data.')}</>
-            )}
-            {badgeState === 'no-auth' && (
-              <>{L('Sem sessão Supabase ativa — entre na sua conta para ver os dados do serviço /insights.', 'No active Supabase session — sign in to see data from the /insights service.')}</>
-            )}
-            {badgeState === 'data-error' && (
-              <>{L('Não foi possível carregar o resumo do clube — mostrando fallback local.', 'Could not load the club summary — showing local fallback.')}</>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

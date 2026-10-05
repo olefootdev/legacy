@@ -1,3 +1,5 @@
+> APOSENTADO em 2026-10-05 — o jogo não chama mais este serviço. Pode desligar o serviço no Railway e apagar esta pasta.
+
 # OLEFOOT PYTHON MODE — Insights Service
 
 Camada de inteligência analítica do Olefoot. Consome as tabelas
