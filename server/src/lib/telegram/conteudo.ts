@@ -17,6 +17,7 @@ export const LINKS = {
   mercado: 'https://game.olefoot.ai/mercado/vivo',
   x: 'https://x.com/olefootgame',
   instagram: 'https://instagram.com/olefootgame',
+  telegram: 'https://t.me/olefootgame',
 } as const;
 
 /** Espelha GLOBAL_DIVISION_NAME em src/match/globalLeagueMVP.ts (o server não importa do app). */
@@ -104,7 +105,7 @@ export function textoToken(enderecoOficial: string | null): string {
     '⚠️ Só confie no endereço publicado por este bot e no site. A equipe <b>nunca</b> chama ninguém no privado.',
     '',
     `🌐 <a href="${LINKS.site}">olefoot.ai</a> · 🎮 <a href="${LINKS.jogo}">Jogo</a> · 👛 <a href="${LINKS.carteira}">OLEWALLET</a>`,
-    `𝕏 <a href="${LINKS.x}">@olefootgame</a> · 📸 <a href="${LINKS.instagram}">Instagram</a>`,
+    `𝕏 <a href="${LINKS.x}">@olefootgame</a> · 📸 <a href="${LINKS.instagram}">Instagram</a> · 💬 <a href="${LINKS.telegram}">Grupo oficial</a>`,
   );
   return linhas.join('\n');
 }

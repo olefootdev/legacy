@@ -16,7 +16,7 @@ par OLEFOOT/SOL, como **segundo caminho** — separada do $OLEFOOT já criado
 | **Banner** | `docs/pumpfun/banner-camisa-1500x500.png` (alternativa: `banner-rosto-1500x500.png`) |
 | **Website** | `https://game.olefoot.ai` |
 | **X (Twitter)** | `https://x.com/olefootgame` |
-| **Telegram** | deixar vazio (não há grupo oficial) |
+| **Telegram** | `https://t.me/olefootgame` |
 
 **Description** (o pump.fun não tem campo de Instagram, então ele vai no texto):
 
