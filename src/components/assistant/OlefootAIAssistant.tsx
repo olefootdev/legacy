@@ -18,6 +18,7 @@ import {
   Move,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 // Mesmo padrão dos outros clients (coachApi/quickPlanClient): prioriza env
 // VITE_OLEFOOT_API_URL — path relativo não funciona porque o front (Vite/
@@ -43,33 +44,33 @@ interface QuickQuestion {
 
 const QUICK_QUESTIONS: QuickQuestion[] = [
   {
-    label: 'Como ganhar EXP?',
-    question: 'Como eu ganho EXP no Olefoot? Quais são as melhores formas de evoluir rápido?',
+    label: L('Como ganhar EXP?', 'How to earn EXP?'),
+    question: L('Como eu ganho EXP no Olefoot? Quais são as melhores formas de evoluir rápido?', 'How do I earn EXP in Olefoot? What are the best ways to level up fast?'),
     category: 'inicio',
   },
   {
-    label: 'Diferença entre partidas',
-    question: 'Qual a diferença entre Partida Rápida, Partida Auto e Partida ao Vivo?',
+    label: L('Diferença entre partidas', 'Match types'),
+    question: L('Qual a diferença entre Partida Rápida, Partida Auto e Partida ao Vivo?', 'What is the difference between Quick Match, Auto Match and Live Match?'),
     category: 'partida',
   },
   {
-    label: 'Como funciona BRO?',
-    question: 'O que é BRO e como eu uso essa moeda no jogo?',
+    label: L('Como funciona BRO?', 'How does BRO work?'),
+    question: L('O que é BRO e como eu uso essa moeda no jogo?', 'What is BRO and how do I use this currency in the game?'),
     category: 'economia',
   },
   {
-    label: 'Comprar jogadores',
-    question: 'Como eu compro jogadores no mercado? O que são cartas Genesis?',
+    label: L('Comprar jogadores', 'Buy players'),
+    question: L('Como eu compro jogadores no mercado? O que são cartas Genesis?', 'How do I buy players in the Market? What are Genesis cards?'),
     category: 'mercado',
   },
   {
-    label: 'Melhorar meu time',
-    question: 'Como eu melhoro meu time? Quais atributos são mais importantes?',
+    label: L('Melhorar meu time', 'Improve my team'),
+    question: L('Como eu melhoro meu time? Quais atributos são mais importantes?', 'How do I improve my team? Which attributes matter most?'),
     category: 'inicio',
   },
   {
-    label: 'Formações táticas',
-    question: 'Quais formações estão disponíveis e como escolher a melhor para meu time?',
+    label: L('Formações táticas', 'Formations'),
+    question: L('Quais formações estão disponíveis e como escolher a melhor para meu time?', 'Which formations are available and how do I pick the best one for my team?'),
     category: 'partida',
   },
 ];
@@ -157,8 +158,10 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
         role: 'assistant',
-        content:
+        content: L(
           'Desculpe, tive um problema ao processar sua pergunta. Tente novamente ou reformule a pergunta.',
+          'Sorry, something went wrong with your question. Try again or rephrase it.',
+        ),
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -186,11 +189,11 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
         exit={{ scale: 0, opacity: 0 }}
         onClick={() => setIsOpen(true)}
         className="fixed bottom-20 left-4 z-50 flex h-12 w-12 sm:h-14 sm:w-14 sm:bottom-6 sm:left-6 items-center justify-center rounded-full bg-neon-yellow text-black transition-colors hover:bg-white"
-        aria-label="Abrir assistente IA"
+        aria-label={L('Abrir assistente IA', 'Open AI assistant')}
       >
         <MessageCircle className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.5} />
         <span className="absolute -top-1 -right-1 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full border border-black bg-white text-[8px] sm:text-[9px] font-bold text-black">
-          IA
+          {L('IA', 'AI')}
         </span>
       </motion.button>
     );
@@ -230,15 +233,15 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
           <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-card-hi">
             <MessageCircle className="h-5 w-5 text-white" strokeWidth={2.5} />
             <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[8px] font-bold text-black">
-              IA
+              {L('IA', 'AI')}
             </span>
           </div>
           <div className="text-left pointer-events-none">
             <p className="font-impact text-[15px] uppercase leading-[1.1] text-white">
-              Assistente IA
+              {L('Assistente IA', 'AI Assistant')}
             </p>
             <p className="font-mono text-[10.5px] text-cimento">
-              {messages.length > 0 ? `${messages.length} mensagens` : 'Pergunte qualquer coisa'}
+              {messages.length > 0 ? L(`${messages.length} mensagens`, `${messages.length} messages`) : L('Pergunte qualquer coisa', 'Ask anything')}
             </p>
           </div>
         </button>
@@ -282,16 +285,16 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
             <div className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/16 bg-card-hi">
               <MessageCircle className="h-5 w-5 text-white" strokeWidth={2.5} />
               <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[8px] font-bold text-black">
-                IA
+                {L('IA', 'AI')}
               </span>
             </div>
             <div>
               <h3 className="font-impact text-[17px] uppercase leading-[1.1] text-white">
-                Assistente IA
+                {L('Assistente IA', 'AI Assistant')}
               </h3>
               <p className="flex items-center gap-1 font-mono text-[10.5px] text-cimento">
                 <Move className="h-3 w-3" />
-                Arraste para mover
+                {L('Arraste para mover', 'Drag to move')}
               </p>
             </div>
           </div>
@@ -302,7 +305,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
                 setIsMinimized(true);
               }}
               className="rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="Minimizar"
+              aria-label={L('Minimizar', 'Minimize')}
             >
               <ChevronDown className="h-4 w-4" />
             </button>
@@ -312,7 +315,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
                 setIsOpen(false);
               }}
               className="rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="Fechar"
+              aria-label={L('Fechar', 'Close')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -327,7 +330,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
                 <Sparkles className="h-8 w-8 text-white" strokeWidth={2.5} />
               </div>
               <h4 className="font-impact text-2xl uppercase leading-[1.1] text-white">
-                Olá, Manager!
+                {L('Olá, Manager!', 'Hi, Manager!')}
               </h4>
             </div>
           )}
@@ -360,7 +363,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
                   <div className="mt-2 pt-2 border-t border-white/10">
                     <p className="flex items-center gap-1 text-[9px] text-white/40 uppercase tracking-wider mb-1">
                       <BookOpen className="h-3 w-3" />
-                      Fontes consultadas
+                      {L('Fontes consultadas', 'Sources')}
                     </p>
                     <div className="flex flex-wrap gap-1">
                       {msg.sources.map((source, i) => (
@@ -388,7 +391,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
                 <Loader2 className="h-4 w-4 text-white animate-spin" strokeWidth={2.5} />
               </div>
               <div className="bg-panel border border-white/10 px-4 py-2.5">
-                <p className="text-sm text-white/60">Pensando...</p>
+                <p className="text-sm text-white/60">{L('Pensando...', 'Thinking...')}</p>
               </div>
             </motion.div>
           )}
@@ -401,7 +404,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
           <div className="border-t border-white/10 bg-panel p-3">
             <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white/50 mb-2">
               <Zap className="h-3 w-3" />
-              Perguntas rápidas
+              {L('Perguntas rápidas', 'Quick questions')}
             </p>
             <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
               {QUICK_QUESTIONS.slice(0, 4).map((q, i) => (
@@ -425,7 +428,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Pergunte qualquer coisa sobre o Olefoot..."
+              placeholder={L('Pergunte qualquer coisa sobre o Olefoot...', 'Ask anything about Olefoot...')}
               disabled={isLoading}
               className="flex-1 rounded-sm border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-neon-yellow/60 focus:outline-none disabled:opacity-50"
             />
@@ -433,7 +436,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
               type="submit"
               disabled={!input.trim() || isLoading}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-neon-yellow text-black transition-all hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Enviar"
+              aria-label={L('Enviar', 'Send')}
             >
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" strokeWidth={2.5} />

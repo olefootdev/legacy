@@ -17,6 +17,7 @@
  *
  * PURO e determinístico — sem Date/Math.random.
  */
+import { L } from '@/i18n/L';
 
 export type MomentCompetition = 'quick' | 'liga-ole' | 'legends-cup' | 'global';
 
@@ -64,17 +65,17 @@ export interface Moment {
   competitionLabel: string;
 }
 
-const TIER_LABEL = ['Comum', 'Raro', 'Épico', 'Lendário'] as const;
+const TIER_LABEL = [L('Comum', 'Common'), L('Raro', 'Rare'), L('Épico', 'Epic'), L('Lendário', 'Legendary')] as const;
 
 export function momentTierLabel(tier: MomentTier): string {
   return TIER_LABEL[tier];
 }
 
 const COMPETITION_LABEL: Record<MomentCompetition, string> = {
-  'quick': 'Partida Rápida',
-  'liga-ole': 'Liga Ole · Mata-mata dos 32',
+  'quick': L('Partida Rápida', 'Quick Match'),
+  'liga-ole': L('Liga Ole · Mata-mata dos 32', 'Liga Ole · Round of 32 knockout'),
   'legends-cup': 'Legends Cup',
-  'global': 'Liga Global',
+  'global': L('Liga Global', 'Global League'),
 };
 
 export function momentCompetitionLabel(c: MomentCompetition): string {
@@ -91,11 +92,11 @@ const STAGE_MULTIPLIER: Record<MomentStage, number> = {
 };
 
 const STAGE_LABEL: Record<MomentStage, string> = {
-  group: 'na fase de grupos',
-  round16: 'nas oitavas',
-  quarter: 'nas quartas',
-  semi: 'na semifinal',
-  final: 'na final',
+  group: L('na fase de grupos', 'in the group stage'),
+  round16: L('nas oitavas', 'in the round of 16'),
+  quarter: L('nas quartas', 'in the quarter-finals'),
+  semi: L('na semifinal', 'in the semi-final'),
+  final: L('na final', 'in the final'),
 };
 
 /**
@@ -149,34 +150,34 @@ export function detectMoment(i: MomentInput): Moment {
   let headline: string;
   let tagline: string;
   if (i.isTitle) {
-    headline = 'É CAMPEÃO';
+    headline = L('É CAMPEÃO', 'CHAMPIONS');
     tagline = i.wentToPens
-      ? `${i.homeScore}–${i.awayScore} e a taça nos pênaltis`
-      : `${i.homeScore}–${i.awayScore} na decisão`;
+      ? L(`${i.homeScore}–${i.awayScore} e a taça nos pênaltis`, `${i.homeScore}–${i.awayScore} and the cup on penalties`)
+      : L(`${i.homeScore}–${i.awayScore} na decisão`, `${i.homeScore}–${i.awayScore} in the final`);
   } else if (i.hattrick) {
-    headline = 'NOITE DE HAT-TRICK';
-    tagline = `${i.homeScore}–${i.awayScore} com show individual`;
+    headline = L('NOITE DE HAT-TRICK', 'HAT-TRICK NIGHT');
+    tagline = L(`${i.homeScore}–${i.awayScore} com show individual`, `${i.homeScore}–${i.awayScore} with a one-man show`);
   } else if (comeback) {
-    headline = 'VIRADA HISTÓRICA';
-    tagline = `da desvantagem ao ${i.homeScore}–${i.awayScore}`;
+    headline = L('VIRADA HISTÓRICA', 'HISTORIC COMEBACK');
+    tagline = L(`da desvantagem ao ${i.homeScore}–${i.awayScore}`, `from behind to ${i.homeScore}–${i.awayScore}`);
   } else if (goleada) {
-    headline = 'GOLEADA';
-    tagline = `${i.homeScore}–${i.awayScore} sem dó`;
+    headline = L('GOLEADA', 'ROUT');
+    tagline = L(`${i.homeScore}–${i.awayScore} sem dó`, `${i.homeScore}–${i.awayScore} no mercy`);
   } else if (i.cleanSheet) {
-    headline = 'MURALHA';
-    tagline = `${i.homeScore}–0 e ninguém passou`;
+    headline = L('MURALHA', 'THE WALL');
+    tagline = L(`${i.homeScore}–0 e ninguém passou`, `${i.homeScore}–0 and nobody got through`);
   } else if (i.streak >= 3) {
-    headline = `${i.streak} SEGUIDAS`;
-    tagline = 'a sequência não para';
+    headline = L(`${i.streak} SEGUIDAS`, `${i.streak} IN A ROW`);
+    tagline = L('a sequência não para', 'the streak goes on');
   } else if (i.won) {
-    headline = 'VITÓRIA';
-    tagline = `${i.homeScore}–${i.awayScore} no placar`;
+    headline = L('VITÓRIA', 'WIN');
+    tagline = L(`${i.homeScore}–${i.awayScore} no placar`, `${i.homeScore}–${i.awayScore} on the board`);
   } else if (i.draw) {
-    headline = 'BATALHA';
-    tagline = `${i.homeScore}–${i.awayScore} dividido`;
+    headline = L('BATALHA', 'BATTLE');
+    tagline = L(`${i.homeScore}–${i.awayScore} dividido`, `${i.homeScore}–${i.awayScore} shared`);
   } else {
-    headline = 'FOI GUERRA';
-    tagline = `${i.homeScore}–${i.awayScore} no fim`;
+    headline = L('FOI GUERRA', 'IT WAS WAR');
+    tagline = L(`${i.homeScore}–${i.awayScore} no fim`, `${i.homeScore}–${i.awayScore} at the end`);
   }
 
   // A fase entra na tagline quando ela ainda não conta essa história.

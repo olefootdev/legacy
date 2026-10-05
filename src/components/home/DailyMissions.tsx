@@ -19,6 +19,7 @@ import { Link } from 'react-router-dom';
 import type { DailyChallenge } from '@/game/dailyChallenges';
 import { CHALLENGE_ICONS, CHALLENGE_COLORS } from '@/components/match/DailyChallengesCard';
 import { formatExp } from '@/systems/economy';
+import { L } from '@/i18n/L';
 
 export function DailyMissions({
   challenges,
@@ -37,22 +38,22 @@ export function DailyMissions({
   const pct = Math.round((concluidos / challenges.length) * 100);
 
   return (
-    <section aria-label="Missões diárias" className="flex flex-col gap-2">
+    <section aria-label={L('Missões diárias', 'Daily missions')} className="flex flex-col gap-2">
       <span className="ole-eyebrow-poster" style={{ fontSize: '12px' }}>
-        Todo dia conta
+        {L('Todo dia conta', 'Every day counts')}
       </span>
 
       <div className="ole-poster p-4">
         <div className="flex items-baseline justify-between gap-3">
           <h3 className="font-impact uppercase text-white" style={{ fontSize: '15px' }}>
-            Missões do dia
+            {L('Missões do dia', "Today's missions")}
           </h3>
           {streak != null && streak > 1 && (
             <span
               className="font-display font-black uppercase"
               style={{ fontSize: '10px', letterSpacing: '0.12em', color: 'var(--color-neon-yellow)' }}
             >
-              {streak} dias seguidos
+              {L(`${streak} dias seguidos`, `${streak}-day streak`)}
             </span>
           )}
         </div>
@@ -120,7 +121,7 @@ export function DailyMissions({
                         color: c.claimed ? 'var(--color-success)' : 'rgba(237,235,228,0.5)',
                       }}
                     >
-                      {c.claimed ? 'Resgatado' : `${Math.min(c.progress, c.target)}/${c.target}`}
+                      {c.claimed ? L('Resgatado', 'Claimed') : `${Math.min(c.progress, c.target)}/${c.target}`}
                     </span>
                     {!c.claimed && (
                       <span
@@ -145,7 +146,7 @@ export function DailyMissions({
           aria-valuenow={pct}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label="Progresso das missões do dia"
+          aria-label={L('Progresso das missões do dia', "Today's mission progress")}
         >
           <i
             className="block h-full"
@@ -155,14 +156,14 @@ export function DailyMissions({
 
         <div className="mt-2.5 flex items-center justify-between gap-3">
           <span className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
-            {concluidos} de {challenges.length} concluídas hoje
+            {L(`${concluidos} de ${challenges.length} concluídas hoje`, `${concluidos} of ${challenges.length} done today`)}
           </span>
           <Link
             to="/manager/missoes"
             className="inline-flex items-center gap-1 font-display font-black uppercase transition-colors hover:text-white"
             style={{ fontSize: '10px', letterSpacing: '0.12em', color: 'var(--color-neon-yellow)' }}
           >
-            Todas as missões
+            {L('Todas as missões', 'All missions')}
             <ChevronRight className="h-3 w-3" aria-hidden />
           </Link>
         </div>

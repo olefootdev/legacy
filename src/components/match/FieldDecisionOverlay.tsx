@@ -6,6 +6,7 @@
  * borda amarela flutuam como escolhas do manager.
  */
 import { useEffect, useState } from 'react';
+import { posLabel } from './posLabel';
 
 const NEON = 'var(--color-neon-yellow)';
 
@@ -94,7 +95,7 @@ export function FieldDecisionOverlay({
         transition: 'opacity 480ms ease 80ms, transform 480ms cubic-bezier(0.22,1.4,0.36,1) 80ms',
       }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, fontWeight: 800, letterSpacing: '0.3em', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: 4 }}>
-          {playerPos} · {playerNum}
+          {posLabel(playerPos)} · {playerNum}
         </div>
         <div style={{ fontFamily: 'var(--font-impact)', fontSize: 'clamp(28px, 6vw, 48px)', fontWeight: 400, color: '#fff', lineHeight: 1.1, textTransform: 'uppercase' }}>
           {firstName}

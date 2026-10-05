@@ -23,6 +23,7 @@ import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 import { useAudioWaveform } from '@/hooks/useAudioWaveform';
 import { useVoiceFeedback } from '@/hooks/useVoiceFeedback';
 import { useVoiceCommandDispatch } from '@/hooks/useVoiceCommandDispatch';
+import { L } from '@/i18n/L';
 
 interface CoachCommandInputProps {
   players: PitchPlayerState[];
@@ -315,11 +316,11 @@ export function CoachCommandInput({
   };
 
   const getPlaceholder = () => {
-    if (input.startsWith('@@@')) return 'Mensagem para todo o time...';
-    if (input.startsWith('@@')) return 'Mensagem para o setor...';
-    if (input.startsWith('@')) return 'Mensagem para o jogador...';
-    if (input.startsWith('/')) return 'Digite o nome da skill...';
-    return '@ jogador | @@ setor | @@@ time | /skill';
+    if (input.startsWith('@@@')) return L('Mensagem para todo o time...', 'Message to the whole team...');
+    if (input.startsWith('@@')) return L('Mensagem para o setor...', 'Message to the unit...');
+    if (input.startsWith('@')) return L('Mensagem para o jogador...', 'Message to the player...');
+    if (input.startsWith('/')) return L('Digite o nome da skill...', 'Type the skill name...');
+    return L('@ jogador | @@ setor | @@@ time | /skill', '@ player | @@ unit | @@@ team | /skill');
   };
 
   const handleMicDown = () => {
@@ -333,7 +334,7 @@ export function CoachCommandInput({
       console.log('[voice] Browser não suporta reconhecimento de voz');
       onCommandExecuted?.({
         success: false,
-        message: '🎤 Este browser não suporta reconhecimento de voz',
+        message: L('🎤 Este browser não suporta reconhecimento de voz', '🎤 This browser does not support voice recognition'),
       });
       return;
     }
@@ -375,7 +376,7 @@ export function CoachCommandInput({
     feedback.triggerFeedback('processing');
     onCommandExecuted?.({
       success: true,
-      message: `↩️ Comando desfeito: "${last.text}"`,
+      message: L(`↩️ Comando desfeito: "${last.text}"`, `↩️ Command undone: "${last.text}"`),
     });
   };
 
@@ -394,7 +395,7 @@ export function CoachCommandInput({
             textTransform: 'uppercase',
           }}
         >
-          Digite o comando
+          {L('Digite o comando', 'Type the command')}
         </h4>
       </div>
 
@@ -408,7 +409,7 @@ export function CoachCommandInput({
         >
           <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
             <span className={listening ? 'text-rose-200' : 'text-violet-200'}>
-              {listening ? '🎤 Ouvindo…' : '⏳ Processando…'}
+              {listening ? L('🎤 Ouvindo…', '🎤 Listening…') : L('⏳ Processando…', '⏳ Processing…')}
             </span>
             {listening && <span className="text-rose-300/70">max 5s</span>}
           </div>
@@ -459,9 +460,9 @@ export function CoachCommandInput({
           onTouchEnd={(e) => { e.preventDefault(); handleMicUp(); }}
           disabled={!voice.supported}
           title={
-            !voice.supported ? 'Browser não suporta voz' :
-            !voice.hasPermission ? 'Clique para permitir acesso ao microfone' :
-            'Segure pra falar (push-to-talk)'
+            !voice.supported ? L('Browser não suporta voz', 'Browser does not support voice') :
+            !voice.hasPermission ? L('Clique para permitir acesso ao microfone', 'Click to allow microphone access') :
+            L('Segure pra falar (push-to-talk)', 'Hold to talk (push-to-talk)')
           }
           className={cn(
             'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-all select-none relative',
@@ -487,7 +488,7 @@ export function CoachCommandInput({
           type="button"
           onClick={repeatLastCommand}
           disabled={commandHistory.length === 0 || listening}
-          title="Repetir último comando (ou use Seta-Cima)"
+          title={L('Repetir último comando (ou use Seta-Cima)', 'Repeat last command (or press Arrow Up)')}
           className={cn(
             'flex h-10 w-10 items-center justify-center rounded-lg border transition-all',
             commandHistory.length > 0 && !listening
@@ -523,7 +524,7 @@ export function CoachCommandInput({
             className="flex items-center gap-2 text-sm text-amber-200 hover:text-amber-100 transition-colors"
           >
             <Undo2 className="h-4 w-4" />
-            <span>Desfazer "{recentCommands[recentCommands.length - 1]?.text.slice(0, 30)}..."</span>
+            <span>{L('Desfazer', 'Undo')} "{recentCommands[recentCommands.length - 1]?.text.slice(0, 30)}..."</span>
           </button>
         </div>
       )}
@@ -561,13 +562,13 @@ export function CoachCommandInput({
 
       {/* Hints */}
       <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-white/40">
-        <span className="rounded bg-white/5 px-2 py-1">@ jogador</span>
-        <span className="rounded bg-white/5 px-2 py-1">@@ setor</span>
-        <span className="rounded bg-white/5 px-2 py-1">@@@ time</span>
+        <span className="rounded bg-white/5 px-2 py-1">{L('@ jogador', '@ player')}</span>
+        <span className="rounded bg-white/5 px-2 py-1">{L('@@ setor', '@@ unit')}</span>
+        <span className="rounded bg-white/5 px-2 py-1">{L('@@@ time', '@@@ team')}</span>
         <span className="rounded bg-white/5 px-2 py-1">/skill</span>
         {voice.supported && !voice.hasPermission && (
           <span className="rounded bg-amber-500/20 border border-amber-400/40 px-2 py-1 text-amber-200 animate-pulse">
-            🎤 Clique no microfone para permitir acesso
+            🎤 {L('Clique no microfone para permitir acesso', 'Click the mic to allow access')}
           </span>
         )}
       </div>

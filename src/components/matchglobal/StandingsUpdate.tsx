@@ -1,3 +1,4 @@
+import { L, emIngles } from '@/i18n/L';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Minus, Trophy, TrendingUp, TrendingDown } from 'lucide-react';
 import type { GlobalTeam as GlobalLeagueTeam } from '../../match/globalLeagueMVP';
@@ -71,10 +72,10 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
                   <Trophy className="w-8 h-8 text-neon-yellow" />
                   <div>
                     <h2 className="text-2xl font-bold text-neon-yellow uppercase tracking-wider">
-                      CLASSIFICAÇÃO
+                      {L('CLASSIFICAÇÃO', 'STANDINGS')}
                     </h2>
                     <p className="text-sm text-gray-300 font-mono">
-                      {roundNumber}ª RODADA
+                      {emIngles() ? `ROUND ${roundNumber}` : `${roundNumber}ª RODADA`}
                     </p>
                   </div>
                 </div>
@@ -82,7 +83,7 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
                   onClick={onClose}
                   className="px-4 py-2 bg-neon-yellow/20 hover:bg-neon-yellow/30 border border-neon-yellow/50 rounded text-neon-yellow font-bold uppercase tracking-wider transition-colors"
                 >
-                  Fechar
+                  {L('Fechar', 'Close')}
                 </button>
               </div>
             </div>
@@ -100,18 +101,18 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
                   {/* Division Header */}
                   <div className="bg-card border-b-2 border-neon-yellow/50 px-4 py-3">
                     <h3 className="text-lg font-bold text-neon-yellow uppercase tracking-wider text-center">
-                      {div.division}ª DIVISÃO
+                      {emIngles() ? `DIVISION ${div.division}` : `${div.division}ª DIVISÃO`}
                     </h3>
                   </div>
 
                   {/* Table Header */}
                   <div className="grid grid-cols-[40px_1fr_40px_40px_40px_50px_50px] gap-2 px-4 py-2 bg-gray-800/50 border-b border-gray-700 text-xs font-mono text-gray-400 uppercase">
                     <div className="text-center">#</div>
-                    <div>Time</div>
-                    <div className="text-center">J</div>
-                    <div className="text-center">V</div>
-                    <div className="text-center">E</div>
-                    <div className="text-center">SG</div>
+                    <div>{L('Time', 'Team')}</div>
+                    <div className="text-center">{L('J', 'P')}</div>
+                    <div className="text-center">{L('V', 'W')}</div>
+                    <div className="text-center">{L('E', 'D')}</div>
+                    <div className="text-center">{L('SG', 'GD')}</div>
                     <div className="text-center font-bold">PTS</div>
                   </div>
 
@@ -163,12 +164,12 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
                           <div className="flex flex-col items-center leading-tight">
                             <span
                               className="text-base font-bold font-mono text-neon-yellow"
-                              title={`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`}
+                              title={L(`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`, `All-time total over ${team.allTimeSeasonsPlayed ?? 0} season(s)`)}
                             >
                               {team.allTimePoints ?? 0}
                             </span>
                             <span className="font-mono text-[9px] text-white/40 mt-0.5">
-                              {team.points} (rodada)
+                              {team.points} {L('(rodada)', '(round)')}
                             </span>
                           </div>
                         </motion.div>
@@ -180,15 +181,15 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
                   <div className="px-4 py-3 bg-gray-800/30 border-t border-gray-700 space-y-1 text-xs">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-neon-yellow/20 border-l-2 border-neon-yellow"></div>
-                      <span className="text-gray-400">Líder</span>
+                      <span className="text-gray-400">{L('Líder', 'Leader')}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-neon-green/10 border-l-2 border-neon-green"></div>
-                      <span className="text-gray-400">Zona de Promoção</span>
+                      <span className="text-gray-400">{L('Zona de Promoção', 'Promotion Zone')}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-red-500/10 border-l-2 border-red-500"></div>
-                      <span className="text-gray-400">Zona de Rebaixamento</span>
+                      <span className="text-gray-400">{L('Zona de Rebaixamento', 'Relegation Zone')}</span>
                     </div>
                   </div>
                 </motion.div>
@@ -204,7 +205,7 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
                     <span className="font-bold text-neon-green">
                       {divisions.reduce((acc, div) => acc + div.teams.filter(t => getPositionChange(t) > 0).length, 0)}
                     </span>
-                    {' '}times subiram
+                    {' '}{L('times subiram', 'teams moved up')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -213,7 +214,7 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
                     <span className="font-bold text-red-400">
                       {divisions.reduce((acc, div) => acc + div.teams.filter(t => getPositionChange(t) < 0).length, 0)}
                     </span>
-                    {' '}times caíram
+                    {' '}{L('times caíram', 'teams moved down')}
                   </span>
                 </div>
               </div>

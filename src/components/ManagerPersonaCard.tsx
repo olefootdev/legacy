@@ -8,6 +8,7 @@ import { Megaphone, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fetchManagerPersona, fetchManagerCommandIntents } from '@/supabase/voiceCommandLog';
 import { buildManagerPersona, type ManagerPersona } from '@/voiceCommand/persona';
+import { L } from '@/i18n/L';
 
 const STYLE_COLOR: Record<ManagerPersona['style'], string> = {
   ofensivo_criativo: 'border-fuchsia-400/60 bg-fuchsia-500/10 text-fuchsia-100',
@@ -46,9 +47,9 @@ export function ManagerPersonaCard() {
       <div className="rounded-xl border border-white/10 bg-black/30 p-5">
         <div className="flex items-center gap-2 text-white/50">
           <Megaphone className="h-4 w-4" />
-          <span className="text-xs font-bold uppercase tracking-wider">Perfil do treinador</span>
+          <span className="text-xs font-bold uppercase tracking-wider">{L('Perfil do treinador', 'Manager profile')}</span>
         </div>
-        <p className="mt-3 text-sm text-white/40">Carregando...</p>
+        <p className="mt-3 text-sm text-white/40">{L('Carregando...', 'Loading...')}</p>
       </div>
     );
   }
@@ -58,10 +59,10 @@ export function ManagerPersonaCard() {
       <div className="rounded-xl border border-white/10 bg-black/30 p-5">
         <div className="flex items-center gap-2 text-white/60">
           <Megaphone className="h-4 w-4" />
-          <span className="text-xs font-bold uppercase tracking-wider">Perfil do treinador</span>
+          <span className="text-xs font-bold uppercase tracking-wider">{L('Perfil do treinador', 'Manager profile')}</span>
         </div>
         <p className="mt-3 text-sm text-white/50">
-          Use o comando técnico por voz durante a partida ao vivo pra começar a construir seu perfil.
+          {L('Use o comando técnico por voz durante a partida ao vivo pra começar a construir seu perfil.', 'Use voice commands during live matches to start building your profile.')}
         </p>
       </div>
     );
@@ -74,28 +75,28 @@ export function ManagerPersonaCard() {
     <div className={cn('rounded-xl border p-5', STYLE_COLOR[persona.style])}>
       <div className="flex items-center gap-2">
         <Megaphone className="h-4 w-4" />
-        <span className="text-xs font-bold uppercase tracking-wider opacity-80">Perfil do treinador</span>
+        <span className="text-xs font-bold uppercase tracking-wider opacity-80">{L('Perfil do treinador', 'Manager profile')}</span>
       </div>
       <h3 className="mt-2 font-display text-2xl font-black uppercase tracking-wider">
-        TREINADOR {persona.label.toUpperCase()}
+        {L('TREINADOR', 'MANAGER')} {persona.label.toUpperCase()}
       </h3>
       <p className="mt-1 text-[11px] leading-relaxed opacity-80">{persona.description}</p>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div className="rounded-lg border border-white/10 bg-black/30 p-3">
-          <p className="text-[9px] font-bold uppercase tracking-wider opacity-60">Comandos emitidos</p>
+          <p className="text-[9px] font-bold uppercase tracking-wider opacity-60">{L('Comandos emitidos', 'Commands issued')}</p>
           <p className="mt-1 font-mono text-xl font-black">{persona.total}</p>
         </div>
         <div className="rounded-lg border border-white/10 bg-black/30 p-3">
-          <p className="text-[9px] font-bold uppercase tracking-wider opacity-60">Taxa de aceitação</p>
+          <p className="text-[9px] font-bold uppercase tracking-wider opacity-60">{L('Taxa de aceitação', 'Acceptance rate')}</p>
           <p className="mt-1 font-mono text-xl font-black">{acc}%</p>
         </div>
         <div className="rounded-lg border border-white/10 bg-black/30 p-3">
-          <p className="text-[9px] font-bold uppercase tracking-wider opacity-60">Obediência média</p>
+          <p className="text-[9px] font-bold uppercase tracking-wider opacity-60">{L('Obediência média', 'Avg obedience')}</p>
           <p className="mt-1 font-mono text-xl font-black">{avgObed}%</p>
         </div>
         <div className="rounded-lg border border-white/10 bg-black/30 p-3">
-          <p className="text-[9px] font-bold uppercase tracking-wider opacity-60">Assistente favorito</p>
+          <p className="text-[9px] font-bold uppercase tracking-wider opacity-60">{L('Assistente favorito', 'Favourite assistant')}</p>
           <p className="mt-1 text-sm font-black truncate">
             {persona.topAssistant ? assistantLabel(persona.topAssistant) : '—'}
           </p>
@@ -106,7 +107,7 @@ export function ManagerPersonaCard() {
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-white/10 bg-black/25 px-3 py-2">
           <TrendingUp className="h-3.5 w-3.5 opacity-70" />
           <p className="text-[11px] font-semibold">
-            Comando favorito: <strong>{intentLabel(persona.topIntent)}</strong> ({persona.topIntentCount}×)
+            {L('Comando favorito', 'Favourite command')}: <strong>{intentLabel(persona.topIntent)}</strong> ({persona.topIntentCount}×)
           </p>
         </div>
       ) : null}
@@ -116,31 +117,31 @@ export function ManagerPersonaCard() {
 
 function assistantLabel(a: string): string {
   const m: Record<string, string> = {
-    tatico: '🧠 Aux. Tático',
-    ataque: '⚔️ Aux. Ataque',
-    defesa: '🛡️ Aux. Defesa',
-    fisico: '💪 Preparador Físico',
-    mental: '🧘 Preparador Mental',
+    tatico: L('🧠 Aux. Tático', '🧠 Tactics Asst.'),
+    ataque: L('⚔️ Aux. Ataque', '⚔️ Attack Asst.'),
+    defesa: L('🛡️ Aux. Defesa', '🛡️ Defence Asst.'),
+    fisico: L('💪 Preparador Físico', '💪 Fitness Coach'),
+    mental: L('🧘 Preparador Mental', '🧘 Mental Coach'),
   };
   return m[a] ?? a;
 }
 
 function intentLabel(i: string): string {
   const m: Record<string, string> = {
-    invade_box: 'Invade a área',
-    dribble_attempt: 'Tenta o drible',
-    take_shot: 'Chuta',
-    cross_ball: 'Cruza a bola',
-    pass_to_player: 'Passa pro jogador',
-    hold_ball: 'Segura a bola',
-    team_press_high: 'Pressiona alto',
-    team_retreat: 'Recua',
-    team_hold_possession: 'Segura a bola (time)',
-    break_line: 'Quebra a linha',
-    run_behind: 'Corre pelas costas',
-    pedal_to_metal: 'Pisa no acelerador',
-    player_substitution: 'Substituição',
-    formation_change: 'Muda formação',
+    invade_box: L('Invade a área', 'Attack the box'),
+    dribble_attempt: L('Tenta o drible', 'Take on'),
+    take_shot: L('Chuta', 'Shoot'),
+    cross_ball: L('Cruza a bola', 'Cross'),
+    pass_to_player: L('Passa pro jogador', 'Pass to player'),
+    hold_ball: L('Segura a bola', 'Hold the ball'),
+    team_press_high: L('Pressiona alto', 'Press high'),
+    team_retreat: L('Recua', 'Drop back'),
+    team_hold_possession: L('Segura a bola (time)', 'Keep possession (team)'),
+    break_line: L('Quebra a linha', 'Break the line'),
+    run_behind: L('Corre pelas costas', 'Run in behind'),
+    pedal_to_metal: L('Pisa no acelerador', 'Floor it'),
+    player_substitution: L('Substituição', 'Substitution'),
+    formation_change: L('Muda formação', 'Change formation'),
   };
   return m[i] ?? i;
 }

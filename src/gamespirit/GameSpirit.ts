@@ -29,6 +29,8 @@ import { weightedOverall, roleFromSlotId } from '@/match/positionWeights';
 import { zoneAtUI, isBox, isFinalThird, isCreationZone, dangerToOppGoal01 } from '@/match/spatialZones';
 import { applyContextModifiers } from '@/match/contextFactors';
 import { rngNext } from './rngNext';
+// `L` já é o nome do batch causal neste arquivo — o helper de idioma entra como `Lx`.
+import { L as Lx } from '@/i18n/L';
 import { FIELD_WIDTH, GOAL_MOUTH_HALF_WIDTH_M } from '@/simulation/field';
 import { computeSituationalModifiers, type SituationalModifiers } from '@/gamespirit/situationalIntelligence';
 import { doesLooseControl } from '@/behaviorAI/firstTouchErrors';
@@ -56,6 +58,10 @@ import {
   getPressureIntensity,
   type TacticalIntensityLevel
 } from '@/match/quickTacticalIntensity';
+
+/** Nome de fallback quando o time da casa não tem nome curto (só exibição). */
+const HOME_FALLBACK = Lx('Casa', 'Home');
+const ATTACKER_FALLBACK = Lx('Atacante', 'Attacker');
 
 function dist(a: PitchPoint, b: PitchPoint): number {
   const dx = a.x - b.x;
@@ -451,31 +457,31 @@ function enrichNameWithProfile(
   const { trait, mood, isLegacy } = profile;
 
   // Lenda sempre ganha destaque
-  if (isLegacy) return `${name} (lenda)`;
+  if (isLegacy) return Lx(`${name} (lenda)`, `${name} (legend)`);
 
   // Momentos decisivos com sangue frio
   if (trait === 'sangue_frio' && (action === 'shot' || action === 'counter') && minute > 70) {
-    return `${name}, gelado`;
+    return Lx(`${name}, gelado`, `${name}, ice-cold`);
   }
   // Finalizador em posição de chute
   if (trait === 'finalizador' && action === 'shot') {
-    return `${name}, o finalizador`;
+    return Lx(`${name}, o finalizador`, `${name}, the finisher`);
   }
   // Em chamas — qualquer ação
   if (mood === 'em_chamas') {
-    return `${name} (em chamas)`;
+    return Lx(`${name} (em chamas)`, `${name} (on fire)`);
   }
   // Destruidor recuperando bola
   if (trait === 'destruidor' && action === 'press') {
-    return `${name}, o destruidor`;
+    return Lx(`${name}, o destruidor`, `${name}, the destroyer`);
   }
   // Criativo em progressão
   if (trait === 'criativo' && action === 'progress') {
-    return `${name}, com visão`;
+    return Lx(`${name}, com visão`, `${name}, the visionary`);
   }
   // Guerreiro cansado mas lutando
   if (trait === 'guerreiro' && mood === 'pressionado') {
-    return `${name}, no limite`;
+    return Lx(`${name}, no limite`, `${name}, running on empty`);
   }
 
   return name;
@@ -490,19 +496,19 @@ function narrativeShotRich(
   const { trait, attrs, mood } = profile;
 
   if (trait === 'finalizador' && attrs.finalizacao >= 82) {
-    return `${minute}' — ${name} finaliza com a precisão que é sua marca!`;
+    return Lx(`${minute}' — ${name} finaliza com a precisão que é sua marca!`, `${minute}' — ${name} finishes with his trademark precision!`);
   }
   if (trait === 'sangue_frio') {
-    return `${minute}' — ${name} arrisca sem hesitar — frieza total!`;
+    return Lx(`${minute}' — ${name} arrisca sem hesitar — frieza total!`, `${minute}' — ${name} goes for it without hesitation — ice in the veins!`);
   }
   if (trait === 'criativo' && attrs.tatico >= 75) {
-    return `${minute}' — ${name} cria o espaço do nada e finaliza!`;
+    return Lx(`${minute}' — ${name} cria o espaço do nada e finaliza!`, `${minute}' — ${name} makes space out of nothing and shoots!`);
   }
   if (mood === 'em_chamas') {
-    return `${minute}' — ${name} está em chamas — chuta com tudo!`;
+    return Lx(`${minute}' — ${name} está em chamas — chuta com tudo!`, `${minute}' — ${name} is on fire — hits it with everything!`);
   }
   if (mood === 'pressionado' && attrs.mentalidade >= 70) {
-    return `${minute}' — ${name} cansado, mas não desiste — finaliza!`;
+    return Lx(`${minute}' — ${name} cansado, mas não desiste — finaliza!`, `${minute}' — ${name} is tired, but won't give up — shoots!`);
   }
   return T.shot({ min: minute, shooter: name });
 }
@@ -518,18 +524,18 @@ function narrativeProgressRich(
 
   if (trait === 'criativo' && attrs.passe >= 78) {
     return mate
-      ? `${minute}' — ${name} enxerga o corredor e lança ${mate} em profundidade!`
-      : `${minute}' — ${name} conduz com visão e abre o jogo!`;
+      ? Lx(`${minute}' — ${name} enxerga o corredor e lança ${mate} em profundidade!`, `${minute}' — ${name} spots the gap and sends ${mate} clear!`)
+      : Lx(`${minute}' — ${name} conduz com visão e abre o jogo!`, `${minute}' — ${name} carries it with vision and opens the game up!`);
   }
   if (trait === 'guerreiro' && attrs.velocidade >= 75) {
     return mate
-      ? `${minute}' — ${name} não para de correr — serve ${mate} no espaço!`
-      : `${minute}' — ${name} avança com determinação!`;
+      ? Lx(`${minute}' — ${name} não para de correr — serve ${mate} no espaço!`, `${minute}' — ${name} never stops running — feeds ${mate} into space!`)
+      : Lx(`${minute}' — ${name} avança com determinação!`, `${minute}' — ${name} drives forward with purpose!`);
   }
   if (trait === 'imprevisivel') {
     return mate
-      ? `${minute}' — ${name} surpreende todo mundo e acha ${mate}!`
-      : `${minute}' — ${name} conduz de forma imprevisível!`;
+      ? Lx(`${minute}' — ${name} surpreende todo mundo e acha ${mate}!`, `${minute}' — ${name} surprises everyone and finds ${mate}!`)
+      : Lx(`${minute}' — ${name} conduz de forma imprevisível!`, `${minute}' — ${name} carries it unpredictably!`);
   }
   return T.progress({ min: minute, carrier: name, receiver: mate });
 }
@@ -543,10 +549,10 @@ function narrativeClearRich(
   const { trait } = profile;
 
   if (trait === 'destruidor') {
-    return `${minute}' — ${profile.name} corta com autoridade — perigo eliminado!`;
+    return Lx(`${minute}' — ${profile.name} corta com autoridade — perigo eliminado!`, `${minute}' — ${profile.name} cuts it out with authority — danger over!`);
   }
   if (trait === 'experiente') {
-    return `${minute}' — ${profile.name} lê a jogada antes de todo mundo e afasta!`;
+    return Lx(`${minute}' — ${profile.name} lê a jogada antes de todo mundo e afasta!`, `${minute}' — ${profile.name} reads it before anyone and clears!`);
   }
   return T.clear({ min: minute, defender: mate });
 }
@@ -560,13 +566,13 @@ function narrativeCounterRich(
   const { trait, attrs } = profile;
 
   if (trait === 'finalizador' && attrs.velocidade >= 72) {
-    return `${minute}' — ${name} explode em velocidade no contra-ataque!`;
+    return Lx(`${minute}' — ${name} explode em velocidade no contra-ataque!`, `${minute}' — ${name} explodes into the counter-attack!`);
   }
   if (trait === 'guerreiro') {
-    return `${minute}' — ${name} lidera a transição — motor que não para!`;
+    return Lx(`${minute}' — ${name} lidera a transição — motor que não para!`, `${minute}' — ${name} leads the break — a relentless engine!`);
   }
   if (trait === 'sangue_frio') {
-    return `${minute}' — ${name} conduz o contra-ataque com frieza cirúrgica!`;
+    return Lx(`${minute}' — ${name} conduz o contra-ataque com frieza cirúrgica!`, `${minute}' — ${name} runs the counter with surgical calm!`);
   }
   return T.counter({ min: minute, leader: name });
 }
@@ -813,61 +819,61 @@ function buildRichGoalNarrative(
 
   // Lenda marcando
   if (isLegacy) {
-    return `${minute}' — A LENDA FALA! ${scorerName} mostra por que é diferente — GOOOOOL!`;
+    return Lx(`${minute}' — A LENDA FALA! ${scorerName} mostra por que é diferente — GOOOOOL!`, `${minute}' — THE LEGEND SPEAKS! ${scorerName} shows why he's different — GOOOOOAL!`);
   }
 
   // Gol decisivo nos minutos finais
   if (isDecisive && trait === 'sangue_frio') {
-    return `${minute}' — Nos momentos que importam, ${scorerName} não treme. GOOOOOL!`;
+    return Lx(`${minute}' — Nos momentos que importam, ${scorerName} não treme. GOOOOOL!`, `${minute}' — When it matters most, ${scorerName} doesn't flinch. GOOOOOAL!`);
   }
   if (isDecisive && mood === 'em_chamas') {
-    return `${minute}' — ${scorerName} está em chamas e decide o jogo! GOOOOOL!`;
+    return Lx(`${minute}' — ${scorerName} está em chamas e decide o jogo! GOOOOOL!`, `${minute}' — ${scorerName} is on fire and settles it! GOOOOOAL!`);
   }
   if (isDecisive) {
-    return `${minute}' — GOOOOOL! ${scorerName} decide nos minutos finais!`;
+    return Lx(`${minute}' — GOOOOOL! ${scorerName} decide nos minutos finais!`, `${minute}' — GOOOOOAL! ${scorerName} settles it late on!`);
   }
 
   // Virada / empate
   if (isComeback) {
     if (trait === 'guerreiro') {
-      return `${minute}' — ${scorerName} não desiste nunca — GOOOOOL! O time acredita!`;
+      return Lx(`${minute}' — ${scorerName} não desiste nunca — GOOOOOL! O time acredita!`, `${minute}' — ${scorerName} never gives up — GOOOOOAL! The team believe!`);
     }
-    return `${minute}' — GOOOOOL! ${scorerName} empata — a partida está viva!`;
+    return Lx(`${minute}' — GOOOOOL! ${scorerName} empata — a partida está viva!`, `${minute}' — GOOOOOAL! ${scorerName} levels it — this one's alive!`);
   }
 
   // Contra-ataque
   if (isCounter) {
     if (trait === 'finalizador' && attrs.velocidade >= 72) {
-      return `${minute}' — Velocidade e frieza — ${scorerName} explode no contra-ataque! GOOOOOL!`;
+      return Lx(`${minute}' — Velocidade e frieza — ${scorerName} explode no contra-ataque! GOOOOOL!`, `${minute}' — Pace and composure — ${scorerName} bursts away on the counter! GOOOOOAL!`);
     }
-    return `${minute}' — Transição fulminante! ${scorerName} não perdoa — GOOOOOL!`;
+    return Lx(`${minute}' — Transição fulminante! ${scorerName} não perdoa — GOOOOOL!`, `${minute}' — Lightning break! ${scorerName} makes no mistake — GOOOOOAL!`);
   }
 
   // Por arquétipo cognitivo
   if (cognitiveArchetype === 'finalizador') {
-    return `${minute}' — ${scorerName} estava esperando esse momento. GOOOOOL — instinto puro!`;
+    return Lx(`${minute}' — ${scorerName} estava esperando esse momento. GOOOOOL — instinto puro!`, `${minute}' — ${scorerName} was waiting for that moment. GOOOOOAL — pure instinct!`);
   }
   if (cognitiveArchetype === 'criador' && attrs.tatico >= 75) {
-    return `${minute}' — ${scorerName} criou e finalizou — inteligência total! GOOOOOL!`;
+    return Lx(`${minute}' — ${scorerName} criou e finalizou — inteligência total! GOOOOOL!`, `${minute}' — ${scorerName} made it and finished it — total intelligence! GOOOOOAL!`);
   }
   if (cognitiveArchetype === 'executor') {
-    return `${minute}' — ${scorerName} executou com perfeição — GOOOOOL!`;
+    return Lx(`${minute}' — ${scorerName} executou com perfeição — GOOOOOL!`, `${minute}' — ${scorerName} executes it perfectly — GOOOOOAL!`);
   }
 
   // Por traço
   if (trait === 'imprevisivel') {
-    return `${minute}' — Ninguém esperava! ${scorerName} surpreende todo mundo — GOOOOOL!`;
+    return Lx(`${minute}' — Ninguém esperava! ${scorerName} surpreende todo mundo — GOOOOOL!`, `${minute}' — Nobody saw that coming! ${scorerName} stuns everyone — GOOOOOAL!`);
   }
   if (trait === 'agressivo' && attrs.fisico >= 75) {
-    return `${minute}' — Na força e na raça — ${scorerName} empurra para o gol! GOOOOOL!`;
+    return Lx(`${minute}' — Na força e na raça — ${scorerName} empurra para o gol! GOOOOOL!`, `${minute}' — Pure strength and grit — ${scorerName} forces it in! GOOOOOAL!`);
   }
 
   // Carta especial
   if (cardArchetype === 'meme') {
-    return `${minute}' — ATÉ ELE! ${scorerName} marca e a torcida vai à loucura! GOOOOOL!`;
+    return Lx(`${minute}' — ATÉ ELE! ${scorerName} marca e a torcida vai à loucura! GOOOOOL!`, `${minute}' — EVEN HIM! ${scorerName} scores and the crowd go wild! GOOOOOAL!`);
   }
   if (cardArchetype === 'novo_talento') {
-    return `${minute}' — O jovem ${scorerName} mostra que veio para ficar! GOOOOOL!`;
+    return Lx(`${minute}' — O jovem ${scorerName} mostra que veio para ficar! GOOOOOL!`, `${minute}' — Young ${scorerName} shows he's here to stay! GOOOOOAL!`);
   }
 
   return null; // fallback para o sistema padrão
@@ -921,7 +927,7 @@ function commitGoal(input: CommitGoalInput): {
     narrative = pickLine('goal_rebound', gParams, minute)
       ?? T.goalPostIn({ min: minute, scorer: scorerName });
   } else if (variant === 'keeper_error') {
-    narrative = `${minute}' — Falha clamorosa do goleiro! ${scorerName} aproveita e empurra para o gol.`;
+    narrative = Lx(`${minute}' — Falha clamorosa do goleiro! ${scorerName} aproveita e empurra para o gol.`, `${minute}' — Howler from the keeper! ${scorerName} pounces and pokes it in. GOAL!`);
   } else {
     // Narrativa de gol enriquecida com perfil do marcador
     const richGoalNarrative = profile && scorerSide === 'home'
@@ -999,8 +1005,8 @@ export function gameSpiritTick(
       payload: { ...nb, reason: 'turnover_reorganize' },
     });
     return {
-      narrative: pickLine('possession_switch', { min: ctx.minute, team: ctx.homeShort ?? 'Casa' }, ctx.minute)
-        ?? T.noCarrierRecycle({ min: ctx.minute, team: ctx.homeShort ?? 'Casa' }),
+      narrative: pickLine('possession_switch', { min: ctx.minute, team: ctx.homeShort ?? HOME_FALLBACK }, ctx.minute)
+        ?? T.noCarrierRecycle({ min: ctx.minute, team: ctx.homeShort ?? HOME_FALLBACK }),
       action: 'recycle',
       nextPossession: 'away',
       ball: nb,
@@ -1063,7 +1069,7 @@ export function gameSpiritTick(
       });
       const penaltyTakerId = ctx.onBall!.playerId;
       return {
-        narrative: pickLine('foul_hard', { min: ctx.minute, from: takerName, to: takerName, team: ctx.homeShort ?? 'Casa' }, ctx.minute)
+        narrative: pickLine('foul_hard', { min: ctx.minute, from: takerName, to: takerName, team: ctx.homeShort ?? HOME_FALLBACK }, ctx.minute)
           ?? T.foulPenalty({ min: ctx.minute, fouled: takerName }),
         action: 'recycle',
         nextPossession: ctx.possession,
@@ -1075,7 +1081,7 @@ export function gameSpiritTick(
           spiritOverlay: penaltyOverlayForStage(
             'banner',
             takerName,
-            ctx.homeShort ?? 'Casa',
+            ctx.homeShort ?? HOME_FALLBACK,
             awayShort,
             nowMs,
             2000,
@@ -1084,7 +1090,7 @@ export function gameSpiritTick(
       };
     }
     return {
-      narrative: pickLine(['foul_soft', 'free_kick'], { min: ctx.minute, from: takerName, to: takerName, team: ctx.homeShort ?? 'Casa' }, ctx.minute)
+      narrative: pickLine(['foul_soft', 'free_kick'], { min: ctx.minute, from: takerName, to: takerName, team: ctx.homeShort ?? HOME_FALLBACK }, ctx.minute)
         ?? T.foulFreeKick({ min: ctx.minute, fouled: takerName }),
       action: 'recycle',
       nextPossession: ctx.possession,
@@ -1105,8 +1111,8 @@ export function gameSpiritTick(
   if (action === 'shot' && ctx.possession === 'home' && !homeMayRegisterShot(ctx)) {
     action = 'progress';
   }
-  const name = ctx.possession === 'home' ? ctx.onBall?.name ?? ctx.homeShort ?? 'Casa' : awayShort;
-  let narrative = narrativeFor(action, name, ctx.minute, ctx.crowdPressure, ctx.homeShort ?? 'Casa', ctx.ballZone, ctx);
+  const name = ctx.possession === 'home' ? ctx.onBall?.name ?? ctx.homeShort ?? HOME_FALLBACK : awayShort;
+  let narrative = narrativeFor(action, name, ctx.minute, ctx.crowdPressure, ctx.homeShort ?? HOME_FALLBACK, ctx.ballZone, ctx);
   let next: PossessionSide = ctx.possession;
   let ball: PitchPoint = { ...ctx.ball };
   let goalFor: PossessionSide | undefined;
@@ -1382,8 +1388,8 @@ export function gameSpiritTick(
           scorerSide: 'home',
           minute: ctx.minute,
           buildUp: isCounter ? 'counter' : 'positional',
-          scorerName: ctx.onBall?.name ?? ctx.homeShort ?? 'Casa',
-          homeShort: ctx.homeShort ?? 'Casa',
+          scorerName: ctx.onBall?.name ?? ctx.homeShort ?? HOME_FALLBACK,
+          homeShort: ctx.homeShort ?? HOME_FALLBACK,
           awayShort,
           variant: logical === 'post_in' ? 'post_in' : undefined,
           nowMs,
@@ -1414,8 +1420,8 @@ export function gameSpiritTick(
           L.push({ type: 'possession_change', payload: { to: 'away', reason: 'after_block' } });
           next = patch.possession;
         }
-        narrative = pickLine('shot_blocked', { min: ctx.minute, from: ctx.onBall?.name ?? 'Atacante' }, ctx.minute)
-          ?? T.shotBlock({ min: ctx.minute, shooter: ctx.onBall?.name ?? 'Atacante' });
+        narrative = pickLine('shot_blocked', { min: ctx.minute, from: ctx.onBall?.name ?? ATTACKER_FALLBACK }, ctx.minute)
+          ?? T.shotBlock({ min: ctx.minute, shooter: ctx.onBall?.name ?? ATTACKER_FALLBACK });
         ball = patch.ball;
         spiritMeta = {
           spiritPhase: patch.spiritPhase,
@@ -1431,7 +1437,7 @@ export function gameSpiritTick(
         // adversário não acumula fadiga, então 0; live2D pode passar real.
         const gkFatigue01 = (awayGk?.fatigue ?? 0) / 100;
         const subtype = rollGkSaveSubtype(r(), gkSkill01, gkFatigue01);
-        const shooterName = ctx.onBall?.name ?? 'Atacante';
+        const shooterName = ctx.onBall?.name ?? ATTACKER_FALLBACK;
 
         if (subtype === 'error_goal') {
           // Falha do GK — vira gol da casa com narração própria.
@@ -1441,7 +1447,7 @@ export function gameSpiritTick(
             minute: ctx.minute,
             buildUp: isCounter ? 'counter' : 'positional',
             scorerName: shooterName,
-            homeShort: ctx.homeShort ?? 'Casa',
+            homeShort: ctx.homeShort ?? HOME_FALLBACK,
             awayShort,
             variant: 'keeper_error',
             nowMs,
@@ -1466,7 +1472,7 @@ export function gameSpiritTick(
           });
           // Bola volta pra casa no canto pra executar o escanteio.
           L.push({ type: 'possession_change', payload: { to: 'home', reason: 'after_save_corner' } });
-          narrative = `${ctx.minute}' — O goleiro espalma com as pontas dos dedos para escanteio! Boa chance para ${shooterName}.`;
+          narrative = Lx(`${ctx.minute}' — O goleiro espalma com as pontas dos dedos para escanteio! Boa chance para ${shooterName}.`, `${ctx.minute}' — The keeper fingertips it round for a corner! Good chance for ${shooterName}.`);
           next = 'home';
           ball = { x: 95, y: r() < 0.5 ? 8 : 92 };
           spiritMeta = {
@@ -1480,7 +1486,7 @@ export function gameSpiritTick(
             payload: { x: 82, y: 50, reason: 'keeper_parry_forward' },
           });
           L.push({ type: 'possession_change', payload: { to: 'home', reason: 'after_save_rebound' } });
-          narrative = `${ctx.minute}' — O goleiro espalma para frente, a bola fica viva na área — rebote perigoso para ${ctx.homeShort ?? 'Casa'}!`;
+          narrative = Lx(`${ctx.minute}' — O goleiro espalma para frente, a bola fica viva na área — rebote perigoso para ${ctx.homeShort ?? HOME_FALLBACK}!`, `${ctx.minute}' — The keeper parries it out, the ball's live in the box — dangerous rebound for ${ctx.homeShort ?? HOME_FALLBACK}!`);
           next = 'home';
           ball = { x: 82, y: 50 };
           spiritMeta = {
@@ -1511,8 +1517,8 @@ export function gameSpiritTick(
           payload: { ...patch.ball, reason: 'shot_wide_goal_kick' },
         });
         L.push({ type: 'possession_change', payload: { to: 'away', reason: 'after_shot_wide' } });
-        narrative = pickLine('shot_out', { min: ctx.minute, from: ctx.onBall?.name ?? 'Atacante' }, ctx.minute)
-          ?? T.shotWide({ min: ctx.minute, shooter: ctx.onBall?.name ?? 'Atacante', recoverer: awayShort });
+        narrative = pickLine('shot_out', { min: ctx.minute, from: ctx.onBall?.name ?? ATTACKER_FALLBACK }, ctx.minute)
+          ?? T.shotWide({ min: ctx.minute, shooter: ctx.onBall?.name ?? ATTACKER_FALLBACK, recoverer: awayShort });
         next = patch.possession;
         ball = patch.ball;
         spiritMeta = {
@@ -1601,8 +1607,8 @@ export function gameSpiritTick(
           y: 25 + r() * 50,
         };
         L.push({ type: 'ball_state', payload: { ...ball, reason: 'turnover_after_carry' } });
-        narrative = pickLine('pass_missed', { min: ctx.minute, from: ctx.onBall?.name ?? 'Casa' }, ctx.minute)
-          ?? T.progressLoss({ min: ctx.minute, loser: ctx.onBall?.name ?? 'Casa', winner: awayShort });
+        narrative = pickLine('pass_missed', { min: ctx.minute, from: ctx.onBall?.name ?? HOME_FALLBACK }, ctx.minute)
+          ?? T.progressLoss({ min: ctx.minute, loser: ctx.onBall?.name ?? HOME_FALLBACK, winner: awayShort });
       }
     } else {
       homeStat!.passesOk += 1;
@@ -1665,13 +1671,13 @@ export function gameSpiritTick(
         L.push({ type: 'possession_change', payload: { to: 'home', reason: 'tackle_clean' } });
         L.push({ type: 'ball_state', payload: { ...ball, reason: 'recovery_attack' } });
         narrative =
-          pickLine(['pressure_high', 'tackle_clean'], { min: ctx.minute, from: tacklerName, team: ctx.homeShort ?? 'Casa' }, ctx.minute)
-          ?? `${ctx.minute}' — ${tacklerName} rouba na divida limpa e ${ctx.homeShort ?? 'Casa'} sai no contra-ataque.`;
+          pickLine(['pressure_high', 'tackle_clean'], { min: ctx.minute, from: tacklerName, team: ctx.homeShort ?? HOME_FALLBACK }, ctx.minute)
+          ?? Lx(`${ctx.minute}' — ${tacklerName} rouba na divida limpa e ${ctx.homeShort ?? HOME_FALLBACK} sai no contra-ataque.`, `${ctx.minute}' — ${tacklerName} wins it cleanly and ${ctx.homeShort ?? HOME_FALLBACK} break on the counter.`);
       } else if (tackleOut === 'miss') {
         // Erro crítico — marcador passou batido, atacante segue.
         next = 'away';
         ball = { x: ctx.ball.x, y: ctx.ball.y };
-        narrative = `${ctx.minute}' — ${tacklerName} tenta o desarme, falha feio e ${victimName} escapa com a bola!`;
+        narrative = Lx(`${ctx.minute}' — ${tacklerName} tenta o desarme, falha feio e ${victimName} escapa com a bola!`, `${ctx.minute}' — ${tacklerName} goes for the tackle, misses badly and ${victimName} gets away!`);
       } else if (tackleOut === 'foul_soft') {
         // Falta forte — árbitro para o jogo, adversário reinicia na bola parada.
         next = 'away';
@@ -1690,8 +1696,8 @@ export function gameSpiritTick(
         });
         L.push({ type: 'ball_state', payload: { ...ball, reason: 'free_kick_against' } });
         narrative =
-          pickLine(['foul_soft'], { min: ctx.minute, from: tacklerName, to: victimName, team: ctx.homeShort ?? 'Casa' }, ctx.minute)
-          ?? `${ctx.minute}' — ${tacklerName} faz falta forte em ${victimName}. O árbitro para a partida.`;
+          pickLine(['foul_soft'], { min: ctx.minute, from: tacklerName, to: victimName, team: ctx.homeShort ?? HOME_FALLBACK }, ctx.minute)
+          ?? Lx(`${ctx.minute}' — ${tacklerName} faz falta forte em ${victimName}. O árbitro para a partida.`, `${ctx.minute}' — ${tacklerName} with a strong foul on ${victimName}. The referee stops play.`);
       } else {
         // foul_hard — agressão, falta grave. Vermelho/amarelo + chance de lesão narrada.
         next = 'away';
@@ -1710,8 +1716,8 @@ export function gameSpiritTick(
         });
         L.push({ type: 'ball_state', payload: { ...ball, reason: 'dangerous_foul' } });
         narrative =
-          pickLine(['foul_hard'], { min: ctx.minute, from: tacklerName, to: victimName, team: ctx.homeShort ?? 'Casa' }, ctx.minute)
-          ?? `${ctx.minute}' — Entrada agressiva de ${tacklerName}! Falta grave em ${victimName}, o árbitro já busca o cartão.`;
+          pickLine(['foul_hard'], { min: ctx.minute, from: tacklerName, to: victimName, team: ctx.homeShort ?? HOME_FALLBACK }, ctx.minute)
+          ?? Lx(`${ctx.minute}' — Entrada agressiva de ${tacklerName}! Falta grave em ${victimName}, o árbitro já busca o cartão.`, `${ctx.minute}' — Reckless challenge from ${tacklerName}! Bad foul on ${victimName}, the referee reaches for a card.`);
 
         // BUG FIX: pênalti pro away — antes só home gerava pênalti, away parecia
         // "cone" porque nunca era contemplado em foul perigoso na sua área.
@@ -1726,7 +1732,7 @@ export function gameSpiritTick(
           // Pega o melhor batedor disponível do away (atacante com pos ATA/PD/PE)
           const awayTaker = awayScorer;
           return {
-            narrative: `${ctx.minute}' — Pênalti pro ${awayShort}! ${tacklerName} derrubou ${awayTaker.name} na área.`,
+            narrative: Lx(`${ctx.minute}' — Pênalti pro ${awayShort}! ${tacklerName} derrubou ${awayTaker.name} na área.`, `${ctx.minute}' — Penalty to ${awayShort}! ${tacklerName} brings down ${awayTaker.name} in the box.`),
             action: 'recycle',
             nextPossession: 'away',
             ball: { ...ctx.ball },
@@ -1737,7 +1743,7 @@ export function gameSpiritTick(
               spiritOverlay: penaltyOverlayForStage(
                 'banner',
                 awayTaker.name,
-                ctx.homeShort ?? 'Casa',
+                ctx.homeShort ?? HOME_FALLBACK,
                 awayShort,
                 nowMs,
                 2000,
@@ -1790,7 +1796,7 @@ export function gameSpiritTick(
           minute: ctx.minute,
           buildUp: isCounter ? 'counter' : 'positional',
           scorerName: awayScorer.name,
-          homeShort: ctx.homeShort ?? 'Casa',
+          homeShort: ctx.homeShort ?? HOME_FALLBACK,
           awayShort,
           nowMs,
           L,
@@ -1855,8 +1861,8 @@ export function gameSpiritTick(
         if (r() < 0.35) {
           next = 'home';
           L.push({ type: 'possession_change', payload: { to: 'home', reason: 'away_turnover' } });
-          narrative = pickLine('possession_switch', { min: ctx.minute, team: ctx.homeShort ?? 'Casa' }, ctx.minute)
-            ?? T.turnover({ min: ctx.minute, team: ctx.homeShort ?? 'Casa' });
+          narrative = pickLine('possession_switch', { min: ctx.minute, team: ctx.homeShort ?? HOME_FALLBACK }, ctx.minute)
+            ?? T.turnover({ min: ctx.minute, team: ctx.homeShort ?? HOME_FALLBACK });
         }
       }
     }

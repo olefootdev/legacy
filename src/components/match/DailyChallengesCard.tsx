@@ -3,6 +3,7 @@ import { Trophy, Target, Flame, Shield, TrendingUp, Zap, Clock, Gift } from 'luc
 import type { DailyChallenge, ChallengeType } from '@/game/dailyChallenges';
 import { cn } from '@/lib/utils';
 
+import { L } from '@/i18n/L';
 interface DailyChallengesCardProps {
   challenges: DailyChallenge[];
   onClaimReward: (challengeId: string) => void;
@@ -50,7 +51,7 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
                 letterSpacing: '0.15em',
               }}
             >
-              Desafios Diários
+              {L('Desafios Diários', 'Daily Challenges')}
             </h3>
           </div>
           <div className="text-xs text-white/60">
@@ -123,12 +124,12 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
                           className="text-[10px] bg-neon-yellow text-black px-2 py-0.5 rounded font-bold uppercase whitespace-nowrap hover:bg-white transition-colors"
                           style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.1em' }}
                         >
-                          Resgatar +{challenge.reward} EXP
+                          {L('Resgatar', 'Claim')} +{challenge.reward} EXP
                         </motion.button>
                       )}
 
                       {challenge.claimed && (
-                        <span className="text-[10px] text-green-500 font-bold">✓ Resgatado</span>
+                        <span className="text-[10px] text-green-500 font-bold">✓ {L('Resgatado', 'Claimed')}</span>
                       )}
                     </div>
                   </div>
@@ -142,7 +143,7 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
         <div className="mt-3 pt-3 border-t border-white/10">
           <div className="flex items-center justify-between">
             <span className="text-xs text-white/60 uppercase" style={{ fontFamily: 'var(--font-display)' }}>
-              Progresso Total
+              {L('Progresso Total', 'Total Progress')}
             </span>
             <span className="text-sm text-neon-yellow font-bold tabular-nums">
               {earnedRewards}/{totalRewards} EXP
@@ -157,7 +158,7 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
             className="mt-3 bg-neon-yellow/15 border border-neon-yellow rounded-lg p-3 text-center"
           >
             <p className="text-xs text-neon-yellow font-bold uppercase" style={{ fontFamily: 'var(--font-display)' }}>
-              Todos os desafios completos
+              {L('Todos os desafios completos', 'All challenges complete')}
             </p>
           </motion.div>
         )}
@@ -181,7 +182,7 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
               letterSpacing: '0.2em',
             }}
           >
-            Desafios Diários
+            {L('Desafios Diários', 'Daily Challenges')}
           </h2>
         </div>
         <div className="h-1 w-20 bg-neon-yellow mx-auto mb-3" />
@@ -262,12 +263,12 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
                         className="bg-neon-yellow text-black px-4 py-1.5 rounded-lg font-bold uppercase text-sm whitespace-nowrap hover:bg-white transition-colors"
                         style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.1em' }}
                       >
-                        Resgatar +{challenge.reward} EXP
+                        {L('Resgatar', 'Claim')} +{challenge.reward} EXP
                       </motion.button>
                     )}
 
                     {challenge.claimed && (
-                      <span className="text-sm text-green-500 font-bold">✓ Resgatado</span>
+                      <span className="text-sm text-green-500 font-bold">✓ {L('Resgatado', 'Claimed')}</span>
                     )}
                   </div>
                 </div>
@@ -281,7 +282,7 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
       <div className="bg-card border border-neon-yellow/30 rounded-lg p-4">
         <div className="flex items-center justify-between">
           <span className="text-white uppercase font-bold" style={{ fontFamily: 'var(--font-display)' }}>
-            Total Disponível
+            {L('Total Disponível', 'Total Available')}
           </span>
           <span className="text-neon-yellow font-black text-2xl tabular-nums">
             {earnedRewards}/{totalRewards} EXP
@@ -296,7 +297,7 @@ export function DailyChallengesCard({ challenges, onClaimReward, compact = false
           className="mt-4 bg-neon-yellow/15 border-2 border-neon-yellow rounded-lg p-4 text-center"
         >
           <p className="text-neon-yellow font-bold uppercase" style={{ fontFamily: 'var(--font-display)' }}>
-            Todos os desafios completos
+            {L('Todos os desafios completos', 'All challenges complete')}
           </p>
         </motion.div>
       )}

@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Search, X } from 'lucide-react';
 import { LEGENDS_BY_SLUG, type LegendData } from '@/data/legends';
 import { Hashtag } from '@/components/ui';
+import { L } from '@/i18n/L';
 
 interface LegendSearchModalProps {
   open: boolean;
@@ -85,7 +86,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
           className="fixed inset-0 z-[200] flex items-start justify-center bg-deep-black/95"
           onClick={onClose}
           role="dialog"
-          aria-label="Buscar lendas"
+          aria-label={L('Buscar lendas', 'Search legends')}
           aria-modal="true"
         >
           <motion.div
@@ -107,7 +108,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Buscar lenda… (nome, epíteto, era)"
+                  placeholder={L('Buscar lenda… (nome, epíteto, era)', 'Search legend… (name, epithet, era)')}
                   className="min-w-0 flex-1 bg-transparent outline-none text-white placeholder:text-poeira"
                   style={{
                     fontFamily: 'var(--font-sans)',
@@ -122,9 +123,9 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                     onClick={() => setQuery('')}
                     className="text-cimento hover:text-white text-[11px] uppercase font-mono"
                     style={{ letterSpacing: '0.12em' }}
-                    aria-label="Limpar busca"
+                    aria-label={L('Limpar busca', 'Clear search')}
                   >
-                    Limpar
+                    {L('Limpar', 'Clear')}
                   </button>
                 ) : null}
               </div>
@@ -132,7 +133,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                 type="button"
                 onClick={onClose}
                 className="inline-flex items-center justify-center w-10 text-cimento hover:text-neon-yellow hover:bg-white/5 transition-colors"
-                aria-label="Fechar busca"
+                aria-label={L('Fechar busca', 'Close search')}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -140,9 +141,9 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
 
             {/* Eyebrow editorial */}
             <div className="flex items-center justify-between gap-2 px-1 mt-4 mb-2">
-              <Hashtag className="text-neon-yellow">#halldafama</Hashtag>
+              <Hashtag className="text-neon-yellow">{L('#halldafama', '#halloffame')}</Hashtag>
               <span className="shrink-0 font-mono text-cimento" style={{ fontSize: '10.5px' }}>
-                {filtered.length} {filtered.length === 1 ? 'lenda' : 'lendas'}
+                {filtered.length} {filtered.length === 1 ? L('lenda', 'legend') : L('lendas', 'legends')}
               </span>
             </div>
 
@@ -154,7 +155,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
               {filtered.length === 0 ? (
                 <div className="border border-dashed border-white/16 px-5 py-10 text-center">
                   <p className="text-cimento" style={{ fontSize: '15px' }}>
-                    Nenhuma lenda encontrada para "{query}".
+                    {L(`Nenhuma lenda encontrada para "${query}".`, `No legend found for "${query}".`)}
                   </p>
                 </div>
               ) : (
@@ -230,7 +231,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                           }`}
                           style={{ fontSize: '10.5px', letterSpacing: '0.12em' }}
                         >
-                          {isCurrent ? 'Aqui' : 'Ver →'}
+                          {isCurrent ? L('Aqui', 'Here') : L('Ver →', 'View →')}
                         </span>
                       </div>
                     </button>
@@ -244,7 +245,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
               className="text-center text-poeira mt-3 font-mono uppercase"
               style={{ fontSize: '10px', letterSpacing: '0.14em' }}
             >
-              ESC pra fechar
+              {L('ESC pra fechar', 'ESC to close')}
             </p>
           </motion.div>
         </motion.div>

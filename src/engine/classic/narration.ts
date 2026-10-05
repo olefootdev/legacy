@@ -1,6 +1,7 @@
 import type { ArchetypeId, EventType, MatchScore } from './types';
 import type { PlayerNarrativeProfile } from '@/gamespirit/playerNarrativeProfile';
 import { traitPhrase, moodPhrase } from '@/gamespirit/playerNarrativeProfile';
+import { L, emIngles } from '@/i18n/L';
 
 type NarrationMap = Partial<Record<EventType, string[]>>;
 type ArchetypeNarration = Partial<Record<ArchetypeId, NarrationMap>>;
@@ -106,6 +107,107 @@ const ARCHETYPE_NARRATION: ArchetypeNarration = {
   },
 };
 
+const ARCHETYPE_NARRATION_EN: ArchetypeNarration = {
+  MAESTRO: {
+    pass:  [
+      '{name} distributes with surgical precision.',
+      '{name} opens up the pitch with a master\'s pass.',
+      '{name} controls the tempo — everything goes through him.',
+      '{name} sees the lane before anyone else.',
+    ],
+    shot:  ['{name} tries it from mid-range!', '{name} surprises with a long-range shot!'],
+  },
+  WILD: {
+    shot:  [
+      '{name} lets fly from distance — no second thoughts!',
+      '{name} tries the impossible!',
+      '{name} fires from outside the box!',
+      '{name} doesn\'t think — hits it with everything!',
+    ],
+    pass:  ['{name} tries the risky pass.', '{name} forces the play — high risk!'],
+    foul:  ['{name} goes in hard — nasty foul!', '{name} doesn\'t care about the consequences!'],
+  },
+  VETERAN: {
+    pass:  [
+      '{name} calms the game with experience.',
+      '{name} runs the show — a true veteran.',
+      '{name} organises the team calmly.',
+      '{name} reads the game before anyone else.',
+    ],
+    tackle: ['{name} reads the play before anyone else.', '{name} anticipates with years of wisdom.'],
+    interception: ['{name} was there before the ball arrived.'],
+  },
+  FINISHER: {
+    shot:  [
+      '{name} shoots — perfect position!',
+      '{name} doesn\'t waste the chance!',
+      '{name} was waiting for this moment!',
+      '{name} shoots with the cool of someone who lives for goals!',
+    ],
+    goal:  [
+      '{name} makes no mistake! GOAL!',
+      '{name} froze the keeper — pure instinct!',
+      '{name} was in the right place — GOAL!',
+      'GOAL! {name} — the finisher does what he knows!',
+      '{name} scores like he was born to do it!',
+    ],
+  },
+  DESTROYER: {
+    tackle: [
+      '{name} stops it by force — attack destroyed.',
+      '{name} goes in hard and clean.',
+      '{name} lets nothing through — destroyer in action!',
+    ],
+    foul:  ['{name} forces the error — tactical foul.', '{name} stops the counter with pure grit!'],
+    interception: ['{name} wins the ball with authority!'],
+  },
+  HUNTER: {
+    interception: [
+      '{name} anticipates and steals the ball!',
+      '{name} reads the pass and intercepts!',
+      '{name} was in the right lane — interception!',
+    ],
+    pressure: [
+      '{name} presses high — no breathing room for the opponent.',
+      '{name} hunts the ball non-stop!',
+    ],
+    tackle: ['{name} wins it back with intensity!'],
+  },
+  BOX_INVADER: {
+    shot:  [
+      '{name} bursts into the box — shoots!',
+      '{name} with the header — perfect timing!',
+      '{name} appears in the box like a ghost!',
+    ],
+    cross: ['{name} takes up position at the back post.', '{name} attacks the space in the box!'],
+    goal:  [
+      'GOAL! {name} bursts into the box and makes no mistake!',
+      '{name} was in the right place — goal from inside the box!',
+    ],
+  },
+  ENGINE: {
+    pass:  [
+      '{name} links the play — the team\'s engine.',
+      '{name} covers every blade of grass.',
+      '{name} never stops — connects the team!',
+    ],
+    tackle: ['{name} wins it and moves it on — tireless engine!'],
+    pressure: ['{name} presses and wins it back — full energy!'],
+  },
+  COLD_BLOOD: {
+    shot:  [
+      '{name} no emotion — finishes coolly.',
+      '{name} calculates everything before shooting.',
+    ],
+    goal:  [
+      '{name} ice in his veins — GOAL!',
+      'GOAL! {name} — absolute composure in front of goal!',
+      '{name} didn\'t feel the pressure — GOAL!',
+    ],
+    pass:  ['{name} distributes without hurry — total control.'],
+  },
+};
+
 // Context-aware narration layers
 function contextNarration(
   type: EventType,
@@ -129,31 +231,31 @@ function contextNarration(
   const tightGame   = Math.abs(score.home - score.away) <= 1 && minute > 60;
 
   if (type === 'pass' && isOpening) {
-    return `${team} começa a construir — primeiros toques do jogo.`;
+    return L(`${team} começa a construir — primeiros toques do jogo.`, `${team} starts building — first touches of the game.`);
   }
   if (type === 'pressure' && isOpening) {
-    return `${name} pressiona desde o início — ${team} quer impor o ritmo.`;
+    return L(`${name} pressiona desde o início — ${team} quer impor o ritmo.`, `${name} presses from the start — ${team} want to set the tempo.`);
   }
   if (type === 'pass' && isHalfTime && !isUrgent) {
-    return `${name} circula antes do intervalo — ${team} administra.`;
+    return L(`${name} circula antes do intervalo — ${team} administra.`, `${name} keeps it moving before half-time — ${team} manage the game.`);
   }
   if (type === 'shot' && isHalfTime) {
-    return `${name} tenta antes do apito — ${team} quer o gol do intervalo!`;
+    return L(`${name} tenta antes do apito — ${team} quer o gol do intervalo!`, `${name} tries before the whistle — ${team} want a goal before the break!`);
   }
   if (type === 'pass' && isFinalPush && tightGame) {
-    return `${name} mantém a posse — cada toque vale ouro agora.`;
+    return L(`${name} mantém a posse — cada toque vale ouro agora.`, `${name} keeps possession — every touch is gold now.`);
   }
   if (type === 'tackle' && isFinalPush) {
-    return `${name} não deixa o adversário respirar — pressão total nos minutos finais!`;
+    return L(`${name} não deixa o adversário respirar — pressão total nos minutos finais!`, `${name} gives the opponent no air — full pressure in the closing minutes!`);
   }
   if (type === 'pass' && isExtraTime) {
-    return `${name} circula nos acréscimos — ${team} segura o resultado.`;
+    return L(`${name} circula nos acréscimos — ${team} segura o resultado.`, `${name} keeps it moving in stoppage time — ${team} hold on to the result.`);
   }
   if (type === 'shot' && isExtraTime) {
-    return `${name} CHUTA NOS ACRÉSCIMOS — pode ser o gol da vitória!`;
+    return L(`${name} CHUTA NOS ACRÉSCIMOS — pode ser o gol da vitória!`, `${name} SHOOTS IN STOPPAGE TIME — this could be the winner!`);
   }
   if (type === 'duel') {
-    return `${name} entra no duelo — briga pela bola sem sair do lugar!`;
+    return L(`${name} entra no duelo — briga pela bola sem sair do lugar!`, `${name} goes into the duel — fights for the ball without giving ground!`);
   }
 
   if (type === 'goal') {
@@ -161,57 +263,57 @@ function contextNarration(
     if (profile) {
       const { trait, mood, cognitiveArchetype, isLegacy, cardArchetype } = profile;
 
-      if (isLegacy) return `A LENDA FALA! ${name} marca — ${team} explode!`;
+      if (isLegacy) return L(`A LENDA FALA! ${name} marca — ${team} explode!`, `THE LEGEND SPEAKS! ${name} scores — ${team} erupt!`);
 
       if (isUrgent && trait === 'sangue_frio') {
-        return `${name} EMPATA COM FRIEZA TOTAL! ${team} ACREDITA! GOOOL!`;
+        return L(`${name} EMPATA COM FRIEZA TOTAL! ${team} ACREDITA! GOOOL!`, `${name} EQUALISES, ICE COLD! ${team} BELIEVE! GOAL!`);
       }
       if (isUrgent && mood === 'em_chamas') {
-        return `${name} EM CHAMAS EMPATA! ${team} NÃO DESISTE! GOOOL!`;
+        return L(`${name} EM CHAMAS EMPATA! ${team} NÃO DESISTE! GOOOL!`, `${name} ON FIRE EQUALISES! ${team} NEVER GIVE UP! GOAL!`);
       }
       if (isUrgent && trait === 'guerreiro') {
-        return `${name} NA RAÇA! ${team} EMPATA! GOOOL!`;
+        return L(`${name} NA RAÇA! ${team} EMPATA! GOOOL!`, `${name} WITH PURE GRIT! ${team} EQUALISE! GOAL!`);
       }
       if (isFirstGoal && cognitiveArchetype === 'finalizador') {
-        return `${team} ABRE O PLACAR! ${name} — instinto de finalizador!`;
+        return L(`${team} ABRE O PLACAR! ${name} — instinto de finalizador!`, `${team} OPEN THE SCORING! ${name} — a finisher's instinct!`);
       }
       if (isFirstGoal && cardArchetype === 'novo_talento') {
-        return `${team} ABRE O PLACAR! O jovem ${name} marca primeiro!`;
+        return L(`${team} ABRE O PLACAR! O jovem ${name} marca primeiro!`, `${team} OPEN THE SCORING! Young ${name} strikes first!`);
       }
-      if (isClosing) return `GOOOL NOS ACRÉSCIMOS! ${name} — ${team}!`;
+      if (isClosing) return L(`GOOOL NOS ACRÉSCIMOS! ${name} — ${team}!`, `STOPPAGE-TIME GOAL! ${name} — ${team}!`);
     }
 
-    if (isFirstGoal && isOpening) return `GOOOL RELÂMPAGO! ${name} MARCA LOGO DE INÍCIO — ${team}!`;
-    if (isFirstGoal) return `${team} ABRE O PLACAR! ${name} MARCA O PRIMEIRO!`;
-    if (isUrgent) return `${name} EMPATA! ${team} ACREDITA! GOOOL!`;
-    if (isClosing) return `GOOOL NOS ACRÉSCIMOS! ${name} — ${team}!`;
-    if (tightGame) return `GOOOL! ${name} QUEBRA O EQUILÍBRIO — ${team} NA FRENTE!`;
+    if (isFirstGoal && isOpening) return L(`GOOOL RELÂMPAGO! ${name} MARCA LOGO DE INÍCIO — ${team}!`, `LIGHTNING GOAL! ${name} SCORES RIGHT FROM THE START — ${team}!`);
+    if (isFirstGoal) return L(`${team} ABRE O PLACAR! ${name} MARCA O PRIMEIRO!`, `${team} OPEN THE SCORING! ${name} GETS THE FIRST!`);
+    if (isUrgent) return L(`${name} EMPATA! ${team} ACREDITA! GOOOL!`, `${name} EQUALISES! ${team} BELIEVE! GOAL!`);
+    if (isClosing) return L(`GOOOL NOS ACRÉSCIMOS! ${name} — ${team}!`, `STOPPAGE-TIME GOAL! ${name} — ${team}!`);
+    if (tightGame) return L(`GOOOL! ${name} QUEBRA O EQUILÍBRIO — ${team} NA FRENTE!`, `GOAL! ${name} BREAKS THE DEADLOCK — ${team} IN FRONT!`);
     return null;
   }
 
   if (type === 'shot' && isUrgent) {
     if (profile?.trait === 'finalizador') {
-      return `${name} PRECISA FAZER ISSO AGORA — finaliza com o instinto do goleador!`;
+      return L(`${name} PRECISA FAZER ISSO AGORA — finaliza com o instinto do goleador!`, `${name} HAS TO DO IT NOW — shoots with a goalscorer's instinct!`);
     }
-    return `${name} PRECISA FAZER ISSO AGORA — finaliza com tudo!`;
+    return L(`${name} PRECISA FAZER ISSO AGORA — finaliza com tudo!`, `${name} HAS TO DO IT NOW — shoots with everything!`);
   }
 
   if (type === 'pass' && isClosing && losingTeam !== team) {
     if (profile?.trait === 'experiente') {
-      return `${team} administra. ${name} — veterano — esfria o jogo.`;
+      return L(`${team} administra. ${name} — veterano — esfria o jogo.`, `${team} manage it. ${name} — the veteran — slows the game down.`);
     }
-    return `${team} administra. ${name} esfria o jogo.`;
+    return L(`${team} administra. ${name} esfria o jogo.`, `${team} manage it. ${name} slows the game down.`);
   }
 
   if (type === 'pressure' && minute > 75) {
     if (profile?.trait === 'guerreiro') {
-      return `${team} aperta! ${name} não para de correr — pressão total!`;
+      return L(`${team} aperta! ${name} não para de correr — pressão total!`, `${team} turn up the heat! ${name} never stops running — full pressure!`);
     }
-    return `${team} aperta! Pressão total nos minutos finais.`;
+    return L(`${team} aperta! Pressão total nos minutos finais.`, `${team} turn up the heat! Full pressure in the closing minutes.`);
   }
 
   if (type === 'tackle' && profile?.mood === 'em_chamas') {
-    return `${name} em chamas — recupera a bola com autoridade!`;
+    return L(`${name} em chamas — recupera a bola com autoridade!`, `${name} on fire — wins the ball back with authority!`);
   }
 
   return null;
@@ -242,6 +344,33 @@ const GENERAL_NARRATION: Record<string, string[]> = {
   duel_win:     ['{name} ganha o duelo sem sair do lugar!', '{name} segura a posição — duelo ganho!', '{name} firme — recupera a bola no duelo!'],
 };
 
+const GENERAL_NARRATION_EN: Record<string, string[]> = {
+  goal:         ['GOAL FOR {team}! {name} SCORES!', '{team} SCORE! GOAL!', 'IT\'S A GOAL! {name} — {team}!'],
+  danger:       ['Box under threat!', 'Danger for {team}!', 'Dangerous cross into the box!'],
+  pressure:     ['{team} squeeze the midfield.', 'Intensity rising on the pitch.', '{name} won\'t let the opponent play out.'],
+  corner:       ['Corner to {team}.', 'Ball into the box — {team} corner.'],
+  foul:         ['Foul. Play stopped.', 'Referee whistles — {name} brings his man down.'],
+  pass:         ['{name} receives and distributes.', 'Ball moved around by {team}.', '{name} controls and finds a teammate.'],
+  shot:         ['{team} shoot!', '{name} shoots!', 'Shot from inside the box — {team}!'],
+  tackle:       ['{name} gets there first!', 'Midfield battle — {name} wins it.', 'Intense physical duel.'],
+  interception: ['{name} intercepts smartly!', 'Interception — {team} win the ball back!'],
+  cross:        ['Cross into the box!', 'Ball lofted in — {team} attack!', '{name} crosses into the box.'],
+  save:         ['Goalkeeper saves!', 'Tough save — almost a goal!', '{name} denied by the keeper.', 'Goalkeeper parries {name}\'s shot!'],
+  post:         ['OFF THE POST! {name} so close!', 'The ball smashes off the post!', 'Inches — it hits the woodwork!'],
+  wide:         ['Wide! {name} blazed it over.', '{name} shoots — just wide!', 'Into the stands — {name} wasted it.'],
+  rebound:      ['Rebound in the box — play on!', '{name} shot, it dropped in the box.', 'Ball live after a partial save.'],
+  blocked:      ['Shot blocked by the defence!', '{name} shoots — defender blocks!', 'Solid block — {team} stop the shot!', 'Body on the line! Defender denies {name}!'],
+  duel:         ['{name} fights for the ball — duel on the pitch!', '{name} holds his ground — intense battle!', 'Physical duel — {name} holds position!'],
+  tiktak:       ['{name} first time — tiki-taka in midfield!', '{name} one-touch — quick circulation!', 'One touch — {name} speeds up the game!'],
+  long_ball:    ['{name} switches play — long ball!', '{name} changes the game with a diagonal ball!', 'Long ball from {name} — switches the flank!'],
+  false9:       ['{name} holds, turns and shoots — false 9 in action!', '{name} drops deep, creates space and shoots!', 'False 9! {name} fools the defence and shoots!'],
+  forced_shot:  ['{name} has to shoot — attacking zone!', '{name} has no way out — shoots!', '{name} in the box — has to shoot!'],
+  duel_win:     ['{name} wins the duel without giving ground!', '{name} holds position — duel won!', '{name} stands firm — wins the ball in the duel!'],
+};
+
+const ARCH_NARR = emIngles() ? ARCHETYPE_NARRATION_EN : ARCHETYPE_NARRATION;
+const GEN_NARR = emIngles() ? GENERAL_NARRATION_EN : GENERAL_NARRATION;
+
 function pick(arr: string[]): string {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -262,7 +391,7 @@ export function generateNarration(
 ): string {
   // 0. Gatilho tático especial — narração específica da mecânica
   if (tacticalTrigger && tacticalTrigger !== null) {
-    const triggerLines = GENERAL_NARRATION[tacticalTrigger];
+    const triggerLines = GEN_NARR[tacticalTrigger];
     if (triggerLines) return fill(pick(triggerLines), { name, team });
   }
 
@@ -278,7 +407,7 @@ export function generateNarration(
 
   // 3. Archetype layer (engine Classic)
   if (archetype) {
-    const archetypeMap = ARCHETYPE_NARRATION[archetype];
+    const archetypeMap = ARCH_NARR[archetype];
     if (archetypeMap) {
       const templates = archetypeMap[type];
       if (templates && templates.length > 0) {
@@ -288,9 +417,9 @@ export function generateNarration(
   }
 
   // 4. General fallback
-  const general = GENERAL_NARRATION[type];
+  const general = GEN_NARR[type];
   if (general) return fill(pick(general), { name, team });
-  return fill('{name} participa da jogada.', { name, team });
+  return fill(L('{name} participa da jogada.', '{name} is involved in the play.'), { name, team });
 }
 
 /**
@@ -309,24 +438,24 @@ function profileNarration(
 
   // Gol — frases mais ricas possíveis
   if (type === 'goal') {
-    if (isLegacy) return `A LENDA MARCA! ${name}${mp} — GOOOL!`;
+    if (isLegacy) return L(`A LENDA MARCA! ${name}${mp} — GOOOL!`, `THE LEGEND SCORES! ${name}${mp} — GOAL!`);
     if (trait === 'finalizador' && attrs.finalizacao >= 82) {
-      return `GOOOL! ${tp} faz o que sabe — finalização perfeita!`;
+      return L(`GOOOL! ${tp} faz o que sabe — finalização perfeita!`, `GOAL! ${tp} does what he does best — perfect finish!`);
     }
     if (trait === 'sangue_frio' && minute > 70) {
-      return `GOOOL! ${tp} decide sem sentir a pressão!`;
+      return L(`GOOOL! ${tp} decide sem sentir a pressão!`, `GOAL! ${tp} decides it without feeling the pressure!`);
     }
     if (mood === 'em_chamas') {
-      return `GOOOL! ${name} em chamas — imparável hoje!`;
+      return L(`GOOOL! ${name} em chamas — imparável hoje!`, `GOAL! ${name} on fire — unstoppable today!`);
     }
     if (cognitiveArchetype === 'finalizador') {
-      return `GOOOL! ${name} — instinto puro de finalizador!`;
+      return L(`GOOOL! ${name} — instinto puro de finalizador!`, `GOAL! ${name} — pure finisher's instinct!`);
     }
     if (trait === 'guerreiro' && fatigue > 70) {
-      return `GOOOL! ${name} no limite do cansaço — mas não desiste!`;
+      return L(`GOOOL! ${name} no limite do cansaço — mas não desiste!`, `GOAL! ${name} running on empty — but never gives up!`);
     }
     if (trait === 'imprevisivel') {
-      return `GOOOL! ${name} surpreende todo mundo — impossível de prever!`;
+      return L(`GOOOL! ${name} surpreende todo mundo — impossível de prever!`, `GOAL! ${name} surprises everyone — impossible to read!`);
     }
     return null;
   }
@@ -334,16 +463,16 @@ function profileNarration(
   // Chute
   if (type === 'shot') {
     if (trait === 'finalizador' && attrs.finalizacao >= 80) {
-      return `${tp} finaliza com a precisão que é sua marca!`;
+      return L(`${tp} finaliza com a precisão que é sua marca!`, `${tp} finishes with his trademark precision!`);
     }
     if (mood === 'em_chamas') {
-      return `${name}${mp} — chuta com tudo!`;
+      return L(`${name}${mp} — chuta com tudo!`, `${name}${mp} — shoots with everything!`);
     }
     if (trait === 'imprevisivel') {
-      return `${name} arrisca de onde ninguém esperava!`;
+      return L(`${name} arrisca de onde ninguém esperava!`, `${name} tries it from where no one expected!`);
     }
     if (fatigue > 78 && attrs.mentalidade >= 70) {
-      return `${name} cansado, mas não desiste — finaliza!`;
+      return L(`${name} cansado, mas não desiste — finaliza!`, `${name} tired, but never gives up — shoots!`);
     }
     return null;
   }
@@ -351,13 +480,13 @@ function profileNarration(
   // Passe
   if (type === 'pass') {
     if (trait === 'criativo' && attrs.passe >= 78) {
-      return `${tp} enxerga o corredor e distribui com classe.`;
+      return L(`${tp} enxerga o corredor e distribui com classe.`, `${tp} spots the lane and distributes with class.`);
     }
     if (cognitiveArchetype === 'construtor') {
-      return `${name} constrói a jogada com paciência.`;
+      return L(`${name} constrói a jogada com paciência.`, `${name} builds the move patiently.`);
     }
     if (trait === 'experiente') {
-      return `${tp} esfria o jogo — leitura de veterano.`;
+      return L(`${tp} esfria o jogo — leitura de veterano.`, `${tp} slows the game down — a veteran's read.`);
     }
     return null;
   }
@@ -365,16 +494,16 @@ function profileNarration(
   // Desarme / interceptação
   if (type === 'tackle' || type === 'interception') {
     if (trait === 'destruidor') {
-      return `${tp} para a jogada na força!`;
+      return L(`${tp} para a jogada na força!`, `${tp} stops the move by force!`);
     }
     if (cognitiveArchetype === 'destruidor') {
-      return `${name} antecipa e corta — destruidor em ação!`;
+      return L(`${name} antecipa e corta — destruidor em ação!`, `${name} reads it and cuts it out — destroyer in action!`);
     }
     if (trait === 'guerreiro') {
-      return `${name} não para de lutar — recupera a bola!`;
+      return L(`${name} não para de lutar — recupera a bola!`, `${name} never stops fighting — wins the ball back!`);
     }
     if (mood === 'em_chamas') {
-      return `${name}${mp} — intercepta com autoridade!`;
+      return L(`${name}${mp} — intercepta com autoridade!`, `${name}${mp} — intercepts with authority!`);
     }
     return null;
   }
@@ -382,10 +511,10 @@ function profileNarration(
   // Pressão
   if (type === 'pressure') {
     if (trait === 'guerreiro' && attrs.fisico >= 72) {
-      return `${name} não para de correr — pressão constante!`;
+      return L(`${name} não para de correr — pressão constante!`, `${name} never stops running — constant pressure!`);
     }
     if (cognitiveArchetype === 'destruidor') {
-      return `${name} caça a bola sem descanso!`;
+      return L(`${name} caça a bola sem descanso!`, `${name} hunts the ball relentlessly!`);
     }
     return null;
   }
@@ -393,10 +522,10 @@ function profileNarration(
   // Falta
   if (type === 'foul') {
     if (trait === 'agressivo') {
-      return `${name} entra com tudo — falta dura!`;
+      return L(`${name} entra com tudo — falta dura!`, `${name} goes in hard — nasty foul!`);
     }
     if (fatigue > 75) {
-      return `${name} cansado comete a falta — desgaste visível.`;
+      return L(`${name} cansado comete a falta — desgaste visível.`, `${name}, tired, commits the foul — visible fatigue.`);
     }
     return null;
   }

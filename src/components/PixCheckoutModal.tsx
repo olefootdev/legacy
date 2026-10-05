@@ -34,6 +34,7 @@ import {
   type ProductKind,
   type CreatePixResult,
 } from '@/payments/pixClient';
+import { L, LOCALE, emIngles } from '@/i18n/L';
 
 interface Props {
   open: boolean;
@@ -62,7 +63,7 @@ interface Props {
 type Stage = 'form' | 'loading' | 'waiting' | 'paid' | 'expired' | 'error';
 
 function fmtBrl(cents: number): string {
-  return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
+  return emIngles() ? `R$ ${(cents / 100).toFixed(2)}` : `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 }
 
 /**
@@ -83,15 +84,15 @@ function friendlyCheckoutError(raw?: string): string {
     e.includes('502') ||
     e.includes('503')
   ) {
-    return 'O pagamento via PIX está temporariamente indisponível. Tente novamente em alguns minutos — se persistir, fale com o suporte.';
+    return L('O pagamento via PIX está temporariamente indisponível. Tente novamente em alguns minutos — se persistir, fale com o suporte.', 'Pix payment is temporarily unavailable. Try again in a few minutes — if it persists, contact support.');
   }
   if (e.includes('unauthenticated') || e.includes('unauthorized') || e.includes('401')) {
-    return 'Sua sessão expirou. Entre novamente e refaça a compra.';
+    return L('Sua sessão expirou. Entre novamente e refaça a compra.', 'Your session expired. Log in again and redo the purchase.');
   }
   if (e.includes('cpf') || e.includes('tax') || e.includes('pagador') || e.includes('inválid')) {
-    return 'Confira os dados do pagador (nome, e-mail e CPF) e tente de novo.';
+    return L('Confira os dados do pagador (nome, e-mail e CPF) e tente de novo.', "Check the payer's details (name, email and CPF) and try again.");
   }
-  return 'Não foi possível gerar o PIX agora. Tente novamente em instantes.';
+  return L('Não foi possível gerar o PIX agora. Tente novamente em instantes.', "Couldn't generate the Pix right now. Try again shortly.");
 }
 
 // Pré-preenchimento do checkout PIX — guarda NOME e E-MAIL entre compras.
@@ -131,7 +132,7 @@ function writePixPrefill(v: PixPrefill): void {
 function Entrega({ valor }: { valor: string }) {
   return (
     <div className="flex min-w-0 items-baseline justify-between gap-3 border border-white/10 bg-deep-black px-3 py-2.5">
-      <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-white/50">Você recebe</span>
+      <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-white/50">{L('Você recebe', 'You get')}</span>
       <span className="ole-num min-w-0 truncate text-[15px] text-white tabular-nums">{valor}</span>
     </div>
   );
@@ -158,7 +159,7 @@ export function PixCheckoutModal({
   metadata,
   title,
   description,
-  paidMessage = 'Pagamento recebido e entregue.',
+  paidMessage = L('Pagamento recebido e entregue.', 'Payment received and delivered.'),
   defaultName = '',
   defaultEmail = '',
   onClose,
@@ -300,7 +301,7 @@ export function PixCheckoutModal({
             <div className="flex items-start justify-between gap-3 p-5 border-b border-white/10">
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] text-neon-yellow uppercase tracking-[0.22em] font-display font-black mb-1">
-                  Pagamento PIX
+                  {L('Pagamento PIX', 'Pix payment')}
                 </p>
                 <h3 className="font-display text-lg font-black uppercase tracking-wide text-white truncate">
                   {title}
@@ -309,14 +310,14 @@ export function PixCheckoutModal({
                 <p className="text-[10px] text-cimento mt-1 font-bold tabular-nums">
                   {/* Depois da cobrança criada, o valor que vale é o do servidor —
                       é ele que está no QR (card: preço USDT × cotação da hora). */}
-                  Valor: <span className="text-white text-base">{fmtBrl(charge?.amountCents ?? amountCents)}</span>
+                  {L('Valor', 'Amount')}: <span className="text-white text-base">{fmtBrl(charge?.amountCents ?? amountCents)}</span>
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleClose}
                 className="rounded-sm p-2 text-gray-500 hover:bg-white/10 hover:text-white transition-colors"
-                aria-label="Fechar"
+                aria-label={L('Fechar', 'Close')}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -327,19 +328,19 @@ export function PixCheckoutModal({
               {stage === 'form' && (
                 <div className="space-y-3">
                   <p className="text-xs text-white/60">
-                    Dados de cobrança (necessários pela Receita Federal):
+                    {L('Dados de cobrança (necessários pela Receita Federal):', 'Billing details (required by Brazilian tax authorities):')}
                   </p>
 
                   <div>
                     <label className="text-[10px] uppercase tracking-wider text-white/50 font-display font-bold block mb-1">
-                      Nome completo
+                      {L('Nome completo', 'Full name')}
                     </label>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="w-full bg-deep-black border border-white/15 rounded-sm px-3 py-2.5 text-white focus:border-neon-yellow focus:outline-none"
-                      placeholder="Como aparece no documento"
+                      placeholder={L('Como aparece no documento', 'As it appears on your ID')}
                     />
                   </div>
 
@@ -352,7 +353,7 @@ export function PixCheckoutModal({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full bg-deep-black border border-white/15 rounded-sm px-3 py-2.5 text-white focus:border-neon-yellow focus:outline-none"
-                      placeholder="seu@email.com"
+                      placeholder={L('seu@email.com', 'you@email.com')}
                     />
                   </div>
 
@@ -374,13 +375,13 @@ export function PixCheckoutModal({
                       maxLength={14}
                     />
                     {cpf.length > 0 && !cpfValid && (
-                      <p className="text-[10px] text-baixa mt-1">CPF inválido</p>
+                      <p className="text-[10px] text-baixa mt-1">{L('CPF inválido', 'Invalid CPF')}</p>
                     )}
                   </div>
 
                   <div>
                     <label className="text-[10px] uppercase tracking-wider text-white/50 font-display font-bold block mb-1">
-                      Telefone (opcional)
+                      {L('Telefone (opcional)', 'Phone (optional)')}
                     </label>
                     <input
                       type="tel"
@@ -398,12 +399,12 @@ export function PixCheckoutModal({
                     disabled={!formValid}
                     className="w-full bg-neon-yellow hover:bg-white text-black py-3.5 mt-2 rounded-sm font-display text-sm font-black uppercase tracking-[0.18em] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    Gerar PIX
+                    {L('Gerar PIX', 'Generate Pix')}
                   </button>
 
                   <p className="text-[10px] text-white/40 text-center mt-2 inline-flex items-center gap-1.5 justify-center w-full">
                     <ShieldCheck className="w-3 h-3" />
-                    Processado pelo Mercado Pago · pagamento seguro
+                    {L('Processado pelo Mercado Pago · pagamento seguro', 'Processed by Mercado Pago · secure payment')}
                   </p>
                 </div>
               )}
@@ -412,7 +413,7 @@ export function PixCheckoutModal({
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
                   <Loader2 className="w-8 h-8 text-neon-yellow animate-spin" />
                   <p className="text-sm text-white/70 font-display uppercase tracking-wider">
-                    Gerando seu PIX…
+                    {L('Gerando seu PIX…', 'Generating your Pix…')}
                   </p>
                 </div>
               )}
@@ -428,7 +429,7 @@ export function PixCheckoutModal({
                             ? charge.brCodeBase64
                             : `data:image/png;base64,${charge.brCodeBase64}`
                         }
-                        alt="QR Code PIX"
+                        alt={L('QR Code PIX', 'Pix QR code')}
                         className="w-48 h-48"
                       />
                     </div>
@@ -443,7 +444,7 @@ export function PixCheckoutModal({
                   {/* Copy-paste */}
                   <div>
                     <label className="text-[10px] uppercase tracking-wider text-white/50 font-display font-bold block mb-1">
-                      Copia e cola PIX
+                      {L('Copia e cola PIX', 'Pix copy and paste')}
                     </label>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 min-w-0 bg-deep-black border border-white/15 rounded-sm px-3 py-2.5">
@@ -455,14 +456,14 @@ export function PixCheckoutModal({
                         type="button"
                         onClick={handleCopyBrCode}
                         className="shrink-0 bg-neon-yellow hover:bg-white text-black px-3 py-2.5 rounded-sm transition-colors"
-                        aria-label="Copiar código PIX"
+                        aria-label={L('Copiar código PIX', 'Copy Pix code')}
                       >
                         {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       </button>
                     </div>
                     {copied && (
                       <p className="text-[10px] text-alta mt-1 inline-flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Código copiado
+                        <CheckCircle2 className="w-3 h-3" /> {L('Código copiado', 'Code copied')}
                       </p>
                     )}
                   </div>
@@ -470,40 +471,40 @@ export function PixCheckoutModal({
                   {/* O que este Pix entrega — número do SERVIDOR, com a cotação
                       congelada. É o que vai ser creditado, não uma prévia. */}
                   {charge.entrega?.broCents != null && (
-                    <Entrega valor={`${(charge.entrega.broCents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BRO`} />
+                    <Entrega valor={`${(charge.entrega.broCents / 100).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BRO`} />
                   )}
                   {charge.entrega?.olefoot != null && (
-                    <Entrega valor={`${charge.entrega.olefoot.toLocaleString('pt-BR')} OLEFOOT`} />
+                    <Entrega valor={`${charge.entrega.olefoot.toLocaleString(LOCALE)} OLEFOOT`} />
                   )}
                   {(charge.entrega?.satelites ?? 0) > 0 && (
-                    <Entrega valor={`+ ${charge.entrega!.satelites} contas de $10 · 1 em cada time`} />
+                    <Entrega valor={L(`+ ${charge.entrega!.satelites} contas de $10 · 1 em cada time`, `+ ${charge.entrega!.satelites} $10 accounts · 1 in each team`)} />
                   )}
 
                   {/* Countdown + polling status */}
                   <div className="flex items-center justify-between bg-deep-black border border-white/10 rounded-sm px-3 py-2">
                     <span className="text-[10px] text-white/50 uppercase tracking-wider inline-flex items-center gap-1.5">
                       <Clock className="w-3 h-3" />
-                      Expira em
+                      {L('Expira em', 'Expires in')}
                     </span>
                     <span className="font-display text-sm font-black text-neon-yellow tabular-nums">
-                      {countdown > 0 ? formatCountdown(countdown) : 'expirado'}
+                      {countdown > 0 ? formatCountdown(countdown) : L('expirado', 'expired')}
                     </span>
                   </div>
 
                   <div className="bg-deep-black border border-white/10 rounded-sm p-3 flex items-start gap-2">
                     <Loader2 className="w-4 h-4 text-giz animate-spin shrink-0 mt-0.5" />
                     <p className="text-[11px] text-giz leading-snug">
-                      Aguardando confirmação do banco…
+                      {L('Aguardando confirmação do banco…', 'Waiting for bank confirmation…')}
                       <br />
                       <span className="text-cimento text-[10px]">
-                        Detectamos automaticamente assim que o PIX cair.
+                        {L('Detectamos automaticamente assim que o PIX cair.', 'We detect it automatically as soon as the Pix lands.')}
                       </span>
                     </p>
                   </div>
 
                   {charge.devMode && (
                     <p className="text-[10px] text-atencao text-center">
-                      Modo sandbox (devMode) — pagamento simulado
+                      {L('Modo sandbox (devMode) — pagamento simulado', 'Sandbox mode (devMode) — simulated payment')}
                     </p>
                   )}
                 </div>
@@ -515,7 +516,7 @@ export function PixCheckoutModal({
                     <CheckCircle2 className="w-12 h-12 text-alta" />
                   </div>
                   <p className="font-display text-lg font-black uppercase tracking-wider text-alta">
-                    Pagamento confirmado
+                    {L('Pagamento confirmado', 'Payment confirmed')}
                   </p>
                   <p className="text-xs text-white/60 text-center">{paidMessage}</p>
                 </div>
@@ -527,14 +528,14 @@ export function PixCheckoutModal({
                     <Clock className="w-12 h-12 text-baixa" />
                   </div>
                   <p className="font-display text-base font-black uppercase tracking-wider text-baixa">
-                    QR Code expirado
+                    {L('QR Code expirado', 'QR code expired')}
                   </p>
                   <button
                     type="button"
                     onClick={() => setStage('form')}
                     className="mt-2 bg-neon-yellow hover:bg-white text-black px-5 py-2.5 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] transition-colors"
                   >
-                    Gerar novo PIX
+                    {L('Gerar novo PIX', 'Generate new Pix')}
                   </button>
                 </div>
               )}
@@ -545,7 +546,7 @@ export function PixCheckoutModal({
                     <AlertTriangle className="w-12 h-12 text-baixa" />
                   </div>
                   <p className="font-display text-base font-black uppercase tracking-wider text-baixa">
-                    Falha no checkout
+                    {L('Falha no checkout', 'Checkout failed')}
                   </p>
                   {errorMsg && (
                     <p className="text-[11px] text-white/50 text-center max-w-xs">{errorMsg}</p>
@@ -555,7 +556,7 @@ export function PixCheckoutModal({
                     onClick={() => setStage('form')}
                     className="mt-2 bg-neon-yellow hover:bg-white text-black px-5 py-2.5 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] transition-colors"
                   >
-                    Tentar novamente
+                    {L('Tentar novamente', 'Try again')}
                   </button>
                 </div>
               )}

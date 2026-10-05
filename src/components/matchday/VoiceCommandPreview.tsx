@@ -12,6 +12,7 @@ import { ArrowRight, Circle, Users } from 'lucide-react';
 import type { PitchPlayerState } from '@/engine/types';
 import type { ParsedCommand } from '@/voiceCommand/types';
 import { commandPositionOverride } from '@/voiceCommand/commandQueue';
+import { L } from '@/i18n/L';
 
 interface VoiceCommandPreviewProps {
   /** Comando parseado (pode ser null se ainda não reconhecido). */
@@ -211,36 +212,36 @@ function resolveTarget(
  */
 function getIntentLabel(intent: string): string {
   const labels: Record<string, string> = {
-    invade_box: 'Invade a área',
-    dribble_attempt: 'Tenta drible',
-    take_shot: 'Chuta',
-    cross_ball: 'Cruza',
-    pass_to_player: 'Passa',
-    hold_ball: 'Segura bola',
-    quick_pass: 'Toca rápido',
-    switch_play: 'Troca de lado',
-    mark_player: 'Marca',
-    block_advance: 'Bloqueia',
-    aggressive_tackle: 'Entra duro',
-    tactical_foul: 'Falta tática',
-    team_press_high: 'Pressão alta',
-    team_retreat: 'Recua',
-    team_hold_possession: 'Segura posse',
-    team_high_line: 'Sobe linha',
-    forwards_press_defenders: 'Atacantes pressionam',
-    midfielders_compact: 'Meias compactam',
-    laterals_cross: 'Laterais cruzam',
-    left_back_overlap: 'Lateral sobe',
-    break_line: 'Quebra linha',
-    break_zone: 'Quebra zona',
-    run_behind: 'Corre pelas costas',
-    pedal_to_metal: 'Acelera',
-    free_play: 'Joga livre',
-    wait_support: 'Espera apoio',
-    stretch_team: 'Estica time',
-    hold_small_area: 'Vai pra pequena',
-    spare_player: 'Poupa jogador',
-    calm_team: 'Acalma time',
+    invade_box: L('Invade a área', 'Into the box'),
+    dribble_attempt: L('Tenta drible', 'Takes on'),
+    take_shot: L('Chuta', 'Shoots'),
+    cross_ball: L('Cruza', 'Crosses'),
+    pass_to_player: L('Passa', 'Passes'),
+    hold_ball: L('Segura bola', 'Holds ball'),
+    quick_pass: L('Toca rápido', 'Quick pass'),
+    switch_play: L('Troca de lado', 'Switches play'),
+    mark_player: L('Marca', 'Marks'),
+    block_advance: L('Bloqueia', 'Blocks'),
+    aggressive_tackle: L('Entra duro', 'Goes in hard'),
+    tactical_foul: L('Falta tática', 'Tactical foul'),
+    team_press_high: L('Pressão alta', 'High press'),
+    team_retreat: L('Recua', 'Drop back'),
+    team_hold_possession: L('Segura posse', 'Keep possession'),
+    team_high_line: L('Sobe linha', 'High line'),
+    forwards_press_defenders: L('Atacantes pressionam', 'Forwards press'),
+    midfielders_compact: L('Meias compactam', 'Midfield compact'),
+    laterals_cross: L('Laterais cruzam', 'Full-backs cross'),
+    left_back_overlap: L('Lateral sobe', 'Full-back overlaps'),
+    break_line: L('Quebra linha', 'Break the line'),
+    break_zone: L('Quebra zona', 'Break the zone'),
+    run_behind: L('Corre pelas costas', 'Run in behind'),
+    pedal_to_metal: L('Acelera', 'Speed up'),
+    free_play: L('Joga livre', 'Free play'),
+    wait_support: L('Espera apoio', 'Wait for support'),
+    stretch_team: L('Estica time', 'Stretch team'),
+    hold_small_area: L('Vai pra pequena', 'Attack the six-yard box'),
+    spare_player: L('Poupa jogador', 'Rest player'),
+    calm_team: L('Acalma time', 'Calm the team'),
   };
 
   return labels[intent] ?? intent;

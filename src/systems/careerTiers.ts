@@ -3,6 +3,7 @@
  * Tiers ordenados do mais baixo (Fraldinha) ao mais alto (Lenda).
  * Usado no perfil, ranking, badge no header e desbloqueio progressivo de features.
  */
+import { L } from '@/i18n/L';
 
 export type CareerTier = {
   id: number;
@@ -28,7 +29,7 @@ export type CareerTier = {
 export const CAREER_TIERS: CareerTier[] = [
   {
     id: 1,
-    name: 'Fraldinha',
+    name: L('Fraldinha', 'Rookie'),
     slug: 'fraldinha',
     minExp: 0,
     badgeClass: 'bg-zinc-500/15 border-zinc-400/40',
@@ -37,7 +38,7 @@ export const CAREER_TIERS: CareerTier[] = [
   },
   {
     id: 2,
-    name: 'Juvenil',
+    name: L('Juvenil', 'Youth'),
     slug: 'juvenil',
     minExp: 100_000,
     badgeClass: 'bg-emerald-500/15 border-emerald-400/40',
@@ -46,7 +47,7 @@ export const CAREER_TIERS: CareerTier[] = [
   },
   {
     id: 3,
-    name: 'Amador',
+    name: L('Amador', 'Amateur'),
     slug: 'amador',
     minExp: 500_000,
     badgeClass: 'bg-sky-500/15 border-sky-400/40',
@@ -55,7 +56,7 @@ export const CAREER_TIERS: CareerTier[] = [
   },
   {
     id: 4,
-    name: 'Profissional',
+    name: L('Profissional', 'Professional'),
     slug: 'profissional',
     minExp: 2_000_000,
     badgeClass: 'bg-blue-500/20 border-blue-400/50',
@@ -64,7 +65,7 @@ export const CAREER_TIERS: CareerTier[] = [
   },
   {
     id: 5,
-    name: 'Campeão',
+    name: L('Campeão', 'Champion'),
     slug: 'campeao',
     minExp: 8_000_000,
     badgeClass: 'bg-amber-500/20 border-amber-400/60',
@@ -73,7 +74,7 @@ export const CAREER_TIERS: CareerTier[] = [
   },
   {
     id: 6,
-    name: 'Internacional',
+    name: L('Internacional', 'International'),
     slug: 'internacional',
     minExp: 20_000_000,
     badgeClass: 'bg-violet-500/20 border-violet-400/60',
@@ -82,7 +83,7 @@ export const CAREER_TIERS: CareerTier[] = [
   },
   {
     id: 7,
-    name: 'Raro',
+    name: L('Raro', 'Rare'),
     slug: 'raro',
     minExp: 80_000_000,
     badgeClass: 'bg-fuchsia-500/20 border-fuchsia-400/60',
@@ -91,7 +92,7 @@ export const CAREER_TIERS: CareerTier[] = [
   },
   {
     id: 8,
-    name: 'Lenda',
+    name: L('Lenda', 'Legend'),
     slug: 'lenda',
     minExp: 250_000_000,
     badgeClass: 'bg-gradient-to-r from-neon-yellow/25 to-amber-400/25 border-neon-yellow/70',

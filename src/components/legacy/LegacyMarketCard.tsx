@@ -4,6 +4,8 @@ import type { LegacyPlayerRow, LegacyLotInfo } from '@/supabase/legacyPlayers';
 import { legacyPortraitFocusStyle } from '@/supabase/legacyPlayers';
 import { rarityTierOf, RARITY_LABEL, type RarityTier } from '@/entities/rarityLabels';
 import { moedaDoJogo } from '@/wallet/constants';
+import { L, LOCALE } from '@/i18n/L';
+import { posLabel } from '@/components/matchquick/posLabel';
 
 /**
  * LegacyMarketCard — carta colecionável do mercado de lendas (Legacy Tech).
@@ -20,10 +22,10 @@ type Tier = RarityTier;
 const ATTR_ROWS: Array<{ key: string; label: string }> = [
   { key: 'drible', label: 'DRI' },
   { key: 'passe', label: 'PAS' },
-  { key: 'finalizacao', label: 'FIN' },
-  { key: 'velocidade', label: 'VEL' },
-  { key: 'fisico', label: 'FÍS' },
-  { key: 'marcacao', label: 'MAR' },
+  { key: 'finalizacao', label: L('FIN', 'SHO') },
+  { key: 'velocidade', label: L('VEL', 'PAC') },
+  { key: 'fisico', label: L('FÍS', 'PHY') },
+  { key: 'marcacao', label: L('MAR', 'DEF') },
 ];
 
 function tierOf(row: LegacyPlayerRow, ovr: number): Tier {
@@ -36,8 +38,8 @@ const TIER_LABEL: Record<Tier, string> = RARITY_LABEL;
 function scarcitySignal(lot?: LegacyLotInfo): string | null {
   if (!lot || lot.supply <= 0) return null;
   const pct = lot.restam / lot.supply;
-  if (pct <= 0.1) return 'Últimas unidades';
-  if (pct <= 0.25) return 'Quase esgotado';
+  if (pct <= 0.1) return L('Últimas unidades', 'Last units');
+  if (pct <= 0.25) return L('Quase esgotado', 'Almost sold out');
   return null;
 }
 
@@ -165,7 +167,7 @@ export function LegacyMarketCard({
                 flip();
               }
             }}
-            aria-label={`Ver ficha de ${row.name}`}
+            aria-label={L(`Ver ficha de ${row.name}`, `View ${row.name}'s profile`)}
             className="relative aspect-[4/5] cursor-pointer overflow-hidden bg-deep-black outline-none focus-visible:ring-2 focus-visible:ring-neon-yellow/50"
           >
             {portrait ? (
@@ -231,7 +233,7 @@ export function LegacyMarketCard({
                 {row.name}
               </h3>
               <p className="mt-0.5 truncate font-display font-bold uppercase text-white/60" style={{ fontSize: 9, letterSpacing: '0.16em' }}>
-                {row.pos} · {row.country ?? '—'}
+                {posLabel(row.pos)} · {row.country ?? '—'}
               </p>
               {tag && (
                 <p className="mt-0.5 truncate font-mono text-[10.5px] font-medium text-white/50">{tag}</p>
@@ -247,15 +249,15 @@ export function LegacyMarketCard({
                 </div>
                 <div className="mb-2 flex items-center justify-between text-[11px] text-white/55">
                   <span>
-                    restam <b className="text-neon-yellow tabular-nums">{lot.restam.toLocaleString('pt-BR')}</b>
+                    {L('restam', 'left')} <b className="text-neon-yellow tabular-nums">{lot.restam.toLocaleString(LOCALE)}</b>
                   </span>
-                  <span className="tabular-nums">Ed. {lot.supply.toLocaleString('pt-BR')}</span>
+                  <span className="tabular-nums">Ed. {lot.supply.toLocaleString(LOCALE)}</span>
                 </div>
               </>
             )}
             {owned ? (
               <span className="flex w-full items-center justify-center gap-1.5 rounded-sm border border-[var(--color-success)] py-3 font-display text-[11px] font-black uppercase tracking-[0.12em] text-[var(--color-success)]">
-                ✓ No time
+                ✓ {L('No time', 'In squad')}
               </span>
             ) : (
               BuyButton
@@ -270,8 +272,8 @@ export function LegacyMarketCard({
           style={{ borderRadius: 'var(--radius-sm)', backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
           <div className="mb-2.5 flex items-baseline justify-between">
-            <span className="font-display text-[11px] font-black uppercase tracking-[0.2em] text-neon-yellow">Ficha técnica</span>
-            <span className="font-display text-[9px] uppercase tracking-[0.16em] text-white/35">toque p/ voltar</span>
+            <span className="font-display text-[11px] font-black uppercase tracking-[0.2em] text-neon-yellow">{L('Ficha técnica', 'Profile')}</span>
+            <span className="font-display text-[9px] uppercase tracking-[0.16em] text-white/35">{L('toque p/ voltar', 'tap to go back')}</span>
           </div>
           <div className="mb-3 grid grid-cols-3 gap-1.5">
             {ATTR_ROWS.map((a) => (
@@ -288,21 +290,21 @@ export function LegacyMarketCard({
           </div>
           {taught.length > 0 && (
             <div className="flex items-center justify-between border-t border-white/[0.08] py-1.5 text-[11px] text-white/60">
-              <span>Ensina no time</span>
+              <span>{L('Ensina no time', 'Teaches the team')}</span>
               <b className="font-medium text-white">{taught.join(' · ')}</b>
             </div>
           )}
           {boosterEntries.length > 0 && (
             <div className="flex items-center justify-between border-t border-white/[0.08] py-1.5 text-[11px] text-white/60">
-              <span>Bônus de time</span>
+              <span>{L('Bônus de time', 'Team bonus')}</span>
               <b className="font-medium text-white">
                 {boosterEntries.map(([k, v]) => `${k} +${v}${k.includes('pct') ? '%' : ''}`).join(' · ')}
               </b>
             </div>
           )}
           <div className="flex items-center justify-between border-t border-white/[0.08] py-1.5 text-[11px] text-white/60">
-            <span>Edição</span>
-            <b className="font-medium text-white tabular-nums">{(lot?.supply ?? row.card_supply ?? 0).toLocaleString('pt-BR')} cópias</b>
+            <span>{L('Edição', 'Edition')}</span>
+            <b className="font-medium text-white tabular-nums">{(lot?.supply ?? row.card_supply ?? 0).toLocaleString(LOCALE)} {L('cópias', 'copies')}</b>
           </div>
         </div>
       </article>

@@ -79,6 +79,8 @@ import { shouldAutoSwitchIntensity, type TacticalIntensityLevel } from '@/match/
 import { evaluatePerformanceBonuses, calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
 import { QUICK_PLAN_ENABLED } from '@/match/quickPlanClient';
 import MatchQuickEngaged from '@/pages/MatchQuickEngaged';
+import { L, emIngles } from '@/i18n/L';
+import { posLabel } from '@/components/matchquick/posLabel';
 
 const FIRST_HALF_MS = 45_000;
 const HALFTIME_MS = 10_000;
@@ -126,8 +128,8 @@ function RedCardIcon({ className }: { className?: string }) {
   return (
     <span
       role="img"
-      aria-label="Cartão vermelho"
-      title="Expulso"
+      aria-label={L('Cartão vermelho', 'Red card')}
+      title={L('Expulso', 'Sent off')}
       className={cn(
         'inline-block shrink-0 rounded-sm bg-red-600 ring-1 ring-red-950/50',
         'w-[11px] h-[14px] sm:w-3 sm:h-4',
@@ -144,7 +146,7 @@ function PlayerEventStrip({ badges }: { badges: QuickEventBadge[] }) {
       {badges.map((b, i) => {
         if (b === 'goal')
           return (
-            <span key={`g-${i}`} title="Gol" className="inline-flex text-[11px] leading-none">
+            <span key={`g-${i}`} title={L('Gol', 'Goal')} className="inline-flex text-[11px] leading-none">
               ⚽
             </span>
           );
@@ -152,7 +154,7 @@ function PlayerEventStrip({ badges }: { badges: QuickEventBadge[] }) {
           return (
             <span
               key={`y-${i}`}
-              title="Amarelo"
+              title={L('Amarelo', 'Yellow')}
               className="inline-block w-2 h-2.5 rounded-xs bg-amber-400"
             />
           );
@@ -160,7 +162,7 @@ function PlayerEventStrip({ badges }: { badges: QuickEventBadge[] }) {
           return (
             <span
               key={`r-${i}`}
-              title="Vermelho"
+              title={L('Vermelho', 'Red')}
               className="inline-block w-2 h-2.5 rounded-xs bg-red-500"
             />
           );
@@ -168,7 +170,7 @@ function PlayerEventStrip({ badges }: { badges: QuickEventBadge[] }) {
           <Plus
             key={`i-${i}`}
             className="w-3 h-3 text-red-400 rotate-45 stroke-[3]"
-            aria-label="Lesão"
+            aria-label={L('Lesão', 'Injury')}
           />
         );
       })}
@@ -344,8 +346,8 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
                   )}
                   style={{ backgroundColor: color }}
                   role="img"
-                  aria-label={`Fadiga ${Math.round(fState.pct)}% — ${fState.shortLabel}`}
-                  title={`Fadiga ${Math.round(fState.pct)}% — ${fState.shortLabel}`}
+                  aria-label={`${L('Fadiga', 'Fatigue')} ${Math.round(fState.pct)}% — ${fState.shortLabel}`}
+                  title={`${L('Fadiga', 'Fatigue')} ${Math.round(fState.pct)}% — ${fState.shortLabel}`}
                 >
                   <span
                     aria-hidden
@@ -376,7 +378,7 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
             className="font-display font-bold uppercase text-white/90"
             style={{ fontSize: '8px', letterSpacing: '0.18em' }}
           >
-            {pos}
+            {posLabel(pos)}
           </span>
         </div>
         {/* Número da camisa — bottom-right só mobile (com margem segura). */}
@@ -404,7 +406,7 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
           className="shrink-0 inline-flex items-center bg-white/8 text-white/85 px-1.5 py-0.5 uppercase font-display font-bold"
           style={{ fontSize: '9px', letterSpacing: '0.18em' }}
         >
-          {pos}
+          {posLabel(pos)}
         </span>
         {/* Fadiga — só home & em jogo. Apenas o número, sem rótulo. */}
         {!isAway && !isSentOff ? (
@@ -487,7 +489,7 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
                   letterSpacing: '0.22em',
                 }}
               >
-                Expulso
+                {L('Expulso', 'Sent off')}
               </span>
             ) : null}
           </div>
@@ -504,7 +506,7 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
                     textTransform: 'uppercase',
                   }}
                 >
-                  {Math.round(fatigue)}% cansaço
+                  {Math.round(fatigue)}% {L('cansaço', 'fatigue')}
                 </span>
               </div>
               <div className="mt-1 h-[2px] bg-white/8 overflow-hidden max-w-[7rem]">
@@ -525,7 +527,7 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
                 fontWeight: 600,
               }}
             >
-              {isSentOff ? pos : 'IA\u00A0·\u00A0CPU'}
+              {isSentOff ? posLabel(pos) : L('IA\u00A0·\u00A0CPU', 'AI\u00A0·\u00A0CPU')}
             </div>
           )}
         </div>
@@ -849,16 +851,16 @@ function MatchQuickLegacy() {
 
     // Feedback visual
     const feedMap: Record<string, string> = {
-      PRESSAO_ALTA: 'Treinador manda pressionar alto — equipe avança as linhas e aumenta a intensidade.',
-      TRANSICAO_RAPIDA: 'Instrução: transição rápida após recuperar a bola — menos toques, mais velocidade.',
-      JOGO_DIRETO: 'Equipe adota jogo direto — bolas longas e disputa de segunda bola.',
-      BLOCO_BAIXO: 'Time recua o bloco — linhas defensivas fechadas, menos espaço ao adversário.',
-      POSSE_CONTROLADA: 'Instrução de posse controlada — construção paciente pelo meio.',
-      CRIATIVO_LIVRE: 'Liberdade tática para o ataque — menos rigidez, mais improviso.',
-      JOGO_PELAS_LATERAIS: 'Equipe busca as laterais — amplitude e cruzamentos na área.',
-      balanced: 'Retorno ao equilíbrio tático — bloco organizado, transições controladas.',
+      PRESSAO_ALTA: L('Treinador manda pressionar alto — equipe avança as linhas e aumenta a intensidade.', 'Coach orders a high press — the team pushes its lines up and raises the intensity.'),
+      TRANSICAO_RAPIDA: L('Instrução: transição rápida após recuperar a bola — menos toques, mais velocidade.', 'Instruction: fast transition after winning the ball — fewer touches, more speed.'),
+      JOGO_DIRETO: L('Equipe adota jogo direto — bolas longas e disputa de segunda bola.', 'Team goes direct — long balls and fighting for second balls.'),
+      BLOCO_BAIXO: L('Time recua o bloco — linhas defensivas fechadas, menos espaço ao adversário.', 'Team drops into a low block — compact defensive lines, less space for the opponent.'),
+      POSSE_CONTROLADA: L('Instrução de posse controlada — construção paciente pelo meio.', 'Controlled possession — patient build-up through the middle.'),
+      CRIATIVO_LIVRE: L('Liberdade tática para o ataque — menos rigidez, mais improviso.', 'Tactical freedom in attack — less rigidity, more improvisation.'),
+      JOGO_PELAS_LATERAIS: L('Equipe busca as laterais — amplitude e cruzamentos na área.', 'Team goes down the flanks — width and crosses into the box.'),
+      balanced: L('Retorno ao equilíbrio tático — bloco organizado, transições controladas.', 'Back to tactical balance — organized block, controlled transitions.'),
     };
-    const feedText = feedMap[command] || `Tática alterada para ${command}`;
+    const feedText = feedMap[command] || L(`Tática alterada para ${command}`, `Tactics changed to ${command}`);
     if (live?.phase === 'playing') {
       dispatch({ type: 'ADD_LIVE_MATCH_EVENT', text: feedText, kind: 'narrative' });
     }
@@ -1143,12 +1145,12 @@ function MatchQuickLegacy() {
         if (lm.minute % 5 === 0 && lm.minute > 0) {
           const shots = lm.events.filter(e =>
             e.kind === 'shot_home' ||
-            (e.kind === 'narrative' && e.text.toLowerCase().includes('chut'))
+            (e.kind === 'narrative' && /chut|shot|shoot/.test(e.text.toLowerCase()))
           ).length;
 
           const shotsAgainst = lm.events.filter(e =>
             e.kind === 'shot_away' ||
-            (e.kind === 'narrative' && e.text.toLowerCase().includes('adversário') && e.text.toLowerCase().includes('chut'))
+            (e.kind === 'narrative' && /adversário|opponent/.test(e.text.toLowerCase()) && /chut|shot|shoot/.test(e.text.toLowerCase()))
           ).length;
 
           const arc = detectNarrativeArc({
@@ -1291,7 +1293,7 @@ function MatchQuickLegacy() {
     if (!top || top.kind !== 'narrative') return;
     if (top.id === lastShakeEventIdRef.current) return;
     const t = top.text.toLowerCase();
-    const isSave = ['defende', 'salva', 'voou', 'bloqueou', 'punh', 'nega', 'trav'].some((kw) => t.includes(kw));
+    const isSave = ['defende', 'salva', 'voou', 'bloqueou', 'punh', 'nega', 'trav', 'save', 'parr', 'block', 'denie', 'tips', 'palm'].some((kw) => t.includes(kw));
     if (!isSave) return;
     lastShakeEventIdRef.current = top.id;
     setScoreShakeKey((k) => k + 1);
@@ -1471,7 +1473,7 @@ function MatchQuickLegacy() {
             const entity = playersById[pid];
             setSecondYellowAlert({
               playerId: pid,
-              playerName: pitchPlayer?.name ?? entity?.name ?? 'Jogador',
+              playerName: pitchPlayer?.name ?? entity?.name ?? L('Jogador', 'Player'),
               playerNum: pitchPlayer?.num ?? entity?.num ?? 0,
               playerPos: pitchPlayer?.pos ?? entity?.pos ?? '',
               slotId: pitchPlayer?.slotId ?? '',
@@ -1534,16 +1536,16 @@ function MatchQuickLegacy() {
       if (pitchPlayer || entity) {
         // Determinar motivo do cartão vermelho
         const reason: 'second_yellow' | 'direct_red' | 'violent_conduct' =
-          redCardEvent.text?.toLowerCase().includes('segundo') || redCardEvent.text?.toLowerCase().includes('amarelo')
+          /segundo|amarelo|second|yellow/.test(redCardEvent.text?.toLowerCase() ?? '')
             ? 'second_yellow'
-            : redCardEvent.text?.toLowerCase().includes('violenta') || redCardEvent.text?.toLowerCase().includes('agressão')
+            : /violenta|agressão|violent/.test(redCardEvent.text?.toLowerCase() ?? '')
             ? 'violent_conduct'
             : 'direct_red';
 
         // Mostrar overlay de cartão vermelho
         setRedCardOverlay({
           player: {
-            name: pitchPlayer?.name ?? entity?.name ?? 'Jogador',
+            name: pitchPlayer?.name ?? entity?.name ?? L('Jogador', 'Player'),
             number: pitchPlayer?.num ?? entity?.num ?? 0,
             position: pitchPlayer?.pos ?? entity?.pos ?? '',
           },
@@ -1637,7 +1639,7 @@ function MatchQuickLegacy() {
         } as any);
 
         // Feedback no feed
-        const feedText = `Lesão grave! ${injuredPlayer?.name} sai. ${bestSub.name} entra no lugar.`;
+        const feedText = L(`Lesão grave! ${injuredPlayer?.name} sai. ${bestSub.name} entra no lugar.`, `Serious injury! ${injuredPlayer?.name} off. ${bestSub.name} comes on.`);
         dispatch({
           type: 'ADD_LIVE_MATCH_EVENT',
           text: feedText,
@@ -1648,7 +1650,7 @@ function MatchQuickLegacy() {
         return;
       } else {
         // Sem substitutos: jogador sai e time fica com 10
-        const feedText = `Lesão grave! ${injuredPlayer?.name} sai. Sem substitutos disponíveis.`;
+        const feedText = L(`Lesão grave! ${injuredPlayer?.name} sai. Sem substitutos disponíveis.`, `Serious injury! ${injuredPlayer?.name} off. No subs available.`);
         dispatch({
           type: 'ADD_LIVE_MATCH_EVENT',
           text: feedText,
@@ -1694,15 +1696,15 @@ function MatchQuickLegacy() {
 
     let text = '';
     if (avgFatigue > 78) {
-      text = `${m}' — Elenco visivelmente desgastado. Risco elevado de lesão e erros de concentração.`;
+      text = L(`${m}' — Elenco visivelmente desgastado. Risco elevado de lesão e erros de concentração.`, `${m}' — Squad visibly worn out. High risk of injuries and lapses in concentration.`);
     } else if (avgFatigue > 65) {
-      text = `${m}' — Jogadores já sentem o peso dos minutos. Substituições podem mudar a partida.`;
+      text = L(`${m}' — Jogadores já sentem o peso dos minutos. Substituições podem mudar a partida.`, `${m}' — Players are feeling the minutes. Substitutions could change the match.`);
     } else if (diff > 1) {
-      text = `${m}' — Moral em alta! O grupo joga com confiança após a vantagem no marcador.`;
+      text = L(`${m}' — Moral em alta! O grupo joga com confiança após a vantagem no marcador.`, `${m}' — Morale high! The team plays with confidence after taking the lead.`);
     } else if (diff < -1) {
-      text = `${m}' — Elenco pressionado pela desvantagem. Precisa de reação imediata.`;
+      text = L(`${m}' — Elenco pressionado pela desvantagem. Precisa de reação imediata.`, `${m}' — Squad under pressure from the deficit. Needs an immediate response.`);
     } else if (diff === 0 && milestone >= 75) {
-      text = `${m}' — Empate nos minutos finais — quem arrisca mais pode vencer ou perder tudo.`;
+      text = L(`${m}' — Empate nos minutos finais — quem arrisca mais pode vencer ou perder tudo.`, `${m}' — Level in the final minutes — whoever risks more can win or lose it all.`);
     }
     if (text) dispatch({ type: 'ADD_LIVE_MATCH_EVENT', text, kind: 'narrative' });
   }, [live?.minute, live?.phase, dispatch]);
@@ -1823,7 +1825,7 @@ function MatchQuickLegacy() {
     const shotsHome = live.events.filter((e) => e.kind === 'shot_home').length;
     const shotsAway = live.events.filter((e) => e.kind === 'shot_away').length;
     const cornersHome = live.events.filter((e) =>
-      /escanteio.*(casa|home)|córner.*(casa|home)/i.test(e.text ?? ''),
+      /escanteio.*(casa|home)|córner.*(casa|home)|corner.*home/i.test(e.text ?? ''),
     ).length;
     const yellowsHome = live.events.filter((e) => e.kind === 'yellow_home').length;
     const redsHome = live.events.filter((e) => e.kind === 'red_home').length;
@@ -1973,11 +1975,11 @@ function MatchQuickLegacy() {
       .map((f) => ({ id: f, label: f }));
 
     const playStyles = [
-      { id: 'PRESSAO_ALTA', label: 'Pressão Alta' },
-      { id: 'POSSE_CONTROLADA', label: 'Posse Controlada' },
-      { id: 'TRANSICAO_RAPIDA', label: 'Contra-Ataque Rápido' },
-      { id: 'BLOCO_BAIXO', label: 'Bloco Baixo' },
-      { id: 'JOGO_DIRETO', label: 'Jogo Direto' },
+      { id: 'PRESSAO_ALTA', label: L('Pressão Alta', 'High Press') },
+      { id: 'POSSE_CONTROLADA', label: L('Posse Controlada', 'Controlled Possession') },
+      { id: 'TRANSICAO_RAPIDA', label: L('Contra-Ataque Rápido', 'Fast Counter-Attack') },
+      { id: 'BLOCO_BAIXO', label: L('Bloco Baixo', 'Low Block') },
+      { id: 'JOGO_DIRETO', label: L('Jogo Direto', 'Direct Play') },
     ];
 
     // Top 3 mais cansados (em campo)
@@ -1987,7 +1989,7 @@ function MatchQuickLegacy() {
       .slice(0, 3)
       .map((p) => ({
         id: p.playerId,
-        label: `${p.num} ${p.name} — ${Math.round(p.fatigue ?? 0)}% cansaço`,
+        label: `${p.num} ${p.name} — ${Math.round(p.fatigue ?? 0)}% ${L('cansaço', 'fatigue')}`,
       }));
 
     return {
@@ -1998,7 +2000,7 @@ function MatchQuickLegacy() {
         dispatch({ type: 'LIVE_MATCH_SET_FORMATION', formation } as any);
         dispatch({
           type: 'ADD_LIVE_MATCH_EVENT',
-          text: `Formação alterada para ${formation}`,
+          text: L(`Formação alterada para ${formation}`, `Formation changed to ${formation}`),
           kind: 'narrative',
         } as any);
       },
@@ -2113,7 +2115,7 @@ function MatchQuickLegacy() {
     const ev = live.events[0];
     if (!ev || (ev.kind !== 'goal_home' && ev.kind !== 'goal_away')) return null;
     const side: 'home' | 'away' = ev.kind === 'goal_home' ? 'home' : 'away';
-    let scorerName = 'Marcador';
+    let scorerName = L('Marcador', 'Scorer');
     let scorerNumber: number | undefined;
     let scorerPortraitUrl: string | undefined;
     if (side === 'home' && ev.playerId) {
@@ -2329,14 +2331,14 @@ function MatchQuickLegacy() {
   };
 
   const COACH_ACTION_FEED: Record<string, string> = {
-    PRESSAO_ALTA: 'Treinador manda pressionar alto — equipe avança as linhas e aumenta a intensidade.',
-    TRANSICAO_RAPIDA: 'Instrução: transição rápida após recuperar a bola — menos toques, mais velocidade.',
-    JOGO_DIRETO: 'Equipe adota jogo direto — bolas longas e disputa de segunda bola.',
-    BLOCO_BAIXO: 'Time recua o bloco — linhas defensivas fechadas, menos espaço ao adversário.',
-    POSSE_CONTROLADA: 'Instrução de posse controlada — construção paciente pelo meio.',
-    CRIATIVO_LIVRE: 'Liberdade tática para o ataque — menos rigidez, mais improviso.',
-    JOGO_PELAS_LATERAIS: 'Equipe busca as laterais — amplitude e cruzamentos na área.',
-    balanced: 'Retorno ao equilíbrio tático — bloco organizado, transições controladas.',
+    PRESSAO_ALTA: L('Treinador manda pressionar alto — equipe avança as linhas e aumenta a intensidade.', 'Coach orders a high press — the team pushes its lines up and raises the intensity.'),
+    TRANSICAO_RAPIDA: L('Instrução: transição rápida após recuperar a bola — menos toques, mais velocidade.', 'Instruction: fast transition after winning the ball — fewer touches, more speed.'),
+    JOGO_DIRETO: L('Equipe adota jogo direto — bolas longas e disputa de segunda bola.', 'Team goes direct — long balls and fighting for second balls.'),
+    BLOCO_BAIXO: L('Time recua o bloco — linhas defensivas fechadas, menos espaço ao adversário.', 'Team drops into a low block — compact defensive lines, less space for the opponent.'),
+    POSSE_CONTROLADA: L('Instrução de posse controlada — construção paciente pelo meio.', 'Controlled possession — patient build-up through the middle.'),
+    CRIATIVO_LIVRE: L('Liberdade tática para o ataque — menos rigidez, mais improviso.', 'Tactical freedom in attack — less rigidity, more improvisation.'),
+    JOGO_PELAS_LATERAIS: L('Equipe busca as laterais — amplitude e cruzamentos na área.', 'Team goes down the flanks — width and crosses into the box.'),
+    balanced: L('Retorno ao equilíbrio tático — bloco organizado, transições controladas.', 'Back to tactical balance — organized block, controlled transitions.'),
   };
 
   const applyCoachAction = (presetId: string) => {
@@ -2358,8 +2360,8 @@ function MatchQuickLegacy() {
   if (fcParam && fcGate === 'pending') {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
-        <p className="font-display text-sm font-bold uppercase tracking-wider text-neon-yellow">Amistoso online</p>
-        <p className="max-w-sm text-sm text-gray-400">A validar convite aceite…</p>
+        <p className="font-display text-sm font-bold uppercase tracking-wider text-neon-yellow">{L('Amistoso online', 'Online friendly')}</p>
+        <p className="max-w-sm text-sm text-gray-400">{L('A validar convite aceite…', 'Validating accepted invite…')}</p>
       </div>
     );
   }
@@ -2383,7 +2385,7 @@ function MatchQuickLegacy() {
     return (
       <div className="flex w-full min-h-svh items-center justify-center bg-deep-black px-6">
         <div className="max-w-md text-center space-y-6">
-          <div className="ole-eyebrow !text-neon-yellow"><span>Partida rápida</span></div>
+          <div className="ole-eyebrow !text-neon-yellow"><span>{L('Partida rápida', 'Quick match')}</span></div>
           <h1
             className="font-impact uppercase text-white"
             style={{
@@ -2391,10 +2393,10 @@ function MatchQuickLegacy() {
               lineHeight: 1.1,
             }}
           >
-            Nenhum manager disponível
+            {L('Nenhum manager disponível', 'No manager available')}
           </h1>
           <p className="text-white/65 text-sm leading-relaxed">
-            A Olefoot não tem partidas contra bots. Estamos procurando outro manager pra ti — tenta de novo em alguns segundos.
+            {L('A Olefoot não tem partidas contra bots. Estamos procurando outro manager pra ti — tenta de novo em alguns segundos.', 'Olefoot has no matches against bots. We are looking for another manager for you — try again in a few seconds.')}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <button
@@ -2410,7 +2412,7 @@ function MatchQuickLegacy() {
                 borderRadius: 'var(--radius-sm)',
               }}
             >
-              Procurar de novo
+              {L('Procurar de novo', 'Search again')}
             </button>
             <button
               type="button"
@@ -2425,7 +2427,7 @@ function MatchQuickLegacy() {
                 borderRadius: 'var(--radius-sm)',
               }}
             >
-              Voltar pra Home
+              {L('Voltar pra Home', 'Back to Home')}
             </button>
           </div>
         </div>
@@ -2457,7 +2459,7 @@ function MatchQuickLegacy() {
         {/* Centro — eyebrow + logo + sub */}
         <div className="flex flex-col items-center gap-3 flex-1 min-w-0">
           <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
-            <span>Partida rápida</span>
+            <span>{L('Partida rápida', 'Quick match')}</span>
           </div>
           {soundEnabled ? (
             !soundStarted ? (
@@ -2482,7 +2484,7 @@ function MatchQuickLegacy() {
                   borderRadius: 'var(--radius-sm)',
                 }}
               >
-                Tocar som
+                {L('Tocar som', 'Play sound')}
               </button>
             ) : (
               <button
@@ -2508,7 +2510,7 @@ function MatchQuickLegacy() {
                   borderRadius: 'var(--radius-sm)',
                 }}
               >
-                Parar som
+                {L('Parar som', 'Stop sound')}
               </button>
             )
           ) : null}
@@ -2530,7 +2532,7 @@ function MatchQuickLegacy() {
             }}
           >
             <LogOut className="w-3.5 h-3.5" />
-            Sair
+            {L('Sair', 'Exit')}
           </button>
         ) : (
           <span className="w-12" aria-hidden /> /* spacer pra equilibrar com o ← Home */
@@ -2561,19 +2563,33 @@ function MatchQuickLegacy() {
                 exhaustedAlert.tier === 'critical' ? 'text-rose-300' : 'text-amber-300'
               }`}
             >
-              {exhaustedAlert.tier === 'critical' ? 'Squad em risco' : 'Squad cansado'}
+              {exhaustedAlert.tier === 'critical' ? L('Squad em risco', 'Squad at risk') : L('Squad cansado', 'Squad tired')}
             </p>
             <p className="text-[12px] text-white/75 mt-0.5">
               {exhaustedAlert.criticalStarters > 0 ? (
-                <>
-                  {exhaustedAlert.criticalStarters} titular(es) com fadiga ≥90% em campo —
-                  rendimento e risco de lesão comprometidos.
-                </>
+                emIngles() ? (
+                  <>
+                    {exhaustedAlert.criticalStarters} starter(s) with fatigue ≥90% on the pitch —
+                    performance and injury risk compromised.
+                  </>
+                ) : (
+                  <>
+                    {exhaustedAlert.criticalStarters} titular(es) com fadiga ≥90% em campo —
+                    rendimento e risco de lesão comprometidos.
+                  </>
+                )
               ) : (
-                <>
-                  {exhaustedAlert.exhaustedStarters} titular(es) cansado(s). Considere descanso
-                  ou substituições rápidas.
-                </>
+                emIngles() ? (
+                  <>
+                    {exhaustedAlert.exhaustedStarters} tired starter(s). Consider rest
+                    or quick substitutions.
+                  </>
+                ) : (
+                  <>
+                    {exhaustedAlert.exhaustedStarters} titular(es) cansado(s). Considere descanso
+                    ou substituições rápidas.
+                  </>
+                )
               )}
             </p>
           </div>
@@ -2588,7 +2604,7 @@ function MatchQuickLegacy() {
           {!squadOkForMatch ? (
             <div className="flex flex-col items-start gap-4">
               <div className="ole-eyebrow !text-[var(--color-warning)] !justify-start">
-                <span>Plantel incompleto</span>
+                <span>{L('Plantel incompleto', 'Incomplete squad')}</span>
               </div>
               <p
                 className="text-white/85"
@@ -2597,7 +2613,11 @@ function MatchQuickLegacy() {
                   lineHeight: 1.4,
                 }}
               >
-                Você precisa de <span className="ole-num text-neon-yellow">11 titulares</span> e pelo menos <span className="ole-num text-neon-yellow">5 no banco</span> pra entrar em campo.
+                {emIngles() ? (
+                  <>You need <span className="ole-num text-neon-yellow">11 starters</span> and at least <span className="ole-num text-neon-yellow">5 on the bench</span> to take the pitch.</>
+                ) : (
+                  <>Você precisa de <span className="ole-num text-neon-yellow">11 titulares</span> e pelo menos <span className="ole-num text-neon-yellow">5 no banco</span> pra entrar em campo.</>
+                )}
               </p>
               {squadReport.reason ? (
                 <p
@@ -2624,7 +2644,7 @@ function MatchQuickLegacy() {
                   borderRadius: 'var(--radius-sm)',
                 }}
               >
-                Ajustar plantel
+                {L('Ajustar plantel', 'Adjust squad')}
               </Link>
             </div>
           ) : (
@@ -2632,12 +2652,12 @@ function MatchQuickLegacy() {
               {matchPrediction ? (
                 <MatchPredictionPanel
                   result={matchPrediction}
-                  homeName={club?.shortName ?? 'Casa'}
-                  awayName={fixture?.opponent?.shortName ?? 'Visitante'}
+                  homeName={club?.shortName ?? L('Casa', 'Home')}
+                  awayName={fixture?.opponent?.shortName ?? L('Visitante', 'Away')}
                 />
               ) : null}
               <p className="font-mono text-[12px] uppercase tracking-[0.2em] text-cimento text-center py-2">
-                Preparando a partida…
+                {L('Preparando a partida…', 'Preparing the match…')}
               </p>
             </div>
           )}
@@ -2676,7 +2696,7 @@ function MatchQuickLegacy() {
                     letterSpacing: '0.18em',
                   }}
                 >
-                  Sair do jogo?
+                  {L('Sair do jogo?', 'Leave the match?')}
                 </h2>
               </div>
               <p
@@ -2686,11 +2706,11 @@ function MatchQuickLegacy() {
                   lineHeight: 1.45,
                 }}
               >
-                Você perde por{' '}
+                {L('Você perde por', 'You lose')}{' '}
                 <span className="ole-num text-[var(--color-danger)]">
                   5×0
                 </span>
-                . O resultado entra na liga e no histórico.
+                {L('. O resultado entra na liga e no histórico.', '. The result counts for the league and your history.')}
               </p>
               <div className="mt-6 flex flex-col gap-2">
                 <button
@@ -2706,7 +2726,7 @@ function MatchQuickLegacy() {
                   }}
                   onClick={confirmForfeitQuick}
                 >
-                  Confirmar desistência
+                  {L('Confirmar desistência', 'Confirm forfeit')}
                 </button>
                 <button
                   type="button"
@@ -2721,7 +2741,7 @@ function MatchQuickLegacy() {
                   }}
                   onClick={() => setForfeitOpen(false)}
                 >
-                  Cancelar
+                  {L('Cancelar', 'Cancel')}
                 </button>
               </div>
             </motion.div>
@@ -2748,7 +2768,7 @@ function MatchQuickLegacy() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
-                    Segundo Amarelo
+                    {L('Segundo Amarelo', 'Second Yellow')}
                   </p>
                   <p className="text-sm font-black text-black truncate">
                     #{secondYellowAlert.playerNum} {secondYellowAlert.playerName}
@@ -2758,7 +2778,7 @@ function MatchQuickLegacy() {
                   onClick={handleYellowSubstituteNow}
                   className="shrink-0 px-3 py-1.5 bg-black text-amber-400 text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-900 transition-colors"
                 >
-                  Substituir
+                  {L('Substituir', 'Substitute')}
                 </button>
               </div>
             </div>
@@ -2771,8 +2791,8 @@ function MatchQuickLegacy() {
           <Fragment key="match-halftime">
             <MatchInterruptOverlay
               kind="halftime"
-              title="Intervalo"
-              lines={['Faça as alterações do 2º tempo']}
+              title={L('Intervalo', 'Half-time')}
+              lines={[L('Faça as alterações do 2º tempo', 'Make your 2nd-half changes')]}
             />
           </Fragment>
         ) : live?.spiritOverlay?.kind === 'goal' &&
@@ -2798,8 +2818,8 @@ function MatchQuickLegacy() {
         <div className="mb-3">
           <MatchPredictionPanel
             result={livePrediction}
-            homeName={club?.shortName ?? 'Casa'}
-            awayName={fixture?.opponent?.shortName ?? 'Visitante'}
+            homeName={club?.shortName ?? L('Casa', 'Home')}
+            awayName={fixture?.opponent?.shortName ?? L('Visitante', 'Away')}
             compact
           />
         </div>
@@ -2821,7 +2841,7 @@ function MatchQuickLegacy() {
                   transition={{ duration: 0.35, ease: 'easeOut' }}
                   className="font-display font-black text-[min(8vw,2.2rem)] uppercase text-white/90"
                 >
-                  Preparados?
+                  {L('Preparados?', 'Ready?')}
                 </motion.span>
               ) : (
                 <motion.span
@@ -2890,7 +2910,7 @@ function MatchQuickLegacy() {
                       letterSpacing: '0.18em',
                     }}
                   >
-                    {(live.sentOffPlayerIds ?? []).length} exp.
+                    {(live.sentOffPlayerIds ?? []).length} {L('exp.', 'off')}
                   </span>
                 )}
                 {awaySentOffRows.length > 0 && (
@@ -2903,7 +2923,7 @@ function MatchQuickLegacy() {
                       letterSpacing: '0.18em',
                     }}
                   >
-                    {awaySentOffRows.length} exp. vis.
+                    {awaySentOffRows.length} {L('exp. vis.', 'away off')}
                   </span>
                 )}
               </div>
@@ -2977,7 +2997,7 @@ function MatchQuickLegacy() {
           {quickPreStart === null ? (
             <div className="space-y-2 pt-1 hidden">
               <p className="text-[9px] font-bold uppercase tracking-wider text-center text-gray-500">
-                Momento — pressão rumo ao gol adversário
+                {L('Momento — pressão rumo ao gol adversário', 'Momentum — pressure towards the opponent goal')}
               </p>
               <div
                 key={momentumAnimKey ?? 'momentum-idle'}
@@ -3051,10 +3071,10 @@ function MatchQuickLegacy() {
               <div className="flex justify-between items-start gap-2 text-[9px] font-bold uppercase tracking-wide px-0.5">
                 <span className={live.possession === 'home' ? 'text-neon-yellow' : 'text-gray-500'}>
                   {live.homeShort}{' '}
-                  <span className="font-extrabold">{live.possession === 'home' ? 'ataca →' : 'defende'}</span>
+                  <span className="font-extrabold">{live.possession === 'home' ? L('ataca →', 'attacks →') : L('defende', 'defends')}</span>
                 </span>
                 <span className={live.possession === 'away' ? 'text-white' : 'text-gray-500'}>
-                  <span className="font-extrabold">{live.possession === 'away' ? '← ataca' : 'defende'}</span>{' '}
+                  <span className="font-extrabold">{live.possession === 'away' ? L('← ataca', '← attacks') : L('defende', 'defends')}</span>{' '}
                   {live.awayShort}
                 </span>
               </div>
@@ -3063,8 +3083,8 @@ function MatchQuickLegacy() {
             <div className="min-h-[5.5rem] pt-1 flex items-center justify-center border border-white/8 rounded-lg bg-black/20">
               <p className="text-[10px] font-medium text-gray-500 text-center px-4">
                 {quickPreStart === 'kickoff'
-                  ? 'Bola rolando em instantes…'
-                  : 'O apito soa em segundos.'}
+                  ? L('Bola rolando em instantes…', 'Kick-off in a moment…')
+                  : L('O apito soa em segundos.', 'The whistle blows in seconds.')}
               </p>
             </div>
           )}
@@ -3076,12 +3096,12 @@ function MatchQuickLegacy() {
                     className="font-display font-black text-base sm:text-lg uppercase tracking-wide text-center text-neon-yellow"
                     aria-live="assertive"
                   >
-                    COMEÇA A PARTIDA
+                    {L('COMEÇA A PARTIDA', 'KICK-OFF')}
                   </p>
                 </div>
               ) : quickPreStart === 'ready' || quickPreStart === 'c3' || quickPreStart === 'c2' || quickPreStart === 'c1' ? (
                 <div className="flex items-center justify-center min-h-[4.5rem]">
-                  <p className="text-[11px] text-gray-500 text-center font-medium">Feed ao vivo após o apito…</p>
+                  <p className="text-[11px] text-gray-500 text-center font-medium">{L('Feed ao vivo após o apito…', 'Live feed after the whistle…')}</p>
                 </div>
               ) : (
                 <AnimatePresence initial={false} mode="popLayout">
@@ -3148,7 +3168,7 @@ function MatchQuickLegacy() {
                     fontWeight: 600,
                   }}
                 >
-                  Casa
+                  {L('Casa', 'Home')}
                 </span>
               </div>
               <div className="flex flex-col gap-2">
@@ -3166,10 +3186,10 @@ function MatchQuickLegacy() {
                         letterSpacing: '0.18em',
                       }}
                     >
-                      Plantel vazio
+                      {L('Plantel vazio', 'Empty squad')}
                     </p>
                     <p className="text-white/35 text-[11px] leading-snug">
-                      Sem titulares pra mostrar nesta partida.
+                      {L('Sem titulares pra mostrar nesta partida.', 'No starters to show in this match.')}
                     </p>
                   </div>
                 ) : (
@@ -3243,7 +3263,7 @@ function MatchQuickLegacy() {
                       letterSpacing: '0.18em',
                     }}
                   >
-                    {live.awayName ?? fixture?.opponent?.name ?? 'Visitante'}
+                    {live.awayName ?? fixture?.opponent?.name ?? L('Visitante', 'Away')}
                   </span>
                 </div>
                 <span
@@ -3255,7 +3275,7 @@ function MatchQuickLegacy() {
                     fontWeight: 600,
                   }}
                 >
-                  Vis. (IA)
+                  {L('Vis. (IA)', 'Away (AI)')}
                 </span>
               </div>
               <div className="flex flex-col gap-2">
@@ -3326,7 +3346,7 @@ function MatchQuickLegacy() {
                           fontWeight: 700,
                         }}
                       >
-                        {isGrave ? 'Lesão grave' : 'Lesão leve'}
+                        {isGrave ? L('Lesão grave', 'Serious injury') : L('Lesão leve', 'Minor injury')}
                       </p>
                       <p
                         className={cn('font-impact leading-[1.1] uppercase', isGrave ? 'text-white' : 'text-white')}
@@ -3362,13 +3382,13 @@ function MatchQuickLegacy() {
                       fontWeight: 700,
                     }}
                   >
-                    Substituição
+                    {L('Substituição', 'Substitution')}
                   </p>
                   <p
                     className="font-impact text-white leading-[1.1] uppercase"
                     style={{ fontSize: '20px', letterSpacing: '0.01em' }}
                   >
-                    {selected.num} {selected.name} sai
+                    {selected.num} {selected.name} {L('sai', 'off')}
                   </p>
                 </div>
               </div>
@@ -3387,8 +3407,8 @@ function MatchQuickLegacy() {
                     }}
                   >
                     {isGrave
-                      ? `${selected.name} não pode continuar. Substituição obrigatória.`
-                      : `Substitua ou arrisque ${selected.name} em campo.`}
+                      ? L(`${selected.name} não pode continuar. Substituição obrigatória.`, `${selected.name} can't continue. Substitution required.`)
+                      : L(`Substitua ou arrisque ${selected.name} em campo.`, `Sub him off or risk ${selected.name} on the pitch.`)}
                   </p>
                 );
               })() : null}
@@ -3402,7 +3422,7 @@ function MatchQuickLegacy() {
                     fontWeight: 700,
                   }}
                 >
-                  Entra (banco)
+                  {L('Entra (banco)', 'On (bench)')}
                 </label>
                 <select
                   value={subPickId}
@@ -3414,10 +3434,10 @@ function MatchQuickLegacy() {
                     borderRadius: 'var(--radius-sm)',
                   }}
                 >
-                  <option value="">— Escolher jogador —</option>
+                  <option value="">{L('— Escolher jogador —', '— Choose player —')}</option>
                   {benchCards.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.num} {c.name} · {c.pos} · {c.ovr}
+                      {c.num} {c.name} · {posLabel(c.pos)} · {c.ovr}
                     </option>
                   ))}
                 </select>
@@ -3431,7 +3451,7 @@ function MatchQuickLegacy() {
                     fontSize: '13px',
                   }}
                 >
-                  Não há jogadores elegíveis no banco. Termine a partida ou jogue com menos.
+                  {L('Não há jogadores elegíveis no banco. Termine a partida ou jogue com menos.', 'No eligible players on the bench. Finish the match or play a man down.')}
                 </p>
               ) : null}
 
@@ -3452,7 +3472,7 @@ function MatchQuickLegacy() {
                     setSelected(null);
                   }}
                 >
-                  Confirmar substituição
+                  {L('Confirmar substituição', 'Confirm substitution')}
                 </button>
 
                 {/* Opção "Arriscar" só para lesão leve */}
@@ -3475,7 +3495,7 @@ function MatchQuickLegacy() {
                         setSelected(null);
                       }}
                     >
-                      Arriscar — continua em campo
+                      {L('Arriscar — continua em campo', 'Risk it — stays on')}
                     </button>
                   );
                 })()}
@@ -3492,7 +3512,7 @@ function MatchQuickLegacy() {
                     }}
                     onClick={() => setSelected(null)}
                   >
-                    Cancelar
+                    {L('Cancelar', 'Cancel')}
                   </button>
                 ) : null}
               </div>
@@ -3514,8 +3534,8 @@ function MatchQuickLegacy() {
               let feedbackDetail = '';
 
               if (presetId === 'MORAL_BOOST') {
-                feedText = '⚡ Bônus de Moral aplicado! Equipa motivada.';
-                feedbackDetail = 'Confiança +10%, Fadiga -5% nos próximos 10 minutos';
+                feedText = L('⚡ Bônus de Moral aplicado! Equipa motivada.', '⚡ Morale Boost applied! Team fired up.');
+                feedbackDetail = L('Confiança +10%, Fadiga -5% nos próximos 10 minutos', 'Confidence +10%, Fatigue -5% for the next 10 minutes');
                 // Aplicar bônus de moral aos jogadores
                 dispatch({
                   type: 'ADD_LIVE_MATCH_EVENT',
@@ -3524,15 +3544,15 @@ function MatchQuickLegacy() {
                 } as any);
               } else {
                 const presetLabels: Record<string, { name: string; effect: string }> = {
-                  PRESSAO_ALTA: { name: 'Pressão Alta', effect: 'Fadiga aumentará 60% mais rápido. +10% chance de gol.' },
-                  POSSE_CONTROLADA: { name: 'Posse Controlada', effect: '+15% posse de bola. Desgasta o adversário.' },
-                  TRANSICAO_RAPIDA: { name: 'Contra-Ataque', effect: '+30% chance de contra-ataque. +8% chance de gol.' },
-                  BLOCO_BAIXO: { name: 'Bloco Baixo', effect: '+25% defesa. -15% chance de gol.' },
-                  JOGO_DIRETO: { name: 'Jogo Direto', effect: 'Bolas longas. Disputa de segunda bola.' },
+                  PRESSAO_ALTA: { name: L('Pressão Alta', 'High Press'), effect: L('Fadiga aumentará 60% mais rápido. +10% chance de gol.', 'Fatigue builds 60% faster. +10% goal chance.') },
+                  POSSE_CONTROLADA: { name: L('Posse Controlada', 'Controlled Possession'), effect: L('+15% posse de bola. Desgasta o adversário.', '+15% possession. Wears down the opponent.') },
+                  TRANSICAO_RAPIDA: { name: L('Contra-Ataque', 'Counter-Attack'), effect: L('+30% chance de contra-ataque. +8% chance de gol.', '+30% counter-attack chance. +8% goal chance.') },
+                  BLOCO_BAIXO: { name: L('Bloco Baixo', 'Low Block'), effect: L('+25% defesa. -15% chance de gol.', '+25% defense. -15% goal chance.') },
+                  JOGO_DIRETO: { name: L('Jogo Direto', 'Direct Play'), effect: L('Bolas longas. Disputa de segunda bola.', 'Long balls. Fight for the second ball.') },
                 };
 
-                const preset = presetLabels[presetId] || { name: presetId, effect: 'Ajuste aplicado' };
-                feedText = `🎯 ${preset.name} aplicado`;
+                const preset = presetLabels[presetId] || { name: presetId, effect: L('Ajuste aplicado', 'Adjustment applied') };
+                feedText = L(`🎯 ${preset.name} aplicado`, `🎯 ${preset.name} applied`);
                 feedbackDetail = preset.effect;
 
                 dispatch({ type: 'SET_PLAYING_STYLE_PRESET', presetId: presetId as import('@/tactics/playingStyle').PlayingStylePresetId });
@@ -3614,7 +3634,7 @@ function MatchQuickLegacy() {
                   letterSpacing: '0.32em',
                 }}
               >
-                {summary.result === 'win' ? 'Vitória' : summary.result === 'loss' ? 'Derrota' : 'Empate'} · Fim de jogo
+                {summary.result === 'win' ? L('Vitória', 'Win') : summary.result === 'loss' ? L('Derrota', 'Loss') : L('Empate', 'Draw')} · {L('Fim de jogo', 'Full time')}
               </span>
               <span aria-hidden className="block h-px w-8 bg-neon-yellow/45" />
             </div>
@@ -3748,14 +3768,14 @@ function MatchQuickLegacy() {
                       className="inline-flex items-center bg-black/75 px-1.5 py-0.5 font-display font-bold uppercase text-white/90"
                       style={{ fontSize: '9px', letterSpacing: '0.22em' }}
                     >
-                      {summary.mvp.pos}
+                      {posLabel(summary.mvp.pos)}
                     </span>
                   </div>
                 </div>
 
                 {/* Info MVP */}
                 <div className="flex flex-col justify-center gap-2 px-4 py-3 sm:px-5 sm:py-4">
-                  <Hashtag>#joiadoplantel</Hashtag>
+                  <Hashtag>{L('#joiadoplantel', '#squadgem')}</Hashtag>
                   <p
                     className="text-white uppercase truncate"
                     style={{
@@ -3790,7 +3810,7 @@ function MatchQuickLegacy() {
                           style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}
                         >
                           <strong className="font-display tabular-nums" style={{ fontSize: '14px', color: 'var(--color-success)' }}>{summary.mvp.goals}</strong>
-                          <span className="uppercase tracking-wider" style={{ fontSize: '9px', letterSpacing: '0.22em' }}>Gols</span>
+                          <span className="uppercase tracking-wider" style={{ fontSize: '9px', letterSpacing: '0.22em' }}>{L('Gols', 'Goals')}</span>
                         </span>
                       ) : null}
                       {summary.mvp.assists > 0 ? (
@@ -3799,7 +3819,7 @@ function MatchQuickLegacy() {
                           style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}
                         >
                           <strong className="font-display tabular-nums" style={{ fontSize: '14px', color: 'var(--color-neon-yellow)' }}>{summary.mvp.assists}</strong>
-                          <span className="uppercase tracking-wider" style={{ fontSize: '9px', letterSpacing: '0.22em' }}>Assist.</span>
+                          <span className="uppercase tracking-wider" style={{ fontSize: '9px', letterSpacing: '0.22em' }}>{L('Assist.', 'Assists')}</span>
                         </span>
                       ) : null}
                     </div>
@@ -3811,7 +3831,7 @@ function MatchQuickLegacy() {
             {/* Confirmação: o resultado já entrou na liga e no elenco */}
             <div className="px-6 pt-3 pb-5 text-center border-t border-[var(--color-divider-yellow)]">
               <p className="font-mono text-[11.5px] font-medium text-cimento">
-                Liga e elenco atualizados
+                {L('Liga e elenco atualizados', 'League and squad updated')}
               </p>
             </div>
           </div>
@@ -3833,16 +3853,16 @@ function MatchQuickLegacy() {
                     letterSpacing: '0.24em',
                   }}
                 >
-                  Estatísticas
+                  {L('Estatísticas', 'Stats')}
                 </h3>
               </div>
               {(() => {
                 const s = summary.stats!;
                 const cells = [
-                  { label: 'Posse', val: `${s.possessionHome}%` },
-                  { label: 'Chutes', val: `${s.shotsHome}` },
-                  { label: 'Escanteios', val: `${s.cornersHome}` },
-                  { label: 'Cartões', val: `${s.yellowsHome + s.redsHome}` },
+                  { label: L('Posse', 'Possession'), val: `${s.possessionHome}%` },
+                  { label: L('Chutes', 'Shots'), val: `${s.shotsHome}` },
+                  { label: L('Escanteios', 'Corners'), val: `${s.cornersHome}` },
+                  { label: L('Cartões', 'Cards'), val: `${s.yellowsHome + s.redsHome}` },
                 ];
                 return (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -3888,7 +3908,7 @@ function MatchQuickLegacy() {
                   letterSpacing: '0.24em',
                 }}
               >
-                Lances do jogo
+                {L('Lances do jogo', 'Match highlights')}
               </h3>
             </div>
             <div className="space-y-1">
@@ -3962,7 +3982,7 @@ function MatchQuickLegacy() {
                   onClick={() => setSession((s) => s + 1)}
                 >
                   <RotateCcw className="w-5 h-5" />
-                  Revanche imediata
+                  {L('Revanche imediata', 'Instant rematch')}
                 </motion.button>
               </>
             ) : (
@@ -3980,7 +4000,7 @@ function MatchQuickLegacy() {
                 onClick={() => setSession((s) => s + 1)}
               >
                 <RotateCcw className="w-4 h-4" />
-                Jogar novamente
+                {L('Jogar novamente', 'Play again')}
               </button>
             )}
             <button
@@ -3997,7 +4017,7 @@ function MatchQuickLegacy() {
               onClick={() => navigate('/leagues')}
             >
               <Trophy className="w-4 h-4" />
-              Ir para Liga
+              {L('Ir para Liga', 'Go to League')}
             </button>
             <button
               type="button"
@@ -4027,9 +4047,9 @@ function MatchQuickLegacy() {
             const lastGoal = live.events?.find((e) => e.kind === 'goal_home' || e.kind === 'goal_away');
             if (lastGoal?.playerId) {
               const player = playersById[lastGoal.playerId];
-              return player?.name || 'Jogador';
+              return player?.name || L('Jogador', 'Player');
             }
-            return 'Gol!';
+            return L('Gol!', 'Goal!');
           })()}
           scorerPortrait={(() => {
             const lastGoal = live.events?.find((e) => e.kind === 'goal_home' || e.kind === 'goal_away');
@@ -4041,7 +4061,7 @@ function MatchQuickLegacy() {
           })()}
           narrative={(() => {
             const lastGoal = live.events?.find((e) => e.kind === 'goal_home' || e.kind === 'goal_away');
-            return lastGoal?.text || 'Estufou as redes!';
+            return lastGoal?.text || L('Estufou as redes!', 'Into the back of the net!');
           })()}
           onDismiss={() => {
             setGoalCelebrationActive(false);
@@ -4188,14 +4208,14 @@ function ShotProbabilityBar({
   const { goal, save, out } = preview.probs;
   const pct = (v: number) => Math.round(v * 100);
   const labels: Array<{ k: 'goal' | 'save' | 'out'; v: number; cls: string; txt: string }> = [
-    { k: 'goal', v: goal, cls: 'bg-neon-yellow text-black', txt: `${pct(goal)}% GOL` },
-    { k: 'save', v: save, cls: 'bg-cyan-500/80 text-black', txt: `${pct(save)}% DEF` },
-    { k: 'out',  v: out,  cls: 'bg-white/20 text-white',    txt: `${pct(out)}% FORA` },
+    { k: 'goal', v: goal, cls: 'bg-neon-yellow text-black', txt: `${pct(goal)}% ${L('GOL', 'GOAL')}` },
+    { k: 'save', v: save, cls: 'bg-cyan-500/80 text-black', txt: `${pct(save)}% ${L('DEF', 'SAVE')}` },
+    { k: 'out',  v: out,  cls: 'bg-white/20 text-white',    txt: `${pct(out)}% ${L('FORA', 'OFF')}` },
   ];
   return (
     <div
       role="status"
-      aria-label="Probabilidades do tiro"
+      aria-label={L('Probabilidades do tiro', 'Shot probabilities')}
       className="flex h-5 w-[min(260px,70vw)] overflow-hidden rounded-md border border-white/10 bg-black/40 font-display text-[9px] font-black uppercase tracking-wider"
     >
       {labels.map((l) => (

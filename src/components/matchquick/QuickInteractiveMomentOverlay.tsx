@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Clock, Zap, Shield, Target, TrendingUp, Users } from 'lucide-react';
 import type { QuickInteractiveMoment } from '@/match/quickInteractiveMoments';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 interface Props {
   moment: QuickInteractiveMoment;
@@ -58,13 +59,13 @@ export function QuickInteractiveMomentOverlay({ moment, onChoice }: Props) {
   const getMomentLabel = () => {
     switch (moment.type) {
       case 'counter_attack':
-        return 'Contra-Ataque';
+        return L('Contra-Ataque', 'Counter-Attack');
       case 'set_piece':
-        return 'Bola Parada';
+        return L('Bola Parada', 'Set Piece');
       case 'defensive_choice':
-        return 'Decisão Defensiva';
+        return L('Decisão Defensiva', 'Defensive Decision');
       case 'sub_timing':
-        return 'Substituição';
+        return L('Substituição', 'Substitution');
     }
   };
 
@@ -94,7 +95,7 @@ export function QuickInteractiveMomentOverlay({ moment, onChoice }: Props) {
                 </div>
                 <div className="min-w-0">
                   <div className="font-mono text-xs font-medium uppercase tracking-wider text-black/60">
-                    Minuto {moment.minute}'
+                    {L('Minuto', 'Minute')} {moment.minute}'
                   </div>
                   <div className="truncate font-impact text-2xl uppercase leading-[1.1] text-black">
                     {getMomentLabel()}
@@ -184,7 +185,7 @@ export function QuickInteractiveMomentOverlay({ moment, onChoice }: Props) {
               className="mx-6 mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-3"
             >
               <p className="text-center text-xs font-semibold text-red-400">
-                ⚠️ A IA decidirá por você se o tempo esgotar!
+                {L('⚠️ A IA decidirá por você se o tempo esgotar!', '⚠️ The AI will decide for you if time runs out!')}
               </p>
             </motion.div>
           )}

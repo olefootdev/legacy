@@ -1,3 +1,4 @@
+import { L, LOCALE } from '@/i18n/L';
 /**
  * ManagerOfDay — módulo "Manager do Dia" do layout v3.
  *
@@ -17,7 +18,7 @@ export function ManagerOfDay({
 }) {
   return (
     <section
-      aria-label="Manager do dia"
+      aria-label={L('Manager do dia', 'Manager of the day')}
       className="relative flex flex-col justify-end overflow-hidden p-5"
       style={{
         minHeight: 220,
@@ -46,7 +47,7 @@ export function ManagerOfDay({
           style={{ fontSize: '10px', letterSpacing: '0.24em', color: '#C7A64E' }}
         >
           <span aria-hidden className="h-0.5 w-5" style={{ background: '#C7A64E' }} />
-          No topo agora
+          {L('No topo agora', 'On top right now')}
         </span>
         <div className="mt-3 flex items-center gap-3.5">
           <span
@@ -62,7 +63,7 @@ export function ManagerOfDay({
               className="mt-1 uppercase text-white/60"
               style={{ fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '0.14em' }}
             >
-              Líder do dia · #1 no mundo
+              {L('Líder do dia · #1 no mundo', 'Leader of the day · #1 worldwide')}
             </p>
           </div>
         </div>
@@ -72,13 +73,13 @@ export function ManagerOfDay({
         >
           <div className="flex flex-col">
             <span className="font-impact tabular-nums leading-none" style={{ fontSize: '24px', color: '#C7A64E' }}>
-              {points.toLocaleString('pt-BR')}
+              {points.toLocaleString(LOCALE)}
             </span>
             <span
               className="mt-1 font-display font-black uppercase text-white/40"
               style={{ fontSize: '8.5px', letterSpacing: '0.12em' }}
             >
-              pontos de temporada
+              {L('pontos de temporada', 'season points')}
             </span>
           </div>
           <div className="flex flex-col">
@@ -89,7 +90,7 @@ export function ManagerOfDay({
               className="mt-1 font-display font-black uppercase text-white/40"
               style={{ fontSize: '8.5px', letterSpacing: '0.12em' }}
             >
-              overall do elenco
+              {L('overall do elenco', 'squad overall')}
             </span>
           </div>
         </div>

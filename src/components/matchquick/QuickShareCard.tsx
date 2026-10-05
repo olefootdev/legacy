@@ -21,6 +21,7 @@ import type { QuickRarity } from '@/match/quickRarity';
 import { rarityTierLabel } from '@/match/quickRarity';
 import { shareImageWithText } from '@/lib/shareImage';
 import { Hashtag } from '@/components/ui';
+import { L } from '@/i18n/L';
 
 const MANCHETE = 'var(--font-impact)';
 
@@ -59,12 +60,12 @@ export function QuickShareCard({
   const referralUrl = referralCode ? `${origin}/cadastro/${referralCode}` : `${origin}/cadastro`;
   const displayUrl = referralUrl.replace(/^https?:\/\//, '');
 
-  const resWord = result === 'win' ? 'venci' : result === 'draw' ? 'empatei' : 'perdi';
+  const resWord = result === 'win' ? L('venci', 'won') : result === 'draw' ? L('empatei', 'drew') : L('perdi', 'lost');
   const shareMessage =
-    `${rarity.headline} no Olefoot! ${clubName} ${homeScore}–${awayScore} ${opponentName} — ${resWord} ${rarity.tagline}.` +
-    (rarity.oneInX >= 10 ? ` Raridade estimada: 1 em ${rarity.oneInX} partidas.` : '') +
-    (mvp ? ` Craque: ${mvp.name} (nota ${mvp.rating.toFixed(1)}).` : '') +
-    ` Monta teu time e vem 👉 ${referralUrl}`;
+    L(`${rarity.headline} no Olefoot! ${clubName} ${homeScore}–${awayScore} ${opponentName} — ${resWord} ${rarity.tagline}.`, `${rarity.headline} on Olefoot! ${clubName} ${homeScore}–${awayScore} ${opponentName} — ${resWord} ${rarity.tagline}.`) +
+    (rarity.oneInX >= 10 ? L(` Raridade estimada: 1 em ${rarity.oneInX} partidas.`, ` Estimated rarity: 1 in ${rarity.oneInX} matches.`) : '') +
+    (mvp ? L(` Craque: ${mvp.name} (nota ${mvp.rating.toFixed(1)}).`, ` Star: ${mvp.name} (rating ${mvp.rating.toFixed(1)}).`) : '') +
+    L(` Monta teu time e vem 👉 ${referralUrl}`, ` Build your team and join 👉 ${referralUrl}`);
 
   const onShare = async () => {
     const r = await shareImageWithText({
@@ -107,11 +108,11 @@ export function QuickShareCard({
             >
               <Sparkles className="w-3 h-3 text-neon-yellow" strokeWidth={2.5} aria-hidden />
               <span style={{ color: 'var(--color-neon-yellow)', fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em' }}>
-                {rarityTierLabel(rarity.tier).toUpperCase()} · 1 EM {rarity.oneInX}
+                {rarityTierLabel(rarity.tier).toUpperCase()} · {L('1 EM', '1 IN')} {rarity.oneInX}
               </span>
             </div>
           )}
-          <Hashtag className="mb-1 text-neon-yellow">#partidarápida #olefoot</Hashtag>
+          <Hashtag className="mb-1 text-neon-yellow">{L('#partidarápida #olefoot', '#quickmatch #olefoot')}</Hashtag>
           <p className="uppercase" style={{ color: 'var(--color-giz)', fontFamily: MANCHETE, fontSize: 'clamp(30px, 10vw, 46px)', lineHeight: 1.05 }}>
             {rarity.headline}
           </p>
@@ -129,14 +130,14 @@ export function QuickShareCard({
             >
               <Star className="w-3.5 h-3.5 text-neon-yellow" strokeWidth={2.5} aria-hidden />
               <span style={{ color: 'var(--color-giz)', fontSize: '11px', fontWeight: 600 }}>
-                Craque: <span className="text-white">{mvp.name}</span> · nota {mvp.rating.toFixed(1)}
+                {L('Craque', 'Star')}: <span className="text-white">{mvp.name}</span> · {L('nota', 'rating')} {mvp.rating.toFixed(1)}
               </span>
             </div>
           )}
 
           {strip.length > 0 && (
             <div className="flex items-center gap-1 mb-3">
-              <span className="font-display uppercase text-white/55" style={{ fontSize: '8px', fontWeight: 800, letterSpacing: '0.18em', marginRight: 2 }}>Forma</span>
+              <span className="font-display uppercase text-white/55" style={{ fontSize: '8px', fontWeight: 800, letterSpacing: '0.18em', marginRight: 2 }}>{L('Forma', 'Form')}</span>
               {strip.map((f, idx) => (
                 <span
                   key={idx}
@@ -156,7 +157,7 @@ export function QuickShareCard({
             className="flex items-center justify-center gap-2 w-full"
             style={{ padding: '11px', borderRadius: 'var(--radius-sm)', background: 'var(--color-neon-yellow)', color: 'var(--color-deep-black)', fontWeight: 800, fontSize: '13px', letterSpacing: '0.04em', textDecoration: 'none', fontFamily: 'var(--font-display)' }}
           >
-            CRIE SEU TIME AGORA
+            {L('CRIE SEU TIME AGORA', 'CREATE YOUR TEAM NOW')}
           </a>
           <p className="mt-1.5 text-center" style={{ color: 'rgba(253,225,0,0.85)', fontSize: '10px' }}>{displayUrl}</p>
         </div>
@@ -169,7 +170,7 @@ export function QuickShareCard({
         style={{ padding: '12px', borderRadius: 'var(--radius-sm)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'rgba(253,225,0,0.08)', color: 'var(--color-neon-yellow)', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '12px', letterSpacing: '0.1em' }}
       >
         <Share2 className="w-4 h-4" strokeWidth={2.5} aria-hidden />
-        {shared === 'done' ? 'COMPARTILHADO!' : shared === 'copied' ? 'LINK COPIADO!' : 'COMPARTILHAR MOMENTO'}
+        {shared === 'done' ? L('COMPARTILHADO!', 'SHARED!') : shared === 'copied' ? L('LINK COPIADO!', 'LINK COPIED!') : L('COMPARTILHAR MOMENTO', 'SHARE MOMENT')}
       </button>
     </motion.div>
   );

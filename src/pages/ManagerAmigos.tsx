@@ -3,6 +3,7 @@ import { UserPlus, X } from 'lucide-react';
 import { useFriendships } from '@/social/useFriendships';
 import { FriendSearchBlock } from './manager/FriendSearchBlock';
 import { SecaoVolt, Hashtag, UmaLinha } from '@/components/ui';
+import { L, LOCALE } from '@/i18n/L';
 
 /**
  * Manager → Amigos. Só amizade entre managers.
@@ -14,7 +15,7 @@ import { SecaoVolt, Hashtag, UmaLinha } from '@/components/ui';
  * social — buscar, convidar, aceitar.
  */
 function desde(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }); }
+  try { return new Date(iso).toLocaleDateString(LOCALE, { day: '2-digit', month: 'short' }); }
   catch { return iso.slice(0, 10); }
 }
 
@@ -29,15 +30,15 @@ export function ManagerAmigos() {
   return (
     <div className="mx-auto min-w-0 w-full max-w-3xl space-y-6 px-4 pb-10 pt-6">
       <div>
-        <Hashtag>#manager #amigos</Hashtag>
-        <h1 className="mt-1 font-impact text-[34px] uppercase leading-[1.05] text-white">Amigos</h1>
+        <Hashtag>{L('#manager #amigos', '#manager #friends')}</Hashtag>
+        <h1 className="mt-1 font-impact text-[34px] uppercase leading-[1.05] text-white">{L('Amigos', 'Friends')}</h1>
       </div>
 
       <FriendSearchBlock onInvite={f.invite} linkedIds={ligados} error={f.error} />
 
       {f.data.incoming.length > 0 && (
         <section className="space-y-3">
-          <SecaoVolt label="Pedidos" />
+          <SecaoVolt label={L('Pedidos', 'Requests')} />
           {f.data.incoming.map((p) => (
             <div key={p.id} className="flex min-w-0 items-center justify-between gap-3 border border-white/10 bg-panel px-4 py-3">
               <div className="flex min-w-0 items-center gap-3">
@@ -47,11 +48,11 @@ export function ManagerAmigos() {
               <div className="flex shrink-0 gap-2">
                 <button type="button" onClick={() => void f.accept(p.id)}
                   className="ole-num bg-neon-yellow px-3 py-2 text-[11px] uppercase text-black hover:bg-white">
-                  Aceitar
+                  {L('Aceitar', 'Accept')}
                 </button>
                 <button type="button" onClick={() => void f.decline(p.id)}
                   className="ole-num border border-white/30 px-3 py-2 text-[11px] uppercase text-white hover:border-white">
-                  Recusar
+                  {L('Recusar', 'Decline')}
                 </button>
               </div>
             </div>
@@ -60,11 +61,11 @@ export function ManagerAmigos() {
       )}
 
       <section className="space-y-3">
-        <SecaoVolt label="Seus amigos" tone="neutro" />
+        <SecaoVolt label={L('Seus amigos', 'Your friends')} tone="neutro" />
         {f.loading ? (
-          <p className="font-mono text-[12px] text-cimento">Carregando…</p>
+          <p className="font-mono text-[12px] text-cimento">{L('Carregando…', 'Loading…')}</p>
         ) : f.data.friends.length === 0 ? (
-          <p className="text-[13px] text-cimento">Nenhum amigo ainda. Busque um clube acima.</p>
+          <p className="text-[13px] text-cimento">{L('Nenhum amigo ainda. Busque um clube acima.', 'No friends yet. Search for a club above.')}</p>
         ) : (
           <div className="border border-white/10 bg-panel">
             {f.data.friends.map((a) => (
@@ -72,7 +73,7 @@ export function ManagerAmigos() {
                 <UmaLinha className="text-[14px] font-semibold text-white">{a.clubName}</UmaLinha>
                 <div className="flex shrink-0 items-center gap-3">
                   <span className="font-mono text-[10.5px] text-poeira">{desde(a.since)}</span>
-                  <button type="button" onClick={() => void f.remove(a.id)} aria-label={`Desfazer amizade com ${a.clubName}`}
+                  <button type="button" onClick={() => void f.remove(a.id)} aria-label={L(`Desfazer amizade com ${a.clubName}`, `Unfriend ${a.clubName}`)}
                     className="p-1 text-cimento hover:text-white">
                     <X className="h-4 w-4" />
                   </button>
@@ -85,14 +86,14 @@ export function ManagerAmigos() {
 
       {f.data.outgoing.length > 0 && (
         <section className="space-y-3">
-          <SecaoVolt label="Convites enviados" tone="neutro" />
+          <SecaoVolt label={L('Convites enviados', 'Sent invites')} tone="neutro" />
           <div className="border border-white/10 bg-panel">
             {f.data.outgoing.map((p) => (
               <div key={p.id} className="flex min-w-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3 last:border-b-0">
                 <UmaLinha className="text-[13px] text-giz">{p.clubName}</UmaLinha>
                 <button type="button" onClick={() => void f.remove(p.id)}
                   className="shrink-0 font-mono text-[10.5px] uppercase text-cimento hover:text-white">
-                  Cancelar
+                  {L('Cancelar', 'Cancel')}
                 </button>
               </div>
             ))}

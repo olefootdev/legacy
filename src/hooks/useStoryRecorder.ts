@@ -15,6 +15,7 @@
  * com pausas). Aqui só para quando a pessoa manda parar.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { LOCALE } from '@/i18n/L';
 
 export type RecorderState = 'idle' | 'recording' | 'stopped' | 'denied' | 'unsupported';
 
@@ -51,7 +52,7 @@ function speechCtor(): (new () => SpeechRecognitionLike) | null {
   return (w.SpeechRecognition ?? w.webkitSpeechRecognition) as (new () => SpeechRecognitionLike) | null;
 }
 
-export function useStoryRecorder(lang = 'pt-BR'): StoryRecorderApi {
+export function useStoryRecorder(lang: string = LOCALE): StoryRecorderApi {
   const [state, setState] = useState<RecorderState>('idle');
   const [blob, setBlob] = useState<Blob | null>(null);
   const [transcript, setTranscript] = useState('');

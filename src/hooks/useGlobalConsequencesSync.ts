@@ -38,6 +38,7 @@ import type { MatchOutcomeEvent, PlayerHealth } from '@/systems/playerHealth/typ
 import type { MatchResult } from '@/systems/playerMoral/types';
 import type { InjurySeverity } from '@/systems/injury';
 import type { PlayerEntity } from '@/entities/types';
+import { L, LOCALE } from '@/i18n/L';
 
 const LEAGUE_ID = 'global';
 
@@ -99,8 +100,8 @@ export function useGlobalConsequencesSync() {
         try {
           if (balance < olefootCost) {
             inboxItems.push(
-              makeInboxItem(`autorenew-failed-${p.id}`, 'PLAYER_CONTRACT', 'PLANTEL', `Auto-renovação falhou — ${p.name}`, {
-                body: `Sem OLEFOOT suficiente (${olefootCost} OLEFOOT) pra renovar ${p.name}. Renove manualmente quando tiver saldo.`,
+              makeInboxItem(`autorenew-failed-${p.id}`, 'PLAYER_CONTRACT', 'PLANTEL', L(`Auto-renovação falhou — ${p.name}`, `Auto-renewal failed — ${p.name}`), {
+                body: L(`Sem OLEFOOT suficiente (${olefootCost} OLEFOOT) pra renovar ${p.name}. Renove manualmente quando tiver saldo.`, `Not enough OLEFOOT (${olefootCost} OLEFOOT) to renew ${p.name}. Renew manually when you have the balance.`),
                 deepLink: contractDeepLink(p.id),
                 relatedPlayerIds: [p.id],
               }),
@@ -112,8 +113,8 @@ export function useGlobalConsequencesSync() {
           balance = result.newBalance;
           dispatchGame({ type: 'RENEW_MANAGER_PROSPECT_CONTRACT', playerId: p.id, contractMatches: tier, paymentMethod: 'olefoot' });
           inboxItems.push(
-            makeInboxItem(`autorenew-ok-${p.id}`, 'PLAYER_CONTRACT', 'PLANTEL', `Auto-renovado — ${p.name}`, {
-              body: `Renovei ${p.name} por ${olefootCost} OLEFOOT (+${tier} jogos). Auto-renovação está ativa para este jogador.`,
+            makeInboxItem(`autorenew-ok-${p.id}`, 'PLAYER_CONTRACT', 'PLANTEL', L(`Auto-renovado — ${p.name}`, `Auto-renewed — ${p.name}`), {
+              body: L(`Renovei ${p.name} por ${olefootCost} OLEFOOT (+${tier} jogos). Auto-renovação está ativa para este jogador.`, `Renewed ${p.name} for ${olefootCost} OLEFOOT (+${tier} matches). Auto-renewal is on for this player.`),
               deepLink: contractDeepLink(p.id),
               relatedPlayerIds: [p.id],
             }),
@@ -209,8 +210,8 @@ export function useGlobalConsequencesSync() {
 }
 
 const KO_STAGE_LABEL: Record<string, string> = {
-  qualified: 'Classificado pro Mata-Mata!', r16: 'Venceu as oitavas!',
-  qf: 'Venceu as quartas!', sf: 'Venceu a semifinal!', final: '👑 Campeão do Dia!',
+  qualified: L('Classificado pro Mata-Mata!', 'Through to the Knockouts!'), r16: L('Venceu as oitavas!', 'Won the round of 16!'),
+  qf: L('Venceu as quartas!', 'Won the quarter-final!'), sf: L('Venceu a semifinal!', 'Won the semi-final!'), final: L('👑 Campeão do Dia!', '👑 Champion of the Day!'),
 };
 
 /** Acima disto, uma mensagem-resumo em vez de uma por prêmio (acumulado de meses). */
@@ -266,12 +267,12 @@ async function runLeaguePrizeClaim(): Promise<void> {
     const exp = champs.reduce((s, c) => s + Number(c.prize_exp ?? 0), 0)
       + kos.reduce((s, c) => s + Number(c.prize_exp ?? 0), 0);
     const parts = [
-      champs.length > 0 ? `${champs.length} título(s) de divisão` : null,
-      kos.length > 0 ? `${kos.length} fase(s) de mata-mata` : null,
-    ].filter(Boolean).join(' e ');
+      champs.length > 0 ? L(`${champs.length} título(s) de divisão`, `${champs.length} division title(s)`) : null,
+      kos.length > 0 ? L(`${kos.length} fase(s) de mata-mata`, `${kos.length} knockout round(s)`) : null,
+    ].filter(Boolean).join(L(' e ', ' and '));
     items.push(
-      makeInboxItem(`league-prizes-${champs[0]?.id ?? kos[0]?.id}`, 'FINANCE_EXP_GAIN', 'COMPETIÇÃO', `🏆 Prêmios da Liga Global creditados`, {
-        body: `${parts}. Total: +${ole.toLocaleString('pt-BR')} OLE · +${exp.toLocaleString('pt-BR')} EXP.`,
+      makeInboxItem(`league-prizes-${champs[0]?.id ?? kos[0]?.id}`, 'FINANCE_EXP_GAIN', 'COMPETIÇÃO', L(`🏆 Prêmios da Liga Global creditados`, `🏆 Global League prizes credited`), {
+        body: L(`${parts}. Total: +${ole.toLocaleString(LOCALE)} OLE · +${exp.toLocaleString(LOCALE)} EXP.`, `${parts}. Total: +${ole.toLocaleString(LOCALE)} OLE · +${exp.toLocaleString(LOCALE)} EXP.`),
         deepLink: '/match/global',
       }),
     );
@@ -280,8 +281,8 @@ async function runLeaguePrizeClaim(): Promise<void> {
       const ole = Number(c.prize_ole ?? 0);
       const exp = Number(c.prize_exp ?? 0);
       items.push(
-        makeInboxItem(`season-champ-${c.id}`, 'FINANCE_EXP_GAIN', 'COMPETIÇÃO', `🏆 Campeão da Divisão ${c.division}!`, {
-          body: `Sua equipe venceu a temporada da Div ${c.division} com ${c.points ?? 0} pts. Prêmio creditado: +${ole.toLocaleString('pt-BR')} OLE · +${exp.toLocaleString('pt-BR')} EXP.`,
+        makeInboxItem(`season-champ-${c.id}`, 'FINANCE_EXP_GAIN', 'COMPETIÇÃO', L(`🏆 Campeão da Divisão ${c.division}!`, `🏆 Division ${c.division} Champions!`), {
+          body: L(`Sua equipe venceu a temporada da Div ${c.division} com ${c.points ?? 0} pts. Prêmio creditado: +${ole.toLocaleString(LOCALE)} OLE · +${exp.toLocaleString(LOCALE)} EXP.`, `Your team won the Div ${c.division} season with ${c.points ?? 0} pts. Prize credited: +${ole.toLocaleString(LOCALE)} OLE · +${exp.toLocaleString(LOCALE)} EXP.`),
           deepLink: '/match/global',
         }),
       );
@@ -289,8 +290,8 @@ async function runLeaguePrizeClaim(): Promise<void> {
     for (const c of kos) {
       const exp = Number(c.prize_exp);
       items.push(
-        makeInboxItem(`ko-prize-${c.id}`, 'FINANCE_EXP_GAIN', 'COMPETIÇÃO', `🏆 ${KO_STAGE_LABEL[c.stage] ?? 'Mata-Mata do Dia'}`, {
-          body: `Mata-Mata da Liga Global — prêmio creditado: +${exp.toLocaleString('pt-BR')} EXP.`,
+        makeInboxItem(`ko-prize-${c.id}`, 'FINANCE_EXP_GAIN', 'COMPETIÇÃO', `🏆 ${KO_STAGE_LABEL[c.stage] ?? L('Mata-Mata do Dia', 'Daily Knockout')}`, {
+          body: L(`Mata-Mata da Liga Global — prêmio creditado: +${exp.toLocaleString(LOCALE)} EXP.`, `Global League Knockout — prize credited: +${exp.toLocaleString(LOCALE)} EXP.`),
           deepLink: '/match/global',
         }),
       );
@@ -469,8 +470,8 @@ function applyRoundConsequences(
           `global-rivalry-${fixture.id}`,
           'LEAGUE_MATCH_SIMULATED',
           'COMPETIÇÃO',
-          `Clássico! ${rivalryInfo.rivalryCount}º confronto contra ${rivalryInfo.opponentName} — tensão aumentada`,
-          { timeLabel: 'Liga Global' },
+          L(`Clássico! ${rivalryInfo.rivalryCount}º confronto contra ${rivalryInfo.opponentName} — tensão aumentada`, `Derby! Meeting no. ${rivalryInfo.rivalryCount} with ${rivalryInfo.opponentName} — tension rising`),
+          { timeLabel: L('Liga Global', 'Global League') },
         ),
       ],
     });
@@ -488,14 +489,14 @@ function generateInboxNotifications(
 
   const redCards = healthEvents.filter((e) => e.type === 'red_card');
   for (const ev of redCards) {
-    const playerName = players[ev.playerId]?.name ?? 'Jogador';
+    const playerName = players[ev.playerId]?.name ?? L('Jogador', 'Player');
     inboxItems.push(
       makeInboxItem(
         `global-red-${ev.playerId}-${now}`,
         'PLAYER_SUSPENSION',
         'COMPETIÇÃO',
-        `Cartão vermelho na Liga Global — ${playerName} suspenso 1 rodada`,
-        { timeLabel: 'Liga Global' },
+        L(`Cartão vermelho na Liga Global — ${playerName} suspenso 1 rodada`, `Red card in the Global League — ${playerName} banned for 1 round`),
+        { timeLabel: L('Liga Global', 'Global League') },
       ),
     );
   }
@@ -505,14 +506,14 @@ function generateInboxNotifications(
     const prev = playerHealth[ev.playerId];
     const prevCount = prev?.yellowCardsByLeague?.[LEAGUE_ID] ?? 0;
     if (prevCount === 2) {
-      const playerName = players[ev.playerId]?.name ?? 'Jogador';
+      const playerName = players[ev.playerId]?.name ?? L('Jogador', 'Player');
       inboxItems.push(
         makeInboxItem(
           `global-yellow-ban-${ev.playerId}-${now}`,
           'PLAYER_SUSPENSION',
           'COMPETIÇÃO',
-          `3 amarelos acumulados na Liga Global — ${playerName} suspenso 1 rodada`,
-          { timeLabel: 'Liga Global' },
+          L(`3 amarelos acumulados na Liga Global — ${playerName} suspenso 1 rodada`, `3 yellows in the Global League — ${playerName} banned for 1 round`),
+          { timeLabel: L('Liga Global', 'Global League') },
         ),
       );
     }
@@ -521,15 +522,15 @@ function generateInboxNotifications(
   const injuries = healthEvents.filter((e) => e.type === 'injury');
   for (const ev of injuries) {
     const sev = (ev as { severity: string }).severity;
-    const label = sev === 'gravissima' ? 'Gravíssima' : sev === 'forte' ? 'Forte' : 'Leve';
-    const playerName = players[ev.playerId]?.name ?? 'Jogador';
+    const label = sev === 'gravissima' ? L('Gravíssima', 'Severe') : sev === 'forte' ? L('Forte', 'Serious') : L('Leve', 'Minor');
+    const playerName = players[ev.playerId]?.name ?? L('Jogador', 'Player');
     inboxItems.push(
       makeInboxItem(
         `global-injury-${ev.playerId}-${now}`,
         'PLAYER_INJURY',
         'PLANTEL',
-        `Lesão ${label} na Liga Global — ${playerName} indisponível`,
-        { timeLabel: 'Liga Global' },
+        L(`Lesão ${label} na Liga Global — ${playerName} indisponível`, `${label} injury in the Global League — ${playerName} unavailable`),
+        { timeLabel: L('Liga Global', 'Global League') },
       ),
     );
   }
@@ -548,8 +549,8 @@ function generateInboxNotifications(
         `global-wo-risk-${now}`,
         'LINEUP_ISSUE',
         'COMPETIÇÃO',
-        `Alerta: apenas ~${Math.max(0, availableAfter)} jogadores disponíveis — risco de WO!`,
-        { timeLabel: 'Liga Global' },
+        L(`Alerta: apenas ~${Math.max(0, availableAfter)} jogadores disponíveis — risco de WO!`, `Alert: only ~${Math.max(0, availableAfter)} players available — walkover risk!`),
+        { timeLabel: L('Liga Global', 'Global League') },
       ),
     );
   }

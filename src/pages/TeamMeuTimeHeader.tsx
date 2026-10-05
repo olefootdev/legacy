@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
 import { Hashtag } from '@/components/ui';
+import { L } from '@/i18n/L';
 
 /**
  * Header padrão das páginas /clube/elenco · /clube/treino · /clube/staff.
@@ -35,7 +36,7 @@ export function TeamMeuTimeHeader({
       <GameBannerBackdrop slot="team_header" imageOpacity={0.32} />
       <div className="relative z-10 px-5 sm:px-7 py-6 sm:py-8 flex flex-col items-start gap-3">
         {/* Categoria em #hashtag */}
-        <Hashtag>#meutime</Hashtag>
+        <Hashtag>{L('#meutime', '#myteam')}</Hashtag>
         {/* Headline — Anton */}
         <h2
           className="font-impact uppercase text-white leading-[1.05] [overflow-wrap:anywhere]"

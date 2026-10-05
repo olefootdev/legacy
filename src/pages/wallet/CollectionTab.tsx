@@ -14,6 +14,7 @@
  */
 import { WalletShell } from './WalletShell';
 import type { WalletCollectible } from '@/wallet/types';
+import { L } from '@/i18n/L';
 
 function EmptyShelf() {
   return (
@@ -22,10 +23,10 @@ function EmptyShelf() {
         ◈
       </div>
       <h3 className="font-display text-sm font-black uppercase tracking-[0.18em] text-white/70">
-        Sua coleção está vazia
+        {L('Sua coleção está vazia', 'Your collection is empty')}
       </h3>
       <p className="mx-auto mt-2 max-w-sm text-xs leading-relaxed text-white/45">
-        Os cards que você comprar aparecem aqui.
+        {L('Os cards que você comprar aparecem aqui.', 'Cards you buy show up here.')}
       </p>
     </div>
   );
@@ -67,8 +68,8 @@ export function CollectionTab() {
 
   return (
     <WalletShell
-      title="Coleção"
-      hashtag="#colecao"
+      title={L('Coleção', 'Collection')}
+      hashtag={L('#colecao', '#collection')}
       heroVariant="compact"
       voltar
       heroStats={[{ label: 'Cards', value: String(items.length) }]}

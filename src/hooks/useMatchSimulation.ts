@@ -8,6 +8,7 @@ import type { PitchPlayerState, PossessionSide, MatchEventEntry } from '@/engine
 import type { OpponentStub } from '@/entities/types';
 import { gameSpiritTick, buildSpiritContext } from '@/gamespirit/GameSpirit';
 import type { SpiritContext } from '@/gamespirit/types';
+import { L } from '@/i18n/L';
 
 export type MatchSpeed = '1x' | '2x' | '4x' | 'auto';
 
@@ -152,7 +153,7 @@ export function useMatchSimulation(props: UseMatchSimulationProps) {
         opponentStrength: opponent.strength ?? 70,
         homeRoster,
         homePlayers,
-        homeShort: 'Casa',
+        homeShort: L('Casa', 'Home'),
         awayRoster,
       });
 

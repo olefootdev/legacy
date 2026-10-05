@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
+import { L } from '@/i18n/L';
 
 interface QuickGoalCelebrationProps {
   /** Chave única do gol para triggerar remount */
@@ -92,7 +93,7 @@ export function QuickGoalCelebration({
         onClick={handleDismiss}
         role="button"
         tabIndex={0}
-        aria-label="Fechar celebração de gol"
+        aria-label={L('Fechar celebração de gol', 'Close goal celebration')}
         className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-deep-black cursor-pointer"
       >
         {/* Hint discreto no topo */}
@@ -105,7 +106,7 @@ export function QuickGoalCelebration({
             fontWeight: 700,
           }}
         >
-          Toque pra continuar · ESC
+          {L('Toque pra continuar · ESC', 'Tap to continue · ESC')}
         </p>
         <motion.div
           initial={{ scale: 0.8, y: 30 }}
@@ -122,7 +123,7 @@ export function QuickGoalCelebration({
               letterSpacing: '0.01em',
             }}
           >
-            Gol
+            {L('Gol', 'Goal')}
           </h1>
 
           {/* Foto do jogador */}
@@ -216,7 +217,7 @@ export function QuickGoalCelebration({
                 borderRadius: 'var(--radius-sm)',
               }}
             >
-              Voltar para a partida
+              {L('Voltar para a partida', 'Back to the match')}
               <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6" />
             </motion.button>
           )}

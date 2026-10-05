@@ -1,6 +1,7 @@
 import type { OlefootGameState } from '@/game/types';
 import type { CoachAction } from './coachActions';
 import { findShopItem } from '@/game/shopCatalog';
+import { L } from '@/i18n/L';
 
 /**
  * Gera ações proativas para o manager APROVAR baseado no SSOT `playerHealth`.
@@ -40,12 +41,12 @@ export function generateProactiveHealthActions(state: OlefootGameState): CoachAc
     out.push({
       id: `coach-rest-${now}`,
       type: 'start_training',
-      title: 'Descanso coletivo (recuperação)',
-      description: 'Plantel cansado — sessão coletiva de descanso (24h) para baixar fadiga e risco de lesão.',
+      title: L('Descanso coletivo (recuperação)', 'Team rest (recovery)'),
+      description: L('Plantel cansado — sessão coletiva de descanso (24h) para baixar fadiga e risco de lesão.', 'Tired squad — team rest session (24h) to cut fatigue and injury risk.'),
       reasoning:
         avgFatigue >= 75
-          ? `Fadiga média do plantel em ${avgFatigue.toFixed(0)}% (limiar 75).`
-          : `${countAtRisk} jogadores em risco (atRisk) — descanso urgente.`,
+          ? L(`Fadiga média do plantel em ${avgFatigue.toFixed(0)}% (limiar 75).`, `Squad average fatigue at ${avgFatigue.toFixed(0)}% (threshold 75).`)
+          : L(`${countAtRisk} jogadores em risco (atRisk) — descanso urgente.`, `${countAtRisk} players at risk — rest urgently.`),
       urgency: avgFatigue >= 90 || countAtRisk >= 6 ? 'high' : 'medium',
       status: 'pending',
       createdAt: now,
@@ -67,9 +68,9 @@ export function generateProactiveHealthActions(state: OlefootGameState): CoachAc
       out.push({
         id: `coach-treat-${worst.id}-${now}`,
         type: 'start_treatment',
-        title: `Tratar ${player.name}`,
-        description: `${player.name} indisponível por ${worst.outFor} jogos. Acelerar recuperação.`,
-        reasoning: `Departamento médico pode reduzir tempo de baixa.`,
+        title: L(`Tratar ${player.name}`, `Treat ${player.name}`),
+        description: L(`${player.name} indisponível por ${worst.outFor} jogos. Acelerar recuperação.`, `${player.name} out for ${worst.outFor} games. Speed up recovery.`),
+        reasoning: L(`Departamento médico pode reduzir tempo de baixa.`, `The medical department can shorten the time out.`),
         urgency: 'high',
         status: 'pending',
         createdAt: now,
@@ -86,9 +87,9 @@ export function generateProactiveHealthActions(state: OlefootGameState): CoachAc
       out.push({
         id: `coach-buy-booster-${now}`,
         type: 'buy_health_booster',
-        title: 'Comprar Booster Fadiga Zero',
-        description: `Resetar fadiga do plantel inteiro (${cost} EXP).`,
-        reasoning: `${countAtRisk} jogadores em risco. Booster zera fadiga global e protege contra lesões.`,
+        title: L('Comprar Booster Fadiga Zero', 'Buy Zero Fatigue Booster'),
+        description: L(`Resetar fadiga do plantel inteiro (${cost} EXP).`, `Reset fatigue for the whole squad (${cost} EXP).`),
+        reasoning: L(`${countAtRisk} jogadores em risco. Booster zera fadiga global e protege contra lesões.`, `${countAtRisk} players at risk. The booster clears all fatigue and protects against injuries.`),
         urgency: countAtRisk >= 6 ? 'high' : 'medium',
         status: 'pending',
         createdAt: now,

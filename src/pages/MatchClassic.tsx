@@ -14,6 +14,7 @@ import {
 import type { ClassicPlayer } from '@/engine/classic/types';
 import type { OpponentStub } from '@/entities/types';
 import { overallFromAttributes } from '@/entities/player';
+import { L } from '@/i18n/L';
 
 /**
  * Modo CLASSIC — usa o plantel real do manager + adversário do `nextFixture`.
@@ -29,7 +30,7 @@ function ClassicComingSoonScreen() {
   return (
     <div className="flex w-full min-h-svh items-center justify-center bg-deep-black px-6">
       <div className="max-w-md text-center space-y-6">
-        <div className="ole-eyebrow !text-neon-yellow"><span>Partida clássica</span></div>
+        <div className="ole-eyebrow !text-neon-yellow"><span>{L('Partida clássica', 'Classic match')}</span></div>
         <h1
           className="text-white italic"
           style={{
@@ -40,13 +41,13 @@ function ClassicComingSoonScreen() {
             lineHeight: 1.05,
           }}
         >
-          Em breve
+          {L('Em breve', 'Coming soon')}
         </h1>
         <p className="text-white/65 text-sm leading-relaxed">
-          O modo Classic está em construção. Estamos refinando a simulação retrô-inteligente para entregar uma experiência completa.
+          {L('O modo Classic está em construção. Estamos refinando a simulação retrô-inteligente para entregar uma experiência completa.', 'Classic mode is under construction. We are refining the retro-smart simulation to deliver a complete experience.')}
         </p>
         <p className="text-white/45 text-xs leading-relaxed">
-          Enquanto isso, joga a Partida Rápida — é onde estamos focados no balanceamento e nos eventos divertidos.
+          {L('Enquanto isso, joga a Partida Rápida — é onde estamos focados no balanceamento e nos eventos divertidos.', 'Meanwhile, play a Quick Match — that is where we are focused on balance and fun events.')}
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
           <a
@@ -61,7 +62,7 @@ function ClassicComingSoonScreen() {
               borderRadius: 'var(--radius-sm)',
             }}
           >
-            Jogar Partida Rápida
+            {L('Jogar Partida Rápida', 'Play Quick Match')}
           </a>
           <a
             href="/"
@@ -75,7 +76,7 @@ function ClassicComingSoonScreen() {
               borderRadius: 'var(--radius-sm)',
             }}
           >
-            Voltar pra Home
+            {L('Voltar pra Home', 'Back to Home')}
           </a>
         </div>
       </div>
@@ -189,7 +190,7 @@ export function MatchClassic() {
           formation: awayFormation,
         })
       : buildSyntheticAwayTeam(
-          fixture?.opponent?.shortName ?? fixture?.awayName ?? 'ADVERSÁRIO',
+          fixture?.opponent?.shortName ?? fixture?.awayName ?? L('ADVERSÁRIO', 'OPPONENT'),
           fixture?.opponent?.strength ?? 75,
           { team: 'away', formation: awayFormation },
         );

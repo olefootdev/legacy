@@ -8,6 +8,8 @@
  *   3. `computeMatchMvp()` — elege melhor de cada posição + MVP geral com critérios anti-atacante-fácil
  */
 
+import { L } from '@/i18n/L';
+
 // ─── Pontos base por evento ─────────────────────────────────────────────────
 
 export const SCOUT_POINTS = {
@@ -223,16 +225,16 @@ export function finalizeScoutTallies(
 // ─── MVP ─────────────────────────────────────────────────────────────────────
 
 function mvpHeadline(t: ScoutTally): string {
-  if (t.penaltiesSaved >= 1) return `${t.penaltiesSaved} pênalti(s) defendido(s)`;
-  if (t.goals >= 2)          return `${t.goals} gols`;
-  if (t.goals === 1 && t.assists >= 1) return '1 gol + 1 assistência';
-  if (t.assists >= 2)        return `${t.assists} assistências`;
-  if (t.difficultSaves >= 4) return `${t.difficultSaves} defesas difíceis`;
-  if (t.tackles >= 4)        return `${t.tackles} desarmes`;
-  if (t.goals === 1)         return '1 gol';
-  if (t.assists === 1)       return '1 assistência';
-  if (t.hasCleanSheet)       return 'Jogo sem sofrer gol';
-  return `${t.totalPoints.toFixed(1)} pontos`;
+  if (t.penaltiesSaved >= 1) return L(`${t.penaltiesSaved} pênalti(s) defendido(s)`, `${t.penaltiesSaved} penalt${t.penaltiesSaved === 1 ? 'y' : 'ies'} saved`);
+  if (t.goals >= 2)          return L(`${t.goals} gols`, `${t.goals} goals`);
+  if (t.goals === 1 && t.assists >= 1) return L('1 gol + 1 assistência', '1 goal + 1 assist');
+  if (t.assists >= 2)        return L(`${t.assists} assistências`, `${t.assists} assists`);
+  if (t.difficultSaves >= 4) return L(`${t.difficultSaves} defesas difíceis`, `${t.difficultSaves} tough saves`);
+  if (t.tackles >= 4)        return L(`${t.tackles} desarmes`, `${t.tackles} tackles`);
+  if (t.goals === 1)         return L('1 gol', '1 goal');
+  if (t.assists === 1)       return L('1 assistência', '1 assist');
+  if (t.hasCleanSheet)       return L('Jogo sem sofrer gol', 'Clean sheet');
+  return L(`${t.totalPoints.toFixed(1)} pontos`, `${t.totalPoints.toFixed(1)} points`);
 }
 
 /**

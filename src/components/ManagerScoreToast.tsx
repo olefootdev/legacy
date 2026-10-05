@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { TrendingUp } from 'lucide-react';
 import { useGameStore } from '@/game/store';
+import { L } from '@/i18n/L';
 
 export function ManagerScoreToast() {
   const latest = useGameStore((s) => s.managerScore?.log?.[0]);
@@ -59,7 +60,7 @@ export function ManagerScoreToast() {
                 className="ole-num uppercase leading-none text-white tabular-nums"
                 style={{ fontSize: '15px' }}
               >
-                +{shown.points} pontos
+                +{shown.points} {L('pontos', 'points')}
               </span>
               <span className="mt-1 block truncate font-mono text-cimento" style={{ fontSize: '11px' }}>
                 {shown.label}

@@ -5,6 +5,7 @@ import { Trophy, Users, Plus, Copy, Check, Share2, Swords, Crown, Star, Medal, X
 import { useGameStore } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { Hashtag } from '@/components/ui';
+import { L, LOCALE, emIngles } from '@/i18n/L';
 import {
   fetchOpenLeagues,
   fetchMyLeagues,
@@ -22,7 +23,7 @@ import {
 function formatPool(n: number): string {
   if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
-  return n.toLocaleString('pt-BR');
+  return n.toLocaleString(LOCALE);
 }
 
 const SIZE_OPTIONS = [16, 32, 64] as const;
@@ -32,15 +33,15 @@ const RANK_COLORS = ['text-neon-yellow', 'text-giz', 'text-cimento', 'text-cimen
 function RankIcon({ rank, className }: { rank: number; className?: string }) {
   if (rank === 1) return <Trophy className={className} strokeWidth={2.2} />;
   if (rank === 2 || rank === 3) return <Medal className={className} strokeWidth={2.2} />;
-  return <span className="ole-num text-sm">4º</span>;
+  return <span className="ole-num text-sm">{L('4º', '4th')}</span>;
 }
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    open: { label: 'Inscrições abertas', cls: 'border-alta/50 text-alta' },
-    live: { label: 'Ao vivo', cls: 'border-baixa/50 text-baixa' },
-    finished: { label: 'Encerrada', cls: 'border-white/16 text-cimento' },
-    cancelled: { label: 'Cancelada', cls: 'border-white/10 text-poeira' },
+    open: { label: L('Inscrições abertas', 'Registration open'), cls: 'border-alta/50 text-alta' },
+    live: { label: L('Ao vivo', 'Live'), cls: 'border-baixa/50 text-baixa' },
+    finished: { label: L('Encerrada', 'Finished'), cls: 'border-white/16 text-cimento' },
+    cancelled: { label: L('Cancelada', 'Cancelled'), cls: 'border-white/10 text-poeira' },
   };
   const s = map[status] ?? map.cancelled!;
   return (
@@ -55,9 +56,9 @@ function ShareButton({ slug, compact }: { slug: string; compact?: boolean }) {
   const [copied, setCopied] = useState(false);
   const onShare = async () => {
     const url = inviteLinkForLeague(slug);
-    const text = `Entre na minha Liga Premiada no Olefoot! Mata-mata com pote em EXP. ${url}`;
+    const text = L(`Entre na minha Liga Premiada no Olefoot! Mata-mata com pote em EXP. ${url}`, `Join my Prize League on Olefoot! Knockout with an EXP pot. ${url}`);
     if (navigator.share) {
-      try { await navigator.share({ title: 'Liga Premiada Olefoot', text, url }); return; } catch {}
+      try { await navigator.share({ title: L('Liga Premiada Olefoot', 'Olefoot Prize League'), text, url }); return; } catch {}
     }
     await navigator.clipboard.writeText(url);
     setCopied(true);
@@ -67,7 +68,7 @@ function ShareButton({ slug, compact }: { slug: string; compact?: boolean }) {
     return (
       <button onClick={() => void onShare()} className="ole-num flex items-center gap-1.5 border border-neon-yellow/50 px-3 py-1.5 text-[10.5px] uppercase text-neon-yellow hover:border-neon-yellow transition-colors">
         {copied ? <Check className="h-3 w-3" /> : <Share2 className="h-3 w-3" />}
-        {copied ? 'Copiado!' : 'Convidar'}
+        {copied ? L('Copiado!', 'Copied!') : L('Convidar', 'Invite')}
       </button>
     );
   }
@@ -75,7 +76,7 @@ function ShareButton({ slug, compact }: { slug: string; compact?: boolean }) {
     <button onClick={() => void onShare()}
       className="ole-num flex h-[50px] items-center justify-center gap-2 w-full whitespace-nowrap border border-neon-yellow/50 px-4 text-[13px] uppercase text-neon-yellow hover:border-neon-yellow transition-colors">
       {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
-      {copied ? 'Link copiado' : 'Compartilhar liga'}
+      {copied ? L('Link copiado', 'Link copied') : L('Compartilhar liga', 'Share league')}
     </button>
   );
 }
@@ -103,7 +104,7 @@ function LeagueCard({ league, onClick, delay }: { league: PremiumLeague; onClick
                   {league.name}
                 </h3>
                 <p className="truncate font-mono text-[10.5px] text-cimento">
-                  por {league.creator_club_name}
+                  {L('por', 'by')} {league.creator_club_name}
                 </p>
               </div>
             </div>
@@ -113,21 +114,21 @@ function LeagueCard({ league, onClick, delay }: { league: PremiumLeague; onClick
 
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div>
-            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Inscrição</p>
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Inscrição', 'Entry')}</p>
             <p className="ole-num mt-0.5 text-[17px] text-neon-yellow leading-none">
               {formatPool(league.entry_fee)}
             </p>
             <p className="font-mono text-[9.5px] text-cimento">{league.currency}</p>
           </div>
           <div>
-            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Pote</p>
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Pote', 'Pot')}</p>
             <p className="ole-num mt-0.5 text-[17px] text-white leading-none">
               {formatPool(league.total_pool)}
             </p>
             <p className="font-mono text-[9.5px] text-cimento">{league.currency}</p>
           </div>
           <div className="text-right">
-            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Times</p>
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Times', 'Teams')}</p>
             <p className="ole-num mt-0.5 text-[17px] text-white leading-none">
               {league.current_teams}<span className="text-poeira">/{league.max_teams}</span>
             </p>
@@ -176,7 +177,7 @@ function CreateLeagueModal({ open, onClose, onCreated, clubOverall }: {
       overall: clubOverall,
     });
     setBusy(false);
-    if (!r.ok) { setError('error' in r ? r.error : 'Erro'); return; }
+    if (!r.ok) { setError('error' in r ? r.error : L('Erro', 'Error')); return; }
     onCreated(r.data?.id ?? '');
     onClose();
   };
@@ -192,19 +193,19 @@ function CreateLeagueModal({ open, onClose, onCreated, clubOverall }: {
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-neon-yellow" />
-            <h2 className="font-impact text-2xl uppercase leading-[1.1] text-white">Criar Liga</h2>
+            <h2 className="font-impact text-2xl uppercase leading-[1.1] text-white">{L('Criar Liga', 'Create League')}</h2>
           </div>
           <button onClick={onClose} className="text-cimento hover:text-white text-2xl leading-none">×</button>
         </div>
         <form onSubmit={(e) => void onSubmit(e)} className="p-6 space-y-5">
           <label className="block">
-            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Nome da Liga</span>
+            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Nome da Liga', 'League name')}</span>
             <input value={name} onChange={(e) => setName(e.target.value)} required minLength={3} maxLength={40}
-              placeholder="Ex: Copa dos Campeões"
+              placeholder={L('Ex: Copa dos Campeões', 'e.g. Champions Cup')}
               className="mt-1.5 w-full border border-white/10 bg-deep-black px-4 py-3 text-sm text-white placeholder:text-poeira focus:border-neon-yellow/50 focus:outline-none" />
           </label>
           <div>
-            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Quantidade de Times</span>
+            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Quantidade de Times', 'Number of teams')}</span>
             <div className="mt-1.5 grid grid-cols-3 gap-2">
               {SIZE_OPTIONS.map((n) => (
                 <button key={n} type="button" onClick={() => setMaxTeams(n)}
@@ -219,14 +220,14 @@ function CreateLeagueModal({ open, onClose, onCreated, clubOverall }: {
             </div>
           </div>
           <label className="block">
-            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Valor de Inscrição (EXP)</span>
+            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Valor de Inscrição (EXP)', 'Entry fee (EXP)')}</span>
             <input type="number" value={entryFee} onChange={(e) => setEntryFee(e.target.value)} required min={100} max={10000000}
               className="mt-1.5 w-full border border-white/10 bg-deep-black px-4 py-3 text-sm text-white tabular-nums focus:border-neon-yellow/50 focus:outline-none" />
           </label>
 
           <div className="border border-white/10 bg-deep-black p-4 space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Pote Estimado</span>
+              <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Pote Estimado', 'Estimated pot')}</span>
               <span className="ole-num text-[18px] text-neon-yellow">{formatPool(estimatedPool)} EXP</span>
             </div>
             <div className="h-px bg-white/[0.06]" />
@@ -236,7 +237,9 @@ function CreateLeagueModal({ open, onClose, onCreated, clubOverall }: {
               <div><span className="inline-flex items-center gap-1 text-cimento"><Medal className="h-3 w-3" strokeWidth={2.2} /> 12%</span><br/><span className="text-cimento">{formatPool(estimatedPool * 0.12)}</span></div>
             </div>
             <p className="font-mono text-[10.5px] text-cimento">
-              Criador leva <strong className="text-neon-yellow">10%</strong> do pote ({formatPool(estimatedPool * 0.1)} EXP)
+              {emIngles()
+                ? <>Creator takes <strong className="text-neon-yellow">10%</strong> of the pot ({formatPool(estimatedPool * 0.1)} EXP)</>
+                : <>Criador leva <strong className="text-neon-yellow">10%</strong> do pote ({formatPool(estimatedPool * 0.1)} EXP)</>}
             </p>
           </div>
 
@@ -248,7 +251,7 @@ function CreateLeagueModal({ open, onClose, onCreated, clubOverall }: {
           <button type="submit" disabled={busy || name.trim().length < 3 || !entryFee || Number(entryFee) < 100}
             className="btn-primary w-full disabled:opacity-40 disabled:pointer-events-none">
             <span className="btn-primary-inner justify-center py-1.5">
-              {busy ? 'Criando…' : 'Criar Liga Premiada'}
+              {busy ? L('Criando…', 'Creating…') : L('Criar Liga Premiada', 'Create Prize League')}
             </span>
           </button>
         </form>
@@ -293,24 +296,24 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
     return () => clearTimeout(t);
   }, [showCreatedBanner]);
 
-  if (!league) return <div className="py-16 text-center font-mono text-cimento text-sm">Carregando…</div>;
+  if (!league) return <div className="py-16 text-center font-mono text-cimento text-sm">{L('Carregando…', 'Loading…')}</div>;
 
   const onJoin = async () => {
     setJoining(true); setError(null);
     const r = await joinLeague({ leagueId, clubName: club?.name ?? 'Clube', clubShort: club?.shortName, overall: clubOverall });
     setJoining(false);
-    if (!r.ok) { setError('error' in r ? r.error : 'Erro'); return; }
+    if (!r.ok) { setError('error' in r ? r.error : L('Erro', 'Error')); return; }
     void load();
   };
 
   const roundLabel = (r: number) => {
-    if (!league.total_rounds) return `Rodada ${r}`;
+    if (!league.total_rounds) return L(`Rodada ${r}`, `Round ${r}`);
     const remaining = league.total_rounds - r + 1;
-    if (remaining === 1) return 'Final';
-    if (remaining === 2) return 'Semifinal';
-    if (remaining === 3) return 'Quartas de Final';
-    if (remaining === 4) return 'Oitavas de Final';
-    return `Rodada ${r}`;
+    if (remaining === 1) return L('Final', 'Final');
+    if (remaining === 2) return L('Semifinal', 'Semi-final');
+    if (remaining === 3) return L('Quartas de Final', 'Quarter-finals');
+    if (remaining === 4) return L('Oitavas de Final', 'Round of 16');
+    return L(`Rodada ${r}`, `Round ${r}`);
   };
 
   const rounds = [...new Set(fixtures.map((f) => f.round))].sort((a, b) => a - b);
@@ -318,13 +321,13 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
   return (
     <div className="space-y-5">
       <button onClick={onBack} className="font-mono text-[11px] uppercase tracking-[0.14em] text-cimento hover:text-neon-yellow transition-colors">
-        ← Todas as Ligas
+        ← {L('Todas as Ligas', 'All Leagues')}
       </button>
 
       {showCreatedBanner && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
           className="border border-alta/50 bg-panel px-4 py-3 text-[12.5px] text-alta font-bold text-center">
-          Liga criada. Compartilhe o link.
+          {L('Liga criada. Compartilhe o link.', 'League created. Share the link.')}
         </motion.div>
       )}
 
@@ -349,7 +352,7 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
                 {league.name}
               </h2>
               <p className="mt-1 font-mono text-[11px] text-cimento">
-                <span className="text-neon-yellow">por {league.creator_club_name}</span> · {league.max_teams} times · mata-mata
+                <span className="text-neon-yellow">{L('por', 'by')} {league.creator_club_name}</span> · {league.max_teams} {L('times', 'teams')} · {L('mata-mata', 'knockout')}
               </p>
             </div>
           </div>
@@ -363,7 +366,7 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
                 {formatPool(league.total_pool)}
               </p>
               <p className="mt-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">
-                Pote Total · {league.currency}
+                {L('Pote Total', 'Total Pot')} · {league.currency}
               </p>
             </div>
             <div className="bg-deep-black border border-white/[0.06] p-4 text-center">
@@ -374,7 +377,7 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
                 {league.current_teams}<span className="text-poeira">/{league.max_teams}</span>
               </p>
               <p className="mt-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">
-                {league.status === 'open' ? 'Inscritos' : league.current_round ? `Rodada ${league.current_round}/${league.total_rounds}` : 'Times'}
+                {league.status === 'open' ? L('Inscritos', 'Registered') : league.current_round ? L(`Rodada ${league.current_round}/${league.total_rounds}`, `Round ${league.current_round}/${league.total_rounds}`) : L('Times', 'Teams')}
               </p>
             </div>
           </div>
@@ -386,13 +389,13 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
                 className="btn-primary w-full disabled:opacity-40">
                 <span className="btn-primary-inner justify-center py-1.5">
                   <Swords className="h-4 w-4" />
-                  {joining ? 'Entrando…' : `Inscrever −${formatPool(league.entry_fee)} ${league.currency}`}
+                  {joining ? L('Entrando…', 'Joining…') : L(`Inscrever −${formatPool(league.entry_fee)} ${league.currency}`, `Join −${formatPool(league.entry_fee)} ${league.currency}`)}
                 </span>
               </button>
             )}
             {league.status === 'open' && myEntry && (
               <div className="border border-alta/50 px-4 py-3 text-center font-mono text-[11.5px] uppercase tracking-[0.12em] text-alta">
-                Inscrito · Aguardando {league.max_teams - league.current_teams} times
+                {L(`Inscrito · Aguardando ${league.max_teams - league.current_teams} times`, `Registered · Waiting for ${league.max_teams - league.current_teams} teams`)}
               </div>
             )}
             <ShareButton slug={league.slug} />
@@ -406,7 +409,7 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
       {champions.length > 0 && (
         <section className="space-y-2">
           <div className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-neon-yellow">
-            Premiação Final
+            {L('Premiação Final', 'Final Prizes')}
           </div>
           {champions.map((c, i) => (
             <motion.div
@@ -432,7 +435,7 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
       {league.status === 'open' && entries.length > 0 && (
         <section className="space-y-2">
           <div className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
-            Inscritos ({entries.length}/{league.max_teams})
+            {L('Inscritos', 'Registered')} ({entries.length}/{league.max_teams})
           </div>
           <div className="grid grid-cols-2 gap-2">
             {entries.map((e, i) => (
@@ -453,7 +456,7 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
       {rounds.length > 0 && (
         <section className="space-y-4">
           <div className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
-            Chave do mata-mata
+            {L('Chave do mata-mata', 'Knockout bracket')}
           </div>
           {rounds.map((r) => (
             <div key={r} className="space-y-2">
@@ -476,7 +479,7 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
                   >
                     <div className="grid grid-cols-[1fr_auto_1fr] items-center">
                       <div className={`px-3 py-2.5 text-[12.5px] truncate ${homeWon ? 'font-bold text-white' : 'text-cimento'}`}>
-                        {fx.home_club_name ?? 'A definir'}
+                        {fx.home_club_name ?? L('A definir', 'TBD')}
                       </div>
                       <div className="px-3 py-2.5 text-center border-x border-white/[0.06]">
                         {fx.status === 'finished' ? (
@@ -485,7 +488,7 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
                               {fx.score_home} - {fx.score_away}
                             </span>
                             {fx.went_to_penalties && (
-                              <p className="font-mono text-[9.5px] text-neon-yellow">pen {fx.penalty_home}-{fx.penalty_away}</p>
+                              <p className="font-mono text-[9.5px] text-neon-yellow">{L('pen', 'pens')} {fx.penalty_home}-{fx.penalty_away}</p>
                             )}
                           </div>
                         ) : (
@@ -493,7 +496,7 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
                         )}
                       </div>
                       <div className={`px-3 py-2.5 text-[12.5px] truncate text-right ${awayWon ? 'font-bold text-white' : 'text-cimento'}`}>
-                        {fx.away_club_name ?? 'A definir'}
+                        {fx.away_club_name ?? L('A definir', 'TBD')}
                       </div>
                     </div>
                   </motion.div>
@@ -506,15 +509,15 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
 
       {/* Split info (sempre visível) */}
       <div className="sports-panel p-4 space-y-2">
-        <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Distribuição do Pote</p>
+        <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Distribuição do Pote', 'Pot split')}</p>
         <div className="grid grid-cols-6 gap-1 text-center font-mono text-[10px] text-cimento">
           {[
             { label: <Trophy className="mx-auto h-3.5 w-3.5 text-neon-yellow" strokeWidth={2.2} />, pct: league.pct_champion },
             { label: <Medal className="mx-auto h-3.5 w-3.5 text-giz" strokeWidth={2.2} />, pct: league.pct_vice },
             { label: <Medal className="mx-auto h-3.5 w-3.5 text-cimento" strokeWidth={2.2} />, pct: league.pct_third },
-            { label: '4º', pct: league.pct_fourth },
-            { label: 'Criador', pct: league.pct_creator },
-            { label: 'Casa', pct: league.pct_house },
+            { label: L('4º', '4th'), pct: league.pct_fourth },
+            { label: L('Criador', 'Creator'), pct: league.pct_creator },
+            { label: L('Casa', 'House'), pct: league.pct_house },
           ].map((s, i) => (
             <div key={i}>
               <p className="text-[11px]">{s.label}</p>
@@ -586,14 +589,14 @@ export function PremiumLeagues() {
               className="mt-1 font-impact uppercase text-white leading-[1.1]"
               style={{ fontSize: 'clamp(1.8rem, 6vw, 2.5rem)', letterSpacing: '-0.005em' }}
             >
-              Ligas Premiadas
+              {L('Ligas Premiadas', 'Prize Leagues')}
             </h1>
-            <p className="mt-1 font-mono text-[11px] text-cimento">Mata-mata · pote em EXP · top 4 premiados</p>
+            <p className="mt-1 font-mono text-[11px] text-cimento">{L('Mata-mata · pote em EXP · top 4 premiados', 'Knockout · EXP pot · top 4 rewarded')}</p>
           </div>
           <button onClick={() => setCreateOpen(true)}
             className="btn-primary disabled:opacity-40">
             <span className="btn-primary-inner gap-1.5 px-3 py-1">
-              <Plus className="h-3.5 w-3.5" /> Criar
+              <Plus className="h-3.5 w-3.5" /> {L('Criar', 'Create')}
             </span>
           </button>
         </div>
@@ -602,8 +605,8 @@ export function PremiumLeagues() {
       {slugNotFound && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           className="border border-baixa/50 bg-panel px-4 py-3 text-[12px] text-baixa">
-          <span className="font-bold">Liga não encontrada.</span>{' '}
-          Confira o link ou veja as abertas abaixo.
+          <span className="font-bold">{L('Liga não encontrada.', 'League not found.')}</span>{' '}
+          {L('Confira o link ou veja as abertas abaixo.', 'Check the link or see the open ones below.')}
         </motion.div>
       )}
 
@@ -616,7 +619,7 @@ export function PremiumLeagues() {
                 ? 'bg-neon-yellow text-black'
                 : 'text-cimento hover:text-white'
             }`}>
-            {t === 'open' ? `Abertas (${leagues.length})` : `Minhas (${myLeagues.length})`}
+            {t === 'open' ? L(`Abertas (${leagues.length})`, `Open (${leagues.length})`) : L(`Minhas (${myLeagues.length})`, `Mine (${myLeagues.length})`)}
           </button>
         ))}
       </div>
@@ -625,7 +628,7 @@ export function PremiumLeagues() {
       {loading ? (
         <div className="py-16 text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-neon-yellow/20 border-t-neon-yellow" />
-          <p className="mt-3 font-mono text-[11px] text-cimento">Carregando ligas…</p>
+          <p className="mt-3 font-mono text-[11px] text-cimento">{L('Carregando ligas…', 'Loading leagues…')}</p>
         </div>
       ) : displayLeagues.length > 0 ? (
         <div className="space-y-3">
@@ -642,16 +645,16 @@ export function PremiumLeagues() {
           <Trophy className="mx-auto h-8 w-8 text-poeira" />
           <div>
             <p className="font-impact text-[20px] uppercase leading-[1.1] text-cimento">
-              {tab === 'open' ? 'Nenhuma liga aberta' : 'Você ainda não entrou'}
+              {tab === 'open' ? L('Nenhuma liga aberta', 'No open leagues') : L('Você ainda não entrou', "You haven't joined yet")}
             </p>
             <p className="mt-1 font-mono text-[11px] text-poeira">
-              {tab === 'open' ? 'Crie a primeira liga premiada' : 'Entre em uma liga aberta ou crie a sua'}
+              {tab === 'open' ? L('Crie a primeira liga premiada', 'Create the first prize league') : L('Entre em uma liga aberta ou crie a sua', 'Join an open league or create your own')}
             </p>
           </div>
           {tab === 'open' && (
             <button onClick={() => setCreateOpen(true)}
               className="ole-num inline-flex items-center gap-1.5 text-[12px] uppercase text-neon-yellow hover:text-white transition-colors">
-              <Plus className="h-3.5 w-3.5" /> Criar Liga Premiada
+              <Plus className="h-3.5 w-3.5" /> {L('Criar Liga Premiada', 'Create Prize League')}
             </button>
           )}
         </motion.div>

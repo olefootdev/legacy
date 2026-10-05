@@ -1,5 +1,6 @@
 import type { InboxCategory, InboxItem, InboxMessageType } from './inboxTypes';
-import { inboxCategoryColorClass, isLegacyPlacarInboxNotification } from './inboxTypes';
+import { inboxCategoryColorClass, inboxCategoryTag, isLegacyPlacarInboxNotification } from './inboxTypes';
+import { L } from '@/i18n/L';
 
 export function makeInboxItem(
   id: string,
@@ -14,8 +15,8 @@ export function makeInboxItem(
     messageType,
     category,
     title,
-    tag: extra?.tag ?? category,
-    timeLabel: extra?.timeLabel ?? 'Agora',
+    tag: extra?.tag ?? inboxCategoryTag(category),
+    timeLabel: extra?.timeLabel ?? L('Agora', 'Now'),
     colorClass: extra?.colorClass ?? inboxCategoryColorClass(category),
     read: extra?.read ?? false,
   };

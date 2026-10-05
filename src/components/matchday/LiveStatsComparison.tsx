@@ -8,6 +8,7 @@ import { TrendingUp, TrendingDown, Target, Activity, Shield, Zap } from 'lucide-
 import { cn } from '@/lib/utils';
 import { StatsLineChart } from './StatsLineChart';
 import type { StatsHistoryPoint } from '@/hooks/useStatsHistory';
+import { L } from '@/i18n/L';
 
 export interface LiveMatchStats {
   possession: { home: number; away: number };
@@ -135,7 +136,7 @@ export function LiveStatsComparison({ stats, homeShort, awayShort, statsHistory,
         <div className="flex items-center gap-1.5">
           <Activity className="h-3.5 w-3.5 text-white/60" />
           <span className="text-xs font-medium uppercase tracking-wider text-white/60">
-            Estatísticas
+            {L('Estatísticas', 'Stats')}
           </span>
         </div>
         <span className="font-display text-xs font-bold uppercase tracking-wider text-blue-400">
@@ -147,7 +148,7 @@ export function LiveStatsComparison({ stats, homeShort, awayShort, statsHistory,
       {statsHistory && statsHistory.length >= 2 && (
         <div className="border-b border-white/5 px-3 py-2">
           <div className="mb-1 text-center text-[10px] font-medium uppercase tracking-wider text-white/50">
-            Posse últimos {statsHistory.length} min
+            {L(`Posse últimos ${statsHistory.length} min`, `Possession last ${statsHistory.length} min`)}
           </div>
           <StatsLineChart history={statsHistory} stat="possession" />
         </div>
@@ -156,7 +157,7 @@ export function LiveStatsComparison({ stats, homeShort, awayShort, statsHistory,
       {/* Stats */}
       <div className="divide-y divide-white/5">
         <StatRow
-          label="Posse"
+          label={L('Posse', 'Possession')}
           icon={<Activity className="h-3.5 w-3.5" />}
           homeValue={stats.possession.home}
           awayValue={stats.possession.away}
@@ -167,7 +168,7 @@ export function LiveStatsComparison({ stats, homeShort, awayShort, statsHistory,
         />
 
         <StatRow
-          label="Finalizações"
+          label={L('Finalizações', 'Shots')}
           icon={<Target className="h-3.5 w-3.5" />}
           homeValue={stats.shots.home}
           awayValue={stats.shots.away}
@@ -177,7 +178,7 @@ export function LiveStatsComparison({ stats, homeShort, awayShort, statsHistory,
         />
 
         <StatRow
-          label="No Alvo"
+          label={L('No Alvo', 'On Target')}
           icon={<Zap className="h-3.5 w-3.5" />}
           homeValue={stats.shotsOnTarget.home}
           awayValue={stats.shotsOnTarget.away}
@@ -186,7 +187,7 @@ export function LiveStatsComparison({ stats, homeShort, awayShort, statsHistory,
         />
 
         <StatRow
-          label="Precisão"
+          label={L('Precisão', 'Accuracy')}
           icon={<Target className="h-3.5 w-3.5" />}
           homeValue={stats.passAccuracy.home}
           awayValue={stats.passAccuracy.away}
@@ -196,7 +197,7 @@ export function LiveStatsComparison({ stats, homeShort, awayShort, statsHistory,
         />
 
         <StatRow
-          label="Desarmes"
+          label={L('Desarmes', 'Tackles')}
           icon={<Shield className="h-3.5 w-3.5" />}
           homeValue={stats.tackles.home}
           awayValue={stats.tackles.away}
@@ -205,7 +206,7 @@ export function LiveStatsComparison({ stats, homeShort, awayShort, statsHistory,
         />
 
         <StatRow
-          label="Faltas"
+          label={L('Faltas', 'Fouls')}
           icon={<Activity className="h-3.5 w-3.5" />}
           homeValue={stats.fouls.home}
           awayValue={stats.fouls.away}
@@ -224,7 +225,7 @@ export function LiveStatsComparison({ stats, homeShort, awayShort, statsHistory,
             className="border-t border-neon-yellow/20 bg-neon-yellow/10 px-3 py-2 text-center"
           >
             <p className="text-xs font-bold uppercase tracking-wider text-neon-yellow">
-              🔥 {homeShort} domina a posse!
+              🔥 {homeShort} {L('domina a posse!', 'dominates possession!')}
             </p>
           </motion.div>
         )}
@@ -236,7 +237,7 @@ export function LiveStatsComparison({ stats, homeShort, awayShort, statsHistory,
             className="border-t border-blue-500/20 bg-blue-500/10 px-3 py-2 text-center"
           >
             <p className="text-xs font-bold uppercase tracking-wider text-blue-400">
-              🔥 {awayShort} domina a posse!
+              🔥 {awayShort} {L('domina a posse!', 'dominates possession!')}
             </p>
           </motion.div>
         )}

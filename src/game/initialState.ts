@@ -24,6 +24,7 @@ import type { PlayerHealth } from '@/systems/playerHealth/types';
 import type { PlayerMoral } from '@/systems/playerMoral/types';
 import { createDefaultMoral } from '@/systems/playerMoral/types';
 import { createEmptyOlefootRankedState } from '@/olefootLeague/types';
+import { L } from '@/i18n/L';
 
 function startingExpBonusForTests(): number {
   const raw = import.meta.env.VITE_STARTING_EXP;
@@ -80,7 +81,7 @@ export function createInitialGameState(): OlefootGameState {
     players,
     lineup: {},
     finance,
-    crowd: { supportPercent: 0, moodLabel: 'Desconhecido' },
+    crowd: { supportPercent: 0, moodLabel: L('Desconhecido', 'Unknown') },
     form: [],
     results: [],
     leagueSeason: createInitialLeagueSeason(),
@@ -168,7 +169,7 @@ export function defaultLiveMatchShell(
       {
         id: 'warmup',
         minute: 0,
-        text: `Pré-jogo — Aquecimento em ${homeShort}. Viagem de ~${Math.round(travelKm)} km.`,
+        text: L(`Pré-jogo — Aquecimento em ${homeShort}. Viagem de ~${Math.round(travelKm)} km.`, `Pre-match — Warm-up at ${homeShort}. Travel ~${Math.round(travelKm)} km.`),
         kind: 'narrative',
       },
     ],

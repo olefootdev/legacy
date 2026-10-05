@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { LegacyPlayerCard, type LegacyPlayerCardStats } from '@/components/legacy/LegacyPlayerCard';
+import { L, emIngles } from '@/i18n/L';
 
 /**
  * Sandbox visual do <LegacyPlayerCard /> — `/dev/legacy-card`.
@@ -70,9 +71,15 @@ export function LegacyCardPreview() {
             Card Legadão <span className="text-neon-yellow">SVG</span>
           </h1>
           <p className="text-white/60 max-w-[560px]" style={{ fontSize: 14, lineHeight: 1.5 }}>
-            Sandbox isolado para validar a referência visual do PDF
-            <code className="text-neon-yellow/80 mx-1">olefoot-legacy-design.pdf</code>
-            antes de plugar nos chapters da cerimônia.
+            {emIngles() ? (
+              <>Isolated sandbox to validate the visual reference from the PDF
+              <code className="text-neon-yellow/80 mx-1">olefoot-legacy-design.pdf</code>
+              before wiring it into the ceremony chapters.</>
+            ) : (
+              <>Sandbox isolado para validar a referência visual do PDF
+              <code className="text-neon-yellow/80 mx-1">olefoot-legacy-design.pdf</code>
+              antes de plugar nos chapters da cerimônia.</>
+            )}
           </p>
         </header>
 
@@ -82,7 +89,7 @@ export function LegacyCardPreview() {
             className="font-display uppercase text-white/50"
             style={{ fontSize: 11, letterSpacing: '0.3em' }}
           >
-            Variante:
+            {L('Variante:', 'Variant:')}
           </span>
           {SAMPLE_VARIANTS.map((v, i) => (
             <button
@@ -115,7 +122,7 @@ export function LegacyCardPreview() {
             }}
           >
             <span className="inline-block skew-x-6">
-              {withPhoto ? 'Com foto' : 'Sem foto'}
+              {withPhoto ? L('Com foto', 'With photo') : L('Sem foto', 'No photo')}
             </span>
           </button>
         </div>
@@ -149,7 +156,7 @@ export function LegacyCardPreview() {
               className="font-display uppercase text-white/40"
               style={{ fontSize: 10, letterSpacing: '0.3em' }}
             >
-              Médio (Plantel)
+              {L('Médio (Plantel)', 'Medium (Squad)')}
             </div>
             <LegacyPlayerCard
               name={variant.name}
@@ -168,7 +175,7 @@ export function LegacyCardPreview() {
               className="font-display uppercase text-white/40"
               style={{ fontSize: 10, letterSpacing: '0.3em' }}
             >
-              Mini (Pioneiros)
+              {L('Mini (Pioneiros)', 'Mini (Pioneers)')}
             </div>
             <LegacyPlayerCard
               name={variant.name}
@@ -191,13 +198,13 @@ export function LegacyCardPreview() {
             className="font-display uppercase text-neon-yellow"
             style={{ fontSize: 11, letterSpacing: '0.35em' }}
           >
-            Próximos passos
+            {L('Próximos passos', 'Next steps')}
           </div>
           <ol className="text-white/70 list-decimal pl-5 flex flex-col gap-1" style={{ fontSize: 13, lineHeight: 1.6 }}>
-            <li>Validar tipografia (font-display + font-serif-hero) e alinhamento de bordas dourado.</li>
-            <li>Plugar no Top3Chapter (variante hero) e SquadDraftChapter (variante mini).</li>
-            <li>Reaplicar a paleta nos chapters de Roleta, Daily Bonus e Outro.</li>
-            <li>Substituir backdrop por arte custom de coliseu/torcida (asset futuro).</li>
+            <li>{L('Validar tipografia (font-display + font-serif-hero) e alinhamento de bordas dourado.', 'Validate typography (font-display + font-serif-hero) and gold border alignment.')}</li>
+            <li>{L('Plugar no Top3Chapter (variante hero) e SquadDraftChapter (variante mini).', 'Wire into Top3Chapter (hero variant) and SquadDraftChapter (mini variant).')}</li>
+            <li>{L('Reaplicar a paleta nos chapters de Roleta, Daily Bonus e Outro.', 'Reapply the palette to the Roulette, Daily Bonus and Outro chapters.')}</li>
+            <li>{L('Substituir backdrop por arte custom de coliseu/torcida (asset futuro).', 'Replace the backdrop with custom stadium/crowd art (future asset).')}</li>
           </ol>
         </div>
       </div>

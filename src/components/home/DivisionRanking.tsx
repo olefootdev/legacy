@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { globalDivisionName } from '@/match/globalLeagueMVP';
+import { L, LOCALE } from '@/i18n/L';
 
 export type DivisionRankRow = { entryId: string; team: string; points: number; isMe: boolean };
 
@@ -47,19 +48,19 @@ export function DivisionRanking({
 
   return (
     <section
-      aria-label={`Ranking da sua divisão — ${nome}`}
+      aria-label={L(`Ranking da sua divisão — ${nome}`, `Your division ranking — ${nome}`)}
       className="ole-poster overflow-hidden"
     >
       <div className="flex flex-wrap items-end justify-between gap-3 px-4 pt-4">
         <div>
           <h2 className="ole-eyebrow-poster" style={{ fontSize: '16px' }}>
-            Sua divisão
+            {L('Sua divisão', 'Your division')}
           </h2>
           <span
             className="mt-0.5 block font-display font-black uppercase"
             style={{ fontSize: '9px', letterSpacing: '0.16em', color: '#C7A64E' }}
           >
-            {`Série ${nome} · ${divisionSize} clubes`}
+            {L(`Série ${nome} · ${divisionSize} clubes`, `${nome} · ${divisionSize} clubs`)}
           </span>
         </div>
 
@@ -67,13 +68,13 @@ export function DivisionRanking({
         {myRank != null && (
           <div className="text-right">
             <span className="font-impact tabular-nums text-neon-yellow" style={{ fontSize: '26px', lineHeight: 0.8 }}>
-              {myRank}º
+              {L(`${myRank}º`, `#${myRank}`)}
             </span>
             <span
               className="block font-display font-black uppercase text-white/45"
               style={{ fontSize: '8.5px', letterSpacing: '0.14em' }}
             >
-              sua posição
+              {L('sua posição', 'your position')}
             </span>
           </div>
         )}
@@ -98,7 +99,7 @@ export function DivisionRanking({
           className="inline-flex min-h-[44px] items-center gap-1 font-display font-black uppercase text-white/55 transition-colors hover:text-neon-yellow"
           style={{ fontSize: '10px', letterSpacing: '0.22em' }}
         >
-          Classificação da divisão
+          {L('Classificação da divisão', 'Division standings')}
           <ChevronRight className="h-4 w-4" aria-hidden />
         </Link>
       </div>
@@ -125,13 +126,13 @@ function RankLine({ pos, row }: { pos: number; row: DivisionRankRow }) {
         className={cn('min-w-0 truncate font-impact uppercase', row.isMe ? 'text-neon-yellow' : 'text-white')}
         style={{ fontSize: '13px' }}
       >
-        {row.isMe ? `${row.team} — você` : row.team}
+        {row.isMe ? L(`${row.team} — você`, `${row.team} — you`) : row.team}
       </span>
       <span
         className="text-right font-impact tabular-nums"
         style={{ fontSize: '17px', color: row.isMe ? 'var(--color-neon-yellow)' : '#fff' }}
       >
-        {row.points.toLocaleString('pt-BR')}
+        {row.points.toLocaleString(LOCALE)}
       </span>
     </li>
   );

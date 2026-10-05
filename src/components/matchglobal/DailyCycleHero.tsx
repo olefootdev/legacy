@@ -9,6 +9,7 @@
  *   • crowned    → hero do campeão de hoje
  */
 
+import { L } from '@/i18n/L';
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Crown, Flag, Swords, Clock } from 'lucide-react';
@@ -32,11 +33,11 @@ function fmt(ms: number): string {
 function phaseLabel(size: number): string {
   switch (size) {
     case 2: return 'Final';
-    case 4: return 'Semifinal';
-    case 8: return 'Quartas de Final';
-    case 16: return 'Oitavas de Final';
-    case 32: return 'Fase de 32';
-    default: return `Fase de ${size}`;
+    case 4: return L('Semifinal', 'Semi-final');
+    case 8: return L('Quartas de Final', 'Quarter-finals');
+    case 16: return L('Oitavas de Final', 'Round of 16');
+    case 32: return L('Fase de 32', 'Round of 32');
+    default: return L(`Fase de ${size}`, `Round of ${size}`);
   }
 }
 
@@ -95,17 +96,17 @@ export function DailyCycleHero() {
           {daily.phase === 'knockout' && <Swords className="w-6 h-6 text-neon-yellow animate-pulse" />}
           {daily.phase === 'crowned' && <Crown className="w-6 h-6 text-neon-yellow" />}
           <div>
-            <Hashtag>#coroadodia</Hashtag>
+            <Hashtag>{L('#coroadodia', '#crownoftheday')}</Hashtag>
             <h2 className="font-display text-lg sm:text-2xl font-bold uppercase text-white leading-tight">
-              {daily.phase === 'qualifying' && 'Corrida do Dia'}
-              {daily.phase === 'knockout' && 'Mata-Mata ao Vivo'}
-              {daily.phase === 'crowned' && 'Campeão Coroado'}
+              {daily.phase === 'qualifying' && L('Corrida do Dia', 'Daily Race')}
+              {daily.phase === 'knockout' && L('Mata-Mata ao Vivo', 'Live Knockout')}
+              {daily.phase === 'crowned' && L('Campeão Coroado', 'Champion Crowned')}
             </h2>
           </div>
         </div>
         {daily.phase === 'knockout' && liveRound && (
           <span className="font-mono text-[10px] text-neon-green animate-pulse hidden sm:inline">
-            ● {phaseLabel(liveRound.size)} agora
+            ● {phaseLabel(liveRound.size)} {L('agora', 'now')}
           </span>
         )}
       </div>
@@ -117,7 +118,7 @@ export function DailyCycleHero() {
             {/* Meu rank */}
             <div className="sports-panel rounded-lg p-3 border border-white/10">
               <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-1">
-                Sua posição
+                {L('Sua posição', 'Your position')}
               </p>
               {daily.myRank != null ? (
                 <>
@@ -126,34 +127,34 @@ export function DailyCycleHero() {
                   </p>
                   <p className="text-xs text-text-soft mt-2">
                     {daily.inCut
-                      ? '✅ dentro do top ' + daily.cutSize
+                      ? L('✅ dentro do top ', '✅ inside the top ') + daily.cutSize
                       : daily.distanceToCut != null
-                        ? `${daily.distanceToCut} a frente do top ${daily.cutSize}`
-                        : 'jogue para entrar'}
+                        ? L(`${daily.distanceToCut} a frente do top ${daily.cutSize}`, `${daily.distanceToCut} away from the top ${daily.cutSize}`)
+                        : L('jogue para entrar', 'play to get in')}
                   </p>
                 </>
               ) : (
-                <p className="text-xs text-text-soft">Jogue 1 partida hoje pra entrar</p>
+                <p className="text-xs text-text-soft">{L('Jogue 1 partida hoje pra entrar', 'Play 1 match today to get in')}</p>
               )}
             </div>
 
             {/* Countdown */}
             <div className="sports-panel rounded-lg p-3 border border-white/10">
               <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-1">
-                Corte do mata-mata
+                {L('Corte do mata-mata', 'Knockout cut-off')}
               </p>
               <p className="font-mono text-3xl font-bold text-white leading-none">
                 {fmt(daily.msToCut)}
               </p>
               <p className="text-xs text-text-soft mt-2">
-                top {daily.cutSize} avança às {daily.qualifyHour}h
+                {L(`top ${daily.cutSize} avança às ${daily.qualifyHour}h`, `top ${daily.cutSize} advance at ${daily.qualifyHour}h`)}
               </p>
             </div>
 
             {/* Líder */}
             <div className="sports-panel rounded-lg p-3 border border-white/10">
               <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-1">
-                Líder do dia
+                {L('Líder do dia', 'Leader of the day')}
               </p>
               {daily.standings[0] ? (
                 <>
@@ -163,11 +164,11 @@ export function DailyCycleHero() {
                   <p className="font-mono text-xs text-text-soft mt-2">
                     {daily.standings[0].team.dailyPoints ?? 0} pts
                     {' · '}
-                    SG {daily.standings[0].team.dailyGoalDifference ?? 0}
+                    {L('SG', 'GD')} {daily.standings[0].team.dailyGoalDifference ?? 0}
                   </p>
                 </>
               ) : (
-                <p className="text-xs text-text-soft">Sem partidas ainda</p>
+                <p className="text-xs text-text-soft">{L('Sem partidas ainda', 'No matches yet')}</p>
               )}
             </div>
           </div>
@@ -176,7 +177,7 @@ export function DailyCycleHero() {
           {daily.standings.length > 0 && (
             <div className="sports-panel rounded-lg p-3">
               <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-2">
-                Top 5 da Corrida
+                {L('Top 5 da Corrida', 'Race Top 5')}
               </p>
               <div className="space-y-1">
                 {daily.standings.slice(0, 5).map((row) => {
@@ -194,7 +195,7 @@ export function DailyCycleHero() {
                         </span>
                         <span className="text-sm text-white truncate">
                           {row.team.clubName}
-                          {row.isMe && <span className="text-[10px] text-neon-yellow ml-2">(você)</span>}
+                          {row.isMe && <span className="text-[10px] text-neon-yellow ml-2">{L('(você)', '(you)')}</span>}
                         </span>
                       </div>
                       <span className="font-mono text-xs text-text-soft shrink-0">
@@ -217,20 +218,20 @@ export function DailyCycleHero() {
             {/* Fase atual */}
             <div className="sports-panel rounded-lg p-3 border border-white/10">
               <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-1">
-                Fase atual
+                {L('Fase atual', 'Current round')}
               </p>
               <p className="font-display text-lg font-bold uppercase text-neon-yellow">
                 {liveRound ? phaseLabel(liveRound.size) : nextRound ? phaseLabel(nextRound.size) : '—'}
               </p>
               <p className="text-xs text-text-soft mt-2">
-                {liveRound ? 'rolando agora' : nextRound ? 'aguardando' : 'mata-mata encerrado'}
+                {liveRound ? L('rolando agora', 'live now') : nextRound ? L('aguardando', 'waiting') : L('mata-mata encerrado', 'knockout finished')}
               </p>
             </div>
 
             {/* Countdown próxima rodada */}
             <div className="sports-panel rounded-lg p-3 border border-white/10">
               <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-1 flex items-center gap-1">
-                <Clock className="w-3 h-3" /> Próxima rodada
+                <Clock className="w-3 h-3" /> {L('Próxima rodada', 'Next round')}
               </p>
               {nextRound && nextRound.status === 'scheduled' ? (
                 <>
@@ -244,9 +245,9 @@ export function DailyCycleHero() {
               ) : liveRound ? (
                 <>
                   <p className="font-mono text-2xl font-bold text-neon-green leading-none animate-pulse">
-                    ao vivo
+                    {L('ao vivo', 'live')}
                   </p>
-                  <p className="text-xs text-text-soft mt-2">simulando agora</p>
+                  <p className="text-xs text-text-soft mt-2">{L('simulando agora', 'simulating now')}</p>
                 </>
               ) : (
                 <p className="text-xs text-text-soft">—</p>
@@ -256,7 +257,7 @@ export function DailyCycleHero() {
             {/* Status do meu time */}
             <div className="sports-panel rounded-lg p-3 border border-white/10">
               <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-1">
-                Seu time
+                {L('Seu time', 'Your team')}
               </p>
               {myTeamId ? (
                 (() => {
@@ -264,7 +265,7 @@ export function DailyCycleHero() {
                     r.fixtures.some((fx) => fx.homeTeamId === myTeamId || fx.awayTeamId === myTeamId),
                   );
                   if (!lastRound) {
-                    return <p className="text-sm text-text-soft">Não classificou para o mata-mata</p>;
+                    return <p className="text-sm text-text-soft">{L('Não classificou para o mata-mata', 'Did not qualify for the knockout')}</p>;
                   }
                   const fx = lastRound.fixtures.find((f) => f.homeTeamId === myTeamId || f.awayTeamId === myTeamId);
                   if (!fx) return <p className="text-sm text-text-soft">—</p>;
@@ -272,7 +273,7 @@ export function DailyCycleHero() {
                     return (
                       <>
                         <p className="font-display text-base font-bold uppercase text-neon-yellow">
-                          Você está vivo
+                          {L('Você está vivo', 'You are still alive')}
                         </p>
                         <p className="text-xs text-text-soft mt-2">
                           {phaseLabel(lastRound.size)}
@@ -290,7 +291,7 @@ export function DailyCycleHero() {
                   return won ? (
                     <>
                       <p className="font-display text-base font-bold uppercase text-neon-green">
-                        Avançou
+                        {L('Avançou', 'Advanced')}
                       </p>
                       <p className="font-mono text-xs text-text-soft mt-2">
                         {myScore}–{theirScore}{fx.wentToPenalties ? ' (P)' : ''}
@@ -299,7 +300,7 @@ export function DailyCycleHero() {
                   ) : (
                     <>
                       <p className="font-display text-base font-bold uppercase text-white/60">
-                        Eliminado
+                        {L('Eliminado', 'Eliminated')}
                       </p>
                       <p className="font-mono text-xs text-text-soft mt-2">
                         {phaseLabel(lastRound.size)} · {myScore}–{theirScore}{fx.wentToPenalties ? ' (P)' : ''}
@@ -338,7 +339,7 @@ export function DailyCycleHero() {
           {daily.bracket.length > 0 && (
             <div className="sports-panel rounded-lg p-3">
               <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-2">
-                O caminho do campeão
+                {L('O caminho do campeão', 'The champion\'s path')}
               </p>
               <DailyBracket bracket={daily.bracket} myTeamId={myTeamId} championName={daily.todayCrown.clubName} />
             </div>

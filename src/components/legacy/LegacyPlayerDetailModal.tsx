@@ -10,25 +10,27 @@ import {
 import { overallFromAttributes } from '@/entities/player';
 import type { PlayerAttributes } from '@/entities/types';
 import { moedaDoJogo } from '@/wallet/constants';
+import { L, LOCALE } from '@/i18n/L';
+import { posLabel } from '@/components/matchquick/posLabel';
 
 const ATTR_LABELS: Array<[keyof PlayerAttributes, string]> = [
-  ['velocidade', 'Velocidade'],
-  ['finalizacao', 'Finalização'],
-  ['drible', 'Drible'],
-  ['passe', 'Passe'],
-  ['marcacao', 'Marcação'],
-  ['fisico', 'Físico'],
-  ['tatico', 'Tático'],
-  ['mentalidade', 'Mentalidade'],
-  ['confianca', 'Confiança'],
+  ['velocidade', L('Velocidade', 'Pace')],
+  ['finalizacao', L('Finalização', 'Finishing')],
+  ['drible', L('Drible', 'Dribbling')],
+  ['passe', L('Passe', 'Passing')],
+  ['marcacao', L('Marcação', 'Marking')],
+  ['fisico', L('Físico', 'Physical')],
+  ['tatico', L('Tático', 'Tactical')],
+  ['mentalidade', L('Mentalidade', 'Mentality')],
+  ['confianca', L('Confiança', 'Confidence')],
   ['fairPlay', 'Fair Play'],
 ];
 
 /** Atributos especialistas — mostrados num bloco à parte (bola parada / cabeça / pênalti). */
 const SPECIALIST_LABELS: Array<[keyof PlayerAttributes, string]> = [
-  ['cabeceio', 'Cabeceio'],
-  ['bolaParada', 'Bola parada'],
-  ['penalti', 'Pênalti'],
+  ['cabeceio', L('Cabeceio', 'Heading')],
+  ['bolaParada', L('Bola parada', 'Set pieces')],
+  ['penalti', L('Pênalti', 'Penalty')],
 ];
 
 function fmtBrl(cents: number): string {
@@ -132,13 +134,13 @@ export function LegacyPlayerDetailModal({
             <div className="flex min-w-0 items-center gap-2">
               <span className="inline-flex shrink-0 items-center gap-1.5 bg-lenda px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white">
                 <Crown className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} />
-                Lenda
+                {L('Lenda', 'Legend')}
               </span>
               {row.collection_title && (
                 <span className="truncate text-[10px] text-white/40">· {row.collection_title}</span>
               )}
             </div>
-            <button type="button" onClick={onClose} className="border border-white/16 bg-panel p-2 text-cimento hover:border-white/30 hover:text-white">
+            <button type="button" onClick={onClose} aria-label={L('Fechar', 'Close')} className="border border-white/16 bg-panel p-2 text-cimento hover:border-white/30 hover:text-white">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -189,28 +191,28 @@ export function LegacyPlayerDetailModal({
                       {entity.name}
                     </h2>
                     <p className="break-words text-sm font-bold uppercase tracking-widest text-neon-yellow">
-                      {entity.pos} • Overall {ovr}
+                      {posLabel(entity.pos)} • Overall {ovr}
                     </p>
                     <p className="mt-1.5 text-[10px] text-gray-500">
                       {row.collection_title ? `${row.collection_title} · ` : ''}
-                      {row.country ?? '—'}{row.age ? ` · ${row.age} anos` : ''}
+                      {row.country ?? '—'}{row.age ? L(` · ${row.age} anos`, ` · ${row.age} yrs`) : ''}
                     </p>
                   </div>
 
                   {/* História */}
                   <div className="rounded-xl border border-white/10 bg-black/35 p-4">
                     <h3 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-                      <BookText className="h-4 w-4" /> História
+                      <BookText className="h-4 w-4" /> {L('História', 'Story')}
                     </h3>
                     <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/85">
-                      {(row.bio ?? '').trim() || 'Sem história registrada para este Legacy.'}
+                      {(row.bio ?? '').trim() || L('Sem história registrada para este Legacy.', 'No story recorded for this Legacy.')}
                     </p>
                   </div>
 
                   {/* Atributos */}
                   <div>
                     <h3 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-                      <TrendingUp className="h-4 w-4" /> Atributos Detalhados
+                      <TrendingUp className="h-4 w-4" /> {L('Atributos Detalhados', 'Detailed Attributes')}
                     </h3>
                     <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
                       {ATTR_LABELS.map(([key, label]) => (
@@ -221,7 +223,7 @@ export function LegacyPlayerDetailModal({
                     {/* Especialistas — bola parada, cabeça, pênalti. Bloco à parte
                         porque não entram no OVR: decidem quem marca cada lance. */}
                     <h4 className="mb-3 mt-6 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-cimento">
-                      <Sparkles className="h-3.5 w-3.5" /> Especialista
+                      <Sparkles className="h-3.5 w-3.5" /> {L('Especialista', 'Specialist')}
                     </h4>
                     <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
                       {SPECIALIST_LABELS.map(([key, label]) => (
@@ -234,7 +236,7 @@ export function LegacyPlayerDetailModal({
                   {taught.length > 0 && (
                     <div className="rounded-xl border border-lenda/30 bg-panel p-4">
                       <h3 className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cimento">
-                        <GraduationCap className="h-4 w-4" /> Ensina aos companheiros
+                        <GraduationCap className="h-4 w-4" /> {L('Ensina aos companheiros', 'Teaches teammates')}
                       </h3>
                       <div className="flex flex-wrap gap-1.5">
                         {taught.map((a) => (
@@ -250,7 +252,7 @@ export function LegacyPlayerDetailModal({
                   {boosterEntries.length > 0 && (
                     <div className="rounded-xl border border-alta/30 bg-panel p-4">
                       <h3 className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cimento">
-                        <Sparkles className="h-4 w-4" /> Booster do time (titular)
+                        <Sparkles className="h-4 w-4" /> {L('Booster do time (titular)', 'Team booster (starter)')}
                       </h3>
                       <div className="flex flex-wrap gap-1.5">
                         {boosterEntries.map(([k, v]) => (
@@ -267,21 +269,21 @@ export function LegacyPlayerDetailModal({
                   <div className="relative overflow-hidden rounded-xl border border-white/10 bg-panel p-4 sm:p-5">
                     {isOwned ? (
                       <div className="rounded-lg bg-white/5 py-2.5 text-center text-[12px] font-bold uppercase tracking-wider text-gray-400">
-                        Você já tem este jogador
+                        {L('Você já tem este jogador', 'You already own this player')}
                       </div>
                     ) : notListed ? (
                       /* Fora de catálogo: label honesto, sem CTA de compra. */
                       <div className="space-y-1.5 rounded-lg bg-white/5 py-3 text-center">
                         <p className="text-[12px] font-bold uppercase tracking-wider text-gray-400">
-                          Fora de catálogo
+                          {L('Fora de catálogo', 'Not in catalogue')}
                         </p>
                         <p className="text-[11px] text-white/45">
-                          Esta lenda não está à venda no momento.
+                          {L('Esta lenda não está à venda no momento.', 'This legend is not for sale right now.')}
                         </p>
                       </div>
                     ) : canAfford === null ? (
                       <div className="flex items-center justify-center gap-2 rounded-lg bg-white/5 py-3 text-center text-[12px] font-bold uppercase tracking-wider text-gray-400">
-                        <Loader2 className="h-4 w-4 animate-spin" /> Verificando saldo…
+                        <Loader2 className="h-4 w-4 animate-spin" /> {L('Verificando saldo…', 'Checking balance…')}
                       </div>
                     ) : canAfford ? (
                       /* Tem saldo: carrinho direto, preço no botão. Alto valor pede 2º clique. */
@@ -295,7 +297,7 @@ export function LegacyPlayerDetailModal({
                         {confirming && needsConfirm && !buying ? (
                           <>
                             <p className="text-center text-[12px] text-white/70">
-                              Confirmar a compra de <span className="font-bold text-neon-yellow">{priceExp.toLocaleString('pt-BR')} {moedaDoJogo()}</span>?
+                              {L('Confirmar a compra de', 'Confirm purchase for')} <span className="font-bold text-neon-yellow">{priceExp.toLocaleString(LOCALE)} {moedaDoJogo()}</span>?
                             </p>
                             <div className="grid grid-cols-2 gap-2">
                               <button
@@ -303,14 +305,14 @@ export function LegacyPlayerDetailModal({
                                 onClick={() => setConfirming(false)}
                                 className="rounded-xl border border-white/30 py-3 text-[12px] font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-white hover:text-white"
                               >
-                                Cancelar
+                                {L('Cancelar', 'Cancel')}
                               </button>
                               <button
                                 type="button"
                                 onClick={onBuy}
                                 className="flex items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3 text-[12px] font-black uppercase tracking-wider text-black transition-colors hover:bg-white"
                               >
-                                <ShoppingCart className="h-4 w-4" strokeWidth={2.5} /> Confirmar
+                                <ShoppingCart className="h-4 w-4" strokeWidth={2.5} /> {L('Confirmar', 'Confirm')}
                               </button>
                             </div>
                           </>
@@ -325,9 +327,9 @@ export function LegacyPlayerDetailModal({
                             className="flex w-full items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3.5 text-sm font-black uppercase tracking-wide text-black transition-colors hover:bg-white disabled:opacity-60"
                           >
                             {buying ? (
-                              <><Loader2 className="h-4 w-4 animate-spin" /> Comprando…</>
+                              <><Loader2 className="h-4 w-4 animate-spin" /> {L('Comprando…', 'Buying…')}</>
                             ) : (
-                              <><ShoppingCart className="h-4 w-4" strokeWidth={2.5} /> Comprar · {priceExp.toLocaleString('pt-BR')} {moedaDoJogo()}</>
+                              <><ShoppingCart className="h-4 w-4" strokeWidth={2.5} /> {L('Comprar', 'Buy')} · {priceExp.toLocaleString(LOCALE)} {moedaDoJogo()}</>
                             )}
                           </button>
                         )}
@@ -344,9 +346,9 @@ export function LegacyPlayerDetailModal({
                         <div className="flex items-start gap-2 rounded-lg border border-baixa/40 bg-deep-black px-3 py-2.5">
                           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-baixa" strokeWidth={2.5} />
                           <div className="min-w-0">
-                            <p className="text-[12px] font-black uppercase tracking-wider text-baixa">Saldo insuficiente</p>
+                            <p className="text-[12px] font-black uppercase tracking-wider text-baixa">{L('Saldo insuficiente', 'Insufficient balance')}</p>
                             <p className="text-[11px] text-white/55">
-                              {balanceLabel ? `Você tem ${balanceLabel} · ` : ''}custa {priceExp.toLocaleString('pt-BR')} {moedaDoJogo()}
+                              {balanceLabel ? L(`Você tem ${balanceLabel} · `, `You have ${balanceLabel} · `) : ''}{L('custa', 'costs')} {priceExp.toLocaleString(LOCALE)} {moedaDoJogo()}
                             </p>
                           </div>
                         </div>
@@ -358,15 +360,15 @@ export function LegacyPlayerDetailModal({
                             className="flex w-full items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3.5 text-sm font-black uppercase tracking-wide text-black transition-colors hover:bg-white disabled:opacity-60"
                           >
                             <ShoppingCart className="h-4 w-4" strokeWidth={2.5} />
-                            Comprar com PIX · {fmtBrl(brlCents)}
+                            {L('Comprar com PIX', 'Buy with PIX')} · {fmtBrl(brlCents)}
                           </button>
                         ) : pixState === 'loading' ? (
                           <p className="flex items-center justify-center gap-2 rounded-lg bg-white/5 py-2.5 text-center text-[11px] text-white/45">
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cotação indisponível, tente em instantes…
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {L('Cotação indisponível, tente em instantes…', 'Quote unavailable, try again shortly…')}
                           </p>
                         ) : (
                           <p className="rounded-lg bg-white/5 py-2.5 text-center text-[11px] text-white/45">
-                            Recarregue {moedaDoJogo()} na carteira para adquirir esta lenda.
+                            {L(`Recarregue ${moedaDoJogo()} na carteira para adquirir esta lenda.`, `Top up ${moedaDoJogo()} in your wallet to get this legend.`)}
                           </p>
                         )}
                       </div>

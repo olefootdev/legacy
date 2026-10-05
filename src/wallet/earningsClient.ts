@@ -11,6 +11,7 @@
  * regra.
  */
 import { getSupabase } from '@/supabase/client';
+import { LOCALE } from '@/i18n/L';
 
 const API_BASE =
   (import.meta.env.VITE_OLEFOOT_API_URL as string) ||
@@ -153,16 +154,16 @@ export function emUnidades(valor: bigint, decimais: number, casas = 2): string {
   const base = 10n ** BigInt(Math.max(0, decimais));
   const inteira = valor / base;
   const fracao = ((valor % base) * 10n ** BigInt(casas)) / base;
-  const parte = inteira.toLocaleString('pt-BR');
-  return casas > 0 ? `${parte},${fracao.toString().padStart(casas, '0')}` : parte;
+  const parte = inteira.toLocaleString(LOCALE);
+  return casas > 0 ? `${parte}${LOCALE === 'pt-BR' ? ',' : '.'}${fracao.toString().padStart(casas, '0')}` : parte;
 }
 
 /** 5000 bps → "50%"; 2550 → "25,5%". */
 export function emPorcento(bps: number): string {
-  return `${(bps / 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
+  return `${(bps / 100).toLocaleString(LOCALE, { maximumFractionDigits: 2 })}%`;
 }
 
 /** 15000 bps → "1,5×". */
 export function emVezes(bps: number): string {
-  return `${(bps / 10_000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}×`;
+  return `${(bps / 10_000).toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}×`;
 }

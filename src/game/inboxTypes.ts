@@ -2,6 +2,7 @@
  * Caixa de entrada = centro de gestão do clube (não placares — isso fica em histórico/liga).
  * Sem importar `./types` (evita ciclo com `OlefootGameState` → `InboxItem`).
  */
+import { L, emIngles } from '@/i18n/L';
 
 export type InboxCategory =
   | 'PLANTEL'
@@ -137,19 +138,28 @@ export interface InboxItem {
 }
 
 export const INBOX_CATEGORY_LABELS: Record<InboxCategory, string> = {
-  PLANTEL: 'Plantel',
-  TREINO: 'Treino',
+  PLANTEL: L('Plantel', 'Squad'),
+  TREINO: L('Treino', 'Training'),
   STAFF: 'Staff',
-  FINANCEIRO: 'Financeiro',
-  CLUBE: 'Clube',
-  COMPETIÇÃO: 'Competição',
-  MISSÃO: 'Missão',
-  TORCIDA: 'Torcida',
-  EMPRESA: 'Empresa',
-  CONTA: 'Conta',
+  FINANCEIRO: L('Financeiro', 'Finance'),
+  CLUBE: L('Clube', 'Club'),
+  COMPETIÇÃO: L('Competição', 'Competition'),
+  MISSÃO: L('Missão', 'Mission'),
+  TORCIDA: L('Torcida', 'Fans'),
+  EMPRESA: L('Empresa', 'Company'),
+  CONTA: L('Conta', 'Account'),
   RANKING: 'Ranking',
-  DESAFIOS: 'Desafios',
+  DESAFIOS: L('Desafios', 'Challenges'),
 };
+
+/**
+ * Etiqueta padrão de um item novo (quando o produtor não passa `tag`).
+ * Em PT continua sendo a própria categoria (como sempre foi); em EN, o rótulo
+ * traduzido em caixa alta. A categoria em si (valor) nunca muda.
+ */
+export function inboxCategoryTag(c: InboxCategory): string {
+  return emIngles() ? INBOX_CATEGORY_LABELS[c].toUpperCase() : c;
+}
 
 /**
  * Notificações antigas que só repetem placar (gravadas no localStorage antes do modelo atual).
@@ -169,7 +179,7 @@ export function isLegacyPlacarInboxNotification(item: InboxItem): boolean {
 export function isHiddenFromHomeInboxFeed(item: InboxItem): boolean {
   if (isLegacyPlacarInboxNotification(item)) return true;
   if (item.hideFromHomeFeed) return true;
-  if (item.messageType === 'FINANCE_EXP_GAIN' && /creditados pela jornada/i.test(item.title)) {
+  if (item.messageType === 'FINANCE_EXP_GAIN' && /creditados pela jornada|credited for the matchday/i.test(item.title)) {
     return true;
   }
   if (

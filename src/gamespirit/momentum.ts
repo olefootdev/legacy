@@ -1,4 +1,5 @@
 import type { CausalMatchEvent } from '@/match/causal/matchCausalTypes';
+import { L } from '@/i18n/L';
 
 /**
  * Momentum por lado (-1..+1). Cada minuto tem decay 8% + delta por eventos.
@@ -88,8 +89,8 @@ export function updateMomentum(prev: MomentumState, events: readonly CausalMatch
  */
 export function momentumLabel(value: number): string {
   const a = Math.abs(value);
-  if (a < 0.12) return 'equilíbrio';
-  if (a < 0.3) return value > 0 ? 'leve momentum' : 'leve pressão';
-  if (a < 0.6) return value > 0 ? 'em cima' : 'acuado';
-  return value > 0 ? 'dominando' : 'sufocado';
+  if (a < 0.12) return L('equilíbrio', 'balanced');
+  if (a < 0.3) return value > 0 ? L('leve momentum', 'slight momentum') : L('leve pressão', 'slight pressure');
+  if (a < 0.6) return value > 0 ? L('em cima', 'on top') : L('acuado', 'pinned back');
+  return value > 0 ? L('dominando', 'dominating') : L('sufocado', 'smothered');
 }

@@ -1,5 +1,6 @@
 import type { FormLetter, PastResult } from '@/entities/types';
 import type { LeagueSeasonState } from '@/match/leagueSeason';
+import { L } from '@/i18n/L';
 
 export interface CompetitionTrophyContext {
   leagueSeason: LeagueSeasonState;
@@ -18,32 +19,32 @@ export interface CompetitionTrophyDef {
 export const COMPETITION_TROPHY_CATALOG: readonly CompetitionTrophyDef[] = [
   {
     id: 'comp_estreia',
-    name: 'Estreia na liga',
-    description: 'Dispute a primeira rodada oficial da temporada.',
+    name: L('Estreia na liga', 'League debut'),
+    description: L('Dispute a primeira rodada oficial da temporada.', 'Play the first official matchday of the season.'),
     unlocked: ({ leagueSeason }) => leagueSeason.played >= 1,
   },
   {
     id: 'comp_pontos_15',
-    name: 'Subindo na tabela',
-    description: 'Acumule 15 pontos no campeonato.',
+    name: L('Subindo na tabela', 'Climbing the table'),
+    description: L('Acumule 15 pontos no campeonato.', 'Collect 15 points in the league.'),
     unlocked: ({ leagueSeason }) => leagueSeason.points >= 15,
   },
   {
     id: 'comp_pontos_30',
-    name: 'Zona nobre',
-    description: 'Acumule 30 pontos no campeonato.',
+    name: L('Zona nobre', 'Top zone'),
+    description: L('Acumule 30 pontos no campeonato.', 'Collect 30 points in the league.'),
     unlocked: ({ leagueSeason }) => leagueSeason.points >= 30,
   },
   {
     id: 'comp_gols_20',
-    name: 'Ataque em chamas',
-    description: 'Marque 20 gols na temporada (liga).',
+    name: L('Ataque em chamas', 'Attack on fire'),
+    description: L('Marque 20 gols na temporada (liga).', 'Score 20 goals in the season (league).'),
     unlocked: ({ leagueSeason }) => leagueSeason.goalsFor >= 20,
   },
   {
     id: 'comp_invictos_5',
-    name: 'Muralha invicta',
-    description: 'Últimos 5 jogos sem derrota (forma).',
+    name: L('Muralha invicta', 'Unbeaten wall'),
+    description: L('Últimos 5 jogos sem derrota (forma).', 'Last 5 games unbeaten (form).'),
     unlocked: ({ form }) => {
       const tail = form.slice(-5);
       return tail.length >= 5 && tail.every((f) => f !== 'L');
@@ -51,8 +52,8 @@ export const COMPETITION_TROPHY_CATALOG: readonly CompetitionTrophyDef[] = [
   },
   {
     id: 'comp_primeira_vitoria',
-    name: 'Primeiro triunfo',
-    description: 'Registre a primeira vitória na temporada.',
+    name: L('Primeiro triunfo', 'First triumph'),
+    description: L('Registre a primeira vitória na temporada.', 'Get your first win of the season.'),
     unlocked: ({ results }) => results.some((r) => r.result === 'win'),
   },
 ];

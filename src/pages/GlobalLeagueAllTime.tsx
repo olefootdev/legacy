@@ -10,6 +10,7 @@ import { motion } from 'motion/react';
 import { BackButton } from '@/components/BackButton';
 import { Hashtag } from '@/components/ui';
 import { ArrowLeft, Trophy, ArrowUp, ArrowDown } from 'lucide-react';
+import { L, emIngles } from '@/i18n/L';
 
 export default function GlobalLeagueAllTime() {
   const navigate = useNavigate();
@@ -37,13 +38,13 @@ export default function GlobalLeagueAllTime() {
 
       {/* Header editorial */}
       <div>
-        <BackButton to="/match/global" label="Liga Global" />
-        <Hashtag className="mt-4 text-neon-yellow">#ligaglobal · todas as temporadas</Hashtag>
+        <BackButton to="/match/global" label={L('Liga Global', 'Global League')} />
+        <Hashtag className="mt-4 text-neon-yellow">{L('#ligaglobal · todas as temporadas', '#globalleague · all seasons')}</Hashtag>
         <h1
           className="mt-1 font-impact uppercase leading-[1.1] text-white"
           style={{ fontSize: 'clamp(2rem, 6vw, 3.25rem)', letterSpacing: '0.005em' }}
         >
-          Hall da <span className="text-neon-yellow">Fama</span>
+          {emIngles() ? <>Hall of <span className="text-neon-yellow">Fame</span></> : <>Hall da <span className="text-neon-yellow">Fama</span></>}
         </h1>
       </div>
 
@@ -51,7 +52,7 @@ export default function GlobalLeagueAllTime() {
       {ranked.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-cimento text-base">
-            Nenhum time registrado ainda.
+            {L('Nenhum time registrado ainda.', 'No teams registered yet.')}
           </p>
         </div>
       ) : (
@@ -64,10 +65,10 @@ export default function GlobalLeagueAllTime() {
             <div className="flex min-w-0 items-center gap-2">
               <Trophy className="w-4 h-4 shrink-0 text-neon-yellow" />
               <span className="truncate font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-                Classificação histórica
+                {L('Classificação histórica', 'All-time standings')}
               </span>
             </div>
-            <span className="shrink-0 font-mono text-xs text-cimento">{ranked.length} clubes</span>
+            <span className="shrink-0 font-mono text-xs text-cimento">{ranked.length} {L('clubes', 'clubs')}</span>
           </div>
 
           <div className="overflow-x-auto">
@@ -75,15 +76,15 @@ export default function GlobalLeagueAllTime() {
               <thead className="bg-deep-black">
                 <tr className="text-left">
                   <th className="px-2 sm:px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento w-10">Pos</th>
-                  <th className="px-2 sm:px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Clube</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">T</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">J</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">V</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">E</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">D</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">GP</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">GC</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">SG</th>
+                  <th className="px-2 sm:px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Clube', 'Club')}</th>
+                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('T', 'S')}</th>
+                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('J', 'P')}</th>
+                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('V', 'W')}</th>
+                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('E', 'D')}</th>
+                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('D', 'L')}</th>
+                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('GP', 'GF')}</th>
+                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('GC', 'GA')}</th>
+                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('SG', 'GD')}</th>
                   <th className="px-2 sm:px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">PTS</th>
                   <th className="px-2 sm:px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-right"></th>
                 </tr>
@@ -176,7 +177,7 @@ export default function GlobalLeagueAllTime() {
                           to={`/match/global/club/${team.id}`}
                           className={`font-mono text-[10px] uppercase tracking-[0.12em] transition-colors whitespace-nowrap ${isMe ? 'text-black hover:underline' : 'text-cimento hover:text-neon-yellow'}`}
                         >
-                          Ver perfil
+                          {L('Ver perfil', 'View profile')}
                         </Link>
                       </td>
                     </tr>
@@ -191,9 +192,9 @@ export default function GlobalLeagueAllTime() {
             <div className="flex flex-wrap gap-4 font-mono text-[10.5px]">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-neon-yellow" />
-                <span className="text-cimento">Seu clube</span>
+                <span className="text-cimento">{L('Seu clube', 'Your club')}</span>
               </div>
-              <span className="text-poeira">T = temporadas · PTS = pontos acumulados</span>
+              <span className="text-poeira">{L('T = temporadas · PTS = pontos acumulados', 'S = seasons · PTS = total points')}</span>
             </div>
           </div>
         </motion.div>

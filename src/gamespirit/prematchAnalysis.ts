@@ -3,6 +3,7 @@ import type { PlayerEntity } from '@/entities/types';
 import { overallFromAttributes } from '@/entities/player';
 import { normalizeMatchAttributes } from '@/match/playerInMatch';
 import type { MatchupMatrix, SectorStrength } from './storyContracts';
+import { L } from '@/i18n/L';
 
 function roughOvrFromPitch(p: PitchPlayerState): number {
   const a = p.attributes ?? normalizeMatchAttributes();
@@ -95,13 +96,13 @@ export function buildPrematchSectorAndMatrix(input: PrematchAnalysisInput): {
   const top = best[0];
   const highlights: string[] = [];
   if (top) {
-    highlights.push(`Destaque: ${top.name} (${top.pos}) — trinca tática OLE.`);
+    highlights.push(L(`Destaque: ${top.name} (${top.pos}) — trinca tática OLE.`, `Key man: ${top.name} (${top.pos}) — OLE tactical trio.`));
   }
   highlights.push(
-    `Setores OLE: DEF ${sectorHome.defensive} · CRI ${sectorHome.creative} · ATA ${sectorHome.attack}`,
+    L(`Setores OLE: DEF ${sectorHome.defensive} · CRI ${sectorHome.creative} · ATA ${sectorHome.attack}`, `OLE sectors: DEF ${sectorHome.defensive} · CRE ${sectorHome.creative} · ATT ${sectorHome.attack}`),
   );
-  highlights.push(`Bloco visitante (~força ${input.opponentStrength}): equilíbrio tático esperado.`);
-  highlights.push(`Média elenco: ${ovr.toFixed(1)} OVR — ritmo definido em campo.`);
+  highlights.push(L(`Bloco visitante (~força ${input.opponentStrength}): equilíbrio tático esperado.`, `Visiting side (~strength ${input.opponentStrength}): tactically even contest expected.`));
+  highlights.push(L(`Média elenco: ${ovr.toFixed(1)} OVR — ritmo definido em campo.`, `Squad average: ${ovr.toFixed(1)} OVR — tempo set on the pitch.`));
 
   return {
     sectorHome,

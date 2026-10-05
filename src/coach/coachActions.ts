@@ -1,6 +1,7 @@
 import type { CoachAgent, TeamContext } from './types';
 import type { IndividualTrainingType, CollectiveTrainingType, TrainingGroup, StaffRoleId } from '@/game/types';
 import type { FormationSchemeId } from '@/match-engine/types';
+import { L } from '@/i18n/L';
 
 export type CoachActionType =
   | 'start_training'
@@ -94,10 +95,12 @@ export function createTrainingAction(
   return {
     id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     type: 'start_training',
-    title: `Iniciar treino ${suggestion.mode === 'individual' ? 'individual' : 'coletivo'}: ${suggestion.trainingType}`,
+    title: suggestion.mode === 'individual'
+      ? L(`Iniciar treino individual: ${suggestion.trainingType}`, `Start individual training: ${suggestion.trainingType}`)
+      : L(`Iniciar treino coletivo: ${suggestion.trainingType}`, `Start team training: ${suggestion.trainingType}`),
     description: suggestion.mode === 'individual'
-      ? `Treino ${suggestion.trainingType} para ${playerIds.length} jogador(es) por ${suggestion.durationHours}h`
-      : `Treino ${suggestion.trainingType} coletivo (${suggestion.group}) por ${suggestion.durationHours}h`,
+      ? L(`Treino ${suggestion.trainingType} para ${playerIds.length} jogador(es) por ${suggestion.durationHours}h`, `${suggestion.trainingType} training for ${playerIds.length} player(s) for ${suggestion.durationHours}h`)
+      : L(`Treino ${suggestion.trainingType} coletivo (${suggestion.group}) por ${suggestion.durationHours}h`, `${suggestion.trainingType} team training (${suggestion.group}) for ${suggestion.durationHours}h`),
     reasoning: suggestion.reasoning,
     urgency: suggestion.priority,
     status: 'pending',
@@ -131,7 +134,7 @@ export function createUpgradeStaffAction(
   return {
     id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     type: 'upgrade_staff',
-    title: `Upgrade ${suggestion.role} para nível ${currentLevel + 1}`,
+    title: L(`Upgrade ${suggestion.role} para nível ${currentLevel + 1}`, `Upgrade ${suggestion.role} to level ${currentLevel + 1}`),
     description: suggestion.action,
     reasoning: suggestion.reasoning,
     urgency: suggestion.priority,
@@ -159,8 +162,8 @@ export function createAssignStaffAction(
   return {
     id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     type: 'assign_staff',
-    title: `Atribuir staff a ${playerName}`,
-    description: `Atribuir ${roleIds.join(', ')} a ${playerName}`,
+    title: L(`Atribuir staff a ${playerName}`, `Assign staff to ${playerName}`),
+    description: L(`Atribuir ${roleIds.join(', ')} a ${playerName}`, `Assign ${roleIds.join(', ')} to ${playerName}`),
     reasoning,
     urgency: 'medium',
     status: 'pending',
@@ -184,8 +187,8 @@ export function createTreatmentAction(
   return {
     id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     type: 'start_treatment',
-    title: `Iniciar tratamento médico: ${playerName}`,
-    description: `Colocar ${playerName} em tratamento no departamento médico`,
+    title: L(`Iniciar tratamento médico: ${playerName}`, `Start medical treatment: ${playerName}`),
+    description: L(`Colocar ${playerName} em tratamento no departamento médico`, `Send ${playerName} to the medical department for treatment`),
     reasoning,
     urgency: 'high',
     status: 'pending',

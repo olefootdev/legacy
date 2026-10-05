@@ -13,6 +13,7 @@ import {
   LEDGER_REASON_BRO,
 } from './types';
 import { getExpCost } from './expCosts';
+import { L } from '@/i18n/L';
 
 export interface UpgradeResult {
   ok: boolean;
@@ -62,17 +63,17 @@ export function tryUpgradeStructure(
   const current = structures[id] ?? 1;
 
   if (current >= MAX_LEVEL) {
-    return { ok: false, error: 'Estrutura já no nível máximo.' };
+    return { ok: false, error: L('Estrutura já no nível máximo.', 'Facility already at max level.') };
   }
 
   const cost = getNextUpgradeCost(id, current, broPrices);
   if (!cost) {
-    return { ok: false, error: 'Custo de upgrade indisponível.' };
+    return { ok: false, error: L('Custo de upgrade indisponível.', 'Upgrade cost unavailable.') };
   }
 
   if (cost.currency === 'exp') {
     if (finance.ole < cost.amount) {
-      return { ok: false, error: `EXP insuficiente. Necessário: ${cost.amount}.` };
+      return { ok: false, error: L(`EXP insuficiente. Necessário: ${cost.amount}.`, `Not enough EXP. Required: ${cost.amount}.`) };
     }
     const nextFinance = addOle(finance, -cost.amount);
     const nextStructures = { ...structures, [id]: current + 1 };
@@ -81,7 +82,7 @@ export function tryUpgradeStructure(
 
   if (finance.broCents < cost.amount) {
     const needed = (cost.amount / 100).toFixed(2);
-    return { ok: false, error: `BRO insuficiente. Necessário: ${needed} BRO.` };
+    return { ok: false, error: L(`BRO insuficiente. Necessário: ${needed} BRO.`, `Not enough BRO. Required: ${needed} BRO.`) };
   }
 
   let nextFinance = addBroCents(finance, -cost.amount);

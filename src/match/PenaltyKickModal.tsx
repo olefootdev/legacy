@@ -12,6 +12,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import type { PitchPlayerState } from '@/engine/types';
 import type { PenaltyState } from '@/gamespirit/spiritSnapshotTypes';
 import { GoalScorerOverlay } from '@/match/GoalScorerOverlay';
+import { L, emIngles } from '@/i18n/L';
+
+/** Rótulo de posição só pra tela (o valor `pos` não muda). */
+const POS_EN: Record<string, string> = {
+  GOL: 'GK', ZAG: 'CB', LAT: 'FB', LD: 'RB', LE: 'LB', VOL: 'DM', MEI: 'AM', MC: 'CM', PE: 'LW', PD: 'RW', ATA: 'ST', CA: 'ST',
+};
+const posLabel = (pos: string): string => L(pos, POS_EN[pos] ?? pos);
 
 // Probabilidade do goleiro defender cada slot
 const KEEPER_SAVE_PROB: Record<number, number> = {
@@ -31,28 +38,28 @@ const RNG_SAVED = 0.55;
 const RNG_GOAL  = 0.13;
 
 const GOAL_NARRATIVES = [
-  'A torcida explode! O estádio inteiro em êxtase!',
-  'Aliviou a pressão do grupo — bateu com frieza total!',
-  'O treinador agradece de joelhos na beira do campo!',
-  'Converteu sem pestanejar — sangue frio absoluto!',
-  'A bola entrou e o banco de reservas invadiu o campo!',
-  'Fez história nesse penalty — a torcida não para de gritar!',
+  L('A torcida explode! O estádio inteiro em êxtase!', 'The crowd erupts! The whole stadium is ecstatic!'),
+  L('Aliviou a pressão do grupo — bateu com frieza total!', 'Pressure released — struck with ice-cold calm!'),
+  L('O treinador agradece de joelhos na beira do campo!', 'The coach drops to his knees on the touchline!'),
+  L('Converteu sem pestanejar — sangue frio absoluto!', 'Converted without blinking — pure composure!'),
+  L('A bola entrou e o banco de reservas invadiu o campo!', 'It goes in and the bench storms the pitch!'),
+  L('Fez história nesse penalty — a torcida não para de gritar!', 'History made from the spot — the crowd won\'t stop roaring!'),
 ];
 
 const SAVE_NARRATIVES = [
-  'Grande defesa! Foi frio e esperou a batida!',
-  'O estádio explode comemorando — defesa épica do goleiro!',
-  'Leu o canto perfeito e mergulhou na hora certa!',
-  'Paralisou o adversário com um milagre entre os postes!',
-  'O goleiro vira herói — defesa que vale um título!',
-  'Impossível — o goleiro voou e tirou o que parecia gol!',
+  L('Grande defesa! Foi frio e esperou a batida!', 'Great save! Stayed calm and waited for the kick!'),
+  L('O estádio explode comemorando — defesa épica do goleiro!', 'The stadium erupts — an epic save from the keeper!'),
+  L('Leu o canto perfeito e mergulhou na hora certa!', 'Read the corner perfectly and dived at the right time!'),
+  L('Paralisou o adversário com um milagre entre os postes!', 'Froze the taker with a miracle between the posts!'),
+  L('O goleiro vira herói — defesa que vale um título!', 'The keeper becomes a hero — a title-winning save!'),
+  L('Impossível — o goleiro voou e tirou o que parecia gol!', 'Impossible — the keeper flew and denied a sure goal!'),
 ];
 
 // Colunas = Esq/Cnt/Dir | Linhas = Alto/Meio/Baixo
 const SLOT_LABELS: Record<number, string> = {
-  1: 'Esq Alto', 2: 'Esq Meio', 3: 'Esq Baixo',
-  4: 'Cnt Alto', 5: 'Centro',   6: 'Cnt Baixo',
-  7: 'Dir Alto', 8: 'Dir Meio', 9: 'Dir Baixo',
+  1: L('Esq Alto', 'Top L'), 2: L('Esq Meio', 'Mid L'), 3: L('Esq Baixo', 'Low L'),
+  4: L('Cnt Alto', 'Top C'), 5: L('Centro', 'Centre'),   6: L('Cnt Baixo', 'Low C'),
+  7: L('Dir Alto', 'Top R'), 8: L('Dir Meio', 'Mid R'), 9: L('Dir Baixo', 'Low R'),
 };
 
 function keeperPickSlot(takerSlot: number, keeperQuality: number): number {
@@ -241,7 +248,7 @@ export function PenaltyKickModal({
             className="flex flex-col items-center justify-center gap-6 px-8 text-center"
           >
             <p className="font-display font-black text-zinc-500 text-sm uppercase tracking-widest">
-              {isHome ? 'Cobrança' : 'Adversário bate'}
+              {isHome ? L('Cobrança', 'Penalty kick') : L('Adversário bate', 'Opponent shoots')}
             </p>
             <motion.p
               initial={{ opacity: 0, y: 12 }}
@@ -249,7 +256,9 @@ export function PenaltyKickModal({
               transition={{ delay: 0.2 }}
               className="font-display font-black text-white text-2xl sm:text-3xl leading-tight"
             >
-              Partiu <span className="text-neon-yellow">{penalty.takerName}</span> para a bola e...
+              {emIngles()
+                ? <>Here comes <span className="text-neon-yellow">{penalty.takerName}</span> to the ball and...</>
+                : <>Partiu <span className="text-neon-yellow">{penalty.takerName}</span> para a bola e...</>}
             </motion.p>
             <motion.div
               className="flex gap-1.5 mt-2"
@@ -304,8 +313,8 @@ export function PenaltyKickModal({
                   outcome.isGoal ? 'text-neon-yellow' : 'text-white'
                 }`}>
                   {isHome
-                    ? (outcome.isGoal ? 'GOOOOOL!' : 'DEFENDEU!')
-                    : (outcome.isGoal ? 'TOMAMOS GOL...' : 'DEFESA!')}
+                    ? (outcome.isGoal ? L('GOOOOOL!', 'GOOOOAL!') : L('DEFENDEU!', 'SAVED!'))
+                    : (outcome.isGoal ? L('TOMAMOS GOL...', 'WE CONCEDED...') : L('DEFESA!', 'SAVE!'))}
                 </p>
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -326,7 +335,7 @@ export function PenaltyKickModal({
               >
                 <GoalScorerOverlay
                   isGoal={outcome.isGoal}
-                  scorerName={outcome.isGoal ? penalty.takerName : 'Goleiro'}
+                  scorerName={outcome.isGoal ? penalty.takerName : L('Goleiro', 'Goalkeeper')}
                   scorerNumber={takerPlayer?.num}
                   minute={minute}
                   side={outcome.isGoal ? penalty.side : (penalty.side === 'home' ? 'away' : 'home')}
@@ -358,7 +367,7 @@ export function PenaltyKickModal({
             <div className="w-full max-w-2xl px-5 mb-2">
               <div className="flex items-center justify-between">
                 <span className="font-display font-black uppercase tracking-widest text-sm text-zinc-400">
-                  {isHome ? 'Penalty — Casa' : 'Penalty — Adversário'}
+                  {isHome ? L('Penalty — Casa', 'Penalty — Home') : L('Penalty — Adversário', 'Penalty — Opponent')}
                 </span>
                 {(
                   <span className={`font-display font-black text-2xl tabular-nums ${countdown <= 2 ? 'text-red-400' : 'text-neon-yellow'}`}>
@@ -367,13 +376,13 @@ export function PenaltyKickModal({
                 )}
               </div>
               <p className="font-bold mt-1 text-xl text-white">
-                {phase === 'pick_taker' && 'Escolha o batedor'}
-                {phase === 'pick_slot' && isHome && `${penalty.takerName} na bola`}
-                {phase === 'pick_slot' && !isHome && `${penalty.takerName} vai cobrar`}
+                {phase === 'pick_taker' && L('Escolha o batedor', 'Choose the taker')}
+                {phase === 'pick_slot' && isHome && L(`${penalty.takerName} na bola`, `${penalty.takerName} on the ball`)}
+                {phase === 'pick_slot' && !isHome && L(`${penalty.takerName} vai cobrar`, `${penalty.takerName} steps up`)}
               </p>
               {phase === 'pick_slot' && (
                 <p className="mt-2 text-sm font-bold uppercase tracking-widest text-neon-yellow">
-                  {isHome ? '👇 Escolha onde chutar' : '🧤 Escolha onde defender'}
+                  {isHome ? L('👇 Escolha onde chutar', '👇 Choose where to shoot') : L('🧤 Escolha onde defender', '🧤 Choose where to dive')}
                 </p>
               )}
             </div>
@@ -383,7 +392,7 @@ export function PenaltyKickModal({
               <div className="relative w-full" style={{ aspectRatio: '16 / 9' }}>
                 <img
                   src="/test-pitch/teste-image-real.jpg"
-                  alt="Gol"
+                  alt={L('Gol', 'Goal')}
                   className="w-full h-full object-cover rounded-xl select-none pointer-events-none"
                   draggable={false}
                 />
@@ -433,7 +442,7 @@ export function PenaltyKickModal({
                     >
                       <span className="text-zinc-400 text-xs mr-1">{p.num}</span>
                       {p.name}
-                      <span className="block text-[10px] text-zinc-500 font-normal">{p.pos}</span>
+                      <span className="block text-[10px] text-zinc-500 font-normal">{posLabel(p.pos)}</span>
                     </button>
                   ))}
                 </div>
@@ -443,7 +452,7 @@ export function PenaltyKickModal({
             {/* Dica de timeout */}
             {phase === 'pick_slot' && (
               <p className="text-zinc-600 text-[10px] uppercase tracking-widest font-display mt-2">
-                {isHome ? 'Sem escolha = chute no centro (defesa do goleiro)' : 'Sem escolha = goleiro fica no centro'}
+                {isHome ? L('Sem escolha = chute no centro (defesa do goleiro)', 'No pick = shot down the middle (keeper saves)') : L('Sem escolha = goleiro fica no centro', 'No pick = keeper stays central')}
               </p>
             )}
           </motion.div>

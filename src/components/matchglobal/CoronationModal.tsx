@@ -11,6 +11,7 @@
  * perde a modal no meio do share.
  */
 
+import { L } from '@/i18n/L';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Crown, X, Share2 } from 'lucide-react';
@@ -143,18 +144,18 @@ export function CoronationModal({ crown, onClose }: Props) {
     const referralUrl = referralCode ? `${origin}/cadastro/${referralCode}` : `${origin}/cadastro`;
     const scoreLine =
       crown.finalScoreHome != null && crown.finalScoreAway != null && crown.runnerUpClubName
-        ? ` Final ${crown.finalScoreHome}–${crown.finalScoreAway} contra ${crown.runnerUpClubName}${crown.finalWentToPens ? ' nos pênaltis' : ''}.`
+        ? L(` Final ${crown.finalScoreHome}–${crown.finalScoreAway} contra ${crown.runnerUpClubName}${crown.finalWentToPens ? ' nos pênaltis' : ''}.`, ` Final ${crown.finalScoreHome}–${crown.finalScoreAway} vs ${crown.runnerUpClubName}${crown.finalWentToPens ? ' on penalties' : ''}.`)
         : '';
     const text =
-      `👑 COROA DO DIA no Olefoot! ${crown.clubName} ganhou a chave de ${crown.bracketSize} times.` +
+      L(`👑 COROA DO DIA no Olefoot! ${crown.clubName} ganhou a chave de ${crown.bracketSize} times.`, `👑 CROWN OF THE DAY on Olefoot! ${crown.clubName} won the ${crown.bracketSize}-team bracket.`) +
       scoreLine +
-      (moment.oneInX >= 10 ? ` Raridade estimada: 1 em ${moment.oneInX}.` : '') +
-      ` Monta teu time e vem me tirar a coroa 👉 ${referralUrl}`;
+      (moment.oneInX >= 10 ? L(` Raridade estimada: 1 em ${moment.oneInX}.`, ` Estimated rarity: 1 in ${moment.oneInX}.`) : '') +
+      L(` Monta teu time e vem me tirar a coroa 👉 ${referralUrl}`, ` Build your team and come take my crown 👉 ${referralUrl}`);
     const r = await shareImageWithText({
       imageUrl: '/banner-campeao-game-ole.png',
       text,
       fileName: 'olefoot-coroa-do-dia.png',
-      title: 'Coroa do Dia',
+      title: L('Coroa do Dia', 'Crown of the Day'),
     });
     track('moment_shared', {
       competition: 'global',
@@ -210,7 +211,7 @@ export function CoronationModal({ crown, onClose }: Props) {
               transition={{ delay: 0.4 }}
               className="mb-3"
             >
-              <Hashtag className="text-neon-yellow/80">#coroadodia · {crown.dailyDate}</Hashtag>
+              <Hashtag className="text-neon-yellow/80">{L('#coroadodia', '#crownoftheday')} · {crown.dailyDate}</Hashtag>
             </motion.div>
 
             <motion.h1
@@ -219,9 +220,9 @@ export function CoronationModal({ crown, onClose }: Props) {
               transition={{ delay: 0.5 }}
               className="font-display text-4xl sm:text-6xl md:text-7xl font-black uppercase text-white leading-none"
             >
-              Você é o
+              {L('Você é o', 'You are the')}
               <br />
-              <span className="text-neon-yellow">Campeão</span>
+              <span className="text-neon-yellow">{L('Campeão', 'Champion')}</span>
             </motion.h1>
 
             <motion.p
@@ -241,7 +242,7 @@ export function CoronationModal({ crown, onClose }: Props) {
                 className="font-mono text-sm text-white/60 mt-4"
               >
                 Final {crown.finalScoreHome}–{crown.finalScoreAway} vs {crown.runnerUpClubName}
-                {crown.finalWentToPens ? ' (pênaltis)' : ''}
+                {crown.finalWentToPens ? L(' (pênaltis)', ' (penalties)') : ''}
               </motion.p>
             )}
 
@@ -265,7 +266,7 @@ export function CoronationModal({ crown, onClose }: Props) {
               }}
             >
               <Share2 className="h-4 w-4" strokeWidth={2.5} aria-hidden />
-              {shared === 'done' ? 'COMPARTILHADO!' : shared === 'copied' ? 'LINK COPIADO!' : 'COMPARTILHAR A COROA'}
+              {shared === 'done' ? L('COMPARTILHADO!', 'SHARED!') : shared === 'copied' ? L('LINK COPIADO!', 'LINK COPIED!') : L('COMPARTILHAR A COROA', 'SHARE THE CROWN')}
             </motion.button>
 
             <motion.p
@@ -274,7 +275,7 @@ export function CoronationModal({ crown, onClose }: Props) {
               transition={{ delay: 1.4 }}
               className="mt-5 text-xs uppercase tracking-wider text-white/40"
             >
-              clique fora pra fechar
+              {L('clique fora pra fechar', 'tap outside to close')}
             </motion.p>
           </motion.div>
         </motion.div>

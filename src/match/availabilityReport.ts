@@ -20,6 +20,7 @@ import {
   FATIGUE_EXHAUSTED_THRESHOLD,
 } from '@/entities/lineup';
 import { unavailableReason } from '@/match/squadEligibility';
+import { L } from '@/i18n/L';
 
 // ──────────────────────────────────────────────────────────────────────────
 // Tipos públicos
@@ -122,18 +123,18 @@ function detailFromReason(
   switch (reason) {
     case 'injured': {
       const matches = h?.outForMatches ?? p.outForMatches ?? 0;
-      return { detail: `Lesão · ${matches} jogo${matches === 1 ? '' : 's'}`, matchesUntilReturn: matches };
+      return { detail: L(`Lesão · ${matches} jogo${matches === 1 ? '' : 's'}`, `Injury · ${matches} match${matches === 1 ? '' : 'es'}`), matchesUntilReturn: matches };
     }
     case 'suspended': {
       const matches = h?.suspendedMatches ?? 0;
-      return { detail: `Suspenso · ${matches} jogo${matches === 1 ? '' : 's'}`, matchesUntilReturn: matches };
+      return { detail: L(`Suspenso · ${matches} jogo${matches === 1 ? '' : 's'}`, `Suspended · ${matches} match${matches === 1 ? '' : 'es'}`), matchesUntilReturn: matches };
     }
     case 'exhausted':
-      return { detail: `Sem energia (${100 - Math.round(h?.fatigue ?? 0)}%)`, matchesUntilReturn: null };
+      return { detail: L(`Sem energia (${100 - Math.round(h?.fatigue ?? 0)}%)`, `No energy (${100 - Math.round(h?.fatigue ?? 0)}%)`), matchesUntilReturn: null };
     case 'contract':
-      return { detail: 'Contrato vencido — renovar', matchesUntilReturn: null };
+      return { detail: L('Contrato vencido — renovar', 'Contract expired — renew'), matchesUntilReturn: null };
     case 'no_player':
-      return { detail: 'Slot vazio', matchesUntilReturn: null };
+      return { detail: L('Slot vazio', 'Empty slot'), matchesUntilReturn: null };
   }
 }
 
@@ -187,7 +188,7 @@ export function selectAvailabilityReport(args: {
         fatigue,
         injuryRisk,
         primaryRisk: 'injury',
-        detail: `Risco de lesão ${Math.round(injuryRisk)}%`,
+        detail: L(`Risco de lesão ${Math.round(injuryRisk)}%`, `Injury risk ${Math.round(injuryRisk)}%`),
       });
     }
 
@@ -205,7 +206,7 @@ export function selectAvailabilityReport(args: {
           fatigue,
           injuryRisk,
           primaryRisk: 'contract',
-          detail: `Contrato · ${p.contractMatchesRemaining} jogo${p.contractMatchesRemaining === 1 ? '' : 's'} restante${p.contractMatchesRemaining === 1 ? '' : 's'}`,
+          detail: L(`Contrato · ${p.contractMatchesRemaining} jogo${p.contractMatchesRemaining === 1 ? '' : 's'} restante${p.contractMatchesRemaining === 1 ? '' : 's'}`, `Contract · ${p.contractMatchesRemaining} match${p.contractMatchesRemaining === 1 ? '' : 'es'} left`),
         });
       }
     }
@@ -225,10 +226,10 @@ export function selectAvailabilityReport(args: {
   const blockingReason = canPlayOfficialMatch
     ? null
     : emptySlots.length > 0
-      ? `Sem jogador puro disponível para: ${emptySlots.map((s) => s.positionLabel).join(', ')}.`
+      ? L(`Sem jogador puro disponível para: ${emptySlots.map((s) => s.positionLabel).join(', ')}.`, `No natural player available for: ${emptySlots.map((s) => s.positionLabel).join(', ')}.`)
       : startersAvailable < 11
-        ? `Titulares disponíveis: ${startersAvailable}/11.`
-        : `Banco insuficiente: ${benchAvailable}/5.`;
+        ? L(`Titulares disponíveis: ${startersAvailable}/11.`, `Starters available: ${startersAvailable}/11.`)
+        : L(`Banco insuficiente: ${benchAvailable}/5.`, `Not enough subs: ${benchAvailable}/5.`);
 
   return {
     startersAvailable,
@@ -393,7 +394,7 @@ export function selectStatusFeed(args: {
           playerName: p.name,
           kind: 'injury_in',
           severity: 'critical',
-          message: `${p.name} sofreu lesão — ${cur.outForMatches} jogo${cur.outForMatches === 1 ? '' : 's'} fora.`,
+          message: L(`${p.name} sofreu lesão — ${cur.outForMatches} jogo${cur.outForMatches === 1 ? '' : 's'} fora.`, `${p.name} is injured — out for ${cur.outForMatches} match${cur.outForMatches === 1 ? '' : 'es'}.`),
           atMs: cur.lastMatchAt || nowMs,
         });
       }
@@ -404,7 +405,7 @@ export function selectStatusFeed(args: {
           playerName: p.name,
           kind: 'injury_out',
           severity: 'info',
-          message: `${p.name} está de volta da lesão.`,
+          message: L(`${p.name} está de volta da lesão.`, `${p.name} is back from injury.`),
           atMs: cur.lastMatchAt || nowMs,
         });
       }
@@ -415,7 +416,7 @@ export function selectStatusFeed(args: {
           playerName: p.name,
           kind: 'suspension_in',
           severity: 'warning',
-          message: `${p.name} suspenso — ${cur.suspendedMatches} jogo${cur.suspendedMatches === 1 ? '' : 's'}.`,
+          message: L(`${p.name} suspenso — ${cur.suspendedMatches} jogo${cur.suspendedMatches === 1 ? '' : 's'}.`, `${p.name} suspended — ${cur.suspendedMatches} match${cur.suspendedMatches === 1 ? '' : 'es'}.`),
           atMs: cur.lastMatchAt || nowMs,
         });
       }
@@ -426,7 +427,7 @@ export function selectStatusFeed(args: {
           playerName: p.name,
           kind: 'suspension_out',
           severity: 'info',
-          message: `${p.name} cumpriu suspensão.`,
+          message: L(`${p.name} cumpriu suspensão.`, `${p.name} has served the suspension.`),
           atMs: cur.lastMatchAt || nowMs,
         });
       }
@@ -437,7 +438,7 @@ export function selectStatusFeed(args: {
           playerName: p.name,
           kind: 'fatigue_warning',
           severity: 'warning',
-          message: `${p.name} está exausto (${Math.round(cur.fatigue)}%).`,
+          message: L(`${p.name} está exausto (${Math.round(cur.fatigue)}%).`, `${p.name} is exhausted (${Math.round(cur.fatigue)}%).`),
           atMs: cur.lastMatchAt || nowMs,
         });
       }
@@ -448,7 +449,7 @@ export function selectStatusFeed(args: {
           playerName: p.name,
           kind: 'fatigue_recovered',
           severity: 'info',
-          message: `${p.name} recuperou energia.`,
+          message: L(`${p.name} recuperou energia.`, `${p.name} has recovered energy.`),
           atMs: cur.lastMatchAt || nowMs,
         });
       }
@@ -461,7 +462,7 @@ export function selectStatusFeed(args: {
         playerName: p.name,
         kind: 'contract_expired',
         severity: 'critical',
-        message: `${p.name} com contrato vencido — não pode entrar em XI oficial.`,
+        message: L(`${p.name} com contrato vencido — não pode entrar em XI oficial.`, `${p.name}'s contract has expired — can't play in an official XI.`),
         atMs: nowMs,
       });
     } else if (
@@ -477,7 +478,7 @@ export function selectStatusFeed(args: {
           playerName: p.name,
           kind: 'contract_warning',
           severity: 'warning',
-          message: `${p.name} · ${p.contractMatchesRemaining} jogo${p.contractMatchesRemaining === 1 ? '' : 's'} de contrato.`,
+          message: L(`${p.name} · ${p.contractMatchesRemaining} jogo${p.contractMatchesRemaining === 1 ? '' : 's'} de contrato.`, `${p.name} · ${p.contractMatchesRemaining} match${p.contractMatchesRemaining === 1 ? '' : 'es'} left on contract.`),
           atMs: nowMs,
         });
       }

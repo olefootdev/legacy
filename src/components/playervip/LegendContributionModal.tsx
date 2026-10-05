@@ -15,20 +15,21 @@ import {
   type ContributionKind,
 } from '@/supabase/legendContributions';
 import { useStoryRecorder } from '@/hooks/useStoryRecorder';
+import { L } from '@/i18n/L';
 
 /** Campo de formulário VOLT2: asfalto chapado, canto vivo, foco em volt. */
 const CAMPO = 'border border-white/16 bg-deep-black px-4 py-3.5 text-sm text-white outline-none placeholder:text-poeira focus:border-neon-yellow';
 
 const TITLE: Record<ContributionKind, string> = {
-  correcao: 'Sugerir correção',
-  historia: 'Contar sua história',
-  novo_card: 'Pedir um novo card',
+  correcao: L('Sugerir correção', 'Suggest a fix'),
+  historia: L('Contar sua história', 'Tell your story'),
+  novo_card: L('Pedir um novo card', 'Request a new card'),
 };
 
 const LEDE: Record<ContributionKind, string> = {
-  correcao: 'Se tem algo errado — um ano, um clube, um número — nos conte.',
-  historia: 'Grave um áudio contando como foi: um jogo, um gol, um vestiário, uma virada.',
-  novo_card: 'Teve uma época marcante que ainda não virou card? Conte qual e a gente estuda.',
+  correcao: L('Se tem algo errado — um ano, um clube, um número — nos conte.', "If something's wrong — a year, a club, a number — let us know."),
+  historia: L('Grave um áudio contando como foi: um jogo, um gol, um vestiário, uma virada.', 'Record audio telling us how it was: a match, a goal, a dressing room, a comeback.'),
+  novo_card: L('Teve uma época marcante que ainda não virou card? Conte qual e a gente estuda.', "Had a standout era that isn't a card yet? Tell us which and we'll look into it."),
 };
 
 function mmss(total: number): string {
@@ -69,14 +70,14 @@ export function LegendContributionModal({
     setErr('');
 
     if (kind === 'novo_card' && (!ano.trim() || !clube.trim())) {
-      setErr('Preencha ao menos o ano e o clube.'); setState('error'); return;
+      setErr(L('Preencha ao menos o ano e o clube.', 'Fill in at least the year and the club.')); setState('error'); return;
     }
     const texto = kind === 'historia' ? (message.trim() || rec.transcript.trim()) : message.trim();
     if (kind !== 'historia' && texto.length < 5) {
-      setErr('Conta um pouco mais pra gente entender.'); setState('error'); return;
+      setErr(L('Conta um pouco mais pra gente entender.', 'Tell us a bit more so we understand.')); setState('error'); return;
     }
     if (kind === 'historia' && !rec.blob && texto.length < 5) {
-      setErr('Grave um áudio ou escreva sua história.'); setState('error'); return;
+      setErr(L('Grave um áudio ou escreva sua história.', 'Record audio or write your story.')); setState('error'); return;
     }
 
     setState('sending');
@@ -96,7 +97,7 @@ export function LegendContributionModal({
     const r = await submitContribution({
       kind, message: texto || undefined, legacyPlayerId: cardId ?? null, payload, audioPath,
     });
-    if (!r.ok) { setErr(r.error ?? 'Não foi possível enviar.'); setState('error'); return; }
+    if (!r.ok) { setErr(r.error ?? L('Não foi possível enviar.', 'Could not send.')); setState('error'); return; }
     setState('sent');
   }
 
@@ -109,14 +110,14 @@ export function LegendContributionModal({
         {state === 'sent' ? (
           <div className="text-center">
             <CheckCircle2 className="mx-auto mb-4 h-10 w-10 text-neon-yellow" />
-            <h2 className="font-impact text-[28px] uppercase leading-[1.05]">Recebemos</h2>
+            <h2 className="font-impact text-[28px] uppercase leading-[1.05]">{L('Recebemos', 'Received')}</h2>
             <p className="mt-2 text-sm leading-relaxed text-cimento">
               {kind === 'historia'
-                ? 'Sua história vai ser ouvida por uma pessoa da OLEFOOT. Obrigado por contar.'
-                : 'Uma pessoa da OLEFOOT vai ler. Se fizer sentido, a gente ajusta.'}
+                ? L('Sua história vai ser ouvida por uma pessoa da OLEFOOT. Obrigado por contar.', 'Someone at OLEFOOT will listen to your story. Thanks for sharing.')
+                : L('Uma pessoa da OLEFOOT vai ler. Se fizer sentido, a gente ajusta.', "Someone at OLEFOOT will read it. If it makes sense, we'll fix it.")}
             </p>
             <button onClick={onClose} className="btn-primary mt-5 flex h-12 w-full items-center justify-center">
-              Fechar
+              {L('Fechar', 'Close')}
             </button>
           </div>
         ) : (
@@ -131,7 +132,7 @@ export function LegendContributionModal({
                   value={field} onChange={(e) => setField(e.target.value)}
                   className={`w-full ${CAMPO}`}
                 >
-                  <option value="">O que está errado? (opcional)</option>
+                  <option value="">{L('O que está errado? (opcional)', "What's wrong? (optional)")}</option>
                   {CORRECTION_FIELDS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
                 </select>
               )}
@@ -139,18 +140,18 @@ export function LegendContributionModal({
               {kind === 'novo_card' && (
                 <>
                   <div className="grid grid-cols-2 gap-3">
-                    <input value={ano} onChange={(e) => setAno(e.target.value)} inputMode="numeric" placeholder="Ano (ex.: 2003)"
+                    <input value={ano} onChange={(e) => setAno(e.target.value)} inputMode="numeric" placeholder={L('Ano (ex.: 2003)', 'Year (e.g. 2003)')}
                       className={`w-full min-w-0 ${CAMPO}`} />
-                    <input value={clube} onChange={(e) => setClube(e.target.value)} placeholder="Clube"
+                    <input value={clube} onChange={(e) => setClube(e.target.value)} placeholder={L('Clube', 'Club')}
                       className={`w-full min-w-0 ${CAMPO}`} />
                   </div>
-                  <input value={pontoForte} onChange={(e) => setPontoForte(e.target.value)} placeholder="Seu ponto forte na época"
+                  <input value={pontoForte} onChange={(e) => setPontoForte(e.target.value)} placeholder={L('Seu ponto forte na época', 'Your main strength back then')}
                     className={`w-full ${CAMPO}`} />
                   <div>
-                    <input value={preco} onChange={(e) => setPreco(e.target.value)} inputMode="decimal" placeholder="Quanto você acha que vale (US$)"
+                    <input value={preco} onChange={(e) => setPreco(e.target.value)} inputMode="decimal" placeholder={L('Quanto você acha que vale (US$)', "What you think it's worth (US$)")}
                       className={`w-full ${CAMPO}`} />
                     <p className="mt-1.5 text-[11px] leading-snug text-cimento">
-                      É a sua opinião, e ela conta. O preço final é definido pela OLEFOOT junto com o resto da coleção.
+                      {L('É a sua opinião, e ela conta. O preço final é definido pela OLEFOOT junto com o resto da coleção.', 'Your opinion counts. The final price is set by OLEFOOT along with the rest of the collection.')}
                     </p>
                   </div>
                 </>
@@ -161,27 +162,27 @@ export function LegendContributionModal({
                   {rec.state === 'unsupported' || rec.state === 'denied' ? (
                     <p className="text-[12px] leading-relaxed text-cimento">
                       {rec.state === 'denied'
-                        ? 'Precisamos do microfone para gravar. Libere o acesso e tente de novo — ou escreva abaixo.'
-                        : 'Seu navegador não grava áudio. Sem problema: escreva sua história abaixo.'}
+                        ? L('Precisamos do microfone para gravar. Libere o acesso e tente de novo — ou escreva abaixo.', 'We need the microphone to record. Allow access and try again — or write below.')
+                        : L('Seu navegador não grava áudio. Sem problema: escreva sua história abaixo.', "Your browser can't record audio. No problem: write your story below.")}
                     </p>
                   ) : rec.state === 'recording' ? (
                     <div className="flex items-center gap-3">
                       <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-baixa" />
                       <span className="ole-num text-lg">{mmss(rec.seconds)}</span>
                       <button onClick={rec.stop} className="ml-auto flex items-center gap-2 border border-white/30 px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors hover:border-white">
-                        <Square className="h-3.5 w-3.5" /> Parar
+                        <Square className="h-3.5 w-3.5" /> {L('Parar', 'Stop')}
                       </button>
                     </div>
                   ) : rec.blob ? (
                     <div className="flex items-center gap-3">
                       <audio controls src={URL.createObjectURL(rec.blob)} className="h-9 min-w-0 flex-1" />
-                      <button onClick={rec.reset} className="shrink-0 p-2 text-cimento transition-colors hover:text-white" aria-label="Descartar gravação">
+                      <button onClick={rec.reset} className="shrink-0 p-2 text-cimento transition-colors hover:text-white" aria-label={L('Descartar gravação', 'Discard recording')}>
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   ) : (
                     <button onClick={() => void rec.start()} className="btn-primary flex h-12 w-full items-center justify-center gap-2">
-                      <Mic className="h-4 w-4" /> Gravar
+                      <Mic className="h-4 w-4" /> {L('Gravar', 'Record')}
                     </button>
                   )}
                   {rec.state === 'recording' && rec.interim && (
@@ -189,7 +190,7 @@ export function LegendContributionModal({
                   )}
                   {rec.state !== 'idle' && !rec.canTranscribe && (
                     <p className="mt-3 text-[11px] leading-snug text-cimento">
-                      Seu navegador não transcreve automaticamente — mas o áudio é gravado e nós escutamos.
+                      {L('Seu navegador não transcreve automaticamente — mas o áudio é gravado e nós escutamos.', "Your browser doesn't auto-transcribe — but the audio is recorded and we listen to it.")}
                     </p>
                   )}
                 </div>
@@ -200,16 +201,16 @@ export function LegendContributionModal({
                 onChange={(e) => { setMessage(e.target.value); if (state === 'error') setState('idle'); }}
                 rows={kind === 'historia' ? 4 : 5}
                 placeholder={
-                  kind === 'correcao' ? 'Ex.: joguei no Vasco em 2005 e 2006, não só em 2005.'
-                  : kind === 'historia' ? 'Rascunho da transcrição — corrija à vontade, ou escreva direto aqui.'
-                  : 'Conte por que essa época merece um card.'
+                  kind === 'correcao' ? L('Ex.: joguei no Vasco em 2005 e 2006, não só em 2005.', 'E.g. I played for Vasco in 2005 and 2006, not just 2005.')
+                  : kind === 'historia' ? L('Rascunho da transcrição — corrija à vontade, ou escreva direto aqui.', 'Transcript draft — edit freely, or write here directly.')
+                  : L('Conte por que essa época merece um card.', 'Tell us why this era deserves a card.')
                 }
                 className={`w-full resize-none ${CAMPO}`}
               />
 
               {kind === 'historia' && (
                 <p className="text-[11px] leading-snug text-cimento">
-                  Ao enviar, você autoriza a OLEFOOT a usar esta história na construção do seu card. Sua voz não é publicada sem falar com você antes.
+                  {L('Ao enviar, você autoriza a OLEFOOT a usar esta história na construção do seu card. Sua voz não é publicada sem falar com você antes.', "By sending, you authorize OLEFOOT to use this story to build your card. Your voice is never published without talking to you first.")}
                 </p>
               )}
 
@@ -217,14 +218,14 @@ export function LegendContributionModal({
 
               <div className="flex gap-2">
                 <button onClick={onClose} className="btn-secondary flex h-12 flex-1 items-center justify-center px-3">
-                  Cancelar
+                  {L('Cancelar', 'Cancel')}
                 </button>
                 <button
                   onClick={() => void send()}
                   disabled={state === 'sending' || rec.state === 'recording'}
                   className="btn-primary flex h-12 flex-1 items-center justify-center px-3 disabled:opacity-50"
                 >
-                  {state === 'sending' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar'}
+                  {state === 'sending' ? <Loader2 className="h-4 w-4 animate-spin" /> : L('Enviar', 'Send')}
                 </button>
               </div>
             </div>

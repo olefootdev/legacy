@@ -45,6 +45,7 @@ import {
   useConsequenceCounts,
 } from '@/hooks/useConsequences';
 import { cn } from '@/lib/utils';
+import { L, LOCALE } from '@/i18n/L';
 import type {
   ClubSummary,
   ConsequencesByDimension,
@@ -84,25 +85,25 @@ type BadgeState = 'service-up' | 'no-auth' | 'data-error' | 'service-down';
 const BADGE_META: Record<BadgeState, { label: string; tooltip: string; cls: string; Icon: typeof Wifi }> = {
   'service-up': {
     label: 'Python · online',
-    tooltip: 'Serviço /insights respondendo e dados do clube carregados.',
+    tooltip: L('Serviço /insights respondendo e dados do clube carregados.', 'The /insights service is responding and club data has loaded.'),
     cls: 'bg-[var(--color-success)]/15 text-[var(--color-success)] border-[var(--color-success)]/30',
     Icon: Wifi,
   },
   'no-auth': {
-    label: 'Sem login Supabase',
-    tooltip: 'O serviço /insights está online, mas você precisa estar autenticado no Supabase para ver seus dados.',
+    label: L('Sem login Supabase', 'No Supabase login'),
+    tooltip: L('O serviço /insights está online, mas você precisa estar autenticado no Supabase para ver seus dados.', 'The /insights service is online, but you need to be signed in to Supabase to see your data.'),
     cls: 'bg-white/5 text-white/50 border-white/15',
     Icon: WifiOff,
   },
   'data-error': {
-    label: 'Sem dados',
-    tooltip: 'Serviço /insights respondeu, mas o resumo do clube falhou (RLS, 5xx ou timeout). Mostrando fallback local.',
+    label: L('Sem dados', 'No data'),
+    tooltip: L('Serviço /insights respondeu, mas o resumo do clube falhou (RLS, 5xx ou timeout). Mostrando fallback local.', 'The /insights service responded, but the club summary failed (RLS, 5xx or timeout). Showing local fallback.'),
     cls: 'bg-neon-yellow/10 text-neon-yellow border-neon-yellow/30',
     Icon: AlertTriangle,
   },
   'service-down': {
-    label: 'Serviço offline',
-    tooltip: 'O serviço /insights (Python) não respondeu ao health-check. Mostrando dados locais.',
+    label: L('Serviço offline', 'Service offline'),
+    tooltip: L('O serviço /insights (Python) não respondeu ao health-check. Mostrando dados locais.', 'The /insights (Python) service did not answer the health check. Showing local data.'),
     cls: 'bg-[var(--color-danger)]/10 text-[var(--color-danger)] border-[var(--color-danger)]/30',
     Icon: WifiOff,
   },
@@ -196,25 +197,25 @@ function StatCard({ label, value, hint, tone = 'neutral', Icon }: StatCardProps)
 
 const DIMENSION_META = {
   physical: {
-    label: 'Físico',
+    label: L('Físico', 'Physical'),
     Icon: Activity,
     rail: 'border-l-[var(--color-danger)]',
     dot: 'bg-[var(--color-danger)]',
   },
   psychological: {
-    label: 'Psicológico',
+    label: L('Psicológico', 'Psychological'),
     Icon: Brain,
     rail: 'border-l-neon-yellow',
     dot: 'bg-neon-yellow',
   },
   reputational: {
-    label: 'Reputacional',
+    label: L('Reputacional', 'Reputation'),
     Icon: TrendingUp,
     rail: 'border-l-[var(--color-success)]',
     dot: 'bg-[var(--color-success)]',
   },
   financial: {
-    label: 'Financeiro',
+    label: L('Financeiro', 'Financial'),
     Icon: DollarSign,
     rail: 'border-l-[var(--color-warning)]',
     dot: 'bg-[var(--color-warning)]',
@@ -321,7 +322,7 @@ function DimensionCard({
           className="text-white/35 py-2"
           style={{ fontFamily: 'var(--font-ui)', fontSize: '11.5px' }}
         >
-          Nada ativo.
+          {L('Nada ativo.', 'Nothing active.')}
         </div>
       ) : (
         <div className="space-y-0">
@@ -339,7 +340,7 @@ function DimensionCard({
                 fontWeight: 700,
               }}
             >
-              + {entries.length - 8} mais
+              + {entries.length - 8} {L('mais', 'more')}
             </div>
           )}
         </div>
@@ -352,14 +353,14 @@ function DimensionCard({
 
 function NightReportSection({ report }: { report: NightReport }) {
   // VOLT2: eyebrow + manchete sem serifa/itálico; contadores chapados, sem brilho.
-  const time = new Date(report.generated_at).toLocaleTimeString('pt-BR', {
+  const time = new Date(report.generated_at).toLocaleTimeString(LOCALE, {
     hour: '2-digit',
     minute: '2-digit',
   });
 
   return (
     <motion.section
-      aria-label="Relatório da noite"
+      aria-label={L('Relatório da noite', 'Overnight report')}
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -382,7 +383,7 @@ function NightReportSection({ report }: { report: NightReport }) {
                 textTransform: 'uppercase',
               }}
             >
-              Relatório da Noite
+              {L('Relatório da Noite', 'Overnight Report')}
             </span>
           </div>
           {/* Headline */}
@@ -417,12 +418,12 @@ function NightReportSection({ report }: { report: NightReport }) {
       {/* 3 Counters: Resolvidas / Ativas / Novos */}
       <div className="grid grid-cols-3 gap-2 mb-5">
         {[
-          { label: 'Resolvidas', value: report.resolved_overnight, color: 'text-[var(--color-success)]' },
-          { label: 'Ativas', value: report.still_active, color: 'text-white' },
-          { label: 'Novos', value: report.new_alerts, color: 'text-[var(--color-warning)]' },
+          { key: 'resolved', label: L('Resolvidas', 'Resolved'), value: report.resolved_overnight, color: 'text-[var(--color-success)]' },
+          { key: 'active', label: L('Ativas', 'Active'), value: report.still_active, color: 'text-white' },
+          { key: 'new', label: L('Novos', 'New'), value: report.new_alerts, color: 'text-[var(--color-warning)]' },
         ].map((c) => (
           <div
-            key={c.label}
+            key={c.key}
             className="text-center p-3 bg-deep-black/40 border border-white/8"
             style={{ borderRadius: 'var(--radius-sm)' }}
           >
@@ -512,7 +513,7 @@ function NightReportSection({ report }: { report: NightReport }) {
           className="text-center text-white/40 py-3"
           style={{ fontFamily: 'var(--font-ui)', fontSize: '12px' }}
         >
-          Sem destaques no momento.
+          {L('Sem destaques no momento.', 'No highlights right now.')}
         </div>
       )}
     </motion.section>
@@ -601,7 +602,7 @@ export function ManagerScouts() {
       : badgeState === 'data-error'
       ? (summaryError ?? null)
       : lastCheckedAt
-      ? `Última verificação: ${new Date(lastCheckedAt).toLocaleTimeString('pt-BR')}`
+      ? L(`Última verificação: ${new Date(lastCheckedAt).toLocaleTimeString(LOCALE)}`, `Last check: ${new Date(lastCheckedAt).toLocaleTimeString(LOCALE)}`)
       : null;
 
   // Compatibilidade interna — algumas condicionais legadas usam pythonOnline
@@ -641,7 +642,7 @@ export function ManagerScouts() {
               onClick={() => navigate('/manager')}
               className="shrink-0 w-9 h-9 mt-1 bg-deep-black/60 border border-white/12 hover:border-neon-yellow/40 hover:text-neon-yellow grid place-items-center text-white/70 transition-colors"
               style={{ borderRadius: 'var(--radius-sm)' }}
-              aria-label="Voltar"
+              aria-label={L('Voltar', 'Back')}
             >
               <ChevronLeft size={16} />
             </button>
@@ -659,7 +660,7 @@ export function ManagerScouts() {
                     textTransform: 'uppercase',
                   }}
                 >
-                  Olefoot · Inteligência
+                  {L('Olefoot · Inteligência', 'Olefoot · Intelligence')}
                 </span>
               </div>
               {/* Headline */}
@@ -690,32 +691,32 @@ export function ManagerScouts() {
         </motion.header>
 
         {/* ── Stats row ──────────────────────────────────────────── */}
-        <section aria-label="Resumo do clube" className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <section aria-label={L('Resumo do clube', 'Club summary')} className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <StatCard
-            label="Ativas"
+            label={L('Ativas', 'Active')}
             value={stats.total_active}
-            hint="Consequências em jogo"
+            hint={L('Consequências em jogo', 'Consequences in play')}
             tone="neutral"
             Icon={Activity}
           />
           <StatCard
-            label="Indisponíveis"
+            label={L('Indisponíveis', 'Unavailable')}
             value={stats.unavailable_players}
-            hint="Jogadores fora"
+            hint={L('Jogadores fora', 'Players out')}
             tone={stats.unavailable_players > 0 ? 'negative' : 'neutral'}
             Icon={ShieldOff}
           />
           <StatCard
-            label="Alertas"
+            label={L('Alertas', 'Alerts')}
             value={stats.alerts}
-            hint="Negativos ativos"
+            hint={L('Negativos ativos', 'Active negatives')}
             tone={stats.alerts > 3 ? 'urgent' : stats.alerts > 0 ? 'negative' : 'neutral'}
             Icon={AlertTriangle}
           />
           <StatCard
-            label="Celebrações"
+            label={L('Celebrações', 'Celebrations')}
             value={stats.celebrations}
-            hint="Boas notícias"
+            hint={L('Boas notícias', 'Good news')}
             tone={stats.celebrations > 0 ? 'positive' : 'neutral'}
             Icon={BadgeCheck}
           />
@@ -727,13 +728,13 @@ export function ManagerScouts() {
         {/* ── Tabs Legacy Tech (DS §7.6) ────────────────────────── */}
         <div
           role="tablist"
-          aria-label="Modo de visualização"
+          aria-label={L('Modo de visualização', 'View mode')}
           className="flex items-center gap-1 p-1 bg-deep-black/60 border border-white/10 w-fit"
           style={{ borderRadius: 'var(--radius-sm)' }}
         >
           {(['plantel', 'impacto'] as const).map((t) => {
             const active = tab === t;
-            const label = t === 'plantel' ? 'Plantel' : 'Mapa de Impacto';
+            const label = t === 'plantel' ? L('Plantel', 'Squad') : L('Mapa de Impacto', 'Impact Map');
             return (
               <button
                 key={t}
@@ -766,33 +767,33 @@ export function ManagerScouts() {
         {tab === 'plantel' ? (
           <ScoutsPlantelTab overview={squadOverview} />
         ) : (
-          <section aria-label="Mapa de consequências">
+          <section aria-label={L('Mapa de consequências', 'Consequence map')}>
             <div className="flex items-baseline justify-between mb-3">
               <div>
                 <div
                   className="text-[10px] uppercase tracking-[0.28em] text-white/55"
                   style={{ fontFamily: 'var(--font-ui)' }}
                 >
-                  Mapa de Impacto
+                  {L('Mapa de Impacto', 'Impact Map')}
                 </div>
                 <h2
                   className="text-lg font-display font-black text-white"
                   style={{ fontFamily: 'var(--font-display)' }}
                 >
-                  Consequências ativas
+                  {L('Consequências ativas', 'Active consequences')}
                 </h2>
               </div>
               <div className="text-[11px] text-white/40 tabular-nums">
-                {totalDimensionEntries} total
+                {totalDimensionEntries} {L('total', 'total')}
               </div>
             </div>
 
             {totalDimensionEntries === 0 ? (
               <div className="text-center py-10 px-4 rounded-sm bg-white/3 border border-dashed border-white/10">
                 <Sparkles size={24} className="text-white/30 mx-auto mb-2" />
-                <p className="text-sm text-white/55">Nenhuma consequência ativa no momento.</p>
+                <p className="text-sm text-white/55">{L('Nenhuma consequência ativa no momento.', 'No active consequences right now.')}</p>
                 <p className="text-[12px] text-white/35 mt-1">
-                  Jogue partidas para gerar impactos que sobrevivem entre sessões.
+                  {L('Jogue partidas para gerar impactos que sobrevivem entre sessões.', 'Play matches to create impacts that carry over between sessions.')}
                 </p>
               </div>
             ) : (
@@ -810,13 +811,13 @@ export function ManagerScouts() {
         {badgeState !== 'service-up' && (
           <div className="text-[11px] text-white/40 text-center py-2">
             {badgeState === 'service-down' && (
-              <>Serviço /insights offline — mostrando dados locais.</>
+              <>{L('Serviço /insights offline — mostrando dados locais.', '/insights service offline — showing local data.')}</>
             )}
             {badgeState === 'no-auth' && (
-              <>Sem sessão Supabase ativa — entre na sua conta para ver os dados do serviço /insights.</>
+              <>{L('Sem sessão Supabase ativa — entre na sua conta para ver os dados do serviço /insights.', 'No active Supabase session — sign in to see data from the /insights service.')}</>
             )}
             {badgeState === 'data-error' && (
-              <>Não foi possível carregar o resumo do clube — mostrando fallback local.</>
+              <>{L('Não foi possível carregar o resumo do clube — mostrando fallback local.', 'Could not load the club summary — showing local fallback.')}</>
             )}
           </div>
         )}

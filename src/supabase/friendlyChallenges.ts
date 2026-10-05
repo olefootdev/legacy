@@ -1,4 +1,5 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { L } from '@/i18n/L';
 import { getSupabase } from '@/supabase/client';
 import { isUuidString } from '@/supabase/matchPersistence';
 
@@ -91,10 +92,10 @@ export async function createFriendlyChallenge(input: {
   betExp: number | null;
 }): Promise<{ id: string } | { error: string }> {
   const sb = getSupabase();
-  if (!sb) return { error: 'Supabase não configurado.' };
+  if (!sb) return { error: L('Supabase não configurado.', 'Supabase not configured.') };
   const challengerClubId = await fetchProfileRemoteClubId();
-  if (!challengerClubId) return { error: 'Associa o teu clube ao perfil (login Supabase + club_id).' };
-  if (challengerClubId === input.challengedClubId) return { error: 'Não podes desafiar o teu próprio clube.' };
+  if (!challengerClubId) return { error: L('Associa o teu clube ao perfil (login Supabase + club_id).', 'Link your club to your profile (Supabase login + club_id).') };
+  if (challengerClubId === input.challengedClubId) return { error: L('Não podes desafiar o teu próprio clube.', 'You can\'t challenge your own club.') };
   const expires = new Date(Date.now() + FRIENDLY_CHALLENGE_TTL_SEC * 1000).toISOString();
   const { data, error } = await sb
     .from('friendly_challenges')
@@ -112,7 +113,7 @@ export async function createFriendlyChallenge(input: {
     } as never)
     .select('id')
     .single();
-  if (error || !data) return { error: error?.message ?? 'Falha ao criar desafio.' };
+  if (error || !data) return { error: error?.message ?? L('Falha ao criar desafio.', 'Failed to create challenge.') };
   return { id: (data as { id: string }).id };
 }
 
@@ -121,7 +122,7 @@ export async function updateFriendlyChallengeStatus(
   status: FriendlyChallengeStatus,
 ): Promise<{ ok: true } | { error: string }> {
   const sb = getSupabase();
-  if (!sb) return { error: 'Sem cliente.' };
+  if (!sb) return { error: L('Sem cliente.', 'No client.') };
   const { error } = await sb.from('friendly_challenges').update({ status } as never).eq('id', id);
   if (error) return { error: error.message };
   return { ok: true };
@@ -141,7 +142,7 @@ export function subscribeFriendlyChallengeUpdates(
   onRow: (row: FriendlyChallengeRow) => void,
 ): RealtimeChannel {
   const sb = getSupabase();
-  if (!sb) throw new Error('Supabase não configurado');
+  if (!sb) throw new Error(L('Supabase não configurado', 'Supabase not configured'));
   const channel = sb
     .channel(`friendly-challenge-${challengeId}`)
     .on(
@@ -166,7 +167,7 @@ export function subscribeIncomingFriendlyChallenges(
   onInsert: (row: FriendlyChallengeRow) => void,
 ): RealtimeChannel {
   const sb = getSupabase();
-  if (!sb) throw new Error('Supabase não configurado');
+  if (!sb) throw new Error(L('Supabase não configurado', 'Supabase not configured'));
   const channel = sb
     .channel(`friendly-incoming-${challengedClubId}`)
     .on(

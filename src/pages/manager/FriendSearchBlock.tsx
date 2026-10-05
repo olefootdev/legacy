@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Search, UserPlus, Loader2, Check } from 'lucide-react';
 import { searchManagers, type ManagerSearchResult } from '@/supabase/friendships';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 const MIN_CHARS = 3;
 
@@ -65,7 +66,7 @@ export function FriendSearchBlock({
   return (
     <div className="space-y-3">
       <div className="ole-eyebrow-poster !text-neon-yellow">
-        <span>Encontrar manager</span>
+        <span>{L('Encontrar manager', 'Find manager')}</span>
       </div>
 
       <div className="relative">
@@ -73,7 +74,7 @@ export function FriendSearchBlock({
         <input
           value={q}
           onChange={(e) => { setQ(e.target.value); setTouched(true); }}
-          placeholder="Nome do clube, usuário ou e-mail"
+          placeholder={L('Nome do clube, usuário ou e-mail', 'Club name, username or email')}
           className="w-full rounded-[var(--radius-sm)] border border-white/12 bg-black/40 py-3 pl-10 pr-10 text-sm text-white outline-none placeholder:text-white/30 focus:border-neon-yellow/50"
         />
         {searching && (
@@ -85,7 +86,7 @@ export function FriendSearchBlock({
 
       {showEmpty && (
         <p className="rounded-[var(--radius-sm)] border border-dashed border-white/10 bg-black/20 px-3 py-3 text-xs text-gray-500">
-          Nenhum manager encontrado. Pelo e-mail, precisa ser exato.
+          {L('Nenhum manager encontrado. Pelo e-mail, precisa ser exato.', 'No manager found. Email must be exact.')}
         </p>
       )}
 
@@ -117,13 +118,13 @@ export function FriendSearchBlock({
                   )}
                 >
                   {already ? (
-                    'Na rede'
+                    L('Na rede', 'Connected')
                   ) : done ? (
-                    <><Check className="h-3 w-3" /> Enviado</>
+                    <><Check className="h-3 w-3" /> {L('Enviado', 'Sent')}</>
                   ) : inviting === m.id ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
-                    <><UserPlus className="h-3 w-3" /> Convidar</>
+                    <><UserPlus className="h-3 w-3" /> {L('Convidar', 'Invite')}</>
                   )}
                 </button>
               </li>

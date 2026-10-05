@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { L, emIngles } from '@/i18n/L';
 import { convitePendente } from '@/supabase/expansaoConvite';
 
 /**
@@ -17,10 +18,10 @@ export function FaixaConvitePendente() {
   return (
     <div className="flex items-center justify-center gap-2 bg-neon-yellow px-4 py-2.5 text-center">
       <span className="font-mono text-[10px] uppercase tracking-wider text-deep-black/70">
-        Convite
+        {L('Convite', 'Invite')}
       </span>
       <span className="text-[12.5px] font-bold text-deep-black">
-        @{username} está te esperando
+        {emIngles() ? <>@{username} is waiting for you</> : <>@{username} está te esperando</>}
       </span>
     </div>
   );

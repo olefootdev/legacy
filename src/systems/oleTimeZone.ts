@@ -4,12 +4,13 @@
  * O `WorldClock` continua a sincronizar o estado com `WORLD_CATCH_UP` em tempo real;
  * o relógio OTZ na UI segue o relógio do dispositivo formatado em UTC (sempre atual).
  */
+import { LOCALE } from '@/i18n/L';
 
 export const OTZ_IANA = 'UTC';
 export const OTZ_SHORT_LABEL = 'OTZ';
 
 export function formatOtzTime(d: Date): string {
-  return d.toLocaleTimeString('pt-BR', {
+  return d.toLocaleTimeString(LOCALE, {
     timeZone: OTZ_IANA,
     hour: '2-digit',
     minute: '2-digit',
@@ -19,7 +20,7 @@ export function formatOtzTime(d: Date): string {
 }
 
 export function formatOtzDate(d: Date): string {
-  return d.toLocaleDateString('pt-BR', {
+  return d.toLocaleDateString(LOCALE, {
     timeZone: OTZ_IANA,
     day: '2-digit',
     month: 'short',

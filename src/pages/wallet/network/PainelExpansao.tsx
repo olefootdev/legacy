@@ -6,6 +6,7 @@ import { CampoPin } from '@/pages/wallet/PinDaCarteira';
 import { cn } from '@/lib/utils';
 import type { MinhaExpansao } from './useMinhaExpansao';
 import { AtivarComLicenca } from './AtivarComLicenca';
+import { L, LOCALE, emIngles } from '@/i18n/L';
 
 /**
  * Painel de expansão — o lado de negócios, dentro do NETWORK da carteira.
@@ -25,7 +26,7 @@ import { AtivarComLicenca } from './AtivarComLicenca';
  */
 
 const NOME_DEGRAU: Record<string, string> = {
-  CAMPEAO: 'CAMPEÃO', DUPLO_CAMPEAO: 'DUPLO', TRI_CAMPEAO: 'TRI',
+  CAMPEAO: L('CAMPEÃO', 'CHAMPION'), DUPLO_CAMPEAO: L('DUPLO', 'DOUBLE'), TRI_CAMPEAO: L('TRI', 'TREBLE'),
   TETRA: 'TETRA', PENTA: 'PENTA',
 };
 
@@ -36,7 +37,7 @@ function pctDegrau(c: Carreira): number {
   return Math.min(100, Number((c.acumulado * 100n) / alvo));
 }
 
-const br = (v: bigint) => v.toLocaleString('pt-BR');
+const br = (v: bigint) => v.toLocaleString(LOCALE);
 
 /** O convite sai sempre com o domínio público, mesmo visto de outro lugar. */
 const ORIGEM_DO_CONVITE = 'https://game.olefoot.ai';
@@ -58,7 +59,7 @@ function BotaoAtivar() {
       to={ATIVAR}
       className="ole-num mt-4 flex h-[50px] w-full items-center justify-center whitespace-nowrap bg-neon-yellow text-[13px] uppercase text-black transition-colors hover:bg-white [--corte:12px] [clip-path:var(--clip-corte)]"
     >
-      Ativar com $10
+      {L('Ativar com $10', 'Activate with $10')}
     </Link>
   );
 }
@@ -75,7 +76,7 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
   };
 
   if (carregando) {
-    return <p className="font-mono text-[12px] text-cimento">Carregando…</p>;
+    return <p className="font-mono text-[12px] text-cimento">{L('Carregando…', 'Loading…')}</p>;
   }
 
   if (!naArvore) {
@@ -85,11 +86,16 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
     return (
       <div className="border border-white/10 bg-panel px-4 py-5">
         <h3 className="font-impact text-[24px] uppercase leading-[1.1] text-white">
-          Você ainda não entrou
+          {L('Você ainda não entrou', 'You haven\'t joined yet')}
         </h3>
         <p className="mt-2.5 text-[13px] leading-relaxed text-cimento">
+          {emIngles() ? <>
+          You join by buying your first <strong className="text-giz">$10</strong> OLEFOOT pack,
+          or by confirming an invite from someone already in.
+          </> : <>
           Entra quem compra o primeiro pack de <strong className="text-giz">$10</strong> de OLEFOOT,
           ou quem confirma o convite de alguém que já está.
+          </>}
         </p>
         <BotaoAtivar />
         <AtivarComLicenca aoAtivar={reler} />
@@ -115,44 +121,50 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
           A ordem real é: comprar o pack → convidar → equiparar. */}
       {!convida ? (
         <div className="mb-6 border-l-2 border-atencao bg-card px-4 py-3.5">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-atencao">Primeiro passo</div>
+          <div className="font-mono text-[10px] uppercase tracking-wider text-atencao">{L('Primeiro passo', 'First step')}</div>
           <p className="mt-1.5 text-[13px] leading-relaxed text-giz">
-            Ative sua conta com um pack de <strong>$10</strong> na pré-venda. É ele que libera o seu convite.
+            {emIngles()
+              ? <>Activate your account with a <strong>$10</strong> presale pack. That&apos;s what unlocks your invite.</>
+              : <>Ative sua conta com um pack de <strong>$10</strong> na pré-venda. É ele que libera o seu convite.</>}
           </p>
           <p className="mt-1.5 font-mono text-[11px] leading-relaxed text-poeira">
-            Depois de ativar: 1 indicado em cada time e o bônus começa a contar.
+            {L('Depois de ativar: 1 indicado em cada time e o bônus começa a contar.', 'After activating: 1 referral on each team and the bonus starts counting.')}
           </p>
           <BotaoAtivar />
           <AtivarComLicenca aoAtivar={reler} />
         </div>
       ) : ativacao && !ativacao.ativo ? (
         <div className="mb-6 border-l-2 border-atencao bg-card px-4 py-3.5">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-atencao">Falta ativar o bônus</div>
+          <div className="font-mono text-[10px] uppercase tracking-wider text-atencao">{L('Falta ativar o bônus', 'Bonus not active yet')}</div>
           <p className="mt-1.5 text-[13px] leading-relaxed text-giz">
-            Falta 1 indicado no <strong>Time {ativacao.faltaNaPerna}</strong> para o bônus começar a contar.
+            {emIngles()
+              ? <>1 more referral on <strong>Team {ativacao.faltaNaPerna}</strong> and the bonus starts counting.</>
+              : <>Falta 1 indicado no <strong>Time {ativacao.faltaNaPerna}</strong> para o bônus começar a contar.</>}
           </p>
           <p className="mt-1.5 font-mono text-[11px] text-poeira">
-            Hoje: {ativacao.diretosT1} no Time 1 · {ativacao.diretosT2} no Time 2
+            {L(`Hoje: ${ativacao.diretosT1} no Time 1 · ${ativacao.diretosT2} no Time 2`, `Today: ${ativacao.diretosT1} on Team 1 · ${ativacao.diretosT2} on Team 2`)}
           </p>
         </div>
       ) : null}
 
       {/* ── herói: o equiparado, não os times ── */}
       <div className="border border-white/10 bg-panel px-4 py-5">
-        <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-poeira">Equiparado</div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-poeira">{L('Equiparado', 'Matched')}</div>
         <div className="mt-1.5 flex items-baseline gap-2">
           <span className="ole-num text-[46px] font-extrabold leading-none text-neon-yellow">{br(equiparado)}</span>
           <span className="text-[12px] font-semibold text-cimento">OLEXP</span>
         </div>
         <p className="mt-2 text-[11.5px] leading-relaxed text-cimento">
-          É o <strong className="text-giz">menor</strong> dos dois times. Ele define o bônus — sempre.
+          {emIngles()
+            ? <>It&apos;s the <strong className="text-giz">smaller</strong> of the two teams. It sets the bonus — always.</>
+            : <>É o <strong className="text-giz">menor</strong> dos dois times. Ele define o bônus — sempre.</>}
         </p>
       </div>
 
       {/* ── barra espelhada ── */}
       <div className="mt-5">
         <div className="mb-2 flex justify-between font-mono text-[9px] uppercase tracking-wider text-poeira">
-          <span>Time 1</span><span>Time 2</span>
+          <span>{L('Time 1', 'Team 1')}</span><span>{L('Time 2', 'Team 2')}</span>
         </div>
         <div className="flex h-8 items-stretch">
           <div className="flex flex-1 justify-end gap-[2px]">
@@ -169,13 +181,13 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
           <div>
             <div className="ole-num text-[20px] font-bold leading-none text-giz">{br(t1)}</div>
             <div className="mt-1 font-mono text-[9px] uppercase tracking-wider text-poeira">
-              {t1 <= t2 ? '★ o que paga' : 'pontos'}
+              {t1 <= t2 ? L('★ o que paga', '★ the one that pays') : L('pontos', 'points')}
             </div>
           </div>
           <div className="text-right">
             <div className="ole-num text-[20px] font-bold leading-none text-giz">{br(t2)}</div>
             <div className="mt-1 font-mono text-[9px] uppercase tracking-wider text-poeira">
-              {t2 <= t1 ? '★ o que paga' : 'pontos'}
+              {t2 <= t1 ? L('★ o que paga', '★ the one that pays') : L('pontos', 'points')}
             </div>
           </div>
         </div>
@@ -185,8 +197,8 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
       {sobra > 0n && (
         <div className="mt-4 flex items-center justify-between border-l-2 border-cimento bg-card px-3.5 py-3">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">Sobra do Time {pernaMaior}</div>
-            <div className="mt-1 text-[11px] text-cimento">não se perde — entra no próximo ciclo</div>
+            <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L(`Sobra do Time ${pernaMaior}`, `Team ${pernaMaior} carry-over`)}</div>
+            <div className="mt-1 text-[11px] text-cimento">{L('não se perde — entra no próximo ciclo', 'not lost — rolls into the next cycle')}</div>
           </div>
           <div className="ole-num text-[18px] font-bold text-cimento">{br(sobra)}</div>
         </div>
@@ -198,7 +210,7 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
       {/* ── carreira: conta o que foi PAGO, e por isso nunca cai ── */}
       <div className="mt-6 border border-white/10 bg-panel px-4 py-4">
         <div className="flex items-baseline justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">Carreira</span>
+          <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Carreira', 'Career')}</span>
           <span className="font-display text-[15px] font-bold text-giz">
             {carreira?.degrau ? NOME_DEGRAU[carreira.degrau] ?? carreira.degrau : '—'}
           </span>
@@ -207,7 +219,7 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
           <span className="ole-num text-[20px] font-bold leading-none text-giz">
             {br(carreira?.acumulado ?? 0n)}
           </span>
-          <span className="text-[11px] text-cimento">já pagos em equiparação</span>
+          <span className="text-[11px] text-cimento">{L('já pagos em equiparação', 'already paid in matching')}</span>
         </div>
         {carreira?.proximo && (
           <>
@@ -216,19 +228,19 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
                    style={{ width: `${pctDegrau(carreira)}%` }} />
             </div>
             <p className="mt-2 font-mono text-[10.5px] text-poeira">
-              {br(carreira.falta)} para {NOME_DEGRAU[carreira.proximo] ?? carreira.proximo}
-              {' '}· conta o que foi pago, não o que está parado
+              {br(carreira.falta)} {L('para', 'to')} {NOME_DEGRAU[carreira.proximo] ?? carreira.proximo}
+              {' '}· {L('conta o que foi pago, não o que está parado', 'counts what was paid, not what is idle')}
             </p>
             {carreira.premioProximo != null && (
               <p className="mt-2 text-[12px] text-giz">
-                Chegou, ganhou <strong className="text-neon-yellow">{br(carreira.premioProximo)} OLEFOOT</strong>
+                {L('Chegou, ganhou', 'Reach it, win')} <strong className="text-neon-yellow">{br(carreira.premioProximo)} OLEFOOT</strong>
               </p>
             )}
           </>
         )}
         {carreira && carreira.premiosOlefoot > 0n && (
           <p className="mt-2 border-t border-white/10 pt-2 font-mono text-[10.5px] text-poeira">
-            {br(carreira.premiosOlefoot)} OLEFOOT já ganhos em prêmios de carreira
+            {br(carreira.premiosOlefoot)} {L('OLEFOOT já ganhos em prêmios de carreira', 'OLEFOOT already won in career rewards')}
           </p>
         )}
       </div>
@@ -242,27 +254,27 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
 
       {/* ── convite ── */}
       <div className="mt-6 border border-white/10 bg-panel px-4 py-4">
-        <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">Seu convite</div>
+        <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Seu convite', 'Your invite')}</div>
         {convida && link ? (
           <>
             <p className="mt-2 break-all font-mono text-[11px] leading-relaxed text-giz"
                style={{ wordBreak: 'break-all' }}>{link}</p>
             <button type="button" onClick={copiar}
               className="mt-3 w-full bg-neon-yellow px-4 py-3 text-[13px] font-bold text-deep-black">
-              {copiado ? 'COPIADO' : 'COPIAR LINK'}
+              {copiado ? L('COPIADO', 'COPIED') : L('COPIAR LINK', 'COPY LINK')}
             </button>
             <PernaPadrao atual={bonus?.pernaPadrao ?? null} aoMudar={reler} />
           </>
         ) : (
           <p className="mt-2 text-[12.5px] leading-relaxed text-cimento">
-            Seu link aparece aqui depois que você ativar a conta com um pack de $10 na pré-venda.
+            {L('Seu link aparece aqui depois que você ativar a conta com um pack de $10 na pré-venda.', 'Your link shows up here after you activate your account with a $10 presale pack.')}
           </p>
         )}
       </div>
 
       {padrinho && (
         <p className="mt-5 text-center font-mono text-[10.5px] text-poeira">
-          Você entrou por @{padrinho}
+          {L('Você entrou por', 'You joined via')} @{padrinho}
         </p>
       )}
     </div>
@@ -277,13 +289,13 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
  * desequilíbrio entre as pernas vira assimetria, que é a mesma lição da barra.
  */
 const PELA_ORIGEM: Record<string, string> = {
-  convite: 'pelo seu convite', compra: 'pela compra do pack', licenca: 'por licença',
-  ativacao_3x: 'pela Ativação 3×',
+  convite: L('pelo seu convite', 'via your invite'), compra: L('pela compra do pack', 'via pack purchase'), licenca: L('por licença', 'via license'),
+  ativacao_3x: L('pela Ativação 3×', 'via 3× Activation'),
 };
 
 function dataCurta(iso: string | null): string {
   if (!iso) return '';
-  try { return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); }
+  try { return new Date(iso).toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit' }); }
   catch { return iso.slice(0, 10); }
 }
 
@@ -296,23 +308,23 @@ function SeusIndicados({ nos }: { nos: readonly NoDoMapa[] }) {
   return (
     <div className="mt-6 border border-white/10 bg-panel">
       <div className="flex items-baseline justify-between px-4 pb-2 pt-3.5">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">Seus indicados</span>
+        <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Seus indicados', 'Your referrals')}</span>
         <span className="font-mono text-[10px] text-cimento">{diretos.length}</span>
       </div>
       {diretos.length === 0 ? (
-        <p className="px-4 pb-4 text-[12.5px] text-cimento">Ninguém ainda. Quem entrar pelo seu convite aparece aqui.</p>
+        <p className="px-4 pb-4 text-[12.5px] text-cimento">{L('Ninguém ainda. Quem entrar pelo seu convite aparece aqui.', 'No one yet. Whoever joins via your invite shows up here.')}</p>
       ) : (
         diretos.map((n) => (
           <div key={n.userId} className="border-t border-white/10 px-4 py-3">
             <div className="flex min-w-0 items-baseline justify-between gap-3">
               <span className="min-w-0 truncate text-[14px] font-semibold text-white">
-                {n.username ? `@${n.username}` : 'Sem nome de usuário'}
+                {n.username ? `@${n.username}` : L('Sem nome de usuário', 'No username')}
               </span>
-              <span className="ole-num shrink-0 text-[12px] uppercase text-neon-yellow">Time {n.perna}</span>
+              <span className="ole-num shrink-0 text-[12px] uppercase text-neon-yellow">{L('Time', 'Team')} {n.perna}</span>
             </div>
             <div className="mt-0.5 truncate font-mono text-[10.5px] text-poeira">
-              {[n.clube, n.entrouEm ? `entrou ${dataCurta(n.entrouEm)}` : null,
-                n.ativado ? 'conta ativada' : 'sem ativação'].filter(Boolean).join(' · ')}
+              {[n.clube, n.entrouEm ? L(`entrou ${dataCurta(n.entrouEm)}`, `joined ${dataCurta(n.entrouEm)}`) : null,
+                n.ativado ? L('conta ativada', 'account activated') : L('sem ativação', 'not activated')].filter(Boolean).join(' · ')}
             </div>
           </div>
         ))
@@ -326,10 +338,9 @@ function FichaDoNo({ n }: { n: NoDoMapa }) {
   if (!n.daMinhaEquipe) {
     return (
       <div className="border-t border-white/10 px-4 py-3">
-        <div className="text-[13px] font-semibold text-giz">Chegou por derramamento</div>
+        <div className="text-[13px] font-semibold text-giz">{L('Chegou por derramamento', 'Arrived by spillover')}</div>
         <p className="mt-1 text-[12px] leading-relaxed text-cimento">
-          Time {n.perna} · nível {n.nivel}. Não foi indicado pela sua equipe: ocupa a vaga e soma pontos
-          no seu Time {n.perna}, mas o nome não aparece pra você.
+          {L(`Time ${n.perna} · nível ${n.nivel}. Não foi indicado pela sua equipe: ocupa a vaga e soma pontos no seu Time ${n.perna}, mas o nome não aparece pra você.`, `Team ${n.perna} · level ${n.nivel}. Not referred by your team: fills the spot and adds points to your Team ${n.perna}, but the name isn't shown to you.`)}
         </p>
       </div>
     );
@@ -338,24 +349,24 @@ function FichaDoNo({ n }: { n: NoDoMapa }) {
     <div className="border-t border-white/10 px-4 py-3">
       <div className="flex min-w-0 items-baseline justify-between gap-3">
         <span className="min-w-0 truncate text-[15px] font-semibold text-white">
-          {n.username ? `@${n.username}` : 'Sem nome de usuário'}
+          {n.username ? `@${n.username}` : L('Sem nome de usuário', 'No username')}
         </span>
-        <span className="ole-num shrink-0 text-[12px] uppercase text-neon-yellow">Time {n.perna}</span>
+        <span className="ole-num shrink-0 text-[12px] uppercase text-neon-yellow">{L('Time', 'Team')} {n.perna}</span>
       </div>
       {n.clube && <div className="mt-0.5 truncate text-[12px] text-giz">{n.clube}</div>}
       <p className="mt-1.5 font-mono text-[10.5px] leading-relaxed text-poeira">
-        {[`nível ${n.nivel}`, n.direto ? 'indicado direto seu' : 'da sua equipe',
-          n.entrouEm ? `entrou ${dataCurta(n.entrouEm)}${n.origem && PELA_ORIGEM[n.origem] ? ` ${PELA_ORIGEM[n.origem]}` : ''}` : null,
+        {[L(`nível ${n.nivel}`, `level ${n.nivel}`), n.direto ? L('indicado direto seu', 'your direct referral') : L('da sua equipe', 'from your team'),
+          n.entrouEm ? `${L('entrou', 'joined')} ${dataCurta(n.entrouEm)}${n.origem && PELA_ORIGEM[n.origem] ? ` ${PELA_ORIGEM[n.origem]}` : ''}` : null,
         ].filter(Boolean).join(' · ')}
       </p>
       <div className="mt-2 flex flex-wrap gap-1.5">
         <span className={cn('px-2 py-0.5 font-mono text-[10px] uppercase',
           n.ativado ? 'bg-neon-yellow text-black' : 'border border-white/20 text-cimento')}>
-          {n.ativado ? 'Conta ativada' : 'Sem ativação'}
+          {n.ativado ? L('Conta ativada', 'Account activated') : L('Sem ativação', 'Not activated')}
         </span>
         <span className={cn('px-2 py-0.5 font-mono text-[10px] uppercase',
           n.binarioAtivo ? 'bg-white text-black' : 'border border-white/20 text-cimento')}>
-          {n.binarioAtivo ? 'Binário ativo' : 'Binário inativo'}
+          {n.binarioAtivo ? L('Binário ativo', 'Binary active') : L('Binário inativo', 'Binary inactive')}
         </span>
       </div>
     </div>
@@ -367,15 +378,15 @@ function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
   if (nos.length === 0) {
     return (
       <div className="mt-6 border border-white/10 bg-panel px-4 py-6 text-center">
-        <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">Sua rede</div>
-        <p className="mt-2 text-[12.5px] text-cimento">Ninguém ainda. Seu primeiro convite começa aqui.</p>
+        <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Sua rede', 'Your network')}</div>
+        <p className="mt-2 text-[12.5px] text-cimento">{L('Ninguém ainda. Seu primeiro convite começa aqui.', 'No one yet. Your first invite starts here.')}</p>
       </div>
     );
   }
 
-  const L = 340, A = 220, X0 = 56, EIXO = A / 2;
+  const LARG = 340, A = 220, X0 = 56, EIXO = A / 2;
   const maxNivel = Math.max(...nos.map((n) => n.nivel));
-  const colX = (n: number) => X0 + (n / Math.max(1, maxNivel)) * (L - X0 - 26);
+  const colX = (n: number) => X0 + (n / Math.max(1, maxNivel)) * (LARG - X0 - 26);
 
   // 🐞 A primeira versão ligava TODO nó direto na raiz — virava leque, não
   // árvore. O `paiId` vinha do banco e não era usado. Agora cada nó é
@@ -409,15 +420,15 @@ function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
   return (
     <div className="mt-6 border border-white/10 bg-panel">
       <div className="flex items-baseline justify-between px-4 pb-1 pt-3.5">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">Sua rede</span>
+        <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Sua rede', 'Your network')}</span>
         <span className="font-mono text-[10px] text-cimento">
-          {nos.length} {nos.length === 1 ? 'pessoa' : 'pessoas'} · até o nível {maxNivel}
+          {nos.length} {nos.length === 1 ? L('pessoa', 'person') : L('pessoas', 'people')} · {L('até o nível', 'up to level')} {maxNivel}
         </span>
       </div>
-      <svg viewBox={`0 0 ${L} ${A}`} className="block h-[220px] w-full">
-        <line x1={X0} y1={EIXO} x2={L - 8} y2={EIXO} stroke="#1B1D1F" strokeWidth="1" />
-        <text x="4" y="26" fill="#4A4C4F" fontSize="8" fontFamily="monospace">TIME 1</text>
-        <text x="4" y={A - 14} fill="#4A4C4F" fontSize="8" fontFamily="monospace">TIME 2</text>
+      <svg viewBox={`0 0 ${LARG} ${A}`} className="block h-[220px] w-full">
+        <line x1={X0} y1={EIXO} x2={LARG - 8} y2={EIXO} stroke="#1B1D1F" strokeWidth="1" />
+        <text x="4" y="26" fill="#4A4C4F" fontSize="8" fontFamily="monospace">{L('TIME 1', 'TEAM 1')}</text>
+        <text x="4" y={A - 14} fill="#4A4C4F" fontSize="8" fontFamily="monospace">{L('TIME 2', 'TEAM 2')}</text>
 
         {nos.map((n) => {
           const p = pos.get(n.userId);
@@ -446,7 +457,7 @@ function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
               <circle cx={p.x} cy={p.y} r={n.nivel === 1 ? 6 : 4.5}
                 fill={n.daMinhaEquipe ? '#FDE100' : '#5A5C5F'}
                 stroke={ativo ? '#FFFFFF' : 'none'} strokeWidth={ativo ? 2 : 0} />
-              <title>{n.username ? `@${n.username}` : 'derramamento'}</title>
+              <title>{n.username ? `@${n.username}` : L('derramamento', 'spillover')}</title>
             </g>
           );
         })}
@@ -460,20 +471,20 @@ function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
         ))}
 
         <circle cx={X0} cy={EIXO} r="8" fill="#ECECE7" />
-        <text x={X0 - 18} y={EIXO + 22} fill="#ECECE7" fontSize="8" fontFamily="monospace" fontWeight="bold">VOCÊ</text>
+        <text x={X0 - 18} y={EIXO + 22} fill="#ECECE7" fontSize="8" fontFamily="monospace" fontWeight="bold">{L('VOCÊ', 'YOU')}</text>
       </svg>
       {(() => {
         const n = nos.find((x) => x.userId === selecionado);
         return n ? <FichaDoNo n={n} /> : (
           <p className="border-t border-white/10 px-4 py-2.5 font-mono text-[10px] text-cimento">
-            Toque numa bolinha pra ver quem é.
+            {L('Toque numa bolinha pra ver quem é.', 'Tap a dot to see who it is.')}
           </p>
         );
       })()}
       <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-white/10 px-4 py-2.5 font-mono text-[9px] text-poeira">
-        <span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-neon-yellow align-middle" />sua equipe</span>
-        <span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#5A5C5F] align-middle" />derramou</span>
-        {niveisComExcesso.length > 0 && <span>+N = mais gente no nível</span>}
+        <span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-neon-yellow align-middle" />{L('sua equipe', 'your team')}</span>
+        <span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#5A5C5F] align-middle" />{L('derramou', 'spillover')}</span>
+        {niveisComExcesso.length > 0 && <span>{L('+N = mais gente no nível', '+N = more people on this level')}</span>}
       </div>
     </div>
   );
@@ -485,7 +496,7 @@ function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
 const dolar = (cents: bigint) => {
   const inteiro = cents / 100n;
   const resto = (cents % 100n).toString().padStart(2, '0');
-  return `$${inteiro.toLocaleString('pt-BR')},${resto}`;
+  return `$${inteiro.toLocaleString(LOCALE)}${L(',', '.')}${resto}`;
 };
 
 /**
@@ -499,19 +510,19 @@ function BlocoBonus({ bonus }: { bonus: MeuBonus | null }) {
   const aReceber = bonus ? bonus.olefoot - bonus.olefootSacado : 0n;
   return (
     <div className="mt-6 border border-white/10 bg-panel px-4 py-4">
-      <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">Bônus a receber</div>
+      <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Bônus a receber', 'Bonus to receive')}</div>
       <div className="mt-1.5 whitespace-nowrap">
         <span className="ole-num text-[26px] font-bold leading-none text-white tabular-nums">{br(aReceber)}</span>
         <span className="ml-2 text-[12px] font-semibold text-cimento">OLEFOOT</span>
       </div>
       <p className="mt-1.5 font-mono text-[11px] text-poeira">
         {bonus && bonus.ciclosPagos > 0
-          ? `${dolar(bonus.usdCents)} em ${bonus.ciclosPagos} ${bonus.ciclosPagos === 1 ? 'ciclo' : 'ciclos'}`
-          : 'Nenhum ciclo pagou você ainda'}
+          ? L(`${dolar(bonus.usdCents)} em ${bonus.ciclosPagos} ${bonus.ciclosPagos === 1 ? 'ciclo' : 'ciclos'}`, `${dolar(bonus.usdCents)} in ${bonus.ciclosPagos} ${bonus.ciclosPagos === 1 ? 'cycle' : 'cycles'}`)
+          : L('Nenhum ciclo pagou você ainda', 'No cycle has paid you yet')}
       </p>
       {bonus && bonus.tetoDiarioCents > 0n ? <TetoDeHoje hoje={bonus.hojeUsdCents} teto={bonus.tetoDiarioCents} /> : null}
       <p className="mt-2.5 border-t border-white/10 pt-2.5 text-[11.5px] leading-relaxed text-cimento">
-        O saque abre quando o OLEFOOT for lançado na Solana, para a carteira vinculada.
+        {L('O saque abre quando o OLEFOOT for lançado na Solana, para a carteira vinculada.', 'Withdrawals open when OLEFOOT launches on Solana, to your linked wallet.')}
       </p>
     </div>
   );
@@ -526,16 +537,16 @@ function TetoDeHoje({ hoje, teto }: { hoje: bigint; teto: bigint }) {
   return (
     <div className="mt-3">
       <div className="flex items-baseline justify-between gap-3 font-mono text-[10.5px]">
-        <span className="uppercase tracking-wider text-poeira">Hoje</span>
+        <span className="uppercase tracking-wider text-poeira">{L('Hoje', 'Today')}</span>
         <span className={cn('tabular-nums', pct >= 100 ? 'text-atencao' : 'text-giz')}>
-          {dolar(hoje)} de {dolar(teto)}
+          {dolar(hoje)} {L('de', 'of')} {dolar(teto)}
         </span>
       </div>
       <div className="mt-1 h-1.5 w-full bg-white/10">
         <div className={cn('h-full', pct >= 100 ? 'bg-atencao' : 'bg-neon-yellow')} style={{ width: `${pct}%` }} />
       </div>
       {pct >= 100 ? (
-        <p className="mt-1.5 font-mono text-[10.5px] text-atencao">Teto do dia batido. Volta amanhã.</p>
+        <p className="mt-1.5 font-mono text-[10.5px] text-atencao">{L('Teto do dia batido. Volta amanhã.', 'Daily cap reached. Back tomorrow.')}</p>
       ) : null}
     </div>
   );
@@ -545,7 +556,7 @@ function TetoDeHoje({ hoje, teto }: { hoje: bigint; teto: bigint }) {
 
 function quando(iso: string): string {
   try {
-    return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    return new Date(iso).toLocaleString(LOCALE, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   } catch { return iso.slice(0, 16); }
 }
 
@@ -558,22 +569,22 @@ function BlocoCiclos({ ciclos }: { ciclos: readonly CicloFechado[] }) {
   return (
     <div className="mt-6 border border-white/10 bg-panel">
       <div className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-3.5">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">Ciclos pagos</span>
-        <span className="font-mono text-[10px] text-cimento">a cada hora</span>
+        <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Ciclos pagos', 'Paid cycles')}</span>
+        <span className="font-mono text-[10px] text-cimento">{L('a cada hora', 'every hour')}</span>
       </div>
       {ciclos.length === 0 ? (
         <p className="px-4 pb-4 text-[12.5px] leading-relaxed text-cimento">
-          Nenhum ainda. Um ciclo paga quando alguém equipara na hora.
+          {L('Nenhum ainda. Um ciclo paga quando alguém equipara na hora.', 'None yet. A cycle pays when someone matches within the hour.')}
         </p>
       ) : (
         ciclos.map((c) => (
           <div key={c.abreEm} className="border-t border-white/10 px-4 py-2.5">
             <div className="flex min-w-0 items-baseline justify-between gap-3">
               <span className="shrink-0 font-mono text-[11px] text-giz">{quando(c.abreEm)}</span>
-              <span className="ole-num whitespace-nowrap text-[13px] text-white tabular-nums">pago {dolar(c.bonusTotalUsdCents)}</span>
+              <span className="ole-num whitespace-nowrap text-[13px] text-white tabular-nums">{L('pago', 'paid')} {dolar(c.bonusTotalUsdCents)}</span>
             </div>
             <div className="mt-0.5 font-mono text-[10.5px] text-poeira">
-              {br(c.equiparadoTotal)} OLEXP equiparados
+              {br(c.equiparadoTotal)} {L('OLEXP equiparados', 'OLEXP matched')}
             </div>
           </div>
         ))
@@ -599,7 +610,7 @@ function PernaPadrao({ atual, aoMudar }: { atual: 1 | 2 | null; aoMudar: () => v
   const [pendente, setPendente] = useState<{ lado: 1 | 2 | null } | null>(null);
   const [pin, setPin] = useState('');
   const opcoes: ReadonlyArray<{ readonly valor: 1 | 2 | null; readonly rotulo: string }> = [
-    { valor: null, rotulo: 'Auto' }, { valor: 1, rotulo: 'Time 1' }, { valor: 2, rotulo: 'Time 2' },
+    { valor: null, rotulo: 'Auto' }, { valor: 1, rotulo: L('Time 1', 'Team 1') }, { valor: 2, rotulo: L('Time 2', 'Team 2') },
   ];
   const aplicar = async (v: 1 | 2 | null, comPin?: string) => {
     setSalvando(true);
@@ -618,8 +629,8 @@ function PernaPadrao({ atual, aoMudar }: { atual: 1 | 2 | null; aoMudar: () => v
   };
   return (
     <div className="mt-4 border-t border-white/10 pt-3.5">
-      <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">Próximo indicado entra no</div>
-      <div className="mt-2 grid grid-cols-3 gap-1 border border-white/16 p-1" role="radiogroup" aria-label="Time do próximo indicado">
+      <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Próximo indicado entra no', 'Next referral goes to')}</div>
+      <div className="mt-2 grid grid-cols-3 gap-1 border border-white/16 p-1" role="radiogroup" aria-label={L('Time do próximo indicado', 'Next referral team')}>
         {opcoes.map((o) => (
           <button
             key={o.rotulo}

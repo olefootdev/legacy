@@ -15,6 +15,7 @@ import {
   LoadingChapter,
   ErrorChapter,
 } from './ceremonyChapters';
+import { L, LOCALE } from '@/i18n/L';
 
 /**
  * Cerimônia editorial de onboarding.
@@ -50,13 +51,15 @@ function ExitConfirmModal(props: { onCancel: () => void; onConfirm: () => void }
       style={{ background: 'rgba(0,0,0,0.85)' }}
     >
       <div className="w-full max-w-[440px] border border-white/10 bg-deep-black p-7 flex flex-col gap-5">
-        <span className="ole-eyebrow-poster">Aviso · Antes de sair</span>
+        <span className="ole-eyebrow-poster">{L('Aviso · Antes de sair', 'Warning · Before you leave')}</span>
         <h3 className="font-impact uppercase text-white" style={{ fontSize: 28, lineHeight: 1.08 }}>
-          Você não vai ter jogadores nem EXP inicial pra começar. Tudo bem?
+          {L('Você não vai ter jogadores nem EXP inicial pra começar. Tudo bem?', "You won't have players or starting EXP to begin with. Is that OK?")}
         </h3>
         <p className="text-cimento" style={{ fontSize: 14, lineHeight: 1.55 }}>
-          Se sair agora, o sorteio será descartado. Ele rodará de novo na
-          próxima vez que você abrir o app.
+          {L(
+            'Se sair agora, o sorteio será descartado. Ele rodará de novo na próxima vez que você abrir o app.',
+            'If you leave now, the draw is discarded. It will run again next time you open the app.',
+          )}
         </p>
         <div className="flex flex-wrap gap-3 justify-end pt-2">
           <button
@@ -64,14 +67,14 @@ function ExitConfirmModal(props: { onCancel: () => void; onConfirm: () => void }
             onClick={props.onCancel}
             className="btn-primary flex h-12 items-center justify-center px-5 text-[14px]"
           >
-            Não, continuar
+            {L('Não, continuar', 'No, continue')}
           </button>
           <button
             type="button"
             onClick={props.onConfirm}
             className="btn-secondary flex h-12 items-center justify-center px-5 text-[14px]"
           >
-            Sim, sair
+            {L('Sim, sair', 'Yes, leave')}
           </button>
         </div>
       </div>
@@ -84,7 +87,7 @@ function CloseButton(props: { onClick: () => void }) {
     <button
       type="button"
       onClick={props.onClick}
-      aria-label="Fechar cerimônia"
+      aria-label={L('Fechar cerimônia', 'Close ceremony')}
       className="absolute top-4 right-4 z-[105] w-10 h-10 flex items-center justify-center border border-white/16 text-cimento transition-colors hover:border-white/30 hover:text-white"
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -248,9 +251,12 @@ export function OnboardingCeremony() {
         `welcome-onboarding-${Date.now()}`,
         'SHOP_PACK',
         'PLANTEL',
-        'Bem-vindo ao Olefoot',
+        L('Bem-vindo ao Olefoot', 'Welcome to Olefoot'),
         {
-          body: `Você recebeu 25 jogadores e ${pkg.expTier.amount.toLocaleString('pt-BR')} EXP iniciais. Veja o plantel em Equipe e jogue o primeiro amistoso quando quiser.`,
+          body: L(
+            `Você recebeu 25 jogadores e ${pkg.expTier.amount.toLocaleString(LOCALE)} EXP iniciais. Veja o plantel em Equipe e jogue o primeiro amistoso quando quiser.`,
+            `You got 25 players and ${pkg.expTier.amount.toLocaleString(LOCALE)} starting EXP. See your squad under Team and play your first friendly whenever you like.`,
+          ),
           deepLink: '/team',
         },
       );
@@ -297,7 +303,7 @@ export function OnboardingCeremony() {
       )}
       {phase.kind === 'outro' && (
         <OutroChapter
-          managerName={managerProfile?.firstName ?? 'treinador'}
+          managerName={managerProfile?.firstName ?? L('treinador', 'coach')}
           onFinish={finish}
         />
       )}

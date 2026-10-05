@@ -13,6 +13,7 @@ import {
   type FriendlyChallengeRow,
 } from '@/supabase/friendlyChallenges';
 import { formatExp } from '@/systems/economy';
+import { L } from '@/i18n/L';
 
 function secondsLeft(expiresAtIso: string): number {
   return Math.max(0, Math.ceil((new Date(expiresAtIso).getTime() - Date.now()) / 1000));
@@ -106,30 +107,30 @@ export function FriendlyChallengeLayer() {
           type="button"
           onClick={() => void onDecline()}
           className="absolute right-3 top-3 p-2 text-cimento hover:text-white"
-          aria-label="Fechar"
+          aria-label={L('Fechar', 'Close')}
         >
           <X className="h-5 w-5" />
         </button>
-        <p className="font-mono text-[11.5px] font-medium text-neon-yellow">#desafio · amistoso</p>
+        <p className="font-mono text-[11.5px] font-medium text-neon-yellow">{L('#desafio · amistoso', '#challenge · friendly')}</p>
         <h2 className="mt-2 truncate pr-8 font-impact text-2xl uppercase leading-[1.1] text-white">
           {incoming.challenger_club_name}
         </h2>
         <p className="mt-2 text-sm text-cimento">
-          Te convidou pra um {incoming.mode === 'live' ? 'jogo ao vivo' : 'jogo rápido'}.
+          {incoming.mode === 'live' ? L('Te convidou pra um jogo ao vivo.', 'Invited you to a live match.') : L('Te convidou pra um jogo rápido.', 'Invited you to a quick match.')}
           {incoming.bet_currency === 'BRO' && incoming.bet_bro_cents != null ? (
             <span className="mt-1 block text-white">
-              Aposta: {(incoming.bet_bro_cents / 100).toFixed(2)} BRO (vencedor)
+              {L('Aposta', 'Stake')}: {(incoming.bet_bro_cents / 100).toFixed(2)} BRO ({L('vencedor', 'winner')})
             </span>
           ) : null}
           {incoming.bet_currency === 'EXP' && incoming.bet_exp != null ? (
-            <span className="mt-1 block text-white">Aposta: {formatExp(incoming.bet_exp)} EXP</span>
+            <span className="mt-1 block text-white">{L('Aposta', 'Stake')}: {formatExp(incoming.bet_exp)} EXP</span>
           ) : null}
         </p>
         <div className="mt-4 flex items-center justify-between border border-white/10 bg-deep-black px-3 py-2">
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-cimento">Tempo para aceitar</span>
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-cimento">{L('Tempo para aceitar', 'Time to accept')}</span>
           <span className="ole-num text-2xl text-neon-yellow">{left}s</span>
         </div>
-        <p className="mt-2 font-mono text-[10.5px] text-poeira">Máx. {FRIENDLY_CHALLENGE_TTL_SEC}s · os dois managers online</p>
+        <p className="mt-2 font-mono text-[10.5px] text-poeira">{L(`Máx. ${FRIENDLY_CHALLENGE_TTL_SEC}s · os dois managers online`, `Max. ${FRIENDLY_CHALLENGE_TTL_SEC}s · both managers online`)}</p>
         <div className="mt-5 grid grid-cols-[auto_1fr] gap-2">
           <button
             type="button"
@@ -137,7 +138,7 @@ export function FriendlyChallengeLayer() {
             onClick={() => void onDecline()}
             className="ole-num h-[50px] whitespace-nowrap border border-white/30 px-4 text-[11.5px] uppercase text-white transition-colors hover:border-white hover:bg-white/5 disabled:opacity-40"
           >
-            Recusar
+            {L('Recusar', 'Decline')}
           </button>
           <button
             type="button"
@@ -145,7 +146,7 @@ export function FriendlyChallengeLayer() {
             onClick={() => void onAccept()}
             className="ole-num h-[50px] min-w-0 whitespace-nowrap bg-neon-yellow px-3 text-[11.5px] uppercase text-black transition-colors hover:bg-white disabled:opacity-40 [--corte:12px] [clip-path:var(--clip-corte)]"
           >
-            Aceitar e entrar
+            {L('Aceitar e entrar', 'Accept and join')}
           </button>
         </div>
       </div>

@@ -72,6 +72,8 @@ import {
 import { formatExp } from '@/systems/economy';
 import { recordMarketActivity } from '@/supabase/marketActivities';
 import { getSupabase } from '@/supabase/client';
+import { L } from '@/i18n/L';
+import { rotuloPosicao } from '@/transfer/marketFilters';
 
 type CardPlayer = ReturnType<typeof playerToCardView> & { id: string };
 
@@ -218,7 +220,7 @@ export function Team() {
 
   const handleEscalarToSlot = (player: CardPlayer, slotId: string) => {
     if (personAlreadyStarting(player, slotId)) {
-      setSaveBanner({ kind: 'error', text: `${player.name} já está escalado. Só pode 1 ${player.name} em campo por vez.` });
+      setSaveBanner({ kind: 'error', text: L(`${player.name} já está escalado. Só pode 1 ${player.name} em campo por vez.`, `${player.name} is already in the lineup. Only 1 ${player.name} on the pitch at a time.`) });
       return;
     }
     setSaveBanner(null);
@@ -229,7 +231,7 @@ export function Team() {
 
   const handleEscalar = (player: CardPlayer) => {
     if (personAlreadyStarting(player)) {
-      setSaveBanner({ kind: 'error', text: `${player.name} já está escalado. Só pode 1 ${player.name} em campo por vez.` });
+      setSaveBanner({ kind: 'error', text: L(`${player.name} já está escalado. Só pode 1 ${player.name} em campo por vez.`, `${player.name} is already in the lineup. Only 1 ${player.name} on the pitch at a time.`) });
       return;
     }
     // Try to find an empty slot that matches the player's position
@@ -245,7 +247,7 @@ export function Team() {
       setLineupDirty(true);
       setLineup((prev) => ({ ...prev, [targetSlot!.id]: player }));
     } else {
-      alert("O time já está completo! Remova um jogador do campo primeiro.");
+      alert(L('O time já está completo! Remova um jogador do campo primeiro.', 'The team is already full! Remove a player from the pitch first.'));
     }
   };
 
@@ -287,7 +289,7 @@ export function Team() {
   const handleSave = () => {
     const filledSlots = pitchSlots.filter((s) => lineup[s.id]).length;
     if (filledSlots !== pitchSlots.length) {
-      setSaveBanner({ kind: 'error', text: 'VOCÊ PRECISA PREENCHER TODAS AS POSIÇÕES' });
+      setSaveBanner({ kind: 'error', text: L('VOCÊ PRECISA PREENCHER TODAS AS POSIÇÕES', 'YOU MUST FILL ALL POSITIONS') });
       return;
     }
     setSaveBanner(null);
@@ -302,7 +304,7 @@ export function Team() {
     setLineupDirty(false);
     setTimeout(() => {
       setIsSaving(false);
-      setSaveBanner({ kind: 'success', text: 'Escalação salva com sucesso.' });
+      setSaveBanner({ kind: 'success', text: L('Escalação salva com sucesso.', 'Lineup saved.') });
     }, 400);
   };
 
@@ -314,7 +316,7 @@ export function Team() {
     const name = announcePlayer.name;
     dispatch({ type: 'MARKET_MAKER_ACCEPT', playerId: announcePlayer.id, offerExp });
     setAnnouncePlayer(null);
-    setSaveBanner({ kind: 'success', text: `Market Maker comprou ${name} por ${formatExp(offerExp)} EXP` });
+    setSaveBanner({ kind: 'success', text: L(`Market Maker comprou ${name} por ${formatExp(offerExp)} EXP`, `Market Maker bought ${name} for ${formatExp(offerExp)} EXP`) });
     // Salvar no Supabase (fire-and-forget)
     const sb = getSupabase();
     if (sb) {
@@ -344,10 +346,10 @@ export function Team() {
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-8">
       <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-4 md:space-y-8">
-      <BackButton to="/clube" label="Clube" />
+      <BackButton to="/clube" label={L('Clube', 'Club')} />
       <div data-tutorial-anchor="team-hero">
       <TeamMeuTimeHeader
-        title="Plantel Principal"
+        title={L('Plantel Principal', 'First Team')}
         customHero={
           <PlantelHero
             clubName={club.name}
@@ -393,19 +395,19 @@ export function Team() {
                       letterSpacing: '0.18em',
                     }}
                   >
-                    Titulares
+                    {L('Titulares', 'Starters')}
                   </span>
                 </h3>
                 <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
                   <button
                     type="button"
                     onClick={handleSuggestLineup}
-                    title="Sugerir escalação (GameSpirit)"
-                    aria-label="Sugerir escalação"
+                    title={L('Sugerir escalação (GameSpirit)', 'Suggest lineup (GameSpirit)')}
+                    aria-label={L('Sugerir escalação', 'Suggest lineup')}
                     className="inline-flex h-9 shrink-0 touch-manipulation items-center justify-center rounded border border-neon-yellow/40 bg-neon-yellow/10 px-3 font-display text-[10px] font-black uppercase leading-none tracking-[0.2em] text-neon-yellow transition-colors [-webkit-tap-highlight-color:transparent] hover:bg-neon-yellow/20 sm:px-4 sm:text-[11px]"
                     style={{ borderRadius: 'var(--radius-sm)' }}
                   >
-                    Sugerir
+                    {L('Sugerir', 'Suggest')}
                   </button>
                 </div>
               </div>
@@ -421,8 +423,8 @@ export function Team() {
                 }}
                 title={
                   startersStrength.count === 0
-                    ? 'Escala os titulares para ver a força combinada (soma dos OVR).'
-                    : `Força do XI: soma dos OVR dos titulares = ${startersStrength.sum}. Média do XI = ${startersStrength.avg.toFixed(1)}. Escalados: ${startersStrength.count} de ${pitchSlots.length}.`
+                    ? L('Escala os titulares para ver a força combinada (soma dos OVR).', 'Pick your starters to see the combined strength (sum of OVR).')
+                    : L(`Força do XI: soma dos OVR dos titulares = ${startersStrength.sum}. Média do XI = ${startersStrength.avg.toFixed(1)}. Escalados: ${startersStrength.count} de ${pitchSlots.length}.`, `XI strength: starters' OVR sum = ${startersStrength.sum}. XI average = ${startersStrength.avg.toFixed(1)}. Picked: ${startersStrength.count} of ${pitchSlots.length}.`)
                 }
               >
                 <p
@@ -457,7 +459,7 @@ export function Team() {
                 >
                   {startersStrength.count === 0
                     ? `${pitchSlots.length} pos`
-                    : `méd ${Math.round(startersStrength.avg)} · ${startersStrength.count}/${pitchSlots.length}`}
+                    : `${L('méd', 'avg')} ${Math.round(startersStrength.avg)} · ${startersStrength.count}/${pitchSlots.length}`}
                 </p>
               </div>
               {/* Pitch Lines */}
@@ -509,7 +511,7 @@ export function Team() {
                           : 'border-white/35 bg-black/30 text-white/55 hover:border-white/70 hover:text-white/90',
                       )}
                     >
-                      <span className="font-black text-[10px] sm:text-[11px] md:text-sm">{slot.label}</span>
+                      <span className="font-black text-[10px] sm:text-[11px] md:text-sm">{rotuloPosicao(slot.label)}</span>
                     </div>
                   )}
                 </div>
@@ -544,7 +546,7 @@ export function Team() {
                     type="button"
                     onClick={() => setSaveBanner(null)}
                     className="shrink-0 p-1 rounded hover:bg-white/10 text-current opacity-80 hover:opacity-100"
-                    aria-label="Fechar aviso"
+                    aria-label={L('Fechar aviso', 'Close notice')}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -567,7 +569,7 @@ export function Team() {
               }}
             >
               <Save className="h-4 w-4 shrink-0" />
-              {isSaving ? 'Salvando…' : 'Salvar titulares'}
+              {isSaving ? L('Salvando…', 'Saving…') : L('Salvar titulares', 'Save starters')}
             </button>
           </div>
         </div>
@@ -586,7 +588,7 @@ export function Team() {
                   letterSpacing: '0.18em',
                 }}
               >
-                Jogadores disponíveis
+                {L('Jogadores disponíveis', 'Available players')}
               </h3>
             </div>
             <span
@@ -598,7 +600,7 @@ export function Team() {
                 fontWeight: 600,
               }}
             >
-              {availablePlayers.length} {availablePlayers.length === 1 ? 'reserva' : 'reservas'}
+              {availablePlayers.length} {availablePlayers.length === 1 ? L('reserva', 'sub') : L('reservas', 'subs')}
             </span>
           </div>
           
@@ -703,7 +705,7 @@ export function Team() {
                               {player.countryFlagEmoji}
                             </span>
                           ) : null}
-                          {player.pos}
+                          {rotuloPosicao(player.pos)}
                         </p>
                       </button>
                       {entity ? <PlayerStatusBadge player={entity} health={health} size="sm" /> : null}
@@ -768,7 +770,7 @@ export function Team() {
                           borderRadius: 'var(--radius-sm)',
                         }}
                       >
-                        Escalar
+                        {L('Escalar', 'Pick')}
                       </button>
                       <button
                         type="button"
@@ -787,7 +789,7 @@ export function Team() {
                         }}
                       >
                         <Megaphone className="h-3 w-3 shrink-0" aria-hidden />
-                        <span>Anunciar</span>
+                        <span>{L('Anunciar', 'List')}</span>
                       </button>
                     </div>
                   </div>
@@ -802,13 +804,13 @@ export function Team() {
               // caminho de saída.
               <div className="ole-poster px-6 py-10 text-center">
                 <p className="font-impact uppercase text-white" style={{ fontSize: '16px' }}>
-                  Sem reservas
+                  {L('Sem reservas', 'No subs')}
                 </p>
                 <p
                   className="mx-auto mt-1.5 max-w-md text-white/50"
                   style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
                 >
-                  Contrate no mercado.
+                  {L('Contrate no mercado.', 'Sign players in the Market.')}
                 </p>
               </div>
             )}
@@ -836,7 +838,7 @@ export function Team() {
             >
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
                 <h3 className="font-display font-black uppercase tracking-wider text-xl text-white flex items-center gap-2">
-                  Escalar <span className="text-neon-yellow bg-neon-yellow/10 px-2 py-1 rounded border border-neon-yellow/20">{selectedSlot.label}</span>
+                  {L('Escalar', 'Pick')} <span className="text-neon-yellow bg-neon-yellow/10 px-2 py-1 rounded border border-neon-yellow/20">{rotuloPosicao(selectedSlot.label)}</span>
                 </h3>
                 <button onClick={() => setSelectedSlotId(null)} className="text-gray-400 hover:text-white transition-colors">
                   <X className="w-6 h-6" />
@@ -912,7 +914,7 @@ export function Team() {
                       {/* Right: CTA */}
                       <div className="w-16 md:w-28 flex items-center justify-center p-2 border-l border-white/5 bg-black/20 group-hover:bg-neon-yellow transition-colors">
                         <span className="font-display font-bold uppercase tracking-wider text-[9px] md:text-xs text-white group-hover:text-black">
-                          Escalar
+                          {L('Escalar', 'Pick')}
                         </span>
                       </div>
                     </div>
@@ -920,13 +922,13 @@ export function Team() {
                 ) : (
                   <div className="text-center py-12 flex flex-col items-center justify-center">
                     <p className="text-gray-400 font-display font-bold text-lg mb-6">
-                      Nenhum jogador disponível para a posição {selectedSlot.label}.
+                      {L(`Nenhum jogador disponível para a posição ${rotuloPosicao(selectedSlot.label)}.`, `No players available for ${rotuloPosicao(selectedSlot.label)}.`)}
                     </p>
                     <button 
                       onClick={() => navigate('/transfer')}
                       className="px-8 py-3 bg-neon-yellow text-black font-display font-bold uppercase tracking-wider text-sm hover:bg-white transition-colors"
                     >
-                      Ir para Mercado
+                      {L('Ir para Mercado', 'Go to Market')}
                     </button>
                   </div>
                 )}
@@ -956,13 +958,13 @@ export function Team() {
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
                 <h3 className="font-display font-black uppercase tracking-wider text-sm md:text-base text-white flex items-center gap-2">
                   <LayoutGrid className="w-5 h-5 text-neon-yellow shrink-0" />
-                  Formação e Tática
+                  {L('Formação e Tática', 'Formation & Tactics')}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setFormationModalOpen(false)}
                   className="text-gray-400 hover:text-white transition-colors p-1"
-                  aria-label="Fechar"
+                  aria-label={L('Fechar', 'Close')}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -970,7 +972,7 @@ export function Team() {
               <div className="p-3 md:p-4 overflow-y-auto space-y-5">
                 <section>
                   <h4 className="font-display font-black text-[10px] tracking-widest text-white/60 uppercase mb-2">
-                    1. Formação
+                    {L('1. Formação', '1. Formation')}
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {FORMATION_SCHEME_LIST.map((id) => {
@@ -996,7 +998,7 @@ export function Team() {
                           )}
                           <span className="font-display font-black text-sm tracking-tight block pr-5">{id}</span>
                           <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5 block">
-                            Linhas {linesLabel}
+                            {L('Linhas', 'Lines')} {linesLabel}
                           </span>
                         </button>
                       );
@@ -1006,7 +1008,7 @@ export function Team() {
 
                 <section>
                   <h4 className="font-display font-black text-[10px] tracking-widest text-white/60 uppercase mb-2">
-                    2. Tática
+                    {L('2. Tática', '2. Tactics')}
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {PRESET_IDS.map((id) => {
@@ -1063,7 +1065,7 @@ export function Team() {
                           type="button"
                           onClick={() => setPresetInfoId(null)}
                           className="text-white/40 hover:text-white"
-                          aria-label="Fechar info"
+                          aria-label={L('Fechar info', 'Close info')}
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -1081,7 +1083,7 @@ export function Team() {
                   onClick={() => setFormationModalOpen(false)}
                   className="rounded border border-white/15 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-300 hover:bg-white/5"
                 >
-                  Cancelar
+                  {L('Cancelar', 'Cancel')}
                 </button>
                 <button
                   type="button"
@@ -1099,7 +1101,7 @@ export function Team() {
                   }}
                   className="flex-1 inline-flex items-center justify-center gap-2 rounded bg-neon-yellow px-4 py-2 font-display text-xs font-black uppercase tracking-wider text-black hover:bg-white"
                 >
-                  <Check className="w-4 h-4" /> Aplicar formação e tática
+                  <Check className="w-4 h-4" /> {L('Aplicar formação e tática', 'Apply formation & tactics')}
                 </button>
               </div>
             </motion.div>
@@ -1134,7 +1136,7 @@ export function Team() {
               {/* Header */}
               <div className="flex items-start justify-between gap-3 border-b border-white/10 bg-black/40 px-4 py-3">
                 <div className="min-w-0">
-                  <Hashtag>#marketmaker #proposta</Hashtag>
+                  <Hashtag>{L('#marketmaker #proposta', '#marketmaker #offer')}</Hashtag>
                   <h3
                     id="market-maker-title"
                     className="mt-0.5 font-display text-lg font-black uppercase tracking-wide text-white"
@@ -1142,14 +1144,14 @@ export function Team() {
                     {announcePlayer.name}
                   </h3>
                   <p className="mt-0.5 text-xs text-white/50">
-                    {announcePlayer.pos} · OVR {ent ? overallFromAttributes(ent.attrs, ent.pos) : '—'}
+                    {rotuloPosicao(announcePlayer.pos)} · OVR {ent ? overallFromAttributes(ent.attrs, ent.pos) : '—'}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setAnnouncePlayer(null)}
                   className="shrink-0 rounded-full p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label="Fechar"
+                  aria-label={L('Fechar', 'Close')}
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -1159,7 +1161,7 @@ export function Team() {
               <div className="p-4 space-y-4">
                 <div className="rounded-lg border border-neon-yellow/30 bg-neon-yellow/[0.06] px-4 py-3 text-center">
                   <p className="text-[10px] uppercase tracking-[0.22em] text-white/50 font-display font-bold">
-                    Oferta do Market Maker
+                    {L('Oferta do Market Maker', 'Market Maker offer')}
                   </p>
                   <p
                     className="mt-1 text-3xl font-black text-neon-yellow tabular-nums"
@@ -1176,14 +1178,14 @@ export function Team() {
                     onClick={() => setAnnouncePlayer(null)}
                     className="rounded-lg border border-white/20 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-gray-300 hover:bg-white/5 sm:px-4"
                   >
-                    Recusar
+                    {L('Recusar', 'Decline')}
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleMarketMakerAccept()}
                     className="rounded-lg bg-neon-yellow py-2.5 font-display text-xs font-black uppercase tracking-wider text-black hover:bg-neon-yellow/85 active:scale-[0.98] sm:px-4"
                   >
-                    Aceitar +{formatExp(offerExp)} EXP
+                    {L('Aceitar', 'Accept')} +{formatExp(offerExp)} EXP
                   </button>
                 </div>
               </div>
@@ -1233,7 +1235,7 @@ export function Team() {
               setSelectedSlotId(slotId);
               setSaveBanner({
                 kind: 'success',
-                text: `Slot ${slotId} liberado. Escolha um substituto na lista.`,
+                text: L(`Slot ${slotId} liberado. Escolha um substituto na lista.`, `Slot ${slotId} freed. Pick a replacement from the list.`),
               });
             }}
             onVerSkill={() => {
@@ -1331,7 +1333,7 @@ function PitchPlayerMenu({
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
-              Posição · {player.pos}
+              {L('Posição', 'Position')} · {rotuloPosicao(player.pos)}
             </p>
             <h3
               id="pitch-menu-title"
@@ -1344,7 +1346,7 @@ function PitchPlayerMenu({
             type="button"
             onClick={onClose}
             className="shrink-0 rounded-full p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
-            aria-label="Fechar menu"
+            aria-label={L('Fechar menu', 'Close menu')}
           >
             <X className="h-5 w-5" />
           </button>
@@ -1364,11 +1366,11 @@ function PitchPlayerMenu({
             <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
             <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
               <div>
-                <Hashtag>#tatica</Hashtag>
+                <Hashtag>{L('#tatica', '#tactics')}</Hashtag>
                 <p className="font-impact text-[18px] uppercase leading-tight text-white transition-colors group-hover/act:text-neon-yellow">
-                  Substituir
+                  {L('Substituir', 'Substitute')}
                 </p>
-                <p className="mt-0.5 text-[11px] text-white/50">Libera o slot</p>
+                <p className="mt-0.5 text-[11px] text-white/50">{L('Libera o slot', 'Frees the slot')}</p>
               </div>
             </div>
           </button>
@@ -1385,11 +1387,11 @@ function PitchPlayerMenu({
             <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
             <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
               <div>
-                <Hashtag>#perfil</Hashtag>
+                <Hashtag>{L('#perfil', '#profile')}</Hashtag>
                 <p className="font-impact text-[18px] uppercase leading-tight text-white transition-colors group-hover/act:text-neon-yellow">
-                  Ver skills & temporada
+                  {L('Ver skills & temporada', 'Skills & season')}
                 </p>
-                <p className="mt-0.5 text-[11px] text-white/50">Atributos e histórico</p>
+                <p className="mt-0.5 text-[11px] text-white/50">{L('Atributos e histórico', 'Attributes & history')}</p>
               </div>
             </div>
           </button>
@@ -1406,11 +1408,11 @@ function PitchPlayerMenu({
             <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
             <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
               <div>
-                <Hashtag>#mercado</Hashtag>
+                <Hashtag>{L('#mercado', '#market')}</Hashtag>
                 <p className="font-impact text-[18px] uppercase leading-tight text-white transition-colors group-hover/act:text-neon-yellow">
-                  Anunciar no mercado
+                  {L('Anunciar no mercado', 'List on Market')}
                 </p>
-                <p className="mt-0.5 text-[11px] text-white/50">Venda em EXP</p>
+                <p className="mt-0.5 text-[11px] text-white/50">{L('Venda em EXP', 'Sell for EXP')}</p>
               </div>
             </div>
           </button>
@@ -1453,7 +1455,7 @@ function PlantelHero({
   const xiAvgLabel = startersCount === 0 ? '—' : Math.round(xiAvgOverall).toString();
   return (
     <section
-      aria-label="Plantel Principal"
+      aria-label={L('Plantel Principal', 'First Team')}
       className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8"
     >
       {/* ── HERO no layer final ────────────────────────────────────────────
@@ -1482,7 +1484,7 @@ function PlantelHero({
               letterSpacing: '-0.01em',
             }}
           >
-            Plantel
+            {L('Plantel', 'Squad')}
           </h1>
           {/* A formação é dado, não subtítulo decorativo: fica ao lado do
               título, em chip preto, do jeito que se lê num placar. */}
@@ -1504,8 +1506,8 @@ function PlantelHero({
         {/* Placar do plantel — blocos pretos sobre o amarelo. */}
         <div className="mt-6 grid max-w-lg grid-cols-3 gap-2 sm:gap-3">
           {[
-            { v: String(squadSize), l: 'Plantel' },
-            { v: `${startersCount}/${startersCap}`, l: 'Titulares' },
+            { v: String(squadSize), l: L('Plantel', 'Squad') },
+            { v: `${startersCount}/${startersCap}`, l: L('Titulares', 'Starters') },
             { v: xiAvgLabel, l: 'OVR XI' },
           ].map((m) => (
             <div
@@ -1537,15 +1539,15 @@ function PlantelHero({
             className="inline-flex items-center justify-center bg-deep-black px-5 sm:px-7 py-3 text-white font-display font-black uppercase tracking-[0.14em] text-[11px] transition-colors hover:text-neon-yellow active:scale-[0.98]"
             style={{ borderRadius: 'var(--radius-sm)' }}
           >
-            Escolher formação
+            {L('Escolher formação', 'Choose formation')}
           </button>
           <button
             type="button"
             onClick={onCreatePlayer}
             disabled={academyFull}
             title={academyFull
-              ? `Academia cheia (${academyUsed}/${academyCap}). Vende um jogador ao Market Maker pra liberar slot.`
-              : `Academia: ${academyUsed}/${academyCap} slots usados`}
+              ? L(`Academia cheia (${academyUsed}/${academyCap}). Vende um jogador ao Market Maker pra liberar slot.`, `Academy full (${academyUsed}/${academyCap}). Sell a player to the Market Maker to free a slot.`)
+              : L(`Academia: ${academyUsed}/${academyCap} slots usados`, `Academy: ${academyUsed}/${academyCap} slots used`)}
             className={`inline-flex items-center justify-center border border-black/70 bg-transparent px-5 sm:px-7 py-3 text-black font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-[11px] sm:text-[12px] transition-colors ${
               academyFull
                 ? 'opacity-50 cursor-not-allowed'
@@ -1553,7 +1555,7 @@ function PlantelHero({
             }`}
             style={{ fontFamily: 'var(--font-display)', borderRadius: 'var(--radius-sm)' }}
           >
-            Criar jogador
+            {L('Criar jogador', 'Create player')}
             <span
               className={`ml-2 inline-flex items-center justify-center px-2 py-[2px] text-[10px] font-mono rounded ${
                 academyFull ? 'bg-red-900/80 text-red-100' : 'bg-black/15 text-black/75'
@@ -1596,7 +1598,7 @@ function PitchPlayer({
         type="button"
         onClick={onOpenMenu}
         className="group/token relative flex cursor-pointer flex-col items-center [-webkit-tap-highlight-color:transparent]"
-        aria-label={`Abrir ações para ${player.name}`}
+        aria-label={L(`Abrir ações para ${player.name}`, `Open actions for ${player.name}`)}
       >
         {/* Sprint B-3: token ~40% maior */}
         <div

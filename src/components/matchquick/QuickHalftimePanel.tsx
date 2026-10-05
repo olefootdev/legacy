@@ -19,6 +19,8 @@ import {
   pickHalftimeFive,
   type QuickHomePlayerView,
 } from '@/match/quickEngaged/buildQuickPlanInputs';
+import { L, emIngles } from '@/i18n/L';
+import { posLabel } from './posLabel';
 
 export interface HalftimeBenchPlayer extends QuickHomePlayerView {}
 
@@ -45,9 +47,9 @@ interface Props {
 }
 
 const INTENSITIES: { id: 'defensive' | 'balanced' | 'offensive'; label: string }[] = [
-  { id: 'defensive', label: 'Defensiva' },
-  { id: 'balanced', label: 'Equilibrada' },
-  { id: 'offensive', label: 'Ofensiva' },
+  { id: 'defensive', label: L('Defensiva', 'Defensive') },
+  { id: 'balanced', label: L('Equilibrada', 'Balanced') },
+  { id: 'offensive', label: L('Ofensiva', 'Attacking') },
 ];
 
 const FORMATIONS = ['4-4-2', '4-3-3', '3-5-2', '5-3-2', '3-4-3'];
@@ -74,7 +76,7 @@ function MiniCard({
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-bold text-white truncate">{p.name}</p>
         <p className="text-[10px] uppercase tracking-[0.14em] text-white/45">
-          {p.pos} · fadiga {Math.round(p.fatigue)}%
+          {posLabel(p.pos)} · {L('fadiga', 'fatigue')} {Math.round(p.fatigue)}%
         </p>
       </div>
       {action}
@@ -154,13 +156,13 @@ export function QuickHalftimePanel({
         <div className="px-5 py-3 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between">
           <div>
             <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">
-              Intervalo
+              {L('Intervalo', 'Half-time')}
             </p>
             <p className="text-[12px] text-white/60 tabular-nums mt-0.5">
               {homeShort} {homeScore} – {awayScore} {awayShort}
             </p>
             <p className="text-[10px] mt-0.5 font-display uppercase tracking-[0.14em]" style={{ color: subsLeft === 0 ? 'var(--color-warning)' : 'rgba(255,255,255,0.4)' }}>
-              {subsLeft} sub{subsLeft === 1 ? '' : 's'} restante{subsLeft === 1 ? '' : 's'}
+              {emIngles() ? `${subsLeft} sub${subsLeft === 1 ? '' : 's'} left` : `${subsLeft} sub${subsLeft === 1 ? '' : 's'} restante${subsLeft === 1 ? '' : 's'}`}
             </p>
           </div>
           <span className="font-display tabular-nums text-neon-yellow text-2xl font-black">
@@ -173,7 +175,7 @@ export function QuickHalftimePanel({
           {picking === null ? (
             <div className="space-y-2">
               <p className="text-[9px] uppercase tracking-[0.2em] font-display font-black" style={{ color: 'var(--color-success)' }}>
-                Em alta
+                {L('Em alta', 'On fire')}
               </p>
               {five.top.map((p) => (
                 <MiniCard
@@ -187,14 +189,14 @@ export function QuickHalftimePanel({
                         onClick={() => setPicking(p.id)}
                         className="px-2.5 py-1 border border-neon-yellow/40 text-neon-yellow/80 text-[10px] font-display uppercase tracking-[0.12em] font-bold hover:bg-neon-yellow hover:text-black transition-colors inline-flex items-center gap-1"
                       >
-                        <ArrowRightLeft className="w-3 h-3" strokeWidth={2.5} aria-hidden /> Trocar
+                        <ArrowRightLeft className="w-3 h-3" strokeWidth={2.5} aria-hidden /> {L('Trocar', 'Swap')}
                       </button>
                     ) : null
                   }
                 />
               ))}
               <p className="text-[9px] uppercase tracking-[0.2em] font-display font-black pt-1" style={{ color: 'var(--color-warning)' }}>
-                Apagados — trocar?
+                {L('Apagados — trocar?', 'Off the pace — swap?')}
               </p>
               {five.bottom.map((p) => (
                 <MiniCard
@@ -208,7 +210,7 @@ export function QuickHalftimePanel({
                         onClick={() => setPicking(p.id)}
                         className="px-2.5 py-1 border border-neon-yellow/50 text-neon-yellow text-[10px] font-display uppercase tracking-[0.12em] font-bold hover:bg-neon-yellow hover:text-black transition-colors inline-flex items-center gap-1"
                       >
-                        <ArrowRightLeft className="w-3 h-3" strokeWidth={2.5} aria-hidden /> Trocar
+                        <ArrowRightLeft className="w-3 h-3" strokeWidth={2.5} aria-hidden /> {L('Trocar', 'Swap')}
                       </button>
                     ) : null
                   }
@@ -220,7 +222,7 @@ export function QuickHalftimePanel({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] text-white/70">
-                  Entra no lugar de{' '}
+                  {L('Entra no lugar de', 'Coming on for')}{' '}
                   <span className="text-neon-yellow font-bold">
                     {working.find((w) => w.id === picking)?.name}
                   </span>
@@ -230,11 +232,11 @@ export function QuickHalftimePanel({
                   onClick={() => setPicking(null)}
                   className="text-[10px] text-white/40 hover:text-white uppercase tracking-[0.14em]"
                 >
-                  Cancelar
+                  {L('Cancelar', 'Cancel')}
                 </button>
               </div>
               {availableBench.length === 0 && (
-                <p className="text-[12px] text-white/50">Sem reservas disponíveis.</p>
+                <p className="text-[12px] text-white/50">{L('Sem reservas disponíveis.', 'No subs available.')}</p>
               )}
               {availableBench.slice(0, 8).map((b) => (
                 <button
@@ -251,7 +253,7 @@ export function QuickHalftimePanel({
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-bold text-white truncate">{b.name}</p>
                     <p className="text-[10px] uppercase tracking-[0.14em] text-white/45">
-                      {b.pos} · fadiga {Math.round(b.fatigue)}%
+                      {posLabel(b.pos)} · {L('fadiga', 'fatigue')} {Math.round(b.fatigue)}%
                     </p>
                   </div>
                 </button>
@@ -263,7 +265,7 @@ export function QuickHalftimePanel({
           {picking === null && (
             <div>
               <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-display font-black mb-1.5">
-                Estratégia
+                {L('Estratégia', 'Strategy')}
               </p>
               <div className="grid grid-cols-3 gap-1.5">
                 {INTENSITIES.map((it) => (
@@ -288,7 +290,7 @@ export function QuickHalftimePanel({
           {picking === null && (
             <div>
               <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-display font-black mb-1.5">
-                Formação
+                {L('Formação', 'Formation')}
               </p>
               <div className="grid grid-cols-5 gap-1.5">
                 {FORMATIONS.map((f) => (
@@ -318,11 +320,11 @@ export function QuickHalftimePanel({
               onClick={resume}
               className="w-full py-3 bg-neon-yellow hover:bg-white text-black font-display uppercase tracking-[0.18em] text-[12px] font-black transition-colors"
             >
-              Voltar para o jogo →
+              {L('Voltar para o jogo →', 'Back to the match →')}
             </button>
             {subsUsed > 0 && (
               <p className="text-[10px] text-white/40 text-center mt-2">
-                {subsUsed} substituiç{subsUsed === 1 ? 'ão' : 'ões'} · o 2º tempo será recalculado
+                {emIngles() ? `${subsUsed} substitution${subsUsed === 1 ? '' : 's'} · 2nd half will be recalculated` : `${subsUsed} substituiç${subsUsed === 1 ? 'ão' : 'ões'} · o 2º tempo será recalculado`}
               </p>
             )}
           </div>

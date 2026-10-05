@@ -26,6 +26,7 @@ import { LegendMessages } from '@/components/legend/LegendMessages';
 import { LegendSearchBar } from '@/components/legend/LegendSearchBar';
 import { LegendSearchModal } from '@/components/legend/LegendSearchModal';
 import { LegendStoreCTA } from '@/components/legend/LegendStoreCTA';
+import { L } from '@/i18n/L';
 
 export function Legend() {
   const { id } = useParams<{ id: string }>();
@@ -114,7 +115,7 @@ export function Legend() {
             {/* Selo — canto superior direito */}
             <div className="absolute top-3 right-3 z-10 bg-black px-2 py-1">
               <p className="font-mono uppercase text-neon-yellow" style={{ fontSize: '9.5px', letterSpacing: '0.14em' }}>
-                Lenda
+                {L('Lenda', 'Legend')}
               </p>
             </div>
           </div>
@@ -159,7 +160,7 @@ export function Legend() {
               className="font-impact uppercase text-neon-yellow leading-[1.1]"
               style={{ fontSize: 'clamp(28px, 4.5vw, 40px)' }}
             >
-              Trajetória
+              {L('Trajetória', 'Career path')}
             </h2>
           </header>
 
@@ -168,7 +169,7 @@ export function Legend() {
               className="ole-scroll-x hide-scrollbar flex gap-3 sm:gap-4 pb-2 snap-x snap-mandatory scroll-smooth"
               style={{ scrollPaddingLeft: '0px' }}
               role="list"
-              aria-label={`Marcos da carreira de ${legend.name}`}
+              aria-label={L(`Marcos da carreira de ${legend.name}`, `${legend.name} career milestones`)}
             >
               {legend.trajectory.map((ev) => (
                 <article
@@ -204,7 +205,7 @@ export function Legend() {
               className="font-impact uppercase text-neon-yellow leading-[1.1]"
               style={{ fontSize: 'clamp(28px, 4.5vw, 40px)' }}
             >
-              DNA do Campeão
+              {L('DNA do Campeão', "Champion's DNA")}
             </h2>
           </header>
 
@@ -248,7 +249,7 @@ export function Legend() {
                 className="font-impact uppercase text-neon-yellow leading-[1.1]"
                 style={{ fontSize: 'clamp(28px, 4.5vw, 40px)' }}
               >
-                A Voz do Povo
+                {L('A Voz do Povo', 'Voice of the People')}
               </h2>
             </header>
             <div className="flex flex-col gap-4">

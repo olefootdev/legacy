@@ -42,6 +42,8 @@ import {
 } from '@/market/squadMarketClient';
 import { exercerOpcaoDeCompra, pushValueSnapshots, reivindicarSalario } from '@/market/marketLiveClient';
 import { SociedadeSection } from '@/market/SociedadeSection';
+import { L, LOCALE, emIngles } from '@/i18n/L';
+import { rotuloPosicao } from '@/transfer/marketFilters';
 
 /**
  * OLEFOOT por centavo de BRO (≈USD): $0,000125/token ⇒ 80 tokens/centavo.
@@ -50,10 +52,10 @@ import { SociedadeSection } from '@/market/SociedadeSection';
  */
 const TOKENS_POR_CENTAVO = 80;
 
-const tok = (n: number) => Math.round(n).toLocaleString('pt-BR');
+const tok = (n: number) => Math.round(n).toLocaleString(LOCALE);
 const dolar = (cents: number) => {
   const d = cents / 100;
-  return `$${d.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `$${d.toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 /** Valor vivo do jogador em centavos de BRO (persistido ou preview determinístico). */
@@ -144,7 +146,7 @@ export function TeamValores() {
       // dá o ack — sem isso o persist ressuscitaria o jogador no plantel errado.
       if (meus.devolucoesNaoAplicadas.length > 0) {
         for (const dev of meus.devolucoesNaoAplicadas) {
-          const nome = playersRef.current[dev.gamePlayerId]?.name ?? 'um jogador emprestado';
+          const nome = playersRef.current[dev.gamePlayerId]?.name ?? L('um jogador emprestado', 'a loaned player');
           dispatch({ type: 'APPLY_LOAN_RETURNED_AS_BORROWER', playerIds: [dev.gamePlayerId], titulo: nome });
         }
         await confirmarDevolucoesAplicadas(meus.devolucoesNaoAplicadas.map((x) => x.id));
@@ -182,7 +184,7 @@ export function TeamValores() {
           dispatch({
             type: 'APPLY_SQUAD_SALE_AS_SELLER',
             playerIds: ids,
-            titulo: venda.kind === 'team' ? 'o time inteiro' : (venda.player?.name ?? 'um jogador'),
+            titulo: venda.kind === 'team' ? L('o time inteiro', 'the whole team') : (venda.player?.name ?? L('um jogador', 'a player')),
             priceOlefoot: Number(venda.priceOlefoot),
             buyerClubName: venda.buyerClub,
           });
@@ -190,12 +192,12 @@ export function TeamValores() {
         await confirmarVendasAplicadas(meus.vendidosNaoAplicados.map((x) => x.id));
         setAviso(
           meus.vendidosNaoAplicados.length === 1
-            ? 'Uma venda foi concluída enquanto estavas fora — OLEFOOT já na carteira.'
-            : `${meus.vendidosNaoAplicados.length} vendas concluídas enquanto estavas fora — OLEFOOT já na carteira.`,
+            ? L('Uma venda foi concluída enquanto estavas fora — OLEFOOT já na carteira.', 'A sale went through while you were away — OLEFOOT is in your wallet.')
+            : L(`${meus.vendidosNaoAplicados.length} vendas concluídas enquanto estavas fora — OLEFOOT já na carteira.`, `${meus.vendidosNaoAplicados.length} sales went through while you were away — OLEFOOT is in your wallet.`),
         );
       }
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao carregar o mercado.');
+      setErro(e instanceof Error ? e.message : L('Falha ao carregar o mercado.', 'Failed to load the market.'));
     } finally {
       setCarregando(false);
     }
@@ -215,7 +217,7 @@ export function TeamValores() {
       setPreco('');
       await carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao anunciar.');
+      setErro(e instanceof Error ? e.message : L('Falha ao anunciar.', 'Failed to list.'));
     } finally {
       setAgindo(false);
     }
@@ -226,7 +228,7 @@ export function TeamValores() {
     setAgindo(true);
     setErro(null);
     try { await cancelarAnuncio(listingId); await carregar(); }
-    catch (e) { setErro(e instanceof Error ? e.message : 'Falha ao cancelar.'); }
+    catch (e) { setErro(e instanceof Error ? e.message : L('Falha ao cancelar.', 'Failed to cancel.')); }
     finally { setAgindo(false); }
   };
 
@@ -241,13 +243,13 @@ export function TeamValores() {
       dispatch({ type: 'MERGE_PLAYERS', players: novos });
       setAviso(
         r.kind === 'team'
-          ? `Time comprado: ${r.players.length} jogadores entraram no teu plantel.`
-          : `${r.players[0]?.name ?? 'Jogador'} é teu — já está no plantel.`,
+          ? L(`Time comprado: ${r.players.length} jogadores entraram no teu plantel.`, `Team bought: ${r.players.length} players joined your squad.`)
+          : L(`${r.players[0]?.name ?? 'Jogador'} é teu — já está no plantel.`, `${r.players[0]?.name ?? 'Player'} is yours — already in the squad.`),
       );
       setComprar(null);
       await carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha na compra.');
+      setErro(e instanceof Error ? e.message : L('Falha na compra.', 'Purchase failed.'));
     } finally {
       setAgindo(false);
     }
@@ -261,7 +263,7 @@ export function TeamValores() {
       const r = await reivindicarSalario();
       setSalario({ pago: r.pago, atuacoes: r.atuacoesHoje });
       if (r.pago > 0) {
-        setAviso(`Salário do elenco: +${r.pago} OLEFOOT (${r.atuacoesHoje} atuação(ões) nota ≥ 7 hoje).`);
+        setAviso(L(`Salário do elenco: +${r.pago} OLEFOOT (${r.atuacoesHoje} atuação(ões) nota ≥ 7 hoje).`, `Squad wages: +${r.pago} OLEFOOT (${r.atuacoesHoje} rating ≥ 7 appearance(s) today).`));
         setSaldoOlefoot(await fetchMyOlefootBalance().catch(() => saldoOlefoot));
       }
     } finally {
@@ -285,7 +287,7 @@ export function TeamValores() {
       setBuyout('');
       await carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao anunciar o empréstimo.');
+      setErro(e instanceof Error ? e.message : L('Falha ao anunciar o empréstimo.', 'Failed to list the loan.'));
     } finally {
       setAgindo(false);
     }
@@ -298,10 +300,10 @@ export function TeamValores() {
     try {
       const r = await alugarAnuncio(l.id);
       dispatch({ type: 'MERGE_PLAYERS', players: { [r.player.id]: r.player } });
-      setAviso(`${r.player.name} é teu até ${new Date(r.endsAt).toLocaleDateString('pt-BR')} — a evolução fica nele.`);
+      setAviso(L(`${r.player.name} é teu até ${new Date(r.endsAt).toLocaleDateString(LOCALE)} — a evolução fica nele.`, `${r.player.name} is yours until ${new Date(r.endsAt).toLocaleDateString(LOCALE)} — the progress stays with him.`));
       await carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha no aluguel.');
+      setErro(e instanceof Error ? e.message : L('Falha no aluguel.', 'Loan failed.'));
     } finally {
       setAgindo(false);
     }
@@ -315,14 +317,14 @@ export function TeamValores() {
       const r = await exercerOpcaoDeCompra(loan.id);
       if (!r.ok) {
         const mapa: Record<string, string> = {
-          saldo_insuficiente: 'Saldo OLEFOOT insuficiente.',
-          emprestimo_vencido: 'O empréstimo venceu — o jogador já voltou.',
-          sem_opcao_de_compra: 'Este contrato não tem opção de compra.',
+          saldo_insuficiente: L('Saldo OLEFOOT insuficiente.', 'Insufficient OLEFOOT balance.'),
+          emprestimo_vencido: L('O empréstimo venceu — o jogador já voltou.', 'The loan expired — the player is already back.'),
+          sem_opcao_de_compra: L('Este contrato não tem opção de compra.', 'This contract has no buy option.'),
         };
-        setErro(mapa[r.motivo ?? ''] ?? 'Falha na opção de compra.');
+        setErro(mapa[r.motivo ?? ''] ?? L('Falha na opção de compra.', 'Buy option failed.'));
         return;
       }
-      setAviso(`Opção exercida por ${tok(r.price ?? 0)} OLEFOOT — o jogador agora é TEU.`);
+      setAviso(L(`Opção exercida por ${tok(r.price ?? 0)} OLEFOOT — o jogador agora é TEU.`, `Option exercised for ${tok(r.price ?? 0)} OLEFOOT — the player is now YOURS.`));
       await carregar();
     } finally {
       setAgindo(false);
@@ -345,15 +347,15 @@ export function TeamValores() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8">
       {/* ── HERO: o time como ativo ──────────────────────────────────────── */}
-      <section aria-label="Valor do time" className="ole-poster ole-rail px-5 py-5 sm:px-6">
+      <section aria-label={L('Valor do time', 'Team value')} className="ole-poster ole-rail px-5 py-5 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <span className="ole-eyebrow-poster" style={{ fontSize: '12px' }}>Valor do time · {clubName}</span>
+            <span className="ole-eyebrow-poster" style={{ fontSize: '12px' }}>{L('Valor do time', 'Team value')} · {clubName}</span>
             <p className="mt-1 font-impact leading-none text-neon-yellow tabular-nums" style={{ fontSize: 'clamp(34px, 8vw, 58px)' }}>
               {tok(totalCents * TOKENS_POR_CENTAVO)} <span className="text-[0.45em] text-white/70">OLEFOOT</span>
             </p>
             <p className="mt-1 text-[12px] text-white/50">
-              ≈ {dolar(totalCents)} · {lista.length} jogadores · preço vivo: cada partida e treino move este número
+              ≈ {dolar(totalCents)} · {L(`${lista.length} jogadores · preço vivo: cada partida e treino move este número`, `${lista.length} players · live price: every match and training session moves this number`)}
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -364,30 +366,30 @@ export function TeamValores() {
                 disabled={agindo}
                 className="border border-rose-500/40 bg-rose-500/5 px-4 py-2 font-display text-xs font-black uppercase tracking-wider text-rose-200 hover:bg-rose-500/15 disabled:opacity-50"
               >
-                Time à venda por {tok(Number(anuncioDoTime.priceOlefoot))} — cancelar
+                {L(`Time à venda por ${tok(Number(anuncioDoTime.priceOlefoot))} — cancelar`, `Team for sale at ${tok(Number(anuncioDoTime.priceOlefoot))} — cancel`)}
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => { setVenderTime(true); setPreco(String(totalCents * TOKENS_POR_CENTAVO)); }}
                 disabled={lista.length < 11}
-                title={lista.length < 11 ? 'Time pronto tem pelo menos 11 jogadores' : undefined}
+                title={lista.length < 11 ? L('Time pronto tem pelo menos 11 jogadores', 'A full team needs at least 11 players') : undefined}
                 className="bg-neon-yellow px-4 py-2 font-display text-xs font-black uppercase tracking-wider text-black hover:bg-white disabled:opacity-50"
               >
-                Vender o time inteiro
+                {L('Vender o time inteiro', 'Sell the whole team')}
               </button>
             )}
             <span className="text-[11px] text-white/45">
-              Teu saldo: {saldoOlefoot == null ? '—' : `${saldoOlefoot.toLocaleString('pt-BR')} OLEFOOT`}
+              {L('Teu saldo', 'Your balance')}: {saldoOlefoot == null ? '—' : `${saldoOlefoot.toLocaleString(LOCALE)} OLEFOOT`}
             </span>
             <button
               type="button"
               onClick={() => void coletarSalario()}
               disabled={coletando}
-              title="Atuação com nota ≥ 7 hoje rende 1 OLEFOOT (teto 30/dia). Contado pelo servidor."
+              title={L('Atuação com nota ≥ 7 hoje rende 1 OLEFOOT (teto 30/dia). Contado pelo servidor.', 'Each appearance rated ≥ 7 today earns 1 OLEFOOT (cap 30/day). Counted by the server.')}
               className="border border-emerald-500/40 bg-emerald-500/5 px-3 py-1.5 font-display text-[10px] font-black uppercase tracking-wider text-emerald-200 hover:bg-emerald-500/15 disabled:opacity-50"
             >
-              {coletando ? 'Coletando…' : salario ? `Salário: ${salario.atuacoes} atuação(ões) hoje` : 'Coletar salário do elenco'}
+              {coletando ? L('Coletando…', 'Collecting…') : salario ? L(`Salário: ${salario.atuacoes} atuação(ões) hoje`, `Wages: ${salario.atuacoes} appearance(s) today`) : L('Coletar salário do elenco', 'Collect squad wages')}
             </button>
           </div>
         </div>
@@ -399,24 +401,24 @@ export function TeamValores() {
       {/* ── MEU ELENCO: valor, valorização, evolução ─────────────────────── */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="ole-eyebrow-poster" style={{ fontSize: '13px' }}>Meu elenco · valor vivo</h2>
+          <h2 className="ole-eyebrow-poster" style={{ fontSize: '13px' }}>{L('Meu elenco · valor vivo', 'My squad · live value')}</h2>
           <button type="button" onClick={() => void carregar()} disabled={carregando}
             className="flex items-center gap-1.5 border border-white/15 px-3 py-1.5 font-display text-[10px] font-black uppercase tracking-wider text-white/70 hover:bg-white/10 disabled:opacity-50">
-            <RotateCcw className={cn('h-3.5 w-3.5', carregando && 'animate-spin')} /> Atualizar
+            <RotateCcw className={cn('h-3.5 w-3.5', carregando && 'animate-spin')} /> {L('Atualizar', 'Refresh')}
           </button>
         </div>
         <div className="ole-poster overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-[12px]">
             <thead>
               <tr className="border-b border-white/10 text-[9px] uppercase tracking-wider text-white/45">
-                <th className="px-3 py-2.5">Jogador</th>
+                <th className="px-3 py-2.5">{L('Jogador', 'Player')}</th>
                 <th className="px-3 py-2.5">OVR</th>
-                <th className="px-3 py-2.5" title="OVR atual − OVR de criação">Evoluiu</th>
-                <th className="px-3 py-2.5">Treinos</th>
-                <th className="px-3 py-2.5">Jogos</th>
-                <th className="px-3 py-2.5" title="Variação do valor na temporada (performance move o preço)">Valorização</th>
-                <th className="px-3 py-2.5">Valor</th>
-                <th className="px-3 py-2.5 text-right">Mercado</th>
+                <th className="px-3 py-2.5" title={L('OVR atual − OVR de criação', 'Current OVR − OVR at creation')}>{L('Evoluiu', 'Growth')}</th>
+                <th className="px-3 py-2.5">{L('Treinos', 'Training')}</th>
+                <th className="px-3 py-2.5">{L('Jogos', 'Matches')}</th>
+                <th className="px-3 py-2.5" title={L('Variação do valor na temporada (performance move o preço)', 'Value change this season (performance moves the price)')}>{L('Valorização', 'Value change')}</th>
+                <th className="px-3 py-2.5">{L('Valor', 'Value')}</th>
+                <th className="px-3 py-2.5 text-right">{L('Mercado', 'Market')}</th>
               </tr>
             </thead>
             <tbody>
@@ -427,7 +429,7 @@ export function TeamValores() {
                     <td className="px-3 py-2">
                       <span className="font-bold text-white">{p.name}</span>
                       <span className="ml-2 text-[10px] uppercase text-white/45">
-                        {p.pos}{p.age ? ` · ${p.age}a` : ''}{p.rarity && p.rarity !== 'normal' ? ` · ${p.rarity}` : ''}
+                        {rotuloPosicao(p.pos)}{p.age ? L(` · ${p.age}a`, ` · ${p.age}y`) : ''}{p.rarity && p.rarity !== 'normal' ? ` · ${p.rarity}` : ''}
                       </span>
                     </td>
                     <td className="px-3 py-2 font-impact text-[15px] text-white tabular-nums">{ovr}</td>
@@ -442,7 +444,7 @@ export function TeamValores() {
                     <td className="px-3 py-2 text-white/60 tabular-nums">{jogos}</td>
                     <td className="px-3 py-2 tabular-nums">
                       {valorizacao == null ? (
-                        <span className="text-white/35" title="Entra em campo que o preço começa a andar">—</span>
+                        <span className="text-white/35" title={L('Entra em campo que o preço começa a andar', 'Play a match and the price starts moving')}>—</span>
                       ) : (
                         <span className={cn('inline-flex items-center gap-1', valorizacao >= 0 ? 'text-emerald-300' : 'text-rose-300')}>
                           {valorizacao >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
@@ -458,31 +460,31 @@ export function TeamValores() {
                       {alugadoPorMim.has(p.id) ? (
                         <span className="inline-flex items-center gap-2">
                           <span className="border border-sky-500/40 bg-sky-500/10 px-2 py-1 font-display text-[9px] font-black uppercase text-sky-200">
-                            Alugado até {new Date(alugadoPorMim.get(p.id)!.endsAt).toLocaleDateString('pt-BR')}
+                            {L('Alugado até', 'On loan until')} {new Date(alugadoPorMim.get(p.id)!.endsAt).toLocaleDateString(LOCALE)}
                           </span>
                           {alugadoPorMim.get(p.id)!.buyoutOlefoot ? (
                             <button type="button" onClick={() => void comprarAlugado(alugadoPorMim.get(p.id)!)} disabled={agindo}
                               className="border border-emerald-500/40 px-2.5 py-1 font-display text-[10px] font-black uppercase text-emerald-200 hover:bg-emerald-500/10 disabled:opacity-50">
-                              Comprar por {tok(Number(alugadoPorMim.get(p.id)!.buyoutOlefoot))}
+                              {L('Comprar por', 'Buy for')} {tok(Number(alugadoPorMim.get(p.id)!.buyoutOlefoot))}
                             </button>
                           ) : null}
                         </span>
                       ) : anuncio ? (
                         <button type="button" onClick={() => void cancelar(anuncio.id)} disabled={agindo}
                           className="border border-rose-500/40 px-2.5 py-1 font-display text-[10px] font-black uppercase text-rose-200 hover:bg-rose-500/10 disabled:opacity-50">
-                          {anuncio.kind === 'loan' ? 'Pra alugar' : 'À venda'} por {tok(Number(anuncio.priceOlefoot))} · tirar
+                          {anuncio.kind === 'loan' ? L('Pra alugar', 'For loan') : L('À venda', 'For sale')} {L('por', 'at')} {tok(Number(anuncio.priceOlefoot))} · {L('tirar', 'remove')}
                         </button>
                       ) : (
                         <>
                           <button type="button"
                             onClick={() => { setVender(p); setPreco(String(olefoot)); }}
                             className="mr-1 border border-neon-yellow/50 px-2.5 py-1 font-display text-[10px] font-black uppercase text-neon-yellow hover:bg-neon-yellow/10">
-                            Vender
+                            {L('Vender', 'Sell')}
                           </button>
                           <button type="button"
                             onClick={() => { setEmprestar(p); setPreco(String(Math.max(1, Math.round(olefoot / 20)))); setBuyout(String(olefoot)); }}
                             className="border border-sky-500/50 px-2.5 py-1 font-display text-[10px] font-black uppercase text-sky-200 hover:bg-sky-500/10">
-                            Emprestar
+                            {L('Emprestar', 'Loan out')}
                           </button>
                         </>
                       )}
@@ -494,20 +496,21 @@ export function TeamValores() {
           </table>
           {lista.length === 0 ? (
             <p className="p-8 text-center text-sm text-white/40">
-              Plantel vazio. <Link to="/mercado" className="text-neon-yellow underline">Vai ao mercado</Link> montar o teu.
+              {emIngles()
+                ? <>Empty squad. <Link to="/mercado" className="text-neon-yellow underline">Go to the market</Link> to build yours.</>
+                : <>Plantel vazio. <Link to="/mercado" className="text-neon-yellow underline">Vai ao mercado</Link> montar o teu.</>}
             </p>
           ) : null}
         </div>
         <p className="mt-2 text-[11px] text-white/40">
-          O valor é o preço dinâmico do jogo (OVR, forma, idade, raridade, escassez), convertido a OLEFOOT pelo
-          preço real da pré-venda ($0,000125). Quem tu vendes sai TREINADO — é esse o negócio.
+          {L('O valor é o preço dinâmico do jogo (OVR, forma, idade, raridade, escassez), convertido a OLEFOOT pelo preço real da pré-venda ($0,000125). Quem tu vendes sai TREINADO — é esse o negócio.', 'Value is the game\'s dynamic price (OVR, form, age, rarity, scarcity), converted to OLEFOOT at the real presale price ($0.000125). Whoever you sell leaves TRAINED — that\'s the deal.')}
         </p>
         {emprestadosFora.length > 0 ? (
           <div className="mt-3 flex flex-wrap gap-2">
             {emprestadosFora.map((e) => (
               <span key={e.id} className="border border-sky-500/30 bg-sky-500/5 px-2.5 py-1.5 text-[11px] text-sky-200">
-                Emprestado: <span className="font-mono text-[10px] text-white/50">{e.gamePlayerId.slice(0, 12)}</span>{' '}
-                volta {new Date(e.endsAt).toLocaleDateString('pt-BR')} · aluguel {tok(Number(e.rentOlefoot))} já na carteira
+                {L('Emprestado', 'On loan')}: <span className="font-mono text-[10px] text-white/50">{e.gamePlayerId.slice(0, 12)}</span>{' '}
+                {L(`volta ${new Date(e.endsAt).toLocaleDateString(LOCALE)} · aluguel ${tok(Number(e.rentOlefoot))} já na carteira`, `returns ${new Date(e.endsAt).toLocaleDateString(LOCALE)} · fee ${tok(Number(e.rentOlefoot))} already in wallet`)}
               </span>
             ))}
           </div>
@@ -516,10 +519,10 @@ export function TeamValores() {
 
       {/* ── VITRINE DA COMUNIDADE ────────────────────────────────────────── */}
       <section>
-        <h2 className="ole-eyebrow-poster mb-3" style={{ fontSize: '13px' }}>À venda na comunidade</h2>
+        <h2 className="ole-eyebrow-poster mb-3" style={{ fontSize: '13px' }}>{L('À venda na comunidade', 'For sale in the community')}</h2>
         {vitrine.length === 0 ? (
           <p className="ole-poster p-8 text-center text-sm text-white/40">
-            {carregando ? 'Carregando…' : 'Ninguém anunciou ainda. Sê o primeiro — anuncia um jogador treinado.'}
+            {carregando ? L('Carregando…', 'Loading…') : L('Ninguém anunciou ainda. Sê o primeiro — anuncia um jogador treinado.', 'No listings yet. Be the first — list a trained player.')}
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -539,21 +542,21 @@ export function TeamValores() {
                         <span className="font-impact text-[20px] text-neon-yellow tabular-nums">{ovrSnap ?? '—'}</span>
                       </div>
                       <p className="text-[11px] text-white/50">
-                        {l.player.pos}{l.player.age ? ` · ${l.player.age} anos` : ''}
+                        {rotuloPosicao(l.player.pos)}{l.player.age ? L(` · ${l.player.age} anos`, ` · ${l.player.age} yrs`) : ''}
                         {l.player.mintOverall != null && ovrSnap != null && ovrSnap > l.player.mintOverall
-                          ? ` · evoluiu +${ovrSnap - Math.round(l.player.mintOverall)} OVR` : ''}
-                        {' · '}de {l.seller.club ?? (l.seller.username ? `@${l.seller.username}` : 'outro clube')}
+                          ? L(` · evoluiu +${ovrSnap - Math.round(l.player.mintOverall)} OVR`, ` · grew +${ovrSnap - Math.round(l.player.mintOverall)} OVR`) : ''}
+                        {' · '}{L('de', 'from')} {l.seller.club ?? (l.seller.username ? `@${l.seller.username}` : L('outro clube', 'another club'))}
                       </p>
                     </>
                   ) : (
                     <>
                       <div className="flex items-center gap-2">
                         <BadgeDollarSign className="h-4 w-4 text-neon-yellow" />
-                        <span className="font-impact text-[18px] uppercase text-white">Time pronto · {l.team?.jogadores ?? '?'} jogadores</span>
+                        <span className="font-impact text-[18px] uppercase text-white">{L('Time pronto', 'Full team')} · {l.team?.jogadores ?? '?'} {L('jogadores', 'players')}</span>
                       </div>
                       <p className="text-[11px] text-white/50">
-                        {(l.team?.destaques ?? []).map((d) => d.name).filter(Boolean).slice(0, 4).join(' · ') || 'Elenco completo'}
-                        {' · '}de {l.seller.club ?? (l.seller.username ? `@${l.seller.username}` : 'outro clube')}
+                        {(l.team?.destaques ?? []).map((d) => d.name).filter(Boolean).slice(0, 4).join(' · ') || L('Elenco completo', 'Full squad')}
+                        {' · '}{L('de', 'from')} {l.seller.club ?? (l.seller.username ? `@${l.seller.username}` : L('outro clube', 'another club'))}
                       </p>
                     </>
                   )}
@@ -564,13 +567,13 @@ export function TeamValores() {
                       </p>
                       <p className="text-[10px] text-white/40">
                         {l.kind === 'loan' ? (
-                          <>aluguel · {l.buyoutOlefoot ? `opção de compra: ${tok(Number(l.buyoutOlefoot))}` : 'sem opção de compra'}</>
+                          <>{L('aluguel', 'loan')} · {l.buyoutOlefoot ? L(`opção de compra: ${tok(Number(l.buyoutOlefoot))}`, `buy option: ${tok(Number(l.buyoutOlefoot))}`) : L('sem opção de compra', 'no buy option')}</>
                         ) : (
                           <>
                             ≈ {dolar(precoL / TOKENS_POR_CENTAVO * 1)}{' '}
                             {agio != null ? (
                               <span className={agio > 0 ? 'text-amber-300' : 'text-emerald-300'}>
-                                · {agio > 0 ? '+' : ''}{agio.toFixed(0)}% vs referência
+                                · {agio > 0 ? '+' : ''}{agio.toFixed(0)}% {L('vs referência', 'vs reference')}
                               </span>
                             ) : null}
                           </>
@@ -580,12 +583,12 @@ export function TeamValores() {
                     {l.kind === 'loan' ? (
                       <button type="button" onClick={() => void alugar(l)} disabled={agindo}
                         className="bg-sky-400 px-3 py-1.5 font-display text-[11px] font-black uppercase text-black hover:bg-white disabled:opacity-50">
-                        Alugar
+                        {L('Alugar', 'Loan')}
                       </button>
                     ) : (
                       <button type="button" onClick={() => setComprar(l)}
                         className="bg-neon-yellow px-3 py-1.5 font-display text-[11px] font-black uppercase text-black hover:bg-white">
-                        Comprar
+                        {L('Comprar', 'Buy')}
                       </button>
                     )}
                   </div>
@@ -604,33 +607,36 @@ export function TeamValores() {
         open={emprestar != null}
         onClose={() => (agindo ? null : setEmprestar(null))}
         onConfirm={() => void confirmarEmprestimo()}
-        eyebrow="Empréstimo"
-        title={`Emprestar ${emprestar?.name ?? ''}?`}
-        confirmLabel={agindo ? 'Anunciando…' : 'Anunciar empréstimo'}
+        eyebrow={L('Empréstimo', 'Loan')}
+        title={L(`Emprestar ${emprestar?.name ?? ''}?`, `Loan out ${emprestar?.name ?? ''}?`)}
+        confirmLabel={agindo ? L('Anunciando…', 'Listing…') : L('Anunciar empréstimo', 'List loan')}
         confirmDisabled={agindo || !Number.isInteger(precoNum) || precoNum < 1 || !Number(dias)}
         accent="#38bdf8"
       >
         <div className="mt-3 space-y-2 text-sm text-white/75">
           <p>
-            Ele joga no time do locatário e <strong>volta sozinho</strong> no fim do prazo — com
-            toda a evolução que ganhar lá (tu lucras o aluguel E o treino alheio).
+            {emIngles()
+              ? <>He plays for the borrower and <strong>comes back on his own</strong> when the term ends — with
+              all the progress he makes there (you profit from the fee AND their training).</>
+              : <>Ele joga no time do locatário e <strong>volta sozinho</strong> no fim do prazo — com
+              toda a evolução que ganhar lá (tu lucras o aluguel E o treino alheio).</>}
           </p>
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
-              <span className="text-[10px] uppercase text-white/45">Aluguel (OLEFOOT)</span>
+              <span className="text-[10px] uppercase text-white/45">{L('Aluguel (OLEFOOT)', 'Loan fee (OLEFOOT)')}</span>
               <input className={campo} value={preco} inputMode="numeric"
                 onChange={(e) => setPreco(e.target.value.replace(/[^\d]/g, ''))} />
             </label>
             <label className="block">
-              <span className="text-[10px] uppercase text-white/45">Dias (1–30)</span>
+              <span className="text-[10px] uppercase text-white/45">{L('Dias (1–30)', 'Days (1–30)')}</span>
               <input className={campo} value={dias} inputMode="numeric"
                 onChange={(e) => setDias(e.target.value.replace(/[^\d]/g, ''))} />
             </label>
           </div>
           <label className="block">
-            <span className="text-[10px] uppercase text-white/45">Opção de compra (OLEFOOT · em branco = sem opção)</span>
+            <span className="text-[10px] uppercase text-white/45">{L('Opção de compra (OLEFOOT · em branco = sem opção)', 'Buy option (OLEFOOT · blank = none)')}</span>
             <input className={campo} value={buyout} inputMode="numeric"
-              onChange={(e) => setBuyout(e.target.value.replace(/[^\d]/g, ''))} placeholder="preço travado pro locatário ficar com ele" />
+              onChange={(e) => setBuyout(e.target.value.replace(/[^\d]/g, ''))} placeholder={L('preço travado pro locatário ficar com ele', 'locked price for the borrower to keep him')} />
           </label>
         </div>
       </ConfirmDialog>
@@ -640,31 +646,48 @@ export function TeamValores() {
         open={vender != null || venderTime}
         onClose={() => (agindo ? null : (setVender(null), setVenderTime(false)))}
         onConfirm={() => void confirmarVenda()}
-        eyebrow="Mercado de elenco"
-        title={venderTime ? 'Vender o time inteiro?' : `Vender ${vender?.name ?? ''}?`}
-        confirmLabel={agindo ? 'Anunciando…' : 'Anunciar'}
+        eyebrow={L('Mercado de elenco', 'Squad market')}
+        title={venderTime ? L('Vender o time inteiro?', 'Sell the whole team?') : L(`Vender ${vender?.name ?? ''}?`, `Sell ${vender?.name ?? ''}?`)}
+        confirmLabel={agindo ? L('Anunciando…', 'Listing…') : L('Anunciar', 'List')}
         confirmDisabled={agindo || !Number.isInteger(precoNum) || precoNum < 1}
         accent="#fde100"
       >
         <div className="mt-3 space-y-2 text-sm text-white/75">
           {venderTime ? (
+            emIngles() ? (
+              <p>
+                The buyer takes <strong>all {lista.length} players</strong>, as they are — trained.
+                You keep the club, the structures and the OLEFOOT from the sale. Squad reference:{' '}
+                <strong className="text-neon-yellow">{tok(totalCents * TOKENS_POR_CENTAVO)} OLEFOOT</strong>.
+              </p>
+            ) : (
             <p>
               O comprador leva <strong>todos os {lista.length} jogadores</strong>, do jeito que estão — treinados.
               Tu ficas com o clube, as estruturas e o OLEFOOT da venda. Referência do elenco:{' '}
               <strong className="text-neon-yellow">{tok(totalCents * TOKENS_POR_CENTAVO)} OLEFOOT</strong>.
             </p>
+            )
           ) : vender ? (
+            emIngles() ? (
+              <p>
+                He leaves the squad as he is today (OVR {overallFromAttributes(vender.attrs, vender.pos)}
+                {vender.mintOverall != null ? `, created at ${Math.round(vender.mintOverall)}` : ''}). Live reference:{' '}
+                <strong className="text-neon-yellow">{tok(valorCents(vender) * TOKENS_POR_CENTAVO)} OLEFOOT</strong>{' '}
+                ({dolar(valorCents(vender))}). The price is yours — you raised his value, charge the premium.
+              </p>
+            ) : (
             <p>
               Ele sai do plantel como está hoje (OVR {overallFromAttributes(vender.attrs, vender.pos)}
               {vender.mintOverall != null ? `, criado com ${Math.round(vender.mintOverall)}` : ''}). Referência viva:{' '}
               <strong className="text-neon-yellow">{tok(valorCents(vender) * TOKENS_POR_CENTAVO)} OLEFOOT</strong>{' '}
               ({dolar(valorCents(vender))}). O preço é teu — valorizaste, cobra o ágio.
             </p>
+            )
           ) : null}
           <label className="block">
-            <span className="text-[10px] uppercase text-white/45">Preço em OLEFOOT</span>
+            <span className="text-[10px] uppercase text-white/45">{L('Preço em OLEFOOT', 'Price in OLEFOOT')}</span>
             <input className={campo} value={preco} inputMode="numeric"
-              onChange={(e) => setPreco(e.target.value.replace(/[^\d]/g, ''))} placeholder="ex.: 24000" />
+              onChange={(e) => setPreco(e.target.value.replace(/[^\d]/g, ''))} placeholder={L('ex.: 24000', 'e.g. 24000')} />
           </label>
           {Number.isInteger(precoNum) && precoNum >= 1 ? (
             <p className="flex items-center gap-1.5 text-[11px] text-white/50">
@@ -679,9 +702,9 @@ export function TeamValores() {
         open={comprar != null}
         onClose={() => (agindo ? null : setComprar(null))}
         onConfirm={() => void confirmarCompra()}
-        eyebrow="Mercado de elenco"
-        title={comprar?.kind === 'team' ? 'Comprar o time inteiro?' : `Comprar ${comprar?.player?.name ?? ''}?`}
-        confirmLabel={agindo ? 'Comprando…' : `Pagar ${tok(Number(comprar?.priceOlefoot ?? 0))} OLEFOOT`}
+        eyebrow={L('Mercado de elenco', 'Squad market')}
+        title={comprar?.kind === 'team' ? L('Comprar o time inteiro?', 'Buy the whole team?') : L(`Comprar ${comprar?.player?.name ?? ''}?`, `Buy ${comprar?.player?.name ?? ''}?`)}
+        confirmLabel={agindo ? L('Comprando…', 'Buying…') : L(`Pagar ${tok(Number(comprar?.priceOlefoot ?? 0))} OLEFOOT`, `Pay ${tok(Number(comprar?.priceOlefoot ?? 0))} OLEFOOT`)}
         confirmDisabled={agindo || (saldoOlefoot != null && comprar != null && saldoOlefoot < Number(comprar.priceOlefoot))}
         accent="#fde100"
       >
@@ -689,15 +712,15 @@ export function TeamValores() {
           <div className="mt-3 space-y-1.5 text-sm text-white/75">
             <p>
               {comprar.kind === 'team'
-                ? `Levas os ${comprar.team?.jogadores ?? ''} jogadores do ${comprar.seller.club ?? 'vendedor'}, treinados, direto pro teu plantel.`
-                : 'Ele entra no teu plantel como está hoje — com toda a evolução que o vendedor pagou pra construir.'}
+                ? L(`Levas os ${comprar.team?.jogadores ?? ''} jogadores do ${comprar.seller.club ?? 'vendedor'}, treinados, direto pro teu plantel.`, `You get all ${comprar.team?.jogadores ?? ''} players from ${comprar.seller.club ?? 'the seller'}, trained, straight into your squad.`)
+                : L('Ele entra no teu plantel como está hoje — com toda a evolução que o vendedor pagou pra construir.', 'He joins your squad as he is today — with all the progress the seller paid to build.')}
             </p>
             <p className="text-[11px] text-white/50">
-              Débito de {tok(Number(comprar.priceOlefoot))} OLEFOOT na tua carteira
-              {saldoOlefoot != null ? ` (saldo: ${saldoOlefoot.toLocaleString('pt-BR')})` : ''}. Sem estorno — mercado é mercado.
+              {L(`Débito de ${tok(Number(comprar.priceOlefoot))} OLEFOOT na tua carteira`, `${tok(Number(comprar.priceOlefoot))} OLEFOOT charged to your wallet`)}
+              {saldoOlefoot != null ? L(` (saldo: ${saldoOlefoot.toLocaleString(LOCALE)})`, ` (balance: ${saldoOlefoot.toLocaleString(LOCALE)})`) : ''}{L('. Sem estorno — mercado é mercado.', '. No refunds — a market is a market.')}
             </p>
             {saldoOlefoot != null && saldoOlefoot < Number(comprar.priceOlefoot) ? (
-              <p className="text-[11px] font-bold text-rose-300">Saldo OLEFOOT insuficiente.</p>
+              <p className="text-[11px] font-bold text-rose-300">{L('Saldo OLEFOOT insuficiente.', 'Insufficient OLEFOOT balance.')}</p>
             ) : null}
           </div>
         ) : null}

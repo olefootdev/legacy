@@ -25,26 +25,28 @@ import { overallFromAttributes } from '@/entities/player';
 import { playerTokenSrc } from '@/lib/playerPortrait';
 import { useGameDispatch, useGameStore, getGameState } from '@/game/store';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
+import { posLabel } from '@/components/match/posLabel';
 
 const SLOT_LABEL_PT: Record<string, string> = {
-  gol: 'Goleiro',
-  zag1: 'Zagueiro E',
-  zag2: 'Zagueiro D',
-  le: 'Lateral E',
-  ld: 'Lateral D',
-  vol: 'Volante',
-  mc1: 'Meia 1',
-  mc2: 'Meia 2',
-  pe: 'Ponta E',
-  pd: 'Ponta D',
-  ata: 'Atacante',
+  gol: L('Goleiro', 'Goalkeeper'),
+  zag1: L('Zagueiro E', 'Centre-back L'),
+  zag2: L('Zagueiro D', 'Centre-back R'),
+  le: L('Lateral E', 'Left-back'),
+  ld: L('Lateral D', 'Right-back'),
+  vol: L('Volante', 'Defensive mid'),
+  mc1: L('Meia 1', 'Midfielder 1'),
+  mc2: L('Meia 2', 'Midfielder 2'),
+  pe: L('Ponta E', 'Left winger'),
+  pd: L('Ponta D', 'Right winger'),
+  ata: L('Atacante', 'Striker'),
 };
 
 const ROLE_LABEL_PT: Record<string, string> = {
-  gk: 'Goleiro',
-  def: 'Defensor',
-  mid: 'Meio-campo',
-  attack: 'Atacante',
+  gk: L('Goleiro', 'Goalkeeper'),
+  def: L('Defensor', 'Defender'),
+  mid: L('Meio-campo', 'Midfielder'),
+  attack: L('Atacante', 'Forward'),
 };
 
 interface TacticalCommand {
@@ -56,14 +58,14 @@ interface TacticalCommand {
 }
 
 const TACTICAL_COMMANDS: TacticalCommand[] = [
-  { id: 'press_high', label: 'Pressionar', icon: ArrowUp, description: 'Subir e pressionar o adversário', color: 'text-red-400' },
-  { id: 'drop_deep', label: 'Recuar', icon: ArrowDown, description: 'Jogar mais recuado e seguro', color: 'text-blue-400' },
-  { id: 'go_wide', label: 'Abrir jogo', icon: MoveHorizontal, description: 'Procurar espaço pela lateral', color: 'text-emerald-400' },
-  { id: 'shoot_more', label: 'Chutar mais', icon: Target, description: 'Arriscar finalizações', color: 'text-amber-400' },
-  { id: 'mark_tight', label: 'Marcar firme', icon: Shield, description: 'Marcação individual agressiva', color: 'text-purple-400' },
-  { id: 'creative_freedom', label: 'Liberdade', icon: Brain, description: 'Mais liberdade criativa', color: 'text-cyan-400' },
-  { id: 'conserve_energy', label: 'Poupar energia', icon: Timer, description: 'Administrar o desgaste', color: 'text-lime-400' },
-  { id: 'attack_runs', label: 'Chegadas', icon: Zap, description: 'Fazer chegadas na área', color: 'text-orange-400' },
+  { id: 'press_high', label: L('Pressionar', 'Press'), icon: ArrowUp, description: L('Subir e pressionar o adversário', 'Push up and press the opponent'), color: 'text-red-400' },
+  { id: 'drop_deep', label: L('Recuar', 'Drop back'), icon: ArrowDown, description: L('Jogar mais recuado e seguro', 'Play deeper and safer'), color: 'text-blue-400' },
+  { id: 'go_wide', label: L('Abrir jogo', 'Go wide'), icon: MoveHorizontal, description: L('Procurar espaço pela lateral', 'Look for space out wide'), color: 'text-emerald-400' },
+  { id: 'shoot_more', label: L('Chutar mais', 'Shoot more'), icon: Target, description: L('Arriscar finalizações', 'Take more shots'), color: 'text-amber-400' },
+  { id: 'mark_tight', label: L('Marcar firme', 'Tight marking'), icon: Shield, description: L('Marcação individual agressiva', 'Aggressive man-marking'), color: 'text-purple-400' },
+  { id: 'creative_freedom', label: L('Liberdade', 'Freedom'), icon: Brain, description: L('Mais liberdade criativa', 'More creative freedom'), color: 'text-cyan-400' },
+  { id: 'conserve_energy', label: L('Poupar energia', 'Save energy'), icon: Timer, description: L('Administrar o desgaste', 'Manage fatigue'), color: 'text-lime-400' },
+  { id: 'attack_runs', label: L('Chegadas', 'Late runs'), icon: Zap, description: L('Fazer chegadas na área', 'Make runs into the box'), color: 'text-orange-400' },
 ];
 
 interface LivePlayerInfoPanelProps {
@@ -104,12 +106,12 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
   const doSubstitution = useCallback(
     (inPlayer: PlayerEntity) => {
       if (subsLeft <= 0) {
-        setSubFeedback(`Limite de substituições (${maxSubs}).`);
+        setSubFeedback(L(`Limite de substituições (${maxSubs}).`, `Substitution limit (${maxSubs}).`));
         setTimeout(() => setSubFeedback(null), 2800);
         return;
       }
       if (inPlayer.outForMatches > 0) {
-        setSubFeedback('Jogador indisponível (lesão/suspensão).');
+        setSubFeedback(L('Jogador indisponível (lesão/suspensão).', 'Player unavailable (injury/suspension).'));
         setTimeout(() => setSubFeedback(null), 2800);
         return;
       }
@@ -123,7 +125,7 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
       });
       const after = getGameState().liveMatch?.substitutionsUsed ?? before;
       if (after === before) {
-        setSubFeedback('Não foi possível substituir.');
+        setSubFeedback(L('Não foi possível substituir.', 'Substitution not possible.'));
         setTimeout(() => setSubFeedback(null), 3000);
         return;
       }
@@ -203,7 +205,7 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
             type="button"
             onClick={onClose}
             className="shrink-0 rounded-lg border border-white/15 p-1.5 text-gray-400 transition-colors hover:border-white/30 hover:text-white"
-            aria-label="Fechar"
+            aria-label={L('Fechar', 'Close')}
           >
             <X className="h-4 w-4" />
           </button>
@@ -213,16 +215,16 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
         {attrs && (
           <div className="border-b border-white/10 px-4 py-3">
             <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-gray-500">
-              Atributos
+              {L('Atributos', 'Attributes')}
             </p>
             <div className="grid grid-cols-5 gap-1.5">
-              <StatBadge label="VEL" value={attrs.velocidade} icon={Gauge} />
+              <StatBadge label={L('VEL', 'PAC')} value={attrs.velocidade} icon={Gauge} />
               <StatBadge label="PAS" value={attrs.passe} icon={Footprints} />
-              <StatBadge label="FIN" value={attrs.finalizacao} icon={Target} />
+              <StatBadge label={L('FIN', 'SHO')} value={attrs.finalizacao} icon={Target} />
               <StatBadge label="DRI" value={attrs.drible} icon={Zap} />
-              <StatBadge label="MAR" value={attrs.marcacao} icon={Shield} />
-              <StatBadge label="FIS" value={attrs.fisico} icon={Heart} />
-              <StatBadge label="TAT" value={attrs.tatico} icon={Brain} />
+              <StatBadge label={L('MAR', 'DEF')} value={attrs.marcacao} icon={Shield} />
+              <StatBadge label={L('FIS', 'PHY')} value={attrs.fisico} icon={Heart} />
+              <StatBadge label={L('TAT', 'TAC')} value={attrs.tatico} icon={Brain} />
               <StatBadge label="MEN" value={attrs.mentalidade} icon={Swords} />
               <StatBadge label="CON" value={attrs.confianca} icon={ShieldAlert} />
               <StatBadge label="FPL" value={attrs.fairPlay} icon={Shield} />
@@ -231,12 +233,12 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
               <div className="flex items-center gap-1.5">
                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 <span className="text-[9px] font-bold text-gray-500">
-                  Fadiga: {Math.round(player.fatigue)}%
+                  {L('Fadiga', 'Fatigue')}: {Math.round(player.fatigue)}%
                 </span>
               </div>
               {playerEntity?.strongFoot && (
                 <span className="text-[9px] font-bold text-gray-500">
-                  Pé: {playerEntity.strongFoot === 'right' ? 'Direito' : playerEntity.strongFoot === 'left' ? 'Esquerdo' : 'Ambos'}
+                  {L('Pé', 'Foot')}: {playerEntity.strongFoot === 'right' ? L('Direito', 'Right') : playerEntity.strongFoot === 'left' ? L('Esquerdo', 'Left') : L('Ambos', 'Both')}
                 </span>
               )}
             </div>
@@ -247,7 +249,7 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
         <div className="border-b border-white/10 px-4 py-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500">
-              Enviar comando
+              {L('Enviar comando', 'Send command')}
             </p>
             {commandFeedback && (
               <motion.span
@@ -255,7 +257,7 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
                 animate={{ opacity: 1, x: 0 }}
                 className="text-[10px] font-bold text-neon-yellow"
               >
-                {commandFeedback} enviado
+                {L(`${commandFeedback} enviado`, `${commandFeedback} sent`)}
               </motion.span>
             )}
           </div>
@@ -286,7 +288,7 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
             <div className="flex items-center gap-2">
               <ArrowUpDown className="h-3.5 w-3.5 text-neon-yellow" />
               <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500">
-                Substituir
+                {L('Substituir', 'Substitute')}
               </p>
             </div>
             <span className="text-[9px] font-mono font-bold tabular-nums text-gray-500">
@@ -306,7 +308,7 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
 
           {subsLeft <= 0 ? (
             <p className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-center text-[10px] text-gray-500">
-              Todas as substituições utilizadas.
+              {L('Todas as substituições utilizadas.', 'All substitutions used.')}
             </p>
           ) : !showSubPanel ? (
             <button
@@ -318,10 +320,10 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
                 <ArrowUpDown className="h-4 w-4 text-gray-400" />
                 <div>
                   <span className="block text-xs font-bold text-white">
-                    Substituir {player.name}
+                    {L('Substituir', 'Substitute')} {player.name}
                   </span>
                   <span className="block text-[9px] text-gray-500">
-                    {benchPlayers.length} jogadores no banco
+                    {L(`${benchPlayers.length} jogadores no banco`, `${benchPlayers.length} players on the bench`)}
                   </span>
                 </div>
               </div>
@@ -331,19 +333,19 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-bold text-gray-400">
-                  Escolha quem entra por <span className="text-neon-yellow">{player.name}</span>
+                  {L('Escolha quem entra por', 'Pick who replaces')} <span className="text-neon-yellow">{player.name}</span>
                 </p>
                 <button
                   type="button"
                   onClick={() => setShowSubPanel(false)}
                   className="text-[9px] font-bold uppercase text-gray-500 hover:text-white"
                 >
-                  Voltar
+                  {L('Voltar', 'Back')}
                 </button>
               </div>
               <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-white/10 bg-black/40 p-1.5 [scrollbar-width:thin]">
                 {benchPlayers.length === 0 ? (
-                  <p className="py-3 text-center text-[10px] text-gray-500">Nenhum jogador no banco.</p>
+                  <p className="py-3 text-center text-[10px] text-gray-500">{L('Nenhum jogador no banco.', 'No players on the bench.')}</p>
                 ) : (
                   benchPlayers.map((bp) => {
                     const bpOvr = overallFromAttributes(bp.attrs, bp.pos);
@@ -372,11 +374,11 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
                             {bp.num} · {bp.name}
                           </span>
                           <span className="block text-[9px] text-gray-500">
-                            {bp.pos} · {bpOvr} OVR
+                            {posLabel(bp.pos)} · {bpOvr} OVR
                           </span>
                         </div>
                         <div className="shrink-0 rounded bg-neon-yellow/15 px-1.5 py-0.5 text-[9px] font-bold text-neon-yellow">
-                          Entrar
+                          {L('Entrar', 'Bring on')}
                         </div>
                       </button>
                     );

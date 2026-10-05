@@ -9,6 +9,7 @@ import { gameSpiritTick, buildSpiritContext } from './GameSpirit';
 import { generateTacticalInsight, type TacticalInsight } from './gameSpiritInsight';
 import { MemorableMomentsCollector, type MemorableMoment } from './memorableMoments';
 import type { SpiritContext, SpiritOutcome } from './types';
+import { L } from '@/i18n/L';
 
 export interface EnhancedSpiritOutcome extends SpiritOutcome {
   /** Insight tático gerado para este tick (se houver) */
@@ -65,7 +66,7 @@ export function formatInsightForFeed(insight: TacticalInsight): string {
 export function formatMemorableMoments(moments: MemorableMoment[]): string {
   if (moments.length === 0) return '';
 
-  const lines: string[] = ['', '═══ MOMENTOS MEMORÁVEIS ═══', ''];
+  const lines: string[] = ['', L('═══ MOMENTOS MEMORÁVEIS ═══', '═══ MEMORABLE MOMENTS ═══'), ''];
 
   for (const moment of moments) {
     const emoji = getMomentEmoji(moment.type);
@@ -100,18 +101,18 @@ function getMomentEmoji(type: MemorableMoment['type']): string {
 
 function getMomentTypeLabel(type: MemorableMoment['type']): string {
   const labelMap: Record<MemorableMoment['type'], string> = {
-    impossible_goal: 'Gol Improvável',
-    crucial_save: 'Defesa Crucial',
-    game_changing_error: 'Erro Decisivo',
-    momentum_reversal: 'Virada de Momentum',
-    tactical_masterclass: 'Jogada Tática Perfeita',
-    individual_brilliance: 'Brilho Individual',
-    defensive_heroics: 'Heroísmo Defensivo',
-    counter_strike: 'Contra-Ataque Letal',
-    pressure_breakthrough: 'Quebra de Pressão',
-    late_drama: 'Drama Final',
+    impossible_goal: L('Gol Improvável', 'Unlikely Goal'),
+    crucial_save: L('Defesa Crucial', 'Crucial Save'),
+    game_changing_error: L('Erro Decisivo', 'Decisive Error'),
+    momentum_reversal: L('Virada de Momentum', 'Momentum Swing'),
+    tactical_masterclass: L('Jogada Tática Perfeita', 'Tactical Masterclass'),
+    individual_brilliance: L('Brilho Individual', 'Individual Brilliance'),
+    defensive_heroics: L('Heroísmo Defensivo', 'Defensive Heroics'),
+    counter_strike: L('Contra-Ataque Letal', 'Lethal Counter'),
+    pressure_breakthrough: L('Quebra de Pressão', 'Pressure Broken'),
+    late_drama: L('Drama Final', 'Late Drama'),
   };
-  return labelMap[type] || 'Momento Especial';
+  return labelMap[type] || L('Momento Especial', 'Special Moment');
 }
 
 /**

@@ -3,6 +3,7 @@ import { User, Camera } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import { useTrainerAvatarUpload } from '@/hooks/useTrainerAvatarUpload';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 export function TrainerAvatarHeaderControl({ className }: { className?: string }) {
   const avatar = useGameStore((s) => s.userSettings.trainerAvatarDataUrl);
@@ -15,8 +16,8 @@ export function TrainerAvatarHeaderControl({ className }: { className?: string }
         type="button"
         onClick={() => inputRef.current?.click()}
         className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-white/20 bg-white/5 transition-colors hover:border-neon-yellow/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon-yellow"
-        title="Carregar foto do treinador"
-        aria-label="Carregar ou alterar foto do treinador"
+        title={L('Carregar foto do treinador', 'Upload manager photo')}
+        aria-label={L('Carregar ou alterar foto do treinador', 'Upload or change manager photo')}
       >
         {avatar ? (
           <img src={avatar} alt="" className="h-full w-full object-cover" />

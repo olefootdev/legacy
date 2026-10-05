@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BRAZILIAN_CLUBS } from '@/settings/brazilianClubs';
 
+import { L } from '@/i18n/L';
 interface LegacyMatchHUDProps {
   homeShort: string;
   awayShort: string;
@@ -81,7 +82,7 @@ export function LegacyMatchHUD({
   const awayPct = 100 - homePct;
   const homeLeads = homeScore > awayScore;
   const awayLeads = awayScore > homeScore;
-  const phaseLabel = phase === 'halftime' ? 'INT' : phase === 'fulltime' ? 'FIM' : null;
+  const phaseLabel = phase === 'halftime' ? L('INT', 'HT') : phase === 'fulltime' ? L('FIM', 'FT') : null;
 
   return (
     <div style={{ background: 'rgba(5,5,5,0.98)', borderBottom: '1px solid rgba(253,225,0,0.08)', flexShrink: 0, userSelect: 'none', position: 'relative' }}>
@@ -175,7 +176,7 @@ export function LegacyMatchHUD({
           {onAwayClubChange ? (
             <button type="button" onClick={() => setShowClubPicker(v => !v)}
               style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0 }}
-              title="Escolher clube adversário"
+              title={L('Escolher clube adversário', 'Choose opponent club')}
             >
               {awayClub?.logo ? (
                 <img src={awayClub.logo} alt={awayClub.name}

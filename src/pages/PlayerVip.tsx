@@ -31,6 +31,7 @@ import {
 import { formatExp } from '@/systems/economy';
 import { RailStat, ConfirmDialog, SecaoVolt } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { L, LOCALE, emIngles } from '@/i18n/L';
 
 const YELLOW = 'var(--color-neon-yellow)';
 /** Verde de "entrou dinheiro" — token VOLT2 (alta), não hex solto. */
@@ -41,13 +42,13 @@ const INPUT = 'w-full border border-white/16 bg-deep-black px-3.5 py-3 text-base
 const ROTULO = 'font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento';
 
 const PHASE_LABEL: Record<string, string> = {
-  revelacao: 'Revelação',
-  consolidacao: 'Consolidação',
-  expansao: 'Expansão',
+  revelacao: L('Revelação', 'Breakthrough'),
+  consolidacao: L('Consolidação', 'Consolidation'),
+  expansao: L('Expansão', 'Expansion'),
 };
 
 function brl(cents: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((cents || 0) / 100);
+  return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: 'BRL' }).format((cents || 0) / 100);
 }
 function phaseFromId(id: string): string | null {
   const seg = id.split('-').pop() ?? '';
@@ -101,15 +102,15 @@ function PlayerVipLogin() {
 
   async function send() {
     const sb = getSupabase();
-    if (!sb) { setErr('Serviço indisponível.'); setState('error'); return; }
+    if (!sb) { setErr(L('Serviço indisponível.', 'Service unavailable.')); setState('error'); return; }
     const clean = email.trim();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clean)) { setErr('Digite um e-mail válido.'); setState('error'); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clean)) { setErr(L('Digite um e-mail válido.', 'Enter a valid email.')); setState('error'); return; }
     setState('sending'); setErr('');
     const { error } = await sb.auth.signInWithOtp({
       email: clean,
       options: { emailRedirectTo: `${window.location.origin}/playervip` },
     });
-    if (error) { setErr('Não conseguimos enviar. Tente de novo.'); setState('error'); return; }
+    if (error) { setErr(L('Não conseguimos enviar. Tente de novo.', "We couldn't send it. Try again.")); setState('error'); return; }
     setState('sent');
   }
 
@@ -123,25 +124,30 @@ function PlayerVipLogin() {
       {state === 'sent' ? (
         <div className="border border-white/10 bg-panel p-7 text-center">
           <CheckCircle2 className="mx-auto mb-4 h-10 w-10 text-neon-yellow" />
-          <h1 className="font-impact text-[32px] uppercase leading-[1.05]">Link enviado</h1>
+          <h1 className="font-impact text-[32px] uppercase leading-[1.05]">{L('Link enviado', 'Link sent')}</h1>
           <p className="mt-3 text-sm leading-relaxed text-cimento">
-            Enviamos um link de acesso para <b className="text-white">{email.trim()}</b>. Abra seu e-mail e toque no
-            link para entrar — sem senha.
+            {emIngles() ? (
+              <>We sent an access link to <b className="text-white">{email.trim()}</b>. Open your email and tap the
+              link to sign in — no password.</>
+            ) : (
+              <>Enviamos um link de acesso para <b className="text-white">{email.trim()}</b>. Abra seu e-mail e toque no
+              link para entrar — sem senha.</>
+            )}
           </p>
           <button
             onClick={() => setState('idle')}
             className="mt-5 text-xs font-bold uppercase tracking-wider text-cimento transition-colors hover:text-white"
           >
-            Usar outro e-mail
+            {L('Usar outro e-mail', 'Use another email')}
           </button>
         </div>
       ) : (
         <>
           <h1 className="font-impact uppercase leading-[1.02]" style={{ fontSize: 'clamp(40px,12vw,64px)' }}>
-            Bem-vindo,<br /><span className="text-neon-yellow">lenda.</span>
+            {L('Bem-vindo,', 'Welcome,')}<br /><span className="text-neon-yellow">{L('lenda.', 'legend.')}</span>
           </h1>
           <p className="mt-4 text-sm leading-relaxed text-cimento">
-            Digite seu e-mail e enviamos um link de acesso.
+            {L('Digite seu e-mail e enviamos um link de acesso.', "Enter your email and we'll send you an access link.")}
           </p>
           <div className="mt-7 space-y-3">
             <input
@@ -151,7 +157,7 @@ function PlayerVipLogin() {
               value={email}
               onChange={(e) => { setEmail(e.target.value); if (state === 'error') setState('idle'); }}
               onKeyDown={(e) => { if (e.key === 'Enter') void send(); }}
-              placeholder="seu@email.com"
+              placeholder={L('seu@email.com', 'you@email.com')}
               className="w-full border border-white/16 bg-panel px-4 py-4 text-base text-white outline-none placeholder:text-poeira focus:border-neon-yellow"
             />
             {state === 'error' && <p className="text-xs text-baixa">{err}</p>}
@@ -160,11 +166,11 @@ function PlayerVipLogin() {
               disabled={state === 'sending'}
               className="btn-primary flex h-14 w-full items-center justify-center gap-2 disabled:opacity-60"
             >
-              {state === 'sending' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Receber link de acesso'}
+              {state === 'sending' ? <Loader2 className="h-4 w-4 animate-spin" /> : L('Receber link de acesso', 'Get access link')}
             </button>
           </div>
           <p className="mt-6 text-center text-[11px] leading-relaxed text-poeira">
-            Prefere WhatsApp? Peça seu link direto ao seu contato na OLEFOOT.
+            {L('Prefere WhatsApp? Peça seu link direto ao seu contato na OLEFOOT.', 'Prefer WhatsApp? Ask your OLEFOOT contact for your link.')}
           </p>
         </>
       )}
@@ -309,7 +315,7 @@ function PlayerVipDashboard() {
   async function shareLink() {
     if (!shareUrl) return;
     if (navigator.share) {
-      try { await navigator.share({ title: 'OLEFOOT', text: 'Entre na OLEFOOT', url: shareUrl }); return; } catch { /* fallthrough */ }
+      try { await navigator.share({ title: 'OLEFOOT', text: L('Entre na OLEFOOT', 'Join OLEFOOT'), url: shareUrl }); return; } catch { /* fallthrough */ }
     }
     copyLink();
   }
@@ -326,7 +332,7 @@ function PlayerVipDashboard() {
           <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="w-auto shrink-0" style={{ height: 19 }} />
           <span className="font-impact text-[13px] uppercase tracking-wide text-cimento">PLAYERVIP</span>
         </div>
-        <button onClick={() => void logout()} className="flex items-center gap-1.5 text-xs text-cimento transition-colors hover:text-white" aria-label="Sair">
+        <button onClick={() => void logout()} className="flex items-center gap-1.5 text-xs text-cimento transition-colors hover:text-white" aria-label={L('Sair', 'Sign out')}>
           <LogOut className="h-4 w-4" />
         </button>
       </header>
@@ -335,7 +341,7 @@ function PlayerVipDashboard() {
       <section className="border border-white/10 bg-panel">
         <div className="flex flex-wrap items-end justify-between gap-5 p-5 pb-4 sm:p-7 sm:pb-5">
           <div className="min-w-0">
-            <div className={ROTULO}>Disponível para saque</div>
+            <div className={ROTULO}>{L('Disponível para saque', 'Available to withdraw')}</div>
             <div className="ole-num mt-3 leading-none text-white [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(26px,8.5vw,52px)' }}>
               {loading ? '—' : brl(withdrawable)}
             </div>
@@ -345,7 +351,7 @@ function PlayerVipDashboard() {
               onClick={() => setModal('withdraw')}
               className="btn-primary flex h-14 items-center justify-center"
             >
-              Sacar
+              {L('Sacar', 'Withdraw')}
             </button>
           </div>
         </div>
@@ -353,21 +359,23 @@ function PlayerVipDashboard() {
           {withdrawals.some((w) => w.status === 'pending') && (
             <span className="inline-flex items-center gap-2 border border-white/10 px-3 py-1.5 font-mono text-[11px] font-medium text-cimento">
               <span className="h-1.5 w-1.5 rounded-full bg-atencao" />
-              Saque em análise
+              {L('Saque em análise', 'Withdrawal under review')}
             </span>
           )}
           <span className="inline-flex items-center gap-2 border border-white/10 px-3 py-1.5 font-mono text-[11px] font-medium text-cimento">
-            Depósito em até <b className="text-white">2 dias úteis</b>
+            {emIngles()
+              ? <>Deposit within <b className="text-white">2 business days</b></>
+              : <>Depósito em até <b className="text-white">2 dias úteis</b></>}
           </span>
         </div>
       </section>
 
       {/* STAT STRIP */}
       <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        <RailStat label="Coleções" value={loading ? '—' : String(cards.length)} />
-        <RailStat label="Vendidos" value={loading ? '—' : String(summary.totalSales)} rail={ALTA} />
-        <RailStat label="Curtidas" value={loading ? '—' : likes.toLocaleString('pt-BR')} />
-        <RailStat label="Indicados" value={loading ? '—' : String(referrals.length)} />
+        <RailStat label={L('Coleções', 'Collections')} value={loading ? '—' : String(cards.length)} />
+        <RailStat label={L('Vendidos', 'Sold')} value={loading ? '—' : String(summary.totalSales)} rail={ALTA} />
+        <RailStat label={L('Curtidas', 'Likes')} value={loading ? '—' : likes.toLocaleString(LOCALE)} />
+        <RailStat label={L('Indicados', 'Referrals')} value={loading ? '—' : String(referrals.length)} />
       </div>
 
       {/* COMISSÃO DE FACILITADOR — só aparece se a lenda trouxe outras lendas */}
@@ -375,10 +383,12 @@ function PlayerVipDashboard() {
         <div className="mt-2.5 flex items-center justify-between gap-3 border border-white/10 bg-panel px-5 py-4">
           <div className="min-w-0">
             <div className={ROTULO}>
-              Comissão de facilitador
+              {L('Comissão de facilitador', 'Facilitator commission')}
             </div>
             <div className="mt-0.5 text-[11px] text-cimento">
-              {summary.facilitatorSales} venda{summary.facilitatorSales === 1 ? '' : 's'} de lendas que você trouxe
+              {emIngles()
+                ? `${summary.facilitatorSales} sale${summary.facilitatorSales === 1 ? '' : 's'} by legends you brought in`
+                : `${summary.facilitatorSales} venda${summary.facilitatorSales === 1 ? '' : 's'} de lendas que você trouxe`}
             </div>
           </div>
           <div className="ole-num shrink-0 text-[20px] text-white">
@@ -393,10 +403,12 @@ function PlayerVipDashboard() {
         <div className="mt-2.5 flex items-center justify-between gap-3 border border-neon-yellow/30 bg-panel px-5 py-4">
           <div className="min-w-0">
             <div className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-neon-yellow">
-              Receita OLEFOOT
+              {L('Receita OLEFOOT', 'OLEFOOT revenue')}
             </div>
             <div className="mt-0.5 text-[11px] text-cimento">
-              {summary.platformSales} repasse{summary.platformSales === 1 ? '' : 's'} de venda de card (25% + 15%)
+              {emIngles()
+                ? `${summary.platformSales} card sale payout${summary.platformSales === 1 ? '' : 's'} (25% + 15%)`
+                : `${summary.platformSales} repasse${summary.platformSales === 1 ? '' : 's'} de venda de card (25% + 15%)`}
             </div>
           </div>
           <div className="ole-num shrink-0 text-[20px] text-white">
@@ -406,11 +418,11 @@ function PlayerVipDashboard() {
       )}
 
       {/* COLEÇÕES */}
-      <SectionHeader title="Minhas Coleções" />
+      <SectionHeader title={L('Minhas Coleções', 'My Collections')} />
       {loading ? (
         <SkeletonRows n={2} />
       ) : cards.length === 0 ? (
-        <EmptyCard>Assim que suas coleções forem publicadas, elas aparecem aqui.</EmptyCard>
+        <EmptyCard>{L('Assim que suas coleções forem publicadas, elas aparecem aqui.', 'Once your collections are published, they show up here.')}</EmptyCard>
       ) : (
         <div className="flex flex-col gap-2.5">
           {cards.map((c) => {
@@ -433,25 +445,25 @@ function PlayerVipDashboard() {
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 py-4 pr-3">
                   <div className={cn(ROTULO, 'truncate')}>
-                    {phase ? `Fase · ${phase}` : (c.rarity_label || 'Coleção')}
+                    {phase ? `${L('Fase', 'Phase')} · ${phase}` : (c.rarity_label || L('Coleção', 'Collection'))}
                   </div>
                   <h3 className="truncate font-impact text-[20px] uppercase leading-[1.1] text-white">{c.name}</h3>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <Kv k="Vendidos" v={String(cardStats.count)} />
+                    <Kv k={L('Vendidos', 'Sold')} v={String(cardStats.count)} />
                     {c.listed_on_market
-                      ? <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-neon-yellow">À venda</span>
-                      : <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-poeira">Pausada</span>}
+                      ? <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-neon-yellow">{L('À venda', 'For sale')}</span>
+                      : <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-poeira">{L('Pausada', 'Paused')}</span>}
                   </div>
                   {/* Só quem é dono do card chega aqui (get_my_linked_cards filtra por
                       beneficiary) — e o servidor recusa de novo no RPC. */}
                   <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
                     <button type="button" onClick={() => setContribution({ kind: 'correcao', card: c })}
                       className="text-[11px] font-bold uppercase tracking-wider text-cimento underline-offset-2 transition-colors hover:text-white hover:underline">
-                      Sugerir correção
+                      {L('Sugerir correção', 'Suggest a fix')}
                     </button>
                     <button type="button" onClick={() => setContribution({ kind: 'historia', card: c })}
                       className="text-[11px] font-bold uppercase tracking-wider text-cimento underline-offset-2 transition-colors hover:text-white hover:underline">
-                      Contar a história
+                      {L('Contar a história', 'Tell the story')}
                     </button>
                   </div>
                 </div>
@@ -462,7 +474,7 @@ function PlayerVipDashboard() {
                       : `${formatExp(cardStats.olefootCents)}`}
                   </div>
                   <div className="font-mono text-[9.5px] font-medium uppercase tracking-[0.14em] text-poeira">
-                    {cardStats.broCents > 0 || cardStats.olefootCents === 0 ? 'Ganhos (R$)' : 'Ganhos (OLE)'}
+                    {cardStats.broCents > 0 || cardStats.olefootCents === 0 ? L('Ganhos (R$)', 'Earnings (R$)') : L('Ganhos (OLE)', 'Earnings (OLE)')}
                   </div>
                 </div>
               </div>
@@ -472,11 +484,11 @@ function PlayerVipDashboard() {
       )}
 
       {/* HISTÓRICO DE VENDAS */}
-      <SectionHeader title="Histórico de Vendas" />
+      <SectionHeader title={L('Histórico de Vendas', 'Sales History')} />
       {loading ? (
         <SkeletonRows n={3} />
       ) : sales.length === 0 ? (
-        <EmptyCard>Quando alguém comprar um card seu, a venda aparece aqui na hora.</EmptyCard>
+        <EmptyCard>{L('Quando alguém comprar um card seu, a venda aparece aqui na hora.', 'When someone buys one of your cards, the sale shows up here instantly.')}</EmptyCard>
       ) : (
         <div className="overflow-hidden border border-white/10 bg-panel">
           {sales.map((s, i) => {
@@ -484,7 +496,7 @@ function PlayerVipDashboard() {
             const isBro = s.currency === 'BRO';
             const isFac = s.role === 'facilitator';
             const isPlatform = s.role === 'olefoot' || s.role === 'community';
-            const tag = isFac ? 'Comissão' : s.role === 'olefoot' ? 'Olefoot 25%' : s.role === 'community' ? 'Comunidade 15%' : null;
+            const tag = isFac ? L('Comissão', 'Commission') : s.role === 'olefoot' ? 'Olefoot 25%' : s.role === 'community' ? L('Comunidade 15%', 'Community 15%') : null;
             const accent = isFac || isPlatform ? YELLOW : ALTA;
             return (
               <div key={s.id}
@@ -497,7 +509,7 @@ function PlayerVipDashboard() {
                     {name}
                   </div>
                   <div className="mt-0.5 truncate text-[11px] text-cimento">
-                    {isFac ? 'Facilitador · ' : isPlatform ? 'Plataforma · ' : ''}{isBro ? 'PIX' : 'OLEFOOT'} · {new Date(s.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {isFac ? L('Facilitador · ', 'Facilitator · ') : isPlatform ? L('Plataforma · ', 'Platform · ') : ''}{isBro ? 'PIX' : 'OLEFOOT'} · {new Date(s.created_at).toLocaleDateString(LOCALE, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
                 <div className={cn('ole-num shrink-0 text-[14px]', isFac ? 'text-neon-yellow' : 'text-alta')}>
@@ -510,22 +522,22 @@ function PlayerVipDashboard() {
       )}
 
       {/* COMISSÕES */}
-      <SectionHeader title="Comissões" />
+      <SectionHeader title={L('Comissões', 'Commissions')} />
       <div className="grid gap-2.5 sm:grid-cols-[1fr_1.35fr]">
         <div className="border border-white/10 bg-panel p-5">
-          <div className={ROTULO}>Recebido por indicações</div>
+          <div className={ROTULO}>{L('Recebido por indicações', 'Earned from referrals')}</div>
           <div className="ole-num mt-3 text-white [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(24px,7vw,32px)' }}>
             {loading ? '—' : brl(commissionBroCents)}
           </div>
           <p className="mt-3 text-xs leading-relaxed text-cimento">
-            Você ganha sobre as vendas dos jogadores que trouxe para a OLEFOOT.
+            {L('Você ganha sobre as vendas dos jogadores que trouxe para a OLEFOOT.', 'You earn on sales by the players you brought to OLEFOOT.')}
           </p>
         </div>
         <div className="overflow-hidden border border-white/10 bg-panel">
           {loading ? (
-            <div className="p-5 text-sm text-poeira">Carregando…</div>
+            <div className="p-5 text-sm text-poeira">{L('Carregando…', 'Loading…')}</div>
           ) : referrals.length === 0 ? (
-            <div className="p-5 text-sm text-cimento">Você ainda não indicou ninguém. Compartilhe seu link abaixo.</div>
+            <div className="p-5 text-sm text-cimento">{L('Você ainda não indicou ninguém. Compartilhe seu link abaixo.', "You haven't referred anyone yet. Share your link below.")}</div>
           ) : (
             referrals.slice(0, 6).map((r, i) => (
               <div key={r.id} className={cn('flex items-center gap-3 px-4 py-3.5', i > 0 && 'border-t border-white/[0.07]')}>
@@ -534,13 +546,13 @@ function PlayerVipDashboard() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-bold">{r.displayName ?? r.clubName ?? 'Manager'}</div>
-                  <div className="mt-0.5 text-[11px] text-cimento">Entrou pelo seu link</div>
+                  <div className="mt-0.5 text-[11px] text-cimento">{L('Entrou pelo seu link', 'Joined via your link')}</div>
                 </div>
                 {/* Tamanho da equipe dele. A comissão sobre o EXP do indicado foi
                     removida em 2026-07-17 — agora o ganho vem por marco de rede. */}
                 {r.legSize > 0 ? (
                   <span className="shrink-0 font-mono text-[11px] text-cimento">
-                    equipe de {r.legSize.toLocaleString('pt-BR')}
+                    {L('equipe de', 'team of')} {r.legSize.toLocaleString(LOCALE)}
                   </span>
                 ) : null}
               </div>
@@ -550,18 +562,18 @@ function PlayerVipDashboard() {
       </div>
 
       {/* INDICAÇÃO */}
-      <SectionHeader title="Indique uma Lenda" />
+      <SectionHeader title={L('Indique uma Lenda', 'Refer a Legend')} />
       <div className="flex flex-wrap items-center justify-between gap-4 border border-white/10 bg-panel p-5">
         <div className="min-w-0">
-          <h4 className="font-impact text-[20px] uppercase leading-[1.1] text-white">Traga outros craques</h4>
-          <p className="mt-1 text-xs text-cimento">Compartilhe seu link e ganhe comissão sobre o que eles venderem.</p>
+          <h4 className="font-impact text-[20px] uppercase leading-[1.1] text-white">{L('Traga outros craques', 'Bring in other stars')}</h4>
+          <p className="mt-1 text-xs text-cimento">{L('Compartilhe seu link e ganhe comissão sobre o que eles venderem.', 'Share your link and earn commission on what they sell.')}</p>
         </div>
         <div className="flex items-center overflow-hidden border border-white/16 bg-deep-black">
           <code className="max-w-[52vw] truncate px-3.5 font-mono text-xs font-medium text-giz sm:max-w-[220px]">
             {shareUrl || '—'}
           </code>
           <button onClick={copyLink} disabled={!shareUrl}
-            className="px-3 py-3.5 text-cimento transition-colors hover:text-white disabled:opacity-40" aria-label="Copiar link">
+            className="px-3 py-3.5 text-cimento transition-colors hover:text-white disabled:opacity-40" aria-label={L('Copiar link', 'Copy link')}>
             {copied ? <CheckCircle2 className="h-4 w-4 text-alta" /> : <Copy className="h-4 w-4" />}
           </button>
           <button onClick={() => void shareLink()} disabled={!shareUrl}
@@ -574,13 +586,13 @@ function PlayerVipDashboard() {
       {/* AÇÕES */}
       <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
         <ActionTile icon={<Plus className="h-5 w-5" />} accent={YELLOW}
-          title="Pedir um card meu" desc="Conte o ano e o clube."
+          title={L('Pedir um card meu', 'Request my own card')} desc={L('Conte o ano e o clube.', 'Tell us the year and the club.')}
           onClick={() => setContribution({ kind: 'novo_card', card: null })} />
         <ActionTile icon={<Sparkles className="h-5 w-5" />} accent="var(--color-lenda)"
-          title="Indicar um atleta" desc="Quem merece uma coleção?"
+          title={L('Indicar um atleta', 'Refer an athlete')} desc={L('Quem merece uma coleção?', 'Who deserves a collection?')}
           onClick={() => setModal('collection')} />
         <ActionTile icon={<MessageCircle className="h-5 w-5" />} accent="var(--color-giz)"
-          title="Falar com a OLEFOOT" desc="Dúvida, saque, contrato."
+          title={L('Falar com a OLEFOOT', 'Contact OLEFOOT')} desc={L('Dúvida, saque, contrato.', 'Questions, withdrawals, contracts.')}
           onClick={() => setModal('support')} />
       </div>
 
@@ -671,7 +683,7 @@ function WithdrawModal({ open, onClose, maxCents, kycApproved, onDone }: {
     setBusy(true); setErr('');
     const r = await requestWithdrawal({ amountCents: cents, pixKey: pixKey.trim() });
     setBusy(false);
-    if (!r.ok) { setErr(r.error ?? 'Não foi possível.'); return; }
+    if (!r.ok) { setErr(r.error ?? L('Não foi possível.', 'Something went wrong.')); return; }
     setOk(true);
     setTimeout(onDone, 1400);
   }
@@ -679,29 +691,33 @@ function WithdrawModal({ open, onClose, maxCents, kycApproved, onDone }: {
   return (
     <ConfirmDialog
       open={open} onClose={onClose} onConfirm={() => void submit()}
-      eyebrow="Saque · PIX" title={ok ? 'Pedido enviado' : 'Sacar valores'}
-      confirmLabel={busy ? 'Enviando…' : 'Confirmar saque'} confirmDisabled={!valid || busy || ok}
+      eyebrow={L('Saque · PIX', 'Withdrawal · PIX')} title={ok ? L('Pedido enviado', 'Request sent') : L('Sacar valores', 'Withdraw funds')}
+      confirmLabel={busy ? L('Enviando…', 'Sending…') : L('Confirmar saque', 'Confirm withdrawal')} confirmDisabled={!valid || busy || ok}
     >
       {ok ? (
         <p className="mt-3 text-sm leading-relaxed text-giz">
-          Recebemos seu pedido. O depósito cai na conta em até <b className="text-white">2 dias úteis</b> após a conferência.
+          {emIngles()
+            ? <>Request received. The deposit reaches your account within <b className="text-white">2 business days</b> after review.</>
+            : <>Recebemos seu pedido. O depósito cai na conta em até <b className="text-white">2 dias úteis</b> após a conferência.</>}
         </p>
       ) : !kycApproved ? (
         <div className="mt-3 border border-atencao/40 bg-atencao/10 p-3.5 text-[13px] leading-relaxed text-giz">
           <ShieldCheck className="mb-1.5 h-4 w-4 text-atencao" />
-          Para liberar saques precisamos verificar sua conta. Toque em <b>Falar com a OLEFOOT</b> que a gente resolve rápido.
+          {emIngles()
+            ? <>To unlock withdrawals we need to verify your account. Tap <b>Contact OLEFOOT</b> and we'll sort it out fast.</>
+            : <>Para liberar saques precisamos verificar sua conta. Toque em <b>Falar com a OLEFOOT</b> que a gente resolve rápido.</>}
         </div>
       ) : (
         <div className="mt-4 space-y-3">
           <div>
-            <label className={ROTULO}>Valor (R$)</label>
-            <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="0,00"
+            <label className={ROTULO}>{L('Valor (R$)', 'Amount (R$)')}</label>
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder={L('0,00', '0.00')}
               className={cn(INPUT, 'mt-1')} />
-            <div className="mt-1 text-[11px] text-cimento">Disponível: <b className="font-mono font-medium text-white">{brl(maxCents)}</b></div>
+            <div className="mt-1 text-[11px] text-cimento">{L('Disponível', 'Available')}: <b className="font-mono font-medium text-white">{brl(maxCents)}</b></div>
           </div>
           <div>
-            <label className={ROTULO}>Chave PIX</label>
-            <input value={pixKey} onChange={(e) => setPixKey(e.target.value)} placeholder="CPF, e-mail ou telefone"
+            <label className={ROTULO}>{L('Chave PIX', 'PIX key')}</label>
+            <input value={pixKey} onChange={(e) => setPixKey(e.target.value)} placeholder={L('CPF, e-mail ou telefone', 'CPF, email or phone')}
               className={cn(INPUT, 'mt-1')} />
           </div>
           {err && <p className="text-xs text-baixa">{err}</p>}
@@ -723,18 +739,18 @@ function SupportModal({ open, onClose }: { open: boolean; onClose: () => void })
     setBusy(true); setErr('');
     const r = await sendSupportMessage({ body: body.trim() });
     setBusy(false);
-    if (!r.ok) { setErr(r.error ?? 'Não foi possível.'); return; }
+    if (!r.ok) { setErr(r.error ?? L('Não foi possível.', 'Something went wrong.')); return; }
     setOk(true); setTimeout(onClose, 1400);
   }
   return (
     <ConfirmDialog open={open} onClose={onClose} onConfirm={() => void submit()}
-      eyebrow="Suporte" title={ok ? 'Mensagem enviada' : 'Falar com a OLEFOOT'}
-      confirmLabel={busy ? 'Enviando…' : 'Enviar'} confirmDisabled={busy || ok || body.trim().length < 3}>
+      eyebrow={L('Suporte', 'Support')} title={ok ? L('Mensagem enviada', 'Message sent') : L('Falar com a OLEFOOT', 'Contact OLEFOOT')}
+      confirmLabel={busy ? L('Enviando…', 'Sending…') : L('Enviar', 'Send')} confirmDisabled={busy || ok || body.trim().length < 3}>
       {ok ? (
-        <p className="mt-3 text-sm leading-relaxed text-giz">Recebemos sua mensagem. Responderemos por e-mail em breve.</p>
+        <p className="mt-3 text-sm leading-relaxed text-giz">{L('Recebemos sua mensagem. Responderemos por e-mail em breve.', "We got your message. We'll reply by email soon.")}</p>
       ) : (
         <div className="mt-4">
-          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder="Como podemos ajudar?"
+          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder={L('Como podemos ajudar?', 'How can we help?')}
             className={cn(INPUT, 'resize-none')} />
           {err && <p className="mt-2 text-xs text-baixa">{err}</p>}
         </div>
@@ -757,25 +773,25 @@ function CollectionModal({ open, onClose }: { open: boolean; onClose: () => void
     setBusy(true); setErr('');
     const r = await requestNewCollection({ athleteName: athlete.trim(), notes: notes.trim() || undefined, referredName: ref.trim() || undefined });
     setBusy(false);
-    if (!r.ok) { setErr(r.error ?? 'Não foi possível.'); return; }
+    if (!r.ok) { setErr(r.error ?? L('Não foi possível.', 'Something went wrong.')); return; }
     setOk(true); setTimeout(onClose, 1400);
   }
   return (
     <ConfirmDialog open={open} onClose={onClose} onConfirm={() => void submit()}
-      eyebrow="Indicação" title={ok ? 'Indicação enviada' : 'Indicar um atleta'}
-      confirmLabel={busy ? 'Enviando…' : 'Solicitar'} confirmDisabled={busy || ok || athlete.trim().length < 2}>
+      eyebrow={L('Indicação', 'Referral')} title={ok ? L('Indicação enviada', 'Referral sent') : L('Indicar um atleta', 'Refer an athlete')}
+      confirmLabel={busy ? L('Enviando…', 'Sending…') : L('Solicitar', 'Submit')} confirmDisabled={busy || ok || athlete.trim().length < 2}>
       {ok ? (
         <p className="mt-3 text-sm leading-relaxed text-giz">
           <Sparkles className="mb-1 mr-1 inline h-4 w-4 text-neon-yellow" />
-          Recebemos! Nossa equipe monta a proposta e envia para sua aprovação.
+          {L('Recebemos! Nossa equipe monta a proposta e envia para sua aprovação.', 'Got it! Our team will put together the proposal and send it for your approval.')}
         </p>
       ) : (
         <div className="mt-4 space-y-3">
-          <input value={athlete} onChange={(e) => setAthlete(e.target.value)} placeholder="Nome do atleta que você indica"
+          <input value={athlete} onChange={(e) => setAthlete(e.target.value)} placeholder={L('Nome do atleta que você indica', 'Name of the athlete you refer')}
             className={INPUT} />
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Por que ele merece uma coleção? (opcional)"
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder={L('Por que ele merece uma coleção? (opcional)', 'Why does he deserve a collection? (optional)')}
             className={cn(INPUT, 'resize-none')} />
-          <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Como falar com ele? WhatsApp ou e-mail (opcional)"
+          <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder={L('Como falar com ele? WhatsApp ou e-mail (opcional)', 'How do we reach him? WhatsApp or email (optional)')}
             className={INPUT} />
           {err && <p className="text-xs text-baixa">{err}</p>}
         </div>

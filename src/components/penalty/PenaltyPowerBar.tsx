@@ -1,3 +1,4 @@
+import { L } from '@/i18n/L';
 import { POWER_SWEET_HIGH, POWER_SWEET_LOW } from './constants';
 
 export function PenaltyPowerBar({ power }: { power: number }) {
@@ -6,18 +7,18 @@ export function PenaltyPowerBar({ power }: { power: number }) {
 
   const label =
     power > POWER_SWEET_HIGH
-      ? 'DEMAIS!'
+      ? L('DEMAIS!', 'TOO MUCH!')
       : power > POWER_SWEET_LOW
         ? power > 0.6
-          ? 'PURA PANCADA'
-          : 'BOM'
-        : 'FRACO';
+          ? L('PURA PANCADA', 'PURE POWER')
+          : L('BOM', 'GOOD')
+        : L('FRACO', 'WEAK');
 
   return (
     <div className="w-full max-w-[920px] mt-4">
       <div className="flex items-baseline justify-between mb-1">
         <div className="text-[11px] uppercase tracking-[0.35em] font-bold text-black">
-          Força · {Math.round(power * 100)}%
+          {L('Força', 'Power')} · {Math.round(power * 100)}%
         </div>
         <div
           className="text-[11px] uppercase tracking-[0.3em] font-black"
@@ -44,7 +45,7 @@ export function PenaltyPowerBar({ power }: { power: number }) {
         />
       </div>
       <div className="text-[10px] uppercase tracking-[0.25em] text-black/60 mt-1">
-        Solte o botão pra chutar · Zona amarela = pancada na medida
+        {L('Solte o botão pra chutar · Zona amarela = pancada na medida', 'Release to shoot · Yellow zone = perfect strike')}
       </div>
     </div>
   );

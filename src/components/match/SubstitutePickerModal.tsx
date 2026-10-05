@@ -6,6 +6,8 @@ import type { PitchPlayerState } from '@/engine/types';
 import type { PlayerEntity } from '@/entities/types';
 import { roleFromPos } from '@/engine/pitchFromLineup';
 
+import { L } from '@/i18n/L';
+import { posLabel } from './posLabel';
 const NEON = '#FDE100';
 
 interface Props {
@@ -72,7 +74,7 @@ export function SubstitutePickerModal({ outgoing, bench, onPick, onClose }: Prop
             marginBottom: 6,
           }}
         >
-          Substituir · {outgoing.pos}
+          {L('Substituir', 'Substitute')} · {posLabel(outgoing.pos)}
         </div>
 
         {/* Saindo */}
@@ -96,7 +98,7 @@ export function SubstitutePickerModal({ outgoing, bench, onPick, onClose }: Prop
             marginBottom: 16,
           }}
         >
-          Escolha o jogador que entra
+          {L('Escolha o jogador que entra', 'Choose the player coming on')}
         </div>
 
         {/* Lista */}
@@ -110,7 +112,7 @@ export function SubstitutePickerModal({ outgoing, bench, onPick, onClose }: Prop
               padding: '20px 0',
             }}
           >
-            Nenhum reserva disponível.
+            {L('Nenhum reserva disponível.', 'No subs available.')}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -166,7 +168,7 @@ export function SubstitutePickerModal({ outgoing, bench, onPick, onClose }: Prop
                       width: 42,
                     }}
                   >
-                    {p.pos}
+                    {posLabel(p.pos)}
                   </span>
                   <span
                     style={{
@@ -213,7 +215,7 @@ export function SubstitutePickerModal({ outgoing, bench, onPick, onClose }: Prop
               cursor: 'pointer',
             }}
           >
-            Cancelar
+            {L('Cancelar', 'Cancel')}
           </button>
         </div>
       </div>

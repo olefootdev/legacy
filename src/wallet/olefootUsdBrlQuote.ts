@@ -1,4 +1,5 @@
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
+import { L } from '@/i18n/L';
 
 /**
  * A cotação vem do NOSSO servidor (GET /api/quote/usd-brl), não do terceiro.
@@ -39,7 +40,7 @@ export type OlefootUsdBrlQuoteState =
 export async function fetchOlefootUsdBrlQuote(): Promise<OlefootUsdBrlQuoteOk> {
   const res = await fetch(`${olefootApiBase()}${QUOTE_PATH}`);
   if (!res.ok) {
-    throw new Error(`Cotação indisponível (${res.status})`);
+    throw new Error(L(`Cotação indisponível (${res.status})`, `Quote unavailable (${res.status})`));
   }
   const data = (await res.json()) as QuoteResponse;
   const { apiCompra, apiVenda, olefootCompra, olefootVenda } = data;
@@ -49,7 +50,7 @@ export async function fetchOlefootUsdBrlQuote(): Promise<OlefootUsdBrlQuoteOk> {
       (n) => typeof n === 'number' && Number.isFinite(n) && n > 0,
     )
   ) {
-    throw new Error('Resposta da cotação inválida');
+    throw new Error(L('Resposta da cotação inválida', 'Invalid quote response'));
   }
   return {
     status: 'ok',

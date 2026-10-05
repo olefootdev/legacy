@@ -18,6 +18,7 @@
 import { motion } from 'motion/react';
 import { ArrowLeftRight, Gavel, Tag, TrendingUp } from 'lucide-react';
 import { formatPrice, type MarketActivity } from '@/market/socialTrade';
+import { L } from '@/i18n/L';
 
 interface MarketActivityFeedProps {
   activities: MarketActivity[];
@@ -33,11 +34,11 @@ const ICONE: Record<MarketActivity['type'], typeof TrendingUp> = {
 };
 
 const VERBO: Record<MarketActivity['type'], string> = {
-  purchase: 'comprou',
-  sale: 'vendeu',
-  auction_won: 'arrematou',
-  auction_lost: 'disputou',
-  listing: 'listou',
+  purchase: L('comprou', 'bought'),
+  sale: L('vendeu', 'sold'),
+  auction_won: L('arrematou', 'won'),
+  auction_lost: L('disputou', 'bid on'),
+  listing: L('listou', 'listed'),
 };
 
 export function MarketActivityFeed({ activities, maxVisible = 5 }: MarketActivityFeedProps) {
@@ -46,7 +47,7 @@ export function MarketActivityFeed({ activities, maxVisible = 5 }: MarketActivit
   if (activities.length === 0) {
     return (
       <p className="py-6 text-center text-white/40" style={{ fontFamily: 'var(--font-sans)', fontSize: '13px' }}>
-        Nenhuma movimentação no mercado ainda.
+        {L('Nenhuma movimentação no mercado ainda.', 'No market activity yet.')}
       </p>
     );
   }
@@ -97,7 +98,7 @@ export function MarketActivityFeed({ activities, maxVisible = 5 }: MarketActivit
                     className="font-display font-black uppercase"
                     style={{ fontSize: '9px', letterSpacing: '0.1em', color: 'var(--color-success)' }}
                   >
-                    +{formatPrice(a.profit, a.currency)} de lucro
+                    +{formatPrice(a.profit, a.currency)} {L('de lucro', 'profit')}
                   </span>
                 )}
 
@@ -122,8 +123,8 @@ function formatRelativeTime(date: Date): string {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (days > 0) return `há ${days}d`;
-  if (hours > 0) return `há ${hours}h`;
-  if (minutes > 0) return `há ${minutes}min`;
-  return 'agora';
+  if (days > 0) return L(`há ${days}d`, `${days}d ago`);
+  if (hours > 0) return L(`há ${hours}h`, `${hours}h ago`);
+  if (minutes > 0) return L(`há ${minutes}min`, `${minutes}min ago`);
+  return L('agora', 'now');
 }

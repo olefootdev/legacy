@@ -12,6 +12,7 @@ import type { PastResult } from '@/entities/types';
 import type { PersistentConsequence } from '@/systems/consequences/types';
 import { MS_PER_HOUR } from '@/systems/timeCalibration';
 import type { QuickHook } from './types';
+import { L } from '@/i18n/L';
 
 const MAX_ACTIVE_HOOKS = 3;
 
@@ -31,7 +32,7 @@ export function buildStarPerformingHook(
   return {
     id: genHookId('star'),
     kind: 'star_performing',
-    title: `${playerName} tá voando`,
+    title: L(`${playerName} tá voando`, `${playerName} is flying`),
     body: context, // ex: "3 gols em 5 partidas"
     preferredSlotKind: 'short',
     validFrom: nowMs,
@@ -48,7 +49,7 @@ export function buildCliffhangerHook(
   return {
     id: genHookId('cliff'),
     kind: 'cliffhanger',
-    title: 'Algo aconteceu no vestiário',
+    title: L('Algo aconteceu no vestiário', 'Something happened in the dressing room'),
     body: reason,
     preferredSlotKind: 'any',
     validFrom: nowMs,
@@ -67,7 +68,7 @@ export function buildTimeLimitedOfferHook(
   return {
     id: genHookId('offer'),
     kind: 'time_limited_offer',
-    title: `Oferta pelo ${playerName} expira em ${minutes}min`,
+    title: L(`Oferta pelo ${playerName} expira em ${minutes}min`, `Offer for ${playerName} expires in ${minutes}min`),
     preferredSlotKind: 'any',
     validFrom: nowMs,
     validUntil: nowMs + msUntilExpiry,
@@ -84,8 +85,8 @@ export function buildStreakPreservationHook(
   return {
     id: genHookId('streak'),
     kind: 'streak_preservation',
-    title: `Não perca sua sequência de ${streakDays} dias`,
-    body: 'Bastam 30s pra manter ativa.',
+    title: L(`Não perca sua sequência de ${streakDays} dias`, `Don't lose your ${streakDays}-day streak`),
+    body: L('Bastam 30s pra manter ativa.', '30s is all it takes to keep it alive.'),
     preferredSlotKind: 'short',
     validFrom: nowMs,
     validUntil: nowMs + msUntilBreak,
@@ -103,7 +104,7 @@ export function buildMatchStartingHook(
   return {
     id: genHookId('kickoff'),
     kind: 'match_starting',
-    title: `Próxima partida em ${minutes}min`,
+    title: L(`Próxima partida em ${minutes}min`, `Next match in ${minutes}min`),
     body: `vs ${opponent}`,
     preferredSlotKind: 'any',
     validFrom: nowMs,
@@ -120,7 +121,7 @@ export function buildRivalChallengeHook(
   return {
     id: genHookId('rival'),
     kind: 'rival_challenge',
-    title: `${rivalName} te ofereceu amistoso`,
+    title: L(`${rivalName} te ofereceu amistoso`, `${rivalName} challenged you to a friendly`),
     preferredSlotKind: 'short',
     validFrom: nowMs,
     validUntil: nowMs + 3 * MS_PER_HOUR,
@@ -149,13 +150,13 @@ export function autoDetectHooks(input: AutoHookInput, nowMs: number = Date.now()
     const mvpCounts = new Map<string, { name: string; count: number }>();
     for (const r of input.recentResults.slice(-5)) {
       if (!r.scoutMvp) continue;
-      const cur = mvpCounts.get(r.scoutMvp.playerId) ?? { name: r.scoutMvp.name ?? 'jogador', count: 0 };
+      const cur = mvpCounts.get(r.scoutMvp.playerId) ?? { name: r.scoutMvp.name ?? L('jogador', 'player'), count: 0 };
       cur.count += 1;
       mvpCounts.set(r.scoutMvp.playerId, cur);
     }
     for (const [, entry] of mvpCounts) {
       if (entry.count >= 2) {
-        hooks.push(buildStarPerformingHook(entry.name, `${entry.count} MVPs recentes`, nowMs));
+        hooks.push(buildStarPerformingHook(entry.name, L(`${entry.count} MVPs recentes`, `${entry.count} recent MVPs`), nowMs));
         break;
       }
     }
@@ -166,7 +167,7 @@ export function autoDetectHooks(input: AutoHookInput, nowMs: number = Date.now()
     (c) => c.kind === 'injury_severe_out' && (nowMs - c.startsAt) < 30 * 60 * 1000,
   );
   if (severeInjury) {
-    hooks.push(buildCliffhangerHook('Lesão grave em jogador-chave', nowMs));
+    hooks.push(buildCliffhangerHook(L('Lesão grave em jogador-chave', 'Serious injury to a key player'), nowMs));
   }
 
   // Streak em risco (< 2h pra perder)

@@ -44,10 +44,15 @@ import {
   type LigaOleWeeklyRow,
 } from '@/supabase/ligaOleWeekly';
 import type { OpponentStub } from '@/entities/types';
+import { L, LOCALE, emIngles } from '@/i18n/L';
 
 /** Fonte de manchete do layer final. (Era serifa itálica.) */
 const MANCHETE = 'var(--font-impact)';
-const roundAbbr = (r: string) => r.replace('Fase de 32', '32-avos').replace('Semifinal', 'Semi');
+/** Rótulo de TELA das fases — o valor PT (LIGA_OLE_ROUNDS) segue sendo a chave. */
+const ROUND_LABEL_EN: Record<string, string> = { 'Fase de 32': 'Round of 32', Oitavas: 'Round of 16', Quartas: 'Quarter-finals', Semifinal: 'Semi-final', Final: 'Final' };
+const ROUND_ABBR_EN: Record<string, string> = { 'Fase de 32': 'R32', Oitavas: 'R16', Quartas: 'QF', Semifinal: 'Semi', Final: 'Final' };
+const roundLabel = (r: string) => (emIngles() ? ROUND_LABEL_EN[r] ?? r : r);
+const roundAbbr = (r: string) => (emIngles() ? ROUND_ABBR_EN[r] ?? r : r.replace('Fase de 32', '32-avos').replace('Semifinal', 'Semi'));
 
 /** Uma linha de confronto do chaveamento (compacto, mobile). */
 function BracketRow({ m }: { m: LigaOleRoundMatch }) {
@@ -112,8 +117,8 @@ function BracketCompact({ liga }: { liga: LigaOleState }) {
       </div>
       <p className="font-mono uppercase tracking-[0.14em] text-[10px] text-cimento mb-2 px-0.5">
         {isCurrent
-          ? `${matches.length * 2} clubes ainda na disputa`
-          : `Resultados · ${matches.length} ${matches.length === 1 ? 'jogo' : 'jogos'}`}
+          ? L(`${matches.length * 2} clubes ainda na disputa`, `${matches.length * 2} clubs still in contention`)
+          : L(`Resultados · ${matches.length} ${matches.length === 1 ? 'jogo' : 'jogos'}`, `Results · ${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`)}
       </p>
       <div className="flex flex-col gap-1.5">
         {matches.map((m) => <BracketRow key={m.pairIndex} m={m} />)}
@@ -143,12 +148,12 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 /** Leaderboard da Liga da Semana — quem chegou mais longe (Supabase real). */
 function WeeklyLeaderboard({ rows, myId, weekLabel }: { rows: LigaOleWeeklyRow[]; myId: string | null; weekLabel: string }) {
   if (!rows.length) return null;
-  const reachedName = (i: number, champ: boolean) => (champ ? 'Campeão' : (LIGA_OLE_ROUNDS[Math.max(0, Math.min(4, i))] ?? '—'));
+  const reachedName = (i: number, champ: boolean) => (champ ? L('Campeão', 'Champion') : roundLabel(LIGA_OLE_ROUNDS[Math.max(0, Math.min(4, i))] ?? '—'));
   return (
     <div className="border border-white/10 bg-panel p-3">
       <div className="flex items-center gap-2 mb-2.5 px-0.5">
         <CalendarDays className="w-3.5 h-3.5 text-neon-yellow shrink-0" strokeWidth={2.5} aria-hidden />
-        <span className="truncate font-mono uppercase tracking-[0.12em] text-[10px] text-cimento">Liga da Semana · {weekLabel} · quem chegou mais longe</span>
+        <span className="truncate font-mono uppercase tracking-[0.12em] text-[10px] text-cimento">{L('Liga da Semana', 'League of the Week')} · {weekLabel} · {L('quem chegou mais longe', 'who went furthest')}</span>
       </div>
       <div className="flex flex-col gap-1">
         {rows.map((r) => {
@@ -300,7 +305,7 @@ export function LigaOle() {
         // assume o próprio slot no campo (ou troca o último, se não estiver nele).
         const field = await fetchLigaOleRivals({ count: 32, seed });
         if (field.length < 32) {
-          setError('Ainda não há 32 managers reais pra montar a Liga da Semana.');
+          setError(L('Ainda não há 32 managers reais pra montar a Liga da Semana.', 'There are not yet 32 real managers to build the League of the Week.'));
           setBusy(false);
           return;
         }
@@ -313,7 +318,7 @@ export function LigaOle() {
         // CLÁSSICA: 31 rivais sorteados em volta do manager (bracket próprio).
         const rivals = await fetchLigaOleRivals({ excludeShort: club.shortName, excludeName: club.name, excludeManagerId: myManagerId, count: 31, seed });
         if (rivals.length < 31) {
-          setError('Ainda não há managers suficientes pra montar a Liga Ole (precisa de 31 rivais reais).');
+          setError(L('Ainda não há managers suficientes pra montar a Liga Ole (precisa de 31 rivais reais).', 'Not enough managers yet to build the Liga Ole (31 real rivals needed).'));
           setBusy(false);
           return;
         }
@@ -328,7 +333,7 @@ export function LigaOle() {
       dispatch({ type: 'CREATE_LIGA_OLE', liga: built, mode, weekKey: mode === 'weekly' ? weekKey : undefined });
       setWager(0);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Falha ao criar a liga.');
+      setError(e instanceof Error ? e.message : L('Falha ao criar a liga.', 'Failed to create the league.'));
     } finally {
       setBusy(false);
     }
@@ -354,7 +359,7 @@ export function LigaOle() {
       dispatch({ type: 'START_LIGA_OLE_MATCH', opponentId: opp.id, wager: Math.min(wager, balance) });
       navigate('/match/quick');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Falha ao montar a partida.');
+      setError(e instanceof Error ? e.message : L('Falha ao montar a partida.', 'Failed to set up the match.'));
       setBusy(false);
     }
   };
@@ -368,7 +373,7 @@ export function LigaOle() {
   // ficar sempre à mão no mobile, sem precisar rolar de volta.
   const advanceBtn = (
     <button type="button" disabled={busy || !opp} onClick={() => setPreviewOpen(true)} className={pillCls} style={pillStyle}>
-      {busy ? 'Preparando a partida…' : <>Avançar <ChevronRight className="w-4 h-4" strokeWidth={3} aria-hidden /></>}
+      {busy ? L('Preparando a partida…', 'Preparing the match…') : <>{L('Avançar', 'Advance')} <ChevronRight className="w-4 h-4" strokeWidth={3} aria-hidden /></>}
     </button>
   );
 
@@ -389,9 +394,9 @@ export function LigaOle() {
             <MomentShareCard
               moment={ligaOleMoment}
               clubName={flash!.clubName}
-              highlight={bestPlayer ? { label: 'Craque', name: bestPlayer.name, detail: `OVR ${bestPlayer.ovr}` } : null}
+              highlight={bestPlayer ? { label: L('Craque', 'Star'), name: bestPlayer.name, detail: `OVR ${bestPlayer.ovr}` } : null}
               referralCode={referralCode}
-              ctaLabel={flash!.outcome === 'champion' ? 'CRIE SEU TIME AGORA' : 'VEM TENTAR TAMBÉM'}
+              ctaLabel={flash!.outcome === 'champion' ? L('CRIE SEU TIME AGORA', 'CREATE YOUR TEAM NOW') : L('VEM TENTAR TAMBÉM', 'COME GIVE IT A TRY')}
             />
           )}
           {flash?.outcome === 'eliminated' && (
@@ -399,14 +404,14 @@ export function LigaOle() {
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               className="relative px-6 py-7 border border-baixa bg-panel"
             >
-              <button type="button" onClick={dismissFlash} aria-label="Fechar" className="absolute top-3 right-4 text-cimento hover:text-white text-lg leading-none">×</button>
+              <button type="button" onClick={dismissFlash} aria-label={L('Fechar', 'Close')} className="absolute top-3 right-4 text-cimento hover:text-white text-lg leading-none">×</button>
               <p className="font-mono uppercase tracking-[0.16em] text-[11px] font-medium text-baixa mb-2 flex items-center gap-2">
-                <ShieldX className="w-4 h-4" strokeWidth={2.5} aria-hidden /> Fim da linha
+                <ShieldX className="w-4 h-4" strokeWidth={2.5} aria-hidden /> {L('Fim da linha', 'End of the road')}
               </p>
               <p className="text-white leading-[1.1]" style={{ fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: 'clamp(34px, 10vw, 52px)', letterSpacing: '-0.01em' }}>
-                {flash.reachedRound}
+                {roundLabel(flash.reachedRound)}
               </p>
-              <p className="mt-2 font-mono uppercase tracking-[0.14em] text-[11.5px] text-cimento">Eliminado</p>
+              <p className="mt-2 font-mono uppercase tracking-[0.14em] text-[11.5px] text-cimento">{L('Eliminado', 'Eliminated')}</p>
             </motion.div>
           )}
 
@@ -415,9 +420,9 @@ export function LigaOle() {
             <CinematicHero
               badgeLabel="Liga Ole"
               BadgeIcon={Trophy}
-              eyebrow="#matamata · 32 clubes"
-              title="Seja campeão."
-              caption="Só managers reais · 5 confrontos"
+              eyebrow={L('#matamata · 32 clubes', '#knockout · 32 clubs')}
+              title={L('Seja campeão.', 'Be the champion.')}
+              caption={L('Só managers reais · 5 confrontos', 'Real managers only · 5 ties')}
               image="/banner-inicio-liga-ole.png"
             />
           )}
@@ -428,11 +433,11 @@ export function LigaOle() {
               <span className="flex items-center gap-2.5 min-w-0">
                 <Crown className="w-5 h-5 text-neon-yellow shrink-0" strokeWidth={2} aria-hidden />
                 <span className="min-w-0">
-                  <span className="block font-mono uppercase tracking-[0.14em] text-[10px] text-cimento">Dinastia</span>
+                  <span className="block font-mono uppercase tracking-[0.14em] text-[10px] text-cimento">{L('Dinastia', 'Dynasty')}</span>
                   <span className="block truncate text-neon-yellow leading-[1.1]" style={{ fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: '20px' }}>{dinastiaLabel(titles)}</span>
                 </span>
               </span>
-              <span className="ole-num text-[13px] text-neon-yellow shrink-0">prêmios ×{dinastiaMultiplier(titles).toFixed(2)}</span>
+              <span className="ole-num text-[13px] text-neon-yellow shrink-0">{L('prêmios', 'prizes')} ×{dinastiaMultiplier(titles).toFixed(2)}</span>
             </div>
           )}
 
@@ -441,19 +446,23 @@ export function LigaOle() {
             <div className="flex items-center gap-2.5 px-4 py-3 border border-baixa bg-panel">
               <Skull className="w-5 h-5 text-baixa shrink-0" strokeWidth={2} aria-hidden />
               <p className="text-[12.5px] text-giz leading-snug">
-                Revanche: <span className="text-white font-semibold">{nemesis.name}</span> te eliminou na <span className="text-baixa">{nemesis.round}</span> · volta na Liga Ole clássica.
+                {emIngles()
+                  ? <>Revenge: <span className="text-white font-semibold">{nemesis.name}</span> knocked you out in the <span className="text-baixa">{roundLabel(nemesis.round)}</span> · back in the classic Liga Ole.</>
+                  : <>Revanche: <span className="text-white font-semibold">{nemesis.name}</span> te eliminou na <span className="text-baixa">{nemesis.round}</span> · volta na Liga Ole clássica.</>}
               </p>
             </div>
           )}
 
           <div>
             <p className="font-mono text-cimento text-[11.5px] leading-snug mb-3 px-1">
-              <span className="text-white">31 managers reais</span> + você · 5 fases · empate vai pros <span className="text-neon-yellow">pênaltis</span> · perdeu, acabou
+              {emIngles()
+                ? <><span className="text-white">31 real managers</span> + you · 5 rounds · draws go to <span className="text-neon-yellow">penalties</span> · lose and you're out</>
+                : <><span className="text-white">31 managers reais</span> + você · 5 fases · empate vai pros <span className="text-neon-yellow">pênaltis</span> · perdeu, acabou</>}
             </p>
             {error && <p className="text-baixa text-[12px] mb-2 px-1">{error}</p>}
             <div className="flex flex-col gap-2.5">
               <button type="button" disabled={busy} onClick={() => createLeague('classic')} className={pillCls} style={pillStyle}>
-                {busy ? 'Sorteando os 32…' : flash ? 'Criar nova Liga Ole' : 'Criar Liga Ole'}
+                {busy ? L('Sorteando os 32…', 'Drawing the 32…') : flash ? L('Criar nova Liga Ole', 'Create new Liga Ole') : L('Criar Liga Ole', 'Create Liga Ole')}
               </button>
               {/* Liga da Semana — mesmo chaveamento pra todos os managers, ranking real */}
               <button
@@ -462,10 +471,10 @@ export function LigaOle() {
                 onClick={() => createLeague('weekly')}
                 className="ole-num w-full h-[50px] whitespace-nowrap uppercase text-[13px] transition-colors disabled:opacity-50 flex items-center justify-center gap-2 border border-neon-yellow bg-panel text-neon-yellow hover:bg-card"
               >
-                <CalendarDays className="w-4 h-4" strokeWidth={2.5} aria-hidden /> Liga da Semana
+                <CalendarDays className="w-4 h-4" strokeWidth={2.5} aria-hidden /> {L('Liga da Semana', 'League of the Week')}
               </button>
               <p className="font-mono text-[10.5px] text-cimento text-center">
-                Liga da Semana · {weekKey} · mesmo chaveamento pra todo mundo
+                {L('Liga da Semana', 'League of the Week')} · {weekKey} · {L('mesmo chaveamento pra todo mundo', 'same bracket for everyone')}
               </p>
             </div>
           </div>
@@ -480,7 +489,7 @@ export function LigaOle() {
         <div className="flex flex-col gap-7">
           {/* A JORNADA: trilha + confronto + ÚNICO CTA */}
           <div className="flex flex-col gap-4">
-            <SectionHeader>A Jornada</SectionHeader>
+            <SectionHeader>{L('A Jornada', 'The Journey')}</SectionHeader>
 
             {/* Trilha das fases */}
             <div className="flex items-stretch gap-1.5">
@@ -502,21 +511,21 @@ export function LigaOle() {
             <div className="relative overflow-hidden border border-neon-yellow bg-panel px-5 py-6">
               {opp && nemesis && opp.id === nemesis.id && (
                 <p className="flex items-center justify-center gap-1.5 font-mono uppercase tracking-[0.16em] text-[11px] font-medium text-baixa mb-2">
-                  <Skull className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> Revanche
+                  <Skull className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Revanche', 'Revenge')}
                 </p>
               )}
               <p className="font-mono uppercase tracking-[0.16em] text-[11px] font-medium text-neon-yellow text-center mb-4">
-                {active.mode === 'weekly' ? 'Liga da Semana · ' : ''}{LIGA_OLE_ROUNDS[active.roundIndex]}
+                {active.mode === 'weekly' ? L('Liga da Semana · ', 'League of the Week · ') : ''}{roundLabel(LIGA_OLE_ROUNDS[active.roundIndex])}
               </p>
               <div className="flex items-center justify-center gap-3">
                 <div className="flex-1 text-right min-w-0">
                   <p className="text-neon-yellow truncate leading-[0.95]" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 'clamp(20px, 6vw, 30px)', letterSpacing: '-0.01em' }}>{club.name}</p>
-                  <p className="ole-num uppercase text-[10px] text-cimento mt-1">Força {managerOverall}</p>
+                  <p className="ole-num uppercase text-[10px] text-cimento mt-1">{L('Força', 'Strength')} {managerOverall}</p>
                 </div>
                 <Swords className="w-5 h-5 text-poeira shrink-0" strokeWidth={2} aria-hidden />
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-white truncate leading-[0.95]" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 'clamp(20px, 6vw, 30px)', letterSpacing: '-0.01em' }}>{opp?.name ?? '—'}</p>
-                  <p className="ole-num uppercase text-[10px] text-cimento mt-1">Força {opp?.overall ?? '—'}</p>
+                  <p className="ole-num uppercase text-[10px] text-cimento mt-1">{L('Força', 'Strength')} {opp?.overall ?? '—'}</p>
                 </div>
               </div>
               {/* FABLE — persona do treinador rival: rosto + provocação pré-jogo.
@@ -538,7 +547,7 @@ export function LigaOle() {
               const prize = ligaOleRoundReward(active.roundIndex);
               const presets = [10_000, 50_000, 250_000, 1_000_000].filter((v) => v <= balance);
               const chips: { label: string; value: number }[] = [
-                { label: 'Sem aposta', value: 0 },
+                { label: L('Sem aposta', 'No bet'), value: 0 },
                 ...presets.map((v) => ({ label: formatCompactNumber(v), value: v })),
               ];
               const staked = Math.min(wager, balance);
@@ -552,16 +561,16 @@ export function LigaOle() {
                       <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 border border-white/10 bg-deep-black">
                         <div className="flex min-w-0 flex-col">
                           <span className="font-mono uppercase tracking-[0.14em] text-[10px] text-cimento">
-                            {prize.isChampion ? 'Prêmio de título' : 'Prêmio da fase'}
+                            {prize.isChampion ? L('Prêmio de título', 'Title prize') : L('Prêmio da fase', 'Round prize')}
                           </span>
                           {mult > 1 && (
                             <span className="truncate font-mono text-[10px] text-poeira mt-0.5">
-                              base {prize.amount.toLocaleString('pt-BR')} × Dinastia {mult.toFixed(2)}
+                              base {prize.amount.toLocaleString(LOCALE)} × {L('Dinastia', 'Dynasty')} {mult.toFixed(2)}
                             </span>
                           )}
                         </div>
                         <span className="ole-num shrink-0 text-[14px] text-neon-yellow">
-                          +{finalPrize.toLocaleString('pt-BR')} EXP
+                          +{finalPrize.toLocaleString(LOCALE)} EXP
                         </span>
                       </div>
                     );
@@ -570,8 +579,8 @@ export function LigaOle() {
                   {/* Aposta */}
                   <div className="px-3.5 py-3 border bg-panel" style={{ borderColor: staked > 0 ? 'var(--color-neon-yellow)' : 'var(--color-border)' }}>
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="truncate font-mono uppercase tracking-[0.12em] text-[10px] text-giz">Apostar EXP · paga 2× na vitória</span>
-                      <span className="shrink-0 font-mono text-[10px] text-cimento">Saldo {formatCompactNumber(balance)}</span>
+                      <span className="truncate font-mono uppercase tracking-[0.12em] text-[10px] text-giz">{L('Apostar EXP · paga 2× na vitória', 'Bet EXP · pays 2× on a win')}</span>
+                      <span className="shrink-0 font-mono text-[10px] text-cimento">{L('Saldo', 'Balance')} {formatCompactNumber(balance)}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {chips.map((c) => {
@@ -593,12 +602,12 @@ export function LigaOle() {
                     {staked > 0 && (
                       <div className="grid grid-cols-2 gap-1.5 mt-2.5">
                         <div className="px-2.5 py-2 text-center border border-alta/60 bg-deep-black">
-                          <p className="font-mono uppercase tracking-[0.12em] text-[9.5px] text-alta">Vitória</p>
-                          <p className="ole-num text-[13px] text-alta">+{(staked * 2).toLocaleString('pt-BR')}</p>
+                          <p className="font-mono uppercase tracking-[0.12em] text-[9.5px] text-alta">{L('Vitória', 'Win')}</p>
+                          <p className="ole-num text-[13px] text-alta">+{(staked * 2).toLocaleString(LOCALE)}</p>
                         </div>
                         <div className="px-2.5 py-2 text-center border border-baixa/60 bg-deep-black">
-                          <p className="font-mono uppercase tracking-[0.12em] text-[9.5px] text-baixa">Derrota</p>
-                          <p className="ole-num text-[13px] text-baixa">−{staked.toLocaleString('pt-BR')}</p>
+                          <p className="font-mono uppercase tracking-[0.12em] text-[9.5px] text-baixa">{L('Derrota', 'Loss')}</p>
+                          <p className="ole-num text-[13px] text-baixa">−{staked.toLocaleString(LOCALE)}</p>
                         </div>
                       </div>
                     )}
@@ -614,14 +623,14 @@ export function LigaOle() {
 
           {/* CHAVEAMENTO — section header no design system (sem ícone) */}
           <div className="flex flex-col gap-3">
-            <SectionHeader>Chaveamento</SectionHeader>
+            <SectionHeader>{L('Chaveamento', 'Bracket')}</SectionHeader>
             <BracketCompact key={active.roundIndex} liga={active} />
             {/* CTA duplicado embaixo (mobile: à mão sem rolar de volta) */}
             {advanceBtn}
           </div>
 
           <button type="button" onClick={reset} className="font-mono text-poeira text-[11px] underline self-center hover:text-white">
-            Desistir da liga
+            {L('Desistir da liga', 'Quit the league')}
           </button>
         </div>
       )}

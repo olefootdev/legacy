@@ -16,6 +16,7 @@
  * A assinatura NÃO move fundos e NÃO custa taxa — é só uma mensagem.
  */
 import { getWallets } from '@wallet-standard/app';
+import { L } from '@/i18n/L';
 import type { Wallet, WalletAccount } from '@wallet-standard/base';
 import { getSupabase } from '@/supabase/client';
 import { buildSolanaLinkMessage } from '@/wallet/solanaLinkMessage';
@@ -94,24 +95,24 @@ export async function connectAndLinkSolanaWallet(
   pin?: string,
 ): Promise<{ ok: boolean; address?: string; error?: string }> {
   const sb = getSupabase();
-  if (!sb) return { ok: false, error: 'Supabase não configurado.' };
+  if (!sb) return { ok: false, error: L('Supabase não configurado.', 'Supabase not configured.') };
   const { data: { session } } = await sb.auth.getSession();
   if (!session?.user?.id || !session.access_token) {
-    return { ok: false, error: 'Entre na sua conta pra vincular a carteira.' };
+    return { ok: false, error: L('Entre na sua conta pra vincular a carteira.', 'Log in to your account to link the wallet.') };
   }
 
   const connect = option.wallet.features['standard:connect'] as ConnectFeature | undefined;
   const signer = option.wallet.features['solana:signMessage'] as SignMessageFeature | undefined;
-  if (!connect || !signer) return { ok: false, error: `${option.name} não assina mensagens na Solana.` };
+  if (!connect || !signer) return { ok: false, error: L(`${option.name} não assina mensagens na Solana.`, `${option.name} can't sign Solana messages.`) };
 
   let account: WalletAccount | undefined;
   try {
     const { accounts } = await connect.connect();
     account = accounts.find((a) => a.chains.some((c) => c.startsWith('solana:'))) ?? accounts[0];
   } catch {
-    return { ok: false, error: 'Conexão com a carteira cancelada.' };
+    return { ok: false, error: L('Conexão com a carteira cancelada.', 'Wallet connection cancelled.') };
   }
-  if (!account) return { ok: false, error: 'A carteira não liberou nenhuma conta Solana.' };
+  if (!account) return { ok: false, error: L('A carteira não liberou nenhuma conta Solana.', 'The wallet didn\'t share any Solana account.') };
 
   const address = account.address;
   const issuedAt = new Date().toISOString();
@@ -121,11 +122,11 @@ export async function connectAndLinkSolanaWallet(
   let signedMessage: Uint8Array;
   try {
     const [out] = await signer.signMessage({ account, message });
-    if (!out) return { ok: false, error: 'A carteira não devolveu a assinatura.' };
+    if (!out) return { ok: false, error: L('A carteira não devolveu a assinatura.', 'The wallet didn\'t return the signature.') };
     signature = out.signature;
     signedMessage = out.signedMessage ?? message;
   } catch {
-    return { ok: false, error: 'Assinatura cancelada.' };
+    return { ok: false, error: L('Assinatura cancelada.', 'Signature cancelled.') };
   }
 
   try {
@@ -149,11 +150,11 @@ export async function connectAndLinkSolanaWallet(
       | null;
     if (!json || json.ok !== true || !res.ok) {
       const reason = json && json.ok === false ? json.error : undefined;
-      return { ok: false, error: reason || 'Não foi possível vincular a carteira.' };
+      return { ok: false, error: reason || L('Não foi possível vincular a carteira.', 'Couldn\'t link the wallet.') };
     }
     return { ok: true, address: json.link.wallet_address };
   } catch {
-    return { ok: false, error: 'Sem conexão com o servidor. Tente de novo.' };
+    return { ok: false, error: L('Sem conexão com o servidor. Tente de novo.', 'No connection to the server. Try again.') };
   }
 }
 

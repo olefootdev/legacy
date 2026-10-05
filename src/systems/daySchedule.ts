@@ -17,6 +17,7 @@
  *   23:00  Noite regenerativa (sem partidas competitivas)
  */
 import { brtHourDecimal, isNightRegenWindow } from './timeCalibration';
+import { L } from '@/i18n/L';
 
 export type SlotId =
   | 'wake'              // 05:30-07:00
@@ -49,19 +50,19 @@ export interface SlotDef {
 }
 
 export const SLOTS: ReadonlyArray<SlotDef> = [
-  { id: 'wake',              startHour:  5.5,  endHour:  7.0,  kind: 'long',       label: 'Café com o time',     pushAllowed: true,  bigEventTarget: false },
-  { id: 'commute_morning',   startHour:  7.0,  endHour:  8.0,  kind: 'short',      label: 'Aquecimento',         pushAllowed: true,  bigEventTarget: false },
-  { id: 'work_morning',      startHour:  8.0,  endHour:  9.5,  kind: 'background', label: 'Trabalho',            pushAllowed: false, bigEventTarget: false },
-  { id: 'morning_coffee',    startHour:  9.5,  endHour:  9.75, kind: 'short',      label: 'Boletim do café',     pushAllowed: true,  bigEventTarget: false },
-  { id: 'work_late_morning', startHour:  9.75, endHour: 12.0,  kind: 'background', label: 'Trabalho',            pushAllowed: false, bigEventTarget: false },
-  { id: 'lunch',             startHour: 12.0,  endHour: 13.5,  kind: 'long',       label: 'Almoço tático',       pushAllowed: true,  bigEventTarget: false },
-  { id: 'work_afternoon',    startHour: 13.5,  endHour: 15.0,  kind: 'background', label: 'Trabalho',            pushAllowed: false, bigEventTarget: false },
-  { id: 'afternoon_coffee',  startHour: 15.0,  endHour: 15.25, kind: 'short',      label: 'Boletim do café',     pushAllowed: true,  bigEventTarget: false },
-  { id: 'work_late_pm',      startHour: 15.25, endHour: 17.5,  kind: 'background', label: 'Trabalho',            pushAllowed: false, bigEventTarget: false },
-  { id: 'commute_return',    startHour: 17.5,  endHour: 19.0,  kind: 'short',      label: 'Resenha do dia',      pushAllowed: true,  bigEventTarget: false },
-  { id: 'family',            startHour: 19.0,  endHour: 21.0,  kind: 'passive',    label: 'Em casa',             pushAllowed: false, bigEventTarget: false },
+  { id: 'wake',              startHour:  5.5,  endHour:  7.0,  kind: 'long',       label: L('Café com o time', 'Team breakfast'),     pushAllowed: true,  bigEventTarget: false },
+  { id: 'commute_morning',   startHour:  7.0,  endHour:  8.0,  kind: 'short',      label: L('Aquecimento', 'Warm-up'),         pushAllowed: true,  bigEventTarget: false },
+  { id: 'work_morning',      startHour:  8.0,  endHour:  9.5,  kind: 'background', label: L('Trabalho', 'Work'),            pushAllowed: false, bigEventTarget: false },
+  { id: 'morning_coffee',    startHour:  9.5,  endHour:  9.75, kind: 'short',      label: L('Boletim do café', 'Coffee bulletin'),     pushAllowed: true,  bigEventTarget: false },
+  { id: 'work_late_morning', startHour:  9.75, endHour: 12.0,  kind: 'background', label: L('Trabalho', 'Work'),            pushAllowed: false, bigEventTarget: false },
+  { id: 'lunch',             startHour: 12.0,  endHour: 13.5,  kind: 'long',       label: L('Almoço tático', 'Tactical lunch'),       pushAllowed: true,  bigEventTarget: false },
+  { id: 'work_afternoon',    startHour: 13.5,  endHour: 15.0,  kind: 'background', label: L('Trabalho', 'Work'),            pushAllowed: false, bigEventTarget: false },
+  { id: 'afternoon_coffee',  startHour: 15.0,  endHour: 15.25, kind: 'short',      label: L('Boletim do café', 'Coffee bulletin'),     pushAllowed: true,  bigEventTarget: false },
+  { id: 'work_late_pm',      startHour: 15.25, endHour: 17.5,  kind: 'background', label: L('Trabalho', 'Work'),            pushAllowed: false, bigEventTarget: false },
+  { id: 'commute_return',    startHour: 17.5,  endHour: 19.0,  kind: 'short',      label: L('Resenha do dia', 'Day recap'),      pushAllowed: true,  bigEventTarget: false },
+  { id: 'family',            startHour: 19.0,  endHour: 21.0,  kind: 'passive',    label: L('Em casa', 'At home'),             pushAllowed: false, bigEventTarget: false },
   { id: 'prime_time',        startHour: 21.0,  endHour: 23.0,  kind: 'long',       label: 'Prime Time',          pushAllowed: true,  bigEventTarget: true  },
-  { id: 'night_regen',       startHour: 23.0,  endHour: 29.5,  kind: 'regen',      label: 'Noite regenerativa',  pushAllowed: false, bigEventTarget: false },
+  { id: 'night_regen',       startHour: 23.0,  endHour: 29.5,  kind: 'regen',      label: L('Noite regenerativa', 'Recovery night'),  pushAllowed: false, bigEventTarget: false },
 ];
 
 /** Mapa rápido. */

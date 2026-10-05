@@ -8,6 +8,7 @@ import {
   Sparkles,
   Zap,
 } from 'lucide-react';
+import { L } from '@/i18n/L';
 
 export type ShopTabId = 'boosters' | 'packs' | 'extra';
 
@@ -186,7 +187,7 @@ export function defaultShopCatalog(): ShopCatalogItem[] {
     {
       id: 'pack-elite',
       title: 'Pack Elite Draft',
-      blurb: '3 jogadores 72+ OVR · chance de carta holográfica.',
+      blurb: L('3 jogadores 72+ OVR · chance de carta holográfica.', '3 players 72+ OVR · chance of a holo card.'),
       tab: 'packs',
       rarity: 'epico',
       priceBroCents: Math.round(24.99 * 100),
@@ -198,8 +199,8 @@ export function defaultShopCatalog(): ShopCatalogItem[] {
     },
     {
       id: 'pack-starter',
-      title: 'Pack Arranque',
-      blurb: '5 jogadores 65+ · ideal para reforçar o banco.',
+      title: L('Pack Arranque', 'Starter Pack'),
+      blurb: L('5 jogadores 65+ · ideal para reforçar o banco.', '5 players 65+ · great for bench depth.'),
       tab: 'packs',
       rarity: 'comum',
       priceBroCents: Math.round(4.99 * 100),
@@ -210,8 +211,8 @@ export function defaultShopCatalog(): ShopCatalogItem[] {
     },
     {
       id: 'booster-fatigue',
-      title: 'Booster Fadiga Zero',
-      blurb: 'Zera fadiga de todo o plantel ao ativar.',
+      title: L('Booster Fadiga Zero', 'Zero Fatigue Booster'),
+      blurb: L('Zera fadiga de todo o plantel ao ativar.', 'Resets fatigue for the whole squad.'),
       tab: 'boosters',
       rarity: 'raro',
       priceBroCents: null,
@@ -222,8 +223,8 @@ export function defaultShopCatalog(): ShopCatalogItem[] {
     },
     {
       id: 'booster-injury',
-      title: 'Kit Médico Premium',
-      blurb: 'Reduz jogos de lesão do jogador escolhido.',
+      title: L('Kit Médico Premium', 'Premium Medical Kit'),
+      blurb: L('Reduz jogos de lesão do jogador escolhido.', 'Cuts injury matches for the chosen player.'),
       tab: 'boosters',
       rarity: 'epico',
       priceBroCents: Math.round(9.99 * 100),
@@ -234,8 +235,8 @@ export function defaultShopCatalog(): ShopCatalogItem[] {
     },
     {
       id: 'pack-legend',
-      title: 'Cápsula Lendária',
-      blurb: '1 jogador 84+ garantido · supply limitado.',
+      title: L('Cápsula Lendária', 'Legendary Capsule'),
+      blurb: L('1 jogador 84+ garantido · supply limitado.', '1 player 84+ guaranteed · limited supply.'),
       tab: 'packs',
       rarity: 'mitico',
       priceBroCents: Math.round(79 * 100),
@@ -247,8 +248,8 @@ export function defaultShopCatalog(): ShopCatalogItem[] {
     },
     {
       id: 'scout-token',
-      title: 'Token Olheiro PRO',
-      blurb: 'Renova ofertas do mercado EXP (NPC) na hora.',
+      title: L('Token Olheiro PRO', 'PRO Scout Token'),
+      blurb: L('Renova ofertas do mercado EXP (NPC) na hora.', 'Refreshes EXP market (NPC) offers instantly.'),
       tab: 'extra',
       rarity: 'raro',
       priceBroCents: Math.round(14.5 * 100),

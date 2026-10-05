@@ -1,4 +1,5 @@
 /** País + indicativo (DDI) para telefone no cadastro. Ordem: Brasil primeiro, depois alfabético PT. */
+import { emIngles } from '@/i18n/L';
 export interface CountryDialOption {
   iso2: string;
   name: string;
@@ -12,7 +13,7 @@ export function isoToFlag(iso2: string): string {
   );
 }
 
-export const COUNTRY_DIAL_OPTIONS: CountryDialOption[] = [
+export const COUNTRY_DIAL_OPTIONS_PT: CountryDialOption[] = [
   { iso2: 'BR', name: 'Brasil', dial: '+55' },
   { iso2: 'PT', name: 'Portugal', dial: '+351' },
   { iso2: 'AO', name: 'Angola', dial: '+244' },
@@ -42,3 +43,20 @@ export const COUNTRY_DIAL_OPTIONS: CountryDialOption[] = [
   { iso2: 'AE', name: 'Emirados Árabes', dial: '+971' },
   { iso2: 'OTHER', name: 'Outro (+ manual)', dial: '+' },
 ];
+
+/**
+ * Nome do país no idioma do jogador. Em PT é a lista acima (inalterada); em EN
+ * o nome vem do `Intl.DisplayNames` pelo `iso2` (o valor que o código usa).
+ */
+function nomeDoPaisEmIngles(iso2: string, fallback: string): string {
+  if (iso2 === 'OTHER') return 'Other (+ manual)';
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' }).of(iso2) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export const COUNTRY_DIAL_OPTIONS: CountryDialOption[] = emIngles()
+  ? COUNTRY_DIAL_OPTIONS_PT.map((c) => ({ ...c, name: nomeDoPaisEmIngles(c.iso2, c.name) }))
+  : COUNTRY_DIAL_OPTIONS_PT;

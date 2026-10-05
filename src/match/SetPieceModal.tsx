@@ -14,6 +14,7 @@ import {
   type SetPieceTaker,
   type SetPieceTarget,
 } from '@/components/setpiece';
+import { L } from '@/i18n/L';
 
 interface Props {
   /** Tempo limite pra escolher (multiplayer-safe). */
@@ -176,8 +177,8 @@ export function SetPieceModal({ pickTimeSeconds = 10 }: Props) {
 
   const headerLabel =
     pendingSetPiece.mode === 'corner'
-      ? `${minute}' · Escanteio pra nós`
-      : `${minute}' · Falta perigosa`;
+      ? L(`${minute}' · Escanteio pra nós`, `${minute}' · Corner to us`)
+      : L(`${minute}' · Falta perigosa`, `${minute}' · Dangerous free kick`);
 
   return (
     <div className="fixed inset-0 z-[200] overflow-y-auto">

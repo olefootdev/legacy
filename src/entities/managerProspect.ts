@@ -4,6 +4,7 @@ import { applyScoutBonusToNpcAttrs } from '@/systems/staffBenefits';
 import type { ManagerProspectContractGames } from '@/playerContracts/playerContracts';
 import { contractFieldsForManagerProspectTier } from '@/playerContracts/playerContracts';
 import type { PlayerAttributes, PlayerBehavior, PlayerEntity, PlayerStrongFoot } from './types';
+import { L } from '@/i18n/L';
 
 /** OVR máximo na criação (Academia OLE + prospects NPC). */
 export const MANAGER_PROSPECT_CREATE_MAX_OVR = 60;
@@ -274,12 +275,12 @@ export type ManagerProspectPortraitStyleRegion =
   | 'oceania';
 
 export const PORTRAIT_STYLE_REGION_LABELS: Record<ManagerProspectPortraitStyleRegion, string> = {
-  europa: 'Europa',
-  africa_subsariana: 'África (subsaariana)',
-  americas_sul: 'América do Sul',
-  americas_outras: 'América Central, Norte e Caraíbas',
-  mena: 'Médio Oriente e Norte de África',
-  asia: 'Ásia',
+  europa: L('Europa', 'Europe'),
+  africa_subsariana: L('África (subsaariana)', 'Africa (sub-Saharan)'),
+  americas_sul: L('América do Sul', 'South America'),
+  americas_outras: L('América Central, Norte e Caraíbas', 'Central & North America, Caribbean'),
+  mena: L('Médio Oriente e Norte de África', 'Middle East & North Africa'),
+  asia: L('Ásia', 'Asia'),
   oceania: 'Oceania',
 };
 
@@ -521,7 +522,7 @@ export function buildManagerCreatedPlayerEntity(
     mintOverall: mintOvr,
     evolutionRate: 1,
     age,
-    bio: markAsManagerCreated ? `Academia OLE · ${age} anos` : `Rede OLE · ${age} anos`,
+    bio: markAsManagerCreated ? L(`Academia OLE · ${age} anos`, `OLE Academy · ${age} y/o`) : L(`Rede OLE · ${age} anos`, `OLE Network · ${age} y/o`),
     listedOnMarket: false,
     fatigue: 12,
     // Quando vier do fluxo automatizado de arte (P2), o portraitUrl já está

@@ -16,6 +16,7 @@ import {
   type GlobalLeagueMVPState,
 } from '@/match/globalLeagueMVP';
 import { simulateGlobalRound } from '@/match/globalMatchSimulator';
+import { L, LOCALE } from '@/i18n/L';
 
 /**
  * Helper para criar item de inbox da Liga Global. As notificações da Liga
@@ -38,10 +39,19 @@ function makeInboxItem(
     tag,
     title,
     body,
-    timeLabel: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    timeLabel: now.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' }),
     deepLink: options?.deepLink,
     colorClass: options?.colorClass ?? 'text-white',
   };
+}
+
+const TAG_LIGA_GLOBAL = L('LIGA GLOBAL', 'GLOBAL LEAGUE');
+
+/** Sufixo ordinal em inglês (1st, 2nd, 3rd, 4th…). */
+function ordinalEn(n: number): string {
+  const t = n % 100;
+  if (t >= 11 && t <= 13) return 'th';
+  return n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th';
 }
 
 /** Inicializar liga MVP */
@@ -79,9 +89,9 @@ export function handleRegisterGlobalTeam(
     makeInboxItem(
       `global_registered_${Date.now()}`,
       'GLOBAL_LEAGUE_REGISTERED',
-      'LIGA GLOBAL',
-      '✅ Cadastro Confirmado',
-      `${clubName} foi registrado na Liga Global! (${teamsCount}/${minTeams})`,
+      TAG_LIGA_GLOBAL,
+      L('✅ Cadastro Confirmado', '✅ Registration Confirmed'),
+      L(`${clubName} foi registrado na Liga Global! (${teamsCount}/${minTeams})`, `${clubName} is registered in the Global League! (${teamsCount}/${minTeams})`),
       { deepLink: '/liga-global/registro', colorClass: 'text-neon-yellow' }
     ),
   ];
@@ -92,9 +102,9 @@ export function handleRegisterGlobalTeam(
       makeInboxItem(
         `playoffs_ready_${Date.now()}`,
         'PLAYOFFS_READY',
-        'LIGA GLOBAL',
-        '🏆 Pronto para iniciar playoffs',
-        `Os ${minTeams} times necessários foram cadastrados. Aguardando comando do admin para iniciar os playoffs.`,
+        TAG_LIGA_GLOBAL,
+        L('🏆 Pronto para iniciar playoffs', '🏆 Ready to start the playoffs'),
+        L(`Os ${minTeams} times necessários foram cadastrados. Aguardando comando do admin para iniciar os playoffs.`, `All ${minTeams} required teams are registered. Waiting for the admin to start the playoffs.`),
         { deepLink: '/admin', colorClass: 'text-neon-yellow' }
       )
     );
@@ -116,9 +126,9 @@ export function handleAdminStartGlobalPlayoffs(state: OlefootGameState): Olefoot
   const notification = makeInboxItem(
     `playoffs_start_${Date.now()}`,
     'PLAYOFFS_START',
-    'LIGA GLOBAL',
-    '🏆 Playoffs Iniciados!',
-    `Playoffs da Liga Global iniciados! ${updatedLeague.teams.length} times disputam 6 rodadas.`,
+    TAG_LIGA_GLOBAL,
+    L('🏆 Playoffs Iniciados!', '🏆 Playoffs Started!'),
+    L(`Playoffs da Liga Global iniciados! ${updatedLeague.teams.length} times disputam 6 rodadas.`, `Global League playoffs started! ${updatedLeague.teams.length} teams play 6 rounds.`),
     { deepLink: '/liga-global/playoffs', colorClass: 'text-neon-yellow' }
   );
 
@@ -178,9 +188,9 @@ export function handleStartGlobalPlayoffRound(
   const notification = makeInboxItem(
     `playoff_round_start_${roundNumber}`,
     'PLAYOFF_ROUND_START',
-    'LIGA GLOBAL',
-    `⚽ Rodada ${roundNumber} Iniciada`,
-    `Playoffs - Rodada ${roundNumber} de 6 está ao vivo!`,
+    TAG_LIGA_GLOBAL,
+    L(`⚽ Rodada ${roundNumber} Iniciada`, `⚽ Round ${roundNumber} Started`),
+    L(`Playoffs - Rodada ${roundNumber} de 6 está ao vivo!`, `Playoffs - Round ${roundNumber} of 6 is live!`),
     { deepLink: '/liga-global/playoffs', colorClass: 'text-neon-green' }
   );
 
@@ -217,9 +227,9 @@ export function handleFinishGlobalPlayoffRound(
     makeInboxItem(
       `playoff_round_finish_${roundNumber}`,
       'PLAYOFF_ROUND_FINISH',
-      'LIGA GLOBAL',
-      `✅ Rodada ${roundNumber} Finalizada`,
-      `Playoffs - Rodada ${roundNumber} concluída. Confira a classificação!`,
+      TAG_LIGA_GLOBAL,
+      L(`✅ Rodada ${roundNumber} Finalizada`, `✅ Round ${roundNumber} Finished`),
+      L(`Playoffs - Rodada ${roundNumber} concluída. Confira a classificação!`, `Playoffs - Round ${roundNumber} done. Check the standings!`),
       { deepLink: '/liga-global/playoffs' }
     )
   );
@@ -237,9 +247,9 @@ export function handleFinishGlobalPlayoffRound(
         makeInboxItem(
           `division_assigned_${Date.now()}`,
           'DIVISION_ASSIGNED',
-          'LIGA GLOBAL',
-          `🎯 Divisão ${userTeam.division} Confirmada`,
-          `Você foi classificado para a Divisão ${userTeam.division} (${divisionName})! A liga oficial começa em breve.`,
+          TAG_LIGA_GLOBAL,
+          L(`🎯 Divisão ${userTeam.division} Confirmada`, `🎯 Division ${userTeam.division} Confirmed`),
+          L(`Você foi classificado para a Divisão ${userTeam.division} (${divisionName})! A liga oficial começa em breve.`, `You qualified for Division ${userTeam.division} (${divisionName})! The official league starts soon.`),
           { deepLink: '/match/global', colorClass: 'text-neon-yellow' }
         )
       );
@@ -249,9 +259,9 @@ export function handleFinishGlobalPlayoffRound(
       makeInboxItem(
         `league_start_${Date.now()}`,
         'LEAGUE_START',
-        'LIGA GLOBAL',
-        '🏁 Liga Oficial Iniciada',
-        'Os playoffs terminaram! A liga oficial está ativa com 3 divisões.',
+        TAG_LIGA_GLOBAL,
+        L('🏁 Liga Oficial Iniciada', '🏁 Official League Started'),
+        L('Os playoffs terminaram! A liga oficial está ativa com 3 divisões.', 'The playoffs are over! The official league is live with 3 divisions.'),
         { deepLink: '/match/global', colorClass: 'text-neon-yellow' }
       )
     );
@@ -312,9 +322,9 @@ export function handleStartGlobalLeagueRound(
   const notification = makeInboxItem(
     `league_round_start_${roundNumber}`,
     'LEAGUE_ROUND_START',
-    'LIGA GLOBAL',
-    `⚽ Rodada ${roundNumber} Ao Vivo`,
-    `Liga Global - Rodada ${roundNumber} está acontecendo agora!`,
+    TAG_LIGA_GLOBAL,
+    L(`⚽ Rodada ${roundNumber} Ao Vivo`, `⚽ Round ${roundNumber} Live`),
+    L(`Liga Global - Rodada ${roundNumber} está acontecendo agora!`, `Global League - Round ${roundNumber} is happening now!`),
     { deepLink: '/match/global', colorClass: 'text-neon-green' }
   );
 
@@ -362,16 +372,16 @@ export function handleFinishGlobalLeagueRound(
       const opponentScore = isHome ? userFixture.scoreAway : userFixture.scoreHome;
       const opponentName = isHome ? userFixture.awayTeamName : userFixture.homeTeamName;
 
-      const result = userScore > opponentScore ? 'Vitória' : userScore < opponentScore ? 'Derrota' : 'Empate';
+      const result = userScore > opponentScore ? L('Vitória', 'Win') : userScore < opponentScore ? L('Derrota', 'Loss') : L('Empate', 'Draw');
       const emoji = userScore > opponentScore ? '🎉' : userScore < opponentScore ? '😔' : '🤝';
 
       notifications.push(
         makeInboxItem(
           `league_result_${roundNumber}`,
           'LEAGUE_RESULT',
-          'LIGA GLOBAL',
+          TAG_LIGA_GLOBAL,
           `${emoji} ${result}!`,
-          `Rodada ${roundNumber}: ${userTeam.clubName} ${userScore} x ${opponentScore} ${opponentName}`,
+          L(`Rodada ${roundNumber}: ${userTeam.clubName} ${userScore} x ${opponentScore} ${opponentName}`, `Round ${roundNumber}: ${userTeam.clubName} ${userScore} x ${opponentScore} ${opponentName}`),
           { deepLink: '/match/global' }
         )
       );
@@ -385,9 +395,9 @@ export function handleFinishGlobalLeagueRound(
           makeInboxItem(
             `position_up_${roundNumber}`,
             'POSITION_UP',
-            'LIGA GLOBAL',
-            '📈 Subiu na Tabela!',
-            `Você subiu ${positionChange} posição${positionChange > 1 ? 'ões' : ''}! Agora está em ${userTeam.position}º lugar.`,
+            TAG_LIGA_GLOBAL,
+            L('📈 Subiu na Tabela!', '📈 Up the Table!'),
+            L(`Você subiu ${positionChange} posição${positionChange > 1 ? 'ões' : ''}! Agora está em ${userTeam.position}º lugar.`, `You climbed ${positionChange} place${positionChange > 1 ? 's' : ''}! Now ${userTeam.position}${ordinalEn(userTeam.position)}.`),
             { deepLink: '/match/global', colorClass: 'text-emerald-400' }
           )
         );
@@ -396,9 +406,9 @@ export function handleFinishGlobalLeagueRound(
           makeInboxItem(
             `position_down_${roundNumber}`,
             'POSITION_DOWN',
-            'LIGA GLOBAL',
-            '📉 Caiu na Tabela',
-            `Você caiu ${Math.abs(positionChange)} posição${Math.abs(positionChange) > 1 ? 'ões' : ''}. Agora está em ${userTeam.position}º lugar.`,
+            TAG_LIGA_GLOBAL,
+            L('📉 Caiu na Tabela', '📉 Down the Table'),
+            L(`Você caiu ${Math.abs(positionChange)} posição${Math.abs(positionChange) > 1 ? 'ões' : ''}. Agora está em ${userTeam.position}º lugar.`, `You dropped ${Math.abs(positionChange)} place${Math.abs(positionChange) > 1 ? 's' : ''}. Now ${userTeam.position}${ordinalEn(userTeam.position)}.`),
             { deepLink: '/match/global', colorClass: 'text-red-400' }
           )
         );
@@ -437,9 +447,9 @@ export function handleApplyPromotionRelegation(state: OlefootGameState): Olefoot
         makeInboxItem(
           `promotion_${Date.now()}`,
           'PROMOTION',
-          'LIGA GLOBAL',
-          '🎉 Promovido!',
-          `Parabéns! Você subiu para a Divisão ${newTeam.division}!`,
+          TAG_LIGA_GLOBAL,
+          L('🎉 Promovido!', '🎉 Promoted!'),
+          L(`Parabéns! Você subiu para a Divisão ${newTeam.division}!`, `Congrats! You were promoted to Division ${newTeam.division}!`),
           { deepLink: '/match/global', colorClass: 'text-neon-yellow' }
         )
       );
@@ -449,9 +459,9 @@ export function handleApplyPromotionRelegation(state: OlefootGameState): Olefoot
         makeInboxItem(
           `relegation_${Date.now()}`,
           'RELEGATION',
-          'LIGA GLOBAL',
-          '⚠️ Rebaixado',
-          `Você foi rebaixado para a Divisão ${newTeam.division}. Lute para voltar!`,
+          TAG_LIGA_GLOBAL,
+          L('⚠️ Rebaixado', '⚠️ Relegated'),
+          L(`Você foi rebaixado para a Divisão ${newTeam.division}. Lute para voltar!`, `You were relegated to Division ${newTeam.division}. Fight your way back!`),
           { deepLink: '/match/global', colorClass: 'text-red-400' }
         )
       );
@@ -463,9 +473,9 @@ export function handleApplyPromotionRelegation(state: OlefootGameState): Olefoot
     makeInboxItem(
       `season_end_${Date.now()}`,
       'SEASON_END',
-      'LIGA GLOBAL',
-      '🏁 Temporada Finalizada',
-      'A temporada terminou! Promoções e rebaixamentos foram aplicados.',
+      TAG_LIGA_GLOBAL,
+      L('🏁 Temporada Finalizada', '🏁 Season Over'),
+      L('A temporada terminou! Promoções e rebaixamentos foram aplicados.', 'The season is over! Promotions and relegations applied.'),
       { deepLink: '/match/global' }
     )
   );
@@ -537,7 +547,7 @@ function generateMatchEvents(
       minute,
       timestampMs: Date.now() + minute * 1000,
       side,
-      text: `⚽ GOL! ${teamName} marca!`,
+      text: L(`⚽ GOL! ${teamName} marca!`, `⚽ GOAL! ${teamName} score!`),
       highlight: true,
     });
   }

@@ -10,6 +10,7 @@
 import { useGameDispatch, useGameStore } from '@/game/store';
 import type { PitchPlayerState } from '@/engine/types';
 import type { PlayerEntity } from '@/entities/types';
+import { L } from '@/i18n/L';
 
 interface Props {
   homePlayers: PitchPlayerState[];
@@ -52,7 +53,7 @@ export function MarkingAssignmentsControls({ homePlayers, awayRoster, playersByI
           className="text-[10px] uppercase tracking-[0.35em] font-bold text-white/55"
           style={{ fontFamily: 'var(--font-ui)' }}
         >
-          Marcação individual
+          {L('Marcação individual', 'Man marking')}
         </div>
         {hasAny && (
           <button
@@ -63,14 +64,14 @@ export function MarkingAssignmentsControls({ homePlayers, awayRoster, playersByI
             onMouseEnter={(e) => (e.currentTarget.style.color = '#FF6B6B')}
             onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-danger)')}
           >
-            Limpar
+            {L('Limpar', 'Clear')}
           </button>
         )}
       </div>
 
       {defendersOnPitch.length === 0 || attackersToMark.length === 0 ? (
         <div className="text-[10px] text-white/35">
-          Sem dados suficientes pra marcação (defensores ou ataque adversário ausentes).
+          {L('Sem dados suficientes pra marcação (defensores ou ataque adversário ausentes).', 'Not enough data for marking (defenders or opponent attackers missing).')}
         </div>
       ) : (
         <div className="space-y-1">
@@ -102,7 +103,7 @@ export function MarkingAssignmentsControls({ homePlayers, awayRoster, playersByI
                   className="text-[9px] uppercase tracking-[0.2em]"
                   style={{ color: 'rgba(255,255,255,0.32)' }}
                 >
-                  marca
+                  {L('marca', 'marks')}
                 </span>
                 <select
                   value={currentlyMarking ?? ''}
@@ -123,7 +124,7 @@ export function MarkingAssignmentsControls({ homePlayers, awayRoster, playersByI
                       : 'rgba(255,255,255,0.08)')
                   }
                 >
-                  <option value="">— ninguém —</option>
+                  <option value="">{L('— ninguém —', '— nobody —')}</option>
                   {attackersToMark.map((a) => (
                     <option key={a.id} value={a.id}>
                       #{a.num} {a.name} ({a.pos})

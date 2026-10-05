@@ -7,6 +7,7 @@ import {
   OTZ_SHORT_LABEL,
   syntheticOnlineStats,
 } from '@/systems/oleTimeZone';
+import { L } from '@/i18n/L';
 
 /**
  * Bloco do header: horário OTZ (UTC) + métricas sintéticas de jogadores online.
@@ -23,12 +24,15 @@ export function HeaderOtzStrip() {
   const d = new Date(now);
   const stats = syntheticOnlineStats(now);
 
-  const statsTitle = `~${formatOnlineCompact(stats.online)} online · ${formatOnlineCompact(stats.inMatch)} em jogo · ${formatOnlineCompact(stats.scouting)} scouting`;
+  const statsTitle = `~${formatOnlineCompact(stats.online)} online · ${formatOnlineCompact(stats.inMatch)} ${L('em jogo', 'in match')} · ${formatOnlineCompact(stats.scouting)} scouting`;
 
   return (
     <div
       className="w-auto max-w-[min(100%,13rem)] min-w-0 select-none text-right leading-tight sm:max-w-none sm:w-auto"
-      title="Tempo oficial Olefoot (UTC). O estado do jogo sincroniza ao focar a app ou em segundo plano (definições)."
+      title={L(
+        'Tempo oficial Olefoot (UTC). O estado do jogo sincroniza ao focar a app ou em segundo plano (definições).',
+        'Official Olefoot time (UTC). Game state syncs when the app regains focus or in the background (settings).',
+      )}
     >
       <div className="flex items-center justify-end gap-1 text-neon-yellow sm:gap-1.5">
         <Clock className="h-3 w-3 shrink-0 opacity-90 sm:h-3.5 sm:w-3.5" aria-hidden />
@@ -48,7 +52,7 @@ export function HeaderOtzStrip() {
         aria-label={statsTitle}
       >
         <span className="tabular-nums">~{formatOnlineCompact(stats.online)} online</span>
-        <span className="tabular-nums">{formatOnlineCompact(stats.inMatch)} em jogo</span>
+        <span className="tabular-nums">{formatOnlineCompact(stats.inMatch)} {L('em jogo', 'in match')}</span>
         <span className="tabular-nums">{formatOnlineCompact(stats.scouting)} scouting</span>
       </div>
       <div className="mt-1 hidden items-center justify-end gap-1 text-[9px] font-medium text-gray-400 sm:flex" title={statsTitle}>

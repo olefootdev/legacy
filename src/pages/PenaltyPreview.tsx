@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PenaltyShoot } from '@/components/penalty';
+import { L } from '@/i18n/L';
 import type {
   PenaltyShootResult,
   ShootoutContext,
@@ -35,8 +36,8 @@ export function PenaltyPreview() {
     awayShots,
     currentShooter,
     rounds: SHOOTOUT_ROUNDS,
-    homeLabel: 'BSC · Casa',
-    awayLabel: 'ADV · Visitante',
+    homeLabel: L('BSC · Casa', 'BSC · Home'),
+    awayLabel: L('ADV · Visitante', 'OPP · Away'),
   };
 
   function handleResolved(result: PenaltyShootResult) {
@@ -67,7 +68,7 @@ export function PenaltyPreview() {
   return (
     <PenaltyShoot
       key={reseed}
-      headerLabel="Olefoot · Disputa de Pênaltis"
+      headerLabel={L('Olefoot · Disputa de Pênaltis', 'Olefoot · Penalty Shootout')}
       shooter={{
         id: 'adrien-ayo',
         displayName: 'Adrien Ayo',
@@ -76,12 +77,12 @@ export function PenaltyPreview() {
       }}
       keeper={{
         id: 'gk-adversario',
-        displayName: 'Goleiro Adversário',
+        displayName: L('Goleiro Adversário', 'Opponent Keeper'),
         readingRating: 72,
         positioningRating: 70,
         tendency: 'right',
       }}
-      keeperHint="Goleiro lê bem o lado direito"
+      keeperHint={L('Goleiro lê bem o lado direito', 'Keeper reads the right side well')}
       shootoutContext={ctx}
       onResolved={handleResolved}
       onNextShooter={handleNextShooter}

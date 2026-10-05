@@ -4,6 +4,7 @@
  * Exibe countdown, status atual e próxima rodada
  */
 
+import { L } from '@/i18n/L';
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Clock, Activity, Trophy, Zap } from 'lucide-react';
@@ -92,7 +93,7 @@ export function RoundStatusBar() {
             <>
               <Activity className="w-6 h-6 text-neon-green animate-pulse" />
               <div>
-                <p className="text-xs text-text-soft uppercase tracking-wider font-display">Rodada ao Vivo</p>
+                <p className="text-xs text-text-soft uppercase tracking-wider font-display">{L('Rodada ao Vivo', 'Live Round')}</p>
                 <p className="font-serif-hero text-2xl font-bold text-neon-green">{countdown}</p>
               </div>
             </>
@@ -101,7 +102,7 @@ export function RoundStatusBar() {
             <>
               <Zap className="w-6 h-6 text-neon-yellow animate-pulse" />
               <div>
-                <p className="text-xs text-text-soft uppercase tracking-wider font-display">Janela de Comando</p>
+                <p className="text-xs text-text-soft uppercase tracking-wider font-display">{L('Janela de Comando', 'Command Window')}</p>
                 <p className="font-serif-hero text-2xl font-bold text-neon-yellow">{countdown}</p>
               </div>
             </>
@@ -110,8 +111,8 @@ export function RoundStatusBar() {
             <>
               <Trophy className="w-6 h-6 text-neon-yellow" />
               <div>
-                <p className="text-xs text-text-soft uppercase tracking-wider font-display">Rodada Finalizada</p>
-                <p className="font-serif-hero text-2xl font-bold text-white">Próxima em {countdown}</p>
+                <p className="text-xs text-text-soft uppercase tracking-wider font-display">{L('Rodada Finalizada', 'Round Finished')}</p>
+                <p className="font-serif-hero text-2xl font-bold text-white">{L('Próxima em', 'Next in')} {countdown}</p>
               </div>
             </>
           )}
@@ -119,7 +120,7 @@ export function RoundStatusBar() {
             <>
               <Clock className="w-6 h-6 text-neon-yellow" />
               <div>
-                <p className="text-xs text-text-soft uppercase tracking-wider font-display">Próxima Rodada</p>
+                <p className="text-xs text-text-soft uppercase tracking-wider font-display">{L('Próxima Rodada', 'Next Round')}</p>
                 <p className="font-serif-hero text-2xl font-bold text-white">{countdown}</p>
               </div>
             </>
@@ -128,8 +129,8 @@ export function RoundStatusBar() {
             <>
               <Clock className="w-6 h-6 text-text-soft" />
               <div>
-                <p className="text-xs text-text-soft uppercase tracking-wider font-display">Fora do Ar</p>
-                <p className="font-serif-hero text-2xl font-bold text-text-soft">Retorna em {countdown}</p>
+                <p className="text-xs text-text-soft uppercase tracking-wider font-display">{L('Fora do Ar', 'Offline')}</p>
+                <p className="font-serif-hero text-2xl font-bold text-text-soft">{L('Retorna em', 'Back in')} {countdown}</p>
               </div>
             </>
           )}
@@ -137,7 +138,7 @@ export function RoundStatusBar() {
 
         <div className="text-right">
           <p className="text-xs text-text-soft uppercase tracking-wider font-display mb-1">
-            {currentRound ? `Rodada #${currentRound.roundNumber}` : 'Sem rodada'}
+            {currentRound ? L(`Rodada #${currentRound.roundNumber}`, `Round #${currentRound.roundNumber}`) : L('Sem rodada', 'No round')}
           </p>
           <p className="font-display text-sm font-bold text-white">
             Kickoff: {nextKickoffTime}

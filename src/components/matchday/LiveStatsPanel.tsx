@@ -9,6 +9,7 @@ import { memo, useMemo } from 'react';
 import { BarChart3, Target, Shield, Users, Swords, Hand, Zap, Flag, AlertCircle } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import type { LiveMatchSnapshot } from '@/engine/types';
+import { L } from '@/i18n/L';
 
 interface AggregatedStats {
   passesOk: number;
@@ -80,7 +81,7 @@ function countCorners(live: LiveMatchSnapshot | null): { home: number; away: num
     for (const ev of live.events) {
       if (ev.kind !== 'whistle') continue;
       const t = ev.text?.toLowerCase() ?? '';
-      if (!/(escanteio|canto\s+para)/.test(t)) continue;
+      if (!/(escanteio|canto\s+para|corner)/.test(t)) continue;
       const homeShort = live.homeShort?.toLowerCase() ?? '';
       const awayShort = live.awayShort?.toLowerCase() ?? '';
       if (homeShort && t.includes(homeShort)) out.home++;
@@ -108,7 +109,7 @@ function LiveStatsPanelInner() {
   return (
     <div
       className="px-2.5 sm:px-3 py-2.5"
-      aria-label="Estatísticas da partida em tempo real"
+      aria-label={L('Estatísticas da partida em tempo real', 'Live match stats')}
       style={{
         background: 'var(--color-nav)',
         border: '1px solid var(--color-divider-soft)',
@@ -126,7 +127,7 @@ function LiveStatsPanelInner() {
               letterSpacing: '0.32em',
             }}
           >
-            Stats ao vivo · {live.homeShort ?? 'Casa'}
+            {L('Stats ao vivo', 'Live stats')} · {live.homeShort ?? L('Casa', 'Home')}
           </span>
         </div>
         <span
@@ -138,16 +139,16 @@ function LiveStatsPanelInner() {
       </header>
 
       <div className="grid grid-cols-4 gap-1.5">
-        <StatTile icon={Target} label="Chutes" value={totalShots.toString()} sub={`${stats.shotsOn} no gol`} accent="emerald" />
+        <StatTile icon={Target} label={L('Chutes', 'Shots')} value={totalShots.toString()} sub={L(`${stats.shotsOn} no gol`, `${stats.shotsOn} on target`)} accent="emerald" />
         <StatTile icon={Zap} label="Passes" value={stats.passesOk.toString()} sub={passAcc !== null ? `${passAcc}%` : '—'} accent="sky" />
-        <StatTile icon={Swords} label="Desarmes" value={stats.tackles.toString()} accent="amber" />
-        <StatTile icon={Hand} label="Dribles" value={stats.dribblesOk.toString()} accent="fuchsia" />
-        <StatTile icon={Shield} label="Defesas GK" value={stats.saves.toString()} accent="indigo" />
-        <StatTile icon={AlertCircle} label="Faltas" value={fouls.toString()} accent="rose" />
-        <StatTile icon={Flag} label="Escanteios" value={corners.home.toString()} sub={`${corners.away} adv`} accent="teal" />
+        <StatTile icon={Swords} label={L('Desarmes', 'Tackles')} value={stats.tackles.toString()} accent="amber" />
+        <StatTile icon={Hand} label={L('Dribles', 'Dribbles')} value={stats.dribblesOk.toString()} accent="fuchsia" />
+        <StatTile icon={Shield} label={L('Defesas GK', 'GK saves')} value={stats.saves.toString()} accent="indigo" />
+        <StatTile icon={AlertCircle} label={L('Faltas', 'Fouls')} value={fouls.toString()} accent="rose" />
+        <StatTile icon={Flag} label={L('Escanteios', 'Corners')} value={corners.home.toString()} sub={L(`${corners.away} adv`, `${corners.away} opp`)} accent="teal" />
         <StatTile
           icon={Users}
-          label="Cartões"
+          label={L('Cartões', 'Cards')}
           value={`${cards.yellow}🟨`}
           sub={cards.red > 0 ? `${cards.red}🟥` : '—'}
           accent={cards.red > 0 ? 'rose' : 'yellow'}
@@ -158,7 +159,7 @@ function LiveStatsPanelInner() {
         className="mt-2 text-center font-ui"
         style={{ color: 'rgba(255,255,255,0.32)', fontSize: '9px', letterSpacing: '0.18em' }}
       >
-        {km} km · {Object.keys(live.homeStats ?? {}).length} ativos · tick contínuo
+        {km} km · {Object.keys(live.homeStats ?? {}).length} {L('ativos', 'active')} · {L('tick contínuo', 'continuous tick')}
       </p>
     </div>
   );

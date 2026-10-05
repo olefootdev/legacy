@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, TrendingUp, Zap, Star, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { L } from '@/i18n/L';
 interface Reward {
   type: 'exp' | 'streak' | 'bonus' | 'achievement';
   label: string;
@@ -44,7 +45,7 @@ export function InstantRewards({
   const rewards: Reward[] = [
     {
       type: 'exp',
-      label: result === 'win' ? 'Vitória' : result === 'draw' ? 'Empate' : 'Participação',
+      label: result === 'win' ? L('Vitória', 'Win') : result === 'draw' ? L('Empate', 'Draw') : L('Participação', 'Participation'),
       value: baseExp,
       icon: 'trophy',
       color: result === 'win' ? '#FDE100' : result === 'draw' ? '#ECECE7' : '#9A9C9F',
@@ -135,7 +136,7 @@ export function InstantRewards({
                 letterSpacing: '0.2em',
               }}
             >
-              Recompensas
+              {L('Recompensas', 'Rewards')}
             </h2>
             <div className="h-1 w-16 bg-neon-yellow mx-auto" />
           </motion.div>
@@ -180,7 +181,7 @@ export function InstantRewards({
                             {reward.label}
                           </p>
                           {reward.type === 'streak' && (
-                            <p className="text-xs text-white/50">Multiplicador ativo</p>
+                            <p className="text-xs text-white/50">{L('Multiplicador ativo', 'Multiplier active')}</p>
                           )}
                         </div>
                       </div>
@@ -267,7 +268,7 @@ export function InstantRewards({
                 textTransform: 'uppercase',
               }}
             >
-              Continuar
+              {L('Continuar', 'Continue')}
             </motion.button>
           )}
         </motion.div>

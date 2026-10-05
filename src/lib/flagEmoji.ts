@@ -1,4 +1,4 @@
-import { COUNTRY_DIAL_OPTIONS, isoToFlag } from '@/lib/countryDialCodes';
+import { COUNTRY_DIAL_OPTIONS, COUNTRY_DIAL_OPTIONS_PT, isoToFlag } from '@/lib/countryDialCodes';
 
 /** ISO 3166-1 alpha-3 → alpha-2 (FIFA / dados legados). */
 const ISO3_TO_ISO2: Record<string, string> = {
@@ -196,7 +196,8 @@ function normalizeCountryLabelKey(raw: string): string {
 
 function buildLabelToIso2(): Record<string, string> {
   const out: Record<string, string> = { ...ENGLISH_NAME_TO_ISO2 };
-  for (const o of COUNTRY_DIAL_OPTIONS) {
+  // Nomes em PT sempre entram (dado gravado em PT); em EN, também os nomes da tela.
+  for (const o of [...COUNTRY_DIAL_OPTIONS_PT, ...COUNTRY_DIAL_OPTIONS]) {
     if (o.iso2 === 'OTHER') continue;
     out[normalizeCountryLabelKey(o.name)] = o.iso2;
   }

@@ -1,13 +1,14 @@
 import type { FormLetter } from '@/entities/types';
 import type { LeagueSeasonState } from '@/match/leagueSeason';
+import { L } from '@/i18n/L';
 
 /** Âmbito geográfico da competição (criação no /admin; jogador vê Estadual e Nacional em /leagues). */
 export type LeagueScope = 'state' | 'national' | 'world';
 
 export const LEAGUE_SCOPE_LABELS: Record<LeagueScope, string> = {
-  state: 'Estadual',
-  national: 'Nacional',
-  world: 'Mundial',
+  state: L('Estadual', 'State'),
+  national: L('Nacional', 'National'),
+  world: L('Mundial', 'World'),
 };
 
 /** Linha da classificação (persistida; a UI ordena por pontos/SG). */
@@ -72,9 +73,9 @@ export function isLeagueVisibleInPlayerApp(league: AdminLeagueConfig): boolean {
 }
 
 export const LEAGUE_FORMAT_LABELS: Record<LeagueFormat, string> = {
-  round_robin: 'Pontos corridos',
-  knockout: 'Mata-mata',
-  hybrid: 'Híbrida (tabela + mata-mata)',
+  round_robin: L('Pontos corridos', 'Round robin'),
+  knockout: L('Mata-mata', 'Knockout'),
+  hybrid: L('Híbrida (tabela + mata-mata)', 'Hybrid (table + knockout)'),
 };
 
 export function goalDiff(row: LeagueStandingRow): number {

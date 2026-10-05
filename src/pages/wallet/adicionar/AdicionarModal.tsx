@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import type { OlefootUsdBrlQuoteState } from '@/wallet/olefootUsdBrlQuote';
 import { FormBro } from './FormBro';
 import { FormOlefoot, type PedidoOlefoot } from './FormOlefoot';
+import { L } from '@/i18n/L';
 
 /**
  * ADICIONAR — a gaveta única de entrada de dinheiro.
@@ -53,7 +54,7 @@ export function AdicionarModal({
       className="fixed inset-0 z-[190] flex items-end justify-center bg-black/80 p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Adicionar"
+      aria-label={L('Adicionar', 'Add')}
       onClick={(e) => e.target === e.currentTarget && onFechar()}
     >
       <motion.div
@@ -62,18 +63,18 @@ export function AdicionarModal({
         className="flex max-h-[92dvh] w-full max-w-md flex-col border border-white/16 bg-panel"
       >
         <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
-          <h2 className="font-impact text-lg uppercase leading-[1.1] text-white">Adicionar</h2>
+          <h2 className="font-impact text-lg uppercase leading-[1.1] text-white">{L('Adicionar', 'Add')}</h2>
           <button
             type="button"
             onClick={onFechar}
             className="p-2 text-cimento hover:text-white"
-            aria-label="Fechar"
+            aria-label={L('Fechar', 'Close')}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-1 border-b border-white/10 p-1" role="tablist" aria-label="O que adicionar">
+        <div className="grid grid-cols-2 gap-1 border-b border-white/10 p-1" role="tablist" aria-label={L('O que adicionar', 'What to add')}>
           {(['bro', 'olefoot'] as const).map((p) => (
             <button
               key={p}

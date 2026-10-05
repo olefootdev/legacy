@@ -6,6 +6,7 @@
  * Auto-dismiss configurável; toca padrões da CSS `.ole-lt`.
  */
 import { useEffect, useState } from 'react';
+import { L } from '@/i18n/L';
 
 export type EventTone = 'card-yellow' | 'card-red' | 'foul' | 'sub' | 'save';
 
@@ -25,11 +26,11 @@ export interface MatchEventLowerThirdProps {
 }
 
 const TONE_LABEL: Record<EventTone, string> = {
-  'card-yellow': 'Amarelo',
-  'card-red': 'Vermelho',
-  foul: 'Falta',
-  sub: 'Substituição',
-  save: 'Defesa',
+  'card-yellow': L('Amarelo', 'Yellow'),
+  'card-red': L('Vermelho', 'Red'),
+  foul: L('Falta', 'Foul'),
+  sub: L('Substituição', 'Substitution'),
+  save: L('Defesa', 'Save'),
 };
 
 export function MatchEventLowerThird({

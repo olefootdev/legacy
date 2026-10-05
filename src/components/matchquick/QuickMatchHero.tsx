@@ -7,6 +7,7 @@
 
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 export type QuickPreStartPhase = 'ready' | 'c3' | 'c2' | 'c1' | 'kickoff' | null;
 
@@ -130,7 +131,7 @@ export function QuickMatchHero({
                 className="font-impact uppercase text-black leading-[1.1]"
                 style={{ fontSize: 'clamp(2.5rem, 8vw, 5rem)' }}
               >
-                Pronto?
+                {L('Pronto?', 'Ready?')}
               </p>
             </motion.div>
           )}
@@ -171,7 +172,7 @@ export function QuickMatchHero({
                   letterSpacing: '0.02em',
                 }}
               >
-                Bola rolando!
+                {L('Bola rolando!', 'Kick-off!')}
               </p>
             </motion.div>
           )}

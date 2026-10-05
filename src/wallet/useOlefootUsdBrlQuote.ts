@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchOlefootUsdBrlQuote, type OlefootUsdBrlQuoteState } from '@/wallet/olefootUsdBrlQuote';
+import { L } from '@/i18n/L';
 
 /**
  * Cotação USD/BRL (API br.dolarapi.com) + margem Olefoot.
@@ -18,7 +19,7 @@ export function useOlefootUsdBrlQuote(enabled = true): OlefootUsdBrlQuoteState {
       })
       .catch((e: unknown) => {
         if (cancelled) return;
-        const message = e instanceof Error ? e.message : 'Erro ao carregar cotação';
+        const message = e instanceof Error ? e.message : L('Erro ao carregar cotação', 'Error loading quote');
         setState({ status: 'error', message });
       });
     return () => {

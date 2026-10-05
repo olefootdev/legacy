@@ -14,6 +14,7 @@ import { overallFromAttributes } from '@/entities/player';
 import { BackButton } from '@/components/BackButton';
 import { cn } from '@/lib/utils';
 import { Hashtag } from '@/components/ui';
+import { L } from '@/i18n/L';
 
 export default function GlobalLeagueRegistration() {
   const dispatch = useGameDispatch();
@@ -65,16 +66,16 @@ export default function GlobalLeagueRegistration() {
 
   const statusBadge =
     status === 'waiting_teams'
-      ? { label: 'Cadastros abertos', tone: 'text-neon-yellow border-neon-yellow/40' }
+      ? { label: L('Cadastros abertos', 'Registration open'), tone: 'text-neon-yellow border-neon-yellow/40' }
       : status === 'playoffs'
-        ? { label: 'Playoffs em curso', tone: 'text-giz border-white/30' }
+        ? { label: L('Playoffs em curso', 'Playoffs underway'), tone: 'text-giz border-white/30' }
         : status === 'active'
-          ? { label: 'Liga em curso', tone: 'text-alta border-alta/40' }
-          : { label: 'Temporada encerrada', tone: 'text-cimento border-white/16' };
+          ? { label: L('Liga em curso', 'League underway'), tone: 'text-alta border-alta/40' }
+          : { label: L('Temporada encerrada', 'Season over'), tone: 'text-cimento border-white/16' };
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6 pb-10">
-      <BackButton to="/competicao/ligas" label="Ligas" />
+      <BackButton to="/competicao/ligas" label={L('Ligas', 'Leagues')} />
 
       {/* ── HEADER editorial padrão Ranking ── */}
       <motion.div
@@ -85,7 +86,7 @@ export default function GlobalLeagueRegistration() {
         <div className="bg-deep-black p-6 md:p-8 border-b border-white/10">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <Hashtag className="mb-3 text-neon-yellow">#ligaglobal · temporada 2026</Hashtag>
+              <Hashtag className="mb-3 text-neon-yellow">{L('#ligaglobal · temporada 2026', '#globalleague · season 2026')}</Hashtag>
               <h1 className="leading-[1.1]">
                 <span
                   className="block font-impact uppercase text-white"
@@ -94,7 +95,7 @@ export default function GlobalLeagueRegistration() {
                     letterSpacing: '0.005em',
                   }}
                 >
-                  LIGA GLOBAL
+                  {L('LIGA GLOBAL', 'GLOBAL LEAGUE')}
                 </span>
                 <AnimatePresence mode="wait">
                   <motion.span
@@ -106,7 +107,7 @@ export default function GlobalLeagueRegistration() {
                     className="ole-num block uppercase text-neon-yellow mt-1"
                     style={{ fontSize: 'clamp(1.2rem, 3.6vw, 2rem)' }}
                   >
-                    {teamsCount}/{minTeams} times
+                    {teamsCount}/{minTeams} {L('times', 'teams')}
                   </motion.span>
                 </AnimatePresence>
               </h1>
@@ -134,8 +135,8 @@ export default function GlobalLeagueRegistration() {
               </div>
               <p className="mt-2 truncate text-[12.5px] text-cimento">
                 {remaining > 0
-                  ? `Faltam ${remaining} time${remaining === 1 ? '' : 's'} para iniciar os playoffs.`
-                  : 'Quórum atingido — playoffs prestes a começar.'}
+                  ? L(`Faltam ${remaining} time${remaining === 1 ? '' : 's'} para iniciar os playoffs.`, `${remaining} more team${remaining === 1 ? '' : 's'} needed to start the playoffs.`)
+                  : L('Quórum atingido — playoffs prestes a começar.', 'Quorum reached — playoffs about to start.')}
               </p>
             </div>
           ) : null}
@@ -146,23 +147,23 @@ export default function GlobalLeagueRegistration() {
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <RuleCard
           rail="bg-neon-yellow"
-          eyebrow="#fase1"
+          eyebrow={L('#fase1', '#phase1')}
           title="Playoffs"
-          description="3 rodadas ida e volta — 6 jogos para definir as divisões."
+          description={L('3 rodadas ida e volta — 6 jogos para definir as divisões.', '3 home-and-away rounds — 6 matches to set the divisions.')}
           delay={0.1}
         />
         <RuleCard
           rail="bg-neon-yellow"
-          eyebrow="#estrutura"
-          title="3 Divisões"
-          description="~11 times por divisão, pelo desempenho nos playoffs."
+          eyebrow={L('#estrutura', '#structure')}
+          title={L('3 Divisões', '3 Divisions')}
+          description={L('~11 times por divisão, pelo desempenho nos playoffs.', '~11 teams per division, based on playoff results.')}
           delay={0.2}
         />
         <RuleCard
           rail="bg-neon-yellow"
-          eyebrow="#ciclo"
-          title="Promoção & Rebaixamento"
-          description="Top 10% sobem, últimos 10% descem a cada temporada."
+          eyebrow={L('#ciclo', '#cycle')}
+          title={L('Promoção & Rebaixamento', 'Promotion & Relegation')}
+          description={L('Top 10% sobem, últimos 10% descem a cada temporada.', 'Top 10% go up, bottom 10% go down each season.')}
           delay={0.3}
         />
       </section>
@@ -179,12 +180,12 @@ export default function GlobalLeagueRegistration() {
           <div className="relative p-6 md:p-7 pl-7 md:pl-8">
             <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
               <div className="min-w-0">
-                <Hashtag className="mb-2 text-neon-yellow">#seutime</Hashtag>
+                <Hashtag className="mb-2 text-neon-yellow">{L('#seutime', '#yourteam')}</Hashtag>
                 <h3 className="truncate font-impact text-[26px] uppercase leading-[1.1] text-white">
                   {club.name}
                 </h3>
                 <p className="mt-1 truncate font-mono text-[11.5px] text-cimento">
-                  {club.city ?? '—'} · {squadSize} jogador{squadSize === 1 ? '' : 'es'}
+                  {club.city ?? '—'} · {squadSize} {squadSize === 1 ? L('jogador', 'player') : L('jogadores', 'players')}
                 </p>
               </div>
               <div className="text-right">
@@ -195,13 +196,13 @@ export default function GlobalLeagueRegistration() {
                   {teamOverall || '—'}
                 </p>
                 <p className="mt-1 font-mono text-[10px] text-cimento uppercase tracking-[0.14em]">
-                  Overall do XI
+                  {L('Overall do XI', 'XI Overall')}
                 </p>
               </div>
             </div>
 
             {squadSize === 0 ? (
-              <p className="mb-4 truncate text-[13px] text-cimento">Monte o elenco antes de entrar.</p>
+              <p className="mb-4 truncate text-[13px] text-cimento">{L('Monte o elenco antes de entrar.', 'Build your squad before joining.')}</p>
             ) : null}
 
             <div className="flex flex-wrap gap-3">
@@ -217,10 +218,10 @@ export default function GlobalLeagueRegistration() {
                 )}
               >
                 {squadSize === 0
-                  ? 'Sem elenco'
+                  ? L('Sem elenco', 'No squad')
                   : status !== 'waiting_teams'
-                    ? 'Cadastros encerrados'
-                    : 'Entrar na Liga Global'}
+                    ? L('Cadastros encerrados', 'Registration closed')
+                    : L('Entrar na Liga Global', 'Join the Global League')}
               </button>
               {squadSize === 0 ? (
                 <button
@@ -228,7 +229,7 @@ export default function GlobalLeagueRegistration() {
                   onClick={() => navigate('/clube/elenco')}
                   className="ole-num inline-flex h-[50px] items-center whitespace-nowrap border border-white/30 px-5 text-[13px] uppercase text-white transition-colors hover:border-white hover:bg-white/5"
                 >
-                  Ir ao Elenco
+                  {L('Ir ao Elenco', 'Go to Squad')}
                 </button>
               ) : null}
             </div>
@@ -244,13 +245,13 @@ export default function GlobalLeagueRegistration() {
           <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-alta" />
           <div className="relative p-6 md:p-7 pl-7 md:pl-8">
             <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-alta">
-              Confirmado
+              {L('Confirmado', 'Confirmed')}
             </p>
             <h3 className="font-impact text-[24px] uppercase leading-[1.1] text-white">
-              {club.name} está na Liga
+              {club.name} {L('está na Liga', 'is in the League')}
             </h3>
             <p className="mt-2 text-[13px] text-cimento">
-              Playoffs começam com {minTeams} times.
+              {L(`Playoffs começam com ${minTeams} times.`, `Playoffs start with ${minTeams} teams.`)}
             </p>
           </div>
         </motion.section>
@@ -265,7 +266,7 @@ export default function GlobalLeagueRegistration() {
       >
         <div className="border-b border-white/10 p-5 md:p-6 flex items-baseline justify-between gap-3">
           <h2 className="truncate font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-            Times cadastrados
+            {L('Times cadastrados', 'Registered teams')}
           </h2>
           <span className="shrink-0 font-mono text-[11px] text-cimento">
             {teamsCount} {teamsCount === 1 ? 'manager' : 'managers'}
@@ -273,7 +274,7 @@ export default function GlobalLeagueRegistration() {
         </div>
         <div className="p-5 md:p-6">
           {teamsCount === 0 ? (
-            <p className="truncate text-[13px] text-cimento">Ninguém cadastrado ainda.</p>
+            <p className="truncate text-[13px] text-cimento">{L('Ninguém cadastrado ainda.', 'No one registered yet.')}</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[420px] overflow-y-auto pr-1">
               {sortedTeams.map((team, index) => {

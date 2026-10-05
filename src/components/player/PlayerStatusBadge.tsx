@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import type { PlayerEntity } from '@/entities/types';
 import type { PlayerHealth } from '@/systems/playerHealth/types';
 import { INJURY_LABEL_PT } from '@/systems/injury';
+import { L } from '@/i18n/L';
 
 export type PlayerStatusKind =
   | 'contract_expired'
@@ -48,25 +49,25 @@ function classifyPlayer(p: PlayerEntity, h: PlayerHealth | undefined): BadgeConf
   if (p.contractExpired === true) {
     return {
       Icon: Ban,
-      label: 'Contrato',
-      detail: 'vencido',
+      label: L('Contrato', 'Contract'),
+      detail: L('vencido', 'expired'),
       className:
         'bg-[var(--color-deep-black)]/70 text-zinc-200 border-zinc-500/60',
-      tooltip: 'Contrato vencido — jogador não pode entrar em XI oficial. Renove pra reativar.',
+      tooltip: L('Contrato vencido — jogador não pode entrar em XI oficial. Renove pra reativar.', 'Contract expired — player can’t be in an official XI. Renew to reactivate.'),
     };
   }
 
   // 2. Lesão — vermelho com severidade quando disponível.
   const outForMatches = h?.outForMatches ?? p.outForMatches ?? 0;
   if (outForMatches > 0) {
-    const severityLabel = h?.injurySeverity ? INJURY_LABEL_PT[h.injurySeverity] : 'Lesão';
+    const severityLabel = h?.injurySeverity ? INJURY_LABEL_PT[h.injurySeverity] : L('Lesão', 'Injury');
     return {
       Icon: Activity,
       label: severityLabel,
-      detail: `${outForMatches}j`,
+      detail: L(`${outForMatches}j`, `${outForMatches}g`),
       className:
         'bg-[var(--color-danger)]/12 text-[var(--color-danger)] border-[var(--color-danger)]/40',
-      tooltip: `${severityLabel} — ${outForMatches} jogo${outForMatches === 1 ? '' : 's'} de recuperação restante${outForMatches === 1 ? '' : 's'}.`,
+      tooltip: L(`${severityLabel} — ${outForMatches} jogo${outForMatches === 1 ? '' : 's'} de recuperação restante${outForMatches === 1 ? '' : 's'}.`, `${severityLabel} — ${outForMatches} game${outForMatches === 1 ? '' : 's'} of recovery left.`),
     };
   }
 
@@ -75,11 +76,11 @@ function classifyPlayer(p: PlayerEntity, h: PlayerHealth | undefined): BadgeConf
   if (suspended > 0) {
     return {
       Icon: ShieldOff,
-      label: 'Suspenso',
-      detail: `${suspended}j`,
+      label: L('Suspenso', 'Suspended'),
+      detail: L(`${suspended}j`, `${suspended}g`),
       className:
         'bg-[var(--color-warning)]/14 text-[var(--color-warning)] border-[var(--color-warning)]/50',
-      tooltip: `Suspenso por ${suspended} jogo${suspended === 1 ? '' : 's'} oficial${suspended === 1 ? '' : 's'}.`,
+      tooltip: L(`Suspenso por ${suspended} jogo${suspended === 1 ? '' : 's'} oficial${suspended === 1 ? '' : 's'}.`, `Suspended for ${suspended} official game${suspended === 1 ? '' : 's'}.`),
     };
   }
 
@@ -88,11 +89,11 @@ function classifyPlayer(p: PlayerEntity, h: PlayerHealth | undefined): BadgeConf
   if (fatigue >= 75) {
     return {
       Icon: Flame,
-      label: 'Fadiga',
+      label: L('Fadiga', 'Fatigue'),
       detail: `${Math.round(fatigue)}%`,
       className:
         'bg-[var(--color-warning)]/12 text-[var(--color-warning)] border-[var(--color-warning)]/40',
-      tooltip: `Fadiga em ${Math.round(fatigue)}%. Ainda escalável, mas considere poupar pra evitar lesão.`,
+      tooltip: L(`Fadiga em ${Math.round(fatigue)}%. Ainda escalável, mas considere poupar pra evitar lesão.`, `Fatigue at ${Math.round(fatigue)}%. Still selectable, but consider resting him to avoid injury.`),
     };
   }
 
@@ -107,11 +108,11 @@ function classifyPlayer(p: PlayerEntity, h: PlayerHealth | undefined): BadgeConf
     if (pct > 0 && pct <= 0.1) {
       return {
         Icon: Coins,
-        label: 'Contrato',
-        detail: `${p.contractMatchesRemaining}j`,
+        label: L('Contrato', 'Contract'),
+        detail: L(`${p.contractMatchesRemaining}j`, `${p.contractMatchesRemaining}g`),
         className:
           'bg-[var(--color-warning)]/12 text-[var(--color-warning)] border-[var(--color-warning)]/40',
-        tooltip: `Contrato perto do fim: ${p.contractMatchesRemaining} jogo${p.contractMatchesRemaining === 1 ? '' : 's'} restante${p.contractMatchesRemaining === 1 ? '' : 's'} de ${p.contractMatchesIncluded}. Renove em breve.`,
+        tooltip: L(`Contrato perto do fim: ${p.contractMatchesRemaining} jogo${p.contractMatchesRemaining === 1 ? '' : 's'} restante${p.contractMatchesRemaining === 1 ? '' : 's'} de ${p.contractMatchesIncluded}. Renove em breve.`, `Contract ending: ${p.contractMatchesRemaining} of ${p.contractMatchesIncluded} game${p.contractMatchesIncluded === 1 ? '' : 's'} left. Renew soon.`),
       };
     }
   }
@@ -121,11 +122,11 @@ function classifyPlayer(p: PlayerEntity, h: PlayerHealth | undefined): BadgeConf
   if (injuryRisk >= 70) {
     return {
       Icon: AlertTriangle,
-      label: 'Risco',
+      label: L('Risco', 'Risk'),
       detail: `${Math.round(injuryRisk)}`,
       className:
         'bg-[var(--color-warning)]/12 text-[var(--color-warning)] border-[var(--color-warning)]/40',
-      tooltip: `Risco de lesão acumulado em ${Math.round(injuryRisk)}/100. Considere dar descanso ou priorizar recuperação.`,
+      tooltip: L(`Risco de lesão acumulado em ${Math.round(injuryRisk)}/100. Considere dar descanso ou priorizar recuperação.`, `Accumulated injury risk at ${Math.round(injuryRisk)}/100. Consider rest or prioritising recovery.`),
     };
   }
 

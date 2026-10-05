@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 export type HeroTab =
   | 'genesis' | 'legacies' | 'newbies' | 'highlights'
@@ -41,7 +42,7 @@ const TAB_THEME: Record<HeroTab, { label: string }> = {
   legacies:         { label: 'LEGACIES' },
   newbies:          { label: 'NEWBIES' },
   highlights:       { label: 'HIGHLIGHTS' },
-  'store-all':      { label: 'LOJA' },
+  'store-all':      { label: L('LOJA', 'STORE') },
   'store-packs':    { label: 'PACKS' },
   'store-boosters': { label: 'BOOSTERS' },
   'store-extra':    { label: 'EXTRA' },
@@ -176,7 +177,7 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
             <button
               type="button"
               onClick={() => setIndex((i) => (i - 1 + slides.length) % slides.length)}
-              aria-label="Slide anterior"
+              aria-label={L('Slide anterior', 'Previous slide')}
               className="absolute left-3 top-1/2 z-10 -translate-y-1/2 grid h-8 w-8 place-items-center border border-[var(--color-border)] bg-deep-black text-white/70 transition-colors hover:border-neon-yellow/60 hover:text-neon-yellow"
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
@@ -185,7 +186,7 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
             <button
               type="button"
               onClick={() => setIndex((i) => (i + 1) % slides.length)}
-              aria-label="Próximo slide"
+              aria-label={L('Próximo slide', 'Next slide')}
               className="absolute right-3 top-1/2 z-10 -translate-y-1/2 grid h-8 w-8 place-items-center border border-[var(--color-border)] bg-deep-black text-white/70 transition-colors hover:border-neon-yellow/60 hover:text-neon-yellow"
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
@@ -199,7 +200,7 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
                   key={i}
                   type="button"
                   onClick={() => setIndex(i)}
-                  aria-label={`Ir para slide ${i + 1}`}
+                  aria-label={L(`Ir para slide ${i + 1}`, `Go to slide ${i + 1}`)}
                   className={cn(
                     'h-[3px] transition-all',
                     i === index ? 'w-8 bg-neon-yellow' : 'w-2 bg-white/30 hover:bg-white/60',

@@ -28,6 +28,7 @@ import {
   generatePostMatchReport,
 } from '@/coach/globalMatchIntegration';
 import { CoachConversationEngine } from '@/coach/coachConversation';
+import { L } from '@/i18n/L';
 
 // Quando VITE_OLEFOOT_API_URL está definido, a Edge Function do Supabase é
 // autoritativa. Este hook só atua como fallback em dev local sem API URL.
@@ -95,7 +96,7 @@ export function useGlobalRoundScheduler() {
             const teamContext = conversationEngine.buildTeamContext();
             const isHome = fixture.homeTeamId === clubId;
             const report = generatePostMatchReport(coach, fixture, isHome, teamContext);
-            const reportMessage = `${report.analysis}\n\n**Sugestões:**\n${report.suggestions.map(s => `• ${s}`).join('\n')}`;
+            const reportMessage = `${report.analysis}\n\n**${L('Sugestões', 'Suggestions')}:**\n${report.suggestions.map(s => `• ${s}`).join('\n')}`;
 
             dispatch({
               type: 'COACH_ADD_MESSAGE',

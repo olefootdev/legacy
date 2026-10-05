@@ -16,6 +16,7 @@
 
 import { SpiritRng } from '../../shared/gamespirit/SpiritRng';
 import { hashSeed } from './quickBeatDirector';
+import { L } from '@/i18n/L';
 
 export type ClutchIntent = 'attack' | 'defend';
 export type AttackKey = 'chutar' | 'driblar' | 'tocar';
@@ -44,38 +45,38 @@ export interface ClutchResult {
 }
 
 const ATTACK_OPTIONS: ClutchOption[] = [
-  { key: 'chutar', label: 'Chutar' },
-  { key: 'driblar', label: 'Driblar' },
-  { key: 'tocar', label: 'Tocar' },
+  { key: 'chutar', label: L('Chutar', 'Shoot') },
+  { key: 'driblar', label: L('Driblar', 'Dribble') },
+  { key: 'tocar', label: L('Tocar', 'Pass') },
 ];
 const DEFEND_OPTIONS: ClutchOption[] = [
-  { key: 'cercar', label: 'Cercar' },
-  { key: 'carrinho', label: 'Carrinho' },
-  { key: 'combate', label: 'Combate' },
+  { key: 'cercar', label: L('Cercar', 'Close down') },
+  { key: 'carrinho', label: L('Carrinho', 'Slide tackle') },
+  { key: 'combate', label: L('Combate', 'Challenge') },
 ];
 
 interface CtxDef { context: string; best: ClutchKey }
 
 const ATTACK_CONTEXTS: CtxDef[] = [
-  { context: 'Cara a cara com o goleiro', best: 'driblar' },
-  { context: 'Zagueiro fechando o ângulo', best: 'tocar' },
-  { context: 'Sobrou limpa na pequena área', best: 'chutar' },
-  { context: 'Dois marcadores em cima', best: 'tocar' },
-  { context: 'Espaço na entrada da área', best: 'chutar' },
-  { context: 'Companheiro livre na segunda trave', best: 'tocar' },
+  { context: L('Cara a cara com o goleiro', 'One-on-one with the keeper'), best: 'driblar' },
+  { context: L('Zagueiro fechando o ângulo', 'Defender closing the angle'), best: 'tocar' },
+  { context: L('Sobrou limpa na pequena área', 'Loose ball in the six-yard box'), best: 'chutar' },
+  { context: L('Dois marcadores em cima', 'Two markers closing in'), best: 'tocar' },
+  { context: L('Espaço na entrada da área', 'Space at the edge of the box'), best: 'chutar' },
+  { context: L('Companheiro livre na segunda trave', 'Teammate free at the back post'), best: 'tocar' },
 ];
 const DEFEND_CONTEXTS: CtxDef[] = [
-  { context: 'Atacante dispara em velocidade', best: 'carrinho' },
-  { context: 'Atacante protege a bola na área', best: 'cercar' },
-  { context: 'Duelo de corpo, ombro a ombro', best: 'combate' },
-  { context: 'Atacante isolado na pequena área', best: 'carrinho' },
-  { context: 'Eles tabelam na entrada', best: 'cercar' },
+  { context: L('Atacante dispara em velocidade', 'Forward bursting through at pace'), best: 'carrinho' },
+  { context: L('Atacante protege a bola na área', 'Forward shielding the ball in the box'), best: 'cercar' },
+  { context: L('Duelo de corpo, ombro a ombro', 'Physical duel, shoulder to shoulder'), best: 'combate' },
+  { context: L('Atacante isolado na pequena área', 'Forward alone in the six-yard box'), best: 'carrinho' },
+  { context: L('Eles tabelam na entrada', 'They play a one-two at the edge'), best: 'cercar' },
 ];
 
-const ATTACK_PAST: Record<AttackKey, string> = { chutar: 'Chutou', driblar: 'Tentou o drible', tocar: 'Tocou' };
-const DEFEND_PAST: Record<DefendKey, string> = { cercar: 'Cercou', carrinho: 'Foi de carrinho', combate: 'Foi pro combate' };
-const ATTACK_NOUN: Record<AttackKey, string> = { chutar: 'chutar', driblar: 'driblar', tocar: 'tocar' };
-const DEFEND_NOUN: Record<DefendKey, string> = { cercar: 'cercar', carrinho: 'o carrinho', combate: 'o combate' };
+const ATTACK_PAST: Record<AttackKey, string> = { chutar: L('Chutou', 'Shot'), driblar: L('Tentou o drible', 'Tried the dribble'), tocar: L('Tocou', 'Passed') };
+const DEFEND_PAST: Record<DefendKey, string> = { cercar: L('Cercou', 'Closed down'), carrinho: L('Foi de carrinho', 'Went to ground'), combate: L('Foi pro combate', 'Went into the challenge') };
+const ATTACK_NOUN: Record<AttackKey, string> = { chutar: L('chutar', 'shooting'), driblar: L('driblar', 'dribbling'), tocar: L('tocar', 'passing') };
+const DEFEND_NOUN: Record<DefendKey, string> = { cercar: L('cercar', 'closing down'), carrinho: L('o carrinho', 'the slide tackle'), combate: L('o combate', 'the challenge') };
 
 /** Monta o momento decisivo a partir do lado e do minuto (determinístico). */
 export function buildClutch(opts: {
@@ -121,16 +122,16 @@ export function resolveClutch(
     if (success) {
       return {
         success: true,
-        headline: `${pastTxt} e é GOL!`,
+        headline: L(`${pastTxt} e é GOL!`, `${pastTxt} and it's a GOAL!`),
         feedback: right
-          ? `Leitura perfeita — com ${lower(moment.context)}, ${bestNoun} era exatamente a saída.`
-          : `Na sorte! Mas o mais seguro ali era ${bestNoun}.`,
+          ? L(`Leitura perfeita — com ${lower(moment.context)}, ${bestNoun} era exatamente a saída.`, `Perfect read — with ${lower(moment.context)}, ${bestNoun} was exactly the answer.`)
+          : L(`Na sorte! Mas o mais seguro ali era ${bestNoun}.`, `Lucky! But the safer option was ${bestNoun}.`),
       };
     }
     return {
       success: false,
-      headline: `${pastTxt}… e perdeu!`,
-      feedback: `Com ${lower(moment.context)}, ${bestNoun} era a melhor escolha.`,
+      headline: L(`${pastTxt}… e perdeu!`, `${pastTxt}… and lost it!`),
+      feedback: L(`Com ${lower(moment.context)}, ${bestNoun} era a melhor escolha.`, `With ${lower(moment.context)}, ${bestNoun} was the best choice.`),
     };
   }
 
@@ -140,16 +141,16 @@ export function resolveClutch(
   if (success) {
     return {
       success: true,
-      headline: `${pastTxt} — salvou o gol!`,
+      headline: L(`${pastTxt} — salvou o gol!`, `${pastTxt} — goal saved!`),
       feedback: right
-        ? `Na hora certa — com ${lower(moment.context)}, ${bestNoun} era o caminho.`
-        : `Deu sorte, mas o ideal era ${bestNoun}.`,
+        ? L(`Na hora certa — com ${lower(moment.context)}, ${bestNoun} era o caminho.`, `Perfect timing — with ${lower(moment.context)}, ${bestNoun} was the way.`)
+        : L(`Deu sorte, mas o ideal era ${bestNoun}.`, `Got lucky, but the ideal was ${bestNoun}.`),
     };
   }
   return {
     success: false,
-    headline: `${pastTxt}… e sofreu o gol!`,
-    feedback: `Com ${lower(moment.context)}, ${bestNoun} segurava a jogada.`,
+    headline: L(`${pastTxt}… e sofreu o gol!`, `${pastTxt}… and conceded!`),
+    feedback: L(`Com ${lower(moment.context)}, ${bestNoun} segurava a jogada.`, `With ${lower(moment.context)}, ${bestNoun} would have stopped it.`),
   };
 }
 

@@ -11,6 +11,7 @@ import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 import { processVoiceCommand, type VoiceCommandResult } from '@/voiceCommand/voiceCommandProcessor';
 import { parseCoachCommand, findPlayerByName } from '@/match/coachCommands';
 
+import { L } from '@/i18n/L';
 const NEON = 'var(--color-neon-yellow)';
 
 interface FalePlayerBarProps {
@@ -57,7 +58,7 @@ export function FalePlayerBar({
         const result = onSubstituteByName(name);
         setFeedback({
           ok: result.ok,
-          intent: result.ok ? 'SUBSTITUIÇÃO' : undefined,
+          intent: result.ok ? L('SUBSTITUIÇÃO', 'SUBSTITUTION') : undefined,
           raw: result.message,
         });
         if (result.ok) setText('');
@@ -74,7 +75,7 @@ export function FalePlayerBar({
         if (cmd.scope === 'player' && cmd.target) {
           const found = findPlayerByName(cmd.target, players);
           if (!found) {
-            setFeedback({ ok: false, raw: `Jogador "${cmd.target}" não encontrado` });
+            setFeedback({ ok: false, raw: L(`Jogador "${cmd.target}" não encontrado`, `Player "${cmd.target}" not found`) });
             window.setTimeout(() => setFeedback(null), 4000);
             return;
           }
@@ -83,7 +84,7 @@ export function FalePlayerBar({
         const result = onSkillCommand(targetId, cmd.skill);
         setFeedback({
           ok: result.ok,
-          intent: result.ok ? 'SKILL ATIVADA' : undefined,
+          intent: result.ok ? L('SKILL ATIVADA', 'SKILL ON') : undefined,
           raw: result.message,
         });
         if (result.ok) setText('');
@@ -141,8 +142,8 @@ export function FalePlayerBar({
         ok: result.active,
         intent: result.active ? `LEGACY · ${result.activated} skills` : 'LEGACY OFF',
         raw: result.active
-          ? `${result.activated} jogador(es) ativaram skills`
-          : 'Legacy mode desativado',
+          ? L(`${result.activated} jogador(es) ativaram skills`, `${result.activated} player(s) activated skills`)
+          : L('Legacy mode desativado', 'Legacy mode off'),
       });
       window.setTimeout(() => setFeedback(null), 4000);
     }
@@ -243,7 +244,7 @@ export function FalePlayerBar({
             marginBottom: 8,
           }}
         >
-          Fale com o time
+          {L('Fale com o time', 'Talk to the team')}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -252,8 +253,8 @@ export function FalePlayerBar({
             type="button"
             onClick={() => (listening ? voice.stop() : voice.start())}
             disabled={!voice.supported}
-            aria-label={listening ? 'Parar captura' : 'Falar com o time'}
-            title={voice.supported ? (listening ? 'Parar' : 'Falar') : 'Voz não suportada'}
+            aria-label={listening ? L('Parar captura', 'Stop listening') : L('Falar com o time', 'Talk to the team')}
+            title={voice.supported ? (listening ? L('Parar', 'Stop') : L('Falar', 'Speak')) : L('Voz não suportada', 'Voice not supported')}
             style={{
               background: listening ? 'var(--color-baixa)' : 'transparent',
               border: `1px solid ${listening ? 'var(--color-baixa)' : 'rgba(253,225,0,0.55)'}`,
@@ -281,7 +282,7 @@ export function FalePlayerBar({
             onKeyDown={(e) => {
               if (e.key === 'Enter') submit(text);
             }}
-            placeholder={listening ? 'ouvindo…' : 'diga ao Lucas para chutar…'}
+            placeholder={listening ? L('ouvindo…', 'listening…') : L('diga ao Lucas para chutar…', 'tell Lucas to shoot…')}
             style={{
               flex: 1,
               minWidth: 0,
@@ -305,8 +306,8 @@ export function FalePlayerBar({
             type="button"
             onClick={() => submit(text)}
             disabled={!text.trim() || busy}
-            aria-label="Enviar comando"
-            title="Enviar"
+            aria-label={L('Enviar comando', 'Send command')}
+            title={L('Enviar', 'Send')}
             style={{
               background: text.trim() && !busy ? NEON : 'transparent',
               color: text.trim() && !busy ? '#000' : 'rgba(253,225,0,0.4)',
@@ -330,8 +331,8 @@ export function FalePlayerBar({
             type="button"
             onClick={toggleLegacy}
             aria-pressed={effectiveLegacyActive}
-            aria-label={effectiveLegacyActive ? 'Desativar Legacy' : 'Ativar Legacy'}
-            title={effectiveLegacyActive ? 'Legacy ativo — skills do time ativadas' : 'Ativar Legacy: ativa skills do time'}
+            aria-label={effectiveLegacyActive ? L('Desativar Legacy', 'Turn off Legacy') : L('Ativar Legacy', 'Turn on Legacy')}
+            title={effectiveLegacyActive ? L('Legacy ativo — skills do time ativadas', 'Legacy on — team skills active') : L('Ativar Legacy: ativa skills do time', 'Turn on Legacy: activates team skills')}
             style={{
               background: effectiveLegacyActive ? 'var(--color-asfalto)' : NEON,
               color: effectiveLegacyActive ? NEON : '#000',

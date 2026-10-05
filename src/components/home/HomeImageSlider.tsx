@@ -24,6 +24,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ImageIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { L } from '@/i18n/L';
 
 export interface HomeSlide {
   src?: string;
@@ -35,12 +36,12 @@ export interface HomeSlide {
 const DESTAQUES: HomeSlide[] = [
   {
     src: '/banners/home/banner-inicio-liga-ole.jpg',
-    alt: 'Time entrando em campo — Liga Global',
+    alt: L('Time entrando em campo — Liga Global', 'Team walking out — Global League'),
     href: '/match/global',
   },
   {
     src: '/banners/home/banner-campeao-game-ole.jpg',
-    alt: 'Manager erguido pelo time — campeão',
+    alt: L('Manager erguido pelo time — campeão', 'Manager lifted by the team — champion'),
     href: '/competicao/ranking',
   },
 ];
@@ -93,7 +94,7 @@ export function HomeImageSlider({ slides = DESTAQUES }: { slides?: HomeSlide[] }
   }
 
   return (
-    <section aria-label="Destaques" className="ole-full-bleed flex flex-col gap-3">
+    <section aria-label={L('Destaques', 'Highlights')} className="ole-full-bleed flex flex-col gap-3">
       <div
         ref={trilho}
         className="flex snap-x snap-mandatory overflow-x-auto"
@@ -107,7 +108,7 @@ export function HomeImageSlider({ slides = DESTAQUES }: { slides?: HomeSlide[] }
       </div>
 
       {total > 1 && (
-        <div className="flex items-center justify-center gap-2.5" role="tablist" aria-label="Escolher destaque">
+        <div className="flex items-center justify-center gap-2.5" role="tablist" aria-label={L('Escolher destaque', 'Choose highlight')}>
           {slides.map((_, i) => {
             const on = i === ativo;
             return (
@@ -116,7 +117,7 @@ export function HomeImageSlider({ slides = DESTAQUES }: { slides?: HomeSlide[] }
                 type="button"
                 role="tab"
                 aria-selected={on}
-                aria-label={`Destaque ${i + 1}`}
+                aria-label={L(`Destaque ${i + 1}`, `Highlight ${i + 1}`)}
                 onClick={() => irPara(i)}
                 className="grid place-items-center font-impact tabular-nums transition-all"
                 style={{
@@ -162,7 +163,7 @@ function Slide({ slide, eager = false }: { slide: HomeSlide; eager?: boolean }) 
       <div className="flex flex-col items-center gap-2 text-center" style={{ color: 'rgba(237,235,228,0.32)' }}>
         <ImageIcon className="h-6 w-6" aria-hidden />
         <span className="font-display font-black uppercase" style={{ fontSize: '10px', letterSpacing: '0.16em' }}>
-          {slide.alt ?? 'Sua imagem aqui'}
+          {slide.alt ?? L('Sua imagem aqui', 'Your image here')}
         </span>
       </div>
     </div>

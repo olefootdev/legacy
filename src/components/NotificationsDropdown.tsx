@@ -13,6 +13,23 @@ import {
 } from '@/game/inboxTypes';
 import { useNotificationsSync } from '@/hooks/useNotificationsSync';
 import type { NotificationRow } from '@/supabase/notifications';
+import { L, LOCALE } from '@/i18n/L';
+
+/** Rótulo de tela da categoria (o valor `category` continua em PT). */
+const CATEGORY_TAG: Record<InboxCategory, string> = {
+  PLANTEL: L('plantel', 'squad'),
+  TREINO: L('treino', 'training'),
+  STAFF: 'staff',
+  FINANCEIRO: L('financeiro', 'finance'),
+  CLUBE: L('clube', 'club'),
+  COMPETIÇÃO: L('competição', 'competition'),
+  MISSÃO: L('missão', 'mission'),
+  TORCIDA: L('torcida', 'fans'),
+  EMPRESA: L('empresa', 'company'),
+  CONTA: L('conta', 'account'),
+  RANKING: 'ranking',
+  DESAFIOS: L('desafios', 'challenges'),
+};
 
 const VALID_CATEGORIES: InboxCategory[] = [
   'PLANTEL',
@@ -40,7 +57,7 @@ function notificationRowToInbox(row: NotificationRow): InboxItem {
     tag: category,
     title: row.title,
     body: row.message ?? undefined,
-    timeLabel: created.toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' }),
+    timeLabel: created.toLocaleString(LOCALE, { dateStyle: 'short', timeStyle: 'short' }),
     read: row.read,
     deepLink: row.link ?? undefined,
     colorClass: 'text-neon-yellow',
@@ -112,7 +129,7 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
         <p className="text-xs text-cimento leading-snug line-clamp-2 mb-1.5">
           {notification.body}
         </p>
-        <Hashtag className="text-poeira">#{notification.category.toLowerCase()}</Hashtag>
+        <Hashtag className="text-poeira">#{CATEGORY_TAG[notification.category] ?? notification.category.toLowerCase()}</Hashtag>
       </div>
 
       {/* Seta */}
@@ -178,7 +195,7 @@ export function NotificationsDropdown() {
             ? 'border-white text-white'
             : 'border-white/16 text-white/80 hover:border-white hover:text-white',
         )}
-        aria-label="Notificações"
+        aria-label={L('Notificações', 'Notifications')}
       >
         <Bell className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={2.25} />
 
@@ -215,13 +232,13 @@ export function NotificationsDropdown() {
               {/* Header */}
               <div className="flex items-center justify-between border-b border-white/10 px-5 py-3 bg-nav">
                 <h3 className="font-impact text-[17px] uppercase leading-[1.1] text-white">
-                  Notificações {unreadCount > 0 && `(${unreadCount})`}
+                  {L('Notificações', 'Notifications')} {unreadCount > 0 && `(${unreadCount})`}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
                   className="text-cimento hover:text-white transition-colors"
-                  aria-label="Fechar"
+                  aria-label={L('Fechar', 'Close')}
                 >
                   <X className="h-5 w-5" strokeWidth={2} />
                 </button>
@@ -232,7 +249,7 @@ export function NotificationsDropdown() {
                 {notifications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
                     <Bell className="h-10 w-10 text-poeira mb-2" strokeWidth={1.5} />
-                    <p className="text-sm font-bold text-cimento">Sem notificações</p>
+                    <p className="text-sm font-bold text-cimento">{L('Sem notificações', 'No notifications')}</p>
                   </div>
                 ) : (
                   notifications.slice(0, 5).map((notification, i) => (
@@ -253,7 +270,7 @@ export function NotificationsDropdown() {
                     onClick={() => setIsOpen(false)}
                     className="ole-num block w-full py-3 text-center text-[12px] uppercase text-cimento hover:text-white transition-colors"
                   >
-                    Ver todas ({notifications.length})
+                    {L('Ver todas', 'View all')} ({notifications.length})
                   </Link>
                 </div>
               )}

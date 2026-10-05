@@ -13,6 +13,7 @@
  * Click leva pra /match/global (rota real, NÃO /liga-global/hoje).
  */
 
+import { L } from '@/i18n/L';
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Crown, Clock, Swords, ChevronRight, Flag, Trophy } from 'lucide-react';
@@ -20,7 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDailyCycle } from '@/hooks/useDailyCycle';
 
 function fmtCountdown(ms: number): string {
-  if (ms <= 0) return 'agora';
+  if (ms <= 0) return L('agora', 'now');
   const totalSec = Math.floor(ms / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
@@ -32,11 +33,11 @@ function fmtCountdown(ms: number): string {
 function phaseLabel(size: number): string {
   switch (size) {
     case 2: return 'Final';
-    case 4: return 'Semifinal';
-    case 8: return 'Quartas';
-    case 16: return 'Oitavas';
-    case 32: return 'Fase de 32';
-    default: return `Fase de ${size}`;
+    case 4: return L('Semifinal', 'Semi-final');
+    case 8: return L('Quartas', 'Quarters');
+    case 16: return L('Oitavas', 'Last 16');
+    case 32: return L('Fase de 32', 'Last 32');
+    default: return L(`Fase de ${size}`, `Last ${size}`);
   }
 }
 
@@ -58,9 +59,9 @@ export function DailyCycleWidget() {
   const heroConfig = (() => {
     if (daily.phase === 'crowned' && daily.todayCrown) {
       return {
-        watermark: 'COROA',
-        kicker: 'Coroa do Dia',
-        title: 'COROADO',
+        watermark: L('COROA', 'CROWN'),
+        kicker: L('Coroa do Dia', 'Crown of the Day'),
+        title: L('COROADO', 'CROWNED'),
         subtitle: daily.todayCrown.clubName,
         Icon: Crown,
       };
@@ -69,17 +70,17 @@ export function DailyCycleWidget() {
       const r = liveRound ?? nextRound;
       return {
         watermark: 'KO',
-        kicker: 'Coroa do Dia',
-        title: 'MATA-MATA',
-        subtitle: r ? phaseLabel(r.size) + (liveRound ? ' ao vivo' : ' aguardando') : 'em andamento',
+        kicker: L('Coroa do Dia', 'Crown of the Day'),
+        title: L('MATA-MATA', 'KNOCKOUT'),
+        subtitle: r ? phaseLabel(r.size) + (liveRound ? L(' ao vivo', ' live') : L(' aguardando', ' waiting')) : L('em andamento', 'in progress'),
         Icon: Swords,
       };
     }
     return {
-      watermark: 'COROA',
-      kicker: 'Coroa do Dia',
-      title: 'CORRIDA',
-      subtitle: 'Top ' + (daily.cutSize || 32) + ' às ' + daily.qualifyHour + 'h',
+      watermark: L('COROA', 'CROWN'),
+      kicker: L('Coroa do Dia', 'Crown of the Day'),
+      title: L('CORRIDA', 'RACE'),
+      subtitle: 'Top ' + (daily.cutSize || 32) + L(' às ', ' at ') + daily.qualifyHour + 'h',
       Icon: Flag,
     };
   })();
@@ -127,7 +128,7 @@ export function DailyCycleWidget() {
                     {daily.myRank}<span className="text-base">º</span>
                   </p>
                   <p className="text-[10px] font-display uppercase tracking-wider text-black/60 mt-1">
-                    {daily.inCut ? 'no top ' + daily.cutSize : daily.distanceToCut ? `${daily.distanceToCut} fora` : 'sem partidas'}
+                    {daily.inCut ? L('no top ', 'in top ') + daily.cutSize : daily.distanceToCut ? L(`${daily.distanceToCut} fora`, `${daily.distanceToCut} out`) : L('sem partidas', 'no matches')}
                   </p>
                 </>
               ) : (
@@ -137,7 +138,7 @@ export function DailyCycleWidget() {
                     {fmtCountdown(daily.msToCut)}
                   </p>
                   <p className="text-[10px] font-display uppercase tracking-wider text-black/60 mt-1">
-                    pro corte
+                    {L('pro corte', 'to cut-off')}
                   </p>
                 </>
               )}
@@ -148,10 +149,10 @@ export function DailyCycleWidget() {
             <div className="flex flex-col items-end">
               {liveRound ? (
                 <>
-                  <span className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-black/60">ao vivo</span>
+                  <span className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-black/60">{L('ao vivo', 'live')}</span>
                   <p className="font-mono text-2xl font-black text-black leading-none animate-pulse">●</p>
                   <p className="text-[10px] font-display uppercase tracking-wider text-black/60 mt-1">
-                    simulando
+                    {L('simulando', 'simulating')}
                   </p>
                 </>
               ) : (
@@ -161,7 +162,7 @@ export function DailyCycleWidget() {
                     {fmtCountdown(Math.max(0, nextRound.scheduledKickoffMs - now))}
                   </p>
                   <p className="text-[10px] font-display uppercase tracking-wider text-black/60 mt-1">
-                    próxima rodada
+                    {L('próxima rodada', 'next round')}
                   </p>
                 </>
               )}
@@ -175,7 +176,7 @@ export function DailyCycleWidget() {
                 {daily.todayCrown.dailyDate}
               </p>
               <p className="text-[10px] font-display uppercase tracking-wider text-black/60 mt-1">
-                campeão de hoje
+                {L('campeão de hoje', 'today\'s champion')}
               </p>
             </div>
           )}
@@ -194,7 +195,7 @@ export function DailyCycleWidget() {
         {daily.phase === 'qualifying' && (
           <>
             <span className="text-[10px] font-display uppercase tracking-wider text-white/60">
-              {daily.myRank != null ? `Você em ${daily.myRank}º` : 'Jogue 1 partida'}
+              {daily.myRank != null ? L(`Você em ${daily.myRank}º`, `You: #${daily.myRank}`) : L('Jogue 1 partida', 'Play 1 match')}
             </span>
             <span className="font-mono text-sm font-bold text-neon-yellow">
               {fmtCountdown(daily.msToCut)}
@@ -204,17 +205,17 @@ export function DailyCycleWidget() {
         {daily.phase === 'knockout' && nextRound && (
           <>
             <span className="text-[10px] font-display uppercase tracking-wider text-white/60">
-              {liveRound ? phaseLabel(liveRound.size) + ' ao vivo' : 'Próxima rodada em'}
+              {liveRound ? phaseLabel(liveRound.size) + L(' ao vivo', ' live') : L('Próxima rodada em', 'Next round in')}
             </span>
             <span className="font-mono text-sm font-bold text-neon-yellow">
-              {liveRound ? '● agora' : fmtCountdown(Math.max(0, nextRound.scheduledKickoffMs - now))}
+              {liveRound ? L('● agora', '● now') : fmtCountdown(Math.max(0, nextRound.scheduledKickoffMs - now))}
             </span>
           </>
         )}
         {daily.phase === 'crowned' && daily.todayCrown && (
           <>
             <span className="text-[10px] font-display uppercase tracking-wider text-white/60">
-              Campeão · {daily.todayCrown.dailyDate}
+              {L('Campeão', 'Champion')} · {daily.todayCrown.dailyDate}
             </span>
             <span className="font-display text-sm font-bold uppercase text-neon-yellow truncate ml-2">
               {daily.todayCrown.clubShort}

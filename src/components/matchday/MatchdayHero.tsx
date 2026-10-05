@@ -13,6 +13,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 export interface MatchdayHeroData {
   competition: string;
@@ -92,9 +93,9 @@ export interface MatchdayHeroData {
 }
 
 export const MOCK_MATCHDAY: MatchdayHeroData = {
-  competition: 'Brasileirão · Rodada 14',
+  competition: L('Brasileirão · Rodada 14', 'Brasileirão · Matchday 14'),
   statusPrimary: '72\'',
-  statusSecondary: 'Ao vivo',
+  statusSecondary: L('Ao vivo', 'Live'),
   statusVariant: 'live',
   home: {
     short: 'FLA',
@@ -109,21 +110,21 @@ export const MOCK_MATCHDAY: MatchdayHeroData = {
     form: { v: 7, e: 4, d: 2 },
   },
   stats: [
-    { label: 'Posse', value: '58%' },
-    { label: 'Chutes', value: '14' },
-    { label: 'No gol', value: '7' },
-    { label: 'Passes', value: '82%' },
-    { label: 'Escanteios', value: '3' },
+    { label: L('Posse', 'Possession'), value: '58%' },
+    { label: L('Chutes', 'Shots'), value: '14' },
+    { label: L('No gol', 'On target'), value: '7' },
+    { label: L('Passes', 'Passing'), value: '82%' },
+    { label: L('Escanteios', 'Corners'), value: '3' },
   ],
   highlight: {
     name: 'Gabriel Barbosa',
     number: 9,
-    quote: 'Dois gols em 15 minutos. A camisa 9 pesou quando precisou pesar.',
+    quote: L('Dois gols em 15 minutos. A camisa 9 pesou quando precisou pesar.', 'Two goals in 15 minutes. The number 9 delivered when it mattered.'),
   },
   actions: [
-    { label: 'Ver análise tática', variant: 'outline' },
+    { label: L('Ver análise tática', 'Tactical analysis'), variant: 'outline' },
     { label: 'Replay', variant: 'outline' },
-    { label: 'Estatísticas', variant: 'outline' },
+    { label: L('Estatísticas', 'Stats'), variant: 'outline' },
   ],
   topLeft: { label: 'Olefoot', href: '/' },
 };
@@ -450,7 +451,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                       {data.highlight.goalsSeason}
                     </p>
                     <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
-                      Gols
+                      {L('Gols', 'Goals')}
                     </p>
                   </div>
                 ) : null}
@@ -463,7 +464,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                       {data.highlight.assistsSeason}
                     </p>
                     <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
-                      Assistências
+                      {L('Assistências', 'Assists')}
                     </p>
                   </div>
                 ) : null}
@@ -494,14 +495,14 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                                 ? 'bg-atencao text-black'
                                 : 'bg-baixa text-white',
                           )}
-                          title={r === 'W' ? 'Vitória' : r === 'D' ? 'Empate' : 'Derrota'}
+                          title={r === 'W' ? L('Vitória', 'Win') : r === 'D' ? L('Empate', 'Draw') : L('Derrota', 'Loss')}
                         >
-                          {r === 'W' ? 'V' : r === 'D' ? 'E' : 'D'}
+                          {r === 'W' ? L('V', 'W') : r === 'D' ? L('E', 'D') : L('D', 'L')}
                         </span>
                       ))}
                     </div>
                     <p className="mt-1.5 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
-                      Forma · 5 jogos
+                      {L('Forma · 5 jogos', 'Form · last 5')}
                     </p>
                   </div>
                 ) : null}
@@ -587,7 +588,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
             {data.scrollCueTargetId ? (
               <button
                 type="button"
-                aria-label="Mais detalhes"
+                aria-label={L('Mais detalhes', 'More details')}
                 onClick={() => {
                   const el = document.getElementById(data.scrollCueTargetId!);
                   el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -660,7 +661,7 @@ function FormPills({
         align === 'right' ? 'text-right' : 'text-left'
       }`}
     >
-      {form.v}V · {form.e}E · {form.d}D
+      {form.v}{L('V', 'W')} · {form.e}{L('E', 'D')} · {form.d}{L('D', 'L')}
     </p>
   );
 }

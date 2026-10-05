@@ -10,6 +10,7 @@
  */
 
 import type { TacticalIntensityLevel } from './quickTacticalIntensity';
+import { L } from '@/i18n/L';
 
 export interface AgentEchoTrait {
   /** RiskProfile.baseRisk (0-100) — apetite por risco do agente. */
@@ -46,19 +47,19 @@ type Mood = 'embraces' | 'grumbles' | 'steady';
 
 const ECHO_LINES: Record<Mood, Record<'up' | 'down' | 'flat', string[]>> = {
   embraces: {
-    up: ['{name} abraça o comando e acelera o time.', '{name} sorri: era isso que ele pedia.'],
-    down: ['{name} morde o freio, mas cumpre a ordem.', '{name} recua reclamando baixinho — quer bola.'],
-    flat: ['{name} assume a batuta do novo ritmo.', '{name} organiza o time no novo desenho.'],
+    up: [L('{name} abraça o comando e acelera o time.', '{name} embraces the call and speeds the team up.'), L('{name} sorri: era isso que ele pedia.', '{name} smiles: just what he wanted.')],
+    down: [L('{name} morde o freio, mas cumpre a ordem.', '{name} bites his tongue, but follows orders.'), L('{name} recua reclamando baixinho — quer bola.', '{name} drops back muttering — he wants the ball.')],
+    flat: [L('{name} assume a batuta do novo ritmo.', '{name} takes charge of the new tempo.'), L('{name} organiza o time no novo desenho.', '{name} organises the team in the new shape.')],
   },
   grumbles: {
-    up: ['{name} torce o nariz pro sacrifício — mas vai.', '{name} respira fundo: pressão não é o forte dele.'],
-    down: ['{name} agradece: agora joga protegido.', '{name} se encaixa no bloco — confortável.'],
-    flat: ['{name} segue o plano sem discutir.', '{name} acena pro banco: entendido.'],
+    up: [L('{name} torce o nariz pro sacrifício — mas vai.', '{name} frowns at the sacrifice — but goes.'), L('{name} respira fundo: pressão não é o forte dele.', '{name} takes a deep breath: pressing isn\'t his strength.')],
+    down: [L('{name} agradece: agora joga protegido.', '{name} is grateful: now he plays protected.'), L('{name} se encaixa no bloco — confortável.', '{name} slots into the block — comfortable.')],
+    flat: [L('{name} segue o plano sem discutir.', '{name} follows the plan without arguing.'), L('{name} acena pro banco: entendido.', '{name} nods to the bench: understood.')],
   },
   steady: {
-    up: ['{name} puxa a linha pra frente sem alarde.', '{name} ajusta a marcação pro novo plano.'],
-    down: ['{name} fecha a porta e chama o time.', '{name} baixa o ritmo com a frieza de sempre.'],
-    flat: ['{name} mantém o time no trilho.', '{name} toca o jogo — profissional.'],
+    up: [L('{name} puxa a linha pra frente sem alarde.', '{name} quietly pushes the line up.'), L('{name} ajusta a marcação pro novo plano.', '{name} adjusts the marking for the new plan.')],
+    down: [L('{name} fecha a porta e chama o time.', '{name} shuts the door and rallies the team.'), L('{name} baixa o ritmo com a frieza de sempre.', '{name} slows the tempo with his usual calm.')],
+    flat: [L('{name} mantém o time no trilho.', '{name} keeps the team on track.'), L('{name} toca o jogo — profissional.', '{name} keeps it ticking — professional.')],
   },
 };
 

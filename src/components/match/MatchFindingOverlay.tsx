@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { OpponentStub } from '@/entities/types';
 
+import { L } from '@/i18n/L';
 interface Props {
   /** Stub do oponente. `null` enquanto matchmaking não terminou. */
   opponent: OpponentStub | null;
@@ -84,23 +85,23 @@ export function MatchFindingOverlay({ opponent, homeShort, onComplete }: Props) 
   // Lista cronológica dos textos já apresentados (efeito empilhamento)
   const lines: { key: Step; text: string; tone: 'searching' | 'found' | 'narrative' }[] = [];
   if (step === 'searching') {
-    lines.push({ key: 'searching', text: 'Buscando partida...', tone: 'searching' });
+    lines.push({ key: 'searching', text: L('Buscando partida...', 'Finding a match...'), tone: 'searching' });
   } else {
     if (opponent) {
       lines.push({
         key: 'found',
-        text: `Partida encontrada — ${opponent.shortName ?? opponent.name}`,
+        text: `${L('Partida encontrada', 'Match found')} — ${opponent.shortName ?? opponent.name}`,
         tone: 'found',
       });
     }
     if (step === 'teams' || step === 'crowd' || step === 'kickoff') {
-      lines.push({ key: 'teams', text: 'Times em campo...', tone: 'narrative' });
+      lines.push({ key: 'teams', text: L('Times em campo...', 'Teams on the pitch...'), tone: 'narrative' });
     }
     if (step === 'crowd' || step === 'kickoff') {
-      lines.push({ key: 'crowd', text: 'Torcida vibra...', tone: 'narrative' });
+      lines.push({ key: 'crowd', text: L('Torcida vibra...', 'The crowd roars...'), tone: 'narrative' });
     }
     if (step === 'kickoff') {
-      lines.push({ key: 'kickoff', text: 'Começa a partida!', tone: 'narrative' });
+      lines.push({ key: 'kickoff', text: L('Começa a partida!', 'Kick-off!'), tone: 'narrative' });
     }
   }
 

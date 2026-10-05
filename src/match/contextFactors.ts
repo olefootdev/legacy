@@ -21,6 +21,7 @@
 import type { EffectiveTeamStrength } from './availabilityReport';
 import { renownCrowdFactor } from '@/systems/renown';
 import { decreeEffects } from '@/systems/weeklyDecree';
+import { L } from '@/i18n/L';
 
 // ──────────────────────────────────────────────────────────────────────────
 // Tipos
@@ -174,24 +175,24 @@ export function computeMatchContextModifiers(input: MatchContextInput): MatchCon
     squadDepletion: clamp(depletion, CAPS.squadDepletion),
     renownPressure: clamp(renownPressure, [1.0, 1.03]),
     breakdown: {
-      homeAdvantage: input.isHome ? 'Jogando em casa' : 'Visitante',
+      homeAdvantage: input.isHome ? L('Jogando em casa', 'Playing at home') : L('Visitante', 'Away'),
       rest: input.daysSinceLastMatch != null
-        ? `${input.daysSinceLastMatch} dia${input.daysSinceLastMatch === 1 ? '' : 's'} desde o último jogo`
-        : 'Descanso desconhecido',
+        ? L(`${input.daysSinceLastMatch} dia${input.daysSinceLastMatch === 1 ? '' : 's'} desde o último jogo`, `${input.daysSinceLastMatch} day${input.daysSinceLastMatch === 1 ? '' : 's'} since the last match`)
+        : L('Descanso desconhecido', 'Rest unknown'),
       derby: input.isDerby
-        ? 'Clássico — torcida ferve'
+        ? L('Clássico — torcida ferve', 'Derby — the crowd is boiling')
         : decreeFx.derbyIntensityFloor
-          ? 'Semana do Espetáculo — todo jogo ferve'
-          : 'Jogo normal',
-      renown: renownPressure > 1.0 ? 'Sua fama acende o adversário' : undefined,
+          ? L('Semana do Espetáculo — todo jogo ferve', 'Showcase Week — every match is heated')
+          : L('Jogo normal', 'Regular match'),
+      renown: renownPressure > 1.0 ? L('Sua fama acende o adversário', 'Your fame fires up the opponent') : undefined,
       importance: input.importance === 'final'
-        ? 'Final — pressão máxima'
+        ? L('Final — pressão máxima', 'Final — maximum pressure')
         : input.importance === 'decisao'
-          ? 'Decisão — tensão alta'
-          : 'Liga normal',
+          ? L('Decisão — tensão alta', 'Decider — high tension')
+          : L('Liga normal', 'Regular league'),
       depletion: input.effectiveTeamStrength
-        ? `XI -${Math.round((1 - depletion) * 100)}% (fadiga/contratos)`
-        : 'Plantel completo',
+        ? L(`XI -${Math.round((1 - depletion) * 100)}% (fadiga/contratos)`, `XI -${Math.round((1 - depletion) * 100)}% (fatigue/contracts)`)
+        : L('Plantel completo', 'Full squad'),
     },
   };
 }
@@ -287,11 +288,11 @@ export function neutralContextModifiers(): MatchContextModifiers {
     importance: 1.0,
     squadDepletion: 1.0,
     breakdown: {
-      homeAdvantage: 'Neutro',
-      rest: 'Neutro',
-      derby: 'Neutro',
-      importance: 'Neutro',
-      depletion: 'Neutro',
+      homeAdvantage: L('Neutro', 'Neutral'),
+      rest: L('Neutro', 'Neutral'),
+      derby: L('Neutro', 'Neutral'),
+      importance: L('Neutro', 'Neutral'),
+      depletion: L('Neutro', 'Neutral'),
     },
   };
 }

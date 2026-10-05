@@ -12,6 +12,7 @@
  *
  * PURO — sem Date/Math.random (timestamps vêm do caller).
  */
+import { L } from '@/i18n/L';
 
 export interface RenownEntry {
   amount: number;
@@ -49,11 +50,11 @@ export function addRenown(
 
 /** Faixas-título (o "Herói de Oakvale" do futebol). */
 export const RENOWN_TIERS = [
-  { min: 0, title: 'Clube de Bairro' },
-  { min: 150, title: 'Nome do Distrito' },
-  { min: 400, title: 'Força Nacional' },
-  { min: 700, title: 'Gigante Continental' },
-  { min: 1000, title: 'Lenda Viva' },
+  { min: 0, title: L('Clube de Bairro', 'Neighbourhood Club') },
+  { min: 150, title: L('Nome do Distrito', 'District Name') },
+  { min: 400, title: L('Força Nacional', 'National Force') },
+  { min: 700, title: L('Gigante Continental', 'Continental Giant') },
+  { min: 1000, title: L('Lenda Viva', 'Living Legend') },
 ] as const;
 
 export function renownTitle(total: number): string {

@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { Eye, Crosshair, ShieldAlert } from 'lucide-react';
 import type { AnalystBeat, AnalystBeatChoice } from '@/match/quickPlanTypes';
+import { L } from '@/i18n/L';
 
 interface Props {
   beat: AnalystBeat;
@@ -41,10 +42,10 @@ export function AnalystBeatCard({ beat, onChoose }: Props) {
 
   const intent = beat.intent ?? 'neutral';
   const theme = intent === 'attack'
-    ? { token: 'var(--color-success)', Icon: Crosshair, label: 'Chance de gol' }
+    ? { token: 'var(--color-success)', Icon: Crosshair, label: L('Chance de gol', 'Goal chance') }
     : intent === 'defend'
-    ? { token: 'var(--color-danger)', Icon: ShieldAlert, label: 'Perigo — segura' }
-    : { token: 'var(--color-neon-yellow)', Icon: Eye, label: 'Leitura do Analista' };
+    ? { token: 'var(--color-danger)', Icon: ShieldAlert, label: L('Perigo — segura', 'Danger — hold on') }
+    : { token: 'var(--color-neon-yellow)', Icon: Eye, label: L('Leitura do Analista', 'Analyst read') };
 
   return (
     <motion.div
@@ -72,7 +73,7 @@ export function AnalystBeatCard({ beat, onChoose }: Props) {
             transition={{ duration: 1, repeat: Infinity }}
             className="font-sans text-[13px]"
           >
-            O Analista está lendo o jogo…
+            {L('O Analista está lendo o jogo…', 'The Analyst is reading the game…')}
           </motion.span>
         </div>
       ) : (

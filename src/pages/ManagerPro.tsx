@@ -27,6 +27,7 @@ import { formatExp } from '@/systems/economy';
 import { overallFromAttributes } from '@/entities/player';
 import { cn } from '@/lib/utils';
 import { rarityLabelPt } from '@/entities/rarityLabels';
+import { L, LOCALE } from '@/i18n/L';
 
 export function ManagerPro() {
   const navigate = useNavigate();
@@ -111,7 +112,7 @@ export function ManagerPro() {
           type="button"
           onClick={() => navigate('/manager')}
           className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/10 bg-black text-white/70 hover:bg-white/10 hover:text-white"
-          aria-label="Voltar"
+          aria-label={L('Voltar', 'Back')}
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
@@ -120,7 +121,7 @@ export function ManagerPro() {
             MANAGER · PRO
           </div>
           <h1 className="mt-1 font-impact uppercase text-neon-yellow" style={{ fontSize: 'clamp(32px, 6vw, 48px)', lineHeight: 0.9 }}>
-            Vendas dos teus cards
+            {L('Vendas dos teus cards', 'Your card sales')}
           </h1>
         </div>
       </div>
@@ -136,22 +137,22 @@ export function ManagerPro() {
           <div className="min-w-0 flex-1">
             <p className="font-display text-xs font-black uppercase tracking-wider text-neon-yellow">
               {vStatus === 'pending'
-                ? 'Em análise pelo Admin'
+                ? L('Em análise pelo Admin', 'Under Admin review')
                 : vStatus === 'rejected'
-                ? 'Verificação rejeitada — ajusta e reenvia'
-                : 'Modo prévia — conta não verificada'}
+                ? L('Verificação rejeitada — ajusta e reenvia', 'Verification rejected — fix and resubmit')
+                : L('Modo prévia — conta não verificada', 'Preview mode — account not verified')}
             </p>
             <p className="mt-1 text-[12px] leading-snug text-neon-yellow/80">
               {vStatus === 'pending'
-                ? 'Aguarda a aprovação. Assim que liberada, o saldo real e o botão de saque ficam ativos.'
-                : 'Podes ver os teus cards e como ficará o painel. O saldo real e o saque ficam ativos depois que a verificação for aprovada pelo Admin.'}
+                ? L('Aguarda a aprovação. Assim que liberada, o saldo real e o botão de saque ficam ativos.', 'Awaiting approval. Once cleared, your real balance and withdraw button go live.')
+                : L('Podes ver os teus cards e como ficará o painel. O saldo real e o saque ficam ativos depois que a verificação for aprovada pelo Admin.', 'You can see your cards and how the panel will look. Real balance and withdrawals go live once the Admin approves your verification.')}
             </p>
             {vStatus !== 'pending' ? (
               <Link
                 to="/config"
                 className="mt-2 inline-flex items-center gap-1.5 border border-neon-yellow/40 bg-neon-yellow/15 px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-wider text-neon-yellow hover:bg-neon-yellow/25"
               >
-                <ShieldCheck className="h-3.5 w-3.5" /> {vStatus === 'rejected' ? 'Reenviar verificação' : 'Verificar conta'}
+                <ShieldCheck className="h-3.5 w-3.5" /> {vStatus === 'rejected' ? L('Reenviar verificação', 'Resubmit verification') : L('Verificar conta', 'Verify account')}
                 <ChevronRight className="h-3 w-3" />
               </Link>
             ) : null}
@@ -162,32 +163,32 @@ export function ManagerPro() {
       {/* ── KPIs principais ────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard
-          label="Saldo"
+          label={L('Saldo', 'Balance')}
           value={balanceDisplay}
           tone="yellow"
           footer={
             verified
-              ? proSummary.balance_exp > 0 ? 'Pronto pra sacar' : 'Sem saldo ainda'
-              : 'Aguarda verificação'
+              ? proSummary.balance_exp > 0 ? L('Pronto pra sacar', 'Ready to withdraw') : L('Sem saldo ainda', 'No balance yet')
+              : L('Aguarda verificação', 'Awaiting verification')
           }
         />
         <KpiCard
-          label="Vendas"
+          label={L('Vendas', 'Sales')}
           value={String(salesCount)}
           tone="emerald"
-          footer="Cards vendidos no total"
+          footer={L('Cards vendidos no total', 'Total cards sold')}
         />
         <KpiCard
           label="Cards"
           value={String(totalCards)}
           tone="yellow"
-          footer="Criados pelo manager"
+          footer={L('Criados pelo manager', 'Created by manager')}
         />
         <KpiCard
-          label="À venda"
+          label={L('À venda', 'For sale')}
           value={String(listedCount)}
           tone="fuchsia"
-          footer="Listados no mercado"
+          footer={L('Listados no mercado', 'Listed on the Market')}
         />
       </div>
 
@@ -207,10 +208,10 @@ export function ManagerPro() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-display text-sm font-black uppercase tracking-wide text-white">
-              Sacar para Wallet
+              {L('Sacar para Wallet', 'Withdraw to Wallet')}
             </p>
             <p className="mt-0.5 text-[11px] text-white/55">
-              {verified ? 'Converte saldo em BRO' : 'Disponível após verificação'}
+              {verified ? L('Converte saldo em BRO', 'Convert balance to BRO') : L('Disponível após verificação', 'Available after verification')}
             </p>
           </div>
           <ChevronRight className="h-5 w-5 shrink-0 text-white/40 transition-colors group-hover:text-white" />
@@ -225,10 +226,10 @@ export function ManagerPro() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-display text-sm font-black uppercase tracking-wide text-white">
-              Criar novo card
+              {L('Criar novo card', 'Create new card')}
             </p>
             <p className="mt-0.5 font-mono text-[11.5px] text-cimento">
-              #academia
+              {L('#academia', '#academy')}
             </p>
           </div>
           <ChevronRight className="h-5 w-5 shrink-0 text-white/40 transition-colors group-hover:text-white" />
@@ -240,18 +241,18 @@ export function ManagerPro() {
         <div className="mb-3 flex items-center justify-between gap-2">
           <h3 className="flex items-center gap-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em] text-white/80">
             <Trophy className="h-3.5 w-3.5 text-neon-yellow" />
-            Meus cards ({totalCards})
+            {L('Meus cards', 'My cards')} ({totalCards})
           </h3>
         </div>
 
         {totalCards === 0 ? (
           <div className="border border-dashed border-white/10 bg-black/20 p-6 text-center">
-            <p className="text-sm text-white/80">Ainda não criaste nenhum card e nada vinculado pelo Admin.</p>
+            <p className="text-sm text-white/80">{L('Ainda não criaste nenhum card e nada vinculado pelo Admin.', 'No cards created yet and nothing linked by the Admin.')}</p>
             <Link
               to="/city/youth-prospects"
               className="mt-2 inline-flex text-xs font-bold text-neon-yellow/80 hover:underline"
             >
-              Criar meu primeiro card →
+              {L('Criar meu primeiro card →', 'Create my first card →')}
             </Link>
           </div>
         ) : (
@@ -275,13 +276,13 @@ export function ManagerPro() {
                     <p className="text-[10px] text-white/45">
                       {c.pos || '—'}
                       {c.rarity_label ? ` · ${rarityLabelPt(c.rarity_label)}` : ''}
-                      {c.listed_on_market ? ' · À venda' : ''}
+                      {c.listed_on_market ? L(' · À venda', ' · For sale') : ''}
                       {` · split ${playerPct}%`}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <span className="bg-neon-yellow/15 px-2 py-0.5 font-mono text-[10px] font-bold text-neon-yellow/70">
-                      0 vendas
+                      {L('0 vendas', '0 sales')}
                     </span>
                     <ChevronRight className="h-4 w-4 text-white/30" />
                   </div>
@@ -302,12 +303,12 @@ export function ManagerPro() {
                   </p>
                   <p className="text-[10px] text-white/45">
                     {p.pos} · OVR {Math.round(overallFromAttributes(p.attrs, p.pos))}
-                    {p.listedOnMarket ? ' · À venda' : ''}
+                    {p.listedOnMarket ? L(' · À venda', ' · For sale') : ''}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="bg-neon-yellow/15 px-2 py-0.5 font-mono text-[10px] font-bold text-neon-yellow/70">
-                    0 vendas
+                    {L('0 vendas', '0 sales')}
                   </span>
                   <ChevronRight className="h-4 w-4 text-white/30" />
                 </div>
@@ -322,19 +323,19 @@ export function ManagerPro() {
         <div className="mb-3 flex items-center justify-between gap-2">
           <h3 className="flex items-center gap-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em] text-white/80">
             <Activity className="h-3.5 w-3.5 text-neon-yellow/80" />
-            Histórico de vendas ({proPayouts.length})
+            {L('Histórico de vendas', 'Sales history')} ({proPayouts.length})
           </h3>
           {proSummary.last_sale_at ? (
             <span className="text-[10px] text-white/45">
-              Última: {new Date(proSummary.last_sale_at).toLocaleString('pt-BR')}
+              {L('Última', 'Last')}: {new Date(proSummary.last_sale_at).toLocaleString(LOCALE)}
             </span>
           ) : null}
         </div>
         {proPayouts.length === 0 ? (
           <div className="border border-dashed border-white/10 bg-black/20 p-6 text-center">
-            <p className="text-sm text-white/80">Sem vendas ainda.</p>
+            <p className="text-sm text-white/80">{L('Sem vendas ainda.', 'No sales yet.')}</p>
             <p className="mt-1 text-[11px] text-white/45">
-              Quando alguém comprar um card teu, a venda aparece aqui em tempo real.
+              {L('Quando alguém comprar um card teu, a venda aparece aqui em tempo real.', 'When someone buys one of your cards, the sale shows up here in real time.')}
             </p>
           </div>
         ) : (
@@ -356,7 +357,7 @@ export function ManagerPro() {
                       {p.player_name ?? p.player_id}
                     </p>
                     <p className="text-[10px] text-white/45">
-                      {new Date(p.created_at).toLocaleString('pt-BR')} · {p.split_kind} · {p.percent}%
+                      {new Date(p.created_at).toLocaleString(LOCALE)} · {p.split_kind} · {p.percent}%
                     </p>
                   </div>
                   <span className="shrink-0 font-mono text-xs font-bold text-neon-yellow/70">
@@ -372,24 +373,24 @@ export function ManagerPro() {
       {/* ── Como funciona ──────────────────────────────────────── */}
       <section className="border border-neon-yellow/20 bg-neon-yellow/[0.04] p-4">
         <h3 className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-neon-yellow/70">
-          Como o PRO funciona
+          {L('Como o PRO funciona', 'How PRO works')}
         </h3>
         <ul className="mt-2 space-y-1.5 text-[12px] text-white/75">
           <li className="flex items-start gap-2">
             <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-neon-yellow" />
-            Crias um card na Academia (ou vinculas um card real).
+            {L('Crias um card na Academia (ou vinculas um card real).', 'Create a card in the Academy (or link a real card).')}
           </li>
           <li className="flex items-start gap-2">
             <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-neon-yellow" />
-            Anuncias no mercado com preço em EXP.
+            {L('Anuncias no mercado com preço em EXP.', 'List it on the Market priced in EXP.')}
           </li>
           <li className="flex items-start gap-2">
             <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-neon-yellow" />
-            Cada venda confirmada credita o teu saldo aqui em tempo real.
+            {L('Cada venda confirmada credita o teu saldo aqui em tempo real.', 'Each confirmed sale credits your balance here in real time.')}
           </li>
           <li className="flex items-start gap-2">
             <Wallet className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neon-yellow/80" />
-            Saque é feito pela Wallet após verificação da conta.
+            {L('Saque é feito pela Wallet após verificação da conta.', 'Withdrawals go through the Wallet after account verification.')}
           </li>
         </ul>
       </section>

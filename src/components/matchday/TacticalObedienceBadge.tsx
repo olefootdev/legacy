@@ -10,6 +10,7 @@ import { Megaphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
 
+import { L } from '@/i18n/L';
 export function TacticalObedienceBadge() {
   const obed = useGameStore((s) => s.tacticalObedience ?? 30);
   const [flashUp, setFlashUp] = useState(false);
@@ -50,7 +51,7 @@ export function TacticalObedienceBadge() {
         <div className="flex items-center gap-1.5">
           <Megaphone className="h-3 w-3 text-violet-300" />
           <span className="text-[9px] font-bold uppercase tracking-widest text-white/60">
-            Obediência Tática
+            {L('Obediência Tática', 'Tactical Obedience')}
           </span>
         </div>
         <span className="font-mono text-[11px] font-black tabular-nums text-white">
@@ -66,7 +67,7 @@ export function TacticalObedienceBadge() {
       </div>
       {flashUp ? (
         <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wider text-emerald-300">
-          ✨ Time mais obediente
+          ✨ {L('Time mais obediente', 'Team more obedient')}
         </p>
       ) : null}
     </motion.div>

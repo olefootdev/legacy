@@ -7,6 +7,7 @@ import { OlefootAssistant } from '@/components/assistant/OlefootAssistant';
 import { OlefootAIAssistant } from '@/components/assistant/OlefootAIAssistant';
 import { HubSectionCard } from '@/components/ui/HubSectionCard';
 import { Hashtag, SecaoVolt } from '@/components/ui';
+import { L } from '@/i18n/L';
 
 const quickActions: Array<{
   eyebrow: string;
@@ -17,16 +18,16 @@ const quickActions: Array<{
 }> = [
   {
     eyebrow: 'Onboarding',
-    title: 'Como jogar',
-    description: 'Do cadastro à primeira vitória.',
-    cta: 'Ler guia',
+    title: L('Como jogar', 'How to play'),
+    description: L('Do cadastro à primeira vitória.', 'From sign-up to your first win.'),
+    cta: L('Ler guia', 'Read guide'),
     href: '/how-to-play',
   },
   {
-    eyebrow: 'Aprendizado',
-    title: 'Tutoriais',
-    description: 'Um sistema por vez.',
-    cta: 'Começar tutorial',
+    eyebrow: L('Aprendizado', 'Learning'),
+    title: L('Tutoriais', 'Tutorials'),
+    description: L('Um sistema por vez.', 'One system at a time.'),
+    cta: L('Começar tutorial', 'Start tutorial'),
     href: '/how-to-play',
   },
 ];
@@ -40,7 +41,7 @@ export function HelpHub() {
     <div className="w-full max-w-6xl mx-auto space-y-8 sm:space-y-10 px-3 sm:px-4 lg:px-8 pb-24 sm:pb-32">
       {/* ── HERO — volt chapado + título em Anton ── */}
       <section
-        aria-label="Ajuda"
+        aria-label={L('Ajuda', 'Help')}
         className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm"
       >
         <motion.div
@@ -51,7 +52,7 @@ export function HelpHub() {
         style={{ paddingBlock: 'clamp(28px, 6vw, 52px)' }}
       >
         <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-          Central de ajuda
+          {L('Central de ajuda', 'Help center')}
         </span>
         <h1
           className="mt-2 font-impact uppercase"
@@ -62,9 +63,9 @@ export function HelpHub() {
             letterSpacing: '-0.01em',
           }}
         >
-          Ajuda
+          {L('Ajuda', 'Help')}
         </h1>
-        <Hashtag className="mt-3 text-[12px] text-deep-black">#guias #tutoriais #faq</Hashtag>
+        <Hashtag className="mt-3 text-[12px] text-deep-black">{L('#guias #tutoriais #faq', '#guides #tutorials #faq')}</Hashtag>
         </motion.div>
       </section>
 
@@ -81,16 +82,16 @@ export function HelpHub() {
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="font-impact uppercase leading-[1.05] text-white" style={{ fontSize: 'clamp(24px,5vw,32px)' }}>
-              Tutorial Interativo
+              {L('Tutorial Interativo', 'Interactive Tutorial')}
             </h2>
-            <Hashtag className="mt-1.5">#passoapasso</Hashtag>
+            <Hashtag className="mt-1.5">{L('#passoapasso', '#stepbystep')}</Hashtag>
           </div>
           <button
             onClick={() => setShowAssistant(true)}
             className="btn-primary flex h-12 shrink-0 items-center gap-2"
           >
             <PlayCircle className="h-5 w-5" />
-            Iniciar tutorial
+            {L('Iniciar tutorial', 'Start tutorial')}
           </button>
         </div>
       </motion.section>
@@ -108,23 +109,23 @@ export function HelpHub() {
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="font-impact uppercase leading-[1.05] text-white" style={{ fontSize: 'clamp(24px,5vw,32px)' }}>
-              Assistente IA
+              {L('Assistente IA', 'AI Assistant')}
             </h2>
-            <Hashtag className="mt-1.5">#dúvidas #ia</Hashtag>
+            <Hashtag className="mt-1.5">{L('#dúvidas #ia', '#questions #ai')}</Hashtag>
           </div>
           <button
             onClick={() => setShowAIAssistant(true)}
             className="btn-primary flex h-12 shrink-0 items-center gap-2"
           >
             <MessageCircle className="h-5 w-5" />
-            Perguntar
+            {L('Perguntar', 'Ask')}
           </button>
         </div>
       </motion.section>
 
       {/* Quick Actions — Sprint B Legacy Tech */}
       <section>
-        <SecaoVolt label="Acesso rápido" className="mb-4" />
+        <SecaoVolt label={L('Acesso rápido', 'Quick access')} className="mb-4" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {quickActions.map((action, i) => (
             <HubSectionCard
@@ -148,23 +149,23 @@ export function HelpHub() {
         transition={{ delay: 0.3 }}
         className="mb-8"
       >
-        <SecaoVolt label="Tópicos populares" className="mb-4" />
+        <SecaoVolt label={L('Tópicos populares', 'Popular topics')} className="mb-4" />
         <div className="space-y-2.5">
           <Link to="/how-to-play" className="block border border-white/10 bg-panel p-4 transition-colors hover:border-white/30">
             <div className="flex items-center justify-between gap-3">
-              <span className="min-w-0 truncate font-impact text-[17px] uppercase leading-[1.1] text-white">Como começar no Olefoot?</span>
+              <span className="min-w-0 truncate font-impact text-[17px] uppercase leading-[1.1] text-white">{L('Como começar no Olefoot?', 'How to start on Olefoot?')}</span>
               <ChevronRight className="h-5 w-5 shrink-0 text-cimento" />
             </div>
           </Link>
           <Link to="/wallet" className="block border border-white/10 bg-panel p-4 transition-colors hover:border-white/30">
             <div className="flex items-center justify-between gap-3">
-              <span className="min-w-0 truncate font-impact text-[17px] uppercase leading-[1.1] text-white">Como funciona a Wallet?</span>
+              <span className="min-w-0 truncate font-impact text-[17px] uppercase leading-[1.1] text-white">{L('Como funciona a Wallet?', 'How does the Wallet work?')}</span>
               <ChevronRight className="h-5 w-5 shrink-0 text-cimento" />
             </div>
           </Link>
           <Link to="/how-to-play" className="block border border-white/10 bg-panel p-4 transition-colors hover:border-white/30">
             <div className="flex items-center justify-between gap-3">
-              <span className="min-w-0 truncate font-impact text-[17px] uppercase leading-[1.1] text-white">Como melhorar meu time?</span>
+              <span className="min-w-0 truncate font-impact text-[17px] uppercase leading-[1.1] text-white">{L('Como melhorar meu time?', 'How to improve my team?')}</span>
               <ChevronRight className="h-5 w-5 shrink-0 text-cimento" />
             </div>
           </Link>

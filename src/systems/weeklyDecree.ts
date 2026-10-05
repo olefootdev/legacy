@@ -13,6 +13,7 @@
  *
  * PURO — semana vem de fora (caller passa Date.now()).
  */
+import { L } from '@/i18n/L';
 
 export type DecreeOption = 'espetaculo' | 'ferro';
 
@@ -51,16 +52,16 @@ export function isoWeekKey(nowMs: number): string {
 export function decreeForWeek(weekKey: string): DecreeDefinition {
   return {
     weekKey,
-    title: 'Decreto da Semana',
-    question: 'Como a liga joga esta semana?',
+    title: L('Decreto da Semana', 'Decree of the Week'),
+    question: L('Como a liga joga esta semana?', 'How does the league play this week?'),
     options: {
       espetaculo: {
-        label: 'Semana do Espetáculo',
-        effectText: 'Todo jogo ferve como clássico (+5% torcida) — mais gols, mais risco.',
+        label: L('Semana do Espetáculo', 'Showtime Week'),
+        effectText: L('Todo jogo ferve como clássico (+5% torcida) — mais gols, mais risco.', 'Every game boils like a derby (+5% fans) — more goals, more risk.'),
       },
       ferro: {
-        label: 'Semana de Ferro',
-        effectText: 'Calendário protegido: o desgaste entre jogos pesa menos (piso de descanso).',
+        label: L('Semana de Ferro', 'Iron Week'),
+        effectText: L('Calendário protegido: o desgaste entre jogos pesa menos (piso de descanso).', 'Protected schedule: wear between games weighs less (rest floor).'),
       },
     },
   };

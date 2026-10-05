@@ -1,3 +1,4 @@
+import { L } from '@/i18n/L';
 import { useMemo } from 'react';
 import {
   BALL_SIZE_FLY_END,
@@ -297,20 +298,20 @@ export function PenaltyShootSVG({
         fill="#000"
         opacity="0.55"
       >
-        {phase === 'pick' && '— ESCOLHA A MIRA —'}
-        {phase === 'charging' && '— CARREGANDO FORÇA —'}
-        {phase === 'reveal' && '— BATE —'}
+        {phase === 'pick' && L('— ESCOLHA A MIRA —', '— PICK YOUR AIM —')}
+        {phase === 'charging' && L('— CARREGANDO FORÇA —', '— CHARGING POWER —')}
+        {phase === 'reveal' && L('— BATE —', '— STRIKE —')}
         {phase === 'result' &&
           (outcome === 'over-bar'
-            ? '— POR CIMA —'
+            ? L('— POR CIMA —', '— OVER —')
             : outcome === 'post'
-              ? '— TRAVE —'
+              ? L('— TRAVE —', '— POST —')
               : outcome === 'wide'
-                ? '— PRA FORA —'
+                ? L('— PRA FORA —', '— WIDE —')
                 : outcome === 'weak-save'
-                  ? '— ERRO · FRACO —'
+                  ? L('— ERRO · FRACO —', '— MISS · WEAK —')
                   : outcome === 'save'
-                    ? '— DEFESA —'
+                    ? L('— DEFESA —', '— SAVE —')
                     : '')}
       </text>
     </svg>

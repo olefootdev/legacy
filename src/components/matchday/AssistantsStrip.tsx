@@ -17,6 +17,7 @@ import {
   type RelayQuality,
 } from '@/voiceCommand/assistantRelay';
 
+import { L, emIngles } from '@/i18n/L';
 const ORDER: AssistantRole[] = ['tatico', 'ataque', 'defesa', 'fisico', 'mental'];
 
 const QUALITY_COLOR: Record<RelayQuality, string> = {
@@ -47,7 +48,7 @@ export function AssistantsStrip({
   return (
     <div className="rounded-xl border border-white/10 bg-black/25 px-2 py-2 sm:px-3 sm:py-2.5">
       <p className="mb-1 text-[9px] font-display font-bold uppercase tracking-widest text-white/50">
-        Comissão técnica
+        {L('Comissão técnica', 'Coaching staff')}
       </p>
       <div className="grid grid-cols-5 gap-1 sm:gap-1.5">
         {ORDER.map((role) => {
@@ -70,7 +71,7 @@ export function AssistantsStrip({
               <div className="flex flex-col items-center gap-0.5">
                 <span className="text-base leading-none">{ASSISTANT_GLYPH[role]}</span>
                 <span className="text-[7px] font-bold uppercase tracking-wider text-white/60 leading-tight truncate max-w-full">
-                  {ASSISTANT_LABEL[role].replace(/Auxiliar\s+|Preparador\s+/i, '').slice(0, 8)}
+                  {ASSISTANT_LABEL[role].replace(emIngles() ? /\s*(Assistant|Coach)\s*/i : /Auxiliar\s+|Preparador\s+/i, '').slice(0, 8)}
                 </span>
                 <span className={cn('font-mono text-[10px] font-black tabular-nums leading-none', QUALITY_COLOR[quality])}>
                   {eff}

@@ -13,6 +13,7 @@ import { Flag, Square, AlertTriangle, Trophy } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import type { MatchEventEntry } from '@/engine/types';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 type NarrationKind = 'foul' | 'yellow' | 'red' | 'corner_home' | 'corner_away' | 'goal';
 
@@ -35,12 +36,12 @@ function eventToNarration(
   const createdAt = Date.now();
 
   if (ev.kind === 'yellow_home' || ev.kind === 'yellow_away') {
-    const name = ev.playerId ? (playersById[ev.playerId]?.name ?? 'Jogador') : 'Jogador';
+    const name = ev.playerId ? (playersById[ev.playerId]?.name ?? L('Jogador', 'Player')) : L('Jogador', 'Player');
     return {
       id: `narr-${ev.id}`,
       kind: 'yellow',
-      title: `🟨 Cartão amarelo · ${name}`,
-      subtitle: 'Falta dura — aviso do árbitro',
+      title: `🟨 ${L('Cartão amarelo', 'Yellow card')} · ${name}`,
+      subtitle: L('Falta dura — aviso do árbitro', 'Hard foul — referee warning'),
       minute: ev.minute,
       ttlMs: 3200,
       createdAt,
@@ -48,12 +49,12 @@ function eventToNarration(
   }
 
   if (ev.kind === 'red_home' || ev.kind === 'red_away') {
-    const name = ev.playerId ? (playersById[ev.playerId]?.name ?? 'Jogador') : 'Jogador';
+    const name = ev.playerId ? (playersById[ev.playerId]?.name ?? L('Jogador', 'Player')) : L('Jogador', 'Player');
     return {
       id: `narr-${ev.id}`,
       kind: 'red',
-      title: `🟥 Cartão vermelho · ${name}`,
-      subtitle: 'Expulso — time fica com um a menos',
+      title: `🟥 ${L('Cartão vermelho', 'Red card')} · ${name}`,
+      subtitle: L('Expulso — time fica com um a menos', 'Sent off — team down to ten'),
       minute: ev.minute,
       ttlMs: 4000,
       createdAt,
@@ -61,13 +62,13 @@ function eventToNarration(
   }
 
   if (ev.kind === 'goal_home' || ev.kind === 'goal_away') {
-    const name = ev.playerId ? (playersById[ev.playerId]?.name ?? 'Jogador') : 'Time';
-    const side = ev.kind === 'goal_home' ? (live?.homeShort ?? 'Casa') : (live?.awayShort ?? 'Fora');
+    const name = ev.playerId ? (playersById[ev.playerId]?.name ?? L('Jogador', 'Player')) : L('Time', 'Team');
+    const side = ev.kind === 'goal_home' ? (live?.homeShort ?? L('Casa', 'Home')) : (live?.awayShort ?? L('Fora', 'Away'));
     return {
       id: `narr-${ev.id}`,
       kind: 'goal',
-      title: `⚽ GOL · ${side}`,
-      subtitle: `${name} estufa a rede`,
+      title: `⚽ ${L('GOL', 'GOAL')} · ${side}`,
+      subtitle: L(`${name} estufa a rede`, `${name} hits the back of the net`),
       minute: ev.minute,
       ttlMs: 3800,
       createdAt,
@@ -76,27 +77,27 @@ function eventToNarration(
 
   if (ev.kind === 'whistle') {
     const t = ev.text?.toLowerCase() ?? '';
-    if (/(escanteio|canto\s+para)/.test(t)) {
+    if (/(escanteio|canto\s+para|corner)/.test(t)) {
       const homeShort = live?.homeShort?.toLowerCase() ?? '';
       const awayShort = live?.awayShort?.toLowerCase() ?? '';
       const isHome = homeShort ? t.includes(homeShort) : true;
-      const side = isHome ? (live?.homeShort ?? 'Casa') : (live?.awayShort ?? 'Fora');
+      const side = isHome ? (live?.homeShort ?? L('Casa', 'Home')) : (live?.awayShort ?? L('Fora', 'Away'));
       return {
         id: `narr-${ev.id}`,
         kind: isHome ? 'corner_home' : 'corner_away',
-        title: `🚩 Escanteio · ${side}`,
-        subtitle: 'A torcida vai junto com o time',
+        title: `🚩 ${L('Escanteio', 'Corner')} · ${side}`,
+        subtitle: L('A torcida vai junto com o time', 'The crowd is right behind the team'),
         minute: ev.minute,
         ttlMs: 3200,
         createdAt,
       };
     }
-    if (/falta/.test(t)) {
+    if (/falta|foul|free[\s-]kick/.test(t)) {
       return {
         id: `narr-${ev.id}`,
         kind: 'foul',
-        title: `🟧 Falta no campo`,
-        subtitle: 'Árbitro interrompe — reinício pela vítima',
+        title: `🟧 ${L('Falta no campo', 'Foul on the pitch')}`,
+        subtitle: L('Árbitro interrompe — reinício pela vítima', 'Referee stops play — restart to the fouled side'),
         minute: ev.minute,
         ttlMs: 3000,
         createdAt,
@@ -105,12 +106,12 @@ function eventToNarration(
   }
 
   if (ev.kind === 'injury_home') {
-    const name = ev.playerId ? (playersById[ev.playerId]?.name ?? 'Jogador') : 'Jogador';
+    const name = ev.playerId ? (playersById[ev.playerId]?.name ?? L('Jogador', 'Player')) : L('Jogador', 'Player');
     return {
       id: `narr-${ev.id}`,
       kind: 'foul',
-      title: `🚑 Lesão · ${name}`,
-      subtitle: 'Staff entra em campo',
+      title: `🚑 ${L('Lesão', 'Injury')} · ${name}`,
+      subtitle: L('Staff entra em campo', 'Medical staff come on'),
       minute: ev.minute,
       ttlMs: 3500,
       createdAt,

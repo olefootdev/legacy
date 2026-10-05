@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { L } from '@/i18n/L';
 
 type MatchCountdownChipProps = {
   /** ISO de kickoff. Se ausente, mostra estado "sem partida agendada". */
@@ -13,7 +14,7 @@ type MatchCountdownChipProps = {
 };
 
 function formatCountdown(ms: number): string {
-  if (ms <= 0) return 'AO VIVO';
+  if (ms <= 0) return L('AO VIVO', 'LIVE');
   const s = Math.floor(ms / 1000);
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
@@ -64,10 +65,10 @@ export function MatchCountdownChip({
 
       <div className="min-w-0 flex-1">
         <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
-          {isLive ? 'Partida ao vivo' : 'Próxima partida'}
+          {isLive ? L('Partida ao vivo', 'Live match') : L('Próxima partida', 'Next match')}
         </p>
         <p className="mt-0.5 text-[13px] font-bold text-white truncate">
-          {isHome ? 'vs' : 'fora —'} {opponent}
+          {isHome ? 'vs' : L('fora —', 'away —')} {opponent}
           {roundLabel ? <span className="text-cimento"> · {roundLabel}</span> : null}
           {venue ? <span className="text-poeira"> · {venue}</span> : null}
         </p>
@@ -81,7 +82,7 @@ export function MatchCountdownChip({
           {formatCountdown(remaining)}
         </p>
         <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-poeira">
-          {isLive ? 'Em campo' : 'Pra começar'}
+          {isLive ? L('Em campo', 'On the pitch') : L('Pra começar', 'To kick off')}
         </p>
       </div>
     </motion.button>

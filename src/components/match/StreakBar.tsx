@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import type { QuickMatchStreak } from '@/game/quickMatchStreak';
 
+import { L } from '@/i18n/L';
 interface StreakBarProps {
   streak: QuickMatchStreak | undefined;
 }
@@ -44,7 +45,7 @@ export function StreakBar({ streak }: StreakBarProps) {
                 {current}
               </motion.span>
               <span className="text-sm text-gray-400 uppercase tracking-wider">
-                vitórias seguidas
+                {L('vitórias seguidas', 'wins in a row')}
               </span>
             </div>
 
@@ -55,7 +56,7 @@ export function StreakBar({ streak }: StreakBarProps) {
                 animate={{ scale: 1 }}
                 className="mt-1 bg-neon-yellow text-black px-2 py-0.5 rounded text-xs font-bold"
               >
-                {multiplier}x RECOMPENSAS
+                {multiplier}x {L('RECOMPENSAS', 'REWARDS')}
               </motion.div>
             )}
           </div>
@@ -63,7 +64,7 @@ export function StreakBar({ streak }: StreakBarProps) {
           {/* Best Streak */}
           {streak.best > current && (
             <div className="ml-4 pl-4 border-l border-gray-700 text-xs text-gray-500">
-              <div>Recorde</div>
+              <div>{L('Recorde', 'Best')}</div>
               <div className="font-bold text-gray-400">{streak.best}</div>
             </div>
           )}
@@ -73,9 +74,9 @@ export function StreakBar({ streak }: StreakBarProps) {
         {current < 10 && (
           <div className="mt-2 pt-2 border-t border-gray-800">
             <div className="flex justify-between text-xs text-gray-500 mb-1">
-              <span>Próximo nível</span>
+              <span>{L('Próximo nível', 'Next tier')}</span>
               <span>
-                {current >= 7 ? '10' : current >= 5 ? '7' : current >= 3 ? '5' : '3'} vitórias
+                {current >= 7 ? '10' : current >= 5 ? '7' : current >= 3 ? '5' : '3'} {L('vitórias', 'wins')}
               </span>
             </div>
             <div className="h-1 bg-gray-800 rounded-full overflow-hidden">

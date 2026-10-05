@@ -11,6 +11,8 @@
 import { motion } from 'motion/react';
 import type { PitchPlayerState } from '@/engine/types';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
+import { posLabel } from './posLabel';
 
 type QuickEventBadge = 'goal' | 'yellow' | 'red' | 'injury';
 
@@ -30,7 +32,7 @@ function PlayerEventBadges({ badges }: { badges: QuickEventBadge[] }) {
       {badges.map((b, i) => {
         if (b === 'goal')
           return (
-            <span key={`g-${i}`} title="Gol" className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-neon-yellow text-black text-[8px] font-bold leading-none">
+            <span key={`g-${i}`} title={L('Gol', 'Goal')} className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-neon-yellow text-black text-[8px] font-bold leading-none">
               G
             </span>
           );
@@ -38,7 +40,7 @@ function PlayerEventBadges({ badges }: { badges: QuickEventBadge[] }) {
           return (
             <span
               key={`y-${i}`}
-              title="Amarelo"
+              title={L('Amarelo', 'Yellow')}
               className="inline-block w-2 h-2.5 sm:w-2.5 sm:h-3 rounded-xs bg-amber-400"
             />
           );
@@ -46,14 +48,14 @@ function PlayerEventBadges({ badges }: { badges: QuickEventBadge[] }) {
           return (
             <span
               key={`r-${i}`}
-              title="Vermelho"
+              title={L('Vermelho', 'Red')}
               className="inline-block w-2 h-2.5 sm:w-2.5 sm:h-3 rounded-xs bg-red-500"
             />
           );
         return (
           <span
             key={`i-${i}`}
-            title="Lesão"
+            title={L('Lesão', 'Injury')}
             className="inline-block w-3 h-3 text-red-400 rotate-45 font-bold text-xs leading-none"
           >
             +
@@ -105,7 +107,7 @@ export function QuickMatchLineup({
             letterSpacing: '0.18em',
           }}
         >
-          {isHome ? 'Seu time' : 'Adversário'}
+          {isHome ? L('Seu time', 'Your team') : L('Adversário', 'Opponent')}
         </p>
       </div>
 
@@ -181,7 +183,7 @@ export function QuickMatchLineup({
                           fontSize: 'clamp(9px, 1.6vw, 10px)',
                         }}
                       >
-                        {p.pos}
+                        {posLabel(p.pos)}
                       </span>
 
                       {/* Badges (se houver) */}
@@ -241,7 +243,7 @@ export function QuickMatchLineup({
                   </p>
                   <span
                     role="img"
-                    aria-label="Expulso"
+                    aria-label={L('Expulso', 'Sent off')}
                     className="inline-block shrink-0 rounded-sm bg-red-600 ring-1 ring-red-950/50 w-[11px] h-[14px] sm:w-3 sm:h-4"
                   />
                 </div>
@@ -254,7 +256,7 @@ export function QuickMatchLineup({
                     fontSize: 'clamp(9px, 1.6vw, 10px)',
                   }}
                 >
-                  {p.pos}
+                  {posLabel(p.pos)}
                 </span>
               </div>
             </div>

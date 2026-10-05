@@ -6,6 +6,7 @@
 
 import { LayoutGrid, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 export type StoreViewMode = 'grid' | 'list';
 
@@ -26,7 +27,7 @@ export function StoreViewToggle({ mode, onChange }: StoreViewToggleProps) {
             ? 'bg-neon-yellow text-black'
             : 'text-gray-500 hover:text-gray-300'
         )}
-        aria-label="Visualização em grade"
+        aria-label={L('Visualização em grade', 'Grid view')}
       >
         <LayoutGrid className="h-3.5 w-3.5" strokeWidth={2.5} />
         <span className="hidden sm:inline">Grid</span>
@@ -40,10 +41,10 @@ export function StoreViewToggle({ mode, onChange }: StoreViewToggleProps) {
             ? 'bg-neon-yellow text-black'
             : 'text-gray-500 hover:text-gray-300'
         )}
-        aria-label="Visualização em lista"
+        aria-label={L('Visualização em lista', 'List view')}
       >
         <List className="h-3.5 w-3.5" strokeWidth={2.5} />
-        <span className="hidden sm:inline">Lista</span>
+        <span className="hidden sm:inline">{L('Lista', 'List')}</span>
       </button>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Users, Ban, RotateCcw, ArrowRight, ChevronsUp, Shield } from 'lucide-react';
 import { DecisionPromptCard } from './DecisionPromptCard';
+import { L } from '@/i18n/L';
 
 export type GegenpressDefChoice = 'swarm' | 'foul' | 'recover';
 export type GegenpressAttChoice = 'short' | 'vertical' | 'hold';
@@ -14,9 +15,9 @@ export function GegenpressDefender({ onChoose, onTimeout }: { onChoose: (c: Gege
       onChoose={handle}
       onTimeout={onTimeout}
       choices={[
-        { id: 'swarm',   icon: <Users     size={32} />, label: 'Press.',    tone: 'risk' },
-        { id: 'foul',    icon: <Ban       size={32} />, label: 'Falta',     tone: 'mid' },
-        { id: 'recover', icon: <RotateCcw size={32} />, label: 'Recompõe', tone: 'safe' },
+        { id: 'swarm',   icon: <Users     size={32} />, label: L('Press.', 'Press'),    tone: 'risk' },
+        { id: 'foul',    icon: <Ban       size={32} />, label: L('Falta', 'Foul'),     tone: 'mid' },
+        { id: 'recover', icon: <RotateCcw size={32} />, label: L('Recompõe', 'Recover'), tone: 'safe' },
       ]}
     />
   );
@@ -26,14 +27,14 @@ export function GegenpressAttacker({ onChoose, onTimeout }: { onChoose: (c: Gege
   const handle = useCallback((id: string) => onChoose(id as GegenpressAttChoice), [onChoose]);
   return (
     <DecisionPromptCard
-      title="Saída"
+      title={L('Saída', 'Build-up')}
       timeoutMs={4000}
       onChoose={handle}
       onTimeout={onTimeout}
       choices={[
-        { id: 'short',    icon: <ArrowRight size={32} />, label: 'Curto',    tone: 'safe' },
-        { id: 'vertical', icon: <ChevronsUp size={32} />, label: 'Vertical', tone: 'risk' },
-        { id: 'hold',     icon: <Shield     size={32} />, label: 'Segura',   tone: 'mid' },
+        { id: 'short',    icon: <ArrowRight size={32} />, label: L('Curto', 'Short'),    tone: 'safe' },
+        { id: 'vertical', icon: <ChevronsUp size={32} />, label: L('Vertical', 'Direct'), tone: 'risk' },
+        { id: 'hold',     icon: <Shield     size={32} />, label: L('Segura', 'Hold'),   tone: 'mid' },
       ]}
     />
   );

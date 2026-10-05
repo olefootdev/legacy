@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { ChangePill } from './ChangePill';
 import { Sparkline } from './Sparkline';
+import { L } from '@/i18n/L';
 
 export type CryptoCoinCardProps = {
   logoSrc: string;
@@ -91,7 +92,7 @@ export function CryptoCoinCard({
 
         <div className="mt-auto">
           <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
-            Saldo
+            {L('Saldo', 'Balance')}
           </p>
           <p
             className="mt-1 font-mono font-medium tabular-nums leading-none text-white [overflow-wrap:anywhere]"

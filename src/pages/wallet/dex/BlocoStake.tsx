@@ -1,4 +1,5 @@
 import { emVezes, type RegrasDeEarnings } from '@/wallet/earningsClient';
+import { L } from '@/i18n/L';
 
 /**
  * Stake — a regra publicada antes de existir.
@@ -12,19 +13,19 @@ import { emVezes, type RegrasDeEarnings } from '@/wallet/earningsClient';
 export function BlocoStake({ regra }: { regra: RegrasDeEarnings['stake'] }) {
   return (
     <div className="min-w-0 space-y-3">
-      <h3 className="font-impact text-[24px] uppercase leading-[1.1] text-white">Travado é travado</h3>
+      <h3 className="font-impact text-[24px] uppercase leading-[1.1] text-white">{L('Travado é travado', 'Locked is locked')}</h3>
 
       {!regra.aberto && (
         <div className="border-l-2 border-atencao bg-card px-3.5 py-3">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-atencao">Ainda não abriu</div>
+          <div className="font-mono text-[10px] uppercase tracking-wider text-atencao">{L('Ainda não abriu', 'Not open yet')}</div>
           <p className="mt-1.5 text-[12px] leading-relaxed text-giz">
-            O stake começa quando o OLEFOOT estiver na Solana. Estas são as regras, publicadas desde já.
+            {L('O stake começa quando o OLEFOOT estiver na Solana. Estas são as regras, publicadas desde já.', 'Staking starts when OLEFOOT is on Solana. These are the rules, published now.')}
           </p>
         </div>
       )}
 
       <div className="border border-white/10 bg-panel px-4 py-3.5">
-        <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-cimento">Prazo do travamento</div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-cimento">{L('Prazo do travamento', 'Lock period')}</div>
         <div className="mt-3 grid grid-cols-4 gap-1.5">
           {regra.prazos.map((p) => (
             <div key={p.dias}
@@ -37,8 +38,8 @@ export function BlocoStake({ regra }: { regra: RegrasDeEarnings['stake'] }) {
       </div>
 
       <p className="text-[11.5px] leading-relaxed text-poeira">
-        {regra.saidaAntecipada ? 'Há saída antecipada.' : 'Não há saída antecipada.'} O multiplicador é
-        fatia do que a pool produzir de verdade — não taxa prometida.
+        {regra.saidaAntecipada ? L('Há saída antecipada.', 'Early exit available.') : L('Não há saída antecipada.', 'No early exit.')}{' '}
+        {L('O multiplicador é fatia do que a pool produzir de verdade — não taxa prometida.', 'The multiplier is a slice of what the pool actually produces — not a promised rate.')}
       </p>
     </div>
   );

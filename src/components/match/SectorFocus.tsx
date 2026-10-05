@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 
+import { L } from '@/i18n/L';
 export type SectorZone = 'def' | 'mid' | 'att' | null;
 
 const SECTOR_CONFIG = {
-  def: { label: 'DEFESA',    xPct: 0,   wPct: 35, color: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.5)' },
-  mid: { label: 'MEIO',      xPct: 35,  wPct: 30, color: 'rgba(253,225,0,0.08)',   border: 'rgba(253,225,0,0.45)' },
-  att: { label: 'ATAQUE',    xPct: 65,  wPct: 35, color: 'rgba(16,185,129,0.10)',  border: 'rgba(16,185,129,0.5)' },
+  def: { label: L('DEFESA', 'DEFENCE'),    xPct: 0,   wPct: 35, color: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.5)' },
+  mid: { label: L('MEIO', 'MIDFIELD'),      xPct: 35,  wPct: 30, color: 'rgba(253,225,0,0.08)',   border: 'rgba(253,225,0,0.45)' },
+  att: { label: L('ATAQUE', 'ATTACK'),    xPct: 65,  wPct: 35, color: 'rgba(16,185,129,0.10)',  border: 'rgba(16,185,129,0.5)' },
 };
 
 interface SectorFocusProps {

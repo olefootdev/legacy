@@ -14,6 +14,7 @@
  * `friendships_select_involved` já deixa os dois lados lerem.
  */
 import { getSupabase } from './client';
+import { L } from '@/i18n/L';
 
 export type FriendshipStatus = 'pending' | 'accepted' | 'rejected' | 'blocked' | 'cancelled';
 
@@ -129,22 +130,22 @@ export async function fetchMyFriendships(): Promise<Friendships> {
 export type FriendActionResult = { ok: true } | { ok: false; error: string };
 
 function mapError(msg: string): string {
-  if (msg.includes('ALREADY_FRIENDS')) return 'Vocês já são amigos.';
-  if (msg.includes('ALREADY_PENDING')) return 'Você já enviou um convite para este manager.';
-  if (msg.includes('BLOCKED')) return 'Não é possível convidar este manager.';
-  if (msg.includes('MANAGER_NOT_FOUND')) return 'Manager não encontrado.';
-  if (msg.includes('INVALID_TARGET')) return 'Convite inválido.';
-  if (msg.includes('NOT_ADDRESSEE')) return 'Só quem recebeu o convite pode responder.';
-  if (msg.includes('NOT_PENDING')) return 'Este convite já foi respondido.';
-  if (msg.includes('REQUEST_NOT_FOUND')) return 'Convite não encontrado.';
-  if (msg.includes('NOT_AUTHENTICATED')) return 'Faça login novamente.';
-  return 'Não foi possível concluir agora.';
+  if (msg.includes('ALREADY_FRIENDS')) return L('Vocês já são amigos.', 'You are already friends.');
+  if (msg.includes('ALREADY_PENDING')) return L('Você já enviou um convite para este manager.', 'You already sent an invite to this manager.');
+  if (msg.includes('BLOCKED')) return L('Não é possível convidar este manager.', 'You can\'t invite this manager.');
+  if (msg.includes('MANAGER_NOT_FOUND')) return L('Manager não encontrado.', 'Manager not found.');
+  if (msg.includes('INVALID_TARGET')) return L('Convite inválido.', 'Invalid invite.');
+  if (msg.includes('NOT_ADDRESSEE')) return L('Só quem recebeu o convite pode responder.', 'Only the invitee can respond.');
+  if (msg.includes('NOT_PENDING')) return L('Este convite já foi respondido.', 'This invite was already answered.');
+  if (msg.includes('REQUEST_NOT_FOUND')) return L('Convite não encontrado.', 'Invite not found.');
+  if (msg.includes('NOT_AUTHENTICATED')) return L('Faça login novamente.', 'Log in again.');
+  return L('Não foi possível concluir agora.', 'Couldn\'t complete right now.');
 }
 
 /** Envia convite. Se o outro já tinha te convidado, vira amizade na hora. */
 export async function sendFriendRequest(toManagerId: string, message?: string): Promise<FriendActionResult> {
   const sb = getSupabase();
-  if (!sb) return { ok: false, error: 'Serviço indisponível.' };
+  if (!sb) return { ok: false, error: L('Serviço indisponível.', 'Service unavailable.') };
   const { error } = await sb.rpc('send_friend_request', { p_to: toManagerId, p_message: message ?? null });
   if (error) return { ok: false, error: mapError(error.message || '') };
   return { ok: true };
@@ -152,7 +153,7 @@ export async function sendFriendRequest(toManagerId: string, message?: string): 
 
 export async function respondFriendRequest(requestId: string, accept: boolean): Promise<FriendActionResult> {
   const sb = getSupabase();
-  if (!sb) return { ok: false, error: 'Serviço indisponível.' };
+  if (!sb) return { ok: false, error: L('Serviço indisponível.', 'Service unavailable.') };
   const { error } = await sb.rpc('respond_friend_request', { p_id: requestId, p_accept: accept });
   if (error) return { ok: false, error: mapError(error.message || '') };
   return { ok: true };
@@ -161,7 +162,7 @@ export async function respondFriendRequest(requestId: string, accept: boolean): 
 /** Desfaz amizade ou cancela convite enviado. */
 export async function removeFriendship(friendshipId: string): Promise<FriendActionResult> {
   const sb = getSupabase();
-  if (!sb) return { ok: false, error: 'Serviço indisponível.' };
+  if (!sb) return { ok: false, error: L('Serviço indisponível.', 'Service unavailable.') };
   const { error } = await sb.rpc('remove_friendship', { p_id: friendshipId });
   if (error) return { ok: false, error: mapError(error.message || '') };
   return { ok: true };

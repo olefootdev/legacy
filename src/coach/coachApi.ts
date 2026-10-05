@@ -1,4 +1,5 @@
 import type { CoachAgent, TeamContext, ManagerInstruction } from './types';
+import { L } from '@/i18n/L';
 
 // Prioriza VITE_OLEFOOT_API_URL sempre (inclusive em dev) — assim o dev que
 // não roda o server local também consegue testar contra o Railway.
@@ -63,13 +64,13 @@ export async function chatWithCoach(
 
     if (!response.ok) {
       const error = await response.json();
-      return { ok: false, error: error.error || 'Erro ao conversar com coach' };
+      return { ok: false, error: error.error || L('Erro ao conversar com coach', 'Error talking to the coach') };
     }
 
     return await response.json();
   } catch (error: any) {
     console.error('[chatWithCoach] Erro:', error);
-    return { ok: false, error: error.message || 'Erro de conexão com o servidor' };
+    return { ok: false, error: error.message || L('Erro de conexão com o servidor', 'Server connection error') };
   }
 }
 
@@ -89,13 +90,13 @@ export async function suggestTraining(
 
     if (!response.ok) {
       const error = await response.json();
-      return { ok: false, error: error.error || 'Erro ao gerar sugestão de treino' };
+      return { ok: false, error: error.error || L('Erro ao gerar sugestão de treino', 'Error generating training suggestion') };
     }
 
     return await response.json();
   } catch (error: any) {
     console.error('[suggestTraining] Erro:', error);
-    return { ok: false, error: error.message || 'Erro de conexão com o servidor' };
+    return { ok: false, error: error.message || L('Erro de conexão com o servidor', 'Server connection error') };
   }
 }
 
@@ -115,12 +116,12 @@ export async function suggestStaff(
 
     if (!response.ok) {
       const error = await response.json();
-      return { ok: false, error: error.error || 'Erro ao gerar sugestões de staff' };
+      return { ok: false, error: error.error || L('Erro ao gerar sugestões de staff', 'Error generating staff suggestions') };
     }
 
     return await response.json();
   } catch (error: any) {
     console.error('[suggestStaff] Erro:', error);
-    return { ok: false, error: error.message || 'Erro de conexão com o servidor' };
+    return { ok: false, error: error.message || L('Erro de conexão com o servidor', 'Server connection error') };
   }
 }

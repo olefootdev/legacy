@@ -26,6 +26,7 @@ import {
   tacticalVisionArrowEndPercent,
 } from '@/match/tacticalPointingDisplay';
 import { tacticalRadiiFor } from '@/simulation/tacticalAnchorBlend';
+import { L } from '@/i18n/L';
 
 const GOAL_AREA_DEPTH_M = 5.5;
 const CZ = FIELD_WIDTH / 2;
@@ -46,17 +47,17 @@ function uyFromZm(zm: number): number {
 }
 
 const THIRD_LABEL: Record<string, string> = {
-  defensive: 'Def.',
-  middle: 'Meio',
-  attacking: 'Ataq.',
+  defensive: L('Def.', 'Def.'),
+  middle: L('Meio', 'Mid'),
+  attacking: L('Ataq.', 'Att.'),
 };
 
 const LANE_LABEL: Record<string, string> = {
-  left: 'Esq.',
-  half_left: '1/2E',
-  center: 'Cent.',
-  half_right: '1/2D',
-  right: 'Dir.',
+  left: L('Esq.', 'Left'),
+  half_left: L('1/2E', '1/2L'),
+  center: L('Cent.', 'Cent.'),
+  half_right: L('1/2D', '1/2R'),
+  right: L('Dir.', 'Right'),
 };
 
 function pitchPercentToWorld(px: number, py: number): { x: number; z: number } {
@@ -131,6 +132,8 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
   const homeDefendsWest = getDefendingGoalX('home', half) < midX;
   const labelWestGoal = homeDefendsWest ? 'GOL CASA' : 'GOL VISITANTE';
   const labelEastGoal = homeDefendsWest ? 'GOL VISITANTE' : 'GOL CASA';
+  /** Rótulo de tela — o valor ('GOL CASA'/'GOL VISITANTE') continua sendo comparado abaixo. */
+  const goalLabelText = (v: string) => (v === 'GOL CASA' ? L('GOL CASA', 'HOME GOAL') : L('GOL VISITANTE', 'AWAY GOAL'));
   const fillHomeGoal = 'rgba(234,255,0,0.92)';
   const fillAwayGoal = 'rgba(251,113,133,0.95)';
 
@@ -142,17 +145,17 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
   const laneYs = [0.18, 0.36, 0.64, 0.82].map((u) => u * 100);
 
   const thirdUx = [
-    { lo: 0, hi: (FIELD_LENGTH / 3 / FIELD_LENGTH) * 100, geo: 'Oeste' },
+    { lo: 0, hi: (FIELD_LENGTH / 3 / FIELD_LENGTH) * 100, geo: L('Oeste', 'West') },
     {
       lo: (FIELD_LENGTH / 3 / FIELD_LENGTH) * 100,
       hi: ((2 * FIELD_LENGTH) / 3 / FIELD_LENGTH) * 100,
-      geo: 'Central',
+      geo: L('Central', 'Central'),
     },
-    { lo: ((2 * FIELD_LENGTH) / 3 / FIELD_LENGTH) * 100, hi: 100, geo: 'Leste' },
+    { lo: ((2 * FIELD_LENGTH) / 3 / FIELD_LENGTH) * 100, hi: 100, geo: L('Leste', 'East') },
   ];
 
   const grid12 = buildGrid12OverlayCells(half);
-  const colBandLabels = ['D', 'MD', 'MO', 'O'];
+  const colBandLabels = [L('D', 'D'), L('MD', 'DM'), L('MO', 'AM'), L('O', 'A')];
   const grid18 = showZoneView ? buildTactical18OverlayCells(zonePerspectiveTeam, half) : [];
 
   const sfData = showZoneView ? sfSnapshot() : null;
@@ -241,7 +244,7 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
         fontWeight={600}
         style={{ fontFamily: 'system-ui, sans-serif' }}
       >
-        Meio-campo (faixa central)
+        {L('Meio-campo (faixa central)', 'Midfield (central band)')}
       </text>
 
       {/* Grande área + pequena área — contorno extra */}
@@ -255,7 +258,7 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
         strokeWidth={0.15}
       />
       <text x={paUx / 2} y={uyTop + 2.8} textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize={1.5} fontWeight={700}>
-        Gr. área
+        {L('Gr. área', 'Box')}
       </text>
       <rect
         x={0}
@@ -267,7 +270,7 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
         strokeWidth={0.12}
       />
       <text x={gaUx / 2} y={uyTop + 5} textAnchor="middle" fill="rgba(255,255,255,0.55)" fontSize={1.35} fontWeight={700}>
-        Pq. área
+        {L('Pq. área', '6-yd box')}
       </text>
 
       <rect
@@ -280,7 +283,7 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
         strokeWidth={0.15}
       />
       <text x={100 - paUx / 2} y={uyTop + 2.8} textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize={1.5} fontWeight={700}>
-        Gr. área
+        {L('Gr. área', 'Box')}
       </text>
       <rect
         x={100 - gaUx}
@@ -292,7 +295,7 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
         strokeWidth={0.12}
       />
       <text x={100 - gaUx / 2} y={uyTop + 5} textAnchor="middle" fill="rgba(255,255,255,0.55)" fontSize={1.35} fontWeight={700}>
-        Pq. área
+        {L('Pq. área', '6-yd box')}
       </text>
 
       {/* Golos (boca) */}
@@ -306,10 +309,10 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
         fontWeight={800}
         style={{ fontFamily: 'system-ui, sans-serif' }}
       >
-        {labelWestGoal}
+        {goalLabelText(labelWestGoal)}
       </text>
       <text x={-2.2} y={51.2} textAnchor="end" fill="rgba(255,255,255,0.42)" fontSize={1.05} fontWeight={600} style={{ fontFamily: 'system-ui, sans-serif' }}>
-        Oeste
+        {L('Oeste', 'West')}
       </text>
       <rect x={100} y={uyFromZm(34 - GOAL_INNER_WIDTH_M / 2)} width={1.2} height={(GOAL_INNER_WIDTH_M / FIELD_WIDTH) * 100} fill="rgba(0,0,0,0.35)" stroke="rgba(255,255,255,0.5)" strokeWidth={0.08} />
       <text
@@ -321,16 +324,16 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
         fontWeight={800}
         style={{ fontFamily: 'system-ui, sans-serif' }}
       >
-        {labelEastGoal}
+        {goalLabelText(labelEastGoal)}
       </text>
       <text x={102.2} y={51.2} textAnchor="start" fill="rgba(255,255,255,0.42)" fontSize={1.05} fontWeight={600} style={{ fontFamily: 'system-ui, sans-serif' }}>
-        Leste
+        {L('Leste', 'East')}
       </text>
 
       {/* Legenda direção de ataque */}
       <rect x={1} y={1} width={46} height={18.5} rx={0.8} fill="rgba(0,0,0,0.62)" stroke="rgba(255,255,255,0.15)" strokeWidth={0.1} />
       <text x={3} y={4.2} fill="rgba(255,255,255,0.85)" fontSize={1.65} fontWeight={800} style={{ fontFamily: 'system-ui, sans-serif' }}>
-        Campo tático (dev)
+        {L('Campo tático (dev)', 'Tactical pitch (dev)')}
       </text>
       <text
         x={3}
@@ -339,7 +342,7 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
         fontSize={1.45}
         fontWeight={700}
       >
-        {homeShort}: ataca {homeAtt > 0 ? '→' : '←'} · tempo {half}
+        {homeShort}: {L('ataca', 'attacks')} {homeAtt > 0 ? '→' : '←'} · {L('tempo', 'half')} {half}
       </text>
       <text
         x={3}
@@ -348,14 +351,14 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
         fontSize={1.45}
         fontWeight={700}
       >
-        {awayShort}: ataca {awayAtt > 0 ? '→' : '←'}
+        {awayShort}: {L('ataca', 'attacks')} {awayAtt > 0 ? '→' : '←'}
       </text>
       <text x={3} y={13.2} fill="rgba(255,255,255,0.4)" fontSize={1.05}>
-        Gols: Oeste = {labelWestGoal} · Leste = {labelEastGoal} · IFAB · grelha 12 ·
-        {showZoneView ? ` SMARTFIELD · zonas · âncoras (${zonePerspectiveTeam === 'home' ? homeShort : awayShort})` : ' Zone View'}
+        {L('Gols: Oeste', 'Goals: West')} = {goalLabelText(labelWestGoal)} · {L('Leste', 'East')} = {goalLabelText(labelEastGoal)} · IFAB · {L('grelha 12', 'grid 12')} ·
+        {showZoneView ? L(` SMARTFIELD · zonas · âncoras (${zonePerspectiveTeam === 'home' ? homeShort : awayShort})`, ` SMARTFIELD · zones · anchors (${zonePerspectiveTeam === 'home' ? homeShort : awayShort})`) : ' Zone View'}
       </text>
       <text x={3} y={16.4} fill="rgba(196,181,253,0.72)" fontSize={1.05} fontWeight={600}>
-        SMARTFIELD: ● = âncora · ◯ = raio permitido · subzones coloridas por fase
+        {L('SMARTFIELD: ● = âncora · ◯ = raio permitido · subzones coloridas por fase', 'SMARTFIELD: ● = anchor · ◯ = allowed radius · subzones colored by phase')}
       </text>
 
       {/* Grelha 12 setores por cima das faixas — perspetiva CASA nas colunas D→O */}
@@ -385,13 +388,13 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
           </g>
         ))}
         <text x={0.8} y={16.5} fill="rgba(233,213,255,0.62)" fontSize={1.15} fontWeight={700} style={{ fontFamily: 'system-ui, sans-serif' }}>
-          Esq.
+          {L('Esq.', 'Left')}
         </text>
         <text x={0.8} y={50} fill="rgba(233,213,255,0.62)" fontSize={1.15} fontWeight={700} style={{ fontFamily: 'system-ui, sans-serif' }}>
           Cent.
         </text>
         <text x={0.8} y={83} fill="rgba(233,213,255,0.62)" fontSize={1.15} fontWeight={700} style={{ fontFamily: 'system-ui, sans-serif' }}>
-          Dir.
+          {L('Dir.', 'Right')}
         </text>
         {[0, 1, 2, 3].map((ci) => {
           const c = grid12.filter((g) => g.col === ci && g.row === 1)[0];
@@ -667,7 +670,7 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
         const aimQ = tacticalPointingQuality01(p);
         const sfRole = sfRoleFromSlot(p.slotId);
         const shortLabel = `${p.slotId ?? '?'} · ${sfRole} · ${showZoneView ? z18 : g12}`;
-        const detailLabel = `${shortLabel} · ${p.role} · ${THIRD_LABEL[third]} · ${LANE_LABEL[lane]} · pont${Math.round(aimQ * 100)}`;
+        const detailLabel = `${shortLabel} · ${p.role} · ${THIRD_LABEL[third]} · ${LANE_LABEL[lane]} · ${L('pont', 'aim')}${Math.round(aimQ * 100)}`;
         return (
           <g key={`h-${p.playerId}`}>
             <title>{detailLabel}</title>
@@ -717,7 +720,7 @@ function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
         });
         const aimQ = tacticalPointingQuality01(p);
         const shortLabel = `${p.slotId ?? '?'} · ${showZoneView ? z18 : g12}`;
-        const detailLabel = `${shortLabel} · ${p.role} · ${THIRD_LABEL[third]} · ${LANE_LABEL[lane]} · pont${Math.round(aimQ * 100)}`;
+        const detailLabel = `${shortLabel} · ${p.role} · ${THIRD_LABEL[third]} · ${LANE_LABEL[lane]} · ${L('pont', 'aim')}${Math.round(aimQ * 100)}`;
         return (
           <g key={`a-${p.playerId}`}>
             <title>{detailLabel}</title>

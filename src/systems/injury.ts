@@ -1,5 +1,6 @@
 import type { PlayerEntity } from '@/entities/types';
 import { medicalDeptRecoverySpeedBonusPercent } from '@/clubStructures/benefits';
+import { L } from '@/i18n/L';
 
 /**
  * Lesões em qualquer partida simulada (liga, amistoso, desafio) actualizam `outForMatches`
@@ -23,9 +24,9 @@ export const INJURY_MATCHES_OUT: Record<InjurySeverity, number> = {
 };
 
 export const INJURY_LABEL_PT: Record<InjurySeverity, string> = {
-  leve: 'Lesão leve',
-  forte: 'Lesão forte',
-  gravissima: 'Lesão gravíssima',
+  leve: L('Lesão leve', 'Minor injury'),
+  forte: L('Lesão forte', 'Serious injury'),
+  gravissima: L('Lesão gravíssima', 'Severe injury'),
 };
 
 /** Sorteia a severidade dada a intensidade do minuto e risco acumulado. */

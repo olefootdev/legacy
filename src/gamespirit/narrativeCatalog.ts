@@ -12,6 +12,7 @@
 
 import { getSupabase } from '@/supabase/client';
 import { FALLBACK_CATALOG } from './narrativeCatalogFallback';
+import { emIngles } from '@/i18n/L';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,8 @@ let hydrated = false;
  */
 export async function hydrateNarrativeCatalog(force = false): Promise<void> {
   if (hydrated && !force) return;
+  // O catálogo do Supabase só tem templates em PT — em inglês fica o fallback EN.
+  if (emIngles()) return;
   const sb = getSupabase();
   if (!sb) return;
   try {

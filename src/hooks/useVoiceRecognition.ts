@@ -18,6 +18,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { L } from '@/i18n/L';
 
 // Web Speech API types (não tipados no TS core por ser spec não-final).
 interface SpeechRecognitionResult {
@@ -229,7 +230,7 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
 
     if (!supported) {
       console.log('[voice] Não suportado');
-      optsRef.current.onError?.('Reconhecimento de voz não suportado neste browser');
+      optsRef.current.onError?.(L('Reconhecimento de voz não suportado neste browser', 'Voice recognition not supported in this browser'));
       return false;
     }
 
@@ -248,10 +249,10 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
       console.error('[voice] Permissão de microfone negada:', err);
 
       const errorMsg = err instanceof Error && err.name === 'NotAllowedError'
-        ? 'Permissão de microfone negada. Clique no ícone de cadeado na barra de endereço e permita o acesso ao microfone.'
+        ? L('Permissão de microfone negada. Clique no ícone de cadeado na barra de endereço e permita o acesso ao microfone.', 'Microphone permission denied. Click the lock icon in the address bar and allow microphone access.')
         : err instanceof Error && err.name === 'NotFoundError'
-        ? 'Nenhum microfone encontrado. Conecte um microfone e tente novamente.'
-        : 'Não foi possível acessar o microfone. Verifique as permissões do browser.';
+        ? L('Nenhum microfone encontrado. Conecte um microfone e tente novamente.', 'No microphone found. Connect one and try again.')
+        : L('Não foi possível acessar o microfone. Verifique as permissões do browser.', 'Couldn\'t access the microphone. Check your browser permissions.');
 
       optsRef.current.onError?.(errorMsg);
       setHasPermission(false);
@@ -293,7 +294,7 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
     const SR = getSpeechRecognition();
     if (!SR) {
       console.log('[voice] SpeechRecognition não disponível');
-      optsRef.current.onError?.('Reconhecimento de voz não suportado neste browser');
+      optsRef.current.onError?.(L('Reconhecimento de voz não suportado neste browser', 'Voice recognition not supported in this browser'));
       setState('error');
       return;
     }
@@ -349,11 +350,11 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
       }
     };
     r.onerror = (e) => {
-      const msg = e.error === 'no-speech' ? 'Não ouvi nada — segura e fala mais perto' :
-                  e.error === 'audio-capture' ? 'Microfone não disponível' :
-                  e.error === 'not-allowed' ? 'Permissão de microfone negada. Clique no ícone de cadeado e permita o acesso.' :
-                  e.error === 'network' ? 'Sem rede pra transcrever' :
-                  `Erro no reconhecimento: ${e.error}`;
+      const msg = e.error === 'no-speech' ? L('Não ouvi nada — segura e fala mais perto', 'I didn\'t hear anything — hold and speak closer') :
+                  e.error === 'audio-capture' ? L('Microfone não disponível', 'Microphone not available') :
+                  e.error === 'not-allowed' ? L('Permissão de microfone negada. Clique no ícone de cadeado e permita o acesso.', 'Microphone permission denied. Click the lock icon and allow access.') :
+                  e.error === 'network' ? L('Sem rede pra transcrever', 'No network to transcribe') :
+                  L(`Erro no reconhecimento: ${e.error}`, `Recognition error: ${e.error}`);
       optsRef.current.onError?.(msg);
       stopVAD();
       setVoiceState('error');
@@ -383,12 +384,12 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
         if (finalText) {
           optsRef.current.onResult(finalText, lastConfidenceRef.current);
         } else {
-          optsRef.current.onError?.('Não entendi — repete ou digita');
+          optsRef.current.onError?.(L('Não entendi — repete ou digita', 'Didn\'t get that — repeat or type it'));
         }
         optsRef.current.onEnd?.();
       } catch (err) {
         console.warn('[voice] onResult/onEnd handler threw:', err);
-        optsRef.current.onError?.('Falha ao processar o comando');
+        optsRef.current.onError?.(L('Falha ao processar o comando', 'Failed to process the command'));
         window.clearTimeout(returnToIdle);
         setVoiceState((prev) => (prev === 'processing' ? 'idle' : prev));
       }
@@ -398,7 +399,7 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
     try {
       r.start();
     } catch (err) {
-      optsRef.current.onError?.('Não foi possível iniciar a captura');
+      optsRef.current.onError?.(L('Não foi possível iniciar a captura', 'Couldn\'t start capture'));
       setState('error');
       return;
     }
@@ -426,7 +427,7 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
         clearAutoStop();
         stopVAD();
         try { recognitionRef.current?.stop(); } catch { /* noop */ }
-        optsRef.current.onError?.('Microfone desligado — aba em segundo plano');
+        optsRef.current.onError?.(L('Microfone desligado — aba em segundo plano', 'Microphone off — tab in background'));
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);

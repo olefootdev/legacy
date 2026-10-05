@@ -5,6 +5,7 @@
  * pra sinalizar com clareza que existe uma galeria de lendas pra explorar.
  */
 import { Search, ChevronDown } from 'lucide-react';
+import { L } from '@/i18n/L';
 
 interface LegendSearchBarProps {
   onOpen: () => void;
@@ -19,7 +20,7 @@ export function LegendSearchBar({ onOpen, totalCount }: LegendSearchBarProps) {
         type="button"
         onClick={onOpen}
         className="group inline-flex h-12 items-center gap-3 sm:gap-4 border-2 border-black px-5 sm:px-7 transition-colors hover:bg-black hover:text-neon-yellow"
-        aria-label="Buscar lenda"
+        aria-label={L('Buscar lenda', 'Search legend')}
       >
         <Search
           className="w-4 h-4 sm:w-5 sm:h-5 text-black group-hover:text-neon-yellow transition-colors"
@@ -29,7 +30,7 @@ export function LegendSearchBar({ onOpen, totalCount }: LegendSearchBarProps) {
           className="ole-num whitespace-nowrap uppercase text-black group-hover:text-neon-yellow transition-colors"
           style={{ fontSize: '13px' }}
         >
-          Buscar lenda
+          {L('Buscar lenda', 'Search legend')}
         </span>
         {totalCount && totalCount > 1 ? (
           <span

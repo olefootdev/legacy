@@ -23,6 +23,7 @@ import type {
   MatchPlanEvent,
   MatchupChannel,
 } from './quickPlanTypes';
+import { L, emIngles } from '@/i18n/L';
 
 /** Buff base por tier de efeito: positivo +2.5% · neutro 0% · negativo −2.5%. */
 export const EFFECT_BUFF_PCT: Record<ChoiceEffect, number> = {
@@ -116,7 +117,19 @@ const CHANNEL_PT: Record<MatchupChannel, { label: string; em: string; por: strin
   pressao: { label: 'pressão alta', em: 'na', por: 'pela' },
 };
 
+/** Rótulo de tela EN por canal (em/por viram preposição inglesa). */
+const CHANNEL_EN: Record<MatchupChannel, { label: string; em: string; por: string }> = {
+  ataque_central: { label: 'central attack', em: 'on the', por: 'through the' },
+  corredor_esquerdo: { label: 'left flank', em: 'on the', por: 'down the' },
+  corredor_direito: { label: 'right flank', em: 'on the', por: 'down the' },
+  criacao: { label: 'build-up play', em: 'in the', por: 'through the' },
+  bola_parada: { label: 'set pieces', em: 'on', por: 'from' },
+  finalizacao_vs_gk: { label: 'finishing', em: 'on', por: 'through' },
+  pressao: { label: 'high press', em: 'on the', por: 'through the' },
+};
+
 export function channelPt(ch: MatchupChannel) {
+  if (emIngles()) return CHANNEL_EN[ch] ?? { label: ch, em: 'on', por: 'through' };
   return CHANNEL_PT[ch] ?? { label: ch, em: 'no', por: 'pelo' };
 }
 
@@ -149,8 +162,8 @@ function upgradeToHomeGoal(e: MatchPlanEvent, ch: MatchupChannel): MatchPlanEven
     ...e,
     kind: 'goal_home',
     weight_tier: 'epic',
-    text: `${e.minute}' — GOOOL! Você mandou atacar ${por} ${label} e deu certo — bola na rede!`,
-    reason: 'sua leitura abriu o caminho',
+    text: L(`${e.minute}' — GOOOL! Você mandou atacar ${por} ${label} e deu certo — bola na rede!`, `${e.minute}' — GOAL! You called the attack ${por} ${label} and it worked — back of the net!`),
+    reason: L('sua leitura abriu o caminho', 'your read opened the way'),
     decision_influenced: true,
   };
 }
@@ -161,8 +174,8 @@ function downgradeHomeGoal(e: MatchPlanEvent, ch: MatchupChannel): MatchPlanEven
     ...e,
     kind: 'shot_home',
     weight_tier: 'normal',
-    text: `${e.minute}' — Bateu na trave da insistência ${em} ${label}: a marcação já esperava. Faltou ler melhor.`,
-    reason: 'canal fechado — a teimosia custou',
+    text: L(`${e.minute}' — Bateu na trave da insistência ${em} ${label}: a marcação já esperava. Faltou ler melhor.`, `${e.minute}' — Kept insisting ${em} ${label}: the marking was ready for it. Should have read it better.`),
+    reason: L('canal fechado — a teimosia custou', 'channel closed — stubbornness cost you'),
     decision_influenced: true,
   };
 }
@@ -173,8 +186,8 @@ function downgradeAwayGoal(e: MatchPlanEvent, ch: MatchupChannel): MatchPlanEven
     ...e,
     kind: 'shot_away',
     weight_tier: 'big',
-    text: `${e.minute}' — Travou! Você fechou a ${label} deles e o perigo morreu na marcação. Leitura cirúrgica.`,
-    reason: 'sua decisão defensiva segurou o canal',
+    text: L(`${e.minute}' — Travou! Você fechou a ${label} deles e o perigo morreu na marcação. Leitura cirúrgica.`, `${e.minute}' — Shut down! You closed their ${label} and the danger died in the marking. Surgical read.`),
+    reason: L('sua decisão defensiva segurou o canal', 'your defensive call held the channel'),
     decision_influenced: true,
   };
 }
@@ -184,8 +197,8 @@ function upgradeToAwayGoal(e: MatchPlanEvent): MatchPlanEvent {
     ...e,
     kind: 'goal_away',
     weight_tier: 'big',
-    text: `${e.minute}' — Deu ruim: o adversário achou o buraco que a sua aposta deixou e não perdoou.`,
-    reason: 'escolha errada cobrou o preço',
+    text: L(`${e.minute}' — Deu ruim: o adversário achou o buraco que a sua aposta deixou e não perdoou.`, `${e.minute}' — It backfired: the opponent found the gap your gamble left and made no mistake.`),
+    reason: L('escolha errada cobrou o preço', 'wrong call, and it cost you'),
     decision_influenced: true,
   };
 }
@@ -283,10 +296,10 @@ export function applyManDownPenalty(opts: {
   return events.map((e, i) => {
     if (i < fromIndex) return e;
     if (e.kind === 'goal_home' && rng.next() < 0.35) {
-      return { ...e, kind: 'shot_home', weight_tier: 'normal', text: `${e.minute}' — Com um a menos, o time não chega: a finalização sai fraca.`, reason: 'desfalque numérico pesou' };
+      return { ...e, kind: 'shot_home', weight_tier: 'normal', text: L(`${e.minute}' — Com um a menos, o time não chega: a finalização sai fraca.`, `${e.minute}' — A man down, the team can't get there: the shot comes out weak.`), reason: L('desfalque numérico pesou', 'being a man down told') };
     }
     if ((e.kind === 'shot_away' || e.kind === 'chance_away') && rng.next() < 0.3) {
-      return { ...e, kind: 'goal_away', weight_tier: 'big', text: `${e.minute}' — O espaço deixado pelo expulso vira gol do adversário.`, reason: 'um a menos cobrou o preço' };
+      return { ...e, kind: 'goal_away', weight_tier: 'big', text: L(`${e.minute}' — O espaço deixado pelo expulso vira gol do adversário.`, `${e.minute}' — The space left by the sent-off player becomes an opponent goal.`), reason: L('um a menos cobrou o preço', 'a man down, and it cost you') };
     }
     return e;
   });
@@ -321,11 +334,11 @@ export function applySubNudge(opts: {
     if (used || i < fromIndex) return e;
     if (better && (e.kind === 'shot_home' || e.kind === 'chance_home') && rng.next() < strength) {
       used = true;
-      return { ...e, kind: 'goal_home', weight_tier: 'big', text: `${e.minute}' — O reforço que entrou resolve — bola na rede!`, reason: 'sangue novo decidiu', decision_influenced: true };
+      return { ...e, kind: 'goal_home', weight_tier: 'big', text: L(`${e.minute}' — O reforço que entrou resolve — bola na rede!`, `${e.minute}' — The sub settles it — back of the net!`), reason: L('sangue novo decidiu', 'fresh legs decided it'), decision_influenced: true };
     }
     if (!better && e.kind === 'goal_home' && rng.next() < strength) {
       used = true;
-      return { ...e, kind: 'shot_home', weight_tier: 'normal', text: `${e.minute}' — A troca não encaixou: a jogada esfria e a finalização sai fraca.`, reason: 'substituição custou ritmo', decision_influenced: true };
+      return { ...e, kind: 'shot_home', weight_tier: 'normal', text: L(`${e.minute}' — A troca não encaixou: a jogada esfria e a finalização sai fraca.`, `${e.minute}' — The change didn't click: the move cools off and the shot is weak.`), reason: L('substituição custou ritmo', 'the substitution cost rhythm'), decision_influenced: true };
     }
     return e;
   });
@@ -386,14 +399,14 @@ export function sprinkleDisciplineEvents(opts: {
         extra.push({
           minute: m, kind: `red_${side}` as MatchPlanEvent['kind'], actor_id: p.id, actor_name: p.name,
           actor_side: side, weight_tier: 'big', zone: 'mid',
-          text: `${m}' — Segundo amarelo! ${p.name} tá fora.`, reason: 'segundo amarelo',
+          text: L(`${m}' — Segundo amarelo! ${p.name} tá fora.`, `${m}' — Second yellow! ${p.name} is off.`), reason: L('segundo amarelo', 'second yellow'),
         });
       } else {
         yellowedAt.set(p.id, minute);
         extra.push({
           minute, kind: `yellow_${side}` as MatchPlanEvent['kind'], actor_id: p.id, actor_name: p.name,
           actor_side: side, weight_tier: 'minor', zone: 'mid',
-          text: `${minute}' — Amarelo para ${p.name}.`, reason: 'falta tática',
+          text: L(`${minute}' — Amarelo para ${p.name}.`, `${minute}' — Yellow for ${p.name}.`), reason: L('falta tática', 'tactical foul'),
         });
       }
     }
@@ -407,7 +420,7 @@ export function sprinkleDisciplineEvents(opts: {
         extra.push({
           minute, kind: `injury_${side}` as MatchPlanEvent['kind'], actor_id: p.id, actor_name: p.name,
           actor_side: side, weight_tier: 'big', zone: 'mid',
-          text: `${minute}' — ${p.name} sente e não consegue continuar.`, reason: 'desgaste físico',
+          text: L(`${minute}' — ${p.name} sente e não consegue continuar.`, `${minute}' — ${p.name} pulls up and can't continue.`), reason: L('desgaste físico', 'physical wear'),
         });
       }
     }
@@ -435,25 +448,25 @@ interface SituationTemplate {
 }
 
 /** Monta o texto da situação (suporta {flank}/{star} preenchidos pelo builder). */
-type SituationFactory = (ctx: { flank: string; star: string }) => { insight: string; tpl: SituationTemplate };
+type SituationFactory = (ctx: { flank: string; star: string; right: boolean }) => { insight: string; tpl: SituationTemplate };
 
 const DEFEND_SITUATIONS: SituationFactory[] = [
-  ({ flank }) => ({ insight: `Adversário cruzando ${flank}`, tpl: { intent: 'defend', targetSide: 'away', channel: flank.includes('direit') ? 'corredor_direito' : 'corredor_esquerdo', labels: ['Marcar nas laterais', 'Manter posicionamento', 'Subir a linha'] } }),
-  () => ({ insight: 'Eles pressionam em bloco alto', tpl: { intent: 'defend', targetSide: 'away', channel: 'pressao', labels: ['Sair jogando rápido', 'Tocar de lado', 'Lançar na loteria'] } }),
-  () => ({ insight: 'Contra-ataque deles em velocidade', tpl: { intent: 'defend', targetSide: 'away', channel: 'ataque_central', labels: ['Falta tática no meio', 'Recompor a marcação', 'Dar o bote isolado'] } }),
-  () => ({ insight: 'Escanteio perigoso pra eles', tpl: { intent: 'defend', targetSide: 'away', channel: 'bola_parada', labels: ['Marcação por zona', 'Marcação individual', 'Subir o goleiro'] } }),
+  ({ flank, right }) => ({ insight: L(`Adversário cruzando ${flank}`, `Opponent crossing ${flank}`), tpl: { intent: 'defend', targetSide: 'away', channel: right ? 'corredor_direito' : 'corredor_esquerdo', labels: [L('Marcar nas laterais', 'Mark the flanks'), L('Manter posicionamento', 'Hold position'), L('Subir a linha', 'Push the line up')] } }),
+  () => ({ insight: L('Eles pressionam em bloco alto', 'They press with a high block'), tpl: { intent: 'defend', targetSide: 'away', channel: 'pressao', labels: [L('Sair jogando rápido', 'Play out quickly'), L('Tocar de lado', 'Pass sideways'), L('Lançar na loteria', 'Hit it and hope')] } }),
+  () => ({ insight: L('Contra-ataque deles em velocidade', 'Their counter-attack at speed'), tpl: { intent: 'defend', targetSide: 'away', channel: 'ataque_central', labels: [L('Falta tática no meio', 'Tactical foul in midfield'), L('Recompor a marcação', 'Recover the marking'), L('Dar o bote isolado', 'Lunge in alone')] } }),
+  () => ({ insight: L('Escanteio perigoso pra eles', 'Dangerous corner for them'), tpl: { intent: 'defend', targetSide: 'away', channel: 'bola_parada', labels: [L('Marcação por zona', 'Zonal marking'), L('Marcação individual', 'Man marking'), L('Subir o goleiro', 'Send the keeper up')] } }),
 ];
 
 const ATTACK_SITUATIONS: SituationFactory[] = [
-  ({ flank }) => ({ insight: `Lateral deles exposto ${flank}`, tpl: { intent: 'attack', targetSide: 'home', channel: flank.includes('direit') ? 'corredor_direito' : 'corredor_esquerdo', labels: ['Atacar pelo corredor', 'Manter o meio', 'Insistir no chutão'] } }),
-  () => ({ insight: 'Goleiro deles inseguro', tpl: { intent: 'attack', targetSide: 'home', channel: 'finalizacao_vs_gk', labels: ['Finalizar de primeira', 'Trabalhar a jogada', 'Driblar demais'] } }),
-  () => ({ insight: 'Espaço nas costas da zaga', tpl: { intent: 'attack', targetSide: 'home', channel: 'ataque_central', labels: ['Lançar nas costas', 'Posse no meio', 'Recuar a bola'] } }),
-  ({ star }) => ({ insight: `${star} está ligado`, tpl: { intent: 'attack', targetSide: 'home', channel: 'finalizacao_vs_gk', labels: [`Municiar ${star}`, 'Jogo coletivo', 'Isolar na ponta'] } }),
+  ({ flank, right }) => ({ insight: L(`Lateral deles exposto ${flank}`, `Their full-back exposed ${flank}`), tpl: { intent: 'attack', targetSide: 'home', channel: right ? 'corredor_direito' : 'corredor_esquerdo', labels: [L('Atacar pelo corredor', 'Attack down the flank'), L('Manter o meio', 'Hold the middle'), L('Insistir no chutão', 'Keep hoofing it')] } }),
+  () => ({ insight: L('Goleiro deles inseguro', 'Their keeper looks shaky'), tpl: { intent: 'attack', targetSide: 'home', channel: 'finalizacao_vs_gk', labels: [L('Finalizar de primeira', 'Shoot first time'), L('Trabalhar a jogada', 'Work the move'), L('Driblar demais', 'Over-dribble')] } }),
+  () => ({ insight: L('Espaço nas costas da zaga', 'Space behind their defence'), tpl: { intent: 'attack', targetSide: 'home', channel: 'ataque_central', labels: [L('Lançar nas costas', 'Ball in behind'), L('Posse no meio', 'Keep it in midfield'), L('Recuar a bola', 'Play it back')] } }),
+  ({ star }) => ({ insight: L(`${star} está ligado`, `${star} is on fire`), tpl: { intent: 'attack', targetSide: 'home', channel: 'finalizacao_vs_gk', labels: [L(`Municiar ${star}`, `Feed ${star}`), L('Jogo coletivo', 'Team play'), L('Isolar na ponta', 'Isolate on the wing')] } }),
 ];
 
 const NEUTRAL_SITUATIONS: SituationFactory[] = [
-  () => ({ insight: 'Jogo travado no meio', tpl: { intent: 'neutral', targetSide: 'home', channel: 'criacao', labels: ['Acelerar pelos lados', 'Manter a posse', 'Chutar de longe'] } }),
-  () => ({ insight: 'Time pedindo fôlego', tpl: { intent: 'neutral', targetSide: 'home', channel: 'pressao', labels: ['Segurar a bola', 'Ritmo normal', 'Pressionar alto'] } }),
+  () => ({ insight: L('Jogo travado no meio', 'Game stuck in midfield'), tpl: { intent: 'neutral', targetSide: 'home', channel: 'criacao', labels: [L('Acelerar pelos lados', 'Speed up on the flanks'), L('Manter a posse', 'Keep possession'), L('Chutar de longe', 'Shoot from distance')] } }),
+  () => ({ insight: L('Time pedindo fôlego', 'Team needs a breather'), tpl: { intent: 'neutral', targetSide: 'home', channel: 'pressao', labels: [L('Segurar a bola', 'Hold the ball'), L('Ritmo normal', 'Normal tempo'), L('Pressionar alto', 'Press high')] } }),
 ];
 
 const EFFECT_ORDER: ChoiceEffect[] = ['positive', 'neutral', 'negative'];
@@ -486,13 +499,14 @@ export function buildLiveAnalystBeat(opts: {
     const g = opts.awayPlayers.filter((p) => poss.includes(p.pos.toUpperCase()));
     return g.length ? g.reduce((s, p) => s + live(p.fatigue), 0) / g.length : 0;
   };
-  const flank = avgFlank(['LD', 'PD']) >= avgFlank(['LE', 'PE']) ? 'pela direita' : 'pela esquerda';
+  const right = avgFlank(['LD', 'PD']) >= avgFlank(['LE', 'PE']);
+  const flank = right ? L('pela direita', 'on the right') : L('pela esquerda', 'on the left');
   const best = opts.homeStats
     .filter((s) => s.side === 'home')
     .sort((a, b) => b.goals * 3 + b.shots - (a.goals * 3 + a.shots))[0];
   const star = best && best.goals + best.shots > 0
-    ? firstName(opts.homeNameById[best.id] ?? 'o craque')
-    : 'o craque';
+    ? firstName(opts.homeNameById[best.id] ?? L('o craque', 'the star'))
+    : L('o craque', 'the star');
 
   // Categoria pela leitura do jogo: perdendo/sob pressão → defesa; com a bola e
   // momento → ataque; senão neutro. Rotaciona dentro da categoria pelo índice.
@@ -502,7 +516,7 @@ export function buildLiveAnalystBeat(opts: {
       : opts.momentum > 57 || opts.homeScore > opts.awayScore ? ATTACK_SITUATIONS
         : NEUTRAL_SITUATIONS;
   const factory = category[opts.index % category.length]!;
-  const { insight, tpl } = factory({ flank, star });
+  const { insight, tpl } = factory({ flank, star, right });
 
   // 3 escolhas (positivo/neutro/negativo) → peso por tier; ordem embaralhada.
   const built = EFFECT_ORDER.map((effect, i) => ({
@@ -598,12 +612,59 @@ const TRANSITION_REACTIONS: Record<string, { attack: ReactionTriple; defend: Rea
   },
 };
 
+const TRANSITION_REACTIONS_EN: Record<string, { attack: ReactionTriple; defend: ReactionTriple }> = {
+  rebote: {
+    attack: { positive: 'ON THE REBOUND!', neutral: 'REGROUP', negative: 'PLAY IT BACK' },
+    defend: { positive: 'CLEAR IT!', neutral: 'HOLD POSITION', negative: 'PLAY OUT' },
+  },
+  contra_pro: {
+    attack: { positive: 'SPEED UP!', neutral: 'KEEP POSSESSION', negative: 'HOLD' },
+    defend: { positive: 'DROP BACK!', neutral: 'HOLD', negative: 'PRESS' },
+  },
+  contra_sofrido: {
+    attack: { positive: 'SPEED UP!', neutral: 'KEEP POSSESSION', negative: 'HOLD' },
+    defend: { positive: 'DROP BACK!', neutral: 'HOLD', negative: 'PRESS' },
+  },
+  bola_parada: {
+    attack: { positive: 'GET IN THE BOX!', neutral: 'SET PLAY', negative: 'SHOOT DIRECT' },
+    defend: { positive: 'MARK TIGHT!', neutral: 'HOLD THE ZONE', negative: 'PUSH THE LINE UP' },
+  },
+  falha: {
+    attack: { positive: 'PUNISH IT!', neutral: 'BUILD UP', negative: 'DITHER' },
+    defend: { positive: 'COVER!', neutral: 'HOLD', negative: 'RISK PLAYING OUT' },
+  },
+  pressao: {
+    attack: { positive: 'WIN IT HIGH!', neutral: 'HOLD', negative: 'DROP BACK' },
+    defend: { positive: 'PLAY OUT!', neutral: 'PASS SIDEWAYS', negative: 'HIT AND HOPE' },
+  },
+  individual: {
+    attack: { positive: 'TAKE HIM ON!', neutral: 'PASS', negative: 'ISOLATE' },
+    defend: { positive: 'DOUBLE UP!', neutral: 'CONTAIN', negative: 'DIVE IN' },
+  },
+  cruzamento: {
+    attack: { positive: 'ATTACK THE BALL!', neutral: 'HOLD', negative: 'SHOOT FROM DISTANCE' },
+    defend: { positive: 'CLEAR THE CROSS!', neutral: 'MARK THE ZONE', negative: 'PUSH THE LINE UP' },
+  },
+  golaco: {
+    attack: { positive: 'GO FOR IT!', neutral: 'WORK IT', negative: 'DROP BACK' },
+    defend: { positive: 'BLOCK!', neutral: 'CLOSE THE ANGLE', negative: 'GIVE SPACE' },
+  },
+  lancamento: {
+    attack: { positive: 'PLAY IT LONG!', neutral: 'KEEP POSSESSION', negative: 'DROP BACK' },
+    defend: { positive: 'DROP THE LINE!', neutral: 'HOLD', negative: 'HIGH LINE' },
+  },
+  chegada: {
+    attack: { positive: 'SHOOT!', neutral: 'WORK IT', negative: 'DROP BACK' },
+    defend: { positive: 'SHUT IT DOWN!', neutral: 'HOLD', negative: 'STEP OUT' },
+  },
+};
+
 /** Monta as 3 reações (neg/neutro/pos) e embaralha determinístico por minuto. */
 function buildReactions(kind: string, intent: 'attack' | 'defend', minute: number): ReactionChoice[] {
-  const t = TRANSITION_REACTIONS[kind]?.[intent] ?? {
-    positive: intent === 'attack' ? 'ATACAR!' : 'FECHAR!',
-    neutral: 'MANTER',
-    negative: intent === 'attack' ? 'RECUAR' : 'SUBIR A LINHA',
+  const t = (emIngles() ? TRANSITION_REACTIONS_EN : TRANSITION_REACTIONS)[kind]?.[intent] ?? {
+    positive: intent === 'attack' ? L('ATACAR!', 'ATTACK!') : L('FECHAR!', 'SHUT IT DOWN!'),
+    neutral: L('MANTER', 'HOLD'),
+    negative: intent === 'attack' ? L('RECUAR', 'DROP BACK') : L('SUBIR A LINHA', 'PUSH THE LINE UP'),
   };
   const out: ReactionChoice[] = [
     { label: t.positive, effect: 'positive' },
@@ -657,45 +718,45 @@ export function classifyTransition(opts: {
     opts.prevKind === (home ? 'save_away' : 'save_home')
     || opts.prevKind === (home ? 'woodwork_home' : 'woodwork_away')
   )) {
-    return mk('rebote', home ? 'Na sobra do rebote…' : 'Sobra perigosa na nossa área…');
+    return mk('rebote', home ? L('Na sobra do rebote…', 'On the rebound…') : L('Sobra perigosa na nossa área…', 'Dangerous loose ball in our box…'));
   }
   // 2) Contra-ataque — gol/lance CONTRA o fluxo do jogo (a queixa do "do nada").
   if (isCounter || (isGoal && ((home && mh < 42) || (!home && mh > 58)))) {
     return home
-      ? mk('contra_pro', 'Roubou e saiu no contra-ataque!')
-      : mk('contra_sofrido', 'Cuidado — contra-ataque deles!');
+      ? mk('contra_pro', L('Roubou e saiu no contra-ataque!', 'Won it and off on the counter!'))
+      : mk('contra_sofrido', L('Cuidado — contra-ataque deles!', 'Careful — their counter-attack!'));
   }
   // 3) Bola parada / escanteio / falta.
-  if (ch === 'bola_parada' || reason.includes('bola parada') || reason.includes('escanteio') || reason.includes('falta')) {
-    return mk('bola_parada', home ? 'Na bola parada…' : 'Bola parada perigosa pra eles…');
+  if (ch === 'bola_parada' || reason.includes('bola parada') || reason.includes('escanteio') || reason.includes('falta') || reason.includes('corner') || reason.includes('set piece') || reason.includes('free kick')) {
+    return mk('bola_parada', home ? L('Na bola parada…', 'From the set piece…') : L('Bola parada perigosa pra eles…', 'Dangerous set piece for them…'));
   }
   // 4) Erro defensivo / presente.
   if (reason.includes('falha') || reason.includes('erro') || reason.includes('vacilo')) {
-    return mk('falha', home ? 'Falha na saída deles — presente!' : 'Vacilo nosso na saída…');
+    return mk('falha', home ? L('Falha na saída deles — presente!', 'Error in their build-up — a gift!') : L('Vacilo nosso na saída…', 'Our slip in the build-up…'));
   }
   // 5) Pressão alta → roubada.
   if (ch === 'pressao') {
-    return mk('pressao', home ? 'Pressão alta e roubou!' : 'A pressão deles te sufoca…');
+    return mk('pressao', home ? L('Pressão alta e roubou!', 'High press and won it!') : L('A pressão deles te sufoca…', 'Their press is smothering you…'));
   }
   // 6) Jogada individual de craque.
   if (ch === 'finalizacao_vs_gk' || reason.includes('individual') || reason.includes('drible')) {
-    return mk('individual', home ? 'Lance individual de craque…' : 'Individual deles assusta…');
+    return mk('individual', home ? L('Lance individual de craque…', 'A moment of individual class…') : L('Individual deles assusta…', 'Their solo run is a scare…'));
   }
   // 7) Cruzamento na área (corredores).
   if (ch === 'corredor_esquerdo' || ch === 'corredor_direito') {
-    return mk('cruzamento', home ? 'Cruzamento na área…' : 'Cruzamento perigoso pra eles…');
+    return mk('cruzamento', home ? L('Cruzamento na área…', 'Cross into the box…') : L('Cruzamento perigoso pra eles…', 'Dangerous cross for them…'));
   }
   // 8) Golaço de longe (xG baixo).
   if (isGoal && (e.xg ?? 0.1) < 0.06) {
-    return mk('golaco', home ? 'De muito longe… olha o chute!' : 'Chutaram de longe…');
+    return mk('golaco', home ? L('De muito longe… olha o chute!', 'From way out… look at this shot!') : L('Chutaram de longe…', 'They shot from distance…'));
   }
   // 9) Lançamento nas costas / ataque central.
   if (ch === 'ataque_central') {
-    return mk('lancamento', home ? 'Lançou nas costas da zaga!' : 'Acharam as costas da nossa zaga…');
+    return mk('lancamento', home ? L('Lançou nas costas da zaga!', 'Ball in behind the defence!') : L('Acharam as costas da nossa zaga…', 'They found space behind our defence…'));
   }
   // 10) Construção / chegada com perigo (genérico — gol nunca sai "do nada").
   if (isGoal) {
-    return mk('chegada', home ? 'Chegou com perigo…' : 'Perigo na nossa área…');
+    return mk('chegada', home ? L('Chegou com perigo…', 'Arriving with danger…') : L('Perigo na nossa área…', 'Danger in our box…'));
   }
   return null;
 }
@@ -714,14 +775,14 @@ export function computeBeatVerdicts(
       return {
         ...base,
         kind: 'neutral' as const,
-        text: 'Você manteve o plano — sem mexer no jogo, sem risco.',
+        text: L('Você manteve o plano — sem mexer no jogo, sem risco.', 'You kept the plan — no changes, no risk.'),
       };
     }
     if (d.weight < 0) {
       return {
         ...base,
         kind: 'miss' as const,
-        text: `O canal estava fechado — insistir ${por.replace('pelo', 'no').replace('pela', 'na')} ${label} custou caro.`,
+        text: L(`O canal estava fechado — insistir ${por.replace('pelo', 'no').replace('pela', 'na')} ${label} custou caro.`, `The channel was closed — insisting ${por} ${label} cost you.`),
       };
     }
     if (d.target_side === 'home') {
@@ -729,20 +790,20 @@ export function computeBeatVerdicts(
         return {
           ...base,
           kind: 'hit' as const,
-          text: `Mandou bem — o gol saiu ${por} ${label}, exatamente onde você apontou.`,
+          text: L(`Mandou bem — o gol saiu ${por} ${label}, exatamente onde você apontou.`, `Well read — the goal came ${por} ${label}, exactly where you pointed.`),
         };
       }
       if (after.some((e) => NEAR_MISS_HOME.has(e.kind) && e.channel === d.channel)) {
         return {
           ...base,
           kind: 'neutral' as const,
-          text: `Quase! O time chegou ${por} ${label} — faltou o capricho na hora H.`,
+          text: L(`Quase! O time chegou ${por} ${label} — faltou o capricho na hora H.`, `Close! The team got there ${por} ${label} — lacked the final touch.`),
         };
       }
       return {
         ...base,
         kind: 'miss' as const,
-        text: `O plano não saiu do papel — nada nasceu ${por} ${label} depois da decisão.`,
+        text: L(`O plano não saiu do papel — nada nasceu ${por} ${label} depois da decisão.`, `The plan never got going — nothing came ${por} ${label} after the call.`),
       };
     }
     // Escudo defensivo
@@ -750,13 +811,13 @@ export function computeBeatVerdicts(
       return {
         ...base,
         kind: 'miss' as const,
-        text: `A trava não segurou: o gol deles saiu justamente ${por} ${label}.`,
+        text: L(`A trava não segurou: o gol deles saiu justamente ${por} ${label}.`, `The lock didn't hold: their goal came right ${por} ${label}.`),
       };
     }
     return {
       ...base,
       kind: 'hit' as const,
-      text: `Trava perfeita — a ${label} deles não produziu nada depois da sua decisão.`,
+      text: L(`Trava perfeita — a ${label} deles não produziu nada depois da sua decisão.`, `Perfect lock — their ${label} produced nothing after your call.`),
     };
   });
 }

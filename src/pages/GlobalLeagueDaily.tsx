@@ -17,9 +17,10 @@ import { useGameStore, useGameDispatch } from '@/game/store';
 import { decreeForWeek, isoWeekKey, type DecreeOption } from '@/systems/weeklyDecree';
 import { submitDecreeVote, fetchDecreeTally, type DecreeTally } from '@/supabase/weeklyDecree';
 import { Hashtag } from '@/components/ui';
+import { L, emIngles } from '@/i18n/L';
 
 function fmtCountdown(ms: number): string {
-  if (ms <= 0) return 'agora';
+  if (ms <= 0) return L('agora', 'now');
   const totalSec = Math.floor(ms / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
@@ -31,11 +32,11 @@ function fmtCountdown(ms: number): string {
 function phaseSizeLabel(size: number): string {
   switch (size) {
     case 2: return 'Final';
-    case 4: return 'Semifinal';
-    case 8: return 'Quartas';
-    case 16: return 'Oitavas';
-    case 32: return 'Fase de 32';
-    default: return `Fase de ${size}`;
+    case 4: return L('Semifinal', 'Semi-final');
+    case 8: return L('Quartas', 'Quarter-finals');
+    case 16: return L('Oitavas', 'Round of 16');
+    case 32: return L('Fase de 32', 'Round of 32');
+    default: return L(`Fase de ${size}`, `Round of ${size}`);
   }
 }
 
@@ -87,7 +88,7 @@ export default function GlobalLeagueDaily() {
           className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-cimento hover:text-neon-yellow transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          Liga Global
+          {L('Liga Global', 'Global League')}
         </button>
       </div>
 
@@ -98,16 +99,16 @@ export default function GlobalLeagueDaily() {
           animate={{ opacity: 1, y: 0 }}
           className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 text-center"
         >
-          <Hashtag className="mb-2 text-black/70">#ligaglobal · ciclo diário</Hashtag>
+          <Hashtag className="mb-2 text-black/70">{L('#ligaglobal · ciclo diário', '#globalleague · daily cycle')}</Hashtag>
           <h1 className="font-impact text-5xl sm:text-7xl uppercase text-black leading-[1.1]">
-            Coroa do Dia
+            {L('Coroa do Dia', 'Crown of the Day')}
           </h1>
           <p className="mt-3 truncate font-impact text-xl sm:text-3xl uppercase leading-[1.1] text-black">
-            {daily.phase === 'qualifying' && 'A corrida está aberta'}
-            {daily.phase === 'knockout' && 'Mata-Mata em andamento'}
+            {daily.phase === 'qualifying' && L('A corrida está aberta', 'The race is open')}
+            {daily.phase === 'knockout' && L('Mata-Mata em andamento', 'Knockout in progress')}
             {daily.phase === 'crowned' && daily.todayCrown
-              ? `${daily.todayCrown.clubName} é o campeão`
-              : daily.phase === 'crowned' && 'Campeão coroado'}
+              ? L(`${daily.todayCrown.clubName} é o campeão`, `${daily.todayCrown.clubName} are the champions`)
+              : daily.phase === 'crowned' && L('Campeão coroado', 'Champion crowned')}
           </p>
         </motion.div>
       </section>
@@ -115,18 +116,18 @@ export default function GlobalLeagueDaily() {
       {/* Indicador de fase + countdown */}
       <div className="sports-panel p-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm flex-wrap">
-          <PhaseChip active={daily.phase === 'qualifying'} icon={<Flag className="w-3.5 h-3.5" />} label="Classificação" />
+          <PhaseChip active={daily.phase === 'qualifying'} icon={<Flag className="w-3.5 h-3.5" />} label={L('Classificação', 'Qualifying')} />
           <span className="text-poeira">›</span>
-          <PhaseChip active={daily.phase === 'knockout'} icon={<Swords className="w-3.5 h-3.5" />} label="Mata-Mata" />
+          <PhaseChip active={daily.phase === 'knockout'} icon={<Swords className="w-3.5 h-3.5" />} label={L('Mata-Mata', 'Knockout')} />
           <span className="text-poeira">›</span>
-          <PhaseChip active={daily.phase === 'crowned'} icon={<Crown className="w-3.5 h-3.5" />} label="Coroa" />
+          <PhaseChip active={daily.phase === 'crowned'} icon={<Crown className="w-3.5 h-3.5" />} label={L('Coroa', 'Crown')} />
         </div>
         <div className="flex items-center gap-2">
           {daily.phase === 'qualifying' && (
             <div className="flex items-center gap-1.5 text-text-soft">
               <Clock className="w-4 h-4" />
               <span className="font-mono text-sm">
-                corte em <span className="font-bold text-white">{fmtCountdown(daily.msToCut)}</span>
+                {L('corte em', 'cut in')} <span className="font-bold text-white">{fmtCountdown(daily.msToCut)}</span>
               </span>
             </div>
           )}
@@ -135,9 +136,9 @@ export default function GlobalLeagueDaily() {
               <Clock className="w-4 h-4" />
               <span className="font-mono text-sm">
                 {liveRound ? (
-                  <span className="text-alta font-bold animate-pulse">● ao vivo</span>
+                  <span className="text-alta font-bold animate-pulse">● {L('ao vivo', 'live')}</span>
                 ) : (
-                  <>próxima em <span className="font-bold text-white">{fmtCountdown(Math.max(0, nextRound.scheduledKickoffMs - now))}</span></>
+                  <>{L('próxima em', 'next in')} <span className="font-bold text-white">{fmtCountdown(Math.max(0, nextRound.scheduledKickoffMs - now))}</span></>
                 )}
               </span>
             </div>
@@ -159,7 +160,7 @@ export default function GlobalLeagueDaily() {
           </div>
           {activeVote && (
             <span className="shrink-0 bg-neon-yellow px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-black">
-              Decretado
+              {L('Decretado', 'Decreed')}
             </span>
           )}
         </div>
@@ -187,18 +188,18 @@ export default function GlobalLeagueDaily() {
                     {opt.label}
                   </p>
                   {votes != null && (
-                    <span className="font-mono text-xs text-cimento shrink-0">{votes} voto{votes === 1 ? '' : 's'}</span>
+                    <span className="font-mono text-xs text-cimento shrink-0">{votes} {votes === 1 ? L('voto', 'vote') : L('votos', 'votes')}</span>
                   )}
                 </div>
                 <p className="text-xs text-cimento mt-1">{opt.effectText}</p>
                 {reigning && (
                   <p className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.12em] text-neon-yellow mt-2">
-                    <Crown className="h-3 w-3" strokeWidth={2.2} /> Decreto do reino · até domingo
+                    <Crown className="h-3 w-3" strokeWidth={2.2} /> {L('Decreto do reino · até domingo', 'Kingdom decree · until Sunday')}
                   </p>
                 )}
                 {chosen && !reigning && (
                   <p className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.12em] text-cimento mt-2">
-                    <Check className="h-3 w-3" strokeWidth={2.2} /> Seu voto
+                    <Check className="h-3 w-3" strokeWidth={2.2} /> {L('Seu voto', 'Your vote')}
                   </p>
                 )}
               </button>
@@ -207,7 +208,9 @@ export default function GlobalLeagueDaily() {
         </div>
         {globalWinner && activeVote && globalWinner !== activeVote && (
           <p className="px-4 pb-3 -mt-1 text-[12px] text-cimento">
-            O reino escolheu <span className="text-neon-yellow font-bold">{decree.options[globalWinner].label}</span> · vale pra todos.
+            {emIngles()
+              ? <>The kingdom chose <span className="text-neon-yellow font-bold">{decree.options[globalWinner].label}</span> · applies to everyone.</>
+              : <>O reino escolheu <span className="text-neon-yellow font-bold">{decree.options[globalWinner].label}</span> · vale pra todos.</>}
           </p>
         )}
       </section>
@@ -223,15 +226,15 @@ export default function GlobalLeagueDaily() {
             <Crown className="w-12 h-12 sm:w-16 sm:h-16 text-neon-yellow shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-neon-yellow mb-2">
-                Campeão de {daily.todayCrown.dailyDate}
+                {L('Campeão de', 'Champion of')} {daily.todayCrown.dailyDate}
               </p>
               <h2 className="truncate font-impact text-4xl sm:text-6xl uppercase text-white leading-[1.1]">
                 {daily.todayCrown.clubName}
               </h2>
               <p className="mt-3 truncate font-mono text-[12px] text-giz">
                 {daily.todayCrown.runnerUpClubName && daily.todayCrown.finalScoreHome != null && daily.todayCrown.finalScoreAway != null
-                  ? `final ${daily.todayCrown.finalScoreHome}–${daily.todayCrown.finalScoreAway} vs ${daily.todayCrown.runnerUpClubName}${daily.todayCrown.finalWentToPens ? ' (pênaltis)' : ''}`
-                  : `bracket de ${daily.todayCrown.bracketSize} clubes`}
+                  ? `final ${daily.todayCrown.finalScoreHome}–${daily.todayCrown.finalScoreAway} vs ${daily.todayCrown.runnerUpClubName}${daily.todayCrown.finalWentToPens ? L(' (pênaltis)', ' (penalties)') : ''}`
+                  : L(`bracket de ${daily.todayCrown.bracketSize} clubes`, `${daily.todayCrown.bracketSize}-club bracket`)}
               </p>
             </div>
           </div>
@@ -243,33 +246,35 @@ export default function GlobalLeagueDaily() {
         <section className="sports-panel overflow-hidden">
           <div className="px-4 py-3 bg-deep-black border-b border-white/10 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <Hashtag className="text-neon-yellow">#classificação</Hashtag>
+              <Hashtag className="text-neon-yellow">{L('#classificação', '#qualifying')}</Hashtag>
               <h2 className="truncate font-impact text-xl uppercase leading-[1.1] text-white">
-                Corrida do Dia
+                {L('Corrida do Dia', 'Race of the Day')}
               </h2>
             </div>
             <span className="shrink-0 font-mono text-xs text-cimento text-right">
-              top <span className="text-alta font-bold">{daily.cutSize || '—'}</span> avançam<br />
-              <span className="text-[10px] uppercase tracking-[0.12em] text-poeira">às {daily.qualifyHour}h BRT</span>
+              {emIngles()
+                ? <>top <span className="text-alta font-bold">{daily.cutSize || '—'}</span> advance</>
+                : <>top <span className="text-alta font-bold">{daily.cutSize || '—'}</span> avançam</>}<br />
+              <span className="text-[10px] uppercase tracking-[0.12em] text-poeira">{L('às', 'at')} {daily.qualifyHour}h BRT</span>
             </span>
           </div>
 
           {daily.standings.length === 0 ? (
             <div className="text-center text-cimento py-12 px-4">
               <Flag className="w-10 h-10 mx-auto mb-3 text-poeira" />
-              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-giz mb-1">Nenhuma partida hoje</p>
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-giz mb-1">{L('Nenhuma partida hoje', 'No matches today')}</p>
               <p className="text-xs text-cimento max-w-md mx-auto">
-                Partidas de liga somam na corrida · mata-mata às {daily.qualifyHour}h
+                {L(`Partidas de liga somam na corrida · mata-mata às ${daily.qualifyHour}h`, `League matches count toward the race · knockout at ${daily.qualifyHour}h`)}
               </p>
             </div>
           ) : (
             <div>
               <div className="grid grid-cols-[44px_1fr_36px_36px_44px_56px] gap-2 px-3 py-2 bg-deep-black border-b border-white/10 font-mono text-[10px] uppercase tracking-[0.12em] text-cimento">
                 <div className="text-center">#</div>
-                <div>Clube</div>
-                <div className="text-center">J</div>
-                <div className="text-center">V</div>
-                <div className="text-center">SG</div>
+                <div>{L('Clube', 'Club')}</div>
+                <div className="text-center">{L('J', 'P')}</div>
+                <div className="text-center">{L('V', 'W')}</div>
+                <div className="text-center">{L('SG', 'GD')}</div>
                 <div className="text-center font-bold">PTS</div>
               </div>
               {daily.standings.map((row) => {
@@ -292,7 +297,7 @@ export default function GlobalLeagueDaily() {
                         <span className={`min-w-0 text-[14px] truncate ${row.isMe ? 'font-bold text-black' : 'text-giz'}`}>{row.team.clubName}</span>
                         {row.isMe && (
                           <span className="shrink-0 bg-black px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-neon-yellow">
-                            você
+                            {L('você', 'you')}
                           </span>
                         )}
                         {(row.team.seasonCrowns ?? 0) > 0 && (
@@ -309,11 +314,11 @@ export default function GlobalLeagueDaily() {
                       <div className={`ole-num text-center text-[15px] ${row.isMe ? 'text-black' : 'text-white'}`}>{row.team.dailyPoints ?? 0}</div>
                     </motion.div>
                     {isCut && (
-                      <div className="flex h-6 items-center gap-2 px-3" aria-label="Corte do mata-mata acima desta linha">
+                      <div className="flex h-6 items-center gap-2 px-3" aria-label={L('Corte do mata-mata acima desta linha', 'Knockout cut above this line')}>
                         <span className="block h-0 grow border-t border-dashed border-alta" />
                         <span className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-alta">
                           <Swords className="w-3 h-3" />
-                          Corte · top {daily.cutSize} ao mata-mata
+                          {L(`Corte · top ${daily.cutSize} ao mata-mata`, `Cut · top ${daily.cutSize} to knockout`)}
                         </span>
                         <span className="block h-0 grow border-t border-dashed border-alta" />
                       </div>
@@ -331,15 +336,15 @@ export default function GlobalLeagueDaily() {
         <section className="sports-panel overflow-hidden">
           <div className="px-4 py-3 bg-deep-black border-b border-white/10 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <Hashtag className="text-neon-yellow">#chave</Hashtag>
+              <Hashtag className="text-neon-yellow">{L('#chave', '#bracket')}</Hashtag>
               <h2 className="truncate font-impact text-xl uppercase leading-[1.1] text-white">
-                Mata-Mata{daily.phase === 'crowned' ? ' — encerrado' : ''}
+                {L('Mata-Mata', 'Knockout')}{daily.phase === 'crowned' ? L(' — encerrado', ' — finished') : ''}
               </h2>
             </div>
             {liveRound && (
               <span className="shrink-0 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-alta animate-pulse flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-alta inline-block" />
-                ao vivo · {phaseSizeLabel(liveRound.size)}
+                {L('ao vivo', 'live')} · {phaseSizeLabel(liveRound.size)}
               </span>
             )}
           </div>

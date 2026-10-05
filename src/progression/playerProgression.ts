@@ -4,6 +4,7 @@
  */
 
 import type { PlayerEntity } from '@/entities/types';
+import { L } from '@/i18n/L';
 
 export type SignatureMoveType =
   | 'bicycle_kick'
@@ -44,8 +45,8 @@ export interface PlayerProgression {
 export const SIGNATURE_MOVES: Record<SignatureMoveType, SignatureMove> = {
   bicycle_kick: {
     id: 'bicycle_kick',
-    name: 'Bicicleta',
-    description: 'Chute acrobático espetacular',
+    name: L('Bicicleta', 'Bicycle kick'),
+    description: L('Chute acrobático espetacular', 'Spectacular acrobatic shot'),
     requiredXP: 500,
     requiredAttributes: { fisico: 70, acrobacia: 65 },
     unlockCost: 1000,
@@ -55,8 +56,8 @@ export const SIGNATURE_MOVES: Record<SignatureMoveType, SignatureMove> = {
   },
   thunderstrike: {
     id: 'thunderstrike',
-    name: 'Bomba',
-    description: 'Chute potente de fora da área',
+    name: L('Bomba', 'Thunderbolt'),
+    description: L('Chute potente de fora da área', 'Powerful strike from outside the box'),
     requiredXP: 800,
     requiredAttributes: { finalizacao: 75, chuteLongo: 70 },
     unlockCost: 1500,
@@ -66,8 +67,8 @@ export const SIGNATURE_MOVES: Record<SignatureMoveType, SignatureMove> = {
   },
   chip_shot: {
     id: 'chip_shot',
-    name: 'Cavadinha',
-    description: 'Toque sutil por cima do goleiro',
+    name: L('Cavadinha', 'Chip shot'),
+    description: L('Toque sutil por cima do goleiro', 'Delicate chip over the keeper'),
     requiredXP: 600,
     requiredAttributes: { finalizacao: 70, tecnica: 75 },
     unlockCost: 1200,
@@ -77,8 +78,8 @@ export const SIGNATURE_MOVES: Record<SignatureMoveType, SignatureMove> = {
   },
   rabona: {
     id: 'rabona',
-    name: 'Rabona',
-    description: 'Cruzamento ou chute com perna cruzada',
+    name: L('Rabona', 'Rabona'),
+    description: L('Cruzamento ou chute com perna cruzada', 'Cross or shot with legs crossed'),
     requiredXP: 1000,
     requiredAttributes: { tecnica: 80, drible: 75 },
     unlockCost: 2000,
@@ -88,8 +89,8 @@ export const SIGNATURE_MOVES: Record<SignatureMoveType, SignatureMove> = {
   },
   elastico: {
     id: 'elastico',
-    name: 'Elástico',
-    description: 'Drible rápido que engana o defensor',
+    name: L('Elástico', 'Elastico'),
+    description: L('Drible rápido que engana o defensor', 'Quick dribble that fools the defender'),
     requiredXP: 700,
     requiredAttributes: { drible: 80, velocidade: 70 },
     unlockCost: 1400,
@@ -99,8 +100,8 @@ export const SIGNATURE_MOVES: Record<SignatureMoveType, SignatureMove> = {
   },
   rainbow_flick: {
     id: 'rainbow_flick',
-    name: 'Arco-íris',
-    description: 'Levanta a bola por cima do adversário',
+    name: L('Arco-íris', 'Rainbow flick'),
+    description: L('Levanta a bola por cima do adversário', 'Flicks the ball over the opponent'),
     requiredXP: 1200,
     requiredAttributes: { drible: 85, tecnica: 80 },
     unlockCost: 2500,
@@ -110,8 +111,8 @@ export const SIGNATURE_MOVES: Record<SignatureMoveType, SignatureMove> = {
   },
   scorpion_kick: {
     id: 'scorpion_kick',
-    name: 'Escorpião',
-    description: 'Defesa ou finalização com calcanhar',
+    name: L('Escorpião', 'Scorpion kick'),
+    description: L('Defesa ou finalização com calcanhar', 'Save or finish with the heel'),
     requiredXP: 1500,
     requiredAttributes: { acrobacia: 85, fisico: 75 },
     unlockCost: 3000,
@@ -121,8 +122,8 @@ export const SIGNATURE_MOVES: Record<SignatureMoveType, SignatureMove> = {
   },
   trivela: {
     id: 'trivela',
-    name: 'Trivela',
-    description: 'Chute ou passe com efeito externo',
+    name: L('Trivela', 'Trivela'),
+    description: L('Chute ou passe com efeito externo', 'Outside-foot shot or pass'),
     requiredXP: 900,
     requiredAttributes: { tecnica: 78, passe: 75 },
     unlockCost: 1800,
@@ -132,8 +133,8 @@ export const SIGNATURE_MOVES: Record<SignatureMoveType, SignatureMove> = {
   },
   knuckleball: {
     id: 'knuckleball',
-    name: 'Folha Seca',
-    description: 'Chute sem rotação que oscila no ar',
+    name: L('Folha Seca', 'Knuckleball'),
+    description: L('Chute sem rotação que oscila no ar', 'No-spin shot that dips in the air'),
     requiredXP: 1100,
     requiredAttributes: { finalizacao: 80, chuteLongo: 78 },
     unlockCost: 2200,
@@ -143,8 +144,8 @@ export const SIGNATURE_MOVES: Record<SignatureMoveType, SignatureMove> = {
   },
   panenka: {
     id: 'panenka',
-    name: 'Panenka',
-    description: 'Pênalti cavado no centro',
+    name: L('Panenka', 'Panenka'),
+    description: L('Pênalti cavado no centro', 'Chipped penalty down the middle'),
     requiredXP: 1300,
     requiredAttributes: { compostura: 85, tecnica: 75 },
     unlockCost: 2800,
@@ -286,14 +287,14 @@ export class PlayerProgressionManager {
     const prog = this.getProgression(playerId);
     const move = SIGNATURE_MOVES[moveId];
 
-    if (!move) return { can: false, reason: 'Move não existe' };
-    if (!prog.unlockedMoves.includes(moveId)) return { can: false, reason: 'Move não desbloqueado' };
+    if (!move) return { can: false, reason: L('Move não existe', 'Move does not exist') };
+    if (!prog.unlockedMoves.includes(moveId)) return { can: false, reason: L('Move não desbloqueado', 'Move not unlocked') };
 
     // Verifica atributos
     for (const [attr, required] of Object.entries(move.requiredAttributes)) {
       const playerAttr = (player.attrs as any)[attr] || 0;
       if (playerAttr < required) {
-        return { can: false, reason: `${attr} insuficiente (${playerAttr}/${required})` };
+        return { can: false, reason: L(`${attr} insuficiente (${playerAttr}/${required})`, `${attr} too low (${playerAttr}/${required})`) };
       }
     }
 

@@ -21,6 +21,7 @@ import { motion } from 'motion/react';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { InboxItem } from '@/game/inboxTypes';
+import { L } from '@/i18n/L';
 
 /** Quantos itens cabem antes do feed virar rolagem disfarçada. */
 const MAX_ITEMS = 5;
@@ -108,7 +109,7 @@ export function ClubFeed({ inbox }: ClubFeedProps) {
 
   return (
     <section
-      aria-label="O que aconteceu no clube"
+      aria-label={L('O que aconteceu no clube', 'What happened at the club')}
       style={{
         background: 'var(--color-panel)',
         borderRadius: 'var(--radius-card)',
@@ -119,14 +120,14 @@ export function ClubFeed({ inbox }: ClubFeedProps) {
       <div className="mb-3 flex items-baseline gap-2">
         <span aria-hidden className="h-3 w-0.5 flex-none bg-neon-yellow" />
         <h2 className="font-impact uppercase text-white" style={{ fontSize: '15px', letterSpacing: '0.01em' }}>
-          No clube
+          {L('No clube', 'At the club')}
         </h2>
         <Link
           to="/manager/mensagens"
           className="ml-auto font-display font-black uppercase text-white/40 transition-colors hover:text-neon-yellow"
           style={{ fontSize: '9px', letterSpacing: '0.18em' }}
         >
-          Tudo
+          {L('Tudo', 'All')}
         </Link>
       </div>
 

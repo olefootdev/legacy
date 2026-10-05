@@ -19,6 +19,7 @@ import {
   type ParsedCommand,
   type RelayedCommand,
 } from './types';
+import { L } from '@/i18n/L';
 
 export interface AssistantStaff {
   role: AssistantRole;
@@ -32,11 +33,11 @@ export type RelayQuality = 'clean' | 'basic' | 'partial_loss' | 'distorted';
 
 /** Defaults MVP — assistentes base que todos os managers recebem. */
 export const DEFAULT_ASSISTANT_STAFF: Record<AssistantRole, AssistantStaff> = {
-  tatico: { role: 'tatico', effectiveness: 68, name: 'Aux. Tático' },
-  ataque: { role: 'ataque', effectiveness: 72, name: 'Aux. Ataque' },
-  defesa: { role: 'defesa', effectiveness: 65, name: 'Aux. Defesa' },
-  fisico: { role: 'fisico', effectiveness: 70, name: 'Preparador Físico' },
-  mental: { role: 'mental', effectiveness: 75, name: 'Preparador Mental' },
+  tatico: { role: 'tatico', effectiveness: 68, name: L('Aux. Tático', 'Tactical Asst.') },
+  ataque: { role: 'ataque', effectiveness: 72, name: L('Aux. Ataque', 'Attack Asst.') },
+  defesa: { role: 'defesa', effectiveness: 65, name: L('Aux. Defesa', 'Defence Asst.') },
+  fisico: { role: 'fisico', effectiveness: 70, name: L('Preparador Físico', 'Fitness Coach') },
+  mental: { role: 'mental', effectiveness: 75, name: L('Preparador Mental', 'Mental Coach') },
 };
 
 export function qualityFromEffectiveness(eff: number): RelayQuality {
@@ -85,10 +86,10 @@ export function relayCommand(
 
   // Narrativa do relay (mostrada no feed do Comando Técnico)
   const phrases: Record<RelayQuality, (c: string) => string> = {
-    clean: (c) => `${glyph} ${label}: "Entendi — ${c}". Equipe, vai!`,
-    basic: (c) => `${glyph} ${label}: "${c}" — transmite pro time.`,
-    partial_loss: (c) => `${glyph} ${label}: "hum... ${c.split(' ').slice(0, 3).join(' ')}..." — relay parcial.`,
-    distorted: (c) => `${glyph} ${label}: "não ouvi bem..." — comando chega embaralhado.`,
+    clean: (c) => L(`${glyph} ${label}: "Entendi — ${c}". Equipe, vai!`, `${glyph} ${label}: "Got it — ${c}". Team, go!`),
+    basic: (c) => L(`${glyph} ${label}: "${c}" — transmite pro time.`, `${glyph} ${label}: "${c}" — passing it on to the team.`),
+    partial_loss: (c) => L(`${glyph} ${label}: "hum... ${c.split(' ').slice(0, 3).join(' ')}..." — relay parcial.`, `${glyph} ${label}: "hmm... ${c.split(' ').slice(0, 3).join(' ')}..." — partial relay.`),
+    distorted: (c) => L(`${glyph} ${label}: "não ouvi bem..." — comando chega embaralhado.`, `${glyph} ${label}: "didn't catch that..." — command arrives garbled.`),
   };
   out.relayNarrative = phrases[quality](parsed.rawText);
 

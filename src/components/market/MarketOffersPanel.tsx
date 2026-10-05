@@ -13,14 +13,15 @@ import { formatExp } from '@/systems/economy';
 import { ConfirmDialog } from '@/components/ui';
 import type { MarketOffer } from '@/game/types';
 import { useMarketOffers } from '@/hooks/useMarketOffers';
+import { L } from '@/i18n/L';
 
 const STATUS_LABEL: Record<MarketOffer['status'], string> = {
-  pending: 'Pendente',
-  accepted: 'Aceita',
-  rejected: 'Negada',
-  countered: 'Contraproposta',
-  cancelled: 'Cancelada',
-  expired: 'Expirada',
+  pending: L('Pendente', 'Pending'),
+  accepted: L('Aceita', 'Accepted'),
+  rejected: L('Negada', 'Rejected'),
+  countered: L('Contraproposta', 'Countered'),
+  cancelled: L('Cancelada', 'Cancelled'),
+  expired: L('Expirada', 'Expired'),
 };
 
 export function MarketOffersPanel() {
@@ -39,7 +40,7 @@ export function MarketOffersPanel() {
     try {
       await fn();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível concluir a ação.');
+      setError(e instanceof Error ? e.message : L('Não foi possível concluir a ação.', 'Could not complete the action.'));
     } finally {
       setBusyId(null);
     }
@@ -47,8 +48,8 @@ export function MarketOffersPanel() {
 
   return (
     <section className="rounded-lg border border-white/10 bg-panel p-4 sm:p-5">
-      <div className="font-display text-[10px] uppercase tracking-[0.2em] text-neon-yellow">Negociação</div>
-      <h3 className="mt-1 font-impact text-2xl uppercase tracking-wide text-white">Propostas</h3>
+      <div className="font-display text-[10px] uppercase tracking-[0.2em] text-neon-yellow">{L('Negociação', 'Negotiation')}</div>
+      <h3 className="mt-1 font-impact text-2xl uppercase tracking-wide text-white">{L('Propostas', 'Offers')}</h3>
 
       {error && <p className="mt-3 text-xs font-medium text-baixa">{error}</p>}
 
@@ -56,7 +57,7 @@ export function MarketOffersPanel() {
       {incoming.length > 0 && (
         <div className="mt-4">
           <div className="font-display text-[10px] uppercase tracking-[0.2em] text-white/50">
-            Recebidas ({incoming.length})
+            {L('Recebidas', 'Received')} ({incoming.length})
           </div>
           <ul className="mt-2 space-y-2">
             {incoming.map((o) => {
@@ -70,7 +71,7 @@ export function MarketOffersPanel() {
                   </div>
                   <p className="mt-0.5 text-[11px] text-white/50">
                     {o.buyerClubName} · OVR {o.playerOverall}
-                    {o.status === 'countered' ? ' · aguardando o comprador' : ''}
+                    {o.status === 'countered' ? L(' · aguardando o comprador', ' · waiting for the buyer') : ''}
                   </p>
 
                   {o.status === 'pending' && (
@@ -82,7 +83,7 @@ export function MarketOffersPanel() {
                           onClick={() => setConfirmAccept(o)}
                           className="rounded-md bg-neon-yellow px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-black transition-colors hover:bg-white disabled:opacity-40"
                         >
-                          Aceitar
+                          {L('Aceitar', 'Accept')}
                         </button>
                         <button
                           type="button"
@@ -90,7 +91,7 @@ export function MarketOffersPanel() {
                           onClick={() => run(o.offerId, () => respond(o, 'reject'))}
                           className="rounded-md border border-white/30 bg-transparent px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:border-white hover:bg-white/5 disabled:opacity-40"
                         >
-                          Negar
+                          {L('Negar', 'Reject')}
                         </button>
                         <button
                           type="button"
@@ -101,7 +102,7 @@ export function MarketOffersPanel() {
                           }}
                           className="rounded-md border border-neon-yellow/40 bg-transparent px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-neon-yellow transition-colors hover:border-neon-yellow disabled:opacity-40"
                         >
-                          Contrapropor
+                          {L('Contrapropor', 'Counter')}
                         </button>
                       </div>
 
@@ -112,7 +113,7 @@ export function MarketOffersPanel() {
                             inputMode="numeric"
                             value={counterValue}
                             onChange={(e) => setCounterValue(e.target.value)}
-                            placeholder="Valor EXP"
+                            placeholder={L('Valor EXP', 'EXP amount')}
                             className="min-w-0 flex-1 rounded-md border border-white/20 bg-deep-black px-3 py-2 font-display text-sm font-bold text-white focus:border-neon-yellow focus:outline-none"
                           />
                           <button
@@ -126,7 +127,7 @@ export function MarketOffersPanel() {
                             }
                             className="shrink-0 rounded-md bg-neon-yellow px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
                           >
-                            Enviar
+                            {L('Enviar', 'Send')}
                           </button>
                         </div>
                       )}
@@ -143,7 +144,7 @@ export function MarketOffersPanel() {
       {outgoing.length > 0 && (
         <div className="mt-5">
           <div className="font-display text-[10px] uppercase tracking-[0.2em] text-white/50">
-            Enviadas ({outgoing.length})
+            {L('Enviadas', 'Sent')} ({outgoing.length})
           </div>
           <ul className="mt-2 space-y-2">
             {outgoing.map((o) => {
@@ -157,7 +158,7 @@ export function MarketOffersPanel() {
                   <p className="mt-0.5 text-[11px] text-white/50">
                     OVR {o.playerOverall} · {STATUS_LABEL[o.status]}
                     {o.status === 'countered' && o.counterExp != null
-                      ? ` · vendedor pede ${formatExp(o.counterExp)}`
+                      ? L(` · vendedor pede ${formatExp(o.counterExp)}`, ` · seller asks ${formatExp(o.counterExp)}`)
                       : ''}
                   </p>
 
@@ -169,7 +170,7 @@ export function MarketOffersPanel() {
                         onClick={() => run(o.offerId, () => acceptCounterOffer(o.offerId))}
                         className="rounded-md bg-neon-yellow px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-black transition-colors hover:bg-white disabled:opacity-40"
                       >
-                        Aceitar contraproposta
+                        {L('Aceitar contraproposta', 'Accept counter-offer')}
                       </button>
                     )}
                     {(o.status === 'pending' || o.status === 'countered') && (
@@ -179,7 +180,7 @@ export function MarketOffersPanel() {
                         onClick={() => run(o.offerId, () => cancel(o.offerId))}
                         className="rounded-md border border-white/30 bg-transparent px-3 py-2 font-display text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:border-white hover:bg-white/5 disabled:opacity-40"
                       >
-                        Cancelar
+                        {L('Cancelar', 'Cancel')}
                       </button>
                     )}
                   </div>
@@ -198,16 +199,16 @@ export function MarketOffersPanel() {
           setConfirmAccept(null);
           if (o) void run(o.offerId, () => respond(o, 'accept'));
         }}
-        eyebrow="Aceitar proposta"
+        eyebrow={L('Aceitar proposta', 'Accept offer')}
         title={confirmAccept?.playerName ?? ''}
-        confirmLabel="Aceitar e vender"
+        confirmLabel={L('Aceitar e vender', 'Accept and sell')}
         accent="var(--color-neon-yellow)"
       >
         {confirmAccept && (
           <p className="mt-3 text-sm text-white/80">
-            {confirmAccept.buyerClubName} oferece{' '}
-            <span className="font-display font-bold text-white">{formatExp(confirmAccept.offerExp)}</span>. O
-            jogador sai do seu plantel e o EXP é creditado na carteira.
+            {confirmAccept.buyerClubName} {L('oferece', 'offers')}{' '}
+            <span className="font-display font-bold text-white">{formatExp(confirmAccept.offerExp)}</span>.{' '}
+            {L('O jogador sai do seu plantel e o EXP é creditado na carteira.', 'The player leaves your squad and the EXP is credited to your wallet.')}
           </p>
         )}
       </ConfirmDialog>

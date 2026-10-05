@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import type { InboxCategory, InboxItem } from '@/game/inboxTypes';
 import { BackButton } from '@/components/BackButton';
+import { L } from '@/i18n/L';
 
 type MessageFilter = 'all' | 'unread';
 
@@ -57,7 +58,7 @@ export function ManagerMessages() {
       {/* Header */}
       <header className="text-center pt-2 pb-2">
         <div className="ole-eyebrow-poster !text-neon-yellow mb-4">
-          <span>Central do Manager</span>
+          <span>{L('Central do Manager', 'Manager Hub')}</span>
         </div>
         <h1 className="leading-[0.95]">
           <span
@@ -68,7 +69,7 @@ export function ManagerMessages() {
               letterSpacing: '0.005em',
             }}
           >
-            Mensagens
+            {L('Mensagens', 'Messages')}
           </span>
           {unreadCount > 0 && (
             <span
@@ -80,7 +81,7 @@ export function ManagerMessages() {
                 letterSpacing: '-0.01em',
               }}
             >
-              {unreadCount} não {unreadCount === 1 ? 'lida' : 'lidas'}
+              {unreadCount} {L(`não ${unreadCount === 1 ? 'lida' : 'lidas'}`, 'unread')}
             </span>
           )}
         </h1>
@@ -91,8 +92,8 @@ export function ManagerMessages() {
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           {[
-            { key: 'all' as const, label: 'Todas' },
-            { key: 'unread' as const, label: 'Não lidas' },
+            { key: 'all' as const, label: L('Todas', 'All') },
+            { key: 'unread' as const, label: L('Não lidas', 'Unread') },
           ].map((f) => (
             <button
               key={f.key}
@@ -116,7 +117,7 @@ export function ManagerMessages() {
             onClick={markAllAsRead}
             className="text-xs font-bold uppercase tracking-wider text-neon-yellow hover:text-neon-yellow transition-colors"
           >
-            Marcar todas como lidas
+            {L('Marcar todas como lidas', 'Mark all as read')}
           </button>
         )}
       </div>
@@ -133,7 +134,7 @@ export function ManagerMessages() {
             >
               <Bell className="mx-auto h-12 w-12 text-white/20 mb-4" />
               <p className="text-sm text-white/40">
-                {inbox.length === 0 ? 'Caixa vazia' : 'Nenhuma mensagem neste filtro'}
+                {inbox.length === 0 ? L('Caixa vazia', 'Inbox empty') : L('Nenhuma mensagem neste filtro', 'No messages in this filter')}
               </p>
             </motion.div>
           ) : (
@@ -192,7 +193,7 @@ function MessageCard({ msg, onRead, onDelete }: { msg: InboxItem; onRead: () => 
                   onClick={onRead}
                   className="rounded-full bg-neon-yellow px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-black transition-all hover:bg-neon-yellow"
                 >
-                  Ver detalhes
+                  {L('Ver detalhes', 'View details')}
                 </Link>
               )}
               {!msg.read && (
@@ -201,7 +202,7 @@ function MessageCard({ msg, onRead, onDelete }: { msg: InboxItem; onRead: () => 
                   onClick={onRead}
                   className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-all hover:border-white/30 hover:text-white"
                 >
-                  Marcar como lida
+                  {L('Marcar como lida', 'Mark as read')}
                 </button>
               )}
             </div>
@@ -211,7 +212,7 @@ function MessageCard({ msg, onRead, onDelete }: { msg: InboxItem; onRead: () => 
             type="button"
             onClick={onDelete}
             className="shrink-0 rounded-full p-1 text-white/40 transition-colors hover:bg-[var(--color-danger)]/20 hover:text-[var(--color-danger)]"
-            aria-label="Apagar mensagem"
+            aria-label={L('Apagar mensagem', 'Delete message')}
           >
             <X className="h-4 w-4" />
           </button>

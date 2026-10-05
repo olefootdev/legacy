@@ -2,7 +2,9 @@
  * ExpertPanel — 3 barras inteligentes (só nosso time) + elenco + status adversário.
  */
 import type { PitchPlayerState } from '@/engine/types';
+import { posLabel } from './posLabel';
 
+import { L } from '@/i18n/L';
 const NEON = '#FDE100';
 
 interface ExpertBars {
@@ -101,7 +103,7 @@ function PlayerRow({ player }: { player: PitchPlayerState }) {
         fontFamily: 'var(--font-display)', fontSize: 8, fontWeight: 700,
         color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', width: 28, textAlign: 'center',
       }}>
-        {player.pos}
+        {posLabel(player.pos)}
       </span>
       <div style={{ width: 48, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
         <div style={{
@@ -112,6 +114,15 @@ function PlayerRow({ player }: { player: PitchPlayerState }) {
     </div>
   );
 }
+
+/** Rótulo de tela do humor ('embalado'…) — o valor continua o mesmo no código. */
+const MORALE_LABEL: Record<string, string> = {
+  embalado: L('embalado', 'on a roll'),
+  confiante: L('confiante', 'confident'),
+  'estável': L('estável', 'steady'),
+  tenso: L('tenso', 'tense'),
+  abalado: L('abalado', 'shaken'),
+};
 
 function deriveAdversaryStatus(bars: ExpertBars): {
   label: string;
@@ -124,33 +135,33 @@ function deriveAdversaryStatus(bars: ExpertBars): {
   const confLabel = bars.confidence.awayLabel;
 
   if (confLabel === 'abalado' || conf < 20) {
-    return { label: 'Desmoronando', color: '#FF4D4D', description: 'Moral destruída, erros em série' };
+    return { label: L('Desmoronando', 'Collapsing'), color: '#FF4D4D', description: L('Moral destruída, erros em série', 'Morale shattered, error after error') };
   }
   if (dec < 30 && conf < 40) {
-    return { label: 'Errando muito', color: '#FF4D4D', description: 'Decisões ruins, time perdido' };
+    return { label: L('Errando muito', 'Error-prone'), color: '#FF4D4D', description: L('Decisões ruins, time perdido', 'Bad decisions, team lost') };
   }
   if (confLabel === 'tenso') {
-    return { label: 'Pressionado', color: '#FF9F1C', description: 'Sentindo a pressão, pode cometer erros' };
+    return { label: L('Pressionado', 'Under pressure'), color: '#FF9F1C', description: L('Sentindo a pressão, pode cometer erros', 'Feeling the pressure, may make mistakes') };
   }
   if (tact < 30 && dec < 45) {
-    return { label: 'Desorganizado', color: '#FF9F1C', description: 'Fora de posição, sem padrão de jogo' };
+    return { label: L('Desorganizado', 'Disorganised'), color: '#FF9F1C', description: L('Fora de posição, sem padrão de jogo', 'Out of position, no pattern of play') };
   }
   if (dec >= 70 && conf >= 65 && tact >= 60) {
-    return { label: 'Dominando', color: '#FF4D4D', description: 'Adversário forte, atenção total' };
+    return { label: L('Dominando', 'Dominating'), color: '#FF4D4D', description: L('Adversário forte, atenção total', 'Strong opponent, full focus') };
   }
   if (confLabel === 'embalado') {
-    return { label: 'Embalado', color: '#FF9F1C', description: 'Confiante e perigoso' };
+    return { label: L('Embalado', 'On a roll'), color: '#FF9F1C', description: L('Confiante e perigoso', 'Confident and dangerous') };
   }
   if (conf >= 60 && dec >= 55) {
-    return { label: 'Confortável', color: '#FF9F1C', description: 'Jogando sem pressão' };
+    return { label: L('Confortável', 'Comfortable'), color: '#FF9F1C', description: L('Jogando sem pressão', 'Playing without pressure') };
   }
   if (conf < 45 && dec < 50) {
-    return { label: 'Com medo', color: '#22C55E', description: 'Hesitante, evitando riscos' };
+    return { label: L('Com medo', 'Scared'), color: '#22C55E', description: L('Hesitante, evitando riscos', 'Hesitant, avoiding risks') };
   }
   if (confLabel === 'confiante') {
-    return { label: 'Confiante', color: 'rgba(255,255,255,0.5)', description: 'Jogando no ritmo deles' };
+    return { label: L('Confiante', 'Confident'), color: 'rgba(255,255,255,0.5)', description: L('Jogando no ritmo deles', 'Playing at their tempo') };
   }
-  return { label: 'Estável', color: 'rgba(255,255,255,0.4)', description: 'Sem vantagem clara' };
+  return { label: L('Estável', 'Steady'), color: 'rgba(255,255,255,0.4)', description: L('Sem vantagem clara', 'No clear edge') };
 }
 
 export function ExpertPanel({
@@ -200,18 +211,18 @@ export function ExpertPanel({
         padding: '10px 0',
       }}>
         <SmartBar
-          label="Decisões"
+          label={L('Decisões', 'Decisions')}
           value={expertBars.decisions.home}
         />
         <div style={{ width: 1, background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
         <SmartBar
-          label="Confiança"
+          label={L('Confiança', 'Confidence')}
           value={expertBars.confidence.home}
-          subtitle={expertBars.confidence.homeLabel}
+          subtitle={MORALE_LABEL[expertBars.confidence.homeLabel] ?? expertBars.confidence.homeLabel}
         />
         <div style={{ width: 1, background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
         <SmartBar
-          label="Tático"
+          label={L('Tático', 'Tactical')}
           value={expertBars.tactical.home}
         />
       </div>
@@ -223,7 +234,7 @@ export function ExpertPanel({
           letterSpacing: '0.3em', textTransform: 'uppercase',
           color: 'rgba(255,255,255,0.2)', marginBottom: 4, paddingLeft: 2,
         }}>
-          Elenco
+          {L('Elenco', 'Squad')}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {sorted.map((p) => (
@@ -242,7 +253,7 @@ export function ExpertPanel({
           letterSpacing: '0.3em', textTransform: 'uppercase',
           color: 'rgba(255,255,255,0.2)', marginBottom: 6, paddingLeft: 2,
         }}>
-          Status Adversário
+          {L('Status Adversário', 'Opponent Status')}
         </div>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,

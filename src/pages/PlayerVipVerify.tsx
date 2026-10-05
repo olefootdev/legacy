@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { getSupabase } from '@/supabase/client';
+import { L } from '@/i18n/L';
 
 export function PlayerVipVerify() {
   const [params] = useSearchParams();
@@ -27,12 +28,12 @@ export function PlayerVipVerify() {
     // Aceita ?t= (nosso formato curto) e ?token_hash= (formato do Supabase).
     const tokenHash = (params.get('t') ?? params.get('token_hash') ?? '').trim();
     if (!tokenHash) {
-      setError('Link incompleto. Peça um novo acesso.');
+      setError(L('Link incompleto. Peça um novo acesso.', 'Incomplete link. Request a new one.'));
       return;
     }
     const sb = getSupabase();
     if (!sb) {
-      setError('Serviço indisponível no momento.');
+      setError(L('Serviço indisponível no momento.', 'Service unavailable right now.'));
       return;
     }
     let cancelled = false;
@@ -41,7 +42,7 @@ export function PlayerVipVerify() {
       .then(({ error: err }) => {
         if (cancelled) return;
         if (err) {
-          setError('Este link já foi usado ou expirou. Peça um novo — leva um minuto.');
+          setError(L('Este link já foi usado ou expirou. Peça um novo — leva um minuto.', 'This link was already used or has expired. Request a new one — it takes a minute.'));
           return;
         }
         navigate('/playervip', { replace: true });
@@ -58,20 +59,20 @@ export function PlayerVipVerify() {
 
       {error ? (
         <>
-          <h1 className="font-impact text-[32px] uppercase leading-[1.05]">Link expirado</h1>
+          <h1 className="font-impact text-[32px] uppercase leading-[1.05]">{L('Link expirado', 'Link expired')}</h1>
           <p className="text-sm leading-relaxed text-cimento">{error}</p>
           <Link
             to="/playervip"
             className="btn-primary mt-1 flex h-12 items-center justify-center"
           >
-            Receber novo link
+            {L('Receber novo link', 'Get a new link')}
           </Link>
         </>
       ) : (
         <>
           <Loader2 className="h-7 w-7 animate-spin text-neon-yellow" />
           <p className="text-sm text-cimento">
-            {handle ? `Entrando…` : 'Verificando seu acesso…'}
+            {handle ? L('Entrando…', 'Signing in…') : L('Verificando seu acesso…', 'Verifying your access…')}
           </p>
         </>
       )}

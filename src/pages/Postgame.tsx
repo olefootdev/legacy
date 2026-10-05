@@ -7,6 +7,7 @@ import { trackMissionEvent } from '@/progression/trackEvent';
 import { syncMyExpLifetime } from '@/supabase/referrals';
 import { recordPvpMatchResult } from '@/supabase/pvpMatches';
 import { Hashtag } from '@/components/ui';
+import { L, emIngles } from '@/i18n/L';
 
 type TeamStats = {
   passesOk: number;
@@ -143,7 +144,7 @@ export default function Postgame() {
     const sStat = live.homeStats[bestId];
     const pp = live.homePlayers?.find((p) => p.playerId === bestId);
     const pEnt = playersById[bestId];
-    const name = pp?.name ?? pEnt?.name ?? 'Jogador';
+    const name = pp?.name ?? pEnt?.name ?? L('Jogador', 'Player');
     const pos = pp?.slotId?.toUpperCase() ?? pEnt?.pos ?? '';
     return {
       id: bestId,
@@ -170,13 +171,13 @@ export default function Postgame() {
   const awayScore = live.awayScore ?? 0;
   const homeWin = homeScore > awayScore;
   const draw = homeScore === awayScore;
-  const resultLabel = homeWin ? 'Vitória.' : draw ? 'Empate.' : 'Derrota.';
+  const resultLabel = homeWin ? L('Vitória.', 'Win.') : draw ? L('Empate.', 'Draw.') : L('Derrota.', 'Loss.');
   const resultColor = homeWin ? 'text-neon-green' : draw ? 'text-neon-yellow' : 'text-rose-400';
   const resultNarrative = homeWin
-    ? 'enfim.'
+    ? L('enfim.', 'at last.')
     : draw
-      ? 'fica pra próxima.'
-      : 'amanhã o sol nasce de novo.';
+      ? L('fica pra próxima.', 'next time.')
+      : L('amanhã o sol nasce de novo.', 'the sun rises again tomorrow.');
 
   const voiceStats = (() => {
     let total = 0, accepted = 0, refused = 0;
@@ -202,7 +203,7 @@ export default function Postgame() {
       >
         {/* Header — #hashtag + resultado em Anton grande, cor chapada */}
         <header className="text-center space-y-4">
-          <Hashtag>#posjogo</Hashtag>
+          <Hashtag>{L('#posjogo', '#postmatch')}</Hashtag>
           {homeWin && (
             <Trophy
               className="mx-auto h-10 w-10 text-neon-yellow"
@@ -226,7 +227,7 @@ export default function Postgame() {
             <span className="text-neon-yellow tabular-nums">{homeScore}</span>
             <span className="ole-scoreboard__separator">×</span>
             <span className="text-neon-yellow tabular-nums">{awayScore}</span>{' '}
-            {live.awayShort ?? 'Visitante'}
+            {live.awayShort ?? L('Visitante', 'Away')}
           </h1>
           <p className="ole-headline-italic mt-2 text-lg sm:text-xl text-white/55">
             {resultNarrative}
@@ -241,7 +242,7 @@ export default function Postgame() {
           <header className="mb-3 flex items-center gap-2">
             <Trophy className="h-5 w-5 text-neon-yellow" />
             <h2 className="font-display text-sm font-black uppercase tracking-[0.25em] text-neon-yellow">
-              Prêmio MVP
+              {L('Prêmio MVP', 'MVP Award')}
             </h2>
           </header>
           {mvp ? (
@@ -249,7 +250,7 @@ export default function Postgame() {
               <div>
                 <p className="font-display text-2xl font-black text-white uppercase tracking-wide">{mvp.name}</p>
                 <p className="text-[11px] uppercase tracking-wider text-white/50">
-                  {mvp.pos} · nota{' '}
+                  {mvp.pos} · {L('nota', 'rating')}{' '}
                   <span className="ole-attr text-base" data-tier={ratingTier(mvp.rating)}>
                     {mvp.rating.toFixed(1)}
                   </span>
@@ -260,13 +261,13 @@ export default function Postgame() {
                   <p className="ole-attr text-2xl" data-tier={attrTier(mvp.stats.shotsOn * 20)}>
                     {mvp.stats.shotsOn}
                   </p>
-                  <p className="text-[9px] uppercase tracking-wider text-white/40">Chutes no alvo</p>
+                  <p className="text-[9px] uppercase tracking-wider text-white/40">{L('Chutes no alvo', 'Shots on target')}</p>
                 </div>
                 <div>
                   <p className="ole-attr text-2xl" data-tier={attrTier(mvp.stats.tackles * 15)}>
                     {mvp.stats.tackles}
                   </p>
-                  <p className="text-[9px] uppercase tracking-wider text-white/40">Desarmes</p>
+                  <p className="text-[9px] uppercase tracking-wider text-white/40">{L('Desarmes', 'Tackles')}</p>
                 </div>
                 <div>
                   <p
@@ -284,7 +285,7 @@ export default function Postgame() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-white/50">Sem dados suficientes para eleger o MVP.</p>
+            <p className="text-sm text-white/50">{L('Sem dados suficientes para eleger o MVP.', 'Not enough data to pick the MVP.')}</p>
           )}
         </section>
 
@@ -293,22 +294,22 @@ export default function Postgame() {
           <header className="mb-3 flex items-center gap-2">
             <Star className="h-4 w-4 text-white/60" />
             <h2 className="font-display text-xs font-black uppercase tracking-[0.25em] text-white/70">
-              Estatísticas do time
+              {L('Estatísticas do time', 'Team stats')}
             </h2>
           </header>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatTile label="Passes certos" value={teamStats.passesOk.toString()} />
+            <StatTile label={L('Passes certos', 'Passes completed')} value={teamStats.passesOk.toString()} />
             <StatTile
-              label="Passes errados"
+              label={L('Passes errados', 'Passes missed')}
               value={(teamStats.passesAttempt - teamStats.passesOk).toString()}
               sub={passAcc}
             />
-            <StatTile label="Chutes no alvo" value={teamStats.shotsOn.toString()} sub={`${shotsTotal} total`} />
-            <StatTile label="Chutes pra fora" value={teamStats.shotsOff.toString()} />
-            <StatTile label="Desarmes" value={teamStats.tackles.toString()} />
-            <StatTile label="Defesas (GK)" value={teamStats.saves.toString()} />
-            <StatTile label="Dribles certos" value={teamStats.dribblesOk.toString()} />
-            <StatTile label="Gols" value={homeScore.toString()} highlight />
+            <StatTile label={L('Chutes no alvo', 'Shots on target')} value={teamStats.shotsOn.toString()} sub={`${shotsTotal} total`} />
+            <StatTile label={L('Chutes pra fora', 'Shots off target')} value={teamStats.shotsOff.toString()} />
+            <StatTile label={L('Desarmes', 'Tackles')} value={teamStats.tackles.toString()} />
+            <StatTile label={L('Defesas (GK)', 'Saves (GK)')} value={teamStats.saves.toString()} />
+            <StatTile label={L('Dribles certos', 'Dribbles completed')} value={teamStats.dribblesOk.toString()} />
+            <StatTile label={L('Gols', 'Goals')} value={homeScore.toString()} highlight />
           </div>
         </section>
 
@@ -317,13 +318,13 @@ export default function Postgame() {
             <header className="mb-3 flex items-center gap-2">
               <Megaphone className="h-4 w-4 text-violet-300" />
               <h2 className="font-display text-xs font-black uppercase tracking-[0.25em] text-violet-200">
-                Comandos de voz
+                {L('Comandos de voz', 'Voice commands')}
               </h2>
             </header>
             <div className="grid grid-cols-3 gap-3">
-              <StatTile label="Emitidos" value={voiceStats.total.toString()} />
-              <StatTile label="Aceitos" value={voiceStats.accepted.toString()} />
-              <StatTile label="Recusados" value={voiceStats.refused.toString()} />
+              <StatTile label={L('Emitidos', 'Issued')} value={voiceStats.total.toString()} />
+              <StatTile label={L('Aceitos', 'Accepted')} value={voiceStats.accepted.toString()} />
+              <StatTile label={L('Recusados', 'Refused')} value={voiceStats.refused.toString()} />
             </div>
           </section>
         ) : null}
@@ -334,7 +335,9 @@ export default function Postgame() {
             type="button"
             onClick={async () => {
               const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.ai';
-              const text = `${resultLabel} ${clubName} ${homeScore}×${awayScore} ${live.awayShort ?? ''} — no Olefoot. Monta teu time e vem: ${origin}`;
+              const text = emIngles()
+                ? `${resultLabel} ${clubName} ${homeScore}×${awayScore} ${live.awayShort ?? ''} — on Olefoot. Build your team and join: ${origin}`
+                : `${resultLabel} ${clubName} ${homeScore}×${awayScore} ${live.awayShort ?? ''} — no Olefoot. Monta teu time e vem: ${origin}`;
               try {
                 if (navigator.share) await navigator.share({ text });
                 else await navigator.clipboard?.writeText(text);
@@ -344,14 +347,14 @@ export default function Postgame() {
             }}
             className="inline-flex items-center gap-2 rounded-sm border border-neon-yellow/40 bg-neon-yellow/[0.08] px-5 py-3 font-display text-sm font-black uppercase tracking-[0.2em] text-neon-yellow transition-colors hover:bg-neon-yellow/[0.16]"
           >
-            {shareState === 'done' ? <><Check className="h-4 w-4" /> Copiado</> : <><Share2 className="h-4 w-4" /> Compartilhar</>}
+            {shareState === 'done' ? <><Check className="h-4 w-4" /> {L('Copiado', 'Copied')}</> : <><Share2 className="h-4 w-4" /> {L('Compartilhar', 'Share')}</>}
           </button>
           <button
             type="button"
             onClick={() => navigate('/')}
             className="inline-flex items-center gap-2 rounded-sm bg-neon-yellow px-6 py-3 font-display text-sm font-black uppercase tracking-[0.25em] text-black transition-colors hover:bg-white"
           >
-            Continuar
+            {L('Continuar', 'Continue')}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>

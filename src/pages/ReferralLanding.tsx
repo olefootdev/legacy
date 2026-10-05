@@ -7,6 +7,7 @@ import {
   setPendingReferrerCode,
 } from '@/wallet/referralCode';
 import { isDevRegistrationBypassed } from '@/lib/devRegistrationBypass';
+import { L } from '@/i18n/L';
 
 /**
  * Link curto olefoot.app/CÓDIGO — grava indicação pendente (cadastro) ou vincula patrocinador (uma vez).
@@ -53,7 +54,7 @@ export function ReferralLanding() {
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-deep-black font-mono text-[12px] text-cimento">
-      Abrindo convite…
+      {L('Abrindo convite…', 'Opening invite…')}
     </div>
   );
 }

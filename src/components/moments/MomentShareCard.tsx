@@ -13,6 +13,7 @@
  * Presentational puro.
  */
 
+import { L } from '@/i18n/L';
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Share2, Sparkles, Star } from 'lucide-react';
@@ -53,7 +54,7 @@ export function MomentShareCard({
   awayScore,
   highlight,
   referralCode,
-  ctaLabel = 'CRIE SEU TIME AGORA',
+  ctaLabel = L('CRIE SEU TIME AGORA', 'CREATE YOUR TEAM NOW'),
 }: MomentShareCardProps) {
   const [shared, setShared] = useState<'idle' | 'done' | 'copied'>('idle');
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.ai';
@@ -64,12 +65,12 @@ export function MomentShareCard({
   const scoreLine = hasScore ? `${homeScore}–${awayScore}` : null;
 
   const shareMessage =
-    `${moment.headline} no Olefoot! ${clubName}` +
+    L(`${moment.headline} no Olefoot! ${clubName}`, `${moment.headline} on Olefoot! ${clubName}`) +
     (scoreLine && opponentName ? ` ${scoreLine} ${opponentName}` : '') +
     ` — ${moment.tagline}.` +
-    (moment.oneInX >= 10 ? ` Raridade estimada: 1 em ${moment.oneInX}.` : '') +
+    (moment.oneInX >= 10 ? L(` Raridade estimada: 1 em ${moment.oneInX}.`, ` Estimated rarity: 1 in ${moment.oneInX}.`) : '') +
     (highlight ? ` ${highlight.label}: ${highlight.name}.` : '') +
-    ` Monta teu time e vem 👉 ${referralUrl}`;
+    L(` Monta teu time e vem 👉 ${referralUrl}`, ` Build your team and join 👉 ${referralUrl}`);
 
   const banner = BANNER[moment.competition];
 
@@ -139,7 +140,7 @@ export function MomentShareCard({
             >
               <Sparkles className="h-3 w-3 text-neon-yellow" strokeWidth={2.5} aria-hidden />
               <span style={{ color: 'var(--color-neon-yellow)', fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em' }}>
-                {momentTierLabel(moment.tier).toUpperCase()} · 1 EM {moment.oneInX}
+                {momentTierLabel(moment.tier).toUpperCase()} · {L('1 EM', '1 IN')} {moment.oneInX}
               </span>
             </div>
           )}
@@ -222,7 +223,7 @@ export function MomentShareCard({
         }}
       >
         <Share2 className="h-4 w-4" strokeWidth={2.5} aria-hidden />
-        {shared === 'done' ? 'COMPARTILHADO!' : shared === 'copied' ? 'LINK COPIADO!' : 'COMPARTILHAR MOMENTO'}
+        {shared === 'done' ? L('COMPARTILHADO!', 'SHARED!') : shared === 'copied' ? L('LINK COPIADO!', 'LINK COPIED!') : L('COMPARTILHAR MOMENTO', 'SHARE MOMENT')}
       </button>
     </motion.div>
   );

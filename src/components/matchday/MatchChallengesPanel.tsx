@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, CheckCircle, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MatchChallenge } from '@/match/matchChallenges';
+import { L } from '@/i18n/L';
 
 interface MatchChallengesPanelProps {
   challenges: MatchChallenge[];
@@ -24,7 +25,7 @@ export function MatchChallengesPanel({ challenges, progress, completedIds, class
       <div className="flex items-center gap-2 px-2">
         <Trophy className="h-4 w-4 text-neon-yellow" />
         <span className="text-xs font-bold uppercase tracking-wider text-neon-yellow">
-          Desafios
+          {L('Desafios', 'Challenges')}
         </span>
       </div>
 
@@ -62,7 +63,7 @@ export function MatchChallengesPanel({ challenges, progress, completedIds, class
                       challenge.difficulty === 'medium' && 'bg-yellow-500/20 text-neon-yellow',
                       challenge.difficulty === 'hard' && 'bg-red-500/20 text-red-400',
                     )}>
-                      {challenge.difficulty}
+                      {challenge.difficulty === 'easy' ? L('fácil', 'easy') : challenge.difficulty === 'medium' ? L('médio', 'medium') : challenge.difficulty === 'hard' ? L('difícil', 'hard') : challenge.difficulty}
                     </span>
                   </div>
                   <p className="text-[10px] text-gray-400 truncate">{challenge.description}</p>
@@ -130,7 +131,7 @@ export function ChallengeCompletedNotification({ challenge, onDismiss }: Challen
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-400" />
                 <span className="text-xs font-bold uppercase tracking-wider text-green-400">
-                  Desafio Completo!
+                  {L('Desafio Completo!', 'Challenge Complete!')}
                 </span>
               </div>
               <h3 className="mt-1 text-lg font-black uppercase text-white">

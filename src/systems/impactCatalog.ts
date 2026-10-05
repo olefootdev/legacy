@@ -11,6 +11,7 @@
  *   - Lesão grave:    2-3 dias (~500+ partidas)
  *   - Manager precisa SENTIR a consequência, não só ler texto.
  */
+import { L } from '@/i18n/L';
 
 export type ConsequenceDimension =
   | 'physical'      // fadiga, lesão, suspensão
@@ -74,8 +75,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 1, // boolean-like: 1 = indisponível
         durationHours: 2,
         decayCurve: 'step',
-        label: 'Suspenso',
-        description: 'Cartão vermelho: 2h fora do clube. Aproximadamente 24 partidas perdidas.',
+        label: L('Suspenso', 'Suspended'),
+        description: L('Cartão vermelho: 2h fora do clube. Aproximadamente 24 partidas perdidas.', 'Red card: 2h away from the club. Roughly 24 matches missed.'),
       },
       {
         kind: 'morale_drop_card',
@@ -84,8 +85,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: -5,
         durationHours: 120, // 5 dias
         decayCurve: 'linear',
-        label: 'Moral abalado',
-        description: 'Jogador frustrado pela expulsão. Recupera gradualmente em 5 dias.',
+        label: L('Moral abalado', 'Morale shaken'),
+        description: L('Jogador frustrado pela expulsão. Recupera gradualmente em 5 dias.', 'Player frustrated by the red card. Recovers gradually over 5 days.'),
       },
     ],
   },
@@ -100,8 +101,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 1,
         durationHours: 6,
         decayCurve: 'step',
-        label: 'Suspenso (reincidente)',
-        description: 'Segundo vermelho em 7 dias: 6h fora.',
+        label: L('Suspenso (reincidente)', 'Suspended (repeat)'),
+        description: L('Segundo vermelho em 7 dias: 6h fora.', 'Second red in 7 days: 6h out.'),
       },
       {
         kind: 'salary_fine_5pct',
@@ -110,8 +111,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: -0.05, // 5% do salário
         durationHours: 168, // 1 semana
         decayCurve: 'step',
-        label: 'Multa interna 5%',
-        description: 'Indisciplina recorrente — desconto na próxima folha.',
+        label: L('Multa interna 5%', 'Internal fine 5%'),
+        description: L('Indisciplina recorrente — desconto na próxima folha.', 'Repeated indiscipline — deducted from next payroll.'),
       },
       {
         kind: 'market_value_drop_repeat',
@@ -120,8 +121,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: -0.02, // -2%
         durationHours: 336, // 14 dias
         decayCurve: 'linear',
-        label: 'Valor de mercado -2%',
-        description: 'Imprensa noticia o histórico. Clubes ficam reticentes.',
+        label: L('Valor de mercado -2%', 'Market value -2%'),
+        description: L('Imprensa noticia o histórico. Clubes ficam reticentes.', 'The press reports the record. Clubs grow wary.'),
       },
     ],
     club: [
@@ -132,8 +133,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: -3,
         durationHours: 10, // ~2 partidas (com cadência atual: 120 partidas, mas decay mais curto)
         decayCurve: 'step',
-        label: 'Linha defensiva insegura',
-        description: 'Defesa joga com receio nas próximas partidas.',
+        label: L('Linha defensiva insegura', 'Shaky back line'),
+        description: L('Defesa joga com receio nas próximas partidas.', 'The defence plays nervously in the next matches.'),
       },
     ],
   },
@@ -148,8 +149,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 1,
         durationHours: 4,
         decayCurve: 'step',
-        label: 'Lesão leve',
-        description: 'Pancada/desconforto. 4h fora.',
+        label: L('Lesão leve', 'Minor injury'),
+        description: L('Pancada/desconforto. 4h fora.', 'Knock/discomfort. 4h out.'),
       },
       {
         kind: 'physical_attr_drop_light',
@@ -158,8 +159,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: -0.1, // -10% física
         durationHours: 8,
         decayCurve: 'exponential',
-        label: 'Físico reduzido',
-        description: 'Volta com 10% menos de físico. Recupera em ~8h.',
+        label: L('Físico reduzido', 'Reduced fitness'),
+        description: L('Volta com 10% menos de físico. Recupera em ~8h.', 'Returns with 10% less fitness. Recovers in ~8h.'),
       },
     ],
   },
@@ -174,8 +175,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 1,
         durationHours: 12,
         decayCurve: 'step',
-        label: 'Lesão moderada',
-        description: '12h fora. Atravessa a noite regenerativa.',
+        label: L('Lesão moderada', 'Moderate injury'),
+        description: L('12h fora. Atravessa a noite regenerativa.', '12h out. Goes through the recovery night.'),
       },
       {
         kind: 'market_value_drop_injury_med',
@@ -184,8 +185,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: -0.02,
         durationHours: 336,
         decayCurve: 'linear',
-        label: 'Valor de mercado -2%',
-        description: 'Lesão repercute. 14 dias pra recuperar.',
+        label: L('Valor de mercado -2%', 'Market value -2%'),
+        description: L('Lesão repercute. 14 dias pra recuperar.', 'The injury echoes. 14 days to recover.'),
       },
     ],
   },
@@ -200,8 +201,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 1,
         durationHours: 60, // 2.5 dias
         decayCurve: 'step',
-        label: 'Lesão grave',
-        description: '2-3 dias fora. Mais de 500 partidas perdidas.',
+        label: L('Lesão grave', 'Serious injury'),
+        description: L('2-3 dias fora. Mais de 500 partidas perdidas.', '2-3 days out. Over 500 matches missed.'),
       },
       {
         kind: 'morale_drop_injury_severe',
@@ -210,8 +211,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: -8,
         durationHours: 168,
         decayCurve: 'linear',
-        label: 'Moral muito abalado',
-        description: 'Jogador desanimado. Recupera em 7 dias.',
+        label: L('Moral muito abalado', 'Morale badly shaken'),
+        description: L('Jogador desanimado. Recupera em 7 dias.', 'Player downbeat. Recovers in 7 days.'),
       },
       {
         kind: 'team_morale_drop_star_injury',
@@ -220,8 +221,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: -2,
         durationHours: 72,
         decayCurve: 'linear',
-        label: 'Time abalado',
-        description: 'Perda de jogador importante mexe com o vestiário.',
+        label: L('Time abalado', 'Team shaken'),
+        description: L('Perda de jogador importante mexe com o vestiário.', 'Losing a key player rattles the dressing room.'),
       },
       {
         kind: 'market_value_drop_injury_severe',
@@ -230,8 +231,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: -0.05,
         durationHours: 720, // 30 dias
         decayCurve: 'linear',
-        label: 'Valor de mercado -5%',
-        description: 'Histórico de lesão pesa por 30 dias.',
+        label: L('Valor de mercado -5%', 'Market value -5%'),
+        description: L('Histórico de lesão pesa por 30 dias.', 'Injury record weighs for 30 days.'),
       },
     ],
   },
@@ -246,8 +247,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 1,
         durationHours: 2,
         decayCurve: 'step',
-        label: 'Descanso obrigatório',
-        description: 'Fadiga ≥95%. Não pode jogar por 2h.',
+        label: L('Descanso obrigatório', 'Mandatory rest'),
+        description: L('Fadiga ≥95%. Não pode jogar por 2h.', 'Fatigue ≥95%. Can\'t play for 2h.'),
       },
       {
         kind: 'injury_risk_spike',
@@ -256,8 +257,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 30, // +30 pontos de injury risk
         durationHours: 4,
         decayCurve: 'exponential',
-        label: 'Risco lesão +30',
-        description: 'Esgotamento eleva risco. Cai pela metade a cada 2h.',
+        label: L('Risco lesão +30', 'Injury risk +30'),
+        description: L('Esgotamento eleva risco. Cai pela metade a cada 2h.', 'Exhaustion raises the risk. Halves every 2h.'),
       },
     ],
   },
@@ -272,8 +273,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 6,
         durationHours: 72,
         decayCurve: 'linear',
-        label: 'Moral em alta',
-        description: 'MVP da rodada. +6 moral por 3 dias.',
+        label: L('Moral em alta', 'Morale high'),
+        description: L('MVP da rodada. +6 moral por 3 dias.', 'Matchday MVP. +6 morale for 3 days.'),
       },
       {
         kind: 'market_interest_spike',
@@ -282,8 +283,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 0.20, // +20% probabilidade de oferta
         durationHours: 168,
         decayCurve: 'linear',
-        label: 'Interesse no mercado +20%',
-        description: 'Performance chama atenção. Ofertas chegam em 7 dias.',
+        label: L('Interesse no mercado +20%', 'Market interest +20%'),
+        description: L('Performance chama atenção. Ofertas chegam em 7 dias.', 'Performance draws attention. Offers arrive within 7 days.'),
       },
       {
         kind: 'market_value_boost_mvp',
@@ -292,8 +293,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 0.02,
         durationHours: 168,
         decayCurve: 'linear',
-        label: 'Valor +2%',
-        description: 'Valor de mercado sobe 2% por uma semana.',
+        label: L('Valor +2%', 'Value +2%'),
+        description: L('Valor de mercado sobe 2% por uma semana.', 'Market value up 2% for a week.'),
       },
     ],
   },
@@ -308,8 +309,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 10,
         durationHours: 120,
         decayCurve: 'linear',
-        label: 'Moral nas alturas',
-        description: 'Hat-trick! +10 moral por 5 dias.',
+        label: L('Moral nas alturas', 'Morale sky-high'),
+        description: L('Hat-trick! +10 moral por 5 dias.', 'Hat-trick! +10 morale for 5 days.'),
       },
       {
         kind: 'market_value_boost_hat_trick',
@@ -318,8 +319,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 0.05,
         durationHours: 168,
         decayCurve: 'linear',
-        label: 'Valor +5%',
-        description: 'Imprensa em peso. 7 dias de hype.',
+        label: L('Valor +5%', 'Value +5%'),
+        description: L('Imprensa em peso. 7 dias de hype.', 'The press is all over it. 7 days of hype.'),
       },
       {
         kind: 'team_morale_boost_hat_trick',
@@ -328,8 +329,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 5,
         durationHours: 48,
         decayCurve: 'linear',
-        label: 'Time empolgado',
-        description: 'Vestiário inspirado. +5 moral coletivo por 2 dias.',
+        label: L('Time empolgado', 'Team fired up'),
+        description: L('Vestiário inspirado. +5 moral coletivo por 2 dias.', 'Inspired dressing room. +5 team morale for 2 days.'),
       },
     ],
   },
@@ -344,8 +345,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: -10, // -10% apoio torcida
         durationHours: 10, // ~2 partidas em cadência alta, mas decay temporal
         decayCurve: 'step',
-        label: 'Torcida insatisfeita',
-        description: 'Goleada sofrida. Apoio cai 10% nas próximas partidas.',
+        label: L('Torcida insatisfeita', 'Fans unhappy'),
+        description: L('Goleada sofrida. Apoio cai 10% nas próximas partidas.', 'Heavy defeat. Support drops 10% in the next matches.'),
       },
       {
         kind: 'board_pressure_increase',
@@ -354,8 +355,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 1, // pressão da diretoria (boolean-like)
         durationHours: 168,
         decayCurve: 'step',
-        label: 'Diretoria pressiona',
-        description: 'Goleada vexatória. Diretoria observa por 7 dias.',
+        label: L('Diretoria pressiona', 'Board applies pressure'),
+        description: L('Goleada vexatória. Diretoria observa por 7 dias.', 'Humiliating defeat. The board watches for 7 days.'),
       },
     ],
   },
@@ -370,8 +371,8 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         magnitude: 10,
         durationHours: 120,
         decayCurve: 'linear',
-        label: 'Time eufórico',
-        description: 'Vitória no clássico! Time inspirado por 5 dias.',
+        label: L('Time eufórico', 'Team euphoric'),
+        description: L('Vitória no clássico! Time inspirado por 5 dias.', 'Derby win! Team inspired for 5 days.'),
       },
       {
         kind: 'fanbase_growth_classic',
@@ -381,7 +382,7 @@ export const IMPACT_CATALOG: Record<ImpactEventKind, ImpactCatalogEntry> = {
         durationHours: 720, // 30 dias
         decayCurve: 'linear',
         label: 'Fanbase +3%',
-        description: 'Vitória atrai novos torcedores. +3% por 30 dias.',
+        description: L('Vitória atrai novos torcedores. +3% por 30 dias.', 'The win draws new fans. +3% for 30 days.'),
       },
     ],
   },

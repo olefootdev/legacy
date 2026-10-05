@@ -12,6 +12,7 @@
 import { makeInboxItem } from '@/game/inboxItem';
 import type { InboxItem } from '@/game/inboxTypes';
 import type { PlayerEntity } from '@/entities/types';
+import { L } from '@/i18n/L';
 
 /** Limiar de "contrato a vencer" — alerta antecipado antes do vencimento. */
 export const CONTRACT_EXPIRING_SOON_GAMES = 10;
@@ -54,8 +55,8 @@ export function buildContractNudges(
       const id = `contract-expired-${p.id}`;
       if (existingInboxIds.has(id)) continue;
       items.push(
-        makeInboxItem(id, 'PLAYER_CONTRACT', 'PLANTEL', `Contrato vencido — ${p.name}`, {
-          body: `${p.name} está fora do XI oficial até renovar. Renove para voltar a escalar e evitar WO na Liga Global.`,
+        makeInboxItem(id, 'PLAYER_CONTRACT', 'PLANTEL', L(`Contrato vencido — ${p.name}`, `Contract expired — ${p.name}`), {
+          body: L(`${p.name} está fora do XI oficial até renovar. Renove para voltar a escalar e evitar WO na Liga Global.`, `${p.name} is out of the official XI until renewed. Renew to pick him again and avoid a walkover in the Global League.`),
           deepLink: contractDeepLink(p.id),
           relatedPlayerIds: [p.id],
         }),
@@ -68,8 +69,8 @@ export function buildContractNudges(
       const id = `contract-expiring-${p.id}`;
       if (existingInboxIds.has(id)) continue;
       items.push(
-        makeInboxItem(id, 'PLAYER_CONTRACT', 'PLANTEL', `Contrato a vencer — ${p.name}`, {
-          body: `Restam ${rem} ${rem === 1 ? 'jogo' : 'jogos'} no contrato de ${p.name}. Renove antes de vencer pra não perder o jogador.`,
+        makeInboxItem(id, 'PLAYER_CONTRACT', 'PLANTEL', L(`Contrato a vencer — ${p.name}`, `Contract expiring — ${p.name}`), {
+          body: L(`Restam ${rem} ${rem === 1 ? 'jogo' : 'jogos'} no contrato de ${p.name}. Renove antes de vencer pra não perder o jogador.`, `${rem} ${rem === 1 ? 'match' : 'matches'} left on ${p.name}'s contract. Renew before it expires so you don't lose the player.`),
           deepLink: contractDeepLink(p.id),
           relatedPlayerIds: [p.id],
         }),

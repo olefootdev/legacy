@@ -10,6 +10,8 @@
  */
 import { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
+import { L } from '@/i18n/L';
+import { posLabel } from './posLabel';
 
 interface SubstitutionPlayerInfo {
   playerId?: string;
@@ -27,12 +29,12 @@ interface SubstitutionOverlayProps {
 
 function reasonConfig(reason?: 'injury' | 'tactical' | 'red_card') {
   if (reason === 'injury') {
-    return { label: 'Substituição por Lesão', accent: 'var(--color-danger)' };
+    return { label: L('Substituição por Lesão', 'Injury Substitution'), accent: 'var(--color-danger)' };
   }
   if (reason === 'red_card') {
-    return { label: 'Substituição por Expulsão', accent: 'var(--color-danger)' };
+    return { label: L('Substituição por Expulsão', 'Red Card Substitution'), accent: 'var(--color-danger)' };
   }
-  return { label: 'Substituição Tática', accent: 'var(--color-neon-yellow)' };
+  return { label: L('Substituição Tática', 'Tactical Substitution'), accent: 'var(--color-neon-yellow)' };
 }
 
 function PlayerHalf({
@@ -46,7 +48,7 @@ function PlayerHalf({
   const seed = player.playerId ?? `${player.number}-${player.name}`;
   const photoUrl = `https://picsum.photos/seed/sub-${seed}/240/300`;
   const accent = isOut ? 'var(--color-danger)' : 'var(--color-success)';
-  const label = isOut ? 'Sai' : 'Entra';
+  const label = isOut ? L('Sai', 'Off') : L('Entra', 'On');
 
   return (
     <motion.div
@@ -109,7 +111,7 @@ function PlayerHalf({
               letterSpacing: '0.22em',
             }}
           >
-            {player.position}
+            {posLabel(player.position)}
           </span>
         </div>
       </div>
@@ -159,7 +161,7 @@ export function SubstitutionOverlay({
       onClick={handleDismiss}
       role="button"
       tabIndex={0}
-      aria-label="Fechar overlay de substituição"
+      aria-label={L('Fechar overlay de substituição', 'Close substitution overlay')}
       className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-deep-black cursor-pointer"
     >
       {/* Hint discreto no topo */}
@@ -172,7 +174,7 @@ export function SubstitutionOverlay({
           fontWeight: 700,
         }}
       >
-        Toque pra continuar
+        {L('Toque pra continuar', 'Tap to continue')}
       </p>
 
       {/* Conteúdo (não fecha ao clicar dentro) */}

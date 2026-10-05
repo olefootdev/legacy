@@ -17,6 +17,16 @@ import {
 import { VeracityPillarsStrip } from '@/components/VeracityPillarsStrip';
 import { LegacyMentorSection } from '@/legacy/LegacyMentorSection';
 import { PlayerHealthContractSection } from '@/components/player/PlayerHealthContractSection';
+import { L, emIngles } from '@/i18n/L';
+import { rotuloPosicao } from '@/transfer/marketFilters';
+
+/** Rótulo de tela do escopo do booster (o valor continua sendo o id). */
+const ROTULO_ESCOPO: Record<string, string> = {
+  player: L('jogador', 'player'),
+  squad: L('plantel', 'squad'),
+  club: L('clube', 'club'),
+  none: L('nenhum', 'none'),
+};
 
 function TrendGlyph({ label }: { label: 'up' | 'down' | 'flat' | 'unknown' }) {
   if (label === 'up') return <TrendingUp className="h-4 w-4" style={{ color: 'var(--color-success)' }} aria-hidden />;
@@ -109,50 +119,50 @@ export function TeamPlayerSeasonSheet({
     const isDef = /ZAG|CB|LD|LE|LB|DF/.test(pos);
 
     // Status momento
-    let momentum: { label: string; tone: 'good' | 'bad' | 'neutral' } = { label: 'Acompanhamento neutro', tone: 'neutral' };
+    let momentum: { label: string; tone: 'good' | 'bad' | 'neutral' } = { label: L('Acompanhamento neutro', 'Steady form'), tone: 'neutral' };
     if (trendSinceLastMatch.pct != null && trendSinceLastMatch.pct > 4) {
-      momentum = { label: 'Em alta desde o último jogo', tone: 'good' };
+      momentum = { label: L('Em alta desde o último jogo', 'Rising since last match'), tone: 'good' };
     } else if (trendSinceLastMatch.pct != null && trendSinceLastMatch.pct < -4) {
-      momentum = { label: 'Em baixa desde o último jogo', tone: 'bad' };
+      momentum = { label: L('Em baixa desde o último jogo', 'Falling since last match'), tone: 'bad' };
     } else if (trendSeason.pct != null && trendSeason.pct > 8) {
-      momentum = { label: 'Valorizando na temporada', tone: 'good' };
+      momentum = { label: L('Valorizando na temporada', 'Value rising this season'), tone: 'good' };
     } else if (trendSeason.pct != null && trendSeason.pct < -8) {
-      momentum = { label: 'Desvalorizando na temporada', tone: 'bad' };
+      momentum = { label: L('Desvalorizando na temporada', 'Value falling this season'), tone: 'bad' };
     }
 
     // Highlight estatístico
     let highlight: string | null = null;
     if (mp >= 3) {
       if (goalsAvg >= 0.5 && (isAttacker || isMid)) {
-        highlight = `Goleador — ${goalsAvg.toFixed(2)} gols/jogo`;
+        highlight = L(`Goleador — ${goalsAvg.toFixed(2)} gols/jogo`, `Goalscorer — ${goalsAvg.toFixed(2)} goals/match`);
       } else if (passPct != null && passPct >= 85 && (isMid || isDef)) {
-        highlight = `Precisão alta — ${passPct}% de passes certos`;
+        highlight = L(`Precisão alta — ${passPct}% de passes certos`, `High accuracy — ${passPct}% passes completed`);
       } else if (tacklesAvg >= 3 && isDef) {
-        highlight = `Marcador forte — ${tacklesAvg.toFixed(1)} desarmes/jogo`;
+        highlight = L(`Marcador forte — ${tacklesAvg.toFixed(1)} desarmes/jogo`, `Strong tackler — ${tacklesAvg.toFixed(1)} tackles/match`);
       } else if (ovrDelta >= 2) {
-        highlight = `Evoluiu +${ovrDelta} OVR no clube`;
+        highlight = L(`Evoluiu +${ovrDelta} OVR no clube`, `Improved +${ovrDelta} OVR at the club`);
       } else if (ovrDelta <= -2) {
-        highlight = `Regrediu ${ovrDelta} OVR desde o mint`;
+        highlight = L(`Regrediu ${ovrDelta} OVR desde o mint`, `Dropped ${ovrDelta} OVR since mint`);
       }
     } else if (mp === 0) {
-      highlight = 'Ainda sem jogos contabilizados';
+      highlight = L('Ainda sem jogos contabilizados', 'No matches recorded yet');
     }
 
     // Recomendação de venda
     let recommendation: { text: string; action: 'sell' | 'hold' | 'watch' } = {
-      text: 'Continua monitorando — sem sinal forte.',
+      text: L('Continua monitorando — sem sinal forte.', 'Keep watching — no strong signal.'),
       action: 'watch',
     };
     if (trendSeason.pct != null && trendSeason.pct > 15) {
-      recommendation = { text: 'Janela boa pra venda: valor subiu >15% na temporada.', action: 'sell' };
+      recommendation = { text: L('Janela boa pra venda: valor subiu >15% na temporada.', 'Good time to sell: value up >15% this season.'), action: 'sell' };
     } else if (reds >= 2) {
-      recommendation = { text: 'Atenção disciplinar — 2+ expulsões nesta temporada.', action: 'watch' };
+      recommendation = { text: L('Atenção disciplinar — 2+ expulsões nesta temporada.', 'Discipline alert — 2+ red cards this season.'), action: 'watch' };
     } else if (mp >= 5 && goalsAvg < 0.1 && isAttacker) {
-      recommendation = { text: 'Produção baixa pra atacante — reavaliar posição ou venda.', action: 'watch' };
+      recommendation = { text: L('Produção baixa pra atacante — reavaliar posição ou venda.', 'Low output for a striker — rethink position or sell.'), action: 'watch' };
     } else if (goalsAvg >= 0.5 || (passPct != null && passPct >= 88)) {
-      recommendation = { text: 'Peça-chave. Segura enquanto o rendimento se mantiver.', action: 'hold' };
+      recommendation = { text: L('Peça-chave. Segura enquanto o rendimento se mantiver.', 'Key player. Hold while form lasts.'), action: 'hold' };
     } else if (yellows >= 5) {
-      recommendation = { text: 'Cartões acumulando — risco de suspensão futura.', action: 'watch' };
+      recommendation = { text: L('Cartões acumulando — risco de suspensão futura.', 'Cards piling up — suspension risk ahead.'), action: 'watch' };
     }
 
     return { momentum, highlight, recommendation };
@@ -240,7 +250,7 @@ export function TeamPlayerSeasonSheet({
               type="button"
               onClick={onClose}
               className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 shrink-0 rounded-full border border-white/20 bg-black/70 p-2 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="Fechar"
+              aria-label={L('Fechar', 'Close')}
             >
               <X className="h-5 w-5" />
             </button>
@@ -276,7 +286,7 @@ export function TeamPlayerSeasonSheet({
                       {player.country}
                     </span>
                   ) : null}
-                  {player.pos} · Temporada (agregado)
+                  {rotuloPosicao(player.pos)} · {L('Temporada (agregado)', 'Season (total)')}
                 </p>
               </div>
 
@@ -338,7 +348,7 @@ export function TeamPlayerSeasonSheet({
                   fontSize: '11px',
                 }}
               >
-                {ovrDelta > 0 ? 'Evoluiu no clube' : ovrDelta < 0 ? 'Regrediu desde o mint' : 'Mantém o nível inicial'}
+                {ovrDelta > 0 ? L('Evoluiu no clube', 'Improved at the club') : ovrDelta < 0 ? L('Regrediu desde o mint', 'Dropped since mint') : L('Mantém o nível inicial', 'Holding initial level')}
               </p>
             </div>
           </div>
@@ -370,7 +380,7 @@ export function TeamPlayerSeasonSheet({
                   letterSpacing: '0.18em',
                 }}
               >
-                Leitura rápida
+                {L('Leitura rápida', 'Quick read')}
               </h3>
             </div>
             <p
@@ -420,19 +430,19 @@ export function TeamPlayerSeasonSheet({
                 {insight.recommendation.action === 'sell' && (
                   <>
                     <CircleDollarSign className="h-3.5 w-3.5 shrink-0" aria-hidden strokeWidth={2.2} />
-                    Oportunidade
+                    {L('Oportunidade', 'Opportunity')}
                   </>
                 )}
                 {insight.recommendation.action === 'hold' && (
                   <>
                     <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden strokeWidth={2.2} />
-                    Segurar
+                    {L('Segurar', 'Hold')}
                   </>
                 )}
                 {insight.recommendation.action === 'watch' && (
                   <>
                     <Eye className="h-3.5 w-3.5 shrink-0" aria-hidden strokeWidth={2.2} />
-                    Observar
+                    {L('Observar', 'Watch')}
                   </>
                 )}
               </span>
@@ -459,7 +469,7 @@ export function TeamPlayerSeasonSheet({
                     letterSpacing: '0.18em',
                   }}
                 >
-                  Boosters (inventário)
+                  {L('Boosters (inventário)', 'Boosters (inventory)')}
                 </h3>
               </div>
               <p className="mt-2 text-gray-500"
@@ -469,8 +479,7 @@ export function TeamPlayerSeasonSheet({
                   lineHeight: 1.5,
                 }}
               >
-                Itens comprados na loja. Os que valem para um só jogador usam sempre esta ficha. Os de plantel ou clube
-                aplicam ao save completo.
+                {L('Itens comprados na loja. Os que valem para um só jogador usam sempre esta ficha. Os de plantel ou clube aplicam ao save completo.', 'Items bought in the shop. Single-player items apply to this player. Squad or club items apply to the whole save.')}
               </p>
               <ul className="mt-3 space-y-2">
                 {boosterRows.map(({ item, qty }) => {
@@ -502,8 +511,8 @@ export function TeamPlayerSeasonSheet({
                               fontSize: '10px',
                             }}
                           >
-                            {qty}× · escopo: {scope}
-                            {needP ? ' · este jogador' : ''}
+                            {qty}× · {L('escopo', 'scope')}: {ROTULO_ESCOPO[scope] ?? scope}
+                            {needP ? L(' · este jogador', ' · this player') : ''}
                           </p>
                         </div>
                       </div>
@@ -528,7 +537,7 @@ export function TeamPlayerSeasonSheet({
                           borderRadius: 'var(--radius-sm)',
                         }}
                       >
-                        Usar
+                        {L('Usar', 'Use')}
                       </button>
                     </li>
                   );
@@ -552,7 +561,7 @@ export function TeamPlayerSeasonSheet({
                   letterSpacing: '0.18em',
                 }}
               >
-                Valor de mercado (referência)
+                {L('Valor de mercado (referência)', 'Market value (reference)')}
               </h3>
             </div>
             <p className="mt-3 text-white tabular-nums"
@@ -576,7 +585,7 @@ export function TeamPlayerSeasonSheet({
                     letterSpacing: '0.18em',
                   }}
                 >
-                  Vs. início de registo
+                  {L('Vs. início de registo', 'Vs. first record')}
                 </p>
                 <div className="mt-1.5 flex items-center gap-2">
                   <TrendGlyph label={trendSeason.label} />
@@ -589,7 +598,7 @@ export function TeamPlayerSeasonSheet({
                   >
                     {ledger?.seasonBaselineMarketBroCents != null
                       ? `${usesExpMarket ? formatExp(ledger.seasonBaselineMarketBroCents) : formatBroFromCents(ledger.seasonBaselineMarketBroCents)}${usesExpMarket ? ' EXP' : ' BRO'} → ${trendSeason.pct != null ? `${trendSeason.pct >= 0 ? '+' : ''}${trendSeason.pct.toFixed(1)}%` : '—'}`
-                      : 'Ainda sem linha base (1.º jogo ou treino contado)'}
+                      : L('Ainda sem linha base (1.º jogo ou treino contado)', 'No baseline yet (1st match or training counted)')}
                   </span>
                 </div>
               </div>
@@ -604,7 +613,7 @@ export function TeamPlayerSeasonSheet({
                     letterSpacing: '0.18em',
                   }}
                 >
-                  Desde o último jogo
+                  {L('Desde o último jogo', 'Since last match')}
                 </p>
                 <div className="mt-1.5 flex items-center gap-2">
                   <TrendGlyph label={trendSinceLastMatch.label} />
@@ -616,8 +625,8 @@ export function TeamPlayerSeasonSheet({
                     }}
                   >
                     {ledger?.lastMarketBroCentsAfterMatch != null
-                      ? `${trendSinceLastMatch.pct != null ? `${trendSinceLastMatch.pct >= 0 ? '+' : ''}${trendSinceLastMatch.pct.toFixed(1)}%` : '—'} vs. pós-jogo (${usesExpMarket ? `${formatExp(ledger.lastMarketBroCentsAfterMatch)} EXP` : `${formatBroFromCents(ledger.lastMarketBroCentsAfterMatch)}`})`
-                      : 'Sem jogo finalizado ainda'}
+                      ? `${trendSinceLastMatch.pct != null ? `${trendSinceLastMatch.pct >= 0 ? '+' : ''}${trendSinceLastMatch.pct.toFixed(1)}%` : '—'} ${L('vs. pós-jogo', 'vs. post-match')} (${usesExpMarket ? `${formatExp(ledger.lastMarketBroCentsAfterMatch)} EXP` : `${formatBroFromCents(ledger.lastMarketBroCentsAfterMatch)}`})`
+                      : L('Sem jogo finalizado ainda', 'No finished match yet')}
                   </span>
                 </div>
               </div>
@@ -630,8 +639,8 @@ export function TeamPlayerSeasonSheet({
               }}
             >
               {usesExpMarket
-                ? 'Valor de mercado em EXP (catálogo Genesis). A linha base grava-se no primeiro jogo ou treino contabilizado; «desde o último jogo» mede evolução após o apito final.'
-                : 'Sem BRO no cartão, o valor mostrado estima a partir do OVR. A linha base da temporada grava-se no primeiro jogo ou treino contabilizado; «desde o último jogo» mede treinos e evolução após o apito final.'}
+                ? L('Valor de mercado em EXP (catálogo Genesis). A linha base grava-se no primeiro jogo ou treino contabilizado; «desde o último jogo» mede evolução após o apito final.', 'Market value in EXP (Genesis catalog). The baseline is set on the first recorded match or training; “since last match” tracks progress after the final whistle.')
+                : L('Sem BRO no cartão, o valor mostrado estima a partir do OVR. A linha base da temporada grava-se no primeiro jogo ou treino contabilizado; «desde o último jogo» mede treinos e evolução após o apito final.', 'With no BRO on the card, the value is estimated from OVR. The season baseline is set on the first recorded match or training; “since last match” tracks training and progress after the final whistle.')}
             </p>
           </section>
 
@@ -650,7 +659,7 @@ export function TeamPlayerSeasonSheet({
                   letterSpacing: '0.18em',
                 }}
               >
-                Competição &amp; jogo
+                {L('Competição & jogo', 'Competition & match')}
               </h3>
             </div>
             <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
@@ -663,7 +672,7 @@ export function TeamPlayerSeasonSheet({
                     letterSpacing: '0.18em',
                   }}
                 >
-                  Jogos
+                  {L('Jogos', 'Matches')}
                 </dt>
                 <dd className="text-white tabular-nums mt-1"
                   style={{
@@ -684,7 +693,7 @@ export function TeamPlayerSeasonSheet({
                     letterSpacing: '0.18em',
                   }}
                 >
-                  Golos
+                  {L('Golos', 'Goals')}
                 </dt>
                 <dd className="text-white tabular-nums mt-1"
                   style={{
@@ -705,7 +714,7 @@ export function TeamPlayerSeasonSheet({
                     letterSpacing: '0.18em',
                   }}
                 >
-                  Amarelos / Vermelhos
+                  {L('Amarelos / Vermelhos', 'Yellows / Reds')}
                 </dt>
                 <dd className="text-white tabular-nums mt-1"
                   style={{
@@ -726,7 +735,7 @@ export function TeamPlayerSeasonSheet({
                     letterSpacing: '0.18em',
                   }}
                 >
-                  Passes OK / tent.
+                  {L('Passes OK / tent.', 'Passes OK / att.')}
                 </dt>
                 <dd className="text-white tabular-nums mt-1"
                   style={{
@@ -748,7 +757,7 @@ export function TeamPlayerSeasonSheet({
                     letterSpacing: '0.18em',
                   }}
                 >
-                  Desarmes
+                  {L('Desarmes', 'Tackles')}
                 </dt>
                 <dd className="text-white tabular-nums mt-1"
                   style={{
@@ -769,7 +778,7 @@ export function TeamPlayerSeasonSheet({
                     letterSpacing: '0.18em',
                   }}
                 >
-                  Km (motor)
+                  {L('Km (motor)', 'Km (engine)')}
                 </dt>
                 <dd className="text-white tabular-nums mt-1"
                   style={{
@@ -790,7 +799,7 @@ export function TeamPlayerSeasonSheet({
                     letterSpacing: '0.18em',
                   }}
                 >
-                  Remates (agreg.)
+                  {L('Remates (agreg.)', 'Shots (total)')}
                 </dt>
                 <dd className="text-white tabular-nums mt-1"
                   style={{
@@ -820,7 +829,7 @@ export function TeamPlayerSeasonSheet({
                   letterSpacing: '0.18em',
                 }}
               >
-                Treinos
+                {L('Treinos', 'Training')}
               </h3>
             </div>
             <p className="mt-2 text-gray-500"
@@ -829,9 +838,9 @@ export function TeamPlayerSeasonSheet({
                 fontSize: '11px',
               }}
             >
-              Planos concluídos: <span className="font-mono font-bold text-white">{ledger?.trainingPlansCompleted ?? 0}</span>
+              {L('Planos concluídos', 'Plans completed')}: <span className="font-mono font-bold text-white">{ledger?.trainingPlansCompleted ?? 0}</span>
               {' · '}
-              Sessões leves: <span className="font-mono font-bold text-white">{ledger?.trainingLightSessions ?? 0}</span>
+              {L('Sessões leves', 'Light sessions')}: <span className="font-mono font-bold text-white">{ledger?.trainingLightSessions ?? 0}</span>
             </p>
             {ledger && Object.keys(ledger.trainingByType).length > 0 ? (
               <ul className="mt-3 max-h-28 space-y-1 overflow-y-auto">
@@ -864,7 +873,7 @@ export function TeamPlayerSeasonSheet({
                   fontSize: '11px',
                 }}
               >
-                Sem treinos contabilizados nesta temporada.
+                {L('Sem treinos contabilizados nesta temporada.', 'No training recorded this season.')}
               </p>
             )}
           </section>
@@ -884,7 +893,7 @@ export function TeamPlayerSeasonSheet({
                   letterSpacing: '0.18em',
                 }}
               >
-                Atributos actuais
+                {L('Atributos actuais', 'Current attributes')}
               </h3>
             </div>
             <p className="mt-2 text-gray-500"
@@ -893,7 +902,9 @@ export function TeamPlayerSeasonSheet({
                 fontSize: '10px',
               }}
             >
-              O modelo completo do cartão. A evolução global resume-se ao OVR mint ({mintOvr}) vs. actual ({ovrNow}).
+              {emIngles()
+                ? <>The full card model. Overall progress boils down to mint OVR ({mintOvr}) vs. current ({ovrNow}).</>
+                : <>O modelo completo do cartão. A evolução global resume-se ao OVR mint ({mintOvr}) vs. actual ({ovrNow}).</>}
             </p>
             <ul className="mt-3 grid gap-2 sm:grid-cols-2">
               {PLAYER_SEASON_ATTR_KEYS.map((key) => (
@@ -942,7 +953,7 @@ export function TeamPlayerSeasonSheet({
               }}
             >
               <Megaphone className="h-4 w-4 shrink-0" aria-hidden />
-              Anunciar Venda
+              {L('Anunciar Venda', 'List for Sale')}
               <span className="ml-1.5 border border-black/20 bg-black/15 px-2 py-1 font-mono text-[10px] font-bold tracking-wider text-black/80 group-hover:bg-black/20"
                 style={{ borderRadius: 'var(--radius-sm)' }}
               >
@@ -956,7 +967,7 @@ export function TeamPlayerSeasonSheet({
                   fontSize: '10px',
                 }}
               >
-                Oportunidade detectada — valor subiu recentemente.
+                {L('Oportunidade detectada — valor subiu recentemente.', 'Opportunity spotted — value rose recently.')}
               </p>
             ) : null}
           </div>

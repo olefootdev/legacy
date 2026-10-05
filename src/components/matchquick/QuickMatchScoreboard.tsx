@@ -8,6 +8,7 @@
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { LiveMatchClockDisplay } from '@/components/matchday/LiveMatchClockDisplay';
+import { L } from '@/i18n/L';
 
 interface QuickMatchScoreboardProps {
   homeShort: string;
@@ -208,7 +209,7 @@ export function QuickMatchScoreboard({
           )}
           style={{ fontFamily: 'var(--font-ui)' }}
         >
-          {homePressurePct > 60 ? 'Pressão' : ''}
+          {homePressurePct > 60 ? L('Pressão', 'Pressure') : ''}
         </span>
         <span
           className={cn(
@@ -217,7 +218,7 @@ export function QuickMatchScoreboard({
           )}
           style={{ fontFamily: 'var(--font-ui)' }}
         >
-          {awayPressurePct > 60 ? 'Pressão' : ''}
+          {awayPressurePct > 60 ? L('Pressão', 'Pressure') : ''}
         </span>
       </div>
     </div>

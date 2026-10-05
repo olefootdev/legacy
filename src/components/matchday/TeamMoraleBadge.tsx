@@ -10,6 +10,7 @@
 import { useGameStore } from '@/game/store';
 import { deriveTeamMorale } from '@/playerDecision/teamMorale';
 
+import { L } from '@/i18n/L';
 interface MoraleTone {
   /** Cor sólida (texto + barra). */
   color: string;
@@ -49,10 +50,19 @@ function moraleTone(confidence: number): MoraleTone {
 }
 
 function momentumGlyph(momentum: number): { arrow: string; label: string } {
-  if (momentum > 0.2) return { arrow: '↑', label: 'embalado' };
-  if (momentum < -0.2) return { arrow: '↓', label: 'tenso' };
-  return { arrow: '→', label: 'estável' };
+  if (momentum > 0.2) return { arrow: '↑', label: L('embalado', 'on a roll') };
+  if (momentum < -0.2) return { arrow: '↓', label: L('tenso', 'tense') };
+  return { arrow: '→', label: L('estável', 'steady') };
 }
+
+/** Rótulo de tela do humor ('embalado'…) — o valor continua o mesmo no código. */
+const MORALE_LABEL: Record<string, string> = {
+  embalado: L('embalado', 'on a roll'),
+  confiante: L('confiante', 'confident'),
+  'estável': L('estável', 'steady'),
+  tenso: L('tenso', 'tense'),
+  abalado: L('abalado', 'shaken'),
+};
 
 export function TeamMoraleBadge() {
   const live = useGameStore((s) => s.liveMatch);
@@ -80,7 +90,7 @@ export function TeamMoraleBadge() {
           className="text-[10px] uppercase tracking-[0.35em] font-bold text-white/55"
           style={{ fontFamily: 'var(--font-ui)' }}
         >
-          Moral coletiva
+          {L('Moral coletiva', 'Team morale')}
         </div>
         <div className="flex items-baseline gap-2">
           <span
@@ -93,7 +103,7 @@ export function TeamMoraleBadge() {
             className="text-[9px] uppercase tracking-[0.28em] font-bold"
             style={{ color: tone.color }}
           >
-            {morale.label}
+            {MORALE_LABEL[morale.label] ?? morale.label}
           </span>
         </div>
       </div>
@@ -113,7 +123,7 @@ export function TeamMoraleBadge() {
 
       <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.22em] text-white/45">
         <span className="flex items-center gap-1">
-          <span className="text-white/30">Pressão</span>
+          <span className="text-white/30">{L('Pressão', 'Pressure')}</span>
           <span
             className="tabular-nums font-display font-bold"
             style={{ color: morale.pressure > 65 ? 'var(--color-danger)' : 'var(--color-text-soft, rgba(255,255,255,0.7))' }}

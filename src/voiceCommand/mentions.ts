@@ -14,6 +14,7 @@
 import type { CommandTarget } from './types';
 import type { MatchRosterContext } from './intentMatcher';
 import { __testing } from './intentMatcher';
+import { L } from '@/i18n/L';
 
 const { normalize, fuzzyMatch } = __testing;
 
@@ -51,13 +52,13 @@ const SECTOR_ALIASES: Record<string, CommandTarget> = {
 
 /** Lista de setores pra autocomplete. */
 export const SECTOR_SUGGESTIONS: { token: string; label: string; target: CommandTarget }[] = [
-  { token: 'defensivo',        label: '🛡️ Defesa',        target: SECTOR_ALIASES.defensivo! },
-  { token: 'meio',             label: '⚙️ Meio-campo',    target: SECTOR_ALIASES.meio! },
-  { token: 'ataque',           label: '⚡ Ataque',         target: SECTOR_ALIASES.ataque! },
-  { token: 'goleiro',          label: '🧤 Goleiro',        target: SECTOR_ALIASES.goleiro! },
-  { token: 'time',             label: '👥 Time todo',      target: SECTOR_ALIASES.time! },
-  { token: 'lateral-esquerdo', label: '↤ Lateral esquerdo', target: SECTOR_ALIASES['lateral-esquerdo']! },
-  { token: 'lateral-direito',  label: '↦ Lateral direito',  target: SECTOR_ALIASES['lateral-direito']! },
+  { token: 'defensivo',        label: L('🛡️ Defesa', '🛡️ Defence'),        target: SECTOR_ALIASES.defensivo! },
+  { token: 'meio',             label: L('⚙️ Meio-campo', '⚙️ Midfield'),    target: SECTOR_ALIASES.meio! },
+  { token: 'ataque',           label: L('⚡ Ataque', '⚡ Attack'),         target: SECTOR_ALIASES.ataque! },
+  { token: 'goleiro',          label: L('🧤 Goleiro', '🧤 Goalkeeper'),        target: SECTOR_ALIASES.goleiro! },
+  { token: 'time',             label: L('👥 Time todo', '👥 Whole team'),      target: SECTOR_ALIASES.time! },
+  { token: 'lateral-esquerdo', label: L('↤ Lateral esquerdo', '↤ Left back'), target: SECTOR_ALIASES['lateral-esquerdo']! },
+  { token: 'lateral-direito',  label: L('↦ Lateral direito', '↦ Right back'),  target: SECTOR_ALIASES['lateral-direito']! },
 ];
 
 const MENTION_RE = /([@#])([\wáéíóúâêôãõç-]+)/gi;

@@ -1,5 +1,6 @@
 import type { FinanceState } from '@/entities/types';
 import type { WalletState } from '@/wallet/types';
+import { L } from '@/i18n/L';
 
 function appendExpHistory(finance: FinanceState, amount: number, source: string): FinanceState {
   if (!amount) return finance;
@@ -45,9 +46,9 @@ export function mergeWalletIntoFinance(
       ...nextFin,
       expLifetimeEarned: (nextFin.expLifetimeEarned ?? 0) + safeExpDelta,
     };
-    nextFin = appendExpHistory(nextFin, safeExpDelta, 'Game Assets Treasury (diário)');
+    nextFin = appendExpHistory(nextFin, safeExpDelta, L('Game Assets Treasury (diário)', 'Game Assets Treasury (daily)'));
   } else if (safeExpDelta < 0) {
-    nextFin = appendExpHistory(nextFin, safeExpDelta, 'Carteira (ajuste EXP)');
+    nextFin = appendExpHistory(nextFin, safeExpDelta, L('Carteira (ajuste EXP)', 'Wallet (EXP adjustment)'));
   }
   return nextFin;
 }

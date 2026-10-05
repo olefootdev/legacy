@@ -28,6 +28,8 @@ import {
 } from '@/match/quickTacticalIntensity';
 import { track } from '@/analytics/track';
 
+import { L } from '@/i18n/L';
+import { posLabel } from './posLabel';
 interface Props {
   opponentName: string;
   opponentShort: string;
@@ -129,8 +131,8 @@ export function MatchPreviewModal({
   };
   const unavailableLabel = (id: string): string | null => {
     const h = playerHealth?.[id];
-    if (h && h.suspendedMatches > 0) return 'Suspenso';
-    if (h ? h.outForMatches > 0 : (players[id]?.outForMatches ?? 0) > 0) return 'Lesionado';
+    if (h && h.suspendedMatches > 0) return L('Suspenso', 'Suspended');
+    if (h ? h.outForMatches > 0 : (players[id]?.outForMatches ?? 0) > 0) return L('Lesionado', 'Injured');
     return null;
   };
 
@@ -316,7 +318,7 @@ export function MatchPreviewModal({
         <div className="px-5 py-3 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between">
           <div className="min-w-0">
             <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">
-              Antes da partida
+              {L('Antes da partida', 'Before the match')}
             </p>
             <p className="text-[12px] text-white/60 truncate mt-0.5">
               vs {opponentName}
@@ -327,7 +329,7 @@ export function MatchPreviewModal({
             type="button"
             onClick={handleClose}
             className="text-white/40 hover:text-white transition-colors"
-            aria-label={picking ? 'Voltar' : 'Fechar'}
+            aria-label={picking ? L('Voltar', 'Back') : L('Fechar', 'Close')}
           >
             <X className="w-5 h-5" strokeWidth={2.5} />
           </button>
@@ -339,7 +341,7 @@ export function MatchPreviewModal({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] text-white/70">
-                  {pickingSlot.label} · entra no lugar de{' '}
+                  {posLabel(pickingSlot.label)} · {L('entra no lugar de', 'replaces')}{' '}
                   <span className="text-neon-yellow font-bold">
                     {players[working[pickingSlot.id]]?.name ?? '—'}
                   </span>
@@ -349,20 +351,20 @@ export function MatchPreviewModal({
                   onClick={() => setPicking(null)}
                   className="text-[10px] text-white/40 hover:text-white uppercase tracking-[0.14em]"
                 >
-                  Cancelar
+                  {L('Cancelar', 'Cancel')}
                 </button>
               </div>
               {benchFor(pickingSlot.label).length === 0 && (
                 <div className="space-y-2.5">
-                  <p className="text-[12px] text-white/50">Sem reservas pra essa posição.</p>
+                  <p className="text-[12px] text-white/50">{L('Sem reservas pra essa posição.', 'No subs for this position.')}</p>
                   <button
                     type="button"
                     onClick={goToMarket}
                     className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-neon-yellow/10 border border-neon-yellow/40 text-neon-yellow text-[11px] font-display font-bold uppercase tracking-[0.14em] hover:bg-neon-yellow hover:text-black transition-colors"
                   >
-                    <ShoppingBag className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> Buscar reforço no mercado
+                    <ShoppingBag className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Buscar reforço no mercado', 'Find a signing in the Market')}
                   </button>
-                  <p className="text-[10px] text-white/35 text-center">Sua escalação é salva antes de ir ao mercado.</p>
+                  <p className="text-[10px] text-white/35 text-center">{L('Sua escalação é salva antes de ir ao mercado.', 'Your lineup is saved before going to the Market.')}</p>
                 </div>
               )}
               {benchFor(pickingSlot.label).slice(0, 10).map((b) => {
@@ -380,7 +382,7 @@ export function MatchPreviewModal({
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-bold text-white truncate">{b.name}</p>
                       <p className="text-[10px] uppercase tracking-[0.14em]" style={{ color: fatigueTone(f) }}>
-                        fadiga {f}% → ~{forecastFatigue(f)}% pós-jogo
+                        {L('fadiga', 'fatigue')} {f}% → ~{forecastFatigue(f)}% {L('pós-jogo', 'post-match')}
                       </p>
                     </div>
                   </button>
@@ -393,7 +395,7 @@ export function MatchPreviewModal({
                   de propósito: é a única escolha aqui que muda o jogo por si só. */}
               <div>
                 <p className="mb-1.5 font-display text-[9px] font-black uppercase tracking-[0.2em] text-white/50">
-                  Foco
+                  {L('Foco', 'Focus')}
                 </p>
                 <div className="grid grid-cols-5 gap-1">
                   {FOCUS_ORDER.map((level) => {
@@ -449,7 +451,7 @@ export function MatchPreviewModal({
                         type="button"
                         onClick={() => deletePreset(p.name)}
                         className="pr-1.5 text-white/30 hover:text-danger"
-                        aria-label={`Apagar preset ${p.name}`}
+                        aria-label={L(`Apagar preset ${p.name}`, `Delete preset ${p.name}`)}
                       >
                         <X className="w-3 h-3" strokeWidth={2.5} />
                       </button>
@@ -462,7 +464,7 @@ export function MatchPreviewModal({
                       disabled={!complete}
                       className="inline-flex items-center gap-1 px-2 py-1.5 border border-dashed border-neon-yellow/40 text-neon-yellow/80 text-[10px] font-display font-bold uppercase tracking-[0.1em] hover:bg-neon-yellow/10 transition-colors disabled:opacity-40"
                     >
-                      <Plus className="w-3 h-3" strokeWidth={3} aria-hidden /> Salvar atual
+                      <Plus className="w-3 h-3" strokeWidth={3} aria-hidden /> {L('Salvar atual', 'Save current')}
                     </button>
                   )}
                 </div>
@@ -471,7 +473,7 @@ export function MatchPreviewModal({
               {/* Formação */}
               <div>
                 <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-display font-black mb-1.5">
-                  Formação
+                  {L('Formação', 'Formation')}
                 </p>
                 <div className="grid grid-cols-4 gap-1.5">
                   {FORMATION_SCHEME_LIST.map((f) => (
@@ -495,11 +497,11 @@ export function MatchPreviewModal({
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-display font-black">
-                    Titulares ({filled}/{slots.length})
+                    {L('Titulares', 'Starters')} ({filled}/{slots.length})
                   </p>
                   {tiredCount > 0 && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold" style={{ color: fatigueTone(99) }}>
-                      <AlertTriangle className="w-3 h-3" strokeWidth={2.5} /> {tiredCount} cansado{tiredCount > 1 ? 's' : ''}
+                      <AlertTriangle className="w-3 h-3" strokeWidth={2.5} /> {tiredCount} {L(`cansado${tiredCount > 1 ? 's' : ''}`, 'tired')}
                     </span>
                   )}
                 </div>
@@ -509,7 +511,7 @@ export function MatchPreviewModal({
                     onClick={autoManageSquad}
                     className="w-full mb-2 flex items-center justify-center gap-2 px-3 py-2.5 bg-neon-yellow/10 border border-neon-yellow/40 text-neon-yellow text-[11px] font-display font-bold uppercase tracking-[0.14em] hover:bg-neon-yellow hover:text-black transition-colors"
                   >
-                    <Wand2 className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> Gerir elenco · IA troca os cansados
+                    <Wand2 className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Gerir elenco · IA troca os cansados', 'Manage squad · AI swaps the tired')}
                   </button>
                 )}
                 <div className="space-y-1.5">
@@ -528,11 +530,11 @@ export function MatchPreviewModal({
                         style={{ borderLeftColor: outLabel ? 'var(--color-danger, #ef4444)' : fatigueTone(f) }}
                       >
                         <span className="text-[10px] font-display font-black uppercase tracking-[0.1em] text-white/40 w-9 text-center">
-                          {slot.label}
+                          {posLabel(slot.label)}
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="text-[13px] font-bold text-white truncate flex items-center gap-1.5">
-                            {p?.name ?? '— vazio —'}
+                            {p?.name ?? L('— vazio —', '— empty —')}
                             {(tired || outLabel) && (
                               <AlertTriangle className="w-3 h-3 shrink-0" strokeWidth={2.5} style={{ color: 'var(--color-danger, #ef4444)' }} />
                             )}
@@ -548,7 +550,7 @@ export function MatchPreviewModal({
                               <span
                                 className="text-[9px] tabular-nums"
                                 style={{ color: willCross ? 'var(--color-warning, #f59e0b)' : 'rgba(255,255,255,0.3)' }}
-                                title="Previsão de fadiga após este jogo (estimativa)"
+                                title={L('Previsão de fadiga após este jogo (estimativa)', 'Fatigue forecast after this match (estimate)')}
                               >
                                 → ~{after}%
                               </span>
@@ -560,7 +562,7 @@ export function MatchPreviewModal({
                           onClick={() => setPicking(slot.id)}
                           className="px-2.5 py-1 border border-neon-yellow/40 text-neon-yellow/80 text-[10px] font-display uppercase tracking-[0.12em] font-bold hover:bg-neon-yellow hover:text-black transition-colors inline-flex items-center gap-1"
                         >
-                          <ArrowRightLeft className="w-3 h-3" strokeWidth={2.5} aria-hidden /> Trocar
+                          <ArrowRightLeft className="w-3 h-3" strokeWidth={2.5} aria-hidden /> {L('Trocar', 'Swap')}
                         </button>
                       </div>
                     );
@@ -580,7 +582,7 @@ export function MatchPreviewModal({
               disabled={!complete || busy}
               className="w-full py-3 bg-neon-yellow hover:bg-white text-black font-display uppercase tracking-[0.18em] text-[12px] font-black transition-colors disabled:opacity-50"
             >
-              {busy ? 'Preparando…' : `Entrar em campo vs ${opponentShort} →`}
+              {busy ? L('Preparando…', 'Preparing…') : L(`Entrar em campo vs ${opponentShort} →`, `Take the field vs ${opponentShort} →`)}
             </button>
             <button
               type="button"
@@ -589,14 +591,14 @@ export function MatchPreviewModal({
               className="w-full py-2.5 border border-zinc-700 text-white/70 hover:border-neon-yellow/50 hover:text-white font-display uppercase tracking-[0.16em] text-[11px] font-bold transition-colors disabled:opacity-40 inline-flex items-center justify-center gap-2"
             >
               {savedFlash ? (
-                <><Check className="w-3.5 h-3.5" strokeWidth={3} aria-hidden /> Elenco salvo</>
+                <><Check className="w-3.5 h-3.5" strokeWidth={3} aria-hidden /> {L('Elenco salvo', 'Squad saved')}</>
               ) : (
-                <><Star className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> Salvar elenco</>
+                <><Star className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Salvar elenco', 'Save squad')}</>
               )}
             </button>
             {!complete && (
               <p className="text-[10px] text-center" style={{ color: 'var(--color-danger, #ef4444)' }}>
-                Faltam titulares — preencha os {slots.length} para entrar.
+                {L(`Faltam titulares — preencha os ${slots.length} para entrar.`, `Starters missing — fill all ${slots.length} to play.`)}
               </p>
             )}
           </div>

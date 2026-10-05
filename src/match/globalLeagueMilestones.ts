@@ -8,6 +8,7 @@
  */
 
 import type { GlobalTeam } from './globalLeagueMVP';
+import { L, LOCALE } from '@/i18n/L';
 
 export type MilestoneCategory = 'matches' | 'goals' | 'points' | 'wins';
 export const MILESTONE_THRESHOLDS = [10, 50, 100, 300, 1000] as const;
@@ -19,10 +20,10 @@ export type GlobalLeagueMilestoneId = `gl_${MilestoneCategory}_${MilestoneThresh
 export const MILESTONE_CATEGORIES: MilestoneCategory[] = ['matches', 'goals', 'points', 'wins'];
 
 const CATEGORY_LABEL: Record<MilestoneCategory, string> = {
-  matches: 'Partidas',
-  goals: 'Gols',
-  points: 'Pontos',
-  wins: 'Vitórias',
+  matches: L('Partidas', 'Matches'),
+  goals: L('Gols', 'Goals'),
+  points: L('Pontos', 'Points'),
+  wins: L('Vitórias', 'Wins'),
 };
 
 /** EXP entregue por threshold (curva crescente). */
@@ -43,11 +44,14 @@ export function milestoneExpReward(threshold: MilestoneThreshold): number {
 }
 
 export function milestoneLabel(category: MilestoneCategory, threshold: MilestoneThreshold): string {
-  return `${threshold.toLocaleString('pt-BR')} ${CATEGORY_LABEL[category]}`;
+  return `${threshold.toLocaleString(LOCALE)} ${CATEGORY_LABEL[category]}`;
 }
 
 export function milestoneInboxTitle(category: MilestoneCategory, threshold: MilestoneThreshold): string {
-  return `🏆 Liga Global — ${threshold.toLocaleString('pt-BR')} ${CATEGORY_LABEL[category]} alcançadas!`;
+  return L(
+    `🏆 Liga Global — ${threshold.toLocaleString(LOCALE)} ${CATEGORY_LABEL[category]} alcançadas!`,
+    `🏆 Global League — ${threshold.toLocaleString(LOCALE)} ${CATEGORY_LABEL[category]} reached!`,
+  );
 }
 
 export function milestoneInboxBody(
@@ -55,7 +59,10 @@ export function milestoneInboxBody(
   threshold: MilestoneThreshold,
   exp: number,
 ): string {
-  return `Recompensa entregue: +${exp.toLocaleString('pt-BR')} EXP por bater o marco de ${threshold.toLocaleString('pt-BR')} ${CATEGORY_LABEL[category].toLowerCase()} na Liga Global.`;
+  return L(
+    `Recompensa entregue: +${exp.toLocaleString(LOCALE)} EXP por bater o marco de ${threshold.toLocaleString(LOCALE)} ${CATEGORY_LABEL[category].toLowerCase()} na Liga Global.`,
+    `Reward delivered: +${exp.toLocaleString(LOCALE)} EXP for hitting the ${threshold.toLocaleString(LOCALE)} ${CATEGORY_LABEL[category].toLowerCase()} milestone in the Global League.`,
+  );
 }
 
 /**

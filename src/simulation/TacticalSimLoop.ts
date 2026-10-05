@@ -289,6 +289,15 @@ import { slotToTacticalRoleId } from '@/tactical/slotToTacticalRole';
 import { slotToPositionId } from '../../agents/bridge/slotToPositionId';
 import { ROLE_EXPECTATIONS } from '../../agents/context/PlayerRoleExpectations';
 import type { Vec2, PositionId } from '../../agents/core/AgentTypes';
+import { L as tr } from '@/i18n/L';
+
+/** Rótulo de tela (EN) das tags de virada — a tag PT segue sendo a chave. */
+const TAG_EN: Record<Test2dTurnoverTag, string> = {
+  recuperação: 'recovery',
+  interceptação: 'interception',
+  desarme: 'tackle',
+  perda: 'loss',
+};
 const FIXED_DT = 1 / 60;
 
 // ── World ↔ AgentVec2 converters ─────────────────────────────────────────────
@@ -665,7 +674,7 @@ export class TacticalSimLoop {
             (ag as any)._frustrationCount = ((ag as any)._frustrationCount || 0) + 1;
             if ((ag as any)._frustrationCount >= 2) {
               this.pushLive2dLearningLine(
-                `Aprender: ${ev.type} pelo jogador ${ag.slotId ?? ag.id} (repetição)`,
+                tr(`Aprender: ${ev.type} pelo jogador ${ag.slotId ?? ag.id} (repetição)`, `Learn: ${ev.type} by player ${ag.slotId ?? ag.id} (repeat)`),
                 'bad',
                 { playerId: ag.id, minGapSec: 3 },
               );
@@ -945,8 +954,8 @@ export class TacticalSimLoop {
       // Lateral / throw-in
       restartType = 'throw_in';
       const live = this.liveRef;
-      const restartName = restartingSide === 'home' ? (live?.homeShort ?? 'Casa') : (live?.awayShort ?? 'Fora');
-      pushSimEvent(this.simState, `${m}' — Lateral para o ${restartName}.`, 'whistle');
+      const restartName = restartingSide === 'home' ? (live?.homeShort ?? tr('Casa', 'Home')) : (live?.awayShort ?? tr('Fora', 'Away'));
+      pushSimEvent(this.simState, tr(`${m}' — Lateral para o ${restartName}.`, `${m}' — Throw-in to ${restartName}.`), 'whistle');
     } else {
       // Ball crossed a goal line (left = x≈0, right = x≈FIELD_LENGTH).
       // Determine which team defends that end.
@@ -963,8 +972,8 @@ export class TacticalSimLoop {
         ballX = outAtLeft ? 0.3 : FIELD_LENGTH - 0.3;
         ballZ = info.z < FIELD_WIDTH / 2 ? 0.3 : FIELD_WIDTH - 0.3;
         const live = this.liveRef;
-        const restartName = restartingSide === 'home' ? (live?.homeShort ?? 'Casa') : (live?.awayShort ?? 'Fora');
-        pushSimEvent(this.simState, `${m}' — Canto para o ${restartName}!`, 'whistle');
+        const restartName = restartingSide === 'home' ? (live?.homeShort ?? tr('Casa', 'Home')) : (live?.awayShort ?? tr('Fora', 'Away'));
+        pushSimEvent(this.simState, tr(`${m}' — Canto para o ${restartName}!`, `${m}' — Corner to ${restartName}!`), 'whistle');
         // Q6 — Dispara modal interativo de set-piece (apenas para o time da casa,
         // visitante mantém fluxo automático do engine).
         if (restartingSide === 'home' && this.onCornerAwardedCallback) {
@@ -982,8 +991,8 @@ export class TacticalSimLoop {
         ballX = outAtLeft ? 5.5 : FIELD_LENGTH - 5.5;
         ballZ = FIELD_WIDTH / 2;
         const live = this.liveRef;
-        const restartName = restartingSide === 'home' ? (live?.homeShort ?? 'Casa') : (live?.awayShort ?? 'Fora');
-        pushSimEvent(this.simState, `${m}' — Saída de baliza para o ${restartName}.`, 'whistle');
+        const restartName = restartingSide === 'home' ? (live?.homeShort ?? tr('Casa', 'Home')) : (live?.awayShort ?? tr('Fora', 'Away'));
+        pushSimEvent(this.simState, tr(`${m}' — Saída de baliza para o ${restartName}.`, `${m}' — Goal kick to ${restartName}.`), 'whistle');
       }
     }
 
@@ -1417,8 +1426,8 @@ export class TacticalSimLoop {
             icKey: `${carrier.id}:${intr.id}:${tickK}`,
             narrativeLine:
               variant === 'second_half'
-                ? `${m}' — Interceptação no reinício do 2.º tempo.`
-                : `${m}' — Início: interceptação no primeiro toque.`,
+                ? tr(`${m}' — Interceptação no reinício do 2.º tempo.`, `${m}' — Interception at the second-half restart.`)
+                : tr(`${m}' — Início: interceptação no primeiro toque.`, `${m}' — Kick-off: intercepted on the first touch.`),
             causalReason: interceptReason,
           };
           this.scheduleGkReleaseChaseSuppressionFromFlight(selfSnap.x, selfSnap.z, contact.x, contact.z, speed);
@@ -1445,8 +1454,8 @@ export class TacticalSimLoop {
         pushSimEvent(
           this.simState,
           variant === 'second_half'
-            ? `${m}' — 2.º tempo: saída com passe ao meio-campo.`
-            : `${m}' — Início: saída com passe.`,
+            ? tr(`${m}' — 2.º tempo: saída com passe ao meio-campo.`, `${m}' — 2nd half: kick-off with a pass into midfield.`)
+            : tr(`${m}' — Início: saída com passe.`, `${m}' — Kick-off: played out with a pass.`),
         );
       } else {
   this.ballSys.registerLastTouch(carrier.id);
@@ -1455,8 +1464,8 @@ export class TacticalSimLoop {
         pushSimEvent(
           this.simState,
           variant === 'second_half'
-            ? `${m}' — 2.º tempo: toque de saída — segunda bola.`
-            : `${m}' — Início: toque de saída — segunda bola.`,
+            ? tr(`${m}' — 2.º tempo: toque de saída — segunda bola.`, `${m}' — 2nd half: kick-off touch — second ball.`)
+            : tr(`${m}' — Início: toque de saída — segunda bola.`, `${m}' — Kick-off: first touch — second ball.`),
         );
       }
     } else {
@@ -1469,8 +1478,8 @@ export class TacticalSimLoop {
       pushSimEvent(
         this.simState,
         variant === 'second_half'
-          ? `${m}' — 2.º tempo: pontapé de saída à frente.`
-          : `${m}' — Início: pontapé de saída à frente.`,
+          ? tr(`${m}' — 2.º tempo: pontapé de saída à frente.`, `${m}' — 2nd half: kick-off launched forward.`)
+          : tr(`${m}' — Início: pontapé de saída à frente.`, `${m}' — Kick-off launched forward.`),
       );
     }
 
@@ -1623,7 +1632,7 @@ export class TacticalSimLoop {
             contactZ: contact.z,
             deadlineSimTime: this.world.simTime + Math.min(4.2, Math.max(0.55, tFly + 0.45)),
             icKey: `${taker.id}:${intr.id}:${tickK}`,
-            narrativeLine: `${this.simState.minute}' — Interceptação no reinício após golo.`,
+            narrativeLine: tr(`${this.simState.minute}' — Interceptação no reinício após golo.`, `${this.simState.minute}' — Interception at the restart after the goal.`),
             causalReason: 'goal_kickoff_intercept',
           };
           this.scheduleGkReleaseChaseSuppressionFromFlight(selfSnap.x, selfSnap.z, contact.x, contact.z, speed);
@@ -1645,12 +1654,12 @@ export class TacticalSimLoop {
         );
         this.simState.carrierId = null;
         pushLastAction(taker.matchRuntime, 'short_pass_safety');
-        pushSimEvent(this.simState, `${this.simState.minute}' — Reinício: passe de saída após golo.`);
+        pushSimEvent(this.simState, tr(`${this.simState.minute}' — Reinício: passe de saída após golo.`, `${this.simState.minute}' — Restart: kick-off pass after the goal.`));
     } else {
   this.ballSys.registerLastTouch(taker.id);
   this.ballSys.setLoose(passRes.x, passRes.z);
         this.simState.carrierId = null;
-        pushSimEvent(this.simState, `${this.simState.minute}' — Reinício após golo: segunda bola.`);
+        pushSimEvent(this.simState, tr(`${this.simState.minute}' — Reinício após golo: segunda bola.`, `${this.simState.minute}' — Restart after the goal: second ball.`));
       }
     } else {
       const r = rngFromSeed(baseSeed, `goal-kick:${taker.id}:${tickK}`).nextUnit();
@@ -1659,7 +1668,7 @@ export class TacticalSimLoop {
       const c = clampToPitch(toX, toZ, 0.55);
       this.ballSys.startFlight({ x: cx, z: cz }, { x: c.x, z: c.z }, speed, 'pass');
       this.simState.carrierId = null;
-      pushSimEvent(this.simState, `${this.simState.minute}' — Reinício: pontapé de saída após golo.`);
+      pushSimEvent(this.simState, tr(`${this.simState.minute}' — Reinício: pontapé de saída após golo.`, `${this.simState.minute}' — Restart: kick-off launched after the goal.`));
     }
 
     this.gkReleaseChaseSuppressionUntil = this.world.simTime + 0.32;
@@ -1927,7 +1936,7 @@ export class TacticalSimLoop {
         }
         pushSimEvent(
           this.simState,
-          `${this.simState.minute}' — Falta do atacante na área: contacto ilegal com o guarda-redes. Bola para a defesa.`,
+          tr(`${this.simState.minute}' — Falta do atacante na área: contacto ilegal com o guarda-redes. Bola para a defesa.`, `${this.simState.minute}' — Attacker's foul in the box: illegal contact with the goalkeeper. Defence's ball.`),
         );
       } else {
         this.gkRestart = null;
@@ -1949,7 +1958,7 @@ export class TacticalSimLoop {
         }
         pushSimEvent(
           this.simState,
-          `${this.simState.minute}' — Falta do guarda-redes na área (aglomerado). Bola para o adversário.`,
+          tr(`${this.simState.minute}' — Falta do guarda-redes na área (aglomerado). Bola para o adversário.`, `${this.simState.minute}' — Goalkeeper's foul in the box (crowded). Opponent's ball.`),
         );
       }
     } else if (verdict.reason === 'causal_whirlwind') {
@@ -2328,7 +2337,7 @@ export class TacticalSimLoop {
     if (period === 'halftime') {
       this.simState.clockPeriod = 'halftime';
       if (this.prevClockPeriod !== 'halftime') {
-        pushSimEvent(this.simState, `45' — Intervalo.`, 'whistle');
+        pushSimEvent(this.simState, tr(`45' — Intervalo.`, `45' — Half-time.`), 'whistle');
         this.prevClockPeriod = 'halftime';
       }
       this.simState.phase = 'halftime';
@@ -2337,13 +2346,13 @@ export class TacticalSimLoop {
 
     if (period === 'second_half' && this.prevClockPeriod === 'halftime') {
       this.applySecondHalfSideSwapAndKickoff();
-      pushSimEvent(this.simState, `45' — Início do 2.º tempo (troca de campo).`, 'whistle');
+      pushSimEvent(this.simState, tr(`45' — Início do 2.º tempo (troca de campo).`, `45' — Second half underway (teams switch ends).`), 'whistle');
       const liveKick = this.liveRef;
       if (liveKick) {
         const who = this.simState.possession === 'home' ? liveKick.homeShort : liveKick.awayShort;
         pushSimEvent(
           this.simState,
-          `45' — Pontapé de saída: ${who} (igualdade: não iniciaram o 1.º tempo).`,
+          tr(`45' — Pontapé de saída: ${who} (igualdade: não iniciaram o 1.º tempo).`, `45' — Kick-off: ${who} (fairness: didn't kick off the 1st half).`),
         );
       }
       this.matchEngine.reset();
@@ -3056,7 +3065,7 @@ export class TacticalSimLoop {
           });
           pushSimEvent(
             this.simState,
-            `${this.simState.minute}' — Interceptação no ar — bola dominada.`,
+            tr(`${this.simState.minute}' — Interceptação no ar — bola dominada.`, `${this.simState.minute}' — Interception in the air — ball controlled.`),
             'narrative',
             this.isTest2dLiveFeed() ? 'good' : undefined,
             this.isTest2dLiveFeed() ? interceptor.id : undefined,
@@ -4150,7 +4159,7 @@ export class TacticalSimLoop {
             this.applyMotorExecutionChain(ag, 'pass', passRes.executionTier, passRes.impact01, opt.targetId);
             pushSimEvent(
               this.simState,
-              `${this.simState.minute}' — Passe de ruptura — linha adversária desorganizada.`,
+              tr(`${this.simState.minute}' — Passe de ruptura — linha adversária desorganizada.`, `${this.simState.minute}' — Line-breaking pass — opposing line in disarray.`),
               'narrative',
               this.isTest2dLiveFeed() ? 'good' : undefined,
               this.isTest2dLiveFeed() ? ag.id : undefined,
@@ -4270,7 +4279,7 @@ export class TacticalSimLoop {
           }
           const shotLine = this.isTest2dLiveFeed()
             ? test2dShotWindupLine(this.simState.minute, who, shotKey)
-            : `${this.simState.minute}' — Remate de ${who}!`;
+            : tr(`${this.simState.minute}' — Remate de ${who}!`, `${this.simState.minute}' — Shot from ${who}!`);
           pushSimEvent(
             this.simState,
             shotLine,
@@ -4363,7 +4372,7 @@ export class TacticalSimLoop {
         if (cRes.success && cRes.executionTier === 'critical_hit') {
           pushSimEvent(
             this.simState,
-            `${this.simState.minute}' — Cruzamento de ruptura!`,
+            tr(`${this.simState.minute}' — Cruzamento de ruptura!`, `${this.simState.minute}' — Killer cross!`),
             'narrative',
             this.isTest2dLiveFeed() ? 'good' : undefined,
             this.isTest2dLiveFeed() ? ag.id : undefined,
@@ -4423,7 +4432,7 @@ export class TacticalSimLoop {
           if (dr.executionTier === 'critical_hit') {
             pushSimEvent(
               this.simState,
-              `${this.simState.minute}' — Drible de elite — linha ultrapassada!`,
+              tr(`${this.simState.minute}' — Drible de elite — linha ultrapassada!`, `${this.simState.minute}' — Elite dribble — line beaten!`),
               'narrative',
               this.isTest2dLiveFeed() ? 'good' : undefined,
               this.isTest2dLiveFeed() ? ag.id : undefined,
@@ -4691,7 +4700,7 @@ export class TacticalSimLoop {
             contactZ: contact.z,
             deadlineSimTime: this.world.simTime + Math.min(4.2, Math.max(0.55, tFly + 0.45)),
             icKey: `${gk.id}:${intr.id}:${tickK}`,
-            narrativeLine: `${this.simState.minute}' — Interceptação na saída do GR.`,
+            narrativeLine: tr(`${this.simState.minute}' — Interceptação na saída do GR.`, `${this.simState.minute}' — Interception on the GK's distribution.`),
             causalReason: 'gk_restart_intercept',
           };
           this.scheduleGkReleaseChaseSuppressionFromFlight(selfSnap.x, selfSnap.z, contact.x, contact.z, speedGk);
@@ -4723,7 +4732,7 @@ export class TacticalSimLoop {
       }
       this.simState.carrierId = null;
       pushLastAction(gk.matchRuntime, 'gk_distribution_pass');
-      pushSimEvent(this.simState, `${this.simState.minute}' — Saída do guarda-redes: passe ao colega livre.`);
+      pushSimEvent(this.simState, tr(`${this.simState.minute}' — Saída do guarda-redes: passe ao colega livre.`, `${this.simState.minute}' — Goalkeeper distributes: pass to a free teammate.`));
       return;
     }
 
@@ -4755,8 +4764,8 @@ export class TacticalSimLoop {
     pushSimEvent(
       this.simState,
       isLong
-        ? `${this.simState.minute}' — Pontapé do GR ao meio-campo.`
-        : `${this.simState.minute}' — Guarda-redes manda um chutão longo.`,
+        ? tr(`${this.simState.minute}' — Pontapé do GR ao meio-campo.`, `${this.simState.minute}' — GK kicks it to midfield.`)
+        : tr(`${this.simState.minute}' — Guarda-redes manda um chutão longo.`, `${this.simState.minute}' — Goalkeeper launches it long.`),
     );
   }
 
@@ -4814,7 +4823,7 @@ export class TacticalSimLoop {
               reason,
               gkKey,
             )
-          : `${this.simState.minute}' — ${shooterSide === defendingSide ? 'Defesa' : 'Remate'}: bola com GR (${reason}).`;
+          : tr(`${this.simState.minute}' — ${shooterSide === defendingSide ? 'Defesa' : 'Remate'}: bola com GR (${reason}).`, `${this.simState.minute}' — ${shooterSide === defendingSide ? 'Save' : 'Shot'}: ball with the GK (${reason}).`);
         pushSimEvent(this.simState, gkLine);
       }
     } else {
@@ -4894,12 +4903,12 @@ export class TacticalSimLoop {
       if (trans.recovery_profile === 'recovery_critical_chance') {
         pushSimEvent(
           this.simState,
-          `${this.simState.minute}' — Recuperação em zona de perigo — contra-ataque armado.`,
+          tr(`${this.simState.minute}' — Recuperação em zona de perigo — contra-ataque armado.`, `${this.simState.minute}' — Ball won in the danger zone — counter-attack on.`),
         );
       } else if (trans.loss_profile === 'loss_critical_exposed') {
         pushSimEvent(
           this.simState,
-          `${this.simState.minute}' — Perda de posse com bloco defensivo exposto.`,
+          tr(`${this.simState.minute}' — Perda de posse com bloco defensivo exposto.`, `${this.simState.minute}' — Possession lost with the defensive block exposed.`),
         );
       }
     }
@@ -4922,7 +4931,7 @@ export class TacticalSimLoop {
     if (this.isPassOnBallType(action.type)) {
       const line = this.isTest2dLiveFeed()
         ? test2dPassAfterTurnoverLine(this.simState.minute, tag, narrKey)
-        : `${this.simState.minute}' — Passe após ${tag}.`;
+        : tr(`${this.simState.minute}' — Passe após ${tag}.`, `${this.simState.minute}' — Pass after ${TAG_EN[tag]}.`);
       pushSimEvent(this.simState, line);
     } else if (
       action.type === 'simple_carry'
@@ -4931,7 +4940,7 @@ export class TacticalSimLoop {
     ) {
       const line = this.isTest2dLiveFeed()
         ? test2dCarryAfterTurnoverLine(this.simState.minute, tag, narrKey)
-        : `${this.simState.minute}' — Condução após ${tag}.`;
+        : tr(`${this.simState.minute}' — Condução após ${tag}.`, `${this.simState.minute}' — Carry after ${TAG_EN[tag]}.`);
       pushSimEvent(this.simState, line);
     }
   }
@@ -5172,14 +5181,14 @@ export class TacticalSimLoop {
       );
       if (inBox) {
         const attackingSide: PossessionSide = fouler.side === 'home' ? 'away' : 'home';
-        pushSimEvent(this.simState, `${m}' — PÊNALTI! Falta dentro da área — marca-se a cal.`, 'whistle');
+        pushSimEvent(this.simState, tr(`${m}' — PÊNALTI! Falta dentro da área — marca-se a cal.`, `${m}' — PENALTY! Foul inside the box — spot kick given.`), 'whistle');
         // takerName resolvido pelo caller (tem acesso ao playersById).
         this.onPenaltyAwardedCallback({
           attackingSide,
           foulerId: fouler.id,
           foulerSide: fouler.side,
           victimId,
-          takerName: 'Cobrador',
+          takerName: tr('Cobrador', 'Taker'),
           takerId: victim.id,
           minute: m,
         });
@@ -5199,10 +5208,10 @@ export class TacticalSimLoop {
     });
     const line =
       foulSeverity === 'ugly'
-        ? `${m}' — Entrada feia! O árbitro corta o lance com autoridade.`
+        ? tr(`${m}' — Entrada feia! O árbitro corta o lance com autoridade.`, `${m}' — Nasty challenge! The referee stops play firmly.`)
         : foulSeverity === 'firm'
-          ? `${m}' — Falta seca — impacto visível; jogo parado.`
-          : `${m}' — Falta leve de marcação — respira o jogo.`;
+          ? tr(`${m}' — Falta seca — impacto visível; jogo parado.`, `${m}' — Hard foul — visible impact; play stopped.`)
+          : tr(`${m}' — Falta leve de marcação — respira o jogo.`, `${m}' — Light marking foul — the game catches its breath.`);
     pushSimEvent(this.simState, line);
 
     // Foul argument: nearby agents move toward the foul point
@@ -5248,7 +5257,7 @@ export class TacticalSimLoop {
         },
       });
       const k = fouler.side === 'home' ? 'red_home' : 'red_away';
-      pushSimEvent(this.simState, `${m}' — Cartão vermelho — expulsão.`, k);
+      pushSimEvent(this.simState, tr(`${m}' — Cartão vermelho — expulsão.`, `${m}' — Red card — sent off.`), k);
     } else if (uCard < anyCard) {
       L.push({
         type: 'card_shown',
@@ -5261,7 +5270,7 @@ export class TacticalSimLoop {
         },
       });
       const k = fouler.side === 'home' ? 'yellow_home' : 'yellow_away';
-      pushSimEvent(this.simState, `${m}' — Amarelo — advertência ao jogador.`, k);
+      pushSimEvent(this.simState, tr(`${m}' — Amarelo — advertência ao jogador.`, `${m}' — Yellow — player booked.`), k);
     }
 
     // ─── Pausa de 3s + transferência de posse pro time que sofreu ───
@@ -5289,7 +5298,7 @@ export class TacticalSimLoop {
       this.pendingFreeKickTakerId = taker.id;
       // 3 segundos de dead ball — árbitro pausa, narração flutua.
       this.deadBallUntil = this.world.simTime + 3;
-      pushSimEvent(this.simState, `${m}' — Falta ${foulSeverity === 'ugly' ? 'dura' : foulSeverity === 'firm' ? 'cometida' : 'leve'} — jogo parado 3s. Reinício ${victimSide === 'home' ? (this.liveRef?.homeShort ?? 'Casa') : (this.liveRef?.awayShort ?? 'Fora')}.`, 'whistle');
+      pushSimEvent(this.simState, tr(`${m}' — Falta ${foulSeverity === 'ugly' ? 'dura' : foulSeverity === 'firm' ? 'cometida' : 'leve'} — jogo parado 3s. Reinício ${victimSide === 'home' ? (this.liveRef?.homeShort ?? 'Casa') : (this.liveRef?.awayShort ?? 'Fora')}.`, `${m}' — ${foulSeverity === 'ugly' ? 'Hard' : foulSeverity === 'firm' ? 'Clear' : 'Light'} foul — play stopped 3s. Restart ${victimSide === 'home' ? (this.liveRef?.homeShort ?? 'Home') : (this.liveRef?.awayShort ?? 'Away')}.`), 'whistle');
       const uiPos = worldToUiPercent(ballX, ballZ);
       L.push({ type: 'ball_state', payload: { x: uiPos.ux, y: uiPos.uy, reason: 'foul_restart' } });
       L.push({ type: 'possession_change', payload: { to: victimSide, reason: 'foul_awarded' } });
@@ -5457,7 +5466,7 @@ export class TacticalSimLoop {
     ) {
       pushSimEvent(
         this.simState,
-        `${this.simState.minute}' — Remate de elite — defesa/queda física em grande plano.`,
+        tr(`${this.simState.minute}' — Remate de elite — defesa/queda física em grande plano.`, `${this.simState.minute}' — Elite strike — save/dive in close-up.`),
       );
     }
 
@@ -5496,10 +5505,10 @@ export class TacticalSimLoop {
       const gh = pend.shotRes.gkHighlight;
       const goalLine =
         gh === 'gk_blunder_goal'
-          ? `${this.simState.minute}' — GOL! Frango do guarda-redes — ${name} aproveita!`
+          ? tr(`${this.simState.minute}' — GOL! Frango do guarda-redes — ${name} aproveita!`, `${this.simState.minute}' — GOAL! Goalkeeper howler — ${name} pounces!`)
           : gh === 'world_class_goal'
-            ? `${this.simState.minute}' — GOLAÇO! ${name} com remate irrepreensível!`
-            : `${this.simState.minute}' — GOL! ${name} marca!`;
+            ? tr(`${this.simState.minute}' — GOLAÇO! ${name} com remate irrepreensível!`, `${this.simState.minute}' — WONDER GOAL! ${name} with a flawless strike!`)
+            : tr(`${this.simState.minute}' — GOL! ${name} marca!`, `${this.simState.minute}' — GOAL! ${name} scores!`);
       pushSimEvent(
         this.simState,
         goalLine,
@@ -5540,7 +5549,7 @@ export class TacticalSimLoop {
       });
       pushSimEvent(
         this.simState,
-        `${this.simState.minute}' — Bola para fora. Equipas na saída de bola; o GR coloca em jogo.`,
+        tr(`${this.simState.minute}' — Bola para fora. Equipas na saída de bola; o GR coloca em jogo.`, `${this.simState.minute}' — Ball out. Teams set for the goal kick; the GK restarts play.`),
       );
       const strikeKind = strike === 'power' ? 'power' : strike === 'weak' ? 'weak' : 'placed';
       const missKey = `${pend.shooterId}|${strike}|${Math.floor(this.world.simTime * 1000)}`;
@@ -5548,10 +5557,10 @@ export class TacticalSimLoop {
         ? test2dShotMissDetailLine(this.simState.minute, strikeKind, missKey)
         : `${this.simState.minute}' — ${
             strike === 'power'
-              ? 'Remate forte para fora.'
+              ? tr('Remate forte para fora.', 'Powerful shot, wide.')
               : strike === 'weak'
-                ? 'Remate fraco — longe da baliza.'
-                : 'Remate ao lado.'
+                ? tr('Remate fraco — longe da baliza.', 'Weak shot — well wide of goal.')
+                : tr('Remate ao lado.', 'Shot wide.')
           }`;
       pushSimEvent(
         this.simState,
@@ -5570,7 +5579,7 @@ export class TacticalSimLoop {
       }
       pushSimEvent(
         this.simState,
-        `${this.simState.minute}' — Remate bloqueado — segunda bola viva.`,
+        tr(`${this.simState.minute}' — Remate bloqueado — segunda bola viva.`, `${this.simState.minute}' — Shot blocked — second ball live.`),
         'narrative',
         this.isTest2dLiveFeed() ? 'info' : undefined,
         this.isTest2dLiveFeed() ? pend.shooterId : undefined,
@@ -5587,12 +5596,12 @@ export class TacticalSimLoop {
     if (sk === 'hold') {
       this.assignBallToDefendingGoalkeeper(pend.defSide, pend.shooterSide, L, 'shot_save_hold');
       const saveLine = spec
-        ? 'Defesa em grande plano — reflexo e segurança total.'
+        ? tr('Defesa em grande plano — reflexo e segurança total.', 'Close-up save — reflexes and total command.')
         : strike === 'power'
-          ? 'Guarda-redes segura remate forte.'
+          ? tr('Guarda-redes segura remate forte.', 'Goalkeeper holds a powerful shot.')
           : strike === 'weak'
-            ? 'Guarda-redes segura remate fraco.'
-            : 'Guarda-redes agarra o remate colocado.';
+            ? tr('Guarda-redes segura remate fraco.', 'Goalkeeper holds a weak shot.')
+            : tr('Guarda-redes agarra o remate colocado.', 'Goalkeeper gathers the placed shot.');
       pushSimEvent(
         this.simState,
         `${this.simState.minute}' — ${saveLine}`,
@@ -5631,8 +5640,8 @@ export class TacticalSimLoop {
       pushSimEvent(
         this.simState,
         spec
-          ? `${this.simState.minute}' — Defesa espetacular! Espalma para escanteio — linha salva.`
-          : `${this.simState.minute}' — Guarda-redes espalma para escanteio — bola viva pela ponta.`,
+          ? tr(`${this.simState.minute}' — Defesa espetacular! Espalma para escanteio — linha salva.`, `${this.simState.minute}' — Spectacular save! Tipped behind for a corner — line saved.`)
+          : tr(`${this.simState.minute}' — Guarda-redes espalma para escanteio — bola viva pela ponta.`, `${this.simState.minute}' — Goalkeeper tips it behind for a corner.`),
         'narrative',
         this.isTest2dLiveFeed() ? 'good' : undefined,
         undefined,
@@ -5650,8 +5659,8 @@ export class TacticalSimLoop {
     pushSimEvent(
       this.simState,
       spec
-        ? `${this.simState.minute}' — Defesaça — bola rebate e fica viva na área!`
-        : `${this.simState.minute}' — Espalma pra frente! Bola viva — disputa de rebote.`,
+        ? tr(`${this.simState.minute}' — Defesaça — bola rebate e fica viva na área!`, `${this.simState.minute}' — Superb save — rebound live in the box!`)
+        : tr(`${this.simState.minute}' — Espalma pra frente! Bola viva — disputa de rebote.`, `${this.simState.minute}' — Parried forward! Ball live — scramble for the rebound.`),
       'narrative',
       this.isTest2dLiveFeed() ? 'good' : undefined,
       undefined,
@@ -5787,7 +5796,7 @@ export class TacticalSimLoop {
         if (tkTier.tier === 'critical_hit') {
           pushSimEvent(
             this.simState,
-            `${this.simState.minute}' — Desarme de classe — bola recuperada com autoridade.`,
+            tr(`${this.simState.minute}' — Desarme de classe — bola recuperada com autoridade.`, `${this.simState.minute}' — Classy tackle — ball won with authority.`),
             'narrative',
             this.isTest2dLiveFeed() ? 'good' : undefined,
             this.isTest2dLiveFeed() ? def.id : undefined,
@@ -5818,7 +5827,7 @@ export class TacticalSimLoop {
 
         pushSimEvent(
           this.simState,
-          `${this.simState.minute}' — Desarme limpo!`,
+          tr(`${this.simState.minute}' — Desarme limpo!`, `${this.simState.minute}' — Clean tackle!`),
           'narrative',
           this.isTest2dLiveFeed() ? 'good' : undefined,
           this.isTest2dLiveFeed() ? def.id : undefined,
@@ -5863,7 +5872,7 @@ export class TacticalSimLoop {
       this.ballSys.setLoose(bx, bz, 0, 0);
       this.simState.carrierId = null;
       this.simState.possession = pend.possessionBefore;
-      pushSimEvent(this.simState, `${this.simState.minute}' — Corte na linha — bola dividida.`);
+      pushSimEvent(this.simState, tr(`${this.simState.minute}' — Corte na linha — bola dividida.`, `${this.simState.minute}' — Cut out on the line — 50/50 ball.`));
       return;
     }
 
@@ -5880,7 +5889,7 @@ export class TacticalSimLoop {
       pend.narrativeLine
       ?? (this.isTest2dLiveFeed()
         ? test2dInterceptCutPassLine(this.simState.minute, pend.icKey)
-        : `${this.simState.minute}' — Interceptação corta o passe.`);
+        : tr(`${this.simState.minute}' — Interceptação corta o passe.`, `${this.simState.minute}' — Interception cuts out the pass.`));
     pushSimEvent(
       this.simState,
       icLine,

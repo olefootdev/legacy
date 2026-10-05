@@ -3,6 +3,7 @@ import { PainelExpansao } from './network/PainelExpansao';
 import { useMinhaExpansao } from './network/useMinhaExpansao';
 import { SecaoVolt, Hashtag } from '@/components/ui';
 import { useTrackScreen } from '@/progression/trackEvent';
+import { L } from '@/i18n/L';
 
 /**
  * Wallet → NETWORK. A rede que paga: a expansão, e só ela.
@@ -27,8 +28,8 @@ export function NetworkTab() {
   return (
     <WalletShell title="Network" hashtag="#network" heroVariant="compact" voltar>
       <section className="min-w-0 space-y-3">
-        <SecaoVolt label="Expansão">
-          <Hashtag>#equiparacao #time1 #time2</Hashtag>
+        <SecaoVolt label={L('Expansão', 'Expansion')}>
+          <Hashtag>{L('#equiparacao #time1 #time2', '#matching #team1 #team2')}</Hashtag>
         </SecaoVolt>
         <PainelExpansao dados={expansao} />
       </section>

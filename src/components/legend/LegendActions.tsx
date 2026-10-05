@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Share2, ChevronRight } from 'lucide-react';
+import { L } from '@/i18n/L';
 
 interface LegendActionsProps {
   slug: string;
@@ -42,7 +43,7 @@ export function LegendActions({
 
   const handleShare = async () => {
     const url = `${window.location.origin}/legend/${slug}`;
-    const text = `Aprenda com ${name} no Olefoot. Museu vivo do futebol.`;
+    const text = L(`Aprenda com ${name} no Olefoot. Museu vivo do futebol.`, `Learn from ${name} on Olefoot. A living football museum.`);
     try {
       if ((navigator as any).share) {
         await (navigator as any).share({ title: name, text, url });
@@ -56,7 +57,7 @@ export function LegendActions({
       setShareFlash(true);
       window.setTimeout(() => setShareFlash(false), 1600);
     } catch {
-      window.prompt('Copie o link:', url);
+      window.prompt(L('Copie o link:', 'Copy the link:'), url);
     }
   };
 
@@ -81,7 +82,7 @@ export function LegendActions({
         to={trainHref}
         className="ole-num inline-flex h-[50px] max-w-full items-center gap-2 whitespace-nowrap bg-black px-6 text-[13px] uppercase text-neon-yellow transition-colors hover:bg-deep-black [--corte:12px] [clip-path:var(--clip-corte)]"
       >
-        <span className="min-w-0 truncate">Treinar com {name}</span>
+        <span className="min-w-0 truncate">{L('Treinar com', 'Train with')} {name}</span>
         <ChevronRight className="w-4 h-4 shrink-0" />
       </Link>
 
@@ -91,7 +92,7 @@ export function LegendActions({
           type="button"
           onClick={onToggleLike}
           aria-pressed={liked}
-          aria-label={liked ? 'Descurtir' : 'Curtir'}
+          aria-label={liked ? L('Descurtir', 'Unlike') : L('Curtir', 'Like')}
           className={`ole-num group inline-flex h-10 items-center gap-2 border px-4 text-[11px] uppercase transition-colors ${ghostBtn}`}
         >
           <Heart
@@ -104,11 +105,11 @@ export function LegendActions({
         <button
           type="button"
           onClick={() => void handleShare()}
-          aria-label="Compartilhar"
+          aria-label={L('Compartilhar', 'Share')}
           className={`ole-num relative inline-flex h-10 items-center gap-2 whitespace-nowrap border px-4 text-[11px] uppercase transition-colors ${ghostBtn}`}
         >
           <Share2 className="w-4 h-4" strokeWidth={2.5} />
-          {shareFlash ? 'Link copiado' : 'Compartilhar'}
+          {shareFlash ? L('Link copiado', 'Link copied') : L('Compartilhar', 'Share')}
         </button>
       </div>
     </div>

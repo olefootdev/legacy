@@ -3,6 +3,8 @@
  * Armazena hash SHA-256 com salt em localStorage.
  */
 
+import { L } from '@/i18n/L';
+
 const STORAGE_KEY = 'olefoot-local-auth-v1';
 
 interface StoredAuth {
@@ -36,8 +38,8 @@ export function hasLocalPassword(): boolean {
 }
 
 export async function setLocalPassword(plain: string): Promise<{ ok: boolean; error?: string }> {
-  if (plain.length < 6) return { ok: false, error: 'A senha deve ter pelo menos 6 caracteres.' };
-  if (readStored()) return { ok: false, error: 'Já existe senha. Usa “Trocar senha”.' };
+  if (plain.length < 6) return { ok: false, error: L('A senha deve ter pelo menos 6 caracteres.', 'Password must be at least 6 characters.') };
+  if (readStored()) return { ok: false, error: L('Já existe senha. Usa “Trocar senha”.', 'A password already exists. Use “Change password”.') };
   const salt = crypto.randomUUID();
   const hash = await digestHex(`${salt}:${plain}`);
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: 1, salt, hash } satisfies StoredAuth));
@@ -49,10 +51,10 @@ export async function changeLocalPassword(
   nextPlain: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const st = readStored();
-  if (!st) return { ok: false, error: 'Ainda não definiste senha local.' };
-  if (nextPlain.length < 6) return { ok: false, error: 'A nova senha deve ter pelo menos 6 caracteres.' };
+  if (!st) return { ok: false, error: L('Ainda não definiste senha local.', "You haven't set a local password yet.") };
+  if (nextPlain.length < 6) return { ok: false, error: L('A nova senha deve ter pelo menos 6 caracteres.', 'New password must be at least 6 characters.') };
   const cur = await digestHex(`${st.salt}:${currentPlain}`);
-  if (cur !== st.hash) return { ok: false, error: 'Senha atual incorreta.' };
+  if (cur !== st.hash) return { ok: false, error: L('Senha atual incorreta.', 'Current password is incorrect.') };
   const salt = crypto.randomUUID();
   const hash = await digestHex(`${salt}:${nextPlain}`);
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: 1, salt, hash } satisfies StoredAuth));

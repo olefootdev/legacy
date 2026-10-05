@@ -5,6 +5,7 @@
 
 import type { PitchPlayerState } from '@/engine/types';
 import type { PlayerEntity } from '@/entities/types';
+import { L } from '@/i18n/L';
 
 export type SubstitutionReason = 'fatigue' | 'tactical' | 'injury' | 'momentum';
 export type SubstitutionUrgency = 'low' | 'medium' | 'high';
@@ -80,7 +81,7 @@ export function detectFatigueSuggestions(
         playerIn: replacement,
         impact,
         urgency,
-        narrative: `${player.name} está exausto (${Math.round(player.fatigue)}% fadiga). Trocar por ${replacement.name}?`,
+        narrative: L(`${player.name} está exausto (${Math.round(player.fatigue)}% fadiga). Trocar por ${replacement.name}?`, `${player.name} is exhausted (${Math.round(player.fatigue)}% fatigue). Swap for ${replacement.name}?`),
       });
     }
   }
@@ -115,7 +116,7 @@ export function detectTacticalSuggestions(
         playerIn: attacker,
         impact,
         urgency: scoreDiff < -1 ? 'high' : 'medium',
-        narrative: `Perdendo ${Math.abs(scoreDiff)}-0. Trocar ${defender.name} (DEF) por ${attacker.name} (ATA) para buscar o gol?`,
+        narrative: L(`Perdendo ${Math.abs(scoreDiff)}-0. Trocar ${defender.name} (DEF) por ${attacker.name} (ATA) para buscar o gol?`, `Losing ${Math.abs(scoreDiff)}-0. Swap ${defender.name} (DEF) for ${attacker.name} (ST) to chase a goal?`),
       });
     }
   }
@@ -138,7 +139,7 @@ export function detectTacticalSuggestions(
         playerIn: defender,
         impact,
         urgency: 'medium',
-        narrative: `Vencendo por 1. Trocar ${attacker.name} (ATA) por ${defender.name} (DEF) para segurar o resultado?`,
+        narrative: L(`Vencendo por 1. Trocar ${attacker.name} (ATA) por ${defender.name} (DEF) para segurar o resultado?`, `Winning by 1. Swap ${attacker.name} (ST) for ${defender.name} (DEF) to hold the result?`),
       });
     }
   }
@@ -184,7 +185,7 @@ export function detectMomentumSuggestions(
         playerIn: bestBench.player,
         impact,
         urgency: 'medium',
-        narrative: `Time sufocado! Trocar ${worstPitch.player.name} por ${bestBench.player.name} para mudar o jogo?`,
+        narrative: L(`Time sufocado! Trocar ${worstPitch.player.name} por ${bestBench.player.name} para mudar o jogo?`, `Team under siege! Swap ${worstPitch.player.name} for ${bestBench.player.name} to change the game?`),
       });
     }
   }

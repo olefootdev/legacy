@@ -9,15 +9,16 @@
  */
 
 import type { CoachSkill } from './playbookV1';
+import { L } from '@/i18n/L';
 
 export const SKILL_CATALOG: readonly CoachSkill[] = [
   {
     schema: 'playbook_v1',
     id: 'skl_lateral_overlap_cross',
-    name: 'Sobreposição Ofensiva',
+    name: L('Sobreposição Ofensiva', 'Attacking Overlap'),
     role: 'lateral',
     tier: 'generica',
-    philosophy: 'Avança até próximo do escanteio e cruza na área com precisão',
+    philosophy: L('Avança até próximo do escanteio e cruza na área com precisão', 'Pushes up near the corner flag and crosses accurately into the box'),
     level: 1,
     attrRequirements: {
       velocidade: 70,
@@ -27,7 +28,7 @@ export const SKILL_CATALOG: readonly CoachSkill[] = [
     behaviors: [
       {
         id: 'bh_overlap_trigger',
-        name: 'Detectar oportunidade de sobreposição',
+        name: L('Detectar oportunidade de sobreposição', 'Spot an overlap opportunity'),
         when: 'team_has_ball AND zone IN [mid_attack, final_third] AND no_press_nearby AND winger_has_ball',
         bias: {
           overlap_intent: 0.25,
@@ -37,7 +38,7 @@ export const SKILL_CATALOG: readonly CoachSkill[] = [
       },
       {
         id: 'bh_advance_to_byline',
-        name: 'Avançar até linha de fundo',
+        name: L('Avançar até linha de fundo', 'Push up to the byline'),
         when: 'carrier_is_me AND zone IN [final_third, wide_channel] AND space_ahead',
         bias: {
           sprint_intensity: 0.30,
@@ -48,7 +49,7 @@ export const SKILL_CATALOG: readonly CoachSkill[] = [
       },
       {
         id: 'bh_cross_from_byline',
-        name: 'Cruzamento da linha de fundo',
+        name: L('Cruzamento da linha de fundo', 'Cross from the byline'),
         when: 'carrier_is_me AND zone = wide_channel AND x_pos > 85 AND teammates_in_box >= 2',
         bias: {
           cross_accuracy: 0.30,
@@ -67,7 +68,7 @@ export const SKILL_CATALOG: readonly CoachSkill[] = [
       },
       {
         id: 'bh_recovery_run',
-        name: 'Retorno defensivo após cruzamento',
+        name: L('Retorno defensivo após cruzamento', 'Track back after the cross'),
         when: 'NOT team_has_ball AND zone IN [final_third, mid_attack] AND opp_counter_threat',
         bias: {
           sprint_back_urgency: 0.25,

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { TrendingUp, TrendingDown, Flame, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMomentumHistory, type MomentumWithTrend } from '@/hooks/useMomentumHistory';
+import { L } from '@/i18n/L';
 
 export interface MomentumState {
   home: number; // 0-100
@@ -58,11 +59,11 @@ function getStreakIcon(streak: MomentumStreak) {
 function getStreakLabel(streak: MomentumStreak): string {
   switch (streak) {
     case 'fire':
-      return 'DOMINANDO!';
+      return L('DOMINANDO!', 'DOMINATING!');
     case 'hot':
-      return 'Pressão';
+      return L('Pressão', 'Pressure');
     case 'cold':
-      return 'Sufocado';
+      return L('Sufocado', 'Smothered');
     default:
       return '';
   }

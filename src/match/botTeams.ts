@@ -4,6 +4,7 @@ import type { PlayerEntity } from '@/entities/types';
 import { generatePlayerId } from '@/entities/player';
 import { withSpecialistDefaults } from '@/entities/specialistAttrs';
 import { randomBrazilianName } from '@/entities/nameGenerator';
+import { L } from '@/i18n/L';
 
 export type BotTeamId = 'bot-ole-fc' | 'bot-antros-sc' | 'bot-hexa-team' | 'bot-for-peace';
 
@@ -28,7 +29,7 @@ export const BOT_TEAMS: Record<BotTeamId, BotTeamDefinition> = {
     avgOverall: 75,
     formation: '4-3-3',
     style: 'balanced',
-    description: 'Time equilibrado com foco em posse de bola e transições rápidas.',
+    description: L('Time equilibrado com foco em posse de bola e transições rápidas.', 'Balanced team focused on possession and quick transitions.'),
   },
   'bot-antros-sc': {
     id: 'bot-antros-sc',
@@ -38,7 +39,7 @@ export const BOT_TEAMS: Record<BotTeamId, BotTeamDefinition> = {
     avgOverall: 72,
     formation: '4-4-2',
     style: 'BLOCO_BAIXO',
-    description: 'Equipe defensiva sólida, joga no contra-ataque.',
+    description: L('Equipe defensiva sólida, joga no contra-ataque.', 'Solid defensive side that plays on the counter.'),
   },
   'bot-hexa-team': {
     id: 'bot-hexa-team',
@@ -48,7 +49,7 @@ export const BOT_TEAMS: Record<BotTeamId, BotTeamDefinition> = {
     avgOverall: 78,
     formation: '4-2-3-1',
     style: 'TRANSICAO_RAPIDA',
-    description: 'Seleção brasileira de craques, jogo ofensivo e técnico.',
+    description: L('Seleção brasileira de craques, jogo ofensivo e técnico.', 'A Brazilian all-star side, attacking and technical.'),
   },
   'bot-for-peace': {
     id: 'bot-for-peace',
@@ -58,7 +59,7 @@ export const BOT_TEAMS: Record<BotTeamId, BotTeamDefinition> = {
     avgOverall: 70,
     formation: '3-5-2',
     style: 'POSSE_CONTROLADA',
-    description: 'Time que valoriza a paz através do futebol, posse de bola intensa.',
+    description: L('Time que valoriza a paz através do futebol, posse de bola intensa.', 'A team that values peace through football, with intense possession.'),
   },
 };
 

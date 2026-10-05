@@ -5,13 +5,14 @@ import { motion } from 'motion/react';
 
 import { WalletSpotToggle } from './WalletSpotToggle';
 import { Sparkline } from './Sparkline';
+import { L } from '@/i18n/L';
 
 export function WalletShell({
   title,
   subtitle,
   heroStats,
   heroVariant = 'cinematic',
-  hashtag = '#carteira',
+  hashtag = L('#carteira', '#wallet'),
   voltar = false,
   children,
 }: {
@@ -55,7 +56,7 @@ export function WalletShell({
                 to="/wallet"
                 className="inline-flex items-center gap-2 font-mono text-[11.5px] font-medium uppercase tracking-[0.14em] text-cimento transition-colors hover:text-white"
               >
-                <ArrowLeft className="h-4 w-4" strokeWidth={2.2} /> Carteira
+                <ArrowLeft className="h-4 w-4" strokeWidth={2.2} /> {L('Carteira', 'Wallet')}
               </Link>
             </div>
           ) : (

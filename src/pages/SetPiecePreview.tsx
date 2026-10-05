@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { LiveSetPieceManager, type SetPieceChoice, type SetPieceContext } from '@/components/setpiece';
+import { L } from '@/i18n/L';
 
 export function SetPiecePreview() {
   const [scenario, setScenario] = useState<'corner' | 'free_kick'>('corner');
@@ -44,13 +45,13 @@ export function SetPiecePreview() {
     return (
       <div className="min-h-screen bg-deep-black text-white flex flex-col items-center justify-center px-6 py-12">
         <div className="text-[10px] uppercase tracking-[0.35em] text-white/60 mb-3">
-          Decisão registrada
+          {L('Decisão registrada', 'Decision recorded')}
         </div>
         <h1
           className="ole-headline-italic text-neon-yellow mb-8"
           style={{ fontSize: 'clamp(48px, 8vw, 96px)', lineHeight: 1 }}
         >
-          {resolved.mode === 'corner' ? 'ESCANTEIO' : 'FALTA'}
+          {resolved.mode === 'corner' ? L('ESCANTEIO', 'CORNER') : L('FALTA', 'FREE KICK')}
         </h1>
         <pre className="bg-zinc-900 border border-zinc-700 rounded p-4 text-xs leading-relaxed font-mono">
           {JSON.stringify(resolved, null, 2)}
@@ -63,7 +64,7 @@ export function SetPiecePreview() {
             }}
             className="bg-neon-yellow text-black px-8 py-3 font-display font-black uppercase tracking-wider -skew-x-6 hover:bg-white"
           >
-            Outro
+            {L('Outro', 'Another')}
           </button>
           <button
             type="button"
@@ -73,7 +74,7 @@ export function SetPiecePreview() {
             }}
             className="bg-transparent border-2 border-neon-yellow text-neon-yellow px-8 py-3 font-display font-black italic uppercase tracking-wider -skew-x-6 hover:bg-neon-yellow hover:text-black"
           >
-            Trocar cenário
+            {L('Trocar cenário', 'Switch scenario')}
           </button>
         </div>
       </div>
@@ -93,7 +94,7 @@ export function SetPiecePreview() {
               : 'bg-transparent border-2 border-black/60 text-black/70 hover:border-black'
           }`}
         >
-          Escanteio
+          {L('Escanteio', 'Corner')}
         </button>
         <button
           type="button"
@@ -104,13 +105,13 @@ export function SetPiecePreview() {
               : 'bg-transparent border-2 border-black/60 text-black/70 hover:border-black'
           }`}
         >
-          Falta
+          {L('Falta', 'Free kick')}
         </button>
       </div>
 
       <LiveSetPieceManager
         ctx={scenario === 'corner' ? cornerCtx : freeKickCtx}
-        headerLabel={scenario === 'corner' ? "67' · Escanteio pra nós" : "73' · Falta perigosa"}
+        headerLabel={scenario === 'corner' ? L("67' · Escanteio pra nós", "67' · Corner to us") : L("73' · Falta perigosa", "73' · Dangerous free kick")}
         pickTimeSeconds={10}
         onResolve={setResolved}
       />

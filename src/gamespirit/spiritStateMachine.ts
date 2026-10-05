@@ -13,6 +13,7 @@ import type {
   SpiritPhase,
   PossessionSideSpirit,
 } from './spiritSnapshotTypes';
+import { L } from '@/i18n/L';
 
 /**
  * Taxas-alvo por 90' (partida rápida, ~75 ticks efetivos com spiritTickProb 0.88):
@@ -64,8 +65,8 @@ export function redCardBannerOverlay(args: {
   const team = args.side === 'home' ? args.homeShort : args.awayShort;
   return {
     kind: 'red_card',
-    title: 'Cartão vermelho',
-    lines: [`${args.minute}' — ${args.playerName} (${team})`, 'O time fica com um a menos em campo.'],
+    title: L('Cartão vermelho', 'Red card'),
+    lines: [`${args.minute}' — ${args.playerName} (${team})`, L('O time fica com um a menos em campo.', 'The team are down to ten men.')],
     startedAtMs: args.startedAtMs,
     autoDismissMs: RED_CARD_BANNER_MS,
   };
@@ -346,19 +347,19 @@ export function penaltyNarrativeLine(
 ): string {
   switch (outcome) {
     case 'goal':
-      return `${takerName} converte com frieza — gol!`;
+      return L(`${takerName} converte com frieza — gol!`, `${takerName} converts coolly — goal!`);
     case 'post_in':
-      return `A trave ajuda: a bola bate e entra — gol de ${takerName}!`;
+      return L(`A trave ajuda: a bola bate e entra — gol de ${takerName}!`, `In off the post — goal for ${takerName}!`);
     case 'save':
-  return `${keeperHint} voa e defende o penalty de ${takerName}!`;
+  return L(`${keeperHint} voa e defende o penalty de ${takerName}!`, `${keeperHint} dives and saves ${takerName}'s penalty!`);
     case 'post_out':
-      return `${takerName} acerta na trave; a bola salta para fora.`;
+      return L(`${takerName} acerta na trave; a bola salta para fora.`, `${takerName} hits the post; it bounces away.`);
     case 'miss_wide':
-      return `${takerName} desvia-se; o remate vai largo da baliza.`;
+      return L(`${takerName} desvia-se; o remate vai largo da baliza.`, `${takerName} drags it wide of the goal.`);
     case 'miss_far':
-      return `${takerName} envia por cima da grelha.`;
+      return L(`${takerName} envia por cima da grelha.`, `${takerName} blazes it over the bar.`);
     default:
-  return 'Penalty resolvido.';
+  return L('Penalty resolvido.', 'Penalty taken.');
   }
 }
 
@@ -377,7 +378,7 @@ export function penaltyOverlayForStage(
       return {
         kind: 'penalty',
         title: baseTitle,
-        lines: [`Árbitro aponta para a marca. ${takerName} vai bater.`],
+        lines: [L(`Árbitro aponta para a marca. ${takerName} vai bater.`, `The referee points to the spot. ${takerName} to take.`)],
         startedAtMs: nowMs,
         autoDismissMs: autoMs,
       };
@@ -385,7 +386,7 @@ export function penaltyOverlayForStage(
       return {
         kind: 'penalty',
         title: baseTitle,
-        lines: [`${takerName} coloca a bola na marca branca.`, `${homeShort} e ${awayShort} afastam-se da área.`],
+        lines: [L(`${takerName} coloca a bola na marca branca.`, `${takerName} places the ball on the spot.`), L(`${homeShort} e ${awayShort} afastam-se da área.`, `${homeShort} and ${awayShort} clear the box.`)],
         startedAtMs: nowMs,
         autoDismissMs: autoMs,
       };
@@ -393,7 +394,7 @@ export function penaltyOverlayForStage(
       return {
         kind: 'penalty',
         title: baseTitle,
-        lines: ['Autorizado — parte a corrida…'],
+        lines: [L('Autorizado — parte a corrida…', "Whistle — here's the run-up…")],
         startedAtMs: nowMs,
         autoDismissMs: autoMs,
       };

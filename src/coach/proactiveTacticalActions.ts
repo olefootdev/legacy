@@ -3,6 +3,7 @@ import type { CoachAction } from './coachActions';
 import type { CoachPersonality } from './types';
 import type { FormationSchemeId } from '@/match-engine/types';
 import type { PlayerEntity } from '@/entities/types';
+import { L } from '@/i18n/L';
 
 /**
  * Gera ações TÁTICAS para a janela 3 do ciclo (5min "ajustes técnicos próximo jogo").
@@ -43,11 +44,11 @@ export function generateProactiveTacticalActions(
   out.push({
     id: `coach-formation-${now}`,
     type: 'set_lineup_formation',
-    title: `Mudar formação para ${recommended}`,
+    title: L(`Mudar formação para ${recommended}`, `Switch formation to ${recommended}`),
     description: opponentContext
-      ? `Sugestão tática contra ${opponentContext}: trocar de ${current} para ${recommended}.`
-      : `Sugestão: trocar de ${current} para ${recommended} com base no perfil do plantel.`,
-    reasoning: `Perfil do plantel: defesa ${profile.defense.toFixed(0)} / meio ${profile.midfield.toFixed(0)} / ataque ${profile.attack.toFixed(0)} (médias OVR). Estilo do coach: ${coach.personality}.`,
+      ? L(`Sugestão tática contra ${opponentContext}: trocar de ${current} para ${recommended}.`, `Tactical tip vs ${opponentContext}: switch from ${current} to ${recommended}.`)
+      : L(`Sugestão: trocar de ${current} para ${recommended} com base no perfil do plantel.`, `Tip: switch from ${current} to ${recommended} based on the squad profile.`),
+    reasoning: L(`Perfil do plantel: defesa ${profile.defense.toFixed(0)} / meio ${profile.midfield.toFixed(0)} / ataque ${profile.attack.toFixed(0)} (médias OVR). Estilo do coach: ${coach.personality}.`, `Squad profile: defence ${profile.defense.toFixed(0)} / midfield ${profile.midfield.toFixed(0)} / attack ${profile.attack.toFixed(0)} (avg OVR). Coach style: ${coach.personality}.`),
     urgency: 'medium',
     status: 'pending',
     createdAt: now,

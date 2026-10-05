@@ -1,3 +1,4 @@
+import { L, emIngles } from '@/i18n/L';
 import {
   useCallback,
   useEffect,
@@ -175,6 +176,15 @@ function addTimelineSlot(prev: MatchEvent[], evt: MatchEvent): MatchEvent[] {
   return keep;
 }
 
+/** Rótulo de TELA do período. O valor ('1º TEMPO', 'INTERVALO', '2º TEMPO') segue igual no código. */
+function periodLabel(p: string): string {
+  if (!emIngles()) return p;
+  if (p === '1º TEMPO') return '1ST HALF';
+  if (p === '2º TEMPO') return '2ND HALF';
+  if (p === 'INTERVALO') return 'HALF-TIME';
+  return p;
+}
+
 function formatSkillTag(evt: MatchEvent): string | null {
   if (evt.skillActivated) return `${evt.skillActivated} activated`;
   if (evt.tacticalTrigger === 'forced_shot') return 'Box Striker attacked the box';
@@ -185,12 +195,12 @@ function formatSkillTag(evt: MatchEvent): string | null {
 }
 
 const SKILLS_INIT: SkillEntry[] = [
-  { id:'counter', label:'CONTRA ATAQUE',   icon:'zap',        cooldown:10, active:false, remaining:0 },
-  { id:'press',   label:'PRESSÃO ALTA',    icon:'shield',     cooldown:15, active:false, remaining:0 },
-  { id:'offens',  label:'FOCO OFENSIVO',   icon:'target',     cooldown:20, active:false, remaining:0 },
-  { id:'cross',   label:'BOLA NA ÁREA',    icon:'crosshair',  cooldown:15, active:false, remaining:0 },
-  { id:'hold',    label:'SEGURAR JOGO',    icon:'footprints', cooldown:12, active:false, remaining:0 },
-  { id:'wing',    label:'EXPLORAR ALAS',   icon:'arrowup',    cooldown:12, active:false, remaining:0 },
+  { id:'counter', label:L('CONTRA ATAQUE', 'COUNTER ATTACK'), icon:'zap',        cooldown:10, active:false, remaining:0 },
+  { id:'press',   label:L('PRESSÃO ALTA', 'HIGH PRESS'), icon:'shield',     cooldown:15, active:false, remaining:0 },
+  { id:'offens',  label:L('FOCO OFENSIVO', 'ATTACK FOCUS'), icon:'target',     cooldown:20, active:false, remaining:0 },
+  { id:'cross',   label:L('BOLA NA ÁREA', 'BALL IN THE BOX'), icon:'crosshair',  cooldown:15, active:false, remaining:0 },
+  { id:'hold',    label:L('SEGURAR JOGO', 'HOLD THE GAME'), icon:'footprints', cooldown:12, active:false, remaining:0 },
+  { id:'wing',    label:L('EXPLORAR ALAS', 'USE THE WINGS'), icon:'arrowup',    cooldown:12, active:false, remaining:0 },
 ];
 
 const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1', '5-3-2', '3-4-3'] as const;
@@ -201,25 +211,25 @@ const PASS_STYLES = [
   {
     id: 'TIKTAK' as const,
     label: 'TIK-TAK',
-    desc: 'Circulação curta zona a zona',
+    desc: L('Circulação curta zona a zona', 'Short circulation zone by zone'),
     icon: 'repeat',
   },
   {
     id: 'LONGO' as const,
-    label: 'LONGO',
-    desc: 'Lançamento direto em profundidade',
+    label: L('LONGO', 'LONG'),
+    desc: L('Lançamento direto em profundidade', 'Direct ball in behind'),
     icon: 'send',
   },
   {
     id: 'LATERAL' as const,
     label: 'LATERAL',
-    desc: 'Amplitude nos corredores',
+    desc: L('Amplitude nos corredores', 'Width down the flanks'),
     icon: 'chevron-right',
   },
   {
     id: 'COUNTER' as const,
     label: 'COUNTER',
-    desc: 'Transição ofensiva rápida',
+    desc: L('Transição ofensiva rápida', 'Fast attacking transition'),
     icon: 'zap',
   },
 ] as const;
@@ -604,12 +614,12 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           ballRef.current.y = FIELD_H_LOGIC / 2;
           carrierIdRef.current = null;
           ballInTransitRef.current = false;
-          setPeriodOverlay({ label: 'INTERVALO', sub: '2º TEMPO EM 3', countdown: 3 });
+          setPeriodOverlay({ label: L('INTERVALO', 'HALF-TIME'), sub: L('2º TEMPO EM 3', '2ND HALF IN 3'), countdown: 3 });
           // Countdown 3, 2, 1 — atualiza o overlay
           let cd = 3;
           const tick = setInterval(() => {
             cd -= 1;
-            if (cd > 0) setPeriodOverlay({ label: 'INTERVALO', sub: `2º TEMPO EM ${cd}`, countdown: cd });
+            if (cd > 0) setPeriodOverlay({ label: L('INTERVALO', 'HALF-TIME'), sub: L(`2º TEMPO EM ${cd}`, `2ND HALF IN ${cd}`), countdown: cd });
             else {
               clearInterval(tick);
               setPeriodOverlay(null);
@@ -870,7 +880,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           playerId: striker.id,
           playerName: striker.shortName,
           archetype: striker.archetype,
-          text: `${striker.shortName} dá início — toca para ${receiver.shortName}.`,
+          text: L(`${striker.shortName} dá início — toca para ${receiver.shortName}.`, `${striker.shortName} kicks off — plays it to ${receiver.shortName}.`),
           ballX: receiver.position.x,
           ballY: receiver.position.y,
           receiverPlayerId: receiver.id,
@@ -895,8 +905,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           ? fbs[Math.floor(Math.random() * fbs.length)]
           : (cms.find(c => c.role === 'CM') ?? cms[0] ?? teamPlayers[1]);
         const gkText = goesShort
-          ? `${gk.shortName} sai pelo pé — toca pro ${target.shortName}`
-          : `${gk.shortName} bate o tiro de meta — chutão pro ${target.shortName}`;
+          ? L(`${gk.shortName} sai pelo pé — toca pro ${target.shortName}`, `${gk.shortName} plays it out short — to ${target.shortName}`)
+          : L(`${gk.shortName} bate o tiro de meta — chutão pro ${target.shortName}`, `${gk.shortName} takes the goal kick — long ball to ${target.shortName}`);
         const gkEvt: MatchEvent = {
           id: `evt_gk_${Date.now()}`,
           minute,
@@ -1274,10 +1284,10 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const toggleSkill = useCallback((id: string) => {
     setSkills(prev => prev.map(s => (s.id === id && s.remaining === 0) ? { ...s, active: true, remaining: s.cooldown } : s));
     const reactions: Record<string, string> = {
-      counter: 'CONTRA ATAQUE — atacantes em profundidade imediata.',
-      press:   'PRESSÃO ALTA — HUNTER e DESTROYER dominam o meio.',
-      offens:  'FOCO OFENSIVO — FINISHER e WILD com liberdade total.',
-      cross:   'BOLA NA ÁREA — BOX_INVADER no segundo pau.',
+      counter: L('CONTRA ATAQUE — atacantes em profundidade imediata.', 'COUNTER ATTACK — forwards straight in behind.'),
+      press:   L('PRESSÃO ALTA — HUNTER e DESTROYER dominam o meio.', 'HIGH PRESS — HUNTER and DESTROYER own the midfield.'),
+      offens:  L('FOCO OFENSIVO — FINISHER e WILD com liberdade total.', 'ATTACK FOCUS — FINISHER and WILD with total freedom.'),
+      cross:   L('BOLA NA ÁREA — BOX_INVADER no segundo pau.', 'BALL IN THE BOX — BOX_INVADER at the far post.'),
     };
     if (reactions[id]) {
       setCoachFeedback(reactions[id]);
@@ -1335,7 +1345,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
     const homeWon  = score.home > score.away;
     const awayWon  = score.away > score.home;
     const isDraw   = score.home === score.away;
-    const resultLabel = isDraw ? 'EMPATE' : homeWon ? `${homeTeam} VENCE` : `${awayTeam} VENCE`;
+    const resultLabel = isDraw ? L('EMPATE', 'DRAW') : homeWon ? L(`${homeTeam} VENCE`, `${homeTeam} WIN`) : L(`${awayTeam} VENCE`, `${awayTeam} WIN`);
     const resultColor = isDraw ? 'var(--c-text-sec)' : homeWon ? 'var(--c-accent)' : 'var(--c-team-away)';
     const mvpPlayer = mvp ?? star;
     const fullMatchEvents = matchEventsRef.current;
@@ -1343,10 +1353,10 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       fullMatchEvents.find(e => e.type === 'save' || e.type === 'post' || e.skillActivated) ??
       fullMatchEvents[fullMatchEvents.length - 1] ??
       null;
-    const tacticalPattern = passStyle === 'LATERAL' ? 'Amplitude e cruzamentos'
-      : passStyle === 'LONGO' ? 'Jogo vertical'
-      : passStyle === 'COUNTER' ? 'Transição rápida'
-      : 'Circulação curta';
+    const tacticalPattern = passStyle === 'LATERAL' ? L('Amplitude e cruzamentos', 'Width and crosses')
+      : passStyle === 'LONGO' ? L('Jogo vertical', 'Vertical play')
+      : passStyle === 'COUNTER' ? L('Transição rápida', 'Fast transition')
+      : L('Circulação curta', 'Short circulation');
 
     return (
       <>
@@ -1366,7 +1376,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           {/* Header resultado */}
           <div style={{ background:'var(--c-bg-surface)', borderBottom:'1px solid var(--c-border)', padding:'20px 18px 16px', textAlign:'center' }}>
             <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-muted)', letterSpacing:'0.28em', marginBottom:6 }}>
-              {competition} · JORNADA {round} · APITO FINAL
+              {competition} · {L('JORNADA', 'MATCHDAY')} {round} · {L('APITO FINAL', 'FULL TIME')}
             </div>
             {/* Placar final */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:16, marginBottom:10 }}>
@@ -1387,7 +1397,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               {[
                 { label:'FINAL SCORE', value:`${score.home} - ${score.away}` },
-                { label:'KEY MOMENT', value:keyMoment ? `${keyMoment.minute}' ${keyMoment.text}` : 'Partida sem grande ruptura' },
+                { label:'KEY MOMENT', value:keyMoment ? `${keyMoment.minute}' ${keyMoment.text}` : L('Partida sem grande ruptura', 'No major turning point') },
                 { label:'MAN OF THE MATCH', value:mvpPlayer.shortName },
                 { label:'TACTICAL PATTERN', value:tacticalPattern },
               ].map(item => (
@@ -1404,7 +1414,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           {/* MVP */}
           <div style={{ padding:'18px 18px 0' }}>
             <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.28em', marginBottom:10 }}>
-              MELHOR DA PARTIDA
+              {L('MELHOR DA PARTIDA', 'PLAYER OF THE MATCH')}
             </div>
             <div style={{ display:'flex', gap:14, alignItems:'center', background:'var(--c-bg-surface)', border:'1px solid var(--c-border-accent)', borderRadius:8, padding:'14px', marginBottom:14 }}>
               {/* Foto MVP */}
@@ -1441,12 +1451,12 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             {/* Stats resumo — números grandes e impactantes (Moret italic editorial) */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:1, background:'var(--c-border)', marginBottom:16 }}>
               {[
-                { label:'POSSE',    home:`${stats.possession.home}%`, away:`${stats.possession.away}%` },
-                { label:'CHUTES',   home:`${stats.shots.home}`,       away:`${stats.shots.away}` },
-                { label:'NO ALVO',  home:`${stats.shotsOnTarget.home}`, away:`${stats.shotsOnTarget.away}` },
+                { label:L('POSSE', 'POSSESSION'),  home:`${stats.possession.home}%`, away:`${stats.possession.away}%` },
+                { label:L('CHUTES', 'SHOTS'),  home:`${stats.shots.home}`,       away:`${stats.shots.away}` },
+                { label:L('NO ALVO', 'ON TARGET'),  home:`${stats.shotsOnTarget.home}`, away:`${stats.shotsOnTarget.away}` },
                 { label:'PASSES',   home:`${stats.passes.home}`,      away:`${stats.passes.away}` },
-                { label:'FALTAS',   home:`${stats.fouls.home}`,       away:`${stats.fouls.away}` },
-                { label:'CANTOS',   home:`${stats.corners.home}`,     away:`${stats.corners.away}` },
+                { label:L('FALTAS', 'FOULS'),  home:`${stats.fouls.home}`,       away:`${stats.fouls.away}` },
+                { label:L('CANTOS', 'CORNERS'),  home:`${stats.corners.home}`,     away:`${stats.corners.away}` },
               ].map((s, i) => (
                 <div key={i} style={{ background:'var(--c-bg-surface)', padding:'14px 14px 16px' }}>
                   <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-muted)', letterSpacing:'0.24em', marginBottom:8 }}>{s.label}</div>
@@ -1469,7 +1479,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               return (
                 <div style={{ marginBottom:20, padding:'0 18px' }}>
                   <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.28em', marginBottom:10 }}>
-                    DESTAQUES INDIVIDUAIS
+                    {L('DESTAQUES INDIVIDUAIS', 'TOP PERFORMERS')}
                   </div>
                   <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                     {homePlayers2.map(p => {
@@ -1570,7 +1580,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 ...T_DISPLAY, fontSize:13, fontWeight:900, letterSpacing:'0.22em',
               }}
             >
-              JOGAR NOVAMENTE
+              {L('JOGAR NOVAMENTE', 'PLAY AGAIN')}
             </button>
             <button
               type="button"
@@ -1625,14 +1635,14 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           <button
             type="button"
             onClick={onExit}
-            aria-label="Sair da partida"
+            aria-label={L('Sair da partida', 'Leave match')}
             style={{
               background:'transparent', border:'none', cursor:'pointer',
               ...T_DISPLAY, fontSize:9, color:'var(--c-danger)', letterSpacing:'0.18em',
               display:'flex', alignItems:'center', gap:4, padding:'2px 0',
             }}
           >
-            <X size={10} strokeWidth={2.5} /> SAIR DA PARTIDA
+            <X size={10} strokeWidth={2.5} /> {L('SAIR DA PARTIDA', 'LEAVE MATCH')}
           </button>
         </div>
 
@@ -1660,7 +1670,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           {/* Center — cronômetro em AGENCY + jornada/período */}
           <div style={{ textAlign:'center', flex:'0 1 auto', minWidth:88 }}>
             <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-sec)', letterSpacing:'0.22em', marginBottom:3 }}>
-              JORNADA {round}
+              {L('JORNADA', 'MATCHDAY')} {round}
             </div>
             <div style={{
               ...T_DISPLAY,
@@ -1676,7 +1686,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               }
             </div>
             <div style={{ display:'inline-block', ...T_DISPLAY, fontSize:9, fontWeight:700, color:'var(--c-text-primary)', borderBottom:'2px solid var(--c-accent)', paddingBottom:2, marginTop:5, letterSpacing:'0.18em' }}>
-              {period}
+              {periodLabel(period)}
             </div>
           </div>
 
@@ -1744,16 +1754,16 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             <div style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:1 }}>
               {/* ZD — Defensive Zone (0-40%) */}
               <div style={{ position:'absolute', left:'0%', top:0, width:'40%', height:'100%', background:'rgba(59,130,246,0.12)', borderRight:'1px dashed rgba(59,130,246,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <span style={{ fontSize:11, fontWeight:800, color:'rgba(59,130,246,0.7)', letterSpacing:'0.1em' }}>ZD</span>
+                <span style={{ fontSize:11, fontWeight:800, color:'rgba(59,130,246,0.7)', letterSpacing:'0.1em' }}>{L('ZD', 'DZ')}</span>
               </div>
               {/* ZC — Creative Zone (40-70%) */}
               <div style={{ position:'absolute', left:'40%', top:0, width:'30%', height:'100%', background:'rgba(253,225,0,0.08)', borderRight:'1px dashed rgba(253,225,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <span style={{ fontSize:11, fontWeight:800, color:'rgba(253,225,0,0.6)', letterSpacing:'0.1em' }}>ZC</span>
+                <span style={{ fontSize:11, fontWeight:800, color:'rgba(253,225,0,0.6)', letterSpacing:'0.1em' }}>{L('ZC', 'CZ')}</span>
               </div>
               {/* ZA — Attack Zone (70-100%) com % de gol */}
               <div style={{ position:'absolute', left:'70%', top:0, width:'30%', height:'100%', background:'rgba(239,68,68,0.10)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2 }}>
-                <span style={{ fontSize:11, fontWeight:800, color:'rgba(239,68,68,0.7)', letterSpacing:'0.1em' }}>ZA</span>
-                <span style={{ fontSize:9, fontWeight:700, color:'rgba(239,68,68,0.55)' }}>GOL 12-35%</span>
+                <span style={{ fontSize:11, fontWeight:800, color:'rgba(239,68,68,0.7)', letterSpacing:'0.1em' }}>{L('ZA', 'AZ')}</span>
+                <span style={{ fontSize:9, fontWeight:700, color:'rgba(239,68,68,0.55)' }}>{L('GOL 12-35%', 'GOAL 12-35%')}</span>
               </div>
             </div>
           )}
@@ -1990,10 +2000,10 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           {lastTacticalTrigger && (() => {
             const labels: Record<string, string> = {
               tiktak: 'TIK-TAK',
-              long_ball: 'BOLA LONGA',
-              false9: 'FALSO 9',
-              forced_shot: 'CHUTE!',
-              duel_win: 'DUELO GANHO',
+              long_ball: L('BOLA LONGA', 'LONG BALL'),
+              false9: L('FALSO 9', 'FALSE 9'),
+              forced_shot: L('CHUTE!', 'SHOT!'),
+              duel_win: L('DUELO GANHO', 'DUEL WON'),
             };
             const label = labels[lastTacticalTrigger] ?? lastTacticalTrigger.toUpperCase();
             return (
@@ -2077,7 +2087,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               {goalOverlay.type === 'goal' ? (
                 <>
                   <div style={{ ...T_HERO, fontSize:48, fontWeight:900, fontStyle:'italic', color:'#FDE100', letterSpacing:'-0.02em', lineHeight:1, textTransform:'uppercase' }}>
-                    GOOOOL!
+                    {L('GOOOOL!', 'GOOOAL!')}
                   </div>
                   <div style={{ ...T_DISPLAY, fontSize:16, fontWeight:700, color:'#fff', letterSpacing:'0.12em', marginTop:4 }}>
                     {goalOverlay.playerName}
@@ -2086,7 +2096,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               ) : goalOverlay.type === 'save' ? (
                 <>
                   <div style={{ ...T_HERO, fontSize:38, fontWeight:900, fontStyle:'italic', color:'#fff', letterSpacing:'-0.02em', lineHeight:1, textTransform:'uppercase' }}>
-                    DEFENDEU!
+                    {L('DEFENDEU!', 'SAVED!')}
                   </div>
                   <div style={{ ...T_DISPLAY, fontSize:13, fontWeight:700, color:'rgba(255,255,255,0.7)', letterSpacing:'0.1em', marginTop:2 }}>
                     {goalOverlay.playerName}
@@ -2095,7 +2105,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               ) : (
                 <>
                   <div style={{ ...T_HERO, fontSize:38, fontWeight:900, fontStyle:'italic', color:'#0A0A0A', letterSpacing:'-0.02em', lineHeight:1, textTransform:'uppercase' }}>
-                    PRA FORAAAA!
+                    {L('PRA FORAAAA!', 'WIIIDE!')}
                   </div>
                   <div style={{ ...T_DISPLAY, fontSize:13, fontWeight:700, color:'rgba(0,0,0,0.6)', letterSpacing:'0.1em', marginTop:2 }}>
                     {goalOverlay.playerName}
@@ -2160,7 +2170,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             </>
           ) : (
             <span style={{ ...T_BODY, fontSize:11, color:'var(--c-text-muted)', fontStyle:'italic' }}>
-              Aguardando início...
+              {L('Aguardando início...', 'Waiting for kickoff...')}
             </span>
           )}
         </div>
@@ -2185,7 +2195,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 ...T_BODY, fontSize:10, color:'var(--c-text-muted)', fontStyle:'italic',
                 whiteSpace:'nowrap',
               }}>
-                A partida ainda está se estudando.
+                {L('A partida ainda está se estudando.', 'The teams are still feeling each other out.')}
               </span>
             )}
             {timelineSlots.map((slot, i) => {
@@ -2246,9 +2256,9 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             borderRadius:8, overflow:'hidden',
           }}>
             <div style={{ padding:'10px 14px 8px', borderBottom:'1px solid var(--c-border)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.22em', fontWeight:900 }}>MENTALIDADE</span>
+              <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.22em', fontWeight:900 }}>{L('MENTALIDADE', 'MENTALITY')}</span>
               <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>
-                {passStyle === 'TIKTAK' ? 'TOQUE RÁPIDO' : passStyle === 'LONGO' ? 'DIRETO' : passStyle === 'LATERAL' ? 'AMPLITUDE' : 'CONTRA-ATAQUE'}
+                {passStyle === 'TIKTAK' ? L('TOQUE RÁPIDO', 'QUICK PASSING') : passStyle === 'LONGO' ? L('DIRETO', 'DIRECT') : passStyle === 'LATERAL' ? L('AMPLITUDE', 'WIDTH') : L('CONTRA-ATAQUE', 'COUNTER-ATTACK')}
               </span>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:1, background:'var(--c-border)' }}>
@@ -2291,7 +2301,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             borderRadius:8, overflow:'hidden',
           }}>
             <div style={{ padding:'10px 14px 8px', borderBottom:'1px solid var(--c-border)' }}>
-              <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.22em', fontWeight:900 }}>HABILIDADES DO COACH</span>
+              <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.22em', fontWeight:900 }}>{L('HABILIDADES DO COACH', 'COACH SKILLS')}</span>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:1, background:'var(--c-border)' }}>
               {skills.map(sk => {
@@ -2333,9 +2343,9 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             borderRadius:8, padding:'12px 14px',
           }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
-              <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.22em', fontWeight:900 }}>AO VIVO</span>
+              <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.22em', fontWeight:900 }}>{L('AO VIVO', 'LIVE')}</span>
               <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>
-                {stats.possession.home > 58 ? 'DOMINANDO' : stats.possession.home < 42 ? 'SOB PRESSÃO' : 'EQUILIBRADO'}
+                {stats.possession.home > 58 ? L('DOMINANDO', 'DOMINATING') : stats.possession.home < 42 ? L('SOB PRESSÃO', 'UNDER PRESSURE') : L('EQUILIBRADO', 'BALANCED')}
               </span>
             </div>
             {/* Stats grid */}
@@ -2343,7 +2353,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               {/* Posse */}
               <div>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>POSSE</span>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>{L('POSSE', 'POSSESSION')}</span>
                   <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color:'var(--c-text-primary)' }}>{stats.possession.home}%</span>
                 </div>
                 <div style={{ height:4, background:'var(--c-bg-elevated)', borderRadius:2 }}>
@@ -2353,7 +2363,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               {/* Energia */}
               <div>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>ENERGIA</span>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>{L('ENERGIA', 'ENERGY')}</span>
                   <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: avgEnergy < 40 ? 'var(--c-danger)' : avgEnergy < 60 ? 'var(--c-warning)' : 'var(--c-text-primary)' }}>{avgEnergy}%</span>
                 </div>
                 <div style={{ height:4, background:'var(--c-bg-elevated)', borderRadius:2 }}>
@@ -2363,7 +2373,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               {/* Finalizações */}
               <div>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>CHUTES</span>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>{L('CHUTES', 'SHOTS')}</span>
                   <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color:'var(--c-text-primary)' }}>{stats.shots.home} — {stats.shots.away}</span>
                 </div>
                 <div style={{ height:4, background:'var(--c-bg-elevated)', borderRadius:2 }}>
@@ -2400,8 +2410,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               }}
             >
               <Swords size={20} color={passStyle === 'LONGO' ? '#ef4444' : 'var(--c-text-sec)'} strokeWidth={1.8} />
-              <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: passStyle === 'LONGO' ? '#ef4444' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>ATACAR</span>
-              <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', textAlign:'center' }}>Jogo vertical, bola longa</span>
+              <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: passStyle === 'LONGO' ? '#ef4444' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>{L('ATACAR', 'ATTACK')}</span>
+              <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', textAlign:'center' }}>{L('Jogo vertical, bola longa', 'Vertical play, long ball')}</span>
             </button>
             <button
               type="button"
@@ -2416,8 +2426,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               }}
             >
               <Zap size={20} color={passStyle === 'TIKTAK' ? 'var(--c-accent)' : 'var(--c-text-sec)'} strokeWidth={1.8} />
-              <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: passStyle === 'TIKTAK' ? 'var(--c-accent)' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>PRESSIONAR</span>
-              <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', textAlign:'center' }}>Toque rápido, intensidade</span>
+              <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: passStyle === 'TIKTAK' ? 'var(--c-accent)' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>{L('PRESSIONAR', 'PRESS')}</span>
+              <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', textAlign:'center' }}>{L('Toque rápido, intensidade', 'Quick passing, intensity')}</span>
             </button>
             <button
               type="button"
@@ -2432,8 +2442,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               }}
             >
               <ChevronRight size={20} color={passStyle === 'LATERAL' ? '#3b82f6' : 'var(--c-text-sec)'} strokeWidth={1.8} />
-              <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: passStyle === 'LATERAL' ? '#3b82f6' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>AMPLITUDE</span>
-              <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', textAlign:'center' }}>Jogo pelas alas, cruzamentos</span>
+              <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: passStyle === 'LATERAL' ? '#3b82f6' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>{L('AMPLITUDE', 'WIDTH')}</span>
+              <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', textAlign:'center' }}>{L('Jogo pelas alas, cruzamentos', 'Wing play, crosses')}</span>
             </button>
             <button
               type="button"
@@ -2448,8 +2458,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               }}
             >
               <Repeat size={20} color={passStyle === 'COUNTER' ? '#22c55e' : 'var(--c-text-sec)'} strokeWidth={1.8} />
-              <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: passStyle === 'COUNTER' ? '#22c55e' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>CONTRA</span>
-              <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', textAlign:'center' }}>Transição rápida, velocidade</span>
+              <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: passStyle === 'COUNTER' ? '#22c55e' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>{L('CONTRA', 'COUNTER')}</span>
+              <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', textAlign:'center' }}>{L('Transição rápida, velocidade', 'Fast transition, pace')}</span>
             </button>
           </div>
 
@@ -2466,7 +2476,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           {[
             { id:'coach',  label:'COACH AI',  Icon: Brain,       onClick: () => { setCoachModal(true); setCoachPing(false); setCoachReadingFresh(false); } },
             { id:'legacy', label:'LEGACY',    Icon: Sparkles,    onClick: triggerLegacy            },
-            { id:'form',   label:'FORMAÇÃO', Icon: LayoutGrid,  onClick: () => setFormationModal(true) },
+            { id:'form',   label:L('FORMAÇÃO', 'FORMATION'), Icon: LayoutGrid,  onClick: () => setFormationModal(true) },
           ].map((tab, idx) => {
             const isCoachAlert = tab.id === 'coach' && coachPing;
             return (
@@ -2474,7 +2484,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 key={tab.id}
                 type="button"
                 onClick={tab.onClick}
-                aria-label={isCoachAlert ? `${tab.label} — leitura tática nova` : tab.label}
+                aria-label={isCoachAlert ? L(`${tab.label} — leitura tática nova`, `${tab.label} — new tactical read`) : tab.label}
                 style={{
                   display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4,
                   cursor:'pointer', position:'relative', background: isCoachAlert ? 'rgba(253,225,0,0.06)' : 'transparent', border:'none',
@@ -2530,15 +2540,15 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                   <Brain size={18} color="var(--c-accent)" />
-                  <span id="coach-modal-title" style={{ ...T_DISPLAY, fontSize:12, fontWeight:900, color:'var(--c-accent)', letterSpacing:'0.26em' }}>LEITURA DO JOGO</span>
+                  <span id="coach-modal-title" style={{ ...T_DISPLAY, fontSize:12, fontWeight:900, color:'var(--c-accent)', letterSpacing:'0.26em' }}>{L('LEITURA DO JOGO', 'MATCH READ')}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setCoachModal(false)}
-                  aria-label="Fechar"
+                  aria-label={L('Fechar', 'Close')}
                   style={{ background:'transparent', border:'1px solid var(--c-border)', color:'var(--c-text-primary)', padding:'4px 8px', borderRadius:4, cursor:'pointer', display:'flex', alignItems:'center', gap:4, ...T_DISPLAY, fontSize:9, letterSpacing:'0.12em' }}
                 >
-                  <X size={11} /> FECHAR
+                  <X size={11} /> {L('FECHAR', 'CLOSE')}
                 </button>
               </div>
 
@@ -2567,7 +2577,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                   }}>
                     <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
                       <span style={{ ...T_DISPLAY, fontSize:8, fontWeight:900, color: toneColor, letterSpacing:'0.28em' }}>
-                        ANÁLISE · {coachReading.tone.toUpperCase()}
+                        {L('ANÁLISE', 'ANALYSIS')} · {coachReading.tone.toUpperCase()}
                       </span>
                       <span aria-hidden style={{ flex:1, height:1, background:`${toneColor}33`, marginLeft:6 }} />
                     </div>
@@ -2622,38 +2632,38 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
 
                   // Posse
                   if (homePoss > 60) {
-                    readings.push({ icon:'●', label:'POSSE', text:`${homePoss}% de posse. Domínio claro — usa a bola para esgotar o adversário.` });
+                    readings.push({ icon:'●', label:L('POSSE', 'POSSESSION'), text:L(`${homePoss}% de posse. Domínio claro — usa a bola para esgotar o adversário.`, `${homePoss}% possession. Clear control — use the ball to wear the opponent down.`) });
                   } else if (homePoss < 40) {
-                    readings.push({ icon:'●', label:'POSSE', text:`Só ${homePoss}% de posse. Estás a jogar no limite — considera mudar para COUNTER.`, color:'var(--c-danger)' });
+                    readings.push({ icon:'●', label:L('POSSE', 'POSSESSION'), text:L(`Só ${homePoss}% de posse. Estás a jogar no limite — considera mudar para COUNTER.`, `Only ${homePoss}% possession. You're on the edge — consider switching to COUNTER.`), color:'var(--c-danger)' });
                   } else {
-                    readings.push({ icon:'●', label:'POSSE', text:`${homePoss}% de posse. Equilíbrio no meio-campo. Mantém a pressão.` });
+                    readings.push({ icon:'●', label:L('POSSE', 'POSSESSION'), text:L(`${homePoss}% de posse. Equilíbrio no meio-campo. Mantém a pressão.`, `${homePoss}% possession. Midfield is balanced. Keep the pressure on.`) });
                   }
 
                   // Chutes
                   if (awayShots > homeShots + 3) {
-                    readings.push({ icon:'▲', label:'PERIGO', text:`Adversário com ${awayShots} finalizações. Linha defensiva está exposta — fecha o corredor central.`, color:'var(--c-danger)' });
+                    readings.push({ icon:'▲', label:L('PERIGO', 'DANGER'), text:L(`Adversário com ${awayShots} finalizações. Linha defensiva está exposta — fecha o corredor central.`, `Opponent has ${awayShots} shots. Back line is exposed — close the central channel.`), color:'var(--c-danger)' });
                   } else if (homeShots > awayShots + 3) {
-                    readings.push({ icon:'▲', label:'PRESSÃO', text:`${homeShots} finalizações. Estás a dominar a Zona 14 — continua a atacar os half-spaces.`, color:'var(--c-ok)' });
+                    readings.push({ icon:'▲', label:L('PRESSÃO', 'PRESSURE'), text:L(`${homeShots} finalizações. Estás a dominar a Zona 14 — continua a atacar os half-spaces.`, `${homeShots} shots. You own Zone 14 — keep attacking the half-spaces.`), color:'var(--c-ok)' });
                   }
 
                   // Resultado + tempo
                   if (isLosing && lateGame) {
-                    readings.push({ icon:'!', label:'URGÊNCIA', text:`A perder com ${minute > 80 ? 'menos de 10' : 'menos de 20'} minutos. Muda para TIKTAK e sobe os laterais.`, color:'var(--c-danger)' });
+                    readings.push({ icon:'!', label:L('URGÊNCIA', 'URGENCY'), text:L(`A perder com ${minute > 80 ? 'menos de 10' : 'menos de 20'} minutos. Muda para TIKTAK e sobe os laterais.`, `Losing with ${minute > 80 ? 'under 10' : 'under 20'} minutes left. Switch to TIKTAK and push the full-backs up.`), color:'var(--c-danger)' });
                   } else if (isWinning && lateGame) {
-                    readings.push({ icon:'✓', label:'GESTÃO', text:`A vencer. Usa LATERAL para circular e gastar tempo — não arrisques transições.`, color:'var(--c-ok)' });
+                    readings.push({ icon:'✓', label:L('GESTÃO', 'MANAGEMENT'), text:L(`A vencer. Usa LATERAL para circular e gastar tempo — não arrisques transições.`, `Winning. Use LATERAL to circulate and run the clock — don't risk transitions.`), color:'var(--c-ok)' });
                   } else if (isDraw && lateGame) {
-                    readings.push({ icon:'!', label:'DECISÃO', text:`Empate nos minutos finais. Hora de arriscar — activa FOCO OFENSIVO e vai à Zona 14.` });
+                    readings.push({ icon:'!', label:L('DECISÃO', 'DECISION'), text:L(`Empate nos minutos finais. Hora de arriscar — activa FOCO OFENSIVO e vai à Zona 14.`, `Level in the final minutes. Time to gamble — turn on ATTACK FOCUS and go for Zone 14.`) });
                   }
 
                   // Acréscimos
                   if (extraTime) {
-                    readings.push({ icon:'⚡', label:'ACRÉSCIMOS', text:`Estamos nos acréscimos. Cada segundo conta — pressão máxima, sem recuo.`, color:'var(--c-danger)' });
+                    readings.push({ icon:'⚡', label:L('ACRÉSCIMOS', 'STOPPAGE TIME'), text:L(`Estamos nos acréscimos. Cada segundo conta — pressão máxima, sem recuo.`, `We're in stoppage time. Every second counts — maximum pressure, no retreat.`), color:'var(--c-danger)' });
                   }
 
                   // Tipo de passe activo
                   const psInfo = PASS_STYLES.find(p => p.id === passStyle);
                   if (psInfo) {
-                    readings.push({ icon:'→', label:'ESTILO', text:`${psInfo.label} activo: ${psInfo.desc}. ${passStyle === 'TIKTAK' ? 'Aciona mais jogadores antes do chute.' : passStyle === 'COUNTER' ? 'Transição rápida — mantém profundidade.' : passStyle === 'LATERAL' ? 'Usa os corredores para criar superioridade.' : 'Lançamento directo — exige ST forte no hold-up.'}` });
+                    readings.push({ icon:'→', label:L('ESTILO', 'STYLE'), text:L(`${psInfo.label} activo: ${psInfo.desc}. ${passStyle === 'TIKTAK' ? 'Aciona mais jogadores antes do chute.' : passStyle === 'COUNTER' ? 'Transição rápida — mantém profundidade.' : passStyle === 'LATERAL' ? 'Usa os corredores para criar superioridade.' : 'Lançamento directo — exige ST forte no hold-up.'}`, `${psInfo.label} active: ${psInfo.desc}. ${passStyle === 'TIKTAK' ? 'Involves more players before the shot.' : passStyle === 'COUNTER' ? 'Fast transition — keep depth.' : passStyle === 'LATERAL' ? 'Use the flanks to create overloads.' : 'Direct balls — needs a strong ST for hold-up play.'}`) });
                   }
 
                   return readings.map((r, i) => (
@@ -2691,15 +2701,15 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 18px', marginBottom:14 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                   <LayoutGrid size={18} color="var(--c-accent)" />
-                  <span id="form-modal-title" style={{ ...T_DISPLAY, fontSize:12, fontWeight:900, color:'var(--c-accent)', letterSpacing:'0.26em' }}>FORMAÇÃO</span>
+                  <span id="form-modal-title" style={{ ...T_DISPLAY, fontSize:12, fontWeight:900, color:'var(--c-accent)', letterSpacing:'0.26em' }}>{L('FORMAÇÃO', 'FORMATION')}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setFormationModal(false)}
-                  aria-label="Fechar"
+                  aria-label={L('Fechar', 'Close')}
                   style={{ background:'transparent', border:'1px solid var(--c-border)', color:'var(--c-text-primary)', padding:'4px 8px', borderRadius:4, cursor:'pointer', display:'flex', alignItems:'center', gap:4, ...T_DISPLAY, fontSize:9, letterSpacing:'0.12em' }}
                 >
-                  <X size={11} /> FECHAR
+                  <X size={11} /> {L('FECHAR', 'CLOSE')}
                 </button>
               </div>
 
@@ -2721,7 +2731,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                     >
                       <span style={{ ...T_HERO, fontSize:22, letterSpacing:'-0.02em' }}>{f}</span>
                       {activeFormation === f
-                        ? <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.22em' }}>ATIVA</span>
+                        ? <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.22em' }}>{L('ATIVA', 'ACTIVE')}</span>
                         : <ChevronRight size={14} color="var(--c-text-muted)" />}
                     </button>
                   </li>
@@ -2734,7 +2744,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                   onClick={() => setFormationModal(false)}
                   style={{ width:'100%', padding:'10px 0', background:'transparent', border:'1px solid var(--c-border)', color:'var(--c-text-primary)', borderRadius:4, cursor:'pointer', ...T_DISPLAY, fontSize:10, letterSpacing:'0.22em', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}
                 >
-                  <ChevronDown size={11} style={{ transform:'rotate(90deg)' }} /> VOLTAR
+                  <ChevronDown size={11} style={{ transform:'rotate(90deg)' }} /> {L('VOLTAR', 'BACK')}
                 </button>
               </div>
             </div>

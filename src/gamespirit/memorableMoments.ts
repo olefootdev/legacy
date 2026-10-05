@@ -8,6 +8,7 @@
 
 import type { TacticalInsight } from './gameSpiritInsight';
 import type { PossessionSide } from '@/engine/types';
+import { L } from '@/i18n/L';
 
 export interface MemorableMoment {
   /** Tipo do momento */
@@ -155,7 +156,7 @@ export class MemorableMomentsCollector {
     }
 
     // Defesas
-    if (insight.type === 'decisive_moment' && insight.text.includes('goleiro')) {
+    if (insight.type === 'decisive_moment' && (insight.text.includes('goleiro') || insight.text.includes('keeper'))) {
       return isLateGame ? 'late_drama' : 'crucial_save';
     }
 
@@ -170,7 +171,7 @@ export class MemorableMomentsCollector {
     }
 
     // Defesa
-    if (insight.type === 'defensive_breakdown' || insight.text.includes('defesa')) {
+    if (insight.type === 'defensive_breakdown' || insight.text.includes('defesa') || insight.text.includes('defence') || insight.text.includes('save')) {
       return 'defensive_heroics';
     }
 
@@ -200,25 +201,25 @@ export class MemorableMomentsCollector {
 
     if (insight.type === 'decisive_moment' && insight.emotionalImpact >= 85) {
       if (isLateGame && isCloseGame) {
-        return 'Momento decisivo da partida';
+        return L('Momento decisivo da partida', 'Decisive moment of the match');
       }
-      return 'Virada emocional do jogo';
+      return L('Virada emocional do jogo', 'Emotional turning point');
     }
 
     if (insight.type === 'momentum_shift') {
-      return 'Mudança de domínio da partida';
+      return L('Mudança de domínio da partida', 'Shift in control of the match');
     }
 
     if (insight.type === 'tactical_error' && insight.emotionalImpact >= 70) {
-      return 'Erro que custou caro';
+      return L('Erro que custou caro', 'A costly mistake');
     }
 
     if (insight.type === 'counter_timing') {
-      return 'Transição letal';
+      return L('Transição letal', 'Lethal transition');
     }
 
-    if (insight.text.includes('goleiro') && insight.emotionalImpact >= 80) {
-      return 'Defesa que salvou o resultado';
+    if ((insight.text.includes('goleiro') || insight.text.includes('keeper')) && insight.emotionalImpact >= 80) {
+      return L('Defesa que salvou o resultado', 'The save that rescued the result');
     }
 
     return undefined;

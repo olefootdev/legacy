@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid';
 import type { CoachAgent, CoachPersonality } from './types';
+import { L } from '@/i18n/L';
 
 /**
  * Cria o coach agent default que cada manager recebe.
@@ -8,7 +9,7 @@ import type { CoachAgent, CoachPersonality } from './types';
 export function createDefaultCoachAgent(): CoachAgent {
   return {
     id: nanoid(),
-    name: 'Assistente Técnico',
+    name: L('Assistente Técnico', 'Assistant Coach'),
     personality: 'Tactician', // começa equilibrado
     specialties: ['youth', 'fitness', 'mentality'], // foco em desenvolvimento
 
@@ -34,7 +35,7 @@ export function createDefaultCoachAgent(): CoachAgent {
       },
       staffKnowledge: {
         priorityRoles: [], // aprende quais roles o manager valoriza
-        playerAssignmentStrategy: 'Ainda não definida. Aguardando orientação do manager.',
+        playerAssignmentStrategy: L('Ainda não definida. Aguardando orientação do manager.', 'Not set yet. Waiting for the manager’s guidance.'),
       },
       decisionHistory: [],
     },
@@ -116,38 +117,38 @@ export const COACH_PERSONALITIES: Record<CoachPersonality, {
 export const COACH_SYSTEM_KNOWLEDGE = {
   training: {
     individual: {
-      fisico: 'Melhora velocidade, físico e reduz fadiga. Ideal após jogos intensos.',
-      mental: 'Aumenta mentalidade, confiança e fair play. Importante para jogadores jovens.',
-      tatico: 'Desenvolve tático e posicionamento. Essencial para entender formações.',
-      atributos: 'Treina passe, drible e finalização. Core técnico do jogador.',
-      especial: 'Especialização ofensiva avançada. Para atacantes de elite.',
+      fisico: L('Melhora velocidade, físico e reduz fadiga. Ideal após jogos intensos.', 'Improves pace and physical, reduces fatigue. Ideal after intense games.'),
+      mental: L('Aumenta mentalidade, confiança e fair play. Importante para jogadores jovens.', 'Boosts mentality, confidence and fair play. Important for young players.'),
+      tatico: L('Desenvolve tático e posicionamento. Essencial para entender formações.', 'Develops tactics and positioning. Essential for understanding formations.'),
+      atributos: L('Treina passe, drible e finalização. Core técnico do jogador.', 'Trains passing, dribbling and finishing. The player’s technical core.'),
+      especial: L('Especialização ofensiva avançada. Para atacantes de elite.', 'Advanced attacking specialisation. For elite forwards.'),
     },
     collective: {
-      formacao: 'Melhora posicionamento coletivo e entendimento tático do grupo.',
-      empatia: 'Aumenta fair play e coesão do time. Reduz cartões.',
-      fisico: 'Condicionamento físico coletivo. Prepara o time para sequência de jogos.',
+      formacao: L('Melhora posicionamento coletivo e entendimento tático do grupo.', 'Improves team positioning and the group’s tactical understanding.'),
+      empatia: L('Aumenta fair play e coesão do time. Reduz cartões.', 'Boosts fair play and team cohesion. Fewer cards.'),
+      fisico: L('Condicionamento físico coletivo. Prepara o time para sequência de jogos.', 'Team conditioning. Prepares the squad for a run of games.'),
     },
     groups: {
-      defensivo: 'Zagueiros e volantes. Foco em marcação e posicionamento.',
-      criativo: 'Meio-campo. Foco em passes e criação.',
-      ataque: 'Atacantes. Foco em finalização e movimentação.',
-      all: 'Plantel completo. Usa para preparação pré-temporada ou integração.',
+      defensivo: L('Zagueiros e volantes. Foco em marcação e posicionamento.', 'Centre-backs and defensive mids. Focus on marking and positioning.'),
+      criativo: L('Meio-campo. Foco em passes e criação.', 'Midfield. Focus on passing and creativity.'),
+      ataque: L('Atacantes. Foco em finalização e movimentação.', 'Forwards. Focus on finishing and movement.'),
+      all: L('Plantel completo. Usa para preparação pré-temporada ou integração.', 'Full squad. Use for pre-season or integration.'),
     },
     durationGuidelines: {
-      short: '6-12h: Recuperação leve ou ajuste fino pré-jogo.',
-      medium: '24-36h: Treino padrão entre jogos.',
-      long: '48-72h: Desenvolvimento profundo, ideal em semanas sem jogos.',
+      short: L('6-12h: Recuperação leve ou ajuste fino pré-jogo.', '6-12h: Light recovery or pre-match fine-tuning.'),
+      medium: L('24-36h: Treino padrão entre jogos.', '24-36h: Standard training between games.'),
+      long: L('48-72h: Desenvolvimento profundo, ideal em semanas sem jogos.', '48-72h: Deep development, ideal in weeks without games.'),
     },
   },
   staff: {
     roles: {
-      preparador_fisico: 'Acelera recuperação de fadiga e melhora ganhos de treino físico.',
-      mental: 'Aumenta mentalidade e confiança. Crítico para jogadores jovens.',
-      nutricao: 'Reduz fadiga e risco de lesão após partidas.',
-      tatico: 'Melhora ganhos de treino tático e posicionamento.',
-      treinador: 'Multiplica ganhos de TODOS os treinos. Prioridade máxima de upgrade.',
-      olheiro: 'Aumenta recompensas EXP de scouting. Útil para economia.',
-      preparador_goleiros: 'Buff específico para goleiros. Só atribua a GKs.',
+      preparador_fisico: L('Acelera recuperação de fadiga e melhora ganhos de treino físico.', 'Speeds up fatigue recovery and improves physical training gains.'),
+      mental: L('Aumenta mentalidade e confiança. Crítico para jogadores jovens.', 'Boosts mentality and confidence. Critical for young players.'),
+      nutricao: L('Reduz fadiga e risco de lesão após partidas.', 'Reduces fatigue and injury risk after matches.'),
+      tatico: L('Melhora ganhos de treino tático e posicionamento.', 'Improves tactical training gains and positioning.'),
+      treinador: L('Multiplica ganhos de TODOS os treinos. Prioridade máxima de upgrade.', 'Multiplies gains from ALL training. Top upgrade priority.'),
+      olheiro: L('Aumenta recompensas EXP de scouting. Útil para economia.', 'Increases scouting EXP rewards. Useful for the economy.'),
+      preparador_goleiros: L('Buff específico para goleiros. Só atribua a GKs.', 'Goalkeeper-specific buff. Assign to GKs only.'),
     },
     upgradePriority: [
       'treinador', // sempre primeiro (multiplica tudo)
@@ -158,19 +159,26 @@ export const COACH_SYSTEM_KNOWLEDGE = {
       'olheiro', // economia
       'preparador_goleiros', // nicho
     ],
-    assignmentStrategy: `
+    assignmentStrategy: L(`
       - Jogadores da academia (managerCreated) podem receber buff individual
       - Cada role tem limite de slots baseado no nível do Treinador
       - Priorize jogadores jovens (< 23 anos) para desenvolvimento
       - Goleiros DEVEM ter preparador_goleiros se disponível
       - Jogadores titulares devem ter preparador_fisico + nutricao
       - Jovens promissores: mental + tatico + preparador_fisico
-    `,
+    `, `
+      - Academy players (managerCreated) can receive individual buffs
+      - Each role has a slot limit based on the Head Coach level
+      - Prioritise young players (< 23) for development
+      - Goalkeepers MUST have preparador_goleiros if available
+      - Starters should have preparador_fisico + nutricao
+      - Promising youngsters: mental + tatico + preparador_fisico
+    `),
   },
   structures: {
-    training_center: 'Aumenta slots de treino e multiplica ganhos. Nível 4+ dá boost significativo.',
-    medical_dept: 'Slots de tratamento e velocidade de recuperação de lesões.',
-    stadium: 'Aumenta receita de jogos em casa. Não afeta treinos.',
-    youth_academy: 'Multiplica ganhos de treino de prospects. Essencial para Developer.',
+    training_center: L('Aumenta slots de treino e multiplica ganhos. Nível 4+ dá boost significativo.', 'More training slots and multiplied gains. Level 4+ gives a significant boost.'),
+    medical_dept: L('Slots de tratamento e velocidade de recuperação de lesões.', 'Treatment slots and injury recovery speed.'),
+    stadium: L('Aumenta receita de jogos em casa. Não afeta treinos.', 'Increases home match revenue. Does not affect training.'),
+    youth_academy: L('Multiplica ganhos de treino de prospects. Essencial para Developer.', 'Multiplies prospects’ training gains. Essential for Developer.'),
   },
 };

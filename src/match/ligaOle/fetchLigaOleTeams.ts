@@ -9,6 +9,7 @@
 
 import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
 import type { LigaOleTeam } from './ligaOleModel';
+import { L } from '@/i18n/L';
 
 interface TeamRow {
   id: string;
@@ -79,7 +80,7 @@ export async function fetchLigaOleRivals(args: {
     const picked = seededShuffle(rows, args.seed).slice(0, args.count);
     return picked.map((t) => ({
       id: t.id,
-      name: t.club_name || 'Clube Rival',
+      name: t.club_name || L('Clube Rival', 'Rival Club'),
       short: t.club_short || 'RIV',
       overall: Math.round(Number(t.overall)),
       managerId: t.manager_id ? String(t.manager_id) : undefined,

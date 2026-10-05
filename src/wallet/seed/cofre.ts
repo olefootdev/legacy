@@ -25,6 +25,11 @@
  * pode morar no localStorage.
  */
 
+import { idiomaAtual } from '../../i18n/idioma.js';
+
+/** A OLEWALLET troca de idioma sem recarregar: o texto é escolhido na hora da chamada. */
+const tx = (pt: string, en: string): string => (idiomaAtual() === 'en' ? en : pt);
+
 const VOLTAS = 600_000;
 const BYTES_SAL = 16;
 const BYTES_IV = 12;
@@ -44,7 +49,7 @@ export interface Cofre {
 
 export class SenhaErrada extends Error {
   constructor() {
-    super('Senha errada, ou o cofre foi alterado.');
+    super(tx('Senha errada, ou o cofre foi alterado.', 'Wrong password, or the vault was altered.'));
     this.name = 'SenhaErrada';
   }
 }
@@ -84,8 +89,8 @@ async function chaveDaSenha(senha: string, sal: Uint8Array, voltas: number): Pro
 
 /** Regra mínima da senha. Curta demais torna as 600 mil voltas inúteis. */
 export function senhaFraca(senha: string): string | null {
-  if (senha.length < 8) return 'A senha precisa de pelo menos 8 caracteres.';
-  if (/^\d+$/.test(senha)) return 'Só números é fácil demais. Misture letras.';
+  if (senha.length < 8) return tx('A senha precisa de pelo menos 8 caracteres.', 'The password needs at least 8 characters.');
+  if (/^\d+$/.test(senha)) return tx('Só números é fácil demais. Misture letras.', 'Numbers only is too easy. Mix in letters.');
   return null;
 }
 
@@ -167,7 +172,7 @@ export function guardar(cofre: Cofre): void {
   try {
     localStorage.setItem(CHAVE_LOCAL, JSON.stringify(cofre));
   } catch {
-    throw new Error('Não consegui guardar no aparelho. Anote a frase — ela é a única cópia.');
+    throw new Error(tx('Não consegui guardar no aparelho. Anote a frase — ela é a única cópia.', "Couldn't save on this device. Write down the phrase — it's the only copy."));
   }
 }
 

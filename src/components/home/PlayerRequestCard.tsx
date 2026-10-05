@@ -23,6 +23,7 @@ import {
   type PlayerRequestChoice,
 } from '@/systems/playerPersonality';
 import { track } from '@/analytics/track';
+import { L } from '@/i18n/L';
 
 const CHOICES: readonly PlayerRequestChoice[] = ['grant', 'challenge', 'promise'] as const;
 
@@ -43,7 +44,7 @@ export function PlayerRequestCard({
     <motion.section
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      aria-label={`${request.playerName} quer conversar`}
+      aria-label={L(`${request.playerName} quer conversar`, `${request.playerName} wants a word`)}
       className="border"
       style={{
         borderRadius: 'var(--radius-card)',
@@ -58,7 +59,7 @@ export function PlayerRequestCard({
         style={{ fontSize: '9px', letterSpacing: '0.26em' }}
       >
         <MessageSquare aria-hidden className="h-3 w-3" strokeWidth={2.6} />
-        No vestiário
+        {L('No vestiário', 'In the dressing room')}
       </p>
 
       <p

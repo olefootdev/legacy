@@ -4,6 +4,7 @@
  */
 
 import type { MatchEventEntry } from '@/engine/types';
+import { L } from '@/i18n/L';
 
 export interface PerformanceBonus {
   id: string;
@@ -70,8 +71,8 @@ export function evaluatePerformanceBonuses(stats: MatchStats): PerformanceBonus[
   if (stats.goalsAgainst === 0 && stats.homeScore > 0) {
     bonuses.push({
       id: 'clean_sheet',
-      name: 'Defesa Impecável',
-      description: 'Não sofreu nenhum gol',
+      name: L('Defesa Impecável', 'Clean Sheet'),
+      description: L('Não sofreu nenhum gol', 'Conceded no goals'),
       ole: 50,
       exp: 10,
       icon: '🧤',
@@ -84,7 +85,7 @@ export function evaluatePerformanceBonuses(stats: MatchStats): PerformanceBonus[
     bonuses.push({
       id: 'hattrick',
       name: 'Hat-trick',
-      description: 'Um jogador marcou 3+ gols',
+      description: L('Um jogador marcou 3+ gols', 'One player scored 3+ goals'),
       ole: 100,
       exp: 20,
       icon: '🎩',
@@ -95,8 +96,8 @@ export function evaluatePerformanceBonuses(stats: MatchStats): PerformanceBonus[
   if (stats.wasLosing && stats.won) {
     bonuses.push({
       id: 'comeback',
-      name: 'Virada Épica',
-      description: 'Virou o jogo após estar a perder',
+      name: L('Virada Épica', 'Epic Comeback'),
+      description: L('Virou o jogo após estar a perder', 'Came back from behind'),
       ole: 75,
       exp: 15,
       icon: '🔥',
@@ -107,8 +108,8 @@ export function evaluatePerformanceBonuses(stats: MatchStats): PerformanceBonus[
   if (stats.possession > 65 && stats.shots > 15 && stats.won) {
     bonuses.push({
       id: 'dominance',
-      name: 'Domínio Total',
-      description: 'Posse >65% e 15+ finalizações',
+      name: L('Domínio Total', 'Total Domination'),
+      description: L('Posse >65% e 15+ finalizações', 'Possession >65% and 15+ shots'),
       ole: 30,
       exp: 8,
       icon: '👑',
@@ -119,8 +120,8 @@ export function evaluatePerformanceBonuses(stats: MatchStats): PerformanceBonus[
   if (stats.homeScore >= 3 && stats.shots <= 8 && stats.won) {
     bonuses.push({
       id: 'efficiency',
-      name: 'Eficiência Clínica',
-      description: '3+ gols com ≤8 finalizações',
+      name: L('Eficiência Clínica', 'Clinical Efficiency'),
+      description: L('3+ gols com ≤8 finalizações', '3+ goals from ≤8 shots'),
       ole: 40,
       exp: 10,
       icon: '🎯',

@@ -9,6 +9,7 @@ import {
 import { lerMinhaEntrada } from '@/supabase/expansaoPainel';
 import { escolherPatrocinador, meuIndicador, FRASE_DA_INDICACAO } from '@/supabase/expansaoConvite';
 import { conviteVisto, esquecerConviteVisto } from '@/wallet/conviteVisto';
+import { L, LOCALE, emIngles } from '@/i18n/L';
 
 /**
  * Comprar OLEFOOT na pré-venda — o pack.
@@ -36,19 +37,19 @@ export interface PedidoOlefoot {
 }
 
 const FECHADO: Record<MotivoPackFechado, string> = {
-  abaixo_do_minimo: 'abaixo do mínimo',
-  nao_inteiro: 'valor inválido',
-  acima_do_teto_por_conta: 'acima do teto da conta',
-  alocacao_insuficiente: 'esgotado',
-  cotacao_invalida: 'sem cotação',
+  abaixo_do_minimo: L('abaixo do mínimo', 'below minimum'),
+  nao_inteiro: L('valor inválido', 'invalid amount'),
+  acima_do_teto_por_conta: L('acima do teto da conta', 'above account cap'),
+  alocacao_insuficiente: L('esgotado', 'sold out'),
+  cotacao_invalida: L('sem cotação', 'no rate'),
 };
 
-const br = (v: bigint) => v.toLocaleString('pt-BR');
+const br = (v: bigint) => v.toLocaleString(LOCALE);
 const reais = (cents: number) =>
-  (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  (cents / 100).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 // Dólar escrito como o resto da tela: ponto no milhar, vírgula no centavo.
 const dolar = (cents: number) =>
-  `$${(cents / 100).toLocaleString('pt-BR', {
+  `$${(cents / 100).toLocaleString(LOCALE, {
     minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2,
   })}`;
 
@@ -116,20 +117,20 @@ export function FormOlefoot({
   }, [estado, escolhido, outroCents]);
 
   if (carga.status === 'carregando' || naArvore === null) {
-    return <p className="py-6 font-mono text-[12px] text-cimento">Carregando a pré-venda…</p>;
+    return <p className="py-6 font-mono text-[12px] text-cimento">{L('Carregando a pré-venda…', 'Loading the presale…')}</p>;
   }
   if (carga.status === 'erro' || !estado) {
     return (
       <div className="border border-atencao/40 bg-atencao/10 px-3 py-3">
-        <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-atencao">Pré-venda</p>
-        <p className="mt-1 text-xs text-giz">Não deu para carregar os packs agora. Tente de novo em instantes.</p>
+        <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-atencao">{L('Pré-venda', 'Presale')}</p>
+        <p className="mt-1 text-xs text-giz">{L('Não deu para carregar os packs agora. Tente de novo em instantes.', 'Couldn\'t load the packs right now. Try again in a moment.')}</p>
       </div>
     );
   }
   if (!estado.aberta) {
     return (
       <div className="border border-white/10 bg-card px-3 py-4">
-        <p className="font-impact text-[20px] uppercase leading-[1.1] text-white">Pré-venda fechada</p>
+        <p className="font-impact text-[20px] uppercase leading-[1.1] text-white">{L('Pré-venda fechada', 'Presale closed')}</p>
       </div>
     );
   }
@@ -140,7 +141,7 @@ export function FormOlefoot({
   const pagar = async () => {
     if (!pedido || conferindo) return;
     if (!precisaIndicador) { onPagar(pedido); return; }
-    if (!indicadorPronto) { setErroIndicador('Diga quem te indicou ou marque "Ninguém me indicou".'); return; }
+    if (!indicadorPronto) { setErroIndicador(L('Diga quem te indicou ou marque "Ninguém me indicou".', 'Tell us who referred you or tick "No one referred me".')); return; }
     setErroIndicador(null);
     setConferindo(true);
     const r = await escolherPatrocinador(ninguem ? null : indicador.trim());
@@ -155,7 +156,7 @@ export function FormOlefoot({
       {precisaIndicador && (
         <div className="border border-white/10 bg-card px-3.5 py-3">
           <label htmlFor="quem-indicou" className="font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
-            Quem te indicou?
+            {L('Quem te indicou?', 'Who referred you?')}
           </label>
           <div className="relative mt-1.5">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-poeira">@</span>
@@ -164,7 +165,7 @@ export function FormOlefoot({
               value={indicador}
               disabled={ninguem}
               onChange={(e) => { setIndicador(e.target.value.replace(/^@+/, '').replace(/\s/g, '')); setErroIndicador(null); }}
-              placeholder="usuario"
+              placeholder={L('usuario', 'username')}
               autoCapitalize="none"
               autoComplete="off"
               spellCheck={false}
@@ -174,16 +175,16 @@ export function FormOlefoot({
           <label className="mt-2 flex cursor-pointer items-center gap-2 font-mono text-[11px] text-cimento">
             <input type="checkbox" checked={ninguem}
               onChange={(e) => { setNinguem(e.target.checked); setErroIndicador(null); }} />
-            Ninguém me indicou
+            {L('Ninguém me indicou', 'No one referred me')}
           </label>
           <p className="mt-1.5 font-mono text-[10.5px] leading-relaxed text-poeira">
-            Você entra no time de quem te indicou. A posição na rede é definitiva.
+            {L('Você entra no time de quem te indicou. A posição na rede é definitiva.', 'You join the team of whoever referred you. Your network position is permanent.')}
           </p>
           {erroIndicador && <p role="alert" className="mt-1.5 text-[12px] text-atencao">{erroIndicador}</p>}
         </div>
       )}
 
-      <Hashtag>#prevenda · ${estado.preco.replace('.', ',')} por OLEFOOT</Hashtag>
+      <Hashtag>{emIngles() ? `#presale · $${estado.preco} per OLEFOOT` : `#prevenda · $${estado.preco.replace('.', ',')} por OLEFOOT`}</Hashtag>
 
       <div className="border border-white/10">
         {estado.packs.map((p) => {
@@ -234,14 +235,13 @@ export function FormOlefoot({
             )}
           >
             <span className="flex items-center justify-between gap-3">
-              <span className="ole-num shrink-0 text-[15px] uppercase">Ativação 3× · {dolar(plano.usdCents)}</span>
+              <span className="ole-num shrink-0 text-[15px] uppercase">{L('Ativação 3×', '3× Activation')} · {dolar(plano.usdCents)}</span>
               <span className="whitespace-nowrap font-mono text-[11px] tabular-nums">
                 {plano.disponivel ? `R$ ${reais(plano.brlCents)}` : FECHADO[plano.motivo ?? 'cotacao_invalida']}
               </span>
             </span>
             <span className={cn('mt-1.5 block text-[12px] leading-relaxed', ativo ? 'text-black' : 'text-cimento')}>
-              Seu pack de $10 + 1 conta de $10 no Time 1 e no Time 2 — as duas são suas.
-              Ativa o bônus na hora, com 1 em cada time.
+              {L('Seu pack de $10 + 1 conta de $10 no Time 1 e no Time 2 — as duas são suas. Ativa o bônus na hora, com 1 em cada time.', 'Your $10 pack + one $10 account on Team 1 and on Team 2 — both are yours. Activates the bonus instantly, with 1 on each team.')}
             </span>
           </button>
         );
@@ -249,7 +249,7 @@ export function FormOlefoot({
 
       <div>
         <label className="mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
-          Ou outro valor, em dólar
+          {L('Ou outro valor, em dólar', 'Or another amount, in USD')}
         </label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-poeira">$</span>
@@ -262,18 +262,18 @@ export function FormOlefoot({
           />
         </div>
         {outroCents != null && outroCents < estado.minimoUsdCents && (
-          <p className="mt-1 text-[10px] text-baixa">Mínimo de {dolar(estado.minimoUsdCents)}</p>
+          <p className="mt-1 text-[10px] text-baixa">{L('Mínimo de', 'Minimum')} {dolar(estado.minimoUsdCents)}</p>
         )}
       </div>
 
       {pedido && (
         <div className="flex min-w-0 items-baseline justify-between gap-3 border border-white/10 bg-card px-3 py-2.5">
           <span className="shrink-0 font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
-            Você recebe
+            {L('Você recebe', 'You get')}
           </span>
           <span className="ole-num min-w-0 truncate text-[16px] text-white tabular-nums">
             {pedido.plano === 'ativacao_3x'
-              ? `${br(pedido.recebe)} OLEFOOT × 3 contas`
+              ? `${br(pedido.recebe)} OLEFOOT × ${L('3 contas', '3 accounts')}`
               : `${br(pedido.recebe)} OLEFOOT`}
           </span>
         </div>
@@ -289,14 +289,13 @@ export function FormOlefoot({
         )}
       >
         <Zap className="h-4 w-4" />
-        {conferindo ? 'Conferindo…' : pedido ? `Pagar R$ ${reais(pedido.brlCents)} no Pix` : 'Escolha o pack'}
+        {conferindo ? L('Conferindo…', 'Checking…') : pedido ? L(`Pagar R$ ${reais(pedido.brlCents)} no Pix`, `Pay R$ ${reais(pedido.brlCents)} with Pix`) : L('Escolha o pack', 'Choose a pack')}
       </button>
 
       {/* Texto de custódia e de trava: a pessoa precisa saber ANTES de pagar
           que o token entra travado e ainda não está na carteira dela. */}
       <p className="border-l-2 border-cimento bg-card px-3.5 py-3 text-[12px] leading-relaxed text-cimento">
-        O OLEFOOT entra travado na sua posição e libera com o tempo ou com nova compra. O que for
-        liberado vai para a sua carteira Solana vinculada.
+        {L('O OLEFOOT entra travado na sua posição e libera com o tempo ou com nova compra. O que for liberado vai para a sua carteira Solana vinculada.', 'OLEFOOT enters your position locked and unlocks over time or with a new buy. What unlocks goes to your linked Solana wallet.')}
       </p>
     </div>
   );

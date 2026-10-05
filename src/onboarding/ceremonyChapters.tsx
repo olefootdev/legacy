@@ -3,6 +3,7 @@ import type { OnboardingPackage } from './buildOnboardingPackage';
 import type { RarityTier } from './draftStarterSquad';
 import { STARTER_EXP_TIERS } from './rollStarterExp';
 import { DAILY_REWARDS_7D, type DailyReward } from './dailyBonus';
+import { L, emIngles } from '@/i18n/L';
 
 /**
  * Cerimônia de onboarding — capítulos editoriais.
@@ -13,11 +14,18 @@ import { DAILY_REWARDS_7D, type DailyReward } from './dailyBonus';
  */
 
 const TIER_LABEL: Record<RarityTier, string> = {
-  basic: 'Básico',
-  rare: 'Raro',
-  epic: 'Épico',
-  legendary: 'Lendário',
+  basic: L('Básico', 'Basic'),
+  rare: L('Raro', 'Rare'),
+  epic: L('Épico', 'Epic'),
+  legendary: L('Lendário', 'Legendary'),
 };
+
+/** Rótulo de TELA da posição — `pos` continua o código PT (GOL, ZAG…). */
+const ROTULO_POS_EN: Record<string, string> = {
+  GOL: 'GK', ZAG: 'CB', LAT: 'FB', LD: 'RB', LE: 'LB', VOL: 'DM',
+  MEI: 'AM', MC: 'CM', CAM: 'AM', PE: 'LW', PD: 'RW', ATA: 'ST', CA: 'ST',
+};
+const rotuloPos = (pos: string): string => L(pos, ROTULO_POS_EN[pos] ?? pos);
 
 /** Cor de raridade em token VOLT2 (era hex solto: cinza/azul/amarelo/amarelo). */
 const TIER_ACCENT: Record<RarityTier, string> = {
@@ -114,7 +122,7 @@ function CeremonyPlayerCard({
             {player.ovr}
           </p>
           <p className="mt-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-giz">
-            {player.pos}
+            {rotuloPos(player.pos)}
           </p>
         </div>
         {rank ? (
@@ -134,7 +142,7 @@ function CeremonyPlayerCard({
               {player.name}
             </p>
             <p className="mt-0.5 truncate font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">
-              {player.pos} · OVR {player.ovr}
+              {rotuloPos(player.pos)} · OVR {player.ovr}
             </p>
           </div>
           <span
@@ -151,7 +159,7 @@ function CeremonyPlayerCard({
               {TIER_LABEL[player.tier]}
             </span>
             <span className="min-w-0 truncate font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">
-              · Pioneiro do clube
+              · {L('Pioneiro do clube', 'Club pioneer')}
             </span>
           </div>
         ) : null}
@@ -182,7 +190,7 @@ export function IntroChapter(props: {
   return (
     <StageWrap>
       <div className="flex flex-col items-center text-center gap-8">
-        <ChapterLabel>Olefoot · História Viva</ChapterLabel>
+        <ChapterLabel>{L('Olefoot · História Viva', 'Olefoot · Living Story')}</ChapterLabel>
 
         <img
           src="/brand/olefoot-icone-yellow-01.svg"
@@ -196,16 +204,27 @@ export function IntroChapter(props: {
           className={TITULO}
           style={{ fontSize: 'clamp(40px, 9vw, 80px)', lineHeight: 1.02, letterSpacing: '-0.01em' }}
         >
-          Hoje começa a história
-          <br />
-          do{' '}
-          <span className="text-neon-yellow [overflow-wrap:anywhere]">{props.clubName}</span>.
+          {emIngles() ? (
+            <>
+              Today begins the story
+              <br />
+              of{' '}
+              <span className="text-neon-yellow [overflow-wrap:anywhere]">{props.clubName}</span>.
+            </>
+          ) : (
+            <>
+              Hoje começa a história
+              <br />
+              do{' '}
+              <span className="text-neon-yellow [overflow-wrap:anywhere]">{props.clubName}</span>.
+            </>
+          )}
         </h1>
 
-        <span className="font-mono text-[12px] font-medium text-cimento">#cofre #plantel #astros</span>
+        <span className="font-mono text-[12px] font-medium text-cimento">{L('#cofre #plantel #astros', '#vault #squad #stars')}</span>
 
         <div className="pt-2">
-          <NextButton onClick={props.onNext}>Abrir o cofre</NextButton>
+          <NextButton onClick={props.onNext}>{L('Abrir o cofre', 'Open the vault')}</NextButton>
         </div>
       </div>
     </StageWrap>
@@ -246,10 +265,12 @@ export function ExpRouletteChapter(props: {
   return (
     <StageWrap>
       <div className="flex flex-col items-center text-center gap-7">
-        <ChapterLabel>Capítulo I · Cofre Fundador</ChapterLabel>
+        <ChapterLabel>{L('Capítulo I · Cofre Fundador', "Chapter I · Founder's Vault")}</ChapterLabel>
 
         <h2 className={TITULO} style={{ fontSize: 'clamp(32px, 7vw, 56px)', lineHeight: 1.04 }}>
-          O capital inicial<br />que vai mover o clube.
+          {emIngles()
+            ? <>The starting capital<br />that will drive the club.</>
+            : <>O capital inicial<br />que vai mover o clube.</>}
         </h2>
 
         <div className="w-full max-w-[420px] flex flex-col gap-2">
@@ -288,7 +309,7 @@ export function ExpRouletteChapter(props: {
             className="flex flex-col items-center gap-3"
             style={{ animation: 'olefoot-fade-up 500ms both' }}
           >
-            <span className="ole-eyebrow-poster">O cofre revelou</span>
+            <span className="ole-eyebrow-poster">{L('O cofre revelou', 'The vault revealed')}</span>
             <div
               className="font-impact text-neon-yellow"
               style={{
@@ -300,10 +321,10 @@ export function ExpRouletteChapter(props: {
               {targetTier.label}
             </div>
             <div className="font-mono uppercase text-cimento" style={{ fontSize: 13, letterSpacing: '0.2em' }}>
-              EXP iniciais
+              {L('EXP iniciais', 'starting EXP')}
             </div>
             <div className="pt-4">
-              <NextButton onClick={props.onNext}>Convocar o plantel</NextButton>
+              <NextButton onClick={props.onNext}>{L('Convocar o plantel', 'Call up the squad')}</NextButton>
             </div>
           </div>
         )}
@@ -341,14 +362,14 @@ export function SquadDraftChapter(props: {
     >
       <div className="w-full max-w-[1100px] mx-auto px-6 sm:px-12 py-8 flex flex-col gap-5">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <ChapterLabel>Capítulo II · 25 Pioneiros</ChapterLabel>
+          <ChapterLabel>{L('Capítulo II · 25 Pioneiros', 'Chapter II · 25 Pioneers')}</ChapterLabel>
           <div className="ole-num text-giz" style={{ fontSize: 13 }}>
             {revealedCount} / {cards.length}
           </div>
         </div>
 
         <h2 className={TITULO} style={{ fontSize: 'clamp(28px, 6vw, 44px)', lineHeight: 1.06 }}>
-          Os primeiros nomes a vestir as cores do clube.
+          {L('Os primeiros nomes a vestir as cores do clube.', 'The first names to wear the club colours.')}
         </h2>
 
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
@@ -411,7 +432,7 @@ export function SquadDraftChapter(props: {
                     className="font-mono uppercase text-neon-yellow"
                     style={{ fontSize: 9.5, letterSpacing: '0.16em', fontWeight: 500 }}
                   >
-                    {c.pos}
+                    {rotuloPos(c.pos)}
                   </div>
                 </div>
               </div>
@@ -421,7 +442,7 @@ export function SquadDraftChapter(props: {
 
         <div className="flex justify-end pt-2 pb-4">
           <NextButton onClick={props.onNext}>
-            {done ? 'Conhecer os astros' : 'Aguarde…'}
+            {done ? L('Conhecer os astros', 'Meet the stars') : L('Aguarde…', 'Please wait…')}
           </NextButton>
         </div>
       </div>
@@ -450,18 +471,27 @@ export function Top3Chapter(props: {
         className="flex flex-col gap-6 cursor-pointer select-none"
         onClick={handleTap}
         role={allRevealed ? undefined : 'button'}
-        aria-label={allRevealed ? undefined : 'Tocar para revelar o próximo astro'}
+        aria-label={allRevealed ? undefined : L('Tocar para revelar o próximo astro', 'Tap to reveal the next star')}
       >
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <ChapterLabel>Capítulo III · Os Astros</ChapterLabel>
+          <ChapterLabel>{L('Capítulo III · Os Astros', 'Chapter III · The Stars')}</ChapterLabel>
           <div className="ole-num text-giz" style={{ fontSize: 13 }}>
             {revealed} / {total}
           </div>
         </div>
 
         <h2 className={TITULO} style={{ fontSize: 'clamp(34px, 7vw, 72px)', lineHeight: 1.02 }}>
-          E entre eles,<br />
-          <span className="text-neon-yellow">três nomes</span> brilharam mais alto.
+          {emIngles() ? (
+            <>
+              And among them,<br />
+              <span className="text-neon-yellow">three names</span> shone brightest.
+            </>
+          ) : (
+            <>
+              E entre eles,<br />
+              <span className="text-neon-yellow">três nomes</span> brilharam mais alto.
+            </>
+          )}
         </h2>
 
         <div className="flex flex-col gap-3 mt-2">
@@ -488,7 +518,9 @@ export function Top3Chapter(props: {
             className="font-mono uppercase text-neon-yellow text-center pt-2"
             style={{ fontSize: 12, letterSpacing: '0.2em', animation: 'olefoot-fade-up 400ms both' }}
           >
-            Toque para revelar o {revealed === 0 ? 'primeiro' : revealed === 1 ? 'segundo' : 'terceiro'} astro
+            {emIngles()
+              ? `Tap to reveal the ${revealed === 0 ? 'first' : revealed === 1 ? 'second' : 'third'} star`
+              : `Toque para revelar o ${revealed === 0 ? 'primeiro' : revealed === 1 ? 'segundo' : 'terceiro'} astro`}
           </div>
         ) : (
           <div
@@ -496,7 +528,7 @@ export function Top3Chapter(props: {
             style={{ animation: 'olefoot-fade-up 400ms both' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <NextButton onClick={props.onNext}>Rotina dos campeões</NextButton>
+            <NextButton onClick={props.onNext}>{L('Rotina dos campeões', "Champions' routine")}</NextButton>
           </div>
         )}
       </div>
@@ -524,15 +556,15 @@ export function DailyBonusChapter(props: { onClaim: () => void; onNext: () => vo
   return (
     <StageWrap>
       <div className="flex flex-col gap-6">
-        <ChapterLabel>Capítulo IV · Rotina dos Campeões</ChapterLabel>
+        <ChapterLabel>{L('Capítulo IV · Rotina dos Campeões', "Chapter IV · Champions' Routine")}</ChapterLabel>
 
         <h2 className={TITULO} style={{ fontSize: 'clamp(32px, 7vw, 56px)', lineHeight: 1.04 }}>
-          Volte todo dia.<br />
-          <span className="text-neon-yellow">A casa retribui.</span>
+          {L('Volte todo dia.', 'Come back every day.')}<br />
+          <span className="text-neon-yellow">{L('A casa retribui.', 'The club pays you back.')}</span>
         </h2>
 
         <p className="font-sans text-cimento max-w-[640px]" style={{ fontSize: 15, lineHeight: 1.5 }}>
-          Falte mais de 48h e a sequência reinicia.
+          {L('Falte mais de 48h e a sequência reinicia.', 'Miss more than 48h and the streak resets.')}
         </p>
 
         <div className="grid grid-cols-7 gap-2">
@@ -549,7 +581,7 @@ export function DailyBonusChapter(props: { onClaim: () => void; onNext: () => vo
                     className="font-mono uppercase"
                     style={{ fontSize: 9, letterSpacing: '0.14em', opacity: 0.7 }}
                   >
-                    Dia
+                    {L('Dia', 'Day')}
                   </span>
                   <span
                     className="font-impact"
@@ -577,10 +609,10 @@ export function DailyBonusChapter(props: { onClaim: () => void; onNext: () => vo
                 props.onClaim();
               }}
             >
-              Reivindicar dia 1
+              {L('Reivindicar dia 1', 'Claim day 1')}
             </NextButton>
           ) : (
-            <NextButton onClick={props.onNext}>Continuar</NextButton>
+            <NextButton onClick={props.onNext}>{L('Continuar', 'Continue')}</NextButton>
           )}
         </div>
       </div>
@@ -597,12 +629,12 @@ export function OutroChapter(props: { managerName: string; onFinish: () => void;
           className={TITULO}
           style={{ fontSize: 'clamp(48px, 11vw, 112px)', lineHeight: 1.02, letterSpacing: '-0.01em' }}
         >
-          Bem-vindo,
+          {L('Bem-vindo,', 'Welcome,')}
           <br />
           <span className="text-neon-yellow [overflow-wrap:anywhere]">{props.managerName}</span>
         </h1>
         <NextButton onClick={props.onFinish} disabled={props.finishing}>
-          {props.finishing ? 'Salvando...' : 'Acessar painel'}
+          {props.finishing ? L('Salvando...', 'Saving...') : L('Acessar painel', 'Open dashboard')}
         </NextButton>
       </div>
     </StageWrap>
@@ -614,9 +646,9 @@ export function LoadingChapter() {
   return (
     <StageWrap>
       <div className="flex flex-col items-center gap-4">
-        <span className="ole-eyebrow-poster">Preparando capítulo I</span>
+        <span className="ole-eyebrow-poster">{L('Preparando capítulo I', 'Preparing chapter I')}</span>
         <div className="font-impact uppercase text-giz" style={{ fontSize: 'clamp(28px, 6vw, 40px)', lineHeight: 1.1 }}>
-          A imprensa está rodando…
+          {L('A imprensa está rodando…', 'The presses are rolling…')}
         </div>
       </div>
     </StageWrap>
@@ -627,12 +659,14 @@ export function ErrorChapter(props: { onRetry: () => void }) {
   return (
     <StageWrap>
       <div className="flex flex-col items-center gap-5 text-center">
-        <ChapterLabel>Atraso na edição</ChapterLabel>
+        <ChapterLabel>{L('Atraso na edição', 'Edition delayed')}</ChapterLabel>
         <div className="font-sans text-giz" style={{ fontSize: 'clamp(17px, 3vw, 22px)', lineHeight: 1.4, maxWidth: 520 }}>
-          Não conseguimos imprimir o capítulo. Verifique sua conexão e tente
-          novamente em instantes.
+          {L(
+            'Não conseguimos imprimir o capítulo. Verifique sua conexão e tente novamente em instantes.',
+            "We couldn't print the chapter. Check your connection and try again shortly.",
+          )}
         </div>
-        <NextButton onClick={props.onRetry}>Tentar de novo</NextButton>
+        <NextButton onClick={props.onRetry}>{L('Tentar de novo', 'Try again')}</NextButton>
       </div>
     </StageWrap>
   );

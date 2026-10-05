@@ -4,6 +4,7 @@ import type { OpponentStub, PlayerEntity } from '@/entities/types';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { overallFromAttributes } from '@/entities/player';
 import { localCrestUrl } from '@/settings/crestUrl';
+import { L } from '@/i18n/L';
 
 /** Extrai URL do crest do time do coração armazenado em onboarding_data. */
 function favoriteTeamCrestFromOnboarding(onboardingData: unknown): string | null {
@@ -55,7 +56,7 @@ export function opponentMatchToStub(m: OpponentMatch, myOverall: number): Oppone
   if (m.type === 'none') {
     return {
       id: NO_OPPONENT_STUB_ID,
-      name: 'Nenhum manager disponível',
+      name: L('Nenhum manager disponível', 'No manager available'),
       shortName: '—',
       strength: myOverall,
     };
@@ -437,7 +438,7 @@ export async function updateClubAvailability(
   availability: 'ONLINE' | 'OFFLINE',
 ): Promise<{ ok: true } | { error: string }> {
   const sb = getSupabase();
-  if (!sb) return { error: 'Supabase não configurado.' };
+  if (!sb) return { error: L('Supabase não configurado.', 'Supabase not configured.') };
 
   try {
     const { error } = await sb
@@ -460,7 +461,7 @@ export async function updateClubAutoAccept(
   autoAccept: boolean,
 ): Promise<{ ok: true } | { error: string }> {
   const sb = getSupabase();
-  if (!sb) return { error: 'Supabase não configurado.' };
+  if (!sb) return { error: L('Supabase não configurado.', 'Supabase not configured.') };
 
   try {
     const { error } = await sb

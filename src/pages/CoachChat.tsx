@@ -9,33 +9,49 @@ import { BackButton } from '@/components/BackButton';
 import { suggestTraining, suggestStaff } from '@/coach/coachApi';
 import { createTrainingAction, createUpgradeStaffAction } from '@/coach/coachActions';
 import { cn } from '@/lib/utils';
+import { L, LOCALE } from '@/i18n/L';
+
+/** Rótulo de tela do grupo de treino — o valor (`defensivo`…) segue intacto. */
+const ROTULO_GRUPO: Record<string, string> = {
+  defensivo: L('defensivo', 'defensive'),
+  criativo: L('criativo', 'creative'),
+  ataque: L('ataque', 'attack'),
+  all: L('all', 'all'),
+};
 
 function buildWelcomeMessage(engine: CoachConversationEngine, coachName: string): ConversationMessage {
   const ctx = engine.buildTeamContext();
 
   const fatigueNote =
     ctx.averageFatigue > 60
-      ? `Fadiga média alta (${Math.round(ctx.averageFatigue)}%) — recomendo treino de recuperação.`
+      ? L(`Fadiga média alta (${Math.round(ctx.averageFatigue)}%) — recomendo treino de recuperação.`, `High average fatigue (${Math.round(ctx.averageFatigue)}%) — I recommend recovery training.`)
       : ctx.averageFatigue < 30
-        ? `Plantel descansado (${Math.round(ctx.averageFatigue)}%) — bom momento para desenvolvimento.`
-        : `Fadiga média em ${Math.round(ctx.averageFatigue)}% — situação controlada.`;
+        ? L(`Plantel descansado (${Math.round(ctx.averageFatigue)}%) — bom momento para desenvolvimento.`, `Squad is rested (${Math.round(ctx.averageFatigue)}%) — good time for development.`)
+        : L(`Fadiga média em ${Math.round(ctx.averageFatigue)}% — situação controlada.`, `Average fatigue at ${Math.round(ctx.averageFatigue)}% — under control.`);
 
   const injuryNote = ctx.injuredPlayers > 0
-    ? `\n• ${ctx.injuredPlayers} jogador(es) lesionado(s).`
+    ? L(`\n• ${ctx.injuredPlayers} jogador(es) lesionado(s).`, `\n• ${ctx.injuredPlayers} injured player(s).`)
     : '';
 
   const matchNote = ctx.nextMatch
-    ? `\n• Próximo jogo: **${ctx.nextMatch.opponent}** em ${ctx.nextMatch.daysUntil} dia(s).`
+    ? L(`\n• Próximo jogo: **${ctx.nextMatch.opponent}** em ${ctx.nextMatch.daysUntil} dia(s).`, `\n• Next match: **${ctx.nextMatch.opponent}** in ${ctx.nextMatch.daysUntil} day(s).`)
     : '';
 
-  const content = `Olá, manager! Sou o **${coachName}**, teu assistente técnico.
+  const content = L(`Olá, manager! Sou o **${coachName}**, teu assistente técnico.
 
 Aqui está o resumo rápido do plantel:
 • ${ctx.totalPlayers} jogadores disponíveis. ${fatigueNote}${injuryNote}${matchNote}
 • Treinos em execução: ${ctx.runningTrainingPlans}
 • Treinador nível ${ctx.staffLevels.treinador ?? 1}
 
-Como posso ajudar? Usa os botões abaixo ou escreve diretamente.`;
+Como posso ajudar? Usa os botões abaixo ou escreve diretamente.`, `Hi, manager! I'm **${coachName}**, your assistant coach.
+
+Quick squad summary:
+• ${ctx.totalPlayers} players available. ${fatigueNote}${injuryNote}${matchNote}
+• Training sessions running: ${ctx.runningTrainingPlans}
+• Head coach level ${ctx.staffLevels.treinador ?? 1}
+
+How can I help? Use the buttons below or type directly.`);
 
   return { role: 'assistant', content, timestamp: Date.now() };
 }
@@ -51,7 +67,7 @@ export function CoachChat() {
   const [messages, setMessages] = useState<ConversationMessage[]>(() => {
     const saved = coach?.conversationContext ?? [];
     if (saved.length > 0) return saved;
-    return [buildWelcomeMessage(conversationEngine, coach?.name ?? 'Assistente Técnico')];
+    return [buildWelcomeMessage(conversationEngine, coach?.name ?? L('Assistente Técnico', 'Assistant Coach'))];
   });
 
   const draft = (location.state as { draft?: string } | null)?.draft ?? '';
@@ -98,7 +114,7 @@ export function CoachChat() {
       console.error('Erro ao conversar com coach:', error);
       const errorMsg: ConversationMessage = {
         role: 'assistant',
-        content: 'Desculpa, tive um problema ao processar isso. Podes tentar novamente?',
+        content: L('Desculpa, tive um problema ao processar isso. Podes tentar novamente?', 'Sorry, something went wrong. Can you try again?'),
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -115,10 +131,10 @@ export function CoachChat() {
   };
 
   const quickActions = [
-    { label: 'Analisa o time', prompt: 'Analisa a situação atual do plantel' },
-    { label: 'Sugere treino', prompt: 'Sugere um plano de treino', action: 'suggest_training' },
-    { label: 'Prioridades staff', prompt: 'Quais as prioridades de upgrade de staff?', action: 'suggest_staff' },
-    { label: 'Próximo jogo', prompt: 'Como preparar para o próximo jogo?' },
+    { label: L('Analisa o time', 'Analyze team'), prompt: L('Analisa a situação atual do plantel', 'Analyze the current squad situation') },
+    { label: L('Sugere treino', 'Suggest training'), prompt: L('Sugere um plano de treino', 'Suggest a training plan'), action: 'suggest_training' },
+    { label: L('Prioridades staff', 'Staff priorities'), prompt: L('Quais as prioridades de upgrade de staff?', 'What are the staff upgrade priorities?'), action: 'suggest_staff' },
+    { label: L('Próximo jogo', 'Next match'), prompt: L('Como preparar para o próximo jogo?', 'How should I prepare for the next match?') },
   ];
 
   const handleQuickAction = async (action: typeof quickActions[0]) => {
@@ -140,7 +156,7 @@ export function CoachChat() {
     // Adiciona mensagem do manager
     const userMsg: ConversationMessage = {
       role: 'user',
-      content: 'Sugere um plano de treino e executa se eu aprovar',
+      content: L('Sugere um plano de treino e executa se eu aprovar', 'Suggest a training plan and run it if I approve'),
       timestamp: Date.now(),
     };
     setMessages((prev) => [...prev, userMsg]);
@@ -150,7 +166,7 @@ export function CoachChat() {
       const result = await suggestTraining(coach, teamContext);
 
       if (!result.ok || !result.suggestion) {
-        throw new Error(result.error || 'Erro ao gerar sugestão');
+        throw new Error(result.error || L('Erro ao gerar sugestão', 'Could not generate suggestion'));
       }
 
       const suggestion = result.suggestion;
@@ -169,7 +185,7 @@ export function CoachChat() {
       // Resposta do coach
       const assistantMsg: ConversationMessage = {
         role: 'assistant',
-        content: `**Sugestão de Treino Criada**
+        content: L(`**Sugestão de Treino Criada**
 
 **Tipo**: ${suggestion.mode === 'individual' ? 'Individual' : 'Coletivo'} - ${suggestion.trainingType}
 **Grupo**: ${suggestion.group}
@@ -179,7 +195,17 @@ export function CoachChat() {
 **Justificativa:**
 ${suggestion.reasoning}
 
-Criei uma ação pendente para aprovação. Verifica o card no canto inferior direito da tela para aprovar ou rejeitar.`,
+Criei uma ação pendente para aprovação. Verifica o card no canto inferior direito da tela para aprovar ou rejeitar.`, `**Training Suggestion Created**
+
+**Type**: ${suggestion.mode === 'individual' ? 'Individual' : 'Team'} - ${suggestion.trainingType}
+**Group**: ${ROTULO_GRUPO[suggestion.group] ?? suggestion.group}
+**Duration**: ${suggestion.durationHours}h
+**Priority**: ${suggestion.priority}
+
+**Reasoning:**
+${suggestion.reasoning}
+
+I created a pending action for approval. Check the card in the bottom-right corner to approve or reject.`),
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
@@ -187,7 +213,7 @@ Criei uma ação pendente para aprovação. Verifica o card no canto inferior di
       console.error('[handleSuggestTraining] Erro:', error);
       const errorMsg: ConversationMessage = {
         role: 'assistant',
-        content: `Erro ao criar sugestão de treino: ${error.message}`,
+        content: L(`Erro ao criar sugestão de treino: ${error.message}`, `Could not create training suggestion: ${error.message}`),
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -204,7 +230,7 @@ Criei uma ação pendente para aprovação. Verifica o card no canto inferior di
     // Adiciona mensagem do manager
     const userMsg: ConversationMessage = {
       role: 'user',
-      content: 'Sugere ações de staff e executa se eu aprovar',
+      content: L('Sugere ações de staff e executa se eu aprovar', 'Suggest staff actions and run them if I approve'),
       timestamp: Date.now(),
     };
     setMessages((prev) => [...prev, userMsg]);
@@ -214,7 +240,7 @@ Criei uma ação pendente para aprovação. Verifica o card no canto inferior di
       const result = await suggestStaff(coach, teamContext);
 
       if (!result.ok || !result.suggestions || result.suggestions.length === 0) {
-        throw new Error(result.error || 'Nenhuma sugestão disponível');
+        throw new Error(result.error || L('Nenhuma sugestão disponível', 'No suggestions available'));
       }
 
       const suggestions = result.suggestions;
@@ -243,11 +269,15 @@ Criei uma ação pendente para aprovação. Verifica o card no canto inferior di
 
       const assistantMsg: ConversationMessage = {
         role: 'assistant',
-        content: `**Sugestões de Staff Criadas**
+        content: L(`**Sugestões de Staff Criadas**
 
 ${suggestionsList}
 
-Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os cards no canto inferior direito da tela.`,
+Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os cards no canto inferior direito da tela.`, `**Staff Suggestions Created**
+
+${suggestionsList}
+
+I created ${actionsCreated} pending action(s) for approval. Check the cards in the bottom-right corner.`),
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
@@ -255,7 +285,7 @@ Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os c
       console.error('[handleSuggestStaff] Erro:', error);
       const errorMsg: ConversationMessage = {
         role: 'assistant',
-        content: `Erro ao criar sugestões de staff: ${error.message}`,
+        content: L(`Erro ao criar sugestões de staff: ${error.message}`, `Could not create staff suggestions: ${error.message}`),
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -269,7 +299,7 @@ Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os c
       <div className="w-full max-w-4xl mx-auto px-4 py-8">
         <div className="sports-panel p-6 text-center">
           <Bot className="w-12 h-12 mx-auto text-white/45 mb-4" />
-          <p className="text-white/50">Coach não disponível</p>
+          <p className="text-white/50">{L('Coach não disponível', 'Coach unavailable')}</p>
         </div>
       </div>
     );
@@ -281,7 +311,7 @@ Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os c
         <BackButton to="/clube/staff" label="Staff" />
 
         <div className="ole-eyebrow !text-neon-yellow">
-          <span>Treinador · Assistente de IA</span>
+          <span>{L('Treinador · Assistente de IA', 'Coach · AI Assistant')}</span>
         </div>
 
         {/* Header do Coach */}
@@ -299,20 +329,20 @@ Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os c
                 {coach.name}
               </h2>
               <p className="text-xs text-white/50 mt-0.5">
-                {coach.personality} · Reputação {coach.reputation}/100
+                {coach.personality} · {L('Reputação', 'Reputation')} {coach.reputation}/100
               </p>
             </div>
             <div className="hidden sm:flex items-center gap-3 text-xs">
               <div className="text-center">
-                <div className="text-white/45 uppercase text-[10px]">Tático</div>
+                <div className="text-white/45 uppercase text-[10px]">{L('Tático', 'Tactical')}</div>
                 <div className="text-white font-bold">{coach.tactical}/20</div>
               </div>
               <div className="text-center">
-                <div className="text-white/45 uppercase text-[10px]">Motivação</div>
+                <div className="text-white/45 uppercase text-[10px]">{L('Motivação', 'Motivation')}</div>
                 <div className="text-white font-bold">{coach.motivation}/20</div>
               </div>
               <div className="text-center">
-                <div className="text-white/45 uppercase text-[10px]">Autonomia</div>
+                <div className="text-white/45 uppercase text-[10px]">{L('Autonomia', 'Autonomy')}</div>
                 <div className="text-neon-yellow font-bold">{coach.autonomyLevel}%</div>
               </div>
             </div>
@@ -328,7 +358,7 @@ Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os c
           <div className="bg-black/40 border border-white/10 rounded p-2.5 text-xs">
             <div className="flex items-center gap-1.5 text-white/45 mb-1">
               <Users className="w-3.5 h-3.5" />
-              <span className="uppercase text-[10px] font-medium">Jogadores</span>
+              <span className="uppercase text-[10px] font-medium">{L('Jogadores', 'Players')}</span>
             </div>
             <div className="text-white text-base font-black">
               {Object.values(gameState.players).filter((p) => p.outForMatches <= 0).length}
@@ -337,7 +367,7 @@ Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os c
           <div className="bg-black/40 border border-white/10 rounded p-2.5 text-xs">
             <div className="flex items-center gap-1.5 text-white/45 mb-1">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span className="uppercase text-[10px] font-medium">Fadiga</span>
+              <span className="uppercase text-[10px] font-medium">{L('Fadiga', 'Fatigue')}</span>
             </div>
             <div className="text-white text-base font-black">
               {Math.round(
@@ -351,7 +381,7 @@ Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os c
           <div className="bg-black/40 border border-white/10 rounded p-2.5 text-xs">
             <div className="flex items-center gap-1.5 text-white/45 mb-1">
               <Dumbbell className="w-3.5 h-3.5" />
-              <span className="uppercase text-[10px] font-medium">Treinos</span>
+              <span className="uppercase text-[10px] font-medium">{L('Treinos', 'Training')}</span>
             </div>
             <div className="text-white text-base font-black">
               {gameState.manager.trainingPlans.filter((p) => p.status === 'running').length}
@@ -379,10 +409,10 @@ Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os c
               <div className="text-center py-8">
                 <Bot className="w-12 h-12 mx-auto text-gray-600 mb-3" />
                 <p className="text-sm text-white/50">
-                  Olá! Sou o teu assistente técnico. Posso ajudar com treinos, staff e análise do plantel.
+                  {L('Olá! Sou o teu assistente técnico. Posso ajudar com treinos, staff e análise do plantel.', 'Hi! I am your assistant coach. I can help with training, staff and squad analysis.')}
                 </p>
                 <p className="text-xs text-white/45 mt-2">
-                  Usa os botões abaixo ou escreve tua pergunta.
+                  {L('Usa os botões abaixo ou escreve tua pergunta.', 'Use the buttons below or type your question.')}
                 </p>
               </div>
             )}
@@ -406,7 +436,7 @@ Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os c
                 >
                   <div className="whitespace-pre-wrap break-words">{msg.content}</div>
                   <div className="text-[10px] opacity-60 mt-1">
-                    {new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
+                    {new Date(msg.timestamp).toLocaleTimeString(LOCALE, {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
@@ -445,7 +475,7 @@ Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os c
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Escreve tua mensagem..."
+                placeholder={L('Escreve tua mensagem...', 'Type your message...')}
                 className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-gray-500 resize-none focus:outline-none focus:border-neon-yellow/50"
                 rows={2}
                 disabled={loading}
@@ -491,7 +521,7 @@ Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os c
             className="sports-panel p-4"
           >
             <h3 className="text-xs font-bold uppercase tracking-wider text-white/50 mb-2">
-              Instruções Ativas ({coach.memory.managerInstructions.filter((i) => i.active).length})
+              {L('Instruções Ativas', 'Active Instructions')} ({coach.memory.managerInstructions.filter((i) => i.active).length})
             </h3>
             <div className="space-y-1.5">
               {coach.memory.managerInstructions

@@ -2,6 +2,7 @@ import type { LiveMatchSnapshot } from '@/engine/types';
 import type { OlefootGameState } from './types';
 import type { InboxItem } from './inboxTypes';
 import { makeInboxItem } from './inboxItem';
+import { L } from '@/i18n/L';
 
 /**
  * Um conselho de staff após jornada (sem placar no título — consequência de gestão).
@@ -24,7 +25,7 @@ export function buildPostMatchStaffInboxItem(
   const avgFat = fats.length ? fats.reduce((a, b) => a + b, 0) / fats.length : 0;
 
   const gk = lm.homePlayers?.find((p) => p.role === 'gk');
-  const gkName = gk?.name ?? 'o guarda-redes';
+  const gkName = gk?.name ?? L('o guarda-redes', 'the goalkeeper');
   const gkId = gk?.playerId;
 
   if (conceded >= 2) {
@@ -32,9 +33,9 @@ export function buildPostMatchStaffInboxItem(
       `staff-gr-${Date.now()}`,
       'STAFF_ADVICE',
       'STAFF',
-      'Preparador de GR: golos evitáveis na última jornada',
+      L('Preparador de GR: golos evitáveis na última jornada', 'GK coach: avoidable goals last matchday'),
       {
-        body: `Sugerimos treino mental focado em confiança e reação para **${gkName}** — vamos reforçar a concentração nos próximos dias.`,
+        body: L(`Sugerimos treino mental focado em confiança e reação para **${gkName}** — vamos reforçar a concentração nos próximos dias.`, `We suggest mental training focused on confidence and reactions for **${gkName}** — we'll sharpen concentration over the next few days.`),
         staffRole: 'preparador_goleiros',
         relatedPlayerIds: gkId ? [gkId] : undefined,
         deepLink: '/team',
@@ -48,10 +49,10 @@ export function buildPostMatchStaffInboxItem(
       `staff-mental-${Date.now()}`,
       'STAFF_ADVICE',
       'STAFF',
-      'Equipe técnica de performance mental',
+      L('Equipe técnica de performance mental', 'Mental performance staff'),
       {
         body:
-          'Notamos insegurança no grupo após o desgaste da última jornada. Sugerimos um treino mental em circuito para destravar o bloco.',
+          L('Notamos insegurança no grupo após o desgaste da última jornada. Sugerimos um treino mental em circuito para destravar o bloco.', 'We noticed insecurity in the group after last matchday\'s toll. We suggest a mental circuit session to unlock the team.'),
         staffRole: 'mental',
         deepLink: '/team',
         hideFromHomeFeed: true,
@@ -64,10 +65,10 @@ export function buildPostMatchStaffInboxItem(
       `staff-fis-${Date.now()}`,
       'STAFF_ADVICE',
       'STAFF',
-      'Preparador físico: bloco pesado',
+      L('Preparador físico: bloco pesado', 'Fitness coach: heavy legs'),
       {
         body:
-          'O ritmo de jogo pode estar a sofrer com a carga acumulada. Proponho treino físico coletivo para recuperar intensidade.',
+          L('O ritmo de jogo pode estar a sofrer com a carga acumulada. Proponho treino físico coletivo para recuperar intensidade.', 'The match tempo may be suffering from accumulated load. I propose team fitness training to recover intensity.'),
         staffRole: 'preparador_fisico',
         deepLink: '/team',
         hideFromHomeFeed: true,
@@ -81,10 +82,10 @@ export function buildPostMatchStaffInboxItem(
       `staff-tat-${Date.now()}`,
       'STAFF_ADVICE',
       'STAFF',
-      'Análise tática: desalinhamento com o plano',
+      L('Análise tática: desalinhamento com o plano', 'Tactical analysis: off the game plan'),
       {
         body:
-          'Estamos previsíveis na saída de bola face ao estilo definido. Sugerimos treino tático com o grupo criativo.',
+          L('Estamos previsíveis na saída de bola face ao estilo definido. Sugerimos treino tático com o grupo criativo.', 'We\'re predictable building from the back for our chosen style. We suggest tactical training with the creative group.'),
         staffRole: 'tatico',
         deepLink: '/team',
         hideFromHomeFeed: true,
@@ -96,10 +97,10 @@ export function buildPostMatchStaffInboxItem(
     `staff-head-${Date.now()}`,
     'STAFF_ADVICE',
     'STAFF',
-    'Treinador: resenha da jornada',
+    L('Treinador: resenha da jornada', 'Coach: matchday review'),
     {
       body:
-        'Resumo interno: ajustámos detalhes táticos e estado físico. Reforçar finalização e compactação antes do próximo compromisso.',
+        L('Resumo interno: ajustámos detalhes táticos e estado físico. Reforçar finalização e compactação antes do próximo compromisso.', 'Internal summary: we adjusted tactical details and fitness. Work on finishing and compactness before the next fixture.'),
       staffRole: 'treinador',
       deepLink: '/team',
       hideFromHomeFeed: true,

@@ -1,3 +1,4 @@
+import { L } from '@/i18n/L';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, UserPlus, X, Zap, Trophy, Shield, Star, Users } from 'lucide-react';
 import { useState } from 'react';
@@ -110,16 +111,16 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
 
             <div className="shrink-0 border-b border-white/10 bg-deep-black p-6">
               <h3 className="font-impact text-2xl uppercase leading-[1.1] text-white">
-                Buscar Partida
+                {L('Buscar Partida', 'Find Match')}
               </h3>
-              <Hashtag className="mt-1.5">#pvp · adversário automático</Hashtag>
+              <Hashtag className="mt-1.5">{L('#pvp · adversário automático', '#pvp · auto opponent')}</Hashtag>
             </div>
 
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain p-6">
               {/* Tipo de partida: Competitivo / Amistoso */}
               <div>
                 <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento block mb-2">
-                  Tipo de partida
+                  {L('Tipo de partida', 'Match type')}
                 </span>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -134,7 +135,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                   >
                     <div className="flex flex-col items-center gap-1">
                       <Star className="w-4 h-4" />
-                      <span>Competitivo</span>
+                      <span>{L('Competitivo', 'Competitive')}</span>
                     </div>
                   </button>
                   <button
@@ -149,13 +150,13 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                   >
                     <div className="flex flex-col items-center gap-1">
                       <Users className="w-4 h-4" />
-                      <span>Amistoso</span>
+                      <span>{L('Amistoso', 'Friendly')}</span>
                     </div>
                   </button>
                 </div>
                 {matchType === 'competitive' && (
                   <p className="mt-2 font-mono text-[10.5px] text-neon-yellow leading-snug">
-                    Conta pontos no ranking contra time humano
+                    {L('Conta pontos no ranking contra time humano', 'Counts ranking points vs a human team')}
                   </p>
                 )}
               </div>
@@ -163,7 +164,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
               {/* Modo de partida */}
               <div>
                 <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento block mb-2">
-                  Modo de partida
+                  {L('Modo de partida', 'Match mode')}
                 </span>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -176,7 +177,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                         : 'border-white/16 text-cimento hover:border-white/30 hover:text-white',
                     )}
                   >
-                    Partida Rápida
+                    {L('Partida Rápida', 'Quick Match')}
                   </button>
                   <button
                     type="button"
@@ -188,7 +189,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                         : 'border-white/16 text-cimento hover:border-white/30 hover:text-white',
                     )}
                   >
-                    Disputa Pênaltis
+                    {L('Disputa Pênaltis', 'Penalty Shootout')}
                   </button>
                 </div>
               </div>
@@ -197,7 +198,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">
-                    Prêmio (vencedor leva)
+                    {L('Prêmio (vencedor leva)', 'Prize (winner takes)')}
                   </span>
                   <div className="flex gap-1">
                     <button
@@ -225,11 +226,11 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                 <input
                   value={betInput}
                   onChange={(e) => setBetInput(e.target.value)}
-                  placeholder={betCurrency === 'BRO' ? 'Ex.: 10,50' : 'Ex.: 500'}
+                  placeholder={betCurrency === 'BRO' ? L('Ex.: 10,50', 'e.g. 10.50') : L('Ex.: 500', 'e.g. 500')}
                   className="w-full bg-deep-black border border-white/16 px-3 py-2 text-sm text-white placeholder:text-poeira focus:border-neon-yellow/60 focus:outline-none"
                 />
                 <p className="font-mono text-[10.5px] text-cimento mt-2">
-                  Saldo: {betCurrency === 'BRO' ? `${(finance.broCents / 100).toFixed(2)} BRO` : `${formatExp(finance.ole)} EXP`}
+                  {L('Saldo', 'Balance')}: {betCurrency === 'BRO' ? `${(finance.broCents / 100).toFixed(2)} BRO` : `${formatExp(finance.ole)} EXP`}
                 </p>
               </div>
 
@@ -243,7 +244,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                 >
                   <span className="btn-primary-inner flex items-center justify-center gap-2">
                     <Search className="w-4 h-4" />
-                    {searching ? 'Procurando adversário...' : 'BUSCAR ADVERSÁRIO'}
+                    {searching ? L('Procurando adversário...', 'Searching for opponent...') : L('BUSCAR ADVERSÁRIO', 'FIND OPPONENT')}
                   </span>
                 </button>
               )}
@@ -257,7 +258,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <h4 className="truncate font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-neon-yellow">
-                      Adversário encontrado
+                      {L('Adversário encontrado', 'Opponent found')}
                     </h4>
                     {opponent.type === 'bot' ? (
                       <span className="shrink-0 bg-card-hi px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-cimento">
@@ -265,7 +266,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                       </span>
                     ) : opponent.type === 'real_manager' ? (
                       <span className="shrink-0 bg-neon-yellow px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-black">
-                        MANAGER REAL
+                        {L('MANAGER REAL', 'REAL MANAGER')}
                       </span>
                     ) : (
                       <span className="shrink-0 border border-alta/50 px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-alta">
@@ -300,7 +301,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                       )}
                       {opponent.type === 'real_manager' && (
                         <p className="font-mono text-[10.5px] text-neon-yellow mt-1">
-                          Elenco real · EXP conta para o ranking
+                          {L('Elenco real · EXP conta para o ranking', 'Real squad · EXP counts for ranking')}
                         </p>
                       )}
                     </div>
@@ -308,18 +309,18 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
 
                   <div className="border-t border-white/10 pt-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">Tipo</span>
+                      <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Tipo', 'Type')}</span>
                       <span className={cn(
                         "ole-num text-[11px] uppercase px-2 py-0.5",
                         matchType === 'competitive'
                           ? 'bg-neon-yellow text-black'
                           : 'border border-white/16 text-cimento'
                       )}>
-                        {matchType === 'competitive' ? 'Competitivo' : 'Amistoso'}
+                        {matchType === 'competitive' ? L('Competitivo', 'Competitive') : L('Amistoso', 'Friendly')}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">Prêmio</span>
+                      <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Prêmio', 'Prize')}</span>
                       <span className="ole-num text-sm text-neon-yellow">
                         {betCurrency === 'BRO'
                           ? `${(betBroCents / 100).toFixed(2)} BRO`
@@ -329,7 +330,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                     {(matchType === 'competitive' && opponent.type !== 'bot') || opponent.type === 'real_manager' ? (
                       <div className="flex items-center gap-1.5 border border-neon-yellow/40 px-2 py-1.5 font-mono text-[10.5px] text-neon-yellow">
                         <Star className="w-3 h-3 shrink-0" />
-                        <span>Partida vale pontos no ranking</span>
+                        <span>{L('Partida vale pontos no ranking', 'Match counts for ranking points')}</span>
                       </div>
                     ) : null}
                   </div>
@@ -341,7 +342,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                   >
                     <span className="btn-primary-inner flex items-center justify-center gap-2">
                       <Trophy className="w-4 h-4" />
-                      CONFIRMAR E JOGAR
+                      {L('CONFIRMAR E JOGAR', 'CONFIRM & PLAY')}
                     </span>
                   </button>
 
@@ -350,7 +351,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                     onClick={() => setOpponent(null)}
                     className="ole-num w-full h-11 border border-white/30 text-[12px] uppercase text-white transition-colors hover:border-white hover:bg-white/5"
                   >
-                    Buscar outro adversário
+                    {L('Buscar outro adversário', 'Find another opponent')}
                   </button>
                 </motion.div>
               )}

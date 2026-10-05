@@ -9,6 +9,7 @@ import { ShoppingBag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { shopItemIcon, type ShopCatalogItem, type ShopRarity } from '@/game/shopCatalog';
 import { LegendaryBadge } from '@/store/LegendaryBadge';
+import { L, LOCALE } from '@/i18n/L';
 
 interface StoreItemListProps {
   items: ShopCatalogItem[];
@@ -37,14 +38,14 @@ function rarityBorder(r: ShopRarity): string {
 }
 
 function formatBro(cents: number): string {
-  return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (cents / 100).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export function StoreItemList({ items, inventory, onSelect }: StoreItemListProps) {
   if (items.length === 0) {
     return (
       <div className="rounded-lg border border-white/10 bg-panel p-8 text-center">
-        <p className="text-sm text-gray-500">Nenhum item disponível nesta categoria.</p>
+        <p className="text-sm text-gray-500">{L('Nenhum item disponível nesta categoria.', 'No items available in this category.')}</p>
       </div>
     );
   }
@@ -110,7 +111,7 @@ export function StoreItemList({ items, inventory, onSelect }: StoreItemListProps
                       item.rarity === 'comum' && 'bg-white/10 text-white/70'
                     )}
                   >
-                    {item.rarity === 'mitico' ? 'MÍTICO' : item.rarity === 'epico' ? 'ÉPICO' : item.rarity === 'raro' ? 'RARO' : 'COMUM'}
+                    {item.rarity === 'mitico' ? L('MÍTICO', 'MYTHIC') : item.rarity === 'epico' ? L('ÉPICO', 'EPIC') : item.rarity === 'raro' ? L('RARO', 'RARE') : L('COMUM', 'COMMON')}
                   </span>
                 </div>
 
@@ -124,14 +125,14 @@ export function StoreItemList({ items, inventory, onSelect }: StoreItemListProps
                   )}
                   {item.priceExp != null && item.priceExp > 0 && (
                     <span className="rounded border border-neon-yellow/30 bg-neon-yellow/5 px-2 py-0.5 font-mono text-[9px] font-bold text-neon-yellow">
-                      {item.priceExp.toLocaleString('pt-BR')} EXP
+                      {item.priceExp.toLocaleString(LOCALE)} EXP
                     </span>
                   )}
 
                   {/* Inventário */}
                   {item.consumable && inv > 0 && (
                     <span className="rounded border border-[var(--color-success)]/30 bg-[var(--color-success)]/10 px-2 py-0.5 font-display text-[8px] font-bold uppercase text-[var(--color-success)]">
-                      {inv}× estoque
+                      {inv}× {L('estoque', 'in stock')}
                     </span>
                   )}
 
@@ -145,7 +146,7 @@ export function StoreItemList({ items, inventory, onSelect }: StoreItemListProps
                   {/* CTA hover */}
                   <span className="ml-auto inline-flex items-center gap-1 text-[9px] text-white/40 transition-colors group-hover:text-neon-yellow">
                     <ShoppingBag className="h-3 w-3" aria-hidden />
-                    Comprar
+                    {L('Comprar', 'Buy')}
                   </span>
                 </div>
               </div>

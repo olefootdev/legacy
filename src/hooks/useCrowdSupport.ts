@@ -18,6 +18,7 @@
  */
 
 import { useGameStore } from '@/game/store';
+import { L } from '@/i18n/L';
 
 const NEUTRAL = 50;
 
@@ -29,10 +30,10 @@ export interface CrowdSupportResult {
 }
 
 function crowdMood(support: number): string {
-  if (support < 40) return 'Cética';
-  if (support < 62) return 'Expectante';
-  if (support < 82) return 'Confiante';
-  return 'Euforia';
+  if (support < 40) return L('Cética', 'Sceptical');
+  if (support < 62) return L('Expectante', 'Expectant');
+  if (support < 82) return L('Confiante', 'Confident');
+  return L('Euforia', 'Euphoric');
 }
 
 export function useCrowdSupport(): CrowdSupportResult {

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 import { useGameStore } from '@/game/store';
 import { formatExp } from '@/systems/economy';
 import { useProgressionStore } from '@/progression/progressionStore';
@@ -153,9 +154,12 @@ export function Manager() {
     if (missionsReady.count > 0) {
       out.push({
         key: 'missions',
-        text: `${missionsReady.count} miss${missionsReady.count > 1 ? 'ões' : 'ão'}`,
-        tag: '#prontas',
-        cta: `Resgatar +${formatExp(missionsReady.expTotal)} EXP`,
+        text: L(
+          `${missionsReady.count} miss${missionsReady.count > 1 ? 'ões' : 'ão'}`,
+          `${missionsReady.count} mission${missionsReady.count > 1 ? 's' : ''}`,
+        ),
+        tag: L('#prontas', '#ready'),
+        cta: L(`Resgatar +${formatExp(missionsReady.expTotal)} EXP`, `Claim +${formatExp(missionsReady.expTotal)} EXP`),
         primary: true,
         onClick: () => navigate('/manager/missoes'),
       });
@@ -163,9 +167,12 @@ export function Manager() {
     if (social.incoming.length > 0) {
       out.push({
         key: 'requests',
-        text: `${social.incoming.length} solicitaç${social.incoming.length > 1 ? 'ões' : 'ão'}`,
+        text: L(
+          `${social.incoming.length} solicitaç${social.incoming.length > 1 ? 'ões' : 'ão'}`,
+          `${social.incoming.length} request${social.incoming.length > 1 ? 's' : ''}`,
+        ),
         tag: '#network',
-        cta: 'Responder',
+        cta: L('Responder', 'Respond'),
         primary: false,
         onClick: () => setDrawer('network'),
       });
@@ -173,9 +180,9 @@ export function Manager() {
     if (nextTier && tierFrac >= 0.85) {
       out.push({
         key: 'nextTier',
-        text: `Perto de ${nextTier.name}`,
-        tag: `#carreira · faltam ${formatExp(missingToNext)} EXP`,
-        cta: 'Ver plano',
+        text: L(`Perto de ${nextTier.name}`, `Close to ${nextTier.name}`),
+        tag: L(`#carreira · faltam ${formatExp(missingToNext)} EXP`, `#career · ${formatExp(missingToNext)} EXP to go`),
+        cta: L('Ver plano', 'View plan'),
         primary: false,
         onClick: () => setDrawer('career'),
       });
@@ -190,7 +197,7 @@ export function Manager() {
   return (
     <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col gap-7 overflow-x-hidden px-3 pb-6 sm:px-4">
       {/* ── 1. QUEM É O MANAGER ─────────────────────────────────────────── */}
-      <section aria-label="Perfil do manager" className="flex flex-col gap-4">
+      <section aria-label={L('Perfil do manager', 'Manager profile')} className="flex flex-col gap-4">
         <div className="flex min-w-0 items-center gap-4">
           <div className="relative flex h-[76px] w-[76px] shrink-0 items-center justify-center overflow-hidden border border-white/16 bg-card">
             {avatarSrc && avatarOk ? (
@@ -229,12 +236,12 @@ export function Manager() {
                 <TierIcon className="h-6 w-6" strokeWidth={2.4} aria-hidden />
               </span>
               <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="font-mono text-[10.5px] font-medium tracking-[0.2em] text-cimento">CARREIRA</span>
+                <span className="font-mono text-[10.5px] font-medium tracking-[0.2em] text-cimento">{L('CARREIRA', 'CAREER')}</span>
                 <UmaLinha className="font-impact text-[26px] uppercase leading-[1.25] text-white">{currentTier.name}</UmaLinha>
               </div>
             </div>
             <span className="ole-num flex shrink-0 items-center gap-1 text-[12px] uppercase text-neon-yellow">
-              Plano
+              {L('Plano', 'Plan')}
               <ChevronRight aria-hidden className="h-4 w-4" strokeWidth={2.6} />
             </span>
           </div>
@@ -242,7 +249,7 @@ export function Manager() {
             <div className="mt-3.5 flex flex-col gap-2">
               <div className="flex min-w-0 items-baseline justify-between gap-3">
                 <UmaLinha className="text-[13.5px] font-semibold text-white">
-                  −{formatExp(missingToNext)} EXP pro {nextTier.name}
+                  {L(`−${formatExp(missingToNext)} EXP pro ${nextTier.name}`, `−${formatExp(missingToNext)} EXP to ${nextTier.name}`)}
                 </UmaLinha>
                 <span className="shrink-0 font-mono text-[11px] text-cimento">{Math.round(tierFrac * 100)}%</span>
               </div>
@@ -251,18 +258,18 @@ export function Manager() {
               </div>
             </div>
           ) : (
-            <UmaLinha className="mt-3.5 text-[13.5px] font-semibold text-alta">Topo da carreira</UmaLinha>
+            <UmaLinha className="mt-3.5 text-[13.5px] font-semibold text-alta">{L('Topo da carreira', 'Top of career')}</UmaLinha>
           )}
         </button>
 
         {/* Três números — nenhum é saldo (saldo é da Carteira) */}
         <div className="grid grid-cols-3 divide-x divide-white/10 border border-white/10 bg-panel">
           {[
-            { label: 'ELENCO', value: squadSize },
-            { label: 'TROFÉUS', value: trophiesEarned },
-            { label: social.friends.length === 1 ? 'AMIGO' : 'AMIGOS', value: social.friends.length },
+            { key: 'squad', label: L('ELENCO', 'SQUAD'), value: squadSize },
+            { key: 'trophies', label: L('TROFÉUS', 'TROPHIES'), value: trophiesEarned },
+            { key: 'friends', label: social.friends.length === 1 ? L('AMIGO', 'FRIEND') : L('AMIGOS', 'FRIENDS'), value: social.friends.length },
           ].map((s) => (
-            <div key={s.label} className="flex min-w-0 flex-col items-center gap-1.5 px-2 py-3.5">
+            <div key={s.key} className="flex min-w-0 flex-col items-center gap-1.5 px-2 py-3.5">
               <span className="ole-num block leading-none text-white" style={{ fontSize: 'clamp(22px, 6.4vw, 30px)' }}>
                 {s.value}
               </span>
@@ -274,8 +281,8 @@ export function Manager() {
 
       {/* ── 2. MESA DO MANAGER — só aparece quando há o que fazer ───────── */}
       {mesa.length > 0 && (
-        <section aria-label="Mesa do manager" className="flex flex-col gap-3">
-          <SecaoVolt label="Mesa do manager" />
+        <section aria-label={L('Mesa do manager', 'Manager desk')} className="flex flex-col gap-3">
+          <SecaoVolt label={L('Mesa do manager', 'Manager desk')} />
           <ul className="border border-white/10 bg-panel">
             {mesa.map((m) => (
               // Sem espaço (320px), o botão desce pra baixo do texto em vez de espremê-lo.
@@ -303,8 +310,8 @@ export function Manager() {
       )}
 
       {/* ── 3. SUA CENTRAL — mosaico 2×2 ─────────────────────────────────── */}
-      <section aria-label="Sua central" className="flex flex-col gap-3">
-        <SecaoVolt label="Sua central" />
+      <section aria-label={L('Sua central', 'Your hub')} className="flex flex-col gap-3">
+        <SecaoVolt label={L('Sua central', 'Your hub')} />
         <div className="grid auto-rows-[152px] grid-cols-2 gap-3.5">
           <button
             type="button"
@@ -313,7 +320,7 @@ export function Manager() {
           >
             <TrendingUp aria-hidden className="h-[28px] w-[28px]" strokeWidth={2.2} />
             <span className="flex min-w-0 flex-col gap-1">
-              <span className={tileTitle}>Carreira</span>
+              <span className={tileTitle}>{L('Carreira', 'Career')}</span>
               <span className="block min-w-0 truncate font-mono text-[11.5px] font-semibold text-[#1A1700]">
                 #{currentTier.name.toLowerCase().replace(/\s+/g, '')}
               </span>
@@ -330,8 +337,8 @@ export function Manager() {
               )}
             </span>
             <span className="flex min-w-0 flex-col gap-1">
-              <span className={tileTitle}>Amigos</span>
-              <Hashtag>{`${social.friends.length} amigo${social.friends.length !== 1 ? 's' : ''}`}</Hashtag>
+              <span className={tileTitle}>{L('Amigos', 'Friends')}</span>
+              <Hashtag>{L(`${social.friends.length} amigo${social.friends.length !== 1 ? 's' : ''}`, `${social.friends.length} friend${social.friends.length !== 1 ? 's' : ''}`)}</Hashtag>
             </span>
           </button>
 
@@ -339,7 +346,7 @@ export function Manager() {
             <Brain aria-hidden className="h-[28px] w-[28px] text-neon-yellow" strokeWidth={2.2} />
             <span className="flex min-w-0 flex-col gap-1">
               <span className={tileTitle}>Scouts</span>
-              <Hashtag>#relatório</Hashtag>
+              <Hashtag>{L('#relatório', '#report')}</Hashtag>
             </span>
           </button>
 
@@ -347,25 +354,25 @@ export function Manager() {
             <Gem aria-hidden className="h-[28px] w-[28px] text-neon-yellow" strokeWidth={2.2} />
             <span className="flex min-w-0 flex-col gap-1">
               <span className={tileTitle}>PRO</span>
-              <Hashtag>#vendas</Hashtag>
+              <Hashtag>{L('#vendas', '#sales')}</Hashtag>
             </span>
           </button>
         </div>
       </section>
 
       {/* ── 4. TROFÉUS ─────────────────────────────────────────────────── */}
-      <section aria-label="Troféus" className="flex flex-col gap-3">
-        <SecaoVolt label="Troféus">
-          <Hashtag>{`${trophiesEarned} conquistado${trophiesEarned !== 1 ? 's' : ''}`}</Hashtag>
+      <section aria-label={L('Troféus', 'Trophies')} className="flex flex-col gap-3">
+        <SecaoVolt label={L('Troféus', 'Trophies')}>
+          <Hashtag>{L(`${trophiesEarned} conquistado${trophiesEarned !== 1 ? 's' : ''}`, `${trophiesEarned} won`)}</Hashtag>
         </SecaoVolt>
 
         <TrophyGroup
-          title="Memoráveis"
+          title={L('Memoráveis', 'Memorable')}
           count={memorableTrophyUnlockedIds.length}
           total={MEMORABLE_TROPHY_SLOTS.length}
           defaultOpen
         >
-          <Hashtag className="mb-3">#liga #copa #supercopa</Hashtag>
+          <Hashtag className="mb-3">{L('#liga #copa #supercopa', '#league #cup #supercup')}</Hashtag>
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {MEMORABLE_TROPHY_SLOTS.map((slot) => (
               <TrophySlot key={slot.id} name={slot.name} earned={memorableTrophyUnlockedIds.includes(slot.id)} />
@@ -374,15 +381,15 @@ export function Manager() {
         </TrophyGroup>
 
         <TrophyGroup
-          title="Coroas do Dia"
+          title={L('Coroas do Dia', 'Daily Crowns')}
           count={dailyCrowns.length}
           defaultOpen={dailyCrowns.length > 0}
         >
-          <Hashtag className="mb-3">#ligaglobal #matamata</Hashtag>
+          <Hashtag className="mb-3">{L('#ligaglobal #matamata', '#globalleague #knockout')}</Hashtag>
           {dailyCrowns.length === 0 ? (
             <div className="flex min-w-0 items-center gap-3 border border-dashed border-white/10 px-4 py-4">
               <Lock aria-hidden className="h-5 w-5 shrink-0 text-poeira" />
-              <UmaLinha className="text-[13px] text-cimento">Vença o mata-mata das 19h</UmaLinha>
+              <UmaLinha className="text-[13px] text-cimento">{L('Vença o mata-mata das 19h', 'Win the 7pm knockout')}</UmaLinha>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
@@ -394,8 +401,8 @@ export function Manager() {
                       <Crown aria-hidden className="h-5 w-5" strokeWidth={2.4} />
                     </span>
                     <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className="ole-num text-[14px] leading-none text-white">{`${d}/${m}/${y.slice(2)}`}</span>
-                      <span className="block truncate font-mono text-[10.5px] text-cimento">#chave{c.bracketSize}</span>
+                      <span className="ole-num text-[14px] leading-none text-white">{L(`${d}/${m}/${y.slice(2)}`, `${m}/${d}/${y.slice(2)}`)}</span>
+                      <span className="block truncate font-mono text-[10.5px] text-cimento">{L('#chave', '#bracket')}{c.bracketSize}</span>
                     </span>
                   </div>
                 );
@@ -405,7 +412,7 @@ export function Manager() {
         </TrophyGroup>
 
         <TrophyGroup
-          title="Competição"
+          title={L('Competição', 'Competition')}
           count={competitionTrophies.filter((t) => t.earned).length}
           total={competitionTrophies.length}
         >
@@ -417,7 +424,7 @@ export function Manager() {
         </TrophyGroup>
 
         <TrophyGroup
-          title="Missões"
+          title={L('Missões', 'Missions')}
           count={missionTrophies.filter((t) => t.earned).length}
           total={missionTrophies.length}
         >
@@ -561,7 +568,7 @@ function DrawerShell({
             type="button"
             onClick={onClose}
             className="p-2 text-cimento transition-colors hover:bg-white/10 hover:text-white"
-            aria-label="Fechar"
+            aria-label={L('Fechar', 'Close')}
           >
             <X className="h-5 w-5" />
           </button>
@@ -582,10 +589,10 @@ function CareerDrawer({
   onClose: () => void;
 }) {
   return (
-    <DrawerShell title="Plano de Carreira" onClose={onClose}>
+    <DrawerShell title={L('Plano de Carreira', 'Career Plan')} onClose={onClose}>
       <div className="space-y-4">
         <div className="border border-white/10 bg-card p-4">
-          <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">EXP acumulado</p>
+          <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">{L('EXP acumulado', 'Lifetime EXP')}</p>
           <p className="ole-num mt-1 truncate leading-none text-white" style={{ fontSize: 'clamp(22px, 7vw, 30px)' }}>{formatExp(expLifetime)}</p>
           <div className="mt-3">
             <CareerTierBadge expLifetimeEarned={expLifetime} showProgress />
@@ -645,7 +652,7 @@ function CareerDrawer({
                       {t.name}
                       {isCurrent && (
                         <span className="ml-2 inline-flex items-center bg-neon-yellow px-2 py-0.5 align-middle font-mono text-[9.5px] font-medium text-black">
-                          AGORA
+                          {L('AGORA', 'NOW')}
                         </span>
                       )}
                     </p>
@@ -653,7 +660,7 @@ function CareerDrawer({
                       'mt-1 text-[11px]',
                       isCurrent ? 'text-giz' : 'text-cimento',
                     )}>
-                      {t.minExp === 0 ? 'Nível inicial' : `A partir de ${formatExp(t.minExp)} EXP`}
+                      {t.minExp === 0 ? L('Nível inicial', 'Starting level') : L(`A partir de ${formatExp(t.minExp)} EXP`, `From ${formatExp(t.minExp)} EXP`)}
                     </p>
                   </div>
 
@@ -675,12 +682,12 @@ function CareerDrawer({
 
         <div className="border border-white/10 bg-card p-3 text-xs text-giz">
           <p className="flex items-center gap-1.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
-            <Sparkles className="h-3.5 w-3.5 text-cimento" /> Como ganho EXP?
+            <Sparkles className="h-3.5 w-3.5 text-cimento" /> {L('Como ganho EXP?', 'How do I earn EXP?')}
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-4">
-            <li>Complete missões diárias, semanais e especiais</li>
-            <li>Vença partidas oficiais da liga</li>
-            <li>Evolua estruturas do clube e treine o plantel</li>
+            <li>{L('Complete missões diárias, semanais e especiais', 'Complete daily, weekly and special missions')}</li>
+            <li>{L('Vença partidas oficiais da liga', 'Win official league matches')}</li>
+            <li>{L('Evolua estruturas do clube e treine o plantel', 'Upgrade club facilities and train the squad')}</li>
           </ul>
         </div>
       </div>
@@ -700,7 +707,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
 
         {social.data.incoming.length > 0 ? (
           <section>
-            <SecaoVolt label="Solicitações" className="mb-2" />
+            <SecaoVolt label={L('Solicitações', 'Requests')} className="mb-2" />
             <ul className="space-y-2">
               {social.data.incoming.map((req) => (
                 <li
@@ -709,7 +716,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
                 >
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-semibold text-white">{req.clubName}</p>
-                    <Hashtag>#solicitação</Hashtag>
+                    <Hashtag>{L('#solicitação', '#request')}</Hashtag>
                   </div>
                   <div className="flex shrink-0 gap-1.5">
                     <button
@@ -717,14 +724,14 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
                       onClick={() => void social.accept(req.id)}
                       className="ole-num bg-neon-yellow px-2.5 py-1.5 text-[11px] uppercase text-black hover:bg-white"
                     >
-                      Aceitar
+                      {L('Aceitar', 'Accept')}
                     </button>
                     <button
                       type="button"
                       onClick={() => void social.decline(req.id)}
                       className="ole-num border border-white/30 px-2.5 py-1.5 text-[11px] uppercase text-white hover:border-white"
                     >
-                      Recusar
+                      {L('Recusar', 'Decline')}
                     </button>
                   </div>
                 </li>
@@ -734,10 +741,10 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
         ) : null}
 
         <section>
-          <SecaoVolt label={`Amigos · ${social.data.friends.length}`} tone="neutro" className="mb-2" />
+          <SecaoVolt label={`${L('Amigos', 'Friends')} · ${social.data.friends.length}`} tone="neutro" className="mb-2" />
           {social.data.friends.length === 0 ? (
             <p className="border border-dashed border-white/10 px-3 py-3 text-[13px] text-cimento">
-              Quem entra pelo seu link vira amigo.
+              {L('Quem entra pelo seu link vira amigo.', 'Anyone who joins via your link becomes a friend.')}
             </p>
           ) : (
             <ul className="grid gap-1.5 sm:grid-cols-2">
@@ -752,7 +759,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
                     onClick={() => void social.remove(f.id)}
                     className="ole-num shrink-0 text-[11px] uppercase text-cimento hover:text-baixa"
                   >
-                    Remover
+                    {L('Remover', 'Remove')}
                   </button>
                 </li>
               ))}
@@ -762,7 +769,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
 
         {social.data.outgoing.length > 0 ? (
           <section>
-            <SecaoVolt label="Convites enviados" tone="neutro" className="mb-2" />
+            <SecaoVolt label={L('Convites enviados', 'Invites sent')} tone="neutro" className="mb-2" />
             <ul className="space-y-1.5">
               {social.data.outgoing.map((o) => (
                 <li key={o.id} className="flex min-w-0 items-center justify-between gap-2 border border-white/10 bg-panel px-3 py-2.5">
@@ -772,7 +779,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
                     onClick={() => void social.remove(o.id)}
                     className="ole-num shrink-0 text-[11px] uppercase text-cimento hover:text-white"
                   >
-                    Cancelar
+                    {L('Cancelar', 'Cancel')}
                   </button>
                 </li>
               ))}
@@ -780,7 +787,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
           </section>
         ) : null}
 
-        <Hashtag className="text-poeira">Seu link de convite fica na Home</Hashtag>
+        <Hashtag className="text-poeira">{L('Seu link de convite fica na Home', 'Your invite link is on the Home screen')}</Hashtag>
       </div>
 
     </DrawerShell>

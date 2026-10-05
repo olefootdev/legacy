@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 /**
  * Toggle SPOT | DEX do hero da Wallet.
@@ -24,7 +25,7 @@ export function WalletSpotToggle() {
     <div
       className="inline-flex items-center gap-1 border border-white/16 bg-panel p-1"
       role="tablist"
-      aria-label="Conta SPOT ou DEX"
+      aria-label={L('Conta SPOT ou DEX', 'SPOT or DEX account')}
     >
       <NavLink to="/wallet" end className={estado}>
         SPOT

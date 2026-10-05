@@ -4,6 +4,7 @@ import {
   type TeamCardVisualStyle,
 } from '@/components/match/TeamStylePortraitColumn';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 export interface GoalScorerOverlayProps {
   scorerName: string;
@@ -58,7 +59,7 @@ export function GoalScorerOverlay({
       className={cn('w-full', className)}
       role="status"
       aria-live="assertive"
-      aria-label={`Gol de ${scorerName}`}
+      aria-label={L(`Gol de ${scorerName}`, `Goal by ${scorerName}`)}
     >
       <div
         className={cn(
@@ -83,7 +84,7 @@ export function GoalScorerOverlay({
           'relative z-10 font-impact text-4xl sm:text-5xl uppercase leading-[1.1] tracking-[0.04em]',
           side === 'away' ? 'text-red-400' : 'inline-block bg-neon-yellow px-4 pt-1 text-black',
         )}>
-          {isGoal ? (side === 'away' ? 'Tomamos gol...' : 'Gol!') : 'Defesa!'}
+          {isGoal ? (side === 'away' ? L('Tomamos gol...', 'We conceded...') : L('Gol!', 'Goal!')) : L('Defesa!', 'Save!')}
         </p>
 
         <div className="relative z-10 mt-6 flex flex-col items-stretch gap-4">
@@ -146,12 +147,12 @@ export function GoalScorerOverlay({
                 ) : goalBuildUp === 'counter' ? (
                   <>
                     <span className="mx-1.5 text-gray-600">·</span>
-                    <span className="text-gray-400">Contra-ataque</span>
+                    <span className="text-gray-400">{L('Contra-ataque', 'Counter-attack')}</span>
                   </>
                 ) : goalBuildUp === 'positional' ? (
                   <>
                     <span className="mx-1.5 text-gray-600">·</span>
-                    <span className="text-gray-400">Jogo posicional</span>
+                    <span className="text-gray-400">{L('Jogo posicional', 'Build-up play')}</span>
                   </>
                 ) : null}
               </p>

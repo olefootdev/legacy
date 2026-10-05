@@ -7,6 +7,8 @@
  */
 
 import { Link } from 'react-router-dom';
+import { L } from '@/i18n/L';
+import { posLabel } from '@/components/matchquick/posLabel';
 
 const MORET = 'var(--font-serif-hero)';
 
@@ -21,15 +23,15 @@ export type LegendMini = {
 
 export function LegendsRail({ legends }: { legends: LegendMini[] }) {
   return (
-    <section aria-label="Lendas em destaque">
+    <section aria-label={L('Lendas em destaque', 'Featured legends')}>
       <div className="mb-2.5 flex items-center justify-between">
-        <h2 className="ole-eyebrow-poster">Lendas em destaque</h2>
+        <h2 className="ole-eyebrow-poster">{L('Lendas em destaque', 'Featured legends')}</h2>
         <Link
           to="/mercado/transfer"
           className="font-display font-black uppercase text-neon-yellow"
           style={{ fontSize: '9px', letterSpacing: '0.16em' }}
         >
-          Ver todas ›
+          {L('Ver todas ›', 'See all ›')}
         </Link>
       </div>
 
@@ -39,7 +41,7 @@ export function LegendsRail({ legends }: { legends: LegendMini[] }) {
           style={{ borderRadius: 'var(--radius-md)' }}
         >
           <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}>
-            Nenhuma lenda no drop ainda.
+            {L('Nenhuma lenda no drop ainda.', 'No legends in the drop yet.')}
           </p>
         </div>
       ) : (
@@ -93,7 +95,7 @@ export function LegendsRail({ legends }: { legends: LegendMini[] }) {
                       borderRadius: '3px',
                     }}
                   >
-                    Novo
+                    {L('Novo', 'New')}
                   </span>
                 )}
                 <div className="absolute inset-x-0 bottom-0 p-2">
@@ -108,7 +110,7 @@ export function LegendsRail({ legends }: { legends: LegendMini[] }) {
                       className="font-display font-black uppercase"
                       style={{ fontSize: '7px', letterSpacing: '0.1em', color: 'var(--gold, #C7A64E)' }}
                     >
-                      {l.pos}
+                      {posLabel(l.pos)}
                     </span>
                     <span className="font-impact tabular-nums text-neon-yellow" style={{ fontSize: '15px' }}>
                       {l.ovr}

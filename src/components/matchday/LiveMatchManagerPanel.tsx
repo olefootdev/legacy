@@ -17,6 +17,8 @@ import {
   type StyleAxisKey,
 } from '@/tactics/playingStyle';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
+import { posLabel } from '@/components/match/posLabel';
 import { PressingControls } from './PressingControls';
 import { MarkingAssignmentsControls } from './MarkingAssignmentsControls';
 import { TeamMoraleBadge } from './TeamMoraleBadge';
@@ -24,28 +26,28 @@ import { CoachCommandInput } from './CoachCommandInput';
 import type { CommandResult } from '@/match/coachCommands';
 
 const SLOT_LABEL_PT: Record<string, string> = {
-  gol: 'GR',
-  zag1: 'Zag E',
-  zag2: 'Zag D',
-  le: 'LE',
-  ld: 'LD',
-  vol: 'Vol',
-  mc1: 'MC 1',
-  mc2: 'MC 2',
-  pe: 'PE',
-  pd: 'PD',
-  ata: 'ATA',
+  gol: L('GR', 'GK'),
+  zag1: L('Zag E', 'LCB'),
+  zag2: L('Zag D', 'RCB'),
+  le: L('LE', 'LB'),
+  ld: L('LD', 'RB'),
+  vol: L('Vol', 'DM'),
+  mc1: L('MC 1', 'CM 1'),
+  mc2: L('MC 2', 'CM 2'),
+  pe: L('PE', 'LW'),
+  pd: L('PD', 'RW'),
+  ata: L('ATA', 'ST'),
 };
 
 const QUICK_PRESETS: { id: PlayingStylePresetId; label: string }[] = [
-  { id: 'balanced', label: 'Equilíbrio' },
-  { id: 'POSSE_CONTROLADA', label: 'Posse' },
-  { id: 'PRESSAO_ALTA', label: 'Pressão' },
-  { id: 'TRANSICAO_RAPIDA', label: 'Transição' },
-  { id: 'BLOCO_BAIXO', label: 'Bloco' },
-  { id: 'JOGO_PELAS_LATERAIS', label: 'Alas' },
-  { id: 'JOGO_DIRETO', label: 'Direto' },
-  { id: 'CRIATIVO_LIVRE', label: 'Criativo' },
+  { id: 'balanced', label: L('Equilíbrio', 'Balanced') },
+  { id: 'POSSE_CONTROLADA', label: L('Posse', 'Possession') },
+  { id: 'PRESSAO_ALTA', label: L('Pressão', 'Pressing') },
+  { id: 'TRANSICAO_RAPIDA', label: L('Transição', 'Transition') },
+  { id: 'BLOCO_BAIXO', label: L('Bloco', 'Low block') },
+  { id: 'JOGO_PELAS_LATERAIS', label: L('Alas', 'Wings') },
+  { id: 'JOGO_DIRETO', label: L('Direto', 'Direct') },
+  { id: 'CRIATIVO_LIVRE', label: L('Criativo', 'Creative') },
 ];
 
 function slotLabel(slotId: string): string {
@@ -115,7 +117,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
 
   const applyPreset = (presetId: PlayingStylePresetId) => {
     dispatch({ type: 'SET_PLAYING_STYLE_PRESET', presetId });
-    setFeedback(`Padrão: ${PRESET_LABEL_PT[presetId]}`);
+    setFeedback(L(`Padrão: ${PRESET_LABEL_PT[presetId]}`, `Style: ${PRESET_LABEL_PT[presetId]}`));
     window.setTimeout(() => setFeedback(null), 2400);
   };
 
@@ -127,7 +129,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
       type: 'SET_MANAGER_SLIDERS',
       partial: { tacticalStyle: { ...next, presetId: undefined } },
     });
-    setFeedback(`Estilo: ${key} ajustado`);
+    setFeedback(L(`Estilo: ${key} ajustado`, `Style: ${key} adjusted`));
     window.setTimeout(() => setFeedback(null), 2000);
   };
 
@@ -138,40 +140,40 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
       return;
     }
     setPendingScheme(scheme);
-    setFeedback(`Rascunho: ${scheme} — clica IMPLEMENTAR`);
+    setFeedback(L(`Rascunho: ${scheme} — clica IMPLEMENTAR`, `Draft: ${scheme} — tap APPLY`));
     window.setTimeout(() => setFeedback(null), 2600);
   };
 
   const implementFormation = () => {
     if (!pendingScheme) return;
     dispatch({ type: 'LIVE_MATCH_SET_FORMATION', formationScheme: pendingScheme });
-    setFeedback(`Implementado: ${pendingScheme} — time atuando na nova formação`);
+    setFeedback(L(`Implementado: ${pendingScheme} — time atuando na nova formação`, `Applied: ${pendingScheme} — team now in the new formation`));
     setPendingScheme(null);
     window.setTimeout(() => setFeedback(null), 3000);
   };
 
   const doSubstitution = () => {
     if (!subOutId || !subInId) {
-      setFeedback('Escolha quem sai e quem entra.');
+      setFeedback(L('Escolha quem sai e quem entra.', 'Pick who comes off and who comes on.'));
       window.setTimeout(() => setFeedback(null), 2200);
       return;
     }
     if (subOutId === subInId) {
-      setFeedback('Os jogadores precisam ser diferentes.');
+      setFeedback(L('Os jogadores precisam ser diferentes.', 'Players must be different.'));
       window.setTimeout(() => setFeedback(null), 2200);
       return;
     }
     const lm = getGameState().liveMatch;
     if (!lm || lm.phase !== 'playing') return;
     if (subsLeft <= 0) {
-      setFeedback(`Limite de substituições (${maxSubs}).`);
+      setFeedback(L(`Limite de substituições (${maxSubs}).`, `Substitution limit (${maxSubs}).`));
       window.setTimeout(() => setFeedback(null), 2800);
       return;
     }
     const incoming = playersById[subInId];
     const outgoing = playersById[subOutId];
     if (!incoming || !outgoing) {
-      setFeedback('Jogador não encontrado.');
+      setFeedback(L('Jogador não encontrado.', 'Player not found.'));
       window.setTimeout(() => setFeedback(null), 2200);
       return;
     }
@@ -180,17 +182,17 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
       ? (incomingHealth.outForMatches ?? 0) > 0 || (incomingHealth.suspendedMatches ?? 0) > 0
       : incoming.outForMatches > 0;
     if (incomingUnavailable) {
-      setFeedback('Entrada indisponível (lesão / suspensão).');
+      setFeedback(L('Entrada indisponível (lesão / suspensão).', 'Player unavailable (injury / suspension).'));
       window.setTimeout(() => setFeedback(null), 2600);
       return;
     }
     if (!onPitchIds.has(subOutId)) {
-      setFeedback('O titular tem de estar em campo.');
+      setFeedback(L('O titular tem de estar em campo.', 'The starter must be on the pitch.'));
       window.setTimeout(() => setFeedback(null), 2200);
       return;
     }
     if (onPitchIds.has(subInId)) {
-      setFeedback('Quem entra não pode já estar em campo.');
+      setFeedback(L('Quem entra não pode já estar em campo.', 'The incoming player is already on the pitch.'));
       window.setTimeout(() => setFeedback(null), 2200);
       return;
     }
@@ -198,7 +200,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
     dispatch({ type: 'MATCH_SUBSTITUTE', outPlayerId: subOutId, inPlayerId: subInId });
     const after = getGameState().liveMatch?.substitutionsUsed ?? before;
     if (after === before) {
-      setFeedback('Não foi possível substituir (regras da partida).');
+      setFeedback(L('Não foi possível substituir (regras da partida).', 'Substitution not allowed (match rules).'));
       window.setTimeout(() => setFeedback(null), 3200);
       return;
     }
@@ -269,7 +271,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
               textTransform: 'uppercase',
             }}
           >
-            Formação
+            {L('Formação', 'Formation')}
           </h4>
           {pendingScheme ? (
             <span
@@ -286,7 +288,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
                 textTransform: 'uppercase',
               }}
             >
-              Rascunho: {pendingScheme}
+              {L('Rascunho', 'Draft')}: {pendingScheme}
             </span>
           ) : null}
         </div>
@@ -345,7 +347,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
           }}
         >
           <CheckCircle2 className="h-4 w-4" />
-          {pendingScheme ? `Implementar ${pendingScheme}` : 'Implementar'}
+          {pendingScheme ? L(`Implementar ${pendingScheme}`, `Apply ${pendingScheme}`) : L('Implementar', 'Apply')}
         </button>
         <p
           className="leading-relaxed"
@@ -355,7 +357,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
             color: 'rgba(255, 255, 255, 0.5)',
           }}
         >
-          O time só muda depois de implementar.
+          {L('O time só muda depois de implementar.', 'The team only changes once you apply.')}
         </p>
       </div>
 
@@ -384,7 +386,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
                 textTransform: 'uppercase',
               }}
             >
-              Substituições
+              {L('Substituições', 'Substitutions')}
             </h4>
           </div>
           <span
@@ -396,7 +398,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
               color: subsLeft > 0 ? 'var(--yellow)' : 'rgba(255, 255, 255, 0.3)',
             }}
           >
-            {subsLeft}/{maxSubs} restantes
+            {subsLeft}/{maxSubs} {L('restantes', 'left')}
           </span>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -411,7 +413,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
                 color: 'rgba(255, 255, 255, 0.5)',
               }}
             >
-              Sai (titular)
+              {L('Sai (titular)', 'Off (starter)')}
             </span>
             <select
               value={subOutId}
@@ -448,7 +450,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
                 color: 'rgba(255, 255, 255, 0.5)',
               }}
             >
-              Entra (banco)
+              {L('Entra (banco)', 'On (bench)')}
             </span>
             <select
               value={subInId}
@@ -465,7 +467,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
               <option value="">—</option>
               {benchPlayers.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.num} {p.name} · {p.pos}
+                  {p.num} {p.name} · {posLabel(p.pos)}
                 </option>
               ))}
             </select>
@@ -487,7 +489,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
               textTransform: 'uppercase',
             }}
           >
-            Aplicar
+            {L('Aplicar', 'Apply')}
           </button>
         </div>
       </div>
@@ -515,12 +517,12 @@ interface ActionCardDef {
 }
 
 const ACTION_CARDS: ActionCardDef[] = [
-  { id: 'press',   icon: Flame,     label: 'Pressiona alto', phrase: 'pressiona alto',    hint: 'Linha sobe, marca no campo adversário.', tone: 'press' },
-  { id: 'retreat', icon: Shield,    label: 'Recua bloco',    phrase: 'recua',             hint: 'Bloco baixo, compacta atrás da bola.',   tone: 'retreat' },
-  { id: 'possess', icon: Clock,     label: 'Mata o jogo',    phrase: 'mata o jogo',       hint: 'Posse segura, ritmo baixo.',             tone: 'possess' },
-  { id: 'accel',   icon: Zap,       label: 'Acelera',        phrase: 'pisa no acelerador', hint: 'Transição rápida, sem pensar duas vezes.', tone: 'accel' },
-  { id: 'invade',  icon: Crosshair, label: 'Invade área',    phrase: 'invade a area',     hint: 'Atacantes atacam a grande área.',        tone: 'attack' },
-  { id: 'cross',   icon: Swords,    label: 'Cruza mais',     phrase: 'laterais cruza mais', hint: 'Laterais sobem e cruzam pra área.',    tone: 'cross' },
+  { id: 'press',   icon: Flame,     label: L('Pressiona alto', 'High press'), phrase: 'pressiona alto',    hint: L('Linha sobe, marca no campo adversário.', 'Line pushes up, press in their half.'), tone: 'press' },
+  { id: 'retreat', icon: Shield,    label: L('Recua bloco', 'Drop deep'),    phrase: 'recua',             hint: L('Bloco baixo, compacta atrás da bola.', 'Low block, compact behind the ball.'),   tone: 'retreat' },
+  { id: 'possess', icon: Clock,     label: L('Mata o jogo', 'Kill the game'),    phrase: 'mata o jogo',       hint: L('Posse segura, ritmo baixo.', 'Safe possession, slow tempo.'),             tone: 'possess' },
+  { id: 'accel',   icon: Zap,       label: L('Acelera', 'Speed up'),        phrase: 'pisa no acelerador', hint: L('Transição rápida, sem pensar duas vezes.', 'Fast transitions, no second thoughts.'), tone: 'accel' },
+  { id: 'invade',  icon: Crosshair, label: L('Invade área', 'Attack the box'),    phrase: 'invade a area',     hint: L('Atacantes atacam a grande área.', 'Forwards attack the box.'),        tone: 'attack' },
+  { id: 'cross',   icon: Swords,    label: L('Cruza mais', 'More crosses'),     phrase: 'laterais cruza mais', hint: L('Laterais sobem e cruzam pra área.', 'Full-backs push up and cross.'),    tone: 'cross' },
 ];
 
 const TONE_STYLES: Record<ActionCardDef['tone'], { bg: string; border: string; text: string; hover: string }> = {
@@ -560,7 +562,7 @@ function LiveActionCards({ onFire }: { onFire: (label: string) => void }) {
                 borderRadius: 'var(--radius-sm)',
                 color: style.text,
               }}
-              title={`Voz: "${c.phrase}"`}
+              title={L(`Voz: "${c.phrase}"`, `Voice: "${c.phrase}"`)}
             >
               <Icon className="h-5 w-5 shrink-0" aria-hidden />
               <div className="min-w-0 w-full">
@@ -636,7 +638,7 @@ function LegacyFineTune({
         }}
         aria-expanded={open}
       >
-        <span>Ajuste fino (presets + estilo)</span>
+        <span>{L('Ajuste fino (presets + estilo)', 'Fine-tune (presets + style)')}</span>
         {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </button>
       {open ? (
@@ -666,12 +668,12 @@ function LegacyFineTune({
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {([
-              { key: 'pressing' as StyleAxisKey, label: '+ Pressão',  delta: 6 },
-              { key: 'width' as StyleAxisKey,    label: '+ Largura',  delta: 6 },
-              { key: 'verticality' as StyleAxisKey, label: '+ Vertical', delta: 6 },
-              { key: 'riskTaking' as StyleAxisKey, label: '+ Risco',   delta: 5 },
-              { key: 'compactness' as StyleAxisKey, label: '+ Compac.', delta: 6 },
-              { key: 'defensiveBlock' as StyleAxisKey, label: 'Bloco recua', delta: 5 },
+              { key: 'pressing' as StyleAxisKey, label: L('+ Pressão', '+ Pressing'),  delta: 6 },
+              { key: 'width' as StyleAxisKey,    label: L('+ Largura', '+ Width'),  delta: 6 },
+              { key: 'verticality' as StyleAxisKey, label: L('+ Vertical', '+ Direct'), delta: 6 },
+              { key: 'riskTaking' as StyleAxisKey, label: L('+ Risco', '+ Risk'),   delta: 5 },
+              { key: 'compactness' as StyleAxisKey, label: L('+ Compac.', '+ Compact'), delta: 6 },
+              { key: 'defensiveBlock' as StyleAxisKey, label: L('Bloco recua', 'Drop block'), delta: 5 },
             ]).map((b) => (
               <button
                 key={b.key}

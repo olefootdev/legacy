@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { L } from '@/i18n/L';
 import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -8,7 +9,7 @@ export type BackButtonProps = {
   className?: string;
 };
 
-export function BackButton({ to, label = 'Voltar', className }: BackButtonProps) {
+export function BackButton({ to, label = L('Voltar', 'Back'), className }: BackButtonProps) {
   return (
     <Link
       to={to}

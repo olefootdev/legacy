@@ -17,6 +17,16 @@ import { makeInboxItem } from '@/game/inboxItem';
 import { coachPersonaFor, personaLine } from './coachPersona';
 import type { LigaOleState } from './ligaOleModel';
 import { LIGA_OLE_ROUNDS } from './ligaOleModel';
+import { L, emIngles } from '@/i18n/L';
+
+/** Rótulo EN da fase (a fase PT segue sendo a chave). */
+const ROUND_EN: Record<string, string> = {
+  'Fase de 32': 'Round of 32',
+  Oitavas: 'Round of 16',
+  Quartas: 'Quarter-finals',
+  Semifinal: 'Semi-final',
+  Final: 'Final',
+};
 
 /**
  * Gera a crônica da rodada que ACABOU de ser resolvida (roundIndex do estado
@@ -28,7 +38,8 @@ export function buildRoundChronicle(
   args: { managerClubName: string; idSalt: string | number },
 ): InboxItem[] {
   const r = before.roundIndex;
-  const roundName = LIGA_OLE_ROUNDS[r] ?? 'Fase';
+  const roundPt = LIGA_OLE_ROUNDS[r];
+  const roundName = roundPt ? (emIngles() ? ROUND_EN[roundPt] ?? roundPt : roundPt) : L('Fase', 'Round');
   const round = before.participants[r];
   if (!round) return [];
   const out: InboxItem[] = [];
@@ -62,7 +73,7 @@ export function buildRoundChronicle(
       `lo-zebra-${args.idSalt}`,
       'COMPANY_ANNOUNCEMENT',
       'COMPETIÇÃO',
-      `🦓 Zebra na ${roundName}: ${zebra.winner} derrubou ${zebra.loser}.`,
+      L(`🦓 Zebra na ${roundName}: ${zebra.winner} derrubou ${zebra.loser}.`, `🦓 Upset in the ${roundName}: ${zebra.winner} knocked out ${zebra.loser}.`),
       { tag: 'Liga Ole', deepLink: '/liga-ole', hideFromHomeFeed: true },
     ));
   }
@@ -71,7 +82,7 @@ export function buildRoundChronicle(
       `lo-goleada-${args.idSalt}`,
       'COMPANY_ANNOUNCEMENT',
       'COMPETIÇÃO',
-      `🔥 ${massacre.winner} atropelou ${massacre.loser} por ${massacre.score} na ${roundName}.`,
+      L(`🔥 ${massacre.winner} atropelou ${massacre.loser} por ${massacre.score} na ${roundName}.`, `🔥 ${massacre.winner} thrashed ${massacre.loser} ${massacre.score} in the ${roundName}.`),
       { tag: 'Liga Ole', deepLink: '/liga-ole', hideFromHomeFeed: true },
     ));
   }
@@ -89,8 +100,8 @@ export function buildRoundChronicle(
         `lo-carrasco-${args.idSalt}`,
         'COMPANY_ANNOUNCEMENT',
         'COMPETIÇÃO',
-        `${persona.icon} O carrasco: ${opp.name} eliminou ${args.managerClubName} na ${roundName}.`,
-        { body: `${persona.label} deixou o recado: "${line}"`, tag: 'Liga Ole', deepLink: '/liga-ole', hideFromHomeFeed: false },
+        L(`${persona.icon} O carrasco: ${opp.name} eliminou ${args.managerClubName} na ${roundName}.`, `${persona.icon} The executioner: ${opp.name} knocked out ${args.managerClubName} in the ${roundName}.`),
+        { body: L(`${persona.label} deixou o recado: "${line}"`, `${persona.label} left a message: "${line}"`), tag: 'Liga Ole', deepLink: '/liga-ole', hideFromHomeFeed: false },
       ));
     }
   }

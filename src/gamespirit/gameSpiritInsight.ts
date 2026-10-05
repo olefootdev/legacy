@@ -12,6 +12,7 @@ import type { SpiritContext, SpiritOutcome } from './types';
 import type { CausalMatchEvent } from '@/match/causal/matchCausalTypes';
 import type { PitchPlayerState } from '@/engine/types';
 import { isBox, isCreationZone, isFinalThird } from '@/match/spatialZones';
+import { L } from '@/i18n/L';
 
 export interface TacticalInsight {
   /** Frase curta de leitura tática (1-2 linhas max) */
@@ -119,29 +120,29 @@ function analyzeGoal(ic: InsightContext): TacticalInsight {
 
   if (isCounter) {
     insights.push({
-      text: 'O GameSpirit leu a transição antes da defesa reagir.',
+      text: L('O GameSpirit leu a transição antes da defesa reagir.', 'GameSpirit read the transition before the defence could react.'),
       weight: 'high',
       impact: 88,
     });
     insights.push({
-      text: 'Esse gol nasceu da velocidade de decisão, não da sorte.',
+      text: L('Esse gol nasceu da velocidade de decisão, não da sorte.', 'That goal came from speed of thought, not luck.'),
       weight: 'high',
       impact: 85,
     });
   } else if (inBox) {
     insights.push({
-      text: 'A pressão abriu um corredor invisível dentro da área.',
+      text: L('A pressão abriu um corredor invisível dentro da área.', 'The pressure opened an invisible lane inside the box.'),
       weight: 'high',
       impact: 90,
     });
     insights.push({
-      text: 'Esse gol começou três passes antes.',
+      text: L('Esse gol começou três passes antes.', 'That goal started three passes earlier.'),
       weight: 'medium',
       impact: 82,
     });
   } else if (inCreation) {
     insights.push({
-      text: 'O espaço apareceu porque a linha defensiva subiu meio segundo tarde.',
+      text: L('O espaço apareceu porque a linha defensiva subiu meio segundo tarde.', 'The space opened because the back line stepped up half a second late.'),
       weight: 'high',
       impact: 86,
     });
@@ -149,13 +150,13 @@ function analyzeGoal(ic: InsightContext): TacticalInsight {
 
   if (momentum > 0.5) {
     insights.push({
-      text: 'O time estava vencendo o campo antes de vencer o placar.',
+      text: L('O time estava vencendo o campo antes de vencer o placar.', 'They were winning the pitch before they won the scoreline.'),
       weight: 'high',
       impact: 92,
     });
   } else if (momentum < -0.3) {
     insights.push({
-      text: 'Esse gol não veio do domínio. Veio da frieza no momento certo.',
+      text: L('Esse gol não veio do domínio. Veio da frieza no momento certo.', "That goal didn't come from dominance. It came from composure at the right moment."),
       weight: 'high',
       impact: 89,
     });
@@ -163,7 +164,7 @@ function analyzeGoal(ic: InsightContext): TacticalInsight {
 
   if (fatigue > 72) {
     insights.push({
-      text: 'A defesa atrasou meio segundo. Fadiga cobra seu preço.',
+      text: L('A defesa atrasou meio segundo. Fadiga cobra seu preço.', 'The defence was half a second late. Fatigue takes its toll.'),
       weight: 'medium',
       impact: 78,
     });
@@ -174,7 +175,7 @@ function analyzeGoal(ic: InsightContext): TacticalInsight {
     const positioning = ctx.onBall.attributes.tatico ?? 50;
     if (finishing >= 85 && positioning >= 80) {
       insights.push({
-        text: 'A finalização foi boa, mas a decisão de estar ali nasceu antes.',
+        text: L('A finalização foi boa, mas a decisão de estar ali nasceu antes.', 'Good finish, but the decision to be there came earlier.'),
         weight: 'high',
         impact: 87,
       });
@@ -184,7 +185,7 @@ function analyzeGoal(ic: InsightContext): TacticalInsight {
   // Fallback genérico forte
   if (insights.length === 0) {
     insights.push({
-      text: 'Esse gol não foi acaso. Foi leitura de jogo.',
+      text: L('Esse gol não foi acaso. Foi leitura de jogo.', 'That goal was no accident. It was reading the game.'),
       weight: 'medium',
       impact: 80,
     });
@@ -214,18 +215,18 @@ function analyzeSave(ic: InsightContext): TacticalInsight | null {
 
   if (inBox) {
     insights.push({
-      text: 'O goleiro salvou mais que um chute. Salvou o momento emocional da partida.',
+      text: L('O goleiro salvou mais que um chute. Salvou o momento emocional da partida.', 'The keeper saved more than a shot. He saved the momentum of the match.'),
       weight: 'high',
       impact: 85,
     });
     insights.push({
-      text: 'Essa defesa não foi reflexo. Foi leitura antecipada da trajetória.',
+      text: L('Essa defesa não foi reflexo. Foi leitura antecipada da trajetória.', "That save wasn't reflex. The keeper read the flight early."),
       weight: 'high',
       impact: 83,
     });
   } else {
     insights.push({
-      text: 'O goleiro fechou o ângulo antes do atacante decidir.',
+      text: L('O goleiro fechou o ângulo antes do atacante decidir.', 'The keeper closed the angle before the striker could decide.'),
       weight: 'medium',
       impact: 75,
     });
@@ -250,8 +251,8 @@ function analyzeBlock(ic: InsightContext): TacticalInsight | null {
   if (!inBox) return null; // Bloqueio longe da área não é tão relevante
 
   const insights = [
-    { text: 'A defesa leu a intenção do chute e se jogou no caminho.', weight: 'medium' as const, impact: 72 },
-    { text: 'Esse bloqueio nasceu de posicionamento, não de sorte.', weight: 'medium' as const, impact: 70 },
+    { text: L('A defesa leu a intenção do chute e se jogou no caminho.', 'The defence read the shot and threw themselves in the way.'), weight: 'medium' as const, impact: 72 },
+    { text: L('Esse bloqueio nasceu de posicionamento, não de sorte.', 'That block came from positioning, not luck.'), weight: 'medium' as const, impact: 70 },
   ];
 
   const chosen = insights[Math.floor(Math.random() * insights.length)]!;
@@ -274,7 +275,7 @@ function analyzeMiss(ic: InsightContext): TacticalInsight | null {
 
   if (fatigue > 75) {
     insights.push({
-      text: 'Esse erro não foi técnico. Foi desgaste acumulado.',
+      text: L('Esse erro não foi técnico. Foi desgaste acumulado.', "That wasn't a technical error. It was accumulated fatigue."),
       weight: 'medium',
       impact: 68,
     });
@@ -282,7 +283,7 @@ function analyzeMiss(ic: InsightContext): TacticalInsight | null {
 
   if (pressure) {
     insights.push({
-      text: 'A pressão tirou meio segundo de decisão. Foi o suficiente.',
+      text: L('A pressão tirou meio segundo de decisão. Foi o suficiente.', 'The pressure took away half a second. That was enough.'),
       weight: 'medium',
       impact: 65,
     });
@@ -311,8 +312,8 @@ function analyzeFoul(ic: InsightContext): TacticalInsight | null {
   if (!payload.dangerous) return null; // Falta leve não merece insight
 
   const insights = [
-    { text: 'A falta foi tática. Parar o contra-ataque valia o cartão.', weight: 'medium' as const, impact: 70 },
-    { text: 'Esse erro não foi de técnica. Foi de desespero.', weight: 'medium' as const, impact: 72 },
+    { text: L('A falta foi tática. Parar o contra-ataque valia o cartão.', 'A tactical foul. Stopping the counter was worth the card.'), weight: 'medium' as const, impact: 70 },
+    { text: L('Esse erro não foi de técnica. Foi de desespero.', "That wasn't technique. It was desperation."), weight: 'medium' as const, impact: 72 },
   ];
 
   const chosen = insights[Math.floor(Math.random() * insights.length)]!;
@@ -337,8 +338,8 @@ function analyzeMomentumShift(ic: InsightContext): TacticalInsight | null {
   if (!homeDominant && !awayDominant) return null;
 
   const insights = [
-    { text: 'O time não acelerou por acaso. Sentiu fraqueza no lado oposto.', weight: 'medium' as const, impact: 75 },
-    { text: 'A mudança de ritmo não foi planejada. Foi lida no momento.', weight: 'medium' as const, impact: 73 },
+    { text: L('O time não acelerou por acaso. Sentiu fraqueza no lado oposto.', "They didn't speed up by chance. They sensed weakness on the other side."), weight: 'medium' as const, impact: 75 },
+    { text: L('A mudança de ritmo não foi planejada. Foi lida no momento.', "The change of tempo wasn't planned. It was read in the moment."), weight: 'medium' as const, impact: 73 },
   ];
 
   const chosen = insights[Math.floor(Math.random() * insights.length)]!;
@@ -360,8 +361,8 @@ function analyzeTackle(ic: InsightContext): TacticalInsight | null {
   if (!dangerous) return null; // Interceptação no meio-campo não é tão relevante
 
   const insights = [
-    { text: 'A interceptação veio da leitura do passe, não da velocidade.', weight: 'medium' as const, impact: 70 },
-    { text: 'O defensor antecipou a jogada dois segundos antes.', weight: 'medium' as const, impact: 72 },
+    { text: L('A interceptação veio da leitura do passe, não da velocidade.', 'The interception came from reading the pass, not pace.'), weight: 'medium' as const, impact: 70 },
+    { text: L('O defensor antecipou a jogada dois segundos antes.', 'The defender anticipated it two seconds early.'), weight: 'medium' as const, impact: 72 },
   ];
 
   const chosen = insights[Math.floor(Math.random() * insights.length)]!;

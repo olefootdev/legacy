@@ -1,3 +1,4 @@
+import { L } from '@/i18n/L';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PICK_TIME_SECONDS, POWER_RAMP_MS } from './constants';
 import { PenaltyPowerBar } from './PenaltyPowerBar';
@@ -76,7 +77,7 @@ export function PenaltyShoot({
   onNextShooter,
   onReset,
   autoAdvanceMs,
-  headerLabel = 'Olefoot · Pênalti',
+  headerLabel = L('Olefoot · Pênalti', 'Olefoot · Penalty'),
   fullViewport = true,
 }: PenaltyShootProps) {
   const [phase, setPhase] = useState<PenaltyPhase>('pick');
@@ -270,15 +271,15 @@ export function PenaltyShoot({
 
   // Headline contextual
   const headline = (() => {
-    if (phase === 'pick') return pickedSlot == null ? 'Onde mandamos ele bater?' : 'Confirma a mira?';
-    if (phase === 'charging') return 'SEGURA… CARREGA…';
-    if (phase === 'reveal') return 'CHUTA!';
-    if (outcome === 'goal') return 'GOOOOOL!';
-    if (outcome === 'over-bar') return 'POR CIMA!';
-    if (outcome === 'post') return 'NA TRAVE!';
-    if (outcome === 'wide') return 'PRA FORA!';
-    if (outcome === 'weak-save') return 'CHUTE FRACO!';
-    return 'DEFENDEU!';
+    if (phase === 'pick') return pickedSlot == null ? L('Onde mandamos ele bater?', 'Where should he shoot?') : L('Confirma a mira?', 'Confirm the aim?');
+    if (phase === 'charging') return L('SEGURA… CARREGA…', 'HOLD… CHARGE…');
+    if (phase === 'reveal') return L('CHUTA!', 'SHOOT!');
+    if (outcome === 'goal') return L('GOOOOOL!', 'GOOOAL!');
+    if (outcome === 'over-bar') return L('POR CIMA!', 'OVER THE BAR!');
+    if (outcome === 'post') return L('NA TRAVE!', 'OFF THE POST!');
+    if (outcome === 'wide') return L('PRA FORA!', 'WIDE!');
+    if (outcome === 'weak-save') return L('CHUTE FRACO!', 'WEAK SHOT!');
+    return L('DEFENDEU!', 'SAVED!');
   })();
 
   return (
@@ -307,7 +308,7 @@ export function PenaltyShoot({
         </div>
         {shootoutContext && (
           <div className="text-[10px] uppercase tracking-[0.35em] font-medium text-black/70">
-            Batedor {shootoutContext.currentShooter + 1} de {shootoutContext.rounds}
+            {L('Batedor', 'Taker')} {shootoutContext.currentShooter + 1} {L('de', 'of')} {shootoutContext.rounds}
           </div>
         )}
       </div>
@@ -342,7 +343,7 @@ export function PenaltyShoot({
         <span className="border border-black/40 px-2 py-1 bg-black text-neon-yellow">
           {shooter.displayName} · #{shooter.shirtNumber}
         </span>
-        <span>Finalização {shooter.finishingRating}</span>
+        <span>{L('Finalização', 'Finishing')} {shooter.finishingRating}</span>
         {keeperHint && (
           <>
             <span className="text-black/50">|</span>
@@ -384,7 +385,7 @@ export function PenaltyShoot({
                 className="relative bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider hover:bg-white hover:text-black transition-colors overflow-hidden"
               >
                 <span className="relative z-10">
-                  Próximo
+                  {L('Próximo', 'Next')}
                   {autoAdvanceLeft != null && (
                     <span className="ml-3 tabular-nums text-neon-yellow/70">
                       {autoAdvanceLeft}s
@@ -407,13 +408,13 @@ export function PenaltyShoot({
                 onClick={handleReset}
                 className="bg-transparent border-2 border-black text-black px-8 py-3 font-display font-black uppercase tracking-wider hover:bg-black hover:text-neon-yellow transition-colors"
               >
-                Reiniciar
+                {L('Reiniciar', 'Restart')}
               </button>
             )}
           </div>
           {autoAdvanceLeft != null && (
             <div className="text-[10px] uppercase tracking-[0.3em] text-black/50">
-              Auto-avança em {autoAdvanceLeft}s · clique pra adiantar
+              {L(`Auto-avança em ${autoAdvanceLeft}s · clique pra adiantar`, `Auto-advance in ${autoAdvanceLeft}s · click to skip`)}
             </div>
           )}
         </div>
@@ -422,8 +423,7 @@ export function PenaltyShoot({
       {/* Hint */}
       {phase === 'pick' && (
         <div className="mt-3 sm:mt-6 text-[9px] sm:text-[10px] uppercase tracking-[0.25em] text-black/50 max-w-[920px] text-center leading-relaxed px-2">
-          Pressione e segure um slot pra carregar a força · Solte pra chutar · {pickTimeSeconds}s pra
-          decidir
+          {L(`Pressione e segure um slot pra carregar a força · Solte pra chutar · ${pickTimeSeconds}s pra decidir`, `Press and hold a slot to charge power · Release to shoot · ${pickTimeSeconds}s to decide`)}
         </div>
       )}
       {pov === 'player' && (

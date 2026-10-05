@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { Hashtag } from '@/components/ui';
 import { getSupabase } from '@/supabase/client';
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
+import { L } from '@/i18n/L';
 
 interface Props {
   open: boolean;
@@ -124,7 +125,7 @@ export function AcademyCardDeliveryModal({
             {/* Header */}
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-neon-yellow/30 bg-panel px-4 py-3">
               <div className="min-w-0">
-                <Hashtag>#academia #entrega</Hashtag>
+                <Hashtag>{L('#academia #entrega', '#academy #delivery')}</Hashtag>
                 <h3 className="font-display text-base font-black uppercase tracking-wide text-white">
                   🎁 {playerName}
                 </h3>
@@ -133,7 +134,7 @@ export function AcademyCardDeliveryModal({
                 type="button"
                 onClick={onClose}
                 className="border border-white/16 p-2 text-white/60 hover:border-white/30 hover:text-white"
-                aria-label="Fechar"
+                aria-label={L('Fechar', 'Close')}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -142,7 +143,7 @@ export function AcademyCardDeliveryModal({
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-4 py-4">
               <p className="mb-4 text-center text-[12px] leading-relaxed text-cimento">
-                Feita à mão pela equipe Olefoot
+                {L('Feita à mão pela equipe Olefoot', 'Handmade by the Olefoot team')}
               </p>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -150,12 +151,12 @@ export function AcademyCardDeliveryModal({
                 {portraitUrl ? (
                   <div className="flex flex-col gap-2">
                     <p className="text-center text-[10px] font-bold uppercase tracking-wider text-neon-yellow/85">
-                      Carta no jogo
+                      {L('Carta no jogo', 'In-game card')}
                     </p>
                     <div className="overflow-hidden rounded-lg border border-white/15 bg-deep-black">
                       <img
                         src={portraitUrl}
-                        alt={`Carta de ${playerName}`}
+                        alt={L(`Carta de ${playerName}`, `${playerName} card`)}
                         className="block w-full"
                         referrerPolicy="no-referrer"
                       />
@@ -166,7 +167,7 @@ export function AcademyCardDeliveryModal({
                       className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white/85 hover:border-white hover:bg-white/5"
                     >
                       <Download className="h-3.5 w-3.5" />
-                      Baixar carta
+                      {L('Baixar carta', 'Download card')}
                     </button>
                   </div>
                 ) : null}
@@ -175,12 +176,12 @@ export function AcademyCardDeliveryModal({
                 {promotionalUrl ? (
                   <div className="flex flex-col gap-2">
                     <p className="text-center text-[10px] font-bold uppercase tracking-wider text-giz">
-                      Card promocional
+                      {L('Card promocional', 'Promo card')}
                     </p>
                     <div className="overflow-hidden rounded-lg border border-white/15 bg-deep-black">
                       <img
                         src={promotionalUrl}
-                        alt={`Card promocional de ${playerName}`}
+                        alt={L(`Card promocional de ${playerName}`, `${playerName} promo card`)}
                         className="block w-full"
                         referrerPolicy="no-referrer"
                       />
@@ -191,7 +192,7 @@ export function AcademyCardDeliveryModal({
                       className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white/85 hover:border-white hover:bg-white/5"
                     >
                       <Download className="h-3.5 w-3.5" />
-                      Baixar promocional
+                      {L('Baixar promocional', 'Download promo')}
                     </button>
                   </div>
                 ) : null}
@@ -200,7 +201,7 @@ export function AcademyCardDeliveryModal({
               {/* Texto pré-formatado */}
               <div className="mt-5 rounded-lg border border-white/10 bg-panel p-3">
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-white/50">
-                  Texto pra postar
+                  {L('Texto pra postar', 'Text to post')}
                 </p>
                 <pre className="whitespace-pre-wrap font-sans text-[12px] leading-relaxed text-white/85">
                   {shareText}
@@ -217,7 +218,7 @@ export function AcademyCardDeliveryModal({
                   className="btn-primary inline-flex flex-1 items-center justify-center gap-2 px-4 py-2.5 font-display text-xs font-black uppercase tracking-wider"
                 >
                   <Share2 className="h-4 w-4" />
-                  Compartilhar
+                  {L('Compartilhar', 'Share')}
                 </button>
                 <button
                   type="button"
@@ -232,12 +233,12 @@ export function AcademyCardDeliveryModal({
                   {copied ? (
                     <>
                       <Check className="h-4 w-4" />
-                      Copiado!
+                      {L('Copiado!', 'Copied!')}
                     </>
                   ) : (
                     <>
                       <Copy className="h-4 w-4" />
-                      Copiar texto
+                      {L('Copiar texto', 'Copy text')}
                     </>
                   )}
                 </button>

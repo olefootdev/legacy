@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
+import { L } from '@/i18n/L';
 interface MomentumBarProps {
   /** Momentum value 0-1, where 0.5 is neutral, 0 is full away, 1 is full home */
   momentum: number;
@@ -54,7 +55,7 @@ export function MomentumBar({
         </div>
 
         <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
-          Domínio
+          {L('Domínio', 'Dominance')}
         </div>
 
         <div className="flex items-center gap-2">
@@ -131,7 +132,7 @@ export function MomentumBar({
               animate={{ scale: 1 }}
               className="text-[10px] text-white/60 font-bold uppercase tracking-wider"
             >
-              Equilibrado
+              {L('Equilibrado', 'Balanced')}
             </motion.span>
           )}
 

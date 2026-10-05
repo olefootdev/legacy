@@ -4,13 +4,14 @@ import { motion } from 'motion/react';
 import { useGameStore } from '@/game/store';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { HubSectionCard } from '@/components/ui/HubSectionCard';
+import { L, LOCALE } from '@/i18n/L';
 
 export function MarketHub() {
   useTrackScreen('screen_market_hub');
   const finance = useGameStore((s) => s.finance);
 
-  const expDisplay = Math.floor(finance.ole ?? 0).toLocaleString('pt-BR');
-  const broDisplay = (finance.broCents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const expDisplay = Math.floor(finance.ole ?? 0).toLocaleString(LOCALE);
+  const broDisplay = (finance.broCents / 100).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6 pb-10">
@@ -20,7 +21,7 @@ export function MarketHub() {
           itálica é assinatura de nome de lenda, e o subtítulo competia com o
           título. Agora o saldo — que é o dado real — ocupa esse lugar. */}
       <section
-        aria-label="Mercado Olefoot"
+        aria-label={L('Mercado Olefoot', 'Olefoot Market')}
         className="relative w-full overflow-hidden bg-neon-yellow"
         style={{ borderRadius: 'var(--radius-poster)' }}
       >
@@ -32,7 +33,7 @@ export function MarketHub() {
           style={{ paddingBlock: 'clamp(28px, 6vw, 52px)' }}
         >
           <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-            Transações
+            {L('Transações', 'Transactions')}
           </span>
 
           <h1
@@ -44,7 +45,7 @@ export function MarketHub() {
               letterSpacing: '-0.01em',
             }}
           >
-            Mercado
+            {L('Mercado', 'Market')}
           </h1>
 
           {/* Saldo: o número manda, o rótulo acompanha. */}
@@ -73,7 +74,7 @@ export function MarketHub() {
               }}
             >
               <Wallet className="w-4 h-4" />
-              Carteira
+              {L('Carteira', 'Wallet')}
             </Link>
             <Link
               to="/mercado/transfer"
@@ -94,27 +95,27 @@ export function MarketHub() {
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <HubSectionCard
           to="/mercado/transfer"
-          eyebrow="Jogadores"
+          eyebrow={L('Jogadores', 'Players')}
           title="Transfer Market"
-          description="Compra e venda entre clubes"
-          cta="Explorar mercado"
+          description={L('Compra e venda entre clubes', 'Buy and sell between clubs')}
+          cta={L('Explorar mercado', 'Explore market')}
           destaque
           delay={0.1}
         />
         <HubSectionCard
           to="/mercado/vivo"
-          eyebrow="Bolsa"
-          title="Mercado ao Vivo"
-          description="Ticker, OLE-100 e leilão do MVP"
-          cta="Ver a bolsa"
+          eyebrow={L('Bolsa', 'Exchange')}
+          title={L('Mercado ao Vivo', 'Live Market')}
+          description={L('Ticker, OLE-100 e leilão do MVP', 'Ticker, OLE-100 and MVP auction')}
+          cta={L('Ver a bolsa', 'View exchange')}
           delay={0.2}
         />
         <HubSectionCard
           to="/mercado/loja"
-          eyebrow="Itens"
-          title="Loja"
-          description="Packs, boosters e extras"
-          cta="Abrir loja"
+          eyebrow={L('Itens', 'Items')}
+          title={L('Loja', 'Store')}
+          description={L('Packs, boosters e extras', 'Packs, boosters and extras')}
+          cta={L('Abrir loja', 'Open store')}
           delay={0.3}
         />
       </section>

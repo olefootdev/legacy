@@ -1,6 +1,7 @@
 import type { PlayerEntity } from '@/entities/types';
 import type { PlayerMatchRuntime, PlayerMatchRuntime as PR } from '@/match/playerInMatch';
 import type { MatchTacticalRole } from '@/match/playerInMatch';
+import { L } from '@/i18n/L';
 
 export type PlayerID = string;
 
@@ -153,17 +154,17 @@ export class FanFrustrationSystem {
   private commentatorLineForRule(rule: FrustrationRule): string {
     switch (rule.id) {
       case 'ATACANTE_PASSA_EM_POSICAO_GOL':
-        return 'Que passe!... poderia ter sido gol.';
+        return L('Que passe!... poderia ter sido gol.', 'What a pass!... could have been a goal.');
       case 'ATACANTE_RECUA_PARA_GOLEIRO':
-        return 'Inacreditável recuo ao goleiro em chance de finalização.';
+        return L('Inacreditável recuo ao goleiro em chance de finalização.', 'Unbelievable back-pass to the keeper with a shooting chance on.');
       case 'PONTA_RECUA_1x1':
-        return 'Ponta que recua num 1x1? A torcida não perdoa.';
+        return L('Ponta que recua num 1x1? A torcida não perdoa.', 'A winger backing off a 1v1? The fans won\'t forgive that.');
       case 'GOLEIRO_CERA':
-        return 'Goleiro faz cera e irrita a torcida.';
+        return L('Goleiro faz cera e irrita a torcida.', 'Keeper time-wasting, the crowd is annoyed.');
       case 'LATERAL_NAO_AVANCA':
-        return 'Lateral que não acompanha o ataque e mata a jogada.';
+        return L('Lateral que não acompanha o ataque e mata a jogada.', 'Full-back doesn\'t join the attack and kills the move.');
       default:
-        return 'A torcida não gostou da jogada.';
+        return L('A torcida não gostou da jogada.', 'The crowd didn\'t like that.');
     }
   }
 

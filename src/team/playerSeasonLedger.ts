@@ -1,6 +1,7 @@
 import type { LiveMatchSnapshot, MatchEventEntry } from '@/engine/types';
 import type { PlayerAttributes, PlayerEntity } from '@/entities/types';
 import { overallFromAttributes } from '@/entities/player';
+import { L } from '@/i18n/L';
 
 /** Agregados da temporada (UI / Meu Time) — actualizados em `FINALIZE_MATCH` e treinos. */
 export interface PlayerSeasonLedgerEntry {
@@ -42,31 +43,31 @@ export const PLAYER_SEASON_ATTR_KEYS: (keyof PlayerAttributes)[] = [
 ];
 
 export const PLAYER_SEASON_ATTR_LABELS: Record<keyof PlayerAttributes, string> = {
-  passe: 'Passe',
-  marcacao: 'Marcação',
-  velocidade: 'Velocidade',
-  drible: 'Drible',
-  finalizacao: 'Finalização',
-  fisico: 'Físico',
-  tatico: 'Tático',
-  mentalidade: 'Mentalidade',
-  confianca: 'Confiança',
-  fairPlay: 'Fair play',
-  cabeceio: 'Cabeceio',
-  bolaParada: 'Bola parada',
-  penalti: 'Pênalti',
+  passe: L('Passe', 'Passing'),
+  marcacao: L('Marcação', 'Marking'),
+  velocidade: L('Velocidade', 'Pace'),
+  drible: L('Drible', 'Dribbling'),
+  finalizacao: L('Finalização', 'Finishing'),
+  fisico: L('Físico', 'Physical'),
+  tatico: L('Tático', 'Tactical'),
+  mentalidade: L('Mentalidade', 'Mentality'),
+  confianca: L('Confiança', 'Confidence'),
+  fairPlay: L('Fair play', 'Fair play'),
+  cabeceio: L('Cabeceio', 'Heading'),
+  bolaParada: L('Bola parada', 'Set pieces'),
+  penalti: L('Pênalti', 'Penalties'),
 };
 
 const TRAINING_TYPE_LABELS: Record<string, string> = {
-  fisico: 'Físico',
-  mental: 'Mental',
-  tatico: 'Tático',
-  atributos: 'Atributos',
-  especial: 'Especial',
-  formacao: 'Formação',
-  empatia: 'Empatia',
-  sessao_leve: 'Treino leve (sessão)',
-  outro: 'Outro',
+  fisico: L('Físico', 'Physical'),
+  mental: L('Mental', 'Mental'),
+  tatico: L('Tático', 'Tactical'),
+  atributos: L('Atributos', 'Attributes'),
+  especial: L('Especial', 'Special'),
+  formacao: L('Formação', 'Shape'),
+  empatia: L('Empatia', 'Empathy'),
+  sessao_leve: L('Treino leve (sessão)', 'Light training (session)'),
+  outro: L('Outro', 'Other'),
 };
 
 export function trainingTypeLabel(key: string): string {

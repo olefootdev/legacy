@@ -8,23 +8,24 @@ import { queryLedger } from '@/wallet/ledger';
 import { createInitialWalletState } from '@/wallet/initial';
 import type { WalletLedgerType, WalletCurrencyExt, WalletLedgerEntry } from '@/wallet/types';
 import { moedaDoJogo } from '@/wallet/constants';
+import { L, LOCALE } from '@/i18n/L';
 
 const LEDGER_TYPE_OPTIONS: { value: WalletLedgerType | ''; label: string }[] = [
-  { value: '', label: 'Todos' },
+  { value: '', label: L('Todos', 'All') },
   { value: 'SPOT_EXP', label: 'SPOT EXP' },
   { value: 'SPOT_BRO', label: 'SPOT BRO' },
   { value: 'REFERRAL_OLE_GAME', label: 'Referral OLE' },
   { value: 'REFERRAL_NFT', label: 'Referral NFT' },
   { value: 'MATCH_REWARD', label: 'Match Reward' },
-  { value: 'PURCHASE', label: 'Compra' },
-  { value: 'TRANSFER', label: 'Transferência' },
-  { value: 'STRUCTURE_UPGRADE', label: 'Estrutura' },
+  { value: 'PURCHASE', label: L('Compra', 'Purchase') },
+  { value: 'TRANSFER', label: L('Transferência', 'Transfer') },
+  { value: 'STRUCTURE_UPGRADE', label: L('Estrutura', 'Facility') },
 ];
 
 // Função, não const de módulo: `moedaDoJogo()` depende do idioma, e uma lista
 // avaliada no import congelaria o rótulo de quem troca de idioma na sessão.
 const currencyOptions = (): { value: WalletCurrencyExt | ''; label: string }[] => [
-  { value: '', label: 'Todas' },
+  { value: '', label: L('Todas', 'All') },
   { value: 'BRO', label: 'BRO' },
   { value: 'EXP', label: 'EXP' },
   { value: 'OLEFOOT', label: moedaDoJogo() },
@@ -52,7 +53,7 @@ function statusDot(status: string): string {
 function formatLedgerDate(iso: string): string {
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    return d.toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit', year: '2-digit' });
   } catch {
     return iso.slice(0, 10);
   }
@@ -80,12 +81,12 @@ export function ExtractTab() {
         onClick={() => navigate('/wallet')}
         className="flex items-center gap-2 text-sm text-cimento hover:text-white transition-colors mb-2"
       >
-        <ArrowLeft className="w-4 h-4" /> Carteira
+        <ArrowLeft className="w-4 h-4" /> {L('Carteira', 'Wallet')}
       </button>
 
       <div className="flex items-center gap-3 mb-2">
         <FileText className="w-6 h-6 text-white" />
-        <h2 className="font-impact text-2xl uppercase leading-[1.1] text-white">Extrato Completo</h2>
+        <h2 className="font-impact text-2xl uppercase leading-[1.1] text-white">{L('Extrato Completo', 'Full statement')}</h2>
       </div>
 
       {/* Filters */}
@@ -117,13 +118,13 @@ export function ExtractTab() {
             </option>
           ))}
         </select>
-        <span className="ml-auto font-mono text-[11px] text-cimento">{sorted.length} registros</span>
+        <span className="ml-auto font-mono text-[11px] text-cimento">{sorted.length} {L('registros', 'entries')}</span>
       </motion.div>
 
       {/* Entries */}
       {sorted.length === 0 ? (
         <div className="text-center py-12 text-cimento text-sm">
-          Nenhuma transação encontrada.
+          {L('Nenhuma transação encontrada.', 'No transactions found.')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -154,7 +155,7 @@ export function ExtractTab() {
                 }`}
               >
                 {entry.currency === 'EXP'
-                  ? `${entry.amount < 0 ? '-' : '+'}${Math.abs(entry.amount).toLocaleString('pt-BR')}`
+                  ? `${entry.amount < 0 ? '-' : '+'}${Math.abs(entry.amount).toLocaleString(LOCALE)}`
                   : `${entry.amount >= 0 ? '+' : ''}${(entry.amount / 100).toFixed(2)}`}
                 <span className="text-[10px] font-normal text-poeira ml-1">
                   {entry.currency === 'BRO' ? 'USDT' : entry.currency}

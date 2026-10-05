@@ -22,7 +22,8 @@ import { overallFromAttributes } from '@/entities/player';
 import { fetchListedGenesisEntitiesByCatalogId, fetchGenesisMarketAuctionCards } from '@/supabase/genesisMarket';
 import { fetchOtherManagerListings, type OtherManagerListing } from '@/supabase/academyManagers';
 import { TransferLegaciesTab } from './TransferLegaciesTab';
-import { MARKET_POSITIONS, MARKET_SORTS, type SortKey } from '@/transfer/marketFilters';
+import { MARKET_POSITIONS, MARKET_SORTS, rotuloPosicao, type SortKey } from '@/transfer/marketFilters';
+import { L, LOCALE } from '@/i18n/L';
 import { moedaDoJogo } from '@/wallet/constants';
 import {
   fetchListedLegacyPlayerRows,
@@ -97,7 +98,7 @@ function playerEntityToManagerMockAuction(
   const category: MockAuctionPlayer['category'] = ovr >= 70 ? 'gold' : ovr >= 65 ? 'silver' : 'bronze';
   const ageLabel = p.age != null ? String(p.age) : '—';
   const clubLabel =
-    marketKind === 'manager_own' ? 'OLE FC' : marketKind === 'manager_other' ? 'Academia OLE' : 'Rede OLE';
+    marketKind === 'manager_own' ? 'OLE FC' : marketKind === 'manager_other' ? L('Academia OLE', 'OLE Academy') : L('Rede OLE', 'OLE Network');
   return {
     id: cardId,
     name: p.name,
@@ -128,11 +129,11 @@ function playerEntityToManagerMockAuction(
       (p.bio ?? '').trim().slice(0, 250) ||
       (marketKind === 'manager_own'
         ? p.managerCreated
-          ? 'Prospect da sua Academia OLE.'
-          : 'Jogador do seu plantel no mercado EXP.'
+          ? L('Prospect da sua Academia OLE.', 'Prospect from your OLE Academy.')
+          : L('Jogador do seu plantel no mercado EXP.', 'Player from your squad on the EXP market.')
         : marketKind === 'manager_other'
-        ? 'Prospect de outro manager — Academia OLE.'
-        : 'Prospect da rede de managers OLE.'),
+        ? L('Prospect de outro manager — Academia OLE.', "Another manager's prospect — OLE Academy.")
+        : L('Prospect da rede de managers OLE.', 'Prospect from the OLE manager network.')),
     memorableTrophyIds: [],
     marketKind,
     managerListingId: opts.managerListingId,
@@ -167,7 +168,7 @@ function homonymRankMapForPlayers(players: MockAuctionPlayer[]): Map<number, { i
 function playerIdentityLine(p: MockAuctionPlayer): string {
   const club = p.history[0]?.club ?? '—';
   const nation = natFlagDisplay(p.nat) || '—';
-  return `${nation} · ${p.pos} · ${p.ovr} · ${club}`;
+  return `${nation} · ${rotuloPosicao(p.pos)} · ${p.ovr} · ${club}`;
 }
 
 /** Cartas iniciais no carril “Sessão do mercado” (ordem por OVR); “Ver mais” acrescenta do mesmo ranking. */
@@ -200,7 +201,7 @@ function formatAuctionDisplay(
     return `${formatExp(amount)} EXP`;
   }
   const bro = amount / 100;
-  return `${bro.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BRO`;
+  return `${bro.toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BRO`;
 }
 
 /**
@@ -254,7 +255,7 @@ function TransferCarouselVerMaisTile({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={bottomLabel ? `Ver mais — ${bottomLabel}` : 'Ver mais'}
+      aria-label={bottomLabel ? L(`Ver mais — ${bottomLabel}`, `See more — ${bottomLabel}`) : L('Ver mais', 'See more')}
       className={cn(
         'flex w-[min(5.25rem,calc(100vw-2rem))] max-w-[5.5rem] shrink-0 flex-col items-center justify-center gap-1.5 border border-dashed px-1.5 py-5 text-center transition-colors sm:w-[5.25rem] sm:px-2 sm:py-6',
         variant === 'neon'
@@ -268,7 +269,7 @@ function TransferCarouselVerMaisTile({
         </span>
       ) : null}
       <span className="font-display text-[11px] font-black uppercase leading-tight tracking-wide text-neon-yellow sm:text-xs">
-        Ver mais
+        {L('Ver mais', 'See more')}
       </span>
       {bottomLabel ? (
         <span className="max-w-[4.5rem] px-0.5 text-[7px] leading-tight text-white/45 sm:max-w-none sm:text-[8px]">
@@ -289,35 +290,35 @@ function heroSlidesForTab(tab: HeroTab): { imageUrl?: string; title: string; sub
   switch (tab) {
     case 'genesis':
       return [
-        { imageUrl: '/transfer-heroes/genesis-01.webp', title: 'Drops Genesis', subtitle: 'Cartas fundadoras limitadas. A primeira geração do universo OLEFOOT.', tag: 'Coleção original', ctaLabel: 'Ver drops' },
-        { imageUrl: '/transfer-heroes/genesis-02.webp', title: 'Hall dos 90+', subtitle: 'Os overalls mais altos da temporada em disputa por lance.', tag: 'Elite', ctaLabel: 'Lance agora' },
-        { imageUrl: '/transfer-heroes/genesis-03.webp', title: 'Craques em moeda BRO', subtitle: 'Pague em BRO e leva pra plantel imediatamente.', tag: 'BRO only', ctaLabel: 'Explorar' },
+        { imageUrl: '/transfer-heroes/genesis-01.webp', title: L('Drops Genesis', 'Genesis Drops'), subtitle: L('Cartas fundadoras limitadas. A primeira geração do universo OLEFOOT.', 'Limited founder cards. The first generation of the OLEFOOT universe.'), tag: L('Coleção original', 'Original collection'), ctaLabel: L('Ver drops', 'See drops') },
+        { imageUrl: '/transfer-heroes/genesis-02.webp', title: L('Hall dos 90+', '90+ Hall'), subtitle: L('Os overalls mais altos da temporada em disputa por lance.', 'The highest overalls of the season, up for bids.'), tag: 'Elite', ctaLabel: L('Lance agora', 'Bid now') },
+        { imageUrl: '/transfer-heroes/genesis-03.webp', title: L('Craques em moeda BRO', 'Stars in BRO'), subtitle: L('Pague em BRO e leva pra plantel imediatamente.', 'Pay in BRO and add them to your squad instantly.'), tag: 'BRO only', ctaLabel: L('Explorar', 'Explore') },
       ];
     case 'legacies':
       return [
-        { imageUrl: '/transfer-heroes/legacies-01.webp', title: 'Lendas com DNA', subtitle: 'Cartas Legacy carregam linhagem — cada geração herda parte da história.', tag: 'DNA evolutivo', ctaLabel: 'Ver linhagens' },
-        { imageUrl: '/transfer-heroes/legacies-02.webp', title: 'Descendentes em alta', subtitle: 'Filhos de lendas começando a brilhar — aposta pra valorização.', tag: 'Promessa', ctaLabel: 'Descobrir' },
+        { imageUrl: '/transfer-heroes/legacies-01.webp', title: L('Lendas com DNA', 'Legends with DNA'), subtitle: L('Cartas Legacy carregam linhagem — cada geração herda parte da história.', 'Legacy cards carry a lineage — each generation inherits part of the story.'), tag: L('DNA evolutivo', 'Evolving DNA'), ctaLabel: L('Ver linhagens', 'See lineages') },
+        { imageUrl: '/transfer-heroes/legacies-02.webp', title: L('Descendentes em alta', 'Rising descendants'), subtitle: L('Filhos de lendas começando a brilhar — aposta pra valorização.', 'Sons of legends starting to shine — a bet on growth.'), tag: L('Promessa', 'Prospect'), ctaLabel: L('Descobrir', 'Discover') },
       ];
     case 'newbies':
       return [
-        { imageUrl: '/transfer-heroes/newbies-01.webp', title: 'Novos no mercado', subtitle: 'Cartas recém-listadas — aproveite antes da concorrência chegar.', tag: 'Fresco', ctaLabel: 'Ver tudo' },
-        { imageUrl: '/transfer-heroes/newbies-02.webp', title: 'Prospectos da Academia', subtitle: 'Talentos formados por outros managers — aprenda a fazer olho clínico.', tag: 'Academia', ctaLabel: 'Garimpar' },
+        { imageUrl: '/transfer-heroes/newbies-01.webp', title: L('Novos no mercado', 'New on the market'), subtitle: L('Cartas recém-listadas — aproveite antes da concorrência chegar.', 'Freshly listed cards — grab them before the competition does.'), tag: L('Fresco', 'Fresh'), ctaLabel: L('Ver tudo', 'See all') },
+        { imageUrl: '/transfer-heroes/newbies-02.webp', title: L('Prospectos da Academia', 'Academy prospects'), subtitle: L('Talentos formados por outros managers — aprenda a fazer olho clínico.', 'Talent developed by other managers — train your scouting eye.'), tag: L('Academia', 'Academy'), ctaLabel: L('Garimpar', 'Scout') },
       ];
     case 'highlights':
       return [
-        { imageUrl: '/transfer-heroes/highlights-01.webp', title: 'Destaques da semana', subtitle: 'Curadoria do time — cartas com buzz no mercado e overall de topo.', tag: 'Curadoria', ctaLabel: 'Ver destaques' },
-        { imageUrl: '/transfer-heroes/highlights-02.webp', title: 'Leilões quentes', subtitle: 'Terminam em horas. Último lance define dono.', tag: 'Encerra hoje', ctaLabel: 'Entrar no leilão' },
-        { imageUrl: '/transfer-heroes/highlights-03.webp', title: 'Títulos memoráveis', subtitle: 'Cartas com troféus raros equipados — valor narrativo + desempenho.', tag: 'Memorável', ctaLabel: 'Explorar' },
+        { imageUrl: '/transfer-heroes/highlights-01.webp', title: L('Destaques da semana', 'Weekly highlights'), subtitle: L('Curadoria do time — cartas com buzz no mercado e overall de topo.', 'Team picks — cards with market buzz and top overall.'), tag: L('Curadoria', 'Curated'), ctaLabel: L('Ver destaques', 'See highlights') },
+        { imageUrl: '/transfer-heroes/highlights-02.webp', title: L('Leilões quentes', 'Hot auctions'), subtitle: L('Terminam em horas. Último lance define dono.', 'Ending in hours. Last bid wins.'), tag: L('Encerra hoje', 'Ends today'), ctaLabel: L('Entrar no leilão', 'Join auction') },
+        { imageUrl: '/transfer-heroes/highlights-03.webp', title: L('Títulos memoráveis', 'Memorable titles'), subtitle: L('Cartas com troféus raros equipados — valor narrativo + desempenho.', 'Cards with rare trophies equipped — story value + performance.'), tag: L('Memorável', 'Memorable'), ctaLabel: L('Explorar', 'Explore') },
       ];
   }
 }
 
 function featuredBoxesConfigForTab(tab: HeroTab): { title: string; subtitle: string; variant: 'premium' | 'rising' | 'drop' } {
   switch (tab) {
-    case 'genesis':   return { title: 'Genesis em foco', subtitle: 'Seleção curada das cartas fundadoras em destaque.', variant: 'premium' };
-    case 'legacies':  return { title: 'Legacies em foco', subtitle: 'Linhagens com DNA forte e histórico valioso.', variant: 'premium' };
-    case 'newbies':   return { title: 'Chegaram ao mercado', subtitle: 'Cartas recém-listadas — movimento ainda a formar.', variant: 'rising' };
-    case 'highlights':return { title: 'Drops em alta', subtitle: 'Valor de compra imediata no topo da temporada.', variant: 'drop' };
+    case 'genesis':   return { title: L('Genesis em foco', 'Genesis spotlight'), subtitle: L('Seleção curada das cartas fundadoras em destaque.', 'Curated selection of featured founder cards.'), variant: 'premium' };
+    case 'legacies':  return { title: L('Legacies em foco', 'Legacies spotlight'), subtitle: L('Linhagens com DNA forte e histórico valioso.', 'Lineages with strong DNA and a valuable history.'), variant: 'premium' };
+    case 'newbies':   return { title: L('Chegaram ao mercado', 'Just listed'), subtitle: L('Cartas recém-listadas — movimento ainda a formar.', 'Freshly listed cards — activity still building.'), variant: 'rising' };
+    case 'highlights':return { title: L('Drops em alta', 'Trending drops'), subtitle: L('Valor de compra imediata no topo da temporada.', "The season's highest buy-now prices."), variant: 'drop' };
   }
 }
 
@@ -537,8 +538,8 @@ export function Transfer() {
     return [
       {
         id: 'highlights' as const,
-        title: 'Destaques da semana',
-        hint: 'Cartas em destaque pelo overall e buzz do mercado.',
+        title: L('Destaques da semana', 'Weekly highlights'),
+        hint: L('Cartas em destaque pelo overall e buzz do mercado.', 'Cards featured for overall and market buzz.'),
         icon: TrendingUp,
         ordered: byOvr,
       },
@@ -586,10 +587,12 @@ export function Transfer() {
   const legacyHighlightFixedSale = (row: LegacyPlayerRow) => {
     const brl = legacyQuote.status === 'ok' && row.currency === 'USDT' && row.price_unit_cents
       ? Math.round(row.price_unit_cents * legacyQuote.olefootVenda) : null;
-    const oleTxt = `${Math.max(1, Math.round(row.price_bro_cents)).toLocaleString('pt-BR')} ${moedaDoJogo()}`;
-    const price = brl != null ? `R$ ${(brl / 100).toFixed(2).replace('.', ',')}` : oleTxt;
+    const oleTxt = `${Math.max(1, Math.round(row.price_bro_cents)).toLocaleString(LOCALE)} ${moedaDoJogo()}`;
+    const price = brl != null
+      ? `R$ ${(brl / 100).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : oleTxt;
     const isOwned = !!playersById[legacyRowToPlayerEntity(row).id];
-    return { price, cta: isOwned ? 'Adquirido' : 'Comprar', badge: brl != null ? 'PIX' : moedaDoJogo() };
+    return { price, cta: isOwned ? L('Adquirido', 'Owned') : L('Comprar', 'Buy'), badge: brl != null ? 'PIX' : moedaDoJogo() };
   };
 
   useHighlightRailSizing(highlightsScrollRef, !isFiltered, highlightsShownLen);
@@ -641,7 +644,7 @@ export function Transfer() {
 
       // Verifica saldo antes de qualquer chamada
       if (oleBal < priceExp) {
-        setPurchaseError('Saldo EXP insuficiente para esta compra.');
+        setPurchaseError(L('Saldo EXP insuficiente para esta compra.', 'Not enough EXP for this purchase.'));
         return;
       }
 
@@ -668,7 +671,7 @@ export function Transfer() {
             });
             serverRes = await r.json() as typeof serverRes;
           } catch {
-            setPurchaseError('Falha de rede. Verifique sua conexão e tente novamente.');
+            setPurchaseError(L('Falha de rede. Verifique sua conexão e tente novamente.', 'Network error. Check your connection and try again.'));
             setIsPurchasing(false);
             return;
           }
@@ -696,16 +699,16 @@ export function Transfer() {
                 setIsPurchasing(false);
                 return;
               }
-              setPurchaseError('Este jogador já está no seu plantel.');
+              setPurchaseError(L('Este jogador já está no seu plantel.', 'This player is already in your squad.'));
               setIsPurchasing(false);
               return;
             }
 
             const msg = serverRes?.error === 'Jogador não está à venda.'
-              ? 'Este jogador já não está disponível.'
+              ? L('Este jogador já não está disponível.', 'This player is no longer available.')
               : serverRes?.error === 'Unauthorized'
-              ? 'Sessão expirada. Faz login novamente.'
-              : (serverRes?.error ?? 'Não foi possível concluir a compra. Tenta novamente.');
+              ? L('Sessão expirada. Faz login novamente.', 'Session expired. Please log in again.')
+              : (serverRes?.error ?? L('Não foi possível concluir a compra. Tenta novamente.', "Couldn't complete the purchase. Try again."));
             setPurchaseError(msg);
             setIsPurchasing(false);
             return;
@@ -759,11 +762,11 @@ export function Transfer() {
       const listingId = selectedPlayer.managerListingId;
       const listing = otherManagerListings.find((l) => l.listingId === listingId);
       if (!listing) {
-        setPurchaseError('Listagem não encontrada — recarregue a página.');
+        setPurchaseError(L('Listagem não encontrada — recarregue a página.', 'Listing not found — reload the page.'));
         return;
       }
       if (oleBal < listing.priceExp) {
-        setPurchaseError('Saldo EXP insuficiente para esta compra.');
+        setPurchaseError(L('Saldo EXP insuficiente para esta compra.', 'Not enough EXP for this purchase.'));
         return;
       }
       setIsPurchasing(true);
@@ -774,7 +777,7 @@ export function Transfer() {
         const base = olefootApiBase();
         const serverUrl = base && base !== 'http://localhost:4000' ? base : null;
         if (!serverUrl || !token) {
-          setPurchaseError('Compra de Academia exige sessão autenticada — faça login.');
+          setPurchaseError(L('Compra de Academia exige sessão autenticada — faça login.', 'Academy purchases require you to be logged in — please log in.'));
           return;
         }
         let serverRes: {
@@ -795,11 +798,11 @@ export function Transfer() {
           });
           serverRes = (await r.json()) as typeof serverRes;
         } catch {
-          setPurchaseError('Falha de rede. Verifique sua conexão e tente novamente.');
+          setPurchaseError(L('Falha de rede. Verifique sua conexão e tente novamente.', 'Network error. Check your connection and try again.'));
           return;
         }
         if (!serverRes?.ok) {
-          setPurchaseError(serverRes?.error ?? 'Não foi possível concluir a compra. Tenta novamente.');
+          setPurchaseError(serverRes?.error ?? L('Não foi possível concluir a compra. Tenta novamente.', "Couldn't complete the purchase. Try again."));
           return;
         }
 
@@ -843,10 +846,10 @@ export function Transfer() {
 
   type TransferTabKey = 'genesis' | 'legacies' | 'newbies' | 'highlights';
   const TAB_META: Record<TransferTabKey, { subtitle: string; eyebrow: string }> = {
-    genesis: { subtitle: 'fundadores', eyebrow: 'Cartas Genesis' },
-    legacies: { subtitle: 'lendas', eyebrow: 'Hall of Fame' },
-    newbies: { subtitle: 'novidades', eyebrow: 'Recém-listadas' },
-    highlights: { subtitle: 'destaques', eyebrow: 'Curadoria' },
+    genesis: { subtitle: L('fundadores', 'founders'), eyebrow: L('Cartas Genesis', 'Genesis cards') },
+    legacies: { subtitle: L('lendas', 'legends'), eyebrow: 'Hall of Fame' },
+    newbies: { subtitle: L('novidades', 'new'), eyebrow: L('Recém-listadas', 'Just listed') },
+    highlights: { subtitle: L('destaques', 'highlights'), eyebrow: L('Curadoria', 'Curated') },
   };
   const tabMeta = TAB_META[marketTab as TransferTabKey] ?? TAB_META.genesis;
   const tabsList: { id: HeroTab; label: string }[] = [
@@ -858,12 +861,12 @@ export function Transfer() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 overflow-x-hidden pb-20 md:pb-24">
-      <BackButton to="/mercado" label="Mercado" />
+      <BackButton to="/mercado" label={L('Mercado', 'Market')} />
       {/* ── PROPOSTAS P2P (negociação entre managers) ── */}
       <MarketOffersPanel />
       {/* ── HERO EDITORIAL — diagonal split + watermark cinematográfico ── */}
       <section
-        aria-label="Mercado de transferências"
+        aria-label={L('Mercado de transferências', 'Transfer market')}
         className="relative w-full overflow-hidden bg-neon-yellow"
       >
         {/* ── HERO no layer final ──────────────────────────────────────────
@@ -893,7 +896,7 @@ export function Transfer() {
                 letterSpacing: '-0.01em',
               }}
             >
-              Mercado
+              {L('Mercado', 'Market')}
             </h1>
             {/* A aba corrente vira chip preto — é navegação, não subtítulo. */}
             <span
@@ -922,7 +925,7 @@ export function Transfer() {
                   abaixo dizia 23. */}
               {marketTab === 'legacies' ? legacyRows.length : auctionPool.length}
               <span className="ml-1.5 font-display font-black" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
-                cartas
+                {L('cartas', 'cards')}
               </span>
             </span>
             <span
@@ -947,7 +950,7 @@ export function Transfer() {
           >
             <div className="flex items-center gap-2">
               <label className="sr-only" htmlFor="mercado-busca">
-                Buscar jogador pelo nome
+                {L('Buscar jogador pelo nome', 'Search player by name')}
               </label>
               <div className="relative min-w-0 flex-1">
                 <Search
@@ -959,7 +962,7 @@ export function Transfer() {
                   ref={searchInputRef}
                   type="search"
                   inputMode="search"
-                  placeholder="Buscar jogador…"
+                  placeholder={L('Buscar jogador…', 'Search player…')}
                   value={filters.name}
                   onChange={(e) => setFilters({ ...filters, name: e.target.value })}
                   onKeyDown={(e) => {
@@ -973,7 +976,7 @@ export function Transfer() {
                   <button
                     type="button"
                     onClick={() => setFilters({ ...filters, name: '' })}
-                    aria-label="Limpar busca"
+                    aria-label={L('Limpar busca', 'Clear search')}
                     className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-white/45 hover:text-white"
                   >
                     <X className="h-4 w-4" />
@@ -987,7 +990,7 @@ export function Transfer() {
                   className="ole-num h-11 shrink-0 whitespace-nowrap border border-white/20 px-3 text-[11px] uppercase text-cimento transition-colors hover:border-white hover:text-white"
                   style={{ borderRadius: 'var(--radius-sm)' }}
                 >
-                  Limpar
+                  {L('Limpar', 'Clear')}
                 </button>
               )}
             </div>
@@ -995,7 +998,7 @@ export function Transfer() {
             {/* Posição — rolagem horizontal no celular, tudo à vista no desktop. */}
             <div className="mt-3">
               <p className="ole-eyebrow-poster mb-1.5 text-poeira" style={{ fontSize: '10px' }}>
-                Posição
+                {L('Posição', 'Position')}
               </p>
               <div className="hide-scrollbar -mx-1 flex max-w-none gap-1.5 overflow-x-auto px-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
                 {['', ...POSITIONS].map((p) => (
@@ -1012,7 +1015,7 @@ export function Transfer() {
                     )}
                     style={{ borderRadius: 'var(--radius-sm)' }}
                   >
-                    {p || 'Todas'}
+                    {p ? rotuloPosicao(p) : L('Todas', 'All')}
                   </button>
                 ))}
               </div>
@@ -1021,7 +1024,7 @@ export function Transfer() {
             {/* Ordenar — mesmo vocabulário nas duas abas. */}
             <div className="mt-3">
               <p className="ole-eyebrow-poster mb-1.5 text-poeira" style={{ fontSize: '10px' }}>
-                Ordenar
+                {L('Ordenar', 'Sort')}
               </p>
               <div className="hide-scrollbar -mx-1 flex max-w-none gap-1.5 overflow-x-auto px-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
                 {MARKET_SORTS.map((s) => (
@@ -1054,7 +1057,7 @@ export function Transfer() {
           e o primeiro card da tela era outro jogador). */}
       {!isFiltered && highlightsOrdered.length > 0 ? (
         <section className="min-w-0 space-y-3">
-          <SecaoVolt label="Destaques da semana" className="px-0.5" />
+          <SecaoVolt label={L('Destaques da semana', 'Weekly highlights')} className="px-0.5" />
           <div className="relative -mx-3 sm:-mx-4 lg:-mx-8">
             <div
               ref={highlightsScrollRef}
@@ -1091,10 +1094,13 @@ export function Transfer() {
                 <div className="flex items-stretch">
                   <TransferCarouselVerMaisTile
                     variant="neon"
-                    topLabel="Destaques da semana"
+                    topLabel={L('Destaques da semana', 'Weekly highlights')}
                     bottomLabel={
                       highlightsShownLen < highlightsOrdered.length
-                        ? `+${Math.min(DISCOVERY_CAROUSEL_STEP, highlightsOrdered.length - highlightsShownLen)} cartas`
+                        ? L(
+                            `+${Math.min(DISCOVERY_CAROUSEL_STEP, highlightsOrdered.length - highlightsShownLen)} cartas`,
+                            `+${Math.min(DISCOVERY_CAROUSEL_STEP, highlightsOrdered.length - highlightsShownLen)} cards`,
+                          )
                         : `${highlightsShownLen}/${highlightsOrdered.length}`
                     }
                     disabled={highlightsShownLen >= highlightsOrdered.length}
@@ -1192,7 +1198,7 @@ export function Transfer() {
                     letterSpacing: '0.2em',
                   }}
                 >
-                  Compra concluída
+                  {L('Compra concluída', 'Purchase complete')}
                 </p>
               </div>
             </div>
@@ -1207,7 +1213,7 @@ export function Transfer() {
               }}
               className="shrink-0 grid h-8 w-8 place-items-center text-white/45 transition-colors hover:bg-white/10 hover:text-white"
               style={{ borderRadius: 'var(--radius-sm)' }}
-              aria-label="Fechar aviso de compra"
+              aria-label={L('Fechar aviso de compra', 'Close purchase notice')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -1217,10 +1223,13 @@ export function Transfer() {
 
       {/* ── GENESIS EM FOCO ─ headline + view toggle (padrão /loja) ── */}
       <div className="flex flex-wrap items-end justify-between gap-3 px-0.5 pb-3 sm:pb-4">
-        <SecaoVolt label="Genesis em foco" className="min-w-0 flex-1">
+        <SecaoVolt label={L('Genesis em foco', 'Genesis spotlight')} className="min-w-0 flex-1">
           <Hashtag>
-            {gridPlayers.length} {gridPlayers.length === 1 ? 'carta disponível' : 'cartas disponíveis'}
-            {isFiltered ? ' (filtros aplicados)' : ''}
+            {gridPlayers.length}{' '}
+            {gridPlayers.length === 1
+              ? L('carta disponível', 'card available')
+              : L('cartas disponíveis', 'cards available')}
+            {isFiltered ? L(' (filtros aplicados)', ' (filters applied)') : ''}
           </Hashtag>
         </SecaoVolt>
         {/* View toggle Grid / List — Sprint B-4 */}
@@ -1237,7 +1246,11 @@ export function Transfer() {
                   : 'text-white/55 hover:text-white',
               )}
               aria-pressed={genesisViewMode === m}
-              aria-label={`Visualização em ${m === 'grid' ? 'grade' : 'lista horizontal'}`}
+              aria-label={
+                m === 'grid'
+                  ? L('Visualização em grade', 'Grid view')
+                  : L('Visualização em lista horizontal', 'List view')
+              }
             >
               {m === 'grid' ? 'Grid' : 'List'}
             </button>
@@ -1263,13 +1276,13 @@ export function Transfer() {
           {gridPlayers.length === 0 && (
             <div className="col-span-full py-16 text-center">
               <p className="font-impact uppercase text-white" style={{ fontSize: '18px' }}>
-                Nenhuma carta encontrada
+                {L('Nenhuma carta encontrada', 'No cards found')}
               </p>
               <p
                 className="mx-auto mt-1.5 max-w-md text-white/50"
                 style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
               >
-                Nenhuma carta atende esses filtros. Tente afrouxar a busca.
+                {L('Nenhuma carta atende esses filtros. Tente afrouxar a busca.', 'No cards match these filters. Try a broader search.')}
               </p>
               <p
                 className="mt-3 text-white/35 uppercase"
@@ -1279,7 +1292,7 @@ export function Transfer() {
                   letterSpacing: '0.22em',
                 }}
               >
-                Tenta ajustar a busca acima
+                {L('Tenta ajustar a busca acima', 'Try adjusting the search above')}
               </p>
             </div>
           )}
@@ -1290,13 +1303,13 @@ export function Transfer() {
           {gridPlayers.length === 0 && (
             <div className="py-16 text-center">
               <p className="font-impact uppercase text-white" style={{ fontSize: '18px' }}>
-                Nenhuma carta encontrada
+                {L('Nenhuma carta encontrada', 'No cards found')}
               </p>
               <p
                 className="mx-auto mt-1.5 max-w-md text-white/50"
                 style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
               >
-                Nenhuma carta atende esses filtros. Tente afrouxar a busca.
+                {L('Nenhuma carta atende esses filtros. Tente afrouxar a busca.', 'No cards match these filters. Try a broader search.')}
               </p>
             </div>
           )}
@@ -1314,8 +1327,8 @@ export function Transfer() {
           {managerAuctionCards.length > 0 ? (
             <section className="min-w-0 space-y-3">
               <div className="flex items-center justify-between gap-2 px-0.5">
-                <SecaoVolt label="Jogadores anunciados" className="min-w-0 flex-1">
-                  <Hashtag>Toque pra mudar preço ou retirar</Hashtag>
+                <SecaoVolt label={L('Jogadores anunciados', 'Listed players')} className="min-w-0 flex-1">
+                  <Hashtag>{L('Toque pra mudar preço ou retirar', 'Tap to change price or delist')}</Hashtag>
                 </SecaoVolt>
                 <Link
                   to="/team"
@@ -1329,7 +1342,7 @@ export function Transfer() {
                     borderRadius: 'var(--radius-sm)',
                   }}
                 >
-                  Anunciar mais
+                  {L('Anunciar mais', 'List more')}
                   <ChevronRight className="h-3 w-3" />
                 </Link>
               </div>
@@ -1405,7 +1418,7 @@ export function Transfer() {
                           className="shrink-0 rounded border border-white/20 bg-white/10 px-2 py-1 text-xl leading-none"
                           title={
                             selectedPlayer.nat?.trim() && selectedPlayer.nat !== '—'
-                              ? `País (código): ${selectedPlayer.nat}`
+                              ? L(`País (código): ${selectedPlayer.nat}`, `Country (code): ${selectedPlayer.nat}`)
                               : undefined
                           }
                         >
@@ -1413,10 +1426,10 @@ export function Transfer() {
                         </span>
                       </div>
                       <p className="min-w-0 max-w-full break-words text-sm font-bold uppercase tracking-widest text-neon-yellow [overflow-wrap:anywhere]">
-                        {selectedPlayer.pos} • Overall {selectedPlayer.ovr}
+                        {rotuloPosicao(selectedPlayer.pos)} • Overall {selectedPlayer.ovr}
                       </p>
                       <p className="mt-1.5 text-[10px] text-white/45">
-                        Anúncio #{selectedPlayer.id} · {playerIdentityLine(selectedPlayer)}
+                        {L('Anúncio', 'Listing')} #{selectedPlayer.id} · {playerIdentityLine(selectedPlayer)}
                       </p>
                     </div>
 
@@ -1426,11 +1439,11 @@ export function Transfer() {
                         <UserCircle className="w-4 h-4" /> Bio
                       </h3>
                       <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">
-                        {(selectedPlayer.bio ?? '').trim() || 'Sem bio disponível para este anúncio.'}
+                        {(selectedPlayer.bio ?? '').trim() || L('Sem bio disponível para este anúncio.', 'No bio available for this listing.')}
                       </p>
                       {selectedPlayer.bio && (
                         <p className="mt-2 text-[10px] text-white/45">
-                          {Math.min(selectedPlayer.bio.length, BIO_MAX_LEN)} / {BIO_MAX_LEN} caracteres
+                          {Math.min(selectedPlayer.bio.length, BIO_MAX_LEN)} / {BIO_MAX_LEN} {L('caracteres', 'characters')}
                         </p>
                       )}
                     </div>
@@ -1440,7 +1453,7 @@ export function Transfer() {
                     {/* Attributes Grid */}
                     <div>
                       <h3 className="font-bold text-white/50 uppercase text-xs mb-4 flex items-center gap-2 tracking-wider">
-                        <TrendingUp className="w-4 h-4"/> Atributos Detalhados
+                        <TrendingUp className="w-4 h-4"/> {L('Atributos Detalhados', 'Detailed Attributes')}
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                         <StatBar label="PAC" value={selectedPlayer.pac} />
@@ -1454,7 +1467,7 @@ export function Transfer() {
 
                     {/* History */}
                     <div className="bg-black/40 p-5 rounded-xl border border-white/5">
-                      <h3 className="font-bold text-white/50 uppercase text-xs mb-3 tracking-wider">Histórico Recente</h3>
+                      <h3 className="font-bold text-white/50 uppercase text-xs mb-3 tracking-wider">{L('Histórico Recente', 'Recent History')}</h3>
                       <div className="space-y-2">
                         {selectedPlayer.history.map((h: any, idx: number) => (
                           <div
@@ -1466,8 +1479,8 @@ export function Transfer() {
                               <span className="font-medium text-white">{h.club}</span>
                             </div>
                             <div className="flex shrink-0 gap-4 text-white/50">
-                              <span>{h.apps} Jogos</span>
-                              <span className="font-bold text-white">{h.goals} Gols</span>
+                              <span>{h.apps} {L('Jogos', 'Apps')}</span>
+                              <span className="font-bold text-white">{h.goals} {L('Gols', 'Goals')}</span>
                             </div>
                           </div>
                         ))}
@@ -1481,14 +1494,14 @@ export function Transfer() {
                           <div className="mb-5 flex flex-col gap-4 md:mb-6 md:flex-row md:items-end md:justify-between">
                             <div className="min-w-0">
                               <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cimento">
-                                <Gavel className="h-4 w-4 shrink-0" /> Lance Atual
+                                <Gavel className="h-4 w-4 shrink-0" /> {L('Lance Atual', 'Current Bid')}
                               </div>
                               <div className="ole-num max-w-full break-words text-xl text-white [overflow-wrap:anywhere] sm:text-2xl md:text-3xl lg:text-4xl">
                                 {formatAuctionDisplay(selectedPlayer.auctionCurrency, selectedPlayer.currentBid)}
                               </div>
                             </div>
                             <div className="text-left md:text-right">
-                              <div className="mb-1 text-xs font-bold uppercase tracking-widest text-white/50">Tempo Restante</div>
+                              <div className="mb-1 text-xs font-bold uppercase tracking-widest text-white/50">{L('Tempo Restante', 'Time Left')}</div>
                               <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 font-display text-lg font-bold tabular-nums text-white sm:text-xl md:text-2xl">
                                 <Clock className="h-5 w-5 shrink-0 text-neon-yellow sm:h-6 sm:w-6" aria-hidden />
                                 <span className="min-w-0 break-all">{selectedPlayer.timeLeft}</span>
@@ -1500,7 +1513,7 @@ export function Transfer() {
                           selectedPlayer.managerListingId ? (
                             <div className="space-y-3">
                               <p className="text-[10px] text-white/50">
-                                Saldo EXP:{' '}
+                                {L('Saldo EXP:', 'EXP balance:')}{' '}
                                 <span className="font-display font-bold text-white">{formatExp(oleBal)}</span>
                               </p>
                               {(() => {
@@ -1508,8 +1521,14 @@ export function Transfer() {
                                 return pending ? (
                                   <p className="text-[11px] text-neon-yellow/80">
                                     {pending.status === 'countered' && pending.counterExp != null
-                                      ? `Contraproposta do vendedor: ${formatExp(pending.counterExp)}.`
-                                      : `Proposta enviada: ${formatExp(pending.offerExp)} (pendente).`}
+                                      ? L(
+                                          `Contraproposta do vendedor: ${formatExp(pending.counterExp)}.`,
+                                          `Seller's counteroffer: ${formatExp(pending.counterExp)}.`,
+                                        )
+                                      : L(
+                                          `Proposta enviada: ${formatExp(pending.offerExp)} (pendente).`,
+                                          `Offer sent: ${formatExp(pending.offerExp)} (pending).`,
+                                        )}
                                   </p>
                                 ) : null;
                               })()}
@@ -1527,8 +1546,8 @@ export function Transfer() {
                               >
                                 <span className="block text-center text-sm font-black uppercase sm:text-base">
                                   {isPurchasing
-                                    ? 'Processando…'
-                                    : `Comprar agora · ${formatAuctionDisplay(
+                                    ? L('Processando…', 'Processing…')
+                                    : `${L('Comprar agora', 'Buy now')} · ${formatAuctionDisplay(
                                         selectedPlayer.auctionCurrency,
                                         selectedPlayer.buyNow,
                                       )}`}
@@ -1540,37 +1559,43 @@ export function Transfer() {
                                 className="min-h-12 w-full border border-white/30 bg-transparent px-3 py-3 font-display text-sm font-black uppercase tracking-wide text-white transition-colors hover:border-white hover:bg-white/5 sm:py-4"
                               >
                                 {marketOffers.pendingForListing(selectedPlayer.managerListingId)
-                                  ? 'Atualizar proposta'
-                                  : 'Fazer proposta'}
+                                  ? L('Atualizar proposta', 'Update offer')
+                                  : L('Fazer proposta', 'Make offer')}
                               </button>
                             </div>
                           ) : selectedPlayer.marketKind === 'manager_own' ||
                           selectedPlayer.marketKind === 'genesis' ? (
                             <div className="space-y-3">
                               {selectedPlayer.marketKind === 'manager_own' ? (
-                                <p className="text-[10px] text-white/50">Seu anúncio</p>
+                                <p className="text-[10px] text-white/50">{L('Seu anúncio', 'Your listing')}</p>
                               ) : (
                                 <>
                                   <p className="text-[10px] text-white/50">
-                                    Saldo EXP:{' '}
+                                    {L('Saldo EXP:', 'EXP balance:')}{' '}
                                     <span className="font-display font-bold text-white">{formatExp(oleBal)}</span>
                                     {selectedPlayer.marketKind === 'genesis' &&
                                     oleBal < selectedPlayer.buyNow ? (
                                       <span className="mt-1 block text-baixa">
-                                        Saldo insuficiente para compra imediata.
+                                        {L('Saldo insuficiente para compra imediata.', 'Not enough balance to buy now.')}
                                       </span>
                                     ) : null}
                                   </p>
                                   {selectedPlayer.marketKind === 'genesis' && selectedPlayer.genesisCatalogId ? (
                                     <p className="text-[10px] text-white/50">
                                       {genesisListedEntities[selectedPlayer.genesisCatalogId] == null
-                                        ? 'Sincronizando catálogo Genesis… recarregue se o botão travar.'
+                                        ? L('Sincronizando catálogo Genesis… recarregue se o botão travar.', 'Syncing Genesis catalog… reload if the button gets stuck.')
                                         : genesisListedEntities[selectedPlayer.genesisCatalogId]!.contractIsLifetime
-                                          ? 'Contrato vitalício (admin) — não expira com jogos.'
-                                          : `Contrato: ${
-                                              genesisListedEntities[selectedPlayer.genesisCatalogId]!
-                                                .contractMatchesIncluded ?? 70
-                                            } jogos (amistoso ou oficial).`}
+                                          ? L('Contrato vitalício (admin) — não expira com jogos.', "Lifetime contract (admin) — doesn't expire with matches.")
+                                          : L(
+                                              `Contrato: ${
+                                                genesisListedEntities[selectedPlayer.genesisCatalogId]!
+                                                  .contractMatchesIncluded ?? 70
+                                              } jogos (amistoso ou oficial).`,
+                                              `Contract: ${
+                                                genesisListedEntities[selectedPlayer.genesisCatalogId]!
+                                                  .contractMatchesIncluded ?? 70
+                                              } matches (friendly or official).`,
+                                            )}
                                     </p>
                                   ) : null}
                                 </>
@@ -1600,10 +1625,10 @@ export function Transfer() {
                               >
                                 <span className="block text-center text-sm font-black uppercase sm:text-base">
                                   {isPurchasing
-                                    ? 'Processando…'
+                                    ? L('Processando…', 'Processing…')
                                     : selectedPlayer.marketKind === 'manager_own'
-                                    ? 'Retirar do mercado · grátis'
-                                    : `Comprar agora · ${formatAuctionDisplay(
+                                    ? L('Retirar do mercado · grátis', 'Remove from market · free')
+                                    : `${L('Comprar agora', 'Buy now')} · ${formatAuctionDisplay(
                                         selectedPlayer.auctionCurrency,
                                         selectedPlayer.buyNow,
                                       )}`}
@@ -1633,7 +1658,7 @@ export function Transfer() {
                                 >
                                   <span className="flex min-w-0 max-w-full items-center justify-center gap-2 whitespace-normal text-center text-sm leading-tight sm:text-base md:text-lg">
                                     <Gavel className="h-5 w-5 shrink-0" aria-hidden />
-                                    Confirmar Lance
+                                    {L('Confirmar Lance', 'Confirm Bid')}
                                   </span>
                                 </button>
                               </div>
@@ -1643,7 +1668,7 @@ export function Transfer() {
                                   onClick={handleMockBuyNow}
                                   className="mx-auto block max-w-full break-words px-2 text-left text-xs text-white/50 underline underline-offset-4 transition-colors [overflow-wrap:anywhere] hover:text-white sm:text-center"
                                 >
-                                  Ou comprar agora por{' '}
+                                  {L('Ou comprar agora por', 'Or buy now for')}{' '}
                                   {formatAuctionDisplay(selectedPlayer.auctionCurrency, selectedPlayer.buyNow)}
                                 </button>
                               </div>
@@ -1707,7 +1732,7 @@ function TransferMemorablesInfoBox({ ids }: { ids?: MemorableTrophyId[] }) {
           >
             <span className="flex items-center gap-2">
               <Trophy className="w-4 h-4 shrink-0" strokeWidth={2.2} />
-              MEMORÁVEIS
+              {L('MEMORÁVEIS', 'MEMORABLES')}
             </span>
           </span>
           <p
@@ -1717,8 +1742,8 @@ function TransferMemorablesInfoBox({ ids }: { ids?: MemorableTrophyId[] }) {
             )}
           >
             {has
-              ? '#liga #copa #supercopa'
-              : 'Sem títulos memoráveis neste anúncio.'}
+              ? L('#liga #copa #supercopa', '#league #cup #supercup')
+              : L('Sem títulos memoráveis neste anúncio.', 'No memorable titles on this listing.')}
           </p>
         </div>
         {has && (
@@ -1794,7 +1819,7 @@ function TransferMarketCompactCard({
           >
             {player.ovr}
           </div>
-          <div className="mt-0.5 text-[8px] font-bold uppercase tracking-widest text-white">{player.pos}</div>
+          <div className="mt-0.5 text-[8px] font-bold uppercase tracking-widest text-white">{rotuloPosicao(player.pos)}</div>
         </div>
         <div className="absolute right-2 top-2 z-20 flex flex-col items-end gap-0.5">
           <div
@@ -1875,7 +1900,7 @@ function TransferMarketCompactCard({
           </div>
           <div className="flex min-h-9 w-full max-w-full items-center justify-center gap-1 bg-neon-yellow px-1 py-1.5 font-display text-[7px] font-black uppercase leading-tight tracking-wider text-black min-[340px]:text-[8px]">
             <Gavel className="h-3 w-3 shrink-0" aria-hidden />
-            Abrir
+            {L('Abrir', 'Open')}
           </div>
         </div>
       </div>
@@ -1904,10 +1929,10 @@ function cardTierOf(player: MockAuctionPlayer): CardTier {
 }
 
 const TIER_LABEL: Record<CardTier, string> = {
-  comum: 'Comum',
-  raro: 'Raro',
-  epico: 'Épico',
-  lendario: 'Lendário',
+  comum: L('Comum', 'Common'),
+  raro: L('Raro', 'Rare'),
+  epico: L('Épico', 'Epic'),
+  lendario: L('Lendário', 'Legendary'),
 };
 
 /** Moldura por raridade. A quantidade de amarelo É a informação. */
@@ -1951,8 +1976,8 @@ export function PlayerCard({
   const currencyLabel = fixedSale
     ? fixedSale.badge
     : player.auctionCurrency === 'EXP'
-      ? 'Lances em EXP'
-      : 'Lances em BRO';
+      ? L('Lances em EXP', 'Bids in EXP')
+      : L('Lances em BRO', 'Bids in BRO');
   const tier = cardTierOf(player);
   const showHomonymStrip = !isModal && listHomonym && listHomonym.total > 1;
   return (
@@ -1986,7 +2011,7 @@ export function PlayerCard({
             {player.ovr}
           </div>
           <div className="mt-1 font-display text-[10px] font-bold uppercase tracking-widest text-white">
-            {player.pos}
+            {rotuloPosicao(player.pos)}
           </div>
         </div>
 
@@ -2041,7 +2066,7 @@ export function PlayerCard({
             {showHomonymStrip && listHomonym ? (
               <p
                 className="mt-1.5 line-clamp-2 text-center text-[7px] font-display font-bold leading-tight tracking-wide text-neon-yellow/90 [overflow-wrap:anywhere] sm:text-[8px]"
-                title={`Anúncio #${player.id} · ${playerIdentityLine(player)}`}
+                title={`${L('Anúncio', 'Listing')} #${player.id} · ${playerIdentityLine(player)}`}
               >
                 {listHomonym.index}/{listHomonym.total} · {playerIdentityLine(player)}
               </p>
@@ -2107,7 +2132,7 @@ export function PlayerCard({
               {/* Tempo restante — só leilão (venda fixa esconde) */}
               {!fixedSale && (
                 <span className="flex shrink-0 items-center justify-center gap-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/55 sm:justify-start sm:text-[10px]">
-                  Encerra em <span className="text-white/85">{player.timeLeft}</span>
+                  {L('Encerra em', 'Ends in')} <span className="text-white/85">{player.timeLeft}</span>
                 </span>
               )}
               {/* Preço — Anton, sem itálico (VOLT2) */}
@@ -2128,7 +2153,7 @@ export function PlayerCard({
               className="flex w-full min-h-11 max-w-full items-center justify-center bg-neon-yellow px-3 py-2.5 font-display text-[12px] font-black uppercase leading-tight tracking-[0.18em] text-black transition-colors hover:bg-white [-webkit-tap-highlight-color:transparent] sm:py-3 sm:text-[13px]"
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
-              {fixedSale ? fixedSale.cta : 'Dar Lance'}
+              {fixedSale ? fixedSale.cta : L('Dar Lance', 'Place Bid')}
             </button>
           </div>
         </div>
@@ -2192,7 +2217,7 @@ export function TransferRowCard({
         type="button"
         onClick={onSelect}
         className="relative w-28 sm:w-36 md:w-44 flex-shrink-0 overflow-hidden bg-black border-r border-white/8 cursor-pointer [-webkit-tap-highlight-color:transparent]"
-        aria-label={`Ver ${player.name}`}
+        aria-label={L(`Ver ${player.name}`, `View ${player.name}`)}
       >
         <div
           className={cn(
@@ -2224,7 +2249,7 @@ export function TransferRowCard({
             {player.ovr}
           </p>
           <p className="mt-0.5 font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white/85">
-            {player.pos}
+            {rotuloPosicao(player.pos)}
           </p>
         </div>
         {tier === 'lendario' ? (
@@ -2271,7 +2296,7 @@ export function TransferRowCard({
               }}
             >
               {flag ? <span className="mr-1.5 not-italic" aria-hidden>{flag}</span> : null}
-              {player.nat?.trim() && player.nat !== '—' ? player.nat : 'Sem nação'}
+              {player.nat?.trim() && player.nat !== '—' ? player.nat : L('Sem nação', 'No nation')}
               {listHomonym && listHomonym.total > 1 ? (
                 <span className="ml-2 text-neon-yellow/85">
                   · {listHomonym.index}/{listHomonym.total}
@@ -2327,7 +2352,7 @@ export function TransferRowCard({
           <div className="flex min-w-0 flex-col">
             {!fixedSale && (
               <span className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50">
-                Encerra em <span className="text-white/85">{player.timeLeft}</span>
+                {L('Encerra em', 'Ends in')} <span className="text-white/85">{player.timeLeft}</span>
               </span>
             )}
             <span
@@ -2346,7 +2371,7 @@ export function TransferRowCard({
             className="inline-flex items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black transition-colors hover:bg-white"
             style={{ borderRadius: 'var(--radius-sm)' }}
           >
-            {fixedSale ? fixedSale.cta : 'Dar Lance'}
+            {fixedSale ? fixedSale.cta : L('Dar Lance', 'Place Bid')}
           </button>
         </div>
       </div>

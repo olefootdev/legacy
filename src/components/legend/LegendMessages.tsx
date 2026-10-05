@@ -9,6 +9,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { Send } from 'lucide-react';
 import type { LegendMessage } from '@/hooks/useLegendSocial';
 import { useGameStore } from '@/game/store';
+import { L, LOCALE } from '@/i18n/L';
 
 interface LegendMessagesProps {
   legendName: string;
@@ -20,13 +21,13 @@ interface LegendMessagesProps {
 function timeAgo(ts: number): string {
   const diff = Math.max(0, Date.now() - ts);
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return 'agora';
-  if (mins < 60) return `há ${mins}m`;
+  if (mins < 1) return L('agora', 'now');
+  if (mins < 60) return L(`há ${mins}m`, `${mins}m ago`);
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `há ${hours}h`;
+  if (hours < 24) return L(`há ${hours}h`, `${hours}h ago`);
   const days = Math.floor(hours / 24);
-  if (days < 7) return `há ${days}d`;
-  return new Date(ts).toLocaleDateString('pt-BR');
+  if (days < 7) return L(`há ${days}d`, `${days}d ago`);
+  return new Date(ts).toLocaleDateString(LOCALE);
 }
 
 export function LegendMessages({ legendName, messages, onPost, onRemove }: LegendMessagesProps) {
@@ -60,7 +61,7 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
 
   return (
     <section
-      aria-label={`Mural de mensagens para ${legendName}`}
+      aria-label={L(`Mural de mensagens para ${legendName}`, `Message wall for ${legendName}`)}
       className="relative bg-deep-black py-10 sm:py-14"
     >
       <div className="mx-auto max-w-3xl px-5 sm:px-8">
@@ -70,11 +71,11 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
             className="font-impact uppercase text-neon-yellow leading-[1.1]"
             style={{ fontSize: 'clamp(28px, 4.5vw, 40px)' }}
           >
-            Mural dos Managers
+            {L('Mural dos Managers', 'Managers Wall')}
           </h2>
         </header>
         <p className="mb-5 truncate font-mono text-[11.5px] text-cimento">
-          Recado pra {legendName} · visível pra todos os managers
+          {L(`Recado pra ${legendName} · visível pra todos os managers`, `Message for ${legendName} · visible to all managers`)}
         </p>
 
         {/* Composer */}
@@ -95,7 +96,7 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
                 {managerName}
               </p>
               <p className="text-cimento mt-0.5 font-mono" style={{ fontSize: '10px' }}>
-                Postando como você
+                {L('Postando como você', 'Posting as you')}
               </p>
             </div>
           </div>
@@ -103,7 +104,7 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
             value={draft}
             onChange={(e) => setDraft(e.target.value.slice(0, 180))}
             rows={3}
-            placeholder={`Manda um recado pra ${legendName.split(' ')[0]}...`}
+            placeholder={L(`Manda um recado pra ${legendName.split(' ')[0]}...`, `Send ${legendName.split(' ')[0]} a message...`)}
             className="w-full resize-none border border-white/16 bg-deep-black px-3 py-2.5 text-sm text-white placeholder:text-poeira focus:border-neon-yellow/60 focus:outline-none"
           />
           <div className="mt-2.5 flex items-center justify-between gap-3">
@@ -120,7 +121,7 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
               style={{ fontSize: '12px' }}
             >
               <Send className="w-3.5 h-3.5" strokeWidth={2.5} />
-              Publicar
+              {L('Publicar', 'Post')}
             </button>
           </div>
         </form>
@@ -129,7 +130,7 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
         {messages.length === 0 ? (
           <div className="border border-dashed border-white/16 px-5 py-8 text-center">
             <p className="text-cimento" style={{ fontSize: '15px' }}>
-              Seja o primeiro a deixar uma mensagem.
+              {L('Seja o primeiro a deixar uma mensagem.', 'Be the first to leave a message.')}
             </p>
           </div>
         ) : (
@@ -160,7 +161,7 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
                       type="button"
                       onClick={() => onRemove(msg.id)}
                       className="text-poeira hover:text-baixa transition-colors text-[14px] font-mono"
-                      aria-label="Remover mensagem"
+                      aria-label={L('Remover mensagem', 'Remove message')}
                     >
                       ×
                     </button>

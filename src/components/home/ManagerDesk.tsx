@@ -17,6 +17,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeftRight, CircleCheck, FileClock, ShieldAlert, type LucideIcon } from 'lucide-react';
+import { L } from '@/i18n/L';
 
 type Row = {
   key: string;
@@ -50,9 +51,12 @@ export function ManagerDesk({
       key: 'susp',
       icon: ShieldAlert,
       count: suspendedCount,
-      acao: 'Reveja a escalação',
-      atividade: `jogador${suspendedCount > 1 ? 'es' : ''} suspenso${suspendedCount > 1 ? 's' : ''} pra próxima`,
-      botao: 'Escalar',
+      acao: L('Reveja a escalação', 'Review the lineup'),
+      atividade: L(
+        `jogador${suspendedCount > 1 ? 'es' : ''} suspenso${suspendedCount > 1 ? 's' : ''} pra próxima`,
+        `player${suspendedCount > 1 ? 's' : ''} suspended for the next match`,
+      ),
+      botao: L('Escalar', 'Pick XI'),
       onClick: () => navigate('/clube/elenco'),
     });
   }
@@ -61,9 +65,9 @@ export function ManagerDesk({
       key: 'contract',
       icon: FileClock,
       count: expiredCount,
-      acao: 'Renove o contrato',
-      atividade: `vencido${expiredCount > 1 ? 's' : ''} — não pode escalar`,
-      botao: 'Renovar',
+      acao: L('Renove o contrato', 'Renew the contract'),
+      atividade: L(`vencido${expiredCount > 1 ? 's' : ''} — não pode escalar`, 'expired — cannot be picked'),
+      botao: L('Renovar', 'Renew'),
       onClick: () => navigate('/clube/elenco'),
     });
   }
@@ -72,9 +76,9 @@ export function ManagerDesk({
       key: 'offers',
       icon: ArrowLeftRight,
       count: offersCount,
-      acao: 'Responda as ofertas',
-      atividade: `proposta${offersCount > 1 ? 's' : ''} pelo teu elenco`,
-      botao: 'Ver mesa',
+      acao: L('Responda as ofertas', 'Answer the offers'),
+      atividade: L(`proposta${offersCount > 1 ? 's' : ''} pelo teu elenco`, `offer${offersCount > 1 ? 's' : ''} for your squad`),
+      botao: L('Ver mesa', 'View desk'),
       onClick: onOpenOffers ?? (() => navigate('/mercado/transfer')),
     });
   }
@@ -82,18 +86,18 @@ export function ManagerDesk({
   // ── Tudo em dia: discreto, sem amarelo. A cor só aparece quando há ação. ──
   if (rows.length === 0) {
     return (
-      <section aria-label="Mesa do Manager" className="flex flex-col gap-2">
+      <section aria-label={L('Mesa do Manager', 'Manager desk')} className="flex flex-col gap-2">
         <span className="ole-eyebrow-poster" style={{ fontSize: '12px' }}>
-          Mesa do manager
+          {L('Mesa do manager', 'Manager desk')}
         </span>
         <div className="ole-poster flex items-center gap-3 px-4 py-4" style={{ borderLeft: '3px solid var(--color-success)' }}>
           <CircleCheck className="h-5 w-5 flex-none" strokeWidth={2.2} style={{ color: 'var(--color-success)' }} aria-hidden />
           <div>
             <p className="font-impact uppercase text-white" style={{ fontSize: '13px' }}>
-              Tudo em dia
+              {L('Tudo em dia', 'All clear')}
             </p>
             <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
-              Nenhuma pendência no teu elenco.
+              {L('Nenhuma pendência no teu elenco.', 'Nothing pending in your squad.')}
             </p>
           </div>
         </div>
@@ -104,7 +108,7 @@ export function ManagerDesk({
   // ── Há pendência: pôster amarelo sangrado. ───────────────────────────────
   return (
     <section
-      aria-label="Mesa do Manager"
+      aria-label={L('Mesa do Manager', 'Manager desk')}
       className="ole-bleed"
       style={{
         background: 'var(--color-neon-yellow)',
@@ -113,13 +117,13 @@ export function ManagerDesk({
       }}
     >
       <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-        Precisa de você
+        {L('Precisa de você', 'Needs you')}
       </span>
       <h2
         className="mt-2 font-impact uppercase"
         style={{ fontSize: 'clamp(26px, 6vw, 40px)', lineHeight: 0.9, letterSpacing: '-0.01em' }}
       >
-        Mesa do manager
+        {L('Mesa do manager', 'Manager desk')}
       </h2>
 
       <div className="mt-5 flex flex-col gap-2.5">

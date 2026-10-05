@@ -17,6 +17,7 @@ import {
   type PenaltyShootResult,
   type PenaltyShooter,
 } from '@/components/penalty';
+import { L } from '@/i18n/L';
 
 const TAKER_TIMEOUT = 10;
 
@@ -104,13 +105,13 @@ export function PenaltyKickModalV2(props: Props) {
           <div className="max-w-xl w-full">
             <div className="text-center mb-6">
               <div className="text-[10px] uppercase tracking-[0.35em] text-neon-yellow/80 mb-2">
-                Pênalti pra nós · {countdown}s
+                {L('Pênalti pra nós', 'Penalty to us')} · {countdown}s
               </div>
               <h2
                 className="ole-headline text-white leading-[1.1]"
                 style={{ fontSize: 'clamp(36px, 6vw, 64px)' }}
               >
-                Quem bate?
+                {L('Quem bate?', 'Who takes it?')}
               </h2>
             </div>
             <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto">
@@ -174,7 +175,7 @@ export function PenaltyKickModalV2(props: Props) {
   // Goleiro adversário derivado do strength do clube
   const keeper: PenaltyKeeper = {
     id: 'opp-gk',
-    displayName: 'Goleiro Adversário',
+    displayName: L('Goleiro Adversário', 'Opponent Keeper'),
     readingRating: Math.max(40, Math.min(95, opponentStrength)),
     positioningRating: Math.max(40, Math.min(95, opponentStrength - 5)),
   };
@@ -201,7 +202,7 @@ export function PenaltyKickModalV2(props: Props) {
     }
     // 1.5s pra apreciar o resultado antes de avançar o engine
     window.setTimeout(() => {
-      onResolve(rng, penalty.takerName ?? 'Batedor');
+      onResolve(rng, penalty.takerName ?? L('Batedor', 'Taker'));
     }, 1500);
   }
 
@@ -223,7 +224,7 @@ export function PenaltyKickModalV2(props: Props) {
       <div className="w-full max-w-2xl px-3 sm:px-4 py-4 sm:py-6">
         <PenaltyShoot
           key={`shoot-${penalty.takerId}`}
-          headerLabel="Pênalti em jogo"
+          headerLabel={L('Pênalti em jogo', 'Penalty in play')}
           shooter={shooter}
           keeper={keeper}
           onResolved={handleResolved}

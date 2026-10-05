@@ -1,5 +1,6 @@
 import { emPorcento, emUnidades, type FundoDoVault, type MeuVault, type RegrasDeEarnings } from '@/wallet/earningsClient';
 import { LinhaDeValor } from './LinhaDeValor';
+import { L } from '@/i18n/L';
 
 /**
  * Produção — como a colheita se divide, e o que já chegou pra pessoa.
@@ -20,8 +21,8 @@ const TOM: Record<string, string> = {
 };
 
 const NOTA: Record<string, string> = {
-  depositante: 'quem depositou',
-  casa: 'roda a operação',
+  depositante: L('quem depositou', 'depositors'),
+  casa: L('roda a operação', 'runs the operation'),
 };
 
 export function BlocoProducao({
@@ -38,7 +39,7 @@ export function BlocoProducao({
 
   return (
     <div className="min-w-0 space-y-3">
-      <h3 className="font-impact text-[24px] uppercase leading-[1.1] text-white">Como a colheita se divide</h3>
+      <h3 className="font-impact text-[24px] uppercase leading-[1.1] text-white">{L('Como a colheita se divide', 'How the harvest is split')}</h3>
 
       <div className="flex h-3 gap-[2px]" aria-hidden>
         {regra.fatias.map((f) => (
@@ -67,14 +68,13 @@ export function BlocoProducao({
       </div>
 
       <p className="text-[11.5px] leading-relaxed text-poeira">
-        O split roda sobre o que a pool colheu — nunca sobre o que você depositou. Fatia sem dono
-        na rede não vai para a casa: fica na pool e sobe a cota de todo mundo.
+        {L('O split roda sobre o que a pool colheu — nunca sobre o que você depositou. Fatia sem dono na rede não vai para a casa: fica na pool e sobe a cota de todo mundo.', 'The split runs on what the pool harvested — never on what you deposited. An unowned network slice doesn\'t go to the house: it stays in the pool and lifts everyone\'s share.')}
       </p>
 
       {/* O que já chegou. Só aparece quando há fundo — sem fundo não há colheita. */}
       {fundo && (
         <div className="border border-white/10 bg-panel">
-          <LinhaDeValor rotulo="Você já recebeu"
+          <LinhaDeValor rotulo={L('Você já recebeu', 'You\'ve received')}
                         valor={`${emUnidades(recebido, fundo.decimais)} ${fundo.ativo}`} forte />
           {(meu?.fatias ?? []).slice(0, 8).map((f, i) => (
             <div key={`${f.colheita}-${f.fatia}-${i}`}

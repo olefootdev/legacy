@@ -42,6 +42,8 @@ import { chatWithCoach, suggestTraining, suggestStaff } from '@/coach/coachApi';
 import { createTrainingAction, createUpgradeStaffAction } from '@/coach/coachActions';
 import type { TeamContext } from '@/coach/types';
 import { useClubConsequences } from '@/hooks/useConsequences';
+import { L } from '@/i18n/L';
+import { rotuloPosicao } from '@/transfer/marketFilters';
 
 function ovr(attrs: import('@/entities/types').PlayerAttributes): number {
   const vals = Object.values(attrs);
@@ -55,14 +57,14 @@ function formColor(r: 'W' | 'D' | 'L') {
 }
 
 function formLabel(r: 'W' | 'D' | 'L') {
-  if (r === 'W') return 'V';
-  if (r === 'D') return 'E';
-  return 'D';
+  if (r === 'W') return L('V', 'W');
+  if (r === 'D') return L('E', 'D');
+  return L('D', 'L');
 }
 
 // ─── Radar SVG hexagonal ──────────────────────────────────────────────────────
 
-const RADAR_LABELS = ['VEL', 'FIN', 'PAS', 'DRI', 'MAR', 'FIS'];
+const RADAR_LABELS = [L('VEL', 'PAC'), L('FIN', 'SHO'), L('PAS', 'PAS'), L('DRI', 'DRI'), L('MAR', 'DEF'), L('FIS', 'PHY')];
 const RADAR_KEYS: Array<keyof import('@/entities/types').PlayerAttributes> = [
   'velocidade', 'finalizacao', 'passe', 'drible', 'marcacao', 'fisico',
 ];
@@ -173,7 +175,7 @@ function SectionHeader({ label, icon: Icon }: { label: string; icon: React.Eleme
 // ─── Widget 1: Notícias ───────────────────────────────────────────────────────
 
 function NewsWidget() {
-  const clubName = useGameStore((s) => s.club?.name ?? 'Clube');
+  const clubName = useGameStore((s) => s.club?.name ?? L('Clube', 'Club'));
   const form = useGameStore((s) => s.form);
   const results = useGameStore((s) => s.results);
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
@@ -196,13 +198,13 @@ function NewsWidget() {
           const diff = myTeam.previousPosition - myTeam.position;
           if (diff > 0) {
             items.push({
-              text: `Subiu ${diff} posição${diff > 1 ? 'ões' : ''} na Liga Global — agora ${myTeam.position}º`,
+              text: L(`Subiu ${diff} posição${diff > 1 ? 'ões' : ''} na Liga Global — agora ${myTeam.position}º`, `Up ${diff} place${diff > 1 ? 's' : ''} in the Global League — now #${myTeam.position}`),
               icon: TrendingUp,
               color: 'text-green-400',
             });
           } else if (diff < 0) {
             items.push({
-              text: `Caiu ${Math.abs(diff)} posição${Math.abs(diff) > 1 ? 'ões' : ''} na Liga Global — ${myTeam.position}º`,
+              text: L(`Caiu ${Math.abs(diff)} posição${Math.abs(diff) > 1 ? 'ões' : ''} na Liga Global — ${myTeam.position}º`, `Down ${Math.abs(diff)} place${Math.abs(diff) > 1 ? 's' : ''} in the Global League — #${myTeam.position}`),
               icon: TrendingDown,
               color: 'text-red-400',
             });
@@ -212,7 +214,7 @@ function NewsWidget() {
         // Suspensão ativa
         if (myTeam.suspensionRoundsRemaining > 0) {
           items.push({
-            text: `Suspensão ativa — perde ${myTeam.suspensionRoundsRemaining} rodada${myTeam.suspensionRoundsRemaining > 1 ? 's' : ''} na Liga Global`,
+            text: L(`Suspensão ativa — perde ${myTeam.suspensionRoundsRemaining} rodada${myTeam.suspensionRoundsRemaining > 1 ? 's' : ''} na Liga Global`, `Suspension active — misses ${myTeam.suspensionRoundsRemaining} matchday${myTeam.suspensionRoundsRemaining > 1 ? 's' : ''} in the Global League`),
             icon: ShieldAlert,
             color: 'text-red-400',
           });
@@ -222,7 +224,7 @@ function NewsWidget() {
         if (myTeam.injuryRoundsRemaining > 0) {
           const mod = myTeam.injuryModifier < 0 ? myTeam.injuryModifier : -myTeam.injuryModifier;
           items.push({
-            text: `Lesão: ${mod} OVR por ${myTeam.injuryRoundsRemaining} rodada${myTeam.injuryRoundsRemaining > 1 ? 's' : ''} na Liga Global`,
+            text: L(`Lesão: ${mod} OVR por ${myTeam.injuryRoundsRemaining} rodada${myTeam.injuryRoundsRemaining > 1 ? 's' : ''} na Liga Global`, `Injury: ${mod} OVR for ${myTeam.injuryRoundsRemaining} matchday${myTeam.injuryRoundsRemaining > 1 ? 's' : ''} in the Global League`),
             icon: AlertTriangle,
             color: 'text-orange-400',
           });
@@ -232,7 +234,7 @@ function NewsWidget() {
         const streak = myTeam.recentForm.slice(-3).filter((r) => r === 'W').length;
         if (streak === 3) {
           items.push({
-            text: `${myTeam.clubName} em chamas — 3 vitórias seguidas na Liga Global`,
+            text: L(`${myTeam.clubName} em chamas — 3 vitórias seguidas na Liga Global`, `${myTeam.clubName} on fire — 3 straight wins in the Global League`),
             icon: Flame,
             color: 'text-neon-yellow',
           });
@@ -245,19 +247,19 @@ function NewsWidget() {
     if (last && items.length < 2) {
       if (last.result === 'win') {
         items.push({
-          text: `${last.home} vence ${last.scoreHome}–${last.scoreAway} e mantém pressão na tabela`,
+          text: L(`${last.home} vence ${last.scoreHome}–${last.scoreAway} e mantém pressão na tabela`, `${last.home} win ${last.scoreHome}–${last.scoreAway} and keep the pressure on`),
           icon: Flame,
           color: 'text-green-400',
         });
       } else if (last.result === 'loss') {
         items.push({
-          text: `Derrota por ${last.scoreHome}–${last.scoreAway} — hora de rever a tática`,
+          text: L(`Derrota por ${last.scoreHome}–${last.scoreAway} — hora de rever a tática`, `${last.scoreHome}–${last.scoreAway} loss — time to rethink tactics`),
           icon: AlertTriangle,
           color: 'text-red-400',
         });
       } else {
         items.push({
-          text: `Empate ${last.scoreHome}–${last.scoreAway} — ponto conquistado`,
+          text: L(`Empate ${last.scoreHome}–${last.scoreAway} — ponto conquistado`, `${last.scoreHome}–${last.scoreAway} draw — a point earned`),
           icon: Target,
           color: 'text-yellow-400',
         });
@@ -267,7 +269,7 @@ function NewsWidget() {
     const recentWins = (form.slice(-5)).filter((r) => r === 'W').length;
     if (recentWins >= 3 && items.length < 2) {
       items.push({
-        text: `${recentWins} vitórias nos últimos jogos — sequência em chamas`,
+        text: L(`${recentWins} vitórias nos últimos jogos — sequência em chamas`, `${recentWins} wins in recent matches — on a hot streak`),
         icon: Flame,
         color: 'text-neon-yellow',
       });
@@ -275,7 +277,7 @@ function NewsWidget() {
 
     if (items.length === 0) {
       items.push({
-        text: `${clubName} começa a temporada. Primeira partida define o tom.`,
+        text: L(`${clubName} começa a temporada. Primeira partida define o tom.`, `${clubName} kick off the season. The first match sets the tone.`),
         icon: Star,
         color: 'text-white/55',
       });
@@ -286,7 +288,7 @@ function NewsWidget() {
 
   return (
     <div>
-      <SectionHeader label="NOTÍCIAS · IA" icon={Newspaper} />
+      <SectionHeader label={L('NOTÍCIAS · IA', 'NEWS · AI')} icon={Newspaper} />
       <div className="space-y-2">
         {headlines.map((h, i) => (
           <div key={i} className="flex items-start gap-2">
@@ -326,7 +328,7 @@ function FormWidget() {
 
   return (
     <div>
-      <SectionHeader label="FORMA RECENTE" icon={Flame} />
+      <SectionHeader label={L('FORMA RECENTE', 'RECENT FORM')} icon={Flame} />
 
       {/* Liga Global */}
       {hasGlobal && (
@@ -335,7 +337,7 @@ function FormWidget() {
             className="text-white/35 tracking-[0.18em] uppercase mb-1.5"
             style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
           >
-            Liga Global
+            {L('Liga Global', 'Global League')}
           </div>
           <div className="flex gap-1.5">
             {globalForm.map((r, i) => (
@@ -356,7 +358,7 @@ function FormWidget() {
       {/* Local */}
       {last5Local.length === 0 && !hasGlobal ? (
         <p className="text-white/35" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
-          Nenhuma partida jogada.
+          {L('Nenhuma partida jogada.', 'No matches played.')}
         </p>
       ) : last5Local.length > 0 ? (
         <div className="mb-3">
@@ -387,9 +389,9 @@ function FormWidget() {
       {ranking && ranking.matchesPlayed > 0 && (
         <div className="grid grid-cols-3 gap-1 text-center">
           {([
-            { label: 'VITÓRIAS', value: ranking.wins, color: 'text-alta' },
-            { label: 'EMPATES', value: ranking.draws, color: 'text-giz' },
-            { label: 'DERROTAS', value: ranking.losses, color: 'text-baixa' },
+            { label: L('VITÓRIAS', 'WINS'), value: ranking.wins, color: 'text-alta' },
+            { label: L('EMPATES', 'DRAWS'), value: ranking.draws, color: 'text-giz' },
+            { label: L('DERROTAS', 'LOSSES'), value: ranking.losses, color: 'text-baixa' },
           ] as const).map((s) => (
             <div key={s.label}>
               <div
@@ -449,12 +451,12 @@ function RadarWidget() {
       radarValues: RADAR_KEYS.map((k) => stats[k]),
       avgOvr: avgOvrVal,
       barStats: [
-        { label: 'VEL', value: stats.velocidade },
-        { label: 'FIN', value: stats.finalizacao },
-        { label: 'PAS', value: stats.passe },
-        { label: 'DRI', value: stats.drible },
-        { label: 'MAR', value: stats.marcacao },
-        { label: 'FIS', value: stats.fisico },
+        { label: RADAR_LABELS[0], value: stats.velocidade },
+        { label: RADAR_LABELS[1], value: stats.finalizacao },
+        { label: RADAR_LABELS[2], value: stats.passe },
+        { label: RADAR_LABELS[3], value: stats.drible },
+        { label: RADAR_LABELS[4], value: stats.marcacao },
+        { label: RADAR_LABELS[5], value: stats.fisico },
       ],
     };
   }, [players, lineup]);
@@ -463,10 +465,10 @@ function RadarWidget() {
 
   return (
     <div>
-      <SectionHeader label="PERFORMANCE · XI" icon={Target} />
+      <SectionHeader label={L('PERFORMANCE · XI', 'PERFORMANCE · XI')} icon={Target} />
       {!hasLineup ? (
         <p className="text-white/35" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
-          Escala o teu plantel para ver o radar.
+          {L('Escala o teu plantel para ver o radar.', 'Pick your lineup to see the radar.')}
         </p>
       ) : (
         <div className="flex items-center gap-3">
@@ -563,10 +565,10 @@ function MarketWidget() {
 
   return (
     <div>
-      <SectionHeader label="MERCADO · IA" icon={Star} />
+      <SectionHeader label={L('MERCADO · IA', 'MARKET · AI')} icon={Star} />
       {picks.length === 0 ? (
         <p className="text-white/35" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
-          Nenhum jogador disponível.
+          {L('Nenhum jogador disponível.', 'No players available.')}
         </p>
       ) : (
         <div className="space-y-2 mb-2">
@@ -598,7 +600,7 @@ function MarketWidget() {
                       className="text-neon-yellow font-bold"
                       style={{ fontFamily: 'var(--font-display)', fontSize: '10px' }}
                     >
-                      {p.pos}
+                      {rotuloPosicao(p.pos)}
                     </span>
                   )}
                 </div>
@@ -614,7 +616,7 @@ function MarketWidget() {
                     style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}
                   >
                     <span className="truncate">
-                      {p.pos}
+                      {rotuloPosicao(p.pos)}
                       {p.marketValueExp != null
                         ? ` · ${formatOle(p.marketValueExp)} EXP`
                         : ''}
@@ -631,7 +633,7 @@ function MarketWidget() {
                             'inline-flex items-center gap-0.5 shrink-0 tabular-nums',
                             up ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]',
                           )}
-                          title={`Variação no histórico de mercado: ${up ? '+' : ''}${pct.toFixed(1)}%`}
+                          title={L(`Variação no histórico de mercado: ${up ? '+' : ''}${pct.toFixed(1)}%`, `Market history change: ${up ? '+' : ''}${pct.toFixed(1)}%`)}
                         >
                           <Icon size={9} />
                           {up ? '+' : ''}
@@ -663,7 +665,7 @@ function MarketWidget() {
           borderRadius: 'var(--radius-sm)',
         }}
       >
-        VER MERCADO COMPLETO
+        {L('VER MERCADO COMPLETO', 'VIEW FULL MARKET')}
       </button>
     </div>
   );
@@ -725,18 +727,21 @@ function useFriends() {
 
 const ONBOARDING_QUESTIONS = [
   {
-    question: 'Como você prefere jogar?',
-    chips: ['Posse de bola', 'Contra-ataque', 'Pressing intenso', 'Jogo direto'],
+    question: L('Como você prefere jogar?', 'How do you like to play?'),
+    questionPt: 'Como você prefere jogar?',
+    chips: [L('Posse de bola', 'Possession'), L('Contra-ataque', 'Counter-attack'), L('Pressing intenso', 'High pressing'), L('Jogo direto', 'Direct play')],
     category: 'tactics' as const,
   },
   {
-    question: 'Qual sua prioridade de desenvolvimento?',
-    chips: ['Jovens talentos', 'Resultados imediatos', 'Equilíbrio', 'Construção longa'],
+    question: L('Qual sua prioridade de desenvolvimento?', 'What is your development priority?'),
+    questionPt: 'Qual sua prioridade de desenvolvimento?',
+    chips: [L('Jovens talentos', 'Young talent'), L('Resultados imediatos', 'Instant results'), L('Equilíbrio', 'Balance'), L('Construção longa', 'Long-term build')],
     category: 'training' as const,
   },
   {
-    question: 'Como você escala o time?',
-    chips: ['Conservador e seguro', 'Arrisco formações novas', 'Depende do adversário'],
+    question: L('Como você escala o time?', 'How do you pick your lineup?'),
+    questionPt: 'Como você escala o time?',
+    chips: [L('Conservador e seguro', 'Safe and conservative'), L('Arrisco formações novas', 'I try new formations'), L('Depende do adversário', 'Depends on the opponent')],
     category: 'lineup' as const,
   },
 ];
@@ -746,24 +751,24 @@ const ONBOARDING_QUESTIONS = [
 function buildCoachWelcome(coachName: string, ctx: TeamContext): string {
   const fatigueNote =
     ctx.averageFatigue > 60
-      ? `Fadiga média alta (${ctx.averageFatigue}%) — recomendo priorizar recuperação.`
+      ? L(`Fadiga média alta (${ctx.averageFatigue}%) — recomendo priorizar recuperação.`, `High average fatigue (${ctx.averageFatigue}%) — I'd prioritise recovery.`)
       : ctx.averageFatigue < 30
-        ? `Plantel descansado (${ctx.averageFatigue}%) — bom momento para desenvolvimento.`
-        : `Fadiga média em ${ctx.averageFatigue}% — situação sob controle.`;
+        ? L(`Plantel descansado (${ctx.averageFatigue}%) — bom momento para desenvolvimento.`, `Squad is rested (${ctx.averageFatigue}%) — good time for development.`)
+        : L(`Fadiga média em ${ctx.averageFatigue}% — situação sob controle.`, `Average fatigue at ${ctx.averageFatigue}% — under control.`);
 
   const lines: string[] = [
-    `Olá, manager. Sou o ${coachName}, teu assistente técnico.`,
+    L(`Olá, manager. Sou o ${coachName}, teu assistente técnico.`, `Hi, manager. I'm ${coachName}, your assistant coach.`),
     '',
-    `Teu plantel tem ${ctx.totalPlayers} jogadores${ctx.injuredPlayers > 0 ? `, ${ctx.injuredPlayers} lesionado(s)` : ''}. ${fatigueNote}`,
+    L(`Teu plantel tem ${ctx.totalPlayers} jogadores${ctx.injuredPlayers > 0 ? `, ${ctx.injuredPlayers} lesionado(s)` : ''}. ${fatigueNote}`, `Your squad has ${ctx.totalPlayers} players${ctx.injuredPlayers > 0 ? `, ${ctx.injuredPlayers} injured` : ''}. ${fatigueNote}`),
   ];
 
   if (ctx.nextMatch) {
     lines.push(
-      `Próximo jogo contra ${ctx.nextMatch.opponent} (${ctx.nextMatch.isHome ? 'em casa' : 'fora'}) — dá pra ajustar treino e escalação até lá.`,
+      L(`Próximo jogo contra ${ctx.nextMatch.opponent} (${ctx.nextMatch.isHome ? 'em casa' : 'fora'}) — dá pra ajustar treino e escalação até lá.`, `Next match vs ${ctx.nextMatch.opponent} (${ctx.nextMatch.isHome ? 'home' : 'away'}) — time to tune training and lineup before then.`),
     );
   }
 
-  lines.push('', 'Usa os atalhos abaixo ou fala comigo direto.');
+  lines.push('', L('Usa os atalhos abaixo ou fala comigo direto.', 'Use the shortcuts below or talk to me directly.'));
   return lines.join('\n');
 }
 
@@ -1114,7 +1119,7 @@ function CoachInlineChat() {
     setLoading(false);
 
     if (!res.ok || !res.response) {
-      const errMsg = res.error ?? 'Erro ao conectar com o servidor.';
+      const errMsg = res.error ?? L('Erro ao conectar com o servidor.', 'Error connecting to the server.');
       setLocalMessages((prev) => [...prev, { role: 'assistant', content: errMsg }]);
       return;
     }
@@ -1148,12 +1153,12 @@ function CoachInlineChat() {
   async function handleSuggestTraining() {
     if (!coach || loading || suggestingAction) return;
     setSuggestingAction(true);
-    pushMessage('user', 'Sugere um plano de treino e executa se eu aprovar');
+    pushMessage('user', L('Sugere um plano de treino e executa se eu aprovar', 'Suggest a training plan and run it if I approve'));
     try {
       const ctx = buildTeamContext();
       const result = await suggestTraining(coach, ctx);
       if (!result.ok || !result.suggestion) {
-        throw new Error(result.error || 'Erro ao gerar sugestão');
+        throw new Error(result.error || L('Erro ao gerar sugestão', 'Error generating suggestion'));
       }
       const s = result.suggestion;
       const action = createTrainingAction(coach, ctx, s, []);
@@ -1161,19 +1166,19 @@ function CoachInlineChat() {
       pushMessage(
         'assistant',
         [
-          'Sugestão de treino criada.',
-          `Tipo: ${s.mode === 'individual' ? 'Individual' : 'Coletivo'} — ${s.trainingType}`,
-          `Grupo: ${s.group}`,
-          `Duração: ${s.durationHours}h`,
-          `Prioridade: ${s.priority}`,
+          L('Sugestão de treino criada.', 'Training suggestion created.'),
+          L(`Tipo: ${s.mode === 'individual' ? 'Individual' : 'Coletivo'} — ${s.trainingType}`, `Type: ${s.mode === 'individual' ? 'Individual' : 'Team'} — ${s.trainingType}`),
+          L(`Grupo: ${s.group}`, `Group: ${s.group}`),
+          L(`Duração: ${s.durationHours}h`, `Duration: ${s.durationHours}h`),
+          L(`Prioridade: ${s.priority}`, `Priority: ${s.priority}`),
           '',
           s.reasoning,
           '',
-          'Criei uma ação pendente. Aprova ou rejeita no card que aparece na tela.',
+          L('Criei uma ação pendente. Aprova ou rejeita no card que aparece na tela.', 'I created a pending action. Approve or reject it on the card on screen.'),
         ].join('\n'),
       );
     } catch (error: any) {
-      pushMessage('assistant', `Erro ao gerar sugestão de treino: ${error?.message ?? 'tenta de novo.'}`);
+      pushMessage('assistant', L(`Erro ao gerar sugestão de treino: ${error?.message ?? 'tenta de novo.'}`, `Error generating training suggestion: ${error?.message ?? 'try again.'}`));
     } finally {
       setSuggestingAction(false);
     }
@@ -1183,12 +1188,12 @@ function CoachInlineChat() {
   async function handleSuggestStaff() {
     if (!coach || loading || suggestingAction) return;
     setSuggestingAction(true);
-    pushMessage('user', 'Quais as prioridades de upgrade de staff?');
+    pushMessage('user', L('Quais as prioridades de upgrade de staff?', 'What are the staff upgrade priorities?'));
     try {
       const ctx = buildTeamContext();
       const result = await suggestStaff(coach, ctx);
       if (!result.ok || !result.suggestions || result.suggestions.length === 0) {
-        throw new Error(result.error || 'Nenhuma sugestão disponível');
+        throw new Error(result.error || L('Nenhuma sugestão disponível', 'No suggestions available'));
       }
       const suggestions = result.suggestions.slice(0, 3);
       let created = 0;
@@ -1211,16 +1216,16 @@ function CoachInlineChat() {
       pushMessage(
         'assistant',
         [
-          'Prioridades de staff:',
+          L('Prioridades de staff:', 'Staff priorities:'),
           list,
           '',
           created > 0
-            ? `Criei ${created} ação(ões) pendente(s). Aprova no card que aparece na tela.`
-            : 'Sem upgrades acionáveis por agora — foco na atribuição do staff atual.',
+            ? L(`Criei ${created} ação(ões) pendente(s). Aprova no card que aparece na tela.`, `I created ${created} pending action${created > 1 ? 's' : ''}. Approve on the card on screen.`)
+            : L('Sem upgrades acionáveis por agora — foco na atribuição do staff atual.', 'No actionable upgrades for now — focus on assigning current staff.'),
         ].join('\n'),
       );
     } catch (error: any) {
-      pushMessage('assistant', `Erro ao gerar sugestões de staff: ${error?.message ?? 'tenta de novo.'}`);
+      pushMessage('assistant', L(`Erro ao gerar sugestões de staff: ${error?.message ?? 'tenta de novo.'}`, `Error generating staff suggestions: ${error?.message ?? 'try again.'}`));
     } finally {
       setSuggestingAction(false);
     }
@@ -1235,7 +1240,7 @@ function CoachInlineChat() {
       dispatch({
         type: 'COACH_ADD_INSTRUCTION',
         instruction: text,
-        context: `Onboarding — ${q.question}`,
+        context: `Onboarding — ${q.questionPt}`,
         priority: 'high',
         category: q.category,
       });
@@ -1249,7 +1254,7 @@ function CoachInlineChat() {
 
   async function handleHeartTeamAnswer(text: string) {
     setHeartTeamAsked(true);
-    if (favoriteRealTeam && text.toLowerCase().includes('sim')) {
+    if (favoriteRealTeam && /sim|yes/.test(text.toLowerCase())) {
       dispatch({
         type: 'COACH_ADD_INSTRUCTION',
         instruction: `Inspirar estilo de jogo no ${favoriteRealTeam.name}`,
@@ -1266,8 +1271,8 @@ function CoachInlineChat() {
     if (!isOnboarding) return null;
     if (heartTeamQuestion && onboardingStep >= 1) {
       return {
-        question: `Vi que você torce para o ${favoriteRealTeam!.name}. Quer que eu inspire o estilo de jogo do seu time do coração nas sugestões táticas?`,
-        chips: ['Sim, quero!', 'Não por enquanto'],
+        question: L(`Vi que você torce para o ${favoriteRealTeam!.name}. Quer que eu inspire o estilo de jogo do seu time do coração nas sugestões táticas?`, `I see you support ${favoriteRealTeam!.name}. Want me to draw on their playing style in my tactical suggestions?`),
+        chips: [L('Sim, quero!', 'Yes, please!'), L('Não por enquanto', 'Not for now')],
         isHeartTeam: true,
       };
     }
@@ -1287,7 +1292,7 @@ function CoachInlineChat() {
           style={{ borderRadius: 'var(--radius-sm)' }}>
           <Brain className="w-3 h-3 text-neon-yellow shrink-0" strokeWidth={2} />
           <span className="text-neon-yellow/80" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>
-            {activeInstructions} instrução{activeInstructions !== 1 ? 'ões' : ''} aprendida{activeInstructions !== 1 ? 's' : ''}
+            {L(`${activeInstructions} instrução${activeInstructions !== 1 ? 'ões' : ''} aprendida${activeInstructions !== 1 ? 's' : ''}`, `${activeInstructions} instruction${activeInstructions !== 1 ? 's' : ''} learned`)}
           </span>
         </div>
       )}
@@ -1340,7 +1345,7 @@ function CoachInlineChat() {
           {loading && (
             <div className="flex items-center gap-1.5 text-white/40">
               <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2} />
-              <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>Treinador respondendo…</span>
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>{L('Treinador respondendo…', 'Coach is replying…')}</span>
             </div>
           )}
         </div>
@@ -1373,14 +1378,14 @@ function CoachInlineChat() {
               <div className="self-start flex items-center gap-1.5 px-2.5 py-1.5 border border-white/10 bg-white/[0.03]"
                 style={{ borderRadius: 'var(--radius-sm)' }}>
                 <Loader2 className="w-3 h-3 animate-spin text-white/40" strokeWidth={2} />
-                <span className="text-white/35" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>digitando…</span>
+                <span className="text-white/35" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>{L('digitando…', 'typing…')}</span>
               </div>
             )}
           </div>
 
           {localMessages.length === 0 && !loading && (
             <p className="text-white/30 text-center" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>
-              Pergunte qualquer coisa ao seu treinador
+              {L('Pergunte qualquer coisa ao seu treinador', 'Ask your coach anything')}
             </p>
           )}
         </div>
@@ -1390,10 +1395,10 @@ function CoachInlineChat() {
       {!isOnboarding && (
         <div className="flex flex-wrap gap-1">
           {[
-            { label: 'Analisa o time', run: () => sendMessage('Analisa a situação atual do plantel'), action: false },
-            { label: 'Sugere treino', run: handleSuggestTraining, action: true },
-            { label: 'Prioridades staff', run: handleSuggestStaff, action: true },
-            { label: 'Próximo jogo', run: () => sendMessage('Como preparar para o próximo jogo?'), action: false },
+            { label: L('Analisa o time', 'Analyse team'), run: () => sendMessage(L('Analisa a situação atual do plantel', 'Analyse the current state of the squad')), action: false },
+            { label: L('Sugere treino', 'Suggest training'), run: handleSuggestTraining, action: true },
+            { label: L('Prioridades staff', 'Staff priorities'), run: handleSuggestStaff, action: true },
+            { label: L('Próximo jogo', 'Next match'), run: () => sendMessage(L('Como preparar para o próximo jogo?', 'How should we prepare for the next match?')), action: false },
           ].map((chip) => (
             <button
               key={chip.label}
@@ -1418,7 +1423,7 @@ function CoachInlineChat() {
       {suggestingAction && (
         <div className="flex items-center gap-1.5 text-white/40">
           <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2} />
-          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>Preparando sugestão…</span>
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>{L('Preparando sugestão…', 'Preparing suggestion…')}</span>
         </div>
       )}
 
@@ -1443,7 +1448,7 @@ function CoachInlineChat() {
               }
             }
           }}
-          placeholder={isOnboarding ? 'Ou escreva sua resposta…' : 'Fale com seu treinador…'}
+          placeholder={isOnboarding ? L('Ou escreva sua resposta…', 'Or type your answer…') : L('Fale com seu treinador…', 'Talk to your coach…')}
           rows={2}
           disabled={loading}
           className="flex-1 bg-transparent text-white/85 placeholder:text-white/25 outline-none resize-none leading-snug min-w-0 disabled:opacity-50"
@@ -1466,7 +1471,7 @@ function CoachInlineChat() {
               ? 'text-neon-yellow hover:text-white'
               : 'text-white/20 cursor-not-allowed',
           )}
-          aria-label="Enviar"
+          aria-label={L('Enviar', 'Send')}
         >
           <Send className="w-4 h-4" strokeWidth={2} />
         </button>
@@ -1480,7 +1485,7 @@ function CoachInlineChat() {
 type ChatMode = 'coach' | 'manager' | 'support';
 
 const CHAT_TABS: Array<{ mode: ChatMode; Icon: React.ElementType; label: string }> = [
-  { mode: 'coach', Icon: MessageCircle, label: 'TREINADOR' },
+  { mode: 'coach', Icon: MessageCircle, label: L('TREINADOR', 'COACH') },
   { mode: 'manager', Icon: Users, label: 'MANAGER' },
   { mode: 'support', Icon: HeadphonesIcon, label: 'ASSIST+' },
 ];
@@ -1506,14 +1511,14 @@ function ManagerContactPicker({
 
   async function handleAdd() {
     const clean = addInput.replace(/^@/, '').trim().toLowerCase();
-    if (!clean) { setAddError('Digite um @usuário'); return; }
-    if (friends.some((f) => f.username === clean)) { setAddError('Já adicionado'); return; }
+    if (!clean) { setAddError(L('Digite um @usuário', 'Enter a @username')); return; }
+    if (friends.some((f) => f.username === clean)) { setAddError(L('Já adicionado', 'Already added')); return; }
     setAddBusy(true);
     setAddError('');
     const profile = await findProfileByUsername(clean);
     setAddBusy(false);
     if (!profile) {
-      setAddError('Usuário não encontrado');
+      setAddError(L('Usuário não encontrado', 'User not found'));
       return;
     }
     onAdd(profile.username);
@@ -1528,7 +1533,7 @@ function ManagerContactPicker({
         className="text-white/45 tracking-[0.18em] uppercase"
         style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}
       >
-        Com quem quer falar?
+        {L('Com quem quer falar?', 'Who do you want to talk to?')}
       </p>
 
       {friends.length > 0 && (
@@ -1557,7 +1562,7 @@ function ManagerContactPicker({
                 type="button"
                 onClick={() => onRemove(f.username)}
                 className="opacity-0 group-hover:opacity-100 text-white/25 hover:text-red-400 transition-all p-1"
-                aria-label="Remover amigo"
+                aria-label={L('Remover amigo', 'Remove friend')}
               >
                 <X className="w-3 h-3" strokeWidth={2} />
               </button>
@@ -1571,7 +1576,7 @@ function ManagerContactPicker({
           className="text-white/35 py-1"
           style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}
         >
-          Nenhum amigo adicionado ainda.
+          {L('Nenhum amigo adicionado ainda.', 'No friends added yet.')}
         </p>
       )}
 
@@ -1588,7 +1593,7 @@ function ManagerContactPicker({
                 value={addInput}
                 onChange={(e) => { setAddInput(e.target.value); setAddError(''); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') void handleAdd(); if (e.key === 'Escape') setAddMode(false); }}
-                placeholder="nomedeusuario"
+                placeholder={L('nomedeusuario', 'username')}
                 disabled={addBusy}
                 className="flex-1 bg-transparent text-white/85 placeholder:text-white/25 outline-none min-w-0"
                 style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', padding: '6px 0' }}
@@ -1604,7 +1609,7 @@ function ManagerContactPicker({
                 addBusy ? 'opacity-50' : 'hover:brightness-105 active:scale-[0.97]',
               )}
               style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)' }}
-              aria-label="Confirmar"
+              aria-label={L('Confirmar', 'Confirm')}
             >
               {addBusy
                 ? <span className="w-3 h-3 border-2 border-black/30 border-t-black rounded-full animate-spin" />
@@ -1615,7 +1620,7 @@ function ManagerContactPicker({
               onClick={() => { setAddMode(false); setAddError(''); setAddInput(''); }}
               className="flex items-center justify-center border border-white/15 text-white/45 hover:text-white/75 transition-all shrink-0"
               style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)' }}
-              aria-label="Cancelar"
+              aria-label={L('Cancelar', 'Cancel')}
             >
               <X className="w-3.5 h-3.5" strokeWidth={2} />
             </button>
@@ -1634,7 +1639,7 @@ function ManagerContactPicker({
           style={{ fontFamily: 'var(--font-display)', fontSize: '9px', letterSpacing: '0.18em' }}
         >
           <UserPlus className="w-3 h-3" strokeWidth={2} />
-          + ADICIONAR AMIGO
+          {L('+ ADICIONAR AMIGO', '+ ADD FRIEND')}
         </button>
       )}
     </div>
@@ -1677,8 +1682,8 @@ function ChatPanel() {
 
   function handleManagerConfirm() {
     const clean = atInput.replace(/^@/, '').trim().toLowerCase();
-    if (!clean) { setAtError('Digite um @usuário'); return; }
-    if (!isFriend(clean)) { setAtError('Não é amigo — adicione primeiro'); return; }
+    if (!clean) { setAtError(L('Digite um @usuário', 'Enter a @username')); return; }
+    if (!isFriend(clean)) { setAtError(L('Não é amigo — adicione primeiro', 'Not a friend — add them first')); return; }
     setSelectedFriend(clean);
     setAtError('');
     setAtInput('');
@@ -1686,9 +1691,9 @@ function ChatPanel() {
   }
 
   const placeholders: Record<ChatMode, string> = {
-    coach: 'Fale com seu treinador…',
-    manager: `Mensagem para @${selectedFriend ?? ''}…`,
-    support: 'Descreve o problema…',
+    coach: L('Fale com seu treinador…', 'Talk to your coach…'),
+    manager: L(`Mensagem para @${selectedFriend ?? ''}…`, `Message to @${selectedFriend ?? ''}…`),
+    support: L('Descreve o problema…', 'Describe the problem…'),
   };
 
   const canSend =
@@ -1762,7 +1767,7 @@ function ChatPanel() {
                 value={atInput}
                 onChange={(e) => { setAtInput(e.target.value); setAtError(''); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleManagerConfirm(); }}
-                placeholder="ou digitar @usuário"
+                placeholder={L('ou digitar @usuário', 'or type @username')}
                 className="flex-1 bg-transparent text-white/65 placeholder:text-white/25 outline-none min-w-0"
                 style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', padding: '5px 0' }}
               />
@@ -1803,7 +1808,7 @@ function ChatPanel() {
             onClick={() => { setSelectedFriend(null); setMessage(''); }}
             className="flex items-center justify-center border border-white/15 text-white/40 hover:text-white/70 transition-all shrink-0"
             style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)' }}
-            aria-label="Trocar destinatário"
+            aria-label={L('Trocar destinatário', 'Change recipient')}
           >
             <X className="w-3.5 h-3.5" strokeWidth={2} />
           </button>
@@ -1841,7 +1846,7 @@ function ChatPanel() {
                 ? 'text-neon-yellow hover:text-white'
                 : 'text-white/20 cursor-not-allowed',
             )}
-            aria-label="Enviar"
+            aria-label={L('Enviar', 'Send')}
           >
             <Send className="w-4 h-4" strokeWidth={2} />
           </button>
@@ -1879,7 +1884,7 @@ function HubHeader({ onClose }: { onClose?: () => void }) {
               type="button"
               onClick={onClose}
               className="text-white/45 hover:text-white transition-colors p-0.5"
-              aria-label="Fechar hub"
+              aria-label={L('Fechar hub', 'Close hub')}
             >
               <X className="w-4 h-4" strokeWidth={2} />
             </button>
@@ -1952,7 +1957,7 @@ function ScoutsStatusWidget() {
         alerts++;
         if (!mostUrgent || e.msUntilExpiry < mostUrgent.msUntilExpiry) {
           mostUrgent = {
-            name: c.playerId ? (players[c.playerId]?.name ?? 'Jogador') : 'Clube',
+            name: c.playerId ? (players[c.playerId]?.name ?? L('Jogador', 'Player')) : L('Clube', 'Club'),
             kind: c.kind,
             msUntilExpiry: e.msUntilExpiry,
           };
@@ -1992,7 +1997,7 @@ function ScoutsStatusWidget() {
         railColor,
       )}
       style={{ borderRadius: 'var(--radius-md)' }}
-      aria-label="Abrir painel SCOUTS"
+      aria-label={L('Abrir painel SCOUTS', 'Open SCOUTS panel')}
     >
       {/* Eyebrow */}
       <div className="flex items-center justify-between gap-2 mb-2">
@@ -2008,7 +2013,7 @@ function ScoutsStatusWidget() {
               textTransform: 'uppercase',
             }}
           >
-            Scouts · plantel
+            {L('Scouts · plantel', 'Scouts · squad')}
           </span>
         </div>
         <ChevronRight
@@ -2044,7 +2049,7 @@ function ScoutsStatusWidget() {
               textTransform: 'uppercase',
             }}
           >
-            Fora
+            {L('Fora', 'Out')}
           </span>
         </div>
         <div className="flex flex-col items-start">
@@ -2076,7 +2081,7 @@ function ScoutsStatusWidget() {
               textTransform: 'uppercase',
             }}
           >
-            Alertas
+            {L('Alertas', 'Alerts')}
           </span>
         </div>
         <div className="flex flex-col items-start">
@@ -2104,7 +2109,7 @@ function ScoutsStatusWidget() {
               textTransform: 'uppercase',
             }}
           >
-            Em alta
+            {L('Em alta', 'Rising')}
           </span>
         </div>
       </div>
@@ -2117,7 +2122,7 @@ function ScoutsStatusWidget() {
         >
           <Timer size={9} className="opacity-50" />
           <span className="truncate">
-            <span className="text-white/85">{mostUrgent.name}</span> · expira em{' '}
+            <span className="text-white/85">{mostUrgent.name}</span> · {L('expira em', 'expires in')}{' '}
             <span
               className="text-white/85 tabular-nums"
               style={{
@@ -2143,21 +2148,21 @@ function ScoutsStatusWidget() {
 // ─── Menu rápido (atalhos pras outras partes do jogo) ────────────────────────
 
 const QUICK_TILES: Array<{ label: string; to: string; Icon: React.ElementType }> = [
-  { label: 'Elenco', to: '/clube/elenco', Icon: Users },
-  { label: 'Treino', to: '/clube/treino', Icon: Dumbbell },
-  { label: 'Mercado', to: '/mercado', Icon: ArrowRightLeft },
-  { label: 'Competição', to: '/competicao', Icon: Trophy },
+  { label: L('Elenco', 'Squad'), to: '/clube/elenco', Icon: Users },
+  { label: L('Treino', 'Training'), to: '/clube/treino', Icon: Dumbbell },
+  { label: L('Mercado', 'Market'), to: '/mercado', Icon: ArrowRightLeft },
+  { label: L('Competição', 'Competition'), to: '/competicao', Icon: Trophy },
   { label: 'Legends Cup', to: '/legends-cup', Icon: Crown },
   { label: 'Manager', to: '/manager', Icon: User },
   { label: 'Wallet', to: '/wallet', Icon: Wallet },
-  { label: 'Academia', to: '/clube/academia', Icon: GraduationCap },
+  { label: L('Academia', 'Academy'), to: '/clube/academia', Icon: GraduationCap },
 ];
 
 function HubQuickMenu() {
   const navigate = useNavigate();
   return (
     <div>
-      <SectionHeader label="MENU RÁPIDO" icon={Zap} />
+      <SectionHeader label={L('MENU RÁPIDO', 'QUICK MENU')} icon={Zap} />
       <div className="grid grid-cols-2 gap-2">
         {QUICK_TILES.map(({ label, to, Icon }) => (
           <motion.button
@@ -2287,7 +2292,7 @@ export function OleSmartHubTrigger({
       type="button"
       onClick={onClick}
       className="xl:hidden relative flex h-10 w-10 items-center justify-center border border-white/16 bg-nav text-white/80 transition-colors hover:border-white hover:text-white"
-      aria-label="Abrir Smart Hub"
+      aria-label={L('Abrir Smart Hub', 'Open Smart Hub')}
     >
       <Zap className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={2.25} />
       {hasActivity && (

@@ -2,6 +2,7 @@
  * Tabelas Completas de Classificação por Divisão (Pós-Rodada)
  */
 
+import { L, emIngles } from '@/i18n/L';
 import { motion } from 'motion/react';
 import { Trophy, TrendingUp, TrendingDown, Minus, ChevronUp, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -49,10 +50,10 @@ export function StandingsSummary({ standings }: StandingsSummaryProps) {
           <Trophy className="w-8 h-8 text-neon-yellow" />
           <div>
             <h2 className="font-display text-3xl font-bold uppercase tracking-wider text-white">
-              Classificação
+              {L('Classificação', 'Standings')}
             </h2>
             <p className="text-sm text-text-soft font-mono">
-              Tabelas atualizadas por divisão
+              {L('Tabelas atualizadas por divisão', 'Updated tables by division')}
             </p>
           </div>
         </div>
@@ -71,17 +72,17 @@ export function StandingsSummary({ standings }: StandingsSummaryProps) {
             {/* Header da Divisão */}
             <div className="bg-card border-b-2 border-neon-yellow/50 px-4 py-3">
               <h3 className="font-display text-xl font-bold uppercase tracking-wider text-neon-yellow text-center">
-                {standing.division}ª DIVISÃO
+                {emIngles() ? `DIVISION ${standing.division}` : `${standing.division}ª DIVISÃO`}
               </h3>
             </div>
 
             {/* Table Header */}
             <div className="grid grid-cols-[40px_1fr_40px_40px_40px_50px] gap-2 px-3 py-2 bg-gray-800/50 border-b border-gray-700 text-xs font-mono text-gray-400 uppercase">
               <div className="text-center">#</div>
-              <div>Time</div>
-              <div className="text-center">J</div>
-              <div className="text-center">V</div>
-              <div className="text-center">SG</div>
+              <div>{L('Time', 'Team')}</div>
+              <div className="text-center">{L('J', 'P')}</div>
+              <div className="text-center">{L('V', 'W')}</div>
+              <div className="text-center">{L('SG', 'GD')}</div>
               <div className="text-center font-bold">PTS</div>
             </div>
 
@@ -141,15 +142,15 @@ export function StandingsSummary({ standings }: StandingsSummaryProps) {
             <div className="px-3 py-3 bg-gray-800/30 border-t border-gray-700 space-y-1 text-xs">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-neon-yellow/10 border-l-2 border-neon-yellow"></div>
-                <span className="text-gray-400">Líder</span>
+                <span className="text-gray-400">{L('Líder', 'Leader')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-neon-green/5 border-l-2 border-neon-green/50"></div>
-                <span className="text-gray-400">Promoção</span>
+                <span className="text-gray-400">{L('Promoção', 'Promotion')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-red-500/5 border-l-2 border-red-500/50"></div>
-                <span className="text-gray-400">Rebaixamento</span>
+                <span className="text-gray-400">{L('Rebaixamento', 'Relegation')}</span>
               </div>
             </div>
           </motion.div>
@@ -170,7 +171,7 @@ export function StandingsSummary({ standings }: StandingsSummaryProps) {
               <span className="font-bold text-neon-green font-mono text-lg">
                 {standings.reduce((acc, div) => acc + div.teams.filter(t => getPositionChange(t) > 0).length, 0)}
               </span>
-              {' '}times subiram
+              {' '}{L('times subiram', 'teams moved up')}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -179,7 +180,7 @@ export function StandingsSummary({ standings }: StandingsSummaryProps) {
               <span className="font-bold text-red-400 font-mono text-lg">
                 {standings.reduce((acc, div) => acc + div.teams.filter(t => getPositionChange(t) < 0).length, 0)}
               </span>
-              {' '}times caíram
+              {' '}{L('times caíram', 'teams moved down')}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -188,7 +189,7 @@ export function StandingsSummary({ standings }: StandingsSummaryProps) {
               <span className="font-bold text-gray-400 font-mono text-lg">
                 {standings.reduce((acc, div) => acc + div.teams.filter(t => getPositionChange(t) === 0 && t.matchesPlayed > 0).length, 0)}
               </span>
-              {' '}mantiveram
+              {' '}{L('mantiveram', 'held position')}
             </span>
           </div>
         </div>

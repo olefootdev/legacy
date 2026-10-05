@@ -1,5 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, X, Wallet } from 'lucide-react';
+import { L } from '@/i18n/L';
+import { posLabel } from '@/components/matchquick/posLabel';
 
 /**
  * PurchaseReceiptModal — recibo visual após uma compra (OLEXP ou PIX).
@@ -37,9 +39,9 @@ export function PurchaseReceiptModal({
           >
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
               <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-alta">
-                <CheckCircle2 className="h-4 w-4" strokeWidth={2.5} /> Compra confirmada
+                <CheckCircle2 className="h-4 w-4" strokeWidth={2.5} /> {L('Compra confirmada', 'Purchase confirmed')}
               </span>
-              <button type="button" onClick={onClose} className="border border-white/16 bg-panel p-1.5 text-cimento hover:border-white/30 hover:text-white" aria-label="Fechar">
+              <button type="button" onClick={onClose} className="border border-white/16 bg-panel p-1.5 text-cimento hover:border-white/30 hover:text-white" aria-label={L('Fechar', 'Close')}>
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -57,19 +59,19 @@ export function PurchaseReceiptModal({
               </div>
               <div>
                 <p className="break-words font-display text-xl font-black uppercase tracking-wide text-white">{playerName}</p>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-neon-yellow">{playerPos}</p>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-neon-yellow">{posLabel(playerPos)}</p>
               </div>
-              <p className="text-[13px] text-white/70">entrou no seu elenco!</p>
+              <p className="text-[13px] text-white/70">{L('entrou no seu elenco!', 'joined your squad!')}</p>
 
               {newBalanceLabel && (
                 <div className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-panel py-2.5">
                   <Wallet className="h-4 w-4 text-white/45" />
-                  <span className="text-[11px] uppercase tracking-wider text-white/45">Saldo:</span>
+                  <span className="text-[11px] uppercase tracking-wider text-white/45">{L('Saldo:', 'Balance:')}</span>
                   <span className="font-display text-[13px] font-black tabular-nums text-white">{newBalanceLabel}</span>
                 </div>
               )}
               {paidWith === 'pix' && (
-                <p className="text-[10px] text-white/35">Pago via PIX · entrega automática</p>
+                <p className="text-[10px] text-white/35">{L('Pago via PIX · entrega automática', 'Paid via PIX · automatic delivery')}</p>
               )}
             </div>
 
@@ -79,7 +81,7 @@ export function PurchaseReceiptModal({
                 onClick={onClose}
                 className="w-full rounded-xl bg-neon-yellow py-3 text-sm font-black uppercase tracking-wide text-black transition-colors hover:bg-white"
               >
-                Ver meu elenco
+                {L('Ver meu elenco', 'View my squad')}
               </button>
             </div>
           </motion.div>

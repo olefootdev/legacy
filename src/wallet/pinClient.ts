@@ -6,6 +6,7 @@
  * últimos 5 minutos. Aqui só mora a chamada e a tradução dos motivos.
  */
 import { getSupabase } from '@/supabase/client';
+import { L } from '@/i18n/L';
 
 export type PinEstado = { temPin: boolean; tentaDeNovoEm: number };
 export type PinResultado = { ok: boolean; motivo: string | null; tentaDeNovoEm: number };
@@ -50,25 +51,25 @@ export async function definirPin(pin: string): Promise<{ ok: boolean; motivo: st
  */
 export async function reentrarComSenha(senha: string): Promise<string | null> {
   const sb = getSupabase();
-  if (!sb) return 'Sem conexão com a conta.';
+  if (!sb) return L('Sem conexão com a conta.', 'No connection to your account.');
   const { data: s } = await sb.auth.getUser();
   const email = s.user?.email;
-  if (!email) return 'Não achei o e-mail da sua conta.';
+  if (!email) return L('Não achei o e-mail da sua conta.', "Couldn't find your account email.");
   const { error } = await sb.auth.signInWithPassword({ email, password: senha });
-  return error ? 'Senha errada.' : null;
+  return error ? L('Senha errada.', 'Wrong password.') : null;
 }
 
 export function mensagemDoPin(motivo: string | null, tentaDeNovoEm = 0): string {
   switch (motivo) {
-    case 'pin_errado': return 'PIN errado.';
-    case 'pin_invalido': return 'O PIN tem 6 números.';
-    case 'pin_obrigatorio': return 'Digite o seu PIN.';
+    case 'pin_errado': return L('PIN errado.', 'Wrong PIN.');
+    case 'pin_invalido': return L('O PIN tem 6 números.', 'The PIN has 6 digits.');
+    case 'pin_obrigatorio': return L('Digite o seu PIN.', 'Enter your PIN.');
     case 'muitas_tentativas': {
       const min = Math.max(1, Math.ceil(tentaDeNovoEm / 60));
-      return `Muitas tentativas. Espere ${min} min pra tentar de novo.`;
+      return L(`Muitas tentativas. Espere ${min} min pra tentar de novo.`, `Too many attempts. Wait ${min} min to try again.`);
     }
-    case 'login_antigo': return 'Trocar o PIN exige entrar na conta de novo.';
-    case 'sem_pin': return 'Esta conta ainda não tem PIN.';
-    default: return 'Não deu. Tente de novo.';
+    case 'login_antigo': return L('Trocar o PIN exige entrar na conta de novo.', 'Changing the PIN requires logging in again.');
+    case 'sem_pin': return L('Esta conta ainda não tem PIN.', "This account doesn't have a PIN yet.");
+    default: return L('Não deu. Tente de novo.', "Didn't work. Try again.");
   }
 }

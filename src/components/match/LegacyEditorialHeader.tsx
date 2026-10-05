@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import type { FormationSchemeId } from '@/match-engine/types';
 
+import { L } from '@/i18n/L';
 const NEON = '#FDE100';
 
 const FORMATIONS: FormationSchemeId[] = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1'];
@@ -34,7 +35,7 @@ export function LegacyEditorialHeader({
   formation, onFormationChange, actionCam = false, onActionCamToggle, onExit,
   viewMode = 'aerial', onViewModeChange,
 }: LegacyEditorialHeaderProps) {
-  const eyebrow = phase === 'halftime' ? 'OLEFOOT • INTERVALO' : phase === 'fulltime' ? 'OLEFOOT • ENCERRADO' : 'OLEFOOT • LEGACY MODE';
+  const eyebrow = phase === 'halftime' ? L('OLEFOOT • INTERVALO', 'OLEFOOT • HALF-TIME') : phase === 'fulltime' ? L('OLEFOOT • ENCERRADO', 'OLEFOOT • FULL TIME') : 'OLEFOOT • LEGACY MODE';
   const [showFormations, setShowFormations] = useState(false);
   const [showViewModes, setShowViewModes] = useState(false);
 
@@ -72,8 +73,8 @@ export function LegacyEditorialHeader({
         <button
           type="button"
           onClick={onExit}
-          aria-label="Sair da partida"
-          title="Sair"
+          aria-label={L('Sair da partida', 'Leave match')}
+          title={L('Sair', 'Leave')}
           style={{
             position: 'absolute',
             top: 10,
@@ -98,7 +99,7 @@ export function LegacyEditorialHeader({
           onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; }}
         >
           <X size={12} strokeWidth={2.5} />
-          Sair
+          {L('Sair', 'Leave')}
         </button>
       )}
 

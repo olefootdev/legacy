@@ -1,3 +1,4 @@
+import { L } from '@/i18n/L';
 import type { SlotIndex } from './types';
 
 // Geometria do gol e da câmera (calibrado e aprovado em 2026-04-28)
@@ -39,15 +40,15 @@ export const SHOOTOUT_ROUNDS = 5;
 export const POST_TOLERANCE = GOAL.frameWidth + 6; // ~16px
 
 export const SLOT_LABELS: Record<SlotIndex, string> = {
-  0: 'ALTA ESQ',
-  1: 'ALTA MEIO',
-  2: 'ALTA DIR',
-  3: 'MEIO ESQ',
-  4: 'MEIO',
-  5: 'MEIO DIR',
-  6: 'BAIXA ESQ',
-  7: 'BAIXA MEIO',
-  8: 'BAIXA DIR',
+  0: L('ALTA ESQ', 'TOP LEFT'),
+  1: L('ALTA MEIO', 'TOP CENTER'),
+  2: L('ALTA DIR', 'TOP RIGHT'),
+  3: L('MEIO ESQ', 'MID LEFT'),
+  4: L('MEIO', 'CENTER'),
+  5: L('MEIO DIR', 'MID RIGHT'),
+  6: L('BAIXA ESQ', 'LOW LEFT'),
+  7: L('BAIXA MEIO', 'LOW CENTER'),
+  8: L('BAIXA DIR', 'LOW RIGHT'),
 };
 
 export function slotRect(idx: SlotIndex) {

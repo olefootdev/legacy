@@ -11,6 +11,7 @@
  * MANAGER é jogada no Quick engajado (resultado real entra via advanceLigaOle);
  * os outros confrontos do chaveamento são resolvidos aqui por força + sorte.
  */
+import { L, emIngles } from '@/i18n/L';
 
 export interface LigaOleTeam {
   id: string;
@@ -59,8 +60,10 @@ export function dinastiaMultiplier(titles: number): number {
 export function dinastiaLabel(titles: number): string | null {
   const t = Math.max(0, Math.floor(titles || 0));
   if (t <= 0) return null;
-  const names = ['', 'Campeão', 'Bicampeão', 'Tricampeão', 'Tetracampeão', 'Pentacampeão'];
-  return names[t] ?? `${t}× Campeão`;
+  const names = emIngles()
+    ? ['', 'Champion', '2× Champion', '3× Champion', '4× Champion', '5× Champion']
+    : ['', 'Campeão', 'Bicampeão', 'Tricampeão', 'Tetracampeão', 'Pentacampeão'];
+  return names[t] ?? L(`${t}× Campeão`, `${t}× Champion`);
 }
 
 export interface LigaOleMatchResult {

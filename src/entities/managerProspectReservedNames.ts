@@ -2,6 +2,7 @@
  * Reserva de nomes para prospects da Academia OLE (cartas fictícias).
  * Bloqueia combinações e tokens muito específicos; não bloqueia nomes comuns isolados (ex.: RONALDO, CRISTIANO).
  */
+import { L } from '@/i18n/L';
 
 const STRIP_DIACRITICS = /\p{M}/gu;
 
@@ -133,7 +134,7 @@ export function validateAcademyProspectName(rawName: string): AcademyProspectNam
   if (BLOCKED_FULL_NAMES.has(normalized)) {
     return {
       ok: false,
-      reason: 'Esse nome no cartão está reservado. Escolhe outro.',
+      reason: L('Esse nome no cartão está reservado. Escolhe outro.', 'That card name is reserved. Pick another.'),
     };
   }
 
@@ -144,7 +145,7 @@ export function validateAcademyProspectName(rawName: string): AcademyProspectNam
     if (FORBIDDEN_TOKENS.has(t)) {
       return {
         ok: false,
-        reason: 'Há uma palavra reservada no nome. Troca o nome no cartão.',
+        reason: L('Há uma palavra reservada no nome. Troca o nome no cartão.', 'The name has a reserved word. Change the card name.'),
       };
     }
   }
@@ -153,7 +154,7 @@ export function validateAcademyProspectName(rawName: string): AcademyProspectNam
     if (tokenSet.has(a) && tokenSet.has(b)) {
       return {
         ok: false,
-        reason: 'Essa combinação no cartão está reservada. Usa outro nome.',
+        reason: L('Essa combinação no cartão está reservada. Usa outro nome.', 'That name combination is reserved. Use another name.'),
       };
     }
   }

@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { SecaoVolt } from '@/components/ui';
+import { L, LOCALE } from '@/i18n/L';
 
 export type ReceiptLine = {
   label: string;
@@ -20,7 +21,7 @@ export type MatchReceiptData = {
 function fmt(amount: number): string {
   const abs = Math.abs(amount);
   const sign = amount >= 0 ? '+' : '−';
-  return `${sign}${abs.toLocaleString('pt-BR')}`;
+  return `${sign}${abs.toLocaleString(LOCALE)}`;
 }
 
 function totalsByCurrency(lines: ReceiptLine[]): Record<string, number> {
@@ -40,13 +41,13 @@ export function MatchReceiptCard({ data }: MatchReceiptCardProps) {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <SecaoVolt label="Última partida" tone="neutro" className="min-w-0 grow" />
+        <SecaoVolt label={L('Última partida', 'Last match')} tone="neutro" className="min-w-0 grow" />
         <button
           type="button"
           onClick={() => navigate('/wallet/extract')}
           className="shrink-0 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento transition-colors hover:text-white"
         >
-          Recibos anteriores →
+          {L('Recibos anteriores →', 'Previous receipts →')}
         </button>
       </div>
 
@@ -56,7 +57,7 @@ export function MatchReceiptCard({ data }: MatchReceiptCardProps) {
           style={{ borderRadius: 'var(--radius-card)' }}
         >
           <p className="text-[12px] text-cimento">
-            Joga a próxima partida e o recibo aparece aqui.
+            {L('Joga a próxima partida e o recibo aparece aqui.', 'Play your next match and the receipt shows up here.')}
           </p>
         </div>
       ) : (
@@ -71,7 +72,7 @@ export function MatchReceiptCard({ data }: MatchReceiptCardProps) {
           <div className="flex items-center justify-between gap-3 border-b border-dashed border-white/[0.08] px-5 py-4">
             <div>
               <p className="font-mono text-[10.5px] text-cimento">
-                {data.roundLabel} · {data.isHome ? 'Casa' : 'Fora'}
+                {data.roundLabel} · {data.isHome ? L('Casa', 'Home') : L('Fora', 'Away')}
               </p>
               <p className="mt-1 font-impact text-[17px] uppercase leading-[1.1] text-white">
                 vs {data.opponent}
@@ -79,7 +80,7 @@ export function MatchReceiptCard({ data }: MatchReceiptCardProps) {
             </div>
             <div className="text-right">
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-poeira">
-                Resultado
+                {L('Resultado', 'Result')}
               </p>
               <p
                 className="ole-num mt-1 tabular-nums text-white"
@@ -112,7 +113,7 @@ export function MatchReceiptCard({ data }: MatchReceiptCardProps) {
           {/* Líquido */}
           <div className="border-t border-dashed border-white/[0.08] bg-card px-5 py-4">
             <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
-              Líquido
+              {L('Líquido', 'Net')}
             </p>
             <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
               {Object.entries(totalsByCurrency(data.lines)).map(([currency, total]) => {

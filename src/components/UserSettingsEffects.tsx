@@ -7,6 +7,7 @@ import { loadPlatformConfigOnce } from '@/admin/platformConfigStore';
 import { getSupabase } from '@/supabase/client';
 import { syncAdminBroadcasts } from '@/notifications/broadcastConsumer';
 import { trackMissionEvent } from '@/progression/trackEvent';
+import { L } from '@/i18n/L';
 
 function applyGraphicQuality(q: UserSettings['graphicQuality']) {
   document.documentElement.dataset.graphicQuality = q;
@@ -43,7 +44,7 @@ export function UserSettingsEffects() {
       if (s === 'banned') {
         const sb = getSupabase();
         try { void sb?.auth.signOut(); } catch { /* noop */ }
-        window.alert('A tua conta foi banida. Se acreditas que é um erro, contacta o suporte.');
+        window.alert(L('A tua conta foi banida. Se acreditas que é um erro, contacta o suporte.', 'Your account has been banned. If you think this is a mistake, contact support.'));
         window.location.href = '/';
       }
     });

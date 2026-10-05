@@ -3,6 +3,7 @@ import type { OlefootGameState } from '@/game/types';
 import { COACH_SYSTEM_KNOWLEDGE } from './defaultCoach';
 import { chatWithCoach } from './coachApi';
 import { overallFromAttributes } from '@/entities/player';
+import { L, LOCALE, emIngles } from '@/i18n/L';
 
 /**
  * Engine de conversação do Coach Agent.
@@ -91,49 +92,49 @@ export class CoachConversationEngine {
     const lower = message.toLowerCase();
 
     // Saudações
-    if (/^(oi|olá|hey|bom dia|boa tarde|boa noite)/.test(lower)) {
+    if (/^(oi|olá|hey|bom dia|boa tarde|boa noite|hi|hello|good morning|good afternoon|good evening)/.test(lower)) {
       return { type: 'greeting' };
     }
 
     // Instruções (manager ensinando o coach)
     if (
-      /sempre|nunca|prefiro|quero que|não gosto|lembre|importante|priorize/.test(lower)
+      /sempre|nunca|prefiro|quero que|não gosto|lembre|importante|priorize|always|never|i prefer|i want you|i don't like|remember|important|prioriti[sz]e/.test(lower)
     ) {
       let category = 'general';
       if (/treino|training/.test(lower)) category = 'training';
       if (/staff|profission/.test(lower)) category = 'staff';
-      if (/escalação|lineup|formação/.test(lower)) category = 'lineup';
+      if (/escalação|lineup|formação|formation/.test(lower)) category = 'lineup';
       return { type: 'instruction', category };
     }
 
     // Perguntas sobre treino
-    if (/treino|training|treinar/.test(lower)) {
+    if (/treino|training|treinar|train/.test(lower)) {
       let subtype = 'general';
       if (/individual/.test(lower)) subtype = 'individual';
-      if (/coletivo|colectivo/.test(lower)) subtype = 'collective';
-      if (/quanto tempo|duração|horas/.test(lower)) subtype = 'duration';
-      if (/tipo|qual/.test(lower)) subtype = 'type';
+      if (/coletivo|colectivo|collective|team training/.test(lower)) subtype = 'collective';
+      if (/quanto tempo|duração|horas|how long|duration|hours/.test(lower)) subtype = 'duration';
+      if (/tipo|qual|type|which/.test(lower)) subtype = 'type';
       return { type: 'training_question', subtype };
     }
 
     // Perguntas sobre staff
-    if (/staff|profission|preparador|treinador/.test(lower)) {
+    if (/staff|profission|preparador|treinador|coach/.test(lower)) {
       let subtype = 'general';
-      if (/upgrade|evoluir|melhorar/.test(lower)) subtype = 'upgrade';
+      if (/upgrade|evoluir|melhorar|improve/.test(lower)) subtype = 'upgrade';
       if (/atribuir|assign|distribuir/.test(lower)) subtype = 'assignment';
-      if (/prioridade/.test(lower)) subtype = 'priority';
+      if (/prioridade|priority/.test(lower)) subtype = 'priority';
       return { type: 'staff_question', subtype };
     }
 
     // Pedidos de sugestão
-    if (/sugere|sugestão|recomenda|o que|devo/.test(lower)) {
-      if (/treino/.test(lower)) return { type: 'training_suggestion' };
+    if (/sugere|sugestão|recomenda|o que|devo|suggest|recommend|what should|should i/.test(lower)) {
+      if (/treino|train/.test(lower)) return { type: 'training_suggestion' };
       if (/staff/.test(lower)) return { type: 'staff_suggestion' };
       return { type: 'team_analysis' };
     }
 
     // Análise do time
-    if (/analise|análise|status|situação|como está/.test(lower)) {
+    if (/analise|análise|status|situação|como está|analy[sz]e|analysis|how is/.test(lower)) {
       return { type: 'team_analysis' };
     }
 
@@ -142,9 +143,9 @@ export class CoachConversationEngine {
 
   private handleGreeting(): string {
     const greetings = [
-      `Olá, manager! Sou o ${this.coach.name}. Como posso ajudar com o time hoje?`,
-      `Bom dia! Pronto para trabalhar. O que precisas?`,
-      `Olá! Vamos preparar o time?`,
+      L(`Olá, manager! Sou o ${this.coach.name}. Como posso ajudar com o time hoje?`, `Hi, manager! I'm ${this.coach.name}. How can I help with the team today?`),
+      L(`Bom dia! Pronto para trabalhar. O que precisas?`, `Good morning! Ready to work. What do you need?`),
+      L(`Olá! Vamos preparar o time?`, `Hi! Shall we get the team ready?`),
     ];
     return greetings[Math.floor(Math.random() * greetings.length)]!;
   }
@@ -153,45 +154,69 @@ export class CoachConversationEngine {
     const context = this.buildTeamContext();
 
     if (subtype === 'individual') {
-      return `**Treinos Individuais disponíveis:**
-
-${Object.entries(COACH_SYSTEM_KNOWLEDGE.training.individual)
+      const lista = Object.entries(COACH_SYSTEM_KNOWLEDGE.training.individual)
   .map(([type, desc]) => `• **${type}**: ${desc}`)
-  .join('\n')}
+  .join('\n');
+      return L(`**Treinos Individuais disponíveis:**
+
+${lista}
 
 Atualmente tens ${context.runningTrainingPlans} treinos em execução.
-Centro de Treino nível ${context.trainingCenterLevel} permite até ${this.getMaxTrainingSlots()} jogadores por sessão.`;
+Centro de Treino nível ${context.trainingCenterLevel} permite até ${this.getMaxTrainingSlots()} jogadores por sessão.`, `**Available individual training:**
+
+${lista}
+
+You currently have ${context.runningTrainingPlans} training sessions running.
+Training Centre level ${context.trainingCenterLevel} allows up to ${this.getMaxTrainingSlots()} players per session.`);
     }
 
     if (subtype === 'collective') {
-      return `**Treinos Coletivos disponíveis:**
-
-${Object.entries(COACH_SYSTEM_KNOWLEDGE.training.collective)
+      const tipos = Object.entries(COACH_SYSTEM_KNOWLEDGE.training.collective)
   .map(([type, desc]) => `• **${type}**: ${desc}`)
-  .join('\n')}
+  .join('\n');
+      const grupos = Object.entries(COACH_SYSTEM_KNOWLEDGE.training.groups)
+  .map(([group, desc]) => `• **${group}**: ${desc}`)
+  .join('\n');
+      return L(`**Treinos Coletivos disponíveis:**
+
+${tipos}
 
 **Grupos:**
-${Object.entries(COACH_SYSTEM_KNOWLEDGE.training.groups)
-  .map(([group, desc]) => `• **${group}**: ${desc}`)
-  .join('\n')}
+${grupos}
 
-Fadiga média do plantel: ${Math.round(context.averageFatigue)}%`;
+Fadiga média do plantel: ${Math.round(context.averageFatigue)}%`, `**Available team training:**
+
+${tipos}
+
+**Groups:**
+${grupos}
+
+Squad average fatigue: ${Math.round(context.averageFatigue)}%`);
     }
 
     if (subtype === 'duration') {
-      return `**Orientação de duração de treinos:**
-
-${Object.entries(COACH_SYSTEM_KNOWLEDGE.training.durationGuidelines)
+      const guia = Object.entries(COACH_SYSTEM_KNOWLEDGE.training.durationGuidelines)
   .map(([key, desc]) => `• ${desc}`)
-  .join('\n')}
+  .join('\n');
+      const horas = context.nextMatch && context.nextMatch.daysUntil < 2 ? '6-12h' : '24-36h';
+      return L(`**Orientação de duração de treinos:**
 
-${context.nextMatch ? `Próximo jogo em ${context.nextMatch.daysUntil} dias. Recomendo treinos de ${context.nextMatch.daysUntil < 2 ? '6-12h' : '24-36h'}.` : 'Sem jogos agendados. Podes fazer treinos longos (48-72h) para desenvolvimento.'}`;
+${guia}
+
+${context.nextMatch ? `Próximo jogo em ${context.nextMatch.daysUntil} dias. Recomendo treinos de ${horas}.` : 'Sem jogos agendados. Podes fazer treinos longos (48-72h) para desenvolvimento.'}`, `**Training duration guide:**
+
+${guia}
+
+${context.nextMatch ? `Next game in ${context.nextMatch.daysUntil} days. I recommend ${horas} sessions.` : 'No games scheduled. You can run long sessions (48-72h) for development.'}`);
     }
 
-    return `Sobre treinos: temos ${context.totalPlayers} jogadores disponíveis (${context.injuredPlayers} lesionados).
+    return L(`Sobre treinos: temos ${context.totalPlayers} jogadores disponíveis (${context.injuredPlayers} lesionados).
 Fadiga média: ${Math.round(context.averageFatigue)}%.
 
-Posso sugerir um plano de treino específico se quiseres. Basta pedir "sugere um treino".`;
+Posso sugerir um plano de treino específico se quiseres. Basta pedir "sugere um treino".`, `On training: we have ${context.totalPlayers} players available (${context.injuredPlayers} injured).
+Average fatigue: ${Math.round(context.averageFatigue)}%.
+
+I can suggest a specific training plan if you like. Just ask "suggest a training session".`);
   }
 
   private handleStaffQuestion(message: string, subtype?: string): string {
@@ -199,41 +224,60 @@ Posso sugerir um plano de treino específico se quiseres. Basta pedir "sugere um
 
     if (subtype === 'upgrade') {
       const priorities = COACH_SYSTEM_KNOWLEDGE.staff.upgradePriority;
-      return `**Prioridade de upgrade de Staff:**
-
-${priorities
+      const lista = priorities
   .map((role, i) => {
     const level = context.staffLevels[role as keyof typeof context.staffLevels] ?? 1;
     const desc = COACH_SYSTEM_KNOWLEDGE.staff.roles[role as keyof typeof COACH_SYSTEM_KNOWLEDGE.staff.roles];
-    return `${i + 1}. **${role}** (nível ${level}): ${desc}`;
+    return L(`${i + 1}. **${role}** (nível ${level}): ${desc}`, `${i + 1}. **${role}** (level ${level}): ${desc}`);
   })
-  .join('\n\n')}
+  .join('\n\n');
+      const exp = Math.round(context.availableExp).toLocaleString(LOCALE);
+      const bro = (context.availableBro / 100).toFixed(2);
+      return L(`**Prioridade de upgrade de Staff:**
 
-Tens ${Math.round(context.availableExp).toLocaleString('pt-BR')} EXP e ${(context.availableBro / 100).toFixed(2)} BRO disponíveis.`;
+${lista}
+
+Tens ${exp} EXP e ${bro} BRO disponíveis.`, `**Staff upgrade priority:**
+
+${lista}
+
+You have ${exp} EXP and ${bro} BRO available.`);
     }
 
     if (subtype === 'assignment') {
-      return `**Estratégia de atribuição de Staff:**
+      return L(`**Estratégia de atribuição de Staff:**
 
 ${COACH_SYSTEM_KNOWLEDGE.staff.assignmentStrategy}
 
 Atualmente tens ${context.staffAssignedCount} atribuições ativas.
-Slots disponíveis por role: ${context.staffSlotsAvailable}`;
+Slots disponíveis por role: ${context.staffSlotsAvailable}`, `**Staff assignment strategy:**
+
+${COACH_SYSTEM_KNOWLEDGE.staff.assignmentStrategy}
+
+You currently have ${context.staffAssignedCount} active assignments.
+Slots available per role: ${context.staffSlotsAvailable}`);
     }
 
     if (subtype === 'priority') {
       const topPriority = COACH_SYSTEM_KNOWLEDGE.staff.upgradePriority[0];
       const level = context.staffLevels[topPriority as keyof typeof context.staffLevels] ?? 1;
-      return `A prioridade máxima é sempre **${topPriority}** (atualmente nível ${level}).
+      const porque = COACH_SYSTEM_KNOWLEDGE.staff.roles[topPriority as keyof typeof COACH_SYSTEM_KNOWLEDGE.staff.roles];
+      return L(`A prioridade máxima é sempre **${topPriority}** (atualmente nível ${level}).
 
-Porquê? ${COACH_SYSTEM_KNOWLEDGE.staff.roles[topPriority as keyof typeof COACH_SYSTEM_KNOWLEDGE.staff.roles]}
+Porquê? ${porque}
 
-Depois disso: preparador físico, nutrição, tático, mental, olheiro, preparador de goleiros (nessa ordem).`;
+Depois disso: preparador físico, nutrição, tático, mental, olheiro, preparador de goleiros (nessa ordem).`, `Top priority is always **${topPriority}** (currently level ${level}).
+
+Why? ${porque}
+
+After that: fitness coach, nutrition, tactics, mental, scout, goalkeeping coach (in that order).`);
     }
 
-    return `Sobre staff: tens ${Object.keys(context.staffLevels).length} profissionais contratados.
+    return L(`Sobre staff: tens ${Object.keys(context.staffLevels).length} profissionais contratados.
 
-Posso explicar prioridades de upgrade, estratégia de atribuição ou analisar teu staff atual. O que preferes?`;
+Posso explicar prioridades de upgrade, estratégia de atribuição ou analisar teu staff atual. O que preferes?`, `On staff: you have ${Object.keys(context.staffLevels).length} professionals hired.
+
+I can explain upgrade priorities, assignment strategy or analyse your current staff. What would you like?`);
   }
 
   private suggestTrainingPlan(): string {
@@ -245,39 +289,39 @@ Posso explicar prioridades de upgrade, estratégia de atribuição ou analisar t
     const lowFatigue = context.averageFatigue < 30;
     const hasNextMatch = context.nextMatch && context.nextMatch.daysUntil <= 3;
 
-    let suggestion = '**Sugestão de Treino:**\n\n';
+    let suggestion = L('**Sugestão de Treino:**\n\n', '**Training Suggestion:**\n\n');
 
     if (highFatigue) {
-      suggestion += `⚠️ Fadiga média alta (${Math.round(context.averageFatigue)}%). Recomendo:\n`;
-      suggestion += `• Treino **físico individual** de 12-24h para recuperação\n`;
-      suggestion += `• Ou treino **coletivo físico** leve (6-12h) para todo o plantel\n`;
-      suggestion += `• Evitar treinos intensos até fadiga baixar para <50%\n`;
+      suggestion += L(`⚠️ Fadiga média alta (${Math.round(context.averageFatigue)}%). Recomendo:\n`, `⚠️ High average fatigue (${Math.round(context.averageFatigue)}%). I recommend:\n`);
+      suggestion += L(`• Treino **físico individual** de 12-24h para recuperação\n`, `• **Individual physical** training of 12-24h for recovery\n`);
+      suggestion += L(`• Ou treino **coletivo físico** leve (6-12h) para todo o plantel\n`, `• Or light **team physical** training (6-12h) for the whole squad\n`);
+      suggestion += L(`• Evitar treinos intensos até fadiga baixar para <50%\n`, `• Avoid intense sessions until fatigue drops below 50%\n`);
     } else if (hasNextMatch) {
-      suggestion += `🎯 Jogo contra ${context.nextMatch!.opponent} em ${context.nextMatch!.daysUntil} dias.\n`;
-      suggestion += `• Treino **tático coletivo** de 24h (grupo: all)\n`;
-      suggestion += `• Foco em **formação** para ajustar posicionamento\n`;
-      suggestion += `• Treino **mental individual** para titulares (confiança)\n`;
+      suggestion += L(`🎯 Jogo contra ${context.nextMatch!.opponent} em ${context.nextMatch!.daysUntil} dias.\n`, `🎯 Game vs ${context.nextMatch!.opponent} in ${context.nextMatch!.daysUntil} days.\n`);
+      suggestion += L(`• Treino **tático coletivo** de 24h (grupo: all)\n`, `• 24h **team tactical** training (group: all)\n`);
+      suggestion += L(`• Foco em **formação** para ajustar posicionamento\n`, `• Focus on **shape** to fine-tune positioning\n`);
+      suggestion += L(`• Treino **mental individual** para titulares (confiança)\n`, `• **Individual mental** training for starters (confidence)\n`);
     } else if (lowFatigue) {
-      suggestion += `✅ Plantel descansado (fadiga ${Math.round(context.averageFatigue)}%). Momento ideal para desenvolvimento:\n`;
+      suggestion += L(`✅ Plantel descansado (fadiga ${Math.round(context.averageFatigue)}%). Momento ideal para desenvolvimento:\n`, `✅ Squad rested (fatigue ${Math.round(context.averageFatigue)}%). Ideal time for development:\n`);
       if (personality === 'Developer' || personality === 'Visionary') {
-        suggestion += `• Treino **atributos individual** de 48h (passe, drible, finalização)\n`;
-        suggestion += `• Treino **coletivo formação** de 36h (grupo: all)\n`;
-        suggestion += `• Foco em jogadores jovens (<23 anos)\n`;
+        suggestion += L(`• Treino **atributos individual** de 48h (passe, drible, finalização)\n`, `• 48h **individual attributes** training (passing, dribbling, finishing)\n`);
+        suggestion += L(`• Treino **coletivo formação** de 36h (grupo: all)\n`, `• 36h **team shape** training (group: all)\n`);
+        suggestion += L(`• Foco em jogadores jovens (<23 anos)\n`, `• Focus on young players (<23)\n`);
       } else if (personality === 'Pragmatic') {
-        suggestion += `• Treino **tático individual** de 36h\n`;
-        suggestion += `• Treino **coletivo formação** de 24h (grupo: defensivo)\n`;
-        suggestion += `• Reforçar disciplina tática\n`;
+        suggestion += L(`• Treino **tático individual** de 36h\n`, `• 36h **individual tactical** training\n`);
+        suggestion += L(`• Treino **coletivo formação** de 24h (grupo: defensivo)\n`, `• 24h **team shape** training (group: defensive)\n`);
+        suggestion += L(`• Reforçar disciplina tática\n`, `• Reinforce tactical discipline\n`);
       } else {
-        suggestion += `• Treino **atributos individual** de 36h\n`;
-        suggestion += `• Treino **coletivo empatia** de 24h (coesão do grupo)\n`;
+        suggestion += L(`• Treino **atributos individual** de 36h\n`, `• 36h **individual attributes** training\n`);
+        suggestion += L(`• Treino **coletivo empatia** de 24h (coesão do grupo)\n`, `• 24h **team empathy** training (group cohesion)\n`);
       }
     } else {
-      suggestion += `📊 Situação normal. Sugestão balanceada:\n`;
-      suggestion += `• Treino **tático individual** de 24h (2-3 jogadores)\n`;
-      suggestion += `• Treino **coletivo formação** de 24h (grupo: criativo)\n`;
+      suggestion += L(`📊 Situação normal. Sugestão balanceada:\n`, `📊 Normal situation. Balanced suggestion:\n`);
+      suggestion += L(`• Treino **tático individual** de 24h (2-3 jogadores)\n`, `• 24h **individual tactical** training (2-3 players)\n`);
+      suggestion += L(`• Treino **coletivo formação** de 24h (grupo: criativo)\n`, `• 24h **team shape** training (group: creative)\n`);
     }
 
-    suggestion += `\n💡 Centro de Treino nível ${context.trainingCenterLevel} dá boost de ganhos.`;
+    suggestion += L(`\n💡 Centro de Treino nível ${context.trainingCenterLevel} dá boost de ganhos.`, `\n💡 Training Centre level ${context.trainingCenterLevel} boosts gains.`);
 
     return suggestion;
   }
@@ -290,45 +334,75 @@ Posso explicar prioridades de upgrade, estratégia de atribuição ou analisar t
     const treinadorLevel = context.staffLevels.treinador ?? 1;
     if (treinadorLevel < 3 && context.availableExp >= 3_500_000) {
       suggestions.push(
-        `🔥 **PRIORIDADE MÁXIMA**: Upgrade Treinador para nível ${treinadorLevel + 1} (${treinadorLevel === 1 ? '3.5M' : '9M'} EXP). Multiplica TODOS os ganhos de treino.`,
+        L(`🔥 **PRIORIDADE MÁXIMA**: Upgrade Treinador para nível ${treinadorLevel + 1} (${treinadorLevel === 1 ? '3.5M' : '9M'} EXP). Multiplica TODOS os ganhos de treino.`, `🔥 **TOP PRIORITY**: Upgrade Head Coach to level ${treinadorLevel + 1} (${treinadorLevel === 1 ? '3.5M' : '9M'} EXP). Multiplies ALL training gains.`),
       );
     }
 
     const prepFisicoLevel = context.staffLevels.preparador_fisico ?? 1;
     if (prepFisicoLevel < 3 && context.averageFatigue > 50) {
       suggestions.push(
-        `⚡ Plantel cansado. Upgrade Preparador Físico para acelerar recuperação.`,
+        L(`⚡ Plantel cansado. Upgrade Preparador Físico para acelerar recuperação.`, `⚡ Squad tired. Upgrade the Fitness Coach to speed up recovery.`),
       );
     }
 
     const nutricaoLevel = context.staffLevels.nutricao ?? 1;
     if (nutricaoLevel < 2 && context.averageInjuryRisk > 30) {
       suggestions.push(
-        `🏥 Risco de lesão elevado. Upgrade Nutrição para prevenção.`,
+        L(`🏥 Risco de lesão elevado. Upgrade Nutrição para prevenção.`, `🏥 High injury risk. Upgrade Nutrition for prevention.`),
       );
     }
 
     if (context.staffAssignedCount === 0) {
       suggestions.push(
-        `👥 Nenhum staff atribuído a jogadores. Vai em /team/staff para ativar buffs individuais nos jogadores da academia.`,
+        L(`👥 Nenhum staff atribuído a jogadores. Vai em /team/staff para ativar buffs individuais nos jogadores da academia.`, `👥 No staff assigned to players. Go to /team/staff to activate individual buffs for academy players.`),
       );
     }
 
     if (suggestions.length === 0) {
-      return `✅ Staff está bem configurado no momento. Continue monitorando após jogos e treinos.
+      const niveis = Object.entries(context.staffLevels)
+  .map(([role, level]) => L(`• ${role}: nível ${level}`, `• ${role}: level ${level}`))
+  .join('\n');
+      return L(`✅ Staff está bem configurado no momento. Continue monitorando após jogos e treinos.
 
 Níveis atuais:
-${Object.entries(context.staffLevels)
-  .map(([role, level]) => `• ${role}: nível ${level}`)
-  .join('\n')}`;
+${niveis}`, `✅ Staff is well set up right now. Keep monitoring after games and training.
+
+Current levels:
+${niveis}`);
     }
 
-    return `**Sugestões de Staff:**\n\n${suggestions.join('\n\n')}`;
+    return L(`**Sugestões de Staff:**\n\n${suggestions.join('\n\n')}`, `**Staff Suggestions:**\n\n${suggestions.join('\n\n')}`);
   }
 
   private analyzeTeamStatus(): string {
     const context = this.buildTeamContext();
 
+    if (emIngles()) {
+      return `**Squad Analysis:**
+
+📊 **Players:**
+• Total: ${context.totalPlayers}
+• Injured: ${context.injuredPlayers}
+• Suspended: ${context.suspendedPlayers}
+• Average overall: ${Math.round(context.averageOverall)}
+
+⚡ **Fitness:**
+• Average fatigue: ${Math.round(context.averageFatigue)}% ${context.averageFatigue > 60 ? '⚠️ HIGH' : context.averageFatigue < 30 ? '✅ GREAT' : ''}
+• Injury risk: ${Math.round(context.averageInjuryRisk)}% ${context.averageInjuryRisk > 40 ? '⚠️ HIGH' : ''}
+
+🏋️ **Training:**
+• Running: ${context.runningTrainingPlans}
+• Completed: ${context.completedTrainingPlans}
+• Training Centre: level ${context.trainingCenterLevel}
+
+👥 **Staff:**
+• Head Coach: level ${context.staffLevels.treinador ?? 1}
+• Active assignments: ${context.staffAssignedCount}
+
+${context.nextMatch ? `⚽ **Next game:** ${context.nextMatch.opponent} (${context.nextMatch.isHome ? 'Home' : 'Away'}) in ${context.nextMatch.daysUntil} days` : ''}
+
+${this.getQuickRecommendation(context)}`;
+    }
     return `**Análise do Plantel:**
 
 📊 **Jogadores:**
@@ -357,18 +431,18 @@ ${this.getQuickRecommendation(context)}`;
 
   private getQuickRecommendation(context: TeamContext): string {
     if (context.averageFatigue > 65) {
-      return `\n💡 **Recomendação:** Plantel muito cansado. Priorize recuperação (treino físico leve ou descanso).`;
+      return L(`\n💡 **Recomendação:** Plantel muito cansado. Priorize recuperação (treino físico leve ou descanso).`, `\n💡 **Recommendation:** Squad very tired. Prioritise recovery (light physical training or rest).`);
     }
     if (context.injuredPlayers > 3) {
-      return `\n💡 **Recomendação:** Muitos lesionados. Considere upgrade do Departamento Médico.`;
+      return L(`\n💡 **Recomendação:** Muitos lesionados. Considere upgrade do Departamento Médico.`, `\n💡 **Recommendation:** Many injured. Consider upgrading the Medical Department.`);
     }
     if (context.staffLevels.treinador < 3) {
-      return `\n💡 **Recomendação:** Upgrade do Treinador multiplica ganhos de treino. Prioridade máxima.`;
+      return L(`\n💡 **Recomendação:** Upgrade do Treinador multiplica ganhos de treino. Prioridade máxima.`, `\n💡 **Recommendation:** Upgrading the Head Coach multiplies training gains. Top priority.`);
     }
     if (context.nextMatch && context.nextMatch.daysUntil <= 2) {
-      return `\n💡 **Recomendação:** Jogo próximo. Treino tático leve (12-24h) para ajustar formação.`;
+      return L(`\n💡 **Recomendação:** Jogo próximo. Treino tático leve (12-24h) para ajustar formação.`, `\n💡 **Recommendation:** Game coming up. Light tactical training (12-24h) to fine-tune the shape.`);
     }
-    return `\n💡 **Recomendação:** Situação estável. Bom momento para treinos de desenvolvimento (36-48h).`;
+    return L(`\n💡 **Recomendação:** Situação estável. Bom momento para treinos de desenvolvimento (36-48h).`, `\n💡 **Recommendation:** Stable situation. Good time for development training (36-48h).`);
   }
 
   private handleInstructionFallback(
@@ -387,17 +461,21 @@ ${this.getQuickRecommendation(context)}`;
     this.coach.memory.managerInstructions.push(instruction);
     this.learnFromInstruction(instruction);
 
-    return `✅ Entendido e memorizado: "${message}"
+    return L(`✅ Entendido e memorizado: "${message}"
 
 Vou aplicar essa orientação nas minhas sugestões futuras. Podes desativar ou modificar isso a qualquer momento.
 
-${this.coach.memory.managerInstructions.length} instruções ativas no total.`;
+${this.coach.memory.managerInstructions.length} instruções ativas no total.`, `✅ Got it and saved: "${message}"
+
+I'll apply this guidance to my future suggestions. You can turn it off or change it at any time.
+
+${this.coach.memory.managerInstructions.length} active instructions in total.`);
   }
 
   private detectPriority(message: string): 'high' | 'medium' | 'low' {
     const lower = message.toLowerCase();
-    if (/sempre|nunca|crítico|essencial|obrigatório/.test(lower)) return 'high';
-    if (/prefiro|importante|priorize/.test(lower)) return 'medium';
+    if (/sempre|nunca|crítico|essencial|obrigatório|always|never|critical|essential|mandatory/.test(lower)) return 'high';
+    if (/prefiro|importante|priorize|prefer|important|prioriti[sz]e/.test(lower)) return 'medium';
     return 'low';
   }
 
@@ -408,11 +486,11 @@ ${this.coach.memory.managerInstructions.length} instruções ativas no total.`;
     if (instruction.category === 'training') {
       if (/individual/.test(lower)) {
         // Extrai tipos mencionados
-        if (/físico|fisico/.test(lower))
+        if (/físico|fisico|physical/.test(lower))
           this.coach.memory.trainingKnowledge.preferredIndividualTypes.push('fisico');
         if (/mental/.test(lower))
           this.coach.memory.trainingKnowledge.preferredIndividualTypes.push('mental');
-        if (/tático|tatico/.test(lower))
+        if (/tático|tatico|tactical/.test(lower))
           this.coach.memory.trainingKnowledge.preferredIndividualTypes.push('tatico');
       }
 
@@ -449,14 +527,21 @@ ${this.coach.memory.managerInstructions.length} instruções ativas no total.`;
   }
 
   private handleGeneral(message: string): string {
-    return `Entendi. Posso ajudar com:
+    return L(`Entendi. Posso ajudar com:
 
 • **Treinos**: sugestões, tipos, duração
 • **Staff**: upgrades, atribuições, prioridades
 • **Análise**: status do plantel, condição física
 • **Aprendizado**: ensina-me tuas preferências (ex: "sempre priorize treino tático")
 
-O que precisas?`;
+O que precisas?`, `Got it. I can help with:
+
+• **Training**: suggestions, types, duration
+• **Staff**: upgrades, assignments, priorities
+• **Analysis**: squad status, fitness
+• **Learning**: teach me your preferences (e.g. "always prioritise tactical training")
+
+What do you need?`);
   }
 
   /**

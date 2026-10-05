@@ -15,6 +15,7 @@ import type {
 import { REFERRAL_RATE, REFERRAL_MAX_LEVELS, REFERRAL_ELIGIBLE_SOURCES } from './constants';
 import { appendLedger } from './ledger';
 import { normalizeReferralCode } from './referralCode';
+import { L } from '@/i18n/L';
 
 /**
  * Registra o patrocinador (sponsor) do usuário pelo código de indicação (imutável depois de gravado).
@@ -25,19 +26,19 @@ export function registerSponsor(
   selfUserId: string = 'self',
 ): WalletResult {
   if (state.sponsorId) {
-    return { ok: false, error: 'Patrocinador já definido.', code: 'REFERRAL_ALREADY_SET' };
+    return { ok: false, error: L('Patrocinador já definido.', 'Sponsor already set.'), code: 'REFERRAL_ALREADY_SET' };
   }
   const sponsorCode = normalizeReferralCode(sponsorCodeInput);
   if (!sponsorCode) {
     return {
       ok: false,
-      error: 'Código de indicação inválido (3–5 letras ou números, sem caracteres especiais).',
+      error: L('Código de indicação inválido (3–5 letras ou números, sem caracteres especiais).', 'Invalid referral code (3–5 letters or numbers, no special characters).'),
       code: 'REFERRAL_INVALID_CODE',
     };
   }
   const myCode = state.myReferralCode ? normalizeReferralCode(state.myReferralCode) : null;
   if (myCode && sponsorCode === myCode) {
-    return { ok: false, error: 'Não podes usar o teu próprio código de indicação.', code: 'REFERRAL_SELF' };
+    return { ok: false, error: L('Não podes usar o teu próprio código de indicação.', "You can't use your own referral code."), code: 'REFERRAL_SELF' };
   }
 
   return {

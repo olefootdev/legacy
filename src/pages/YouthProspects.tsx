@@ -16,6 +16,8 @@ import { RailStat } from '@/components/ui/RailStat';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Hashtag } from '@/components/ui';
 import { trackMissionEvent } from '@/progression/trackEvent';
+import { rotuloPosicao } from '@/transfer/marketFilters';
+import { L, emIngles } from '@/i18n/L';
 
 /** Fonte de número do layer final: Anton. (Era serifa itálica.) */
 const NUM = 'var(--font-impact)';
@@ -61,13 +63,13 @@ export function YouthProspects() {
 
   return (
     <div className="mx-auto min-w-0 max-w-6xl space-y-6 px-3 pb-10 sm:px-4 lg:px-8">
-      <BackButton to="/clube" label="Clube" />
+      <BackButton to="/clube" label={L('Clube', 'Club')} />
 
       <EditorialHero
         watermark="BASE"
-        eyebrow="Gestão do clube · Categoria de base"
-        title="Academia"
-        stats={`${allCrias.length} cria(s) no elenco · nível ${youthLvl}/5`}
+        eyebrow={L('Gestão do clube · Categoria de base', 'Club management · Youth academy')}
+        title={L('Academia', 'Academy')}
+        stats={L(`${allCrias.length} cria(s) no elenco · nível ${youthLvl}/5`, `${allCrias.length} homegrown player(s) in squad · level ${youthLvl}/5`)}
         icon={
           <div className="relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28" style={{ borderRadius: 'var(--radius-sm)' }}>
             <div className="flex h-full w-full items-center justify-center">
@@ -79,9 +81,9 @@ export function YouthProspects() {
 
       {/* Stat cards (rail) */}
       <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-        <RailStat label="Nível academia" value={<>{youthLvl}<small className="text-white/40">/5</small></>} />
-        <RailStat label="Booster de treino" value={<>+{boosterPct}<small className="text-white/40">%</small></>} />
-        <RailStat label="Crias no elenco" value={<>{allCrias.length}</>} />
+        <RailStat label={L('Nível academia', 'Academy level')} value={<>{youthLvl}<small className="text-white/40">/5</small></>} />
+        <RailStat label={L('Booster de treino', 'Training booster')} value={<>+{boosterPct}<small className="text-white/40">%</small></>} />
+        <RailStat label={L('Crias no elenco', 'Homegrown in squad')} value={<>{allCrias.length}</>} />
       </div>
 
       {/* Como funciona + Evoluir academia */}
@@ -89,10 +91,10 @@ export function YouthProspects() {
         <span className="absolute inset-y-0 left-0 w-[3px] bg-neon-yellow" aria-hidden />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="max-w-lg">
-            <h3 className="font-display text-[16px] font-bold uppercase tracking-[0.04em]">Como a base evolui</h3>
+            <h3 className="font-display text-[16px] font-bold uppercase tracking-[0.04em]">{L('Como a base evolui', 'How the academy grows')}</h3>
             <p className="mt-1.5 text-[12.5px] leading-relaxed text-white/60">
-              Nível turbina o <span className="text-white">ganho de treino</span> das crias ·{' '}
-              <Link to="/team/treino" className="text-neon-yellow underline hover:text-white">Treino</Link>
+              {emIngles() ? <>Level boosts the <span className="text-white">training gains</span> of homegrown players ·{' '}</> : <>Nível turbina o <span className="text-white">ganho de treino</span> das crias ·{' '}</>}
+              <Link to="/team/treino" className="text-neon-yellow underline hover:text-white">{L('Treino', 'Training')}</Link>
             </p>
           </div>
           <div className="shrink-0">
@@ -101,11 +103,11 @@ export function YouthProspects() {
                 onClick={() => setConfirmUpgrade(true)}
                 className="inline-flex items-center gap-1.5 rounded-md bg-neon-yellow px-5 py-3 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-black transition-colors hover:bg-white"
               >
-                <TrendingUp className="h-4 w-4" /> Evoluir · {upLabel}
+                <TrendingUp className="h-4 w-4" /> {L('Evoluir', 'Upgrade')} · {upLabel}
               </button>
             ) : (
               <span className="inline-flex items-center rounded-md border border-white/15 px-5 py-3 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-white/40">
-                Nível máximo
+                {L('Nível máximo', 'Max level')}
               </span>
             )}
           </div>
@@ -115,8 +117,8 @@ export function YouthProspects() {
       {allCrias.length === 0 ? (
         <div className="sports-panel p-8 text-center">
           <GraduationCap className="mx-auto h-8 w-8 text-neon-yellow/70" aria-hidden />
-          <p className="mt-3 text-sm text-white/80">Nenhuma cria no elenco.</p>
-          <p className="mt-1 text-xs text-gray-500">Jogadores «novo talento» aparecem aqui.</p>
+          <p className="mt-3 text-sm text-white/80">{L('Nenhuma cria no elenco.', 'No homegrown players in the squad.')}</p>
+          <p className="mt-1 text-xs text-gray-500">{L('Jogadores «novo talento» aparecem aqui.', '“New talent” players show up here.')}</p>
         </div>
       ) : (
         <>
@@ -124,15 +126,15 @@ export function YouthProspects() {
           <div className="sports-panel grid grid-cols-1 gap-3 p-4 md:grid-cols-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por nome"
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={L('Buscar por nome', 'Search by name')}
                 className="w-full rounded border border-white/10 bg-black/40 px-9 py-2 text-sm" />
             </div>
             <select value={pos} onChange={(e) => setPos(e.target.value)} className="rounded border border-white/10 bg-black/40 px-3 py-2 text-sm">
-              <option value="">Todas posições</option>
-              {positions.map((p) => <option key={p} value={p}>{p}</option>)}
+              <option value="">{L('Todas posições', 'All positions')}</option>
+              {positions.map((p) => <option key={p} value={p}>{rotuloPosicao(p)}</option>)}
             </select>
             <div className="flex items-center justify-between rounded border border-white/10 bg-black/40 px-3 py-2 text-xs text-gray-400">
-              <span>Crias encontradas</span><span className="font-bold text-neon-yellow">{crias.length}</span>
+              <span>{L('Crias encontradas', 'Players found')}</span><span className="font-bold text-neon-yellow">{crias.length}</span>
             </div>
           </div>
 
@@ -148,13 +150,13 @@ export function YouthProspects() {
                   <span className="absolute inset-y-0 left-0 z-10 w-[3px] bg-neon-yellow" aria-hidden />
                   <div className="relative flex w-[86px] shrink-0 flex-col justify-center overflow-hidden bg-black/60 py-3 pl-4">
                     <span className="tabular-nums leading-none text-neon-yellow" style={{ fontFamily: NUM, fontSize: '32px' }}>{ovr}</span>
-                    <span className="mt-1 font-display text-[10px] uppercase tracking-[0.1em] text-white/45">{p.pos}</span>
+                    <span className="mt-1 font-display text-[10px] uppercase tracking-[0.1em] text-white/45">{rotuloPosicao(p.pos)}</span>
                   </div>
                   <div className="flex flex-1 items-center px-4">
                     <div className="min-w-0">
                       <div className="truncate font-display text-[15px] font-bold uppercase tracking-[0.02em]"><span className="text-white/45">{p.num}</span> {p.name}</div>
                       <div className="mt-0.5 font-display text-[10.5px] uppercase tracking-[0.1em] text-white/45">
-                        Teto {cap} · {headroom > 0 ? `+${headroom} p/ evoluir` : 'no teto'}
+                        {L('Teto', 'Cap')} {cap} · {headroom > 0 ? L(`+${headroom} p/ evoluir`, `+${headroom} to grow`) : L('no teto', 'at cap')}
                       </div>
                     </div>
                   </div>
@@ -165,7 +167,7 @@ export function YouthProspects() {
           </div>
 
           {crias.length === 0 && (
-            <div className="sports-panel p-8 text-center text-sm text-gray-500">Nenhuma cria com os filtros atuais.</div>
+            <div className="sports-panel p-8 text-center text-sm text-gray-500">{L('Nenhuma cria com os filtros atuais.', 'No players match the current filters.')}</div>
           )}
         </>
       )}
@@ -178,33 +180,33 @@ export function YouthProspects() {
             <button type="button" onClick={() => setSelectedId(null)} className="absolute right-4 top-4 z-10 rounded-full bg-black/60 p-2 text-gray-300 hover:text-white"><X className="h-5 w-5" /></button>
             <div className="grid grid-cols-1 md:grid-cols-2">
               <div className="border-b border-white/10 bg-black/40 p-6 md:border-b-0 md:border-r">
-                <Hashtag>#novotalento #base</Hashtag>
+                <Hashtag>{L('#novotalento #base', '#newtalent #academy')}</Hashtag>
                 <h3 className="mt-1 font-display text-3xl font-black uppercase">{selected.name}</h3>
                 <div className="mt-5 space-y-2">
-                  <AttrRow label="Passe" value={selected.attrs.passe} />
-                  <AttrRow label="Drible" value={selected.attrs.drible} />
-                  <AttrRow label="Finalização" value={selected.attrs.finalizacao} />
-                  <AttrRow label="Velocidade" value={selected.attrs.velocidade} />
-                  <AttrRow label="Marcação" value={selected.attrs.marcacao} />
-                  <AttrRow label="Físico" value={selected.attrs.fisico} />
-                  <AttrRow label="Tático" value={selected.attrs.tatico} />
+                  <AttrRow label={L('Passe', 'Passing')} value={selected.attrs.passe} />
+                  <AttrRow label={L('Drible', 'Dribbling')} value={selected.attrs.drible} />
+                  <AttrRow label={L('Finalização', 'Finishing')} value={selected.attrs.finalizacao} />
+                  <AttrRow label={L('Velocidade', 'Pace')} value={selected.attrs.velocidade} />
+                  <AttrRow label={L('Marcação', 'Marking')} value={selected.attrs.marcacao} />
+                  <AttrRow label={L('Físico', 'Physical')} value={selected.attrs.fisico} />
+                  <AttrRow label={L('Tático', 'Tactical')} value={selected.attrs.tatico} />
                 </div>
               </div>
               <div className="flex flex-col p-6">
                 <div className="grid grid-cols-2 gap-3">
-                  <Info label="Posição" value={selected.pos} />
+                  <Info label={L('Posição', 'Position')} value={rotuloPosicao(selected.pos)} />
                   <Info label="Overall" value={String(overallFromAttributes(selected.attrs, selected.pos))} />
-                  <Info label="Teto de OVR" value={String(getEvolvedOverallCap(selected))} />
-                  <Info label="Ritmo de evolução" value={`×${(selected.evolutionRate ?? 1).toFixed(2)}`} />
+                  <Info label={L('Teto de OVR', 'OVR cap')} value={String(getEvolvedOverallCap(selected))} />
+                  <Info label={L('Ritmo de evolução', 'Growth rate')} value={`×${(selected.evolutionRate ?? 1).toFixed(2)}`} />
                 </div>
                 <div className="mt-5 rounded-xl border border-neon-yellow/30 bg-neon-yellow/10 p-4">
-                  <div className="font-display text-[10px] uppercase tracking-widest text-white/50">Booster da academia</div>
+                  <div className="font-display text-[10px] uppercase tracking-widest text-white/50">{L('Booster da academia', 'Academy booster')}</div>
                   <div className="tabular-nums mt-1 text-neon-yellow" style={{ fontFamily: NUM, fontSize: '30px' }}>+{boosterPct}%</div>
-                  <p className="mt-1 text-[11px] text-gray-400">ganho extra de treino · academia nível {youthLvl}</p>
+                  <p className="mt-1 text-[11px] text-gray-400">{L('ganho extra de treino · academia nível', 'extra training gain · academy level')} {youthLvl}</p>
                 </div>
                 <Link to="/team/treino"
                   className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3 font-display text-sm font-black uppercase tracking-wider text-black transition-colors hover:bg-white">
-                  <Dumbbell className="h-4 w-4" /> Desenvolver no Treino
+                  <Dumbbell className="h-4 w-4" /> {L('Desenvolver no Treino', 'Develop in Training')}
                 </Link>
               </div>
             </div>
@@ -217,8 +219,8 @@ export function YouthProspects() {
         open={!!(confirmUpgrade && upCost)}
         onClose={() => setConfirmUpgrade(false)}
         onConfirm={doUpgrade}
-        eyebrow="Confirmar evolução"
-        title="Categoria de Base"
+        eyebrow={L('Confirmar evolução', 'Confirm upgrade')}
+        title={L('Categoria de Base', 'Youth Academy')}
         confirmDisabled={!upCanAfford}
       >
         {confirmUpgrade && upCost && (
@@ -229,10 +231,10 @@ export function YouthProspects() {
               <span className="tabular-nums text-neon-yellow" style={{ fontFamily: NUM, fontSize: '30px' }}>{youthLvl + 1}</span>
             </div>
             <div className="mt-4 space-y-1.5 text-[12.5px]">
-              <div className="flex justify-between"><span className="text-white/50">Custo</span><span className="font-semibold text-white">{upLabel}</span></div>
-              <div className="flex justify-between"><span className="text-white/50">Booster de treino</span><span className="text-white">+{boosterPct}% → <span className="text-neon-yellow">+{nextBoosterPct}%</span></span></div>
+              <div className="flex justify-between"><span className="text-white/50">{L('Custo', 'Cost')}</span><span className="font-semibold text-white">{upLabel}</span></div>
+              <div className="flex justify-between"><span className="text-white/50">{L('Booster de treino', 'Training booster')}</span><span className="text-white">+{boosterPct}% → <span className="text-neon-yellow">+{nextBoosterPct}%</span></span></div>
             </div>
-            {!upCanAfford && <p className="mt-3 text-[11.5px] text-[color:var(--color-danger)]">Saldo insuficiente para esta evolução.</p>}
+            {!upCanAfford && <p className="mt-3 text-[11.5px] text-[color:var(--color-danger)]">{L('Saldo insuficiente para esta evolução.', 'Insufficient balance for this upgrade.')}</p>}
           </>
         )}
       </ConfirmDialog>

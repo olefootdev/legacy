@@ -1,3 +1,4 @@
+import { L } from '@/i18n/L';
 export type ClubStructureId =
   | 'stadium'
   | 'megastore'
@@ -14,11 +15,11 @@ export const ALL_STRUCTURE_IDS: readonly ClubStructureId[] = [
 ] as const;
 
 export const STRUCTURE_LABELS: Record<ClubStructureId, string> = {
-  stadium: 'Estádio',
-  megastore: 'Megaloja',
-  youth_academy: 'Categoria de base',
-  training_center: 'Centro de treinamento',
-  medical_dept: 'Departamento médico',
+  stadium: L('Estádio', 'Stadium'),
+  megastore: L('Megaloja', 'Megastore'),
+  youth_academy: L('Categoria de base', 'Youth academy'),
+  training_center: L('Centro de treinamento', 'Training centre'),
+  medical_dept: L('Departamento médico', 'Medical department'),
 };
 
 /** Minimum level (always unlocked). */

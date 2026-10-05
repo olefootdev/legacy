@@ -13,10 +13,18 @@ import { useTrackScreen } from '@/progression/trackEvent';
 import { StatTile } from '@/components/ui/StatTile';
 import { RailStat } from '@/components/ui/RailStat';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { rotuloPosicao } from '@/transfer/marketFilters';
+import { L, LOCALE } from '@/i18n/L';
 
 /** Fonte de número do layer final: Anton. (Era serifa itálica.) */
 const NUM = 'var(--font-impact)';
 const COLLECTIVE_GROUPS = ['defensivo', 'criativo', 'ataque'] as const;
+/** Rótulo de TELA do grupo — o valor continua o mesmo. */
+const ROTULO_GRUPO: Record<(typeof COLLECTIVE_GROUPS)[number], string> = {
+  defensivo: L('defensivo', 'defensive'),
+  criativo: L('criativo', 'creative'),
+  ataque: L('ataque', 'attack'),
+};
 
 function collectiveGroupIcon(g: (typeof COLLECTIVE_GROUPS)[number]) {
   if (g === 'defensivo') return Shield;
@@ -26,19 +34,19 @@ function collectiveGroupIcon(g: (typeof COLLECTIVE_GROUPS)[number]) {
 
 /** Descrição HONESTA do que cada role faz HOJE (treino / scouting / fadiga). Efeito em partida ao vivo é wiring futuro. */
 const ROLE_ONELINER: Record<StaffRoleId, string> = {
-  preparador_fisico: 'Energia em jogo e fadiga',
-  mental: 'Reforça treino mental',
-  nutricao: 'Fadiga e risco de lesão',
-  tatico: 'Reforça treino tático',
-  treinador: 'Mais slots, todo treino',
-  olheiro: 'Desconto no scouting',
-  preparador_goleiros: 'Reforça treino de goleiros',
+  preparador_fisico: L('Energia em jogo e fadiga', 'Match energy and fatigue'),
+  mental: L('Reforça treino mental', 'Boosts mental training'),
+  nutricao: L('Fadiga e risco de lesão', 'Fatigue and injury risk'),
+  tatico: L('Reforça treino tático', 'Boosts tactical training'),
+  treinador: L('Mais slots, todo treino', 'More slots, all training'),
+  olheiro: L('Desconto no scouting', 'Scouting discount'),
+  preparador_goleiros: L('Reforça treino de goleiros', 'Boosts goalkeeper training'),
 };
 
 function formatCost(cost: { currency: 'exp' | 'bro'; amount: number }): string {
   return cost.currency === 'bro'
     ? `${(cost.amount / 100).toFixed(2)} BRO`
-    : `${cost.amount.toLocaleString('pt-BR')} EXP`;
+    : `${cost.amount.toLocaleString(LOCALE)} EXP`;
 }
 
 export function TeamStaff() {
@@ -78,10 +86,10 @@ export function TeamStaff() {
   if (!coach || !manager) {
     return (
       <div className="w-full max-w-4xl mx-auto px-4 py-8">
-        <BackButton to="/clube" label="Clube" />
+        <BackButton to="/clube" label={L('Clube', 'Club')} />
         <div className="sports-panel p-6 text-center">
           <Bot className="w-12 h-12 mx-auto text-gray-500 mb-4" />
-          <p className="text-gray-400">Coach não disponível</p>
+          <p className="text-gray-400">{L('Coach não disponível', 'Coach unavailable')}</p>
         </div>
       </div>
     );
@@ -139,14 +147,14 @@ export function TeamStaff() {
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-8">
       <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-6">
-        <BackButton to="/clube" label="Clube" />
+        <BackButton to="/clube" label={L('Clube', 'Club')} />
 
         <EditorialHero
           watermark="STAFF"
-          eyebrow="Gestão do clube · Profissionais"
+          eyebrow={L('Gestão do clube · Profissionais', 'Club management · Professionals')}
           title="Staff"
           subtitle={coach.name}
-          stats={`${activeInstr} instruções ativas · reputação ${coach.reputation}/100`}
+          stats={L(`${activeInstr} instruções ativas · reputação ${coach.reputation}/100`, `${activeInstr} active instructions · reputation ${coach.reputation}/100`)}
           icon={
             <div className="relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
@@ -168,33 +176,33 @@ export function TeamStaff() {
               </div>
               <div>
                 <h3 className="font-display text-lg font-bold uppercase tracking-wider text-white">{coach.name}</h3>
-                <p className="text-xs text-white/50">{coach.personality} · assistente técnico IA · rep {coach.reputation}/100</p>
+                <p className="text-xs text-white/50">{coach.personality} · {L('assistente técnico IA', 'AI assistant coach')} · rep {coach.reputation}/100</p>
               </div>
             </div>
             <button onClick={() => navigate('/coach/chat')}
               className="inline-flex items-center gap-2 rounded-md bg-neon-yellow px-5 py-3 font-display text-sm font-bold uppercase tracking-wide text-black transition-colors hover:bg-white">
-              <MessageCircle className="h-5 w-5" /> Conversar
+              <MessageCircle className="h-5 w-5" /> {L('Conversar', 'Chat')}
             </button>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-3 md:grid-cols-5">
-            <StatTile value={coach.tactical} label="Tático" tone="accent" hint="0–20" />
-            <StatTile value={coach.motivation} label="Motivação" tone="accent" hint="0–20" />
-            <StatTile value={coach.discipline} label="Disciplina" tone="accent" hint="0–20" />
-            <StatTile value={coach.attacking} label="Ataque" tone="accent" hint="0–20" />
-            <StatTile value={coach.defending} label="Defesa" tone="accent" hint="0–20" />
+            <StatTile value={coach.tactical} label={L('Tático', 'Tactical')} tone="accent" hint="0–20" />
+            <StatTile value={coach.motivation} label={L('Motivação', 'Motivation')} tone="accent" hint="0–20" />
+            <StatTile value={coach.discipline} label={L('Disciplina', 'Discipline')} tone="accent" hint="0–20" />
+            <StatTile value={coach.attacking} label={L('Ataque', 'Attack')} tone="accent" hint="0–20" />
+            <StatTile value={coach.defending} label={L('Defesa', 'Defence')} tone="accent" hint="0–20" />
           </div>
         </motion.div>
 
         {/* ── Stat cards (rail) ── */}
         <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-          <RailStat label="Slots por role" value={<>{perRoleCap}</>} hint={`Treinador nível ${treinadorLvl}`} />
-          <RailStat label="EXP disponível" value={<>{Math.round(finance.ole).toLocaleString('pt-BR')}</>} />
-          <RailStat label="BRO disponível" value={<>{(finance.broCents / 100).toFixed(2)}</>} />
+          <RailStat label={L('Slots por role', 'Slots per role')} value={<>{perRoleCap}</>} hint={L(`Treinador nível ${treinadorLvl}`, `Head Coach level ${treinadorLvl}`)} />
+          <RailStat label={L('EXP disponível', 'EXP available')} value={<>{Math.round(finance.ole).toLocaleString(LOCALE)}</>} />
+          <RailStat label={L('BRO disponível', 'BRO available')} value={<>{(finance.broCents / 100).toFixed(2)}</>} />
         </div>
 
         {/* ── Profissionais — evoluir com confirmação ── */}
         <div>
-          <StepHeader title="Profissionais" />
+          <StepHeader title={L('Profissionais', 'Professionals')} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {STAFF_ROLE_IDS.map((id) => {
               const level = manager.staff.roles[id] ?? 1;
@@ -205,7 +213,7 @@ export function TeamStaff() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="font-display text-[15px] font-semibold uppercase tracking-[0.03em] text-white">{STAFF_LABELS[id]}</div>
                     <div className="flex items-baseline gap-1 shrink-0">
-                      <span className="font-display text-[9px] uppercase tracking-[0.12em] text-white/40">Nível</span>
+                      <span className="font-display text-[9px] uppercase tracking-[0.12em] text-white/40">{L('Nível', 'Level')}</span>
                       <span className="tabular-nums leading-none text-neon-yellow" style={{ fontFamily: NUM, fontSize: '24px' }}>{level}</span>
                       <span className="font-display text-[11px] text-white/35">/5</span>
                     </div>
@@ -216,7 +224,7 @@ export function TeamStaff() {
                     onClick={() => cost && setConfirmRole(id)}
                     className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-neon-yellow py-2.5 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
                   >
-                    {cost ? <><TrendingUp className="h-3.5 w-3.5" /> Evoluir · {formatCost(cost)}</> : 'Nível máximo'}
+                    {cost ? <><TrendingUp className="h-3.5 w-3.5" /> {L('Evoluir', 'Upgrade')} · {formatCost(cost)}</> : L('Nível máximo', 'Max level')}
                   </button>
                 </div>
               );
@@ -228,18 +236,18 @@ export function TeamStaff() {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="sports-panel space-y-3 p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="flex items-center gap-2 font-display text-lg font-bold uppercase tracking-wider">
-              <UserCog className="h-5 w-5" /> Buff de treino por jogador
+              <UserCog className="h-5 w-5" /> {L('Buff de treino por jogador', 'Training buff per player')}
             </h3>
-            <span className="text-[10px] uppercase tracking-wider text-gray-500">Só jogadores da academia · cada role aceita {perRoleCap} atleta(s)</span>
+            <span className="text-[10px] uppercase tracking-wider text-gray-500">{L(`Só jogadores da academia · cada role aceita ${perRoleCap} atleta(s)`, `Academy players only · each role takes ${perRoleCap} player(s)`)}</span>
           </div>
 
           {academyRoster.length === 0 ? (
             <div className="rounded border border-dashed border-white/15 bg-black/30 p-6 text-center">
               <Sparkles className="mx-auto h-6 w-6 text-neon-yellow/80" aria-hidden />
-              <p className="mt-3 text-sm text-white/80">Nenhum jogador da academia.</p>
+              <p className="mt-3 text-sm text-white/80">{L('Nenhum jogador da academia.', 'No academy players.')}</p>
               <p className="mt-1 text-xs text-gray-500">
-                Crie o primeiro na{' '}
-                <Link to="/clube/academia" className="text-neon-yellow underline hover:text-white">Academia</Link>.
+                {L('Crie o primeiro na', 'Create the first one in the')}{' '}
+                <Link to="/clube/academia" className="text-neon-yellow underline hover:text-white">{L('Academia', 'Academy')}</Link>.
               </p>
             </div>
           ) : (
@@ -260,11 +268,11 @@ export function TeamStaff() {
                         <div className="grid h-9 w-9 shrink-0 place-items-center rounded bg-neon-yellow/15 font-display text-sm font-black text-neon-yellow">{p.num}</div>
                         <div className="min-w-0 text-left">
                           <div className="truncate text-sm font-bold text-white">{p.name}</div>
-                          <div className="text-[10px] uppercase tracking-wider text-gray-500">{p.pos} · OVR {Math.round(overallFromAttributes(p.attrs, p.pos))}</div>
+                          <div className="text-[10px] uppercase tracking-wider text-gray-500">{rotuloPosicao(p.pos)} · OVR {Math.round(overallFromAttributes(p.attrs, p.pos))}</div>
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        <span className={cn('rounded px-2 py-0.5 text-[10px] font-bold', pillTone)}>{savedAssigned.length} no treino</span>
+                        <span className={cn('rounded px-2 py-0.5 text-[10px] font-bold', pillTone)}>{savedAssigned.length} {L('no treino', 'in training')}</span>
                         <ChevronDown className={cn('h-4 w-4 text-gray-500 transition-transform', isOpen && 'rotate-180 text-white')} />
                       </div>
                     </button>
@@ -282,7 +290,7 @@ export function TeamStaff() {
                                 className={cn('rounded px-2 py-2 font-display text-[11px] font-bold uppercase tracking-wide transition-colors',
                                   selected ? 'bg-neon-yellow text-black' : 'border border-white/10 bg-white/5 text-white hover:bg-white/10',
                                   disabled && 'pointer-events-none opacity-35')}
-                                title={gkLocked ? 'Só para goleiros' : roleFull ? 'Slots da role cheios' : undefined}>
+                                title={gkLocked ? L('Só para goleiros', 'Goalkeepers only') : roleFull ? L('Slots da role cheios', 'Role slots full') : undefined}>
                                 <div>{STAFF_LABELS[id]}</div>
                                 <div className="mt-0.5 text-[9px] font-normal opacity-70">{roleUsage[id]}/{perRoleCap} slot(s){gkLocked ? ' · GK' : ''}</div>
                               </button>
@@ -292,21 +300,21 @@ export function TeamStaff() {
                         <div className="flex items-center gap-2">
                           <button type="button" onClick={() => applyDraft(p.id)} disabled={!dirty}
                             className="inline-flex flex-1 items-center justify-center gap-1.5 rounded bg-neon-yellow px-4 py-2 font-display text-xs font-bold uppercase tracking-wider text-black disabled:opacity-40 sm:flex-none">
-                            <Zap className="h-3.5 w-3.5" aria-hidden /> Aplicar
+                            <Zap className="h-3.5 w-3.5" aria-hidden /> {L('Aplicar', 'Apply')}
                           </button>
                           {dirty && (
                             <button type="button" onClick={() => resetDraft(p.id)}
-                              className="rounded border border-white/15 px-3 py-2 font-display text-[11px] font-bold uppercase tracking-wider text-gray-300 hover:bg-white/5">Cancelar</button>
+                              className="rounded border border-white/15 px-3 py-2 font-display text-[11px] font-bold uppercase tracking-wider text-gray-300 hover:bg-white/5">{L('Cancelar', 'Cancel')}</button>
                           )}
                         </div>
                         {showFlash && savedAssigned.length > 0 && (
                           <div className="rounded border border-neon-green/35 bg-neon-green/10 p-3">
                             <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-neon-green">
-                              <Check className="h-3.5 w-3.5" /> Buff de treino aplicado
+                              <Check className="h-3.5 w-3.5" /> {L('Buff de treino aplicado', 'Training buff applied')}
                             </div>
                             <ul className="mt-2 space-y-0.5 text-[11px] text-white/85">
                               {savedAssigned.map((r) => (
-                                <li key={r}><span className="font-bold text-neon-yellow">{STAFF_LABELS[r]}</span> — N{manager.staff.roles[r] ?? 1} reforça o treino de {p.name}.</li>
+                                <li key={r}><span className="font-bold text-neon-yellow">{STAFF_LABELS[r]}</span> — N{manager.staff.roles[r] ?? 1} {L(`reforça o treino de ${p.name}.`, `boosts ${p.name}'s training.`)}</li>
                               ))}
                             </ul>
                           </div>
@@ -323,7 +331,7 @@ export function TeamStaff() {
         {/* ── Orientação de treino coletivo ── */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="sports-panel space-y-4 p-5">
           <h3 className="flex items-center gap-2 font-display text-lg font-bold uppercase tracking-wider">
-            <Users className="h-5 w-5" /> Orientação de treino coletivo
+            <Users className="h-5 w-5" /> {L('Orientação de treino coletivo', 'Team training guidance')}
           </h3>
           <div className="flex flex-wrap gap-2">
             {COLLECTIVE_GROUPS.map((g) => {
@@ -333,7 +341,7 @@ export function TeamStaff() {
                   className={group === g
                     ? 'inline-flex items-center gap-1.5 rounded bg-neon-yellow px-4 py-2 font-display text-xs font-bold uppercase text-black'
                     : 'inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/5 px-4 py-2 font-display text-xs font-bold uppercase text-gray-200'}>
-                  <GIcon className="h-3.5 w-3.5 shrink-0" aria-hidden /> {g}
+                  <GIcon className="h-3.5 w-3.5 shrink-0" aria-hidden /> {ROTULO_GRUPO[g]}
                 </button>
               );
             })}
@@ -357,7 +365,7 @@ export function TeamStaff() {
         open={!!(confirmRole && confirmCost)}
         onClose={() => setConfirmRole(null)}
         onConfirm={doUpgrade}
-        eyebrow="Confirmar evolução"
+        eyebrow={L('Confirmar evolução', 'Confirm upgrade')}
         title={confirmRole ? STAFF_LABELS[confirmRole] : ''}
         confirmDisabled={!confirmCanAfford}
       >
@@ -369,10 +377,10 @@ export function TeamStaff() {
               <span className="tabular-nums text-neon-yellow" style={{ fontFamily: NUM, fontSize: '30px' }}>{(manager.staff.roles[confirmRole] ?? 1) + 1}</span>
             </div>
             <div className="mt-4 space-y-1.5 text-[12.5px]">
-              <div className="flex justify-between"><span className="text-white/50">Custo</span><span className="font-semibold text-white">{formatCost(confirmCost)}</span></div>
-              <div className="flex justify-between"><span className="text-white/50">Teu saldo</span><span className={confirmCanAfford ? 'text-white' : 'text-[color:var(--color-danger)]'}>{confirmCost.currency === 'exp' ? `${Math.round(finance.ole).toLocaleString('pt-BR')} EXP` : `${(finance.broCents / 100).toFixed(2)} BRO`}</span></div>
+              <div className="flex justify-between"><span className="text-white/50">{L('Custo', 'Cost')}</span><span className="font-semibold text-white">{formatCost(confirmCost)}</span></div>
+              <div className="flex justify-between"><span className="text-white/50">{L('Teu saldo', 'Your balance')}</span><span className={confirmCanAfford ? 'text-white' : 'text-[color:var(--color-danger)]'}>{confirmCost.currency === 'exp' ? `${Math.round(finance.ole).toLocaleString(LOCALE)} EXP` : `${(finance.broCents / 100).toFixed(2)} BRO`}</span></div>
             </div>
-            {!confirmCanAfford && <p className="mt-3 text-[11.5px] text-[color:var(--color-danger)]">Saldo insuficiente para esta evolução.</p>}
+            {!confirmCanAfford && <p className="mt-3 text-[11.5px] text-[color:var(--color-danger)]">{L('Saldo insuficiente para esta evolução.', 'Insufficient balance for this upgrade.')}</p>}
           </>
         )}
       </ConfirmDialog>

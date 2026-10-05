@@ -14,11 +14,12 @@ import { Hashtag } from '@/components/ui';
 import { ArrowLeft, Trophy, Star } from 'lucide-react';
 import type { GlobalFixture } from '@/match/globalMatch';
 import type { LeagueRound } from '@/match/globalLeagueMVP';
+import { L, LOCALE } from '@/i18n/L';
 
 function formatKickoff(ms: number): string {
   const d = new Date(ms);
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) +
-    ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit' }) +
+    ' ' + d.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
 }
 
 function HistoryFixtureRow({ fixture, myTeamId }: { fixture: GlobalFixture; myTeamId: string | null }) {
@@ -31,9 +32,9 @@ function HistoryFixtureRow({ fixture, myTeamId }: { fixture: GlobalFixture; myTe
   if (isMyMatch) {
     const myGoals = isMyHome ? fixture.scoreHome : fixture.scoreAway;
     const theirGoals = isMyHome ? fixture.scoreAway : fixture.scoreHome;
-    if (myGoals > theirGoals) { resultLabel = 'V'; resultColor = 'text-alta'; }
-    else if (myGoals === theirGoals) { resultLabel = 'E'; resultColor = 'text-giz'; }
-    else { resultLabel = 'D'; resultColor = 'text-baixa'; }
+    if (myGoals > theirGoals) { resultLabel = L('V', 'W'); resultColor = 'text-alta'; }
+    else if (myGoals === theirGoals) { resultLabel = L('E', 'D'); resultColor = 'text-giz'; }
+    else { resultLabel = L('D', 'L'); resultColor = 'text-baixa'; }
   }
 
   return (
@@ -96,7 +97,7 @@ function RoundSection({ round, myTeamId, index }: { round: LeagueRound; myTeamId
         <div className="flex items-center gap-2">
           <Trophy className="w-4 h-4 text-neon-yellow" />
           <span className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-            Rodada {round.roundNumber}
+            {L('Rodada', 'Round')} {round.roundNumber}
           </span>
           {myFixture && <Star className="w-3 h-3 text-neon-yellow fill-neon-yellow" />}
         </div>
@@ -160,13 +161,13 @@ export default function GlobalLeagueHistory() {
     <div className="mx-auto min-w-0 w-full max-w-4xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 py-6 pb-12">
       {/* Header editorial */}
       <div>
-        <BackButton to="/match/global" label="Liga Global" />
-        <Hashtag className="mt-4 text-neon-yellow">#ligaglobal · arquivo</Hashtag>
+        <BackButton to="/match/global" label={L('Liga Global', 'Global League')} />
+        <Hashtag className="mt-4 text-neon-yellow">{L('#ligaglobal · arquivo', '#globalleague · archive')}</Hashtag>
         <h1
           className="mt-1 font-impact uppercase text-white leading-[1.1]"
           style={{ fontSize: 'clamp(2rem, 5.5vw, 3rem)', letterSpacing: '0.005em' }}
         >
-          Rodadas Passadas
+          {L('Rodadas Passadas', 'Past Rounds')}
         </h1>
       </div>
 
@@ -174,33 +175,33 @@ export default function GlobalLeagueHistory() {
       {myStats && myStats.matches > 0 && (
         <div className="sports-panel p-4 border border-white/10">
           <p className="truncate font-mono text-[10.5px] uppercase tracking-[0.14em] text-cimento mb-2">
-            Meu desempenho · {myTeam?.clubName}
+            {L('Meu desempenho', 'My record')} · {myTeam?.clubName}
           </p>
           <div className="flex items-center gap-6 flex-wrap">
             <div className="text-center">
               <span className="ole-num text-2xl text-neon-yellow">{myStats.matches}</span>
-              <p className="font-mono text-[9.5px] text-cimento uppercase">Jogos</p>
+              <p className="font-mono text-[9.5px] text-cimento uppercase">{L('Jogos', 'Played')}</p>
             </div>
             <div className="text-center">
               <span className="ole-num text-2xl text-alta">{myStats.wins}</span>
-              <p className="font-mono text-[9.5px] text-cimento uppercase">Vitórias</p>
+              <p className="font-mono text-[9.5px] text-cimento uppercase">{L('Vitórias', 'Wins')}</p>
             </div>
             <div className="text-center">
               <span className="ole-num text-2xl text-giz">{myStats.draws}</span>
-              <p className="font-mono text-[9.5px] text-cimento uppercase">Empates</p>
+              <p className="font-mono text-[9.5px] text-cimento uppercase">{L('Empates', 'Draws')}</p>
             </div>
             <div className="text-center">
               <span className="ole-num text-2xl text-baixa">{myStats.losses}</span>
-              <p className="font-mono text-[9.5px] text-cimento uppercase">Derrotas</p>
+              <p className="font-mono text-[9.5px] text-cimento uppercase">{L('Derrotas', 'Losses')}</p>
             </div>
             <div className="h-8 w-px bg-white/10" />
             <div className="text-center">
               <span className="ole-num text-2xl text-white">{myStats.goalsFor}</span>
-              <p className="font-mono text-[9.5px] text-cimento uppercase">Gols pró</p>
+              <p className="font-mono text-[9.5px] text-cimento uppercase">{L('Gols pró', 'Goals for')}</p>
             </div>
             <div className="text-center">
               <span className="ole-num text-2xl text-cimento">{myStats.goalsAgainst}</span>
-              <p className="font-mono text-[9.5px] text-cimento uppercase">Gols contra</p>
+              <p className="font-mono text-[9.5px] text-cimento uppercase">{L('Gols contra', 'Goals against')}</p>
             </div>
           </div>
         </div>
@@ -210,10 +211,10 @@ export default function GlobalLeagueHistory() {
       {finishedRounds.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-cimento text-base">
-            Nenhuma rodada finalizada ainda.
+            {L('Nenhuma rodada finalizada ainda.', 'No finished rounds yet.')}
           </p>
           <p className="font-mono text-poeira text-[11.5px] mt-2">
-            As rodadas são processadas nos slots: 05:30, 11:00, 15:00, 19:00, 21:30 UTC
+            {L('As rodadas são processadas nos slots: 05:30, 11:00, 15:00, 19:00, 21:30 UTC', 'Rounds are processed in slots: 05:30, 11:00, 15:00, 19:00, 21:30 UTC')}
           </p>
         </div>
       ) : (

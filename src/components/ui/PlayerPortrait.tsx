@@ -1,14 +1,15 @@
 import type { CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 import { portraitFocusStyle } from '@/supabase/legacyPlayers';
+import { L } from '@/i18n/L';
 
 type Rarity = 'normal' | 'ouro' | 'epico' | 'lenda' | 'genesis';
 
 const RARITY_LABEL: Record<Rarity, string> = {
   normal: 'Normal',
-  ouro: 'Ouro',
-  epico: 'Épico',
-  lenda: 'Lenda',
+  ouro: L('Ouro', 'Gold'),
+  epico: L('Épico', 'Epic'),
+  lenda: L('Lenda', 'Legend'),
   genesis: 'Genesis',
 };
 
@@ -108,7 +109,7 @@ export function PlayerPortrait({
       {src ? (
         <img
           src={src}
-          alt={alt ?? name ?? 'Jogador'}
+          alt={alt ?? name ?? L('Jogador', 'Player')}
           className={cn('absolute inset-0 h-full w-full object-cover opacity-95', !focus && 'object-top')}
           style={focus ? portraitFocusStyle(focus.x, focus.y, focus.zoom) : undefined}
           loading="lazy"

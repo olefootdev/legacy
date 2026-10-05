@@ -2,6 +2,7 @@
  * Catálogo de estilos de cabelo para Academia OLE / prompt de retrato (personagem fictício).
  * Referências a jogadores reais são apenas âncoras de estilo para ilustração, não rostos reais.
  */
+import { emIngles } from '@/i18n/L';
 export type ManagerHairStyleCatalogEntry = {
   id: string;
   name: string;
@@ -174,6 +175,33 @@ export function hairStylePromptFromCatalogId(id: string): string | undefined {
 
 /** Rótulo para selects: nome do estilo + jogador de referência; sem raridade nem metadados de tipo. */
 export function hairStyleSelectLabel(entry: ManagerHairStyleCatalogEntry): string {
-  const ref = entry.example_player?.trim();
-  return ref ? `${entry.name} (${ref})` : entry.name;
+  const refPt = entry.example_player?.trim();
+  const ref = emIngles() && refPt === 'Jogador de base' ? 'Academy player' : refPt;
+  const nome = hairStyleDisplayName(entry);
+  return ref ? `${nome} (${ref})` : nome;
+}
+
+/**
+ * Nome do estilo NA TELA. O `name` do catálogo fica em português porque
+ * alimenta o prompt da arte (`hairStylePromptFromCatalogId`); em inglês a tela
+ * usa este rótulo.
+ */
+const HAIR_NAME_EN: Record<string, string> = {
+  fade_short_top: 'Fade, short top',
+  fade_messy_top: 'Fade, messy top',
+  faux_hawk: 'Faux hawk',
+  short_curly: 'Short curly',
+  afro: 'Big afro',
+  dreads: 'Dreads',
+  dreads_ronaldinho: 'Classic dreads (Ronaldinho)',
+  braids: 'Braids',
+  long_tied: 'Long, tied back',
+  beckham_style: 'Styled medium straight',
+  buzz_cut: 'Buzz cut',
+  dyed_style: 'Dyed / platinum',
+  raiz_simple: 'Simple, no frills',
+};
+
+export function hairStyleDisplayName(entry: ManagerHairStyleCatalogEntry): string {
+  return emIngles() ? HAIR_NAME_EN[entry.id] ?? entry.name : entry.name;
 }

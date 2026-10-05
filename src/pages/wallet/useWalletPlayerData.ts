@@ -5,6 +5,7 @@ import type { PlayerEvolutionTimelineMap } from '@/team/playerEvolutionTimeline'
 import { MEMORABLE_TROPHY_SLOTS, type MemorableTrophyId } from '@/trophies/memorableCatalog';
 import type { WatchlistEntry } from './PlayerWatchlist';
 import type { TrophyEntry } from './TrophyShowcase';
+import { L } from '@/i18n/L';
 
 const SPARK_POINTS = 24;
 
@@ -168,7 +169,7 @@ export function useUnlockedTrophies(): TrophyEntry[] {
         leagueName: slot.name,
         // `season` fica de fora: o unlock não grava a temporada, e usar o ano atual
         // fazia um troféu antigo exibir o ano de hoje.
-        position: 'Campeão',
+        position: L('Campeão', 'Champion'),
         note: slot.blurb,
       });
     }
@@ -178,7 +179,7 @@ export function useUnlockedTrophies(): TrophyEntry[] {
 
 export function useTopSquadPlayers(limit = 3): WatchlistEntry[] {
   const players = useGameStore((s) => s.players);
-  const clubName = useGameStore((s) => s.club?.shortName ?? s.club?.name ?? 'Meu Clube');
+  const clubName = useGameStore((s) => s.club?.shortName ?? s.club?.name ?? L('Meu Clube', 'My Club'));
   const timeline = useGameStore(
     (s) => (s as { playerEvolutionTimeline?: PlayerEvolutionTimelineMap }).playerEvolutionTimeline,
   );

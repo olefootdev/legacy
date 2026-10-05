@@ -5,7 +5,9 @@
  */
 import type { PitchPlayerState } from '@/engine/types';
 import { Crown, Zap } from 'lucide-react';
+import { posLabel } from './posLabel';
 
+import { L } from '@/i18n/L';
 const NEON = '#FDE100';
 
 export interface LegacySkillBannerEntry {
@@ -27,17 +29,17 @@ interface Props {
 }
 
 const SKILL_TAGLINES: Record<string, { tag: string; legend: string }> = {
-  skl_goleiro_padrao:        { tag: 'REFLEXO',     legend: 'Reação · Taffarel 1994' },
-  skl_escola_taffarel:       { tag: 'PEGADA',      legend: 'Defesa · Taffarel 1994' },
-  skl_ferrolho_italiano:     { tag: 'FERROLHO',    legend: 'Marcação · Maldini 2003' },
-  skl_meia_padrao:           { tag: 'CONDUÇÃO',    legend: 'Visão · Zico 1982' },
-  skl_lateral_overlap_cross: { tag: 'OVERLAP',     legend: 'Subida · Cafu 2002' },
-  skl_atacante_padrao:       { tag: 'INFILTRA',    legend: 'Movimento · Romário 1994' },
-  skl_artilheiro_clutch:     { tag: 'CLUTCH',      legend: 'Frieza · Pelé 1970' },
+  skl_goleiro_padrao:        { tag: L('REFLEXO', 'REFLEX'),     legend: L('Reação · Taffarel 1994', 'Reaction · Taffarel 1994') },
+  skl_escola_taffarel:       { tag: L('PEGADA', 'GRIP'),      legend: L('Defesa · Taffarel 1994', 'Save · Taffarel 1994') },
+  skl_ferrolho_italiano:     { tag: L('FERROLHO', 'LOCKDOWN'),    legend: L('Marcação · Maldini 2003', 'Marking · Maldini 2003') },
+  skl_meia_padrao:           { tag: L('CONDUÇÃO', 'CARRY'),    legend: L('Visão · Zico 1982', 'Vision · Zico 1982') },
+  skl_lateral_overlap_cross: { tag: 'OVERLAP',     legend: L('Subida · Cafu 2002', 'Surge · Cafu 2002') },
+  skl_atacante_padrao:       { tag: L('INFILTRA', 'RUNS IN'),    legend: L('Movimento · Romário 1994', 'Movement · Romário 1994') },
+  skl_artilheiro_clutch:     { tag: 'CLUTCH',      legend: L('Frieza · Pelé 1970', 'Composure · Pelé 1970') },
 };
 
 function taglineFor(skillId: string): { tag: string; legend: string } {
-  return SKILL_TAGLINES[skillId] ?? { tag: 'LEGADO', legend: 'Inspiração histórica' };
+  return SKILL_TAGLINES[skillId] ?? { tag: L('LEGADO', 'LEGACY'), legend: L('Inspiração histórica', 'Historic inspiration') };
 }
 
 function formatBuffDuration(sec: number): string {
@@ -114,7 +116,7 @@ export function LegacySkillBanner({
             flex: 1,
           }}
         >
-          Modo Legacy
+          {L('Modo Legacy', 'Legacy Mode')}
         </div>
         <div
           style={{
@@ -186,7 +188,7 @@ export function LegacySkillBanner({
               marginBottom: 2,
             }}
           >
-            #{player.num} · {player.pos}
+            #{player.num} · {posLabel(player.pos)}
           </div>
           <div
             style={{
@@ -264,7 +266,7 @@ export function LegacySkillBanner({
                   textTransform: 'uppercase',
                 }}
               >
-                {formatBuffDuration(buffDurationSec!)} de buff
+                {formatBuffDuration(buffDurationSec!)} {L('de buff', 'buff')}
               </span>
             </div>
           )}
@@ -279,7 +281,7 @@ export function LegacySkillBanner({
                 textTransform: 'uppercase',
               }}
             >
-              {sessionsCompleted} {sessionsCompleted === 1 ? 'sessão' : 'sessões'}
+              {sessionsCompleted} {sessionsCompleted === 1 ? L('sessão', 'session') : L('sessões', 'sessions')}
             </span>
           )}
         </div>

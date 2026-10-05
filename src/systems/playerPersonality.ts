@@ -17,6 +17,7 @@
  * Determinístico — o mesmo jogador no mesmo estado dá sempre os mesmos números,
  * sem Math.random e sem Date.
  */
+import { L } from '@/i18n/L';
 
 export interface PersonalityInput {
   playerId: string;
@@ -140,13 +141,13 @@ export function detectPlayerRequest(
   });
 
   if (share < MINUTES_FLOOR && (p.ego >= ANSIOSO || p.ambicao >= ANSIOSO)) {
-    return mk('minutes', 'Quero começar a próxima partida. Estou pronto.');
+    return mk('minutes', L('Quero começar a próxima partida. Estou pronto.', 'I want to start the next match. I\'m ready.'));
   }
   if (p.ambicao >= 75 && p.lealdade < 45) {
-    return mk('ambition', 'Quero disputar competições maiores. Aqui dá pra sonhar mais alto?');
+    return mk('ambition', L('Quero disputar competições maiores. Aqui dá pra sonhar mais alto?', 'I want to play in bigger competitions. Can I dream bigger here?'));
   }
   if (p.ego >= 80 && share >= MINUTES_FLOOR) {
-    return mk('respect', 'Carrego esse time. Queria sentir isso no meu tratamento.');
+    return mk('respect', L('Carrego esse time. Queria sentir isso no meu tratamento.', 'I carry this team. I want to feel that in how I’m treated.'));
   }
   return null;
 }
@@ -180,27 +181,27 @@ export function resolveRequest(kind: PlayerRequestKind, choice: PlayerRequestCho
         relationDelta: 8,
         moralDelta: 10,
         reply: kind === 'minutes'
-          ? 'Você começa a próxima. A vaga é sua pra perder.'
-          : 'Combinado. Você vai sentir a diferença.',
+          ? L('Você começa a próxima. A vaga é sua pra perder.', 'You start the next one. The spot is yours to lose.')
+          : L('Combinado. Você vai sentir a diferença.', 'Deal. You\'ll feel the difference.'),
       };
     case 'challenge':
       return {
         relationDelta: -5,
         moralDelta: -6,
-        reply: 'Vaga aqui se conquista no treino. Mostra que é seu.',
+        reply: L('Vaga aqui se conquista no treino. Mostra que é seu.', 'Spots here are earned in training. Show it’s yours.'),
       };
     case 'promise':
       return {
         relationDelta: 2,
         moralDelta: 3,
-        reply: 'Sua hora vem. Segura a ansiedade e continua trabalhando.',
+        reply: L('Sua hora vem. Segura a ansiedade e continua trabalhando.', 'Your time will come. Stay calm and keep working.'),
       };
   }
 }
 
 /** Rótulo curto pt-BR de cada escolha — botões da UI. */
 export const CHOICE_LABEL: Record<PlayerRequestChoice, string> = {
-  grant: 'Dar chance',
-  challenge: 'Conquistar vaga',
-  promise: 'Prometer minutos',
+  grant: L('Dar chance', 'Give a chance'),
+  challenge: L('Conquistar vaga', 'Earn the spot'),
+  promise: L('Prometer minutos', 'Promise minutes'),
 };

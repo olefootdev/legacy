@@ -15,6 +15,7 @@ import { LegendaryBadge } from '@/store/LegendaryBadge';
 import { PremiumPriceReveal } from '@/store/PremiumPriceReveal';
 import { StoreViewToggle, type StoreViewMode } from '@/store/StoreViewToggle';
 import { StoreItemList } from '@/store/StoreItemList';
+import { L, LOCALE } from '@/i18n/L';
 
 type ShopTab = 'todos' | ShopTabId;
 
@@ -57,7 +58,7 @@ function rarityStyles(r: ShopRarity): {
       return {
         border: 'border-white/12',
         frame: 'hover:border-white/30',
-        label: 'COMUM',
+        label: L('COMUM', 'COMMON'),
         labelClass: 'bg-white/10 text-white/70',
         rail: 'bg-white/25',
       };
@@ -65,7 +66,7 @@ function rarityStyles(r: ShopRarity): {
       return {
         border: 'border-neon-yellow/25',
         frame: 'hover:border-white/30',
-        label: 'RARO',
+        label: L('RARO', 'RARE'),
         labelClass: 'bg-neon-yellow/12 text-neon-yellow/85',
         rail: 'bg-neon-yellow/45',
       };
@@ -73,7 +74,7 @@ function rarityStyles(r: ShopRarity): {
       return {
         border: 'border-neon-yellow/55',
         frame: 'border-neon-yellow/55',
-        label: 'ÉPICO',
+        label: L('ÉPICO', 'EPIC'),
         labelClass: 'bg-neon-yellow/25 text-neon-yellow',
         rail: 'bg-neon-yellow',
       };
@@ -82,7 +83,7 @@ function rarityStyles(r: ShopRarity): {
       return {
         border: 'border-neon-yellow',
         frame: 'border-2 border-neon-yellow',
-        label: 'MÍTICO',
+        label: L('MÍTICO', 'MYTHIC'),
         labelClass: 'bg-neon-yellow text-black',
         rail: 'bg-neon-yellow',
       };
@@ -98,13 +99,13 @@ function rarityStyles(r: ShopRarity): {
 }
 
 function formatBro(cents: number): string {
-  return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (cents / 100).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function priceLines(item: ShopCatalogItem): { bro: string | null; exp: string | null } {
   return {
     bro: item.priceBroCents != null && item.priceBroCents > 0 ? `${formatBro(item.priceBroCents)} BRO` : null,
-    exp: item.priceExp != null && item.priceExp > 0 ? `${item.priceExp.toLocaleString('pt-BR')} EXP` : null,
+    exp: item.priceExp != null && item.priceExp > 0 ? `${item.priceExp.toLocaleString(LOCALE)} EXP` : null,
   };
 }
 
@@ -127,10 +128,10 @@ function featuredBoxesConfigForStoreTab(tab: ShopTab): {
   variant: 'premium' | 'rising' | 'drop';
 } {
   switch (tab) {
-    case 'todos':   return { title: 'Destaques da loja', subtitle: 'Seleção curada — featured + raridades mais altas.', variant: 'premium' };
-    case 'packs':   return { title: 'Packs em foco', subtitle: 'Blindpacks com maior chance de tier raro.', variant: 'drop' };
-    case 'boosters':return { title: 'Boosters em alta', subtitle: 'Mais usados antes de partidas decisivas.', variant: 'rising' };
-    case 'extra':   return { title: 'Extras da temporada', subtitle: 'Cosméticos e upgrades da estrutura.', variant: 'premium' };
+    case 'todos':   return { title: L('Destaques da loja', 'Store highlights'), subtitle: L('Seleção curada — featured + raridades mais altas.', 'Curated pick — featured + top rarities.'), variant: 'premium' };
+    case 'packs':   return { title: L('Packs em foco', 'Packs in focus'), subtitle: L('Blindpacks com maior chance de tier raro.', 'Blindpacks with the best odds of a rare tier.'), variant: 'drop' };
+    case 'boosters':return { title: L('Boosters em alta', 'Trending boosters'), subtitle: L('Mais usados antes de partidas decisivas.', 'Most used before decisive matches.'), variant: 'rising' };
+    case 'extra':   return { title: L('Extras da temporada', 'Season extras'), subtitle: L('Cosméticos e upgrades da estrutura.', 'Cosmetics and facility upgrades.'), variant: 'premium' };
   }
 }
 
@@ -148,7 +149,7 @@ export function Store() {
   const [purchaseErr, setPurchaseErr] = useState<string | null>(null);
 
   const broDisplay = useMemo(() => formatBro(finance.broCents ?? 0), [finance.broCents]);
-  const expDisplay = useMemo(() => Math.floor(finance.ole ?? 0).toLocaleString('pt-BR'), [finance.ole]);
+  const expDisplay = useMemo(() => Math.floor(finance.ole ?? 0).toLocaleString(LOCALE), [finance.ole]);
 
   const filtered = useMemo(
     () => (tab === 'todos' ? catalog : catalog.filter((i) => i.tab === tab)),
@@ -161,14 +162,17 @@ export function Store() {
     const canBro = item.priceBroCents != null && item.priceBroCents > 0;
     if (currency === 'exp' && (!canExp || finance.ole < item.priceExp!)) {
       setPurchaseErr(
-        `Faltam ${Math.max(0, Math.ceil((item.priceExp ?? 0) - (finance.ole ?? 0))).toLocaleString('pt-BR')} EXP para pagar este item.`,
+        L(
+          `Faltam ${Math.max(0, Math.ceil((item.priceExp ?? 0) - (finance.ole ?? 0))).toLocaleString(LOCALE)} EXP para pagar este item.`,
+          `You need ${Math.max(0, Math.ceil((item.priceExp ?? 0) - (finance.ole ?? 0))).toLocaleString(LOCALE)} more EXP to pay for this item.`,
+        ),
       );
       return;
     }
     if (currency === 'bro' && (!canBro || finance.broCents < item.priceBroCents!)) {
       const need = (item.priceBroCents ?? 0) - (finance.broCents ?? 0);
       setPurchaseErr(
-        `Faltam ${formatBro(Math.max(0, need))} BRO para pagar este item.`,
+        L(`Faltam ${formatBro(Math.max(0, need))} BRO para pagar este item.`, `You need ${formatBro(Math.max(0, need))} more BRO to pay for this item.`),
       );
       return;
     }
@@ -194,14 +198,17 @@ export function Store() {
       setConfirmItem(null);
       setPurchaseOutcome({
         kind: 'error',
-        title: 'Compra não registrada',
+        title: L('Compra não registrada', 'Purchase not recorded'),
         message:
-          'O pagamento não foi aplicado (saldo pode ter mudado ou o item não está disponível). Abra a Wallet, confira EXP/BRO e tente outra vez.',
+          L(
+            'O pagamento não foi aplicado (saldo pode ter mudado ou o item não está disponível). Abra a Wallet, confira EXP/BRO e tente outra vez.',
+            'The payment was not applied (your balance may have changed or the item is unavailable). Open the Wallet, check EXP/BRO and try again.',
+          ),
       });
       return;
     }
 
-    const atLabel = new Date().toLocaleString('pt-BR', {
+    const atLabel = new Date().toLocaleString(LOCALE, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -228,19 +235,19 @@ export function Store() {
 
   // Meta da aba — segue padrão BVB do /transfer (num + eyebrow + subtitle + quote)
   const TAB_META: Record<ShopTab, { eyebrow: string }> = {
-    todos:    { eyebrow: 'Catálogo Olefoot' },
-    packs:    { eyebrow: 'Packs de Jogadores' },
-    boosters: { eyebrow: 'Boosters de Partida' },
-    extra:    { eyebrow: 'Extras Especiais' },
+    todos:    { eyebrow: L('Catálogo Olefoot', 'Olefoot Catalog') },
+    packs:    { eyebrow: L('Packs de Jogadores', 'Player Packs') },
+    boosters: { eyebrow: L('Boosters de Partida', 'Match Boosters') },
+    extra:    { eyebrow: L('Extras Especiais', 'Special Extras') },
   };
   const tabMeta = TAB_META[tab] ?? TAB_META.todos;
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 overflow-x-hidden pb-28 md:pb-12">
-      <BackButton to="/mercado" label="Mercado" />
+      <BackButton to="/mercado" label={L('Mercado', 'Market')} />
       {/* ── HERO EDITORIAL — diagonal split + watermark cinematográfico (espelha /transfer) ── */}
       <section
-        aria-label="Loja Olefoot"
+        aria-label={L('Loja Olefoot', 'Olefoot Store')}
         className="relative w-full overflow-hidden bg-neon-yellow"
       >
         {/* ── HERO no layer final ──────────────────────────────────────────
@@ -267,7 +274,7 @@ export function Store() {
               letterSpacing: '-0.01em',
             }}
           >
-            Loja
+            {L('Loja', 'Store')}
           </h1>
 
           <div className="mt-5 flex flex-wrap items-baseline gap-x-6 gap-y-2">
@@ -292,7 +299,7 @@ export function Store() {
               }}
             >
               <Wallet className="w-4 h-4" />
-              Carteira
+              {L('Carteira', 'Wallet')}
             </Link>
             <button
               type="button"
@@ -304,7 +311,7 @@ export function Store() {
               }}
             >
               <Sparkles className="w-4 h-4" />
-              Ver packs
+              {L('Ver packs', 'View packs')}
             </button>
           </div>
         </motion.div>
@@ -314,7 +321,7 @@ export function Store() {
       <div className="flex flex-wrap gap-2">
         {(
           [
-            { id: 'todos' as const, label: 'Todos' },
+            { id: 'todos' as const, label: L('Todos', 'All') },
             { id: 'packs' as const, label: 'Packs' },
             { id: 'boosters' as const, label: 'Boosters' },
             { id: 'extra' as const, label: 'Extra' },
@@ -340,8 +347,8 @@ export function Store() {
       <div className="flex items-start justify-between gap-4">
         <StoreSectionHeadline
           variant="moret"
-          title={tab === 'todos' ? 'Raros da Semana' : `Todos os ${TAB_META[tab].eyebrow}`}
-          subtitle={`${filtered.length} ${filtered.length === 1 ? 'item disponível' : 'itens disponíveis'}.`}
+          title={tab === 'todos' ? L('Raros da Semana', 'Rares of the Week') : L(`Todos os ${TAB_META[tab].eyebrow}`, `All ${TAB_META[tab].eyebrow}`)}
+          subtitle={`${filtered.length} ${filtered.length === 1 ? L('item disponível', 'item available') : L('itens disponíveis', 'items available')}.`}
         />
         <StoreViewToggle mode={viewMode} onChange={setViewMode} />
       </div>
@@ -360,7 +367,7 @@ export function Store() {
             const inv = inventory[item.id] ?? 0;
             const handleSelect = () => { setPurchaseErr(null); setConfirmItem(item); };
             const broText = item.priceBroCents != null && item.priceBroCents > 0 ? `${formatBro(item.priceBroCents)} BRO` : null;
-            const expText = item.priceExp != null && item.priceExp > 0 ? `${item.priceExp.toLocaleString('pt-BR')} EXP` : null;
+            const expText = item.priceExp != null && item.priceExp > 0 ? `${item.priceExp.toLocaleString(LOCALE)} EXP` : null;
             return (
               <PremiumPriceReveal
                 key={item.id}
@@ -403,7 +410,7 @@ export function Store() {
                       </span>
                       {item.consumable && inv > 0 ? (
                         <span className="rounded-sm bg-[var(--color-success)]/15 px-2.5 py-1 font-display text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--color-success)]">
-                          {inv}× inventário
+                          {inv}× {L('inventário', 'inventory')}
                         </span>
                       ) : null}
                     </div>
@@ -432,7 +439,7 @@ export function Store() {
                         </span>
                       ) : null}
                       {broText && expText ? (
-                        <span className="text-[10px] uppercase tracking-[0.2em] text-white/30">ou</span>
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-white/30">{L('ou', 'or')}</span>
                       ) : null}
                       {expText ? (
                         <span
@@ -453,7 +460,7 @@ export function Store() {
                       }}
                       className="mt-auto inline-flex items-center justify-center rounded-sm bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black transition-colors hover:bg-white"
                     >
-                      Comprar
+                      {L('Comprar', 'Buy')}
                     </button>
                   </div>
 
@@ -498,7 +505,7 @@ export function Store() {
               )}>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[9px] font-bold uppercase tracking-widest text-neon-yellow/90">
-                    Confirmar compra
+                    {L('Confirmar compra', 'Confirm purchase')}
                   </p>
 
                   {/* Nome do item — Anton. Serifa itálica é assinatura de LENDA. */}
@@ -524,14 +531,14 @@ export function Store() {
                   type="button"
                   onClick={() => setConfirmItem(null)}
                   className="rounded-full p-2 text-gray-400 transition hover:bg-white/10 hover:text-white"
-                  aria-label="Fechar"
+                  aria-label={L('Fechar', 'Close')}
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
               <div className="max-h-[min(60vh,420px)] space-y-4 overflow-y-auto overscroll-y-contain px-4 py-4">
                 <div className="rounded-xl border border-white/10 bg-black/40 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Resumo</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{L('Resumo', 'Summary')}</p>
                   <p className="mt-2 text-sm leading-relaxed text-gray-300">{confirmItem.blurb}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <span
@@ -547,13 +554,13 @@ export function Store() {
                     </span>
                     {confirmItem.consumable ? (
                       <span className="rounded border border-[var(--color-success)]/30 bg-[var(--color-success)]/10 px-2 py-0.5 font-display text-[8px] font-bold uppercase text-[var(--color-success)]">
-                        Consumível
+                        {L('Consumível', 'Consumable')}
                       </span>
                     ) : null}
                   </div>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-black/40 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Preço</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{L('Preço', 'Price')}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {checkoutPrices?.bro ? (
                       <span className="rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 font-impact tabular-nums text-white" style={{ fontSize: '15px' }}>
@@ -566,11 +573,11 @@ export function Store() {
                       </span>
                     ) : null}
                     {!checkoutPrices?.bro && !checkoutPrices?.exp ? (
-                      <span className="text-sm text-gray-500">Sem preço definido</span>
+                      <span className="text-sm text-gray-500">{L('Sem preço definido', 'No price set')}</span>
                     ) : null}
                   </div>
                   <p className="mt-3 text-[10px] leading-relaxed text-gray-600">
-                    Saldo: <span className="font-impact tabular-nums text-neon-yellow">{expDisplay} EXP</span>
+                    {L('Saldo', 'Balance')}: <span className="font-impact tabular-nums text-neon-yellow">{expDisplay} EXP</span>
                     <span className="mx-1.5 text-white/20">·</span>
                     <span className="font-impact tabular-nums text-white/80">{broDisplay} BRO</span>
                   </p>
@@ -581,7 +588,7 @@ export function Store() {
                         to="/wallet"
                         className="inline-flex w-full items-center justify-center rounded-lg border border-[var(--color-danger)]/35 bg-[var(--color-danger)]/15 py-2.5 font-display text-[10px] font-black uppercase tracking-wide text-[var(--color-danger)] transition hover:bg-[var(--color-danger)]/25 sm:w-auto sm:px-4"
                       >
-                        Ver saldo na Wallet
+                        {L('Ver saldo na Wallet', 'Check balance in Wallet')}
                       </Link>
                     </div>
                   ) : null}
@@ -593,7 +600,7 @@ export function Store() {
                   onClick={() => setConfirmItem(null)}
                   className="flex-1 rounded-xl border border-white/15 py-3 font-display text-[10px] font-bold uppercase tracking-wide text-gray-300 transition hover:bg-white/5"
                 >
-                  Cancelar
+                  {L('Cancelar', 'Cancel')}
                 </button>
                 {confirmItem.priceExp != null && confirmItem.priceExp > 0 ? (
                   <button
@@ -603,7 +610,7 @@ export function Store() {
                     className="btn-primary flex flex-1 items-center justify-center gap-2 py-3 font-display text-[10px] font-black uppercase tracking-wide disabled:opacity-40"
                   >
                     <Zap className="h-4 w-4" />
-                    Pagar {checkoutPrices?.exp ?? 'EXP'}
+                    {L('Pagar', 'Pay')} {checkoutPrices?.exp ?? 'EXP'}
                   </button>
                 ) : null}
                 {confirmItem.priceBroCents != null && confirmItem.priceBroCents > 0 ? (
@@ -614,7 +621,7 @@ export function Store() {
                     className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 py-3 font-display text-[10px] font-black uppercase tracking-wide text-white transition hover:bg-white/20 disabled:opacity-40"
                   >
                     <Wallet className="h-4 w-4" />
-                    Pagar {checkoutPrices?.bro ?? 'BRO'}
+                    {L('Pagar', 'Pay')} {checkoutPrices?.bro ?? 'BRO'}
                   </button>
                 ) : null}
               </div>
@@ -628,17 +635,20 @@ export function Store() {
         variant={purchaseOutcome?.kind === 'error' ? 'error' : 'success'}
         title={
           purchaseOutcome?.kind === 'success'
-            ? 'Compra concluída'
+            ? L('Compra concluída', 'Purchase complete')
             : purchaseOutcome?.kind === 'error'
               ? purchaseOutcome.title
               : ''
         }
         message={
           purchaseOutcome?.kind === 'success'
-            ? `Pagamento em ${purchaseOutcome.currency === 'exp' ? 'EXP' : 'BRO'} às ${purchaseOutcome.atLabel}. ${
+            ? `${L(
+                `Pagamento em ${purchaseOutcome.currency === 'exp' ? 'EXP' : 'BRO'} às ${purchaseOutcome.atLabel}.`,
+                `Paid in ${purchaseOutcome.currency === 'exp' ? 'EXP' : 'BRO'} at ${purchaseOutcome.atLabel}.`,
+              )} ${
                 purchaseOutcome.item.consumable
-                  ? 'O item está no inventário: abra Meu Time, escolha um jogador e aplique o consumível.'
-                  : 'O pedido do pack foi registrado; veja também a mensagem na caixa do clube.'
+                  ? L('O item está no inventário: abra Meu Time, escolha um jogador e aplique o consumível.', 'The item is in your inventory: open My Team, pick a player and apply the consumable.')
+                  : L('O pedido do pack foi registrado; veja também a mensagem na caixa do clube.', 'Your pack order was recorded; also check the message in the club inbox.')
               }`
             : purchaseOutcome?.kind === 'error'
               ? purchaseOutcome.message
@@ -650,7 +660,7 @@ export function Store() {
                 ...(purchaseOutcome.item.consumable
                   ? [
                       {
-                        label: 'Ir a Meu Time',
+                        label: L('Ir a Meu Time', 'Go to My Team'),
                         variant: 'primary' as const,
                         onClick: () => {
                           setPurchaseOutcome(null);
@@ -660,7 +670,7 @@ export function Store() {
                     ]
                   : []),
                 {
-                  label: purchaseOutcome.item.consumable ? 'Ficar na loja' : 'OK',
+                  label: purchaseOutcome.item.consumable ? L('Ficar na loja', 'Stay in store') : 'OK',
                   variant: purchaseOutcome.item.consumable ? ('secondary' as const) : ('primary' as const),
                   onClick: () => setPurchaseOutcome(null),
                 },
@@ -676,7 +686,7 @@ export function Store() {
             : purchaseOutcome?.kind === 'error'
               ? [
                   {
-                    label: 'Ir à Wallet',
+                    label: L('Ir à Wallet', 'Go to Wallet'),
                     variant: 'primary' as const,
                     onClick: () => {
                       setPurchaseOutcome(null);
@@ -684,7 +694,7 @@ export function Store() {
                     },
                   },
                   {
-                    label: 'Fechar',
+                    label: L('Fechar', 'Close'),
                     variant: 'ghost' as const,
                     onClick: () => setPurchaseOutcome(null),
                   },

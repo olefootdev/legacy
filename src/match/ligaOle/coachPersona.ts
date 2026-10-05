@@ -8,6 +8,7 @@
  * Falas respeitam a regra do analista: ≤5 palavras, sempre pt-BR.
  * PURO — sem Date/Math.random.
  */
+import { L } from '@/i18n/L';
 
 export type CoachArchetype =
   | 'provocador'
@@ -26,12 +27,12 @@ export interface CoachPersona {
 }
 
 const PERSONAS: Record<CoachArchetype, Omit<CoachPersona, 'archetype'>> = {
-  provocador: { label: 'O Provocador', icon: '😤' },
-  professor: { label: 'O Professor', icon: '📋' },
-  retranqueiro: { label: 'O Retranqueiro', icon: '🧱' },
-  romantico: { label: 'O Romântico', icon: '🎩' },
-  matador: { label: 'O Matador', icon: '🗡️' },
-  imprevisivel: { label: 'O Imprevisível', icon: '🎲' },
+  provocador: { label: L('O Provocador', 'The Provoker'), icon: '😤' },
+  professor: { label: L('O Professor', 'The Professor'), icon: '📋' },
+  retranqueiro: { label: L('O Retranqueiro', 'The Bus Parker'), icon: '🧱' },
+  romantico: { label: L('O Romântico', 'The Romantic'), icon: '🎩' },
+  matador: { label: L('O Matador', 'The Assassin'), icon: '🗡️' },
+  imprevisivel: { label: L('O Imprevisível', 'The Wildcard'), icon: '🎲' },
 };
 
 const ORDER: CoachArchetype[] = ['provocador', 'professor', 'retranqueiro', 'romantico', 'matador', 'imprevisivel'];
@@ -57,40 +58,40 @@ export type PersonaSituation = 'pre' | 'won' | 'lost' | 'eliminated_you';
  *  VISTA DO RIVAL (ele venceu / ele perdeu). */
 const LINES: Record<CoachArchetype, Record<PersonaSituation, string[]>> = {
   provocador: {
-    pre: ['Vai ser fácil hoje.', 'Trouxe até time reserva.'],
-    won: ['Eu avisei. Fácil.', 'Nem suamos a camisa.'],
-    lost: ['Sorte. Volto ano que vem.', 'Árbitro decidiu esse jogo.'],
-    eliminated_you: ['Tchau. Nem doeu.', 'Volta pra escolinha.'],
+    pre: [L('Vai ser fácil hoje.', 'It\'ll be easy today.'), L('Trouxe até time reserva.', 'Even brought the reserves.')],
+    won: [L('Eu avisei. Fácil.', 'Told you. Easy.'), L('Nem suamos a camisa.', 'Barely broke a sweat.')],
+    lost: [L('Sorte. Volto ano que vem.', 'Luck. See you next year.'), L('Árbitro decidiu esse jogo.', 'The ref decided this one.')],
+    eliminated_you: [L('Tchau. Nem doeu.', 'Bye. Didn\'t even hurt.'), L('Volta pra escolinha.', 'Back to football school.')],
   },
   professor: {
-    pre: ['Estudei cada jogada sua.', 'O plano está pronto.'],
-    won: ['O plano funcionou perfeitamente.', 'Xadrez, não futebol.'],
-    lost: ['Você me surpreendeu. Parabéns.', 'Vou rever a tese.'],
-    eliminated_you: ['Aula encerrada. Boa sorte.', 'Faltou tática. Estude.'],
+    pre: [L('Estudei cada jogada sua.', 'I studied your every move.'), L('O plano está pronto.', 'The plan is ready.')],
+    won: [L('O plano funcionou perfeitamente.', 'The plan worked perfectly.'), L('Xadrez, não futebol.', 'Chess, not football.')],
+    lost: [L('Você me surpreendeu. Parabéns.', 'You surprised me. Well done.'), L('Vou rever a tese.', 'I\'ll revise the thesis.')],
+    eliminated_you: [L('Aula encerrada. Boa sorte.', 'Class dismissed. Good luck.'), L('Faltou tática. Estude.', 'Lacked tactics. Study.')],
   },
   retranqueiro: {
-    pre: ['Ninguém fura meu muro.', 'Zero espaço pra vocês.'],
-    won: ['Muro em pé. Sempre.', 'Defesa ganha campeonato.'],
-    lost: ['Racharam o muro. Raro.', 'Um erro. Um só.'],
-    eliminated_you: ['O muro te engoliu.', 'Bateu e voltou.'],
+    pre: [L('Ninguém fura meu muro.', 'Nobody breaks my wall.'), L('Zero espaço pra vocês.', 'Zero space for you.')],
+    won: [L('Muro em pé. Sempre.', 'Wall still standing. Always.'), L('Defesa ganha campeonato.', 'Defence wins titles.')],
+    lost: [L('Racharam o muro. Raro.', 'They cracked the wall. Rare.'), L('Um erro. Um só.', 'One mistake. Just one.')],
+    eliminated_you: [L('O muro te engoliu.', 'The wall swallowed you.'), L('Bateu e voltou.', 'Hit it and bounced off.')],
   },
   romantico: {
-    pre: ['Que vença o futebol.', 'Hoje tem espetáculo.'],
-    won: ['Futebol bonito venceu hoje.', 'A torcida merecia isso.'],
-    lost: ['Perdi jogando bonito. Durmo tranquilo.', 'O futebol agradece. Parabéns.'],
-    eliminated_you: ['Foi lindo te vencer.', 'A poesia seguiu adiante.'],
+    pre: [L('Que vença o futebol.', 'May football win.'), L('Hoje tem espetáculo.', 'Tonight\'s a show.')],
+    won: [L('Futebol bonito venceu hoje.', 'Beautiful football won today.'), L('A torcida merecia isso.', 'The fans deserved this.')],
+    lost: [L('Perdi jogando bonito. Durmo tranquilo.', 'Lost playing beautifully. I sleep well.'), L('O futebol agradece. Parabéns.', 'Football thanks you. Well done.')],
+    eliminated_you: [L('Foi lindo te vencer.', 'Beating you was beautiful.'), L('A poesia seguiu adiante.', 'The poetry goes on.')],
   },
   matador: {
-    pre: ['Uma chance. Um gol.', 'Vim decidir, não jogar.'],
-    won: ['Cirúrgico. Como sempre.', 'Uma chance bastou.'],
-    lost: ['Errei a única. Acontece.', 'Hoje a faca falhou.'],
-    eliminated_you: ['Golpe único. Fim.', 'Nem viu de onde veio.'],
+    pre: [L('Uma chance. Um gol.', 'One chance. One goal.'), L('Vim decidir, não jogar.', 'Came to decide, not to play.')],
+    won: [L('Cirúrgico. Como sempre.', 'Surgical. As always.'), L('Uma chance bastou.', 'One chance was enough.')],
+    lost: [L('Errei a única. Acontece.', 'Missed the only one. Happens.'), L('Hoje a faca falhou.', 'The knife failed today.')],
+    eliminated_you: [L('Golpe único. Fim.', 'One blow. Done.'), L('Nem viu de onde veio.', 'Didn\'t see it coming.')],
   },
   imprevisivel: {
-    pre: ['Nem eu sei o plano.', 'Hoje pode dar tudo.'],
-    won: ['Caos venceu a ordem.', 'Ninguém previu. Nem eu.'],
-    lost: ['O caos me traiu hoje.', 'Amanhã invento outra.'],
-    eliminated_you: ['O caos te levou.', 'Imprevisível até no adeus.'],
+    pre: [L('Nem eu sei o plano.', 'Even I don\'t know the plan.'), L('Hoje pode dar tudo.', 'Anything can happen today.')],
+    won: [L('Caos venceu a ordem.', 'Chaos beat order.'), L('Ninguém previu. Nem eu.', 'Nobody saw it coming. Not even me.')],
+    lost: [L('O caos me traiu hoje.', 'Chaos betrayed me today.'), L('Amanhã invento outra.', 'Tomorrow I\'ll invent another.')],
+    eliminated_you: [L('O caos te levou.', 'Chaos took you.'), L('Imprevisível até no adeus.', 'Unpredictable even in goodbye.')],
   },
 };
 

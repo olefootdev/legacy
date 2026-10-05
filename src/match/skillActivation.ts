@@ -12,6 +12,7 @@ import type { PitchPlayerState } from '@/engine/types';
 import type { PlayerEntity } from '@/entities/types';
 import { getPlayerSkills } from '@/skills/index';
 import type { CoachSkill, SkillBehavior } from '@/skills/playbookV1';
+import { L } from '@/i18n/L';
 
 export interface ActiveSkill {
   skillId: string;
@@ -54,13 +55,13 @@ export class SkillActivationSystem {
     // Check if player has skill equipped
     const entity = playersById[playerId];
     if (!entity?.skills?.includes(skillId)) {
-      return { success: false, reason: 'Skill não equipada' };
+      return { success: false, reason: L('Skill não equipada', 'Skill not equipped') };
     }
 
     // Get skill definition
     const skills = getPlayerSkills([skillId]);
     if (skills.length === 0) {
-      return { success: false, reason: 'Skill não encontrada' };
+      return { success: false, reason: L('Skill não encontrada', 'Skill not found') };
     }
 
     const skill = skills[0];

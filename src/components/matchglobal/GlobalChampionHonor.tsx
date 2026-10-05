@@ -7,6 +7,7 @@
  *   • variant="hero"    → banner cheio no topo de /match/global (pós-coroação)
  *   • variant="compact" → módulo da Home ("Último Campeão Liga Global")
  */
+import { L, emIngles } from '@/i18n/L';
 import { motion } from 'motion/react';
 import { Crown, Trophy, ChevronRight } from 'lucide-react';
 import { Hashtag } from '@/components/ui';
@@ -30,7 +31,7 @@ function formatDatePt(iso?: string): string | null {
   if (!iso) return null;
   const p = iso.split('-');
   if (p.length !== 3) return iso;
-  return `${p[2]}/${p[1]}/${p[0]}`;
+  return emIngles() ? `${p[1]}/${p[2]}/${p[0]}` : `${p[2]}/${p[1]}/${p[0]}`;
 }
 
 export function GlobalChampionHonor({
@@ -66,7 +67,7 @@ export function GlobalChampionHonor({
             <Trophy className="h-6 w-6 text-neon-yellow" strokeWidth={2} />
           </span>
           <div className="min-w-0 flex-1">
-            <Hashtag className="text-neon-yellow/80">#ligaglobal · último campeão</Hashtag>
+            <Hashtag className="text-neon-yellow/80">{L('#ligaglobal · último campeão', '#globalleague · latest champion')}</Hashtag>
             <p
               className="truncate text-white"
               style={{ fontFamily: IMPACT, fontSize: 'clamp(20px, 6vw, 28px)', lineHeight: 1, letterSpacing: '0.01em' }}
@@ -79,7 +80,7 @@ export function GlobalChampionHonor({
                   Manager <span className="font-bold text-white/80">{managerName}</span>
                 </span>
               ) : (
-                <span className="truncate text-white/40">Campeão coroado</span>
+                <span className="truncate text-white/40">{L('Campeão coroado', 'Champion crowned')}</span>
               )}
               {dateLabel && <span className="shrink-0 text-white/30">· {dateLabel}</span>}
             </p>
@@ -115,7 +116,7 @@ export function GlobalChampionHonor({
         <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-neon-yellow/40 bg-black/50 px-3 py-1">
           <Crown className="h-3.5 w-3.5 text-neon-yellow" strokeWidth={2.5} aria-hidden />
           <span className="font-display text-[9px] font-bold uppercase tracking-[0.28em] text-neon-yellow">
-            Campeão da Liga Global
+            {L('Campeão da Liga Global', 'Global League Champion')}
           </span>
         </span>
 
@@ -134,7 +135,7 @@ export function GlobalChampionHonor({
 
         {managerName && (
           <p className="mt-3 text-white/70" style={{ fontFamily: 'var(--font-sans)', fontSize: 'clamp(16px, 4vw, 22px)' }}>
-            comandado por {managerName}
+            {L('comandado por', 'managed by')} {managerName}
           </p>
         )}
 
@@ -144,7 +145,7 @@ export function GlobalChampionHonor({
           {hasFinal && (
             <span className="font-mono text-sm">
               Final <span className="font-bold text-white">{finalScoreHome}–{finalScoreAway}</span> vs {runnerUpClubName}
-              {finalWentToPens ? ' (pên.)' : ''}
+              {finalWentToPens ? L(' (pên.)', ' (pens)') : ''}
             </span>
           )}
           {dateLabel && <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">{dateLabel}</span>}

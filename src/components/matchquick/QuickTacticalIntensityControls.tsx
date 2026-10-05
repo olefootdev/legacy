@@ -8,6 +8,7 @@ import { Shield, CircleDot, Zap, Flame, Swords, type LucideIcon } from 'lucide-r
 import type { TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
 import { TACTICAL_INTENSITY_PRESETS } from '@/match/quickTacticalIntensity';
 import { cn } from '@/lib/utils';
+import { emIngles } from '@/i18n/L';
 
 interface Props {
   current: TacticalIntensityLevel;
@@ -21,6 +22,15 @@ const INTENSITY_ICONS: Record<TacticalIntensityLevel, LucideIcon> = {
   counter: Zap,
   press: Flame,
   attack: Swords,
+};
+
+/** Rótulo/descrição de TELA em inglês (o preset do engine segue em PT). */
+const INTENSITY_EN: Record<TacticalIntensityLevel, { label: string; description: string }> = {
+  defend: { label: 'Defend', description: 'Low block, +25% defense, quick counters' },
+  possession: { label: 'Possession', description: 'Control the game, +15% possession, tire the opponent' },
+  counter: { label: 'Counter', description: 'Sit back and exploit space, +30% counters' },
+  press: { label: 'Press', description: 'High press, win the ball back fast, fatigue 1.6x' },
+  attack: { label: 'All-out Attack', description: '+20% goal chances, -10% defense, fatigue 2x' },
 };
 
 export function QuickTacticalIntensityControls({ current, onChange, disabled }: Props) {
@@ -56,7 +66,7 @@ export function QuickTacticalIntensityControls({ current, onChange, disabled }: 
               )}
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              {preset.label}
+              {emIngles() ? INTENSITY_EN[level].label : preset.label}
             </span>
             {isActive && (
               <motion.div
@@ -85,7 +95,7 @@ export function QuickTacticalIntensityInfo({ level }: { level: TacticalIntensity
       animate={{ opacity: 1, y: 0 }}
       className="p-2 rounded-lg bg-black/30 border border-white/10"
     >
-      <p className="text-xs text-white/70 text-center">{preset.description}</p>
+      <p className="text-xs text-white/70 text-center">{emIngles() ? INTENSITY_EN[level].description : preset.description}</p>
     </motion.div>
   );
 }

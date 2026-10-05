@@ -1,5 +1,6 @@
 import type { PitchPlayerState } from '@/engine/types';
 import type { MatchPlayerAttributes } from '@/match/playerInMatch';
+import { L } from '@/i18n/L';
 
 export type QuickMomentType =
   | 'counter_attack'
@@ -108,20 +109,20 @@ export function buildDefensiveChoiceMoment(ctx: MomentTriggerContext): QuickInte
     id: `defense_${ctx.minute}_${Date.now()}`,
     minute: ctx.minute,
     type: 'defensive_choice',
-    context: `Adversário avança com perigo no nosso terço. Linha defensiva pede orientação.`,
+    context: L(`Adversário avança com perigo no nosso terço. Linha defensiva pede orientação.`, `Opponent pushing dangerously into our third. The back line needs instructions.`),
     choices: [
       {
         id: 'block_low',
-        label: 'Bloco baixo',
-        description: 'Recua, fecha espaços, segura o resultado',
+        label: L('Bloco baixo', 'Low block'),
+        description: L('Recua, fecha espaços, segura o resultado', 'Drop deep, close spaces, protect the result'),
         successChance: blockChance,
         reward: { ole: 18, exp: 6 },
         momentumImpact: 6,
       },
       {
         id: 'press_high',
-        label: 'Pressão alta',
-        description: 'Sobe a linha, rouba na frente — alto risco/recompensa',
+        label: L('Pressão alta', 'High press'),
+        description: L('Sobe a linha, rouba na frente — alto risco/recompensa', 'Push up, win it high — high risk/reward'),
         successChance: pressChance,
         reward: { ole: 32, exp: 12 },
         momentumImpact: 18,
@@ -154,20 +155,20 @@ export function buildSubTimingMoment(
     id: `subtiming_${ctx.minute}_${Date.now()}`,
     minute: ctx.minute,
     type: 'sub_timing',
-    context: `${tired.name} está visivelmente cansado (${Math.round(tired.fatigue)}% fadiga). Trocar agora?`,
+    context: L(`${tired.name} está visivelmente cansado (${Math.round(tired.fatigue)}% fadiga). Trocar agora?`, `${tired.name} is visibly tired (${Math.round(tired.fatigue)}% fatigue). Sub now?`),
     choices: [
       {
         id: 'sub_now',
-        label: 'Trocar agora',
-        description: 'Mantém intensidade, gasta vaga de substituição',
+        label: L('Trocar agora', 'Sub now'),
+        description: L('Mantém intensidade, gasta vaga de substituição', 'Keeps intensity, uses a substitution'),
         successChance: 0.78,
         reward: { ole: 14, exp: 5 },
         momentumImpact: 9,
       },
       {
         id: 'hold_on',
-        label: 'Aguentar mais',
-        description: 'Economiza sub, risco de lesão e queda',
+        label: L('Aguentar mais', 'Hold on'),
+        description: L('Economiza sub, risco de lesão e queda', 'Saves a sub, risk of injury and drop-off'),
         successChance: 0.45,
         reward: { ole: 26, exp: 9 },
         momentumImpact: -4,
@@ -190,20 +191,20 @@ export function buildCounterAttackMoment(
     id: `counter_${ctx.minute}_${Date.now()}`,
     minute: ctx.minute,
     type: 'counter_attack',
-    context: `${attacker.name} rouba a bola no meio-campo e dispara em contra-ataque!`,
+    context: L(`${attacker.name} rouba a bola no meio-campo e dispara em contra-ataque!`, `${attacker.name} wins the ball in midfield and races away on the counter!`),
     choices: [
       {
         id: 'pass',
-        label: 'Passar',
-        description: 'Procurar companheiro melhor posicionado',
+        label: L('Passar', 'Pass'),
+        description: L('Procurar companheiro melhor posicionado', 'Find a better-placed teammate'),
         successChance: passChance,
         reward: { ole: 15, exp: 5 },
         momentumImpact: 8,
       },
       {
         id: 'shoot',
-        label: 'Chutar',
-        description: 'Arriscar finalização imediata',
+        label: L('Chutar', 'Shoot'),
+        description: L('Arriscar finalização imediata', 'Go for an instant shot'),
         successChance: shootChance,
         reward: { ole: 30, exp: 10 },
         momentumImpact: 15,
@@ -237,12 +238,12 @@ export function buildSetPieceMoment(
     id: `setpiece_${ctx.minute}_${Date.now()}`,
     minute: ctx.minute,
     type: 'set_piece',
-    context: `Falta perigosa na entrada da área! Quem deve cobrar?`,
+    context: L(`Falta perigosa na entrada da área! Quem deve cobrar?`, `Dangerous free kick at the edge of the box! Who takes it?`),
     choices: [
       {
         id: `taker_${taker1.playerId}`,
         label: taker1.name,
-        description: `Finalização ${finishing1} | Técnica ${technique1}`,
+        description: L(`Finalização ${finishing1} | Técnica ${technique1}`, `Finishing ${finishing1} | Technique ${technique1}`),
         successChance: chance1,
         reward: { ole: 25, exp: 8 },
         momentumImpact: 12,
@@ -250,7 +251,7 @@ export function buildSetPieceMoment(
       {
         id: `taker_${taker2.playerId}`,
         label: taker2.name,
-        description: `Finalização ${finishing2} | Técnica ${technique2}`,
+        description: L(`Finalização ${finishing2} | Técnica ${technique2}`, `Finishing ${finishing2} | Technique ${technique2}`),
         successChance: chance2,
         reward: { ole: 25, exp: 8 },
         momentumImpact: 12,
@@ -275,8 +276,8 @@ export function resolveInteractiveMoment(
       choiceId: 'timeout',
       success,
       narrative: success
-        ? `A IA decidiu por você e conseguiu criar perigo!`
-        : `A IA decidiu por você, mas a jogada não resultou.`,
+        ? L(`A IA decidiu por você e conseguiu criar perigo!`, `The AI decided for you and created danger!`)
+        : L(`A IA decidiu por você, mas a jogada não resultou.`, `The AI decided for you, but the move came to nothing.`),
       rewards: { ole: success ? Math.floor(fallback.reward.ole! * 0.5) : 0, exp: 0 },
       momentumDelta: success ? fallback.momentumImpact * 0.5 : -5,
     };
@@ -288,36 +289,36 @@ export function resolveInteractiveMoment(
   if (moment.type === 'counter_attack') {
     if (choice.id === 'pass') {
       narrative = success
-        ? `Passe perfeito! O companheiro recebe livre e finaliza com perigo!`
-        : `O passe foi interceptado. Oportunidade desperdiçada.`;
+        ? L(`Passe perfeito! O companheiro recebe livre e finaliza com perigo!`, `Perfect pass! The teammate receives it free and shoots dangerously!`)
+        : L(`O passe foi interceptado. Oportunidade desperdiçada.`, `The pass was intercepted. Chance wasted.`);
     } else {
       narrative = success
-        ? `Chute colocado! A bola passa raspando a trave e entra!`
-        : `Chute precipitado. A bola sai pela linha de fundo.`;
+        ? L(`Chute colocado! A bola passa raspando a trave e entra!`, `Placed shot! The ball grazes the post and goes in!`)
+        : L(`Chute precipitado. A bola sai pela linha de fundo.`, `Rushed shot. The ball goes out for a goal kick.`);
     }
   } else if (moment.type === 'set_piece') {
     narrative = success
-      ? `Cobrança magistral! A bola desvia na barreira e entra!`
-      : `A barreira bloqueou. Escanteio para a casa.`;
+      ? L(`Cobrança magistral! A bola desvia na barreira e entra!`, `Masterful free kick! It deflects off the wall and goes in!`)
+      : L(`A barreira bloqueou. Escanteio para a casa.`, `The wall blocked it. Corner to the home side.`);
   } else if (moment.type === 'defensive_choice') {
     if (choice.id === 'block_low') {
       narrative = success
-        ? `Linha cerrada! O zagueiro corta o cruzamento e a defesa respira.`
-        : `Linha baixa permitiu o chute. Goleiro trabalha, mas a pressão continua.`;
+        ? L(`Linha cerrada! O zagueiro corta o cruzamento e a defesa respira.`, `Tight line! The defender cuts out the cross and the defence breathes.`)
+        : L(`Linha baixa permitiu o chute. Goleiro trabalha, mas a pressão continua.`, `The deep line allowed the shot. Keeper makes the save, but the pressure continues.`);
     } else {
       narrative = success
-        ? `Pressão alta funciona! Roubada na frente e contra-ataque a caminho!`
-        : `Pressão arriscada — adversário furou a linha e criou perigo claro.`;
+        ? L(`Pressão alta funciona! Roubada na frente e contra-ataque a caminho!`, `High press works! Won it high and the counter is on!`)
+        : L(`Pressão arriscada — adversário furou a linha e criou perigo claro.`, `Risky press — the opponent broke the line and created a clear chance.`);
     }
   } else if (moment.type === 'sub_timing') {
     if (choice.id === 'sub_now') {
       narrative = success
-        ? `Troca certeira! Sangue novo em campo, intensidade recuperada.`
-        : `Substituição feita, mas o time leva tempo pra encaixar o entrante.`;
+        ? L(`Troca certeira! Sangue novo em campo, intensidade recuperada.`, `Spot-on change! Fresh legs on the pitch, intensity restored.`)
+        : L(`Substituição feita, mas o time leva tempo pra encaixar o entrante.`, `Sub made, but the team takes time to fit the newcomer in.`);
     } else {
       narrative = success
-        ? `Aguentou bravamente! Cansado, mas decisivo no momento certo.`
-        : `Cansaço cobrou caro — jogador errou jogada chave e baixou a energia da equipe.`;
+        ? L(`Aguentou bravamente! Cansado, mas decisivo no momento certo.`, `Held on bravely! Tired, but decisive at the right moment.`)
+        : L(`Cansaço cobrou caro — jogador errou jogada chave e baixou a energia da equipe.`, `Fatigue cost dearly — the player botched a key play and drained the team's energy.`);
     }
   }
 

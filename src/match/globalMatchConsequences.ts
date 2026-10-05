@@ -12,6 +12,7 @@ import type {
 } from './globalMatch';
 import type { LeagueStandingRow } from './adminLeagues';
 import { sortStandings } from './adminLeagues';
+import { L } from '@/i18n/L';
 
 interface PlayerImpact {
   playerId: string;
@@ -286,36 +287,36 @@ export function calculateTeamMomentum(
 export function formatConsequencesReport(consequences: RoundConsequences): string {
   const lines: string[] = [];
 
-  lines.push('=== CONSEQUÊNCIAS DA RODADA ===\n');
+  lines.push(L('=== CONSEQUÊNCIAS DA RODADA ===\n', '=== MATCHDAY CONSEQUENCES ===\n'));
 
   if (consequences.suspensions.length > 0) {
-    lines.push('🟥 SUSPENSÕES:');
+    lines.push(L('🟥 SUSPENSÕES:', '🟥 SUSPENSIONS:'));
     for (const s of consequences.suspensions) {
-      const reason = s.reason === 'red_card' ? 'Cartão Vermelho' : 'Acúmulo de Amarelos';
-      lines.push(`  • ${s.playerName} (${reason}) - ${s.roundsToServe} rodada(s)`);
+      const reason = s.reason === 'red_card' ? L('Cartão Vermelho', 'Red Card') : L('Acúmulo de Amarelos', 'Accumulated Yellows');
+      lines.push(L(`  • ${s.playerName} (${reason}) - ${s.roundsToServe} rodada(s)`, `  • ${s.playerName} (${reason}) - ${s.roundsToServe} matchday(s)`));
     }
     lines.push('');
   }
 
   if (consequences.injuries.length > 0) {
-    lines.push('⚠️ LESÕES:');
+    lines.push(L('⚠️ LESÕES:', '⚠️ INJURIES:'));
     for (const i of consequences.injuries) {
       const severityLabel = {
-        light: 'Leve',
-        moderate: 'Moderada',
-        severe: 'Grave',
+        light: L('Leve', 'Minor'),
+        moderate: L('Moderada', 'Moderate'),
+        severe: L('Grave', 'Severe'),
       }[i.severity];
-      lines.push(`  • ${i.playerName} (${severityLabel}) - ${i.recoveryRounds} rodada(s)`);
+      lines.push(L(`  • ${i.playerName} (${severityLabel}) - ${i.recoveryRounds} rodada(s)`, `  • ${i.playerName} (${severityLabel}) - ${i.recoveryRounds} matchday(s)`));
     }
     lines.push('');
   }
 
   if (consequences.standingsChanges.length > 0) {
-    lines.push('📊 MUDANÇAS NA TABELA:');
+    lines.push(L('📊 MUDANÇAS NA TABELA:', '📊 TABLE CHANGES:'));
     for (const c of consequences.standingsChanges) {
       const direction = c.newPosition < c.previousPosition ? '⬆️' : '⬇️';
       lines.push(
-        `  ${direction} ${c.teamName}: ${c.previousPosition}º → ${c.newPosition}º (+${c.pointsGained} pts)`,
+        L(`  ${direction} ${c.teamName}: ${c.previousPosition}º → ${c.newPosition}º (+${c.pointsGained} pts)`, `  ${direction} ${c.teamName}: ${c.previousPosition} → ${c.newPosition} (+${c.pointsGained} pts)`),
       );
     }
     lines.push('');
@@ -326,7 +327,7 @@ export function formatConsequencesReport(consequences: RoundConsequences): strin
     consequences.injuries.length === 0 &&
     consequences.standingsChanges.length === 0
   ) {
-    lines.push('Nenhuma consequência significativa nesta rodada.');
+    lines.push(L('Nenhuma consequência significativa nesta rodada.', 'No significant consequences this matchday.'));
   }
 
   return lines.join('\n');
@@ -344,7 +345,7 @@ export function isPlayerAvailable(
   if (suspension) {
     return {
       available: false,
-      reason: `Suspenso (${suspension.reason === 'red_card' ? 'Cartão Vermelho' : 'Acúmulo de Amarelos'})`,
+      reason: L(`Suspenso (${suspension.reason === 'red_card' ? 'Cartão Vermelho' : 'Acúmulo de Amarelos'})`, `Suspended (${suspension.reason === 'red_card' ? 'Red Card' : 'Accumulated Yellows'})`),
     };
   }
 
@@ -352,7 +353,7 @@ export function isPlayerAvailable(
   if (injury) {
     return {
       available: false,
-      reason: `Lesionado (${injury.severity})`,
+      reason: L(`Lesionado (${injury.severity})`, `Injured (${injury.severity})`),
     };
   }
 

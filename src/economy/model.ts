@@ -3,6 +3,8 @@
  * Compliance jurídico/contábil fica fora deste arquivo.
  */
 
+import { L } from '@/i18n/L';
+
 /** Moeda do ledger genérico (backend). */
 export type WalletCurrency = 'EXP' | 'BRO';
 
@@ -46,8 +48,10 @@ export function compareExpRanking(a: { expBalance: number }, b: { expBalance: nu
   return b.expBalance - a.expBalance;
 }
 
-export const BRO_USD_PARITY_COPY =
-  '1 BRO corresponde aproximadamente a 1 USD para comunicação e relatórios internos. Saques em moeda local, taxas e termos legais aplicam-se.';
+export const BRO_USD_PARITY_COPY = L(
+  '1 BRO corresponde aproximadamente a 1 USD para comunicação e relatórios internos. Saques em moeda local, taxas e termos legais aplicam-se.',
+  '1 BRO is roughly 1 USD for communication and internal reporting. Local-currency withdrawals, fees and legal terms apply.',
+);
 
 export interface AuctionListingCore {
   id: string;

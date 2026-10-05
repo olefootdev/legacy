@@ -23,6 +23,7 @@ import { aoMudarAPosicao } from '@/wallet/eventosDaCarteira';
 import { moedaDoJogo } from '@/wallet/constants';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { SecaoVolt } from '@/components/ui';
+import { L, LOCALE } from '@/i18n/L';
 
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
@@ -51,7 +52,7 @@ function formatUsdtUsdRef(cents: number): string {
  *  rótulo "Crédito (BRO)" — dois nomes pro mesmo saldo na mesma tela. */
 function formatBroCompacto(cents: number): string {
   const value = cents / 100;
-  return `${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BRO`;
+  return `${value.toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BRO`;
 }
 
 /** 11.965.198 → "11.9M"; 1.234 → "1.2K"; 950 → "950" — trunca, não arredonda. */
@@ -68,7 +69,7 @@ function formatCompact(n: number): string {
     const v = Math.floor(n / 1e2) / 10;
     return `${v.toFixed(1).replace(/\.0$/, '')}K`;
   }
-  return n.toLocaleString('pt-BR');
+  return n.toLocaleString(LOCALE);
 }
 
 export function Wallet() {
@@ -113,8 +114,8 @@ export function Wallet() {
     return () => { vivo = false; parar(); };
   }, []);
   const temPosicao = posicao != null && posicao.tokens > 0n;
-  const brInt = (v: bigint) => v.toLocaleString('pt-BR');
-  const dolarCents = (c: number) => `$${(c / 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`;
+  const brInt = (v: bigint) => v.toLocaleString(LOCALE);
+  const dolarCents = (c: number) => `$${(c / 100).toLocaleString(LOCALE, { maximumFractionDigits: 2 })}`;
 
   const expBalance = finance.ole ?? 0;
   const olefootBalance = legacyBalance != null ? Number(legacyBalance) : 0;
@@ -140,14 +141,14 @@ export function Wallet() {
       ? [{ label: 'OLEFOOT', value: brInt(posicao.tokens), highlight: true }]
       : []),
     {
-      label: 'Crédito (BRO)',
+      label: L('Crédito (BRO)', 'Credit (BRO)'),
       value: formatBroCompacto(finance.broCents),
       highlight: !temPosicao,
     },
     {
       label: 'EXP',
       value: formatCompact(expBalance),
-      subValue: `${expBalance.toLocaleString('pt-BR')} EXP`,
+      subValue: `${expBalance.toLocaleString(LOCALE)} EXP`,
       highlight: false,
     },
   ];
@@ -169,13 +170,13 @@ export function Wallet() {
     ...(temPosicao && posicao
       ? [{
           ticker: 'OLEFOOT',
-          name: 'Comprado na pré-venda',
+          name: L('Comprado na pré-venda', 'Bought in presale'),
           logoSrc: '/token/olefoot-token.svg',
           balance: `${brInt(posicao.tokens)} OLEFOOT`,
           fiatRef: posicao.travado > 0n
-            ? `${dolarCents(posicao.compradoUsdCents)} pagos · ${brInt(posicao.travado)} travados — liberam com o tempo ou com nova compra`
-            : `${dolarCents(posicao.compradoUsdCents)} pagos · liberado`,
-          badge: 'Seu',
+            ? L(`${dolarCents(posicao.compradoUsdCents)} pagos · ${brInt(posicao.travado)} travados — liberam com o tempo ou com nova compra`, `${dolarCents(posicao.compradoUsdCents)} paid · ${brInt(posicao.travado)} locked — unlock over time or with a new buy`)
+            : L(`${dolarCents(posicao.compradoUsdCents)} pagos · liberado`, `${dolarCents(posicao.compradoUsdCents)} paid · unlocked`),
+          badge: L('Seu', 'Yours'),
           highlight: true,
         }]
       : []),
@@ -184,7 +185,7 @@ export function Wallet() {
       // — que é crédito INTERNO comprado no PIX, não Tether nenhum. Com o
       // stablecoin de verdade chegando na Solana, esse rótulo deixaria de ser gafe.
       ticker: 'BRO',
-      name: 'Crédito Olefoot',
+      name: L('Crédito Olefoot', 'Olefoot credit'),
       logoSrc: '/wallet-olefoot-logo.png',
       balance: formatBro(finance.broCents),
       fiatRef: formatUsdtUsdRef(finance.broCents),
@@ -193,7 +194,7 @@ export function Wallet() {
       // Era "OLEFOOT · Olefoot Token" — o mesmo nome do token da Solana, com a
       // palavra "Token" no rótulo. Agora é OLEXP: saldo do jogo (constants.ts).
       ticker: moedaDoJogo(),
-      name: 'Saldo do jogo',
+      name: L('Saldo do jogo', 'Game balance'),
       logoSrc: '/wallet-olefoot-logo.png',
       balance: `${formatCompact(olefootBalance)} ${moedaDoJogo()}`,
       // SEM preço em dólar. Trazia `≈ $0.000000 · $0.000001/OLEXP (preço interno)`
@@ -209,10 +210,10 @@ export function Wallet() {
     ...(olefootMintAddress() && onchainOlefoot != null
       ? [{
           ticker: '$OLEFOOT',
-          name: 'Token na Solana (on-chain)',
+          name: L('Token na Solana (on-chain)', 'Token on Solana (on-chain)'),
           logoSrc: '/token/olefoot-token.svg',
           balance: `${formatCompact(onchainOlefoot)} OLEFOOT`,
-          fiatRef: 'na tua carteira vinculada · preço de mercado chega com a pool de liquidez',
+          fiatRef: L('na tua carteira vinculada · preço de mercado chega com a pool de liquidez', 'in your linked wallet · market price arrives with the liquidity pool'),
           badge: 'Solana',
         }]
       : []),
@@ -220,7 +221,7 @@ export function Wallet() {
 
   return (
     <WalletShell
-      title="Conta SPOT"
+      title={L('Conta SPOT', 'SPOT account')}
       heroStats={heroStats}
       heroVariant="compact"
     >
@@ -240,10 +241,10 @@ export function Wallet() {
       {/* ── SEUS SALDOS ───────────────────────────────────────────── */}
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <SecaoVolt label="Seus saldos" tone="neutro" className="min-w-0 grow" />
+          <SecaoVolt label={L('Seus saldos', 'Your balances')} tone="neutro" className="min-w-0 grow" />
           {usdBrlQuote.status === 'ok' && (
             <span className="hidden shrink-0 font-mono text-[10.5px] tabular-nums text-poeira sm:block">
-              1 BRO = US$ 1 = R$ {usdBrlQuote.olefootVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              1 BRO = US$ 1 = R$ {usdBrlQuote.olefootVenda.toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           )}
         </div>

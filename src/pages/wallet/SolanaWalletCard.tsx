@@ -9,6 +9,7 @@ import {
   type SolanaWalletLink,
   type SolanaWalletOption,
 } from '@/supabase/solanaWallet';
+import { L } from '@/i18n/L';
 
 function truncateAddress(addr: string): string {
   return addr.length > 10 ? `${addr.slice(0, 4)}…${addr.slice(-4)}` : addr;
@@ -55,7 +56,7 @@ export function SolanaWalletCard() {
     try {
       const r = await conectarOleWallet();
       if (!r.ok || !r.address) {
-        setError(r.error ?? 'Não foi possível vincular a OLEWALLET.');
+        setError(r.error ?? L('Não foi possível vincular a OLEWALLET.', 'Couldn\'t link the OLEWALLET.'));
         return;
       }
       setLink({ walletAddress: r.address, verified: true, linkedAt: new Date().toISOString() });
@@ -71,7 +72,7 @@ export function SolanaWalletCard() {
     try {
       const r = await connectAndLinkSolanaWallet(option);
       if (!r.ok || !r.address) {
-        setError(r.error ?? 'Não foi possível vincular a carteira.');
+        setError(r.error ?? L('Não foi possível vincular a carteira.', 'Couldn\'t link the wallet.'));
         return;
       }
       setLink({ walletAddress: r.address, verified: true, linkedAt: new Date().toISOString() });
@@ -96,7 +97,7 @@ export function SolanaWalletCard() {
             </p>
           ) : (
             <p className="mt-1 truncate text-[13px] text-giz">
-              {link ? 'Confirme com a carteira' : 'Carteira na Solana'}
+              {link ? L('Confirme com a carteira', 'Confirm with your wallet') : L('Carteira na Solana', 'Solana wallet')}
             </p>
           )}
         </div>
@@ -108,7 +109,7 @@ export function SolanaWalletCard() {
            — e a carteira é a única parte do produto que a pessoa pode perder
            sozinha. Ninguém deve ser empurrado pra ela. */
         <p className="mt-2 text-[12px] leading-relaxed text-cimento">
-          Opcional. Seu time, seu EXP e suas compras continuam funcionando sem ela.
+          {L('Opcional. Seu time, seu EXP e suas compras continuam funcionando sem ela.', 'Optional. Your team, your EXP and your purchases keep working without it.')}
         </p>
       )}
 
@@ -123,7 +124,7 @@ export function SolanaWalletCard() {
             >
               <span className="btn-primary-inner flex items-center gap-1.5">
                 <img src="/brand/olefoot-icone-yellow-01.svg" alt="" className="h-4 w-4" />
-                {busy === 'OLEWALLET' ? 'Aguardando…' : 'OLEWALLET'}
+                {busy === 'OLEWALLET' ? L('Aguardando…', 'Waiting…') : 'OLEWALLET'}
               </span>
             </button>
           )}
@@ -143,15 +144,15 @@ export function SolanaWalletCard() {
               >
                 <span className="btn-secondary-inner">
                   <img src={w.icon} alt="" className="h-4 w-4" />
-                  {busy === w.name ? 'Assinando…' : w.name}
+                  {busy === w.name ? L('Assinando…', 'Signing…') : w.name}
                 </span>
               </button>
             ))}
           </div>
         ) : (
           <div className="mt-2 space-y-1">
-            <p className="text-[12px] text-cimento">Nenhuma extensão de carteira neste navegador</p>
-            <p className="text-[12px] text-poeira">Use a OLEWALLET acima — ou abra o jogo pelo app da Phantom ou da MetaMask</p>
+            <p className="text-[12px] text-cimento">{L('Nenhuma extensão de carteira neste navegador', 'No wallet extension in this browser')}</p>
+            <p className="text-[12px] text-poeira">{L('Use a OLEWALLET acima — ou abra o jogo pelo app da Phantom ou da MetaMask', 'Use the OLEWALLET above — or open the game in the Phantom or MetaMask app')}</p>
           </div>
         )
       )}

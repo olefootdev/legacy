@@ -9,6 +9,7 @@ import type { CSSProperties } from 'react';
 import { motion } from 'motion/react';
 import type { SpiritOverlayKind } from '@/gamespirit/spiritSnapshotTypes';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 export interface MatchInterruptOverlayProps {
   kind: SpiritOverlayKind;
@@ -35,35 +36,35 @@ function kindStyle(kind: SpiritOverlayKind): KindStyle {
       return {
         accent: 'var(--color-event-goal)',
         onAccent: 'var(--color-deep-black)',
-        eyebrow: '#lance',
+        eyebrow: L('#lance', '#play'),
         borderRGB: '253,225,0',
       };
     case 'penalty':
       return {
         accent: 'var(--color-event-card-yellow)',
         onAccent: 'var(--color-deep-black)',
-        eyebrow: '#pênalti',
+        eyebrow: L('#pênalti', '#penalty'),
         borderRGB: '245,197,24',
       };
     case 'red_card':
       return {
         accent: 'var(--color-event-card-red)',
         onAccent: '#FFFFFF',
-        eyebrow: '#expulsão',
+        eyebrow: L('#expulsão', '#sentoff'),
         borderRGB: '225,29,42',
       };
     case 'halftime':
       return {
         accent: 'var(--color-event-goal)',
         onAccent: 'var(--color-deep-black)',
-        eyebrow: '#intervalo',
+        eyebrow: L('#intervalo', '#halftime'),
         borderRGB: '253,225,0',
       };
     default:
       return {
         accent: '#FFFFFF',
         onAccent: 'var(--color-deep-black)',
-        eyebrow: '#cena',
+        eyebrow: L('#cena', '#scene'),
         borderRGB: '255,255,255',
       };
   }

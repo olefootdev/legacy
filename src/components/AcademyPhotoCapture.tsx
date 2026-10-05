@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, Check, X, Loader2, Upload, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { L, emIngles } from '@/i18n/L';
 
 interface Props {
   /** Callback chamado quando o manager confirma a selfie. */
@@ -65,7 +66,7 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
     setErrorMsg(null);
     if (!navigator.mediaDevices?.getUserMedia) {
       setStage('permission-denied');
-      setErrorMsg('Webcam não disponível neste browser.');
+      setErrorMsg(L('Webcam não disponível neste browser.', 'Webcam not available in this browser.'));
       return;
     }
     try {
@@ -83,7 +84,7 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
       }, 50);
     } catch (e) {
       setStage('permission-denied');
-      setErrorMsg(`Permissão de câmera negada: ${e instanceof Error ? e.message : 'erro desconhecido'}`);
+      setErrorMsg(L(`Permissão de câmera negada: ${e instanceof Error ? e.message : 'erro desconhecido'}`, `Camera permission denied: ${e instanceof Error ? e.message : 'unknown error'}`));
     }
   }, []);
 
@@ -109,7 +110,7 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      setErrorMsg('Selecione um arquivo de imagem.');
+      setErrorMsg(L('Selecione um arquivo de imagem.', 'Select an image file.'));
       return;
     }
     setErrorMsg(null);
@@ -146,11 +147,13 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
         <div className="flex flex-col items-center gap-4 rounded-lg border border-white/15 bg-deep-black/50 p-6 text-center">
           <Camera className="h-10 w-10 text-neon-yellow" aria-hidden />
           <p className="text-sm text-white/85">
-            Tira uma selfie <strong>próxima do rosto</strong>, em local <strong>bem iluminado</strong>.
+            {emIngles()
+              ? <>Take a selfie <strong>close to your face</strong>, in a <strong>well-lit</strong> spot.</>
+              : <>Tira uma selfie <strong>próxima do rosto</strong>, em local <strong>bem iluminado</strong>.</>}
           </p>
           <p className="text-[11px] leading-relaxed text-white/60">
-            A foto vai ser usada como referência pra criar tua carta premium.<br />
-            Quanto melhor a iluminação e a resolução, melhor o resultado.
+            {L('A foto vai ser usada como referência pra criar tua carta premium.', 'The photo will be used as a reference to create your premium card.')}<br />
+            {L('Quanto melhor a iluminação e a resolução, melhor o resultado.', 'The better the lighting and resolution, the better the result.')}
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
@@ -159,7 +162,7 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
               className="btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 font-display text-xs font-black uppercase tracking-wider"
             >
               <Upload className="h-4 w-4" />
-              Tirar foto / Carregar
+              {L('Tirar foto / Carregar', 'Take photo / Upload')}
             </button>
             <button
               type="button"
@@ -167,12 +170,12 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
               className="inline-flex items-center justify-center gap-2 border border-white/30 px-5 py-2.5 font-display text-xs font-black uppercase tracking-wider text-white/85 hover:bg-white/10"
             >
               <Camera className="h-4 w-4" />
-              Câmera ao vivo
+              {L('Câmera ao vivo', 'Live camera')}
             </button>
           </div>
           <p className="text-[10px] leading-relaxed text-white/50">
-            No celular o botão "Tirar foto" abre a câmera frontal nativa.<br />
-            No PC abre o explorador de arquivos pra escolher uma imagem.
+            {L('No celular o botão "Tirar foto" abre a câmera frontal nativa.', 'On mobile, "Take photo" opens the native front camera.')}<br />
+            {L('No PC abre o explorador de arquivos pra escolher uma imagem.', 'On desktop it opens the file browser to pick an image.')}
           </p>
           {errorMsg && <p className="text-[11px] text-red-300">{errorMsg}</p>}
           {onCancel && (
@@ -181,7 +184,7 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
               onClick={onCancel}
               className="text-[10px] uppercase tracking-wider text-white/50 hover:text-white"
             >
-              Voltar
+              {L('Voltar', 'Back')}
             </button>
           )}
         </div>
@@ -191,9 +194,9 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
       {stage === 'permission-denied' && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-red-500/40 bg-red-950/40 p-5 text-center">
           <X className="h-6 w-6 text-red-300" aria-hidden />
-          <p className="text-sm text-red-200">{errorMsg ?? 'Câmera indisponível.'}</p>
+          <p className="text-sm text-red-200">{errorMsg ?? L('Câmera indisponível.', 'Camera unavailable.')}</p>
           <p className="text-[11px] text-red-200/70">
-            Sem problema — usa o botão de upload pra escolher uma foto do device.
+            {L('Sem problema — usa o botão de upload pra escolher uma foto do device.', 'No problem — use the upload button to pick a photo from your device.')}
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
@@ -202,14 +205,14 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
               className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-xs font-black uppercase tracking-wider"
             >
               <Upload className="h-4 w-4" />
-              Carregar foto
+              {L('Carregar foto', 'Upload photo')}
             </button>
             <button
               type="button"
               onClick={() => void startCamera()}
               className="border border-red-300/40 px-4 py-2 text-xs uppercase tracking-wider text-red-200 hover:bg-red-500/20"
             >
-              Tentar câmera de novo
+              {L('Tentar câmera de novo', 'Try camera again')}
             </button>
           </div>
         </div>
@@ -230,7 +233,7 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
             <div className="pointer-events-none absolute inset-0 border-4 border-dashed border-neon-yellow/40" />
           </div>
           <p className="text-center text-[12px] text-white/70">
-            Olha pra câmera, enquadra teu rosto no meio, e clica em Capturar.
+            {L('Olha pra câmera, enquadra teu rosto no meio, e clica em Capturar.', 'Look at the camera, center your face, and click Capture.')}
           </p>
           <div className="flex gap-2">
             <button
@@ -238,14 +241,14 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
               onClick={() => { stopStream(); setStage('idle'); }}
               className="border border-white/30 px-4 py-2 text-xs uppercase tracking-wider text-white/80 hover:bg-white/10"
             >
-              Cancelar
+              {L('Cancelar', 'Cancel')}
             </button>
             <button
               type="button"
               onClick={capture}
               className="btn-primary px-6 py-2.5 text-xs font-black uppercase tracking-wider"
             >
-              Capturar
+              {L('Capturar', 'Capture')}
             </button>
           </div>
         </div>
@@ -257,7 +260,7 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
           <div className="relative overflow-hidden rounded-lg border border-neon-yellow/40 bg-deep-black">
             <img
               src={previewUrl}
-              alt="Selfie capturada"
+              alt={L('Selfie capturada', 'Captured selfie')}
               className={cn(
                 'block max-h-[60vh] w-auto',
                 stage === 'composing' && 'opacity-60',
@@ -270,8 +273,8 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
             )}
           </div>
           <p className="text-center text-[10px] leading-relaxed text-neon-yellow/70">
-            ⚡ Tua selfie vai pra equipa Olefoot.<br />
-            A carta premium é feita à mão e entregue no teu plantel em breve.
+            ⚡ {L('Tua selfie vai pra equipa Olefoot.', 'Your selfie goes to the Olefoot team.')}<br />
+            {L('A carta premium é feita à mão e entregue no teu plantel em breve.', 'The premium card is handmade and delivered to your squad soon.')}
           </p>
           <div className="flex gap-2">
             <button
@@ -281,7 +284,7 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
               className="inline-flex items-center gap-1 border border-white/30 px-4 py-2 text-xs uppercase tracking-wider text-white/85 hover:bg-white/10 disabled:opacity-40"
             >
               <RefreshCw className="h-3 w-3" />
-              Tirar de novo
+              {L('Tirar de novo', 'Retake')}
             </button>
             <button
               type="button"
@@ -290,7 +293,7 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
               className="btn-primary inline-flex items-center gap-1 px-5 py-2 text-xs font-black uppercase tracking-wider disabled:opacity-40"
             >
               <Check className="h-3 w-3" />
-              {stage === 'composing' ? 'Enviando…' : 'Confirmar'}
+              {stage === 'composing' ? L('Enviando…', 'Sending…') : L('Confirmar', 'Confirm')}
             </button>
           </div>
         </div>

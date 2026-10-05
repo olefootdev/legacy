@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 import { VERACITY_PILLARS, veracityPillarTooltip, type VeracityPillarDef } from '@/lib/veracityPillarsMap';
 
 const DOT: Record<VeracityPillarDef['id'], string> = {
@@ -32,9 +33,12 @@ export function VeracityPillarsStrip({ className }: { className?: string }) {
         className,
       )}
       role="note"
-      aria-label="Rastreabilidade Olefoot: atributos em campo, impacto no XI e evolução. Passe o rato sobre cada etiqueta para ver onde é calculado no código."
+      aria-label={L(
+        'Rastreabilidade Olefoot: atributos em campo, impacto no XI e evolução. Passe o rato sobre cada etiqueta para ver onde é calculado no código.',
+        'Olefoot traceability: on-pitch attributes, XI impact and progression. Hover each tag to see where it is calculated in the code.',
+      )}
     >
-      <span className="shrink-0 font-semibold uppercase tracking-wide text-gray-600">Veracidade</span>
+      <span className="shrink-0 font-semibold uppercase tracking-wide text-gray-600">{L('Veracidade', 'Veracity')}</span>
       <span className="text-gray-600" aria-hidden>
         ·
       </span>

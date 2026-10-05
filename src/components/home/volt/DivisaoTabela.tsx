@@ -10,6 +10,7 @@ import { ChevronRight } from 'lucide-react';
 import { Hashtag, SecaoVolt, UmaLinha } from '@/components/ui';
 import { globalDivisionName } from '@/match/globalLeagueMVP';
 import type { DivisionView, StandingRow } from '@/ranking/divisionStandings';
+import { L } from '@/i18n/L';
 
 export function DivisaoTabela({
   view,
@@ -23,16 +24,16 @@ export function DivisaoTabela({
 }) {
   const hasAccess = view.promotionCount > 0;
   const tag = [
-    hasAccess ? `#sobem${view.promotionCount}` : '#título',
-    roundsLeft ? `${roundsLeft} rodada${roundsLeft > 1 ? 's' : ''}` : null,
+    hasAccess ? L(`#sobem${view.promotionCount}`, `#top${view.promotionCount}up`) : L('#título', '#title'),
+    roundsLeft ? L(`${roundsLeft} rodada${roundsLeft > 1 ? 's' : ''}`, `${roundsLeft} round${roundsLeft > 1 ? 's' : ''}`) : null,
   ]
     .filter(Boolean)
     .join(' · ');
   const opp = nextOpponent?.name.trim().toLowerCase() ?? null;
 
   return (
-    <section aria-label={`Sua divisão — ${globalDivisionName(view.division)}`} className="flex flex-col gap-3">
-      <SecaoVolt label={`Divisão ${view.division} · ${globalDivisionName(view.division)}`} tone="neutro">
+    <section aria-label={L(`Sua divisão — ${globalDivisionName(view.division)}`, `Your division — ${globalDivisionName(view.division)}`)} className="flex flex-col gap-3">
+      <SecaoVolt label={L(`Divisão ${view.division} · ${globalDivisionName(view.division)}`, `Division ${view.division} · ${globalDivisionName(view.division)}`)} tone="neutro">
         <Hashtag>{tag}</Hashtag>
       </SecaoVolt>
 
@@ -42,12 +43,12 @@ export function DivisaoTabela({
             <Linha
               row={row}
               inZone={hasAccess && row.pos <= view.promotionCount}
-              chip={opp && row.team.trim().toLowerCase() === opp ? (nextOpponent!.isToday ? 'HOJE' : 'PRÓXIMO') : null}
+              chip={opp && row.team.trim().toLowerCase() === opp ? (nextOpponent!.isToday ? L('HOJE', 'TODAY') : L('PRÓXIMO', 'NEXT')) : null}
             />
             {view.zoneAfterPos === row.pos && (
-              <div className="flex h-6 items-center gap-2 px-4" aria-label="Zona de acesso acima desta linha">
+              <div className="flex h-6 items-center gap-2 px-4" aria-label={L('Zona de acesso acima desta linha', 'Promotion zone above this line')}>
                 <span className="block h-0 grow border-t border-dashed border-alta" />
-                <span className="font-mono text-[10px] font-semibold tracking-[0.16em] text-alta">ZONA DE ACESSO</span>
+                <span className="font-mono text-[10px] font-semibold tracking-[0.16em] text-alta">{L('ZONA DE ACESSO', 'PROMOTION ZONE')}</span>
                 <span className="block h-0 grow border-t border-dashed border-alta" />
               </div>
             )}
@@ -57,12 +58,14 @@ export function DivisaoTabela({
         {hasAccess && (
           <div className="flex flex-col gap-2 border-b border-white/[0.06] px-4 py-3.5">
             {view.pointsToZone == null ? (
-              <UmaLinha className="text-[13.5px] font-semibold text-alta">Na zona de acesso</UmaLinha>
+              <UmaLinha className="text-[13.5px] font-semibold text-alta">{L('Na zona de acesso', 'In the promotion zone')}</UmaLinha>
             ) : (
               <>
                 <div className="flex min-w-0 items-baseline justify-between gap-3">
                   <UmaLinha className="text-[13.5px] font-semibold text-white">
-                    {view.pointsToZone === 0 ? 'Empatado com o acesso' : `−${view.pointsToZone} pro acesso`}
+                    {view.pointsToZone === 0
+                      ? L('Empatado com o acesso', 'Level with promotion')
+                      : L(`−${view.pointsToZone} pro acesso`, `−${view.pointsToZone} to promotion`)}
                   </UmaLinha>
                   <span className="shrink-0 font-mono text-[11px] text-cimento">
                     {view.me.points} / {view.zoneTargetPoints}
@@ -85,7 +88,7 @@ export function DivisaoTabela({
           to="/competicao/standings"
           className="ole-num flex h-12 items-center justify-between px-4 text-[12.5px] uppercase text-white transition-colors hover:text-neon-yellow"
         >
-          Tabela
+          {L('Tabela', 'Table')}
           <ChevronRight aria-hidden className="h-4 w-4 text-neon-yellow" strokeWidth={2.6} />
         </Link>
       </div>

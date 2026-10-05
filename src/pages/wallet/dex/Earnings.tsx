@@ -5,6 +5,7 @@ import { useEarnings } from './useEarnings';
 import { BlocoVault } from './BlocoVault';
 import { BlocoProducao } from './BlocoProducao';
 import { BlocoStake } from './BlocoStake';
+import { L } from '@/i18n/L';
 
 /**
  * EARNINGS — Vault, Produção e Stake dentro da conta DEX.
@@ -22,7 +23,7 @@ type Qual = 'vault' | 'producao' | 'stake';
 
 const ABAS: ReadonlyArray<{ readonly id: Qual; readonly rotulo: string }> = [
   { id: 'vault', rotulo: 'Vault' },
-  { id: 'producao', rotulo: 'Produção' },
+  { id: 'producao', rotulo: L('Produção', 'Production') },
   { id: 'stake', rotulo: 'Stake' },
 ];
 
@@ -33,7 +34,7 @@ export function Earnings() {
   return (
     <section className="min-w-0 space-y-3">
       <SecaoVolt label="Earnings">
-        <Hashtag>#vault #producao #stake</Hashtag>
+        <Hashtag>{L('#vault #producao #stake', '#vault #production #stake')}</Hashtag>
       </SecaoVolt>
 
       <div className="grid grid-cols-3 gap-1 border border-white/16 bg-panel p-1" role="tablist" aria-label="Earnings">
@@ -55,12 +56,12 @@ export function Earnings() {
       </div>
 
       {e.status === 'carregando' && (
-        <p className="py-4 font-mono text-[12px] text-cimento">Carregando…</p>
+        <p className="py-4 font-mono text-[12px] text-cimento">{L('Carregando…', 'Loading…')}</p>
       )}
       {e.status === 'erro' && (
         <div className="border border-atencao/40 bg-atencao/10 px-3.5 py-3">
           <p className="text-[12px] leading-relaxed text-giz">
-            Não deu para carregar as regras agora. Tente de novo em instantes.
+            {L('Não deu para carregar as regras agora. Tente de novo em instantes.', 'Couldn\'t load the rules right now. Try again in a moment.')}
           </p>
         </div>
       )}

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, TrendingUp, TrendingDown, AlertCircle, Zap, Shield, Battery } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SubstitutionSuggestion } from '@/match/smartSubstitutions';
+import { L } from '@/i18n/L';
 
 interface SubstitutionSuggestionPanelProps {
   suggestions: SubstitutionSuggestion[];
@@ -90,7 +91,7 @@ export function SubstitutionSuggestionPanel({
               {/* Urgência badge */}
               {suggestion.urgency === 'high' && (
                 <div className="absolute right-2 top-2 rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-bold uppercase text-white">
-                  Urgente
+                  {L('Urgente', 'Urgent')}
                 </div>
               )}
 
@@ -99,9 +100,9 @@ export function SubstitutionSuggestionPanel({
                 <div className="mb-2 flex items-center gap-2">
                   <Icon className={cn('h-4 w-4', config.color)} />
                   <span className="text-xs font-medium uppercase tracking-wider text-gray-400">
-                    {suggestion.reason === 'fatigue' && 'Fadiga'}
-                    {suggestion.reason === 'tactical' && 'Tático'}
-                    {suggestion.reason === 'injury' && 'Lesão'}
+                    {suggestion.reason === 'fatigue' && L('Fadiga', 'Fatigue')}
+                    {suggestion.reason === 'tactical' && L('Tático', 'Tactical')}
+                    {suggestion.reason === 'injury' && L('Lesão', 'Injury')}
                     {suggestion.reason === 'momentum' && 'Momentum'}
                   </span>
                   <span className="ml-auto text-xs text-gray-500">{suggestion.minute}'</span>
@@ -113,7 +114,7 @@ export function SubstitutionSuggestionPanel({
                 {/* Substituição */}
                 <div className="mb-3 flex items-center justify-between rounded-md bg-black/30 p-2">
                   <div className="flex-1">
-                    <div className="text-xs text-gray-400">Sai</div>
+                    <div className="text-xs text-gray-400">{L('Sai', 'Off')}</div>
                     <div className="font-bold text-white">{suggestion.playerOut.name}</div>
                     <div className="text-xs text-gray-500">#{suggestion.playerOut.num}</div>
                   </div>
@@ -121,7 +122,7 @@ export function SubstitutionSuggestionPanel({
                   <ArrowRight className="mx-2 h-5 w-5 text-yellow-400" />
 
                   <div className="flex-1 text-right">
-                    <div className="text-xs text-gray-400">Entra</div>
+                    <div className="text-xs text-gray-400">{L('Entra', 'On')}</div>
                     <div className="font-bold text-white">{suggestion.playerIn.name}</div>
                     <div className="text-xs text-gray-500">#{suggestion.playerIn.num}</div>
                   </div>
@@ -129,9 +130,9 @@ export function SubstitutionSuggestionPanel({
 
                 {/* Impacto */}
                 <div className="mb-3 flex flex-wrap gap-3">
-                  <ImpactIndicator value={suggestion.impact.attack} label="Ataque" />
-                  <ImpactIndicator value={suggestion.impact.defense} label="Defesa" />
-                  <ImpactIndicator value={suggestion.impact.energy} label="Energia" />
+                  <ImpactIndicator value={suggestion.impact.attack} label={L('Ataque', 'Attack')} />
+                  <ImpactIndicator value={suggestion.impact.defense} label={L('Defesa', 'Defence')} />
+                  <ImpactIndicator value={suggestion.impact.energy} label={L('Energia', 'Energy')} />
                 </div>
 
                 {/* Ações */}
@@ -140,13 +141,13 @@ export function SubstitutionSuggestionPanel({
                     onClick={() => onAccept(suggestion)}
                     className="flex-1 rounded-md bg-neon-yellow px-3 py-2 text-sm font-bold uppercase tracking-wide text-black transition-colors hover:bg-white"
                   >
-                    Substituir
+                    {L('Substituir', 'Substitute')}
                   </button>
                   <button
                     onClick={() => onDismiss(suggestion.id)}
                     className="rounded-md border border-white/20 px-3 py-2 text-sm font-medium text-gray-400 transition-all hover:bg-white/5"
                   >
-                    Ignorar
+                    {L('Ignorar', 'Ignore')}
                   </button>
                 </div>
               </div>

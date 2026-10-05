@@ -14,10 +14,11 @@ import { cn } from '@/lib/utils';
 import { BackButton } from '@/components/BackButton';
 import { Hashtag } from '@/components/ui';
 import { useGameStore } from '@/game/store';
+import { L } from '@/i18n/L';
 
 const MODE_LABEL: Record<PvpMatchMode, string> = {
-  quick: 'Liga Rápida',
-  classic: 'Liga Clássica',
+  quick: L('Liga Rápida', 'Quick League'),
+  classic: L('Liga Clássica', 'Classic League'),
 };
 
 export function PvpStandings() {
@@ -42,11 +43,11 @@ export function PvpStandings() {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-6 space-y-5">
-      <BackButton to="/competicao" label="Competição" />
+      <BackButton to="/competicao" label={L('Competição', 'Competition')} />
 
       {/* Header */}
       <header className="space-y-2">
-        <Hashtag className="text-neon-yellow">#pvp · classificação</Hashtag>
+        <Hashtag className="text-neon-yellow">{L('#pvp · classificação', '#pvp · standings')}</Hashtag>
         <h1
           className="truncate font-impact uppercase text-white"
           style={{ fontSize: 'clamp(32px, 6vw, 56px)', lineHeight: 1.1 }}
@@ -81,12 +82,12 @@ export function PvpStandings() {
 
       {loading ? (
         <div className="bg-panel border border-dashed border-white/10 p-6 text-center">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-cimento">Carregando classificação…</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-cimento">{L('Carregando classificação…', 'Loading standings…')}</p>
         </div>
       ) : rows.length === 0 ? (
         <div className="bg-panel border border-dashed border-white/10 p-8 text-center space-y-3">
           <Trophy className="w-10 h-10 text-poeira mx-auto" />
-          <p className="text-sm text-cimento">Nenhuma partida nesta liga ainda.</p>
+          <p className="text-sm text-cimento">{L('Nenhuma partida nesta liga ainda.', 'No matches in this league yet.')}</p>
         </div>
       ) : (
         <div className="bg-panel border border-white/10 overflow-x-auto">
@@ -98,11 +99,11 @@ export function PvpStandings() {
           >
             <span>#</span>
             <span>Manager</span>
-            <span className="text-center">J</span>
-            <span className="text-center">V</span>
-            <span className="text-center">E</span>
-            <span className="text-center">D</span>
-            <span className="text-center">SG</span>
+            <span className="text-center">{L('J', 'P')}</span>
+            <span className="text-center">{L('V', 'W')}</span>
+            <span className="text-center">{L('E', 'D')}</span>
+            <span className="text-center">{L('D', 'L')}</span>
+            <span className="text-center">{L('SG', 'GD')}</span>
             <span className="text-right">Pts</span>
           </div>
           {/* Rows */}
@@ -180,7 +181,7 @@ export function PvpStandings() {
       )}
 
       <p className="font-mono text-[10.5px] text-cimento text-center pt-2">
-        Vitória 3 · empate 1 · derrota 0 · desempate: saldo, depois gols pró
+        {L('Vitória 3 · empate 1 · derrota 0 · desempate: saldo, depois gols pró', 'Win 3 · draw 1 · loss 0 · tiebreak: goal difference, then goals for')}
       </p>
     </div>
   );

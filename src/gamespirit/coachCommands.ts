@@ -1,4 +1,5 @@
 import { TacticalIntent, type RelevanceResult, type StoryWeights } from './storyContracts';
+import { L } from '@/i18n/L';
 
 /** Frase canónica para testes de relevância (pressionar + fechar espaços). */
 export const CANONICAL_RELEVANT_COMMAND =
@@ -6,34 +7,34 @@ export const CANONICAL_RELEVANT_COMMAND =
 
 const KEYWORDS: { words: string[]; intent: TacticalIntent; reason: string }[] = [
   {
-    words: ['press', 'pressiona', 'pressing', 'alta', 'linha'],
+    words: ['press', 'pressiona', 'pressing', 'alta', 'linha', 'high', 'push up'],
     intent: TacticalIntent.PressHigh,
-    reason: 'Pedido de pressing / linha mais alta.',
+    reason: L('Pedido de pressing / linha mais alta.', 'High press / higher line requested.'),
   },
   {
-    words: ['recua', 'defende', 'fech', 'compact', 'bloco'],
+    words: ['recua', 'defende', 'fech', 'compact', 'bloco', 'deep', 'drop', 'sit back'],
     intent: TacticalIntent.Recover,
-    reason: 'Pedido de bloco mais baixo / recuperação.',
+    reason: L('Pedido de bloco mais baixo / recuperação.', 'Deeper block / recovery requested.'),
   },
   {
-    words: ['ataque', 'frente', 'remat', 'gol', 'finaliza', 'área'],
+    words: ['ataque', 'frente', 'remat', 'gol', 'finaliza', 'área', 'attack', 'shoot', 'goal', 'forward'],
     intent: TacticalIntent.FinalThird,
-    reason: 'Ênfase na zona final / finalização.',
+    reason: L('Ênfase na zona final / finalização.', 'Focus on the final third / finishing.'),
   },
   {
-    words: ['lateral', 'corredor', 'extrem'],
+    words: ['lateral', 'corredor', 'extrem', 'wide', 'wing', 'flank'],
     intent: TacticalIntent.WideOverload,
-    reason: 'Ênfase em corredores / largura.',
+    reason: L('Ênfase em corredores / largura.', 'Focus on the flanks / width.'),
   },
   {
-    words: ['transição', 'contra', 'velocidade'],
+    words: ['transição', 'contra', 'velocidade', 'counter', 'transition', 'fast'],
     intent: TacticalIntent.Counter,
-    reason: 'Ênfase em transição / contra-ataque.',
+    reason: L('Ênfase em transição / contra-ataque.', 'Focus on transition / counter-attack.'),
   },
   {
-    words: ['toc', 'posse', 'calm', 'rodar'],
+    words: ['toc', 'posse', 'calm', 'rodar', 'possession', 'keep the ball', 'patient'],
     intent: TacticalIntent.BuildUp,
-    reason: 'Ênfase em construção / posse.',
+    reason: L('Ênfase em construção / posse.', 'Focus on build-up / possession.'),
   },
 ];
 
@@ -47,7 +48,7 @@ function normalize(s: string): string {
 
 export function scoreCommandRelevance(raw: string): RelevanceResult {
   const t = normalize(raw);
-  if (t.length < 4) return { relevant: false, reason: 'Texto demasiado curto.' };
+  if (t.length < 4) return { relevant: false, reason: L('Texto demasiado curto.', 'Text too short.') };
 
   for (const row of KEYWORDS) {
     if (row.words.some((w) => t.includes(w))) {
@@ -56,10 +57,10 @@ export function scoreCommandRelevance(raw: string): RelevanceResult {
   }
 
   if (t.includes('ole') && t.length > 12) {
-    return { relevant: true, matchedIntent: TacticalIntent.Progress, reason: 'Comando genérico de impulso.' };
+    return { relevant: true, matchedIntent: TacticalIntent.Progress, reason: L('Comando genérico de impulso.', 'Generic push command.') };
   }
 
-  return { relevant: false, reason: 'Sem palavras-chave táticas reconhecidas.' };
+  return { relevant: false, reason: L('Sem palavras-chave táticas reconhecidas.', 'No tactical keywords recognised.') };
 }
 
 export function applyRelevantCommandToStoryWeights(

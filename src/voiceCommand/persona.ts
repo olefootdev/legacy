@@ -5,6 +5,7 @@
  */
 
 import { INTENT_CATEGORY, type VoiceIntent, type IntentCategory } from './types';
+import { L } from '@/i18n/L';
 
 export type ManagerStyle =
   | 'ofensivo_criativo'
@@ -16,23 +17,23 @@ export type ManagerStyle =
   | 'iniciante';
 
 export const STYLE_LABELS: Record<ManagerStyle, string> = {
-  ofensivo_criativo: 'Ofensivo-Criativo',
-  ofensivo_direto: 'Ofensivo-Direto',
-  defensivo_tatico: 'Defensivo-Tático',
-  gerencialista: 'Gerencialista',
-  agressivo: 'Agressivo',
-  equilibrado: 'Equilibrado',
-  iniciante: 'Iniciante',
+  ofensivo_criativo: L('Ofensivo-Criativo', 'Attacking-Creative'),
+  ofensivo_direto: L('Ofensivo-Direto', 'Attacking-Direct'),
+  defensivo_tatico: L('Defensivo-Tático', 'Defensive-Tactical'),
+  gerencialista: L('Gerencialista', 'Manager-Engineer'),
+  agressivo: L('Agressivo', 'Aggressive'),
+  equilibrado: L('Equilibrado', 'Balanced'),
+  iniciante: L('Iniciante', 'Beginner'),
 };
 
 export const STYLE_DESCRIPTIONS: Record<ManagerStyle, string> = {
-  ofensivo_criativo: 'Prioriza jogadas de ruptura e ataque à área — confia nos criativos.',
-  ofensivo_direto: 'Comando pro ataque direto — chutes, cruzamentos e velocidade.',
-  defensivo_tatico: 'Foco em manter o bloco, pressionar no momento certo e neutralizar o adversário.',
-  gerencialista: 'Ajusta formação, substituições e ritmo — comanda como um engenheiro.',
-  agressivo: 'Divide forte, pressiona alto e arrisca cartão — mentalidade de vitória a qualquer custo.',
-  equilibrado: 'Alterna ataque, defesa e gestão conforme o momento do jogo.',
-  iniciante: 'Poucos comandos emitidos — experimenta o sistema.',
+  ofensivo_criativo: L('Prioriza jogadas de ruptura e ataque à área — confia nos criativos.', 'Prioritises line-breaking play and attacking the box — trusts the creators.'),
+  ofensivo_direto: L('Comando pro ataque direto — chutes, cruzamentos e velocidade.', 'Calls for direct attack — shots, crosses and pace.'),
+  defensivo_tatico: L('Foco em manter o bloco, pressionar no momento certo e neutralizar o adversário.', 'Focus on keeping the block, pressing at the right time and neutralising the opponent.'),
+  gerencialista: L('Ajusta formação, substituições e ritmo — comanda como um engenheiro.', 'Adjusts formation, subs and tempo — manages like an engineer.'),
+  agressivo: L('Divide forte, pressiona alto e arrisca cartão — mentalidade de vitória a qualquer custo.', 'Tackles hard, presses high and risks cards — win-at-all-costs mentality.'),
+  equilibrado: L('Alterna ataque, defesa e gestão conforme o momento do jogo.', 'Switches between attack, defence and game management as the match demands.'),
+  iniciante: L('Poucos comandos emitidos — experimenta o sistema.', 'Few commands issued — still trying out the system.'),
 };
 
 export interface PersonaAggregates {

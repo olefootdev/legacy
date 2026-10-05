@@ -9,6 +9,7 @@ import { ShoppingBag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { shopItemIcon, type ShopCatalogItem, type ShopRarity } from '@/game/shopCatalog';
 import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
+import { L, LOCALE } from '@/i18n/L';
 
 interface StoreFeaturedBoxesProps {
   title: string;
@@ -51,14 +52,14 @@ const RARITY_FRAME: Record<ShopRarity, string> = {
 };
 
 const RARITY_LABEL: Record<ShopRarity, string> = {
-  comum: 'COMUM',
-  raro: 'RARO',
-  epico: 'ÉPICO',
-  mitico: 'MÍTICO',
+  comum: L('COMUM', 'COMMON'),
+  raro: L('RARO', 'RARE'),
+  epico: L('ÉPICO', 'EPIC'),
+  mitico: L('MÍTICO', 'MYTHIC'),
 };
 
 function formatBro(cents: number): string {
-  return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (cents / 100).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export function StoreFeaturedBoxes({
@@ -79,7 +80,7 @@ export function StoreFeaturedBoxes({
       <StoreSectionHeadline
         title={title}
         subtitle={subtitle}
-        rightLabel={moreCount > 0 ? `+${moreCount} mais` : undefined}
+        rightLabel={moreCount > 0 ? L(`+${moreCount} mais`, `+${moreCount} more`) : undefined}
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -114,7 +115,7 @@ export function StoreFeaturedBoxes({
                 {item.featured ? (
                   <div className="absolute left-2 top-2">
                     <span className={cn('rounded-full border px-2 py-0.5 font-display text-[8px] font-black uppercase tracking-widest', v.badge)}>
-                      Destaque
+                      {L('Destaque', 'Featured')}
                     </span>
                   </div>
                 ) : null}
@@ -140,12 +141,12 @@ export function StoreFeaturedBoxes({
                   ) : null}
                   {item.priceExp != null && item.priceExp > 0 ? (
                     <span className="rounded-lg border border-neon-yellow/30 bg-neon-yellow/5 px-2 py-0.5 font-mono text-[10px] font-bold text-neon-yellow">
-                      {item.priceExp.toLocaleString('pt-BR')} EXP
+                      {item.priceExp.toLocaleString(LOCALE)} EXP
                     </span>
                   ) : null}
                   <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-white/50 transition-colors group-hover:text-neon-yellow">
                     <ShoppingBag className="h-3 w-3" aria-hidden />
-                    Comprar
+                    {L('Comprar', 'Buy')}
                   </span>
                 </div>
               </div>

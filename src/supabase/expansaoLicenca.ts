@@ -1,4 +1,5 @@
 import { getSupabase } from './client';
+import { L } from '@/i18n/L';
 
 /**
  * Resgatar uma licença de ativação da expansão.
@@ -18,18 +19,18 @@ export type ResultadoLicenca =
   | { readonly ativou: false; readonly motivo: MotivoLicenca | string };
 
 export const FRASE_DO_MOTIVO: Record<string, string> = {
-  licenca_invalida: 'Essa licença não existe. Confira as letras.',
-  licenca_revogada: 'Essa licença foi cancelada.',
-  licenca_ja_usada: 'Essa licença já ativou outra conta.',
-  licenca_expirada: 'Essa licença venceu.',
-  ja_ativada_por_esta_licenca: 'Sua conta já foi ativada por esta licença.',
-  conta_ja_ativada: 'Sua conta já está ativada. Guarde a licença pra outra pessoa.',
-  muitas_tentativas: 'Muitas tentativas erradas. Tente de novo em uma hora.',
-  sem_sessao: 'Entre na sua conta pra usar a licença.',
+  licenca_invalida: L('Essa licença não existe. Confira as letras.', 'This license doesn\'t exist. Check the letters.'),
+  licenca_revogada: L('Essa licença foi cancelada.', 'This license was cancelled.'),
+  licenca_ja_usada: L('Essa licença já ativou outra conta.', 'This license already activated another account.'),
+  licenca_expirada: L('Essa licença venceu.', 'This license expired.'),
+  ja_ativada_por_esta_licenca: L('Sua conta já foi ativada por esta licença.', 'Your account was already activated by this license.'),
+  conta_ja_ativada: L('Sua conta já está ativada. Guarde a licença pra outra pessoa.', 'Your account is already active. Save the license for someone else.'),
+  muitas_tentativas: L('Muitas tentativas erradas. Tente de novo em uma hora.', 'Too many wrong attempts. Try again in an hour.'),
+  sem_sessao: L('Entre na sua conta pra usar a licença.', 'Log in to your account to use the license.'),
 };
 
 export function fraseDoMotivo(motivo: string): string {
-  return FRASE_DO_MOTIVO[motivo] ?? 'Não deu pra ativar agora. Tente de novo.';
+  return FRASE_DO_MOTIVO[motivo] ?? L('Não deu pra ativar agora. Tente de novo.', 'Couldn\'t activate right now. Try again.');
 }
 
 export async function resgatarLicenca(codigo: string): Promise<ResultadoLicenca> {

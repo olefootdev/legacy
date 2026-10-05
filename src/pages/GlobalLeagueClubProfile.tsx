@@ -12,12 +12,13 @@ import { Hashtag } from '@/components/ui';
 import { ArrowLeft, Trophy, Shield } from 'lucide-react';
 import type { GlobalFixture } from '@/match/globalMatch';
 import { globalDivisionName } from '@/match/globalLeagueMVP';
+import { L } from '@/i18n/L';
 
 function FormBadge({ result }: { result: 'W' | 'D' | 'L' }) {
   const map: Record<'W' | 'D' | 'L', { label: string; cls: string }> = {
-    W: { label: 'V', cls: 'bg-alta text-black' },
-    D: { label: 'E', cls: 'bg-card-hi text-white' },
-    L: { label: 'D', cls: 'bg-baixa text-white' },
+    W: { label: L('V', 'W'), cls: 'bg-alta text-black' },
+    D: { label: L('E', 'D'), cls: 'bg-card-hi text-white' },
+    L: { label: L('D', 'L'), cls: 'bg-baixa text-white' },
   };
   const { label, cls } = map[result];
   return (
@@ -50,25 +51,25 @@ function FixtureRow({ fixture, teamId }: { fixture: GlobalFixture; teamId: strin
 
   let resultLabel = '';
   let resultColor = 'text-cimento';
-  if (myGoals > theirGoals) { resultLabel = 'V'; resultColor = 'text-alta'; }
-  else if (myGoals === theirGoals) { resultLabel = 'E'; resultColor = 'text-cimento'; }
-  else { resultLabel = 'D'; resultColor = 'text-baixa'; }
+  if (myGoals > theirGoals) { resultLabel = L('V', 'W'); resultColor = 'text-alta'; }
+  else if (myGoals === theirGoals) { resultLabel = L('E', 'D'); resultColor = 'text-cimento'; }
+  else { resultLabel = L('D', 'L'); resultColor = 'text-baixa'; }
 
   return (
     <div className="flex min-w-0 items-center gap-3 px-3 py-2 bg-deep-black border border-white/[0.06] hover:border-white/16 transition-colors">
       <span className={`ole-num w-5 shrink-0 text-sm text-center ${resultColor}`}>
         {resultLabel}
       </span>
-      <span className="text-[10px] text-poeira font-mono shrink-0">{isHome ? 'Casa' : 'Fora'}</span>
+      <span className="text-[10px] text-poeira font-mono shrink-0">{isHome ? L('Casa', 'Home') : L('Fora', 'Away')}</span>
       <span className="min-w-0 flex-1 text-[13px] text-giz truncate">
         {opponentName}
       </span>
       {(myWo || theirWo) && (
         <span
           className={`shrink-0 border px-[5px] py-0.5 font-mono text-[9px] uppercase tracking-[0.1em] ${myWo ? 'border-baixa text-baixa' : 'border-alta text-alta'}`}
-          title={myWo ? 'Você não tinha elenco mínimo (11)' : 'Adversário não tinha elenco mínimo (11)'}
+          title={myWo ? L('Você não tinha elenco mínimo (11)', 'You lacked the minimum squad (11)') : L('Adversário não tinha elenco mínimo (11)', 'Opponent lacked the minimum squad (11)')}
         >
-          {myWo ? 'WO sofrido' : 'WO a favor'}
+          {myWo ? L('WO sofrido', 'Walkover lost') : L('WO a favor', 'Walkover won')}
         </span>
       )}
       <div className="flex items-center gap-1 shrink-0">
@@ -118,9 +119,9 @@ export default function GlobalLeagueClubProfile() {
           onClick={() => navigate('/match/global')}
           className="mb-6 inline-flex items-center gap-2 text-sm text-cimento hover:text-neon-yellow transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> Voltar
+          <ArrowLeft className="w-4 h-4" /> {L('Voltar', 'Back')}
         </button>
-        <p className="text-lg text-cimento">Clube não encontrado.</p>
+        <p className="text-lg text-cimento">{L('Clube não encontrado.', 'Club not found.')}</p>
       </div>
     );
   }
@@ -132,7 +133,7 @@ export default function GlobalLeagueClubProfile() {
     .map(([oppId, n]) => ({
       id: oppId,
       count: n as number,
-      name: globalLeagueMVP?.teams.find((t) => t.id === oppId)?.clubName ?? 'Adversário',
+      name: globalLeagueMVP?.teams.find((t) => t.id === oppId)?.clubName ?? L('Adversário', 'Opponent'),
     }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
@@ -141,7 +142,7 @@ export default function GlobalLeagueClubProfile() {
     <div className="mx-auto min-w-0 w-full max-w-4xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 py-6 pb-12">
 
       {/* Back */}
-      <BackButton to="/match/global" label="Liga Global" />
+      <BackButton to="/match/global" label={L('Liga Global', 'Global League')} />
 
       {/* Header do clube */}
       <motion.div
@@ -166,7 +167,7 @@ export default function GlobalLeagueClubProfile() {
               {team.division && (
                 <>
                   <span className="w-px h-4 bg-white/16" />
-                  <span className="font-mono text-[11px] text-poeira">Divisão {team.division}</span>
+                  <span className="font-mono text-[11px] text-poeira">{L('Divisão', 'Division')} {team.division}</span>
                 </>
               )}
             </div>
@@ -180,7 +181,7 @@ export default function GlobalLeagueClubProfile() {
         {/* Forma recente */}
         {team.recentForm && team.recentForm.length > 0 && (
           <div className="mt-4 pt-4 border-t border-white/10">
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cimento mb-2">Forma recente</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cimento mb-2">{L('Forma recente', 'Recent form')}</p>
             <div className="flex items-center gap-1.5">
               {team.recentForm.slice(-5).map((r, i) => (
                 <FormBadge key={i} result={r} />
@@ -200,18 +201,18 @@ export default function GlobalLeagueClubProfile() {
         <div className="flex items-center gap-2 mb-4">
           <Trophy className="w-4 h-4 text-neon-yellow" />
           <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-            Temporada atual
+            {L('Temporada atual', 'Current season')}
           </h2>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-4">
-          <StatBox label="J" value={team.matchesPlayed} />
-          <StatBox label="V" value={team.wins} />
-          <StatBox label="E" value={team.draws} />
-          <StatBox label="D" value={team.losses} />
+          <StatBox label={L('J', 'P')} value={team.matchesPlayed} />
+          <StatBox label={L('V', 'W')} value={team.wins} />
+          <StatBox label={L('E', 'D')} value={team.draws} />
+          <StatBox label={L('D', 'L')} value={team.losses} />
           <div className="w-px h-10 bg-white/10 self-center hidden sm:block" />
-          <StatBox label="GP" value={team.goalsFor} />
-          <StatBox label="GC" value={team.goalsAgainst} />
-          <StatBox label="SG" value={sgSeason > 0 ? `+${sgSeason}` : sgSeason} />
+          <StatBox label={L('GP', 'GF')} value={team.goalsFor} />
+          <StatBox label={L('GC', 'GA')} value={team.goalsAgainst} />
+          <StatBox label={L('SG', 'GD')} value={sgSeason > 0 ? `+${sgSeason}` : sgSeason} />
           <div className="w-px h-10 bg-white/10 self-center hidden sm:block" />
           <StatBox label="PTS" value={team.points} accent />
         </div>
@@ -227,22 +228,22 @@ export default function GlobalLeagueClubProfile() {
         <div className="flex items-center gap-2 mb-4">
           <Trophy className="w-4 h-4 text-cimento" />
           <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-            Histórico
+            {L('Histórico', 'History')}
           </h2>
           <span className="text-[10.5px] text-cimento font-mono">
-            {team.allTimeSeasonsPlayed ?? 0} temporada(s)
+            {team.allTimeSeasonsPlayed ?? 0} {L('temporada(s)', 'season(s)')}
           </span>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-4">
-          <StatBox label="Jogos" value={team.allTimeMatchesPlayed} />
-          <StatBox label="Vitórias" value={team.allTimeWins} />
-          <StatBox label="Empates" value={team.allTimeDraws} />
-          <StatBox label="Derrotas" value={team.allTimeLosses} />
+          <StatBox label={L('Jogos', 'Played')} value={team.allTimeMatchesPlayed} />
+          <StatBox label={L('Vitórias', 'Wins')} value={team.allTimeWins} />
+          <StatBox label={L('Empates', 'Draws')} value={team.allTimeDraws} />
+          <StatBox label={L('Derrotas', 'Losses')} value={team.allTimeLosses} />
           <div className="w-px h-10 bg-white/10 self-center hidden sm:block" />
-          <StatBox label="Gols pró" value={team.allTimeGoalsFor} />
-          <StatBox label="Gols contra" value={team.allTimeGoalsAgainst} />
+          <StatBox label={L('Gols pró', 'Goals for')} value={team.allTimeGoalsFor} />
+          <StatBox label={L('Gols contra', 'Goals against')} value={team.allTimeGoalsAgainst} />
           <div className="w-px h-10 bg-white/10 self-center hidden sm:block" />
-          <StatBox label="PTS total" value={team.allTimePoints} accent />
+          <StatBox label={L('PTS total', 'Total PTS')} value={team.allTimePoints} accent />
         </div>
       </motion.div>
 
@@ -255,8 +256,8 @@ export default function GlobalLeagueClubProfile() {
           className="sports-panel overflow-hidden"
         >
           <div className="bg-deep-black px-4 py-3 border-b border-white/10">
-            <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">Rivais históricos</h2>
-            <Hashtag className="mt-0.5">#3+confrontos</Hashtag>
+            <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">{L('Rivais históricos', 'Historic rivals')}</h2>
+            <Hashtag className="mt-0.5">{L('#3+confrontos', '#3+meetings')}</Hashtag>
           </div>
           <div className="p-3 space-y-1.5">
             {rivals.map((r) => (
@@ -267,7 +268,7 @@ export default function GlobalLeagueClubProfile() {
                 className="w-full flex min-w-0 items-center justify-between gap-3 px-3 py-2 bg-deep-black border border-white/[0.06] hover:border-white/30 transition-colors text-left"
               >
                 <span className="min-w-0 text-[13px] font-bold text-white truncate">{r.name}</span>
-                <span className="ole-num text-[11px] uppercase text-neon-yellow shrink-0">{r.count} duelos</span>
+                <span className="ole-num text-[11px] uppercase text-neon-yellow shrink-0">{r.count} {L('duelos', 'meetings')}</span>
               </button>
             ))}
           </div>
@@ -283,13 +284,13 @@ export default function GlobalLeagueClubProfile() {
       >
         <div className="bg-deep-black px-4 py-3 border-b border-white/10">
           <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-            Partidas disputadas
+            {L('Partidas disputadas', 'Matches played')}
           </h2>
         </div>
 
         {clubFixtures.length === 0 ? (
           <div className="p-6 text-center">
-            <p className="text-cimento">Nenhuma partida finalizada ainda.</p>
+            <p className="text-cimento">{L('Nenhuma partida finalizada ainda.', 'No finished matches yet.')}</p>
           </div>
         ) : (
           <div className="p-3 space-y-1.5">

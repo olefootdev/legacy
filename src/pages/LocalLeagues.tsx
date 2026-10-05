@@ -11,6 +11,7 @@ import { useGameStore } from '@/game/store';
 import { cn } from '@/lib/utils';
 import { BackButton } from '@/components/BackButton';
 import { Hashtag } from '@/components/ui';
+import { L } from '@/i18n/L';
 import {
   emptyLocalLeagueStanding,
   type LocalLeagueId,
@@ -23,13 +24,13 @@ import {
 
 const LEAGUE_META: Record<LocalLeagueId, { label: string; subtitle: string; icon: typeof Trophy }> = {
   classic: {
-    label: 'Liga Classic',
-    subtitle: 'Pontos somam toda vez que você joga uma partida CLASSIC (2D).',
+    label: L('Liga Classic', 'Classic League'),
+    subtitle: L('Pontos somam toda vez que você joga uma partida CLASSIC (2D).', 'Points add up every time you play a CLASSIC (2D) match.'),
     icon: Layers,
   },
   fast: {
-    label: 'Fast Liga',
-    subtitle: 'Pontos somam toda vez que você joga uma partida RÁPIDA.',
+    label: L('Fast Liga', 'Fast League'),
+    subtitle: L('Pontos somam toda vez que você joga uma partida RÁPIDA.', 'Points add up every time you play a QUICK match.'),
     icon: Zap,
   },
 };
@@ -59,7 +60,7 @@ export default function LocalLeaguesPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 pb-10 px-3 sm:px-4">
-      <BackButton to="/competicao" label="Competição" />
+      <BackButton to="/competicao" label={L('Competição', 'Competition')} />
 
       {/* Header editorial */}
       <header>
@@ -69,7 +70,7 @@ export default function LocalLeaguesPage() {
             className="block font-impact uppercase text-white"
             style={{ fontSize: 'clamp(2rem, 5.5vw, 3.25rem)', letterSpacing: '0.005em' }}
           >
-            Ligas locais
+            {L('Ligas locais', 'Local leagues')}
           </span>
           <span
             className="ole-num block uppercase text-neon-yellow mt-1"
@@ -108,16 +109,16 @@ export default function LocalLeaguesPage() {
       <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
         {/* My stats */}
         <div className="border border-neon-yellow/40 bg-panel p-4 space-y-3">
-          <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">Meu placar acumulado</h3>
+          <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">{L('Meu placar acumulado', 'My cumulative record')}</h3>
           <div className="grid grid-cols-4 gap-2 text-center">
-            <Stat label="Jogos" value={myStanding.played} />
-            <Stat label="Pontos" value={myStanding.points} highlight />
-            <Stat label="V/E/D" value={`${myStanding.wins}/${myStanding.draws}/${myStanding.losses}`} small />
-            <Stat label="Saldo" value={myStanding.goalsFor - myStanding.goalsAgainst} />
+            <Stat label={L('Jogos', 'Played')} value={myStanding.played} />
+            <Stat label={L('Pontos', 'Points')} value={myStanding.points} highlight />
+            <Stat label={L('V/E/D', 'W/D/L')} value={`${myStanding.wins}/${myStanding.draws}/${myStanding.losses}`} small />
+            <Stat label={L('Saldo', 'GD')} value={myStanding.goalsFor - myStanding.goalsAgainst} />
           </div>
           {myStanding.recentForm.length > 0 && (
             <div className="flex items-center gap-2 text-[10px]">
-              <span className="font-mono uppercase tracking-[0.14em] text-cimento">Forma</span>
+              <span className="font-mono uppercase tracking-[0.14em] text-cimento">{L('Forma', 'Form')}</span>
               <div className="flex gap-1">
                 {myStanding.recentForm.map((c, i) => (
                   <span
@@ -129,7 +130,7 @@ export default function LocalLeaguesPage() {
                       c === 'L' && 'bg-baixa text-white',
                     )}
                   >
-                    {c === 'W' ? 'V' : c === 'D' ? 'E' : 'D'}
+                    {c === 'W' ? L('V', 'W') : c === 'D' ? L('E', 'D') : L('D', 'L')}
                   </span>
                 ))}
               </div>
@@ -140,9 +141,9 @@ export default function LocalLeaguesPage() {
         {/* Leaderboard */}
         <div className="border border-white/10 bg-panel p-4">
           <h3 className="mb-3 font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">Top 50 managers</h3>
-          {loading && <p className="text-xs text-cimento">Carregando ranking…</p>}
+          {loading && <p className="text-xs text-cimento">{L('Carregando ranking…', 'Loading ranking…')}</p>}
           {!loading && leaderboard.length === 0 && (
-            <p className="truncate text-xs text-cimento">Ranking vazio. Jogue e estreie no top.</p>
+            <p className="truncate text-xs text-cimento">{L('Ranking vazio. Jogue e estreie no top.', 'Empty ranking. Play and make your debut at the top.')}</p>
           )}
           {!loading && leaderboard.length > 0 && (
             <div className="border border-white/10">
@@ -160,7 +161,7 @@ export default function LocalLeaguesPage() {
                     <span className={cn('truncate text-[13.5px]', isMe ? 'font-bold' : 'text-giz')}>
                       {row.clubName ?? row.managerName ?? row.userId.slice(0, 8)}
                     </span>
-                    <span className={cn('font-mono text-[10.5px] text-right', isMe ? 'text-black/70' : 'text-cimento')}>{row.played}j</span>
+                    <span className={cn('font-mono text-[10.5px] text-right', isMe ? 'text-black/70' : 'text-cimento')}>{row.played}{L('j', 'p')}</span>
                     <span className={cn('font-mono text-[10.5px] text-right', isMe ? 'text-black/70' : 'text-cimento')}>
                       {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
                     </span>

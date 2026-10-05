@@ -10,6 +10,7 @@
  * Moret italic tabular-nums no tempo. Cores via tokens (--color-danger /
  * --color-warning / --color-success / --color-neon-yellow).
  */
+import { L } from '@/i18n/L';
 import { ShieldOff, Activity, TrendingUp, TrendingDown, BadgeCheck } from 'lucide-react';
 import { usePlayerConsequences } from '@/hooks/useConsequences';
 import { cn } from '@/lib/utils';
@@ -37,7 +38,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
       Icon: ShieldOff,
       className:
         'bg-[var(--color-danger)]/12 text-[var(--color-danger)] border-[var(--color-danger)]/35',
-      label: 'Suspenso',
+      label: L('Suspenso', 'Suspended'),
     };
   }
   if (kind === 'injury_severe_out') {
@@ -45,7 +46,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
       Icon: Activity,
       className:
         'bg-[var(--color-danger)]/15 text-[var(--color-danger)] border-[var(--color-danger)]/40',
-      label: 'Lesão grave',
+      label: L('Lesão grave', 'Serious injury'),
     };
   }
   if (kind === 'injury_medium_out') {
@@ -53,7 +54,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
       Icon: Activity,
       className:
         'bg-[var(--color-warning)]/12 text-[var(--color-warning)] border-[var(--color-warning)]/35',
-      label: 'Lesão moderada',
+      label: L('Lesão moderada', 'Moderate injury'),
     };
   }
   if (kind === 'injury_light_out') {
@@ -61,14 +62,14 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
       Icon: Activity,
       className:
         'bg-[var(--color-warning)]/10 text-[var(--color-warning)] border-[var(--color-warning)]/30',
-      label: 'Lesão leve',
+      label: L('Lesão leve', 'Minor injury'),
     };
   }
   if (kind === 'forced_rest') {
     return {
       Icon: Activity,
       className: 'bg-white/5 text-white/75 border-white/15',
-      label: 'Descanso',
+      label: L('Descanso', 'Rest'),
     };
   }
   if (kind === 'morale_boost_hat_trick' || kind === 'morale_boost_mvp') {
@@ -84,7 +85,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
       Icon: TrendingUp,
       className:
         'bg-[var(--color-success)]/12 text-[var(--color-success)] border-[var(--color-success)]/35',
-      label: 'Em alta',
+      label: L('Em alta', 'Rising'),
     };
   }
   if (kind === 'market_interest_spike') {
@@ -92,7 +93,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
       Icon: TrendingUp,
       className:
         'bg-[var(--color-success)]/12 text-[var(--color-success)] border-[var(--color-success)]/35',
-      label: 'Cobiçado',
+      label: L('Cobiçado', 'In demand'),
     };
   }
   if (kind.startsWith('market_value_drop')) {
@@ -100,7 +101,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
       Icon: TrendingDown,
       className:
         'bg-[var(--color-danger)]/12 text-[var(--color-danger)] border-[var(--color-danger)]/35',
-      label: 'Valor em queda',
+      label: L('Valor em queda', 'Value falling'),
     };
   }
   return null;
@@ -138,7 +139,7 @@ export function PlayerConsequencesBadge({ playerId, compact = true }: Props) {
               meta.className,
             )}
             style={{ borderRadius: 'var(--radius-sm)' }}
-            title={`${meta.label} · expira em ${formatTimeLeft(c.msUntilExpiry)}`}
+            title={L(`${meta.label} · expira em ${formatTimeLeft(c.msUntilExpiry)}`, `${meta.label} · expires in ${formatTimeLeft(c.msUntilExpiry)}`)}
           >
             <meta.Icon size={10} />
             <span

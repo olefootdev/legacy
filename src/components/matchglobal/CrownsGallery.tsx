@@ -5,6 +5,7 @@
  * Reutiliza `loadRecentCrowns` (sem precisar de novo hook).
  */
 
+import { L, emIngles } from '@/i18n/L';
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Crown } from 'lucide-react';
@@ -14,7 +15,7 @@ import type { DailyCrown } from '@/match/globalLeagueMVP';
 function formatDate(iso: string): string {
   // iso = 'YYYY-MM-DD'
   const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y.slice(2)}`;
+  return emIngles() ? `${m}/${d}/${y.slice(2)}` : `${d}/${m}/${y.slice(2)}`;
 }
 
 interface Props {
@@ -43,14 +44,14 @@ export function CrownsGallery({ limit = 10 }: Props) {
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-white/40">
-            Galeria de Coroas
+            {L('Galeria de Coroas', 'Crown Gallery')}
           </p>
           <h3 className="font-display text-xl font-bold uppercase text-white">
-            Campeões Recentes
+            {L('Campeões Recentes', 'Recent Champions')}
           </h3>
         </div>
         <span className="font-mono text-[10px] text-white/40">
-          {crowns.length} coroa{crowns.length === 1 ? '' : 's'}
+          {crowns.length} {L('coroa', 'crown')}{crowns.length === 1 ? '' : 's'}
         </span>
       </div>
 

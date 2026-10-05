@@ -6,6 +6,7 @@
 import { motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
 import type { ShopRarity } from '@/game/shopCatalog';
+import { L } from '@/i18n/L';
 
 interface LegendaryBadgeProps {
   rarity: ShopRarity;
@@ -31,7 +32,7 @@ export function LegendaryBadge({ rarity, featured }: LegendaryBadgeProps) {
           className="font-impact uppercase text-black"
           style={{ fontSize: '13px', letterSpacing: '0.04em' }}
         >
-          Lendário
+          {L('Lendário', 'Legendary')}
         </span>
       </div>
     </motion.div>

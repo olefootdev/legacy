@@ -1,4 +1,5 @@
 import { getSupabase } from '@/supabase/client';
+import { L } from '@/i18n/L';
 
 export interface PremiumLeague {
   id: string;
@@ -150,7 +151,7 @@ export async function createLeague(input: {
   overall?: number;
 }): Promise<{ ok: true; data: any } | { ok: false; error: string }> {
   const sb = getSupabase();
-  if (!sb) return { ok: false, error: 'Supabase não configurado' };
+  if (!sb) return { ok: false, error: L('Supabase não configurado', 'Supabase not configured') };
   const { data, error } = await sb.rpc('create_premium_league', {
     p_name: input.name,
     p_max_teams: input.maxTeams,
@@ -165,10 +166,10 @@ export async function createLeague(input: {
 }
 
 const JOIN_ERROR_MAP: Record<string, string> = {
-  'league is full': 'Liga completa! Todas as vagas foram preenchidas.',
-  'league is not open for entries': 'Liga já iniciou — inscrições encerradas.',
-  'already entered this league': 'Você já está inscrito nesta liga.',
-  'must be authenticated': 'Faça login para se inscrever.',
+  'league is full': L('Liga completa! Todas as vagas foram preenchidas.', 'League full! All spots are taken.'),
+  'league is not open for entries': L('Liga já iniciou — inscrições encerradas.', 'League already started — entries closed.'),
+  'already entered this league': L('Você já está inscrito nesta liga.', 'You are already entered in this league.'),
+  'must be authenticated': L('Faça login para se inscrever.', 'Log in to enter.'),
 };
 
 export async function joinLeague(input: {
@@ -178,7 +179,7 @@ export async function joinLeague(input: {
   overall?: number;
 }): Promise<{ ok: true; data: any } | { ok: false; error: string }> {
   const sb = getSupabase();
-  if (!sb) return { ok: false, error: 'Supabase não configurado' };
+  if (!sb) return { ok: false, error: L('Supabase não configurado', 'Supabase not configured') };
   const { data, error } = await sb.rpc('join_premium_league', {
     p_league_id: input.leagueId,
     p_club_name: input.clubName,

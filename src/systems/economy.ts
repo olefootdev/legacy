@@ -1,5 +1,6 @@
 import type { FinanceState } from '@/entities/types';
 import { BRO_USD_PARITY_COPY } from '@/economy/model';
+import { L, LOCALE } from '@/i18n/L';
 
 /** Taxa da plataforma em desafios amistosos liquidados em BRO (feeChallenger). */
 export const FRIENDLY_CHALLENGE_BRO_FEE_RATE = 0.05;
@@ -30,7 +31,7 @@ export function addBroCents(f: FinanceState, cents: number): FinanceState {
 }
 
 export function formatOle(n: number): string {
-  return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return n.toLocaleString(LOCALE, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 /**
@@ -40,13 +41,13 @@ export function formatOle(n: number): string {
 export function formatCompactNumber(n: number): string {
   if (n >= 1_000_000) {
     const millions = n / 1_000_000;
-    return `${millions.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}M`;
+    return `${millions.toLocaleString(LOCALE, { minimumFractionDigits: 0, maximumFractionDigits: 1 })}M`;
   }
   if (n >= 1_000) {
     const thousands = n / 1_000;
-    return `${thousands.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}K`;
+    return `${thousands.toLocaleString(LOCALE, { minimumFractionDigits: 0, maximumFractionDigits: 1 })}K`;
   }
-  return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return n.toLocaleString(LOCALE, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 /** Preferir na UI nova copy de EXP em vez de OLE. */
@@ -59,8 +60,8 @@ export function formatBroFromCents(cents: number): string {
 /** Saldo BRO + referência USD (produto); não substitui assessoria fiscal. */
 export function formatBroDisplay(cents: number): { primary: string; footnote: string } {
   const bro = cents / 100;
-  const primary = `${bro.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BRO`;
+  const primary = `${bro.toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BRO`;
   const usdRef = bro.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-  const footnote = `${BRO_USD_PARITY_COPY} Referência: ~${usdRef}.`;
+  const footnote = L(`${BRO_USD_PARITY_COPY} Referência: ~${usdRef}.`, `${BRO_USD_PARITY_COPY} Reference: ~${usdRef}.`);
   return { primary, footnote };
 }

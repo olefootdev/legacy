@@ -2,6 +2,7 @@ import type { OlefootGameState } from '@/game/types';
 import type { CoachAction } from './coachActions';
 import type { CoachPersonality } from './types';
 import type { CollectiveTrainingType, IndividualTrainingType, TrainingGroup } from '@/game/types';
+import { L } from '@/i18n/L';
 
 /**
  * Gera ações de TREINO/EVOLUÇÃO para a janela 2 do ciclo (5min "preparação e evolução").
@@ -45,9 +46,9 @@ export function generateProactiveTrainingActions(state: OlefootGameState): Coach
   out.push({
     id: `coach-train-coletivo-${now}`,
     type: 'start_training',
-    title: `Treino coletivo: ${collective.label}`,
-    description: `Sessão coletiva (${collective.group}, 12h) focada em ${collective.label.toLowerCase()}.`,
-    reasoning: `Plantel descansado (fadiga ${avgFatigue.toFixed(0)}%) — janela boa para evoluir. Estilo do coach: ${coach.personality}.`,
+    title: L(`Treino coletivo: ${collective.label}`, `Team training: ${collective.label}`),
+    description: L(`Sessão coletiva (${collective.group}, 12h) focada em ${collective.label.toLowerCase()}.`, `Team session (${collective.group}, 12h) focused on ${collective.label.toLowerCase()}.`),
+    reasoning: L(`Plantel descansado (fadiga ${avgFatigue.toFixed(0)}%) — janela boa para evoluir. Estilo do coach: ${coach.personality}.`, `Squad rested (fatigue ${avgFatigue.toFixed(0)}%) — good window to improve. Coach style: ${coach.personality}.`),
     urgency: 'medium',
     status: 'pending',
     createdAt: now,
@@ -74,9 +75,9 @@ export function generateProactiveTrainingActions(state: OlefootGameState): Coach
     out.push({
       id: `coach-train-indiv-${p.id}-${now}`,
       type: 'start_training',
-      title: `Treino individual: ${p.name}`,
-      description: `Treino ${indiv} para ${p.name} (8h) — atributo fraco: ${weak}.`,
-      reasoning: `${p.name} (OVR ${meanOvr(p).toFixed(0)}) ganha mais com treino focado em ${weak}.`,
+      title: L(`Treino individual: ${p.name}`, `Individual training: ${p.name}`),
+      description: L(`Treino ${indiv} para ${p.name} (8h) — atributo fraco: ${weak}.`, `${indiv} training for ${p.name} (8h) — weak attribute: ${weak}.`),
+      reasoning: L(`${p.name} (OVR ${meanOvr(p).toFixed(0)}) ganha mais com treino focado em ${weak}.`, `${p.name} (OVR ${meanOvr(p).toFixed(0)}) gains most from training focused on ${weak}.`),
       urgency: 'low',
       status: 'pending',
       createdAt: now,
@@ -100,15 +101,15 @@ function pickCollectiveByPersonality(personality: CoachPersonality): {
 } {
   switch (personality) {
     case 'Pragmatic':
-      return { type: 'fisico', label: 'Físico (resistência defensiva)', group: 'defensivo' };
+      return { type: 'fisico', label: L('Físico (resistência defensiva)', 'Physical (defensive stamina)'), group: 'defensivo' };
     case 'Visionary':
-      return { type: 'formacao', label: 'Formação (padrões de jogo)', group: 'all' };
+      return { type: 'formacao', label: L('Formação (padrões de jogo)', 'Shape (play patterns)'), group: 'all' };
     case 'Motivator':
-      return { type: 'empatia', label: 'Empatia (coesão de grupo)', group: 'all' };
+      return { type: 'empatia', label: L('Empatia (coesão de grupo)', 'Empathy (team cohesion)'), group: 'all' };
     case 'Tactician':
-      return { type: 'formacao', label: 'Formação (leitura tática)', group: 'all' };
+      return { type: 'formacao', label: L('Formação (leitura tática)', 'Shape (tactical reading)'), group: 'all' };
     case 'Developer':
-      return { type: 'formacao', label: 'Formação (base do plantel)', group: 'all' };
+      return { type: 'formacao', label: L('Formação (base do plantel)', 'Shape (squad basics)'), group: 'all' };
   }
 }
 

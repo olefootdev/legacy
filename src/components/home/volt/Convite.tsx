@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { ChevronRight, Users } from 'lucide-react';
 import { fetchMyReferralCode } from '@/supabase/referrals';
 import { inviteLinkForCode } from '@/wallet/referralCode';
+import { L } from '@/i18n/L';
 
 export function Convite() {
   const [code, setCode] = useState<string | null>(null);
@@ -27,7 +28,7 @@ export function Convite() {
     const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
     if (typeof nav.share === 'function') {
       try {
-        await nav.share({ title: 'OLEFOOT', text: 'Monta teu time comigo no OLEFOOT', url: link });
+        await nav.share({ title: 'OLEFOOT', text: L('Monta teu time comigo no OLEFOOT', 'Build your team with me on OLEFOOT'), url: link });
         return;
       } catch {
         /* cancelou ou não suportou: cai pra copiar */
@@ -50,9 +51,9 @@ export function Convite() {
     >
       <Users aria-hidden className="h-7 w-7 shrink-0" strokeWidth={2} />
       <span className="flex min-w-0 grow flex-col gap-0.5">
-        <span className="block min-w-0 truncate font-impact text-[22px] uppercase leading-none">Chame um amigo</span>
+        <span className="block min-w-0 truncate font-impact text-[22px] uppercase leading-none">{L('Chame um amigo', 'Invite a friend')}</span>
         <span className="block min-w-0 truncate font-mono text-[11.5px] font-medium text-[#3A3D40]">
-          {copiado ? 'Link copiado' : '#convite · +EXP'}
+          {copiado ? L('Link copiado', 'Link copied') : L('#convite · +EXP', '#invite · +EXP')}
         </span>
       </span>
       <ChevronRight aria-hidden className="h-5 w-5 shrink-0" strokeWidth={2.6} />

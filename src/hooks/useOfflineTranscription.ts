@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { L } from '@/i18n/L';
 
 export type OfflineTranscriptionState = 'idle' | 'loading' | 'ready' | 'transcribing' | 'error';
 
@@ -55,7 +56,7 @@ export function useOfflineTranscription(): OfflineTranscriptionApi {
       isLoadingRef.current = false;
     } catch (err) {
       console.error('[offline-transcription] Failed to load Whisper:', err);
-      setError('Falha ao carregar modelo de transcrição offline');
+      setError(L('Falha ao carregar modelo de transcrição offline', 'Failed to load the offline transcription model'));
       setState('error');
       isLoadingRef.current = false;
     }
@@ -86,7 +87,7 @@ export function useOfflineTranscription(): OfflineTranscriptionApi {
     } catch (err) {
       console.error('[offline-transcription] Transcription failed:', err);
       setState('error');
-      setError('Falha na transcrição');
+      setError(L('Falha na transcrição', 'Transcription failed'));
       throw err;
     }
   }, [loadWhisper]);

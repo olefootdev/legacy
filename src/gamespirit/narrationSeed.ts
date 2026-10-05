@@ -4,6 +4,8 @@
  * `pickLine` escolhe por peso, preenche e devolve uma linha única pronta para o feed.
  */
 
+import { L, emIngles } from '@/i18n/L';
+
 export interface NarrationEntry {
   situation: string;
   template: string;
@@ -14,259 +16,259 @@ export interface NarrationEntry {
 export const NARRATION_SEED: NarrationEntry[] = [
   {
     situation: 'kickoff',
-    template: 'Bola rolando — {{team}} coloca o jogo em movimento no apito inicial.',
+    template: L('Bola rolando — {{team}} coloca o jogo em movimento no apito inicial.', "We're under way — {{team}} get the game started."),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'pass_short',
-    template: '{{from}} toca curto e seguro para {{to}} no compasso do {{team}}.',
+    template: L('{{from}} toca curto e seguro para {{to}} no compasso do {{team}}.', '{{from}} plays it short and safe to {{to}}, {{team}} keeping it ticking.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'pass_long',
-    template: '{{from}} abre o jogo em profundidade na direção de {{to}}.',
+    template: L('{{from}} abre o jogo em profundidade na direção de {{to}}.', '{{from}} goes long, looking for {{to}} in behind.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'pass_missed',
-    template: '{{from}} erra o passe; a bola sobra limpa para o adversário.',
+    template: L('{{from}} erra o passe; a bola sobra limpa para o adversário.', '{{from}} misplaces the pass; it runs straight to the opposition.'),
     tags: ['pt-BR', 'radio'],
     weight: 8,
   },
   {
     situation: 'interception',
-    template: '{{from}} lê o passe, intercepta e mata a jogada de ataque.',
+    template: L('{{from}} lê o passe, intercepta e mata a jogada de ataque.', '{{from}} reads it, intercepts and kills the attack.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'tackle_clean',
-    template: '{{from}} desarma com limpeza, fica com a bola e acelera o {{team}}.',
+    template: L('{{from}} desarma com limpeza, fica com a bola e acelera o {{team}}.', '{{from}} wins it cleanly and drives {{team}} forward.'),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'tackle_hard',
-    template: '{{from}} chega forte em {{to}} e derruba o lance; o estádio reage.',
+    template: L('{{from}} chega forte em {{to}} e derruba o lance; o estádio reage.', '{{from}} goes in hard on {{to}} and brings him down; the crowd reacts.'),
     tags: ['pt-BR', 'radio'],
     weight: 8,
   },
   {
     situation: 'foul_soft',
-    template: '{{from}} comete falta leve em {{to}}; o árbitro para o jogo.',
+    template: L('{{from}} comete falta leve em {{to}}; o árbitro para o jogo.', '{{from}} with a soft foul on {{to}}; the referee stops play.'),
     tags: ['pt-BR', 'radio'],
     weight: 7,
   },
   {
     situation: 'foul_hard',
-    template: 'Entrada dura de {{from}} em {{to}}; o árbitro apita e corta o ritmo.',
+    template: L('Entrada dura de {{from}} em {{to}}; o árbitro apita e corta o ritmo.', 'Heavy challenge from {{from}} on {{to}}; the referee blows up.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'advantage_play',
-    template: 'O árbitro deixa seguir: vantagem clara para o {{team}}.',
+    template: L('O árbitro deixa seguir: vantagem clara para o {{team}}.', 'The referee waves play on: advantage {{team}}.'),
     tags: ['pt-BR', 'radio'],
     weight: 8,
   },
   {
     situation: 'shot_out',
-    template: '{{from}} finaliza com convicção, mas a bola passa longe da baliza.',
+    template: L('{{from}} finaliza com convicção, mas a bola passa longe da baliza.', "{{from}} hits it with conviction, but it's well wide of the target."),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'shot_blocked',
-    template: '{{from}} solta o remate e um defensor fecha o caminho na hora H.',
+    template: L('{{from}} solta o remate e um defensor fecha o caminho na hora H.', '{{from}} lets fly and a defender throws himself in the way.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'shot_save',
-    template: '{{from}} bate com intenção e {{keeper}} fecha o ângulo com defesa segura.',
+    template: L('{{from}} bate com intenção e {{keeper}} fecha o ângulo com defesa segura.', '{{from}} means it, but {{keeper}} narrows the angle and saves.'),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'shot_strong',
-    template: '{{from}} enche o pé; o remate vibra na defesa e assusta o estádio.',
+    template: L('{{from}} enche o pé; o remate vibra na defesa e assusta o estádio.', '{{from}} leathers it; the shot rattles the defence and stirs the crowd.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'goal_simple',
-    template: 'GOL! {{from}} empurra para a rede e coloca o {{team}} na frente do placar.',
+    template: L('GOL! {{from}} empurra para a rede e coloca o {{team}} na frente do placar.', 'GOAL! {{from}} tucks it away and puts {{team}} ahead.'),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'goal_beautiful',
-    template: 'GOLAÇO! {{from}} pinta o lance e explode o {{team}} na comemoração.',
+    template: L('GOLAÇO! {{from}} pinta o lance e explode o {{team}} na comemoração.', 'WHAT A GOAL! {{from}} paints a picture and {{team}} erupt.'),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'goal_header',
-    template: 'GOL DE CABEÇA! {{from}} sobe mais alto que a marcação e manda para a rede.',
+    template: L('GOL DE CABEÇA! {{from}} sobe mais alto que a marcação e manda para a rede.', 'HEADED GOAL! {{from}} rises above everyone and nods it in.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'goal_rebound',
-    template: 'GOL NO REBOTE! {{from}} aproveita a sobra fria dentro da área.',
+    template: L('GOL NO REBOTE! {{from}} aproveita a sobra fria dentro da área.', 'GOAL ON THE REBOUND! {{from}} pounces on the loose ball in the box.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'counter_attack',
-    template: '{{team}} dispara o contra-ataque em três toques e leva perigo na área.',
+    template: L('{{team}} dispara o contra-ataque em três toques e leva perigo na área.', "{{team}} break in three passes and there's danger in the box."),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'build_up',
-    template: '{{team}} troca passes na intermediária e tenta puxar o bloco adversário.',
+    template: L('{{team}} troca passes na intermediária e tenta puxar o bloco adversário.', '{{team}} work it through midfield, trying to pull the block apart.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'wing_play',
-    template: '{{from}} ganha a linha, ganha velocidade e manda o cruzamento na medida.',
+    template: L('{{from}} ganha a linha, ganha velocidade e manda o cruzamento na medida.', '{{from}} gets to the byline, picks up speed and whips in an inviting cross.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'cross_cut',
-    template: '{{to}} antecipa e corta o cruzamento de {{from}} antes da conclusão.',
+    template: L('{{to}} antecipa e corta o cruzamento de {{from}} antes da conclusão.', "{{to}} gets there first and cuts out {{from}}'s cross."),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'cross_header',
-    template: '{{from}} levanta na área e {{to}} sobe livre para cabecear com veneno.',
+    template: L('{{from}} levanta na área e {{to}} sobe livre para cabecear com veneno.', '{{from}} swings it in and {{to}} rises unmarked to head it with venom.'),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'dribble_success',
-    template: '{{from}} engana {{to}} na condução, entra no espaço e deixa o estádio em pé.',
+    template: L('{{from}} engana {{to}} na condução, entra no espaço e deixa o estádio em pé.', '{{from}} skips past {{to}}, drives into space and has the crowd on its feet.'),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'dribble_fail',
-    template: '{{from}} tenta o drible cerrado e {{to}} fecha a porta sem falta.',
+    template: L('{{from}} tenta o drible cerrado e {{to}} fecha a porta sem falta.', '{{from}} tries to squeeze through and {{to}} shuts the door, no foul.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'clearance',
-    template: 'A zaga afasta com o pé levantado e tira o perigo da pequena área.',
+    template: L('A zaga afasta com o pé levantado e tira o perigo da pequena área.', 'The defence hacks it clear and the danger in the six-yard box is gone.'),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'keeper_catch',
-    template: '{{keeper}} sai do gol, segura firme no alto e acalma o jogo.',
+    template: L('{{keeper}} sai do gol, segura firme no alto e acalma o jogo.', '{{keeper}} comes off his line, claims it high and calms things down.'),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'keeper_punch',
-    template: '{{keeper}} soca para longe num lance aéreo tenso; sobra viva na área.',
+    template: L('{{keeper}} soca para longe num lance aéreo tenso; sobra viva na área.', "{{keeper}} punches clear under pressure; the ball's still live in the box."),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'throw_in',
-    template: 'Arremesso lateral para o {{team}} na faixa ofensiva.',
+    template: L('Arremesso lateral para o {{team}} na faixa ofensiva.', 'Throw-in to {{team}} in the attacking third.'),
     tags: ['pt-BR', 'radio'],
     weight: 8,
   },
   {
     situation: 'corner_kick',
-    template: 'Escanteio perigoso para o {{team}}; a área fica pequena demais.',
+    template: L('Escanteio perigoso para o {{team}}; a área fica pequena demais.', 'Dangerous corner for {{team}}; the box suddenly looks very crowded.'),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'corner_clear',
-    template: 'A defesa sobe na primeira bola e afasta o escanteio sem drama.',
+    template: L('A defesa sobe na primeira bola e afasta o escanteio sem drama.', 'The defence wins the first ball and clears the corner without fuss.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'free_kick',
-    template: 'Falta frontal para o {{team}}; a barreira respira fundo.',
+    template: L('Falta frontal para o {{team}}; a barreira respira fundo.', 'Free kick in a central position for {{team}}; the wall takes a deep breath.'),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'free_kick_shot',
-    template: '{{from}} cobra direto, a bola desvia na barreira e ainda assusta.',
+    template: L('{{from}} cobra direto, a bola desvia na barreira e ainda assusta.', '{{from}} goes direct, it deflects off the wall and still causes a scare.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'offside',
-    template: 'Bandeira no ar: impedimento marcado e jogada anulada.',
+    template: L('Bandeira no ar: impedimento marcado e jogada anulada.', "Flag's up: offside, and the move is called back."),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'possession_switch',
-    template: 'A posse troca de lado num piscar de olhos no meio-campo.',
+    template: L('A posse troca de lado num piscar de olhos no meio-campo.', 'Possession changes hands in the blink of an eye in midfield.'),
     tags: ['pt-BR', 'radio'],
     weight: 8,
   },
   {
     situation: 'midfield_duel',
-    template: '{{from}} e {{to}} travam duelo físico no miolo; ninguém cede terreno.',
+    template: L('{{from}} e {{to}} travam duelo físico no miolo; ninguém cede terreno.', '{{from}} and {{to}} go toe to toe in midfield; neither gives an inch.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'pressure_high',
-    template: '{{team}} sobe a pressão, rouba metros e força o erro na saída.',
+    template: L('{{team}} sobe a pressão, rouba metros e força o erro na saída.', '{{team}} push up the press, win ground and force the error.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'pressure_low',
-    template: '{{team}} recua o bloco, fecha o corredor central e espera o erro.',
+    template: L('{{team}} recua o bloco, fecha o corredor central e espera o erro.', '{{team}} drop deep, close the middle and wait for the mistake.'),
     tags: ['pt-BR', 'radio'],
     weight: 8,
   },
   {
     situation: 'long_shot',
-    template: '{{from}} arrisca de fora da área; a bola raspa a trave e o estádio segura o grito.',
+    template: L('{{from}} arrisca de fora da área; a bola raspa a trave e o estádio segura o grito.', '{{from}} tries his luck from distance; it shaves the post and the crowd holds its breath.'),
     tags: ['pt-BR', 'radio'],
     weight: 9,
   },
   {
     situation: 'miss_big_chance',
-    template: '{{from}} fica cara a cara e manda por cima; chance limpa desperdiçada.',
+    template: L('{{from}} fica cara a cara e manda por cima; chance limpa desperdiçada.', '{{from}} is one-on-one and blazes over; a golden chance wasted.'),
     tags: ['pt-BR', 'radio'],
     weight: 10,
   },
   {
     situation: 'crowd_reaction',
-    template: 'A torcida empurra o {{team}} e o estádio vira caldeirão por um instante.',
+    template: L('A torcida empurra o {{team}} e o estádio vira caldeirão por um instante.', 'The crowd roar {{team}} on and the stadium becomes a cauldron.'),
     tags: ['pt-BR', 'radio'],
     weight: 8,
   },
   {
     situation: 'game_pause',
-    template: 'O jogo segura o ritmo: atendimento em campo e conversa com o árbitro.',
+    template: L('O jogo segura o ritmo: atendimento em campo e conversa com o árbitro.', "Play's held up: treatment on the pitch and words with the referee."),
     tags: ['pt-BR', 'radio'],
     weight: 7,
   },
   {
     situation: 'restart_play',
-    template: 'Árbitro autoriza: bola em jogo de novo e o relógio volta a correr.',
+    template: L('Árbitro autoriza: bola em jogo de novo e o relógio volta a correr.', 'The referee waves it on: back in play and the clock is running again.'),
     tags: ['pt-BR', 'radio'],
     weight: 8,
   },
@@ -290,12 +292,14 @@ function fillTemplate(
     .replace(/\{\{from\}\}/g, p.from ?? '')
     .replace(/\{\{to\}\}/g, p.to ?? '')
     .replace(/\{\{team\}\}/g, p.team ?? '')
-    .replace(/\{\{keeper\}\}/g, p.keeper ?? 'o guarda-redes');
+    .replace(/\{\{keeper\}\}/g, p.keeper ?? L('o guarda-redes', 'the keeper'));
 }
 
 /** Injeta linhas dos NarrativePacks do admin no pool de candidatos. */
 function adminPackEntries(situations: string[]): NarrationEntry[] {
   if (typeof localStorage === 'undefined') return [];
+  // Packs do admin são escritos em PT — em inglês ficam de fora do pool.
+  if (emIngles()) return [];
   try {
     const raw = localStorage.getItem('olefoot-gamespirit-knowledge-v2');
     if (!raw) return [];

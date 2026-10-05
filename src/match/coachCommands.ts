@@ -19,6 +19,7 @@ import type { PitchPlayerState } from '@/engine/types';
 import type { PlayerEntity } from '@/entities/types';
 import { getPlayerSkills, FULL_SKILL_CATALOG } from '@/skills/index';
 import type { CoachSkill } from '@/skills/playbookV1';
+import { L } from '@/i18n/L';
 
 export type CommandScope = 'player' | 'sector' | 'team';
 export type SectorType = 'defesa' | 'meio' | 'ataque';
@@ -182,11 +183,11 @@ export function canActivateSkill(
   playersById: Record<string, PlayerEntity>,
 ): { ok: boolean; reason?: string } {
   const entity = playersById[player.playerId];
-  if (!entity) return { ok: false, reason: 'Jogador não encontrado' };
+  if (!entity) return { ok: false, reason: L('Jogador não encontrado', 'Player not found') };
 
   const equippedSkills = entity.skills ?? [];
   if (!equippedSkills.includes(skillId)) {
-    return { ok: false, reason: 'Skill não equipada' };
+    return { ok: false, reason: L('Skill não equipada', 'Skill not equipped') };
   }
 
   // TODO: verificar cooldown, fatigue, etc.

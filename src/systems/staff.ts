@@ -2,15 +2,16 @@ import type { FinanceState, PlayerEntity } from '@/entities/types';
 import type { StaffRoleId, StaffState } from '@/game/types';
 import { addBroCents, addOle } from './economy';
 import { headCoachTrainingAttrMultiplier } from './staffBenefits';
+import { L } from '@/i18n/L';
 
 export const STAFF_LABELS: Record<StaffRoleId, string> = {
-  preparador_fisico: 'Preparador físico',
-  mental: 'Preparador mental',
-  nutricao: 'Nutrição',
-  tatico: 'Preparador tático',
-  treinador: 'Treinador',
-  olheiro: 'Olheiro',
-  preparador_goleiros: 'Preparador de goleiros',
+  preparador_fisico: L('Preparador físico', 'Fitness coach'),
+  mental: L('Preparador mental', 'Mental coach'),
+  nutricao: L('Nutrição', 'Nutrition'),
+  tatico: L('Preparador tático', 'Tactical coach'),
+  treinador: L('Treinador', 'Head coach'),
+  olheiro: L('Olheiro', 'Scout'),
+  preparador_goleiros: L('Preparador de goleiros', 'Goalkeeping coach'),
 };
 
 export const STAFF_ROLE_IDS: StaffRoleId[] = [
@@ -58,16 +59,16 @@ export function tryUpgradeStaffRole(
 ): { ok: true; staff: StaffState; finance: FinanceState } | { ok: false; error: string } {
   const current = state.roles[roleId] ?? 1;
   const cost = getStaffUpgradeCost(current);
-  if (!cost) return { ok: false, error: 'Profissional já está no nível máximo.' };
+  if (!cost) return { ok: false, error: L('Profissional já está no nível máximo.', 'Staff member is already at max level.') };
   if (cost.currency === 'exp') {
-    if (finance.ole < cost.amount) return { ok: false, error: `EXP insuficiente. Necessário: ${cost.amount}.` };
+    if (finance.ole < cost.amount) return { ok: false, error: L(`EXP insuficiente. Necessário: ${cost.amount}.`, `Not enough EXP. Required: ${cost.amount}.`) };
     return {
       ok: true,
       staff: { ...state, roles: { ...state.roles, [roleId]: current + 1 } },
       finance: addOle(finance, -cost.amount),
     };
   }
-  if (finance.broCents < cost.amount) return { ok: false, error: `BRO insuficiente. Necessário: ${(cost.amount / 100).toFixed(2)}.` };
+  if (finance.broCents < cost.amount) return { ok: false, error: L(`BRO insuficiente. Necessário: ${(cost.amount / 100).toFixed(2)}.`, `Not enough BRO. Required: ${(cost.amount / 100).toFixed(2)}.`) };
   return {
     ok: true,
     staff: { ...state, roles: { ...state.roles, [roleId]: current + 1 } },

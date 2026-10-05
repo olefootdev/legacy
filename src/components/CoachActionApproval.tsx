@@ -4,6 +4,7 @@ import { Check, X, Clock, AlertCircle, Zap, TrendingUp, Users, Dumbbell } from '
 import { useGameDispatch, useGameStore } from '@/game/store';
 import type { CoachAction } from '@/coach/types';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 export function CoachActionApproval() {
   const dispatch = useGameDispatch();
@@ -117,7 +118,7 @@ export function CoachActionApproval() {
                   <div className="flex items-center gap-2 text-[10px] text-cimento hover:text-white transition-colors">
                     <Clock className="w-3 h-3" />
                     <span>
-                      {isExpanded ? 'Ocultar' : 'Ver'} justificativa do coach
+                      {isExpanded ? L('Ocultar justificativa do coach', 'Hide coach reasoning') : L('Ver justificativa do coach', 'Show coach reasoning')}
                     </span>
                   </div>
                 </button>
@@ -144,14 +145,14 @@ export function CoachActionApproval() {
                     className="ole-num flex-1 inline-flex items-center justify-center gap-1.5 bg-neon-yellow text-black px-3 py-2 text-[12px] uppercase hover:bg-white transition-colors"
                   >
                     <Check className="w-4 h-4" />
-                    Aprovar
+                    {L('Aprovar', 'Approve')}
                   </button>
                   <button
                     onClick={() => handleReject(action.id)}
                     className="ole-num inline-flex items-center justify-center gap-1.5 border border-white/30 text-white px-3 py-2 text-[12px] uppercase hover:border-white transition-colors"
                   >
                     <X className="w-4 h-4" />
-                    Rejeitar
+                    {L('Rejeitar', 'Reject')}
                   </button>
                 </div>
               </div>

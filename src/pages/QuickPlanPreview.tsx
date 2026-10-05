@@ -28,6 +28,7 @@ import type { MatchPlan } from '@/match/quickPlanTypes';
 import { buildFatigueByIdMap, getEffectiveFatigue } from '@/systems/fatigue';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { roleFromPos } from '@/engine/pitchFromLineup';
+import { L, emIngles } from '@/i18n/L';
 
 export default function QuickPlanPreview() {
   const players = useGameStore((s) => s.players);
@@ -112,7 +113,7 @@ export default function QuickPlanPreview() {
       };
       const fetched = await fetchQuickPlan(input);
       if (!fetched) {
-        setError('Backend retornou null. Verifique se o servidor Hono está rodando + python3 disponível.');
+        setError(L('Backend retornou null. Verifique se o servidor Hono está rodando + python3 disponível.', 'Backend returned null. Check that the Hono server is running + python3 is available.'));
         return;
       }
       lastInputRef.current = input;
@@ -147,8 +148,11 @@ export default function QuickPlanPreview() {
         </div>
 
         <p className="text-[12px] text-white/60 mb-5 leading-relaxed">
-          Pré-computa uma Partida Rápida via Python (smartfield/match_simulator.py) e renderiza condensado em ~25s.
-          O backend precisa estar rodando ({String(import.meta.env.VITE_OLEFOOT_API_URL ?? 'localhost:4000')}) e ter python3 no PATH.
+          {emIngles()
+            ? <>Pre-computes a Quick Match via Python (smartfield/match_simulator.py) and renders it condensed in ~25s.
+          The backend must be running ({String(import.meta.env.VITE_OLEFOOT_API_URL ?? 'localhost:4000')}) with python3 on PATH.</>
+            : <>Pré-computa uma Partida Rápida via Python (smartfield/match_simulator.py) e renderiza condensado em ~25s.
+          O backend precisa estar rodando ({String(import.meta.env.VITE_OLEFOOT_API_URL ?? 'localhost:4000')}) e ter python3 no PATH.</>}
         </p>
 
         <button
@@ -157,13 +161,13 @@ export default function QuickPlanPreview() {
           disabled={loading}
           className="mb-6 px-5 py-2.5 bg-amber-400 hover:bg-white text-black font-display uppercase tracking-[0.18em] text-[11px] font-black transition-colors disabled:opacity-50"
         >
-          {loading ? 'Simulando...' : plan ? 'Simular outra' : 'Gerar Match Plan'}
+          {loading ? L('Simulando...', 'Simulating...') : plan ? L('Simular outra', 'Simulate another') : L('Gerar Match Plan', 'Generate Match Plan')}
         </button>
 
         {error && (
           <div className="mb-6 border border-rose-500/40 border-l-[3px] border-l-rose-400 bg-rose-500/10 px-4 py-3">
             <p className="text-[10px] text-rose-300 font-display uppercase tracking-[0.2em] font-black mb-1">
-              Erro
+              {L('Erro', 'Error')}
             </p>
             <p className="text-[12px] text-white/80">{error}</p>
           </div>
@@ -172,7 +176,7 @@ export default function QuickPlanPreview() {
         {plan && (
           <>
             <div className="mb-3 text-[11px] text-white/50 tabular-nums">
-              Gerado em {plan.duration_ms}ms · {plan.events.length} eventos · {plan.analyst_beats?.length ?? 0} beats · arco {plan.narrative_arc}
+              {L('Gerado em', 'Generated in')} {plan.duration_ms}ms · {plan.events.length} {L('eventos', 'events')} · {plan.analyst_beats?.length ?? 0} beats · {L('arco', 'arc')} {plan.narrative_arc}
             </div>
             {/* key=seed: plano novo = instância nova (refs do engine não sobrevivem à troca) */}
             <QuickPlanPlayer
@@ -183,8 +187,8 @@ export default function QuickPlanPreview() {
             />
             {result && (
               <div className="mt-3 text-[11px] text-white/50 tabular-nums">
-                Leitura {result.reading.good}/{result.reading.total} · {result.ledger.length} decisões ·{' '}
-                {result.replanned ? '2º tempo replanejado pelo Python' : '2º tempo baseline (replan indisponível)'}
+                {L('Leitura', 'Reading')} {result.reading.good}/{result.reading.total} · {result.ledger.length} {L('decisões', 'decisions')} ·{' '}
+                {result.replanned ? L('2º tempo replanejado pelo Python', '2nd half replanned by Python') : L('2º tempo baseline (replan indisponível)', '2nd half baseline (replan unavailable)')}
               </div>
             )}
           </>

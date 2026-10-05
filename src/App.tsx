@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useLayoutEffect, useState } from 'react';
+import { L } from '@/i18n/L';
 import { ErrorBoundary } from 'react-error-boundary';
 import { lazyRetry } from '@/lib/lazyRetry';
 import { loadAdminPanelSession, isGameSessionAdmin } from '@/supabase/adminPanelAuth';
@@ -299,7 +300,7 @@ function GameShell() {
 function RouteFallback() {
   return (
     <div className="flex min-h-[40vh] items-center justify-center text-sm text-white/60">
-      Carregando…
+      {L('Carregando…', 'Loading…')}
     </div>
   );
 }
@@ -308,7 +309,7 @@ function MatchQuickErrorFallback({ error, resetErrorBoundary }: { error: Error; 
   console.error('MatchQuick Error:', error);
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-16 text-center">
-      <p className="font-display text-sm font-bold uppercase tracking-wider text-red-500">Erro na Partida Rápida</p>
+      <p className="font-display text-sm font-bold uppercase tracking-wider text-red-500">{L('Erro na Partida Rápida', 'Quick Match error')}</p>
       <pre className="max-w-2xl overflow-auto rounded bg-black/50 p-4 text-left text-xs text-white/80">
         {error.message}
         {'\n\n'}
@@ -318,13 +319,13 @@ function MatchQuickErrorFallback({ error, resetErrorBoundary }: { error: Error; 
         onClick={resetErrorBoundary}
         className="mt-4 rounded bg-neon-yellow px-6 py-2 font-display text-xs font-bold uppercase tracking-wider text-black hover:bg-white transition-colors"
       >
-        Tentar novamente
+        {L('Tentar novamente', 'Try again')}
       </button>
       <a
         href="/"
         className="text-sm text-white/60 hover:text-neon-yellow transition-colors"
       >
-        ← Voltar para Home
+        {L('← Voltar para Home', '← Back to Home')}
       </a>
     </div>
   );
@@ -364,15 +365,15 @@ function RootErrorFallback({ error, resetErrorBoundary }: { error: Error; resetE
         className="font-display font-black uppercase"
         style={{ color: 'var(--color-neon-yellow, #FDE100)', fontSize: 'clamp(24px, 5vw, 36px)', letterSpacing: '0.04em' }}
       >
-        {isChunkErr ? 'Atualizando o jogo' : 'Algo deu errado'}
+        {isChunkErr ? L('Atualizando o jogo', 'Updating the game') : L('Algo deu errado', 'Something went wrong')}
       </div>
       <p
         className="max-w-md leading-relaxed"
         style={{ color: 'rgba(255,255,255,0.72)', fontFamily: 'var(--font-ui)', fontSize: '14px' }}
       >
         {isChunkErr
-          ? 'Estamos a carregar a versão mais recente. Recarrega a página pra continuar.'
-          : 'Recarrega a página. Se persistir, contacta o suporte.'}
+          ? L('Estamos a carregar a versão mais recente. Recarrega a página pra continuar.', 'Loading the latest version. Reload the page to continue.')
+          : L('Recarrega a página. Se persistir, contacta o suporte.', 'Reload the page. If it persists, contact support.')}
       </p>
       <button
         type="button"
@@ -382,11 +383,11 @@ function RootErrorFallback({ error, resetErrorBoundary }: { error: Error; resetE
         }}
         className="btn-primary"
       >
-        <span className="btn-primary-inner">Recarregar</span>
+        <span className="btn-primary-inner">{L('Recarregar', 'Reload')}</span>
       </button>
       {!isChunkErr && (
         <details className="mt-3 max-w-md text-left" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '11px' }}>
-          <summary className="cursor-pointer">Detalhes técnicos</summary>
+          <summary className="cursor-pointer">{L('Detalhes técnicos', 'Technical details')}</summary>
           <pre className="mt-2 overflow-auto rounded bg-black/40 p-3 text-[10px]">{error.message}</pre>
         </details>
       )}

@@ -17,6 +17,7 @@ import { Sparkles, TrendingUp, Activity, Zap, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MonteCarloResult } from '@/match/matchMonteCarlo';
 
+import { L, LOCALE } from '@/i18n/L';
 interface Props {
   result: MonteCarloResult;
   /** Nome curto pra mostrar no resultado (default "Casa" / "Visitante"). */
@@ -31,16 +32,16 @@ function pctLabel(p: number): string {
 }
 
 function dramaLabel(idx: number): { label: string; tone: 'success' | 'warning' | 'neutral' } {
-  if (idx >= 0.8) return { label: 'Equilíbrio extremo', tone: 'success' };
-  if (idx >= 0.65) return { label: 'Jogo aberto', tone: 'success' };
-  if (idx >= 0.45) return { label: 'Equilibrado', tone: 'neutral' };
-  return { label: 'Favorito claro', tone: 'warning' };
+  if (idx >= 0.8) return { label: L('Equilíbrio extremo', 'Razor-tight'), tone: 'success' };
+  if (idx >= 0.65) return { label: L('Jogo aberto', 'Open game'), tone: 'success' };
+  if (idx >= 0.45) return { label: L('Equilibrado', 'Balanced'), tone: 'neutral' };
+  return { label: L('Favorito claro', 'Clear favourite'), tone: 'warning' };
 }
 
 export function MatchPredictionPanel({
   result,
-  homeName = 'Casa',
-  awayName = 'Visitante',
+  homeName = L('Casa', 'Home'),
+  awayName = L('Visitante', 'Away'),
   compact = false,
 }: Props) {
   const { winHome, draw, winAway, xgHome, xgAway, scoreDist, topHomeScorers, dramaIndex, zebra, zebraSide } = result;
@@ -70,7 +71,7 @@ export function MatchPredictionPanel({
             letterSpacing: '0.18em',
           }}
         >
-          Leitura da Partida
+          {L('Leitura da Partida', 'Match Read')}
         </h3>
         <span
           className="ml-auto text-white/40"
@@ -81,7 +82,7 @@ export function MatchPredictionPanel({
             letterSpacing: '0.18em',
           }}
         >
-          {result.samples.toLocaleString('pt-BR')} sims
+          {result.samples.toLocaleString(LOCALE)} sims
         </span>
       </div>
 
@@ -104,7 +105,7 @@ export function MatchPredictionPanel({
                 letterSpacing: '0.22em',
               }}
             >
-              Vitória {homeName}
+              {L('Vitória', 'Win')} {homeName}
             </p>
           </div>
           <div>
@@ -123,7 +124,7 @@ export function MatchPredictionPanel({
                 letterSpacing: '0.22em',
               }}
             >
-              Empate
+              {L('Empate', 'Draw')}
             </p>
           </div>
           <div>
@@ -142,7 +143,7 @@ export function MatchPredictionPanel({
                 letterSpacing: '0.22em',
               }}
             >
-              Vitória {awayName}
+              {L('Vitória', 'Win')} {awayName}
             </p>
           </div>
         </div>
@@ -190,13 +191,13 @@ export function MatchPredictionPanel({
               letterSpacing: '0.22em',
             }}
           >
-            Zebra possível
+            {L('Zebra possível', 'Upset possible')}
           </span>
           <span
             className="text-white/70"
             style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}
           >
-            {zebraSide === 'home' ? homeName : awayName} pode surpreender
+            {zebraSide === 'home' ? homeName : awayName} {L('pode surpreender', 'could surprise')}
           </span>
         </motion.div>
       ) : null}
@@ -221,7 +222,7 @@ export function MatchPredictionPanel({
                     letterSpacing: '0.22em',
                   }}
                 >
-                  Gols esperados
+                  {L('Gols esperados', 'Expected goals')}
                 </span>
               </div>
               <div className="flex items-baseline justify-between gap-2">
@@ -331,7 +332,7 @@ export function MatchPredictionPanel({
                     letterSpacing: '0.22em',
                   }}
                 >
-                  Placares prováveis
+                  {L('Placares prováveis', 'Likely scores')}
                 </span>
               </div>
               <ul className="space-y-1">
@@ -379,7 +380,7 @@ export function MatchPredictionPanel({
                     letterSpacing: '0.22em',
                   }}
                 >
-                  Possível herói
+                  {L('Possível herói', 'Possible hero')}
                 </span>
               </div>
               {topHomeScorers.length > 0 ? (
@@ -407,14 +408,14 @@ export function MatchPredictionPanel({
                         className="shrink-0 tabular-nums text-white/55"
                         style={{ fontFamily: 'var(--font-display)', fontSize: '11px', fontWeight: 700 }}
                       >
-                        {s.goalsPerMatch.toFixed(2)}/p
+                        {s.goalsPerMatch.toFixed(2)}{L('/p', '/m')}
                       </span>
                     </li>
                   ))}
                 </ul>
               ) : (
                 <p className="text-white/45" style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}>
-                  Sem dados de elenco.
+                  {L('Sem dados de elenco.', 'No squad data.')}
                 </p>
               )}
             </div>

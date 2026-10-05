@@ -10,6 +10,7 @@
  */
 
 import type { FormationSchemeId } from '@/match-engine/types';
+import { L } from '@/i18n/L';
 
 // ─── Intents ────────────────────────────────────────────────────────────────
 
@@ -115,11 +116,11 @@ export const INTENT_CATEGORY: Record<VoiceIntent, IntentCategory> = {
 export type AssistantRole = 'tatico' | 'ataque' | 'defesa' | 'fisico' | 'mental';
 
 export const ASSISTANT_LABEL: Record<AssistantRole, string> = {
-  tatico: 'Auxiliar Tático',
-  ataque: 'Auxiliar de Ataque',
-  defesa: 'Auxiliar Defensivo',
-  fisico: 'Preparador Físico',
-  mental: 'Preparador Mental',
+  tatico: L('Auxiliar Tático', 'Tactical Assistant'),
+  ataque: L('Auxiliar de Ataque', 'Attacking Coach'),
+  defesa: L('Auxiliar Defensivo', 'Defensive Coach'),
+  fisico: L('Preparador Físico', 'Fitness Coach'),
+  mental: L('Preparador Mental', 'Mental Coach'),
 };
 
 export const ASSISTANT_GLYPH: Record<AssistantRole, string> = {
@@ -241,11 +242,11 @@ export type ObedienceTier =
   | 'protest';          // <20 · "NÃO POSSO" com tremor
 
 export const OBEDIENCE_TIER_BUBBLE: Record<ObedienceTier, string> = {
-  critical_accept: 'DEIXA COMIGO!',
-  accept: 'Vou fazer',
-  weak_accept: 'Vou tentar',
-  refuse: 'Tá difícil...',
-  protest: 'NÃO POSSO',
+  critical_accept: L('DEIXA COMIGO!', 'LEAVE IT TO ME!'),
+  accept: L('Vou fazer', 'On it'),
+  weak_accept: L('Vou tentar', "I'll try"),
+  refuse: L('Tá difícil...', "It's tough..."),
+  protest: L('NÃO POSSO', "I CAN'T"),
 };
 
 export const OBEDIENCE_TIER_COLOR: Record<ObedienceTier, string> = {

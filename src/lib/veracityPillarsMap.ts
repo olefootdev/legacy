@@ -5,6 +5,7 @@
  * cada pilar é resolvido no código. Ao alterar a simulação ou a progressão, actualiza
  * estes caminhos para manter a rastreabilidade.
  */
+import { L } from '@/i18n/L';
 
 export type VeracityPillarId = 'active_attrs' | 'team_match_impact' | 'evolution';
 
@@ -30,9 +31,9 @@ export interface VeracityPillarDef {
 export const VERACITY_PILLARS: readonly VeracityPillarDef[] = [
   {
     id: 'active_attrs',
-    label: 'Atributos → campo',
+    label: L('Atributos → campo', 'Attributes → pitch'),
     description:
-      'Os atributos da entidade (`PlayerEntity.attrs`) são convertidos em atributos de partida e injectados no estado do relvado; o movimento e decisões em tempo real leem esses valores.',
+      L('Os atributos da entidade (`PlayerEntity.attrs`) são convertidos em atributos de partida e injectados no estado do relvado; o movimento e decisões em tempo real leem esses valores.', 'The entity attributes (`PlayerEntity.attrs`) are converted into match attributes and injected into the pitch state; real-time movement and decisions read those values.'),
     codeRefs: [
       {
         module: '@/match/playerInMatch.ts',
@@ -53,9 +54,9 @@ export const VERACITY_PILLARS: readonly VeracityPillarDef[] = [
   },
   {
     id: 'team_match_impact',
-    label: 'Impacto (XI + jogo)',
+    label: L('Impacto (XI + jogo)', 'Impact (XI + match)'),
     description:
-      'Força do plantel no ecrã de equipa usa o mesmo overall dos atributos activos. Em jogo, estatísticas e ledger de impacto alimentam rating e factores de evento.',
+      L('Força do plantel no ecrã de equipa usa o mesmo overall dos atributos activos. Em jogo, estatísticas e ledger de impacto alimentam rating e factores de evento.', 'Squad strength on the team screen uses the same overall as the active attributes. In matches, stats and the impact ledger feed ratings and event factors.'),
     codeRefs: [
       {
         module: '@/entities/player.ts',
@@ -81,9 +82,9 @@ export const VERACITY_PILLARS: readonly VeracityPillarDef[] = [
   },
   {
     id: 'evolution',
-    label: 'Evolução (treino + jogo)',
+    label: L('Evolução (treino + jogo)', 'Progression (training + match)'),
     description:
-      'Planos de treino alteram `attrs` e XP; jogos aplicam swing de performance; a linha do tempo grava snapshots para auditoria na ficha.',
+      L('Planos de treino alteram `attrs` e XP; jogos aplicam swing de performance; a linha do tempo grava snapshots para auditoria na ficha.', 'Training plans change `attrs` and XP; matches apply a performance swing; the timeline stores snapshots for auditing on the player sheet.'),
     codeRefs: [
       {
         module: '@/systems/trainingPlans.ts',
@@ -116,5 +117,5 @@ export const VERACITY_PILLARS: readonly VeracityPillarDef[] = [
 
 export function veracityPillarTooltip(def: VeracityPillarDef): string {
   const refs = def.codeRefs.map((r) => `${r.module} → ${r.symbol}`).join('\n');
-  return `${def.description}\n\nCódigo:\n${refs}`;
+  return `${def.description}\n\n${L('Código', 'Code')}:\n${refs}`;
 }

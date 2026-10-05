@@ -23,11 +23,12 @@ import {
   type ScheduledLeagueFixture,
 } from '@/match/leagueSchedule';
 import { evaluateOfficialSquad } from '@/match/squadEligibility';
+import { L, LOCALE, emIngles } from '@/i18n/L';
 
 function formatDayLabel(dateIso: string): string {
   try {
     const d = new Date(`${dateIso}T12:00:00`);
-    return d.toLocaleDateString('pt-BR', {
+    return d.toLocaleDateString(LOCALE, {
       weekday: 'short',
       day: '2-digit',
       month: 'short',
@@ -41,7 +42,7 @@ function formatDayShort(dateIso: string): { weekday: string; day: string } {
   try {
     const d = new Date(`${dateIso}T12:00:00`);
     const weekday = d
-      .toLocaleDateString('pt-BR', { weekday: 'short' })
+      .toLocaleDateString(LOCALE, { weekday: 'short' })
       .replace('.', '')
       .slice(0, 3)
       .toUpperCase();
@@ -67,7 +68,7 @@ function addDaysIso(iso: string, delta: number): string {
 
 function statusBadge(fx: ScheduledLeagueFixture): { text: string; className: string } {
   if (fx.status === 'scheduled')
-    return { text: 'Agendado', className: 'border border-white/16 text-cimento' };
+    return { text: L('Agendado', 'Scheduled'), className: 'border border-white/16 text-cimento' };
   if (fx.status === 'walkover')
     return {
       text: 'WO',
@@ -84,23 +85,23 @@ function formatCountdown(
   nowMs: number,
 ): { label: string; urgent: boolean; live: boolean } {
   const diff = targetMs - nowMs;
-  if (Math.abs(diff) < 60_000) return { label: 'agora', urgent: true, live: true };
+  if (Math.abs(diff) < 60_000) return { label: L('agora', 'now'), urgent: true, live: true };
   if (diff < 0) {
     const mins = Math.round(-diff / 60_000);
-    if (mins < 60) return { label: `começou há ${mins}min`, urgent: true, live: true };
+    if (mins < 60) return { label: L(`começou há ${mins}min`, `started ${mins}min ago`), urgent: true, live: true };
     const h = Math.round(mins / 60);
-    return { label: `há ${h}h`, urgent: false, live: false };
+    return { label: L(`há ${h}h`, `${h}h ago`), urgent: false, live: false };
   }
   const mins = Math.round(diff / 60_000);
-  if (mins < 60) return { label: `em ${mins}min`, urgent: true, live: false };
+  if (mins < 60) return { label: L(`em ${mins}min`, `in ${mins}min`), urgent: true, live: false };
   const hours = Math.floor(mins / 60);
   if (hours < 24) {
     const m = mins - hours * 60;
-    return { label: m > 0 ? `em ${hours}h ${m}min` : `em ${hours}h`, urgent: hours <= 2, live: false };
+    return { label: m > 0 ? L(`em ${hours}h ${m}min`, `in ${hours}h ${m}min`) : L(`em ${hours}h`, `in ${hours}h`), urgent: hours <= 2, live: false };
   }
   const days = Math.floor(hours / 24);
   const h2 = hours - days * 24;
-  return { label: h2 > 0 ? `em ${days}d ${h2}h` : `em ${days}d`, urgent: false, live: false };
+  return { label: h2 > 0 ? L(`em ${days}d ${h2}h`, `in ${days}d ${h2}h`) : L(`em ${days}d`, `in ${days}d`), urgent: false, live: false };
 }
 
 interface FixtureCardProps {
@@ -129,7 +130,7 @@ function FixtureCard({ fx, mine }: FixtureCardProps) {
             </span>
             {mine && (
               <span className="bg-neon-yellow text-black px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em]">
-                Seu jogo
+                {L('Seu jogo', 'Your match')}
               </span>
             )}
           </div>
@@ -161,7 +162,7 @@ function FixtureCard({ fx, mine }: FixtureCardProps) {
           to="/match/quick"
           className="mt-3 ole-num inline-flex h-11 items-center gap-1.5 whitespace-nowrap bg-neon-yellow px-4 text-[12px] uppercase text-black transition-colors hover:bg-white [--corte:10px] [clip-path:var(--clip-corte)]"
         >
-          <Play className="h-3.5 w-3.5" /> Jogar
+          <Play className="h-3.5 w-3.5" /> {L('Jogar', 'Play')}
         </Link>
       )}
     </div>
@@ -247,7 +248,7 @@ export function Calendar() {
 
   return (
     <div className="mx-auto min-w-0 max-w-3xl space-y-4 pb-28 md:pb-12">
-      <BackButton to="/competicao" label="Competição" />
+      <BackButton to="/competicao" label={L('Competição', 'Competition')} />
 
       {/* ── HERO ─────────────────────────────────────────────────── */}
       {!squad.ok ? (
@@ -260,19 +261,28 @@ export function Calendar() {
             <div className="flex items-center gap-2 text-baixa">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span className="font-mono text-[11px] font-medium uppercase tracking-[0.16em]">
-                Risco de WO
+                {L('Risco de WO', 'Walkover risk')}
               </span>
             </div>
             <h1 className="mt-2 font-impact uppercase leading-[1.1] text-white" style={{ fontSize: 'clamp(28px, 7vw, 40px)' }}>
-              Ajuste o elenco
+              {L('Ajuste o elenco', 'Fix your squad')}
             </h1>
             <p className="mt-2 text-sm leading-snug text-giz">
-              <strong className="text-white">11 titulares</strong> e{' '}
-              <strong className="text-white">5 no banco</strong>, sem lesão ou suspensão.
+              {emIngles() ? (
+                <>
+                  <strong className="text-white">11 starters</strong> and{' '}
+                  <strong className="text-white">5 on the bench</strong>, no injuries or suspensions.
+                </>
+              ) : (
+                <>
+                  <strong className="text-white">11 titulares</strong> e{' '}
+                  <strong className="text-white">5 no banco</strong>, sem lesão ou suspensão.
+                </>
+              )}
             </p>
             {nextUser && countdown && (
               <p className="mt-2 truncate text-[12px] text-cimento">
-                Próximo: <strong className="text-white">{nextUser.homeName} × {nextUser.awayName}</strong>
+                {L('Próximo', 'Next')}: <strong className="text-white">{nextUser.homeName} × {nextUser.awayName}</strong>
                 {' · '}
                 <span className="font-bold text-baixa">{countdown.label}</span>
               </p>
@@ -282,13 +292,13 @@ export function Calendar() {
                 to="/clube/elenco"
                 className="ole-num inline-flex h-11 items-center gap-1.5 whitespace-nowrap bg-neon-yellow px-4 text-[12px] uppercase text-black transition-colors hover:bg-white [--corte:10px] [clip-path:var(--clip-corte)]"
               >
-                Ajustar escalação
+                {L('Ajustar escalação', 'Edit lineup')}
               </Link>
               <Link
                 to="/mercado/transfer"
                 className="ole-num inline-flex h-11 items-center whitespace-nowrap border border-white/30 px-4 text-[12px] uppercase text-white transition-colors hover:border-white hover:bg-white/5"
               >
-                Mercado
+                {L('Mercado', 'Market')}
               </Link>
             </div>
           </div>
@@ -305,12 +315,12 @@ export function Calendar() {
             <div className="flex items-center gap-2 text-neon-yellow">
               <Clock className={cn('h-4 w-4 shrink-0', countdown.live && 'animate-pulse')} />
               <span className="truncate font-mono text-[11px] font-medium uppercase tracking-[0.16em]">
-                Próximo · {countdown.label}
+                {L('Próximo', 'Next')} · {countdown.label}
               </span>
             </div>
             <div className="mt-3 flex items-end justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <Hashtag>{myOpponent.isHome ? '#emcasa' : '#fora'}</Hashtag>
+                <Hashtag>{myOpponent.isHome ? L('#emcasa', '#home') : L('#fora', '#away')}</Hashtag>
                 <h1
                   className="mt-1 truncate font-impact uppercase text-white"
                   style={{ fontSize: 'clamp(28px, 7vw, 44px)', lineHeight: 1.1 }}
@@ -336,21 +346,21 @@ export function Calendar() {
                   to="/match/quick"
                   className="ole-num inline-flex h-11 items-center gap-1.5 whitespace-nowrap bg-neon-yellow px-4 text-[12px] uppercase text-black transition-colors hover:bg-white [--corte:10px] [clip-path:var(--clip-corte)]"
                 >
-                  Jogar agora
+                  {L('Jogar agora', 'Play now')}
                 </Link>
               ) : (
                 <Link
                   to="/clube/elenco"
                   className="ole-num inline-flex h-11 items-center gap-1.5 whitespace-nowrap bg-neon-yellow px-4 text-[12px] uppercase text-black transition-colors hover:bg-white [--corte:10px] [clip-path:var(--clip-corte)]"
                 >
-                  Preparar escalação
+                  {L('Preparar escalação', 'Set lineup')}
                 </Link>
               )}
               <Link
                 to="/clube/treino"
                 className="ole-num inline-flex h-11 items-center whitespace-nowrap border border-white/30 px-4 text-[12px] uppercase text-white transition-colors hover:border-white hover:bg-white/5"
               >
-                Treino
+                {L('Treino', 'Training')}
               </Link>
             </div>
           </div>
@@ -364,10 +374,10 @@ export function Calendar() {
           <div className="relative z-10 p-5">
             <div className="flex items-center gap-2 text-neon-yellow">
               <CalendarDays className="h-4 w-4" />
-              <Hashtag className="text-neon-yellow">#calendário</Hashtag>
+              <Hashtag className="text-neon-yellow">{L('#calendário', '#calendar')}</Hashtag>
             </div>
             <h1 className="mt-2 font-impact uppercase leading-[1.1] text-white" style={{ fontSize: 'clamp(28px, 7vw, 44px)' }}>
-              Sem jogos agendados
+              {L('Sem jogos agendados', 'No matches scheduled')}
             </h1>
           </div>
         </section>
@@ -403,7 +413,7 @@ export function Calendar() {
                       !isSelected && isToday && 'text-neon-yellow',
                     )}
                   >
-                    {isToday ? 'HOJE' : short.weekday}
+                    {isToday ? L('HOJE', 'TODAY') : short.weekday}
                   </span>
                   <span
                     className={cn(
@@ -438,7 +448,7 @@ export function Calendar() {
               type="button"
               onClick={() => setDayIso((d) => addDaysIso(d, -1))}
               className="border border-white/16 p-1.5 text-cimento hover:border-white/30 hover:text-white"
-              aria-label="Dia anterior"
+              aria-label={L('Dia anterior', 'Previous day')}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -449,7 +459,7 @@ export function Calendar() {
               type="button"
               onClick={() => setDayIso((d) => addDaysIso(d, 1))}
               className="border border-white/16 p-1.5 text-cimento hover:border-white/30 hover:text-white"
-              aria-label="Dia seguinte"
+              aria-label={L('Dia seguinte', 'Next day')}
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -460,7 +470,7 @@ export function Calendar() {
               onClick={() => setDayIso(todayIso)}
               className="border border-neon-yellow/50 px-2 py-1 font-mono text-[10.5px] uppercase tracking-[0.12em] text-neon-yellow hover:border-neon-yellow"
             >
-              Hoje
+              {L('Hoje', 'Today')}
             </button>
           ) : null}
         </div>
@@ -469,7 +479,7 @@ export function Calendar() {
         {fixturesOnDay.length === 0 ? (
           <div className="py-10 text-center">
             <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-poeira">
-              Sem jogos da liga neste dia
+              {L('Sem jogos da liga neste dia', 'No league matches this day')}
             </p>
           </div>
         ) : (
@@ -501,8 +511,11 @@ export function Calendar() {
                       )}
                     />
                     {showOthers
-                      ? 'Ocultar liga'
-                      : `Ver ${otherFixturesOnDay.length} ${otherFixturesOnDay.length === 1 ? 'jogo' : 'jogos'} da liga`}
+                      ? L('Ocultar liga', 'Hide league')
+                      : L(
+                          `Ver ${otherFixturesOnDay.length} ${otherFixturesOnDay.length === 1 ? 'jogo' : 'jogos'} da liga`,
+                          `View ${otherFixturesOnDay.length} league ${otherFixturesOnDay.length === 1 ? 'match' : 'matches'}`,
+                        )}
                   </button>
                 )}
                 {(showOthers || myFixturesOnDay.length === 0) && (
@@ -530,8 +543,8 @@ export function Calendar() {
           <div className="min-w-0 flex-1">
             <p className="text-[14px] font-semibold text-white truncate">{league.name}</p>
             <p className="truncate font-mono text-[10.5px] text-cimento">
-              {league.format === 'round_robin' ? 'Pontos corridos' : league.format} ·{' '}
-              {league.division} · Ver classificação →
+              {league.format === 'round_robin' ? L('Pontos corridos', 'Round robin') : league.format} ·{' '}
+              {league.division} · {L('Ver classificação', 'View table')} →
             </p>
           </div>
         </Link>

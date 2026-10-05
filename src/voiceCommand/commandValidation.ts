@@ -14,6 +14,7 @@ import type { VoiceIntent } from './types';
 import type { PitchPlayerState } from '@/engine/types';
 import { computeSkillMatch } from './obedienceRoll';
 import type { MatchPlayerAttributes } from '@/match/playerInMatch';
+import { L } from '@/i18n/L';
 
 export interface CommandValidationResult {
   valid: boolean;
@@ -64,7 +65,7 @@ function validateSkillMatch(
   if (skillMatch < SKILL_THRESHOLD_ERROR) {
     return {
       valid: false,
-      reason: `${ctx.player.name} não tem skill pra isso (compatibilidade ${Math.round(skillMatch)}%)`,
+      reason: L(`${ctx.player.name} não tem skill pra isso (compatibilidade ${Math.round(skillMatch)}%)`, `${ctx.player.name} lacks the skill for that (${Math.round(skillMatch)}% match)`),
       suggestion: getSkillSuggestion(intent, ctx),
       severity: 'error',
     };
@@ -87,23 +88,23 @@ function getSkillSuggestion(intent: VoiceIntent, ctx: ValidationContext): string
   // Sugestões por intent + role
   const suggestions: Partial<Record<VoiceIntent, Partial<Record<string, string>>>> = {
     dribble_attempt: {
-      def: 'Zagueiros não driblam — tenta "passa rápido" ou "segura a bola"',
-      gk: 'Goleiro não dribla — tenta "lança pro ataque"',
+      def: L('Zagueiros não driblam — tenta "passa rápido" ou "segura a bola"', 'Defenders don\'t dribble — try "passa rápido" or "segura a bola"'),
+      gk: L('Goleiro não dribla — tenta "lança pro ataque"', 'Goalkeeper doesn\'t dribble — try "lança pro ataque"'),
     },
     take_shot: {
-      def: 'Zagueiro longe do gol — tenta "passa pro ataque"',
-      gk: 'Goleiro não finaliza',
+      def: L('Zagueiro longe do gol — tenta "passa pro ataque"', 'Defender far from goal — try "passa pro ataque"'),
+      gk: L('Goleiro não finaliza', 'Goalkeeper doesn\'t shoot'),
     },
     invade_box: {
-      def: 'Zagueiro não invade — tenta "sobe o time" (coletivo)',
-      mid: 'Meia raramente invade — tenta "atacantes invadem"',
-      gk: 'Goleiro não invade',
+      def: L('Zagueiro não invade — tenta "sobe o time" (coletivo)', 'Defender doesn\'t attack the box — try "sobe o time" (team)'),
+      mid: L('Meia raramente invade — tenta "atacantes invadem"', 'Midfielder rarely attacks the box — try "atacantes invadem"'),
+      gk: L('Goleiro não invade', 'Goalkeeper doesn\'t attack the box'),
     },
     mark_player: {
-      attack: 'Atacante não marca — tenta "pressiona alto" (coletivo)',
+      attack: L('Atacante não marca — tenta "pressiona alto" (coletivo)', 'Forward doesn\'t mark — try "pressiona alto" (team)'),
     },
     aggressive_tackle: {
-      attack: 'Atacante não entra duro — tenta "pressiona o portador"',
+      attack: L('Atacante não entra duro — tenta "pressiona o portador"', 'Forward doesn\'t tackle hard — try "pressiona o portador"'),
     },
   };
 
@@ -139,10 +140,10 @@ function validateContext(
   if (requiresBall.includes(intent) && !p.hasBall) {
     return {
       valid: false,
-      reason: `${p.name} não está com a bola`,
+      reason: L(`${p.name} não está com a bola`, `${p.name} doesn't have the ball`),
       suggestion: m.ballCarrierPlayerId
-        ? 'Comando só funciona com bola no pé'
-        : 'Ninguém do seu time está com a bola',
+        ? L('Comando só funciona com bola no pé', 'Command only works with the ball at your feet')
+        : L('Ninguém do seu time está com a bola', 'No one on your team has the ball'),
       severity: 'error',
     };
   }
@@ -152,8 +153,8 @@ function validateContext(
   if (intent === 'take_shot' && attackingX < 65) {
     return {
       valid: false,
-      reason: `${p.name} está longe do gol (campo ${attackingX < 50 ? 'defensivo' : 'meio-campo'})`,
-      suggestion: 'Tenta "invade a área" primeiro, depois "chuta"',
+      reason: L(`${p.name} está longe do gol (campo ${attackingX < 50 ? 'defensivo' : 'meio-campo'})`, `${p.name} is far from goal (${attackingX < 50 ? 'defensive half' : 'midfield'})`),
+      suggestion: L('Tenta "invade a área" primeiro, depois "chuta"', 'Try "invade a área" first, then "chuta"'),
       severity: 'error',
     };
   }
@@ -161,8 +162,8 @@ function validateContext(
   if (intent === 'cross_ball' && attackingX < 60) {
     return {
       valid: false,
-      reason: `${p.name} está longe da linha de fundo pra cruzar`,
-      suggestion: 'Cruza funciona melhor perto da área adversária',
+      reason: L(`${p.name} está longe da linha de fundo pra cruzar`, `${p.name} is too far from the byline to cross`),
+      suggestion: L('Cruza funciona melhor perto da área adversária', 'Crossing works best near the opponent\'s box'),
       severity: 'warning',
     };
   }
@@ -172,8 +173,8 @@ function validateContext(
   if ((intent === 'mark_player' || intent === 'block_advance') && attackingX > 60) {
     return {
       valid: false,
-      reason: `${p.name} está no ataque, longe de marcar`,
-      suggestion: 'Marcação funciona no meio-campo ou defesa',
+      reason: L(`${p.name} está no ataque, longe de marcar`, `${p.name} is up front, too far to mark`),
+      suggestion: L('Marcação funciona no meio-campo ou defesa', 'Marking works in midfield or defence'),
       severity: 'warning',
     };
   }
@@ -183,7 +184,7 @@ function validateContext(
   if (p.role === 'gk' && (intent === 'invade_box' || intent === 'dribble_attempt')) {
     return {
       valid: false,
-      reason: 'Goleiro não deve sair da área',
+      reason: L('Goleiro não deve sair da área', 'Goalkeeper shouldn\'t leave the box'),
       severity: 'error',
     };
   }
@@ -193,8 +194,8 @@ function validateContext(
   if ((intent === 'break_line' || intent === 'run_behind') && attackingX < 50) {
     return {
       valid: false,
-      reason: `${p.name} está no campo defensivo — "quebrar linha" funciona no ataque`,
-      suggestion: 'Tenta "sobe o time" primeiro',
+      reason: L(`${p.name} está no campo defensivo — "quebrar linha" funciona no ataque`, `${p.name} is in the defensive half — "quebrar linha" works in attack`),
+      suggestion: L('Tenta "sobe o time" primeiro', 'Try "sobe o time" first'),
       severity: 'warning',
     };
   }
@@ -223,7 +224,7 @@ function validateTacticalSense(
   if (intent === 'player_substitution' && m.minute > 85) {
     return {
       valid: true,
-      reason: 'Substituição nos acréscimos — certeza?',
+      reason: L('Substituição nos acréscimos — certeza?', 'Substitution in stoppage time — sure?'),
       severity: 'warning',
     };
   }

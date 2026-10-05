@@ -14,6 +14,13 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { L } from '@/i18n/L';
+
+/** Rótulo de posição só pra tela (o valor `pos` não muda). */
+const POS_EN: Record<string, string> = {
+  GOL: 'GK', ZAG: 'CB', LAT: 'FB', LD: 'RB', LE: 'LB', VOL: 'DM', MEI: 'AM', MC: 'CM', PE: 'LW', PD: 'RW', ATA: 'ST', CA: 'ST',
+};
+const posLabel = (pos?: string): string | undefined => (pos ? L(pos, POS_EN[pos] ?? pos) : pos);
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -61,11 +68,11 @@ export interface AssistantPanelProps {
 const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1', '5-3-2', '3-4-3'];
 
 const STYLE_OPTIONS = [
-  { id: 'PRESSAO_ALTA',     label: 'Pressão Alta',  icon: '🔥', desc: 'Agressivo, alto risco' },
-  { id: 'POSSE_CONTROLADA', label: 'Posse',          icon: '🔵', desc: 'Controle, paciência' },
-  { id: 'TRANSICAO_RAPIDA', label: 'Transição',      icon: '⚡', desc: 'Contra-ataque rápido' },
-  { id: 'BLOCO_BAIXO',      label: 'Bloco Baixo',   icon: '🛡️', desc: 'Defesa sólida' },
-  { id: 'JOGO_DIRETO',      label: 'Jogo Direto',   icon: '🎯', desc: 'Vertical, 2ª bola' },
+  { id: 'PRESSAO_ALTA',     label: L('Pressão Alta', 'High Press'),  icon: '🔥', desc: L('Agressivo, alto risco', 'Aggressive, high risk') },
+  { id: 'POSSE_CONTROLADA', label: L('Posse', 'Possession'),          icon: '🔵', desc: L('Controle, paciência', 'Control, patience') },
+  { id: 'TRANSICAO_RAPIDA', label: L('Transição', 'Transition'),      icon: '⚡', desc: L('Contra-ataque rápido', 'Fast counter-attack') },
+  { id: 'BLOCO_BAIXO',      label: L('Bloco Baixo', 'Low Block'),   icon: '🛡️', desc: L('Defesa sólida', 'Solid defence') },
+  { id: 'JOGO_DIRETO',      label: L('Jogo Direto', 'Direct Play'),   icon: '🎯', desc: L('Vertical, 2ª bola', 'Vertical, 2nd ball') },
 ];
 
 type HalftimeTab = 'formacao' | 'estilo' | 'subs';
@@ -187,13 +194,13 @@ export function AssistantPanel({
               </svg>
             </div>
             <p className="font-display text-xs font-black uppercase tracking-widest text-white">
-              {isHalftime ? 'Intervalo' : 'Assistente Técnico'}
+              {isHalftime ? L('Intervalo', 'Half-time') : L('Assistente Técnico', 'Assistant Coach')}
             </p>
           </div>
           <div className="flex items-center gap-2">
             {isHalftime ? (
               <span className={`text-xs font-bold tabular-nums ${halftimeReady ? 'text-neon-yellow' : 'text-white/40'}`}>
-                {halftimeReady ? 'Pronto' : `${HALFTIME_MIN_SECONDS - seconds}s`}
+                {halftimeReady ? L('Pronto', 'Ready') : `${HALFTIME_MIN_SECONDS - seconds}s`}
               </span>
             ) : (
               !userInteracted && (
@@ -205,7 +212,7 @@ export function AssistantPanel({
                 type="button"
                 onClick={() => { interact(); onDismiss(); }}
                 className="text-white/40 transition-colors hover:text-white text-xl leading-none"
-                aria-label="Fechar"
+                aria-label={L('Fechar', 'Close')}
               >×</button>
             )}
           </div>
@@ -274,7 +281,7 @@ export function AssistantPanel({
               onClick={() => { interact(); onDismiss(); }}
               className="w-full rounded-lg border border-neon-yellow/40 bg-neon-yellow py-3 font-display text-xs font-black uppercase tracking-wider text-black transition-colors hover:bg-white active:scale-[0.99]"
             >
-              ▶ Voltar ao Jogo
+              {L('▶ Voltar ao Jogo', '▶ Back to Match')}
             </button>
           </div>
         )}
@@ -287,7 +294,7 @@ export function AssistantPanel({
               onClick={handleApply}
               className="flex-1 rounded-lg border border-white/20 bg-black/60 py-3 font-display text-xs font-black uppercase tracking-wide text-white transition-all hover:border-neon-yellow/40 hover:bg-black/80"
             >
-              {applied ? '✓ Aplicado' : 'Aplicar'}
+              {applied ? L('✓ Aplicado', '✓ Applied') : L('Aplicar', 'Apply')}
             </button>
             <button
               type="button"
@@ -299,7 +306,7 @@ export function AssistantPanel({
                   : 'cursor-not-allowed border border-white/10 bg-black/40 text-white/40'
               }`}
             >
-              {halftimeReady ? '▶ Retomar Partida' : `Aguarde ${HALFTIME_MIN_SECONDS - seconds}s…`}
+              {halftimeReady ? L('▶ Retomar Partida', '▶ Resume Match') : L(`Aguarde ${HALFTIME_MIN_SECONDS - seconds}s…`, `Wait ${HALFTIME_MIN_SECONDS - seconds}s…`)}
             </button>
           </div>
         )}
@@ -335,29 +342,29 @@ function Min15Check({
         {matchContext && (
           <div className="mb-4 rounded-lg border border-white/10 bg-black/60 p-3">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-bold text-white/50">MINUTO {matchContext.minute}'</span>
+              <span className="text-xs font-bold text-white/50">{L('MINUTO', 'MINUTE')} {matchContext.minute}'</span>
               <span className="text-lg font-black text-neon-yellow">
                 {matchContext.homeScore} - {matchContext.awayScore}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div>
-                <div className="text-white/50">Posse</div>
+                <div className="text-white/50">{L('Posse', 'Possession')}</div>
                 <div className="font-bold text-white">{matchContext.possession}%</div>
               </div>
               <div>
-                <div className="text-white/50">Chutes</div>
+                <div className="text-white/50">{L('Chutes', 'Shots')}</div>
                 <div className="font-bold text-white">{matchContext.shots}</div>
               </div>
               <div>
-                <div className="text-white/50">Sofridos</div>
+                <div className="text-white/50">{L('Sofridos', 'Conceded')}</div>
                 <div className="font-bold text-white">{matchContext.shotsAgainst}</div>
               </div>
             </div>
           </div>
         )}
 
-        <p className="mb-4 text-sm text-white/80">Como está o time?</p>
+        <p className="mb-4 text-sm text-white/80">{L('Como está o time?', 'How is the team doing?')}</p>
         <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
@@ -365,7 +372,7 @@ function Min15Check({
             className="flex flex-col items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 py-3 font-display text-xs font-black uppercase tracking-wide text-white transition-all hover:border-red-500/50 hover:bg-red-500/20"
           >
             <span className="text-xl">❌</span>
-            <span>Precisa Melhorar</span>
+            <span>{L('Precisa Melhorar', 'Needs Work')}</span>
           </button>
           <button
             type="button"
@@ -373,7 +380,7 @@ function Min15Check({
             className="flex flex-col items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 py-3 font-display text-xs font-black uppercase tracking-wide text-white transition-all hover:border-blue-500/50 hover:bg-blue-500/20"
           >
             <span className="text-xl">✓</span>
-            <span>Satisfatório</span>
+            <span>{L('Satisfatório', 'Fine')}</span>
           </button>
           <button
             type="button"
@@ -384,7 +391,7 @@ function Min15Check({
             className="flex flex-col items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 py-3 font-display text-xs font-black uppercase tracking-wide text-white transition-all hover:border-green-500/50 hover:bg-green-500/20"
           >
             <span className="text-xl">⚡</span>
-            <span>Excelente</span>
+            <span>{L('Excelente', 'Excellent')}</span>
           </button>
         </div>
       </motion.div>
@@ -405,18 +412,18 @@ function InjuryWarning({
 }) {
   return (
     <div>
-      <p className="text-xs text-zinc-400 mb-3">Jogador com risco de lesão detectado</p>
+      <p className="text-xs text-zinc-400 mb-3">{L('Jogador com risco de lesão detectado', 'Player at injury risk detected')}</p>
 
       {/* Troca visual: sai → entra */}
       <div className="flex items-center gap-3 mb-4">
         {/* Sai */}
         <div className="flex-1 bg-red-950/60 border border-red-800/50 rounded-xl px-3 py-2.5">
-          <p className="text-[9px] text-red-400 font-bold uppercase tracking-wider mb-1">Sai</p>
+          <p className="text-[9px] text-red-400 font-bold uppercase tracking-wider mb-1">{L('Sai', 'Out')}</p>
           <p className="text-sm font-bold text-white truncate">{outPlayer?.name ?? '—'}</p>
-          <p className="text-[10px] text-zinc-500">{outPlayer?.pos}</p>
+          <p className="text-[10px] text-zinc-500">{posLabel(outPlayer?.pos)}</p>
           {outPlayer && (
             <div className="mt-1.5">
-              <p className="text-[9px] text-zinc-500 mb-0.5">FADIGA</p>
+              <p className="text-[9px] text-zinc-500 mb-0.5">{L('FADIGA', 'FATIGUE')}</p>
               <div className="flex items-center gap-1">
                 <div className="flex-1 h-1.5 rounded-full bg-zinc-700 overflow-hidden">
                   <div
@@ -437,21 +444,21 @@ function InjuryWarning({
 
         {/* Entra */}
         <div className="flex-1 bg-emerald-950/60 border border-emerald-800/50 rounded-xl px-3 py-2.5">
-          <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider mb-1">Entra</p>
+          <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider mb-1">{L('Entra', 'In')}</p>
           <p className="text-sm font-bold text-white truncate">{inPlayer?.name ?? '—'}</p>
-          <p className="text-[10px] text-zinc-500">{inPlayer?.pos}</p>
+          <p className="text-[10px] text-zinc-500">{posLabel(inPlayer?.pos)}</p>
         </div>
       </div>
 
-      <p className="text-sm text-zinc-300 mb-3 text-center">Deseja fazer a substituição?</p>
+      <p className="text-sm text-zinc-300 mb-3 text-center">{L('Deseja fazer a substituição?', 'Make the substitution?')}</p>
       <div className="grid grid-cols-2 gap-2">
         <button type="button" onClick={onNo}
           className="py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 font-bold text-sm text-zinc-300 transition-colors">
-          Não
+          {L('Não', 'No')}
         </button>
         <button type="button" onClick={onYes}
           className="py-3 rounded-xl bg-blue-950 hover:bg-blue-900 border border-blue-700 font-bold text-sm text-white transition-colors">
-          ✓ Sim
+          {L('✓ Sim', '✓ Yes')}
         </button>
       </div>
     </div>
@@ -489,7 +496,7 @@ function HalftimePanel({
                 : 'text-white/60 hover:text-white'
             }`}
           >
-            {t === 'formacao' ? 'Formação' : t === 'estilo' ? 'Estilo' : `Subs (${subsMax - subsUsed})`}
+            {t === 'formacao' ? L('Formação', 'Formation') : t === 'estilo' ? L('Estilo', 'Style') : `Subs (${subsMax - subsUsed})`}
           </button>
         ))}
       </div>
@@ -540,7 +547,7 @@ function HalftimePanel({
         {tab === 'subs' && (
           <motion.div key="subs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <p className="mb-4 text-xs text-white/60">
-              {subsUsed} de {subsMax} substituições usadas.
+              {L(`${subsUsed} de ${subsMax} substituições usadas.`, `${subsUsed} of ${subsMax} substitutions used.`)}
             </p>
             <button
               type="button"
@@ -548,7 +555,7 @@ function HalftimePanel({
               disabled={subsUsed >= subsMax}
               className="w-full rounded-lg border border-blue-500/30 bg-blue-500/10 py-3 text-sm font-bold text-white transition-all hover:border-blue-500/50 hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              🔄 Fazer Substituição
+              {L('🔄 Fazer Substituição', '🔄 Make Substitution')}
             </button>
           </motion.div>
         )}
@@ -559,10 +566,10 @@ function HalftimePanel({
 
 function Min70Check({ onApply, matchContext }: { onApply: (id: string) => void; matchContext?: AssistantEvent['matchContext'] }) {
   const options = [
-    { id: 'PRESSAO_ALTA', label: 'Ataca Mais', icon: '⚔️', desc: '+20% gol, +60% fadiga' },
-    { id: 'POSSE_CONTROLADA', label: 'Posse de Bola', icon: '🔵', desc: '+15% posse, controle' },
-    { id: 'TRANSICAO_RAPIDA', label: 'Contra-ataque', icon: '⚡', desc: '+30% contra, +8% gol' },
-    { id: 'BLOCO_BAIXO', label: 'Defende', icon: '🛡️', desc: '+25% defesa, -15% gol' },
+    { id: 'PRESSAO_ALTA', label: L('Ataca Mais', 'Attack More'), icon: '⚔️', desc: L('+20% gol, +60% fadiga', '+20% goals, +60% fatigue') },
+    { id: 'POSSE_CONTROLADA', label: L('Posse de Bola', 'Possession'), icon: '🔵', desc: L('+15% posse, controle', '+15% possession, control') },
+    { id: 'TRANSICAO_RAPIDA', label: L('Contra-ataque', 'Counter-attack'), icon: '⚡', desc: L('+30% contra, +8% gol', '+30% counters, +8% goals') },
+    { id: 'BLOCO_BAIXO', label: L('Defende', 'Defend'), icon: '🛡️', desc: L('+25% defesa, -15% gol', '+25% defence, -15% goals') },
   ];
 
   return (
@@ -571,29 +578,29 @@ function Min70Check({ onApply, matchContext }: { onApply: (id: string) => void; 
       {matchContext && (
         <div className="mb-4 rounded-lg border border-white/10 bg-black/60 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-bold text-white/50">MINUTO {matchContext.minute}'</span>
+            <span className="text-xs font-bold text-white/50">{L('MINUTO', 'MINUTE')} {matchContext.minute}'</span>
             <span className="text-lg font-black text-neon-yellow">
               {matchContext.homeScore} - {matchContext.awayScore}
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
             <div>
-              <div className="text-white/50">Posse</div>
+              <div className="text-white/50">{L('Posse', 'Possession')}</div>
               <div className="font-bold text-white">{matchContext.possession}%</div>
             </div>
             <div>
-              <div className="text-white/50">Chutes</div>
+              <div className="text-white/50">{L('Chutes', 'Shots')}</div>
               <div className="font-bold text-white">{matchContext.shots}</div>
             </div>
             <div>
-              <div className="text-white/50">Sofridos</div>
+              <div className="text-white/50">{L('Sofridos', 'Conceded')}</div>
               <div className="font-bold text-white">{matchContext.shotsAgainst}</div>
             </div>
           </div>
         </div>
       )}
 
-      <p className="mb-4 text-sm text-white/80">O que fazemos agora?</p>
+      <p className="mb-4 text-sm text-white/80">{L('O que fazemos agora?', 'What do we do now?')}</p>
       <div className="grid grid-cols-2 xs:grid-cols-4 gap-2">
         {options.map(o => (
           <button
@@ -623,7 +630,7 @@ export function AssistantFab({ hasPending, onClick }: { hasPending: boolean; onC
       style={{
         borderColor: hasPending ? 'var(--color-neon-yellow)' : 'rgba(255, 255, 255, 0.16)',
       }}
-      aria-label="Assistente técnico"
+      aria-label={L('Assistente técnico', 'Assistant coach')}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

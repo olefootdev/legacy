@@ -45,6 +45,7 @@ import { saveLearnedPhrase, lookupLearned, hydrateLearnedFromSupabase, syncLearn
 import { extractMentions, detectMentionAtCursor, applyMentionCompletion, SECTOR_SUGGESTIONS, type MentionEditState } from '@/voiceCommand/mentions';
 import { validateCommand } from '@/voiceCommand/commandValidation';
 import { llmInterpretCommand } from '@/voiceCommand/llmInterpret';
+import { L, emIngles } from '@/i18n/L';
 
 type FeedbackEntry = {
   id: string;
@@ -150,7 +151,7 @@ export function VoiceCommandPanel() {
       const warnings = live.refereeLanguageWarnings ?? 0;
       if (warnings === 0) {
         dispatch({ type: 'REFEREE_WARNING_LANGUAGE', minute: live.minute });
-        addFeedback({ kind: 'warning', message: '⚠ Árbitro adverte: linguagem imprópria! (1ª vez)' });
+        addFeedback({ kind: 'warning', message: L('⚠ Árbitro adverte: linguagem imprópria! (1ª vez)', '⚠ Referee warns: foul language! (1st time)') });
       } else {
         const best = [...live.homePlayers].sort(
           (a, b) => (live.homeStats?.[b.playerId]?.rating ?? 0) - (live.homeStats?.[a.playerId]?.rating ?? 0),
@@ -162,7 +163,7 @@ export function VoiceCommandPanel() {
             expelledPlayerId: best.playerId,
             expelledPlayerName: best.name,
           });
-          addFeedback({ kind: 'error', message: `🟥 VERMELHO em ${best.name} por conduta do treinador!` });
+          addFeedback({ kind: 'error', message: L(`🟥 VERMELHO em ${best.name} por conduta do treinador!`, `🟥 RED for ${best.name} due to the coach's conduct!`) });
         }
       }
       setText('');
@@ -201,23 +202,23 @@ export function VoiceCommandPanel() {
       addFeedback({
         kind: 'sent',
         message: mentions.playerName
-          ? `🎯 Alvo: ${mentions.playerName}`
-          : `🎯 Setor: ${mentions.sectorLabel ?? ''}`,
+          ? `🎯 ${L('Alvo', 'Target')}: ${mentions.playerName}`
+          : `🎯 ${L('Setor', 'Unit')}: ${mentions.sectorLabel ?? ''}`,
       });
     }
 
     if (learnedHit && learned) {
       addFeedback({
         kind: 'sent',
-        message: `🧠 Aprendido: "${clean}" → ${intentLabelPt(learned.intent)}`,
-        detail: `Confirmado ${learned.confirmCount}× antes.`,
+        message: `🧠 ${L('Aprendido', 'Learned')}: "${clean}" → ${intentLabelPt(learned.intent)}`,
+        detail: L(`Confirmado ${learned.confirmCount}× antes.`, `Confirmed ${learned.confirmCount}× before.`),
       });
     }
 
     if (parsed.length === 0) {
       // 2b. Parser determinístico falhou — tenta Claude como intérprete semântico.
       setText('');
-      addFeedback({ kind: 'sent', message: `Interpretando: "${clean}"…` });
+      addFeedback({ kind: 'sent', message: L(`Interpretando: "${clean}"…`, `Interpreting: "${clean}"…`) });
       void (async () => {
         const llmResult = await llmInterpretCommand(clean, {
           players: live.homePlayers.map((p) => ({
@@ -240,7 +241,7 @@ export function VoiceCommandPanel() {
             addFeedback({
               kind: 'sent',
               message: llmResult.narrative,
-              detail: `Interpretado por IA · "${clean}"`,
+              detail: L(`Interpretado por IA · "${clean}"`, `Interpreted by AI · "${clean}"`),
             });
           }
           // Salva na biblioteca aprendida para próximas vezes (sem precisar do Claude).
@@ -262,8 +263,8 @@ export function VoiceCommandPanel() {
         } else {
           addFeedback({
             kind: 'error',
-            message: `Comando não reconhecido: "${clean}"`,
-            detail: 'Tenta mais direto — ex: "chuta", "pressiona alto", "recua", "passa pro <nome>".',
+            message: L(`Comando não reconhecido: "${clean}"`, `Command not recognised: "${clean}"`),
+            detail: L('Tenta mais direto — ex: "chuta", "pressiona alto", "recua", "passa pro <nome>".', 'Try something more direct — e.g. "chuta", "pressiona alto", "recua", "passa pro <name>".'),
           });
         }
       })();
@@ -273,8 +274,8 @@ export function VoiceCommandPanel() {
     // Comando efetivamente reconhecido — feedback ENVIADO.
     addFeedback({
       kind: 'sent',
-      message: `📨 ENVIADO${source === 'voice' ? ' 🎤' : ''}: "${clean}"`,
-      detail: `Obediência coletiva: ${Math.round(teamObedience)}%`,
+      message: `📨 ${L('ENVIADO', 'SENT')}${source === 'voice' ? ' 🎤' : ''}: "${clean}"`,
+      detail: L(`Obediência coletiva: ${Math.round(teamObedience)}%`, `Team obedience: ${Math.round(teamObedience)}%`),
     });
 
     // 3. relay por assistente (cada intent passa pelo assistente apropriado)
@@ -293,7 +294,7 @@ export function VoiceCommandPanel() {
         addFeedback({
           kind: 'sent',
           message: firstRelay.relayed.relayNarrative,
-          detail: `Eficácia ${Math.round(firstRelay.staff.effectiveness)}% · ${firstRelay.relayed.relayQuality}`,
+          detail: `${L('Eficácia', 'Effectiveness')} ${Math.round(firstRelay.staff.effectiveness)}% · ${firstRelay.relayed.relayQuality}`,
         });
       }
     }
@@ -301,7 +302,7 @@ export function VoiceCommandPanel() {
     // 4. executa cada comando relayed (distorted null = dropado)
     for (const { relayed } of relayedList) {
       if (!relayed) {
-        addFeedback({ kind: 'refused', message: '🎧 O assistente não passou o recado. Tente de novo.' });
+        addFeedback({ kind: 'refused', message: L('🎧 O assistente não passou o recado. Tente de novo.', "🎧 The assistant didn't pass the message on. Try again.") });
         continue;
       }
       const cmd = relayed;
@@ -316,21 +317,21 @@ export function VoiceCommandPanel() {
             outPlayerId: outId, inPlayerId: inId, minute: live.minute,
           });
           if (dry.error) {
-            addFeedback({ kind: 'error', message: `🔄 Substituição inválida: ${dry.error}` });
+            addFeedback({ kind: 'error', message: `🔄 ${L('Substituição inválida', 'Invalid substitution')}: ${dry.error}` });
           } else {
             dispatch({ type: 'MATCH_SUBSTITUTE', outPlayerId: outId, inPlayerId: inId });
             const outName = live.homePlayers.find((p) => p.playerId === outId)?.name ?? 'jogador';
-            addFeedback({ kind: 'accepted', message: `🔄 Substituição aceita: ${outName} sai` });
+            addFeedback({ kind: 'accepted', message: L(`🔄 Substituição aceita: ${outName} sai`, `🔄 Substitution accepted: ${outName} off`) });
           }
         } else {
-          addFeedback({ kind: 'error', message: 'Substituição falhou — jogador não reconhecido' });
+          addFeedback({ kind: 'error', message: L('Substituição falhou — jogador não reconhecido', 'Substitution failed — player not recognised') });
         }
         continue;
       }
 
       if (cmd.intent === 'formation_change' && cmd.formationTarget) {
         dispatch({ type: 'LIVE_MATCH_SET_FORMATION', formationScheme: cmd.formationTarget });
-        addFeedback({ kind: 'accepted', message: `📐 Formação: ${cmd.formationTarget}` });
+        addFeedback({ kind: 'accepted', message: `📐 ${L('Formação', 'Formation')}: ${cmd.formationTarget}` });
         continue;
       }
 
@@ -341,7 +342,7 @@ export function VoiceCommandPanel() {
         if (teamCooldown.active) {
           addFeedback({
             kind: 'error',
-            message: `⏱ Comando coletivo aguarda ${Math.ceil(teamCooldown.leftMs / 1000)}s`,
+            message: L(`⏱ Comando coletivo aguarda ${Math.ceil(teamCooldown.leftMs / 1000)}s`, `⏱ Team command ready in ${Math.ceil(teamCooldown.leftMs / 1000)}s`),
           });
           continue;
         }
@@ -386,8 +387,8 @@ export function VoiceCommandPanel() {
         const refusedCount = tiers.refuse + tiers.protest;
         addFeedback({
           kind: acceptedCount > refusedCount ? 'accepted' : 'refused',
-          message: `👥 Time: ${acceptedCount}/${live.homePlayers.length} aceitaram · ${OBEDIENCE_TIER_BUBBLE[dominant]}`,
-          detail: `Coletiva ${Math.round(teamObedience)}% · ${refusedCount} recusaram`,
+          message: L(`👥 Time: ${acceptedCount}/${live.homePlayers.length} aceitaram · ${OBEDIENCE_TIER_BUBBLE[dominant]}`, `👥 Team: ${acceptedCount}/${live.homePlayers.length} accepted · ${OBEDIENCE_TIER_BUBBLE[dominant]}`),
+          detail: L(`Coletiva ${Math.round(teamObedience)}% · ${refusedCount} recusaram`, `Team ${Math.round(teamObedience)}% · ${refusedCount} refused`),
           tier: dominant,
         });
         continue;
@@ -401,7 +402,7 @@ export function VoiceCommandPanel() {
       else if (tgt.kind === 'shirt_number') targetPlayerId = live.homePlayers.find((p) => p.num === tgt.number)?.playerId ?? null;
 
       if (!targetPlayerId) {
-        addFeedback({ kind: 'error', message: `Alvo não resolvido para "${cmd.rawText}"` });
+        addFeedback({ kind: 'error', message: L(`Alvo não resolvido para "${cmd.rawText}"`, `Target not resolved for "${cmd.rawText}"`) });
         continue;
       }
 
@@ -411,11 +412,11 @@ export function VoiceCommandPanel() {
       let commandPayload: Record<string, unknown> | undefined;
       if (cmd.intent === 'pass_to_player') {
         if (!live.onBallPlayerId) {
-          addFeedback({ kind: 'error', message: '🎯 "Passa" só funciona com bola no pé do seu time' });
+          addFeedback({ kind: 'error', message: L('🎯 "Passa" só funciona com bola no pé do seu time', '🎯 "Pass" only works when your team has the ball') });
           continue;
         }
         if (live.onBallPlayerId === targetPlayerId) {
-          addFeedback({ kind: 'error', message: '🎯 O jogador já está com a bola' });
+          addFeedback({ kind: 'error', message: L('🎯 O jogador já está com a bola', '🎯 The player already has the ball') });
           continue;
         }
         commandPayload = { preferredReceiverId: targetPlayerId };
@@ -467,7 +468,7 @@ export function VoiceCommandPanel() {
       if (playerCooldown.active) {
         addFeedback({
           kind: 'error',
-          message: `⏱ ${player.name} aguarda ${Math.ceil(playerCooldown.leftMs / 1000)}s`,
+          message: L(`⏱ ${player.name} aguarda ${Math.ceil(playerCooldown.leftMs / 1000)}s`, `⏱ ${player.name} ready in ${Math.ceil(playerCooldown.leftMs / 1000)}s`),
         });
         continue;
       }
@@ -511,7 +512,7 @@ export function VoiceCommandPanel() {
       addFeedback({
         kind: accepted ? 'accepted' : 'refused',
         message: `${accepted ? '✅' : '❌'} ${player.name}: ${OBEDIENCE_TIER_BUBBLE[r.tier]}`,
-        detail: `Individual ${Math.round(r.individualScore)}% × Coletiva ${Math.round(teamObedience)}% = Efetiva ${Math.round(r.effectiveScore)}%`,
+        detail: L(`Individual ${Math.round(r.individualScore)}% × Coletiva ${Math.round(teamObedience)}% = Efetiva ${Math.round(r.effectiveScore)}%`, `Individual ${Math.round(r.individualScore)}% × Team ${Math.round(teamObedience)}% = Effective ${Math.round(r.effectiveScore)}%`),
         tier: r.tier,
       });
     }
@@ -535,8 +536,8 @@ export function VoiceCommandPanel() {
     void syncLearnedPhraseToSupabase(record);
     addFeedback({
       kind: 'sent',
-      message: `🧠 Guardado — "${originalPhrase}" agora é reconhecido como ${intentLabelPt(guess.intent)}`,
-      detail: 'Próxima vez resolve direto.',
+      message: L(`🧠 Guardado — "${originalPhrase}" agora é reconhecido como ${intentLabelPt(guess.intent)}`, `🧠 Saved — "${originalPhrase}" is now recognised as ${intentLabelPt(guess.intent)}`),
+      detail: L('Próxima vez resolve direto.', 'Next time it resolves directly.'),
     });
     setPendingGuess(null);
     // Reenvia pelo canal padrão — sem cooldown, pois ainda não houve comando efetivo.
@@ -597,13 +598,13 @@ export function VoiceCommandPanel() {
 
   const handleMicDown = () => {
     if (!voice.supported) {
-      addFeedback({ kind: 'error', message: '🎤 Este browser não suporta reconhecimento de voz' });
+      addFeedback({ kind: 'error', message: L('🎤 Este browser não suporta reconhecimento de voz', '🎤 This browser does not support voice recognition') });
       return;
     }
     if (cooldownActive) {
       addFeedback({
         kind: 'error',
-        message: `⏱ Aguarde ${Math.ceil(cooldownLeftMs / 1000)}s`,
+        message: L(`⏱ Aguarde ${Math.ceil(cooldownLeftMs / 1000)}s`, `⏱ Wait ${Math.ceil(cooldownLeftMs / 1000)}s`),
       });
       return;
     }
@@ -637,10 +638,10 @@ export function VoiceCommandPanel() {
       <header className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-violet-200">
           <Megaphone className="h-3.5 w-3.5 text-violet-300" />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Comando técnico</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">{L('Comando técnico', 'Coach command')}</span>
         </div>
         <div className="flex items-center gap-2 text-[10px] font-mono font-bold">
-          <span className="text-white/50 uppercase">obediência</span>
+          <span className="text-white/50 uppercase">{L('obediência', 'obedience')}</span>
           <span className="rounded-full border border-violet-400/50 bg-violet-500/20 px-2 py-0.5 text-violet-100">
             {Math.round(teamObedience)}%
           </span>
@@ -650,8 +651,13 @@ export function VoiceCommandPanel() {
       {/* Dica de mentions — mostra nas primeiras vezes */}
       {!mentionEdit && (
         <div className="rounded-lg border border-cyan-400/30 bg-cyan-500/5 px-2.5 py-1.5 text-[10px] text-cyan-200/90">
-          <span className="font-bold">💡 Dica:</span> Use <span className="font-mono font-bold text-cyan-100">@jogador</span> ou <span className="font-mono font-bold text-cyan-100">#setor</span> pra comandos precisos
-          <span className="ml-1 text-cyan-300/60">— ex: "@adrien chuta" ou "#ataque pressiona"</span>
+          {emIngles() ? (
+            <><span className="font-bold">💡 Tip:</span> Use <span className="font-mono font-bold text-cyan-100">@player</span> or <span className="font-mono font-bold text-cyan-100">#unit</span> for precise commands
+            <span className="ml-1 text-cyan-300/60">— e.g. "@adrien chuta" or "#ataque pressiona"</span></>
+          ) : (
+            <><span className="font-bold">💡 Dica:</span> Use <span className="font-mono font-bold text-cyan-100">@jogador</span> ou <span className="font-mono font-bold text-cyan-100">#setor</span> pra comandos precisos
+            <span className="ml-1 text-cyan-300/60">— ex: "@adrien chuta" ou "#ataque pressiona"</span></>
+          )}
         </div>
       )}
 
@@ -669,7 +675,7 @@ export function VoiceCommandPanel() {
           >
             <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
               <span className={listening ? 'text-rose-200' : 'text-violet-200'}>
-                {listening ? '🎤 Ouvindo…' : '⏳ Processando…'}
+                {listening ? L('🎤 Ouvindo…', '🎤 Listening…') : L('⏳ Processando…', '⏳ Processing…')}
               </span>
               {listening ? (
                 <span className="text-rose-300/70">max {MAX_RECORDING_SECS}s</span>
@@ -706,7 +712,7 @@ export function VoiceCommandPanel() {
             onKeyUp={onInputSelect}
             onClick={onInputSelect}
             onBlur={() => window.setTimeout(() => setMentionEdit(null), 120)}
-            placeholder='Digita @jogador, #setor ou comando — ex: "@ahmad invade a área"'
+            placeholder={L('Digita @jogador, #setor ou comando — ex: "@ahmad invade a área"', 'Type @player, #unit or a command — e.g. "@ahmad invade a área"')}
             className="w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-violet-400 focus:outline-none"
             maxLength={160}
             disabled={listening}
@@ -715,9 +721,9 @@ export function VoiceCommandPanel() {
           {mentionEdit && mentionSuggestions.length > 0 ? (
             <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-violet-400/50 bg-panel">
               <div className="border-b border-white/5 bg-white/[0.03] px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-violet-200">
-                {mentionEdit.kind === '@' ? 'Jogador' : 'Setor'}
+                {mentionEdit.kind === '@' ? L('Jogador', 'Player') : L('Setor', 'Unit')}
                 <span className="ml-1.5 text-white/30">
-                  {mentionEdit.query ? `"${mentionEdit.query}"` : 'escolhe abaixo'}
+                  {mentionEdit.query ? `"${mentionEdit.query}"` : L('escolhe abaixo', 'pick below')}
                 </span>
               </div>
               <ul className="max-h-56 overflow-y-auto">
@@ -735,7 +741,7 @@ export function VoiceCommandPanel() {
                 ))}
               </ul>
               <div className="border-t border-white/5 bg-white/[0.02] px-2.5 py-1 text-[9px] text-white/40">
-                Enter / clique pra completar · Esc pra fechar
+                {L('Enter / clique pra completar · Esc pra fechar', 'Enter / click to complete · Esc to close')}
               </div>
             </div>
           ) : null}
@@ -749,9 +755,9 @@ export function VoiceCommandPanel() {
           onTouchEnd={(e) => { e.preventDefault(); handleMicUp(); }}
           disabled={!voice.supported || cooldownActive}
           title={
-            !voice.supported ? 'Browser não suporta voz' :
-            cooldownActive ? `Aguarde ${Math.ceil(cooldownLeftMs / 1000)}s` :
-            'Segure pra falar (push-to-talk)'
+            !voice.supported ? L('Browser não suporta voz', 'Browser does not support voice') :
+            cooldownActive ? L(`Aguarde ${Math.ceil(cooldownLeftMs / 1000)}s`, `Wait ${Math.ceil(cooldownLeftMs / 1000)}s`) :
+            L('Segure pra falar (push-to-talk)', 'Hold to talk (push-to-talk)')
           }
           className={cn(
             'shrink-0 rounded-lg border px-3 transition-colors select-none',
@@ -775,7 +781,7 @@ export function VoiceCommandPanel() {
           )}
         >
           <Send className="h-3.5 w-3.5" />
-          Enviar
+          {L('Enviar', 'Send')}
         </button>
       </form>
 
@@ -809,16 +815,16 @@ export function VoiceCommandPanel() {
             transition={{ duration: 0.2 }}
             className="rounded-xl border border-cyan-400/60 bg-cyan-500/10 px-3 py-3"
           >
-            <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-200">🤔 Você quis dizer…</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-200">🤔 {L('Você quis dizer…', 'Did you mean…')}</p>
             <p className="mt-1 font-display text-sm font-black uppercase tracking-wider text-white">
               {intentLabelPt(pendingGuess.guess.intent)}
               {pendingGuess.guess.playerName ? (
-                <span className="text-cyan-200"> pro {pendingGuess.guess.playerName.split(' ')[0]}</span>
+                <span className="text-cyan-200"> {L('pro', 'to')} {pendingGuess.guess.playerName.split(' ')[0]}</span>
               ) : null}
               ?
             </p>
             <p className="mt-1 text-[10px] leading-snug text-cyan-300/80">
-              Original: "{pendingGuess.originalPhrase}" · Canônico: "{pendingGuess.guess.canonicalPhrase}"
+              Original: "{pendingGuess.originalPhrase}" · {L('Canônico', 'Canonical')}: "{pendingGuess.guess.canonicalPhrase}"
             </p>
             <div className="mt-2 flex gap-2">
               <button
@@ -826,14 +832,14 @@ export function VoiceCommandPanel() {
                 onClick={confirmGuess}
                 className="flex-1 rounded-lg bg-cyan-400 px-3 py-1.5 font-display text-[10px] font-black uppercase tracking-wider text-black transition-colors hover:bg-cyan-300"
               >
-                ✓ Sim, é isso
+                ✓ {L('Sim, é isso', "Yes, that's it")}
               </button>
               <button
                 type="button"
                 onClick={dismissGuess}
                 className="flex-1 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 font-display text-[10px] font-black uppercase tracking-wider text-gray-300 hover:bg-white/10"
               >
-                ✗ Não
+                ✗ {L('Não', 'No')}
               </button>
             </div>
           </motion.div>

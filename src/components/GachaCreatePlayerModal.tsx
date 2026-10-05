@@ -13,6 +13,23 @@ import {
   type GachaRarity,
 } from '@/supabase/academyDraw';
 import type { PlayerAttributes } from '@/entities/types';
+import { L, emIngles } from '@/i18n/L';
+import { posLabel } from '@/components/matchquick/posLabel';
+
+/** Nome por extenso da posição, só pra TELA (o valor `pos` segue em PT). */
+const POS_NOME_EN: Record<string, string> = {
+  GOL: 'Goalkeeper',
+  ZAG: 'Centre-back',
+  LE: 'Left-back',
+  LD: 'Right-back',
+  VOL: 'Defensive Midfielder',
+  MC: 'Central Midfielder',
+  MEI: 'Attacking Midfielder',
+  PE: 'Left Winger',
+  PD: 'Right Winger',
+  ATA: 'Striker',
+};
+const nomePosicao = (p: string): string => L(positionLabelPt(p), POS_NOME_EN[p.toUpperCase()] ?? p);
 
 const CURRENT_YEAR = 2026;
 
@@ -28,27 +45,27 @@ function buildPhotoWhatsappLink(args: {
   overall: number;
 }): string {
   const msg = [
-    'Olá! Quero finalizar meu card Olefoot 🎴',
+    L('Olá! Quero finalizar meu card Olefoot 🎴', 'Hi! I want to finish my Olefoot card 🎴'),
     '',
-    `Jogador: ${args.playerName}`,
-    `Joguei como: ${args.likePlayerName} (${args.year})`,
-    `Raridade: ${args.rarity.toUpperCase()} · OVR ${args.overall}`,
+    `${L('Jogador', 'Player')}: ${args.playerName}`,
+    `${L('Joguei como', 'Played as')}: ${args.likePlayerName} (${args.year})`,
+    `${L('Raridade', 'Rarity')}: ${args.rarity.toUpperCase()} · OVR ${args.overall}`,
     '',
-    'Segue minha foto pra montarem o card 👇',
+    L('Segue minha foto pra montarem o card 👇', 'Here is my photo for the card 👇'),
   ].join('\n');
   return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`;
 }
 
 const ATTR_LABELS: Array<[keyof PlayerAttributes, string]> = [
-  ['velocidade', 'Velocidade'],
-  ['finalizacao', 'Finalização'],
-  ['drible', 'Drible'],
-  ['passe', 'Passe'],
-  ['marcacao', 'Marcação'],
-  ['fisico', 'Físico'],
-  ['tatico', 'Tático'],
-  ['mentalidade', 'Mentalidade'],
-  ['confianca', 'Confiança'],
+  ['velocidade', L('Velocidade', 'Pace')],
+  ['finalizacao', L('Finalização', 'Finishing')],
+  ['drible', L('Drible', 'Dribbling')],
+  ['passe', L('Passe', 'Passing')],
+  ['marcacao', L('Marcação', 'Marking')],
+  ['fisico', L('Físico', 'Physical')],
+  ['tatico', L('Tático', 'Tactical')],
+  ['mentalidade', L('Mentalidade', 'Mentality')],
+  ['confianca', L('Confiança', 'Confidence')],
   ['fairPlay', 'Fair Play'],
 ];
 
@@ -103,12 +120,15 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
     }
     if (res.code === 'REFERRAL_GATE') {
       setError(
-        `Você precisa de ${res.required ?? 5} indicados ativos (que já jogaram) pra criar um jogador. Você tem ${res.activeReferrals ?? 0}. Convide mais gente!`,
+        L(
+          `Você precisa de ${res.required ?? 5} indicados ativos (que já jogaram) pra criar um jogador. Você tem ${res.activeReferrals ?? 0}. Convide mais gente!`,
+          `You need ${res.required ?? 5} active referrals (who have played) to create a player. You have ${res.activeReferrals ?? 0}. Invite more people!`,
+        ),
       );
     } else if (res.code === 'ALREADY_DREW') {
-      setError('Já fizeste o teu sorteio — é único por manager.');
+      setError(L('Já fizeste o teu sorteio — é único por manager.', 'You already made your draw — one per manager.'));
     } else {
-      setError(res.error ?? 'Falha no sorteio. Tenta novamente.');
+      setError(res.error ?? L('Falha no sorteio. Tenta novamente.', 'Draw failed. Try again.'));
     }
     setStep('setup');
   };
@@ -151,10 +171,10 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
             <div className="flex items-center gap-2">
               <Dices className="h-5 w-5 text-neon-yellow" />
               <h2 className="font-impact text-xl uppercase leading-[1.1] text-white">
-                Criar jogador
+                {L('Criar jogador', 'Create player')}
               </h2>
             </div>
-            <button type="button" onClick={close} className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white">
+            <button type="button" onClick={close} aria-label={L('Fechar', 'Close')} className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -162,9 +182,9 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
           <div className="flex-1 overflow-y-auto px-5 py-5">
             {slotFull && step === 'setup' ? (
               <div className="rounded-xl border border-white/10 bg-black/30 p-6 text-center">
-                <p className="font-display text-base font-black text-white">Você já tem seu jogador</p>
+                <p className="font-display text-base font-black text-white">{L('Você já tem seu jogador', 'You already have your player')}</p>
                 <p className="mt-2 text-sm text-white/55">
-                  A criação é única: 1 jogador por manager.
+                  {L('A criação é única: 1 jogador por manager.', 'Creation is one-time: 1 player per manager.')}
                 </p>
               </div>
             ) : null}
@@ -173,17 +193,27 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
             {!slotFull && step === 'setup' && (
               <div className="space-y-5">
                 <p className="text-sm text-white/60">
-                  Escolhe a posição e o <strong className="text-white">ano de atuação</strong>. O sorteio puxa um
-                  craque real daquela época — do obscuro ao lendário — e aplica o <strong className="text-white">DNA
-                  de atributos</strong> dele no teu jogador.
+                  {emIngles() ? (
+                    <>
+                      Pick the position and the <strong className="text-white">playing year</strong>. The draw picks a
+                      real star from that era — from obscure to legendary — and applies their <strong className="text-white">attribute
+                      DNA</strong> to your player.
+                    </>
+                  ) : (
+                    <>
+                      Escolhe a posição e o <strong className="text-white">ano de atuação</strong>. O sorteio puxa um
+                      craque real daquela época — do obscuro ao lendário — e aplica o <strong className="text-white">DNA
+                      de atributos</strong> dele no teu jogador.
+                    </>
+                  )}
                 </p>
 
                 <label className="block">
-                  <span className="mb-1.5 block text-xs font-medium text-white/65">Nome do teu jogador</span>
+                  <span className="mb-1.5 block text-xs font-medium text-white/65">{L('Nome do teu jogador', 'Your player\'s name')}</span>
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value.slice(0, 24))}
-                    placeholder="ex. JOÃO SILVA"
+                    placeholder={L('ex. JOÃO SILVA', 'e.g. JOHN SMITH')}
                     maxLength={24}
                     className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-neon-yellow/50 focus:outline-none"
                   />
@@ -191,7 +221,7 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
 
                 <div className="grid grid-cols-2 gap-3">
                   <label className="block">
-                    <span className="mb-1.5 block text-xs font-medium text-white/65">Posição</span>
+                    <span className="mb-1.5 block text-xs font-medium text-white/65">{L('Posição', 'Position')}</span>
                     <select
                       value={pos}
                       onChange={(e) => setPos(e.target.value)}
@@ -199,13 +229,13 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
                     >
                       {GACHA_POSITIONS.map((p) => (
                         <option key={p} value={p} className="bg-dark-gray">
-                          {p} — {positionLabelPt(p)}
+                          {posLabel(p)} — {nomePosicao(p)}
                         </option>
                       ))}
                     </select>
                   </label>
                   <label className="block">
-                    <span className="mb-1.5 block text-xs font-medium text-white/65">Ano de atuação</span>
+                    <span className="mb-1.5 block text-xs font-medium text-white/65">{L('Ano de atuação', 'Playing year')}</span>
                     <input
                       type="number"
                       value={year}
@@ -221,7 +251,7 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
                 {odds.length > 0 && (
                   <div className="rounded-xl border border-white/10 bg-black/30 p-4">
                     <p className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-white/50">
-                      <Sparkles className="h-3.5 w-3.5 text-neon-yellow" /> Chances do sorteio
+                      <Sparkles className="h-3.5 w-3.5 text-neon-yellow" /> {L('Chances do sorteio', 'Draw odds')}
                     </p>
                     <div className="space-y-2">
                       {odds.map((o) => (
@@ -250,9 +280,9 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
                   disabled={!canDraw}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3.5 font-display text-sm font-black uppercase tracking-wide text-black transition hover:brightness-110 disabled:bg-white/10 disabled:text-white/40"
                 >
-                  <Dices className="h-4 w-4" /> Sortear meu craque
+                  <Dices className="h-4 w-4" /> {L('Sortear meu craque', 'Draw my star')}
                 </button>
-                <p className="text-center text-[11px] text-white/35">Sorteio único — sem repetição.</p>
+                <p className="text-center text-[11px] text-white/35">{L('Sorteio único — sem repetição.', 'One-time draw — no repeats.')}</p>
               </div>
             )}
 
@@ -265,9 +295,9 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
                 >
                   <Dices className="h-14 w-14 text-neon-yellow" />
                 </motion.div>
-                <p className="font-display text-base font-black uppercase tracking-wide text-white">Sorteando…</p>
+                <p className="font-display text-base font-black uppercase tracking-wide text-white">{L('Sorteando…', 'Drawing…')}</p>
                 <p className="text-center text-xs text-white/50">
-                  Pesquisando craques de {year} na posição {positionLabelPt(pos)}.
+                  {L(`Pesquisando craques de ${year} na posição ${nomePosicao(pos)}.`, `Searching ${year} stars at ${nomePosicao(pos)}.`)}
                 </p>
               </div>
             )}
@@ -283,7 +313,7 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
                   <span className={`inline-block rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wider ${RARITY[result.rarity].chip}`}>
                     {RARITY[result.rarity].label}
                   </span>
-                  <p className="mt-3 text-xs uppercase tracking-wide text-white/45">Você jogou como</p>
+                  <p className="mt-3 text-xs uppercase tracking-wide text-white/45">{L('Você jogou como', 'You played as')}</p>
                   <p className={`font-display text-2xl font-black ${RARITY[result.rarity].text}`}>
                     {result.playerName}
                   </p>
@@ -306,8 +336,10 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
 
                 {result.sources.length > 0 && (
                   <p className="text-[10px] text-white/30">
-                    Atributos derivados por metodologia Olefoot de pesquisa pública ({result.sources.length} fonte
-                    {result.sources.length > 1 ? 's' : ''}).
+                    {emIngles()
+                      ? `Attributes derived by Olefoot's public research methodology (${result.sources.length} source${result.sources.length > 1 ? 's' : ''}).`
+                      : <>Atributos derivados por metodologia Olefoot de pesquisa pública ({result.sources.length} fonte
+                    {result.sources.length > 1 ? 's' : ''}).</>}
                   </p>
                 )}
 
@@ -316,7 +348,7 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
                   onClick={handleConfirm}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3.5 font-display text-sm font-black uppercase tracking-wide text-black transition hover:brightness-110"
                 >
-                  Confirmar e criar <ArrowRight className="h-4 w-4" />
+                  {L('Confirmar e criar', 'Confirm and create')} <ArrowRight className="h-4 w-4" />
                 </button>
               </motion.div>
             )}
@@ -328,18 +360,20 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
                   <Sparkles className="h-7 w-7 text-neon-yellow" />
                 </div>
                 <div>
-                  <p className="font-display text-lg font-black text-white">{trimmed} está no plantel!</p>
+                  <p className="font-display text-lg font-black text-white">{L(`${trimmed} está no plantel!`, `${trimmed} joined the squad!`)}</p>
                   <p className="mt-1 text-sm text-white/55">
-                    Jogou como {result.playerName} ({result.year}) · {RARITY[result.rarity].label} · OVR {result.overall}
+                    {L('Jogou como', 'Played as')} {result.playerName} ({result.year}) · {RARITY[result.rarity].label} · OVR {result.overall}
                   </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-black/30 p-4 text-left">
                   <p className="flex items-center gap-2 text-sm font-bold text-white">
-                    <Camera className="h-4 w-4 text-neon-yellow" /> Último passo: sua foto
+                    <Camera className="h-4 w-4 text-neon-yellow" /> {L('Último passo: sua foto', 'Last step: your photo')}
                   </p>
                   <p className="mt-1.5 text-xs text-white/55">
-                    Mande sua foto no WhatsApp e o time monta seu card oficial à mão.
-                    A mensagem já vai preenchida com os dados do jogador — é só anexar a foto.
+                    {L(
+                      'Mande sua foto no WhatsApp e o time monta seu card oficial à mão. A mensagem já vai preenchida com os dados do jogador — é só anexar a foto.',
+                      'Send your photo on WhatsApp and the team builds your official card by hand. The message is pre-filled with your player details — just attach the photo.',
+                    )}
                   </p>
                 </div>
                 <a
@@ -354,14 +388,14 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
                   rel="noopener noreferrer"
                   className="btn-primary flex w-full items-center justify-center gap-2 px-3 py-3.5 text-sm [--corte:12px]"
                 >
-                  <MessageCircle className="h-4 w-4" /> Enviar minha foto no WhatsApp
+                  <MessageCircle className="h-4 w-4" /> {L('Enviar minha foto no WhatsApp', 'Send my photo on WhatsApp')}
                 </a>
                 <button
                   type="button"
                   onClick={close}
                   className="w-full rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10"
                 >
-                  Fechar
+                  {L('Fechar', 'Close')}
                 </button>
               </div>
             )}

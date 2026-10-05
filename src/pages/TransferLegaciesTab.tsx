@@ -24,6 +24,7 @@ import { PurchaseReceiptModal } from '@/components/legacy/PurchaseReceiptModal';
 import { TransferRowCard } from '@/pages/Transfer';
 import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
 import type { SortKey } from '@/transfer/marketFilters';
+import { L, LOCALE } from '@/i18n/L';
 
 export function TransferLegaciesTab({
   openDetailId,
@@ -145,13 +146,13 @@ export function TransferLegaciesTab({
     if (buyingId) return; // trava duplo-clique / compra concorrente
     if (row.listed_on_market === false) {
       // Ficha aberta via deep-link de lenda fora de catálogo — sem compra.
-      setBuyError('Esta lenda está fora de catálogo no momento.');
+      setBuyError(L('Esta lenda está fora de catálogo no momento.', 'This legend is not on sale right now.'));
       return;
     }
     const entity = legacyRowToPlayerEntity(row);
     // price_bro_cents guarda o preço em OLEFOOT (=OLE, a moeda dos legacies).
     const priceOlefoot = Math.max(1, Math.round(row.price_bro_cents));
-    if (owned.has(entity.id)) { setBuyError('Você já possui esse legacy.'); return; }
+    if (owned.has(entity.id)) { setBuyError(L('Você já possui esse legacy.', 'You already own this Legacy.')); return; }
 
     setBuyError(null);
     setBuyingId(row.id);
@@ -174,7 +175,7 @@ export function TransferLegaciesTab({
         });
         const data = await r.json().catch(() => null);
         if (!r.ok || !data?.ok) {
-          setBuyError(data?.error ?? 'Não foi possível comprar agora.');
+          setBuyError(data?.error ?? L('Não foi possível comprar agora.', "Couldn't buy right now."));
           return;
         }
         // Servidor debitou o OLEFOOT — só entregamos o player no estado local
@@ -193,7 +194,7 @@ export function TransferLegaciesTab({
         refreshOlefootBalance();
       }
     } catch {
-      setBuyError('Falha de conexão ao comprar. Tente de novo.');
+      setBuyError(L('Falha de conexão ao comprar. Tente de novo.', 'Connection failed while buying. Try again.'));
       return;
     } finally {
       setBuyingId(null);
@@ -268,7 +269,7 @@ export function TransferLegaciesTab({
   }, [rows, sort, pos, buscaNorm, quote]);
 
   if (loading) {
-    return <div className="py-10 text-center text-sm text-gray-500">Carregando legacies…</div>;
+    return <div className="py-10 text-center text-sm text-gray-500">{L('Carregando legacies…', 'Loading Legacies…')}</div>;
   }
 
   // GRADE ÚNICA (2026-09-19). Antes: uma seção com carrossel POR ATLETA — com
@@ -280,7 +281,7 @@ export function TransferLegaciesTab({
     const m = /-(revelacao|consolidacao|expansao)$/i.exec(r.id);
     if (m) {
       const f = m[1]!.toLowerCase();
-      return f === 'revelacao' ? '#revelação' : f === 'consolidacao' ? '#consolidação' : '#expansão';
+      return f === 'revelacao' ? L('#revelação', '#breakout') : f === 'consolidacao' ? L('#consolidação', '#consolidation') : L('#expansão', '#expansion');
     }
     const code = r.collection_code?.trim();
     return code ? `#${code.toLowerCase().replace(/\s+/g, '')}` : null;
@@ -291,7 +292,8 @@ export function TransferLegaciesTab({
     ordenada.map((r) => r.collection_id?.trim() || r.id.replace(/-(revelacao|consolidacao|expansao)$/i, '')),
   ).size;
 
-  const fmtBrl = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
+  const fmtBrl = (cents: number) =>
+    `R$ ${(cents / 100).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   // Legacy → MockAuctionPlayer (reusa o card Genesis: PlayerCard / TransferRowCard).
   const toAuction = (row: LegacyPlayerRow, idx: number): MockAuctionPlayer => {
@@ -328,10 +330,10 @@ export function TransferLegaciesTab({
     const brl = brlCentsFor(row);
     // Sem o sufixo da moeda: o selo ao lado do preço já diz OLE (ou PIX), e
     // repetir cortava o número em 320px.
-    const oleTxt = Math.max(1, Math.round(row.price_bro_cents)).toLocaleString('pt-BR');
+    const oleTxt = Math.max(1, Math.round(row.price_bro_cents)).toLocaleString(LOCALE);
     const price = brl != null ? fmtBrl(brl) : oleTxt;
-    if (isOwned) return { price, cta: 'Adquirido', badge: 'Legacy' };
-    return { price, cta: 'Comprar', badge: brl != null ? 'PIX' : 'OLE' };
+    if (isOwned) return { price, cta: L('Adquirido', 'Owned'), badge: 'Legacy' };
+    return { price, cta: L('Comprar', 'Buy'), badge: brl != null ? 'PIX' : 'OLE' };
   };
 
 
@@ -341,16 +343,19 @@ export function TransferLegaciesTab({
           pra lenda fora de catálogo) precisa renderizar mesmo sem listados. */}
       {rows.length === 0 && (
         <div className="rounded-xl border border-white/10 bg-panel py-12 text-center text-sm text-cimento">
-          Nenhum Legacy disponível no momento.
+          {L('Nenhum Legacy disponível no momento.', 'No Legacy available right now.')}
         </div>
       )}
 
       {/* Barra da grade: quantas cartas e como ver. Ordenar/buscar é no hero. */}
       {rows.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <SecaoVolt label="Lendas à venda">
+          <SecaoVolt label={L('Lendas à venda', 'Legends for sale')}>
             <Hashtag>
-              {`${ordenada.length} ${ordenada.length === 1 ? 'carta' : 'cartas'} · ${atletas} ${atletas === 1 ? 'atleta' : 'atletas'}`}
+              {L(
+                `${ordenada.length} ${ordenada.length === 1 ? 'carta' : 'cartas'} · ${atletas} ${atletas === 1 ? 'atleta' : 'atletas'}`,
+                `${ordenada.length} ${ordenada.length === 1 ? 'card' : 'cards'} · ${atletas} ${atletas === 1 ? 'athlete' : 'athletes'}`,
+              )}
             </Hashtag>
           </SecaoVolt>
           <div className="flex items-center gap-1.5">
@@ -367,7 +372,7 @@ export function TransferLegaciesTab({
                     : 'border border-white/20 text-cimento hover:border-white hover:text-white',
                 )}
               >
-                {m === 'grid' ? 'Grade' : 'Lista'}
+                {m === 'grid' ? L('Grade', 'Grid') : L('Lista', 'List')}
               </button>
             ))}
           </div>
@@ -377,7 +382,7 @@ export function TransferLegaciesTab({
       {/* Busca sem resultado: diz o que aconteceu, não some com a tela. */}
       {rows.length > 0 && ordenada.length === 0 && (
         <div className="border border-white/10 bg-panel py-12 text-center text-sm text-cimento">
-          Nenhuma lenda com esse filtro.
+          {L('Nenhuma lenda com esse filtro.', 'No legends match this filter.')}
         </div>
       )}
 
@@ -424,8 +429,8 @@ export function TransferLegaciesTab({
           productRef={pixRow.id}
           amountCents={brlCentsFor(pixRow)!}
           metadata={{ player: legacyRowToPlayerEntity(pixRow), clubName }}
-          title={`Comprar ${pixRow.name}`}
-          description="Pague via PIX e o jogador entra no seu time automaticamente."
+          title={L(`Comprar ${pixRow.name}`, `Buy ${pixRow.name}`)}
+          description={L('Pague via PIX e o jogador entra no seu time automaticamente.', 'Pay with Pix and the player joins your team automatically.')}
           defaultName={clubName}
           defaultEmail={sessionEmail}
           onClose={() => setPixRow(null)}
@@ -468,7 +473,7 @@ export function TransferLegaciesTab({
               ? null
               : olefootBalance >= Math.max(1, Math.round(detailRow.price_bro_cents))
         }
-        balanceLabel={olefootBalance == null ? null : `${olefootBalance.toLocaleString('pt-BR')} ${moedaDoJogo()}`}
+        balanceLabel={olefootBalance == null ? null : `${olefootBalance.toLocaleString(LOCALE)} ${moedaDoJogo()}`}
         buying={!!detailRow && buyingId === detailRow.id}
         errorMsg={buyError}
         pixState={detailRow ? pixStateFor(detailRow) : 'none'}
@@ -488,7 +493,7 @@ export function TransferLegaciesTab({
         playerOvr={receipt?.ovr ?? 0}
         playerPos={receipt?.pos ?? ''}
         portrait={receipt?.portrait ?? null}
-        newBalanceLabel={receipt?.balance != null ? `${receipt.balance.toLocaleString('pt-BR')} ${moedaDoJogo()}` : null}
+        newBalanceLabel={receipt?.balance != null ? `${receipt.balance.toLocaleString(LOCALE)} ${moedaDoJogo()}` : null}
         paidWith={receipt?.paidWith ?? 'olefoot'}
         onClose={() => setReceipt(null)}
       />

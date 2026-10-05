@@ -1,4 +1,5 @@
 /** Limite de caracteres do data URL para não estourar localStorage. */
+import { L } from '@/i18n/L';
 export const TRAINER_AVATAR_MAX_DATA_URL_LENGTH = 220_000;
 
 const MAX_SIDE_PX = 128;
@@ -13,17 +14,17 @@ export type TrainerAvatarResult =
  */
 export async function fileToTrainerAvatarDataUrl(file: File): Promise<TrainerAvatarResult> {
   if (!file.type.startsWith('image/')) {
-    return { ok: false as const, error: 'Escolha um arquivo de imagem.' };
+    return { ok: false as const, error: L('Escolha um arquivo de imagem.', 'Choose an image file.') };
   }
   if (file.size > MAX_INPUT_BYTES) {
-    return { ok: false as const, error: 'Ficheiro demasiado grande (máx. 8 MB).' };
+    return { ok: false as const, error: L('Ficheiro demasiado grande (máx. 8 MB).', 'File too large (max. 8 MB).') };
   }
 
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
   } catch {
-    return { ok: false as const, error: 'Não foi possível ler a imagem.' };
+    return { ok: false as const, error: L('Não foi possível ler a imagem.', 'Couldn\'t read the image.') };
   }
 
   try {
@@ -37,7 +38,7 @@ export async function fileToTrainerAvatarDataUrl(file: File): Promise<TrainerAva
     canvas.width = cw;
     canvas.height = ch;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return { ok: false as const, error: 'Erro ao processar a imagem.' };
+    if (!ctx) return { ok: false as const, error: L('Erro ao processar a imagem.', 'Error processing the image.') };
     ctx.drawImage(bitmap, 0, 0, cw, ch);
 
     let quality = 0.88;
@@ -49,7 +50,7 @@ export async function fileToTrainerAvatarDataUrl(file: File): Promise<TrainerAva
     if (dataUrl.length > TRAINER_AVATAR_MAX_DATA_URL_LENGTH) {
       return {
         ok: false as const,
-        error: 'A imagem continua grande demais. Tente outra foto.',
+        error: L('A imagem continua grande demais. Tente outra foto.', 'The image is still too large. Try another photo.'),
       };
     }
     return { ok: true as const, dataUrl };

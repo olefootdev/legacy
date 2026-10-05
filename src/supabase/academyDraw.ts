@@ -4,6 +4,7 @@
  * - drawAcademyPlayer(): chama POST /api/academy/draw (server rola raridade + pesquisa).
  */
 import { getSupabase } from './client';
+import { L } from '@/i18n/L';
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import type { PlayerAttributes } from '@/entities/types';
 
@@ -51,7 +52,7 @@ export async function fetchAcademyDrawConfig(): Promise<DrawConfigRow[]> {
 export async function drawAcademyPlayer(pos: string, year: number): Promise<DrawResponse> {
   const sb = getSupabase();
   const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
-  if (!token) return { ok: false, error: 'Você precisa estar logado.' };
+  if (!token) return { ok: false, error: L('Você precisa estar logado.', 'You need to be logged in.') };
   const base = olefootApiBase();
   try {
     const r = await fetch(`${base}/api/academy/draw`, {
@@ -77,7 +78,7 @@ export async function drawAcademyPlayer(pos: string, year: number): Promise<Draw
     if (!json.ok) {
       return {
         ok: false,
-        error: json.error ?? 'Falha no sorteio.',
+        error: json.error ?? L('Falha no sorteio.', 'Draw failed.'),
         code: json.code,
         activeReferrals: json.active_referrals,
         required: json.required,
@@ -97,7 +98,7 @@ export async function drawAcademyPlayer(pos: string, year: number): Promise<Draw
       },
     };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Falha de rede no sorteio.' };
+    return { ok: false, error: e instanceof Error ? e.message : L('Falha de rede no sorteio.', 'Network error during the draw.') };
   }
 }
 

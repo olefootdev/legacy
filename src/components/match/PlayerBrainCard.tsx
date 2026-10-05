@@ -8,43 +8,45 @@ import { getLastAttackingAction, getLastFullbackAction } from '@/playerDecision/
 import { rollObedience } from '@/voiceCommand/obedienceRoll';
 import { OBEDIENCE_TIER_BUBBLE } from '@/voiceCommand/types';
 
+import { L } from '@/i18n/L';
+import { posLabel } from './posLabel';
 const NEON = '#FDE100';
 
 const ACTION_LABELS: Record<string, string> = {
-  striker_infiltrate_box:     'Infiltrou a área',
-  winger_attack_depth:        'Atacou profundidade',
-  fullback_overlap_box_entry: 'Overlap na área',
-  mid_attack_depth:           'Entrou na meia-lua',
-  anchor_to_slot:             'Manteve posição',
-  structural_hold:            'Segurou estrutura',
-  sq_create_width:            'Abriu amplitude',
-  sq_attack_space:            'Atacou espaço',
-  sq_recycle:                 'Reciclou a bola',
-  sq_offer_line:              'Ofereceu linha',
-  overlap_run:                'Fez o overlap',
-  defensive_cover:            'Cobriu transição',
-  offer_short_line:           'Ofereceu passe curto',
-  open_width:                 'Manteve amplitude',
+  striker_infiltrate_box:     L('Infiltrou a área', 'Ran into the box'),
+  winger_attack_depth:        L('Atacou profundidade', 'Attacked depth'),
+  fullback_overlap_box_entry: L('Overlap na área', 'Overlap into the box'),
+  mid_attack_depth:           L('Entrou na meia-lua', 'Arrived at the edge'),
+  anchor_to_slot:             L('Manteve posição', 'Held position'),
+  structural_hold:            L('Segurou estrutura', 'Held the shape'),
+  sq_create_width:            L('Abriu amplitude', 'Created width'),
+  sq_attack_space:            L('Atacou espaço', 'Attacked space'),
+  sq_recycle:                 L('Reciclou a bola', 'Recycled the ball'),
+  sq_offer_line:              L('Ofereceu linha', 'Offered a line'),
+  overlap_run:                L('Fez o overlap', 'Made the overlap'),
+  defensive_cover:            L('Cobriu transição', 'Covered transition'),
+  offer_short_line:           L('Ofereceu passe curto', 'Offered a short pass'),
+  open_width:                 L('Manteve amplitude', 'Kept width'),
 };
 
 const TENDENCY_MAP: Record<string, Record<string, string>> = {
-  attack: { striker_infiltrate_box: 'Infiltrador', winger_attack_depth: 'Atacante', anchor_to_slot: 'Disciplinado' },
-  mid:    { anchor_to_slot: 'Organizador', sq_recycle: 'Construtor', sq_attack_space: 'Box-to-box' },
-  def:    { defensive_cover: 'Disciplinado', overlap_run: 'Lateral Ofensivo', anchor_to_slot: 'Conservador' },
+  attack: { striker_infiltrate_box: L('Infiltrador', 'Poacher'), winger_attack_depth: L('Atacante', 'Attacker'), anchor_to_slot: L('Disciplinado', 'Disciplined') },
+  mid:    { anchor_to_slot: L('Organizador', 'Playmaker'), sq_recycle: L('Construtor', 'Builder'), sq_attack_space: 'Box-to-box' },
+  def:    { defensive_cover: L('Disciplinado', 'Disciplined'), overlap_run: L('Lateral Ofensivo', 'Attacking Full-back'), anchor_to_slot: L('Conservador', 'Conservative') },
   gk:     {},
 };
 
 const TENDENCY_DEFAULT: Record<string, string> = {
-  attack: 'Finalizador',
-  mid:    'Equilibrado',
-  def:    'Defensivo',
-  gk:     'Goleiro',
+  attack: L('Finalizador', 'Finisher'),
+  mid:    L('Equilibrado', 'Balanced'),
+  def:    L('Defensivo', 'Defensive'),
+  gk:     L('Goleiro', 'Goalkeeper'),
 };
 
 function getTendency(role: string, lastAction: string | null): string {
   const roleMap = (TENDENCY_MAP as Record<string, Record<string, string>>)[role] ?? {};
   if (lastAction && roleMap[lastAction]) return roleMap[lastAction];
-  return TENDENCY_DEFAULT[role] ?? 'Aguardando';
+  return TENDENCY_DEFAULT[role] ?? L('Aguardando', 'Waiting');
 }
 
 const TIER_COLOR: Record<string, string> = {
@@ -76,7 +78,7 @@ export function PlayerBrainCard({ player, onClose, onSubstitute }: PlayerBrainCa
   // Última ação do agente
   const lastAction = getLastAttackingAction(player.playerId)
     ?? getLastFullbackAction(player.playerId);
-  const actionLabel = lastAction ? (ACTION_LABELS[lastAction] ?? lastAction) : 'Aguardando';
+  const actionLabel = lastAction ? (ACTION_LABELS[lastAction] ?? lastAction) : L('Aguardando', 'Waiting');
 
   // Obediência
   const roll = rollObedience({
@@ -116,7 +118,7 @@ export function PlayerBrainCard({ player, onClose, onSubstitute }: PlayerBrainCa
             fontFamily: 'var(--font-display)', fontSize: 8, fontWeight: 800,
             letterSpacing: '0.28em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase',
           }}>
-            {player.pos} · {player.num}
+            {posLabel(player.pos)} · {player.num}
           </span>
         </div>
         <div style={{
@@ -129,7 +131,7 @@ export function PlayerBrainCard({ player, onClose, onSubstitute }: PlayerBrainCa
         {/* Energia */}
         <div style={{ marginBottom: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 7, fontWeight: 700, letterSpacing: '0.22em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>ENERGIA</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 7, fontWeight: 700, letterSpacing: '0.22em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>{L('ENERGIA', 'ENERGY')}</span>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: 7, fontWeight: 800, color: energyColor }}>{Math.round(energy)}%</span>
           </div>
           <div style={{ height: 2, background: 'rgba(255,255,255,0.08)', position: 'relative', overflow: 'hidden' }}>
@@ -139,7 +141,7 @@ export function PlayerBrainCard({ player, onClose, onSubstitute }: PlayerBrainCa
 
         {/* Última ação */}
         <div style={{ marginBottom: 8 }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 7, fontWeight: 700, letterSpacing: '0.22em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', display: 'block', marginBottom: 3 }}>ÚLTIMA AÇÃO</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 7, fontWeight: 700, letterSpacing: '0.22em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', display: 'block', marginBottom: 3 }}>{L('ÚLTIMA AÇÃO', 'LAST ACTION')}</span>
           <span style={{ fontFamily: 'var(--font-serif-hero)', fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>
             {actionLabel}
           </span>
@@ -187,7 +189,7 @@ export function PlayerBrainCard({ player, onClose, onSubstitute }: PlayerBrainCa
             onMouseEnter={(e) => { e.currentTarget.style.background = NEON; e.currentTarget.style.color = '#000'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = NEON; }}
           >
-            Substituir
+            {L('Substituir', 'Substitute')}
           </button>
         )}
       </div>

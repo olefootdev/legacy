@@ -21,6 +21,7 @@ import { fetchMyReferralCode } from '@/supabase/referrals';
 import { checkClubShortAvailable, computeUsername } from '@/supabase/managerUsername';
 import { destinoAposEntrar } from '@/supabase/expansaoConvite';
 import { FaixaConvitePendente } from '@/components/FaixaConvitePendente';
+import { L } from '@/i18n/L';
 
 type UserProfile =
   | 'apaixonado'
@@ -272,6 +273,15 @@ const BRAZIL_STATES_DDD = [
   },
 ];
 
+/** `supabase/auth.ts` é compartilhado com o REVELA e fica em PT; o inglês sai aqui, na tela. */
+const ERRO_AUTH_EN: Record<string, string> = {
+  'Supabase não configurado.': 'Supabase not configured.',
+  'Conta criada, confirma teu e-mail e tenta login.': 'Account created — confirm your email and sign in.',
+};
+function traduzErroAuth(msg: string | undefined): string | undefined {
+  return msg ? L(msg, ERRO_AUTH_EN[msg] ?? msg) : msg;
+}
+
 function digitsOnly(s: string): string {
   return s.replace(/\D/g, '');
 }
@@ -439,7 +449,7 @@ export function Cadastro() {
         userProfile: userProfile ?? null,
       });
       if (!signUp.ok) {
-        setFinishError(signUp.error ?? 'Falha ao criar conta.');
+        setFinishError(traduzErroAuth(signUp.error) ?? L('Falha ao criar conta.', 'Could not create account.'));
         return;
       }
       dispatch({
@@ -528,7 +538,7 @@ export function Cadastro() {
               className="h-10 w-auto max-h-11 max-w-[min(100%,280px)] object-contain object-left sm:h-12 sm:max-h-[3.25rem]"
             />
           </Link>
-          <Hashtag className="shrink-0 text-[12px] text-giz">#cadastro</Hashtag>
+          <Hashtag className="shrink-0 text-[12px] text-giz">{L('#cadastro', '#signup')}</Hashtag>
         </div>
       </header>
 
@@ -577,14 +587,14 @@ export function Cadastro() {
                 className="font-impact uppercase leading-[1.05] text-white"
                 style={{ fontSize: 'clamp(30px, 8vw, 42px)' }}
               >
-                {step === 1 && 'Crie sua conta'}
-                {step === 2 && 'Monte seu clube'}
-                {step === 3 && 'Escolha seu time'}
+                {step === 1 && L('Crie sua conta', 'Create your account')}
+                {step === 2 && L('Monte seu clube', 'Build your club')}
+                {step === 3 && L('Escolha seu time', 'Pick your team')}
               </h1>
               <Hashtag className="mt-2 text-[12px]">
-                {step === 1 && '#passo1 · dados e acesso'}
-                {step === 2 && '#passo2 · clube e formação'}
-                {step === 3 && '#passo3 · time do coração'}
+                {step === 1 && L('#passo1 · dados e acesso', '#step1 · details & access')}
+                {step === 2 && L('#passo2 · clube e formação', '#step2 · club & formation')}
+                {step === 3 && L('#passo3 · time do coração', '#step3 · team you support')}
               </Hashtag>
             </div>
 
@@ -592,7 +602,7 @@ export function Cadastro() {
           <div className="mt-8 space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block sm:col-span-1">
-                <span className={labelClass}>Nome</span>
+                <span className={labelClass}>{L('Nome', 'First name')}</span>
                 <input
                   className={inputClass}
                   value={firstName}
@@ -601,7 +611,7 @@ export function Cadastro() {
                 />
               </label>
               <label className="block sm:col-span-1">
-                <span className={labelClass}>Sobrenome</span>
+                <span className={labelClass}>{L('Sobrenome', 'Last name')}</span>
                 <input
                   className={inputClass}
                   value={lastName}
@@ -611,7 +621,7 @@ export function Cadastro() {
               </label>
             </div>
             <label className="block">
-              <span className={labelClass}>E-mail</span>
+              <span className={labelClass}>{L('E-mail', 'Email')}</span>
               <input
                 type="email"
                 className={inputClass}
@@ -621,21 +631,21 @@ export function Cadastro() {
                 aria-invalid={emailTaken || undefined}
               />
               {simpleEmailOk(email) && emailChecking ? (
-                <p className="mt-1 text-[11px] text-poeira">Verificando…</p>
+                <p className="mt-1 text-[11px] text-poeira">{L('Verificando…', 'Checking…')}</p>
               ) : null}
               {emailTaken ? (
                 <p className="mt-1 text-[11px] text-baixa">
-                  ✗ E-mail já cadastrado.{' '}
+                  ✗ {L('E-mail já cadastrado.', 'Email already registered.')}{' '}
                   <Link to="/login" className="underline decoration-baixa/50 hover:text-white">
-                    Fazer login
+                    {L('Fazer login', 'Sign in')}
                   </Link>
                 </p>
               ) : null}
             </label>
             <label className="block">
               <span className="mb-1 block text-[11px] text-cimento">
-                <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em]">Senha</span>{' '}
-                <span className="text-poeira">(mín. 6 chars — usada pra entrar de qualquer dispositivo)</span>
+                <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em]">{L('Senha', 'Password')}</span>{' '}
+                <span className="text-poeira">{L('(mín. 6 chars — usada pra entrar de qualquer dispositivo)', '(min. 6 chars — used to sign in on any device)')}</span>
               </span>
               <input
                 type="password"
@@ -649,11 +659,11 @@ export function Cadastro() {
             <label className="block">
               <span className="mb-1 flex items-center justify-between gap-2">
                 <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">
-                  Código de indicação <span className="normal-case tracking-normal text-poeira">(opcional)</span>
+                  {L('Código de indicação', 'Referral code')} <span className="normal-case tracking-normal text-poeira">{L('(opcional)', '(optional)')}</span>
                 </span>
                 {referrerFromInvite && normalizeReferralCode(referrerCode) ? (
                   <span className="shrink-0 border border-alta/40 bg-alta/10 px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wide text-alta">
-                    ✓ Convite aplicado
+                    ✓ {L('Convite aplicado', 'Invite applied')}
                   </span>
                 ) : null}
               </span>
@@ -664,21 +674,21 @@ export function Cadastro() {
                   setReferrerCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8));
                   setReferrerFromInvite(false);
                 }}
-                placeholder="ex. ABC123XY"
+                placeholder={L('ex. ABC123XY', 'e.g. ABC123XY')}
                 maxLength={8}
                 autoComplete="off"
               />
               <p className="mt-1 text-[10.5px] text-poeira">
-                Se você tiver um link de convite, o código já vem preenchido. Não dá pra alterar depois de concluir o cadastro.
+                {L('Se você tiver um link de convite, o código já vem preenchido. Não dá pra alterar depois de concluir o cadastro.', "If you have an invite link, the code is already filled in. It can't be changed after you finish signing up.")}
               </p>
             </label>
             <div>
-              <span className={cn(labelClass, 'mb-2')}>Telefone</span>
+              <span className={cn(labelClass, 'mb-2')}>{L('Telefone', 'Phone')}</span>
               <div className="space-y-2.5">
                 {/* Linha 1: DDI + DDD */}
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <label className="mb-1 block text-[10.5px] text-poeira">DDI (País)</label>
+                    <label className="mb-1 block text-[10.5px] text-poeira">{L('DDI (País)', 'Country code')}</label>
                     <select
                       className={inputClass}
                       value={dialOption.iso2}
@@ -702,10 +712,10 @@ export function Cadastro() {
                   </div>
                   {dialOption.iso2 === 'OTHER' && (
                     <div className="w-28">
-                      <label className="mb-1 block text-[10.5px] text-poeira">Código</label>
+                      <label className="mb-1 block text-[10.5px] text-poeira">{L('Código', 'Code')}</label>
                       <input
                         className={inputClass}
-                        placeholder="ex. 352"
+                        placeholder={L('ex. 352', 'e.g. 352')}
                         value={customDialDigits}
                         onChange={(e) => setCustomDialDigits(e.target.value)}
                         inputMode="numeric"
@@ -714,7 +724,7 @@ export function Cadastro() {
                   )}
                   {dialOption.iso2 === 'BR' ? (
                     <div className="w-20">
-                      <label className="mb-1 block text-[10.5px] text-poeira">UF</label>
+                      <label className="mb-1 block text-[10.5px] text-poeira">{L('UF', 'State')}</label>
                       <select
                         className={inputClass}
                         value={brazilState}
@@ -734,10 +744,10 @@ export function Cadastro() {
                     </div>
                   ) : dialOption.iso2 !== 'OTHER' ? (
                     <div className="w-24">
-                      <label className="mb-1 block text-[10.5px] text-poeira">DDD</label>
+                      <label className="mb-1 block text-[10.5px] text-poeira">{L('DDD', 'Area code')}</label>
                       <input
                         className={inputClass}
-                        placeholder="DDD"
+                        placeholder={L('DDD', 'Area code')}
                         value={ddd}
                         onChange={(e) => setDdd(e.target.value)}
                         inputMode="numeric"
@@ -750,7 +760,7 @@ export function Cadastro() {
                 <div className="flex gap-2">
                   {dialOption.iso2 === 'BR' && brazilState ? (
                     <div className="flex-1">
-                      <label className="mb-1 block text-[10.5px] text-poeira">Cidade/Região</label>
+                      <label className="mb-1 block text-[10.5px] text-poeira">{L('Cidade/Região', 'City/Region')}</label>
                       <select
                         className={inputClass}
                         value={brazilCity}
@@ -763,7 +773,7 @@ export function Cadastro() {
                           }
                         }}
                       >
-                        <option value="">Selecione</option>
+                        <option value="">{L('Selecione', 'Select')}</option>
                         {BRAZIL_STATES_DDD.find((s) => s.state === brazilState)?.cities.map((c) => (
                           <option key={c.name} value={c.name}>
                             {c.name}
@@ -773,10 +783,10 @@ export function Cadastro() {
                     </div>
                   ) : null}
                   <div className={dialOption.iso2 === 'BR' && brazilState ? 'flex-1' : 'w-full'}>
-                    <label className="mb-1 block text-[10.5px] text-poeira">Número</label>
+                    <label className="mb-1 block text-[10.5px] text-poeira">{L('Número', 'Number')}</label>
                     <input
                       className={inputClass}
-                      placeholder="Número do telefone"
+                      placeholder={L('Número do telefone', 'Phone number')}
                       value={localPhone}
                       onChange={(e) => setLocalPhone(e.target.value)}
                       inputMode="tel"
@@ -786,7 +796,7 @@ export function Cadastro() {
                 </div>
               </div>
               {phoneE164 ? (
-                <p className="mt-1.5 font-mono text-[10.5px] text-cimento">Seu telefone é {phoneE164}</p>
+                <p className="mt-1.5 font-mono text-[10.5px] text-cimento">{L('Seu telefone é', 'Your phone is')} {phoneE164}</p>
               ) : null}
             </div>
           </div>
@@ -797,16 +807,16 @@ export function Cadastro() {
             {/* Seleção de perfil */}
             <div>
               <p className="mb-3 text-center font-impact text-[20px] uppercase leading-[1.1] text-white">
-                Qual seu perfil?
+                {L('Qual seu perfil?', "What's your profile?")}
               </p>
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 {[
-                  { id: 'apaixonado' as const, label: 'Apaixonado por futebol', icon: Heart, color: 'rose' },
-                  { id: 'novo_talento' as const, label: 'Novo talento', icon: Sparkles, color: 'cyan' },
-                  { id: 'atleta_atuacao' as const, label: 'Atleta em atuação', icon: Trophy, color: 'amber' },
-                  { id: 'profissional' as const, label: 'Profissional', icon: Briefcase, color: 'blue' },
-                  { id: 'midia' as const, label: 'Mídia', icon: Mic, color: 'purple' },
-                  { id: 'ex_jogador' as const, label: 'Ex-Jogador', icon: Star, color: 'yellow' },
+                  { id: 'apaixonado' as const, label: L('Apaixonado por futebol', 'Football lover'), icon: Heart, color: 'rose' },
+                  { id: 'novo_talento' as const, label: L('Novo talento', 'New talent'), icon: Sparkles, color: 'cyan' },
+                  { id: 'atleta_atuacao' as const, label: L('Atleta em atuação', 'Active athlete'), icon: Trophy, color: 'amber' },
+                  { id: 'profissional' as const, label: L('Profissional', 'Professional'), icon: Briefcase, color: 'blue' },
+                  { id: 'midia' as const, label: L('Mídia', 'Media'), icon: Mic, color: 'purple' },
+                  { id: 'ex_jogador' as const, label: L('Ex-Jogador', 'Former player'), icon: Star, color: 'yellow' },
                 ].map((profile) => {
                   const Icon = profile.icon;
                   const selected = userProfile === profile.id;
@@ -837,7 +847,7 @@ export function Cadastro() {
               {userProfile === 'ex_jogador' && (
                 <div className="mt-3 border border-atencao/40 bg-atencao/10 px-3 py-2">
                   <p className="text-center text-[11px] text-giz">
-                    Entraremos em contato para validar seu perfil de ex-jogador
+                    {L('Entraremos em contato para validar seu perfil de ex-jogador', "We'll contact you to verify your former-player profile")}
                   </p>
                 </div>
               )}
@@ -848,9 +858,9 @@ export function Cadastro() {
 
             <div>
               <p className="mb-1 text-center font-impact text-[20px] uppercase leading-[1.1] text-white">
-                Time do coração
+                {L('Time do coração', 'Team you support')}
               </p>
-              <Hashtag className="text-center">{`#${LEAGUE_BUCKETS.length}ligas`}</Hashtag>
+              <Hashtag className="text-center">{L(`#${LEAGUE_BUCKETS.length}ligas`, `#${LEAGUE_BUCKETS.length}leagues`)}</Hashtag>
             </div>
 
             {/* Seleção Brasil em destaque (1 card cheio no topo) */}
@@ -873,8 +883,8 @@ export function Cadastro() {
                 ) : null}
               </div>
               <div className="min-w-0 flex-1 text-left">
-                <p className="truncate font-impact text-[17px] uppercase leading-[1.1] text-white">🇧🇷 Seleção Brasil</p>
-                <Hashtag className="text-[11px]">#seleção</Hashtag>
+                <p className="truncate font-impact text-[17px] uppercase leading-[1.1] text-white">🇧🇷 {L('Seleção Brasil', 'Brazil National Team')}</p>
+                <Hashtag className="text-[11px]">{L('#seleção', '#nationalteam')}</Hashtag>
               </div>
             </button>
 
@@ -938,7 +948,7 @@ export function Cadastro() {
 
             {favoriteTeam ? (
               <p className="text-center text-[11px] font-medium text-neon-yellow">
-                ✓ {favoriteTeam.name} selecionado
+                ✓ {favoriteTeam.name} {L('selecionado', 'selected')}
               </p>
             ) : null}
           </div>
@@ -949,7 +959,7 @@ export function Cadastro() {
             {/* Nome do clube — limite 10 caracteres com aviso inline */}
             <label className="block">
               <span className={cn(labelClass, 'mb-2')}>
-                Nome do clube
+                {L('Nome do clube', 'Club name')}
               </span>
               <input
                 className={inputClass}
@@ -958,7 +968,7 @@ export function Cadastro() {
                   const raw = e.target.value;
                   if (raw.length > 10) {
                     setClubName(raw.slice(0, 10));
-                    setClubNameWarn('Máximo 10 letras');
+                    setClubNameWarn(L('Máximo 10 letras', 'Max 10 letters'));
                     window.setTimeout(() => setClubNameWarn(null), 2400);
                     return;
                   }
@@ -972,7 +982,7 @@ export function Cadastro() {
                     e.key.length === 1 &&
                     !e.metaKey && !e.ctrlKey && !e.altKey
                   ) {
-                    setClubNameWarn('Máximo 10 letras');
+                    setClubNameWarn(L('Máximo 10 letras', 'Max 10 letters'));
                     window.clearTimeout((window as any).__cnTimer);
                     (window as any).__cnTimer = window.setTimeout(
                       () => setClubNameWarn(null),
@@ -981,7 +991,7 @@ export function Cadastro() {
                   }
                 }}
                 maxLength={10}
-                placeholder="Ex.: OLE FC"
+                placeholder={L('Ex.: OLE FC', 'e.g. OLE FC')}
               />
               <div className="mt-1.5 flex items-center justify-between gap-3">
                 {clubNameWarn ? (
@@ -994,7 +1004,7 @@ export function Cadastro() {
                   </p>
                 ) : (
                   <p className={hintClass}>
-                    Máximo 10 caracteres
+                    {L('Máximo 10 caracteres', 'Max 10 characters')}
                   </p>
                 )}
                 <span className="ole-num text-[10.5px] text-poeira">
@@ -1006,7 +1016,7 @@ export function Cadastro() {
             {/* Iniciais — só A–Z, máximo 3 letras, sem pontos/caracteres especiais */}
             <label className="block">
               <span className={cn(labelClass, 'mb-2')}>
-                Iniciais
+                {L('Iniciais', 'Initials')}
               </span>
               <input
                 className={cn(inputClass, 'tracking-[0.4em] text-center font-display font-black uppercase')}
@@ -1017,14 +1027,14 @@ export function Cadastro() {
                   const cleaned = raw.replace(/[^A-Z]/g, '');
                   const trimmed = cleaned.slice(0, 3);
                   if (cleaned !== raw.replace(/\s/g, '')) {
-                    setInitialsWarn('Use apenas letras A–Z');
+                    setInitialsWarn(L('Use apenas letras A–Z', 'Letters A–Z only'));
                     window.clearTimeout((window as any).__inTimer);
                     (window as any).__inTimer = window.setTimeout(
                       () => setInitialsWarn(null),
                       2400,
                     );
                   } else if (cleaned.length > 3) {
-                    setInitialsWarn('Máximo 3 letras');
+                    setInitialsWarn(L('Máximo 3 letras', 'Max 3 letters'));
                     window.clearTimeout((window as any).__inTimer);
                     (window as any).__inTimer = window.setTimeout(
                       () => setInitialsWarn(null),
@@ -1050,7 +1060,7 @@ export function Cadastro() {
                   </p>
                 ) : (
                   <p className={hintClass}>
-                    3 letras (sem pontos ou números)
+                    {L('3 letras (sem pontos ou números)', '3 letters (no dots or numbers)')}
                   </p>
                 )}
                 <span className="ole-num text-[10.5px] text-poeira">
@@ -1062,14 +1072,14 @@ export function Cadastro() {
               {initials.trim().length >= 2 && (
                 <div className="mt-1">
                   {initialsChecking ? (
-                    <p className={hintClass}>Verificando…</p>
+                    <p className={hintClass}>{L('Verificando…', 'Checking…')}</p>
                   ) : initialsTaken ? (
                     <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-baixa">
-                      ✗ Iniciais já em uso — escolha outras
+                      ✗ {L('Iniciais já em uso — escolha outras', 'Initials taken — pick others')}
                     </p>
                   ) : (
                     <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-alta">
-                      ✓ DISPONÍVEL
+                      ✓ {L('DISPONÍVEL', 'AVAILABLE')}
                     </p>
                   )}
                 </div>
@@ -1079,7 +1089,7 @@ export function Cadastro() {
               {previewUsername && !initialsTaken && !initialsChecking && (
                 <div className="mt-2 flex min-w-0 items-center gap-1.5 border border-white/10 bg-deep-black px-3 py-1.5">
                   <span className="shrink-0 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">
-                    Seu username:
+                    {L('Seu username:', 'Your username:')}
                   </span>
                   <span className="min-w-0 truncate font-mono text-[12px] font-medium text-neon-yellow">
                     @{previewUsername}
@@ -1091,7 +1101,7 @@ export function Cadastro() {
             {/* Formação */}
             <label className="block">
               <span className={cn(labelClass, 'mb-2')}>
-                Formação
+                {L('Formação', 'Formation')}
               </span>
               <select
                 className={inputClass}
@@ -1105,7 +1115,7 @@ export function Cadastro() {
                 ))}
               </select>
               <p className="mt-1.5 text-[10.5px] text-cimento">
-                Estilo tático:{' '}
+                {L('Estilo tático:', 'Tactical style:')}{' '}
                 <span className="font-mono font-medium uppercase tracking-[0.14em] text-neon-yellow">
                   {PRESET_LABEL_PT[FORMATION_TACTICAL_DEFAULTS[formationScheme].presetId]}
                 </span>
@@ -1128,14 +1138,14 @@ export function Cadastro() {
               className="btn-secondary flex h-12 items-center justify-center sm:order-1"
               onClick={() => setStep((step - 1) as 1 | 2 | 3)}
             >
-              Voltar
+              {L('Voltar', 'Back')}
             </button>
           ) : (
             <Link
               to="/login"
               className="btn-secondary flex h-12 items-center justify-center sm:order-1"
             >
-              Cancelar
+              {L('Cancelar', 'Cancel')}
             </Link>
           )}
           {step < 3 ? (
@@ -1148,7 +1158,7 @@ export function Cadastro() {
               disabled={(step === 1 && !step1Valid) || (step === 2 && !step2Valid)}
               onClick={goNext}
             >
-              Continuar
+              {L('Continuar', 'Continue')}
             </button>
           ) : (
             <button
@@ -1160,7 +1170,7 @@ export function Cadastro() {
               disabled={!step3Valid || finishBusy}
               onClick={() => void finish()}
             >
-              {finishBusy ? 'Preparando plantel…' : 'Concluir'}
+              {finishBusy ? L('Preparando plantel…', 'Preparing squad…') : L('Concluir', 'Finish')}
             </button>
           )}
         </div>
@@ -1169,7 +1179,7 @@ export function Cadastro() {
     </div>
 
     <footer className="relative z-10 mx-auto mt-6 max-w-md text-center text-[10px] text-poeira sm:text-[11px]">
-      Olefoot © 2026 · Todos os direitos reservados
+      Olefoot © 2026 · {L('Todos os direitos reservados', 'All rights reserved')}
     </footer>
   </div>
 );

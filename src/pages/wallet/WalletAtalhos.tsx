@@ -8,6 +8,7 @@ import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
 import { applyPendingCredits } from '@/wallet/applyPendingCredits';
 import { avisarQueAPosicaoMudou } from '@/wallet/eventosDaCarteira';
 import { esquecerConviteVisto } from '@/wallet/conviteVisto';
+import { L, LOCALE } from '@/i18n/L';
 
 /**
  * Os quatro atalhos da carteira — os mesmos em SPOT e em DEX.
@@ -26,7 +27,7 @@ import { esquecerConviteVisto } from '@/wallet/conviteVisto';
 
 // Dólar escrito como o resto da tela: ponto no milhar, vírgula no centavo.
 const dolar = (cents: number) =>
-  `$${(cents / 100).toLocaleString('pt-BR', {
+  `$${(cents / 100).toLocaleString(LOCALE, {
     minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2,
   })}`;
 
@@ -57,10 +58,10 @@ export function WalletAtalhos() {
   }, [params, setParams]);
 
   const atalhos: QuickAction[] = [
-    { key: 'add', label: 'Adicionar', icon: <ArrowDown className="h-5 w-5" strokeWidth={2.2} />, accent: 'green', onClick: () => setGaveta({ produto: 'bro' }) },
-    { key: 'collection', label: 'Coleção', icon: <Layers className="h-5 w-5" strokeWidth={2.2} />, onClick: () => navigate('/wallet/colecao') },
+    { key: 'add', label: L('Adicionar', 'Add'), icon: <ArrowDown className="h-5 w-5" strokeWidth={2.2} />, accent: 'green', onClick: () => setGaveta({ produto: 'bro' }) },
+    { key: 'collection', label: L('Coleção', 'Collection'), icon: <Layers className="h-5 w-5" strokeWidth={2.2} />, onClick: () => navigate('/wallet/colecao') },
     { key: 'network', label: 'Network', icon: <Network className="h-5 w-5" strokeWidth={2.2} />, onClick: () => navigate('/wallet/network') },
-    { key: 'extract', label: 'Extrato', icon: <Menu className="h-5 w-5" strokeWidth={2.2} />, onClick: () => navigate('/wallet/extract') },
+    { key: 'extract', label: L('Extrato', 'Statement'), icon: <Menu className="h-5 w-5" strokeWidth={2.2} />, onClick: () => navigate('/wallet/extract') },
   ];
 
   return (
@@ -79,9 +80,9 @@ export function WalletAtalhos() {
         open={pixBro !== null}
         productKind="recharge"
         amountCents={pixBro ?? 0}
-        title="Depósito em BRO"
-        description="O BRO entra no saldo assim que o Pix cair."
-        paidMessage="Seu BRO já está no saldo."
+        title={L('Depósito em BRO', 'BRO deposit')}
+        description={L('O BRO entra no saldo assim que o Pix cair.', 'Your BRO hits your balance as soon as the Pix clears.')}
+        paidMessage={L('Seu BRO já está no saldo.', 'Your BRO is in your balance.')}
         onClose={() => setPixBro(null)}
         onSuccess={() => {
           setPixBro(null);
@@ -97,18 +98,18 @@ export function WalletAtalhos() {
         amountCents={pixOlefoot?.brlCents ?? 0}
         usdCents={pixOlefoot?.plano === 'ativacao_3x' ? 1000 : pixOlefoot?.usdCents}
         plano={pixOlefoot?.plano}
-        title={pixOlefoot?.plano === 'ativacao_3x' ? 'Ativação 3×' : 'Comprar OLEFOOT'}
+        title={pixOlefoot?.plano === 'ativacao_3x' ? L('Ativação 3×', '3× Activation') : L('Comprar OLEFOOT', 'Buy OLEFOOT')}
         description={
           pixOlefoot?.plano === 'ativacao_3x'
-            ? `${pixOlefoot.recebe.toLocaleString('pt-BR')} OLEFOOT × 3 contas · você + Time 1 + Time 2`
+            ? L(`${pixOlefoot.recebe.toLocaleString(LOCALE)} OLEFOOT × 3 contas · você + Time 1 + Time 2`, `${pixOlefoot.recebe.toLocaleString(LOCALE)} OLEFOOT × 3 accounts · you + Team 1 + Team 2`)
             : pixOlefoot
-              ? `${pixOlefoot.recebe.toLocaleString('pt-BR')} OLEFOOT · pack de ${dolar(pixOlefoot.usdCents)}`
+              ? L(`${pixOlefoot.recebe.toLocaleString(LOCALE)} OLEFOOT · pack de ${dolar(pixOlefoot.usdCents)}`, `${pixOlefoot.recebe.toLocaleString(LOCALE)} OLEFOOT · ${dolar(pixOlefoot.usdCents)} pack`)
               : ''
         }
         paidMessage={
           pixOlefoot?.plano === 'ativacao_3x'
-            ? 'Suas 3 contas estão ativas — 1 em cada time. O bônus já conta.'
-            : 'Seu OLEFOOT está na sua posição, travado.'
+            ? L('Suas 3 contas estão ativas — 1 em cada time. O bônus já conta.', 'Your 3 accounts are active — 1 on each team. The bonus already counts.')
+            : L('Seu OLEFOOT está na sua posição, travado.', 'Your OLEFOOT is in your position, locked.')
         }
         onClose={() => setPixOlefoot(null)}
         onSuccess={() => {

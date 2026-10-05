@@ -17,6 +17,7 @@ import { DailyMissions } from '@/components/home/DailyMissions';
 import type { LegendMini } from '@/components/home/LegendsRail';
 import type { DailyChallenge } from '@/game/dailyChallenges';
 import { fetchMyLinkedSolanaWallet, type SolanaWalletLink } from '@/supabase/solanaWallet';
+import { L, LOCALE } from '@/i18n/L';
 
 // leading 1.15: com `truncate` (overflow hidden), leading-none corta o til de MISSÕES.
 const TILE_TITLE = 'block min-w-0 truncate font-impact text-[clamp(20px,6.6vw,26px)] uppercase leading-[1.15]';
@@ -40,7 +41,7 @@ export function Mosaico({
   onClaim: (challengeId: string) => void;
 }) {
   return (
-    <section aria-label="Atalhos" className="grid auto-rows-[196px] grid-cols-2 gap-3.5">
+    <section aria-label={L('Atalhos', 'Shortcuts')} className="grid auto-rows-[196px] grid-cols-2 gap-3.5">
       <TileLenda legend={legend} />
       <Link
         to="/legends-cup"
@@ -50,7 +51,7 @@ export function Mosaico({
         <span className="flex min-w-0 flex-col gap-1.5">
           <span className={TILE_TITLE}>Legends Cup</span>
           <span className="block min-w-0 truncate font-mono text-[11.5px] font-semibold text-[#1A1700]">
-            {cupPhase ? hashtagOf(cupPhase) : '#comece'}
+            {cupPhase ? hashtagOf(cupPhase) : L('#comece', '#start')}
           </span>
         </span>
       </Link>
@@ -83,18 +84,18 @@ function TileLenda({ legend }: { legend: LegendMini | null }) {
       )}
       {legend?.isNew && (
         <span className="absolute left-2.5 top-3 bg-neon-yellow px-2 pb-[3px] pt-1 font-impact text-[12px] tracking-[0.08em] text-black">
-          NOVO
+          {L('NOVO', 'NEW')}
         </span>
       )}
       <span className="absolute inset-x-3 bottom-3 flex min-w-0 flex-col gap-1.5">
         <span className="block min-w-0 truncate font-impact text-[clamp(22px,7.4vw,30px)] uppercase leading-[1.1]">
-          {legend ? legend.name.split(/\s+/)[0] : 'Lendas'}
+          {legend ? legend.name.split(/\s+/)[0] : L('Lendas', 'Legends')}
         </span>
         <span className="flex min-w-0 items-center gap-1.5">
           <span className="shrink-0 bg-lenda px-[5px] py-0.5 font-mono text-[9.5px] font-semibold tracking-[0.12em] text-black">
-            LENDA
+            {L('LENDA', 'LEGEND')}
           </span>
-          <Hashtag className="text-giz">#mercado</Hashtag>
+          <Hashtag className="text-giz">{L('#mercado', '#market')}</Hashtag>
         </span>
       </span>
     </Link>
@@ -128,7 +129,7 @@ function TileMissoes({
         onClick={() => setOpen(true)}
         disabled={total === 0}
         className="flex min-w-0 flex-col justify-between border border-white/10 bg-panel p-4 text-left text-white transition-colors hover:border-white/30 disabled:opacity-50"
-        aria-label={`Missões do dia: ${done} de ${total} concluídas`}
+        aria-label={L(`Missões do dia: ${done} de ${total} concluídas`, `Today's missions: ${done} of ${total} done`)}
       >
         <span className="relative block h-16 w-16">
           <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden className="block">
@@ -149,18 +150,18 @@ function TileMissoes({
           </span>
         </span>
         <span className="flex min-w-0 flex-col gap-1">
-          <span className={TILE_TITLE}>Missões</span>
+          <span className={TILE_TITLE}>{L('Missões', 'Missions')}</span>
           {claimableExp > 0 ? (
             <span className="block min-w-0 truncate font-mono text-[clamp(10px,3.1vw,11.5px)] font-semibold text-neon-yellow">
-              Resgatar +{claimableExp.toLocaleString('pt-BR')} EXP
+              {L('Resgatar', 'Claim')} +{claimableExp.toLocaleString(LOCALE)} EXP
             </span>
           ) : (
-            <Hashtag>{pendingExp > 0 ? `+${pendingExp.toLocaleString('pt-BR')} EXP` : '#feitas'}</Hashtag>
+            <Hashtag>{pendingExp > 0 ? `+${pendingExp.toLocaleString(LOCALE)} EXP` : L('#feitas', '#done')}</Hashtag>
           )}
         </span>
       </button>
       {open && (
-        <Gaveta titulo="Missões do dia" onClose={() => setOpen(false)}>
+        <Gaveta titulo={L('Missões do dia', "Today's missions")} onClose={() => setOpen(false)}>
           <DailyMissions challenges={challenges} streak={streak} onClaim={onClaim} />
         </Gaveta>
       )}
@@ -187,7 +188,7 @@ function TileCarteira() {
     >
       <SeloRede />
       <span className="flex min-w-0 flex-col gap-2">
-        <span className="block min-w-0 truncate font-impact text-[clamp(22px,7.4vw,30px)] uppercase leading-[1.1]">Carteira</span>
+        <span className="block min-w-0 truncate font-impact text-[clamp(22px,7.4vw,30px)] uppercase leading-[1.1]">{L('Carteira', 'Wallet')}</span>
         {verified && link ? (
           <span className="flex h-11 min-w-0 items-center gap-1.5 border border-alta/45 px-2.5">
             <Check aria-hidden className="h-4 w-4 shrink-0 text-alta" strokeWidth={2.6} />
@@ -197,7 +198,7 @@ function TileCarteira() {
           </span>
         ) : (
           <span className="ole-num flex h-11 items-center justify-center border border-neon-yellow text-[11.5px] uppercase text-neon-yellow">
-            {link === undefined ? '…' : 'Vincular'}
+            {link === undefined ? '…' : L('Vincular', 'Link')}
           </span>
         )}
       </span>
@@ -232,7 +233,7 @@ function Gaveta({ titulo, onClose, children }: { titulo: string; onClose: () => 
             ref={closeRef}
             type="button"
             onClick={onClose}
-            aria-label="Fechar"
+            aria-label={L('Fechar', 'Close')}
             className="flex h-11 w-11 shrink-0 items-center justify-center border border-white/20 text-white hover:border-white"
           >
             <X aria-hidden className="h-5 w-5" />

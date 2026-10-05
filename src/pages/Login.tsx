@@ -10,6 +10,7 @@ import { fetchMyReferralCode, syncMyExpLifetime } from '@/supabase/referrals';
 import { FORMATION_TACTICAL_DEFAULTS } from '@/tactics/formationDefaults';
 import { FaixaConvitePendente } from '@/components/FaixaConvitePendente';
 import { destinoAposEntrar } from '@/supabase/expansaoConvite';
+import { L, emIngles } from '@/i18n/L';
 
 /**
  * Proposta de valor da landing.
@@ -23,15 +24,15 @@ import { destinoAposEntrar } from '@/supabase/expansaoConvite';
  */
 const VALUE_PROP = {
   headline: {
-    white1: 'A gente sabe que',
-    yellow: 'você já virou noite para ser o melhor',
-    white2: 'clube do mundo!',
+    white1: L('A gente sabe que', 'We know'),
+    yellow: L('você já virou noite para ser o melhor', 'you have pulled all-nighters to build the best'),
+    white2: L('clube do mundo!', 'club in the world!'),
   },
-  subheadline: 'Bem vindo ao OLEFOOT',
+  subheadline: L('Bem vindo ao OLEFOOT', 'Welcome to OLEFOOT'),
   features: [
-    { icon: ShoppingCart, text: 'Revele novos talentos no mercado' },
-    { icon: Trophy, text: 'Construa sua cidade do futebol' },
-    { icon: Users, text: 'Dispute ligas contra gringos' },
+    { icon: ShoppingCart, text: L('Revele novos talentos no mercado', 'Discover new talent in the market') },
+    { icon: Trophy, text: L('Construa sua cidade do futebol', 'Build your football city') },
+    { icon: Users, text: L('Dispute ligas contra gringos', 'Play leagues against the world') },
   ],
 };
 
@@ -95,7 +96,7 @@ export function Login() {
     try {
       const r = await sendPasswordResetEmail(email);
       if (!r.ok) {
-        setError(r.error ?? 'Não foi possível enviar o e-mail.');
+        setError(r.error ?? L('Não foi possível enviar o e-mail.', 'Could not send the email.'));
         return;
       }
       setForgotSent(true);
@@ -113,13 +114,13 @@ export function Login() {
       const r = await signInWithEmail(email, password);
       if (!r.ok) {
         // Mensagens de erro mais específicas
-        let errorMsg = r.error ?? 'Falha ao entrar.';
+        let errorMsg = r.error === 'Supabase não configurado.' ? L(r.error, 'Supabase not configured.') : (r.error ?? L('Falha ao entrar.', 'Sign-in failed.'));
         if (errorMsg.includes('Invalid login credentials')) {
-          errorMsg = 'E-mail ou senha incorretos. Verifica os dados e tenta novamente.';
+          errorMsg = L('E-mail ou senha incorretos. Verifica os dados e tenta novamente.', 'Wrong email or password. Check your details and try again.');
         } else if (errorMsg.includes('Email not confirmed')) {
-          errorMsg = 'E-mail não confirmado. Verifica tua caixa de entrada.';
+          errorMsg = L('E-mail não confirmado. Verifica tua caixa de entrada.', 'Email not confirmed. Check your inbox.');
         } else if (errorMsg.includes('User not found')) {
-          errorMsg = 'Conta não encontrada. Confira o e-mail ou cadastre-se.';
+          errorMsg = L('Conta não encontrada. Confira o e-mail ou cadastre-se.', 'Account not found. Check your email or sign up.');
         }
         setError(errorMsg);
         return;
@@ -286,7 +287,7 @@ export function Login() {
             />
           </Link>
           <div className="flex shrink-0 items-center gap-3">
-            <Hashtag className="hidden text-[12px] text-giz sm:inline">#manager #futebol</Hashtag>
+            <Hashtag className="hidden text-[12px] text-giz sm:inline">{L('#manager #futebol', '#manager #football')}</Hashtag>
             <SeletorDeIdioma />
           </div>
         </div>
@@ -300,7 +301,7 @@ export function Login() {
             <>
               <div className="flex flex-col gap-4">
                 <span className="self-start bg-neon-yellow px-2.5 pb-1 pt-[5px] font-impact text-[14px] uppercase tracking-[0.06em] text-black">
-                  Jogue agora
+                  {L('Jogue agora', 'Play now')}
                 </span>
 
                                 <h1
@@ -328,35 +329,35 @@ export function Login() {
               <div className="mt-6 space-y-3">
                 <FeatureCard
                   icon={<ShoppingCart className="h-5 w-5" strokeWidth={2.5} />}
-                  title="Mercado Real"
-                  desc="Leilões ao vivo, garimpe talentos baratos e venda por fortuna"
+                  title={L('Mercado Real', 'Real Market')}
+                  desc={L('Leilões ao vivo, garimpe talentos baratos e venda por fortuna', 'Live auctions: scout cheap talent and sell for a fortune')}
                 />
                 <FeatureCard
                   icon={<Trophy className="h-5 w-5" strokeWidth={2.5} />}
-                  title="Construa Sua Dinastia"
-                  desc="Décadas de carreira, jogadores envelhecem e novos talentos surgem"
+                  title={L('Construa Sua Dinastia', 'Build Your Dynasty')}
+                  desc={L('Décadas de carreira, jogadores envelhecem e novos talentos surgem', 'Decades of career: players age and new talent emerges')}
                 />
                 <FeatureCard
                   icon={<Zap className="h-5 w-5" strokeWidth={2.5} />}
-                  title="O Jogo Começou"
-                  desc="Mostre que você entende de futebol e domine o ranking mundial"
+                  title={L('O Jogo Começou', 'Kick-off')}
+                  desc={L('Mostre que você entende de futebol e domine o ranking mundial', 'Prove you know football and rule the world ranking')}
                 />
               </div>
             </>
           ) : mode === 'complete' ? (
             <div className={CAIXA}>
               <div>
-                <span className="ole-eyebrow-poster mb-3">Bem-vindo de volta</span>
+                <span className="ole-eyebrow-poster mb-3">{L('Bem-vindo de volta', 'Welcome back')}</span>
                 <h2 className={TITULO}>
-                  Completar Cadastro
+                  {L('Completar Cadastro', 'Complete Sign-up')}
                 </h2>
                 <p className="mt-2 text-[12px] leading-relaxed text-cimento">
-                  Encontramos tua conta da era anterior. Completa os dados abaixo para entrar na nova plataforma.
+                  {L('Encontramos tua conta da era anterior. Completa os dados abaixo para entrar na nova plataforma.', 'We found your account from the previous era. Fill in the details below to join the new platform.')}
                 </p>
                 <form onSubmit={(e) => void onCompleteSubmit(e)} className="mt-4 space-y-3" autoComplete="on">
                   <div className="grid grid-cols-2 gap-3">
                     <label className="block">
-                      <span className={LABEL}>Nome</span>
+                      <span className={LABEL}>{L('Nome', 'First name')}</span>
                       <input
                         type="text"
                         autoComplete="given-name"
@@ -367,7 +368,7 @@ export function Login() {
                       />
                     </label>
                     <label className="block">
-                      <span className={LABEL}>Sobrenome</span>
+                      <span className={LABEL}>{L('Sobrenome', 'Last name')}</span>
                       <input
                         type="text"
                         autoComplete="family-name"
@@ -379,7 +380,7 @@ export function Login() {
                     </label>
                   </div>
                   <label className="block">
-                    <span className={LABEL}>Telefone (com DDD)</span>
+                    <span className={LABEL}>{L('Telefone (com DDD)', 'Phone (with country code)')}</span>
                     <input
                       type="tel"
                       autoComplete="tel"
@@ -390,18 +391,18 @@ export function Login() {
                     />
                   </label>
                   <label className="block">
-                    <span className={LABEL}>Nome do Clube</span>
+                    <span className={LABEL}>{L('Nome do Clube', 'Club name')}</span>
                     <input
                       type="text"
                       value={compClubName}
                       onChange={(e) => setCompClubName(e.target.value)}
                       required
-                      placeholder="Ex: Olefoot FC"
+                      placeholder={L('Ex: Olefoot FC', 'e.g. Olefoot FC')}
                       className={INPUT}
                     />
                   </label>
                   <label className="block">
-                    <span className={LABEL}>Formação</span>
+                    <span className={LABEL}>{L('Formação', 'Formation')}</span>
                     <select
                       value={compFormation}
                       onChange={(e) => setCompFormation(e.target.value as FormationSchemeId)}
@@ -424,7 +425,7 @@ export function Login() {
                     className="btn-primary flex h-12 w-full items-center justify-center disabled:pointer-events-none disabled:opacity-40"
                   >
                     <span className="btn-primary-inner justify-center py-1">
-                      {busy ? 'Salvando…' : 'Entrar na Plataforma'}
+                      {busy ? L('Salvando…', 'Saving…') : L('Entrar na Plataforma', 'Enter the Platform')}
                     </span>
                   </button>
                 </form>
@@ -434,24 +435,26 @@ export function Login() {
             <div className={CAIXA}>
               <div>
                 <h2 className={TITULO}>
-                  Recuperar Senha
+                  {L('Recuperar Senha', 'Reset Password')}
                 </h2>
                 {forgotSent ? (
                   <div className="mt-4 space-y-3">
                     <p className="border border-alta/40 bg-alta/10 px-3 py-2 text-[12px] text-giz">
-                      ✓ Enviamos um link de recuperação para <strong>{email}</strong>. Abre o e-mail para definir uma nova senha.
+                      {emIngles()
+                        ? <>✓ We sent a reset link to <strong>{email}</strong>. Open the email to set a new password.</>
+                        : <>✓ Enviamos um link de recuperação para <strong>{email}</strong>. Abre o e-mail para definir uma nova senha.</>}
                     </p>
                     <p className="text-[11px] text-cimento">
-                      Não recebeu? Verifica a pasta de spam ou tenta novamente.
+                      {L('Não recebeu? Verifica a pasta de spam ou tenta novamente.', "Didn't get it? Check your spam folder or try again.")}
                     </p>
                   </div>
                 ) : (
                   <form onSubmit={(e) => void onForgotSubmit(e)} className="mt-4 space-y-3" autoComplete="on">
                     <p className="text-[12px] text-giz">
-                      Informa o e-mail da tua conta. Te enviaremos um link para redefinir a senha.
+                      {L('Informa o e-mail da tua conta. Te enviaremos um link para redefinir a senha.', "Enter your account email. We'll send you a link to reset your password.")}
                     </p>
                     <label className="block">
-                      <span className={LABEL}>E-mail</span>
+                      <span className={LABEL}>{L('E-mail', 'Email')}</span>
                       <input
                         type="email"
                         autoComplete="email"
@@ -473,7 +476,7 @@ export function Login() {
                       className="btn-primary flex h-12 w-full items-center justify-center disabled:pointer-events-none disabled:opacity-40"
                     >
                       <span className="btn-primary-inner justify-center py-1">
-                        {busy ? 'Enviando…' : 'Enviar link'}
+                        {busy ? L('Enviando…', 'Sending…') : L('Enviar link', 'Send link')}
                       </span>
                     </button>
                   </form>
@@ -487,7 +490,7 @@ export function Login() {
                   }}
                   className="mt-4 w-full text-center text-[12px] text-cimento transition-colors hover:text-white"
                 >
-                  ← Voltar
+                  ← {L('Voltar', 'Back')}
                 </button>
               </div>
             </div>
@@ -495,11 +498,11 @@ export function Login() {
             <div className={CAIXA}>
               <div>
                 <h2 className={TITULO}>
-                  Entrar
+                  {L('Entrar', 'Sign in')}
                 </h2>
                 <form onSubmit={(e) => void onSubmit(e)} className="mt-4 space-y-3" autoComplete="on">
                   <label className="block">
-                    <span className={LABEL}>E-mail</span>
+                    <span className={LABEL}>{L('E-mail', 'Email')}</span>
                     <input
                       type="email"
                       autoComplete="email"
@@ -510,7 +513,7 @@ export function Login() {
                     />
                   </label>
                   <label className="block">
-                    <span className={LABEL}>Senha</span>
+                    <span className={LABEL}>{L('Senha', 'Password')}</span>
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -525,7 +528,7 @@ export function Login() {
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-2 top-1/2 -translate-y-1/2 text-cimento transition-colors hover:text-white"
-                        aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                        aria-label={showPassword ? L('Ocultar senha', 'Hide password') : L('Mostrar senha', 'Show password')}
                       >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4" />
@@ -547,7 +550,7 @@ export function Login() {
                     className="btn-primary flex h-12 w-full items-center justify-center disabled:pointer-events-none disabled:opacity-40"
                   >
                     <span className="btn-primary-inner justify-center py-1">
-                      {busy ? 'Entrando…' : 'Entrar'}
+                      {busy ? L('Entrando…', 'Signing in…') : L('Entrar', 'Sign in')}
                     </span>
                   </button>
                 </form>
@@ -556,14 +559,14 @@ export function Login() {
                   onClick={() => setMode('landing')}
                   className="mt-4 w-full text-center text-[12px] text-cimento transition-colors hover:text-white"
                 >
-                  ← Voltar
+                  ← {L('Voltar', 'Back')}
                 </button>
               </div>
             </div>
           )}
 
           {mode === 'landing' ? (
-            <nav className="mt-8 flex w-full flex-col gap-3 sm:mt-10" aria-label="Acesso à conta">
+            <nav className="mt-8 flex w-full flex-col gap-3 sm:mt-10" aria-label={L('Acesso à conta', 'Account access')}>
               <button
                 type="button"
                 onClick={() => {
@@ -571,13 +574,13 @@ export function Login() {
                 }}
                 className="btn-primary flex h-14 w-full items-center justify-center text-[16px]"
               >
-                Entrar
+                {L('Entrar', 'Sign in')}
               </button>
               <Link
                 to="/cadastro"
                 className="btn-secondary flex h-14 w-full items-center justify-center text-[16px]"
               >
-                Cadastrar
+                {L('Cadastrar', 'Sign up')}
               </Link>
               <button
                 type="button"
@@ -588,7 +591,7 @@ export function Login() {
                   setMode('forgot');
                 }}
               >
-                Esqueci minha senha
+                {L('Esqueci minha senha', 'Forgot my password')}
               </button>
             </nav>
           ) : null}
@@ -632,7 +635,7 @@ export function Login() {
             </a>
           </div>
           <p className="text-[10px] text-poeira sm:text-[11px]">
-            Olefoot © 2026 · Todos os direitos reservados
+            Olefoot © 2026 · {L('Todos os direitos reservados', 'All rights reserved')}
           </p>
         </footer>
       </div>

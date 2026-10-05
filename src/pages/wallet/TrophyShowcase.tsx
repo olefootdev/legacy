@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { SecaoVolt } from '@/components/ui';
+import { L } from '@/i18n/L';
 
 export type TrophyEntry = {
   id: string;
@@ -28,7 +29,7 @@ function TrophyArt({ imageSrc, leagueName }: { imageSrc?: string; leagueName: st
     return (
       <img
         src={imageSrc}
-        alt={`Troféu ${leagueName}`}
+        alt={L(`Troféu ${leagueName}`, `${leagueName} trophy`)}
         className="h-full w-full object-contain"
         loading="lazy"
         onError={() => setErrored(true)}
@@ -55,15 +56,15 @@ function TrophyArt({ imageSrc, leagueName }: { imageSrc?: string; leagueName: st
 
 export function TrophyShowcase({
   trophies,
-  teaserMessage = 'O primeiro troféu te espera na Liga Global.',
+  teaserMessage = L('O primeiro troféu te espera na Liga Global.', 'Your first trophy awaits in the Global League.'),
 }: TrophyShowcaseProps) {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <SecaoVolt label="Conquistas" tone="neutro" className="min-w-0 grow" />
+        <SecaoVolt label={L('Conquistas', 'Achievements')} tone="neutro" className="min-w-0 grow" />
         {trophies.length > 0 ? (
           <span className="shrink-0 font-mono text-[11px] text-cimento">
-            {trophies.length} {trophies.length === 1 ? 'troféu' : 'troféus'}
+            {trophies.length} {trophies.length === 1 ? L('troféu', 'trophy') : L('troféus', 'trophies')}
           </span>
         ) : null}
       </div>
@@ -77,7 +78,7 @@ export function TrophyShowcase({
             <TrophyArt leagueName="placeholder" />
           </div>
           <p className="mt-4 font-impact text-[16px] uppercase leading-[1.1] text-giz">
-            Vitrine vazia
+            {L('Vitrine vazia', 'Cabinet empty')}
           </p>
           <p className="mt-1 text-[12px] text-cimento">{teaserMessage}</p>
         </div>

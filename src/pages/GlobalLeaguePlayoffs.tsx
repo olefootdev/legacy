@@ -10,6 +10,7 @@ import { Fragment, useMemo } from 'react';
 import { BackButton } from '@/components/BackButton';
 import { Hashtag } from '@/components/ui';
 import { globalDivisionName } from '@/match/globalLeagueMVP';
+import { L } from '@/i18n/L';
 
 export default function GlobalLeaguePlayoffs() {
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
@@ -39,14 +40,14 @@ export default function GlobalLeaguePlayoffs() {
   if (!globalLeagueMVP || globalLeagueMVP.status !== 'playoffs') {
     return (
       <div className="mx-auto min-w-0 w-full max-w-4xl px-3 sm:px-4 lg:px-6 py-12 text-center">
-        <p className="text-cimento">Playoffs ainda não iniciados</p>
+        <p className="text-cimento">{L('Playoffs ainda não iniciados', 'Playoffs not started yet')}</p>
       </div>
     );
   }
 
   return (
     <div className="mx-auto min-w-0 w-full max-w-6xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-6 pb-6 md:pb-8">
-      <BackButton to="/match/global" label="Liga Global" />
+      <BackButton to="/match/global" label={L('Liga Global', 'Global League')} />
 
       {/* Hero */}
       <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-6">
@@ -55,7 +56,7 @@ export default function GlobalLeaguePlayoffs() {
           animate={{ opacity: 1, y: 0 }}
           className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-14 text-center"
         >
-          <Hashtag className="mb-4 text-black/70 sm:mb-6">#ligaglobal · playoffs</Hashtag>
+          <Hashtag className="mb-4 text-black/70 sm:mb-6">{L('#ligaglobal · playoffs', '#globalleague · playoffs')}</Hashtag>
 
           <h1 className="leading-[1.1]">
             <span
@@ -65,13 +66,13 @@ export default function GlobalLeaguePlayoffs() {
                 letterSpacing: '0.005em',
               }}
             >
-              Rodada {currentRound}
+              {L('Rodada', 'Round')} {currentRound}
             </span>
             <span
               className="ole-num block uppercase text-black"
               style={{ fontSize: 'clamp(1.5rem, 5vw, 3rem)' }}
             >
-              de {totalRounds}
+              {L('de', 'of')} {totalRounds}
             </span>
           </h1>
 
@@ -86,7 +87,7 @@ export default function GlobalLeaguePlayoffs() {
               />
             </div>
             <p className="mt-2 font-mono text-[11.5px] text-black/70">
-              {totalRounds - currentRound} rodadas restantes
+              {L(`${totalRounds - currentRound} rodadas restantes`, `${totalRounds - currentRound} rounds left`)}
             </p>
           </div>
         </motion.div>
@@ -103,11 +104,11 @@ export default function GlobalLeaguePlayoffs() {
           <div className="flex items-center gap-2">
             <Trophy className="w-4 h-4 text-neon-yellow" />
             <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-              Classificação dos playoffs
+              {L('Classificação dos playoffs', 'Playoff standings')}
             </h2>
           </div>
           <p className="mt-1 font-mono text-[11px] text-cimento">
-            Top 11 → {globalDivisionName(1)} · meio 11 → {globalDivisionName(2)} · últimos 10 → {globalDivisionName(3)}
+            {L(`Top 11 → ${globalDivisionName(1)} · meio 11 → ${globalDivisionName(2)} · últimos 10 → ${globalDivisionName(3)}`, `Top 11 → ${globalDivisionName(1)} · middle 11 → ${globalDivisionName(2)} · bottom 10 → ${globalDivisionName(3)}`)}
           </p>
         </div>
 
@@ -116,14 +117,14 @@ export default function GlobalLeaguePlayoffs() {
             <thead className="bg-deep-black">
               <tr className="text-left">
                 <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">#</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">Time</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">J</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">V</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">E</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">D</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">SG</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Time', 'Team')}</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('J', 'P')}</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('V', 'W')}</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('E', 'D')}</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('D', 'L')}</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('SG', 'GD')}</th>
                 <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">PTS</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">Divisão</th>
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('Divisão', 'Division')}</th>
               </tr>
             </thead>
             <tbody>
@@ -155,7 +156,7 @@ export default function GlobalLeaguePlayoffs() {
                           <p className={`font-mono text-[10.5px] ${tone('text-cimento')}`}>{team.clubShort}</p>
                         </div>
                         {isMe && (
-                          <span className="shrink-0 bg-black px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-neon-yellow">você</span>
+                          <span className="shrink-0 bg-black px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-neon-yellow">{L('você', 'you')}</span>
                         )}
                       </div>
                     </td>
@@ -210,11 +211,11 @@ export default function GlobalLeaguePlayoffs() {
           <div className="flex flex-wrap gap-4 font-mono text-[11px]">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-neon-yellow" />
-              <span className="text-cimento">Seu clube</span>
+              <span className="text-cimento">{L('Seu clube', 'Your club')}</span>
             </div>
             <span className="text-neon-yellow">Div 1 · {globalDivisionName(1)} (top 11)</span>
-            <span className="text-giz">Div 2 · {globalDivisionName(2)} (meio 11)</span>
-            <span className="text-cimento">Div 3 · {globalDivisionName(3)} (últimos 10)</span>
+            <span className="text-giz">Div 2 · {globalDivisionName(2)} {L('(meio 11)', '(middle 11)')}</span>
+            <span className="text-cimento">Div 3 · {globalDivisionName(3)} {L('(últimos 10)', '(bottom 10)')}</span>
           </div>
         </div>
       </motion.div>
@@ -229,7 +230,7 @@ export default function GlobalLeaguePlayoffs() {
         <div className="flex items-center gap-2 mb-4">
           <Calendar className="w-4 h-4 text-neon-yellow" />
           <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-            Calendário
+            {L('Calendário', 'Schedule')}
           </h2>
         </div>
 
@@ -247,26 +248,26 @@ export default function GlobalLeaguePlayoffs() {
                 <span className={`ole-num text-sm uppercase ${
                   round.roundNumber === currentRound ? 'text-neon-yellow' : 'text-cimento'
                 }`}>
-                  Rodada {round.roundNumber}
+                  {L('Rodada', 'Round')} {round.roundNumber}
                 </span>
                 <span className="font-mono text-[11px] text-poeira">
-                  {round.isReturning ? 'Returno' : 'Turno'}
+                  {round.isReturning ? L('Returno', 'Second leg') : L('Turno', 'First leg')}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 {round.status === 'finished' && (
                   <span className="font-mono text-[10.5px] text-alta uppercase tracking-[0.12em]">
-                    Finalizada
+                    {L('Finalizada', 'Finished')}
                   </span>
                 )}
                 {round.status === 'live' && (
                   <span className="font-mono text-[10.5px] text-neon-yellow uppercase tracking-[0.12em] animate-pulse">
-                    Ao vivo
+                    {L('Ao vivo', 'Live')}
                   </span>
                 )}
                 {round.status === 'scheduled' && (
                   <span className="font-mono text-[10.5px] text-cimento uppercase tracking-[0.12em]">
-                    Agendada
+                    {L('Agendada', 'Scheduled')}
                   </span>
                 )}
               </div>

@@ -15,6 +15,7 @@
 
 import { FORMATION_OFFENSE } from '@/match/quickTacticalLive';
 import type { TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
+import { L } from '@/i18n/L';
 
 export interface ClubDnaState {
   /** -100 (Pragmático) … +100 (Romântico). */
@@ -64,19 +65,19 @@ export function applyQuickMatchToDna(
 
 /** Rótulo editorial do eixo — aparece junto do escudo/pós-jogo. */
 export function dnaLabel(axis: number): string {
-  if (axis >= 60) return 'Romântico incorrigível';
-  if (axis >= 25) return 'Romântico';
-  if (axis >= -24) return 'Equilibrista';
-  if (axis >= -59) return 'Pragmático';
-  return 'Pragmático de ferro';
+  if (axis >= 60) return L('Romântico incorrigível', 'Incurable romantic');
+  if (axis >= 25) return L('Romântico', 'Romantic');
+  if (axis >= -24) return L('Equilibrista', 'Balancer');
+  if (axis >= -59) return L('Pragmático', 'Pragmatic');
+  return L('Pragmático de ferro', 'Iron pragmatist');
 }
 
 /** Frase do narrador na entrada em campo, por faixa do eixo. */
 export function dnaEntranceLine(axis: number): string | null {
-  if (axis >= 60) return 'O time que nunca recua entra no gramado.';
-  if (axis >= 25) return 'Time de tocar pra frente — a torcida sabe o que esperar.';
-  if (axis <= -60) return 'Frio, fechado, cirúrgico. O adversário que se vire.';
-  if (axis <= -25) return 'Time de resultado — feio ou bonito, o que importa é o placar.';
+  if (axis >= 60) return L('O time que nunca recua entra no gramado.', 'The team that never backs off takes the pitch.');
+  if (axis >= 25) return L('Time de tocar pra frente — a torcida sabe o que esperar.', 'A team that plays forward — the fans know what to expect.');
+  if (axis <= -60) return L('Frio, fechado, cirúrgico. O adversário que se vire.', 'Cold, compact, surgical. Let the opponent figure it out.');
+  if (axis <= -25) return L('Time de resultado — feio ou bonito, o que importa é o placar.', 'A results team — ugly or pretty, the score is what counts.');
   return null;
 }
 

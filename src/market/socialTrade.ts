@@ -2,6 +2,7 @@
  * Social Trade — Sistema minimalista de atividades de mercado
  * Sem conexão externa (Twitter/X), apenas feed interno
  */
+import { L, LOCALE } from '@/i18n/L';
 
 export interface MarketActivity {
   id: string;
@@ -61,7 +62,7 @@ export function formatTimeLeft(endTime: Date): string {
   const now = Date.now();
   const diff = endTime.getTime() - now;
 
-  if (diff <= 0) return 'Encerrado';
+  if (diff <= 0) return L('Encerrado', 'Ended');
 
   const seconds = Math.floor(diff / 1000);
   const minutes = Math.floor(seconds / 60);
@@ -85,5 +86,5 @@ export function formatPrice(amount: number, currency: 'EXP' | 'BRO'): string {
   if (amount >= 10_000) {
     return `${(amount / 1000).toFixed(0)}k EXP`;
   }
-  return `${amount.toLocaleString('pt-BR')} EXP`;
+  return `${amount.toLocaleString(LOCALE)} EXP`;
 }

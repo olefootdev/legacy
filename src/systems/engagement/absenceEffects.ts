@@ -31,6 +31,7 @@ import type {
 import type { PersistentConsequence } from '@/systems/consequences/types';
 import type { InboxItem } from '@/game/inboxTypes';
 import { makeInboxItem } from '@/game/inboxItem';
+import { L } from '@/i18n/L';
 
 /**
  * Ordem das tiers, da mais leve à mais grave.
@@ -150,26 +151,26 @@ export function buildAbsenceSideEffects(opts: ApplyOpts): AbsenceSideEffects {
     normal: '',
     warning_12h: '',
     mild_24h: '',
-    moderate_36h: 'Clube à deriva',
-    heavy_48h: 'Crise instalada',
-    crisis_72h: 'CRISE TOTAL',
+    moderate_36h: L('Clube à deriva', 'Club adrift'),
+    heavy_48h: L('Crise instalada', 'Crisis set in'),
+    crisis_72h: L('CRISE TOTAL', 'TOTAL CRISIS'),
   };
   if (tierLabel[opts.tier]) {
     const parts: string[] = [];
     if (injuredIds.length > 0) {
-      parts.push(`${injuredIds.length} lesão${injuredIds.length > 1 ? 'ões' : ''} leve${injuredIds.length > 1 ? 's' : ''}`);
+      parts.push(L(`${injuredIds.length} lesão${injuredIds.length > 1 ? 'ões' : ''} leve${injuredIds.length > 1 ? 's' : ''}`, `${injuredIds.length} minor injur${injuredIds.length > 1 ? 'ies' : 'y'}`));
     }
     if (opts.effect.crowdSupportDelta < 0) {
-      parts.push(`apoio torcida ${opts.effect.crowdSupportDelta}%`);
+      parts.push(L(`apoio torcida ${opts.effect.crowdSupportDelta}%`, `fan support ${opts.effect.crowdSupportDelta}%`));
     }
     if (!opts.effect.marketActivityEnabled) {
-      parts.push('mercado parou');
+      parts.push(L('mercado parou', 'market stopped'));
     }
     if (opts.effect.starPlayerDepartureRisk) {
-      parts.push('estrelas considerando saída');
+      parts.push(L('estrelas considerando saída', 'stars considering leaving'));
     }
 
-    const title = `${tierLabel[opts.tier]} — ${Math.floor(opts.hoursAbsent)}h sem comando`;
+    const title = L(`${tierLabel[opts.tier]} — ${Math.floor(opts.hoursAbsent)}h sem comando`, `${tierLabel[opts.tier]} — ${Math.floor(opts.hoursAbsent)}h without command`);
     inboxItems.push(
       makeInboxItem(
         `absence_${opts.tier}_${opts.now}`,

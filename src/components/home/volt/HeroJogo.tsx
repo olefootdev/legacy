@@ -11,6 +11,7 @@
 import { Link } from 'react-router-dom';
 import { Clock, Zap } from 'lucide-react';
 import { Hashtag } from '@/components/ui';
+import { L } from '@/i18n/L';
 
 export interface HeroFixture {
   opponentName: string;
@@ -42,7 +43,11 @@ export function HeroJogo({
 }) {
   return (
     <section
-      aria-label={fixture ? `Próximo jogo: ${clubName} contra ${fixture.opponentName}` : 'Partida rápida'}
+      aria-label={
+        fixture
+          ? L(`Próximo jogo: ${clubName} contra ${fixture.opponentName}`, `Next match: ${clubName} vs ${fixture.opponentName}`)
+          : L('Partida rápida', 'Quick Match')
+      }
       className="relative -mx-3 -mt-6 h-[520px] max-w-none overflow-hidden bg-deep-black sm:mx-0 sm:mt-0 sm:h-[560px] sm:max-w-full sm:border sm:border-white/10"
     >
       {heroImgOk && (
@@ -67,7 +72,7 @@ export function HeroJogo({
 
       <div className="absolute inset-x-4 bottom-5 flex flex-col gap-3.5">
         <span className="self-start bg-neon-yellow px-2.5 pb-1 pt-[5px] font-impact text-[14px] uppercase tracking-[0.06em] text-black">
-          {fixture ? (fixture.isLive ? 'Ao vivo' : 'Próximo jogo') : 'Jogue agora'}
+          {fixture ? (fixture.isLive ? L('Ao vivo', 'Live') : L('Próximo jogo', 'Next match')) : L('Jogue agora', 'Play now')}
         </span>
 
         {fixture ? (
@@ -88,7 +93,7 @@ export function HeroJogo({
             <span className={NOME_CLUBE} style={{ fontSize: 'clamp(40px, 15vw, 64px)' }}>
               {clubName}
             </span>
-            <Hashtag className="text-[12px] text-giz">#partidarápida</Hashtag>
+            <Hashtag className="text-[12px] text-giz">{L('#partidarápida', '#quickmatch')}</Hashtag>
           </div>
         )}
 
@@ -106,20 +111,20 @@ export function HeroJogo({
           {fixture ? (
             <>
               <Link to="/team" className={PRIMARIO}>
-                Escalar time
+                {L('Escalar time', 'Set lineup')}
               </Link>
               <Link to="/match/quick" className={SECUNDARIO}>
                 <Zap aria-hidden className="h-4 w-4 fill-neon-yellow text-neon-yellow" />
-                Rápida
+                {L('Rápida', 'Quick')}
               </Link>
             </>
           ) : (
             <>
               <Link to="/match/quick" className={PRIMARIO}>
-                Partida rápida
+                {L('Partida rápida', 'Quick Match')}
               </Link>
               <Link to="/team" className={SECUNDARIO}>
-                Escalar
+                {L('Escalar', 'Lineup')}
               </Link>
             </>
           )}

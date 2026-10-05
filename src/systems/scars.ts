@@ -14,6 +14,7 @@
  *
  * PURO — sem Date/Math.random.
  */
+import { L } from '@/i18n/L';
 
 export type ScarKind = 'penalty_miss' | 'clutch_goal_90' | 'redemption';
 
@@ -85,14 +86,14 @@ export function applyQuickScars(
       narratives.push({
         playerId: kick.kickerId,
         kind: 'healed',
-        text: `Redenção: ${nameOf(kick.kickerId)} carregava o pênalti perdido (${openScar.matchLabel}) — e converteu. Conta acertada com a história.`,
+        text: L(`Redenção: ${nameOf(kick.kickerId)} carregava o pênalti perdido (${openScar.matchLabel}) — e converteu. Conta acertada com a história.`, `Redemption: ${nameOf(kick.kickerId)} carried the missed penalty (${openScar.matchLabel}) — and scored. Score settled with history.`),
       });
     } else if (!kick.scored) {
       out[kick.kickerId] = pushScar(cur, { kind: 'penalty_miss', matchLabel: input.matchLabel, atMs: input.atMs });
       narratives.push({
         playerId: kick.kickerId,
         kind: 'penalty_miss',
-        text: `Cicatriz: ${nameOf(kick.kickerId)} perdeu o pênalti (${input.matchLabel}). Só uma conversão cura essa marca.`,
+        text: L(`Cicatriz: ${nameOf(kick.kickerId)} perdeu o pênalti (${input.matchLabel}). Só uma conversão cura essa marca.`, `Scar: ${nameOf(kick.kickerId)} missed the penalty (${input.matchLabel}). Only a conversion heals this mark.`),
       });
     }
   }
@@ -104,7 +105,7 @@ export function applyQuickScars(
     narratives.push({
       playerId: heroId,
       kind: 'clutch_goal_90',
-      text: `Medalha: ${nameOf(heroId)} decidiu aos 85'+ (${input.matchLabel}). O herói do minuto final pede a bola.`,
+      text: L(`Medalha: ${nameOf(heroId)} decidiu aos 85'+ (${input.matchLabel}). O herói do minuto final pede a bola.`, `Medal: ${nameOf(heroId)} decided it at 85'+ (${input.matchLabel}). The last-minute hero wants the ball.`),
     });
   }
 

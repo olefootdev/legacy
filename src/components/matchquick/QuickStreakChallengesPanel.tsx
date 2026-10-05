@@ -8,6 +8,7 @@ import { Trophy, Clock } from 'lucide-react';
 import type { StreakChallenge } from '@/match/quickStreakChallenges';
 import { getDifficultyColor, getDifficultyIcon } from '@/match/quickStreakChallenges';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 interface Props {
   challenges: StreakChallenge[];
@@ -32,7 +33,7 @@ export function QuickStreakChallengesPanel({ challenges, onClaimReward }: Props)
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-neon-yellow" />
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-            Desafios Semanais
+            {L('Desafios Semanais', 'Weekly Challenges')}
           </h3>
         </div>
         <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/40">
@@ -69,12 +70,12 @@ export function QuickStreakChallengesPanel({ challenges, onClaimReward }: Props)
                       <span className="text-sm font-bold text-white">{challenge.name}</span>
                       {isCompleted && !challenge.claimed && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-bold">
-                          ✓ Completo
+                          {L('✓ Completo', '✓ Complete')}
                         </span>
                       )}
                       {challenge.claimed && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 font-bold">
-                          ✓ Resgatado
+                          {L('✓ Resgatado', '✓ Claimed')}
                         </span>
                       )}
                     </div>
@@ -101,7 +102,7 @@ export function QuickStreakChallengesPanel({ challenges, onClaimReward }: Props)
                       onClick={() => onClaimReward(challenge.id)}
                       className="whitespace-nowrap text-[10px] bg-neon-yellow text-black px-2.5 py-1 font-bold uppercase tracking-wider hover:bg-white transition-colors"
                     >
-                      Resgatar +{challenge.reward.ole + challenge.reward.exp} EXP
+                      {L('Resgatar', 'Claim')} +{challenge.reward.ole + challenge.reward.exp} EXP
                     </motion.button>
                   )}
                 </div>

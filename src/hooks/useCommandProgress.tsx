@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import type { VoiceIntent } from '@/voiceCommand/types';
 import type { PitchPlayerState } from '@/engine/types';
+import { L } from '@/i18n/L';
 
 export interface CommandProgress {
   playerId: string;
@@ -91,92 +92,92 @@ function generateNarrative(
 
 function getNarrativeStart(intent: VoiceIntent): string {
   const narratives: Partial<Record<VoiceIntent, string>> = {
-    invade_box: 'Avançando...',
-    dribble_attempt: 'Preparando drible...',
-    take_shot: 'Posicionando...',
-    cross_ball: 'Buscando espaço...',
-    pass_to_player: 'Procurando passe...',
-    hold_ball: 'Protegendo bola...',
-    quick_pass: 'Tocando...',
-    switch_play: 'Trocando lado...',
-    mark_player: 'Aproximando...',
-    block_advance: 'Posicionando...',
-    aggressive_tackle: 'Preparando entrada...',
-    tactical_foul: 'Aproximando...',
-    team_press_high: 'Subindo pressão...',
-    team_retreat: 'Recuando...',
-    team_hold_possession: 'Organizando posse...',
-    team_high_line: 'Subindo linha...',
-    break_line: 'Acelerando...',
-    run_behind: 'Correndo...',
-    pedal_to_metal: 'Aumentando ritmo...',
-    free_play: 'Improvisando...',
-    wait_support: 'Esperando...',
-    stretch_team: 'Abrindo espaços...',
-    hold_small_area: 'Invadindo área...',
+    invade_box: L('Avançando...', 'Pushing up...'),
+    dribble_attempt: L('Preparando drible...', 'Lining up the dribble...'),
+    take_shot: L('Posicionando...', 'Positioning...'),
+    cross_ball: L('Buscando espaço...', 'Finding space...'),
+    pass_to_player: L('Procurando passe...', 'Looking for a pass...'),
+    hold_ball: L('Protegendo bola...', 'Shielding the ball...'),
+    quick_pass: L('Tocando...', 'Passing...'),
+    switch_play: L('Trocando lado...', 'Switching sides...'),
+    mark_player: L('Aproximando...', 'Closing in...'),
+    block_advance: L('Posicionando...', 'Positioning...'),
+    aggressive_tackle: L('Preparando entrada...', 'Setting up the tackle...'),
+    tactical_foul: L('Aproximando...', 'Closing in...'),
+    team_press_high: L('Subindo pressão...', 'Raising the press...'),
+    team_retreat: L('Recuando...', 'Dropping back...'),
+    team_hold_possession: L('Organizando posse...', 'Building possession...'),
+    team_high_line: L('Subindo linha...', 'Pushing the line up...'),
+    break_line: L('Acelerando...', 'Speeding up...'),
+    run_behind: L('Correndo...', 'Running...'),
+    pedal_to_metal: L('Aumentando ritmo...', 'Upping the tempo...'),
+    free_play: L('Improvisando...', 'Improvising...'),
+    wait_support: L('Esperando...', 'Waiting...'),
+    stretch_team: L('Abrindo espaços...', 'Opening space...'),
+    hold_small_area: L('Invadindo área...', 'Into the box...'),
   };
 
-  return narratives[intent] ?? 'Executando...';
+  return narratives[intent] ?? L('Executando...', 'Executing...');
 }
 
 function getNarrativeMid(intent: VoiceIntent): string {
   const narratives: Partial<Record<VoiceIntent, string>> = {
-    invade_box: 'Indo pra área...',
-    dribble_attempt: 'Driblando...',
-    take_shot: 'Mirando...',
-    cross_ball: 'Cruzando...',
-    pass_to_player: 'Passando...',
-    hold_ball: 'Segurando bola...',
-    quick_pass: 'Tocando rápido...',
-    switch_play: 'Trocando jogo...',
-    mark_player: 'Marcando...',
-    block_advance: 'Bloqueando...',
-    aggressive_tackle: 'Entrando...',
-    tactical_foul: 'Fazendo falta...',
-    team_press_high: 'Pressionando...',
-    team_retreat: 'Voltando...',
-    team_hold_possession: 'Segurando posse...',
-    team_high_line: 'Linha alta...',
-    break_line: 'Quebrando linha...',
-    run_behind: 'Pelas costas...',
-    pedal_to_metal: 'Acelerando...',
-    free_play: 'Jogando livre...',
-    wait_support: 'Aguardando apoio...',
-    stretch_team: 'Esticando time...',
-    hold_small_area: 'Na pequena área...',
+    invade_box: L('Indo pra área...', 'Heading into the box...'),
+    dribble_attempt: L('Driblando...', 'Dribbling...'),
+    take_shot: L('Mirando...', 'Taking aim...'),
+    cross_ball: L('Cruzando...', 'Crossing...'),
+    pass_to_player: L('Passando...', 'Passing...'),
+    hold_ball: L('Segurando bola...', 'Holding the ball...'),
+    quick_pass: L('Tocando rápido...', 'Quick passing...'),
+    switch_play: L('Trocando jogo...', 'Switching play...'),
+    mark_player: L('Marcando...', 'Marking...'),
+    block_advance: L('Bloqueando...', 'Blocking...'),
+    aggressive_tackle: L('Entrando...', 'Going in...'),
+    tactical_foul: L('Fazendo falta...', 'Making the foul...'),
+    team_press_high: L('Pressionando...', 'Pressing...'),
+    team_retreat: L('Voltando...', 'Tracking back...'),
+    team_hold_possession: L('Segurando posse...', 'Keeping possession...'),
+    team_high_line: L('Linha alta...', 'High line...'),
+    break_line: L('Quebrando linha...', 'Breaking the line...'),
+    run_behind: L('Pelas costas...', 'In behind...'),
+    pedal_to_metal: L('Acelerando...', 'Speeding up...'),
+    free_play: L('Jogando livre...', 'Playing free...'),
+    wait_support: L('Aguardando apoio...', 'Waiting for support...'),
+    stretch_team: L('Esticando time...', 'Stretching the team...'),
+    hold_small_area: L('Na pequena área...', 'In the six-yard box...'),
   };
 
-  return narratives[intent] ?? 'Em execução...';
+  return narratives[intent] ?? L('Em execução...', 'In progress...');
 }
 
 function getNarrativeEnd(intent: VoiceIntent): string {
   const narratives: Partial<Record<VoiceIntent, string>> = {
-    invade_box: 'Na área!',
-    dribble_attempt: 'Finalizando drible...',
-    take_shot: 'Chutando!',
-    cross_ball: 'Cruzando!',
-    pass_to_player: 'Passando!',
-    hold_ball: 'Bola segura',
-    quick_pass: 'Tocado!',
-    switch_play: 'Trocado!',
-    mark_player: 'Marcando firme',
-    block_advance: 'Bloqueado',
-    aggressive_tackle: 'Entrada!',
-    tactical_foul: 'Falta!',
-    team_press_high: 'Pressão alta!',
-    team_retreat: 'Recuado',
-    team_hold_possession: 'Posse segura',
-    team_high_line: 'Linha subida',
-    break_line: 'Linha quebrada!',
-    run_behind: 'Pelas costas!',
-    pedal_to_metal: 'Ritmo alto!',
-    free_play: 'Improvisando!',
-    wait_support: 'Apoio chegando',
-    stretch_team: 'Time esticado',
-    hold_small_area: 'Na pequena!',
+    invade_box: L('Na área!', 'In the box!'),
+    dribble_attempt: L('Finalizando drible...', 'Finishing the dribble...'),
+    take_shot: L('Chutando!', 'Shooting!'),
+    cross_ball: L('Cruzando!', 'Crossing!'),
+    pass_to_player: L('Passando!', 'Passing!'),
+    hold_ball: L('Bola segura', 'Ball secured'),
+    quick_pass: L('Tocado!', 'Passed!'),
+    switch_play: L('Trocado!', 'Switched!'),
+    mark_player: L('Marcando firme', 'Marking tight'),
+    block_advance: L('Bloqueado', 'Blocked'),
+    aggressive_tackle: L('Entrada!', 'Tackle!'),
+    tactical_foul: L('Falta!', 'Foul!'),
+    team_press_high: L('Pressão alta!', 'High press!'),
+    team_retreat: L('Recuado', 'Dropped back'),
+    team_hold_possession: L('Posse segura', 'Possession secured'),
+    team_high_line: L('Linha subida', 'Line up'),
+    break_line: L('Linha quebrada!', 'Line broken!'),
+    run_behind: L('Pelas costas!', 'In behind!'),
+    pedal_to_metal: L('Ritmo alto!', 'High tempo!'),
+    free_play: L('Improvisando!', 'Improvising!'),
+    wait_support: L('Apoio chegando', 'Support arriving'),
+    stretch_team: L('Time esticado', 'Team stretched'),
+    hold_small_area: L('Na pequena!', 'In the six-yard box!'),
   };
 
-  return narratives[intent] ?? 'Concluído!';
+  return narratives[intent] ?? L('Concluído!', 'Done!');
 }
 
 /**

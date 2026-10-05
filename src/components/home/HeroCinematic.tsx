@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { Play, TrendingUp, TrendingDown } from 'lucide-react';
 import type { ClubPulse } from '@/systems/clubPulse';
 import { pulseColorToken, shouldShowTrend } from '@/systems/clubPulse';
+import { L, LOCALE } from '@/i18n/L';
 
 /** Selo do Pulse — número grande, band em rótulo, seta de tendência. */
 function PulseBadge({ pulse }: { pulse: ClubPulse }) {
@@ -28,13 +29,13 @@ function PulseBadge({ pulse }: { pulse: ClubPulse }) {
   return (
     <div
       className="absolute right-3 top-3 flex flex-col items-end"
-      aria-label={`Pulso do clube ${pulse.value} de 100 — ${pulse.label}`}
+      aria-label={L(`Pulso do clube ${pulse.value} de 100 — ${pulse.label}`, `Club pulse ${pulse.value} of 100 — ${pulse.label}`)}
     >
       <span
         className="font-display font-black uppercase text-white/50"
         style={{ fontSize: '9px', letterSpacing: '0.24em' }}
       >
-        Pulso
+        {L('Pulso', 'Pulse')}
       </span>
       <span className="flex items-center gap-1 leading-none">
         {/* ~30% menor que o desenho inicial: o Pulso INFORMA, mas o eixo do
@@ -86,7 +87,7 @@ export function HeroCinematic({
 
   return (
     <section
-      aria-label="Cockpit do manager"
+      aria-label={L('Cockpit do manager', 'Manager cockpit')}
       className="relative flex flex-col justify-end overflow-hidden"
       style={{
         borderRadius: 'var(--radius-poster)',
@@ -129,7 +130,7 @@ export function HeroCinematic({
           style={{ fontSize: '10px', letterSpacing: '0.26em' }}
         >
           <span aria-hidden className="h-0.5 w-4 bg-neon-yellow" />
-          Teu clube · {clubName}
+          {L('Teu clube', 'Your club')} · {clubName}
         </span>
 
         <h1
@@ -149,7 +150,7 @@ export function HeroCinematic({
             className="font-impact leading-[0.8] tabular-nums text-neon-yellow"
             style={{ fontSize: 'clamp(40px, 11vw, 64px)' }}
           >
-            {scoreTotal.toLocaleString('pt-BR')}
+            {scoreTotal.toLocaleString(LOCALE)}
           </span>
           {scoreToday > 0 ? (
             <span
@@ -163,11 +164,11 @@ export function HeroCinematic({
                 background: 'var(--color-neon-green)',
               }}
             >
-              +{scoreToday.toLocaleString('pt-BR')} hoje
+              +{scoreToday.toLocaleString(LOCALE)} {L('hoje', 'today')}
             </span>
           ) : (
             <span className="text-white/50" style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}>
-              Toda ação pontua.
+              {L('Toda ação pontua.', 'Every move scores.')}
             </span>
           )}
           {rank ? (
@@ -175,14 +176,14 @@ export function HeroCinematic({
               className="uppercase tabular-nums text-white/45"
               style={{ fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '0.18em', fontWeight: 700 }}
             >
-              #{rank} <span className="text-white">no mundo</span>
+              #{rank} <span className="text-white">{L('no mundo', 'worldwide')}</span>
             </span>
           ) : null}
         </div>
 
         {/* As 3 forças que explicam o Pulse — leitura de 1 segundo, sem página nova. */}
         {pulse ? (
-          <ul className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1" aria-label="O que move o pulso">
+          <ul className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1" aria-label={L('O que move o pulso', 'What drives the pulse')}>
             {pulse.drivers.map((d) => (
               <li
                 key={d.label}
@@ -227,7 +228,7 @@ export function HeroCinematic({
         >
           <span className="min-w-0">
             <span className="block font-impact uppercase leading-none" style={{ fontSize: '17px' }}>
-              Desafie as lendas
+              {L('Desafie as lendas', 'Challenge the legends')}
             </span>
             <span
               className="mt-0.5 block truncate font-display font-black uppercase"

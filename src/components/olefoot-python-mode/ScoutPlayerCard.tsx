@@ -14,6 +14,8 @@
  * Border-left 3px da cor do estado (neon-yellow / warning / danger / success
  * / white/15). Hover: só a borda neon (VOLT2 — nada pula). Press scale-[0.98].
  */
+import { posLabel } from '@/components/match/posLabel';
+import { L } from '@/i18n/L';
 import { useMemo } from 'react';
 import { motion } from 'motion/react';
 import {
@@ -174,12 +176,12 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
             borderRadius: 'var(--radius-sm)',
           }}
         >
-          {player.pos}
+          {posLabel(player.pos)}
         </div>
         {lvlInfo && (
           <div
             className="px-1.5 py-0.5 bg-neon-yellow/10 border border-neon-yellow/35 text-neon-yellow"
-            title={`Nível ${lvlInfo.level} · ${lvlInfo.xp} XP (próximo: ${lvlInfo.xpForNext})`}
+            title={L(`Nível ${lvlInfo.level} · ${lvlInfo.xp} XP (próximo: ${lvlInfo.xpForNext})`, `Level ${lvlInfo.level} · ${lvlInfo.xp} XP (next: ${lvlInfo.xpForNext})`)}
             style={{
               fontFamily: 'var(--font-display)',
               fontWeight: 900,
@@ -242,26 +244,26 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
           <MiniStat
             Icon={Activity}
             value={`${100 - fatigue}%`}
-            label="Físico"
+            label={L('Físico', 'Fitness')}
             tone={fatigue > 70 ? 'urgent' : fatigue > 40 ? 'negative' : 'positive'}
           />
           <MiniStat
             Icon={Heart}
             value={`${moralValue}%`}
-            label="Moral"
+            label={L('Moral', 'Morale')}
             tone={moralValue >= 70 ? 'positive' : moralValue < 40 ? 'negative' : 'neutral'}
           />
           <MiniStat
             Icon={formStreak >= 0 ? TrendingUp : TrendingDown}
             value={formStreak > 0 ? `+${formStreak}` : `${formStreak}`}
-            label="Forma"
+            label={L('Forma', 'Form')}
             tone={formStreak >= 2 ? 'positive' : formStreak <= -2 ? 'negative' : 'neutral'}
           />
           {injuryRisk >= 60 && (
             <MiniStat
               Icon={AlertTriangle}
               value={`${injuryRisk}%`}
-              label="Risco"
+              label={L('Risco', 'Risk')}
               tone="urgent"
             />
           )}
@@ -274,7 +276,7 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
             style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.16em', fontWeight: 700 }}
           >
             {matches > 0 && (
-              <span className="text-white/55 uppercase">{matches}P</span>
+              <span className="text-white/55 uppercase">{matches}{L('P', 'M')}</span>
             )}
             {goals > 0 && (
               <span className="text-[var(--color-success)] uppercase">{goals}G</span>
@@ -283,7 +285,7 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
               <span className="text-blue-300 uppercase">{assists}A</span>
             )}
             {reds > 0 && (
-              <span className="text-[var(--color-danger)] uppercase">{reds}V</span>
+              <span className="text-[var(--color-danger)] uppercase">{reds}{L('V', 'R')}</span>
             )}
             {celebrations > 0 && (
               <span

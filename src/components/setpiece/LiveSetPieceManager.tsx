@@ -1,3 +1,5 @@
+import { posLabel } from '@/components/match/posLabel';
+import { L } from '@/i18n/L';
 import { useEffect, useState } from 'react';
 import type {
   CornerType,
@@ -20,15 +22,15 @@ interface Props {
 }
 
 const CORNER_TYPES: { id: CornerType; label: string; desc: string }[] = [
-  { id: 'short', label: 'Curto', desc: 'Toca de cabeça com lateral, mantém posse' },
-  { id: 'near_post', label: 'Primeiro pau', desc: 'Cruzamento tenso pra frente da área' },
-  { id: 'far_post', label: 'Segundo pau', desc: 'Bola alta pro outro lado da área' },
+  { id: 'short', label: L('Curto', 'Short'), desc: L('Toca de cabeça com lateral, mantém posse', 'Quick one-two with the full-back, keep possession') },
+  { id: 'near_post', label: L('Primeiro pau', 'Near post'), desc: L('Cruzamento tenso pra frente da área', 'Whipped cross to the front of the box') },
+  { id: 'far_post', label: L('Segundo pau', 'Far post'), desc: L('Bola alta pro outro lado da área', 'High ball to the far side of the box') },
 ];
 
 const FREE_KICK_TYPES: { id: FreeKickType; label: string; desc: string }[] = [
-  { id: 'direct_shot', label: 'Chuta direto', desc: 'Tenta o gol — exige pernada e mira' },
-  { id: 'cross', label: 'Cruza na área', desc: 'Bola alta pro corredor cabeceiar' },
-  { id: 'short_pass', label: 'Toca curto', desc: 'Reinicia jogada, segura posse' },
+  { id: 'direct_shot', label: L('Chuta direto', 'Shoot direct'), desc: L('Tenta o gol — exige pernada e mira', 'Go for goal — needs power and aim') },
+  { id: 'cross', label: L('Cruza na área', 'Cross into the box'), desc: L('Bola alta pro corredor cabeceiar', 'High ball for a runner to head') },
+  { id: 'short_pass', label: L('Toca curto', 'Play it short'), desc: L('Reinicia jogada, segura posse', 'Restart the move, keep possession') },
 ];
 
 export function LiveSetPieceManager({
@@ -87,12 +89,12 @@ export function LiveSetPieceManager({
   }
 
   const types = ctx.mode === 'corner' ? CORNER_TYPES : FREE_KICK_TYPES;
-  const headline = ctx.mode === 'corner' ? 'Escanteio pra nós!' : 'Falta perigosa!';
+  const headline = ctx.mode === 'corner' ? L('Escanteio pra nós!', 'Corner to us!') : L('Falta perigosa!', 'Dangerous free kick!');
   const lateralityLabel =
     ctx.mode === 'corner'
-      ? `Canto ${ctx.cornerSide === 'left' ? 'esquerdo' : 'direito'}`
+      ? L(`Canto ${ctx.cornerSide === 'left' ? 'esquerdo' : 'direito'}`, `${ctx.cornerSide === 'left' ? 'Left' : 'Right'} corner`)
       : ctx.distance != null
-        ? `${Math.round(ctx.distance)}m do gol · ${ctx.zone === 'center' ? 'centralizada' : ctx.zone === 'left' ? 'lado esquerdo' : 'lado direito'}`
+        ? L(`${Math.round(ctx.distance)}m do gol · ${ctx.zone === 'center' ? 'centralizada' : ctx.zone === 'left' ? 'lado esquerdo' : 'lado direito'}`, `${Math.round(ctx.distance)}m from goal · ${ctx.zone === 'center' ? 'central' : ctx.zone === 'left' ? 'left side' : 'right side'}`)
         : '';
 
   return (
@@ -103,7 +105,7 @@ export function LiveSetPieceManager({
       {/* Header editorial */}
       <div className="w-full max-w-[920px] flex items-baseline justify-between mb-3">
         <div className="text-[10px] uppercase tracking-[0.35em] font-medium text-black/70">
-          {headerLabel ?? 'Olefoot · Bola Parada'}
+          {headerLabel ?? L('Olefoot · Bola Parada', 'Olefoot · Set Piece')}
         </div>
         <div className="text-[10px] uppercase tracking-[0.35em] font-medium text-black/70 tabular-nums">
           {timeLeft}s
@@ -129,7 +131,7 @@ export function LiveSetPieceManager({
       {/* SELETOR DE BATEDOR */}
       <div className="w-full max-w-[920px] mb-5">
         <div className="text-[10px] uppercase tracking-[0.35em] font-bold text-black/80 mb-2">
-          Quem bate?
+          {L('Quem bate?', 'Who takes it?')}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {ctx.takers.slice(0, 3).map((t) => (
@@ -146,7 +148,7 @@ export function LiveSetPieceManager({
       {/* SELETOR DE TIPO DE BATIDA */}
       <div className="w-full max-w-[920px] mb-5">
         <div className="text-[10px] uppercase tracking-[0.35em] font-bold text-black/80 mb-2">
-          Como bate?
+          {L('Como bate?', 'How to take it?')}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {types.map((t) => (
@@ -165,7 +167,7 @@ export function LiveSetPieceManager({
       {ctx.mode === 'corner' || (ctx.mode === 'free_kick' && type === 'cross') ? (
         <div className="w-full max-w-[920px] mb-5">
           <div className="text-[10px] uppercase tracking-[0.35em] font-bold text-black/80 mb-2">
-            Quem cabeceia?
+            {L('Quem cabeceia?', 'Who heads it?')}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {ctx.targets.slice(0, 4).map((tg) => (
@@ -187,7 +189,7 @@ export function LiveSetPieceManager({
         disabled={!takerId || !type}
         className="bg-black text-neon-yellow px-10 py-3 font-display font-black uppercase tracking-wider hover:bg-white hover:text-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
       >
-        Confirmar batida
+        {L('Confirmar batida', 'Confirm kick')}
       </button>
     </div>
   );
@@ -280,10 +282,10 @@ function TargetCard({
           {target.displayName}
         </div>
         <div className="text-[9px] uppercase tracking-[0.2em] opacity-70">
-          #{target.shirtNumber} · {target.position}
+          #{target.shirtNumber} · {posLabel(target.position)}
         </div>
       </div>
-      <div className="text-[10px] uppercase tracking-[0.2em] font-bold opacity-70">CAB</div>
+      <div className="text-[10px] uppercase tracking-[0.2em] font-bold opacity-70">{L('CAB', 'HDR')}</div>
       <div className="font-display font-black text-xl tabular-nums">{target.skillRating}</div>
     </button>
   );
@@ -371,8 +373,8 @@ function SetPieceFieldSVG({ ctx }: { ctx: SetPieceContext }) {
         opacity="0.6"
       >
         {ctx.mode === 'corner'
-          ? `ESCANTEIO ${ctx.cornerSide === 'left' ? 'ESQ' : 'DIR'}`
-          : `FALTA · ${ctx.distance ?? 22}M`}
+          ? L(`ESCANTEIO ${ctx.cornerSide === 'left' ? 'ESQ' : 'DIR'}`, `CORNER ${ctx.cornerSide === 'left' ? 'L' : 'R'}`)
+          : L(`FALTA · ${ctx.distance ?? 22}M`, `FREE KICK · ${ctx.distance ?? 22}M`)}
       </text>
     </svg>
   );

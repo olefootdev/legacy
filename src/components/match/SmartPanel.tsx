@@ -5,16 +5,17 @@ import { useState } from 'react';
 import type { FormationSchemeId } from '@/match-engine/types';
 import type { PlayingStylePresetId } from '@/tactics/playingStyle';
 
+import { L } from '@/i18n/L';
 const NEON = '#FDE100';
 
 const FORMATIONS: FormationSchemeId[] = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1'];
 
 const STYLES: { id: PlayingStylePresetId; label: string }[] = [
   { id: 'BLOCO_BAIXO',      label: 'Defender' },
-  { id: 'POSSE_CONTROLADA', label: 'Posse' },
-  { id: 'TRANSICAO_RAPIDA', label: 'Contra-Ataque' },
-  { id: 'PRESSAO_ALTA',     label: 'Pressionar' },
-  { id: 'JOGO_DIRETO',      label: 'Ataque Total' },
+  { id: 'POSSE_CONTROLADA', label: L('Posse', 'Possession') },
+  { id: 'TRANSICAO_RAPIDA', label: L('Contra-Ataque', 'Counter') },
+  { id: 'PRESSAO_ALTA',     label: L('Pressionar', 'Press') },
+  { id: 'JOGO_DIRETO',      label: L('Ataque Total', 'All-out Attack') },
 ];
 
 export type CameraTrackMode = 'static' | 'follow' | 'actioncam';
@@ -35,7 +36,7 @@ export function SmartPanel({ formation, onFormationChange, fanMood, cameraTrack 
   const [showFormations, setShowFormations] = useState(false);
 
   const moodColor = fanMood >= 70 ? NEON : fanMood >= 40 ? '#FF9F1C' : '#FF4D4D';
-  const moodLabel = fanMood >= 70 ? 'ANIMADA' : fanMood >= 40 ? 'NERVOSA' : 'VAIANDO';
+  const moodLabel = fanMood >= 70 ? L('ANIMADA', 'BUZZING') : fanMood >= 40 ? L('NERVOSA', 'NERVOUS') : L('VAIANDO', 'BOOING');
 
   return (
     <div style={{

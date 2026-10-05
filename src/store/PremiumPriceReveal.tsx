@@ -6,6 +6,7 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, type ReactNode } from 'react';
 import type { ShopCatalogItem } from '@/game/shopCatalog';
+import { L, LOCALE } from '@/i18n/L';
 
 interface PremiumPriceRevealProps {
   key?: import("react").Key;
@@ -24,7 +25,7 @@ export function PremiumPriceReveal({ item, children, onSelect }: PremiumPriceRev
 
   const priceDisplay = item.priceBroCents
     ? `¢${(item.priceBroCents / 100).toFixed(0)}`
-    : `${item.priceExp?.toLocaleString('pt-BR')} EXP`;
+    : `${item.priceExp?.toLocaleString(LOCALE)} EXP`;
 
   return (
     <motion.div
@@ -58,7 +59,7 @@ export function PremiumPriceReveal({ item, children, onSelect }: PremiumPriceRev
                   fontSize: '9px',
                 }}
               >
-                Preço Premium
+                {L('Preço Premium', 'Premium Price')}
               </p>
               <p
                 className="font-impact tabular-nums text-neon-yellow"
@@ -77,7 +78,7 @@ export function PremiumPriceReveal({ item, children, onSelect }: PremiumPriceRev
                   fontSize: '11px',
                 }}
               >
-                Clique para ver detalhes
+                {L('Clique para ver detalhes', 'Click for details')}
               </p>
             </motion.div>
           </motion.div>

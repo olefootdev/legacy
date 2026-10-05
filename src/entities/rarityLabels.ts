@@ -17,6 +17,7 @@
  * Visual: prestígio = GRAU DE AMARELO (épico sólido → premium sem amarelo).
  * AI+ sai da escada de amarelo de propósito, pra não se confundir com raro.
  */
+import { L } from '@/i18n/L';
 
 export type RarityTier = 'ai' | 'revelacao' | 'premium' | 'raro' | 'ultra' | 'epico';
 
@@ -25,11 +26,11 @@ export const RARITY_ORDER: RarityTier[] = ['ai', 'revelacao', 'premium', 'raro',
 
 export const RARITY_LABEL: Record<RarityTier, string> = {
   ai: 'AI+',
-  revelacao: 'Revelação',
+  revelacao: L('Revelação', 'Breakout'),
   premium: 'Premium',
-  raro: 'Raro',
-  ultra: 'Ultra-raro',
-  epico: 'Épico',
+  raro: L('Raro', 'Rare'),
+  ultra: L('Ultra-raro', 'Ultra-rare'),
+  epico: L('Épico', 'Epic'),
 };
 
 /**

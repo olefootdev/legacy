@@ -43,6 +43,7 @@ import {
 } from '@/team/playerSeasonLedger';
 import { appendEvolutionTimelinePoints } from '@/team/playerEvolutionTimeline';
 import { applyHomeContractsAfterMatch } from '@/playerContracts/playerContracts';
+import { L } from '@/i18n/L';
 
 /** Evita simular meses de uma vez no mesmo WORLD_CATCH_UP; o resto fica para a próxima sincronização. */
 export const MAX_LEAGUE_FIXTURES_PER_WORLD_CATCHUP = 12;
@@ -89,7 +90,7 @@ function buildTempFixture(
     id: fx.id,
     kickoffLabel: `${fx.dateIso} ${fx.kickoffHHmm}`,
     venue: state.club.stadium,
-    competition: state.adminLeagues.find((l) => l.id === fx.leagueId)?.name ?? 'Liga',
+    competition: state.adminLeagues.find((l) => l.id === fx.leagueId)?.name ?? L('Liga', 'League'),
     homeName: userHome ? state.club.name : opponentName,
     awayName: userHome ? opponentName : state.club.name,
     opponent,
@@ -122,7 +123,7 @@ function woSnapshot(state: OlefootGameState, homeScore: number, awayScore: numbe
       {
         id: `wo-${Date.now()}`,
         minute: 0,
-        text: `WO — Equipe não cumpriu requisitos mínimos de inscrição (11 titulares + 5 no banco).`,
+        text: L(`WO — Equipe não cumpriu requisitos mínimos de inscrição (11 titulares + 5 no banco).`, `Walkover — team didn't meet the minimum registration requirements (11 starters + 5 subs).`),
         kind: 'whistle',
       },
     ],
@@ -220,11 +221,11 @@ function applyUserMatchResolution(
   const oleGain = oleGainBase + structBonuses.totalExtra;
 
   const staffNote = buildPostMatchStaffInboxItem(state, liveMatch);
-  const financeNote = makeInboxItem(`finance-${fx.id}`, 'FINANCE_EXP_GAIN', 'FINANCEIRO', `+${oleGain} EXP (jogo simulado)`, {
+  const financeNote = makeInboxItem(`finance-${fx.id}`, 'FINANCE_EXP_GAIN', 'FINANCEIRO', L(`+${oleGain} EXP (jogo simulado)`, `+${oleGain} EXP (simulated match)`), {
     body:
       structBonuses.totalExtra > 0
-        ? `Resultado processado automaticamente pelo GameSpirit. Bónus de estruturas: estádio +${structBonuses.stadiumExp}${userWin ? `, Megaloja +${structBonuses.megastoreExp}` : ''} EXP.`
-        : 'Resultado processado automaticamente pelo GameSpirit.',
+        ? L(`Resultado processado automaticamente pelo GameSpirit. Bónus de estruturas: estádio +${structBonuses.stadiumExp}${userWin ? `, Megaloja +${structBonuses.megastoreExp}` : ''} EXP.`, `Result processed automatically by GameSpirit. Facility bonus: stadium +${structBonuses.stadiumExp}${userWin ? `, Megastore +${structBonuses.megastoreExp}` : ''} EXP.`)
+        : L('Resultado processado automaticamente pelo GameSpirit.', 'Result processed automatically by GameSpirit.'),
     deepLink: '/wallet',
     hideFromHomeFeed: true,
   });
@@ -234,7 +235,7 @@ function applyUserMatchResolution(
     'COMPETIÇÃO',
     `${fx.homeName} ${officialSH}–${officialSA} ${fx.awayName}`,
     {
-      body: `Você não estava em campo na hora marcada — o GameSpirit jogou a partida. ${walkover && walkoverUserLoses ? 'WO por elenco incompleto.' : 'Veja o calendário da próxima rodada.'}`,
+      body: L(`Você não estava em campo na hora marcada — o GameSpirit jogou a partida. ${walkover && walkoverUserLoses ? 'WO por elenco incompleto.' : 'Veja o calendário da próxima rodada.'}`, `You weren't there at kick-off — GameSpirit played the match. ${walkover && walkoverUserLoses ? 'Walkover: incomplete squad.' : 'Check the calendar for the next matchday.'}`),
       deepLink: '/calendar',
     },
   );
@@ -272,12 +273,12 @@ function applyUserMatchResolution(
   const newTrophies = diffNewMemorableTrophyIds(prevMem, memorableTrophyUnlockedIds);
 
   let finance = grantEarnedExp(state.finance, oleGain);
-  finance = appendExpHistory(finance, oleGain, 'Jornada (GameSpirit)');
+  finance = appendExpHistory(finance, oleGain, L('Jornada (GameSpirit)', 'Matchday (GameSpirit)'));
   for (const tid of newTrophies) {
     const { exp: te, broCents: tb } = memorableTrophyFinanceReward(tid);
     if (te > 0) {
       finance = grantEarnedExp(finance, te);
-      finance = appendExpHistory(finance, te, 'Prémio de competição (troféu)');
+      finance = appendExpHistory(finance, te, L('Prémio de competição (troféu)', 'Competition prize (trophy)'));
     }
     if (tb > 0) finance = addBroCents(finance, tb);
   }
@@ -290,9 +291,9 @@ function applyUserMatchResolution(
       `trophy-${fx.id}-${Date.now()}`,
       'FINANCE_EXP_GAIN',
       'COMPETIÇÃO',
-      'Prémios de título memorável creditados.',
+      L('Prémios de título memorável creditados.', 'Memorable title prizes credited.'),
       {
-        body: `Novos troféus: ${newTrophies.join(', ')}. EXP e BRO na carteira de jogo.`,
+        body: L(`Novos troféus: ${newTrophies.join(', ')}. EXP e BRO na carteira de jogo.`, `New trophies: ${newTrophies.join(', ')}. EXP and BRO in your game wallet.`),
         deepLink: '/manager',
       },
     );
@@ -456,9 +457,9 @@ export function processLeagueScheduleDue(state: OlefootGameState, nowMs: number)
       'league-catchup-pending',
       'FIXTURE_REMINDER',
       'COMPETIÇÃO',
-      'Calendário: ainda há jogos por processar',
+      L('Calendário: ainda há jogos por processar', 'Calendar: matches still to process'),
       {
-        body: `Foram simulados até ${MAX_LEAGUE_FIXTURES_PER_WORLD_CATCHUP} jogos nesta sincronização (para não sobrecarregar o jogo de uma vez). Os restantes entram na próxima abertura do app ou no próximo ciclo de tempo real.`,
+        body: L(`Foram simulados até ${MAX_LEAGUE_FIXTURES_PER_WORLD_CATCHUP} jogos nesta sincronização (para não sobrecarregar o jogo de uma vez). Os restantes entram na próxima abertura do app ou no próximo ciclo de tempo real.`, `Up to ${MAX_LEAGUE_FIXTURES_PER_WORLD_CATCHUP} matches were simulated in this sync (so the game isn't overloaded at once). The rest will run next time you open the app or in the next real-time cycle.`),
         deepLink: '/calendar',
       },
     );

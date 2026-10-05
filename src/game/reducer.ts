@@ -15,6 +15,7 @@
  * 📧 Contact: contact@olefoot.ai
  */
 
+import { L, LOCALE } from '@/i18n/L';
 import { pitchPlayersFromLineup, roleFromPos } from '@/engine/pitchFromLineup';
 import { runMatchMinute } from '@/engine/runMatchMinute';
 import { advanceMatchToPostgame, runMatchMinuteBulk } from '@/engine/matchBulk';
@@ -289,7 +290,7 @@ function promoteToPostgame(
   const whistle: MatchEventEntry = {
     id: uid(),
     minute,
-    text: opts.whistleText ?? `${minute}' — Apito final.`,
+    text: opts.whistleText ?? L(`${minute}' — Apito final.`, `${minute}' — Full time.`),
     kind: 'whistle',
   };
   return {
@@ -328,10 +329,10 @@ function homeRosterFromLineup(state: OlefootGameState): import('@/entities/types
 }
 
 function crowdMood(support: number): string {
-  if (support < 40) return 'Cética';
-  if (support < 62) return 'Expectante';
-  if (support < 82) return 'Confiante';
-  return 'Euforia';
+  if (support < 40) return L('Cética', 'Sceptical');
+  if (support < 62) return L('Expectante', 'Expectant');
+  if (support < 82) return L('Confiante', 'Confident');
+  return L('Euforia', 'Euphoric');
 }
 
 function buildNpcOffersForShop(state: OlefootGameState) {
@@ -798,9 +799,12 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           'lineup-requirement-live-match',
           'LINEUP_ISSUE',
           'PLANTEL',
-          'Não podes entrar em campo — plantel incompleto',
+          L('Não podes entrar em campo — plantel incompleto', "You can't take the pitch — squad incomplete"),
           {
-            body: `${squadCheck.reason ?? 'Requisitos não cumpridos.'} São necessários 11 titulares disponíveis (sem lesão/suspensão) e pelo menos 5 jogadores no banco. Reforça o plantel ou ajusta a escalação.`,
+            body: L(
+              `${squadCheck.reason ?? 'Requisitos não cumpridos.'} São necessários 11 titulares disponíveis (sem lesão/suspensão) e pelo menos 5 jogadores no banco. Reforça o plantel ou ajusta a escalação.`,
+              `${squadCheck.reason ?? 'Requirements not met.'} You need 11 available starters (no injuries/suspensions) and at least 5 players on the bench. Strengthen the squad or adjust the lineup.`,
+            ),
             deepLink: '/team',
           },
         );
@@ -870,7 +874,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         }
       } 
       else if (action.mode === 'quick' || action.mode === 'test2d') {
-        const kickLabel = action.mode === 'test2d' ? '(ao vivo 2D)' : '(partida rápida)';
+        const kickLabel = action.mode === 'test2d' ? L('(ao vivo 2D)', '(live 2D)') : L('(partida rápida)', '(quick match)');
         const kick: MatchEventEntry = {
           id: uid(),
           minute: 0,
@@ -1040,7 +1044,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       // ole e exp aqui são nomenclatura legada — ambos vão pro mesmo saldo (finance.ole === expBalance).
       const totalReward = challenge.reward.ole + challenge.reward.exp;
       let finance = grantEarnedExp(state.finance, totalReward);
-      finance = withExpHistory(finance, totalReward, `Desafio semanal: ${challenge.name}`);
+      finance = withExpHistory(finance, totalReward, L(`Desafio semanal: ${challenge.name}`, `Weekly challenge: ${challenge.name}`));
 
       const challenges = state.streakChallenges.challenges.map((c) =>
         c.id === action.challengeId ? { ...c, claimed: true } : c,
@@ -1053,7 +1057,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           'DESAFIOS',
           `+${totalReward} EXP — ${challenge.name}`,
           {
-            body: `Completaste o desafio semanal "${challenge.name}". Recompensa creditada.`,
+            body: L(`Completaste o desafio semanal "${challenge.name}". Recompensa creditada.`, `You completed the weekly challenge "${challenge.name}". Reward credited.`),
             deepLink: '/wallet',
           },
         ),
@@ -1075,7 +1079,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const kick: MatchEventEntry = {
         id: uid(),
         minute: 0,
-        text: `0' — Bola rolando. ${state.liveMatch.homeShort} x ${state.liveMatch.awayShort}.`,
+        text: L(`0' — Bola rolando. ${state.liveMatch.homeShort} x ${state.liveMatch.awayShort}.`, `0' — Kick-off. ${state.liveMatch.homeShort} x ${state.liveMatch.awayShort}.`),
         kind: 'whistle',
       };
       return {
@@ -1233,7 +1237,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         if (!pen || pen.stage !== 'kick') return state;
         const rng = payload.rng ?? Math.random();
         const outcome = rollPenaltyOutcome(rng);
-        const line = penaltyNarrativeLine(outcome, pen.takerName, 'O guarda-redes');
+        const line = penaltyNarrativeLine(outcome, pen.takerName, L('O guarda-redes', 'The keeper'));
         const isGoal = outcome === 'goal' || outcome === 'post_in';
         let homeScore = lm.homeScore;
         let awayScore = lm.awayScore;
@@ -1463,7 +1467,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const riskEv: MatchEventEntry = {
         id: uid(),
         minute: lm.minute ?? 0,
-        text: `${lm.minute ?? 0}' — ${q.name} decide continuar apesar das dores. Risco elevado de agravamento.`,
+        text: L(`${lm.minute ?? 0}' — ${q.name} decide continuar apesar das dores. Risco elevado de agravamento.`, `${lm.minute ?? 0}' — ${q.name} plays on through the pain. High risk of aggravation.`),
         kind: 'narrative',
       };
       return {
@@ -1518,24 +1522,24 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const isCorner = lm.pendingSetPiece.mode === 'corner';
 
       // Narrativa
-      const targetPart = a.targetName ? ` ${a.targetName} sobe` : '';
+      const targetPart = a.targetName ? L(` ${a.targetName} sobe`, ` ${a.targetName} rises`) : '';
       let narrativeText: string;
       switch (outcome) {
         case 'goal':
           narrativeText = isCorner
-            ? `${a.takerName} cobra escanteio,${targetPart} e marca de cabeça!`
-            : `${a.takerName} cobra falta direto e supera a barreira — GOL!`;
+            ? L(`${a.takerName} cobra escanteio,${targetPart} e marca de cabeça!`, `${a.takerName} takes the corner,${targetPart} and heads it in!`)
+            : L(`${a.takerName} cobra falta direto e supera a barreira — GOL!`, `${a.takerName} curls the free kick over the wall — GOAL!`);
           break;
         case 'shot_saved':
           narrativeText = isCorner
-            ? `${a.takerName} cruza,${targetPart} mas o goleiro defende firme.`
-            : `${a.takerName} chuta a falta — goleiro defende.`;
+            ? L(`${a.takerName} cruza,${targetPart} mas o goleiro defende firme.`, `${a.takerName} crosses,${targetPart} but the keeper holds firm.`)
+            : L(`${a.takerName} chuta a falta — goleiro defende.`, `${a.takerName} strikes the free kick — keeper saves.`);
           break;
         case 'cleared':
-          narrativeText = `Defesa adversária afasta a bola após cobrança de ${a.takerName}.`;
+          narrativeText = L(`Defesa adversária afasta a bola após cobrança de ${a.takerName}.`, `The defence clears ${a.takerName}'s delivery.`);
           break;
         default:
-          narrativeText = `${a.takerName} bate, jogada continua e o ataque é reciclado.`;
+          narrativeText = L(`${a.takerName} bate, jogada continua e o ataque é reciclado.`, `${a.takerName} takes it, play goes on and the attack is recycled.`);
       }
 
       const ev: MatchEventEntry = {
@@ -1606,7 +1610,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const forfeiEv: MatchEventEntry = {
         id: uid(),
         minute: 90,
-        text: `WO — Desistência: vitória de ${state.nextFixture.opponent.shortName} por 5–0.`,
+        text: L(`WO — Desistência: vitória de ${state.nextFixture.opponent.shortName} por 5–0.`, `Walkover — Forfeit: ${state.nextFixture.opponent.shortName} win 5–0.`),
         kind: 'whistle',
       };
 
@@ -1681,7 +1685,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const whistleEv: MatchEventEntry = {
         id: uid(),
         minute,
-        text: `${minute}' — PÊNALTI para ${attackingSide === 'home' ? lm.homeShort : lm.awayShort}!`,
+        text: L(`${minute}' — PÊNALTI para ${attackingSide === 'home' ? lm.homeShort : lm.awayShort}!`, `${minute}' — PENALTY to ${attackingSide === 'home' ? lm.homeShort : lm.awayShort}!`),
         kind: 'whistle',
       };
       return {
@@ -1777,7 +1781,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const ev: import('@/engine/types').MatchEventEntry = {
         id: uid(),
         minute: action.minute,
-        text: `${action.minute}' — ⚠ Árbitro adverte o banco — linguagem imprópria do treinador.`,
+        text: L(`${action.minute}' — ⚠ Árbitro adverte o banco — linguagem imprópria do treinador.`, `${action.minute}' — ⚠ Referee warns the bench — improper language from the coach.`),
         kind: 'narrative',
         live2dMoment: 'bad',
       };
@@ -1794,7 +1798,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const ev: import('@/engine/types').MatchEventEntry = {
         id: uid(),
         minute: action.minute,
-        text: `${action.minute}' — 🟥 Árbitro expulsa ${action.expelledPlayerName} por conduta do treinador!`,
+        text: L(`${action.minute}' — 🟥 Árbitro expulsa ${action.expelledPlayerName} por conduta do treinador!`, `${action.minute}' — 🟥 Referee sends off ${action.expelledPlayerName} for the coach's conduct!`),
         kind: 'red_home',
         playerId: action.expelledPlayerId,
       };
@@ -1847,7 +1851,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
         const shots = lm.events.filter(e =>
           e.kind === 'shot_home' ||
-          (e.kind === 'narrative' && e.text.toLowerCase().includes('chut'))
+          (e.kind === 'narrative' && /chut|shot|shoot/.test(e.text.toLowerCase()))
         ).length;
 
         performanceBonuses = evaluatePerformanceBonuses({
@@ -1953,27 +1957,30 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const staffNote = buildPostMatchStaffInboxItem(state, lm);
       const structExtraLine =
         structBonuses.totalExtra > 0
-          ? ` Estruturas: estádio +${structBonuses.stadiumExp} EXP${homeWin ? `, Megaloja +${structBonuses.megastoreExp} EXP` : ''} (apoio efectivo ~${structBonuses.effectiveCrowd.toFixed(1)}%).`
+          ? L(
+              ` Estruturas: estádio +${structBonuses.stadiumExp} EXP${homeWin ? `, Megaloja +${structBonuses.megastoreExp} EXP` : ''} (apoio efectivo ~${structBonuses.effectiveCrowd.toFixed(1)}%).`,
+              ` Facilities: stadium +${structBonuses.stadiumExp} EXP${homeWin ? `, Megastore +${structBonuses.megastoreExp} EXP` : ''} (effective support ~${structBonuses.effectiveCrowd.toFixed(1)}%).`,
+            )
           : '';
       const streakBonusLine =
         streakMultiplier > 1.0
-          ? ` 🔥 Streak de ${quickMatchStreak?.current ?? 0} vitórias: ${streakMultiplier}x multiplicador aplicado!`
+          ? L(` 🔥 Streak de ${quickMatchStreak?.current ?? 0} vitórias: ${streakMultiplier}x multiplicador aplicado!`, ` 🔥 ${quickMatchStreak?.current ?? 0}-win streak: ${streakMultiplier}x multiplier applied!`)
           : '';
       const performanceBonusLine =
         performanceBonuses.length > 0
-          ? ` 🏆 Bônus de Performance: +${bonusOle} OLE, +${bonusExp} EXP (${performanceBonuses.map(b => b.name).join(', ')})`
+          ? L(` 🏆 Bônus de Performance: +${bonusOle} OLE, +${bonusExp} EXP (${performanceBonuses.map(b => b.name).join(', ')})`, ` 🏆 Performance Bonus: +${bonusOle} OLE, +${bonusExp} EXP (${performanceBonuses.map(b => b.name).join(', ')})`)
           : '';
       const financeNote = makeInboxItem(
         `finance-${Date.now()}`,
         'FINANCE_EXP_GAIN',
         'FINANCEIRO',
-        `+${oleGain} EXP creditados pela jornada.`,
+        L(`+${oleGain} EXP creditados pela jornada.`, `+${oleGain} EXP credited for the matchday.`),
         {
           body: `${homeWin
-            ? 'Bónus de jornada creditado. Desfecho desportivo e detalhes ficam no histórico de jogos e na liga — não na caixa de notificações.'
+            ? L('Bónus de jornada creditado. Desfecho desportivo e detalhes ficam no histórico de jogos e na liga — não na caixa de notificações.', 'Matchday bonus credited. Results and details are in the match history and the league — not in notifications.')
             : draw
-              ? 'Jornada contabilizada na competição — tabela e calendário na área de competição.'
-              : 'Jornada contabilizada — segue a preparação no plantel e no staff; placares no histórico de jogos.'}${structExtraLine}${streakBonusLine}${performanceBonusLine}`,
+              ? L('Jornada contabilizada na competição — tabela e calendário na área de competição.', 'Matchday counted in the competition — table and fixtures in the competition area.')
+              : L('Jornada contabilizada — segue a preparação no plantel e no staff; placares no histórico de jogos.', 'Matchday counted — keep preparing the squad and staff; scores in the match history.')}${structExtraLine}${streakBonusLine}${performanceBonusLine}`,
           deepLink: '/wallet',
           hideFromHomeFeed: true,
         },
@@ -2166,12 +2173,12 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const newTrophies = diffNewMemorableTrophyIds(prevMem, memorableTrophyUnlockedIds);
 
       let finance = grantEarnedExp(state.finance, oleGain);
-      finance = withExpHistory(finance, oleGain, 'Recompensa de partida');
+      finance = withExpHistory(finance, oleGain, L('Recompensa de partida', 'Match reward'));
       for (const tid of newTrophies) {
         const { exp: te, broCents: tb } = memorableTrophyFinanceReward(tid);
         if (te > 0) {
           finance = grantEarnedExp(finance, te);
-          finance = withExpHistory(finance, te, 'Prémio de competição (troféu)');
+          finance = withExpHistory(finance, te, L('Prémio de competição (troféu)', 'Competition prize (trophy)'));
         }
         if (tb > 0) finance = addBroCents(finance, tb);
       }
@@ -2186,9 +2193,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           `trophy-${Date.now()}`,
           'FINANCE_EXP_GAIN',
           'COMPETIÇÃO',
-          'Prémios de título memorável creditados.',
+          L('Prémios de título memorável creditados.', 'Memorable title prizes credited.'),
           {
-            body: `Novos troféus: ${newTrophies.join(', ')}. EXP e BRO na carteira de jogo.`,
+            body: L(`Novos troféus: ${newTrophies.join(', ')}. EXP e BRO na carteira de jogo.`, `New trophies: ${newTrophies.join(', ')}. EXP and BRO in your game wallet.`),
             deepLink: '/manager',
           },
         );
@@ -2208,9 +2215,12 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `ranking-${Date.now()}`,
             'FINANCE_EXP_GAIN',
             'RANKING',
-            `+${pointsGained} pontos no ranking competitivo!`,
+            L(`+${pointsGained} pontos no ranking competitivo!`, `+${pointsGained} points in the competitive ranking!`),
             {
-              body: `Partida competitiva: ${homeWin ? 'Vitória' : 'Empate'} contra adversário humano. Total: ${competitiveRanking.points} pontos (${competitiveRanking.wins}V ${competitiveRanking.draws}E ${competitiveRanking.losses}D).`,
+              body: L(
+                `Partida competitiva: ${homeWin ? 'Vitória' : 'Empate'} contra adversário humano. Total: ${competitiveRanking.points} pontos (${competitiveRanking.wins}V ${competitiveRanking.draws}E ${competitiveRanking.losses}D).`,
+                `Competitive match: ${homeWin ? 'Win' : 'Draw'} against a human opponent. Total: ${competitiveRanking.points} points (${competitiveRanking.wins}W ${competitiveRanking.draws}D ${competitiveRanking.losses}L).`,
+              ),
               deepLink: '/ranking',
             },
           );
@@ -2383,7 +2393,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         : 0;
       const lastQuickNewRecord = homeWin && winMargin > prevBestMargin;
       const quickBestWin = lastQuickNewRecord
-        ? { homeScore: action.homeScore, awayScore: action.awayScore, opponentName: state.nextFixture.opponent?.name ?? 'Adversário' }
+        ? { homeScore: action.homeScore, awayScore: action.awayScore, opponentName: state.nextFixture.opponent?.name ?? L('Adversário', 'Opponent') }
         : state.quickBestWin;
       // Ponte #2: desafios semanais de streak também progridem no motor Engaged
       // (antes só o FINALIZE_MATCH legado os atualizava → loop de retorno morto).
@@ -2405,7 +2415,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           };
         }
       }
-      let finance = withExpHistory(credit.finance, credit.oleGain, 'Partida Rápida');
+      let finance = withExpHistory(credit.finance, credit.oleGain, L('Partida Rápida', 'Quick Match'));
       finance = financeWithLedger(finance, {
         type: 'MATCH_REWARD',
         currency: 'EXP',
@@ -2417,22 +2427,22 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const form = [...state.form.slice(1), nextResult];
       const results = [{
         home: state.club.name,
-        away: state.nextFixture.opponent?.name ?? 'Adversário',
+        away: state.nextFixture.opponent?.name ?? L('Adversário', 'Opponent'),
         scoreHome: action.homeScore,
         scoreAway: action.awayScore,
         status: 'FT',
         result: homeWin ? ('win' as const) : draw ? ('draw' as const) : ('loss' as const),
       }, ...state.results].slice(0, 8);
       const iqLine = action.reading.total > 0
-        ? ` Leitura de jogo ${action.reading.good}/${action.reading.total} — Manager IQ ${credit.readingMult >= 1 ? `+${Math.round((credit.readingMult - 1) * 100)}%` : `${Math.round((credit.readingMult - 1) * 100)}%`} na recompensa.`
+        ? L(` Leitura de jogo ${action.reading.good}/${action.reading.total} — Manager IQ ${credit.readingMult >= 1 ? `+${Math.round((credit.readingMult - 1) * 100)}%` : `${Math.round((credit.readingMult - 1) * 100)}%`} na recompensa.`, ` Game reading ${action.reading.good}/${action.reading.total} — Manager IQ ${credit.readingMult >= 1 ? `+${Math.round((credit.readingMult - 1) * 100)}%` : `${Math.round((credit.readingMult - 1) * 100)}%`} on the reward.`)
         : '';
       const note = makeInboxItem(
         `qp-${Date.now()}`,
         'FINANCE_EXP_GAIN',
         'FINANCEIRO',
-        `+${credit.oleGain} EXP pela Partida Rápida.`,
+        L(`+${credit.oleGain} EXP pela Partida Rápida.`, `+${credit.oleGain} EXP from the Quick Match.`),
         {
-          body: `Recompensa creditada.${credit.bonusNames.length ? ` Bônus: ${credit.bonusNames.join(', ')}.` : ''}${iqLine}`,
+          body: `${L('Recompensa creditada.', 'Reward credited.')}${credit.bonusNames.length ? L(` Bônus: ${credit.bonusNames.join(', ')}.`, ` Bonus: ${credit.bonusNames.join(', ')}.`) : ''}${iqLine}`,
           deepLink: '/wallet',
           // Ponte #4: quando saiu bônus de performance, o feito MERECE o feed da
           // Home (growth orgânico). Partida rotineira sem bônus segue escondida.
@@ -2458,8 +2468,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       });
       // Renome: feitos públicos somam fama (nunca decai).
       let clubRenown = state.clubRenown;
-      if (homeWin) clubRenown = addRenown(clubRenown, 2, 'Vitória na Partida Rápida', fableNowMs);
-      if (homeWin && action.agg.wasLosing) clubRenown = addRenown(clubRenown, 15, 'Virada épica', fableNowMs);
+      if (homeWin) clubRenown = addRenown(clubRenown, 2, L('Vitória na Partida Rápida', 'Quick Match win'), fableNowMs);
+      if (homeWin && action.agg.wasLosing) clubRenown = addRenown(clubRenown, 15, L('Virada épica', 'Epic comeback'), fableNowMs);
       // Cicatrizes: pênalti errado marca; conversão carregando a marca CURA
       // (redenção); gol aos 85'+ vira medalha de clutch.
       let playerScars = state.playerScars;
@@ -2469,10 +2479,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           {
             shootoutKicks: action.shootoutKicks,
             lateHeroIds: action.lateHeroIds,
-            matchLabel: `vs ${state.nextFixture.opponent?.name ?? 'Adversário'}`,
+            matchLabel: `vs ${state.nextFixture.opponent?.name ?? L('Adversário', 'Opponent')}`,
             atMs: fableNowMs,
           },
-          (id) => state.players[id]?.name ?? 'Jogador',
+          (id) => state.players[id]?.name ?? L('Jogador', 'Player'),
         );
         playerScars = scarred.map;
         for (const n of scarred.narratives) {
@@ -2481,7 +2491,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             'COMPANY_ANNOUNCEMENT',
             'PLANTEL',
             n.text,
-            { tag: 'Elenco', hideFromHomeFeed: n.kind !== 'healed' },
+            { tag: L('Elenco', 'Squad'), hideFromHomeFeed: n.kind !== 'healed' },
           ));
         }
       }
@@ -2506,28 +2516,28 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           const prize = ligaOleRoundReward(roundPlayed);
           const amount = Math.round(prize.amount * dinastiaMult);
           if (amount > 0) {
-            const label = prize.isChampion ? 'Liga Ole · CAMPEÃO' : `Liga Ole · ${prize.round}`;
+            const label = prize.isChampion ? L('Liga Ole · CAMPEÃO', 'Liga Ole · CHAMPION') : `Liga Ole · ${prize.round}`;
             finance = withExpHistory(grantEarnedExp(finance, amount), amount, label);
-            const dinastiaTag = dinastiaMult > 1 ? ` (Dinastia ×${dinastiaMult.toFixed(2)})` : '';
+            const dinastiaTag = dinastiaMult > 1 ? L(` (Dinastia ×${dinastiaMult.toFixed(2)})`, ` (Dynasty ×${dinastiaMult.toFixed(2)})`) : '';
             ligaNotes.push(makeInboxItem(
               `lo-prize-${Date.now()}`,
               'FINANCE_EXP_GAIN',
               'COMPETIÇÃO',
               prize.isChampion
-                ? `🏆 CAMPEÃO! +${amount.toLocaleString('pt-BR')} EXP de título${dinastiaTag}.`
-                : `Avançou na ${prize.round}: +${amount.toLocaleString('pt-BR')} EXP${dinastiaTag}.`,
+                ? L(`🏆 CAMPEÃO! +${amount.toLocaleString(LOCALE)} EXP de título${dinastiaTag}.`, `🏆 CHAMPION! +${amount.toLocaleString(LOCALE)} title EXP${dinastiaTag}.`)
+                : L(`Avançou na ${prize.round}: +${amount.toLocaleString(LOCALE)} EXP${dinastiaTag}.`, `Through the ${prize.round}: +${amount.toLocaleString(LOCALE)} EXP${dinastiaTag}.`),
               { tag: 'Liga Ole', deepLink: '/liga-ole', hideFromHomeFeed: false },
             ));
           }
           // Aposta: vitória paga 2× (devolve o stake + lucro igual ao stake).
           if (wager > 0) {
             const payout = wager * 2;
-            finance = withExpHistory(grantEarnedExp(finance, payout), payout, 'Liga Ole · aposta vencedora');
+            finance = withExpHistory(grantEarnedExp(finance, payout), payout, L('Liga Ole · aposta vencedora', 'Liga Ole · winning bet'));
             ligaNotes.push(makeInboxItem(
               `lo-bet-${Date.now()}`,
               'FINANCE_EXP_GAIN',
               'COMPETIÇÃO',
-              `Aposta vencedora: +${payout.toLocaleString('pt-BR')} EXP (dobrou ${wager.toLocaleString('pt-BR')}).`,
+              L(`Aposta vencedora: +${payout.toLocaleString(LOCALE)} EXP (dobrou ${wager.toLocaleString(LOCALE)}).`, `Winning bet: +${payout.toLocaleString(LOCALE)} EXP (doubled ${wager.toLocaleString(LOCALE)}).`),
               { tag: 'Liga Ole', deepLink: '/liga-ole', hideFromHomeFeed: false },
             ));
           }
@@ -2541,7 +2551,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `lo-revenge-${Date.now()}`,
               'FINANCE_EXP_GAIN',
               'COMPETIÇÃO',
-              `Revanche! Você eliminou ${ligaOleNemesis.name} — conta acertada.`,
+              L(`Revanche! Você eliminou ${ligaOleNemesis.name} — conta acertada.`, `Revenge! You knocked out ${ligaOleNemesis.name} — score settled.`),
               { tag: 'Liga Ole', deepLink: '/liga-ole', hideFromHomeFeed: false },
             ));
             ligaOleNemesis = undefined;
@@ -2556,7 +2566,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `lo-bet-${Date.now()}`,
               'FINANCE_EXP_GAIN',
               'COMPETIÇÃO',
-              `Aposta perdida: ${wager.toLocaleString('pt-BR')} EXP. Fica pra próxima.`,
+              L(`Aposta perdida: ${wager.toLocaleString(LOCALE)} EXP. Fica pra próxima.`, `Bet lost: ${wager.toLocaleString(LOCALE)} EXP. Next time.`),
               { tag: 'Liga Ole', deepLink: '/liga-ole', hideFromHomeFeed: true },
             ));
           }
@@ -2568,8 +2578,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         // FABLE — Renome: avançar fase +30; título soma +100 (fama nunca decai).
         if (homeWin) {
           clubRenown = advanced.status === 'champion'
-            ? addRenown(clubRenown, 130, 'Campeão da Liga Ole', fableNowMs)
-            : addRenown(clubRenown, 30, `Liga Ole — venceu na ${playedRoundName}`, fableNowMs);
+            ? addRenown(clubRenown, 130, L('Campeão da Liga Ole', 'Liga Ole champion'), fableNowMs)
+            : addRenown(clubRenown, 30, L(`Liga Ole — venceu na ${playedRoundName}`, `Liga Ole — won in the ${playedRoundName}`), fableNowMs);
         }
         // FABLE — Crônica da edição: zebra/goleada/carrasco da rodada viram
         // manchete no inbox (a história sendo escrita sem autor humano).
@@ -2609,7 +2619,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           const amount = legendsCupPhaseExp(roundBefore, legendsCup.runNumber);
           if (amount > 0) {
             const label = advanced.status === 'champion'
-              ? 'Legends Cup · CAMPEÃO'
+              ? L('Legends Cup · CAMPEÃO', 'Legends Cup · CHAMPION')
               : `Legends Cup · ${legendsCupRoundOf(roundBefore)}`;
             finance = withExpHistory(grantEarnedExp(finance, amount), amount, label);
             ligaNotes.push(makeInboxItem(
@@ -2617,8 +2627,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               'FINANCE_EXP_GAIN',
               'COMPETIÇÃO',
               advanced.status === 'champion'
-                ? `🏆 Você venceu OS IMORTAIS! +${amount.toLocaleString('pt-BR')} EXP.`
-                : `Passou da ${legendsCupRoundOf(roundBefore)}: +${amount.toLocaleString('pt-BR')} EXP.`,
+                ? L(`🏆 Você venceu OS IMORTAIS! +${amount.toLocaleString(LOCALE)} EXP.`, `🏆 You beat THE IMMORTALS! +${amount.toLocaleString(LOCALE)} EXP.`)
+                : L(`Passou da ${legendsCupRoundOf(roundBefore)}: +${amount.toLocaleString(LOCALE)} EXP.`, `Through the ${legendsCupRoundOf(roundBefore)}: +${amount.toLocaleString(LOCALE)} EXP.`),
               { tag: 'Legends Cup', deepLink: '/legends-cup', hideFromHomeFeed: false },
             ));
           }
@@ -2653,8 +2663,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `qp-contract-${pid}-${fableNowMs}`,
             'COMPANY_ANNOUNCEMENT',
             'PLANTEL',
-            `Contrato de ${players[pid]?.name ?? 'jogador'} EXPIROU — renove para voltar a escalar.`,
-            { tag: 'Contratos', colorClass: 'text-red-400', deepLink: '/clube/elenco' },
+            L(`Contrato de ${players[pid]?.name ?? 'jogador'} EXPIROU — renove para voltar a escalar.`, `${players[pid]?.name ?? 'Player'}'s contract EXPIRED — renew to pick him again.`),
+            { tag: L('Contratos', 'Contracts'), colorClass: 'text-red-400', deepLink: '/clube/elenco' },
           ));
         }
         // 2) Disciplina + lesões, derivadas dos stats reais da partida
@@ -2681,8 +2691,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
                 `qp-injury-${o.playerId}-${fableNowMs}`,
                 'COMPANY_ANNOUNCEMENT',
                 'PLANTEL',
-                `${INJURY_LABEL_PT[o.injured]}: ${pl.name} fora por ${o.after.outForMatches} jogo(s).`,
-                { tag: 'Departamento Médico', colorClass: 'text-red-400', deepLink: '/clube/elenco' },
+                L(`${INJURY_LABEL_PT[o.injured]}: ${pl.name} fora por ${o.after.outForMatches} jogo(s).`, `${INJURY_LABEL_PT[o.injured]}: ${pl.name} out for ${o.after.outForMatches} match(es).`),
+                { tag: L('Departamento Médico', 'Medical Department'), colorClass: 'text-red-400', deepLink: '/clube/elenco' },
               ));
             }
             if (o.newlySuspended) {
@@ -2690,8 +2700,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
                 `qp-susp-${o.playerId}-${fableNowMs}`,
                 'COMPANY_ANNOUNCEMENT',
                 'PLANTEL',
-                `${pl.name} suspenso: cumpre ${o.after.suspendedMatches} jogo(s) de gancho.`,
-                { tag: 'Disciplina', colorClass: 'text-red-400', deepLink: '/clube/elenco' },
+                L(`${pl.name} suspenso: cumpre ${o.after.suspendedMatches} jogo(s) de gancho.`, `${pl.name} suspended: banned for ${o.after.suspendedMatches} match(es).`),
+                { tag: L('Disciplina', 'Discipline'), colorClass: 'text-red-400', deepLink: '/clube/elenco' },
               ));
             }
           }
@@ -2699,13 +2709,13 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       }
 
       // PONTUAÇÃO DO MANAGER — jogar sempre pontua; oficial vale mais.
-      const scoreOppName = state.nextFixture.opponent?.name ?? 'Adversário';
+      const scoreOppName = state.nextFixture.opponent?.name ?? L('Adversário', 'Opponent');
       const managerScore = addManagerScore(
         state.managerScore,
         homeWin ? (competitionLeagueId ? 'vitoria_oficial' : 'vitoria_amistosa') : 'derrota',
         homeWin
-          ? `Vitória ${competitionLeagueId ? 'oficial ' : ''}sobre ${scoreOppName}`
-          : draw ? `Empate com ${scoreOppName}` : `Jogou contra ${scoreOppName}`,
+          ? L(`Vitória ${competitionLeagueId ? 'oficial ' : ''}sobre ${scoreOppName}`, `${competitionLeagueId ? 'Official w' : 'W'}in over ${scoreOppName}`)
+          : draw ? L(`Empate com ${scoreOppName}`, `Draw with ${scoreOppName}`) : L(`Jogou contra ${scoreOppName}`, `Played ${scoreOppName}`),
         fableNowMs,
         draw ? 4 : undefined,
       );
@@ -2786,7 +2796,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const wager = Math.max(0, Math.floor(action.wager ?? 0));
       const stake = Math.min(wager, Math.max(0, state.finance.ole));
       const finance = stake > 0
-        ? withExpHistory(addOle(state.finance, -stake), -stake, 'Liga Ole · aposta')
+        ? withExpHistory(addOle(state.finance, -stake), -stake, L('Liga Ole · aposta', 'Liga Ole · bet'))
         : state.finance;
       return {
         ...state,
@@ -2851,8 +2861,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           `player_request_${req.id}_${now}`,
           'PLAYER_MORALE',
           'PLANTEL',
-          `${req.playerName} — conversa resolvida`,
-          { body: outcome.reply, tag: 'PLANTEL', timeLabel: 'Agora', deepLink: '/clube/elenco' },
+          L(`${req.playerName} — conversa resolvida`, `${req.playerName} — talk resolved`),
+          { body: outcome.reply, tag: L('PLANTEL', 'SQUAD'), timeLabel: L('Agora', 'Now'), deepLink: '/clube/elenco' },
         ),
         ...state.inbox,
       ].slice(0, 60);
@@ -3039,7 +3049,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           strongFoot: 'right',
           listedOnMarket: false,
           fatigue: 12,
-          bio: `Jogou como ${gp.likePlayerName} (${gp.year})`,
+          bio: L(`Jogou como ${gp.likePlayerName} (${gp.year})`, `Played like ${gp.likePlayerName} (${gp.year})`),
           ...contractFieldsForManagerProspectTier(250),
         }),
         gachaProvenance: { likePlayerName: gp.likePlayerName, year: gp.year, rarity: gp.rarity },
@@ -3066,9 +3076,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           `gacha-create-${Date.now()}`,
           'PLAYER_BOUGHT',
           'PLANTEL',
-          `${gName} criado — jogou como ${gp.likePlayerName} (${gp.year})`,
+          L(`${gName} criado — jogou como ${gp.likePlayerName} (${gp.year})`, `${gName} created — played like ${gp.likePlayerName} (${gp.year})`),
           {
-            body: `Teu jogador de raridade ${gp.rarity.toUpperCase()} (OVR ${gMint}) está no plantel. Envia tua foto pra finalizarmos o card.`,
+            body: L(`Teu jogador de raridade ${gp.rarity.toUpperCase()} (OVR ${gMint}) está no plantel. Envia tua foto pra finalizarmos o card.`, `Your ${gp.rarity.toUpperCase()} player (OVR ${gMint}) is in the squad. Send your photo so we can finish the card.`),
             deepLink: '/team',
           },
         ),
@@ -3240,16 +3250,16 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         messageType: 'PLAYER_SOLD' as const,
         category: 'FINANCEIRO' as const,
         tag: 'Market Maker',
-        title: 'Market Maker comprou seu jogador',
-        body: `**${pl.name}** vendido por **${offerExp.toLocaleString('pt-BR')} EXP**. Saldo creditado na wallet.`,
-        timeLabel: 'agora',
+        title: L('Market Maker comprou seu jogador', 'Market Maker bought your player'),
+        body: L(`**${pl.name}** vendido por **${offerExp.toLocaleString(LOCALE)} EXP**. Saldo creditado na wallet.`, `**${pl.name}** sold for **${offerExp.toLocaleString(LOCALE)} EXP**. Balance credited to your wallet.`),
+        timeLabel: L('agora', 'now'),
         colorClass: 'text-neon-yellow',
         read: false,
       };
       const inbox = [inboxItem, ...(state.inbox ?? [])];
       return {
         ...state, lineup, players, finance, inbox,
-        managerScore: addManagerScore(state.managerScore, 'venda_jogador', `Vendeu ${pl.name} por ${offerExp.toLocaleString('pt-BR')} EXP`, Date.now()),
+        managerScore: addManagerScore(state.managerScore, 'venda_jogador', L(`Vendeu ${pl.name} por ${offerExp.toLocaleString(LOCALE)} EXP`, `Sold ${pl.name} for ${offerExp.toLocaleString(LOCALE)} EXP`), Date.now()),
       };
     }
     case 'DELIST_MANAGER_PROSPECT': {
@@ -3302,7 +3312,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ...state,
         finance,
         players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
-        managerScore: addManagerScore(state.managerScore, 'compra_jogador', `Contratou ${action.player.name} por proposta`, Date.now()),
+        managerScore: addManagerScore(state.managerScore, 'compra_jogador', L(`Contratou ${action.player.name} por proposta`, `Signed ${action.player.name} via offer`), Date.now()),
         managerProspectMarket: {
           ...state.managerProspectMarket,
           outgoingOffers: (state.managerProspectMarket.outgoingOffers ?? []).filter((o) => o.gamePlayerId !== pid),
@@ -3312,8 +3322,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `offer-won-${Date.now()}`,
             'PLAYER_SOLD',
             'FINANCEIRO',
-            `Proposta aceita: ${action.player.name} é teu.`,
-            { body: `Pagaste ${action.priceExp.toLocaleString('pt-BR')} EXP. Jogador no plantel.`, deepLink: '/clube/elenco', hideFromHomeFeed: false },
+            L(`Proposta aceita: ${action.player.name} é teu.`, `Offer accepted: ${action.player.name} is yours.`),
+            { body: L(`Pagaste ${action.priceExp.toLocaleString(LOCALE)} EXP. Jogador no plantel.`, `You paid ${action.priceExp.toLocaleString(LOCALE)} EXP. Player in the squad.`), deepLink: '/clube/elenco', hideFromHomeFeed: false },
           ),
           ...state.inbox,
         ].slice(0, 60),
@@ -3334,7 +3344,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ...state,
         players,
         lineup,
-        managerScore: addManagerScore(state.managerScore, 'venda_jogador', `Vendeu ${action.playerName} para ${action.buyerClubName}`, Date.now()),
+        managerScore: addManagerScore(state.managerScore, 'venda_jogador', L(`Vendeu ${action.playerName} para ${action.buyerClubName}`, `Sold ${action.playerName} to ${action.buyerClubName}`), Date.now()),
         managerProspectMarket: {
           ...state.managerProspectMarket,
           ownListings: state.managerProspectMarket.ownListings.filter((l) => l.playerId !== action.playerId),
@@ -3345,8 +3355,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `offer-sold-${Date.now()}`,
             'PLAYER_SOLD',
             'FINANCEIRO',
-            `Vendeste ${action.playerName} por ${action.creditExp.toLocaleString('pt-BR')} EXP.`,
-            { body: `${action.buyerClubName} fechou a proposta. EXP creditado na carteira.`, deepLink: '/wallet', hideFromHomeFeed: false },
+            L(`Vendeste ${action.playerName} por ${action.creditExp.toLocaleString(LOCALE)} EXP.`, `You sold ${action.playerName} for ${action.creditExp.toLocaleString(LOCALE)} EXP.`),
+            { body: L(`${action.buyerClubName} fechou a proposta. EXP creditado na carteira.`, `${action.buyerClubName} closed the deal. EXP credited to your wallet.`), deepLink: '/wallet', hideFromHomeFeed: false },
           ),
           ...state.inbox,
         ].slice(0, 60),
@@ -3372,7 +3382,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         managerScore: addManagerScore(
           state.managerScore,
           'venda_jogador',
-          `Vendeu ${action.titulo} para ${action.buyerClubName} por OLEFOOT`,
+          L(`Vendeu ${action.titulo} para ${action.buyerClubName} por OLEFOOT`, `Sold ${action.titulo} to ${action.buyerClubName} for OLEFOOT`),
           Date.now(),
         ),
         inbox: [
@@ -3380,9 +3390,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `squad-sale-${Date.now()}`,
             'PLAYER_SOLD',
             'FINANCEIRO',
-            `Vendeste ${action.titulo} por ${action.priceOlefoot.toLocaleString('pt-BR')} OLEFOOT.`,
+            L(`Vendeste ${action.titulo} por ${action.priceOlefoot.toLocaleString(LOCALE)} OLEFOOT.`, `You sold ${action.titulo} for ${action.priceOlefoot.toLocaleString(LOCALE)} OLEFOOT.`),
             {
-              body: `${action.buyerClubName} comprou no mercado de elenco. O OLEFOOT já está na tua carteira.`,
+              body: L(`${action.buyerClubName} comprou no mercado de elenco. O OLEFOOT já está na tua carteira.`, `${action.buyerClubName} bought on the squad market. The OLEFOOT is already in your wallet.`),
               deepLink: '/wallet',
               hideFromHomeFeed: false,
             },
@@ -3411,8 +3421,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `loan-returned-${Date.now()}`,
             'PLAYER_SOLD',
             'FINANCEIRO',
-            `Empréstimo encerrado: ${action.titulo} voltou pro dono.`,
-            { body: 'O contrato venceu. Toda a evolução que ele ganhou aqui vai junto.', deepLink: '/clube/valores', hideFromHomeFeed: true },
+            L(`Empréstimo encerrado: ${action.titulo} voltou pro dono.`, `Loan ended: ${action.titulo} went back to the owner.`),
+            { body: L('O contrato venceu. Toda a evolução que ele ganhou aqui vai junto.', 'The contract expired. All the progress made here goes with him.'), deepLink: '/clube/valores', hideFromHomeFeed: true },
           ),
           ...state.inbox,
         ].slice(0, 60),
@@ -3443,7 +3453,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return {
         ...state,
         finance: financeGenesis,
-        managerScore: addManagerScore(state.managerScore, 'compra_jogador', `Contratou ${action.player.name}`, Date.now()),
+        managerScore: addManagerScore(state.managerScore, 'compra_jogador', L(`Contratou ${action.player.name}`, `Signed ${action.player.name}`), Date.now()),
         players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
       };
     }
@@ -3473,7 +3483,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return {
         ...state,
         finance,
-        managerScore: addManagerScore(state.managerScore, 'compra_jogador', `Contratou ${action.player.name}`, Date.now()),
+        managerScore: addManagerScore(state.managerScore, 'compra_jogador', L(`Contratou ${action.player.name}`, `Signed ${action.player.name}`), Date.now()),
         players: {
           ...state.players,
           [pid]: { ...action.player, listedOnMarket: false },
@@ -3562,7 +3572,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return {
         ...state,
         finance: financeLegacy,
-        managerScore: addManagerScore(state.managerScore, 'compra_legend', `Garantiu a lenda ${action.player.name}`, Date.now()),
+        managerScore: addManagerScore(state.managerScore, 'compra_legend', L(`Garantiu a lenda ${action.player.name}`, `Secured the legend ${action.player.name}`), Date.now()),
         players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
       };
     }
@@ -3581,8 +3591,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         finance,
         players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
         // FABLE — Renome: contratar uma lenda é evento SOCIAL (+50).
-        clubRenown: addRenown(state.clubRenown, 50, `Contratou a lenda ${action.player.name}`, Date.now()),
-        managerScore: addManagerScore(state.managerScore, 'compra_legend', `Garantiu a lenda ${action.player.name}`, Date.now()),
+        clubRenown: addRenown(state.clubRenown, 50, L(`Contratou a lenda ${action.player.name}`, `Signed the legend ${action.player.name}`), Date.now()),
+        managerScore: addManagerScore(state.managerScore, 'compra_legend', L(`Garantiu a lenda ${action.player.name}`, `Secured the legend ${action.player.name}`), Date.now()),
       };
     }
     case 'RECRUIT_YOUTH_PROSPECT': {
@@ -3644,7 +3654,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       // Guard: teto por chamada para limitar impacto de dispatch manual no console.
       // Valor legítimo mais alto: recompensa de temporada ~500k EXP.
       if (a > 1_000_000) return state;
-      const src = action.historySource?.trim() || 'Recompensa';
+      const src = action.historySource?.trim() || L('Recompensa', 'Reward');
       let finance = grantEarnedExp(state.finance, a);
       finance = withExpHistory(finance, a, src);
       return { ...state, finance };
@@ -3658,10 +3668,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       // só dispatcha após marcar claimed=true com sucesso).
       if (ole > 5_000_000 || exp > 5_000_000) return state;
       let finance = state.finance;
-      if (ole > 0) finance = withExpHistory(addOle(finance, ole), ole, `Campeão Div ${action.division} · OLE`);
-      if (exp > 0) finance = withExpHistory(grantEarnedExp(finance, exp), exp, `Campeão Div ${action.division} · EXP`);
+      if (ole > 0) finance = withExpHistory(addOle(finance, ole), ole, L(`Campeão Div ${action.division} · OLE`, `Div ${action.division} champion · OLE`));
+      if (exp > 0) finance = withExpHistory(grantEarnedExp(finance, exp), exp, L(`Campeão Div ${action.division} · EXP`, `Div ${action.division} champion · EXP`));
       // FABLE — Renome: título de divisão é feito público (+100).
-      const clubRenown = addRenown(state.clubRenown, 100, `Campeão da Divisão ${action.division}`, Date.now());
+      const clubRenown = addRenown(state.clubRenown, 100, L(`Campeão da Divisão ${action.division}`, `Division ${action.division} champion`), Date.now());
       return { ...state, finance, clubRenown };
     }
     case 'CLAIM_KO_PRIZE': {
@@ -3671,16 +3681,16 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const exp = Math.max(0, Math.round(action.exp));
       if (exp === 0 || exp > 5_000_000) return state;
       const labels: Record<string, string> = {
-        qualified: 'Classificação Mata-Mata', r16: 'Vitória nas oitavas',
-        qf: 'Vitória nas quartas', sf: 'Vitória na semifinal', final: 'Campeão do Dia',
+        qualified: L('Classificação Mata-Mata', 'Knockout qualification'), r16: L('Vitória nas oitavas', 'Round of 16 win'),
+        qf: L('Vitória nas quartas', 'Quarter-final win'), sf: L('Vitória na semifinal', 'Semi-final win'), final: L('Campeão do Dia', 'Champion of the Day'),
       };
-      const src = `Mata-Mata · ${labels[action.stage] ?? action.stage} · EXP`;
+      const src = `${L('Mata-Mata', 'Knockout')} · ${labels[action.stage] ?? action.stage} · EXP`;
       const finance = withExpHistory(grantEarnedExp(state.finance, exp), exp, src);
       // FABLE — Renome: Coroa do Dia +50; fases do mata-mata +10.
       const clubRenown = addRenown(
         state.clubRenown,
         action.stage === 'final' ? 50 : 10,
-        labels[action.stage] ?? 'Mata-Mata do Dia',
+        labels[action.stage] ?? L('Mata-Mata do Dia', 'Daily Knockout'),
         Date.now(),
       );
       return { ...state, finance, clubRenown };
@@ -3697,7 +3707,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         return state;
       }
       const finance = financeWithLedger(
-        withExpHistory(addOle(state.finance, -expAmount), -expAmount, 'Exchange · anúncio EXP'),
+        withExpHistory(addOle(state.finance, -expAmount), -expAmount, L('Exchange · anúncio EXP', 'Exchange · EXP listing')),
         { type: 'SPOT_EXP', currency: 'EXP', amount: -expAmount, source: 'exchange_sell_announce' },
       );
       const order = {
@@ -3712,7 +3722,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return {
         ...state,
         finance,
-        managerScore: addManagerScore(state.managerScore, 'negociacao_exchange', `Anunciou ${expAmount.toLocaleString('pt-BR')} EXP no Exchange`, Date.now()),
+        managerScore: addManagerScore(state.managerScore, 'negociacao_exchange', L(`Anunciou ${expAmount.toLocaleString(LOCALE)} EXP no Exchange`, `Listed ${expAmount.toLocaleString(LOCALE)} EXP on the Exchange`), Date.now()),
         expExchange: {
           ...state.expExchange,
           playerOrders: [order, ...state.expExchange.playerOrders],
@@ -3723,7 +3733,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const o = state.expExchange.playerOrders.find((x) => x.id === action.orderId);
       if (!o || o.sellerClubId !== state.club.id) return state;
       const finance = financeWithLedger(
-        withExpHistory(addOle(state.finance, o.expAmount), o.expAmount, 'Exchange · cancelar venda'),
+        withExpHistory(addOle(state.finance, o.expAmount), o.expAmount, L('Exchange · cancelar venda', 'Exchange · cancel sale')),
         { type: 'SPOT_EXP', currency: 'EXP', amount: o.expAmount, source: 'exchange_sell_cancel', refId: `ex-cancel-${o.id}` },
       );
       return {
@@ -3745,7 +3755,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (state.finance.broCents < o.broCents) return state;
       let finance = addBroCents(state.finance, -o.broCents);
       finance = grantEarnedExp(finance, o.expAmount);
-      finance = withExpHistory(finance, o.expAmount, 'Exchange · compra EXP');
+      finance = withExpHistory(finance, o.expAmount, L('Exchange · compra EXP', 'Exchange · EXP purchase'));
       finance = financeWithLedger(finance, {
         type: 'SPOT_BRO', currency: 'BRO', amount: -o.broCents, source: 'exchange_buy', refId: `ex-buy-bro-${o.id}`,
       });
@@ -3756,7 +3766,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const expExchange = replenishNpcExpOrders({ ...ex, npcOrders });
       return {
         ...state, finance, expExchange,
-        managerScore: addManagerScore(state.managerScore, 'negociacao_exchange', `Comprou ${o.expAmount.toLocaleString('pt-BR')} EXP no Exchange`, Date.now()),
+        managerScore: addManagerScore(state.managerScore, 'negociacao_exchange', L(`Comprou ${o.expAmount.toLocaleString(LOCALE)} EXP no Exchange`, `Bought ${o.expAmount.toLocaleString(LOCALE)} EXP on the Exchange`), Date.now()),
       };
     }
     case 'UPSERT_CARD_COLLECTION': {
@@ -3858,7 +3868,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `tactic-save-${Date.now()}`,
             'TACTIC_SAVED',
             'TREINO',
-            `Tática "${name}" salva e pronta para partidas.`,
+            L(`Tática "${name}" salva e pronta para partidas.`, `Tactic "${name}" saved and ready for matches.`),
             { deepLink: '/team' },
           ),
           ...state.inbox,
@@ -3880,7 +3890,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `tactic-train-${Date.now()}`,
             'TACTIC_TRAINING_FOCUS',
             'TREINO',
-            `Treino com foco na tática "${tactic.name}" iniciado.`,
+            L(`Treino com foco na tática "${tactic.name}" iniciado.`, `Training focused on the "${tactic.name}" tactic started.`),
             { deepLink: '/team' },
           ),
           ...state.inbox,
@@ -3900,7 +3910,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `train-slot-${Date.now()}`,
               'TRAINING_SLOT_BLOCKED',
               'TREINO',
-              `Sem slots disponíveis para este treino (limite ${slots}).`,
+              L(`Sem slots disponíveis para este treino (limite ${slots}).`, `No slots available for this training (limit ${slots}).`),
               { colorClass: 'text-red-400' },
             ),
             ...state.inbox,
@@ -3919,7 +3929,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
                 `train-coll-${Date.now()}`,
                 'TRAINING_SLOT_BLOCKED',
                 'TREINO',
-                `Limite de treinos colectivos em simultâneo: ${maxColl}.`,
+                L(`Limite de treinos colectivos em simultâneo: ${maxColl}.`, `Simultaneous team training limit: ${maxColl}.`),
                 { colorClass: 'text-red-400' },
               ),
               ...state.inbox,
@@ -3952,8 +3962,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               'TRAINING_SLOT_BLOCKED',
               'TREINO',
               action.mode === 'coletivo'
-                ? 'Todos do grupo já estão num treino em curso.'
-                : 'Jogador(es) já estão num treino em curso.',
+                ? L('Todos do grupo já estão num treino em curso.', 'Everyone in the group is already in training.')
+                : L('Jogador(es) já estão num treino em curso.', 'Player(s) already in training.'),
               { colorClass: 'text-red-400', deepLink: '/team/treino' },
             ),
             ...state.inbox,
@@ -3981,8 +3991,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `train-start-${Date.now()}`,
             'TRAINING_PLAN_STARTED',
             'TREINO',
-            `Treino iniciado (${action.trainingType}, ${plan.playerIds.length} jogador(es)).`,
-            { body: 'Fadiga e atributos serão atualizados ao concluir o plano.', deepLink: '/team' },
+            L(`Treino iniciado (${action.trainingType}, ${plan.playerIds.length} jogador(es)).`, `Training started (${action.trainingType}, ${plan.playerIds.length} player(s)).`),
+            { body: L('Fadiga e atributos serão atualizados ao concluir o plano.', 'Fatigue and attributes will update when the plan ends.'), deepLink: '/team' },
           ),
           ...state.inbox,
         ].slice(0, 14),
@@ -4062,8 +4072,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const done = due.map((p) => ({ ...p, status: 'completed' as const }));
       const doneTreat = dueTreat.map((p) => ({ ...p, status: 'completed' as const }));
       const inboxParts: string[] = [];
-      if (due.length > 0) inboxParts.push(`${due.length} treino(s) concluído(s)`);
-      if (dueTreat.length > 0) inboxParts.push(`${dueTreat.length} tratamento(s) concluído(s)`);
+      if (due.length > 0) inboxParts.push(L(`${due.length} treino(s) concluído(s)`, `${due.length} training(s) completed`));
+      if (dueTreat.length > 0) inboxParts.push(L(`${dueTreat.length} tratamento(s) concluído(s)`, `${dueTreat.length} treatment(s) completed`));
 
       // Sync playerHealth (SSOT) com fatigue/injuryRisk pós-treino/tratamento — descanso deposita aqui.
       const syncedHealth: typeof state.playerHealth = { ...state.playerHealth };
@@ -4085,7 +4095,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         scoreAfterTraining = addManagerScore(
           scoreAfterTraining,
           'treino_concluido',
-          `Treino concluído (${plan.playerIds.length} jogador${plan.playerIds.length === 1 ? '' : 'es'})`,
+          L(`Treino concluído (${plan.playerIds.length} jogador${plan.playerIds.length === 1 ? '' : 'es'})`, `Training completed (${plan.playerIds.length} player${plan.playerIds.length === 1 ? '' : 's'})`),
           Date.now(),
         );
       }
@@ -4126,7 +4136,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `treat-slot-${Date.now()}`,
               'TRAINING_SLOT_BLOCKED',
               'CLUBE',
-              `Todos os slots de tratamento estão ocupados (máx. ${maxTreat}).`,
+              L(`Todos os slots de tratamento estão ocupados (máx. ${maxTreat}).`, `All treatment slots are taken (max. ${maxTreat}).`),
               { colorClass: 'text-red-400', deepLink: '/team/treino' },
             ),
             ...state.inbox,
@@ -4146,7 +4156,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `treat-dup-${Date.now()}`,
               'TRAINING_SLOT_BLOCKED',
               'CLUBE',
-              'Este jogador já tem um tratamento em curso.',
+              L('Este jogador já tem um tratamento em curso.', 'This player is already in treatment.'),
               { colorClass: 'text-red-400', deepLink: '/team/treino' },
             ),
             ...state.inbox,
@@ -4172,10 +4182,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `treat-start-${Date.now()}`,
             'STAFF_ADVICE',
             'STAFF',
-            `Tratamento iniciado: ${pl.name}`,
+            L(`Tratamento iniciado: ${pl.name}`, `Treatment started: ${pl.name}`),
             {
-              body: `Departamento médico (nível ${medLvl}). Conclusão em ~${TREATMENT_PLAN_DURATION_H}h.`,
-              advisorLabel: 'Departamento médico',
+              body: L(`Departamento médico (nível ${medLvl}). Conclusão em ~${TREATMENT_PLAN_DURATION_H}h.`, `Medical department (level ${medLvl}). Done in ~${TREATMENT_PLAN_DURATION_H}h.`),
+              advisorLabel: L('Departamento médico', 'Medical department'),
               deepLink: '/team/treino',
             },
           ),
@@ -4201,7 +4211,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `train-fail-${Date.now()}`,
               'TRAINING_SESSION_FAIL',
               'FINANCEIRO',
-              'Treino leve cancelado: saldo EXP insuficiente.',
+              L('Treino leve cancelado: saldo EXP insuficiente.', 'Light training cancelled: not enough EXP.'),
               { colorClass: 'text-red-400', deepLink: '/wallet' },
             ),
             ...state.inbox,
@@ -4231,14 +4241,14 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         players: trainedPlayers,
         playerSeasonLedger,
         playerEvolutionTimeline,
-        finance: withExpHistory(r.finance, -40, 'Treino leve'),
+        finance: withExpHistory(r.finance, -40, L('Treino leve', 'Light training')),
         inbox: [
           makeInboxItem(
             `train-${Date.now()}`,
             'TRAINING_SESSION_LIGHT',
             'TREINO',
-            'Sessão leve concluída: elenco recuperou fôlego.',
-            { body: 'EXP debitado conforme o plano de treino.', deepLink: '/team' },
+            L('Sessão leve concluída: elenco recuperou fôlego.', 'Light session done: squad got its breath back.'),
+            { body: L('EXP debitado conforme o plano de treino.', 'EXP charged per the training plan.'), deepLink: '/team' },
           ),
           ...state.inbox,
         ].slice(0, 14),
@@ -4255,7 +4265,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `buy-fail-${Date.now()}`,
               'SHOP_PACK_FAIL',
               'FINANCEIRO',
-              'Saldo BRO insuficiente para o pacote de EXP.',
+              L('Saldo BRO insuficiente para o pacote de EXP.', 'Not enough BRO for the EXP pack.'),
               { colorClass: 'text-red-400', deepLink: '/store' },
             ),
             ...state.inbox,
@@ -4264,7 +4274,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       }
       const nextState = {
         ...state,
-        finance: withExpHistory(f, 500, 'Pacote de EXP (BRO)'),
+        finance: withExpHistory(f, 500, L('Pacote de EXP (BRO)', 'EXP pack (BRO)')),
       };
       return {
         ...nextState,
@@ -4273,9 +4283,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `buy-${Date.now()}`,
             'SHOP_PACK',
             'FINANCEIRO',
-            '+500 EXP creditados na tesouraria (compra com BRO).',
+            L('+500 EXP creditados na tesouraria (compra com BRO).', '+500 EXP credited to the treasury (BRO purchase).'),
             {
-              body: 'Não contabiliza como EXP “ganho” no histórico de recompensas de jogo.',
+              body: L('Não contabiliza como EXP “ganho” no histórico de recompensas de jogo.', 'Doesn\'t count as “earned” EXP in the game reward history.'),
               deepLink: '/wallet',
             },
           ),
@@ -4287,14 +4297,14 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const exp = scoutExpReward(state.manager.staff);
       return {
         ...state,
-        finance: withExpHistory(grantEarnedExp(state.finance, exp), exp, 'Relatório de olheiro'),
+        finance: withExpHistory(grantEarnedExp(state.finance, exp), exp, L('Relatório de olheiro', 'Scout report')),
         inbox: [
           makeInboxItem(
             `scout-${Date.now()}`,
             'MARKET_SCOUT_REPORT',
             'PLANTEL',
-            `Olheiro: +${exp} EXP creditados pelo relatório.`,
-            { body: 'Consulta o mercado e o staff para próximos alvos.', deepLink: '/transfer' },
+            L(`Olheiro: +${exp} EXP creditados pelo relatório.`, `Scout: +${exp} EXP credited for the report.`),
+            { body: L('Consulta o mercado e o staff para próximos alvos.', 'Check the market and staff for next targets.'), deepLink: '/transfer' },
           ),
           ...state.inbox,
         ].slice(0, 14),
@@ -4323,14 +4333,14 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         finance: result.finance,
         manager: { ...state.manager, staff: result.staff },
         // PONTUAÇÃO DO MANAGER — evoluir profissional é ação de gestão (ponte que faltava).
-        managerScore: addManagerScore(state.managerScore, 'upgrade_staff', `Evoluiu ${STAFF_LABELS[action.roleId]} (nível ${lvl})`, Date.now()),
+        managerScore: addManagerScore(state.managerScore, 'upgrade_staff', L(`Evoluiu ${STAFF_LABELS[action.roleId]} (nível ${lvl})`, `Upgraded ${STAFF_LABELS[action.roleId]} (level ${lvl})`), Date.now()),
         inbox: [
           makeInboxItem(
             `staff-up-${Date.now()}`,
             'STAFF_LEVEL_UP',
             'STAFF',
-            `${STAFF_LABELS[action.roleId]} subiu para nível ${lvl}.`,
-            { body: 'Efeitos em treinos e relatórios já aplicados ao plantel.', deepLink: '/clube/staff' },
+            L(`${STAFF_LABELS[action.roleId]} subiu para nível ${lvl}.`, `${STAFF_LABELS[action.roleId]} reached level ${lvl}.`),
+            { body: L('Efeitos em treinos e relatórios já aplicados ao plantel.', 'Training and report effects already applied to the squad.'), deepLink: '/clube/staff' },
           ),
           ...state.inbox,
         ].slice(0, 14),
@@ -4387,7 +4397,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `city-med-fail-${Date.now()}`,
               'STRUCTURE_UPGRADE_FAIL',
               'CLUBE',
-              'Mutirão médico cancelado: EXP insuficiente.',
+              L('Mutirão médico cancelado: EXP insuficiente.', 'Medical drive cancelled: not enough EXP.'),
               { colorClass: 'text-red-400', deepLink: '/city' },
             ),
             ...state.inbox,
@@ -4408,7 +4418,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const finance = withExpHistory(
         addOle(state.finance, -CITY_QUICK_MEDICAL_COST_EXP),
         -CITY_QUICK_MEDICAL_COST_EXP,
-        'Mutirão médico (cidade)',
+        L('Mutirão médico (cidade)', 'Medical drive (city)'),
       );
       return {
         ...state,
@@ -4419,10 +4429,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `city-med-${Date.now()}`,
             'STAFF_ADVICE',
             'STAFF',
-            'Mutirão médico: recuperação acelerada no grupo.',
+            L('Mutirão médico: recuperação acelerada no grupo.', 'Medical drive: faster recovery across the squad.'),
             {
-              body: `Investimento de **${CITY_QUICK_MEDICAL_COST_EXP} EXP** em fisioterapia e enfermagem. Fadiga e risco de lesão reduzidos em todo o plantel.`,
-              advisorLabel: 'Departamento médico',
+              body: L(`Investimento de **${CITY_QUICK_MEDICAL_COST_EXP} EXP** em fisioterapia e enfermagem. Fadiga e risco de lesão reduzidos em todo o plantel.`, `**${CITY_QUICK_MEDICAL_COST_EXP} EXP** invested in physio and nursing. Fatigue and injury risk reduced across the squad.`),
+              advisorLabel: L('Departamento médico', 'Medical department'),
               deepLink: '/team',
               staffRole: 'nutricao',
             },
@@ -4440,7 +4450,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `city-store-fail-${Date.now()}`,
               'STRUCTURE_UPGRADE_FAIL',
               'CLUBE',
-              'Campanha na Megaloja cancelada: EXP insuficiente.',
+              L('Campanha na Megaloja cancelada: EXP insuficiente.', 'Megastore campaign cancelled: not enough EXP.'),
               { colorClass: 'text-red-400', deepLink: '/city' },
             ),
             ...state.inbox,
@@ -4450,7 +4460,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       let finance = withExpHistory(
         addOle(state.finance, -CITY_QUICK_STORE_COST_EXP),
         -CITY_QUICK_STORE_COST_EXP,
-        'Campanha Megaloja (cidade)',
+        L('Campanha Megaloja (cidade)', 'Megastore campaign (city)'),
       );
       // 2026-08-01: a campanha NÃO paga mais BRO. Convertia 540 EXP em R$ 75
       // sem cooldown nem teto — o jogo imprimia dinheiro de valor real em loop.
@@ -4466,9 +4476,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `city-store-${Date.now()}`,
             'FINANCE_BRO_MOVEMENT',
             'FINANCEIRO',
-            `Campanha na Megaloja: a torcida respondeu.`,
+            L(`Campanha na Megaloja: a torcida respondeu.`, `Megastore campaign: the fans responded.`),
             {
-              body: `**${CITY_QUICK_STORE_COST_EXP} EXP** em marketing e logística. Pico de vendas e reforço do apoio da torcida.`,
+              body: L(`**${CITY_QUICK_STORE_COST_EXP} EXP** em marketing e logística. Pico de vendas e reforço do apoio da torcida.`, `**${CITY_QUICK_STORE_COST_EXP} EXP** in marketing and logistics. Sales spike and stronger fan support.`),
               deepLink: '/wallet',
             },
           ),
@@ -4489,7 +4499,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `city-train-slot-${Date.now()}`,
               'TRAINING_SLOT_BLOCKED',
               'TREINO',
-              `Treino intensivo indisponível: limite de ${slots} plano(s) físico(s) coletivo(s).`,
+              L(`Treino intensivo indisponível: limite de ${slots} plano(s) físico(s) coletivo(s).`, `Intensive training unavailable: limit of ${slots} team fitness plan(s).`),
               { colorClass: 'text-red-400', deepLink: '/team/treino' },
             ),
             ...state.inbox,
@@ -4507,7 +4517,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `city-train-coll-${Date.now()}`,
               'TRAINING_SLOT_BLOCKED',
               'TREINO',
-              `Treino intensivo indisponível: limite de ${maxColl} treino(s) colectivo(s) em simultâneo.`,
+              L(`Treino intensivo indisponível: limite de ${maxColl} treino(s) colectivo(s) em simultâneo.`, `Intensive training unavailable: limit of ${maxColl} simultaneous team training(s).`),
               { colorClass: 'text-red-400', deepLink: '/team/treino' },
             ),
             ...state.inbox,
@@ -4524,7 +4534,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `city-train-exp-${Date.now()}`,
               'TRAINING_SESSION_FAIL',
               'TREINO',
-              'Treino intensivo cancelado: EXP insuficiente.',
+              L('Treino intensivo cancelado: EXP insuficiente.', 'Intensive training cancelled: not enough EXP.'),
               { colorClass: 'text-red-400', deepLink: '/city' },
             ),
             ...state.inbox,
@@ -4545,7 +4555,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const finance = withExpHistory(
         addOle(state.finance, -CITY_QUICK_TRAINING_COST_EXP),
         -CITY_QUICK_TRAINING_COST_EXP,
-        'Treino intensivo (cidade)',
+        L('Treino intensivo (cidade)', 'Intensive training (city)'),
       );
       return {
         ...state,
@@ -4559,9 +4569,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `city-train-${Date.now()}`,
             'TRAINING_PLAN_STARTED',
             'TREINO',
-            `Treino físico intensivo (${plan.playerIds.length} jogador(es)).`,
+            L(`Treino físico intensivo (${plan.playerIds.length} jogador(es)).`, `Intensive fitness training (${plan.playerIds.length} player(s)).`),
             {
-              body: `**${CITY_QUICK_TRAINING_COST_EXP} EXP** em microciclo físico. Conclusão em ~${CITY_QUICK_TRAINING_DURATION_H}h — acompanha em Treino.`,
+              body: L(`**${CITY_QUICK_TRAINING_COST_EXP} EXP** em microciclo físico. Conclusão em ~${CITY_QUICK_TRAINING_DURATION_H}h — acompanha em Treino.`, `**${CITY_QUICK_TRAINING_COST_EXP} EXP** on a fitness microcycle. Done in ~${CITY_QUICK_TRAINING_DURATION_H}h — follow it in Training.`),
               deepLink: '/team/treino',
             },
           ),
@@ -4584,7 +4594,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `struct-fail-${Date.now()}`,
               'STRUCTURE_UPGRADE_FAIL',
               'CLUBE',
-              result.error ?? 'Upgrade de estrutura bloqueado.',
+              result.error ?? L('Upgrade de estrutura bloqueado.', 'Facility upgrade blocked.'),
               { colorClass: 'text-red-400', deepLink: '/city' },
             ),
             ...state.inbox,
@@ -4599,7 +4609,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ? (state.finance.broCents - (result.finance?.broCents ?? state.finance.broCents))
         : 0;
       let nextFinance = expCost > 0
-        ? withExpHistory(result.finance!, -expCost, `Upgrade de estrutura: ${label}`)
+        ? withExpHistory(result.finance!, -expCost, L(`Upgrade de estrutura: ${label}`, `Facility upgrade: ${label}`))
         : result.finance!;
       if (expCost > 0) {
         nextFinance = financeWithLedger(nextFinance, {
@@ -4616,7 +4626,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ...state,
         structures: result.structures!,
         finance: nextFinance,
-        managerScore: addManagerScore(state.managerScore, 'upgrade_estrutura', `${label} evoluiu para nível ${newLevel}`, Date.now()),
+        managerScore: addManagerScore(state.managerScore, 'upgrade_estrutura', L(`${label} evoluiu para nível ${newLevel}`, `${label} upgraded to level ${newLevel}`), Date.now()),
       };
       const crowdNext =
         action.structureId === 'stadium'
@@ -4636,12 +4646,12 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `struct-${Date.now()}`,
             'STRUCTURE_UPGRADED',
             'CLUBE',
-            `${label} evoluiu para nível ${newLevel}.`,
+            L(`${label} evoluiu para nível ${newLevel}.`, `${label} upgraded to level ${newLevel}.`),
             {
               body:
                 action.structureId === 'stadium'
-                  ? `Pagamento em ${currencyLabel}. Expansão reforça o ambiente e o apoio em dias de jogo.`
-                  : `Pagamento registrado em ${currencyLabel}.`,
+                  ? L(`Pagamento em ${currencyLabel}. Expansão reforça o ambiente e o apoio em dias de jogo.`, `Paid in ${currencyLabel}. Expansion boosts the atmosphere and support on matchdays.`)
+                  : L(`Pagamento registrado em ${currencyLabel}.`, `Payment recorded in ${currencyLabel}.`),
               deepLink: '/city',
             },
           ),
@@ -4667,8 +4677,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (!Number.isFinite(amount) || amount <= 0) return state;
       // grantEarnedExp: conta em lifetime → dispara comissão pro indicador (5%).
       // Coerente com pacote de design: PvP é "ganho" do manager.
-      const modeLabel = action.mode === 'quick' ? 'Liga Rápida' : 'Liga Clássica';
-      const outcomeLabel = action.outcome === 'win' ? 'Vitória' : action.outcome === 'draw' ? 'Empate' : 'Derrota';
+      const modeLabel = action.mode === 'quick' ? L('Liga Rápida', 'Quick League') : L('Liga Clássica', 'Classic League');
+      const outcomeLabel = action.outcome === 'win' ? L('Vitória', 'Win') : action.outcome === 'draw' ? L('Empate', 'Draw') : L('Derrota', 'Loss');
       let finance = grantEarnedExp(state.finance, amount);
       finance = withExpHistory(finance, amount, `${outcomeLabel} · ${modeLabel}`);
       const opponentLine = action.opponentLabel ? ` vs ${action.opponentLabel}` : '';
@@ -4677,9 +4687,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           `pvp-${action.mode}-${Date.now()}`,
           'FINANCE_EXP_GAIN',
           'COMPETIÇÃO',
-          `${outcomeLabel} · ${modeLabel}${opponentLine} (+${amount.toLocaleString('pt-BR')} EXP)`,
+          `${outcomeLabel} · ${modeLabel}${opponentLine} (+${amount.toLocaleString(LOCALE)} EXP)`,
           {
-            body: `Resultado registrado na ${modeLabel}. +${amount.toLocaleString('pt-BR')} EXP creditados.`,
+            body: L(`Resultado registrado na ${modeLabel}. +${amount.toLocaleString(LOCALE)} EXP creditados.`, `Result recorded in the ${modeLabel}. +${amount.toLocaleString(LOCALE)} EXP credited.`),
             deepLink: '/',
           },
         ),
@@ -4742,7 +4752,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `amistoso-req-${Date.now()}`,
               'FRIENDLY_CHALLENGE_FAIL',
               'COMPETIÇÃO',
-              'Desafio amistoso: falta nome do clube ou ID do adversário.',
+              L('Desafio amistoso: falta nome do clube ou ID do adversário.', 'Friendly challenge: missing club name or opponent ID.'),
               { colorClass: 'text-red-400' },
             ),
             ...state.inbox,
@@ -4761,7 +4771,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
                 `amistoso-bro-${Date.now()}`,
                 'FRIENDLY_CHALLENGE_FAIL',
                 'FINANCEIRO',
-                'BRO insuficiente para prémio em escrow + taxa da plataforma (5%).',
+                L('BRO insuficiente para prémio em escrow + taxa da plataforma (5%).', 'Not enough BRO for the escrow prize + platform fee (5%).'),
                 { deepLink: '/wallet' },
               ),
               ...state.inbox,
@@ -4785,9 +4795,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `amistoso-${Date.now()}`,
               'FINANCE_ESCROW',
               'FINANCEIRO',
-              `Desafio amistoso vs ${opponentName}: prémio em escrow (BRO).`,
+              L(`Desafio amistoso vs ${opponentName}: prémio em escrow (BRO).`, `Friendly challenge vs ${opponentName}: prize in escrow (BRO).`),
               {
-                body: `Retido ${(prizeCents / 100).toFixed(2)} BRO para o vencedor; taxa registrada ${(feeCents / 100).toFixed(2)} BRO. O resultado fica no histórico após o jogo.`,
+                body: L(`Retido ${(prizeCents / 100).toFixed(2)} BRO para o vencedor; taxa registrada ${(feeCents / 100).toFixed(2)} BRO. O resultado fica no histórico após o jogo.`, `${(prizeCents / 100).toFixed(2)} BRO held for the winner; fee recorded ${(feeCents / 100).toFixed(2)} BRO. The result goes to the history after the match.`),
                 deepLink: '/wallet',
               },
             ),
@@ -4804,14 +4814,14 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `amistoso-exp-${Date.now()}`,
               'FRIENDLY_CHALLENGE_FAIL',
               'FINANCEIRO',
-              'EXP insuficiente para constituir o prémio em escrow do desafio.',
+              L('EXP insuficiente para constituir o prémio em escrow do desafio.', 'Not enough EXP to fund the challenge escrow prize.'),
               { deepLink: '/wallet' },
             ),
             ...state.inbox,
           ].slice(0, 14),
         };
       }
-      const f = withExpHistory(addOle(state.finance, -prizeExp), -prizeExp, `Amistoso: prêmio travado vs ${opponentName}`);
+      const f = withExpHistory(addOle(state.finance, -prizeExp), -prizeExp, L(`Amistoso: prêmio travado vs ${opponentName}`, `Friendly: prize locked vs ${opponentName}`));
       return {
         ...state,
         finance: f,
@@ -4820,9 +4830,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `amistoso-${Date.now()}`,
             'FINANCE_ESCROW',
             'FINANCEIRO',
-            `Desafio amistoso vs ${opponentName}: prémio em escrow (EXP).`,
+            L(`Desafio amistoso vs ${opponentName}: prémio em escrow (EXP).`, `Friendly challenge vs ${opponentName}: prize in escrow (EXP).`),
             {
-              body: `${prizeExp} EXP retidos até liquidação após o jogo — consulta histórico e carteira.`,
+              body: L(`${prizeExp} EXP retidos até liquidação após o jogo — consulta histórico e carteira.`, `${prizeExp} EXP held until settlement after the match — check history and wallet.`),
               deepLink: '/wallet',
             },
           ),
@@ -4861,9 +4871,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `amistoso-refund-${Date.now()}`,
               'FRIENDLY_CHALLENGE',
               'COMPETIÇÃO',
-              `Desafio amistoso vs ${opponentName || 'adversário'}: devolução (BRO).`,
+              L(`Desafio amistoso vs ${opponentName || 'adversário'}: devolução (BRO).`, `Friendly challenge vs ${opponentName || 'opponent'}: refund (BRO).`),
               {
-                body: 'O convite expirou ou foi recusado/cancelado; prémio e taxa foram estornados ao saldo.',
+                body: L('O convite expirou ou foi recusado/cancelado; prémio e taxa foram estornados ao saldo.', 'The invite expired or was declined/cancelled; prize and fee were refunded to your balance.'),
                 colorClass: 'text-gray-300',
               },
             ),
@@ -4872,7 +4882,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         };
       }
       const prizeExp = Math.max(1, Math.round(action.prizeAmount));
-      const f = withExpHistory(addOle(state.finance, prizeExp), prizeExp, `Amistoso: estorno vs ${opponentName}`);
+      const f = withExpHistory(addOle(state.finance, prizeExp), prizeExp, L(`Amistoso: estorno vs ${opponentName}`, `Friendly: refund vs ${opponentName}`));
       return {
         ...state,
         finance: f,
@@ -4881,9 +4891,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `amistoso-refund-${Date.now()}`,
             'FRIENDLY_CHALLENGE',
             'COMPETIÇÃO',
-            `Desafio amistoso vs ${opponentName || 'adversário'}: devolução (EXP).`,
+            L(`Desafio amistoso vs ${opponentName || 'adversário'}: devolução (EXP).`, `Friendly challenge vs ${opponentName || 'opponent'}: refund (EXP).`),
             {
-              body: 'O convite expirou ou foi recusado/cancelado; EXP retidos foram devolvidos.',
+              body: L('O convite expirou ou foi recusado/cancelado; EXP retidos foram devolvidos.', 'The invite expired or was declined/cancelled; held EXP was returned.'),
               colorClass: 'text-gray-300',
             },
           ),
@@ -5380,18 +5390,18 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       // payload `academy` com URLs + texto pré-formatado pra share.
       // deepLink abre o modal de entrega via /clube/elenco?academyDelivery=<id>
       const shareText = [
-        `🎁 Acabei de receber minha carta da Academia OLE!`,
-        `Conheça ${pl.name}, ${pl.pos} da minha Academia.`,
-        `Jogue no #Olefoot — seu time, sua história.`,
+        L(`🎁 Acabei de receber minha carta da Academia OLE!`, `🎁 I just got my OLE Academy card!`),
+        L(`Conheça ${pl.name}, ${pl.pos} da minha Academia.`, `Meet ${pl.name}, ${pl.pos} from my Academy.`),
+        L(`Jogue no #Olefoot — seu time, sua história.`, `Play #Olefoot — your team, your story.`),
       ].join('\n');
       const deliveryInbox = makeInboxItem(
         `academy-delivery-${action.requestId}`,
         'ACADEMY_CARD_DELIVERED',
         'PLANTEL',
-        `🎁 Carta da Academia OLE: ${pl.name}`,
+        L(`🎁 Carta da Academia OLE: ${pl.name}`, `🎁 OLE Academy card: ${pl.name}`),
         {
-          tag: 'ACADEMIA',
-          body: 'Sua carta foi entregue pela Olefoot. Compartilhe e mostre seu jogador pro mundo!',
+          tag: L('ACADEMIA', 'ACADEMY'),
+          body: L('Sua carta foi entregue pela Olefoot. Compartilhe e mostre seu jogador pro mundo!', 'Your card was delivered by Olefoot. Share it and show your player to the world!'),
           deepLink: `/clube/elenco?academyDelivery=${action.requestId}`,
           colorClass: 'text-neon-yellow',
           academy: {
@@ -5505,7 +5515,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
       let finance = state.finance;
       if (payExp) {
-        finance = withExpHistory(addOle(finance, -item.priceExp!), -item.priceExp!, `Loja · ${item.title}`);
+        finance = withExpHistory(addOle(finance, -item.priceExp!), -item.priceExp!, L(`Loja · ${item.title}`, `Shop · ${item.title}`));
         finance = financeWithLedger(finance, {
           type: 'PURCHASE', currency: 'EXP', amount: -item.priceExp!,
           source: 'loja', metadata: { itemId: item.id, itemTitle: item.title },
@@ -5531,10 +5541,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               `shop-buy-${Date.now()}`,
               'STAFF_ADVICE',
               'CLUBE',
-              `Compra: ${item.title}`,
+              L(`Compra: ${item.title}`, `Purchase: ${item.title}`),
               {
-                body: `**${item.title}** foi para o inventário. Usa em **Meu Time** ao abrir um jogador.`,
-                advisorLabel: 'Loja',
+                body: L(`**${item.title}** foi para o inventário. Usa em **Meu Time** ao abrir um jogador.`, `**${item.title}** went to your inventory. Use it in **My Team** when opening a player.`),
+                advisorLabel: L('Loja', 'Shop'),
                 deepLink: '/team',
               },
             ),
@@ -5551,9 +5561,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             `shop-pack-${Date.now()}`,
             'STAFF_ADVICE',
             'CLUBE',
-            `Pedido: ${item.title}`,
+            L(`Pedido: ${item.title}`, `Order: ${item.title}`),
             {
-              body: `**${item.title}** — entrega de pack em desenvolvimento; o pagamento foi registrado.`,
+              body: L(`**${item.title}** — entrega de pack em desenvolvimento; o pagamento foi registrado.`, `**${item.title}** — pack delivery in development; the payment was recorded.`),
               deepLink: '/store',
             },
           ),
@@ -5644,8 +5654,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             'CLUBE',
             `Booster: ${item.title}`,
             {
-              body: `Ativaste **${item.title}** no teu clube.`,
-              advisorLabel: 'Loja',
+              body: L(`Ativaste **${item.title}** no teu clube.`, `You activated **${item.title}** at your club.`),
+              advisorLabel: L('Loja', 'Shop'),
               deepLink: '/team',
             },
           ),
@@ -5690,9 +5700,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       );
 
       let finance = grantEarnedExp(state.finance, challenge.reward);
-      finance = withExpHistory(finance, challenge.reward, `Desafio: ${challenge.title}`);
+      finance = withExpHistory(finance, challenge.reward, L(`Desafio: ${challenge.title}`, `Challenge: ${challenge.title}`));
       // FABLE — Renome: desafio diário cumprido é feito público (+10).
-      const clubRenown = addRenown(state.clubRenown, 10, `Desafio: ${challenge.title}`, Date.now());
+      const clubRenown = addRenown(state.clubRenown, 10, L(`Desafio: ${challenge.title}`, `Challenge: ${challenge.title}`), Date.now());
 
       const inbox = [
         makeInboxItem(
@@ -5701,7 +5711,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           'DESAFIOS',
           `+${challenge.reward} EXP — ${challenge.title}`,
           {
-            body: `Completaste o desafio "${challenge.title}". Recompensa creditada.`,
+            body: L(`Completaste o desafio "${challenge.title}". Recompensa creditada.`, `You completed the challenge "${challenge.title}". Reward credited.`),
             deepLink: '/wallet',
           },
         ),
@@ -5735,7 +5745,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const newSupportPercent = Math.min(99, Math.max(0, state.crowd.supportPercent + crowdDelta));
       // FABLE — Renome: vitória na Liga Global é feito público (+5).
       const clubRenown = action.win
-        ? addRenown(state.clubRenown, 5, 'Vitória na Liga Global', Date.now())
+        ? addRenown(state.clubRenown, 5, L('Vitória na Liga Global', 'Global League win'), Date.now())
         : state.clubRenown;
       return {
         ...state,

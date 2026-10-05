@@ -11,6 +11,7 @@ import { BackButton } from '@/components/BackButton';
 import { CinematicHero } from '@/components/CinematicHero';
 import { LocalLeagueSection } from '@/components/leagues/LocalLeagueSection';
 import { Hashtag } from '@/components/ui';
+import { L } from '@/i18n/L';
 import {
   goalDiff,
   isLeagueVisibleInPlayerApp,
@@ -51,7 +52,7 @@ function displayStandingsForLeague(
 function KnockoutBracketSection({ rounds }: { rounds: KnockoutRound[] | undefined }) {
   if (!rounds?.length) {
     return (
-      <p className="max-w-full truncate text-sm text-cimento">Chaves ainda não definidas.</p>
+      <p className="max-w-full truncate text-sm text-cimento">{L('Chaves ainda não definidas.', 'Brackets not set yet.')}</p>
     );
   }
   return (
@@ -92,10 +93,10 @@ function StandingsBlock({
         <thead>
           <tr>
             <th style={{ width: '2.5rem' }} className="text-center px-1 sm:px-2">#</th>
-            <th className="px-2 sm:px-3">Equipe</th>
-            <th style={{ width: '2.5rem' }} className="text-center px-1 sm:px-2">J</th>
+            <th className="px-2 sm:px-3">{L('Equipe', 'Team')}</th>
+            <th style={{ width: '2.5rem' }} className="text-center px-1 sm:px-2">{L('J', 'P')}</th>
             <th style={{ width: '3rem' }} className="text-center px-1 sm:px-2">PTS</th>
-            <th style={{ width: '3rem' }} className="text-center px-1 sm:px-2">SG</th>
+            <th style={{ width: '3rem' }} className="text-center px-1 sm:px-2">{L('SG', 'GD')}</th>
           </tr>
         </thead>
         <tbody>
@@ -164,13 +165,13 @@ function StandingsBlock({
 }
 
 const PLAYER_SCOPE_TABS: { id: Exclude<LeagueScope, 'world'>; label: string }[] = [
-  { id: 'national', label: 'Nacionais' },
-  { id: 'state', label: 'Estaduais' },
+  { id: 'national', label: L('Nacionais', 'National') },
+  { id: 'state', label: L('Estaduais', 'State') },
 ];
 
 const TAB_META: Record<Exclude<LeagueScope, 'world'>, { num: string; eyebrow: string; subtitle: string; quote: string }> = {
-  national: { num: '01', eyebrow: 'Competições · Nacional', subtitle: 'pelo país.', quote: '“pontos corridos, mata-mata e híbridos do território nacional.”' },
-  state:    { num: '02', eyebrow: 'Competições · Estadual', subtitle: 'pelo estado.', quote: '“rivalidades regionais — onde tudo começa.”' },
+  national: { num: '01', eyebrow: L('Competições · Nacional', 'Competitions · National'), subtitle: L('pelo país.', 'across the country.'), quote: L('“pontos corridos, mata-mata e híbridos do território nacional.”', '“round-robin, knockout and hybrid across the nation.”') },
+  state:    { num: '02', eyebrow: L('Competições · Estadual', 'Competitions · State'), subtitle: L('pelo estado.', 'across the state.'), quote: L('“rivalidades regionais — onde tudo começa.”', '“regional rivalries — where it all begins.”') },
 };
 
 // Sprint 7 — As 3 ligas que o usuário quer em destaque no topo de /competicao/ligas.
@@ -188,33 +189,33 @@ const PRIMARY_LEAGUE_TABS: {
 }[] = [
   {
     id: 'global',
-    label: 'Liga Global',
+    label: L('Liga Global', 'Global League'),
     icon: Globe,
-    subtitle: 'pelo mundo.',
-    quote: 'A liga autoritativa — managers reais em divisões com promoção e rebaixamento.',
+    subtitle: L('pelo mundo.', 'around the world.'),
+    quote: L('A liga autoritativa — managers reais em divisões com promoção e rebaixamento.', 'The authoritative league — real managers in divisions with promotion and relegation.'),
     heroImage: '/login-hero.png',
     heroPos: 'center 18%',
-    heroCaption: 'Managers reais · promoção e rebaixamento',
+    heroCaption: L('Managers reais · promoção e rebaixamento', 'Real managers · promotion and relegation'),
   },
   {
     id: 'classic',
-    label: 'Liga Classic',
+    label: L('Liga Classic', 'Classic League'),
     icon: Layers,
-    subtitle: 'no campo 2D.',
-    quote: 'Cada partida CLASSIC soma pontos — ranking eterno de managers táticos.',
+    subtitle: L('no campo 2D.', 'on the 2D pitch.'),
+    quote: L('Cada partida CLASSIC soma pontos — ranking eterno de managers táticos.', 'Every CLASSIC match adds points — the all-time ranking of tactical managers.'),
     heroImage: '/hero-legacy-high.png',
     heroPos: 'center 12%',
-    heroCaption: 'Pontos corridos · ranking eterno',
+    heroCaption: L('Pontos corridos · ranking eterno', 'Round-robin · all-time ranking'),
   },
   {
     id: 'fast',
-    label: 'Fast Liga',
+    label: L('Fast Liga', 'Fast League'),
     icon: Zap,
-    subtitle: 'partida rápida.',
-    quote: 'Cada partida RÁPIDA soma pontos — quem joga mais, sobe mais rápido.',
+    subtitle: L('partida rápida.', 'quick match.'),
+    quote: L('Cada partida RÁPIDA soma pontos — quem joga mais, sobe mais rápido.', 'Every QUICK match adds points — play more, climb faster.'),
     heroImage: '/hero-legacy-full.png',
     heroPos: 'center 22%',
-    heroCaption: 'Partida rápida · sobe quem joga mais',
+    heroCaption: L('Partida rápida · sobe quem joga mais', 'Quick match · the more you play, the higher you climb'),
   },
 ];
 
@@ -256,15 +257,15 @@ export function Leagues() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6 pb-8 lg:max-w-5xl xl:max-w-6xl">
-      <BackButton to="/competicao" label="Competição" />
+      <BackButton to="/competicao" label={L('Competição', 'Competition')} />
 
       {/* ── Hero cinematográfico — muda com a tab primária selecionada ── */}
       <CinematicHero
         image={primaryMeta.heroImage}
         objectPosition={primaryMeta.heroPos}
-        badgeLabel="Competição"
+        badgeLabel={L('Competição', 'Competition')}
         BadgeIcon={Trophy}
-        eyebrow="OLE Football · Competições"
+        eyebrow={L('OLE Football · Competições', 'OLE Football · Competitions')}
         title={primaryMeta.label}
         caption={primaryMeta.heroCaption}
       />
@@ -309,9 +310,9 @@ export function Leagues() {
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="min-w-0">
               <h2 className="truncate font-impact uppercase leading-[1.1] text-[20px] text-white">
-                Ligas regionais
+                {L('Ligas regionais', 'Regional leagues')}
               </h2>
-              <Hashtag className="mt-1">{scopeTab === 'national' ? '#nacional' : '#estadual'}</Hashtag>
+              <Hashtag className="mt-1">{scopeTab === 'national' ? L('#nacional', '#national') : L('#estadual', '#state')}</Hashtag>
             </div>
             <div className="flex flex-wrap gap-2">
               {PLAYER_SCOPE_TABS.map((t) => (
@@ -339,14 +340,14 @@ export function Leagues() {
           className="border border-white/10 bg-panel p-6 text-center"
           style={{ borderRadius: 'var(--radius-md)' }}
         >
-          <p className="truncate text-sm text-cimento">Nenhuma liga regional no momento.</p>
+          <p className="truncate text-sm text-cimento">{L('Nenhuma liga regional no momento.', 'No regional leagues right now.')}</p>
         </section>
       ) : null}
 
       {/* ── Só ligas mundiais (não visíveis aqui) ── */}
       {onlyWorld ? (
         <section className="bg-panel border border-white/10 rounded-sm p-6 text-center">
-          <p className="truncate text-sm text-cimento">Nenhuma liga regional no momento.</p>
+          <p className="truncate text-sm text-cimento">{L('Nenhuma liga regional no momento.', 'No regional leagues right now.')}</p>
         </section>
       ) : null}
 
@@ -354,8 +355,8 @@ export function Leagues() {
       {!isEmpty && !onlyWorld && orderedLeagues.length > 0 ? (
         <section className="space-y-4">
           <StoreSectionHeadline
-            title="Em destaque"
-            rightLabel={orderedLeagues.length > 3 ? `${orderedLeagues.length} ligas` : undefined}
+            title={L('Em destaque', 'Featured')}
+            rightLabel={orderedLeagues.length > 3 ? L(`${orderedLeagues.length} ligas`, `${orderedLeagues.length} leagues`) : undefined}
           />
           <div className="hide-scrollbar flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-1">
             {orderedLeagues.map((lg) => {
@@ -374,7 +375,7 @@ export function Leagues() {
                     <Hashtag className="text-neon-yellow">#{LEAGUE_SCOPE_LABELS[lg.scope].toLowerCase()}</Hashtag>
                     {isPrimary ? (
                       <span className="shrink-0 bg-neon-yellow text-black px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em]">
-                        Principal
+                        {L('Principal', 'Main')}
                       </span>
                     ) : null}
                   </div>
@@ -388,7 +389,7 @@ export function Leagues() {
                     <div className="flex items-center gap-2 pt-3 border-t border-white/10">
                       <Trophy className="w-3.5 h-3.5 text-neon-yellow shrink-0" />
                       <span className="text-[13px] text-giz truncate">
-                        Líder · {champion.name}
+                        {L('Líder', 'Leader')} · {champion.name}
                       </span>
                       <ChevronRight className="w-3.5 h-3.5 text-white/40 ml-auto shrink-0" />
                     </div>
@@ -404,7 +405,7 @@ export function Leagues() {
         {noOnTab ? (
           <section className="bg-panel border border-white/10 rounded-sm p-6 text-center">
             <p className="truncate text-sm text-cimento">
-              Nenhuma competição {LEAGUE_SCOPE_LABELS[scopeTab].toLowerCase()} no momento.
+              {L(`Nenhuma competição ${LEAGUE_SCOPE_LABELS[scopeTab].toLowerCase()} no momento.`, `No ${LEAGUE_SCOPE_LABELS[scopeTab].toLowerCase()} competitions right now.`)}
             </p>
           </section>
         ) : null}
@@ -450,7 +451,7 @@ export function Leagues() {
                       </h3>
                       {isPrimary ? (
                         <span className="shrink-0 bg-neon-yellow px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-black">
-                          Principal
+                          {L('Principal', 'Main')}
                         </span>
                       ) : null}
                       <span className="max-w-full min-w-0 truncate border border-white/16 px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-cimento">
@@ -465,24 +466,24 @@ export function Leagues() {
                     </p>
                     {dateLine ? (
                       <p className="mt-1 max-w-full truncate font-mono text-[11.5px] text-cimento">
-                        <span className="text-poeira">Período: </span>
+                        <span className="text-poeira">{L('Período: ', 'Period: ')}</span>
                         {dateLine}
                       </p>
                     ) : null}
                     {lg.format === 'hybrid' && lg.hybridQualificationEndDate ? (
                       <p className="mt-0.5 max-w-full truncate font-mono text-[11.5px] text-cimento">
-                        Fim qualificação: {formatDatePt(lg.hybridQualificationEndDate)}
+                        {L('Fim qualificação', 'Qualifying ends')}: {formatDatePt(lg.hybridQualificationEndDate)}
                       </p>
                     ) : null}
                     {(lg.format === 'knockout' || lg.format === 'hybrid') && lg.knockoutStartDate ? (
                       <p className="mt-0.5 max-w-full truncate font-mono text-[11.5px] text-cimento">
-                        Mata-mata: {formatDatePt(lg.knockoutStartDate)}
-                        {lg.knockoutBracketSize ? ` · chave de ${lg.knockoutBracketSize}` : null}
+                        {L('Mata-mata', 'Knockout')}: {formatDatePt(lg.knockoutStartDate)}
+                        {lg.knockoutBracketSize ? L(` · chave de ${lg.knockoutBracketSize}`, ` · bracket of ${lg.knockoutBracketSize}`) : null}
                       </p>
                     ) : null}
                     {lg.prizeSummary ? (
                       <p className="mt-2 max-w-full break-words text-sm leading-snug text-giz lg:max-w-2xl">
-                        <span className="font-mono text-[11.5px] text-cimento">Prêmios: </span>
+                        <span className="font-mono text-[11.5px] text-cimento">{L('Prêmios: ', 'Prizes: ')}</span>
                         {lg.prizeSummary}
                       </p>
                     ) : null}
@@ -492,15 +493,15 @@ export function Leagues() {
                 <div className="grid w-full min-w-0 grid-cols-3 gap-2 sm:w-auto sm:max-w-md sm:justify-self-stretch sm:gap-2.5 md:max-w-lg md:gap-3 lg:max-w-xl">
                   <div className="min-w-0 bg-neon-yellow px-2 py-2.5 text-center text-black sm:p-3 md:px-4 md:py-4">
                     <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-black/70 sm:text-[10px]">
-                      Posição
+                      {L('Posição', 'Position')}
                     </div>
                     <div className="ole-num truncate text-xl sm:text-2xl md:text-3xl">
-                      {userPosition}º
+                      {userPosition}{L('º', '')}
                     </div>
                   </div>
                   <div className="min-w-0 border border-white/10 bg-deep-black px-2 py-2.5 text-center sm:p-3 md:px-4 md:py-4">
                     <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-cimento sm:text-[10px]">
-                      Pontos
+                      {L('Pontos', 'Points')}
                     </div>
                     <div className="ole-num truncate text-xl text-white sm:text-2xl md:text-3xl">
                       {rowMatchingClub(sorted, club.name, club.shortName)?.points ?? '—'}
@@ -508,7 +509,7 @@ export function Leagues() {
                   </div>
                   <div className="min-w-0 border border-white/10 bg-deep-black px-2 py-2.5 text-center sm:p-3 md:px-4 md:py-4">
                     <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-cimento sm:text-[10px]">
-                      Jogos
+                      {L('Jogos', 'Played')}
                     </div>
                     <div className="ole-num truncate text-xl text-white sm:text-2xl md:text-3xl">
                       {rowMatchingClub(sorted, club.name, club.shortName)?.played ?? '—'}
@@ -519,7 +520,7 @@ export function Leagues() {
 
               <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
                 <span className="mr-0.5 shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-cimento sm:mr-1">
-                  Forma
+                  {L('Forma', 'Form')}
                 </span>
                 {userForm.map((f, j) => (
                   <span
@@ -529,7 +530,7 @@ export function Leagues() {
                       f === 'W' ? 'bg-alta text-black' : f === 'D' ? 'bg-card-hi text-white' : 'bg-baixa text-white',
                     )}
                   >
-                    {f === 'W' ? 'V' : f === 'D' ? 'E' : 'D'}
+                    {f === 'W' ? L('V', 'W') : f === 'D' ? L('E', 'D') : L('D', 'L')}
                   </span>
                 ))}
               </div>
@@ -539,7 +540,7 @@ export function Leagues() {
                   <h4 className="mb-2 flex min-w-0 max-w-full items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz sm:mb-3">
                     <TrendingUp className="h-3.5 w-3.5 shrink-0 text-neon-yellow sm:h-4 sm:w-4" />
                     <span className="min-w-0 truncate">
-                      {lg.format === 'hybrid' ? 'Fase de qualificação (tabela)' : 'Classificação'}
+                      {lg.format === 'hybrid' ? L('Fase de qualificação (tabela)', 'Qualifying stage (table)') : L('Classificação', 'Standings')}
                     </span>
                   </h4>
                   <StandingsBlock sorted={sorted} clubName={club.name} clubShort={club.shortName} />
@@ -549,7 +550,7 @@ export function Leagues() {
               {showBracket ? (
                 <div className="min-w-0 max-w-full">
                   <h4 className="mb-2 max-w-full truncate font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz sm:mb-3">
-                    {lg.format === 'hybrid' ? 'Mata-mata' : 'Chaves'}
+                    {lg.format === 'hybrid' ? L('Mata-mata', 'Knockout') : L('Chaves', 'Brackets')}
                   </h4>
                   <KnockoutBracketSection rounds={lg.knockoutRounds} />
                 </div>
@@ -592,12 +593,12 @@ function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSect
 
   const statusBadge =
     status === 'waiting_teams'
-      ? { label: 'Aguardando cadastros', tone: 'text-neon-yellow border-neon-yellow/40' }
+      ? { label: L('Aguardando cadastros', 'Awaiting sign-ups'), tone: 'text-neon-yellow border-neon-yellow/40' }
       : status === 'playoffs'
-        ? { label: 'Playoffs em curso', tone: 'text-giz border-white/30' }
+        ? { label: L('Playoffs em curso', 'Playoffs in progress'), tone: 'text-giz border-white/30' }
         : status === 'active'
-          ? { label: 'Liga em curso', tone: 'text-alta border-alta/40' }
-          : { label: 'Temporada encerrada', tone: 'text-cimento border-white/16' };
+          ? { label: L('Liga em curso', 'League in progress'), tone: 'text-alta border-alta/40' }
+          : { label: L('Temporada encerrada', 'Season ended'), tone: 'text-cimento border-white/16' };
 
   const targetRoute =
     status === 'waiting_teams'
@@ -619,7 +620,7 @@ function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSect
       <div className="border-b border-white/10 p-6 md:p-7 pl-7 md:pl-8">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <Hashtag className="mb-2 text-neon-yellow">#ligaglobal · temporada 2026</Hashtag>
+            <Hashtag className="mb-2 text-neon-yellow">{L('#ligaglobal · temporada 2026', '#globalleague · season 2026')}</Hashtag>
             <h2 className="leading-[1.1]">
               <span
                 className="block font-impact uppercase text-white"
@@ -628,7 +629,7 @@ function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSect
                   letterSpacing: '0.005em',
                 }}
               >
-                LIGA GLOBAL
+                {L('LIGA GLOBAL', 'GLOBAL LEAGUE')}
               </span>
               <span
                 className="ole-num block uppercase text-neon-yellow mt-0.5"
@@ -637,12 +638,12 @@ function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSect
                 }}
               >
                 {status === 'waiting_teams'
-                  ? `${teamsCount}/${minTeamsRequired} times`
+                  ? L(`${teamsCount}/${minTeamsRequired} times`, `${teamsCount}/${minTeamsRequired} teams`)
                   : status === 'playoffs'
                     ? 'playoffs'
                     : status === 'active'
-                      ? 'em disputa'
-                      : 'encerrada'}
+                      ? L('em disputa', 'in play')
+                      : L('encerrada', 'ended')}
               </span>
             </h2>
           </div>
@@ -671,8 +672,8 @@ function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSect
             </div>
             <p className="mt-2 truncate text-[12.5px] text-cimento">
               {remaining > 0
-                ? `Faltam ${remaining} time${remaining === 1 ? '' : 's'} para iniciar os playoffs.`
-                : 'Quórum atingido — playoffs prestes a começar.'}
+                ? L(`Faltam ${remaining} time${remaining === 1 ? '' : 's'} para iniciar os playoffs.`, `${remaining} more team${remaining === 1 ? '' : 's'} needed to start the playoffs.`)
+                : L('Quórum atingido — playoffs prestes a começar.', 'Quorum reached — playoffs about to start.')}
             </p>
           </div>
         ) : null}
@@ -682,12 +683,12 @@ function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSect
           className="ole-num mt-6 inline-flex h-[50px] items-center whitespace-nowrap bg-neon-yellow px-5 text-[13px] uppercase text-black transition-colors hover:bg-white [--corte:12px] [clip-path:var(--clip-corte)]"
         >
           {status === 'waiting_teams'
-            ? 'Entrar na Liga'
+            ? L('Entrar na Liga', 'Join the League')
             : status === 'playoffs'
-              ? 'Ver Playoffs'
+              ? L('Ver Playoffs', 'View Playoffs')
               : status === 'active'
-                ? 'Ver Tabela'
-                : 'Ver Resultado'}
+                ? L('Ver Tabela', 'View Table')
+                : L('Ver Resultado', 'View Result')}
         </Link>
       </div>
 
@@ -695,7 +696,7 @@ function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSect
       <div className="p-6 md:p-7 pl-7 md:pl-8">
         <div className="mb-4 flex items-baseline justify-between gap-3">
           <h3 className="truncate font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-            Times cadastrados
+            {L('Times cadastrados', 'Registered teams')}
           </h3>
           <span className="shrink-0 font-mono text-[11px] text-cimento">
             {teamsCount} {teamsCount === 1 ? 'manager' : 'managers'}
@@ -703,7 +704,7 @@ function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSect
         </div>
 
         {teamsCount === 0 ? (
-          <p className="truncate text-[13px] text-cimento">Ninguém cadastrado ainda.</p>
+          <p className="truncate text-[13px] text-cimento">{L('Ninguém cadastrado ainda.', 'No one registered yet.')}</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[360px] overflow-y-auto pr-1">
             {sortedTeams.map((team, index) => (

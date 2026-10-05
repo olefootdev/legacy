@@ -7,11 +7,20 @@ import { motion, AnimatePresence } from 'motion/react';
 import type { NarrativeArc } from '@/match/quickNarrativeArcs';
 import { getArcDescription } from '@/match/quickNarrativeArcs';
 import { cn } from '@/lib/utils';
+import { emIngles } from '@/i18n/L';
 
 interface Props {
   arc: NarrativeArc;
   intensity: number;
 }
+
+const ARC_EN: Record<NarrativeArc, string> = {
+  late_drama: 'Late drama!',
+  collapse: 'The lead is slipping away...',
+  underdog_fight: 'Fighting against the odds!',
+  dominant_control: 'Total dominance!',
+  balanced: 'Even match',
+};
 
 export function QuickNarrativeArcIndicator({ arc, intensity }: Props) {
   if (arc === 'balanced') return null;
@@ -66,7 +75,7 @@ export function QuickNarrativeArcIndicator({ arc, intensity }: Props) {
             {getArcIcon()}
           </motion.span>
           <span className="text-xs font-bold text-white uppercase tracking-wider">
-            {getArcDescription(arc)}
+            {emIngles() ? ARC_EN[arc] : getArcDescription(arc)}
           </span>
           <div className="flex-1 h-1 bg-black/30 rounded-full overflow-hidden">
             <motion.div

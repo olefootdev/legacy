@@ -1,3 +1,4 @@
+import { L } from '@/i18n/L';
 /**
  * Sugestão de escalação (GameSpirit OLE): encaixa o elenco nos slots da formação
  * por OVR e posição, com desempates estáveis.
@@ -40,7 +41,7 @@ export function suggestBestLineup(
     return p.outForMatches <= 0;
   });
   if (eligible.length < slots.length) {
-    return { error: 'Jogadores em campo ou suspensões: não há 11 disponíveis para sugerir.' };
+    return { error: L('Jogadores em campo ou suspensões: não há 11 disponíveis para sugerir.', 'Injuries or suspensions: fewer than 11 players available to suggest.') };
   }
 
   const used = new Set<string>();
@@ -69,7 +70,7 @@ export function suggestBestLineup(
   for (const s of slots) {
     if (slotToPlayerId[s.id]) continue;
     const rest = eligible.filter((p) => !used.has(p.id)).sort((a, b) => b.ovr - a.ovr || a.id.localeCompare(b.id));
-    if (!rest[0]) return { error: 'Não foi possível fechar os 11 lugares com o elenco actual.' };
+    if (!rest[0]) return { error: L('Não foi possível fechar os 11 lugares com o elenco actual.', 'Could not fill all 11 spots with the current squad.') };
     slotToPlayerId[s.id] = rest[0].id;
     used.add(rest[0].id);
   }
@@ -78,10 +79,10 @@ export function suggestBestLineup(
   const avg = starters.reduce((a, p) => a + p.ovr, 0) / starters.length;
   const note =
     avg >= 82
-      ? 'GameSpirit: onze forte em OVR; confira em campo se encaixa no seu plano tático.'
+      ? L('GameSpirit: onze forte em OVR; confira em campo se encaixa no seu plano tático.', 'GameSpirit: strong XI by OVR; check it fits your tactical plan.')
       : avg >= 72
-        ? 'GameSpirit: equilíbrio entre posição e força; rever titulares antes de gravar.'
-        : 'GameSpirit: prioridade à posição certa; pensa em reforços no mercado.';
+        ? L('GameSpirit: equilíbrio entre posição e força; rever titulares antes de gravar.', 'GameSpirit: balance of position and strength; review starters before saving.')
+        : L('GameSpirit: prioridade à posição certa; pensa em reforços no mercado.', 'GameSpirit: right positions first; consider signings in the market.');
 
   return { slotToPlayerId, note };
 }

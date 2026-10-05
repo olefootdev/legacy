@@ -1,5 +1,6 @@
 import type { FavoriteRealTeamRef } from '@/game/types';
 import { localCrestUrl } from './crestUrl';
+import { L } from '@/i18n/L';
 
 /**
  * Catálogo de ligas × clubes para o step 3 do Cadastro (time do coração).
@@ -26,7 +27,7 @@ export const SELECAO_BRASIL: FavoriteRealTeamRef = team(6, 'Seleção Brasil');
 export const LEAGUE_BUCKETS: LeagueBucket[] = [
   {
     id: 'brasil',
-    label: 'Brasil — Série A',
+    label: L('Brasil — Série A', 'Brazil — Série A'),
     flag: '🇧🇷',
     teams: [
       team(127, 'Flamengo'),
@@ -49,7 +50,7 @@ export const LEAGUE_BUCKETS: LeagueBucket[] = [
   },
   {
     id: 'england',
-    label: 'Inglaterra — Premier League',
+    label: L('Inglaterra — Premier League', 'England — Premier League'),
     flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
     teams: [
       team(33, 'Manchester United'),
@@ -68,7 +69,7 @@ export const LEAGUE_BUCKETS: LeagueBucket[] = [
   },
   {
     id: 'spain',
-    label: 'Espanha — La Liga',
+    label: L('Espanha — La Liga', 'Spain — La Liga'),
     flag: '🇪🇸',
     teams: [
       team(541, 'Real Madrid'),
@@ -85,7 +86,7 @@ export const LEAGUE_BUCKETS: LeagueBucket[] = [
   },
   {
     id: 'italy',
-    label: 'Itália — Serie A',
+    label: L('Itália — Serie A', 'Italy — Serie A'),
     flag: '🇮🇹',
     teams: [
       team(496, 'Juventus'),
@@ -102,7 +103,7 @@ export const LEAGUE_BUCKETS: LeagueBucket[] = [
   },
   {
     id: 'germany',
-    label: 'Alemanha — Bundesliga',
+    label: L('Alemanha — Bundesliga', 'Germany — Bundesliga'),
     flag: '🇩🇪',
     teams: [
       team(157, 'Bayern Munich'),
@@ -117,7 +118,7 @@ export const LEAGUE_BUCKETS: LeagueBucket[] = [
   },
   {
     id: 'france',
-    label: 'França — Ligue 1',
+    label: L('França — Ligue 1', 'France — Ligue 1'),
     flag: '🇫🇷',
     teams: [
       team(85, 'Paris Saint-Germain'),
@@ -144,7 +145,7 @@ export const LEAGUE_BUCKETS: LeagueBucket[] = [
   },
   {
     id: 'netherlands',
-    label: 'Holanda — Eredivisie',
+    label: L('Holanda — Eredivisie', 'Netherlands — Eredivisie'),
     flag: '🇳🇱',
     teams: [
       team(194, 'Ajax'),
@@ -169,7 +170,7 @@ export const LEAGUE_BUCKETS: LeagueBucket[] = [
   },
   {
     id: 'usa',
-    label: 'EUA — MLS',
+    label: L('EUA — MLS', 'USA — MLS'),
     flag: '🇺🇸',
     teams: [
       team(1616, 'Inter Miami'),
@@ -182,7 +183,7 @@ export const LEAGUE_BUCKETS: LeagueBucket[] = [
   },
   {
     id: 'mexico',
-    label: 'México — Liga MX',
+    label: L('México — Liga MX', 'Mexico — Liga MX'),
     flag: '🇲🇽',
     teams: [
       team(2279, 'Club América'),
@@ -194,7 +195,7 @@ export const LEAGUE_BUCKETS: LeagueBucket[] = [
   },
   {
     id: 'turkey',
-    label: 'Turquia — Süper Lig',
+    label: L('Turquia — Süper Lig', 'Turkey — Süper Lig'),
     flag: '🇹🇷',
     teams: [
       team(645, 'Galatasaray'),
@@ -205,7 +206,7 @@ export const LEAGUE_BUCKETS: LeagueBucket[] = [
   },
   {
     id: 'saudi',
-    label: 'Arábia Saudita — Pro League',
+    label: L('Arábia Saudita — Pro League', 'Saudi Arabia — Pro League'),
     flag: '🇸🇦',
     teams: [
       team(2938, 'Al-Nassr'),

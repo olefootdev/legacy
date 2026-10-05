@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import type { MatchEventEntry } from '@/engine/types';
 import { quickFeedLineClass, renderQuickFeedRichText } from '@/match/quickMatchFeed';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 interface QuickMatchFeedProps {
   events: MatchEventEntry[];
@@ -41,7 +42,7 @@ export function QuickMatchFeed({
               letterSpacing: '0.22em',
             }}
           >
-            Aguardando eventos...
+            {L('Aguardando eventos...', 'Waiting for events...')}
           </p>
         </div>
       </div>
@@ -57,7 +58,7 @@ export function QuickMatchFeed({
           className="text-neon-yellow uppercase tracking-[0.35em] text-[10px] font-medium"
           style={{ fontFamily: 'var(--font-ui)' }}
         >
-          Ao vivo
+          {L('Ao vivo', 'Live')}
         </span>
         <span aria-hidden className="h-px w-8 bg-neon-yellow/40" />
       </div>

@@ -9,6 +9,7 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { definirPin, lerPinEstado, mensagemDoPin, reentrarComSenha, verificarPin } from '@/wallet/pinClient';
+import { L } from '@/i18n/L';
 
 const CHAVE_LIBERADO = 'olefoot.pin-liberado-ate';
 const VALE_POR_MS = 5 * 60 * 1000;
@@ -23,7 +24,7 @@ const CAMPO_PIN =
   'h-[50px] w-full border border-white/16 bg-card px-4 text-center font-mono text-[18px] tracking-[0.5em] ' +
   'text-white outline-none placeholder:tracking-normal placeholder:text-poeira focus:border-white/40';
 
-export function CampoPin({ valor, aoMudar, aoEnviar, placeholder = 'PIN de 6 números', foco }: {
+export function CampoPin({ valor, aoMudar, aoEnviar, placeholder = L('PIN de 6 números', '6-digit PIN'), foco }: {
   valor: string; aoMudar: (v: string) => void; aoEnviar: () => void; placeholder?: string; foco?: boolean;
 }) {
   return (
@@ -77,9 +78,9 @@ export function GateDePin({ children }: { children: ReactNode }) {
     <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-10 pt-8">
       <div>
         <p className="font-mono text-[11px] text-poeira">#pin</p>
-        <h2 className="ole-num mt-1 text-[26px] uppercase leading-tight text-white">Carteira protegida</h2>
+        <h2 className="ole-num mt-1 text-[26px] uppercase leading-tight text-white">{L('Carteira protegida', 'Wallet protected')}</h2>
         <p className="mt-1.5 text-[12.5px] leading-relaxed text-cimento">
-          Você trancou esta aba com um PIN. Ele é conferido no servidor.
+          {L('Você trancou esta aba com um PIN. Ele é conferido no servidor.', 'You locked this tab with a PIN. It is checked on the server.')}
         </p>
       </div>
       <CampoPin valor={pin} aoMudar={setPin} aoEnviar={() => void conferir()} foco />
@@ -90,7 +91,7 @@ export function GateDePin({ children }: { children: ReactNode }) {
         onClick={() => void conferir()}
         className="ole-num inline-flex h-[50px] w-full items-center justify-center bg-neon-yellow text-[13px] uppercase text-black transition-colors hover:bg-white disabled:opacity-50 [--corte:12px] [clip-path:var(--clip-corte)]"
       >
-        {conferindo ? 'Conferindo…' : 'Abrir'}
+        {conferindo ? L('Conferindo…', 'Checking…') : L('Abrir', 'Open')}
       </button>
     </div>
   );
@@ -125,8 +126,8 @@ export function PinCard() {
   const salvar = async () => {
     if (salvando) return;
     setErro(null);
-    if (pin.length !== 6) { setErro('O PIN tem 6 números.'); return; }
-    if (pin !== repete) { setErro('Os dois PINs não são iguais.'); return; }
+    if (pin.length !== 6) { setErro(L('O PIN tem 6 números.', 'The PIN has 6 digits.')); return; }
+    if (pin !== repete) { setErro(L('Os dois PINs não são iguais.', 'The two PINs don\'t match.')); return; }
     setSalvando(true);
     // Troca exige login fresco: se o servidor disser login_antigo, a senha da
     // conta reentra aqui mesmo e a troca segue — é também o caminho de quem
@@ -145,7 +146,7 @@ export function PinCard() {
     }
     if (r.motivo === 'login_antigo') {
       setPedeSenha(true);
-      setErro('Confirme a senha da sua conta pra trocar o PIN.');
+      setErro(L('Confirme a senha da sua conta pra trocar o PIN.', 'Confirm your account password to change the PIN.'));
       return;
     }
     setErro(mensagemDoPin(r.motivo));
@@ -155,11 +156,11 @@ export function PinCard() {
     <div className="border border-white/10 bg-panel px-4 py-4">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cimento">PIN da carteira</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cimento">{L('PIN da carteira', 'Wallet PIN')}</p>
           <p className="mt-1 text-[12px] leading-relaxed text-cimento">
             {temPin
-              ? 'Ativo. Abre esta aba e assina troca de carteira e time padrão.'
-              : 'Tranque esta aba e as ações da carteira com 6 números.'}
+              ? L('Ativo. Abre esta aba e assina troca de carteira e time padrão.', 'Active. Opens this tab and signs wallet and default-team changes.')
+              : L('Tranque esta aba e as ações da carteira com 6 números.', 'Lock this tab and wallet actions with 6 digits.')}
           </p>
         </div>
         {!aberto && (
@@ -168,7 +169,7 @@ export function PinCard() {
             onClick={() => setAberto(true)}
             className="ole-num shrink-0 border border-white/30 px-3.5 py-2.5 text-[12px] uppercase text-white transition-colors hover:border-white"
           >
-            {temPin ? 'Trocar' : 'Criar PIN'}
+            {temPin ? L('Trocar', 'Change') : L('Criar PIN', 'Create PIN')}
           </button>
         )}
       </div>
@@ -178,23 +179,23 @@ export function PinCard() {
           {feito ? (
             <>
               <p className="text-[12.5px] leading-relaxed text-giz">
-                PIN salvo. Guarde de cabeça: ele não aparece de novo.
+                {L('PIN salvo. Guarde de cabeça: ele não aparece de novo.', 'PIN saved. Memorize it: it won\'t be shown again.')}
               </p>
               <button type="button" onClick={fechar}
-                className="self-start text-[12px] text-poeira underline">Fechar</button>
+                className="self-start text-[12px] text-poeira underline">{L('Fechar', 'Close')}</button>
             </>
           ) : (
             <>
               <CampoPin valor={pin} aoMudar={setPin} aoEnviar={() => void salvar()}
-                placeholder={temPin ? 'novo PIN de 6 números' : 'PIN de 6 números'} foco />
+                placeholder={temPin ? L('novo PIN de 6 números', 'new 6-digit PIN') : L('PIN de 6 números', '6-digit PIN')} foco />
               <CampoPin valor={repete} aoMudar={setRepete} aoEnviar={() => void salvar()}
-                placeholder="repita o PIN" />
+                placeholder={L('repita o PIN', 'repeat the PIN')} />
               {pedeSenha && (
                 <input
                   type="password"
                   autoComplete="current-password"
                   className="h-[50px] w-full border border-white/16 bg-card px-4 text-[14px] text-white outline-none placeholder:text-poeira focus:border-white/40"
-                  placeholder="senha da sua conta"
+                  placeholder={L('senha da sua conta', 'your account password')}
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') void salvar(); }}
@@ -208,10 +209,10 @@ export function PinCard() {
                   onClick={() => void salvar()}
                   className="ole-num inline-flex h-[46px] flex-1 items-center justify-center bg-neon-yellow text-[13px] uppercase text-black transition-colors hover:bg-white disabled:opacity-50"
                 >
-                  {salvando ? 'Salvando…' : temPin ? 'Trocar PIN' : 'Criar PIN'}
+                  {salvando ? L('Salvando…', 'Saving…') : temPin ? L('Trocar PIN', 'Change PIN') : L('Criar PIN', 'Create PIN')}
                 </button>
                 <button type="button" onClick={fechar}
-                  className="border border-white/25 px-3.5 text-[12px] text-cimento">Cancelar</button>
+                  className="border border-white/25 px-3.5 text-[12px] text-cimento">{L('Cancelar', 'Cancel')}</button>
               </div>
             </>
           )}

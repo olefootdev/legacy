@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { ChangePill } from './ChangePill';
 import { Sparkline } from './Sparkline';
 import { SecaoVolt } from '@/components/ui';
+import { L, LOCALE } from '@/i18n/L';
 
 export type WatchlistEntry = {
   id: string;
@@ -24,22 +25,28 @@ type PlayerWatchlistProps = {
 const COPY = {
   watchlist: {
     eyebrow: 'Watchlist',
-    title: 'Jogadores observados',
-    cta: '+ scoutar →',
-    empty: 'Você ainda não scoutou nenhum jogador. Comece pelo Mercado.',
+    title: L('Jogadores observados', 'Watched players'),
+    cta: L('+ scoutar →', '+ scout →'),
+    empty: L('Você ainda não scoutou nenhum jogador. Comece pelo Mercado.', 'You haven\'t scouted any players yet. Start in the Market.'),
   },
   topSquad: {
-    eyebrow: 'Top do Plantel',
-    title: 'Mais valiosos',
-    cta: 'Ver plantel →',
-    empty: 'Nenhum jogador com valor de mercado registrado.',
+    eyebrow: L('Top do Plantel', 'Squad top'),
+    title: L('Mais valiosos', 'Most valuable'),
+    cta: L('Ver plantel →', 'View squad →'),
+    empty: L('Nenhum jogador com valor de mercado registrado.', 'No players with a recorded market value.'),
   },
 } as const;
+
+/** Rótulo de posição só pra tela (o valor `pos` não muda). */
+const POS_EN: Record<string, string> = {
+  GOL: 'GK', ZAG: 'CB', LAT: 'FB', LD: 'RB', LE: 'LB', VOL: 'DM', MEI: 'AM', MC: 'CM', PE: 'LW', PD: 'RW', ATA: 'ST', CA: 'ST',
+};
+const posLabel = (pos: string): string => L(pos, POS_EN[pos] ?? pos);
 
 function formatOle(n: number): string {
   if (n >= 1e6) return `${(Math.floor(n / 1e5) / 10).toFixed(1).replace(/\.0$/, '')}M`;
   if (n >= 1e3) return `${(Math.floor(n / 1e2) / 10).toFixed(1).replace(/\.0$/, '')}K`;
-  return n.toLocaleString('pt-BR');
+  return n.toLocaleString(LOCALE);
 }
 
 export function PlayerWatchlist({
@@ -81,7 +88,7 @@ export function PlayerWatchlist({
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-bold text-white truncate">{p.name}</p>
                 <p className="truncate font-mono text-[10.5px] text-cimento">
-                  {p.position} · {p.club}
+                  {posLabel(p.position)} · {p.club}
                 </p>
               </div>
               {p.spark && p.spark.length > 1 ? (

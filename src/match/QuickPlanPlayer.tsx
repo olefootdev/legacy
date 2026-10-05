@@ -67,6 +67,16 @@ import { detectLiveArc, getArcDescription } from '@/match/quickNarrativeArcs';
 import { QuickNarrativeArcIndicator } from '@/components/matchquick/QuickNarrativeArcIndicator';
 import { Hashtag } from '@/components/ui';
 import { buildAgentEcho, type AgentEchoTrait } from '@/match/quickAgentEcho';
+import { L, emIngles } from '@/i18n/L';
+
+/** Rótulo de posição só pra tela (o valor `pos` não muda). */
+const POS_EN: Record<string, string> = {
+  GOL: 'GK', ZAG: 'CB', LAT: 'FB', LD: 'RB', LE: 'LB', VOL: 'DM', MEI: 'AM', MC: 'CM', PE: 'LW', PD: 'RW', ATA: 'ST', CA: 'ST',
+};
+const posLabel = (pos: string): string => L(pos, POS_EN[pos] ?? pos);
+/** Rótulo do buff Legacy só pra tela (o valor `label` é comparado em quickPlanClient). */
+const LEGACY_LABEL_EN: Record<string, string> = { MORAL: 'MORALE', POSSE: 'POSSESSION', ATAQUE: 'ATTACK', DEFESA: 'DEFENCE' };
+const legacyLabel = (label: string): string => L(label, LEGACY_LABEL_EN[label] ?? label);
 
 /** Lance importante ganha o palco central; construção só alimenta o momento.
  *  Fruto de decisão SEMPRE aparece — o manager precisa ver a consequência. */
@@ -185,20 +195,20 @@ export interface SquadCard {
 
 /** Rótulo curto do lance pro eyebrow do banner amarelo. */
 function eventKindLabel(e: MatchPlanEvent): string {
-  if (e.kind.startsWith('goal_')) return 'Gol';
+  if (e.kind.startsWith('goal_')) return L('Gol', 'Goal');
   const base = e.kind.replace(/_(home|away)$/, '');
   return ({
-    save: 'Defesa', chance: 'Chance', woodwork: 'Na trave', counter: 'Contra-ataque',
-    penalty: 'Pênalti', red: 'Vermelho', shot: 'Finalização',
-  } as Record<string, string>)[base] ?? 'Lance';
+    save: L('Defesa', 'Save'), chance: L('Chance', 'Chance'), woodwork: L('Na trave', 'Woodwork'), counter: L('Contra-ataque', 'Counter-attack'),
+    penalty: L('Pênalti', 'Penalty'), red: L('Vermelho', 'Red card'), shot: L('Finalização', 'Shot'),
+  } as Record<string, string>)[base] ?? L('Lance', 'Play');
 }
 
 /** Estado físico em uma palavra com emoção (voz da marca). */
 function fatigueWord(f: number): string {
-  if (f <= 35) return 'inteiro';
-  if (f <= 65) return 'no ritmo';
-  if (f <= 85) return 'no limite';
-  return 'apagando';
+  if (f <= 35) return L('inteiro', 'fresh');
+  if (f <= 65) return L('no ritmo', 'in rhythm');
+  if (f <= 85) return L('no limite', 'at the limit');
+  return L('apagando', 'fading');
 }
 
 /** Nome curto pra UI: apelido entre aspas ("Juca") ou corta o sufixo " — fase".
@@ -313,7 +323,7 @@ function RosterRow({ card, isTop, rating, subbable, onSub }: {
           {shortName(card.name)}
         </span>
         <span className="block uppercase tracking-[0.14em] text-[9px]" style={{ color: tired ? 'var(--color-warning)' : 'rgba(255,255,255,0.45)' }}>
-          {card.pos} · {fatigueWord(card.fatigue)}
+          {posLabel(card.pos)} · {fatigueWord(card.fatigue)}
         </span>
       </span>
       {rating !== undefined && (
@@ -365,11 +375,11 @@ interface GoalCelebration {
 
 /** Chips do dock de estilo (ordem defesa → ataque, como o eixo do fit). */
 const STYLE_CHIPS: { id: TacticalIntensityLevel; label: string }[] = [
-  { id: 'defend', label: 'Retranca' },
-  { id: 'counter', label: 'Contra' },
-  { id: 'possession', label: 'Posse' },
-  { id: 'press', label: 'Pressão' },
-  { id: 'attack', label: 'Ataque' },
+  { id: 'defend', label: L('Retranca', 'Park the bus') },
+  { id: 'counter', label: L('Contra', 'Counter') },
+  { id: 'possession', label: L('Posse', 'Possession') },
+  { id: 'press', label: L('Pressão', 'Press') },
+  { id: 'attack', label: L('Ataque', 'Attack') },
 ];
 
 /** Formações que o seletor ao vivo cicla + viés territorial (afeta o momento). */
@@ -514,7 +524,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     styleLogRef.current.push(next); // FABLE/DNA — cada escolha marca o eixo do clube
     const m = minuteRef.current;
     momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, styleMomentumBias(next));
-    pushFeed({ id: `style-${m}`, minute: m, kind: 'decision', text: `Estilo: ${STYLE_LABEL[next]} — ${TACTICAL_INTENSITY_PRESETS[next].description}` });
+    pushFeed({ id: `style-${m}`, minute: m, kind: 'decision', text: L(`Estilo: ${STYLE_LABEL[next]} — ${TACTICAL_INTENSITY_PRESETS[next].description}`, `Style: ${STYLE_LABEL[next]} — ${TACTICAL_INTENSITY_PRESETS[next].description}`) });
     // FABLE — ECO DO AGENTE: um jogador do XI responde ao comando no feed,
     // coerente com o agentProfile dele (abraça / resmunga / cumpre). O comando
     // deixa de ser toggle mudo e vira conversa com o elenco.
@@ -561,7 +571,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     setLegacyUsedIds((prev) => new Set(prev).add(buff.id));
     setLegacyPickerOpen(false);
     momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, Math.min(18, buff.pct * 2 + 4));
-    pushFeed({ id: `legacy-${buff.id}-${m}`, minute: m, kind: 'decision', text: `Legacy: @${buff.name} +${buff.pct}% ${buff.label}` });
+    pushFeed({ id: `legacy-${buff.id}-${m}`, minute: m, kind: 'decision', text: `Legacy: @${buff.name} +${buff.pct}% ${legacyLabel(buff.label)}` });
   };
 
   /** Cicla a formação ao vivo: muda a forma do time e empurra o momento conforme
@@ -573,7 +583,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     setFormation(next);
     const m = minuteRef.current;
     momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, FORMATION_TILT[next] ?? 0);
-    pushFeed({ id: `form-${m}-${next}`, minute: m, kind: 'decision', text: `Formação: ${next}` });
+    pushFeed({ id: `form-${m}-${next}`, minute: m, kind: 'decision', text: L(`Formação: ${next}`, `Formation: ${next}`) });
   };
 
   /** Agenda o próximo passo do relógio (pausa quando uma decisão está aberta). */
@@ -618,7 +628,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     // FEEDBACK DO NARRADOR: quando o lance é fruto de uma decisão sua, o Analista
     // comenta a consequência (fecha o loop decisão → efeito).
     if (e.decision_influenced && e.reason) {
-      pushFeed({ id: `nf-${idx}`, minute: e.minute, kind: 'insight', text: `Analista — ${e.reason}.` });
+      pushFeed({ id: `nf-${idx}`, minute: e.minute, kind: 'insight', text: L(`Analista — ${e.reason}.`, `Analyst — ${e.reason}.`) });
     }
     // buildup/corner/shot ficam só no palco principal (ritmo, sem poluir o feed)
   };
@@ -710,7 +720,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       id: 'ht',
       minute: 45,
       kind: 'halftime',
-      text: `Intervalo — ${ctx.homeScore} x ${ctx.awayScore}`,
+      text: L(`Intervalo — ${ctx.homeScore} x ${ctx.awayScore}`, `Half-time — ${ctx.homeScore} x ${ctx.awayScore}`),
     });
     try {
       const h2 = await onSecondHalf?.(ctx);
@@ -809,24 +819,24 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         seed: plan.seed,
         windowMinutes: BUFF_WINDOW_MINUTES,
       }).events;
-      const side = attack ? 'ATAQUE' : 'DEFESA';
+      const side = attack ? L('ATAQUE', 'ATTACK') : L('DEFESA', 'DEFENCE');
       const positive = effect === 'positive';
       const fxKey = (fxSeqRef.current += 1);
       setFloatFx({
         key: fxKey,
         text: crit.isCrit
-          ? `⚡ ${positive ? 'ACERTO' : 'ERRO'} CRÍTICO ×${crit.mult} · ${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`
-          : `${positive ? 'ACERTO!' : 'ERROU!'} ${pct > 0 ? '+' : ''}${pct.toFixed(1)}% ${side}`,
+          ? L(`⚡ ${positive ? 'ACERTO' : 'ERRO'} CRÍTICO ×${crit.mult} · ${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`, `⚡ CRITICAL ${positive ? 'HIT' : 'MISS'} ×${crit.mult} · ${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`)
+          : `${positive ? L('ACERTO!', 'NAILED IT!') : L('ERROU!', 'MISSED!')} ${pct > 0 ? '+' : ''}${pct.toFixed(1)}% ${side}`,
         tier: crit.isCrit ? 'crit' : positive ? 'pos' : 'neg',
       });
       window.setTimeout(() => setFloatFx((f) => (f && f.key === fxKey ? null : f)), 1500);
       setActiveBuff({ pct, tier: crit.isCrit ? 'crit' : positive ? 'pos' : 'neg', untilMinute: ev.minute + BUFF_WINDOW_MINUTES });
-      pushFeed({ id: `reac-${ev.minute}`, minute: ev.minute, kind: 'decision', text: `${positive ? 'Leu bem' : 'Leu errado'}: ${choice.label}` });
+      pushFeed({ id: `reac-${ev.minute}`, minute: ev.minute, kind: 'decision', text: `${positive ? L('Leu bem', 'Good read') : L('Leu errado', 'Wrong read')}: ${choice.label}` });
     } else {
       const fxKey = (fxSeqRef.current += 1);
-      setFloatFx({ key: fxKey, text: 'Plano mantido', tier: 'neutral' });
+      setFloatFx({ key: fxKey, text: L('Plano mantido', 'Plan kept'), tier: 'neutral' });
       window.setTimeout(() => setFloatFx((f) => (f && f.key === fxKey ? null : f)), 1500);
-      pushFeed({ id: `reac-${ev.minute}`, minute: ev.minute, kind: 'decision', text: `Manteve: ${choice.label}` });
+      pushFeed({ id: `reac-${ev.minute}`, minute: ev.minute, kind: 'decision', text: L(`Manteve: ${choice.label}`, `Kept: ${choice.label}`) });
     }
 
     setLeadIn(null);
@@ -838,7 +848,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
    *  comuns destacam no palco e seguram o relógio por HOLD_MS. */
   const processSignalEvent = (next: MatchPlanEvent, idx: number) => {
     if (next.kind === 'penalty_home') {
-      pushFeed({ id: `pen-${idx}`, minute: next.minute, kind: 'penalty', text: 'Pênalti pra gente!', side: 'home' });
+      pushFeed({ id: `pen-${idx}`, minute: next.minute, kind: 'penalty', text: L('Pênalti pra gente!', 'Penalty to us!'), side: 'home' });
       setPenalty({ idx, minute: next.minute });
       setPhase('penalty');
       return;
@@ -850,25 +860,25 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         setAwayScore((v) => v + 1);
         if (scoreRef.current.away > scoreRef.current.home) wasLosingRef.current = true;
         momentumRef.current = nudgeMomentumCurve(momentumRef.current, next.minute, -15); // gol deles puxa o momento
-        setCelebration({ key: `pen-away-${idx}`, name: plan.away_short, portrait: null, narrative: goalLine(next.minute, 'Pênalti convertido pelo adversário. Dói, mas segue.'), side: 'away' });
+        setCelebration({ key: `pen-away-${idx}`, name: plan.away_short, portrait: null, narrative: goalLine(next.minute, L('Pênalti convertido pelo adversário. Dói, mas segue.', 'Penalty converted by the opponent. It hurts, but we go on.')), side: 'away' });
         setPhase('celebration');
       } else {
         momentumRef.current = nudgeMomentumCurve(momentumRef.current, next.minute, 16); // paredão! a torcida vira o jogo
-        pushFeed({ id: `pen-${idx}`, minute: next.minute, kind: 'save', text: 'PEGOU! Pênalti defendido — que paredão!', side: 'home' });
+        pushFeed({ id: `pen-${idx}`, minute: next.minute, kind: 'save', text: L('PEGOU! Pênalti defendido — que paredão!', 'SAVED! Penalty stopped — what a wall!'), side: 'home' });
         scheduleNext(HOLD_MS.big);
       }
       return;
     }
     if (next.kind === 'injury_home') {
       pushFeed({ id: `inj-${idx}`, minute: next.minute, kind: 'chance', text: next.text, side: 'home', actorId: next.actor_id });
-      setForced({ kind: 'injury', idx, minute: next.minute, outName: next.actor_name ?? 'titular', outId: next.actor_id });
+      setForced({ kind: 'injury', idx, minute: next.minute, outName: next.actor_name ?? L('titular', 'starter'), outId: next.actor_id });
       setPhase('forced');
       return;
     }
     if (next.kind === 'red_home') {
       cardsRef.current.sentOffHome += 1;
       pushFeed({ id: `red-${idx}`, minute: next.minute, kind: 'red', text: next.text, side: 'home', actorId: next.actor_id });
-      setForced({ kind: 'red', idx, minute: next.minute, outName: next.actor_name ?? 'jogador' });
+      setForced({ kind: 'red', idx, minute: next.minute, outName: next.actor_name ?? L('jogador', 'player') });
       setPhase('forced');
       return;
     }
@@ -976,7 +986,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
           const fxKey = (fxSeqRef.current += 1);
           setFloatFx({
             key: fxKey,
-            text: good ? `✓ SUA LEITURA — ${STYLE_LABEL[styleRef.current]}` : `✕ O PREÇO — ${STYLE_LABEL[styleRef.current]}`,
+            text: good ? L(`✓ SUA LEITURA — ${STYLE_LABEL[styleRef.current]}`, `✓ YOUR READ — ${STYLE_LABEL[styleRef.current]}`) : L(`✕ O PREÇO — ${STYLE_LABEL[styleRef.current]}`, `✕ THE PRICE — ${STYLE_LABEL[styleRef.current]}`),
             tier: good ? 'pos' : 'neg',
           });
           window.setTimeout(() => setFloatFx((f) => (f && f.key === fxKey ? null : f)), 1600);
@@ -1082,7 +1092,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     const f = forced;
     setForced(null);
     if (f) {
-      pushFeed({ id: `subin-${f.idx}`, minute: f.minute, kind: 'insight', text: `Entra ${inCard.name} no lugar de ${f.outName}.` });
+      pushFeed({ id: `subin-${f.idx}`, minute: f.minute, kind: 'insight', text: L(`Entra ${inCard.name} no lugar de ${f.outName}.`, `${inCard.name} comes on for ${f.outName}.`) });
       swapInField(f.outId, inCard);
     }
     setPhase('playing');
@@ -1103,7 +1113,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     setSubOut(null);
     if (outId) {
       const outCard = field.find((p) => p.id === outId);
-      pushFeed({ id: `sub-${minute}-${outId}`, minute, kind: 'insight', text: `Substituição: entra ${inCard.name}${outCard ? `, sai ${outCard.name}` : ''}.` });
+      pushFeed({ id: `sub-${minute}-${outId}`, minute, kind: 'insight', text: L(`Substituição: entra ${inCard.name}${outCard ? `, sai ${outCard.name}` : ''}.`, `Substitution: ${inCard.name} on${outCard ? `, ${outCard.name} off` : ''}.`) });
       swapInField(outId, inCard);
       bumpSubs(1); // conta no teto de 5
       // Efeito real no resto do jogo (sem replan): OVR + pernas frescas + encaixe.
@@ -1126,7 +1136,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     setForced(null);
     if (f) {
       eventsRef.current = applyManDownPenalty({ events: eventsRef.current, fromIndex: f.idx + 1, seed: plan.seed });
-      pushFeed({ id: `red10-${f.idx}`, minute: f.minute, kind: 'insight', text: 'Analista — com um a menos, vai ser na raça.' });
+      pushFeed({ id: `red10-${f.idx}`, minute: f.minute, kind: 'insight', text: L('Analista — com um a menos, vai ser na raça.', 'Analyst — a man down, it\'s all heart now.') });
     }
     setPhase('playing');
     scheduleNext(500);
@@ -1151,14 +1161,14 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         key: `pen-${pen.idx}`,
         name: taker.name,
         portrait: taker.portrait,
-        narrative: `Pênalti! ${taker.name} bate com categoria e marca!`,
+        narrative: L(`Pênalti! ${taker.name} bate com categoria e marca!`, `Penalty! ${taker.name} strikes with class and scores!`),
         side: 'home',
       });
       setPhase('celebration');
     } else {
       // PÊNALTI PERDIDO: choque psicológico — o momento pende pro adversário (#2).
       momentumRef.current = nudgeMomentumCurve(momentumRef.current, pen.minute, -16);
-      pushFeed({ id: `penm-${pen.idx}`, minute: pen.minute, kind: 'chance', text: `${taker.name} bateu o pênalti e o goleiro pegou! Que azar.`, side: 'home', actorId: taker.id });
+      pushFeed({ id: `penm-${pen.idx}`, minute: pen.minute, kind: 'chance', text: L(`${taker.name} bateu o pênalti e o goleiro pegou! Que azar.`, `${taker.name} took the penalty and the keeper saved it! Unlucky.`), side: 'home', actorId: taker.id });
       setPhase('playing');
       scheduleNext(900);
     }
@@ -1199,17 +1209,17 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         windowMinutes: BUFF_WINDOW_MINUTES, // buff dura ~10s (janela de minutos)
       });
       eventsRef.current = res.events;
-      pushFeed({ id: `d-${beat.id}`, minute: beat.minute, kind: 'decision', text: `Você: ${choice.label}` });
+      pushFeed({ id: `d-${beat.id}`, minute: beat.minute, kind: 'decision', text: L(`Você: ${choice.label}`, `You: ${choice.label}`) });
 
       // FX flutuante do impacto (sobe da barra de momento e some) + chip de buff ativo.
-      const side = choice.target_side === 'away' ? 'DEFESA' : 'ATAQUE';
+      const side = choice.target_side === 'away' ? L('DEFESA', 'DEFENCE') : L('ATAQUE', 'ATTACK');
       const sign = effectivePct > 0 ? '+' : '';
       const fxTier: 'pos' | 'neg' | 'neutral' | 'crit' =
         crit.isCrit ? 'crit' : effect === 'positive' ? 'pos' : effect === 'negative' ? 'neg' : 'neutral';
       const fxText = effect === 'neutral'
-        ? 'Plano mantido'
+        ? L('Plano mantido', 'Plan kept')
         : crit.isCrit
-          ? `⚡ CRÍTICO ×${crit.mult} · ${sign}${effectivePct.toFixed(1)}% ${side}`
+          ? `⚡ ${L('CRÍTICO', 'CRITICAL')} ×${crit.mult} · ${sign}${effectivePct.toFixed(1)}% ${side}`
           : `${sign}${effectivePct.toFixed(1)}% ${side}`;
       const key = (fxSeqRef.current += 1);
       setFloatFx({ key, text: fxText, tier: fxTier });
@@ -1270,21 +1280,21 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     // Neutro NUNCA repete "Jogo equilibrado" (a barra de momento já diz isso):
     // aponta o que vai TIPAR o jogo, girando por minuto pra não repetir a linha.
     const balancedReads = [
-      bestHome ? `Pode abrir ${bestHome.label}` : 'Quem marcar primeiro decide',
-      threat ? `Olho ${threat.label} deles` : 'Jogo de detalhes',
-      'Quem marcar primeiro decide',
+      bestHome ? L(`Pode abrir ${bestHome.label}`, `Can open up ${bestHome.label}`) : L('Quem marcar primeiro decide', 'First goal decides it'),
+      threat ? L(`Olho ${threat.label} deles`, `Watch their ${threat.label}`) : L('Jogo de detalhes', 'Game of fine margins'),
+      L('Quem marcar primeiro decide', 'First goal decides it'),
     ];
     const headline = press >= 58
-      ? `${homeShort} no ataque`
+      ? L(`${homeShort} no ataque`, `${homeShort} on the attack`)
       : press <= 42
-      ? `${awayShort} pressiona`
+      ? L(`${awayShort} pressiona`, `${awayShort} pressing`)
       : balancedReads[Math.floor(currentMinute / 6) % balancedReads.length]!;
     // Detalhe gira por minuto pra não ficar estático (3 leituras reais).
     const beat = Math.floor(currentMinute / 7) % 3;
     let detail: string;
-    if (beat === 0 && bestHome) detail = `Tua força: ${bestHome.label}`;
-    else if (beat === 1 && threat) detail = `O perigo deles: ${threat.label}`;
-    else detail = `Finalizações ${hShots} – ${aShots}`;
+    if (beat === 0 && bestHome) detail = L(`Tua força: ${bestHome.label}`, `Your edge: ${bestHome.label}`);
+    else if (beat === 1 && threat) detail = L(`O perigo deles: ${threat.label}`, `Their threat: ${threat.label}`);
+    else detail = L(`Finalizações ${hShots} – ${aShots}`, `Shots ${hShots} – ${aShots}`);
     return { headline, detail, press };
   })();
 
@@ -1359,7 +1369,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         {/* Minuto */}
         <div className="flex justify-center mt-2">
           <span className="font-display tabular-nums text-neon-yellow text-[13px] font-bold tracking-[0.1em]">
-            {phase === 'beat' || phase === 'clutch' || phase === 'penalty' || phase === 'forced' || phase === 'leadin' ? '⏸ ' : phase === 'halftime' ? 'INTERVALO · ' : ''}{currentMinute}&prime;
+            {phase === 'beat' || phase === 'clutch' || phase === 'penalty' || phase === 'forced' || phase === 'leadin' ? '⏸ ' : phase === 'halftime' ? L('INTERVALO · ', 'HALF-TIME · ') : ''}{currentMinute}&prime;
           </span>
         </div>
       </div>
@@ -1448,14 +1458,14 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       <div className="px-5 pt-3">
         {/* Header do dock: rótulo + RISCO do estilo atual (trade-off legível). */}
         <div className="flex items-center justify-between px-0.5 mb-1.5">
-          <span className="font-display uppercase tracking-[0.2em] text-[9px] font-black text-white/40">Estilo</span>
+          <span className="font-display uppercase tracking-[0.2em] text-[9px] font-black text-white/40">{L('Estilo', 'Style')}</span>
           {(() => {
             const d = TACTICAL_INTENSITY_PRESETS[style].defensiveBonus;
             const r = d <= -0.08
-              ? { t: 'Risco alto', c: 'var(--color-danger)' }
+              ? { t: L('Risco alto', 'High risk'), c: 'var(--color-danger)' }
               : d <= 0.05
-              ? { t: 'Risco médio', c: 'var(--color-warning)' }
-              : { t: 'Risco baixo', c: 'var(--color-success)' };
+              ? { t: L('Risco médio', 'Medium risk'), c: 'var(--color-warning)' }
+              : { t: L('Risco baixo', 'Low risk'), c: 'var(--color-success)' };
             return <span className="font-display uppercase tracking-[0.16em] text-[9px] font-black" style={{ color: r.c }}>{r.t}</span>;
           })()}
         </div>
@@ -1497,8 +1507,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
           const legendary = !!hl && hl.kind.startsWith('goal_')
             && new SpiritRng(hashSeed(`${plan.seed}:legend:${hl.minute}:${hl.kind}`)).next() < 0.08;
           const eyebrow = legendary
-            ? `✦ Frase Lendária · ${currentMinute}'`
-            : hl ? `${eventKindLabel(hl)} · ${currentMinute}'` : `Ao vivo · ${currentMinute}'`;
+            ? `✦ ${L('Frase Lendária', 'Legendary Line')} · ${currentMinute}'`
+            : hl ? `${eventKindLabel(hl)} · ${currentMinute}'` : `${L('Ao vivo', 'Live')} · ${currentMinute}'`;
           const headline = hl ? hl.text : liveRead.headline;
           const detail = hl ? hl.reason : liveRead.detail;
           // VOLT2: lance épico vira placa volt chapada (impacto pela cor, sem brilho).
@@ -1564,7 +1574,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                   className="font-display uppercase tracking-[0.32em] text-[9px] font-black mb-2"
                   style={{ color: tone }}
                 >
-                  Atenção
+                  {L('Atenção', 'Heads up')}
                 </motion.p>
                 <p
                   className="font-impact text-white leading-[1.1]"
@@ -1620,10 +1630,10 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               className="text-center"
             >
               <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-neon-yellow mb-2">
-                Intervalo
+                {L('Intervalo', 'Half-time')}
               </p>
               <p className="text-[12px] text-white/60">
-                Recalculando o jogo com as suas decisões…
+                {L('Recalculando o jogo com as suas decisões…', 'Recalculating the match with your decisions…')}
               </p>
             </motion.div>
           )}
@@ -1638,13 +1648,13 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               style={{ borderColor: 'var(--color-border)', borderLeftColor: 'var(--color-neon-yellow)', borderRadius: 'var(--radius-md)' }}
             >
               <p className="px-4 pt-3 pb-1 flex items-center gap-2 font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">
-                <Target className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> Pênalti · {penalty.minute}&prime;
+                <Target className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Pênalti', 'Penalty')} · {penalty.minute}&prime;
               </p>
-              <p className="px-4 pb-3 text-sm text-white font-semibold">Quem vai bater?</p>
+              <p className="px-4 pb-3 text-sm text-white font-semibold">{L('Quem vai bater?', 'Who takes it?')}</p>
               <div className="px-3 pb-3 flex flex-col gap-1.5">
                 {(penaltyTakers && penaltyTakers.length > 0
                   ? penaltyTakers
-                  : [{ id: 'def', name: eventsRef.current[penalty.idx]?.actor_name ?? 'Capitão', finalizacao: 75, portrait: null }]
+                  : [{ id: 'def', name: eventsRef.current[penalty.idx]?.actor_name ?? L('Capitão', 'Captain'), finalizacao: 75, portrait: null }]
                 ).slice(0, 4).map((t) => (
                   <button
                     key={t.id}
@@ -1688,11 +1698,11 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                   <>
                     <p className="px-4 pt-3 flex items-center gap-2 font-display uppercase tracking-[0.28em] text-[10px] font-black" style={{ color: tk }}>
                       <Icon className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden />
-                      {atk ? 'Chance de gol' : 'Perigo na área'} · {clutch.moment.minute}&prime;
+                      {atk ? L('Chance de gol', 'Goal chance') : L('Perigo na área', 'Danger in the box')} · {clutch.moment.minute}&prime;
                     </p>
                     <p className="px-4 pt-1.5 pb-1 text-sm text-white font-bold">{clutch.moment.context}</p>
                     <p className="px-4 pb-3 text-[11px] text-white/55">
-                      {atk ? `${clutch.moment.actorName} na bola — o que fazer?` : 'Decisão na hora — como parar?'}
+                      {atk ? L(`${clutch.moment.actorName} na bola — o que fazer?`, `${clutch.moment.actorName} on the ball — what now?`) : L('Decisão na hora — como parar?', 'Split-second call — how to stop it?')}
                     </p>
                     <div className="px-3 pb-3 grid grid-cols-3 gap-1.5">
                       {clutch.moment.options.map((o) => (
@@ -1725,15 +1735,15 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               style={{ borderColor: 'var(--color-border)', borderLeftColor: 'var(--color-warning)', borderRadius: 'var(--radius-md)' }}
             >
               <p className="px-4 pt-3 pb-1 flex items-center gap-2 font-display uppercase tracking-[0.28em] text-[10px] font-black" style={{ color: 'var(--color-warning)' }}>
-                <Cross className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> Lesão · {forced.minute}&prime;
+                <Cross className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Lesão', 'Injury')} · {forced.minute}&prime;
               </p>
               <p className="px-4 pb-3 text-sm text-white font-semibold">
-                {forced.outName} caiu. Quem entra?
+                {L(`${forced.outName} caiu. Quem entra?`, `${forced.outName} is down. Who comes on?`)}
               </p>
               <div className="px-3 pb-3 flex flex-col gap-1.5">
                 {(benchPool.length > 0
                   ? benchPool
-                  : [{ id: 'res', name: 'Reserva', pos: '—', ovr: 70, fatigue: 0, portrait: null }]
+                  : [{ id: 'res', name: L('Reserva', 'Sub'), pos: '—', ovr: 70, fatigue: 0, portrait: null }]
                 ).slice(0, 4).map((b) => (
                   <button
                     key={b.id}
@@ -1746,7 +1756,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                   >
                     <span className="ole-num text-[15px] w-8 shrink-0 text-center" style={{ color: 'var(--color-warning)' }}>{b.ovr}</span>
                     <span className="flex-1 text-[13px] font-bold text-white group-hover:text-black">{b.name}</span>
-                    <span className="text-[10px] uppercase tracking-[0.12em] text-white/45 group-hover:text-black/60">{b.pos}</span>
+                    <span className="text-[10px] uppercase tracking-[0.12em] text-white/45 group-hover:text-black/60">{posLabel(b.pos)}</span>
                   </button>
                 ))}
               </div>
@@ -1764,12 +1774,14 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
             >
               <div className="px-4 pt-3 pb-1 flex items-center justify-between">
                 <span className="flex items-center gap-2 font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">
-                  <ArrowRightLeft className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> Substituição · {minute}&prime;
+                  <ArrowRightLeft className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Substituição', 'Substitution')} · {minute}&prime;
                 </span>
-                <button type="button" onClick={() => { setSubOut(null); setPhase('playing'); scheduleNext(300); }} className="text-[10px] text-white/40 hover:text-white uppercase tracking-[0.14em]">Cancelar</button>
+                <button type="button" onClick={() => { setSubOut(null); setPhase('playing'); scheduleNext(300); }} className="text-[10px] text-white/40 hover:text-white uppercase tracking-[0.14em]">{L('Cancelar', 'Cancel')}</button>
               </div>
               <p className="px-4 pb-3 text-[12px] text-white/70">
-                Sai <span className="text-white font-bold">{field.find((p) => p.id === subOut)?.name}</span> — quem entra? <span className="text-white/40">(qualquer posição)</span>
+                {emIngles()
+                  ? <>Off: <span className="text-white font-bold">{field.find((p) => p.id === subOut)?.name}</span> — who comes on? <span className="text-white/40">(any position)</span></>
+                  : <>Sai <span className="text-white font-bold">{field.find((p) => p.id === subOut)?.name}</span> — quem entra? <span className="text-white/40">(qualquer posição)</span></>}
               </p>
               <div className="px-3 pb-3 flex flex-col gap-1.5">
                 {benchPool.map((b) => (
@@ -1784,7 +1796,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                   >
                     <span className="ole-num text-[15px] text-neon-yellow group-hover:text-black w-8 shrink-0 text-center">{b.ovr}</span>
                     <span className="flex-1 text-[13px] font-bold text-white group-hover:text-black">{b.name}</span>
-                    <span className="text-[10px] uppercase tracking-[0.12em] text-white/45 group-hover:text-black/60">{b.pos} · fad {Math.round(b.fatigue)}%</span>
+                    <span className="text-[10px] uppercase tracking-[0.12em] text-white/45 group-hover:text-black/60">{posLabel(b.pos)} · {L('fad', 'fat')} {Math.round(b.fatigue)}%</span>
                   </button>
                 ))}
               </div>
@@ -1801,10 +1813,10 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               style={{ borderColor: 'var(--color-border)', borderLeftColor: 'var(--color-danger)', borderRadius: 'var(--radius-md)' }}
             >
               <p className="px-4 pt-4 flex items-center justify-center gap-2 font-display uppercase tracking-[0.28em] text-[10px] font-black" style={{ color: 'var(--color-danger)' }}>
-                <AlertTriangle className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> Cartão Vermelho · {forced.minute}&prime;
+                <AlertTriangle className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Cartão Vermelho', 'Red Card')} · {forced.minute}&prime;
               </p>
               <p className="px-4 pt-1 pb-3 text-sm text-white font-semibold">
-                {forced.outName} foi expulso. Vai ter que segurar com 10!
+                {L(`${forced.outName} foi expulso. Vai ter que segurar com 10!`, `${forced.outName} sent off. Hold on with 10!`)}
               </p>
               <div className="px-4 pb-4">
                 <button
@@ -1813,7 +1825,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                   className="w-full py-2.5 text-black font-display uppercase tracking-[0.16em] text-[12px] font-black transition-all active:scale-[0.99] hover:bg-white"
                   style={{ backgroundColor: 'var(--color-danger)', borderRadius: 'var(--radius-sm)' }}
                 >
-                  Segurar com 10
+                  {L('Segurar com 10', 'Hold with 10')}
                 </button>
               </div>
             </motion.div>
@@ -1851,10 +1863,10 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 // No empate, a disputa de pênaltis decide o vencedor.
                 const decided = shootoutResult ? shootoutResult.winner : homeScore > awayScore ? 'home' : homeScore < awayScore ? 'away' : null;
                 const res = decided === 'home' ? 'win' : decided === 'away' ? 'loss' : 'draw';
-                const resWord = res === 'win' ? 'Vitória' : res === 'loss' ? 'Não foi dessa vez' : 'Empate';
+                const resWord = res === 'win' ? L('Vitória', 'Win') : res === 'loss' ? L('Não foi dessa vez', 'Not this time') : L('Empate', 'Draw');
                 const resColor = res === 'win' ? 'var(--color-success)' : res === 'loss' ? 'var(--color-danger)' : 'var(--color-neon-yellow)';
                 const detail = shootoutResult
-                  ? `nos pênaltis ${shootoutResult.homeTally}–${shootoutResult.awayTally}`
+                  ? L(`nos pênaltis ${shootoutResult.homeTally}–${shootoutResult.awayTally}`, `on penalties ${shootoutResult.homeTally}–${shootoutResult.awayTally}`)
                   : getArcDescription(plan.narrative_arc); // #14: arco em PT legível
                 return (
                   <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black mb-4 text-center" style={{ color: resColor }}>
@@ -1883,12 +1895,12 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 const mvp = proj ?? fallback;
                 if (!mvp) return null;
                 const parts: string[] = [];
-                if (mvp.goals > 0) parts.push(`${mvp.goals} ${mvp.goals === 1 ? 'gol' : 'gols'}`);
+                if (mvp.goals > 0) parts.push(`${mvp.goals} ${mvp.goals === 1 ? L('gol', 'goal') : L('gols', 'goals')}`);
                 if (mvp.assists > 0) parts.push(`${mvp.assists} ${mvp.assists === 1 ? 'assist.' : 'assist.'}`);
-                parts.push(`Nota ${mvp.rating.toFixed(1)}`);
+                parts.push(`${L('Nota', 'Rating')} ${mvp.rating.toFixed(1)}`);
                 return (
                   <div className="mb-4 px-5 py-5 bg-neon-yellow" style={{ borderRadius: 'var(--radius-md)' }}>
-                    <Hashtag className="mb-2 text-black/70">#craquedojogo #mvp</Hashtag>
+                    <Hashtag className="mb-2 text-black/70">{L('#craquedojogo #mvp', '#playerofthematch #mvp')}</Hashtag>
                     <p
                       className="font-impact uppercase text-black leading-[1.05]"
                       style={{ fontSize: 'clamp(34px, 9vw, 52px)' }}
@@ -1906,9 +1918,9 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               {/* Estatísticas do jogo */}
               <div className="grid grid-cols-3 gap-px bg-white/8 border border-white/8 text-center mb-4" style={{ borderRadius: 'var(--radius-sm)' }}>
                 {[
-                  { l: 'Posse', h: `${doneInfo.stats.possessionHome}%`, a: `${100 - doneInfo.stats.possessionHome}%` },
-                  { l: 'Finalizações', h: doneInfo.stats.homeShots, a: doneInfo.stats.awayShots },
-                  { l: 'Defesas', h: doneInfo.stats.homeSaves, a: doneInfo.stats.awaySaves },
+                  { l: L('Posse', 'Possession'), h: `${doneInfo.stats.possessionHome}%`, a: `${100 - doneInfo.stats.possessionHome}%` },
+                  { l: L('Finalizações', 'Shots'), h: doneInfo.stats.homeShots, a: doneInfo.stats.awayShots },
+                  { l: L('Defesas', 'Saves'), h: doneInfo.stats.homeSaves, a: doneInfo.stats.awaySaves },
                 ].map((s) => (
                   <div key={s.l} className="bg-deep-black py-3">
                     <p className="ole-num text-neon-yellow text-lg leading-none">{s.h}</p>
@@ -1921,7 +1933,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               {/* Leitura de Jogo — o placar da inteligência do manager */}
               <div className="border-t border-white/8 pt-3">
                 <p className="font-display uppercase tracking-[0.26em] text-[10px] font-black text-neon-yellow mb-2 text-center">
-                  Leitura de Jogo · {doneInfo.reading.good}/{doneInfo.reading.total}
+                  {L('Leitura de Jogo', 'Game Reading')} · {doneInfo.reading.good}/{doneInfo.reading.total}
                 </p>
                 {narration?.reading && (
                   <p className="text-white/85 text-[15px] leading-snug text-center mb-3 px-2">
@@ -1930,7 +1942,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 )}
                 {doneInfo.verdicts.length === 0 ? (
                   <p className="text-[11px] text-white/50 text-center">
-                    Você não decidiu nada — o Analista falou sozinho.
+                    {L('Você não decidiu nada — o Analista falou sozinho.', 'You decided nothing — the Analyst talked to himself.')}
                   </p>
                 ) : (
                   <ul className="flex flex-col gap-1.5">
@@ -1949,7 +1961,9 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 )}
                 {doneInfo.skipped > 0 && (
                   <p className="text-[11px] text-white/40 mt-2 text-center">
-                    Você deixou passar {doneInfo.skipped} decisã{doneInfo.skipped === 1 ? 'o' : 'ões'} — o Analista chamou e ninguém respondeu.
+                    {emIngles()
+                      ? `You let ${doneInfo.skipped} decision${doneInfo.skipped === 1 ? '' : 's'} slip — the Analyst called and nobody answered.`
+                      : <>Você deixou passar {doneInfo.skipped} decisã{doneInfo.skipped === 1 ? 'o' : 'ões'} — o Analista chamou e ninguém respondeu.</>}
                   </p>
                 )}
               </div>
@@ -1974,7 +1988,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               )}
               <div className="min-w-0 flex-1">
                 <p className="font-display uppercase tracking-[0.24em] text-[9px] font-black text-neon-yellow mb-0.5">
-                  {latest.minute}&prime; · Narração
+                  {latest.minute}&prime; · {L('Narração', 'Commentary')}
                 </p>
                 <p className={`text-[14px] leading-snug ${FEED_STYLE[latest.kind]}`} style={{ fontFamily: 'var(--font-sans)' }}>
                   {richText(latest.text, '15px')}
@@ -2020,7 +2034,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                     border: legacyActive || canPick ? 'none' : '1px solid var(--color-border)',
                   }}
                 >
-                  {legacyActive ? '★ Legacy ativo' : allUsed ? '★ Legacy usado' : noLegend ? '★ Sem lenda' : `★ Legacy (${availableBoosters.length})`}
+                  {legacyActive ? L('★ Legacy ativo', '★ Legacy active') : allUsed ? L('★ Legacy usado', '★ Legacy used') : noLegend ? L('★ Sem lenda', '★ No legend') : `★ Legacy (${availableBoosters.length})`}
                 </button>
               </div>
             </div>
@@ -2029,7 +2043,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
             {legacyPickerOpen && canPick && (
               <div className="mt-2 flex flex-col gap-1.5" style={{ borderRadius: 'var(--radius-sm)' }}>
                 <p className="text-[9px] uppercase tracking-[0.16em] text-white/40 font-display font-bold px-0.5">
-                  Ativar buff — defesa sob pressão · ataque pra pressionar
+                  {L('Ativar buff — defesa sob pressão · ataque pra pressionar', 'Activate buff — defence under pressure · attack to push')}
                 </p>
                 {availableBoosters.map((b) => {
                   const def = b.label === 'DEFESA';
@@ -2053,7 +2067,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                           border: `1px solid ${def ? 'var(--color-success, #22c55e)' : 'var(--color-neon-yellow)'}`,
                         }}
                       >
-                        +{b.pct}% {b.label}
+                        +{b.pct}% {legacyLabel(b.label)}
                       </span>
                     </button>
                   );
@@ -2071,13 +2085,13 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
           <div className="flex items-center gap-2 mb-0.5">
             {homeCrestUrl && <img src={homeCrestUrl} alt="" className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />}
             <span className="font-display uppercase tracking-[0.24em] text-[9px] font-black text-neon-yellow truncate">
-              {homeName ?? plan.home_short} · em campo
+              {homeName ?? plan.home_short} · {L('em campo', 'on the pitch')}
             </span>
             {/* Teto de substituições — toque num jogador pra trocar. */}
             <span
               className="ml-auto shrink-0 flex items-center gap-1 font-display uppercase tracking-[0.14em] text-[9px] font-black"
               style={{ color: subsUsed >= MAX_SUBS ? 'var(--color-warning)' : 'rgba(255,255,255,0.5)' }}
-              title="Substituições usadas (intervalo + jogo)"
+              title={L('Substituições usadas (intervalo + jogo)', 'Substitutions used (half-time + match)')}
             >
               <ArrowRightLeft className="w-3 h-3" strokeWidth={2.5} aria-hidden />
               {subsUsed}/{MAX_SUBS}

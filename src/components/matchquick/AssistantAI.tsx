@@ -6,6 +6,7 @@ import { useState, useRef, useEffect, type FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bot, X, Send, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 // ─── Tipos de chat ────────────────────────────────────────────────────────
 interface ChatChoice {
@@ -86,7 +87,7 @@ export function AssistantAI({
           ...prev,
           {
             role: 'assistant',
-            text: 'Qual formação você quer adotar?',
+            text: L('Qual formação você quer adotar?', 'Which formation do you want?'),
             choices: script.formations.map((f, i) => ({
               label: `${i + 1}) ${f.label}`,
               value: `ht:formation:${f.id}`,
@@ -101,7 +102,7 @@ export function AssistantAI({
           ...prev,
           {
             role: 'assistant',
-            text: 'Qual estilo de jogo?',
+            text: L('Qual estilo de jogo?', 'Which play style?'),
             choices: script.playStyles.map((s, i) => ({
               label: `${i + 1}) ${s.label}`,
               value: `ht:style:${s.id}`,
@@ -116,7 +117,7 @@ export function AssistantAI({
           ...prev,
           {
             role: 'assistant',
-            text: 'Top 3 mais cansados — quem sai?',
+            text: L('Top 3 mais cansados — quem sai?', 'Top 3 most tired — who comes off?'),
             choices: script.tiredPlayers.map((p, i) => ({
               label: `${i + 1}) ${p.label}`,
               value: `ht:sub:${p.id}`,
@@ -132,7 +133,7 @@ export function AssistantAI({
         script.onPickFormation(id);
         setChatHistory((prev) => [
           ...prev,
-          { role: 'assistant', text: 'Formação ajustada. Bom jogo!' },
+          { role: 'assistant', text: L('Formação ajustada. Bom jogo!', 'Formation set. Good game!') },
         ]);
         return;
       }
@@ -141,7 +142,7 @@ export function AssistantAI({
         script.onPickPlayStyle(id);
         setChatHistory((prev) => [
           ...prev,
-          { role: 'assistant', text: 'Estilo aplicado. Vai com tudo!' },
+          { role: 'assistant', text: L('Estilo aplicado. Vai com tudo!', 'Style applied. Go for it!') },
         ]);
         return;
       }
@@ -150,7 +151,7 @@ export function AssistantAI({
         script.onPickTiredPlayer(id);
         setChatHistory((prev) => [
           ...prev,
-          { role: 'assistant', text: 'Beleza, vou abrir o banco pra você escolher quem entra.' },
+          { role: 'assistant', text: L('Beleza, vou abrir o banco pra você escolher quem entra.', 'Okay, opening the bench so you can pick who comes on.') },
         ]);
         return;
       }
@@ -165,11 +166,11 @@ export function AssistantAI({
     setChatHistory([
       {
         role: 'assistant',
-        text: 'Intervalo. Quer mudar algo?',
+        text: L('Intervalo. Quer mudar algo?', 'Half-time. Want to change anything?'),
         choices: [
-          { label: '1) Mudar formação', value: 'ht:menu:formation' },
-          { label: '2) Estilo de jogo', value: 'ht:menu:style' },
-          { label: '3) Substituir jogador', value: 'ht:menu:sub' },
+          { label: L('1) Mudar formação', '1) Change formation'), value: 'ht:menu:formation' },
+          { label: L('2) Estilo de jogo', '2) Play style'), value: 'ht:menu:style' },
+          { label: L('3) Substituir jogador', '3) Substitute player'), value: 'ht:menu:sub' },
         ],
         onChoice: buildHalftimeChoiceHandler(),
       },
@@ -194,9 +195,9 @@ export function AssistantAI({
     let response = '';
 
     // Comandos de substituição
-    if (lowerMsg.includes('substituir') || lowerMsg.includes('trocar')) {
+    if (lowerMsg.includes('substituir') || lowerMsg.includes('trocar') || lowerMsg.includes('sub') || lowerMsg.includes('swap')) {
       if (benchPlayers.length === 0) {
-        response = 'Não há jogadores disponíveis no banco para substituição.';
+        response = L('Não há jogadores disponíveis no banco para substituição.', 'No players available on the bench.');
       } else {
         // Encontrar jogador mais cansado
         const mostTired = availablePlayers.reduce((prev, curr) =>
@@ -207,43 +208,43 @@ export function AssistantAI({
 
         if (substitute && onSubstitution) {
           onSubstitution(mostTired.id, substitute.id, 'tactical');
-          response = `Substituição realizada: ${mostTired.name} saiu, ${substitute.name} entrou.`;
+          response = L(`Substituição realizada: ${mostTired.name} saiu, ${substitute.name} entrou.`, `Substitution made: ${mostTired.name} off, ${substitute.name} on.`);
         }
       }
     }
     // Comandos táticos
-    else if (lowerMsg.includes('pressão') || lowerMsg.includes('pressao') || lowerMsg.includes('atacar')) {
+    else if (lowerMsg.includes('pressão') || lowerMsg.includes('pressao') || lowerMsg.includes('atacar') || lowerMsg.includes('press') || lowerMsg.includes('attack')) {
       if (onTacticalChange) {
         onTacticalChange('PRESSAO_ALTA');
-        response = 'Tática alterada para PRESSÃO ALTA. Time mais agressivo!';
+        response = L('Tática alterada para PRESSÃO ALTA. Time mais agressivo!', 'Tactics set to HIGH PRESS. More aggressive team!');
       }
     }
-    else if (lowerMsg.includes('defender') || lowerMsg.includes('defesa') || lowerMsg.includes('segurar')) {
+    else if (lowerMsg.includes('defender') || lowerMsg.includes('defesa') || lowerMsg.includes('segurar') || lowerMsg.includes('defend') || lowerMsg.includes('hold')) {
       if (onTacticalChange) {
         onTacticalChange('BLOCO_BAIXO');
-        response = 'Tática alterada para BLOCO BAIXO. Defesa reforçada!';
+        response = L('Tática alterada para BLOCO BAIXO. Defesa reforçada!', 'Tactics set to LOW BLOCK. Defense reinforced!');
       }
     }
     else if (lowerMsg.includes('equilibr') || lowerMsg.includes('balanc') || lowerMsg.includes('normal')) {
       if (onTacticalChange) {
         onTacticalChange('POSSE_CONTROLADA');
-        response = 'Tática alterada para POSSE CONTROLADA. Jogo equilibrado!';
+        response = L('Tática alterada para POSSE CONTROLADA. Jogo equilibrado!', 'Tactics set to CONTROLLED POSSESSION. Balanced game!');
       }
     }
-    else if (lowerMsg.includes('contra') || lowerMsg.includes('rápid') || lowerMsg.includes('rapido')) {
+    else if (lowerMsg.includes('contra') || lowerMsg.includes('rápid') || lowerMsg.includes('rapido') || lowerMsg.includes('counter') || lowerMsg.includes('fast')) {
       if (onTacticalChange) {
         onTacticalChange('TRANSICAO_RAPIDA');
-        response = 'Tática alterada para TRANSIÇÃO RÁPIDA. Contra-ataques ativados!';
+        response = L('Tática alterada para TRANSIÇÃO RÁPIDA. Contra-ataques ativados!', 'Tactics set to FAST TRANSITION. Counter-attacks on!');
       }
     }
     // Análise do jogo
-    else if (lowerMsg.includes('como') && (lowerMsg.includes('jogo') || lowerMsg.includes('partida'))) {
+    else if ((lowerMsg.includes('como') && (lowerMsg.includes('jogo') || lowerMsg.includes('partida'))) || (lowerMsg.includes('how') && (lowerMsg.includes('game') || lowerMsg.includes('match')))) {
       const avgFatigue = availablePlayers.reduce((sum, p) => sum + p.fatigue, 0) / availablePlayers.length;
-      response = `Análise do jogo:\n• Fadiga média: ${Math.round(avgFatigue)}%\n• Jogadores disponíveis: ${availablePlayers.length}\n• Banco: ${benchPlayers.length} jogadores`;
+      response = L(`Análise do jogo:\n• Fadiga média: ${Math.round(avgFatigue)}%\n• Jogadores disponíveis: ${availablePlayers.length}\n• Banco: ${benchPlayers.length} jogadores`, `Match analysis:\n• Average fatigue: ${Math.round(avgFatigue)}%\n• Available players: ${availablePlayers.length}\n• Bench: ${benchPlayers.length} players`);
     }
     // Resposta padrão
     else {
-      response = `Entendi! Posso ajudar com:\n• "Substituir jogador cansado"\n• "Pressionar mais"\n• "Defender resultado"\n• "Como está o jogo?"`;
+      response = L(`Entendi! Posso ajudar com:\n• "Substituir jogador cansado"\n• "Pressionar mais"\n• "Defender resultado"\n• "Como está o jogo?"`, `Got it! I can help with:\n• "Sub tired player"\n• "Press more"\n• "Defend the lead"\n• "How's the game going?"`);
     }
 
     setChatHistory(prev => [...prev, { role: 'assistant', text: response }]);
@@ -270,7 +271,7 @@ export function AssistantAI({
             onClick={() => setIsOpen(true)}
             className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-[100] flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center bg-deep-black border-2 border-neon-yellow text-neon-yellow transition-colors hover:bg-neon-yellow hover:text-black"
             style={{ borderRadius: 'var(--radius-pill)' }}
-            aria-label="Assistente tático"
+            aria-label={L('Assistente tático', 'Tactical assistant')}
           >
             <Bot className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.5} />
           </motion.button>
@@ -306,7 +307,7 @@ export function AssistantAI({
                       lineHeight: 1,
                     }}
                   >
-                    Assistente Tático
+                    {L('Assistente Tático', 'Tactical Assistant')}
                   </p>
                 </div>
               </div>
@@ -314,7 +315,7 @@ export function AssistantAI({
                 onClick={() => setIsOpen(false)}
                 className="shrink-0 inline-flex h-8 w-8 items-center justify-center text-white/50 transition-colors hover:bg-white/10 hover:text-white"
                 style={{ borderRadius: 'var(--radius-sm)' }}
-                aria-label="Fechar"
+                aria-label={L('Fechar', 'Close')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -336,10 +337,10 @@ export function AssistantAI({
                       letterSpacing: '0.24em',
                     }}
                   >
-                    Olá, treinador
+                    {L('Olá, treinador', 'Hello, coach')}
                   </p>
                   <p className="text-xs text-white/45 max-w-xs leading-relaxed">
-                    Peça tática, substituição ou leitura do jogo.
+                    {L('Peça tática, substituição ou leitura do jogo.', 'Ask for tactics, a sub or a match read.')}
                   </p>
                 </div>
               ) : (
@@ -429,7 +430,7 @@ export function AssistantAI({
                   type="text"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Digite o comando..."
+                  placeholder={L('Digite o comando...', 'Type a command...')}
                   disabled={isProcessing}
                   className="flex-1 border border-white/15 bg-black/50 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-neon-yellow/60 focus:outline-none disabled:opacity-50"
                   style={{ borderRadius: 'var(--radius-sm)' }}
@@ -443,7 +444,7 @@ export function AssistantAI({
                     letterSpacing: '0.22em',
                     borderRadius: 'var(--radius-sm)',
                   }}
-                  aria-label="Enviar"
+                  aria-label={L('Enviar', 'Send')}
                 >
                   <Send className="h-4 w-4" />
                 </button>

@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { Badge } from './Badge';
 import { moedaDoJogo } from '@/wallet/constants';
+import { L } from '@/i18n/L';
 
 type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
 
@@ -118,7 +119,7 @@ export function PackCard({
               disabled={disabled}
               className="bg-neon-yellow text-black font-display font-bold uppercase tracking-[0.12em] text-[13px] px-5 py-2.5 [clip-path:var(--clip-corte)] hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="inline-block">Adquirir</span>
+              <span className="inline-block">{L('Adquirir', 'Get')}</span>
             </button>
           </div>
         </div>

@@ -4,18 +4,19 @@
  */
 import { useEffect, useState } from 'react';
 
+import { L } from '@/i18n/L';
 const NEON = '#FDE100';
 
 // Momentum label derivado de posse + posição da bola
 function deriveMomentumLabel(possession: 'home' | 'away', ballX: number): string {
   const bias = possession === 'home' ? ballX / 100 : 1 - ballX / 100;
-  if (bias > 0.72) return 'dominando';
-  if (bias > 0.58) return 'em cima';
-  if (bias > 0.45) return 'leve pressão';
-  if (bias > 0.38) return 'equilíbrio';
-  if (bias > 0.28) return 'leve momentum';
-  if (bias > 0.18) return 'acuado';
-  return 'sufocado';
+  if (bias > 0.72) return L('dominando', 'dominating');
+  if (bias > 0.58) return L('em cima', 'on top');
+  if (bias > 0.45) return L('leve pressão', 'slight pressure');
+  if (bias > 0.38) return L('equilíbrio', 'balanced');
+  if (bias > 0.28) return L('leve momentum', 'slight momentum');
+  if (bias > 0.18) return L('acuado', 'pinned back');
+  return L('sufocado', 'smothered');
 }
 
 // Classifica pelo kind real do engine, com fallback por texto
@@ -89,7 +90,7 @@ export function NarrativeBar({ lastEventText, lastEventKind, possession, ballX, 
         whiteSpace: 'nowrap',
         transition: 'color 300ms ease',
       }}>
-        {displayText ?? `${minute}' — Partida em andamento`}
+        {displayText ?? `${minute}' — ${L('Partida em andamento', 'Match in progress')}`}
       </span>
 
       {/* Separador */}
@@ -111,7 +112,7 @@ export function NarrativeBar({ lastEventText, lastEventKind, possession, ballX, 
           color: momentumColor,
           transition: 'color 600ms ease',
         }}>
-          {possession === 'home' ? 'OLE' : 'ADV'} {momentumLabel}
+          {possession === 'home' ? 'OLE' : L('ADV', 'OPP')} {momentumLabel}
         </span>
       </div>
     </div>

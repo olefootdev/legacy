@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 import { useGameStore } from '@/game/store';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 
@@ -339,7 +340,7 @@ export function MatchdayVersusWithClock({
           <span
             className="mt-0.5 font-display text-[10px] font-black tabular-nums tracking-tight text-neon-yellow min-[400px]:text-xs sm:text-sm"
             aria-live="polite"
-            aria-label={`Contagem regressiva: ${scoreboardCountdownSec} segundos`}
+            aria-label={L(`Contagem regressiva: ${scoreboardCountdownSec} segundos`, `Countdown: ${scoreboardCountdownSec} seconds`)}
           >
             {scoreboardCountdownSec}
           </span>

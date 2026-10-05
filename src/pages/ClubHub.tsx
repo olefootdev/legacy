@@ -6,6 +6,7 @@ import { HubSectionCard } from '@/components/ui/HubSectionCard';
 import { StatTile } from '@/components/ui/StatTile';
 import { managerScoreToday } from '@/systems/managerScore/managerScore';
 import { Hashtag } from '@/components/ui';
+import { L, LOCALE, emIngles } from '@/i18n/L';
 
 /**
  * Ações do clube. O trilho amarelo é do HubSectionCard — nada de cor por categoria.
@@ -19,45 +20,45 @@ const quickActions: Array<{
   href: string;
 }> = [
   {
-    eyebrow: '#plantel',
-    title: 'Elenco',
-    description: 'Escalação e formação',
-    cta: 'Abrir elenco',
+    eyebrow: L('#plantel', '#squad'),
+    title: L('Elenco', 'Squad'),
+    description: L('Escalação e formação', 'Lineup and formation'),
+    cta: L('Abrir elenco', 'Open squad'),
     href: '/clube/elenco',
   },
   {
-    eyebrow: '#mercado',
-    title: 'Valores',
-    description: 'Preço vivo e vendas',
-    cta: 'Ver valores',
+    eyebrow: L('#mercado', '#market'),
+    title: L('Valores', 'Values'),
+    description: L('Preço vivo e vendas', 'Live price and sales'),
+    cta: L('Ver valores', 'View values'),
     href: '/clube/valores',
   },
   {
-    eyebrow: '#desenvolvimento',
-    title: 'Treino',
-    description: 'Individual e coletivo',
-    cta: 'Programar treino',
+    eyebrow: L('#desenvolvimento', '#development'),
+    title: L('Treino', 'Training'),
+    description: L('Individual e coletivo', 'Individual and team'),
+    cta: L('Programar treino', 'Schedule training'),
     href: '/clube/treino',
   },
   {
-    eyebrow: '#comissao',
+    eyebrow: L('#comissao', '#staff'),
     title: 'Staff',
-    description: 'Profissionais e coach',
-    cta: 'Gerir staff',
+    description: L('Profissionais e coach', 'Professionals and coach'),
+    cta: L('Gerir staff', 'Manage staff'),
     href: '/clube/staff',
   },
   {
-    eyebrow: '#base',
-    title: 'Academia',
-    description: 'Jovens promessas',
-    cta: 'Ver promessas',
+    eyebrow: L('#base', '#youth'),
+    title: L('Academia', 'Academy'),
+    description: L('Jovens promessas', 'Young prospects'),
+    cta: L('Ver promessas', 'View prospects'),
     href: '/clube/academia',
   },
   {
-    eyebrow: '#infraestrutura',
-    title: 'Estruturas',
-    description: 'Instalações e upgrades',
-    cta: 'Visitar estruturas',
+    eyebrow: L('#infraestrutura', '#facilities'),
+    title: L('Estruturas', 'Facilities'),
+    description: L('Instalações e upgrades', 'Facilities and upgrades'),
+    cta: L('Visitar estruturas', 'Visit facilities'),
     href: '/clube/estruturas',
   },
 ];
@@ -90,7 +91,7 @@ export function ClubHub() {
           competia com a própria manchete. Agora é o que o layer final pede —
           alinhado à esquerda, eyebrow com risco, nome do clube em Anton. */}
       <section
-        aria-label="Clube"
+        aria-label={L('Clube', 'Club')}
         className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8"
       >
         <motion.div
@@ -101,7 +102,7 @@ export function ClubHub() {
           style={{ paddingBlock: 'clamp(28px, 6vw, 52px)' }}
         >
           <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-            Teu clube
+            {L('Teu clube', 'Your club')}
           </span>
           <h1
             className="mt-2 font-impact uppercase"
@@ -118,14 +119,14 @@ export function ClubHub() {
             className="mt-3"
             style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'rgba(13,13,13,0.62)' }}
           >
-            {playerCount} {playerCount === 1 ? 'jogador' : 'jogadores'} no plantel ·{' '}
+            {playerCount} {L(`${playerCount === 1 ? 'jogador' : 'jogadores'} no plantel`, `${playerCount === 1 ? 'player' : 'players'} in the squad`)} ·{' '}
             {club.shortName ?? club.name.slice(0, 3).toUpperCase()}
           </p>
         </motion.div>
       </section>
 
       {/* Pontuação do Manager — destaque do core-engagement no topo do hub */}
-      <section aria-label="Pontuação do manager">
+      <section aria-label={L('Pontuação do manager', 'Manager score')}>
         <div
           className="ole-poster ole-rail relative flex items-center justify-between gap-4 overflow-hidden px-5 py-4 sm:px-6 sm:py-5"
         >
@@ -139,10 +140,10 @@ export function ClubHub() {
             </span>
             <div className="min-w-0">
               <p className="font-display text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">
-                Pontuação do manager
+                {L('Pontuação do manager', 'Manager score')}
               </p>
               <p className="font-impact leading-none text-neon-yellow tabular-nums" style={{ fontSize: 'clamp(30px, 7vw, 46px)' }}>
-                {scoreTotal.toLocaleString('pt-BR')}
+                {scoreTotal.toLocaleString(LOCALE)}
               </p>
             </div>
           </div>
@@ -152,11 +153,11 @@ export function ClubHub() {
                 className="inline-flex items-center gap-1 border border-neon-yellow/40 bg-neon-yellow/10 px-3 py-1.5 font-display text-xs font-black uppercase tracking-wider text-neon-yellow tabular-nums"
                 style={{ borderRadius: 'var(--radius-sm)' }}
               >
-                +{scoreToday.toLocaleString('pt-BR')} hoje
+                +{scoreToday.toLocaleString(LOCALE)} {L('hoje', 'today')}
               </span>
             ) : (
               <span className="block max-w-[9rem] text-[11px] leading-snug text-white/45">
-                Gerir o clube rende pontos hoje.
+                {L('Gerir o clube rende pontos hoje.', 'Managing the club earns points today.')}
               </span>
             )}
           </div>
@@ -166,23 +167,29 @@ export function ClubHub() {
       {/* IPO DE CLUBE: manager sem time completo pode ESTREAR comprando um
           pronto — a vitrine de times inteiros do mercado de elenco. */}
       {playerCount < 11 ? (
-        <section aria-label="Comprar um time pronto">
+        <section aria-label={L('Comprar um time pronto', 'Buy a ready-made team')}>
           <a
             href="/clube/valores"
             className="ole-poster ole-rail flex flex-wrap items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-white/[0.04]"
           >
             <div>
               <p className="font-display text-[10px] font-bold uppercase tracking-[0.24em] text-neon-yellow">
-                Estreia de dono
+                {L('Estreia de dono', 'Owner debut')}
               </p>
               <p className="mt-1 text-sm text-white/75">
-                Teu plantel tem {playerCount} jogador(es). Dá pra começar do zero — ou{' '}
-                <strong className="text-white">comprar um time PRONTO</strong>, treinado por outro manager,
-                na vitrine em OLEFOOT.
+                {emIngles() ? (
+                  <>Your squad has {playerCount} player(s). You can start from scratch — or{' '}
+                  <strong className="text-white">buy a READY team</strong>, trained by another manager,
+                  in the OLEFOOT showcase.</>
+                ) : (
+                  <>Teu plantel tem {playerCount} jogador(es). Dá pra começar do zero — ou{' '}
+                  <strong className="text-white">comprar um time PRONTO</strong>, treinado por outro manager,
+                  na vitrine em OLEFOOT.</>
+                )}
               </p>
             </div>
             <span className="bg-neon-yellow px-4 py-2 font-display text-[11px] font-black uppercase text-black">
-              Ver times à venda
+              {L('Ver times à venda', 'View teams for sale')}
             </span>
           </a>
         </section>
@@ -191,7 +198,7 @@ export function ClubHub() {
       {/* Ações do clube — o primeiro card vem em destaque amarelo. */}
       <section>
         <h2 className="ole-eyebrow-poster mb-4" style={{ fontSize: '13px' }}>
-          Acesso rápido
+          {L('Acesso rápido', 'Quick access')}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {quickActions.map((action, i) => (
@@ -213,13 +220,13 @@ export function ClubHub() {
       {/* Visão geral — StatTiles editoriais */}
       <section>
         <h2 className="ole-eyebrow-poster mb-4" style={{ fontSize: '13px' }}>
-          Visão geral
+          {L('Visão geral', 'Overview')}
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatTile value={playerCount} label="Jogadores" tone="accent" />
-          <StatTile value={staffLevel} label="Staff" hint="nível somado" />
-          <StatTile value={academyCount} label="Academia" hint="crias reveladas" />
-          <StatTile value={structuresLevel} label="Estruturas" hint="nível somado" />
+          <StatTile value={playerCount} label={L('Jogadores', 'Players')} tone="accent" />
+          <StatTile value={staffLevel} label="Staff" hint={L('nível somado', 'total level')} />
+          <StatTile value={academyCount} label={L('Academia', 'Academy')} hint={L('crias reveladas', 'homegrown talents')} />
+          <StatTile value={structuresLevel} label={L('Estruturas', 'Facilities')} hint={L('nível somado', 'total level')} />
         </div>
       </section>
     </div>

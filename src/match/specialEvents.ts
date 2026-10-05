@@ -5,6 +5,7 @@
 
 import type { PitchPlayerState } from '@/engine/types';
 import type { SpiritContext } from '@/gamespirit/types';
+import { L } from '@/i18n/L';
 
 export type SpecialEventType =
   | 'bicycle_kick'
@@ -46,7 +47,7 @@ export function tryBicycleKick(
     playerId: shooter.playerId,
     playerName: shooter.name,
     minute: ctx.minute,
-    narrative: `${ctx.minute}' — BICICLETA ESPETACULAR DE ${shooter.name.toUpperCase()}! O estádio está em pé!`,
+    narrative: L(`${ctx.minute}' — BICICLETA ESPETACULAR DE ${shooter.name.toUpperCase()}! O estádio está em pé!`, `${ctx.minute}' — SPECTACULAR BICYCLE KICK FROM ${shooter.name.toUpperCase()}! The stadium is on its feet!`),
     effect: {
       xGBonus: 1.5, // +50% chance de gol
     },
@@ -71,7 +72,7 @@ export function tryThunderstrike(
     playerId: shooter.playerId,
     playerName: shooter.name,
     minute: ctx.minute,
-    narrative: `${ctx.minute}' — BOMBA DE FORA DA ÁREA! ${shooter.name.toUpperCase()} solta o pé!`,
+    narrative: L(`${ctx.minute}' — BOMBA DE FORA DA ÁREA! ${shooter.name.toUpperCase()} solta o pé!`, `${ctx.minute}' — ROCKET FROM OUTSIDE THE BOX! ${shooter.name.toUpperCase()} lets fly!`),
     effect: {
       xGBonus: 2.0, // dobra chance de gol
     },
@@ -98,7 +99,7 @@ export function tryGoalkeeperAssist(
     playerId: gk.playerId,
     playerName: gk.name,
     minute: ctx.minute,
-    narrative: `${ctx.minute}' — Lançamento cirúrgico do goleiro ${gk.name}! Atacante livre!`,
+    narrative: L(`${ctx.minute}' — Lançamento cirúrgico do goleiro ${gk.name}! Atacante livre!`, `${ctx.minute}' — Pinpoint long ball from goalkeeper ${gk.name}! Striker free!`),
     effect: {
       xGBonus: 1.3,
     },
@@ -118,7 +119,7 @@ export function tryInjuryScare(
     playerId: victim.playerId,
     playerName: victim.name,
     minute: ctx.minute,
-    narrative: `${ctx.minute}' — ${victim.name} levou uma pancada feia... consegue continuar, mas está sentindo.`,
+    narrative: L(`${ctx.minute}' — ${victim.name} levou uma pancada feia... consegue continuar, mas está sentindo.`, `${ctx.minute}' — ${victim.name} took a nasty knock... can carry on, but he's feeling it.`),
     effect: {
       fatigueIncrease: 15,
       durationMinutes: 3,
@@ -140,9 +141,9 @@ export function tryCrowdRoarBoost(
   return {
     type: 'crowd_roar_boost',
     playerId: 'team',
-    playerName: ctx.homeShort ?? 'Casa',
+    playerName: ctx.homeShort ?? L('Casa', 'Home'),
     minute: ctx.minute,
-    narrative: `${ctx.minute}' — A TORCIDA EMPURRA O TIME! ${ctx.homeShort?.toUpperCase()} sente a energia do estádio!`,
+    narrative: L(`${ctx.minute}' — A TORCIDA EMPURRA O TIME! ${ctx.homeShort?.toUpperCase()} sente a energia do estádio!`, `${ctx.minute}' — THE CROWD DRIVES THE TEAM ON! ${ctx.homeShort?.toUpperCase()} feel the stadium's energy!`),
     effect: {
       accuracyBoost: 0.20, // +20% shot accuracy
       durationMinutes: 5,
@@ -163,9 +164,9 @@ export function tryMiraculousSave(
   return {
     type: 'miraculous_save',
     playerId: 'away_gk',
-    playerName: 'Goleiro',
+    playerName: L('Goleiro', 'Goalkeeper'),
     minute: ctx.minute,
-    narrative: `${ctx.minute}' — DEFESA MILAGROSA! O goleiro voa e salva o impossível!`,
+    narrative: L(`${ctx.minute}' — DEFESA MILAGROSA! O goleiro voa e salva o impossível!`, `${ctx.minute}' — MIRACLE SAVE! The keeper flies and saves the impossible!`),
     effect: {
       xGBonus: 0.3, // reduz xG do próximo chute
       durationMinutes: 2,

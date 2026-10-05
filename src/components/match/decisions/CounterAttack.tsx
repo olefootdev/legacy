@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { ArrowUp, ArrowUpRight, Crosshair, Timer, ArrowDown, MoveDown } from 'lucide-react';
 import { DecisionPromptCard } from './DecisionPromptCard';
+import { L } from '@/i18n/L';
 
 export type CounterAttChoice = 'middle' | 'wing' | 'shot';
 export type CounterDefChoice = 'delay' | 'inside' | 'press';
@@ -9,14 +10,14 @@ export function CounterAttacker({ onChoose, onTimeout }: { onChoose: (c: Counter
   const handle = useCallback((id: string) => onChoose(id as CounterAttChoice), [onChoose]);
   return (
     <DecisionPromptCard
-      title="Contra-ataque"
+      title={L('Contra-ataque', 'Counter')}
       timeoutMs={5000}
       onChoose={handle}
       onTimeout={onTimeout}
       choices={[
-        { id: 'middle', icon: <ArrowUp      size={32} />, label: 'Meio', tone: 'mid' },
-        { id: 'wing',   icon: <ArrowUpRight size={32} />, label: 'Lado', tone: 'safe' },
-        { id: 'shot',   icon: <Crosshair    size={32} />, label: 'Chuta', tone: 'risk' },
+        { id: 'middle', icon: <ArrowUp      size={32} />, label: L('Meio', 'Middle'), tone: 'mid' },
+        { id: 'wing',   icon: <ArrowUpRight size={32} />, label: L('Lado', 'Wide'), tone: 'safe' },
+        { id: 'shot',   icon: <Crosshair    size={32} />, label: L('Chuta', 'Shoot'), tone: 'risk' },
       ]}
     />
   );
@@ -26,14 +27,14 @@ export function CounterDefender({ onChoose, onTimeout }: { onChoose: (c: Counter
   const handle = useCallback((id: string) => onChoose(id as CounterDefChoice), [onChoose]);
   return (
     <DecisionPromptCard
-      title="Defesa"
+      title={L('Defesa', 'Defence')}
       timeoutMs={5000}
       onChoose={handle}
       onTimeout={onTimeout}
       choices={[
-        { id: 'delay',  icon: <Timer    size={32} />, label: 'Atrasa', tone: 'safe' },
-        { id: 'inside', icon: <ArrowDown size={32} />, label: 'Dentro', tone: 'mid' },
-        { id: 'press',  icon: <MoveDown  size={32} />, label: 'Press.', tone: 'risk' },
+        { id: 'delay',  icon: <Timer    size={32} />, label: L('Atrasa', 'Delay'), tone: 'safe' },
+        { id: 'inside', icon: <ArrowDown size={32} />, label: L('Dentro', 'Inside'), tone: 'mid' },
+        { id: 'press',  icon: <MoveDown  size={32} />, label: L('Press.', 'Press'), tone: 'risk' },
       ]}
     />
   );

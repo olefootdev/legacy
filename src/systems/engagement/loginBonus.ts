@@ -22,6 +22,7 @@ import type {
   LoginBonusReward,
   ManagerPresence,
 } from './types';
+import { L } from '@/i18n/L';
 
 const STREAK_BREAK_HOURS = 24;
 
@@ -67,10 +68,10 @@ function computeReward(
 
   // Slots especiais
   if (streakSlots > 0 && streakSlots % 8 === 0) {
-    return { kind: 'pack_rare', label: 'Pack Raro (streak épica)' };
+    return { kind: 'pack_rare', label: L('Pack Raro (streak épica)', 'Rare Pack (epic streak)') };
   }
   if (streakSlots > 0 && streakSlots % 4 === 0) {
-    return { kind: 'pack_basic', label: 'Pack Básico' };
+    return { kind: 'pack_basic', label: L('Pack Básico', 'Basic Pack') };
   }
   if (streakSlots >= 6) {
     return {

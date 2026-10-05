@@ -8,6 +8,7 @@ import type { PlayerEntity } from '@/entities/types';
 import { TacticalSimLoop } from '@/simulation/TacticalSimLoop';
 import { truthSnapshotToTest2dPitch } from '@/engine/test2d/truthToTest2dPitch';
 import type { MatchSimulationEvent } from '@/match/events/matchSimulationContract';
+import { L } from '@/i18n/L';
 
 export type LegacyEventKind =
   | 'corner'
@@ -367,7 +368,7 @@ export function useLegacyMatchEngine(
    */
   const applySkillToPlayer = useCallback((playerId: string, skillId: string): { ok: boolean; message: string } => {
     const loop = loopRef.current;
-    if (!loop) return { ok: false, message: 'Engine não inicializado' };
+    if (!loop) return { ok: false, message: L('Engine não inicializado', 'Engine not initialised') };
     const gameTime = loop.getSimState().minute * 60;
     const res = loop.skillActivation.activateSkill(playerId, skillId, gameTime, playersByIdRef.current);
     if (res.success) {
@@ -379,9 +380,9 @@ export function useLegacyMatchEngine(
       window.setTimeout(() => {
         setActivatedSkills((prev) => prev.filter((s) => !(s.playerId === playerId && s.skillId === skillId && s.activatedAt === gameTime)));
       }, 30_000);
-      return { ok: true, message: `${player?.name ?? playerId} ativou ${skillId}` };
+      return { ok: true, message: L(`${player?.name ?? playerId} ativou ${skillId}`, `${player?.name ?? playerId} activated ${skillId}`) };
     }
-    return { ok: false, message: res.reason ?? 'Falha ao ativar skill' };
+    return { ok: false, message: res.reason ?? L('Falha ao ativar skill', 'Failed to activate skill') };
   }, []);
 
   /**

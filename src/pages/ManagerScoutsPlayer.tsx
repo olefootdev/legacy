@@ -43,6 +43,8 @@ import type { PlayerAttributes } from '@/entities/types';
 import type { PlayerEvolutionPoint } from '@/team/playerEvolutionTimeline';
 import type { PlayerTimelineEvent, Severity } from '@/insights/client';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
+import { rotuloPosicao } from '@/transfer/marketFilters';
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
@@ -62,13 +64,13 @@ function formatTimeAgo(iso: string): string {
   const now = Date.now();
   const then = new Date(iso).getTime();
   const diff = now - then;
-  if (diff < 60_000) return 'agora';
+  if (diff < 60_000) return L('agora', 'now');
   const m = Math.floor(diff / 60_000);
-  if (m < 60) return `há ${m}min`;
+  if (m < 60) return L(`há ${m}min`, `${m}min ago`);
   const h = Math.floor(m / 60);
-  if (h < 24) return `há ${h}h`;
+  if (h < 24) return L(`há ${h}h`, `${h}h ago`);
   const d = Math.floor(h / 24);
-  return `há ${d}d`;
+  return L(`há ${d}d`, `${d}d ago`);
 }
 
 function formatTimeLeft(ms: number): string {
@@ -79,6 +81,30 @@ function formatTimeLeft(ms: number): string {
   if (h < 24) return `${h}h`;
   return `${Math.floor(h / 24)}d`;
 }
+
+/** Rótulos de tela — as chaves continuam as do schema. */
+const ROTULO_ATRIBUTO: Record<keyof PlayerAttributes, string> = {
+  passe: L('passe', 'passing'),
+  marcacao: L('marcacao', 'marking'),
+  velocidade: L('velocidade', 'pace'),
+  drible: L('drible', 'dribbling'),
+  finalizacao: L('finalizacao', 'finishing'),
+  fisico: L('fisico', 'physical'),
+  tatico: L('tatico', 'tactical'),
+  mentalidade: L('mentalidade', 'mentality'),
+  confianca: L('confianca', 'confidence'),
+  fairPlay: L('fairPlay', 'fair play'),
+  cabeceio: L('cabeceio', 'heading'),
+  bolaParada: L('bolaParada', 'set pieces'),
+  penalti: L('penalti', 'penalties'),
+};
+
+const ROTULO_DIMENSAO: Record<string, string> = {
+  physical: L('physical', 'physical'),
+  psychological: L('psychological', 'psychological'),
+  reputational: L('reputational', 'reputational'),
+  financial: L('financial', 'financial'),
+};
 
 // ─── Severity styling ──────────────────────────────────────────────
 
@@ -133,7 +159,7 @@ function HeroCard({
           }}
         >
           <ShieldOff size={10} />
-          Indisponível{outForMatches > 0 ? ` · ${outForMatches}P` : ''}
+          {L('Indisponível', 'Unavailable')}{outForMatches > 0 ? ` · ${outForMatches}${L('P', 'M')}` : ''}
         </div>
       )}
 
@@ -156,7 +182,7 @@ function HeroCard({
               borderRadius: 'var(--radius-sm)',
             }}
           >
-            {pos}
+            {rotuloPosicao(pos)}
           </div>
         </div>
 
@@ -174,7 +200,7 @@ function HeroCard({
                 textTransform: 'uppercase',
               }}
             >
-              Painel de Transparência
+              {L('Painel de Transparência', 'Transparency Panel')}
             </span>
           </div>
           <h1
@@ -212,7 +238,7 @@ function HeroCard({
                   textTransform: 'uppercase',
                 }}
               >
-                valor atual
+                {L('valor atual', 'current value')}
               </span>
             </div>
           )}
@@ -235,35 +261,39 @@ function StatusGrid({
 }) {
   const cells = [
     {
-      label: 'Físico',
+      key: 'physical',
+      label: L('Físico', 'Physical'),
       value: `${100 - fatigue}%`,
-      hint: fatigue > 70 ? 'Exausto' : fatigue > 40 ? 'Cansado' : 'Pronto',
+      hint: fatigue > 70 ? L('Exausto', 'Exhausted') : fatigue > 40 ? L('Cansado', 'Tired') : L('Pronto', 'Ready'),
       Icon: Activity,
       tone: fatigue > 70 ? 'urgent' : fatigue > 40 ? 'negative' : 'positive',
     },
     {
-      label: 'Moral',
+      key: 'morale',
+      label: L('Moral', 'Morale'),
       value: `${moral}%`,
-      hint: moral >= 70 ? 'Confiante' : moral < 40 ? 'Abalado' : 'Estável',
+      hint: moral >= 70 ? L('Confiante', 'Confident') : moral < 40 ? L('Abalado', 'Shaken') : L('Estável', 'Stable'),
       Icon: Heart,
       tone: moral >= 70 ? 'positive' : moral < 40 ? 'negative' : 'neutral',
     },
     {
-      label: 'Forma',
+      key: 'form',
+      label: L('Forma', 'Form'),
       value: formStreak > 0 ? `+${formStreak}` : `${formStreak}`,
       hint:
         formStreak >= 3
-          ? 'Em alta'
+          ? L('Em alta', 'On the rise')
           : formStreak <= -3
-          ? 'Em baixa'
-          : 'Equilibrada',
+          ? L('Em baixa', 'Slumping')
+          : L('Equilibrada', 'Steady'),
       Icon: formStreak >= 0 ? TrendingUp : TrendingDown,
       tone: formStreak >= 2 ? 'positive' : formStreak <= -2 ? 'negative' : 'neutral',
     },
     {
-      label: 'Risco lesão',
+      key: 'injury',
+      label: L('Risco lesão', 'Injury risk'),
       value: `${injuryRisk}%`,
-      hint: injuryRisk >= 70 ? 'Crítico' : injuryRisk >= 40 ? 'Atenção' : 'Baixo',
+      hint: injuryRisk >= 70 ? L('Crítico', 'Critical') : injuryRisk >= 40 ? L('Atenção', 'Caution') : L('Baixo', 'Low'),
       Icon: AlertTriangle,
       tone: injuryRisk >= 70 ? 'urgent' : injuryRisk >= 40 ? 'negative' : 'positive',
     },
@@ -278,12 +308,12 @@ function StatusGrid({
 
   return (
     <section
-      aria-label="Status atual"
+      aria-label={L('Status atual', 'Current status')}
       className="grid grid-cols-2 sm:grid-cols-4 gap-2.5"
     >
       {cells.map((c) => (
         <div
-          key={c.label}
+          key={c.key}
           className={cn(
             'flex flex-col gap-2 p-4 border border-l-[3px] bg-[var(--color-card)]',
             toneClass[c.tone],
@@ -350,22 +380,22 @@ function SeasonStats({
           borderRadius: 'var(--radius-md)',
         }}
       >
-        Sem partidas oficiais ainda nesta temporada.
+        {L('Sem partidas oficiais ainda nesta temporada.', 'No official matches yet this season.')}
       </div>
     );
   }
   const items = [
-    { label: 'Partidas', value: matches, Icon: Calendar, color: 'text-white' },
-    { label: 'Gols', value: goals, Icon: Target, color: 'text-[var(--color-success)]' },
-    { label: 'Assists', value: assists, Icon: Award, color: 'text-neon-yellow' },
-    { label: 'Amarelos', value: yellows, Icon: AlertTriangle, color: 'text-[var(--color-warning)]' },
-    { label: 'Vermelhos', value: reds, Icon: AlertOctagon, color: 'text-[var(--color-danger)]' },
+    { key: 'matches', label: L('Partidas', 'Matches'), value: matches, Icon: Calendar, color: 'text-white' },
+    { key: 'goals', label: L('Gols', 'Goals'), value: goals, Icon: Target, color: 'text-[var(--color-success)]' },
+    { key: 'assists', label: L('Assists', 'Assists'), value: assists, Icon: Award, color: 'text-neon-yellow' },
+    { key: 'yellows', label: L('Amarelos', 'Yellows'), value: yellows, Icon: AlertTriangle, color: 'text-[var(--color-warning)]' },
+    { key: 'reds', label: L('Vermelhos', 'Reds'), value: reds, Icon: AlertOctagon, color: 'text-[var(--color-danger)]' },
   ];
   return (
     <section className="grid grid-cols-5 gap-2">
       {items.map((i) => (
         <div
-          key={i.label}
+          key={i.key}
           className="flex flex-col items-center gap-1.5 p-3 bg-[var(--color-card)] border border-white/8"
           style={{ borderRadius: 'var(--radius-md)' }}
         >
@@ -406,9 +436,9 @@ function ActiveConsequences({
     return (
       <div className="text-center py-6 px-4 rounded-sm bg-white/3 border border-dashed border-white/10">
         <Sparkles size={20} className="text-white/30 mx-auto mb-2" />
-        <p className="text-[12px] text-white/55">Nenhuma consequência ativa.</p>
+        <p className="text-[12px] text-white/55">{L('Nenhuma consequência ativa.', 'No active consequences.')}</p>
         <p className="text-[10px] text-white/35 mt-0.5">
-          Jogador estável — sem efeitos pendentes.
+          {L('Jogador estável — sem efeitos pendentes.', 'Player stable — no pending effects.')}
         </p>
       </div>
     );
@@ -437,12 +467,12 @@ function ActiveConsequences({
               </div>
               <div className="text-[11px] text-white/55 mt-0.5">{e.subtitle}</div>
               <div className="mt-2 flex items-center gap-3 text-[10px] text-white/40">
-                <span className="uppercase tracking-wider">{e.consequence.dimension}</span>
+                <span className="uppercase tracking-wider">{ROTULO_DIMENSAO[e.consequence.dimension] ?? e.consequence.dimension}</span>
                 <span className="tabular-nums">
-                  intensidade {Math.round(Math.abs(e.current_value * 100))}%
+                  {L('intensidade', 'intensity')} {Math.round(Math.abs(e.current_value * 100))}%
                 </span>
                 <span>·</span>
-                <span>{Math.round(e.life_remaining * 100)}% restante</span>
+                <span>{Math.round(e.life_remaining * 100)}% {L('restante', 'remaining')}</span>
               </div>
             </div>
           </div>
@@ -456,7 +486,7 @@ function Timeline({ events }: { events: PlayerTimelineEvent[] }) {
   if (events.length === 0) {
     return (
       <div className="text-center py-4 text-[11px] text-white/40">
-        Sem eventos recentes nos últimos 7 dias.
+        {L('Sem eventos recentes nos últimos 7 dias.', 'No events in the last 7 days.')}
       </div>
     );
   }
@@ -550,7 +580,7 @@ function AttrDeltaList({
                 textTransform: 'uppercase',
               }}
             >
-              {k}
+              {ROTULO_ATRIBUTO[k] ?? k}
             </div>
             <div className="flex items-baseline gap-1.5">
               <span
@@ -596,8 +626,10 @@ function MarketChart({
   if (points.length < 2) {
     return (
       <div className="text-[11px] text-white/40 text-center py-4">
-        Histórico de mercado ainda construindo — precisa de mais snapshots
-        após partidas pra exibir tendência.
+        {L(
+          'Histórico de mercado ainda construindo — precisa de mais snapshots após partidas pra exibir tendência.',
+          'Market history still building — needs more post-match snapshots to show a trend.',
+        )}
       </div>
     );
   }
@@ -755,13 +787,13 @@ export function ManagerScoutsPlayer() {
           onClick={() => navigate('/manager/scouts')}
           className="inline-flex items-center gap-2 text-[12px] text-white/60 hover:text-white transition"
         >
-          <ChevronLeft size={14} /> Voltar pro plantel
+          <ChevronLeft size={14} /> {L('Voltar pro plantel', 'Back to squad')}
         </button>
         <div className="mt-8 text-center py-12 px-4 rounded-sm bg-white/3 border border-dashed border-white/10">
           <ShieldOff size={28} className="text-white/30 mx-auto mb-3" />
-          <p className="text-sm text-white/70">Jogador não encontrado no plantel.</p>
+          <p className="text-sm text-white/70">{L('Jogador não encontrado no plantel.', 'Player not found in the squad.')}</p>
           <p className="text-[12px] text-white/40 mt-1">
-            Pode ter sido vendido ou liberado.
+            {L('Pode ter sido vendido ou liberado.', 'They may have been sold or released.')}
           </p>
         </div>
       </div>
@@ -803,7 +835,7 @@ export function ManagerScoutsPlayer() {
             textTransform: 'uppercase',
           }}
         >
-          <ChevronLeft size={13} /> Plantel
+          <ChevronLeft size={13} /> {L('Plantel', 'Squad')}
         </button>
 
         {/* ── Hero ──────────────────────────────────────────────── */}
@@ -818,7 +850,7 @@ export function ManagerScoutsPlayer() {
 
         {/* ── Status atual (sempre local, dado SSOT) ────────────── */}
         <section className="space-y-2">
-          <SectionHeader kicker="Estado de prontidão" title="Status atual" />
+          <SectionHeader kicker={L('Estado de prontidão', 'Readiness')} title={L('Status atual', 'Current status')} />
           <StatusGrid
             fatigue={fatigue}
             moral={moralValue}
@@ -829,7 +861,7 @@ export function ManagerScoutsPlayer() {
 
         {/* ── Temporada ─────────────────────────────────────────── */}
         <section className="space-y-2">
-          <SectionHeader kicker="Histórico oficial" title="Temporada" />
+          <SectionHeader kicker={L('Histórico oficial', 'Official record')} title={L('Temporada', 'Season')} />
           <SeasonStats
             matches={matches}
             goals={goals}
@@ -842,8 +874,8 @@ export function ManagerScoutsPlayer() {
         {/* ── Consequências ativas (do Python, com explicação) ──── */}
         <section className="space-y-2">
           <SectionHeader
-            kicker="Efeitos pendentes"
-            title={`Consequências ativas${
+            kicker={L('Efeitos pendentes', 'Pending effects')}
+            title={`${L('Consequências ativas', 'Active consequences')}${
               transparency ? ` · ${transparency.total_active}` : ''
             }`}
           />
@@ -851,25 +883,27 @@ export function ManagerScoutsPlayer() {
             <ActiveConsequences list={transparency.active} />
           ) : showFallbackNotice ? (
             <div className="text-[11px] text-white/40 text-center py-4">
-              Serviço /insights indisponível — não foi possível listar consequências
-              com explicação humana. Tente entrar na conta ou aguarde reconexão.
+              {L(
+                'Serviço /insights indisponível — não foi possível listar consequências com explicação humana. Tente entrar na conta ou aguarde reconexão.',
+                '/insights service unavailable — could not list consequences with explanations. Try signing in or wait for it to reconnect.',
+              )}
             </div>
           ) : (
             <div className="text-[11px] text-white/40 text-center py-4">
-              Carregando consequências...
+              {L('Carregando consequências...', 'Loading consequences...')}
             </div>
           )}
         </section>
 
         {/* ── Timeline (do Python) ──────────────────────────────── */}
         <section className="space-y-2">
-          <SectionHeader kicker="Trace cronológico" title="Linha do tempo · 7 dias" />
+          <SectionHeader kicker={L('Trace cronológico', 'Chronological trace')} title={L('Linha do tempo · 7 dias', 'Timeline · 7 days')} />
           <div className="rounded-sm border border-white/8 bg-[var(--color-card)] p-4">
             {transparency ? (
               <Timeline events={transparency.timeline} />
             ) : (
               <div className="text-[11px] text-white/40 text-center py-3">
-                Timeline disponível só com /insights online.
+                {L('Timeline disponível só com /insights online.', 'Timeline only available with /insights online.')}
               </div>
             )}
           </div>
@@ -877,18 +911,18 @@ export function ManagerScoutsPlayer() {
 
         {/* ── Atributos: atual + delta vs 7d atrás ──────────────── */}
         <section className="space-y-2">
-          <SectionHeader kicker="Evolução técnica" title="Atributos · delta 7 dias" />
+          <SectionHeader kicker={L('Evolução técnica', 'Technical progress')} title={L('Atributos · delta 7 dias', 'Attributes · 7-day delta')} />
           <AttrDeltaList currentAttrs={player.attrs} weekAgoAttrs={weekAgoAttrs} />
           {!weekAgoAttrs && (
             <div className="text-[10px] text-white/35">
-              Sem snapshot anterior a 7 dias — o delta aparecerá após a próxima partida.
+              {L('Sem snapshot anterior a 7 dias — o delta aparecerá após a próxima partida.', 'No snapshot older than 7 days — the delta will show after the next match.')}
             </div>
           )}
         </section>
 
         {/* ── Mercado ───────────────────────────────────────────── */}
         <section className="space-y-2">
-          <SectionHeader kicker="Avaliação" title="Histórico de valor de mercado" />
+          <SectionHeader kicker={L('Avaliação', 'Valuation')} title={L('Histórico de valor de mercado', 'Market value history')} />
           <div className="rounded-sm border border-white/8 bg-[var(--color-card)] p-4">
             <MarketChart points={marketHistory} />
           </div>

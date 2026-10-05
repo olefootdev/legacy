@@ -13,6 +13,7 @@ import {
   type SlotIndex,
 } from '@/components/penalty';
 import { Hashtag } from '@/components/ui';
+import { L } from '@/i18n/L';
 
 const REGULAR_KICKS = 5;
 
@@ -68,7 +69,7 @@ export function MatchPenaltyV2() {
   const opponentKeeper: PenaltyKeeper = useMemo(
     () => ({
       id: 'opp-gk',
-      displayName: `Goleiro ${opponentShort}`,
+      displayName: L(`Goleiro ${opponentShort}`, `${opponentShort} Keeper`),
       readingRating: Math.max(40, Math.min(95, opponentStrength)),
       positioningRating: Math.max(40, Math.min(95, opponentStrength - 5)),
       tendency: ['left', 'right', 'center'][Math.floor(Math.random() * 3)] as
@@ -91,7 +92,7 @@ export function MatchPenaltyV2() {
     )[0] as any;
     return {
       id: best?.id ?? 'home-gk',
-      displayName: best?.name ?? 'Nosso Goleiro',
+      displayName: best?.name ?? L('Nosso Goleiro', 'Our Keeper'),
       readingRating: best?.attrs?.defesa ?? 70,
       positioningRating: best?.attrs?.posicionamento ?? 70,
     };
@@ -181,7 +182,7 @@ export function MatchPenaltyV2() {
       const aiPower = 0.18 + Math.random() * 0.78;
       const aiShooter: PenaltyShooter = {
         id: 'opp-shooter',
-        displayName: `Batedor ${opponentShort}`,
+        displayName: L(`Batedor ${opponentShort}`, `${opponentShort} Taker`),
         shirtNumber: 10,
         finishingRating: Math.max(50, Math.min(90, opponentStrength)),
       };
@@ -234,7 +235,7 @@ export function MatchPenaltyV2() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <Hashtag className="w-auto">#penaltis</Hashtag>
+            <Hashtag className="w-auto">{L('#penaltis', '#penalties')}</Hashtag>
             <div className="w-9" />
           </div>
 
@@ -242,10 +243,10 @@ export function MatchPenaltyV2() {
             className="ole-headline text-center mb-2 leading-[1.1]"
             style={{ fontSize: 'clamp(28px, min(5vh, 5vw), 56px)' }}
           >
-            Escolha 5 batedores
+            {L('Escolha 5 batedores', 'Choose 5 takers')}
           </h1>
           <p className="text-center text-white/60 text-sm mb-4 sm:mb-8">
-            Ordenados por finalização. {takerOrder.length}/{REGULAR_KICKS} selecionados.
+            {L(`Ordenados por finalização. ${takerOrder.length}/${REGULAR_KICKS} selecionados.`, `Sorted by finishing. ${takerOrder.length}/${REGULAR_KICKS} selected.`)}
           </p>
 
           {availablePlayers.length === 0 ? (
@@ -261,18 +262,17 @@ export function MatchPenaltyV2() {
                   letterSpacing: '0.22em',
                 }}
               >
-                Plantel vazio
+                {L('Plantel vazio', 'Empty squad')}
               </p>
               <p className="text-white/45 text-[13px] leading-snug mb-5">
-                Você precisa de pelo menos {REGULAR_KICKS} jogadores no
-                plantel pra montar a disputa.
+                {L(`Você precisa de pelo menos ${REGULAR_KICKS} jogadores no plantel pra montar a disputa.`, `You need at least ${REGULAR_KICKS} players in the squad to set up the shootout.`)}
               </p>
               <button
                 type="button"
                 onClick={() => navigate('/clube/elenco')}
                 className="inline-flex items-center justify-center bg-neon-yellow text-black px-6 py-2.5 font-display font-black uppercase tracking-wider text-xs hover:bg-white transition-colors"
               >
-                Ir ao Elenco
+                {L('Ir ao Elenco', 'Go to Squad')}
               </button>
             </div>
           ) : null}
@@ -321,7 +321,7 @@ export function MatchPenaltyV2() {
             onClick={startMatch}
             className="w-full bg-neon-yellow text-black px-8 py-4 font-display font-black uppercase tracking-wider disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white"
           >
-            Começar Disputa
+            {L('Começar Disputa', 'Start Shootout')}
           </button>
         </div>
       </div>
@@ -340,13 +340,13 @@ export function MatchPenaltyV2() {
         }}
       >
         <div className="text-[10px] uppercase tracking-[0.35em] text-black/70 mb-4 sm:mb-6">
-          Final da Disputa
+          {L('Final da Disputa', 'Shootout Over')}
         </div>
         <h1
           className="ole-headline text-black text-center mb-3 sm:mb-4"
           style={{ fontSize: 'clamp(56px, min(13vh, 14vw), 160px)', lineHeight: 1 }}
         >
-          {winner === 'home' ? 'GANHAMOS!' : 'PERDEMOS'}
+          {winner === 'home' ? L('GANHAMOS!', 'WE WON!') : L('PERDEMOS', 'WE LOST')}
         </h1>
         <div className="font-display font-black tabular-nums text-black/85 mb-6 sm:mb-12"
           style={{ fontSize: 'clamp(44px, min(9vh, 10vw), 120px)' }}
@@ -359,14 +359,14 @@ export function MatchPenaltyV2() {
             onClick={fullReset}
             className="bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider hover:bg-deep-black transition-colors"
           >
-            Nova Disputa
+            {L('Nova Disputa', 'New Shootout')}
           </button>
           <button
             type="button"
             onClick={() => navigate(-1)}
             className="bg-transparent border-2 border-black text-black px-8 py-3 font-display font-black uppercase tracking-wider"
           >
-            Voltar
+            {L('Voltar', 'Back')}
           </button>
         </div>
       </div>
@@ -380,7 +380,7 @@ export function MatchPenaltyV2() {
   if (!currentTaker) {
     return (
       <div className="bg-deep-black text-white flex items-center justify-center" style={{ minHeight: '100dvh' }}>
-        Erro: batedor não encontrado.
+        {L('Erro: batedor não encontrado.', 'Error: taker not found.')}
       </div>
     );
   }
@@ -398,7 +398,7 @@ export function MatchPenaltyV2() {
     awayShots,
     currentShooter: homeKicksUsed,
     rounds: TOTAL_KICKS,
-    homeLabel: 'NÓS',
+    homeLabel: L('NÓS', 'US'),
     awayLabel: opponentShort,
   };
 
@@ -413,13 +413,13 @@ export function MatchPenaltyV2() {
         }}
       >
         <div className="text-[10px] uppercase tracking-[0.35em] text-black/70 mb-2">
-          {opponentShort} bate agora
+          {L(`${opponentShort} bate agora`, `${opponentShort} shooting now`)}
         </div>
         <h2
           className="ole-headline text-black animate-pulse"
           style={{ fontSize: 'clamp(32px, min(6vh, 6vw), 64px)' }}
         >
-          Aguarde…
+          {L('Aguarde…', 'Wait…')}
         </h2>
         <div className="font-display font-black tabular-nums mt-4 sm:mt-8"
           style={{ fontSize: 'clamp(36px, min(6vh, 6vw), 64px)' }}
@@ -433,18 +433,27 @@ export function MatchPenaltyV2() {
   return (
     <PenaltyShoot
       key={resetSeed}
-      headerLabel={`${isSuddenDeath ? 'Morte Súbita · ' : ''}Disputa de Pênaltis`}
+      headerLabel={`${isSuddenDeath ? L('Morte Súbita · ', 'Sudden Death · ') : ''}${L('Disputa de Pênaltis', 'Penalty Shootout')}`}
       shooter={shooter}
       keeper={opponentKeeper}
       keeperHint={
         opponentKeeper.tendency
-          ? `Goleiro lê bem o lado ${
-              opponentKeeper.tendency === 'left'
-                ? 'esquerdo'
-                : opponentKeeper.tendency === 'right'
-                  ? 'direito'
-                  : 'central'
-            }`
+          ? L(
+              `Goleiro lê bem o lado ${
+                opponentKeeper.tendency === 'left'
+                  ? 'esquerdo'
+                  : opponentKeeper.tendency === 'right'
+                    ? 'direito'
+                    : 'central'
+              }`,
+              `Keeper reads the ${
+                opponentKeeper.tendency === 'left'
+                  ? 'left'
+                  : opponentKeeper.tendency === 'right'
+                    ? 'right'
+                    : 'centre'
+              } side well`,
+            )
           : undefined
       }
       shootoutContext={ctx}

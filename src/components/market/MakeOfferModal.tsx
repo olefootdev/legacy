@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { formatExp } from '@/systems/economy';
 import type { MarketOffer } from '@/game/types';
+import { L } from '@/i18n/L';
 
 export function MakeOfferModal({
   open,
@@ -44,7 +45,7 @@ export function MakeOfferModal({
 
   const handleConfirm = async () => {
     if (!valid) {
-      setError('Informe um valor válido em EXP.');
+      setError(L('Informe um valor válido em EXP.', 'Enter a valid EXP amount.'));
       return;
     }
     setSubmitting(true);
@@ -53,7 +54,7 @@ export function MakeOfferModal({
       await onSubmit(parsed);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível enviar a proposta.');
+      setError(e instanceof Error ? e.message : L('Não foi possível enviar a proposta.', 'Could not send the offer.'));
     } finally {
       setSubmitting(false);
     }
@@ -76,32 +77,32 @@ export function MakeOfferModal({
         <button
           onClick={onClose}
           className="absolute right-3 top-3 text-white/40 hover:text-white"
-          aria-label="Fechar"
+          aria-label={L('Fechar', 'Close')}
         >
           <X className="h-5 w-5" />
         </button>
 
         <div className="font-display text-[10px] uppercase tracking-[0.2em] text-neon-yellow">
-          {existingOffer ? 'Atualizar proposta' : 'Fazer proposta'}
+          {existingOffer ? L('Atualizar proposta', 'Update offer') : L('Fazer proposta', 'Make offer')}
         </div>
         <h4 className="mt-1 font-impact text-3xl uppercase leading-[1.1] text-white">
           {playerName}
         </h4>
         <p className="mt-1 text-xs font-bold uppercase tracking-widest text-neon-yellow/80">
-          Overall {playerOverall} · pede {formatExp(listPriceExp)}
+          Overall {playerOverall} · {L('pede', 'asking')} {formatExp(listPriceExp)}
         </p>
 
         {existingOffer && (
           <p className="mt-3 rounded-md border border-white/10 bg-card px-3 py-2 text-xs text-white/70">
             {existingOffer.status === 'countered' && existingOffer.counterExp != null
-              ? `O vendedor contrapropôs ${formatExp(existingOffer.counterExp)}. Você pode atualizar sua oferta.`
-              : `Sua proposta atual: ${formatExp(existingOffer.offerExp)} (pendente).`}
+              ? L(`O vendedor contrapropôs ${formatExp(existingOffer.counterExp)}. Você pode atualizar sua oferta.`, `The seller countered with ${formatExp(existingOffer.counterExp)}. You can update your offer.`)
+              : L(`Sua proposta atual: ${formatExp(existingOffer.offerExp)} (pendente).`, `Your current offer: ${formatExp(existingOffer.offerExp)} (pending).`)}
           </p>
         )}
 
         <label className="mt-4 block">
           <span className="font-display text-[10px] uppercase tracking-[0.2em] text-white/50">
-            Sua proposta (EXP)
+            {L('Sua proposta (EXP)', 'Your offer (EXP)')}
           </span>
           <input
             type="number"
@@ -114,10 +115,10 @@ export function MakeOfferModal({
         </label>
 
         <p className="mt-2 text-[10px] text-white/50">
-          Saldo EXP: <span className="font-display font-bold text-white">{formatExp(balanceExp)}</span>
+          {L('Saldo EXP', 'EXP balance')}: <span className="font-display font-bold text-white">{formatExp(balanceExp)}</span>
           {overBalance && (
             <span className="mt-1 block text-atencao">
-              Aviso: acima do seu saldo — só dá pra pagar se juntar EXP até o aceite.
+              {L('Aviso: acima do seu saldo — só dá pra pagar se juntar EXP até o aceite.', 'Warning: above your balance — you can only pay if you have enough EXP when it is accepted.')}
             </span>
           )}
         </p>
@@ -130,13 +131,13 @@ export function MakeOfferModal({
             disabled={submitting || !valid}
             className="flex-1 rounded-md bg-neon-yellow py-3 font-display text-sm font-bold uppercase tracking-wide text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
           >
-            {submitting ? 'Enviando…' : existingOffer ? 'Atualizar proposta' : 'Enviar proposta'}
+            {submitting ? L('Enviando…', 'Sending…') : existingOffer ? L('Atualizar proposta', 'Update offer') : L('Enviar proposta', 'Send offer')}
           </button>
           <button
             onClick={onClose}
             className="rounded-md border border-white/30 bg-transparent px-4 py-3 font-display text-xs font-bold uppercase tracking-wide text-white/80 hover:border-white hover:bg-white/5"
           >
-            Cancelar
+            {L('Cancelar', 'Cancel')}
           </button>
         </div>
       </div>

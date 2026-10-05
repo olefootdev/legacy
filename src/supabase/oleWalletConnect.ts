@@ -15,6 +15,7 @@
  * `@/wallet/seed/conexao`, lido pelos dois lados.
  */
 import { getSupabase } from '@/supabase/client';
+import { L } from '@/i18n/L';
 import {
   OLA,
   ORIGEM_DA_CARTEIRA,
@@ -57,10 +58,10 @@ export function oleWalletDisponivel(): boolean {
 // TROCA de endereço de quem criou PIN.
 export async function conectarOleWallet(pin?: string): Promise<ResultadoOleWallet> {
   const sb = getSupabase();
-  if (!sb) return { ok: false, address: null, error: 'Sem conexão com a sua conta agora.' };
+  if (!sb) return { ok: false, address: null, error: L('Sem conexão com a sua conta agora.', 'No connection to your account right now.') };
   const { data } = await sb.auth.getSession();
   const sessao = data.session;
-  if (!sessao) return { ok: false, address: null, error: 'Entre na sua conta pra vincular.' };
+  if (!sessao) return { ok: false, address: null, error: L('Entre na sua conta pra vincular.', 'Log in to your account to link.') };
 
   const issuedAt = new Date().toISOString();
   const url = urlDoPedido(ORIGEM_DA_CARTEIRA, { uid: sessao.user.id, issuedAt });
@@ -76,7 +77,7 @@ export async function conectarOleWallet(pin?: string): Promise<ResultadoOleWalle
   // Sem passar nada, o opener é preservado, que é o que este fluxo precisa.
   const janela = window.open(url, 'olewallet', 'width=420,height=760');
   if (!janela) {
-    return { ok: false, address: null, error: 'O navegador bloqueou a janela. Libere popups para este site.' };
+    return { ok: false, address: null, error: L('O navegador bloqueou a janela. Libere popups para este site.', 'The browser blocked the window. Allow popups for this site.') };
   }
 
   const daJanela = await new Promise<DaJanela>((resolve) => {
@@ -114,12 +115,12 @@ export async function conectarOleWallet(pin?: string): Promise<ResultadoOleWalle
     // Janela fechada no X: não deixa a promessa pendurada pra sempre.
     const vigia = setInterval(() => {
       if (janela.closed) {
-        encerrar({ ok: false, erro: pronto ? 'Você fechou a janela.' : 'A carteira não respondeu.' });
+        encerrar({ ok: false, erro: pronto ? L('Você fechou a janela.', 'You closed the window.') : L('A carteira não respondeu.', 'The wallet didn\'t respond.') });
       }
     }, 600);
 
     const prazo = setTimeout(
-      () => encerrar({ ok: false, erro: 'Demorou demais. Tente de novo.' }),
+      () => encerrar({ ok: false, erro: L('Demorou demais. Tente de novo.', 'Took too long. Try again.') }),
       PACIENCIA_MS,
     );
 
@@ -153,10 +154,10 @@ export async function conectarOleWallet(pin?: string): Promise<ResultadoOleWalle
       | null;
     if (!json || json.ok !== true || !res.ok) {
       const motivo = json && json.ok === false ? json.error : undefined;
-      return { ok: false, address: null, error: motivo || 'Não foi possível vincular a carteira.' };
+      return { ok: false, address: null, error: motivo || L('Não foi possível vincular a carteira.', 'Couldn\'t link the wallet.') };
     }
     return { ok: true, address: json.link.wallet_address, error: null };
   } catch {
-    return { ok: false, address: null, error: 'Sem conexão com o servidor. Tente de novo.' };
+    return { ok: false, address: null, error: L('Sem conexão com o servidor. Tente de novo.', 'No connection to the server. Try again.') };
   }
 }

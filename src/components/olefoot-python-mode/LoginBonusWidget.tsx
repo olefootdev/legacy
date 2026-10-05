@@ -12,6 +12,7 @@
  * VOLT2: sem serifa/itálico, sem brilho. CTA é botão amarelo dominante
  * (DS §7.1). Quando claimable, rail amarelo 3px à esquerda.
  */
+import { L } from '@/i18n/L';
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Gift, Clock, Sparkles } from 'lucide-react';
@@ -20,7 +21,7 @@ import { useLoginBonus } from '@/hooks/useEngagement';
 import { cn } from '@/lib/utils';
 
 function formatCountdown(ms: number): string {
-  if (ms <= 0) return 'agora';
+  if (ms <= 0) return L('agora', 'now');
   const totalMin = Math.ceil(ms / 60000);
   if (totalMin < 60) return `${totalMin}m`;
   const h = Math.floor(totalMin / 60);
@@ -82,7 +83,7 @@ export function LoginBonusWidget() {
                 textTransform: 'uppercase',
               }}
             >
-              Bônus · ciclo {intervalHours}h
+              {L(`Bônus · ciclo ${intervalHours}h`, `Bonus · ${intervalHours}h cycle`)}
             </span>
           </div>
 
@@ -97,7 +98,7 @@ export function LoginBonusWidget() {
                   fontSize: 'clamp(15px, 2.6vw, 18px)',
                 }}
               >
-                {nextReward?.label ?? 'Recompensa pronta'}
+                {nextReward?.label ?? L('Recompensa pronta', 'Reward ready')}
               </div>
             ) : (
               <div className="flex items-baseline gap-2">
@@ -111,7 +112,7 @@ export function LoginBonusWidget() {
                     textTransform: 'uppercase',
                   }}
                 >
-                  Próximo em
+                  {L('Próximo em', 'Next in')}
                 </span>
                 <span
                   className="text-white tabular-nums leading-none"
@@ -143,9 +144,9 @@ export function LoginBonusWidget() {
               textTransform: 'uppercase',
               borderRadius: 'var(--radius-sm)',
             }}
-            aria-label="Reivindicar bônus"
+            aria-label={L('Reivindicar bônus', 'Claim bonus')}
           >
-            Resgatar
+            {L('Resgatar', 'Claim')}
           </motion.button>
         )}
       </div>
@@ -172,7 +173,7 @@ export function LoginBonusWidget() {
                     textTransform: 'uppercase',
                   }}
                 >
-                  Concedido
+                  {L('Concedido', 'Granted')}
                 </span>
                 <Sparkles size={11} className="text-black/70" />
               </div>
@@ -197,7 +198,7 @@ export function LoginBonusWidget() {
                     textTransform: 'uppercase',
                   }}
                 >
-                  Slot {lastClaimResult.slotIndex} consecutivo
+                  {L(`Slot ${lastClaimResult.slotIndex} consecutivo`, `Streak slot ${lastClaimResult.slotIndex}`)}
                 </div>
               )}
             </div>

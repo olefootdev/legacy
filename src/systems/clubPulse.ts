@@ -17,6 +17,7 @@
 
 import type { FormLetter } from '@/entities/types';
 import type { ConsequenceDimension } from '@/systems/impactCatalog';
+import { L } from '@/i18n/L';
 
 /** Recorte mínimo de uma consequência ativa — evita acoplar ao tipo completo. */
 export interface PulseConsequence {
@@ -136,11 +137,11 @@ export function consequenceAdjustment(consequences: readonly PulseConsequence[])
 }
 
 function bandOf(value: number): { band: PulseBand; label: string } {
-  if (value >= 82) return { band: 'fire', label: 'Em chamas' };
-  if (value >= 65) return { band: 'high', label: 'Embalado' };
-  if (value >= 45) return { band: 'steady', label: 'Estável' };
-  if (value >= 28) return { band: 'low', label: 'Abalado' };
-  return { band: 'crisis', label: 'Em crise' };
+  if (value >= 82) return { band: 'fire', label: L('Em chamas', 'On fire') };
+  if (value >= 65) return { band: 'high', label: L('Embalado', 'Rolling') };
+  if (value >= 45) return { band: 'steady', label: L('Estável', 'Steady') };
+  if (value >= 28) return { band: 'low', label: L('Abalado', 'Shaken') };
+  return { band: 'crisis', label: L('Em crise', 'In crisis') };
 }
 
 /**
@@ -167,34 +168,34 @@ function directionOf(score: number): PulseTrend {
 }
 
 function crowdDetail(v: number): string {
-  if (v >= 75) return 'cantando';
-  if (v >= 58) return 'do lado';
-  if (v >= 42) return 'morna';
-  if (v >= 28) return 'desconfiada';
-  return 'hostil';
+  if (v >= 75) return L('cantando', 'singing');
+  if (v >= 58) return L('do lado', 'behind us');
+  if (v >= 42) return L('morna', 'lukewarm');
+  if (v >= 28) return L('desconfiada', 'wary');
+  return L('hostil', 'hostile');
 }
 
 function formDetail(form: readonly FormLetter[]): string {
   const last = form.slice(-5);
-  if (last.length === 0) return 'sem histórico';
+  if (last.length === 0) return L('sem histórico', 'no history');
   const w = last.filter((l) => l === 'W').length;
   const l = last.filter((x) => x === 'L').length;
-  if (w === last.length) return `${w} vitórias seguidas`;
-  if (l === last.length) return `${l} derrotas seguidas`;
-  return `${w}V em ${last.length}`;
+  if (w === last.length) return L(`${w} vitórias seguidas`, `${w} wins in a row`);
+  if (l === last.length) return L(`${l} derrotas seguidas`, `${l} losses in a row`);
+  return L(`${w}V em ${last.length}`, `${w}W in ${last.length}`);
 }
 
 function moralDetail(v: number): string {
-  if (v >= 70) return 'plantel empolgado';
-  if (v >= 55) return 'plantel confiante';
-  if (v >= 40) return 'plantel morno';
-  return 'plantel abatido';
+  if (v >= 70) return L('plantel empolgado', 'squad fired up');
+  if (v >= 55) return L('plantel confiante', 'squad confident');
+  if (v >= 40) return L('plantel morno', 'squad flat');
+  return L('plantel abatido', 'squad downbeat');
 }
 
 function engagementDetail(v: number): string {
-  if (v >= 70) return 'clube no comando';
-  if (v >= 45) return 'presença regular';
-  return 'clube sem comando';
+  if (v >= 70) return L('clube no comando', 'club in command');
+  if (v >= 45) return L('presença regular', 'regular presence');
+  return L('clube sem comando', 'club adrift');
 }
 
 /**
@@ -222,15 +223,15 @@ export function computeClubPulse(input: ClubPulseInput): ClubPulse {
 
   // Drivers: os componentes que MAIS se afastam do neutro explicam o número.
   const candidates: Array<ClubPulseDriver & { deviation: number }> = [
-    { label: 'Torcida', detail: crowdDetail(crowd), direction: directionOf(crowd), deviation: Math.abs(crowd - 50) },
-    { label: 'Forma', detail: formDetail(input.form), direction: directionOf(form), deviation: Math.abs(form - 50) },
-    { label: 'Moral', detail: moralDetail(moral), direction: directionOf(moral), deviation: Math.abs(moral - 50) },
-    { label: 'Comando', detail: engagementDetail(engagement), direction: directionOf(engagement), deviation: Math.abs(engagement - 50) },
+    { label: L('Torcida', 'Fans'), detail: crowdDetail(crowd), direction: directionOf(crowd), deviation: Math.abs(crowd - 50) },
+    { label: L('Forma', 'Form'), detail: formDetail(input.form), direction: directionOf(form), deviation: Math.abs(form - 50) },
+    { label: L('Moral', 'Morale'), detail: moralDetail(moral), direction: directionOf(moral), deviation: Math.abs(moral - 50) },
+    { label: L('Comando', 'Command'), detail: engagementDetail(engagement), direction: directionOf(engagement), deviation: Math.abs(engagement - 50) },
   ];
   if (consequences <= -3) {
     candidates.push({
-      label: 'Baixas',
-      detail: `${input.consequences.length} consequência${input.consequences.length === 1 ? '' : 's'} ativa${input.consequences.length === 1 ? '' : 's'}`,
+      label: L('Baixas', 'Setbacks'),
+      detail: L(`${input.consequences.length} consequência${input.consequences.length === 1 ? '' : 's'} ativa${input.consequences.length === 1 ? '' : 's'}`, `${input.consequences.length} active consequence${input.consequences.length === 1 ? '' : 's'}`),
       direction: 'down',
       deviation: Math.abs(consequences) * 3,
     });

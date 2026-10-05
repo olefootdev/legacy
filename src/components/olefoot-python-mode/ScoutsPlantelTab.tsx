@@ -5,6 +5,7 @@
  * Filtros como pílulas (DS §7.6): bg neon/[0.08] quando ativo + glow.
  * Lista com `view-player-card` (cada ScoutPlayerCard).
  */
+import { L, emIngles } from '@/i18n/L';
 import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Search, Users } from 'lucide-react';
@@ -154,20 +155,20 @@ export function ScoutsPlantelTab({ overview }: Props) {
           className="text-white/70"
           style={{ fontFamily: 'var(--font-ui)', fontSize: '14px' }}
         >
-          Plantel vazio.
+          {L('Plantel vazio.', 'Empty squad.')}
         </p>
         <p
           className="text-white/45 mt-1"
           style={{ fontFamily: 'var(--font-ui)', fontSize: '12px' }}
         >
-          Compre jogadores no Mercado pra começar.
+          {L('Compre jogadores no Mercado pra começar.', 'Buy players in the Market to get started.')}
         </p>
       </div>
     );
   }
 
   return (
-    <section aria-label="Plantel completo" className="space-y-4">
+    <section aria-label={L('Plantel completo', 'Full squad')} className="space-y-4">
       {/* ── Header editorial (DS §7.4) ────────────────────────── */}
       <header className="space-y-1.5">
         <div className="flex items-center gap-2">
@@ -182,14 +183,14 @@ export function ScoutsPlantelTab({ overview }: Props) {
               textTransform: 'uppercase',
             }}
           >
-            Plantel · {totalCount} jogadores
+            {L(`Plantel · ${totalCount} jogadores`, `Squad · ${totalCount} players`)}
           </span>
         </div>
         <h2
           className="font-impact uppercase text-white leading-[1.1]"
           style={{ fontSize: 'clamp(22px, 3.5vw, 30px)' }}
         >
-          Quem está em campo
+          {L('Quem está em campo', 'Who takes the field')}
         </h2>
         <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow mt-2" />
       </header>
@@ -207,13 +208,13 @@ export function ScoutsPlantelTab({ overview }: Props) {
           {affectedCount > 0 && (
             <span className="text-white/65">
               <span className="text-white tabular-nums font-bold">{affectedCount}</span>{' '}
-              com efeitos ativos
+              {L('com efeitos ativos', 'with active effects')}
             </span>
           )}
           {unavailableCount > 0 && (
             <span className="text-[var(--color-danger)]">
-              <span className="font-bold tabular-nums">{unavailableCount}</span> indisponível
-              {unavailableCount === 1 ? '' : 'is'}
+              <span className="font-bold tabular-nums">{unavailableCount}</span>{' '}
+              {emIngles() ? 'unavailable' : <>indisponível{unavailableCount === 1 ? '' : 'is'}</>}
             </span>
           )}
         </div>
@@ -229,7 +230,7 @@ export function ScoutsPlantelTab({ overview }: Props) {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar jogador…"
+          placeholder={L('Buscar jogador…', 'Search player…')}
           className="w-full bg-deep-black/60 border border-white/15 pl-9 pr-3 py-2.5 text-white placeholder:text-white/35 focus:border-neon-yellow/55 focus:outline-none transition-colors"
           style={{
             fontFamily: 'var(--font-ui)',
@@ -242,23 +243,23 @@ export function ScoutsPlantelTab({ overview }: Props) {
       {/* ── Filtros pílula ────────────────────────────────────── */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
         <FilterChip active={posFilter === 'all'} onClick={() => setPosFilter('all')} count={totalCount}>
-          Todos
+          {L('Todos', 'All')}
         </FilterChip>
         <FilterChip active={posFilter === 'GK'} onClick={() => setPosFilter('GK')} count={groupCounts.GK}>
           GK
         </FilterChip>
         <FilterChip active={posFilter === 'DEF'} onClick={() => setPosFilter('DEF')} count={groupCounts.DEF}>
-          Defesa
+          {L('Defesa', 'Defence')}
         </FilterChip>
         <FilterChip active={posFilter === 'MID'} onClick={() => setPosFilter('MID')} count={groupCounts.MID}>
-          Meio
+          {L('Meio', 'Midfield')}
         </FilterChip>
         <FilterChip active={posFilter === 'ATK'} onClick={() => setPosFilter('ATK')} count={groupCounts.ATK}>
-          Ataque
+          {L('Ataque', 'Attack')}
         </FilterChip>
         <span className="w-px h-5 bg-white/10 mx-1 shrink-0" />
         <FilterChip active={hideHealthy} onClick={() => setHideHealthy(!hideHealthy)}>
-          Só afetados
+          {L('Só afetados', 'Affected only')}
         </FilterChip>
       </div>
 
@@ -279,7 +280,7 @@ export function ScoutsPlantelTab({ overview }: Props) {
           className="text-center py-6 text-white/45"
           style={{ fontFamily: 'var(--font-ui)', fontSize: '12px' }}
         >
-          Nenhum jogador corresponde ao filtro.
+          {L('Nenhum jogador corresponde ao filtro.', 'No player matches the filter.')}
         </div>
       )}
     </section>

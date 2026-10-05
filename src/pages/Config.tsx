@@ -1,4 +1,8 @@
-import { L } from '@/i18n/L';
+import { L, LOCALE, emIngles } from '@/i18n/L';
+
+/** Palavras digitadas pra confirmar (só UI; nada é gravado). */
+const PALAVRA_REMOVER = L('REMOVER', 'REMOVE');
+const PALAVRA_CONTRATO = L('CONTRATO', 'CONTRACT');
 import { SeletorDeIdioma } from '@/components/ui/SeletorDeIdioma';
 import { motion } from 'motion/react';
 import {
@@ -109,15 +113,15 @@ export function Config() {
   const handleDefinePassword = async () => {
     setPwdMsg(null);
     if (newPw.length < 6) {
-      setPwdMsg('Senha muito curta (mín. 6).');
+      setPwdMsg(L('Senha muito curta (mín. 6).', 'Password too short (min. 6).'));
       return;
     }
     if (newPw !== confirmPw) {
-      setPwdMsg('As senhas não coincidem.');
+      setPwdMsg(L('As senhas não coincidem.', "Passwords don't match."));
       return;
     }
     const r = await setLocalPassword(newPw);
-    setPwdMsg(r.ok ? '✓ Senha local definida.' : r.error ?? 'Erro.');
+    setPwdMsg(r.ok ? L('✓ Senha local definida.', '✓ Local password set.') : r.error ?? L('Erro.', 'Error.'));
     if (r.ok) {
       resetSecurityFields();
       setSecurityMode('idle');
@@ -127,19 +131,19 @@ export function Config() {
   const handleChangePassword = async () => {
     setPwdMsg(null);
     if (!currentPw.trim()) {
-      setPwdMsg('Informa a senha atual.');
+      setPwdMsg(L('Informa a senha atual.', 'Enter your current password.'));
       return;
     }
     if (newPw.length < 6) {
-      setPwdMsg('Nova senha muito curta (mín. 6).');
+      setPwdMsg(L('Nova senha muito curta (mín. 6).', 'New password too short (min. 6).'));
       return;
     }
     if (newPw !== confirmPw) {
-      setPwdMsg('A nova senha e a confirmação não coincidem.');
+      setPwdMsg(L('A nova senha e a confirmação não coincidem.', "New password and confirmation don't match."));
       return;
     }
     const r = await changeLocalPassword(currentPw, newPw);
-    setPwdMsg(r.ok ? '✓ Senha atualizada.' : r.error ?? 'Erro.');
+    setPwdMsg(r.ok ? L('✓ Senha atualizada.', '✓ Password updated.') : r.error ?? L('Erro.', 'Error.'));
     if (r.ok) {
       resetSecurityFields();
       setSecurityMode('idle');
@@ -148,13 +152,13 @@ export function Config() {
 
   const handleForgotReset = () => {
     setPwdMsg(null);
-    if (forgotConfirm.trim().toUpperCase() !== 'REMOVER') {
-      setPwdMsg('Digita REMOVER (em maiúsculas) para confirmar.');
+    if (forgotConfirm.trim().toUpperCase() !== PALAVRA_REMOVER) {
+      setPwdMsg(L('Digita REMOVER (em maiúsculas) para confirmar.', 'Type REMOVE (in capitals) to confirm.'));
       return;
     }
     clearLocalPassword();
     setHasPwd(false);
-    setPwdMsg('✓ Senha local removida. Podes definir uma nova abaixo.');
+    setPwdMsg(L('✓ Senha local removida. Podes definir uma nova abaixo.', '✓ Local password removed. You can set a new one below.'));
     resetSecurityFields();
     setSecurityMode('idle');
   };
@@ -183,7 +187,7 @@ export function Config() {
     e.target.value = '';
     if (!file) return;
     if (file.size > 6 * 1024 * 1024) {
-      alert('Ficheiro demasiado grande (máx. 6 MB).');
+      alert(L('Ficheiro demasiado grande (máx. 6 MB).', 'File too large (max. 6 MB).'));
       return;
     }
     const reader = new FileReader();
@@ -191,13 +195,13 @@ export function Config() {
       const text = typeof reader.result === 'string' ? reader.result : '';
       const next = tryHydrateGameState(text);
       if (!next) {
-        alert('Save inválido ou versão incompatível.');
+        alert(L('Save inválido ou versão incompatível.', 'Invalid save or incompatible version.'));
         return;
       }
-      if (!window.confirm('Substituir o progresso atual por este backup? Não podes desfazer.')) return;
+      if (!window.confirm(L('Substituir o progresso atual por este backup? Não podes desfazer.', "Replace current progress with this backup? This can't be undone."))) return;
       dispatch({ type: 'IMPORT_GAME_STATE', state: next });
       setClubDraft(next.club.name);
-      alert('Save importado. A página vai recarregar para aplicar tudo.');
+      alert(L('Save importado. A página vai recarregar para aplicar tudo.', 'Save imported. The page will reload to apply everything.'));
       window.location.reload();
     };
     reader.readAsText(file);
@@ -212,7 +216,7 @@ export function Config() {
       </div>
       {/* ── HERO — volt chapado + manchete em Anton ── */}
       <section
-        aria-label="Configurações"
+        aria-label={L('Configurações', 'Settings')}
         className="relative w-full overflow-hidden bg-neon-yellow -mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-2"
       >
         {/* ── HERO no layer final: eyebrow + manchete + a linha que informa. ── */}
@@ -224,7 +228,7 @@ export function Config() {
           style={{ paddingBlock: 'clamp(26px, 5vw, 46px)' }}
         >
           <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-            Sua conta
+            {L('Sua conta', 'Your account')}
           </span>
           <h1
             className="mt-2 font-impact uppercase"
@@ -235,7 +239,7 @@ export function Config() {
               letterSpacing: '-0.01em',
             }}
           >
-            Configurações
+            {L('Configurações', 'Settings')}
           </h1>
         </motion.div>
       </section>
@@ -250,7 +254,7 @@ export function Config() {
         className="space-y-3"
       >
         <StoreSectionHeadline
-          title="Geral"
+          title={L('Geral', 'General')}
           className="mb-3"
         />
         <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
@@ -273,8 +277,8 @@ export function Config() {
                 <VolumeX className="w-4 h-4 text-white/45" />
               )}
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">Sons</span>
-                <p className="text-[10px] text-white/45">Feedback sonoro na interface (ex.: confirmações).</p>
+                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Sons', 'Sounds')}</span>
+                <p className="text-[10px] text-white/45">{L('Feedback sonoro na interface (ex.: confirmações).', 'Interface sound feedback (e.g. confirmations).')}</p>
               </div>
             </div>
             <button
@@ -298,8 +302,8 @@ export function Config() {
             <div className="flex items-center gap-3">
               <Monitor className="w-4 h-4 text-white/45" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">Qualidade gráfica</span>
-                <p className="text-[10px] text-white/45">Efeitos do painel e densidade visual.</p>
+                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Qualidade gráfica', 'Graphics quality')}</span>
+                <p className="text-[10px] text-white/45">{L('Efeitos do painel e densidade visual.', 'Panel effects and visual density.')}</p>
               </div>
             </div>
             <select
@@ -307,9 +311,9 @@ export function Config() {
               onChange={(e) => setQuality(e.target.value as GraphicQualityId)}
               className="bg-black/60 border border-white/15 rounded-lg px-3 py-2 text-xs text-white uppercase font-bold shrink-0"
             >
-              <option value="high">Alta</option>
-              <option value="medium">Média</option>
-              <option value="low">Baixa</option>
+              <option value="high">{L('Alta', 'High')}</option>
+              <option value="medium">{L('Média', 'Medium')}</option>
+              <option value="low">{L('Baixa', 'Low')}</option>
             </select>
           </div>
 
@@ -317,8 +321,8 @@ export function Config() {
             <div className="flex items-center gap-3">
               <Monitor className="w-4 h-4 text-white/45" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">Animações</span>
-                <p className="text-[10px] text-white/45">Respeitar acessibilidade ou forçar movimento.</p>
+                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Animações', 'Animations')}</span>
+                <p className="text-[10px] text-white/45">{L('Respeitar acessibilidade ou forçar movimento.', 'Follow accessibility or force motion.')}</p>
               </div>
             </div>
             <select
@@ -326,9 +330,9 @@ export function Config() {
               onChange={(e) => setReduceMotion(e.target.value as ReduceMotionPreference)}
               className="bg-black/60 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-bold shrink-0 max-w-[11rem]"
             >
-              <option value="system">Sistema</option>
-              <option value="reduce">Reduzir</option>
-              <option value="noReduce">Normais</option>
+              <option value="system">{L('Sistema', 'System')}</option>
+              <option value="reduce">{L('Reduzir', 'Reduce')}</option>
+              <option value="noReduce">{L('Normais', 'Normal')}</option>
             </select>
           </div>
 
@@ -336,9 +340,9 @@ export function Config() {
             <div className="flex items-center gap-3">
               <Clock className="w-4 h-4 text-white/45" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">Mundo em segundo plano</span>
+                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Mundo em segundo plano', 'Background world')}</span>
                 <p className="text-[10px] text-white/45">
-                  Com ativado, treinos e tempo do clube avançam ~1× por minuto mesmo com o separador em segundo plano.
+                  {L('Com ativado, treinos e tempo do clube avançam ~1× por minuto mesmo com o separador em segundo plano.', 'When on, training and club time advance ~1× per minute even with the tab in the background.')}
                 </p>
               </div>
             </div>
@@ -369,7 +373,7 @@ export function Config() {
         className="space-y-3"
       >
         <StoreSectionHeadline
-          title="Clube"
+          title={L('Clube', 'Club')}
           className="mb-3"
         />
         <div className="bg-panel border border-white/10 rounded-sm overflow-hidden">
@@ -377,8 +381,8 @@ export function Config() {
             <div className="flex items-start gap-3">
               <Building2 className="w-4 h-4 text-white/45 mt-0.5 shrink-0" />
               <div className="min-w-0 flex-1">
-                <span className="text-sm font-display font-bold text-white tracking-wider">Nome do clube</span>
-                <p className="text-[10px] text-white/45">Aparece em jogos, ranking e telas principais.</p>
+                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Nome do clube', 'Club name')}</span>
+                <p className="text-[10px] text-white/45">{L('Aparece em jogos, ranking e telas principais.', 'Shown in matches, rankings and main screens.')}</p>
                 <input
                   value={clubDraft}
                   onChange={(e) => setClubDraft(e.target.value)}
@@ -393,19 +397,19 @@ export function Config() {
               className="shrink-0 flex items-center gap-2 bg-neon-yellow text-black text-xs font-display font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg hover:bg-white transition-colors"
             >
               <Save className="w-3.5 h-3.5" />
-              Guardar
+              {L('Guardar', 'Save')}
             </button>
           </div>
-          {clubSaved ? <p className="px-5 py-2 text-[10px] text-alta font-bold">Nome atualizado.</p> : null}
+          {clubSaved ? <p className="px-5 py-2 text-[10px] text-alta font-bold">{L('Nome atualizado.', 'Name updated.')}</p> : null}
           <div className={rowClass}>
             <div className="flex items-start gap-3">
               <User className="mt-0.5 h-4 w-4 shrink-0 text-white/45" />
               <div className="min-w-0 flex-1">
                 <span className="text-sm font-display font-bold tracking-wider text-white">
-                  Foto do treinador
+                  {L('Foto do treinador', 'Manager photo')}
                 </span>
                 <p className="text-[10px] text-white/45">
-                  Círculo ao lado de «Bem-vindo» no topo. Incluída no backup JSON.
+                  {L('Círculo ao lado de «Bem-vindo» no topo. Incluída no backup JSON.', 'Circle next to «Welcome» at the top. Included in the JSON backup.')}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-black/40">
@@ -425,7 +429,7 @@ export function Config() {
                       onClick={() => trainerPhotoInputRef.current?.click()}
                       className="shrink-0 rounded-lg bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/20"
                     >
-                      Escolher imagem
+                      {L('Escolher imagem', 'Choose image')}
                     </button>
                     {trainerAvatar ? (
                       <button
@@ -433,7 +437,7 @@ export function Config() {
                         onClick={clearAvatar}
                         className="shrink-0 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-400/90 hover:bg-white/5"
                       >
-                        Remover
+                        {L('Remover', 'Remove')}
                       </button>
                     ) : null}
                   </div>
@@ -464,7 +468,7 @@ export function Config() {
         className="space-y-3"
       >
         <StoreSectionHeadline
-          title="Segurança local"
+          title={L('Segurança local', 'Local security')}
           className="mb-3"
         />
         <div className="bg-panel border border-white/10 rounded-sm overflow-hidden">
@@ -483,15 +487,15 @@ export function Config() {
               <Lock className="w-4 h-4 text-white/45 mt-0.5 shrink-0" />
               <div className="min-w-0">
                 <p className={cn('inline-flex items-center gap-1 font-display text-sm font-bold uppercase tracking-wider', hasPwd ? 'text-[var(--color-success)]' : 'text-white/70')}>
-                  {hasPwd ? <><Check className="h-3.5 w-3.5" strokeWidth={2.4} /> Senha local ativa</> : 'Senha local não definida'}
+                  {hasPwd ? <><Check className="h-3.5 w-3.5" strokeWidth={2.4} /> {L('Senha local ativa', 'Local password on')}</> : L('Senha local não definida', 'Local password not set')}
                 </p>
                 <p className="mt-0.5 text-[11px] text-white/50">
-                  PIN guardado só neste dispositivo (hash SHA-256). Não substitui login Supabase.
+                  {L('PIN guardado só neste dispositivo (hash SHA-256). Não substitui login Supabase.', 'PIN stored only on this device (SHA-256 hash). Does not replace Supabase login.')}
                 </p>
               </div>
             </div>
             <span className="shrink-0 rounded border border-white/15 bg-white/5 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider text-white/70">
-              {securityExpanded ? 'Fechar' : hasPwd ? 'Gerenciar' : 'Definir'}
+              {securityExpanded ? L('Fechar', 'Close') : hasPwd ? L('Gerenciar', 'Manage') : L('Definir', 'Set')}
             </span>
           </button>
 
@@ -500,13 +504,13 @@ export function Config() {
               {/* Sem senha → form criar */}
               {!hasPwd ? (
                 <div className="max-w-md space-y-2">
-                  <label className="text-[10px] text-white/50 uppercase font-bold">Definir senha local</label>
+                  <label className="text-[10px] text-white/50 uppercase font-bold">{L('Definir senha local', 'Set local password')}</label>
                   <input
                     type="password"
                     autoComplete="new-password"
                     value={newPw}
                     onChange={(e) => setNewPw(e.target.value)}
-                    placeholder="Nova senha (mín. 6)"
+                    placeholder={L('Nova senha (mín. 6)', 'New password (min. 6)')}
                     className="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-2 text-sm"
                   />
                   <input
@@ -514,7 +518,7 @@ export function Config() {
                     autoComplete="new-password"
                     value={confirmPw}
                     onChange={(e) => setConfirmPw(e.target.value)}
-                    placeholder="Confirmar senha"
+                    placeholder={L('Confirmar senha', 'Confirm password')}
                     className="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-2 text-sm"
                   />
                   <button
@@ -522,7 +526,7 @@ export function Config() {
                     onClick={() => void handleDefinePassword()}
                     className="rounded-lg bg-neon-yellow px-4 py-2 text-xs font-bold uppercase text-black hover:bg-white"
                   >
-                    Guardar senha
+                    {L('Guardar senha', 'Save password')}
                   </button>
                 </div>
               ) : securityMode === 'idle' ? (
@@ -535,7 +539,7 @@ export function Config() {
                     }}
                     className="rounded-lg bg-neon-yellow px-4 py-2 text-xs font-bold uppercase text-black hover:bg-white"
                   >
-                    Trocar senha
+                    {L('Trocar senha', 'Change password')}
                   </button>
                   <button
                     type="button"
@@ -545,18 +549,18 @@ export function Config() {
                     }}
                     className="rounded-lg border border-[var(--color-danger)]/35 bg-[var(--color-danger)]/5 px-4 py-2 text-xs font-bold uppercase text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
                   >
-                    Esqueci a senha
+                    {L('Esqueci a senha', 'Forgot password')}
                   </button>
                 </div>
               ) : securityMode === 'change' ? (
                 <div className="max-w-md space-y-2">
-                  <label className="text-[10px] text-white/50 uppercase font-bold">Trocar senha local</label>
+                  <label className="text-[10px] text-white/50 uppercase font-bold">{L('Trocar senha local', 'Change local password')}</label>
                   <input
                     type="password"
                     autoComplete="current-password"
                     value={currentPw}
                     onChange={(e) => setCurrentPw(e.target.value)}
-                    placeholder="Senha atual"
+                    placeholder={L('Senha atual', 'Current password')}
                     className="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-2 text-sm"
                   />
                   <input
@@ -564,7 +568,7 @@ export function Config() {
                     autoComplete="new-password"
                     value={newPw}
                     onChange={(e) => setNewPw(e.target.value)}
-                    placeholder="Nova senha (mín. 6)"
+                    placeholder={L('Nova senha (mín. 6)', 'New password (min. 6)')}
                     className="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-2 text-sm"
                   />
                   <input
@@ -572,7 +576,7 @@ export function Config() {
                     autoComplete="new-password"
                     value={confirmPw}
                     onChange={(e) => setConfirmPw(e.target.value)}
-                    placeholder="Confirmar nova senha"
+                    placeholder={L('Confirmar nova senha', 'Confirm new password')}
                     className="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-2 text-sm"
                   />
                   <div className="flex flex-wrap gap-2 pt-1">
@@ -581,14 +585,14 @@ export function Config() {
                       onClick={() => void handleChangePassword()}
                       className="rounded-lg bg-neon-yellow px-4 py-2 text-xs font-bold uppercase text-black hover:bg-white"
                     >
-                      Atualizar senha
+                      {L('Atualizar senha', 'Update password')}
                     </button>
                     <button
                       type="button"
                       onClick={cancelPasswordChangeFlow}
                       className="rounded-lg bg-white/10 px-4 py-2 text-xs font-bold uppercase text-white hover:bg-white/20"
                     >
-                      Voltar
+                      {L('Voltar', 'Back')}
                     </button>
                   </div>
                 </div>
@@ -596,35 +600,37 @@ export function Config() {
                 <div className="max-w-md space-y-3 rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/[0.06] p-4">
                   <div>
                     <p className="font-display text-sm font-bold uppercase tracking-wider text-[var(--color-danger)]">
-                      Esqueci a senha
+                      {L('Esqueci a senha', 'Forgot password')}
                     </p>
                     <p className="mt-1 text-[11px] leading-snug text-[var(--color-danger)]/70">
-                      Esta é apenas um PIN deste dispositivo — não há recuperação por e-mail.
+                      {emIngles() ? <>This is just a PIN for this device — there is no e-mail recovery.
+                      You can <strong className="text-white">remove it</strong> and set a new one below. To confirm,
+                      type <strong className="text-white">{PALAVRA_REMOVER}</strong>.</> : <>Esta é apenas um PIN deste dispositivo — não há recuperação por e-mail.
                       Podes <strong className="text-white">removê-la</strong> e definir uma nova abaixo. Para confirmar,
-                      digita <strong className="text-white">REMOVER</strong>.
+                      digita <strong className="text-white">REMOVER</strong>.</>}
                     </p>
                   </div>
                   <input
                     value={forgotConfirm}
                     onChange={(e) => setForgotConfirm(e.target.value.toUpperCase())}
-                    placeholder="Digite: REMOVER"
+                    placeholder={L('Digite: REMOVER', 'Type: REMOVE')}
                     className="w-full rounded-lg border border-[var(--color-danger)]/30 bg-black/40 px-3 py-2 text-sm"
                   />
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={handleForgotReset}
-                      disabled={forgotConfirm.trim().toUpperCase() !== 'REMOVER'}
+                      disabled={forgotConfirm.trim().toUpperCase() !== PALAVRA_REMOVER}
                       className="rounded-lg bg-[var(--color-danger)] px-4 py-2 text-xs font-bold uppercase text-white hover:bg-[var(--color-danger)] disabled:opacity-40"
                     >
-                      Remover senha
+                      {L('Remover senha', 'Remove password')}
                     </button>
                     <button
                       type="button"
                       onClick={cancelPasswordChangeFlow}
                       className="rounded-lg bg-white/10 px-4 py-2 text-xs font-bold uppercase text-white hover:bg-white/20"
                     >
-                      Voltar
+                      {L('Voltar', 'Back')}
                     </button>
                   </div>
                 </div>
@@ -651,7 +657,7 @@ export function Config() {
         className="space-y-3"
       >
         <StoreSectionHeadline
-          title="Dados"
+          title={L('Dados', 'Data')}
           className="mb-3"
         />
         <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
@@ -659,8 +665,8 @@ export function Config() {
             <div className="flex items-center gap-3">
               <Download className="w-4 h-4 text-neon-yellow" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">Exportar backup</span>
-                <p className="text-[10px] text-white/45">JSON com todo o progresso (inclui definições).</p>
+                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Exportar backup', 'Export backup')}</span>
+                <p className="text-[10px] text-white/45">{L('JSON com todo o progresso (inclui definições).', 'JSON with all progress (includes settings).')}</p>
               </div>
             </div>
             <button
@@ -668,15 +674,15 @@ export function Config() {
               onClick={downloadBackup}
               className="text-xs font-display font-bold uppercase tracking-wider bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg shrink-0"
             >
-              Baixar
+              {L('Baixar', 'Download')}
             </button>
           </div>
           <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-3">
               <Upload className="w-4 h-4 text-neon-yellow" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">Restaurar backup</span>
-                <p className="text-[10px] text-white/45">Substitui o save atual. Recarrega a página em seguida.</p>
+                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Restaurar backup', 'Restore backup')}</span>
+                <p className="text-[10px] text-white/45">{L('Substitui o save atual. Recarrega a página em seguida.', 'Replaces the current save. Reloads the page afterwards.')}</p>
               </div>
             </div>
             <div>
@@ -693,7 +699,7 @@ export function Config() {
                 onClick={() => fileInputRef.current?.click()}
                 className="text-xs font-display font-bold uppercase tracking-wider border border-white/20 hover:bg-white/10 px-4 py-2 rounded-lg shrink-0"
               >
-                Escolher ficheiro
+                {L('Escolher ficheiro', 'Choose file')}
               </button>
             </div>
           </div>
@@ -708,7 +714,7 @@ export function Config() {
         className="space-y-3"
       >
         <StoreSectionHeadline
-          title="Sobre"
+          title={L('Sobre', 'About')}
           className="mb-3"
         />
         <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
@@ -716,7 +722,7 @@ export function Config() {
             <div className="flex items-center gap-3">
               <Info className="w-4 h-4 text-white/45" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">Versão</span>
+                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Versão', 'Version')}</span>
                 <p className="text-[10px] text-white/45">OLEFOOT v0.11</p>
               </div>
             </div>
@@ -731,13 +737,13 @@ export function Config() {
               >
                 <Trash2 className="w-4 h-4" />
                 <div>
-                  <span className="text-sm font-display font-bold tracking-wider">Resetar progresso</span>
-                  <p className="text-[10px] text-white/45 group-hover:text-white/50">Apaga o save do jogo e recomeça do zero.</p>
+                  <span className="text-sm font-display font-bold tracking-wider">{L('Resetar progresso', 'Reset progress')}</span>
+                  <p className="text-[10px] text-white/45 group-hover:text-white/50">{L('Apaga o save do jogo e recomeça do zero.', 'Deletes the game save and starts from scratch.')}</p>
                 </div>
               </button>
             ) : (
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <span className="text-xs text-red-400 font-bold flex-1">Tens a certeza? Não dá para desfazer.</span>
+                <span className="text-xs text-red-400 font-bold flex-1">{L('Tens a certeza? Não dá para desfazer.', 'Are you sure? This can\'t be undone.')}</span>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -748,7 +754,7 @@ export function Config() {
                     }}
                     className="bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider px-4 py-2"
                   >
-                    Confirmar
+                    {L('Confirmar', 'Confirm')}
                   </button>
                   <button
                     type="button"
@@ -756,7 +762,7 @@ export function Config() {
                     className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold uppercase tracking-wider px-4 py-2 flex items-center gap-1"
                   >
                     <RotateCcw className="w-3 h-3" />
-                    Cancelar
+                    {L('Cancelar', 'Cancel')}
                   </button>
                 </div>
               </div>
@@ -796,14 +802,14 @@ function VerificationSection() {
   const status = state?.verification_status ?? 'not_submitted';
 
   const summary = loading
-    ? { label: 'Carregando…', tone: 'neutral' as const, ctaLabel: '' }
+    ? { label: L('Carregando…', 'Loading…'), tone: 'neutral' as const, ctaLabel: '' }
     : status === 'approved'
-    ? { label: (<span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" strokeWidth={2.4} /> Conta verificada</span>), tone: 'ok' as const, ctaLabel: 'Ver dados' }
+    ? { label: (<span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" strokeWidth={2.4} /> {L('Conta verificada', 'Account verified')}</span>), tone: 'ok' as const, ctaLabel: L('Ver dados', 'View details') }
     : status === 'pending'
-    ? { label: 'Em análise pelo Admin', tone: 'pending' as const, ctaLabel: 'Editar' }
+    ? { label: L('Em análise pelo Admin', 'Under Admin review'), tone: 'pending' as const, ctaLabel: L('Editar', 'Edit') }
     : status === 'rejected'
-    ? { label: 'Verificação rejeitada', tone: 'bad' as const, ctaLabel: 'Reenviar' }
-    : { label: 'Conta não verificada', tone: 'neutral' as const, ctaLabel: 'Verificar' };
+    ? { label: L('Verificação rejeitada', 'Verification rejected'), tone: 'bad' as const, ctaLabel: L('Reenviar', 'Resubmit') }
+    : { label: L('Conta não verificada', 'Account not verified'), tone: 'neutral' as const, ctaLabel: L('Verificar', 'Verify') };
 
   const toneClass =
     summary.tone === 'ok'
@@ -817,8 +823,8 @@ function VerificationSection() {
   return (
     <section className="space-y-3">
       <StoreSectionHeadline
-        title="Verificação da conta"
-        subtitle="Confirme seu e-mail e proteja seu save."
+        title={L('Verificação da conta', 'Account verification')}
+        subtitle={L('Confirme seu e-mail e proteja seu save.', 'Confirm your e-mail and protect your save.')}
         className="mb-3"
       />
       <div className="rounded-lg border border-white/10 bg-panel overflow-hidden">
@@ -834,17 +840,17 @@ function VerificationSection() {
             </p>
             <p className="mt-0.5 text-[11px] text-white/50">
               {status === 'approved'
-                ? 'O PRO pode sacar saldo normalmente.'
+                ? L('O PRO pode sacar saldo normalmente.', 'PRO can withdraw balance normally.')
                 : status === 'pending'
-                ? 'Aguarda aprovação do Admin para liberar o PRO.'
+                ? L('Aguarda aprovação do Admin para liberar o PRO.', 'Awaiting Admin approval to unlock PRO.')
                 : status === 'rejected'
-                ? state?.verification_rejection_reason ?? 'Revisa os dados e reenvia.'
-                : 'Libera o painel PRO com seus cards e saque.'}
+                ? state?.verification_rejection_reason ?? L('Revisa os dados e reenvia.', 'Review your details and resubmit.')
+                : L('Libera o painel PRO com seus cards e saque.', 'Unlocks the PRO panel with your cards and withdrawals.')}
             </p>
           </div>
           {!loading ? (
             <span className="shrink-0 rounded border border-neon-yellow/35 bg-neon-yellow/10 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider text-neon-yellow">
-              {expanded ? 'Fechar' : summary.ctaLabel}
+              {expanded ? L('Fechar', 'Close') : summary.ctaLabel}
             </span>
           ) : null}
         </button>
@@ -853,15 +859,15 @@ function VerificationSection() {
             {status === 'approved' ? (
               <div className="px-5 py-5">
                 <p className="text-[12px] text-white/70">
-                  Aprovado em{' '}
+                  {L('Aprovado em', 'Approved on')}{' '}
                   {state?.verification_reviewed_at
-                    ? new Date(state.verification_reviewed_at).toLocaleString('pt-BR')
+                    ? new Date(state.verification_reviewed_at).toLocaleString(LOCALE)
                     : '—'}
                   .
                 </p>
                 {state?.verification_data?.address ? (
                   <p className="mt-2 text-[11px] leading-snug text-white/55">
-                    Endereço registrado:{' '}
+                    {L('Endereço registrado:', 'Registered address:')}{' '}
                     {state.verification_data.address.street}, {state.verification_data.address.number} ·{' '}
                     {state.verification_data.address.city}
                     {state.verification_data.address.state ? ` — ${state.verification_data.address.state}` : ''}
@@ -872,7 +878,7 @@ function VerificationSection() {
                   onClick={() => setExpanded(false)}
                   className="mt-4 rounded border border-white/15 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider text-white/70 hover:bg-white/5"
                 >
-                  Fechar
+                  {L('Fechar', 'Close')}
                 </button>
               </div>
             ) : (
@@ -954,7 +960,7 @@ function VerificationForm({
     setCepLookupErr(null);
   };
 
-  const contractValid = contractText.trim().toUpperCase() === 'CONTRATO';
+  const contractValid = contractText.trim().toUpperCase() === PALAVRA_CONTRATO;
   const baseValid =
     birthDate.length === 10 &&
     addr.street.trim().length > 0 &&
@@ -977,7 +983,7 @@ function VerificationForm({
         contractAcceptedAt: new Date().toISOString(),
       });
       if (!r.ok) {
-        setSubmitErr(r.error ?? 'Falha ao enviar verificação.');
+        setSubmitErr(r.error ?? L('Falha ao enviar verificação.', 'Failed to submit verification.'));
         return;
       }
       onSubmitted();
@@ -993,20 +999,20 @@ function VerificationForm({
     <div className="px-5 py-5 space-y-4">
       <div>
         <p className="font-display text-sm font-bold uppercase tracking-wider text-white">
-          {rejectedReason ? 'Reenviar verificação' : 'Preencha seus dados'}
+          {rejectedReason ? L('Reenviar verificação', 'Resubmit verification') : L('Preencha seus dados', 'Fill in your details')}
         </p>
         <p className="mt-1 text-[11px] text-white/55">
-          Necessário para liberar o painel <strong className="text-white">PRO</strong> (saque de vendas). Aprovação pelo Admin.
+          {emIngles() ? <>Required to unlock the <strong className="text-white">PRO</strong> panel (sales withdrawals). Approved by Admin.</> : <>Necessário para liberar o painel <strong className="text-white">PRO</strong> (saque de vendas). Aprovação pelo Admin.</>}
         </p>
         {rejectedReason ? (
           <div className="mt-2 rounded border border-[var(--color-danger)]/35 bg-[var(--color-danger)]/[0.08] px-3 py-2 text-[11px] text-[var(--color-danger)]">
-            <strong className="uppercase text-[var(--color-danger)]">Rejeitado:</strong> {rejectedReason}
+            <strong className="uppercase text-[var(--color-danger)]">{L('Rejeitado:', 'Rejected:')}</strong> {rejectedReason}
           </div>
         ) : null}
       </div>
 
       <label className="block">
-        <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">Data de nascimento</span>
+        <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">{L('Data de nascimento', 'Date of birth')}</span>
         <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className={inputCls} required />
       </label>
 
@@ -1019,14 +1025,14 @@ function VerificationForm({
           className="h-4 w-4 accent-neon-yellow"
         />
         <label htmlFor="addr-international" className="text-[11px] font-bold uppercase tracking-wider text-white/70">
-          Endereço internacional
+          {L('Endereço internacional', 'International address')}
         </label>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
           <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">
-            {addr.international ? 'Código postal' : 'CEP'}
+            {addr.international ? L('Código postal', 'Postal code') : L('CEP', 'ZIP (CEP)')}
           </span>
           <div className="flex gap-2">
             <input
@@ -1043,7 +1049,7 @@ function VerificationForm({
                 disabled={cepLoading}
                 className="shrink-0 rounded border border-neon-yellow/40 bg-neon-yellow/10 px-3 font-display text-[10px] font-bold uppercase tracking-wider text-neon-yellow hover:bg-neon-yellow/20 disabled:opacity-40"
               >
-                {cepLoading ? '…' : 'Buscar'}
+                {cepLoading ? '…' : L('Buscar', 'Search')}
               </button>
             ) : null}
           </div>
@@ -1051,7 +1057,7 @@ function VerificationForm({
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">País</span>
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">{L('País', 'Country')}</span>
           <input
             value={addr.country}
             onChange={(e) => setAddr((a) => ({ ...a, country: e.target.value.toUpperCase().slice(0, 3) }))}
@@ -1063,28 +1069,28 @@ function VerificationForm({
         </label>
 
         <label className="block sm:col-span-2">
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">Rua / logradouro</span>
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">{L('Rua / logradouro', 'Street')}</span>
           <input value={addr.street} onChange={(e) => setAddr((a) => ({ ...a, street: e.target.value }))} className={inputCls} />
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">Número</span>
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">{L('Número', 'Number')}</span>
           <input value={addr.number} onChange={(e) => setAddr((a) => ({ ...a, number: e.target.value }))} className={inputCls} />
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">Complemento</span>
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">{L('Complemento', 'Address line 2')}</span>
           <input value={addr.complement ?? ''} onChange={(e) => setAddr((a) => ({ ...a, complement: e.target.value }))} className={inputCls} />
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">Cidade</span>
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">{L('Cidade', 'City')}</span>
           <input value={addr.city} onChange={(e) => setAddr((a) => ({ ...a, city: e.target.value }))} className={inputCls} />
         </label>
 
         <label className="block">
           <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">
-            {addr.international ? 'Região / estado' : 'UF'}
+            {addr.international ? L('Região / estado', 'Region / state') : L('UF', 'State')}
           </span>
           <input
             value={addr.state}
@@ -1096,16 +1102,17 @@ function VerificationForm({
       </div>
 
       <div className="rounded border border-white/10 bg-black/30 p-3">
-        <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/70">Contrato de venda</p>
+        <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/70">{L('Contrato de venda', 'Sales contract')}</p>
         <p className="mt-1 text-[11px] leading-snug text-white/60">
-          Ao assinar, confirma que os dados acima são verdadeiros e concorda com a cláusula de splits de pagamento
-          descrita nos termos da Olefoot. Para aceitar, digita a palavra <strong className="text-neon-yellow">CONTRATO</strong> abaixo.
+          {emIngles() ? <>By signing, you confirm the details above are true and agree to the payment split clause
+          in the Olefoot terms. To accept, type the word <strong className="text-neon-yellow">{PALAVRA_CONTRATO}</strong> below.</> : <>Ao assinar, confirma que os dados acima são verdadeiros e concorda com a cláusula de splits de pagamento
+          descrita nos termos da Olefoot. Para aceitar, digita a palavra <strong className="text-neon-yellow">CONTRATO</strong> abaixo.</>}
         </p>
         <input
           value={contractText}
           onChange={(e) => setContractText(e.target.value.toUpperCase())}
           className={`${inputCls} mt-2`}
-          placeholder="Digite: CONTRATO"
+          placeholder={L('Digite: CONTRATO', 'Type: CONTRACT')}
         />
         <label className={`mt-3 flex items-center gap-2 text-[11px] ${contractValid ? 'text-white/80' : 'text-white/40 cursor-not-allowed'}`}>
           <input
@@ -1115,7 +1122,7 @@ function VerificationForm({
             onChange={(e) => setAcceptTerms(e.target.checked)}
             className="h-4 w-4 accent-neon-yellow"
           />
-          <span>Aceito os termos de venda da Olefoot.</span>
+          <span>{L('Aceito os termos de venda da Olefoot.', 'I accept the Olefoot sales terms.')}</span>
         </label>
       </div>
 
@@ -1130,7 +1137,7 @@ function VerificationForm({
           onClick={() => void submit()}
           className="flex-1 rounded bg-neon-yellow px-4 py-2.5 font-display text-xs font-black uppercase tracking-wider text-black hover:bg-white disabled:opacity-40"
         >
-          {submitting ? 'Enviando…' : 'Enviar para verificação'}
+          {submitting ? L('Enviando…', 'Sending…') : L('Enviar para verificação', 'Submit for verification')}
         </button>
         {onCancel ? (
           <button
@@ -1138,7 +1145,7 @@ function VerificationForm({
             onClick={onCancel}
             className="rounded border border-white/15 px-4 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-white/70 hover:bg-white/5"
           >
-            Cancelar
+            {L('Cancelar', 'Cancel')}
           </button>
         ) : null}
       </div>

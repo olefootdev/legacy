@@ -1,11 +1,12 @@
 import type { ClubEntity, Fixture, OpponentStub, PlayerEntity } from './types';
+import { L } from '@/i18n/L';
 
 export const DEFAULT_CLUB: ClubEntity = {
   id: 'ole-fc',
   name: 'OLE FC',
   shortName: 'OLE',
   city: 'Neo City',
-  stadium: 'Estádio Neo Arena',
+  stadium: L('Estádio Neo Arena', 'Neo Arena Stadium'),
 };
 
 // [2026-05-18] TITANS FC mockada removida. O placeholder padrão fica neutro;
@@ -13,7 +14,7 @@ export const DEFAULT_CLUB: ClubEntity = {
 // no mount via `quickFindOpponent`, então este stub raramente é exibido.
 export const DEFAULT_OPPONENT: OpponentStub = {
   id: 'placeholder-opponent',
-  name: 'Buscando…',
+  name: L('Buscando…', 'Searching…'),
   shortName: '...',
   strength: 70,
 };
@@ -21,9 +22,9 @@ export const DEFAULT_OPPONENT: OpponentStub = {
 export function defaultFixture(): Fixture {
   return {
     id: 'fx-next-1',
-    kickoffLabel: 'Hoje, 20:00',
+    kickoffLabel: L('Hoje, 20:00', 'Today, 20:00'),
     venue: DEFAULT_CLUB.stadium,
-    competition: 'Liga Principal',
+    competition: L('Liga Principal', 'Main League'),
     homeName: DEFAULT_CLUB.name,
     awayName: DEFAULT_OPPONENT.name,
     opponent: { ...DEFAULT_OPPONENT },

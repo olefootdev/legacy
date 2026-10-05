@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { L, LOCALE } from '@/i18n/L';
 import { HeaderOtzStrip } from '@/components/HeaderOtzStrip';
 import { TrainerAvatarHeaderControl } from '@/components/TrainerAvatarHeaderControl';
 import { NotificationsDropdown } from '@/components/NotificationsDropdown';
@@ -49,10 +50,10 @@ type NavItem = {
 
 const mainNavItems: NavItem[] = [
   { icon: Home, label: 'HOME', path: '/' },
-  { icon: Users, label: 'CLUBE', path: '/clube' },
-  { icon: Trophy, label: 'COMPETIÇÃO', path: '/competicao' },
+  { icon: Users, label: L('CLUBE', 'CLUB'), path: '/clube' },
+  { icon: Trophy, label: L('COMPETIÇÃO', 'COMPETITION'), path: '/competicao' },
   { icon: Crown, label: 'LEGENDS', path: '/legend' },
-  { icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
+  { icon: ArrowRightLeft, label: L('MERCADO', 'MARKET'), path: '/mercado' },
   { icon: User, label: 'MANAGER', path: '/manager' },
   // A WALLET é a porta única do dinheiro: SPOT, DEX e NETWORK moram dentro dela.
   //
@@ -82,17 +83,17 @@ type BottomNavAction = {
 type BottomNavItem = BottomNavLink | BottomNavAction;
 
 const bottomNavItems: BottomNavItem[] = [
-  { kind: 'link', icon: Home, label: 'INÍCIO', path: '/' },
-  { kind: 'link', icon: Users, label: 'CLUBE', path: '/clube' },
-  { kind: 'action', label: 'JOGAR', actionId: 'open-match-modes' },
-  { kind: 'link', icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
-  { kind: 'link', icon: Trophy, label: 'COMPETIÇÃO', path: '/competicao' },
+  { kind: 'link', icon: Home, label: L('INÍCIO', 'HOME'), path: '/' },
+  { kind: 'link', icon: Users, label: L('CLUBE', 'CLUB'), path: '/clube' },
+  { kind: 'action', label: L('JOGAR', 'PLAY'), actionId: 'open-match-modes' },
+  { kind: 'link', icon: ArrowRightLeft, label: L('MERCADO', 'MARKET'), path: '/mercado' },
+  { kind: 'link', icon: Trophy, label: L('COMPETIÇÃO', 'COMPETITION'), path: '/competicao' },
 ];
 
 /** Item secundário — mora no rodapé do menu lateral, perto do SAIR.
  *  Renderizado em Inter regular (não vira item principal "perdido"). */
 const secondaryNavItems: NavItem[] = [
-  { icon: GraduationCap, label: 'Como jogar', path: '/ajuda' },
+  { icon: GraduationCap, label: L('Como jogar', 'How to play'), path: '/ajuda' },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -182,7 +183,7 @@ export function Layout({ children }: { children: ReactNode }) {
   };
 
   const coachGreetingName = remoteManagerFirst ?? (localManagerFirst || null);
-  const coachGreetingLine = coachGreetingName ? `Olá, ${coachGreetingName}` : 'Olá, Treinador';
+  const coachGreetingLine = coachGreetingName ? L(`Olá, ${coachGreetingName}`, `Hi, ${coachGreetingName}`) : L('Olá, Treinador', 'Hi, Coach');
   const isQuickMatchRoute = location.pathname === '/match/quick';
   const isPenaltyRoute =
     location.pathname === '/match/penalty' ||
@@ -207,8 +208,8 @@ export function Layout({ children }: { children: ReactNode }) {
           >
             <span className="btn-primary-inner px-1 sm:px-2">
               <Play className="h-3 w-3 shrink-0 fill-black" />
-              <span className="hidden min-[360px]:inline">RÁPIDA</span>
-              <span className="min-[360px]:hidden">JOGO</span>
+              <span className="hidden min-[360px]:inline">{L('RÁPIDA', 'QUICK')}</span>
+              <span className="min-[360px]:hidden">{L('JOGO', 'MATCH')}</span>
             </span>
           </Link>
         );
@@ -220,7 +221,7 @@ export function Layout({ children }: { children: ReactNode }) {
             className="btn-primary flex shrink-0 items-center gap-1 px-3 py-2 text-[10px] sm:gap-2 sm:px-4 sm:py-2 sm:text-xs"
           >
             <span className="btn-primary-inner px-1 sm:px-2">
-              <Settings className="h-3 w-3 shrink-0" /> Tática
+              <Settings className="h-3 w-3 shrink-0" /> {L('Tática', 'Tactics')}
             </span>
           </button>
         );
@@ -239,7 +240,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80">
           <div className="flex flex-col items-center gap-3">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-neon-yellow" />
-            <span className="text-sm text-white/70">Salvando progresso...</span>
+            <span className="text-sm text-white/70">{L('Salvando progresso...', 'Saving progress...')}</span>
           </div>
         </div>
       )}
@@ -326,7 +327,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 letterSpacing: '-0.01em',
               }}
             >
-              Jogar
+              {L('Jogar', 'Play')}
             </span>
           </button>
         </div>
@@ -361,7 +362,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* Status do jogo — Fase Beta sempre visível + número real de clubes. */}
         <div className="mx-4 mb-3 px-4 py-3 border border-white/10 bg-white/[0.02]" style={{ borderRadius: 'var(--radius-sm)' }}>
           <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600 }}>
-            Status do jogo
+            {L('Status do jogo', 'Game status')}
           </p>
           <p
             className="mt-1"
@@ -383,16 +384,16 @@ export function Layout({ children }: { children: ReactNode }) {
                 style={{ background: 'var(--color-neon-yellow)' }}
                 aria-hidden
               />
-              Fase Beta
+              {L('Fase Beta', 'Beta')}
             </span>
           </p>
           <p
             className="text-white/70 mt-2"
             style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', fontWeight: 500 }}
           >
-            Clubes criados:{' '}
+            {L('Clubes criados:', 'Clubs created:')}{' '}
             <span className="text-neon-yellow font-semibold tabular-nums">
-              {totalManagers != null ? totalManagers.toLocaleString('pt-BR') : '—'}
+              {totalManagers != null ? totalManagers.toLocaleString(LOCALE) : '—'}
             </span>
           </p>
         </div>
@@ -404,7 +405,7 @@ export function Layout({ children }: { children: ReactNode }) {
             className="flex w-full items-center gap-3 px-4 py-3 text-gray-500 hover:text-white transition-colors group"
           >
             <LogOut className="w-5 h-5 group-hover:text-neon-yellow transition-colors" />
-            <span className="font-display font-bold tracking-wider text-sm">SAIR</span>
+            <span className="font-display font-bold tracking-wider text-sm">{L('SAIR', 'LOG OUT')}</span>
           </button>
         </div>
       </aside>
@@ -432,7 +433,7 @@ export function Layout({ children }: { children: ReactNode }) {
               type="button"
               className="shrink-0 grid place-items-center text-white transition-colors hover:text-neon-yellow lg:hidden"
               onClick={() => setIsMobileMenuOpen(true)}
-              aria-label="Abrir menu"
+              aria-label={L('Abrir menu', 'Open menu')}
             >
               <Menu className="h-6 w-6" strokeWidth={2.25} />
             </button>
@@ -444,7 +445,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <Link
               to="/"
               className="flex items-center justify-center"
-              aria-label="Olefoot — início"
+              aria-label={L('Olefoot — início', 'Olefoot — home')}
             >
               <img src="/brand/olefoot-icone-yellow-01.svg" alt="Olefoot" className="h-8 w-8 sm:h-9 sm:w-9" />
             </Link>
@@ -468,7 +469,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <Link
               to="/manager/config"
               className="flex h-10 w-10 items-center justify-center border border-white/16 bg-nav text-white/80 transition-colors hover:border-white hover:text-white"
-              aria-label="Configurações"
+              aria-label={L('Configurações', 'Settings')}
             >
               <Settings className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={2.25} />
             </Link>
@@ -535,7 +536,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="text-gray-400 hover:text-white p-1"
-                  aria-label="Fechar menu"
+                  aria-label={L('Fechar menu', 'Close menu')}
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -619,7 +620,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
               <div className="mx-4 mb-3 px-4 py-3 border border-white/10 bg-white/[0.02]" style={{ borderRadius: 'var(--radius-sm)' }}>
                 <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600 }}>
-                  Status do jogo
+                  {L('Status do jogo', 'Game status')}
                 </p>
                 <p
                   className="mt-1"
@@ -641,16 +642,16 @@ export function Layout({ children }: { children: ReactNode }) {
                       style={{ background: 'var(--color-neon-yellow)' }}
                       aria-hidden
                     />
-                    Fase Beta
+                    {L('Fase Beta', 'Beta')}
                   </span>
                 </p>
                 <p
                   className="text-white/70 mt-2"
                   style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', fontWeight: 500 }}
                 >
-                  Clubes criados:{' '}
+                  {L('Clubes criados:', 'Clubs created:')}{' '}
                   <span className="text-neon-yellow font-semibold tabular-nums">
-                    {totalManagers != null ? totalManagers.toLocaleString('pt-BR') : '—'}
+                    {totalManagers != null ? totalManagers.toLocaleString(LOCALE) : '—'}
                   </span>
                 </p>
               </div>
@@ -662,7 +663,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   className="flex w-full items-center gap-3 px-4 py-3 text-gray-500 hover:text-white transition-colors group rounded-lg hover:bg-white/5"
                 >
                   <LogOut className="w-5 h-5 group-hover:text-neon-yellow transition-colors" />
-                  <span className="font-display font-bold tracking-wider">SAIR</span>
+                  <span className="font-display font-bold tracking-wider">{L('SAIR', 'LOG OUT')}</span>
                 </button>
               </div>
             </motion.div>
@@ -675,7 +676,7 @@ export function Layout({ children }: { children: ReactNode }) {
           sem halo, sem vidro fosco. */}
       {!hideMobileBottomNav && (
         <nav
-          aria-label="Navegação principal"
+          aria-label={L('Navegação principal', 'Main navigation')}
           className="lg:hidden fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 items-start border-t border-white/[0.07] bg-nav pb-safe"
         >
           {bottomNavItems.map((item) => {

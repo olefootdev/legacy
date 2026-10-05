@@ -2,6 +2,7 @@
  * Sistema de Intensidade Tática
  * 5 níveis táticos com efeitos reais no jogo
  */
+import { L } from '@/i18n/L';
 
 export type TacticalIntensityLevel = 'defend' | 'possession' | 'counter' | 'press' | 'attack';
 
@@ -26,8 +27,8 @@ export const TACTICAL_INTENSITY_PRESETS: Record<TacticalIntensityLevel, Tactical
     counterChance: 0.15,
     pressureIntensity: 0.3,
     defensiveBonus: 0.25,
-    label: 'Defender',
-    description: 'Bloco baixo, +25% defesa, contra-ataques rápidos',
+    label: L('Defender', 'Defend'),
+    description: L('Bloco baixo, +25% defesa, contra-ataques rápidos', 'Low block, +25% defence, fast counters'),
   },
   possession: {
     level: 'possession',
@@ -37,8 +38,8 @@ export const TACTICAL_INTENSITY_PRESETS: Record<TacticalIntensityLevel, Tactical
     counterChance: 0.05,
     pressureIntensity: 0.6,
     defensiveBonus: 0.10,
-    label: 'Posse',
-    description: 'Controla o jogo, +15% posse, desgasta adversário',
+    label: L('Posse', 'Possession'),
+    description: L('Controla o jogo, +15% posse, desgasta adversário', 'Controls the game, +15% possession, wears the opponent down'),
   },
   counter: {
     level: 'counter',
@@ -48,8 +49,8 @@ export const TACTICAL_INTENSITY_PRESETS: Record<TacticalIntensityLevel, Tactical
     counterChance: 0.30,
     pressureIntensity: 0.5,
     defensiveBonus: 0.15,
-    label: 'Contra-Ataque',
-    description: 'Aguarda e explora espaços, +30% contra-ataques',
+    label: L('Contra-Ataque', 'Counter-Attack'),
+    description: L('Aguarda e explora espaços, +30% contra-ataques', 'Waits and exploits space, +30% counters'),
   },
   press: {
     level: 'press',
@@ -59,8 +60,8 @@ export const TACTICAL_INTENSITY_PRESETS: Record<TacticalIntensityLevel, Tactical
     counterChance: 0.10,
     pressureIntensity: 1.5,
     defensiveBonus: -0.05,
-    label: 'Pressionar',
-    description: 'Pressão alta, recupera bola rápido, fadiga 1.6x',
+    label: L('Pressionar', 'Press'),
+    description: L('Pressão alta, recupera bola rápido, fadiga 1.6x', 'High press, wins the ball back fast, 1.6x fatigue'),
   },
   attack: {
     level: 'attack',
@@ -70,8 +71,8 @@ export const TACTICAL_INTENSITY_PRESETS: Record<TacticalIntensityLevel, Tactical
     counterChance: 0.05,
     pressureIntensity: 1.2,
     defensiveBonus: -0.10,
-    label: 'Ataque Total',
-    description: '+20% chances de gol, -10% defesa, fadiga 2x',
+    label: L('Ataque Total', 'All-Out Attack'),
+    description: L('+20% chances de gol, -10% defesa, fadiga 2x', '+20% goal chances, -10% defence, 2x fatigue'),
   },
 };
 

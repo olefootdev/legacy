@@ -23,9 +23,10 @@ import type { MomentStage } from './detectMoment';
 export function stageFromRoundName(round: string | undefined | null): MomentStage | undefined {
   if (!round) return undefined;
   const r = round.trim().toLowerCase();
+  // Também aceita os nomes em inglês (Quarter-final, Round of 16, Group stage…).
+  if (r.includes('quarta') || r.includes('quarter')) return 'quarter';
   if (r.includes('final')) return r.includes('semi') ? 'semi' : 'final';
-  if (r.includes('quarta')) return 'quarter';
-  if (r.includes('oitava')) return 'round16';
-  if (r.includes('grupo') || r.includes('fase de 32') || r.includes('playoff')) return 'group';
+  if (r.includes('oitava') || r.includes('round of 16')) return 'round16';
+  if (r.includes('grupo') || r.includes('group') || r.includes('fase de 32') || r.includes('round of 32') || r.includes('playoff')) return 'group';
   return undefined;
 }

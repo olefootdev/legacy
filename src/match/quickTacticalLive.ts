@@ -24,6 +24,7 @@ import { SpiritRng } from '../../shared/gamespirit/SpiritRng';
 import { hashSeed } from './quickBeatDirector';
 import type { MatchPlanEvent } from './quickPlanTypes';
 import type { TacticalIntensityLevel } from './quickTacticalIntensity';
+import { L } from '@/i18n/L';
 
 export interface LiveMatchState {
   /** homeScore - awayScore (>0 ganhando). */
@@ -39,7 +40,7 @@ const AXIS: Record<TacticalIntensityLevel, number> = {
 };
 
 export const STYLE_LABEL: Record<TacticalIntensityLevel, string> = {
-  defend: 'Retranca', counter: 'Contra-ataque', possession: 'Posse', press: 'Pressão', attack: 'Ataque',
+  defend: L('Retranca', 'Park the bus'), counter: L('Contra-ataque', 'Counter'), possession: L('Posse', 'Possession'), press: L('Pressão', 'Press'), attack: L('Ataque', 'Attack'),
 };
 
 /**
@@ -92,23 +93,23 @@ const THREAT_AWAY = new Set<MatchPlanEvent['kind']>(['goal_away', 'chance_away',
 
 function upHomeGoal(e: MatchPlanEvent, label: string): MatchPlanEvent {
   return { ...e, kind: 'goal_home', weight_tier: 'epic',
-    text: `${e.minute}' — GOOOL! ${label} na hora certa rasgou a defesa — bola na rede!`,
-    reason: `${label} foi a leitura certa do momento`, decision_influenced: true };
+    text: L(`${e.minute}' — GOOOL! ${label} na hora certa rasgou a defesa — bola na rede!`, `${e.minute}' — GOAL! ${label} at the right time tore the defence apart — back of the net!`),
+    reason: L(`${label} foi a leitura certa do momento`, `${label} was the right read of the moment`), decision_influenced: true };
 }
 function shieldAway(e: MatchPlanEvent, label: string): MatchPlanEvent {
   return { ...e, kind: 'shot_away', weight_tier: 'big',
-    text: `${e.minute}' — Travou! ${label} no tempo certo matou o perigo deles.`,
-    reason: `${label} segurou o jogo`, decision_influenced: true };
+    text: L(`${e.minute}' — Travou! ${label} no tempo certo matou o perigo deles.`, `${e.minute}' — Shut down! ${label} at the right time killed their threat.`),
+    reason: L(`${label} segurou o jogo`, `${label} held the game`), decision_influenced: true };
 }
 function downHomeGoal(e: MatchPlanEvent, label: string): MatchPlanEvent {
   return { ...e, kind: 'shot_home', weight_tier: 'normal',
-    text: `${e.minute}' — Faltou ler o jogo: ${label} fora de hora e a finalização morre na marcação.`,
-    reason: `${label} era o estilo errado pro momento`, decision_influenced: true };
+    text: L(`${e.minute}' — Faltou ler o jogo: ${label} fora de hora e a finalização morre na marcação.`, `${e.minute}' — Misread the game: ${label} at the wrong time and the shot dies in the marking.`),
+    reason: L(`${label} era o estilo errado pro momento`, `${label} was the wrong style for the moment`), decision_influenced: true };
 }
 function upAwayGoal(e: MatchPlanEvent, label: string): MatchPlanEvent {
   return { ...e, kind: 'goal_away', weight_tier: 'big',
-    text: `${e.minute}' — Deu ruim: ${label} na hora errada abriu o espaço e o adversário não perdoou.`,
-    reason: `${label} fora de hora cobrou o preço`, decision_influenced: true };
+    text: L(`${e.minute}' — Deu ruim: ${label} na hora errada abriu o espaço e o adversário não perdoou.`, `${e.minute}' — It backfired: ${label} at the wrong time opened space and the opponent made no mistake.`),
+    reason: L(`${label} fora de hora cobrou o preço`, `${label} at the wrong time cost you`), decision_influenced: true };
 }
 
 /**
@@ -130,8 +131,8 @@ export function resolveLegacyBoost(opts: {
   const p = Math.min(0.45, (e.xg ?? 0.12) * 1.5 + opts.totalPct * 0.03);
   if (rng.next() < p) {
     return { ...e, kind: 'goal_home', weight_tier: 'epic',
-      text: `${e.minute}' — GOOOL! O Legacy de ${opts.legendName} puxou o time — bola na rede!`,
-      reason: `a lenda ${opts.legendName} decidiu`, decision_influenced: true };
+      text: L(`${e.minute}' — GOOOL! O Legacy de ${opts.legendName} puxou o time — bola na rede!`, `${e.minute}' — GOAL! ${opts.legendName}'s Legacy lifted the team — back of the net!`),
+      reason: L(`a lenda ${opts.legendName} decidiu`, `the legend ${opts.legendName} decided it`), decision_influenced: true };
   }
   return null;
 }
@@ -159,18 +160,18 @@ export function resolveFormationOnEvent(opts: {
   if (off > 0) {
     if (NEAR_MISS_HOME.has(e.kind) && rng.next() < off * 0.1) {
       return { ...e, kind: 'goal_home', weight_tier: 'big',
-        text: `${e.minute}' — GOOOL! A formação ofensiva criou o espaço e o time não perdoou!`,
-        reason: 'a formação aberta gerou a chance', decision_influenced: true };
+        text: L(`${e.minute}' — GOOOL! A formação ofensiva criou o espaço e o time não perdoou!`, `${e.minute}' — GOAL! The attacking formation created the space and the team made no mistake!`),
+        reason: L('a formação aberta gerou a chance', 'the open formation created the chance'), decision_influenced: true };
     }
     if (NEAR_MISS_AWAY.has(e.kind) && rng.next() < off * 0.07) {
       return { ...e, kind: 'goal_away', weight_tier: 'big',
-        text: `${e.minute}' — A formação aberta deixou espaço atrás e o adversário aproveitou.`,
-        reason: 'o time exposto pagou o preço', decision_influenced: true };
+        text: L(`${e.minute}' — A formação aberta deixou espaço atrás e o adversário aproveitou.`, `${e.minute}' — The open formation left space behind and the opponent took advantage.`),
+        reason: L('o time exposto pagou o preço', 'the exposed team paid the price'), decision_influenced: true };
     }
   } else if (THREAT_AWAY.has(e.kind) && rng.next() < Math.abs(off) * 0.16) {
     return { ...e, kind: 'shot_away', weight_tier: 'big',
-      text: `${e.minute}' — A formação fechada engoliu o ataque deles. Sólido atrás.`,
-      reason: 'a formação defensiva segurou', decision_influenced: true };
+      text: L(`${e.minute}' — A formação fechada engoliu o ataque deles. Sólido atrás.`, `${e.minute}' — The compact formation swallowed their attack. Solid at the back.`),
+      reason: L('a formação defensiva segurou', 'the defensive formation held'), decision_influenced: true };
   }
   return null;
 }

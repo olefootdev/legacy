@@ -1,4 +1,5 @@
 /** Limite de caracteres do data URL (localStorage). */
+import { L } from '@/i18n/L';
 export const MANAGER_CREST_MAX_DATA_URL_LENGTH = 400_000;
 
 const MAX_SIDE_PX = 384;
@@ -20,18 +21,18 @@ export async function fileToManagerCrestPngDataUrl(file: File): Promise<ManagerC
   if (!isLikelyPng(file)) {
     return {
       ok: false,
-      error: 'Usa um ficheiro PNG (com fundo transparente, se quiseres).',
+      error: L('Usa um ficheiro PNG (com fundo transparente, se quiseres).', 'Use a PNG file (with a transparent background, if you like).'),
     };
   }
   if (file.size > MAX_INPUT_BYTES) {
-    return { ok: false, error: 'Ficheiro demasiado grande (máx. 4 MB).' };
+    return { ok: false, error: L('Ficheiro demasiado grande (máx. 4 MB).', 'File too large (max. 4 MB).') };
   }
 
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
   } catch {
-    return { ok: false, error: 'Não foi possível ler a imagem.' };
+    return { ok: false, error: L('Não foi possível ler a imagem.', 'Couldn\'t read the image.') };
   }
 
   try {
@@ -45,7 +46,7 @@ export async function fileToManagerCrestPngDataUrl(file: File): Promise<ManagerC
     canvas.width = cw;
     canvas.height = ch;
     const ctx = canvas.getContext('2d', { alpha: true });
-    if (!ctx) return { ok: false, error: 'Erro ao processar a imagem.' };
+    if (!ctx) return { ok: false, error: L('Erro ao processar a imagem.', 'Error processing the image.') };
     ctx.clearRect(0, 0, cw, ch);
     ctx.drawImage(bitmap, 0, 0, cw, ch);
 
@@ -53,7 +54,7 @@ export async function fileToManagerCrestPngDataUrl(file: File): Promise<ManagerC
     if (dataUrl.length > MANAGER_CREST_MAX_DATA_URL_LENGTH) {
       return {
         ok: false,
-        error: 'O brasão continua grande demais após otimização. Tenta uma imagem mais simples.',
+        error: L('O brasão continua grande demais após otimização. Tenta uma imagem mais simples.', 'The crest is still too large after optimisation. Try a simpler image.'),
       };
     }
     return { ok: true, dataUrl };

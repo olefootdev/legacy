@@ -18,6 +18,7 @@ import { parseVoiceCommand, type MatchRosterContext } from '@/voiceCommand/inten
 import { matchPhrase, incrementPhraseUsage } from '@/voiceCommand/phraseLibrary';
 import { validateCommand, type ValidationContext } from '@/voiceCommand/commandValidation';
 import { findClosestPlayerName } from '@/voiceCommand/intelligentParser';
+import { L } from '@/i18n/L';
 
 export interface VoiceCommandResult {
   success: boolean;
@@ -60,7 +61,7 @@ export async function processVoiceCommand(
   if (!normalizedTranscript) {
     return {
       success: false,
-      message: 'Comando vazio',
+      message: L('Comando vazio', 'Empty command'),
     };
   }
 
@@ -113,7 +114,7 @@ export async function processVoiceCommand(
   if (parsedCommands.length === 0) {
     return {
       success: false,
-      message: `❌ Não entendi "${normalizedTranscript}". Tente: "chuta", "passa pro Adriano", "pressiona alto"`,
+      message: L(`❌ Não entendi "${normalizedTranscript}". Tente: "chuta", "passa pro Adriano", "pressiona alto"`, `❌ Didn't understand "${normalizedTranscript}". Try: "chuta", "passa pro Adriano", "pressiona alto"`),
       confidence: 0,
     };
   }
@@ -128,7 +129,7 @@ export async function processVoiceCommand(
     if (!targetPlayer && cmd.target.kind !== 'team') {
       results.push({
         success: false,
-        message: `❌ Jogador não encontrado: ${JSON.stringify(cmd.target)}`,
+        message: L(`❌ Jogador não encontrado: ${JSON.stringify(cmd.target)}`, `❌ Player not found: ${JSON.stringify(cmd.target)}`),
       });
       continue;
     }
@@ -179,11 +180,11 @@ export async function processVoiceCommand(
 
     // Comando válido
     const targetIds = targetPlayer ? [targetPlayer.playerId] : players.map(p => p.playerId);
-    const targetNames = targetPlayer ? [targetPlayer.name] : ['todo o time'];
+    const targetNames = targetPlayer ? [targetPlayer.name] : [L('todo o time', 'the whole team')];
 
     results.push({
       success: true,
-      message: `✅ ${getCommandFeedback(cmd.intent, targetNames)} ${usedLibrary ? '(biblioteca)' : ''}`,
+      message: `✅ ${getCommandFeedback(cmd.intent, targetNames)} ${usedLibrary ? L('(biblioteca)', '(library)') : ''}`,
       commands: [cmd],
       targetPlayers: targetIds,
       intent: cmd.intent,
@@ -195,7 +196,7 @@ export async function processVoiceCommand(
   if (results.length === 0) {
     return {
       success: false,
-      message: '❌ Nenhum comando válido',
+      message: L('❌ Nenhum comando válido', '❌ No valid command'),
     };
   }
 
@@ -256,21 +257,21 @@ function getCommandFeedback(intent: VoiceIntent, targetNames: string[]): string 
   const target = targetNames.join(', ');
 
   const feedbacks: Partial<Record<VoiceIntent, string>> = {
-    take_shot: `${target} vai chutar`,
-    dribble_attempt: `${target} vai driblar`,
-    cross_ball: `${target} vai cruzar`,
-    pass_to_player: `${target} vai passar`,
-    hold_ball: `${target} vai segurar a bola`,
-    quick_pass: `${target} vai tocar rápido`,
-    invade_box: `${target} vai invadir a área`,
-    mark_player: `${target} vai marcar`,
-    team_press_high: 'Time vai pressionar alto',
-    team_retreat: 'Time vai recuar',
-    team_hold_possession: 'Time vai segurar a posse',
-    break_line: `${target} vai quebrar a linha`,
-    run_behind: `${target} vai correr pelas costas`,
-    pedal_to_metal: 'Time vai acelerar',
+    take_shot: L(`${target} vai chutar`, `${target} will shoot`),
+    dribble_attempt: L(`${target} vai driblar`, `${target} will dribble`),
+    cross_ball: L(`${target} vai cruzar`, `${target} will cross`),
+    pass_to_player: L(`${target} vai passar`, `${target} will pass`),
+    hold_ball: L(`${target} vai segurar a bola`, `${target} will hold the ball`),
+    quick_pass: L(`${target} vai tocar rápido`, `${target} will pass quickly`),
+    invade_box: L(`${target} vai invadir a área`, `${target} will attack the box`),
+    mark_player: L(`${target} vai marcar`, `${target} will mark`),
+    team_press_high: L('Time vai pressionar alto', 'Team will press high'),
+    team_retreat: L('Time vai recuar', 'Team will drop back'),
+    team_hold_possession: L('Time vai segurar a posse', 'Team will keep possession'),
+    break_line: L(`${target} vai quebrar a linha`, `${target} will break the line`),
+    run_behind: L(`${target} vai correr pelas costas`, `${target} will run in behind`),
+    pedal_to_metal: L('Time vai acelerar', 'Team will speed up'),
   };
 
-  return feedbacks[intent] || `Comando: ${intent}`;
+  return feedbacks[intent] || L(`Comando: ${intent}`, `Command: ${intent}`);
 }

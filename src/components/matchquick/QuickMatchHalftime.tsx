@@ -10,6 +10,7 @@
 
 import { motion } from 'motion/react';
 import { Play } from 'lucide-react';
+import { L } from '@/i18n/L';
 
 interface QuickMatchHalftimeProps {
   homeShort: string;
@@ -54,7 +55,7 @@ export function QuickMatchHalftime({
               fontSize: '10px',
             }}
           >
-            Intervalo
+            {L('Intervalo', 'Half-time')}
           </span>
           <span aria-hidden className="h-px w-8 bg-neon-yellow/40" />
         </div>
@@ -167,8 +168,8 @@ export function QuickMatchHalftime({
             }}
           >
             <Play className="w-5 h-5 fill-current" />
-            Iniciar 2º Tempo
-            <span className="ole-num text-black/60" aria-label={`Inicia sozinho em ${countdown} segundos`}>
+            {L('Iniciar 2º Tempo', 'Start 2nd Half')}
+            <span className="ole-num text-black/60" aria-label={L(`Inicia sozinho em ${countdown} segundos`, `Starts automatically in ${countdown} seconds`)}>
               {countdown}s
             </span>
           </button>

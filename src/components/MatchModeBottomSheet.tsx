@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Hashtag } from '@/components/ui';
+import { L } from '@/i18n/L';
 
 type ModeStatus = 'available' | 'soon' | 'wip';
 
@@ -35,22 +36,22 @@ const MODES: ReadonlyArray<ModeEntry> = [
   {
     id: 'classic',
     label: 'Classic',
-    description: 'Em breve · simulação retrô-inteligente com escolhas táticas',
+    description: L('Em breve · simulação retrô-inteligente com escolhas táticas', 'Coming soon · retro-smart sim with tactical choices'),
     status: 'soon',
     glyph: '◈',
   },
   {
     id: 'penalty',
-    label: 'Pênalti',
-    description: 'Disputa cinematográfica · cobrador × goleiro',
+    label: L('Pênalti', 'Penalty'),
+    description: L('Disputa cinematográfica · cobrador × goleiro', 'Cinematic shootout · taker × keeper'),
     status: 'available',
     to: '/match/penalty',
     glyph: '⚡',
   },
   {
     id: 'quick',
-    label: 'Rápida',
-    description: 'Amistosa ou competitiva · resultado em segundos',
+    label: L('Rápida', 'Quick'),
+    description: L('Amistosa ou competitiva · resultado em segundos', 'Friendly or competitive · result in seconds'),
     status: 'available',
     to: '/match/quick',
     glyph: '⏱',
@@ -60,14 +61,14 @@ const MODES: ReadonlyArray<ModeEntry> = [
   {
     id: 'legacy',
     label: 'Legacy',
-    description: 'Em breve · partida ao vivo · simulação tática 2D',
+    description: L('Em breve · partida ao vivo · simulação tática 2D', 'Coming soon · live match · 2D tactical sim'),
     status: 'soon',
     glyph: '✦',
   },
   {
     id: 'cards',
     label: 'Cards',
-    description: 'Em breve · jogo por cartas táticas',
+    description: L('Em breve · jogo por cartas táticas', 'Coming soon · tactical card game'),
     status: 'soon',
     glyph: '▣',
   },
@@ -159,12 +160,12 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
 
             {/* Header */}
             <div className="px-6 pt-2 pb-4">
-              <Hashtag>#olefoot #modos</Hashtag>
+              <Hashtag>{L('#olefoot #modos', '#olefoot #modes')}</Hashtag>
               <h2
                 id="match-mode-sheet-title"
                 className="mt-1 font-impact text-4xl uppercase text-neon-yellow leading-[1.1]"
               >
-                Jogar
+                {L('Jogar', 'Play')}
               </h2>
             </div>
 
@@ -216,12 +217,12 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
                           </span>
                           {mode.status === 'soon' ? (
                             <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-white/65">
-                              Em breve
+                              {L('Em breve', 'Soon')}
                             </span>
                           ) : null}
                           {mode.status === 'wip' ? (
                             <span className="shrink-0 rounded-full bg-neon-yellow/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-neon-yellow/85">
-                              Em construção
+                              {L('Em construção', 'In progress')}
                             </span>
                           ) : null}
                         </span>
@@ -249,7 +250,7 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
               className="block h-px w-full bg-gradient-to-r from-transparent via-neon-yellow/35 to-transparent"
             />
             <div className="px-6 py-3 text-center text-[10px] uppercase tracking-[0.28em] text-white/35 font-display font-bold">
-              Arraste para baixo para fechar
+              {L('Arraste para baixo para fechar', 'Swipe down to close')}
             </div>
           </motion.div>
         ) : null}

@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield } from 'lucide-react';
+import { L } from '@/i18n/L';
 
 function fmtCountdown(ms: number): string {
   if (ms <= 0) return '00:00';
@@ -83,7 +84,7 @@ export function NextMatchCard({
 
   const remaining = kickoffMs != null ? kickoffMs - now : null;
   const live = isLive || (remaining != null && remaining <= 0);
-  const countdown = live ? 'AO VIVO' : remaining != null ? fmtCountdown(remaining) : '—';
+  const countdown = live ? L('AO VIVO', 'LIVE') : remaining != null ? fmtCountdown(remaining) : '—';
 
   const verLigaCta = (
     <Link
@@ -91,18 +92,18 @@ export function NextMatchCard({
       className="inline-flex min-h-[44px] items-center border border-neon-yellow/40 bg-neon-yellow/[0.08] px-6 py-2.5 font-display font-black uppercase text-neon-yellow transition-colors hover:bg-neon-yellow/[0.16]"
       style={{ fontSize: '10px', letterSpacing: '0.18em', borderRadius: 'var(--radius-sm)' }}
     >
-      Ver Liga
+      {L('Ver Liga', 'View League')}
     </Link>
   );
 
   return (
     <section
-      aria-label="Próxima partida"
+      aria-label={L('Próxima partida', 'Next match')}
       className="ole-poster p-4"
     >
       <div className="flex items-center justify-between">
         <span className="ole-eyebrow-poster" style={{ fontSize: '12px' }}>
-          Próxima partida
+          {L('Próxima partida', 'Next match')}
         </span>
         {opponentName ? (
           <span
@@ -110,7 +111,7 @@ export function NextMatchCard({
             style={{ fontSize: '8px', letterSpacing: '0.12em', color: live ? 'var(--color-danger)' : 'var(--color-text-soft)' }}
           >
             {live && <i aria-hidden className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: 'var(--color-danger)' }} />}
-            {live ? 'Ao vivo' : 'Começa em'}
+            {live ? L('Ao vivo', 'Live') : L('Começa em', 'Kicks off in')}
           </span>
         ) : null}
       </div>
@@ -130,7 +131,7 @@ export function NextMatchCard({
                 className="mt-1 block font-display font-black uppercase text-neon-yellow/70"
                 style={{ fontSize: '8px', letterSpacing: '0.16em' }}
               >
-                Rodada Global
+                {L('Rodada Global', 'Global Round')}
               </span>
             </div>
             {/* Adversário — brasão do coração dele (denormalizado na Liga Global); shield neutro se ausente. */}
@@ -151,7 +152,7 @@ export function NextMatchCard({
                   borderRadius: '999px',
                 }}
               >
-                Nemesis · revanche
+                {L('Nemesis · revanche', 'Nemesis · rematch')}
               </span>
             </div>
           ) : null}
@@ -161,7 +162,7 @@ export function NextMatchCard({
       ) : (
         <div className="mt-3 flex flex-col items-center gap-3 text-center">
           <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}>
-            Sem rodada agendada.
+            {L('Sem rodada agendada.', 'No round scheduled.')}
           </p>
           {verLigaCta}
         </div>

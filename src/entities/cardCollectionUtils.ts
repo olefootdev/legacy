@@ -1,4 +1,5 @@
 import type { CardCollection, PlayerEntity } from '@/entities/types';
+import { L } from '@/i18n/L';
 
 /** Soma `cardSupply` de todos os jogadores na coleção (opcionalmente exclui um id ao regravar a mesma carta). */
 export function totalMintedInCollection(
@@ -33,16 +34,16 @@ export function canMintCardSupply(args: {
 }): { ok: true } | { ok: false; reason: string } {
   const q = Math.floor(args.requestedSupply);
   if (!Number.isFinite(q) || q < 1) {
-    return { ok: false, reason: 'Fornecimento da carta tem de ser um inteiro ≥ 1.' };
+    return { ok: false, reason: L('Fornecimento da carta tem de ser um inteiro ≥ 1.', 'Card supply must be an integer ≥ 1.') };
   }
   if (args.collection.maxSupply < 1) {
-    return { ok: false, reason: 'maxSupply da coleção tem de ser ≥ 1.' };
+    return { ok: false, reason: L('maxSupply da coleção tem de ser ≥ 1.', 'Collection maxSupply must be ≥ 1.') };
   }
   const rem = remainingCollectionSupply(args.collection, args.players, args.excludePlayerId);
   if (q > rem) {
     return {
       ok: false,
-      reason: `Só cabem ${rem} unidade(s) nesta coleção (max ${args.collection.maxSupply}, já mintadas ${args.collection.maxSupply - rem}).`,
+      reason: L(`Só cabem ${rem} unidade(s) nesta coleção (max ${args.collection.maxSupply}, já mintadas ${args.collection.maxSupply - rem}).`, `Only ${rem} unit(s) fit in this collection (max ${args.collection.maxSupply}, already minted ${args.collection.maxSupply - rem}).`),
     };
   }
   return { ok: true };

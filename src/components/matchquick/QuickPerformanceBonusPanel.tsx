@@ -6,6 +6,7 @@
 import { motion } from 'motion/react';
 import type { PerformanceBonus } from '@/match/quickPerformanceBonuses';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 interface Props {
   bonuses: PerformanceBonus[];
@@ -21,7 +22,7 @@ export function QuickPerformanceBonusPanel({ bonuses, totalOle, totalExp }: Prop
       <div className="flex items-center gap-2">
         <span className="text-lg">🏆</span>
         <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-          Bônus de Performance
+          {L('Bônus de Performance', 'Performance Bonus')}
         </h3>
       </div>
 
@@ -70,7 +71,7 @@ export function QuickPerformanceBonusPanel({ bonuses, totalOle, totalExp }: Prop
       >
         <div className="flex items-center justify-between">
           <span className="text-sm font-bold text-white uppercase tracking-wider">
-            Total de Bônus
+            {L('Total de Bônus', 'Total Bonus')}
           </span>
           <div className="text-right">
             <div className="font-mono text-lg font-medium text-neon-yellow">+{totalOle} OLE</div>

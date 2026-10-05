@@ -11,6 +11,7 @@ import type { CoachAgent, TeamContext, CoachAction } from './types';
 import type { GlobalRound, GlobalFixture, CoachCommands } from '@/match/globalMatch';
 import type { OlefootGameState } from '@/game/types';
 import { nanoid } from 'nanoid';
+import { L } from '@/i18n/L';
 
 export interface PreMatchCoachRequest {
   roundNumber: number;
@@ -170,18 +171,18 @@ function buildPreMatchReasoning(
 ): string {
   const overallDiff = teamOverall - opponentOverall;
   const formText = recentForm.length > 0
-    ? `Forma recente: ${recentForm.join('-')}`
-    : 'Sem histórico recente';
+    ? L(`Forma recente: ${recentForm.join('-')}`, `Recent form: ${recentForm.join('-')}`)
+    : L('Sem histórico recente', 'No recent history');
 
-  let reasoning = `**Análise Pré-Jogo:**\n\n`;
+  let reasoning = L(`**Análise Pré-Jogo:**\n\n`, `**Pre-Match Analysis:**\n\n`);
 
   // Força relativa
   if (overallDiff > 10) {
-    reasoning += `✅ Somos favoritos (OVR ${teamOverall} vs ${opponentOverall}). `;
+    reasoning += L(`✅ Somos favoritos (OVR ${teamOverall} vs ${opponentOverall}). `, `✅ We are favourites (OVR ${teamOverall} vs ${opponentOverall}). `);
   } else if (overallDiff < -10) {
-    reasoning += `⚠️ Adversário mais forte (OVR ${teamOverall} vs ${opponentOverall}). `;
+    reasoning += L(`⚠️ Adversário mais forte (OVR ${teamOverall} vs ${opponentOverall}). `, `⚠️ Stronger opponent (OVR ${teamOverall} vs ${opponentOverall}). `);
   } else {
-    reasoning += `⚖️ Jogo equilibrado (OVR ${teamOverall} vs ${opponentOverall}). `;
+    reasoning += L(`⚖️ Jogo equilibrado (OVR ${teamOverall} vs ${opponentOverall}). `, `⚖️ Even game (OVR ${teamOverall} vs ${opponentOverall}). `);
   }
 
   // Forma
@@ -189,45 +190,45 @@ function buildPreMatchReasoning(
   const losses = recentForm.filter(r => r === 'L').length;
 
   if (wins >= 3) {
-    reasoning += `Estamos em boa fase (${wins} vitórias recentes). `;
+    reasoning += L(`Estamos em boa fase (${wins} vitórias recentes). `, `We are in good form (${wins} recent wins). `);
   } else if (losses >= 2) {
-    reasoning += `Precisamos reagir (${losses} derrotas recentes). `;
+    reasoning += L(`Precisamos reagir (${losses} derrotas recentes). `, `We need to react (${losses} recent losses). `);
   }
 
-  reasoning += `\n\n**Comandos Sugeridos:**\n\n`;
+  reasoning += L(`\n\n**Comandos Sugeridos:**\n\n`, `\n\n**Suggested Commands:**\n\n`);
 
   // Postura
-  reasoning += `🎯 **Postura: ${commands.posture}**\n`;
+  reasoning += L(`🎯 **Postura: ${commands.posture}**\n`, `🎯 **Posture: ${commands.posture}**\n`);
   if (commands.posture === 'offensive') {
-    reasoning += `Vamos pressionar e buscar o gol. ${overallDiff > 5 ? 'Temos qualidade para dominar.' : 'Precisamos ser agressivos.'}\n\n`;
+    reasoning += L(`Vamos pressionar e buscar o gol. ${overallDiff > 5 ? 'Temos qualidade para dominar.' : 'Precisamos ser agressivos.'}\n\n`, `Let’s press and go for goal. ${overallDiff > 5 ? 'We have the quality to dominate.' : 'We need to be aggressive.'}\n\n`);
   } else if (commands.posture === 'defensive') {
-    reasoning += `Vamos nos proteger e buscar contra-ataques. ${overallDiff < -5 ? 'Adversário é superior.' : 'Momento de ser pragmático.'}\n\n`;
+    reasoning += L(`Vamos nos proteger e buscar contra-ataques. ${overallDiff < -5 ? 'Adversário é superior.' : 'Momento de ser pragmático.'}\n\n`, `Let’s stay compact and hit on the counter. ${overallDiff < -5 ? 'The opponent is superior.' : 'Time to be pragmatic.'}\n\n`);
   } else {
-    reasoning += `Vamos equilibrar defesa e ataque. Jogo pede cautela e oportunismo.\n\n`;
+    reasoning += L(`Vamos equilibrar defesa e ataque. Jogo pede cautela e oportunismo.\n\n`, `Let’s balance defence and attack. The game calls for caution and opportunism.\n\n`);
   }
 
   // Intensidade
-  reasoning += `⚡ **Intensidade: ${commands.intensity}**\n`;
+  reasoning += L(`⚡ **Intensidade: ${commands.intensity}**\n`, `⚡ **Intensity: ${commands.intensity}**\n`);
   if (commands.intensity === 'high') {
-    reasoning += `Máxima energia. ${teamContext.averageFatigue < 40 ? 'Plantel está fresco.' : 'Momento exige esforço extra.'}\n\n`;
+    reasoning += L(`Máxima energia. ${teamContext.averageFatigue < 40 ? 'Plantel está fresco.' : 'Momento exige esforço extra.'}\n\n`, `Maximum energy. ${teamContext.averageFatigue < 40 ? 'The squad is fresh.' : 'This moment demands extra effort.'}\n\n`);
   } else if (commands.intensity === 'low') {
-    reasoning += `Poupar energia. ${teamContext.averageFatigue > 60 ? 'Plantel está cansado.' : 'Preservar para próximas rodadas.'}\n\n`;
+    reasoning += L(`Poupar energia. ${teamContext.averageFatigue > 60 ? 'Plantel está cansado.' : 'Preservar para próximas rodadas.'}\n\n`, `Save energy. ${teamContext.averageFatigue > 60 ? 'The squad is tired.' : 'Preserve for the next matchdays.'}\n\n`);
   } else {
-    reasoning += `Ritmo controlado. Equilíbrio entre resultado e preservação física.\n\n`;
+    reasoning += L(`Ritmo controlado. Equilíbrio entre resultado e preservação física.\n\n`, `Controlled tempo. Balance between result and physical preservation.\n\n`);
   }
 
   // Estilo
-  reasoning += `🎨 **Estilo: ${commands.style}**\n`;
+  reasoning += L(`🎨 **Estilo: ${commands.style}**\n`, `🎨 **Style: ${commands.style}**\n`);
   if (commands.style === 'possession') {
-    reasoning += `Controlar o jogo com posse de bola. ${coach.personality === 'Visionary' ? 'Nosso estilo natural.' : 'Impor nosso ritmo.'}\n`;
+    reasoning += L(`Controlar o jogo com posse de bola. ${coach.personality === 'Visionary' ? 'Nosso estilo natural.' : 'Impor nosso ritmo.'}\n`, `Control the game with possession. ${coach.personality === 'Visionary' ? 'Our natural style.' : 'Impose our rhythm.'}\n`);
   } else if (commands.style === 'counter') {
-    reasoning += `Contra-ataque rápido. ${overallDiff < 0 ? 'Explorar espaços deixados pelo adversário.' : 'Eficiência é a chave.'}\n`;
+    reasoning += L(`Contra-ataque rápido. ${overallDiff < 0 ? 'Explorar espaços deixados pelo adversário.' : 'Eficiência é a chave.'}\n`, `Fast counter-attack. ${overallDiff < 0 ? 'Exploit the space the opponent leaves.' : 'Efficiency is key.'}\n`);
   } else {
-    reasoning += `Jogo direto e vertical. ${coach.personality === 'Motivator' ? 'Intensidade máxima.' : 'Buscar o gol rapidamente.'}\n`;
+    reasoning += L(`Jogo direto e vertical. ${coach.personality === 'Motivator' ? 'Intensidade máxima.' : 'Buscar o gol rapidamente.'}\n`, `Direct, vertical play. ${coach.personality === 'Motivator' ? 'Maximum intensity.' : 'Go for goal quickly.'}\n`);
   }
 
   reasoning += `\n${formText}`;
-  reasoning += `\nFadiga média: ${Math.round(teamContext.averageFatigue)}%`;
+  reasoning += L(`\nFadiga média: ${Math.round(teamContext.averageFatigue)}%`, `\nAverage fatigue: ${Math.round(teamContext.averageFatigue)}%`);
 
   return reasoning;
 }
@@ -302,40 +303,40 @@ function buildPostMatchAnalysis(
   let analysis = '';
 
   if (result === 'win') {
-    analysis += `🏆 **VITÓRIA!** ${scoreTeam}-${scoreOpponent} contra ${opponent}\n\n`;
+    analysis += L(`🏆 **VITÓRIA!** ${scoreTeam}-${scoreOpponent} contra ${opponent}\n\n`, `🏆 **WIN!** ${scoreTeam}-${scoreOpponent} vs ${opponent}\n\n`);
 
     if (scoreTeam - scoreOpponent >= 3) {
-      analysis += `Goleada! Dominamos completamente. `;
+      analysis += L(`Goleada! Dominamos completamente. `, `Thrashing! We dominated completely. `);
     } else if (scoreTeam - scoreOpponent === 1) {
-      analysis += `Vitória suada mas merecida. `;
+      analysis += L(`Vitória suada mas merecida. `, `Hard-fought but deserved win. `);
     } else {
-      analysis += `Boa vitória. `;
+      analysis += L(`Boa vitória. `, `Good win. `);
     }
 
     if (coach.personality === 'Pragmatic') {
-      analysis += `Resultado é o que importa. Três pontos na conta.`;
+      analysis += L(`Resultado é o que importa. Três pontos na conta.`, `The result is what matters. Three points in the bag.`);
     } else if (coach.personality === 'Visionary') {
-      analysis += `Controlamos o jogo e criamos chances.`;
+      analysis += L(`Controlamos o jogo e criamos chances.`, `We controlled the game and created chances.`);
     } else {
-      analysis += `Time mostrou garra e determinação.`;
+      analysis += L(`Time mostrou garra e determinação.`, `The team showed grit and determination.`);
     }
   } else if (result === 'loss') {
-    analysis += `❌ **DERROTA** ${scoreTeam}-${scoreOpponent} contra ${opponent}\n\n`;
+    analysis += L(`❌ **DERROTA** ${scoreTeam}-${scoreOpponent} contra ${opponent}\n\n`, `❌ **LOSS** ${scoreTeam}-${scoreOpponent} vs ${opponent}\n\n`);
 
     if (scoreOpponent - scoreTeam >= 3) {
-      analysis += `Fomos superados. Precisamos reagir. `;
+      analysis += L(`Fomos superados. Precisamos reagir. `, `We were outplayed. We need to react. `);
     } else {
-      analysis += `Jogo equilibrado mas perdemos. `;
+      analysis += L(`Jogo equilibrado mas perdemos. `, `Even game, but we lost. `);
     }
 
-    analysis += `Vamos analisar os erros e corrigir para a próxima.`;
+    analysis += L(`Vamos analisar os erros e corrigir para a próxima.`, `We’ll analyse the mistakes and fix them for next time.`);
   } else {
-    analysis += `⚖️ **EMPATE** ${scoreTeam}-${scoreOpponent} contra ${opponent}\n\n`;
+    analysis += L(`⚖️ **EMPATE** ${scoreTeam}-${scoreOpponent} contra ${opponent}\n\n`, `⚖️ **DRAW** ${scoreTeam}-${scoreOpponent} vs ${opponent}\n\n`);
 
     if (scoreTeam > 0) {
-      analysis += `Jogo movimentado. Ponto conquistado. `;
+      analysis += L(`Jogo movimentado. Ponto conquistado. `, `Lively game. A point earned. `);
     } else {
-      analysis += `Jogo truncado. Faltou criatividade. `;
+      analysis += L(`Jogo truncado. Faltou criatividade. `, `Scrappy game. We lacked creativity. `);
     }
   }
 
@@ -344,10 +345,10 @@ function buildPostMatchAnalysis(
   const redCards = fixture.events.filter(e => e.type === 'red_card').length;
 
   if (goals > 5) {
-    analysis += `\n\nJogo aberto com ${goals} gols no total.`;
+    analysis += L(`\n\nJogo aberto com ${goals} gols no total.`, `\n\nOpen game with ${goals} goals in total.`);
   }
   if (redCards > 0) {
-    analysis += `\n\n⚠️ ${redCards} expulsão(ões) no jogo. Impactou o resultado.`;
+    analysis += L(`\n\n⚠️ ${redCards} expulsão(ões) no jogo. Impactou o resultado.`, `\n\n⚠️ ${redCards} red card(s) in the game. It affected the result.`);
   }
 
   return analysis;
@@ -366,33 +367,33 @@ function buildPostMatchSuggestions(
 
   // Sugestões baseadas em fadiga
   if (teamContext.averageFatigue > 70) {
-    suggestions.push('🏥 Plantel muito cansado. Recomendo treino de recuperação física (12-24h).');
+    suggestions.push(L('🏥 Plantel muito cansado. Recomendo treino de recuperação física (12-24h).', '🏥 Squad very tired. I recommend physical recovery training (12-24h).'));
   } else if (teamContext.averageFatigue < 30) {
-    suggestions.push('✅ Plantel descansado. Bom momento para treino intenso de desenvolvimento.');
+    suggestions.push(L('✅ Plantel descansado. Bom momento para treino intenso de desenvolvimento.', '✅ Squad rested. Good time for intense development training.'));
   }
 
   // Sugestões baseadas em resultado
   if (result === 'loss') {
-    suggestions.push('📊 Após derrota, sugiro treino mental para recuperar confiança.');
-    suggestions.push('🎯 Revisar tática. Treino coletivo de formação pode ajudar.');
+    suggestions.push(L('📊 Após derrota, sugiro treino mental para recuperar confiança.', '📊 After a loss, I suggest mental training to rebuild confidence.'));
+    suggestions.push(L('🎯 Revisar tática. Treino coletivo de formação pode ajudar.', '🎯 Review tactics. Team shape training can help.'));
   } else if (result === 'win') {
-    suggestions.push('🔥 Vitória aumenta moral. Aproveitar para reforçar pontos fortes.');
+    suggestions.push(L('🔥 Vitória aumenta moral. Aproveitar para reforçar pontos fortes.', '🔥 Wins lift morale. Use it to reinforce strengths.'));
   }
 
   // Sugestões baseadas em eventos
   const yellowCards = fixture.events.filter(e => e.type === 'yellow_card').length;
   if (yellowCards > 3) {
-    suggestions.push('🟡 Muitos cartões. Treino coletivo de empatia pode reduzir indisciplina.');
+    suggestions.push(L('🟡 Muitos cartões. Treino coletivo de empatia pode reduzir indisciplina.', '🟡 Too many cards. Team empathy training can reduce indiscipline.'));
   }
 
   const injuries = fixture.events.filter(e => e.type === 'injury').length;
   if (injuries > 0) {
-    suggestions.push('⚠️ Lesões no jogo. Verificar se Departamento Médico precisa upgrade.');
+    suggestions.push(L('⚠️ Lesões no jogo. Verificar se Departamento Médico precisa upgrade.', '⚠️ Injuries in the game. Check if the Medical Department needs an upgrade.'));
   }
 
   // Sugestões baseadas em staff
   if (teamContext.staffLevels.treinador < 3) {
-    suggestions.push('📈 Upgrade do Treinador multiplica ganhos de treino. Prioridade máxima.');
+    suggestions.push(L('📈 Upgrade do Treinador multiplica ganhos de treino. Prioridade máxima.', '📈 Upgrading the Head Coach multiplies training gains. Top priority.'));
   }
 
   return suggestions;
@@ -408,8 +409,8 @@ export function createPreMatchAction(
   return {
     id: nanoid(),
     type: 'start_training', // Reutiliza tipo existente (será expandido depois)
-    title: `Rodada ${request.roundNumber}: ${request.opponent}`,
-    description: `Orientações para o jogo contra ${request.opponent} (Divisão ${request.division})`,
+    title: L(`Rodada ${request.roundNumber}: ${request.opponent}`, `Matchday ${request.roundNumber}: ${request.opponent}`),
+    description: L(`Orientações para o jogo contra ${request.opponent} (Divisão ${request.division})`, `Instructions for the game vs ${request.opponent} (Division ${request.division})`),
     reasoning: request.reasoning,
     urgency: 'medium',
     status: 'pending',

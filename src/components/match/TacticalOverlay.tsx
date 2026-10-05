@@ -20,6 +20,7 @@ import {
   ZONE_SECTOR_COLOR,
 } from '@/tactical';
 
+import { L } from '@/i18n/L';
 // ── Helpers de projeção (idênticos ao OleFieldLabLegacy) ──────────────────────
 function p(x: number, y: number) { return normalizedToFirstViewSvg({ x, y }); }
 function pv(x: number, y: number) {
@@ -337,7 +338,7 @@ export function TacticalOverlay({ homePlayers, awayPlayers, ballX = 50, ballY = 
           <div style={{ width:236, height:'100%', background:'#0A0A0A', borderLeft:`3px solid ${NEON}`, padding:'12px 14px', overflowY:'auto', boxSizing:'border-box', fontFamily:'monospace' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
               <div>
-                <div style={{ fontSize:7, fontWeight:800, letterSpacing:'0.3em', color:NEON, textTransform:'uppercase', marginBottom:2 }}>TÁTICO</div>
+                <div style={{ fontSize:7, fontWeight:800, letterSpacing:'0.3em', color:NEON, textTransform:'uppercase', marginBottom:2 }}>{L('TÁTICO', 'TACTICAL')}</div>
                 <div style={{ fontSize:14, color:'#fff', lineHeight:1.1, fontFamily:'var(--font-sans)' }}>{sel.name}</div>
               </div>
               <button type="button" onClick={() => setSelected(null)}
@@ -349,17 +350,17 @@ export function TacticalOverlay({ homePlayers, awayPlayers, ballX = 50, ballY = 
               <PCell label="POSITION" v={posId??'—'} hi />
               <PCell label="COORDS" v={`(${sel.x.toFixed(1)},${sel.y.toFixed(1)})`} />
               <PCell label="ROLE" v={sel.role} />
-              <PCell label="ARQUÉTIPO" v={sel.cognitiveArchetype??'—'} />
+              <PCell label={L('ARQUÉTIPO', 'COGNITIVE')} v={sel.cognitiveArchetype??'—'} />
               <PCell label="ARCHETYPE" v={sel.archetype??'—'} />
             </PGrid>
 
             {roleExp && <>
-              <PSec label="MISSÃO">
+              <PSec label={L('MISSÃO', 'MISSION')}>
                 <div style={{ fontSize:10, color:'rgba(255,255,255,0.7)', lineHeight:1.4 }}>{roleExp.matchMission.summary}</div>
               </PSec>
 
               {roleExp.behavioralLimits && (
-                <PSec label="LIMITES">
+                <PSec label={L('LIMITES', 'LIMITS')}>
                   <PGrid>
                     <PCell label="MAX CHASE" v={`${roleExp.behavioralLimits.maxDistToChaseBall}u`} />
                     <PCell label="RECOVERY" v={`${(roleExp.behavioralLimits.recoveryPriority*100).toFixed(0)}%`} />
@@ -369,7 +370,7 @@ export function TacticalOverlay({ homePlayers, awayPlayers, ballX = 50, ballY = 
               )}
 
               {roleExp.zoneResponsibility && (
-                <PSec label="ZONA BASE">
+                <PSec label={L('ZONA BASE', 'BASE ZONE')}>
                   <PGrid>
                     <PCell label="BASE" v={`(${roleExp.zoneResponsibility.basePosition.x},${roleExp.zoneResponsibility.basePosition.y})`} />
                     <PCell label="MAX ROAM" v={`${roleExp.zoneResponsibility.maxRoamDistance}u`} />
@@ -378,10 +379,10 @@ export function TacticalOverlay({ homePlayers, awayPlayers, ballX = 50, ballY = 
               )}
 
               {territory && (
-                <PSec label="TERRITÓRIOS">
-                  <PZList label="Primárias" zones={territory.primaryZoneIds} color={NEON} />
-                  <PZList label="Suporte" zones={territory.supportZoneIds} color="#4ade80" />
-                  <PZList label="Proibidas" zones={territory.forbiddenZoneIds} color="#ef4444" />
+                <PSec label={L('TERRITÓRIOS', 'TERRITORIES')}>
+                  <PZList label={L('Primárias', 'Primary')} zones={territory.primaryZoneIds} color={NEON} />
+                  <PZList label={L('Suporte', 'Support')} zones={territory.supportZoneIds} color="#4ade80" />
+                  <PZList label={L('Proibidas', 'Forbidden')} zones={territory.forbiddenZoneIds} color="#ef4444" />
                   <div style={{ fontSize:8, color:'rgba(255,255,255,0.3)', marginTop:4 }}>
                     Recovery: ({territory.recoveryPoint.x},{territory.recoveryPoint.y})
                   </div>
@@ -389,19 +390,19 @@ export function TacticalOverlay({ homePlayers, awayPlayers, ballX = 50, ballY = 
               )}
 
               {roleExp.preferredActions && (
-                <PSec label="AÇÕES PREFERIDAS">
+                <PSec label={L('AÇÕES PREFERIDAS', 'PREFERRED ACTIONS')}>
                   <PGrid>
-                    <PCell label="MOVIMENTO" v={roleExp.preferredActions.movementType??'—'} />
-                    <PCell label="ATAQUE" v={roleExp.preferredActions.attackingAction??'—'} />
-                    <PCell label="DEFESA" v={roleExp.preferredActions.defensiveAction??'—'} />
+                    <PCell label={L('MOVIMENTO', 'MOVEMENT')} v={roleExp.preferredActions.movementType??'—'} />
+                    <PCell label={L('ATAQUE', 'ATTACK')} v={roleExp.preferredActions.attackingAction??'—'} />
+                    <PCell label={L('DEFESA', 'DEFENCE')} v={roleExp.preferredActions.defensiveAction??'—'} />
                   </PGrid>
                 </PSec>
               )}
             </>}
 
             {onUpdatePlayer && (
-              <PSec label="EDITAR AO VIVO">
-                <div style={{ fontSize:7, color:'rgba(255,255,255,0.3)', marginBottom:4 }}>ARQUÉTIPO COGNITIVO</div>
+              <PSec label={L('EDITAR AO VIVO', 'EDIT LIVE')}>
+                <div style={{ fontSize:7, color:'rgba(255,255,255,0.3)', marginBottom:4 }}>{L('ARQUÉTIPO COGNITIVO', 'COGNITIVE ARCHETYPE')}</div>
                 <div style={{ display:'flex', flexWrap:'wrap', gap:3, marginBottom:8 }}>
                   {ARCHETYPES.map(a => (
                     <button key={a} type="button" onClick={() => onUpdatePlayer(sel.playerId, { cognitiveArchetype: a })}

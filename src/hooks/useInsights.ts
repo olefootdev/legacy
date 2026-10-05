@@ -26,6 +26,7 @@ import {
   type PlayerTransparency,
   type SquadOverview,
 } from '@/insights/client';
+import { L } from '@/i18n/L';
 
 interface UseInsightsState<T> {
   data: T | null;
@@ -53,7 +54,7 @@ function useEndpoint<T>(
       const result = await fetcher(managerId);
       if (cancelled) return;
       if (result === null) {
-        setError('Falha ao buscar /insights');
+        setError(L('Falha ao buscar /insights', 'Failed to fetch /insights'));
       } else {
         setData(result);
       }
@@ -139,7 +140,7 @@ export function useInsightsServiceHealth(pollMs = 60_000): {
         setReason(null);
       } else {
         setStatus('down');
-        setReason(r?.reason ?? 'serviço não respondeu');
+        setReason(r?.reason ?? L('serviço não respondeu', 'service didn\'t respond'));
       }
     };
     void probe();

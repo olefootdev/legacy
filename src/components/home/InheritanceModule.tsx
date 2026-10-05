@@ -8,6 +8,7 @@
  */
 
 import { ArrowRight } from 'lucide-react';
+import { L } from '@/i18n/L';
 
 const MORET = 'var(--font-serif-hero)';
 
@@ -16,7 +17,7 @@ export type HeirFigure = { name: string; num: number };
 export function InheritanceModule({ legend, jewel }: { legend: HeirFigure; jewel: HeirFigure }) {
   return (
     <section
-      aria-label="Herança"
+      aria-label={L('Herança', 'Legacy')}
       className="relative overflow-hidden"
       style={{
         borderRadius: 'var(--radius-poster)',
@@ -27,13 +28,13 @@ export function InheritanceModule({ legend, jewel }: { legend: HeirFigure; jewel
     >
       <div className="flex items-center gap-2 px-3 pt-2.5">
         <span className="font-impact uppercase" style={{ fontSize: '12px', color: '#C7A64E' }}>
-          Herança
+          {L('Herança', 'Legacy')}
         </span>
         <span
           className="font-display font-black uppercase text-white/40"
           style={{ fontSize: '8.5px', letterSpacing: '0.14em' }}
         >
-          quem carrega o legado
+          {L('quem carrega o legado', 'who carries the torch')}
         </span>
       </div>
 
@@ -43,7 +44,7 @@ export function InheritanceModule({ legend, jewel }: { legend: HeirFigure; jewel
             className="font-display font-black uppercase text-white/40"
             style={{ fontSize: '7.5px', letterSpacing: '0.1em' }}
           >
-            A lenda
+            {L('A lenda', 'The legend')}
           </p>
           <p className="mt-1 truncate italic font-bold text-white" style={{ fontFamily: MORET, fontSize: '15px', lineHeight: 1 }}>
             {legend.name}
@@ -59,7 +60,7 @@ export function InheritanceModule({ legend, jewel }: { legend: HeirFigure; jewel
             className="font-display font-black uppercase text-white/40"
             style={{ fontSize: '6.5px', letterSpacing: '0.08em' }}
           >
-            herda
+            {L('herda', 'inherits')}
           </span>
         </div>
 
@@ -68,7 +69,7 @@ export function InheritanceModule({ legend, jewel }: { legend: HeirFigure; jewel
             className="font-display font-black uppercase text-white/40"
             style={{ fontSize: '7.5px', letterSpacing: '0.1em' }}
           >
-            Tua joia
+            {L('Tua joia', 'Your gem')}
           </p>
           <p className="mt-1 truncate italic font-bold text-white" style={{ fontFamily: MORET, fontSize: '15px', lineHeight: 1 }}>
             {jewel.name}

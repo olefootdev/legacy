@@ -18,6 +18,7 @@ import {
 } from '@/voiceCommand/types';
 import { cn } from '@/lib/utils';
 import type { MatchPlayerAttributes } from '@/match/playerInMatch';
+import { L } from '@/i18n/L';
 
 const TEST_PHRASES = [
   'Adrien invade a área',
@@ -85,8 +86,8 @@ export function VoiceCommandTestButton() {
     // 0. CONFIRMAÇÃO DE ENVIO — sempre aparece primeiro, independente do resultado.
     addFeedback({
       kind: 'sent',
-      message: `📨 ENVIADO: "${phrase}"`,
-      detail: `Obediência coletiva: ${Math.round(teamObedience)}%`,
+      message: `📨 ${L('ENVIADO', 'SENT')}: "${phrase}"`,
+      detail: L(`Obediência coletiva: ${Math.round(teamObedience)}%`, `Team obedience: ${Math.round(teamObedience)}%`),
     });
 
     // 1. profanity scan
@@ -97,7 +98,7 @@ export function VoiceCommandTestButton() {
         dispatch({ type: 'REFEREE_WARNING_LANGUAGE', minute: live.minute });
         addFeedback({
           kind: 'warning',
-          message: `⚠ Árbitro adverte: linguagem imprópria! (1ª vez)`,
+          message: L(`⚠ Árbitro adverte: linguagem imprópria! (1ª vez)`, `⚠ Referee warns: foul language! (1st time)`),
         });
       } else {
         const best = [...live.homePlayers].sort(
@@ -112,7 +113,7 @@ export function VoiceCommandTestButton() {
           });
           addFeedback({
             kind: 'error',
-            message: `🟥 VERMELHO em ${best.name} por conduta do treinador!`,
+            message: L(`🟥 VERMELHO em ${best.name} por conduta do treinador!`, `🟥 RED for ${best.name} due to the coach's conduct!`),
           });
         }
       }
@@ -122,7 +123,7 @@ export function VoiceCommandTestButton() {
     // 2. parse intents
     const parsed = parseVoiceCommand(phrase, ctx);
     if (parsed.length === 0) {
-      addFeedback({ kind: 'error', message: 'Comando não reconhecido' });
+      addFeedback({ kind: 'error', message: L('Comando não reconhecido', 'Command not recognised') });
       return;
     }
 
@@ -141,11 +142,11 @@ export function VoiceCommandTestButton() {
           const inName = outName; // estado pode não ter ainda
           addFeedback({
             kind: 'accepted',
-            message: `🔄 Substituição: ${outName} → ${inName}`,
+            message: `🔄 ${L('Substituição', 'Substitution')}: ${outName} → ${inName}`,
           });
           dispatched++;
         } else {
-          addFeedback({ kind: 'error', message: 'Substituição falhou — jogador não reconhecido' });
+          addFeedback({ kind: 'error', message: L('Substituição falhou — jogador não reconhecido', 'Substitution failed — player not recognised') });
         }
         continue;
       }
@@ -155,7 +156,7 @@ export function VoiceCommandTestButton() {
         dispatch({ type: 'LIVE_MATCH_SET_FORMATION', formationScheme: cmd.formationTarget });
         addFeedback({
           kind: 'accepted',
-          message: `📐 Formação: ${cmd.formationTarget}`,
+          message: `📐 ${L('Formação', 'Formation')}: ${cmd.formationTarget}`,
         });
         dispatched++;
         continue;
@@ -211,8 +212,8 @@ export function VoiceCommandTestButton() {
         const refusedCount = tiers.refuse + tiers.protest;
         addFeedback({
           kind: acceptedCount > refusedCount ? 'accepted' : 'refused',
-          message: `👥 Time: ${acceptedCount}/${live.homePlayers.length} aceitaram · ${OBEDIENCE_TIER_BUBBLE[dominant]}`,
-          detail: `Coletiva ${Math.round(teamObedience)}% · ${tiers.critical_accept} críticos · ${tiers.accept} normais · ${refusedCount} recusaram`,
+          message: L(`👥 Time: ${acceptedCount}/${live.homePlayers.length} aceitaram · ${OBEDIENCE_TIER_BUBBLE[dominant]}`, `👥 Team: ${acceptedCount}/${live.homePlayers.length} accepted · ${OBEDIENCE_TIER_BUBBLE[dominant]}`),
+          detail: L(`Coletiva ${Math.round(teamObedience)}% · ${tiers.critical_accept} críticos · ${tiers.accept} normais · ${refusedCount} recusaram`, `Team ${Math.round(teamObedience)}% · ${tiers.critical_accept} critical · ${tiers.accept} normal · ${refusedCount} refused`),
           tier: dominant,
         });
         dispatched++;
@@ -220,7 +221,7 @@ export function VoiceCommandTestButton() {
       }
 
       if (!targetPlayerId) {
-        addFeedback({ kind: 'error', message: `Alvo não resolvido para "${cmd.rawText}"` });
+        addFeedback({ kind: 'error', message: L(`Alvo não resolvido para "${cmd.rawText}"`, `Target not resolved for "${cmd.rawText}"`) });
         continue;
       }
       const player = live.homePlayers.find((p) => p.playerId === targetPlayerId);
@@ -252,13 +253,13 @@ export function VoiceCommandTestButton() {
         playerName: player.name,
         tier: r.tier,
         message: `${accepted ? '✅' : '❌'} ${player.name}: ${OBEDIENCE_TIER_BUBBLE[r.tier]}`,
-        detail: `Individual ${Math.round(r.individualScore)}% × Coletiva ${Math.round(teamObedience)}% = Efetiva ${Math.round(r.effectiveScore)}%`,
+        detail: L(`Individual ${Math.round(r.individualScore)}% × Coletiva ${Math.round(teamObedience)}% = Efetiva ${Math.round(r.effectiveScore)}%`, `Individual ${Math.round(r.individualScore)}% × Team ${Math.round(teamObedience)}% = Effective ${Math.round(r.effectiveScore)}%`),
       });
       dispatched++;
     }
 
     if (dispatched === 0) {
-      addFeedback({ kind: 'error', message: 'Nenhum comando foi aplicado' });
+      addFeedback({ kind: 'error', message: L('Nenhum comando foi aplicado', 'No command was applied') });
     }
   };
 
@@ -326,7 +327,7 @@ export function VoiceCommandTestButton() {
             ? `${pulseColor} border-white/40 text-white`
             : 'border-cyan-400/60 bg-cyan-950/90 text-cyan-100',
         )}
-        title="Teste do sistema de voz"
+        title={L('Teste do sistema de voz', 'Voice system test')}
       >
         <Megaphone className="h-4 w-4" />
         Voice · Obed {Math.round(teamObedience)}%
@@ -342,7 +343,7 @@ export function VoiceCommandTestButton() {
             transition={{ duration: 0.18 }}
             className="fixed bottom-36 right-4 z-[9990] w-72 space-y-1 rounded-xl border border-cyan-400/40 bg-panel p-3"
           >
-            <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-cyan-300">Comandos teste</p>
+            <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-cyan-300">{L('Comandos teste', 'Test commands')}</p>
             {TEST_PHRASES.map((phrase) => (
               <button
                 key={phrase}

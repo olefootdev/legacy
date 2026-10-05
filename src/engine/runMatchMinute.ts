@@ -44,6 +44,7 @@ import { computeBallTrajectory, type BallTrajectoryState } from './test2d/ballTr
 import { visualBeatGeometryFromCausalBatch } from './test2d/visualBeatFromCausal';
 import { isLive2dPitchMode } from './ultralive2d/live2dMode';
 import { teamMovementKnobsFromHomePitch } from './ultralive2d/applyAttrsToMovement';
+import { L } from '@/i18n/L';
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -306,7 +307,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     let awayShotsWithoutGoal = 0;
     for (const ev of s.events) {
       if (ev.kind === 'goal_home') break;
-      if (ev.kind === 'shot_home' || (ev.kind === 'narrative' && ev.text?.includes('chut'))) homeShotsWithoutGoal++;
+      if (ev.kind === 'shot_home' || (ev.kind === 'narrative' && /chut|shot|shoot/i.test(ev.text ?? ''))) homeShotsWithoutGoal++;
     }
     for (const ev of s.events) {
       if (ev.kind === 'goal_away') break;
@@ -448,13 +449,13 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
           const nm = goalScorerHomeId
             ? input.homeRoster.find((p) => p.id === goalScorerHomeId)?.name
             : undefined;
-          ev.text = nm ? `${minute}' — Gol: ${nm}.` : `${minute}' — Gol (casa).`;
+          ev.text = nm ? L(`${minute}' — Gol: ${nm}.`, `${minute}' — Goal: ${nm}.`) : L(`${minute}' — Gol (casa).`, `${minute}' — Goal (home).`);
           ev.kind = 'goal_home';
           ev.playerId = goalScorerHomeId;
         } else if (beatGeom.kind === 'goal_away') {
           const aid = out.goalScorerPlayerId;
           const nm = aid ? awayRoster?.find((p) => p.id === aid)?.name : undefined;
-          ev.text = nm ? `${minute}' — Gol: ${nm} (visitante).` : `${minute}' — Gol (visitante).`;
+          ev.text = nm ? L(`${minute}' — Gol: ${nm} (visitante).`, `${minute}' — Goal: ${nm} (away).`) : L(`${minute}' — Gol (visitante).`, `${minute}' — Goal (away).`);
           ev.kind = 'goal_away';
           ev.playerId = aid;
         } else if (beatGeom.kind === 'shot_save') {
@@ -481,13 +482,13 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
         const nm = goalScorerHomeId
           ? input.homeRoster.find((p) => p.id === goalScorerHomeId)?.name
           : undefined;
-        ev.text = nm ? `${minute}' — Gol: ${nm}.` : `${minute}' — Gol (casa).`;
+        ev.text = nm ? L(`${minute}' — Gol: ${nm}.`, `${minute}' — Goal: ${nm}.`) : L(`${minute}' — Gol (casa).`, `${minute}' — Goal (home).`);
         events.unshift(ev);
         if (events.length > 40) events.pop();
       } else if (goalAway) {
         const aid = out.goalScorerPlayerId;
         const nm = aid ? awayRoster?.find((p) => p.id === aid)?.name : undefined;
-        ev.text = nm ? `${minute}' — Gol: ${nm} (visitante).` : `${minute}' — Gol (visitante).`;
+        ev.text = nm ? L(`${minute}' — Gol: ${nm} (visitante).`, `${minute}' — Goal: ${nm} (away).`) : L(`${minute}' — Gol (visitante).`, `${minute}' — Goal (away).`);
         events.unshift(ev);
         if (events.length > 40) events.pop();
       }
@@ -589,7 +590,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       }
     }
 
-    if (out.narrative.includes('Recuperação')) {
+    if (out.narrative.includes('Recuperação') || /\brecover/i.test(out.narrative)) {
       const d = pickDefender(s.homePlayers);
       if (d) {
         const cur = homeStats[d.playerId] ?? {
@@ -774,7 +775,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
               'PLANTEL',
               `${INJURY_LABEL_PT[injuredSeverity]} — ${hp.name}`,
               {
-                body: `${hp.name} cai com dores aos ${minute}' e fica ${games} jogos fora (amistosos + liga). Departamento médico pode acelerar a recuperação.`,
+                body: L(`${hp.name} cai com dores aos ${minute}' e fica ${games} jogos fora (amistosos + liga). Departamento médico pode acelerar a recuperação.`, `${hp.name} goes down in pain at ${minute}' and is out for ${games} matches (friendlies + league). The medical department can speed up recovery.`),
                 deepLink: '/team',
                 timeLabel: `${minute}'`,
               },
@@ -791,7 +792,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     const injEv: MatchEventEntry = {
       id: uid(),
       minute,
-      text: `${minute}' — ${injuredThisMinute.name} cai com dores; o staff corre ao relvado.`,
+      text: L(`${minute}' — ${injuredThisMinute.name} cai com dores; o staff corre ao relvado.`, `${minute}' — ${injuredThisMinute.name} goes down in pain; the staff rush onto the pitch.`),
       kind: 'injury_home',
       playerId: injuredThisMinute.id,
     };
@@ -827,7 +828,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
               const redEv: MatchEventEntry = {
                 id: uid(),
                 minute,
-                text: `${minute}' — ${mergedPlayers[foulerId]?.name ?? 'Jogador'} expulso por falta que causou lesão.`,
+                text: L(`${minute}' — ${mergedPlayers[foulerId]?.name ?? 'Jogador'} expulso por falta que causou lesão.`, `${minute}' — ${mergedPlayers[foulerId]?.name ?? 'Player'} sent off for a foul that caused an injury.`),
                 kind: redKind,
                 playerId: foulerId,
               };
@@ -1068,8 +1069,8 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     const isRed = Math.random() < 0.06;
     const cardKind = isRed ? 'red_away' : 'yellow_away';
     const narrativeText = isRed
-      ? `${pick.name} recebe vermelho direto; o visitante fica com menos um.`
-      : `${pick.name} entra atrasado; o árbitro mostra amarelo.`;
+      ? L(`${pick.name} recebe vermelho direto; o visitante fica com menos um.`, `${pick.name} gets a straight red; the away side are down to ten.`)
+      : L(`${pick.name} entra atrasado; o árbitro mostra amarelo.`, `${pick.name} goes in late; the referee shows yellow.`);
     events.unshift({
       id: uid(),
       minute,

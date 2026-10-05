@@ -2,6 +2,7 @@
  * Sistema de Desafios Semanais de Streak
  * Sprint 3: progressão com metas e recompensas
  */
+import { L } from '@/i18n/L';
 
 export type StreakChallengeDifficulty = 'easy' | 'medium' | 'hard';
 
@@ -43,8 +44,8 @@ export function generateWeeklyChallenges(): StreakChallenge[] {
   return [
     {
       id: `easy_${Date.now()}`,
-      name: 'Primeiros Passos',
-      description: 'Vença 3 partidas rápidas',
+      name: L('Primeiros Passos', 'First Steps'),
+      description: L('Vença 3 partidas rápidas', 'Win 3 quick matches'),
       difficulty: 'easy',
       target: 3,
       progress: 0,
@@ -54,8 +55,8 @@ export function generateWeeklyChallenges(): StreakChallenge[] {
     },
     {
       id: `medium_${Date.now()}`,
-      name: 'Sequência Imparável',
-      description: 'Vença 5 partidas rápidas seguidas',
+      name: L('Sequência Imparável', 'Unstoppable Streak'),
+      description: L('Vença 5 partidas rápidas seguidas', 'Win 5 quick matches in a row'),
       difficulty: 'medium',
       target: 5,
       progress: 0,
@@ -65,8 +66,8 @@ export function generateWeeklyChallenges(): StreakChallenge[] {
     },
     {
       id: `hard_${Date.now()}`,
-      name: 'Lenda do Olefoot',
-      description: 'Vença 10 partidas rápidas seguidas',
+      name: L('Lenda do Olefoot', 'Olefoot Legend'),
+      description: L('Vença 10 partidas rápidas seguidas', 'Win 10 quick matches in a row'),
       difficulty: 'hard',
       target: 10,
       progress: 0,

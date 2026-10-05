@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { L } from '@/i18n/L';
 export type NearMissType =
   | 'close_shot' // Chute que passou perto
   | 'post_hit' // Bola na trave
@@ -215,7 +216,7 @@ export function NearMissMotivation({ visible, scoreDiff, onClose }: NearMissMoti
               letterSpacing: '0.15em',
             }}
           >
-            Tão perto!
+            {L('Tão perto!', 'So close!')}
           </motion.h2>
 
           {/* Message */}
@@ -233,7 +234,7 @@ export function NearMissMotivation({ visible, scoreDiff, onClose }: NearMissMoti
                 lineHeight: 1.4,
               }}
             >
-              Perdeu por {scoreDiff} {scoreDiff === 1 ? 'gol' : 'gols'}
+              {L('Perdeu por', 'Lost by')} {scoreDiff} {scoreDiff === 1 ? L('gol', 'goal') : L('gols', 'goals')}
             </p>
           </motion.div>
 
@@ -252,7 +253,7 @@ export function NearMissMotivation({ visible, scoreDiff, onClose }: NearMissMoti
               letterSpacing: '0.15em',
             }}
           >
-            Vou conseguir!
+            {L('Vou conseguir!', "I'll get there!")}
           </motion.button>
         </motion.div>
       </motion.div>
@@ -291,7 +292,7 @@ export function detectShotNearMiss(shotProbs: { goal: number; save: number; out:
   if (goal >= 0.30 && goal < 0.45 && save > out) {
     return {
       type: 'great_save',
-      message: 'Defesa incrível! Quase foi gol!',
+      message: L('Defesa incrível! Quase foi gol!', 'Incredible save! Almost a goal!'),
       intensity: 'high',
     };
   }
@@ -300,7 +301,7 @@ export function detectShotNearMiss(shotProbs: { goal: number; save: number; out:
   if (goal >= 0.25 && goal < 0.40 && out > save) {
     return {
       type: 'close_shot',
-      message: 'Por centímetros! Passou muito perto!',
+      message: L('Por centímetros! Passou muito perto!', 'Inches away! So close!'),
       intensity: 'medium',
     };
   }
@@ -309,7 +310,7 @@ export function detectShotNearMiss(shotProbs: { goal: number; save: number; out:
   if (goal >= 0.40 && goal < 0.50 && save > 0.3) {
     return {
       type: 'great_save',
-      message: 'Que defesa! Era quase gol certo!',
+      message: L('Que defesa! Era quase gol certo!', 'What a save! That was a sure goal!'),
       intensity: 'high',
     };
   }

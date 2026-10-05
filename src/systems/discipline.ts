@@ -1,4 +1,5 @@
 import type { PlayerEntity } from '@/entities/types';
+import { L } from '@/i18n/L';
 
 export type DisciplineOutcome = 'none' | 'yellow' | 'red';
 
@@ -28,8 +29,8 @@ export function rollMatchDiscipline(player: PlayerEntity): {
       },
     };
     const narrative = secondYellow
-      ? `${player.name} vê o segundo amarelo e deixa os companheiros em inferioridade.`
-      : `${player.name} entra atrasado; o árbitro mostra amarelo e a bancada assobia.`;
+      ? L(`${player.name} vê o segundo amarelo e deixa os companheiros em inferioridade.`, `${player.name} gets a second yellow and leaves his team a man down.`)
+      : L(`${player.name} entra atrasado; o árbitro mostra amarelo e a bancada assobia.`, `${player.name} goes in late; the referee shows yellow and the stands whistle.`);
     if (secondYellow) {
       return {
         outcome: 'red',
@@ -51,6 +52,6 @@ export function rollMatchDiscipline(player: PlayerEntity): {
       },
       outForMatches: Math.max(player.outForMatches, 1),
     },
-    narrative: `${player.name} recebe vermelho direto; o estádio fica em polvorosa.`,
+    narrative: L(`${player.name} recebe vermelho direto; o estádio fica em polvorosa.`, `${player.name} gets a straight red; the stadium is in uproar.`),
   };
 }

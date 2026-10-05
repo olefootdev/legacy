@@ -28,6 +28,7 @@ import { selectRecentConsequences } from '@/systems/consequences/recent';
 import type { PersistentConsequence } from '@/systems/consequences/types';
 import { track } from '@/analytics/track';
 
+import { L } from '@/i18n/L';
 const MAX_ROWS = 5;
 
 export interface MatchConsequencesProps {
@@ -69,7 +70,7 @@ export function MatchConsequences({ playerNames, nowMs }: MatchConsequencesProps
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5, duration: 0.35 }}
-      aria-label="O que esta partida causou"
+      aria-label={L('O que esta partida causou', 'What this match caused')}
       className="border"
       style={{
         borderRadius: 'var(--radius-md)',
@@ -82,7 +83,7 @@ export function MatchConsequences({ playerNames, nowMs }: MatchConsequencesProps
         className="mb-3 font-display font-black uppercase text-neon-yellow"
         style={{ fontSize: '10px', letterSpacing: '0.28em' }}
       >
-        O que este jogo causou
+        {L('O que este jogo causou', 'What this match caused')}
       </p>
 
       <ul className="flex flex-col gap-2.5">

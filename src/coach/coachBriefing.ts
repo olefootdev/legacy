@@ -1,5 +1,6 @@
 import type { OlefootGameState } from '@/game/types';
 import type { ConversationMessage } from './types';
+import { L } from '@/i18n/L';
 
 /**
  * Gera 1 frase de briefing pré-jogo (1min antes da partida LEGACY).
@@ -26,10 +27,10 @@ export function buildPreMatchBriefing(state: OlefootGameState, opponent?: string
   const avgFatigue = totalFatigue / players.length;
   const formation = state.manager.formationScheme;
 
-  const parts: string[] = ['Time pronto', `fadiga ${avgFatigue.toFixed(0)}%`];
-  if (injured > 0) parts.push(`${injured} lesionado${injured > 1 ? 's' : ''}`);
-  if (suspended > 0) parts.push(`${suspended} suspenso${suspended > 1 ? 's' : ''}`);
-  parts.push(opponent ? `sugestão ${formation} contra ${opponent}` : `formação ${formation}`);
+  const parts: string[] = [L('Time pronto', 'Team ready'), L(`fadiga ${avgFatigue.toFixed(0)}%`, `fatigue ${avgFatigue.toFixed(0)}%`)];
+  if (injured > 0) parts.push(L(`${injured} lesionado${injured > 1 ? 's' : ''}`, `${injured} injured`));
+  if (suspended > 0) parts.push(L(`${suspended} suspenso${suspended > 1 ? 's' : ''}`, `${suspended} suspended`));
+  parts.push(opponent ? L(`sugestão ${formation} contra ${opponent}`, `suggested ${formation} vs ${opponent}`) : L(`formação ${formation}`, `formation ${formation}`));
 
   const content = parts.join(', ') + '.';
 

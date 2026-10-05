@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { SecaoVolt } from '@/components/ui';
 import { BackButton } from '@/components/BackButton';
+import { L } from '@/i18n/L';
 
 type Step = {
   icon: typeof Users;
@@ -26,52 +27,52 @@ type Step = {
 const STEPS: Step[] = [
   {
     icon: Users,
-    title: 'Conheça o plantel',
+    title: L('Conheça o plantel', 'Know your squad'),
     body:
-      'Abra MEU TIME, clique em cada jogador e observe atributos, fadiga, posição preferida e mentorias. Um manager sabe quem entra antes de escolher a tática.',
-    cta: { label: 'Conhecer time', to: '/team' },
+      L('Abra MEU TIME, clique em cada jogador e observe atributos, fadiga, posição preferida e mentorias. Um manager sabe quem entra antes de escolher a tática.', 'Open MY TEAM, tap each player and check attributes, fatigue, preferred position and mentorships. A manager knows who starts before picking tactics.'),
+    cta: { label: L('Conhecer time', 'View team'), to: '/team' },
   },
   {
     icon: Target,
-    title: 'Escolha uma tática coerente',
+    title: L('Escolha uma tática coerente', 'Pick tactics that fit'),
     body:
-      'Formação e estilo precisam casar com quem joga. 4-3-3 ofensivo sem velocidade nas pontas perde. 5-3-2 defensivo sem zagueiros fortes também. Teste.',
-    cta: { label: 'Definir tática', to: '/team' },
+      L('Formação e estilo precisam casar com quem joga. 4-3-3 ofensivo sem velocidade nas pontas perde. 5-3-2 defensivo sem zagueiros fortes também. Teste.', 'Formation and style must match your players. An attacking 4-3-3 without pace on the wings loses. So does a defensive 5-3-2 without strong centre-backs. Test it.'),
+    cta: { label: L('Definir tática', 'Set tactics'), to: '/team' },
   },
   {
     icon: Dumbbell,
-    title: 'Treine com foco',
+    title: L('Treine com foco', 'Train with focus'),
     body:
-      'Evolução vai pros atributos mais baixos de cada jogador. Se quer ataque, treine os atacantes em finalização e velocidade — não todos em tudo.',
-    cta: { label: 'Ir ao treino', to: '/team/treino' },
+      L('Evolução vai pros atributos mais baixos de cada jogador. Se quer ataque, treine os atacantes em finalização e velocidade — não todos em tudo.', "Growth goes to each player's lowest attributes. Want attack? Train your strikers in finishing and pace — not everyone in everything."),
+    cta: { label: L('Ir ao treino', 'Go to training'), to: '/team/treino' },
   },
   {
     icon: Wallet,
-    title: 'Controle as finanças',
+    title: L('Controle as finanças', 'Control your finances'),
     body:
-      'OLE é o motor do jogo. Gaste antes de ganhar missão/liga e vai travar. Reserve para emergências (lesão, reposição de contrato).',
-    cta: { label: 'Abrir wallet', to: '/wallet' },
+      L('OLE é o motor do jogo. Gaste antes de ganhar missão/liga e vai travar. Reserve para emergências (lesão, reposição de contrato).', 'OLE drives the game. Spend before winning missions/leagues and you will stall. Keep a reserve for emergencies (injury, contract renewal).'),
+    cta: { label: L('Abrir wallet', 'Open wallet'), to: '/wallet' },
   },
   {
     icon: ShoppingBag,
-    title: 'Contrate com propósito',
+    title: L('Contrate com propósito', 'Sign with purpose'),
     body:
-      'Cada reforço deve resolver um buraco concreto. Legacy DNA ensina jogadores da mesma posição — comprar um mentor certo vale mais que 3 OVR altos sem sinergia.',
-    cta: { label: 'Visitar mercado', to: '/transfer' },
+      L('Cada reforço deve resolver um buraco concreto. Legacy DNA ensina jogadores da mesma posição — comprar um mentor certo vale mais que 3 OVR altos sem sinergia.', 'Every signing should fix a real gap. Legacy DNA teaches players in the same position — the right mentor beats 3 high OVRs with no synergy.'),
+    cta: { label: L('Visitar mercado', 'Visit market'), to: '/transfer' },
   },
   {
     icon: TrendingUp,
-    title: 'Evolua continuamente',
+    title: L('Evolua continuamente', 'Keep improving'),
     body:
-      'Jogue partidas rápidas pra gerar XP, complete missões diárias e acompanhe mentorias (+1/dia nos atributos ensinados). Pequeno, constante, todo dia.',
-    cta: { label: 'Ver missões', to: '/missions' },
+      L('Jogue partidas rápidas pra gerar XP, complete missões diárias e acompanhe mentorias (+1/dia nos atributos ensinados). Pequeno, constante, todo dia.', 'Play quick matches to earn XP, complete daily missions and follow mentorships (+1/day on taught attributes). Small, steady, every day.'),
+    cta: { label: L('Ver missões', 'View missions'), to: '/missions' },
   },
   {
     icon: BookOpen,
-    title: 'Leia o jogo após cada partida',
+    title: L('Leia o jogo após cada partida', 'Read the game after every match'),
     body:
-      'O Game Spirit dá o relatório pós-jogo com o que funcionou e o que falhou. Ajuste a tática antes da próxima. Managers que não revisam repetem erros.',
-    cta: { label: 'Jogar partida rápida', to: '/match/quick' },
+      L('O Game Spirit dá o relatório pós-jogo com o que funcionou e o que falhou. Ajuste a tática antes da próxima. Managers que não revisam repetem erros.', "Game Spirit gives the post-match report: what worked and what failed. Adjust tactics before the next one. Managers who don't review repeat mistakes."),
+    cta: { label: L('Jogar partida rápida', 'Play quick match'), to: '/match/quick' },
   },
 ];
 
@@ -89,7 +90,7 @@ export function HowToPlay() {
   };
 
   const restartTutorial = () => {
-    if (!window.confirm('Reiniciar o tutorial inicial?')) return;
+    if (!window.confirm(L('Reiniciar o tutorial inicial?', 'Restart the intro tutorial?'))) return;
     dispatch({ type: 'SET_USER_SETTINGS', partial: { tutorialStep: 0 } });
     window.location.href = '/';
   };
@@ -97,11 +98,11 @@ export function HowToPlay() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 pb-8 overflow-x-hidden">
       <div className="px-3 sm:px-4 lg:px-8">
-        <BackButton to="/ajuda" label="Ajuda" />
+        <BackButton to="/ajuda" label={L('Ajuda', 'Help')} />
       </div>
       {/* ── HERO — volt chapado + título em Anton ── */}
       <section
-        aria-label="Como jogar"
+        aria-label={L('Como jogar', 'How to play')}
         className="relative w-full overflow-hidden bg-neon-yellow -mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-2"
       >
         <motion.div
@@ -111,26 +112,26 @@ export function HowToPlay() {
           className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14"
         >
           <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-            Tutorial · 7 passos
+            {L('Tutorial · 7 passos', 'Tutorial · 7 steps')}
           </span>
           <h1
             className="mt-2 font-impact uppercase text-deep-black"
             style={{ fontSize: 'clamp(44px, 12vw, 88px)', lineHeight: 0.95, letterSpacing: '-0.01em' }}
           >
-            Como jogar
+            {L('Como jogar', 'How to play')}
           </h1>
         </motion.div>
       </section>
 
       {/* ── Opções ── */}
       <section className="space-y-3">
-        <SecaoVolt label="Opções" />
+        <SecaoVolt label={L('Opções', 'Options')} />
         <div className="bg-panel border border-white/10 overflow-hidden divide-y divide-white/5">
           <div className="flex items-center justify-between gap-3 px-5 py-4">
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white">Ativar assistente</p>
+              <p className="text-sm font-bold text-white">{L('Ativar assistente', 'Enable assistant')}</p>
               <p className="mt-0.5 text-[11px] leading-relaxed text-cimento">
-                Dicas flutuantes fora das partidas.
+                {L('Dicas flutuantes fora das partidas.', 'Floating tips outside matches.')}
               </p>
             </div>
             <button
@@ -143,15 +144,15 @@ export function HowToPlay() {
                   : 'border border-white/16 text-cimento hover:border-white/30 hover:text-white',
               )}
             >
-              {assistantEnabled ? 'Ligado' : 'Desligado'}
+              {assistantEnabled ? L('Ligado', 'On') : L('Desligado', 'Off')}
             </button>
           </div>
 
           <div className="flex items-center justify-between gap-3 px-5 py-4">
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white">Refazer tutorial inicial</p>
+              <p className="text-sm font-bold text-white">{L('Refazer tutorial inicial', 'Redo intro tutorial')}</p>
               <p className="mt-0.5 text-[11px] leading-relaxed text-cimento">
-                Plantel → tática → mercado → primeira partida.
+                {L('Plantel → tática → mercado → primeira partida.', 'Squad → tactics → market → first match.')}
               </p>
             </div>
             <button
@@ -160,7 +161,7 @@ export function HowToPlay() {
               className="inline-flex shrink-0 items-center gap-1.5 border border-white/30 bg-deep-black px-3 py-1.5 text-[10px] font-display font-bold uppercase tracking-[0.18em] text-white transition-colors hover:border-white"
             >
               <RotateCcw className="h-3 w-3" />
-              Reiniciar
+              {L('Reiniciar', 'Restart')}
             </button>
           </div>
         </div>
@@ -168,7 +169,7 @@ export function HowToPlay() {
 
       {/* ── 7 passos ── */}
       <section className="space-y-3">
-        <SecaoVolt label="Os 7 passos" />
+        <SecaoVolt label={L('Os 7 passos', 'The 7 steps')} />
         <ol className="space-y-3">
           {STEPS.map((step, i) => {
             const Icon = step.icon;
@@ -183,7 +184,7 @@ export function HowToPlay() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-neon-yellow">
-                      Passo {String(i + 1).padStart(2, '0')}
+                      {L('Passo', 'Step')} {String(i + 1).padStart(2, '0')}
                     </span>
                     <h3 className="mt-0.5 font-impact text-[20px] uppercase leading-[1.1] text-white">
                       {step.title}

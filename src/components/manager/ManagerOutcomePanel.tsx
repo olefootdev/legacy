@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 /**
  * Padrão Olefoot — feedback para managers (erro, sucesso, confirmação de resultado).
@@ -95,7 +96,7 @@ export function ManagerOutcomePanel({
             type="button"
             onClick={onDismiss}
             className="absolute right-2 top-2 p-2 text-cimento transition hover:bg-white/10 hover:text-white"
-            aria-label="Fechar"
+            aria-label={L('Fechar', 'Close')}
           >
             <X className="h-5 w-5" aria-hidden />
           </button>

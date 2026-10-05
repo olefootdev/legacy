@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import type { LiveAuction, AuctionBid, ManagerMessage } from './socialTrade';
 import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
+import { L, LOCALE } from '@/i18n/L';
 
 // Configurações de leilão
 export const AUCTION_DURATION_MS = 5 * 60 * 1000; // 5 minutos
@@ -96,12 +97,12 @@ export function placeBid(
   amount: number,
 ): { success: boolean; error?: string } {
   const auction = activeAuctions.get(auctionId);
-  if (!auction) return { success: false, error: 'Leilão não encontrado' };
-  if (auction.status !== 'active') return { success: false, error: 'Leilão encerrado' };
+  if (!auction) return { success: false, error: L('Leilão não encontrado', 'Auction not found') };
+  if (auction.status !== 'active') return { success: false, error: L('Leilão encerrado', 'Auction ended') };
 
   const minBid = Math.ceil(auction.currentBid * (1 + MIN_BID_INCREMENT));
   if (amount < minBid) {
-    return { success: false, error: `Lance mínimo: ${minBid} EXP` };
+    return { success: false, error: L(`Lance mínimo: ${minBid} EXP`, `Minimum bid: ${minBid} EXP`) };
   }
 
   // Registrar lance
@@ -144,8 +145,11 @@ function endAuction(auctionId: string) {
     const message: ManagerMessage = {
       id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       type: 'auction_won',
-      title: 'Parabéns! Você venceu!',
-      message: `Você arrematou ${auction.playerName} por ${formatPrice(auction.currentBid)}. Valor de mercado: ${formatPrice(Math.floor(auction.currentBid * 1.4))}`,
+      title: L('Parabéns! Você venceu!', 'Congrats! You won!'),
+      message: L(
+        `Você arrematou ${auction.playerName} por ${formatPrice(auction.currentBid)}. Valor de mercado: ${formatPrice(Math.floor(auction.currentBid * 1.4))}`,
+        `You won ${auction.playerName} for ${formatPrice(auction.currentBid)}. Market value: ${formatPrice(Math.floor(auction.currentBid * 1.4))}`,
+      ),
       playerName: auction.playerName,
       price: auction.currentBid,
       urgency: 'medium',
@@ -233,7 +237,7 @@ function formatPrice(amount: number): string {
   if (amount >= 10_000) {
     return `${(amount / 1000).toFixed(0)}k EXP`;
   }
-  return `${amount.toLocaleString('pt-BR')} EXP`;
+  return `${amount.toLocaleString(LOCALE)} EXP`;
 }
 
 // Gerar leilões a partir de pool de jogadores reais

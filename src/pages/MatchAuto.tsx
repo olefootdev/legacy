@@ -8,6 +8,7 @@ import { overallFromAttributes } from '@/entities/player';
 import { PenaltyShoot, type PenaltyKeeper, type PenaltyShooter } from '@/components/penalty';
 import { LegacyTicker } from '@/components/match/LegacyTicker';
 import { Hashtag } from '@/components/ui';
+import { L } from '@/i18n/L';
 
 type UiPhase = 'analyzing' | 'ticker' | 'result';
 
@@ -89,12 +90,12 @@ export function MatchAuto() {
         simError =
           e instanceof Error
             ? e.message
-            : 'Falha ao simular a partida. Tente de novo ou ajuste o time.';
+            : L('Falha ao simular a partida. Tente de novo ou ajuste o time.', 'Failed to simulate the match. Try again or adjust your team.');
       }
 
       if (!lm && !simError) {
         setBlockedReason(
-          'Não foi possível jogar: plantel incompleto ou jogadores indisponíveis (lesão / suspensão). Titulares e banco cumprem os requisitos em Equipe.',
+          L('Não foi possível jogar: plantel incompleto ou jogadores indisponíveis (lesão / suspensão). Titulares e banco cumprem os requisitos em Equipe.', 'Could not play: incomplete squad or unavailable players (injury / suspension). Make sure starters and bench meet the requirements in Team.'),
         );
       } else if (simError) {
         setBlockedReason(simError);
@@ -174,7 +175,7 @@ export function MatchAuto() {
         >
           ← Home
         </Link>
-        <Hashtag className="w-auto">#automatica</Hashtag>
+        <Hashtag className="w-auto">{L('#automatica', '#auto')}</Hashtag>
         {phase === 'analyzing' && (
           <button
             type="button"
@@ -182,7 +183,7 @@ export function MatchAuto() {
             className="text-[10px] font-display font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors inline-flex items-center gap-1.5"
           >
             <LogOut className="w-3.5 h-3.5" />
-            Sair do jogo
+            {L('Sair do jogo', 'Leave match')}
           </button>
         )}
       </div>
@@ -207,10 +208,10 @@ export function MatchAuto() {
               onClick={(e) => e.stopPropagation()}
             >
               <h2 id="forfeit-auto-title" className="font-display font-black text-xl text-white text-center uppercase tracking-wide">
-                Sair do jogo?
+                {L('Sair do jogo?', 'Leave match?')}
               </h2>
               <p className="text-sm text-gray-400 text-center mt-4 leading-relaxed">
-                Entra na liga e no histórico.
+                {L('Entra na liga e no histórico.', 'Counts in the league and history.')}
               </p>
               <div className="mt-6 flex flex-col gap-2">
                 <button
@@ -218,14 +219,14 @@ export function MatchAuto() {
                   className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-display font-black uppercase tracking-wider text-sm transition-colors whitespace-nowrap"
                   onClick={confirmForfeitAuto}
                 >
-                  Desistir · derrota <span className="ole-num">5×0</span>
+                  {L('Desistir · derrota', 'Forfeit · loss')} <span className="ole-num">5×0</span>
                 </button>
                 <button
                   type="button"
                   className="w-full py-3 border border-white/30 text-gray-300 font-bold text-sm hover:bg-white/5 transition-colors"
                   onClick={() => setForfeitOpen(false)}
                 >
-                  Cancelar
+                  {L('Cancelar', 'Cancel')}
                 </button>
               </div>
             </motion.div>
@@ -241,14 +242,14 @@ export function MatchAuto() {
         >
           <Loader2 className="w-10 h-10 text-neon-yellow animate-spin" />
           <p className="text-white font-display font-bold text-lg uppercase tracking-wide text-center">
-            Analisando elenco e adversário…
+            {L('Analisando elenco e adversário…', 'Analysing squad and opponent…')}
           </p>
         </motion.div>
       )}
 
       {phase === 'ticker' && summary && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-          <div className="ole-eyebrow text-center">PARTIDA AUTOMÁTICA</div>
+          <div className="ole-eyebrow text-center">{L('PARTIDA AUTOMÁTICA', 'AUTO MATCH')}</div>
           <LegacyTicker
             homeShort={summary.homeShort}
             awayShort={summary.awayShort}
@@ -263,7 +264,7 @@ export function MatchAuto() {
             className="w-full py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-colors"
             onClick={() => setPhase('result')}
           >
-            Pular para resultado →
+            {L('Pular para resultado →', 'Skip to result →')}
           </button>
         </motion.div>
       )}
@@ -271,7 +272,7 @@ export function MatchAuto() {
       {phase === 'result' && blockedReason && !summary && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
           <div className="glass-panel bg-panel p-6 border border-amber-500/30 text-center">
-            <Hashtag className="mb-2">#automatica</Hashtag>
+            <Hashtag className="mb-2">{L('#automatica', '#auto')}</Hashtag>
             <p className="text-sm text-gray-200 leading-relaxed">{blockedReason}</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -280,7 +281,7 @@ export function MatchAuto() {
               className="btn-primary flex-1 flex justify-center"
               onClick={() => navigate('/team')}
             >
-              <span className="btn-primary-inner">Ir para Equipe</span>
+              <span className="btn-primary-inner">{L('Ir para Equipe', 'Go to Team')}</span>
             </button>
             <button
               type="button"
@@ -296,7 +297,7 @@ export function MatchAuto() {
       {phase === 'result' && summary && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
           <div className="glass-panel bg-panel p-6 border border-white/10 text-center">
-            <div className="ole-eyebrow mb-4">RESULTADO</div>
+            <div className="ole-eyebrow mb-4">{L('RESULTADO', 'RESULT')}</div>
             <div className="ole-scoreboard mb-2">
               {summary.homeScore}
               <span className="ole-scoreboard__separator">×</span>
@@ -306,12 +307,12 @@ export function MatchAuto() {
               {summary.homeShort} vs {summary.awayShort}
             </p>
             <p className="text-xs text-gray-500 mt-2">
-              vs {fixture.opponent.name} • Liga e elenco já atualizados
+              vs {fixture.opponent.name} • {L('Liga e elenco já atualizados', 'League and squad updated')}
             </p>
           </div>
 
           <div className="glass-panel bg-panel p-5 border border-white/10">
-            <div className="ole-eyebrow mb-3">TITULARES</div>
+            <div className="ole-eyebrow mb-3">{L('TITULARES', 'STARTERS')}</div>
             <div className="flex flex-wrap gap-2">
               {starters.slice(0, 11).map(({ slot, p, ovr }) => (
                 <span
@@ -325,7 +326,7 @@ export function MatchAuto() {
           </div>
 
           <div className="glass-panel bg-panel p-5 border border-white/10">
-            <div className="ole-eyebrow mb-3">DESTAQUES</div>
+            <div className="ole-eyebrow mb-3">{L('DESTAQUES', 'HIGHLIGHTS')}</div>
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {Object.entries(topStats)
                 .sort((a, b) => (b[1]?.rating ?? 0) - (a[1]?.rating ?? 0))
@@ -338,8 +339,8 @@ export function MatchAuto() {
                     <div key={id} className="flex justify-between text-xs text-gray-300">
                       <span>{name}</span>
                       <span>
-                        <span className="ole-attr" data-tier={tier}>Nota {rating.toFixed(1)}</span>
-                        <span className="text-gray-500"> • {st.passesOk}/{st.passesAttempt} pas • {st.tackles} des</span>
+                        <span className="ole-attr" data-tier={tier}>{L('Nota', 'Rating')} {rating.toFixed(1)}</span>
+                        <span className="text-gray-500"> • {st.passesOk}/{st.passesAttempt} {L('pas', 'pas')} • {st.tackles} {L('des', 'tkl')}</span>
                       </span>
                     </div>
                   );
@@ -349,10 +350,10 @@ export function MatchAuto() {
 
           <div className="glass-panel bg-panel p-5 border border-white/10">
             <div className="ole-eyebrow mb-3 flex items-center justify-between">
-              <span>EVENTOS</span>
+              <span>{L('EVENTOS', 'EVENTS')}</span>
               {summary.events.some((e) => e.kind === 'penalty_start') && (
                 <span className="text-[9px] text-neon-yellow tracking-[0.2em]">
-                  ▶ REJOGAR PÊNALTIS
+                  {L('▶ REJOGAR PÊNALTIS', '▶ REPLAY PENALTIES')}
                 </span>
               )}
             </div>
@@ -374,7 +375,7 @@ export function MatchAuto() {
                         onClick={() => setReplayPenaltyId(e.id)}
                         className="shrink-0 inline-flex items-center gap-1 text-[9px] uppercase tracking-[0.2em] font-bold px-2 py-1 bg-neon-yellow text-black hover:bg-white transition-colors"
                       >
-                        <Play className="w-3 h-3" /> Jogar
+                        <Play className="w-3 h-3" /> {L('Jogar', 'Play')}
                       </button>
                     </div>
                   );
@@ -401,7 +402,7 @@ export function MatchAuto() {
           <div className="flex flex-col sm:flex-row gap-3">
             <button type="button" className="btn-primary flex-1 flex justify-center" onClick={() => runAnalysis()}>
               <span className="btn-primary-inner flex items-center gap-2">
-                <RotateCcw className="w-4 h-4" /> Jogar novamente
+                <RotateCcw className="w-4 h-4" /> {L('Jogar novamente', 'Play again')}
               </span>
             </button>
             <button
@@ -409,7 +410,7 @@ export function MatchAuto() {
               className="flex-1 py-3 border border-white/30 font-bold text-sm hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
               onClick={() => navigate('/leagues')}
             >
-              <Trophy className="w-4 h-4 text-neon-yellow" /> Ir para Liga
+              <Trophy className="w-4 h-4 text-neon-yellow" /> {L('Ir para Liga', 'Go to League')}
             </button>
             <button
               type="button"
@@ -435,7 +436,7 @@ export function MatchAuto() {
               type="button"
               onClick={() => setReplayPenaltyId(null)}
               className="fixed top-4 right-4 z-[110] bg-black text-neon-yellow p-2 hover:bg-white hover:text-black transition-colors"
-              aria-label="Fechar replay"
+              aria-label={L('Fechar replay', 'Close replay')}
             >
               <X className="w-5 h-5" />
             </button>
@@ -459,24 +460,24 @@ export function MatchAuto() {
                   }
                 : {
                     id: 'fallback',
-                    displayName: 'Batedor',
+                    displayName: L('Batedor', 'Taker'),
                     shirtNumber: 9,
                     finishingRating: 70,
                   };
               const oppStrength = fixture?.opponent?.strength ?? 65;
               const keeper: PenaltyKeeper = {
                 id: 'opp-gk',
-                displayName: `Goleiro ${summary.awayShort}`,
+                displayName: L(`Goleiro ${summary.awayShort}`, `${summary.awayShort} Keeper`),
                 readingRating: Math.max(40, Math.min(95, oppStrength)),
                 positioningRating: Math.max(40, Math.min(95, oppStrength - 5)),
               };
               return (
                 <PenaltyShoot
                   key={`replay-${replayPenaltyId}`}
-                  headerLabel={`Replay · Pênalti vs ${summary.awayShort}`}
+                  headerLabel={L(`Replay · Pênalti vs ${summary.awayShort}`, `Replay · Penalty vs ${summary.awayShort}`)}
                   shooter={shooter}
                   keeper={keeper}
-                  keeperHint="Replay — não afeta o resultado"
+                  keeperHint={L('Replay — não afeta o resultado', 'Replay — does not affect the result')}
                   onResolved={() => {
                     /* Replay puro — score já está finalizado */
                   }}

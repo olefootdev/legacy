@@ -13,6 +13,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { abrir, esquecer as esquecerCofre, fechar, guardar, ler, type Cofre } from './cofre.js';
 import { fraseParaChave, type ChaveSolana } from './derive.js';
 import { gerarFrase } from './mnemonic.js';
+import { idiomaAtual } from '../../i18n/idioma.js';
+
+/** A OLEWALLET troca de idioma sem recarregar: o texto é escolhido na hora da chamada. */
+const tx = (pt: string, en: string): string => (idiomaAtual() === 'en' ? en : pt);
 
 export type EstadoCarteira = 'carregando' | 'sem-cofre' | 'trancada' | 'aberta';
 
@@ -83,7 +87,7 @@ export function useCarteira(): Carteira {
       guardar(cofre);
       setChave(k); setEndereco(k.endereco); setEstado('aberta');
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'não consegui criar a carteira');
+      setErro(e instanceof Error ? e.message : tx('não consegui criar a carteira', "couldn't create the wallet"));
       throw e;
     } finally { setOcupado(false); }
   }, []);
@@ -97,7 +101,7 @@ export function useCarteira(): Carteira {
       const k = fraseParaChave(palavras);
       setChave(k); setEndereco(k.endereco); setEstado('aberta'); setTrancouSozinha(false);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'não consegui abrir');
+      setErro(e instanceof Error ? e.message : tx('não consegui abrir', "couldn't open"));
       throw e;
     } finally { setOcupado(false); }
   }, []);
@@ -137,7 +141,7 @@ export function useCarteira(): Carteira {
 
   const verFrase = useCallback(async (senha: string) => {
     const cofre = ler();
-    if (!cofre) throw new Error('não há carteira neste aparelho');
+    if (!cofre) throw new Error(tx('não há carteira neste aparelho', 'no wallet on this device'));
     return abrir(cofre, senha);
   }, []);
 

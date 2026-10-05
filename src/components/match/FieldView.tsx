@@ -30,6 +30,7 @@ import {
   GOAL_WIDTH_M, PENALTY_AREA_HALF_W_M,
 } from '@/tactical';
 
+import { L } from '@/i18n/L';
 export type FieldCameraMode = 'aerial' | 'broadcast' | 'firstperson';
 
 // ── SVG layout constants ────────────────────────────────────────────────────
@@ -944,7 +945,7 @@ function AerialField({
 
 // ── Camera mode labels ───────────────────────────────────────────────────────
 const CAMERA_LABELS: Record<FieldCameraMode, string> = {
-  aerial: 'TÁTICA',
+  aerial: L('TÁTICA', 'TACTICAL'),
   broadcast: 'TV',
   firstperson: 'CINEMA',
 };
@@ -1009,7 +1010,7 @@ export const FieldView = memo(function FieldView({
   onBallPlayerId = null,
   cameraMode = 'aerial',
   homeShort = 'HOM',
-  awayShort = 'VIS',
+  awayShort = L('VIS', 'AWY'),
   homeName,
   awayName,
   homeCrestUrl,

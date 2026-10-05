@@ -1,4 +1,5 @@
 import { getSupabase } from './client';
+import { L } from '@/i18n/L';
 
 /**
  * Convite de expansão — a porta de entrada na árvore binária.
@@ -106,12 +107,12 @@ export function destinoAposEntrar(): string {
 export type MotivoIndicacao = 'inexistente' | 'auto_indicacao' | 'nao_ativado' | 'ja_esta_na_arvore' | 'sem_sessao' | 'erro';
 
 export const FRASE_DA_INDICACAO: Record<MotivoIndicacao, string> = {
-  inexistente: 'Não achamos esse @. Confira com quem te indicou.',
-  auto_indicacao: 'Você não pode se indicar.',
-  nao_ativado: 'Essa conta ainda não ativou o convite.',
-  ja_esta_na_arvore: 'Você já está na rede.',
-  sem_sessao: 'Entre na sua conta para continuar.',
-  erro: 'Não deu para confirmar agora. Tente de novo.',
+  inexistente: L('Não achamos esse @. Confira com quem te indicou.', 'We couldn\'t find that @. Check with who referred you.'),
+  auto_indicacao: L('Você não pode se indicar.', 'You can\'t refer yourself.'),
+  nao_ativado: L('Essa conta ainda não ativou o convite.', 'This account hasn\'t activated the invite yet.'),
+  ja_esta_na_arvore: L('Você já está na rede.', 'You are already in the network.'),
+  sem_sessao: L('Entre na sua conta para continuar.', 'Log in to your account to continue.'),
+  erro: L('Não deu para confirmar agora. Tente de novo.', 'Couldn\'t confirm right now. Try again.'),
 };
 
 /**

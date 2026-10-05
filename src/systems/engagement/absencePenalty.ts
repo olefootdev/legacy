@@ -29,6 +29,7 @@ import type {
   ManagerPresence,
 } from './types';
 import { hoursSinceLastLogin } from './checkIn';
+import { L } from '@/i18n/L';
 
 const TIER_TABLE: Record<AbsenceTier, AbsencePenaltyEffect> = {
   normal: {
@@ -41,7 +42,7 @@ const TIER_TABLE: Record<AbsenceTier, AbsencePenaltyEffect> = {
     randomInjuryCount: 0,
     crowdSupportDelta: 0,
     starPlayerDepartureRisk: false,
-    message: 'Tudo em ordem no clube.',
+    message: L('Tudo em ordem no clube.', 'All good at the club.'),
   },
   warning_12h: {
     tier: 'warning_12h',
@@ -53,7 +54,7 @@ const TIER_TABLE: Record<AbsenceTier, AbsencePenaltyEffect> = {
     randomInjuryCount: 0,
     crowdSupportDelta: 0,
     starPlayerDepartureRisk: false,
-    message: 'Jogadores sentem falta da sua presença. Treino rendendo 10% menos.',
+    message: L('Jogadores sentem falta da sua presença. Treino rendendo 10% menos.', 'Players miss your presence. Training 10% less effective.'),
   },
   mild_24h: {
     tier: 'mild_24h',
@@ -65,7 +66,7 @@ const TIER_TABLE: Record<AbsenceTier, AbsencePenaltyEffect> = {
     randomInjuryCount: 0,
     crowdSupportDelta: 0,
     starPlayerDepartureRisk: false,
-    message: 'Sem comando, treinos pararam. Risco de lesão aumentou.',
+    message: L('Sem comando, treinos pararam. Risco de lesão aumentou.', 'No one in charge, training stopped. Injury risk went up.'),
   },
   moderate_36h: {
     tier: 'moderate_36h',
@@ -77,7 +78,7 @@ const TIER_TABLE: Record<AbsenceTier, AbsencePenaltyEffect> = {
     randomInjuryCount: 0,
     crowdSupportDelta: -2,
     starPlayerDepartureRisk: false,
-    message: 'Clube à deriva. Sem recuperação física, mercado paralisado.',
+    message: L('Clube à deriva. Sem recuperação física, mercado paralisado.', 'Club adrift. No physical recovery, market frozen.'),
   },
   heavy_48h: {
     tier: 'heavy_48h',
@@ -89,7 +90,7 @@ const TIER_TABLE: Record<AbsenceTier, AbsencePenaltyEffect> = {
     randomInjuryCount: 0,
     crowdSupportDelta: -4,
     starPlayerDepartureRisk: false,
-    message: 'Elenco no limite. Risco de lesão alto, ofertas desaparecendo.',
+    message: L('Elenco no limite. Risco de lesão alto, ofertas desaparecendo.', 'Squad at its limit. High injury risk, offers vanishing.'),
   },
   crisis_72h: {
     tier: 'crisis_72h',
@@ -101,7 +102,7 @@ const TIER_TABLE: Record<AbsenceTier, AbsencePenaltyEffect> = {
     randomInjuryCount: 0,
     crowdSupportDelta: -8,
     starPlayerDepartureRisk: true,
-    message: 'CRISE. Torcida esfriou, jogadores estrela cogitando sair.',
+    message: L('CRISE. Torcida esfriou, jogadores estrela cogitando sair.', 'CRISIS. Fans went cold, star players thinking of leaving.'),
   },
 };
 

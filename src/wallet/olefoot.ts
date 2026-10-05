@@ -16,6 +16,7 @@
  */
 
 import { getSupabase } from '@/supabase/client';
+import { L } from '@/i18n/L';
 
 /** Saldo OLEFOOT do usuário autenticado (unidades inteiras). 0 se sem sessão/linha. */
 export async function fetchMyOlefootBalance(): Promise<number> {
@@ -70,7 +71,7 @@ export async function spendMyOlefoot(args: {
 }): Promise<SpendOlefootResult | SpendOlefootError> {
   const sb = getSupabase();
   if (!sb) {
-    return { ok: false as const, code: 'NOT_AUTHENTICATED', message: 'Sem sessão Supabase.' };
+    return { ok: false as const, code: 'NOT_AUTHENTICATED', message: L('Sem sessão Supabase.', 'No Supabase session.') };
   }
 
   const { data, error } = await sb.rpc('spend_legacy_olefoot', {
@@ -82,21 +83,21 @@ export async function spendMyOlefoot(args: {
   if (error) {
     const msg = error.message || '';
     if (msg.includes('INSUFFICIENT_OLEFOOT_BALANCE')) {
-      return { ok: false as const, code: 'INSUFFICIENT_BALANCE', message: 'Saldo OLEFOOT insuficiente.' };
+      return { ok: false as const, code: 'INSUFFICIENT_BALANCE', message: L('Saldo OLEFOOT insuficiente.', 'Insufficient OLEFOOT balance.') };
     }
     if (msg.includes('INVALID_SOURCE')) {
-      return { ok: false as const, code: 'INVALID_SOURCE', message: 'Origem não autorizada.' };
+      return { ok: false as const, code: 'INVALID_SOURCE', message: L('Origem não autorizada.', 'Unauthorized source.') };
     }
     if (msg.includes('INVALID_AMOUNT')) {
-      return { ok: false as const, code: 'INVALID_AMOUNT', message: 'Valor inválido.' };
+      return { ok: false as const, code: 'INVALID_AMOUNT', message: L('Valor inválido.', 'Invalid amount.') };
     }
     if (msg.includes('NOT_AUTHENTICATED')) {
-      return { ok: false as const, code: 'NOT_AUTHENTICATED', message: 'Faça login.' };
+      return { ok: false as const, code: 'NOT_AUTHENTICATED', message: L('Faça login.', 'Please log in.') };
     }
     if (msg.includes('function') && msg.includes('does not exist')) {
-      return { ok: false as const, code: 'UNKNOWN', message: 'Recurso sendo ativado. Tente em instantes.' };
+      return { ok: false as const, code: 'UNKNOWN', message: L('Recurso sendo ativado. Tente em instantes.', 'Feature being activated. Try again shortly.') };
     }
-    return { ok: false as const, code: 'UNKNOWN', message: msg || 'Erro ao gastar OLEFOOT.' };
+    return { ok: false as const, code: 'UNKNOWN', message: msg || L('Erro ao gastar OLEFOOT.', 'Error spending OLEFOOT.') };
   }
 
   return { ok: true as const, newBalance: Number(data ?? 0) };

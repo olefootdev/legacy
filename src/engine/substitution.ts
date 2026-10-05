@@ -2,6 +2,7 @@ import type { LiveMatchSnapshot, MatchEventEntry, PitchPlayerState } from './typ
 import type { PlayerEntity } from '@/entities/types';
 import { roleFromPos } from './pitchFromLineup';
 import { behaviorToCognitiveArchetype, matchAttributesFromPlayerEntity } from '@/match/playerInMatch';
+import { L } from '@/i18n/L';
 
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -22,20 +23,20 @@ export function applySubstitution(input: {
   minute: number;
 }): { snapshot: LiveMatchSnapshot; error?: string } {
   const { snapshot, players, outPlayerId, inPlayerId, minute } = input;
-  if (snapshot.phase !== 'playing') return { snapshot, error: 'Fora de jogo.' };
+  if (snapshot.phase !== 'playing') return { snapshot, error: L('Fora de jogo.', 'Not in play.') };
   const maxSubs = snapshot.mode === 'quick' ? 5 : 3;
   if (snapshot.substitutionsUsed >= maxSubs) {
-    return { snapshot, error: `Limite de substituições (${maxSubs}).` };
+    return { snapshot, error: L(`Limite de substituições (${maxSubs}).`, `Substitution limit (${maxSubs}).`) };
   }
   if (snapshot.sentOffPlayerIds?.includes(outPlayerId)) {
-    return { snapshot, error: 'Jogador expulso não pode ser substituído por si.' };
+    return { snapshot, error: L('Jogador expulso não pode ser substituído por si.', 'A sent-off player can\'t be replaced by himself.') };
   }
-  if (outPlayerId === inPlayerId) return { snapshot, error: 'Jogador inválido.' };
+  if (outPlayerId === inPlayerId) return { snapshot, error: L('Jogador inválido.', 'Invalid player.') };
 
   const incoming = players[inPlayerId];
   const outgoing = players[outPlayerId];
-  if (!incoming || !outgoing) return { snapshot, error: 'Jogador não encontrado.' };
-  if (incoming.outForMatches > 0) return { snapshot, error: 'Jogador indisponível (lesão ou suspensão).' };
+  if (!incoming || !outgoing) return { snapshot, error: L('Jogador não encontrado.', 'Player not found.') };
+  if (incoming.outForMatches > 0) return { snapshot, error: L('Jogador indisponível (lesão ou suspensão).', 'Player unavailable (injury or suspension).') };
 
   const pendingInjury = snapshot.quickInjurySub;
   const injurySubOut =
@@ -45,12 +46,12 @@ export function applySubstitution(input: {
 
   const onPitch = new Set(snapshot.homePlayers.map((p) => p.playerId));
   if (!onPitch.has(outPlayerId) && !injurySubOut) {
-    return { snapshot, error: 'Titular não está em campo.' };
+    return { snapshot, error: L('Titular não está em campo.', 'Starter is not on the pitch.') };
   }
-  if (onPitch.has(inPlayerId)) return { snapshot, error: 'Jogador já está em campo.' };
+  if (onPitch.has(inPlayerId)) return { snapshot, error: L('Jogador já está em campo.', 'Player is already on the pitch.') };
 
   const slot = findSlotForPlayer(snapshot.matchLineupBySlot, outPlayerId);
-  if (!slot) return { snapshot, error: 'Posição não encontrada.' };
+  if (!slot) return { snapshot, error: L('Posição não encontrada.', 'Position not found.') };
 
   const outPs = injurySubOut
     ? ({
@@ -69,7 +70,7 @@ export function applySubstitution(input: {
         archetype: outgoing.archetype,
       } satisfies PitchPlayerState)
     : snapshot.homePlayers.find((p) => p.playerId === outPlayerId);
-  if (!outPs) return { snapshot, error: 'Estado de campo inconsistente.' };
+  if (!outPs) return { snapshot, error: L('Estado de campo inconsistente.', 'Inconsistent pitch state.') };
 
   const newPitch: PitchPlayerState = {
     playerId: incoming.id,
@@ -95,7 +96,7 @@ export function applySubstitution(input: {
   const ev: MatchEventEntry = {
     id: uid(),
     minute,
-    text: `${minute}' — Substituição: ${outgoing.name} ↔ ${incoming.name}.`,
+    text: L(`${minute}' — Substituição: ${outgoing.name} ↔ ${incoming.name}.`, `${minute}' — Substitution: ${outgoing.name} ↔ ${incoming.name}.`),
     kind: 'sub',
   };
   const events = [ev, ...snapshot.events].slice(0, 45);

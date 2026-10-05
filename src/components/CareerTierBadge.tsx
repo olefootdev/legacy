@@ -5,6 +5,7 @@ import {
   tierLabel,
   tierProgress01,
 } from '@/systems/careerTiers';
+import { L, LOCALE } from '@/i18n/L';
 
 export interface CareerTierBadgeProps {
   expLifetimeEarned: number;
@@ -47,10 +48,10 @@ export function CareerTierBadge({
           <p className="mt-1.5 truncate font-mono text-[11px] text-cimento">
             {next ? (
               <>
-                {Math.round(progress * 100)}% → <span className="text-white">{next.name}</span> · {next.minExp.toLocaleString('pt-BR')} EXP
+                {Math.round(progress * 100)}% → <span className="text-white">{next.name}</span> · {next.minExp.toLocaleString(LOCALE)} EXP
               </>
             ) : (
-              <>Topo da carreira</>
+              <>{L('Topo da carreira', 'Career peak')}</>
             )}
           </p>
         </div>

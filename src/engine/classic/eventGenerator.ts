@@ -7,6 +7,7 @@ import { resolvePass } from './resolvePass';
 import { tryResolveDuel, type DuelResult } from './duelSystem';
 import type { PlayerNarrativeProfile } from '@/gamespirit/playerNarrativeProfile';
 import { getFatigueState } from '@/match/fatigueState';
+import { L } from '@/i18n/L';
 
 let _eventCounter = 0;
 
@@ -272,7 +273,7 @@ function applyDuelToEvent(
 
   if (foulOutcomes.includes(duel.outcome)) {
     const teamName = attackTeam === 'home' ? 'Tigres' : 'Alvorada';
-    const text = `Falta em ${attacker.shortName}! ${duel.foulSeverity === 'yellow' ? 'Cartão amarelo!' : duel.foulSeverity === 'red' ? 'CARTÃO VERMELHO!' : 'Falta marcada.'}`;
+    const text = L(`Falta em ${attacker.shortName}! ${duel.foulSeverity === 'yellow' ? 'Cartão amarelo!' : duel.foulSeverity === 'red' ? 'CARTÃO VERMELHO!' : 'Falta marcada.'}`, `Foul on ${attacker.shortName}! ${duel.foulSeverity === 'yellow' ? 'Yellow card!' : duel.foulSeverity === 'red' ? 'RED CARD!' : 'Free kick given.'}`);
     const event: MatchEvent = {
       id: `evt_${++_eventCounter}`,
       minute,
@@ -587,7 +588,7 @@ export function generateEvent(
       const midY = (player.position.y + (decision.target?.position.y ?? player.position.y)) / 2;
       const outX = midY < FIELD_H_LOGIC / 2 ? 10 : FIELD_W_LOGIC - 10; // lateral
       const teamName = team === 'home' ? 'Tigres' : 'Alvorada';
-      const outText = `Passe de ${player.shortName} sai pela lateral — reposição ${outTeamName}.`;
+      const outText = L(`Passe de ${player.shortName} sai pela lateral — reposição ${outTeamName}.`, `${player.shortName}'s pass goes out for a throw-in — ${outTeamName} ball.`);
       const outEvent: MatchEvent = {
         id: `evt_${++_eventCounter}`,
         minute,

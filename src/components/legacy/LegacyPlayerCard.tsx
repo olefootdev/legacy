@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react';
 import { moedaDoJogo } from '@/wallet/constants';
+import { L } from '@/i18n/L';
+import { posLabel } from '@/components/matchquick/posLabel';
 
 /**
  * Card canônico Legadão — preto + dourado ornamentado.
@@ -104,7 +106,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
     backdropUrl,
     stats,
     edition,
-    tagline = 'FEITO DE HISTÓRIA · MOVIDO POR HONRA',
+    tagline = L('FEITO DE HISTÓRIA · MOVIDO POR HONRA', 'MADE OF HISTORY · DRIVEN BY HONOUR'),
     est = 2024,
     className,
     style,
@@ -119,7 +121,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
       className={className}
       style={{ display: 'block', width: '100%', height: 'auto', ...style }}
       role="img"
-      aria-label={`Card Legadão de ${name}, ${position}, OVR ${ovr}`}
+      aria-label={L(`Card Legadão de ${name}, ${position}, OVR ${ovr}`, `Legadão card of ${name}, ${posLabel(position)}, OVR ${ovr}`)}
     >
       <defs>
         {/* Scrim: escurece a base da foto pra o nome ler (gradiente permitido) */}
@@ -216,7 +218,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
         fontWeight="700"
         letterSpacing="0.32em"
       >
-        LEGADO · HONRA
+        {L('LEGADO · HONRA', 'LEGACY · HONOUR')}
       </text>
       <text
         x={VB_W - 120}
@@ -228,7 +230,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
         letterSpacing="0.32em"
         textAnchor="end"
       >
-        HISTÓRIA · RESPEITO
+        {L('HISTÓRIA · RESPEITO', 'HISTORY · RESPECT')}
       </text>
 
       {/* Coroa "L" central (logo simplificada em SVG) */}
@@ -273,7 +275,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           fontWeight="700"
           letterSpacing="0.08em"
         >
-          {position}
+          {posLabel(position)}
         </text>
         {countryEmoji && (
           <text
@@ -311,7 +313,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
             letterSpacing="0.22em"
             textAnchor="end"
           >
-            EDIÇÃO
+            {L('EDIÇÃO', 'LIMITED')}
           </text>
           <text
             x="0"
@@ -323,7 +325,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
             letterSpacing="0.22em"
             textAnchor="end"
           >
-            LIMITADA
+            {L('LIMITADA', 'EDITION')}
           </text>
           {/* Mini-coroa selada */}
           <g transform="translate(-30, 130)">
@@ -435,7 +437,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           letterSpacing="0.32em"
           textAnchor="middle"
         >
-          ÚNICO
+          {L('ÚNICO', 'UNIQUE')}
         </text>
 
         {/* Mini-coroa central no rodapé */}
@@ -463,7 +465,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           letterSpacing="0.32em"
           textAnchor="middle"
         >
-          INFINITO
+          {L('INFINITO', 'INFINITE')}
         </text>
 
         <text
@@ -488,7 +490,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           letterSpacing="0.22em"
           textAnchor="end"
         >
-          VERIFICADO
+          {L('VERIFICADO', 'VERIFIED')}
         </text>
       </g>
     </svg>

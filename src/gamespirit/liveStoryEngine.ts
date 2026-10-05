@@ -17,6 +17,7 @@ import {
   pickPressLine,
   pickShapeLine,
 } from './storyNarrativeCatalog';
+import { L } from '@/i18n/L';
 
 export interface StoryEnginePlayerBrief {
   playerId: string;
@@ -134,7 +135,7 @@ export function stepLiveStoryEngine(input: {
           newEvents.push({
             id: uid(),
             minute: displayMinute,
-            text: `${displayMinute}' — GOL! A casa empurra a Neo Arena.`,
+            text: L(`${displayMinute}' — GOL! A casa empurra a Neo Arena.`, `${displayMinute}' — GOAL! The home side roar the Neo Arena on.`),
             kind: 'goal_home',
           });
           spiritPendingRestartSide = 'home';
@@ -142,7 +143,7 @@ export function stepLiveStoryEngine(input: {
           beat.outcomeTag = 'save';
           beat.resolved = true;
           newEvents.push(
-            narr(displayMinute, `${displayMinute}' — Grande defesa do guarda-redes visitante.`),
+            narr(displayMinute, L(`${displayMinute}' — Grande defesa do guarda-redes visitante.`, `${displayMinute}' — Big save from the visiting keeper.`)),
           );
           if (r2 < 0.55) {
             newEvents.push(
@@ -156,7 +157,7 @@ export function stepLiveStoryEngine(input: {
             newEvents.push(
               narr(
                 displayMinute,
-                `${displayMinute}' — Remate da casa por cima — ${pickName(roster, 'attack', simulationSeed, i)} esteve perto.`,
+                L(`${displayMinute}' — Remate da casa por cima — ${pickName(roster, 'attack', simulationSeed, i)} esteve perto.`, `${displayMinute}' — Home shot over the bar — ${pickName(roster, 'attack', simulationSeed, i)} went close.`),
               ),
             );
           }
@@ -175,7 +176,7 @@ export function stepLiveStoryEngine(input: {
           newEvents.push({
             id: uid(),
             minute: displayMinute,
-            text: `${displayMinute}' — Gol dos visitantes. Silêncio na arena.`,
+            text: L(`${displayMinute}' — Gol dos visitantes. Silêncio na arena.`, `${displayMinute}' — Goal for the visitors. Silence in the arena.`),
             kind: 'goal_away',
           });
           spiritPendingRestartSide = 'away';
@@ -219,7 +220,7 @@ export function stepLiveStoryEngine(input: {
           newEvents.push(
             narr(
               displayMinute,
-              `${displayMinute}' — Segunda vaga: sobra na frontal para o remate.`,
+              L(`${displayMinute}' — Segunda vaga: sobra na frontal para o remate.`, `${displayMinute}' — Second wave: it drops at the edge of the box for a shot.`),
             ),
           );
         }
@@ -310,13 +311,13 @@ export function stepLiveStoryEngine(input: {
           beat.resolved = true;
           redCardHomePlayerId = pid;
           newEvents.push(
-            narr(displayMinute, `${displayMinute}' — Cartão vermelho direto para OLE FC.`),
+            narr(displayMinute, L(`${displayMinute}' — Cartão vermelho direto para OLE FC.`, `${displayMinute}' — Straight red card for OLE FC.`)),
           );
         } else if (rCard < p) {
           beat.outcomeTag = 'yellow_home';
           beat.resolved = true;
           newEvents.push(
-            narr(displayMinute, `${displayMinute}' — Cartão amarelo para OLE FC.`),
+            narr(displayMinute, L(`${displayMinute}' — Cartão amarelo para OLE FC.`, `${displayMinute}' — Yellow card for OLE FC.`)),
           );
         } else {
           beat.outcomeTag = 'no_card';
@@ -339,13 +340,13 @@ export function stepLiveStoryEngine(input: {
           beat.outcomeTag = 'red_away';
           beat.resolved = true;
           newEvents.push(
-            narr(displayMinute, `${displayMinute}' — Expulsão na equipa visitante.`),
+            narr(displayMinute, L(`${displayMinute}' — Expulsão na equipa visitante.`, `${displayMinute}' — Red card for the visitors.`)),
           );
         } else if (rCard < p) {
           beat.outcomeTag = 'yellow_away';
           beat.resolved = true;
           newEvents.push(
-            narr(displayMinute, `${displayMinute}' — Amarelo para o adversário.`),
+            narr(displayMinute, L(`${displayMinute}' — Amarelo para o adversário.`, `${displayMinute}' — Yellow for the opposition.`)),
           );
         } else {
           beat.outcomeTag = 'no_card';

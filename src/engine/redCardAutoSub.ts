@@ -5,6 +5,7 @@ import { roleFromPos } from './pitchFromLineup';
 import { behaviorToCognitiveArchetype, matchAttributesFromPlayerEntity } from '@/match/playerInMatch';
 import { overallFromAttributes } from '@/entities/player';
 import { findSlotForPlayer } from './substitution';
+import { L } from '@/i18n/L';
 
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -51,7 +52,7 @@ export function applyRedCardAutoSub(input: {
     const ev: MatchEventEntry = {
       id: uid(),
       minute,
-      text: `${minute}' — ${players[sentOffId]?.name ?? 'Jogador'} expulso. A tua equipa fica com menos um (sem substituição automática).`,
+      text: L(`${minute}' — ${players[sentOffId]?.name ?? 'Jogador'} expulso. A tua equipa fica com menos um (sem substituição automática).`, `${minute}' — ${players[sentOffId]?.name ?? 'Player'} sent off. Your team is down to ten (no automatic substitution).`),
       kind: 'narrative',
     };
     const homePlayers = snapshot.homePlayers.filter((p) => p.playerId !== sentOffId);
@@ -76,7 +77,7 @@ export function applyRedCardAutoSub(input: {
     const ev: MatchEventEntry = {
       id: uid(),
       minute,
-      text: `${minute}' — ${players[sentOffId]?.name ?? 'Jogador'} expulso; sem substituições disponíveis.`,
+      text: L(`${minute}' — ${players[sentOffId]?.name ?? 'Jogador'} expulso; sem substituições disponíveis.`, `${minute}' — ${players[sentOffId]?.name ?? 'Player'} sent off; no substitutions left.`),
       kind: 'narrative',
     };
     const homePlayers = snapshot.homePlayers.filter((p) => p.playerId !== sentOffId);
@@ -112,7 +113,7 @@ export function applyRedCardAutoSub(input: {
   const ev: MatchEventEntry = {
     id: uid(),
     minute,
-    text: `${minute}' — Entra ${incoming.name} no lugar do expulso.`,
+    text: L(`${minute}' — Entra ${incoming.name} no lugar do expulso.`, `${minute}' — ${incoming.name} comes on for the sent-off player.`),
     kind: 'sub',
   };
 

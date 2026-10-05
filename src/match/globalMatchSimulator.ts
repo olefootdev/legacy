@@ -18,6 +18,7 @@ import {
   getCurrentGameMinute,
 } from './globalMatch';
 import type { PossessionSide } from '@/engine/types';
+import { L } from '@/i18n/L';
 
 interface SimulationContext {
   fixture: GlobalFixture;
@@ -171,19 +172,19 @@ function candidateToGlobalEvent(
 
   switch (candidate.type) {
     case 'goal':
-      text = `⚽ GOL! ${candidate.playerName} marca para ${teamName}`;
+      text = L(`⚽ GOL! ${candidate.playerName} marca para ${teamName}`, `⚽ GOAL! ${candidate.playerName} scores for ${teamName}`);
       break;
     case 'yellow_card':
-      text = `🟡 Cartão amarelo para ${candidate.playerName} (${teamName})`;
+      text = L(`🟡 Cartão amarelo para ${candidate.playerName} (${teamName})`, `🟡 Yellow card for ${candidate.playerName} (${teamName})`);
       break;
     case 'red_card':
-      text = `🟥 EXPULSÃO! ${candidate.playerName} (${teamName})`;
+      text = L(`🟥 EXPULSÃO! ${candidate.playerName} (${teamName})`, `🟥 SENT OFF! ${candidate.playerName} (${teamName})`);
       break;
     case 'injury':
-      text = `⚠️ Lesão: ${candidate.playerName} (${teamName})`;
+      text = L(`⚠️ Lesão: ${candidate.playerName} (${teamName})`, `⚠️ Injury: ${candidate.playerName} (${teamName})`);
       break;
     default:
-      text = `Evento em ${teamName}`;
+      text = L(`Evento em ${teamName}`, `Event at ${teamName}`);
   }
 
   return {
@@ -225,7 +226,7 @@ function detectGlobalHighlights(
         id: newGlobalEventId(),
         type: 'leader_goal',
         fixtureId: fixture.id,
-        text: `🔥 GOL DO LÍDER: ${event.side === 'home' ? fixture.homeTeamName : fixture.awayTeamName}`,
+        text: L(`🔥 GOL DO LÍDER: ${event.side === 'home' ? fixture.homeTeamName : fixture.awayTeamName}`, `🔥 LEADERS SCORE: ${event.side === 'home' ? fixture.homeTeamName : fixture.awayTeamName}`),
         timestampMs: event.timestampMs,
       });
     }
@@ -245,7 +246,7 @@ function detectGlobalHighlights(
           id: newGlobalEventId(),
           type: 'comeback',
           fixtureId: fixture.id,
-          text: `🔄 VIRADA! ${event.side === 'home' ? fixture.homeTeamName : fixture.awayTeamName} vira o jogo`,
+          text: L(`🔄 VIRADA! ${event.side === 'home' ? fixture.homeTeamName : fixture.awayTeamName} vira o jogo`, `🔄 COMEBACK! ${event.side === 'home' ? fixture.homeTeamName : fixture.awayTeamName} turn it around`),
           timestampMs: event.timestampMs,
         });
       }
@@ -259,7 +260,7 @@ function detectGlobalHighlights(
           id: newGlobalEventId(),
           type: 'decisive_red',
           fixtureId: fixture.id,
-          text: `🟥 EXPULSÃO DECISIVA em ${fixture.homeTeamName} x ${fixture.awayTeamName}`,
+          text: L(`🟥 EXPULSÃO DECISIVA em ${fixture.homeTeamName} x ${fixture.awayTeamName}`, `🟥 DECISIVE RED CARD in ${fixture.homeTeamName} vs ${fixture.awayTeamName}`),
           timestampMs: event.timestampMs,
         });
       }

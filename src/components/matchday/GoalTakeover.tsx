@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '@/game/store';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { ArrowRight } from 'lucide-react';
+import { L } from '@/i18n/L';
 
 interface GoalTakeoverProps {
   triggerKey: string | null;
@@ -37,7 +38,7 @@ export function GoalTakeover({
   const scorer = lastGoal?.playerId ? playersById[lastGoal.playerId] : null;
   const scorerPortrait = scorer ? playerPortraitSrc(scorer, 256, 256) : null;
   const minute = lastGoal?.minute ?? live?.minute ?? 0;
-  const narrative = lastGoal?.text || 'Estufou as redes!';
+  const narrative = lastGoal?.text || L('Estufou as redes!', 'Back of the net!');
   const points =
     lastGoal?.playerId && live?.homeStats?.[lastGoal.playerId]?.rating
       ? `+${Math.round(live.homeStats[lastGoal.playerId].rating * 10)} pts`
@@ -106,7 +107,7 @@ export function GoalTakeover({
                 textTransform: 'uppercase',
               }}
             >
-              Lance decisivo
+              {L('Lance decisivo', 'Decisive moment')}
             </span>
           </motion.div>
 
@@ -123,7 +124,7 @@ export function GoalTakeover({
                 letterSpacing: '-0.01em',
               }}
             >
-              Gol
+              {L('Gol', 'Goal')}
             </motion.h1>
 
             {/* Portrait + lower-third nome */}
@@ -231,7 +232,7 @@ export function GoalTakeover({
                 }}
               >
                 <span className="inline-flex items-center gap-3">
-                  Voltar à partida
+                  {L('Voltar à partida', 'Back to the match')}
                   <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
                 </span>
               </motion.button>

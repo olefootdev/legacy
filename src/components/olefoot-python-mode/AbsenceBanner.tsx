@@ -11,6 +11,7 @@
  * está perdendo, senão não volta. VOLT2: headline sem serifa/itálico,
  * eyebrow em caixa alta, sem sombra.
  */
+import { L, emIngles } from '@/i18n/L';
 import { motion } from 'motion/react';
 import { AlertTriangle, AlertOctagon, Flame } from 'lucide-react';
 import { useAbsence, useHoursSinceLastLogin } from '@/hooks/useEngagement';
@@ -43,7 +44,7 @@ const TIER_STYLES: Record<AbsenceTier, TierStyle> = {
     bgClass: 'bg-[var(--color-warning)]/8',
     iconColor: 'text-[var(--color-warning)]',
     Icon: AlertTriangle,
-    label: 'Atenção',
+    label: L('Atenção', 'Warning'),
     accentClass: 'text-[var(--color-warning)]',
   },
   mild_24h: {
@@ -51,7 +52,7 @@ const TIER_STYLES: Record<AbsenceTier, TierStyle> = {
     bgClass: 'bg-[var(--color-warning)]/10',
     iconColor: 'text-[var(--color-warning)]',
     Icon: AlertTriangle,
-    label: 'Treinos parados',
+    label: L('Treinos parados', 'Training halted'),
     accentClass: 'text-[var(--color-warning)]',
   },
   moderate_36h: {
@@ -59,7 +60,7 @@ const TIER_STYLES: Record<AbsenceTier, TierStyle> = {
     bgClass: 'bg-[var(--color-danger)]/10',
     iconColor: 'text-[var(--color-danger)]',
     Icon: AlertOctagon,
-    label: 'Clube à deriva',
+    label: L('Clube à deriva', 'Club adrift'),
     accentClass: 'text-[var(--color-danger)]',
   },
   heavy_48h: {
@@ -67,7 +68,7 @@ const TIER_STYLES: Record<AbsenceTier, TierStyle> = {
     bgClass: 'bg-[var(--color-danger)]/14',
     iconColor: 'text-[var(--color-danger)]',
     Icon: AlertOctagon,
-    label: 'Crise instalada',
+    label: L('Crise instalada', 'Full-blown crisis'),
     accentClass: 'text-[var(--color-danger)]',
   },
   crisis_72h: {
@@ -75,16 +76,16 @@ const TIER_STYLES: Record<AbsenceTier, TierStyle> = {
     bgClass: 'bg-[var(--color-danger)]/18',
     iconColor: 'text-[var(--color-danger)] animate-pulse',
     Icon: Flame,
-    label: 'Crise',
+    label: L('Crise', 'Crisis'),
     accentClass: 'text-[var(--color-danger)]',
   },
 };
 
 function formatHours(h: number): string {
-  if (h < 1) return 'menos de 1h';
+  if (h < 1) return L('menos de 1h', 'under 1h');
   if (h < 24) return `${Math.floor(h)}h`;
   const days = Math.floor(h / 24);
-  return days === 1 ? '1 dia' : `${days} dias`;
+  return days === 1 ? L('1 dia', '1 day') : L(`${days} dias`, `${days} days`);
 }
 
 function Pill({
@@ -168,7 +169,7 @@ export function AbsenceBanner() {
                 textTransform: 'uppercase',
               }}
             >
-              {formatHours(hours)} sem visitar
+              {formatHours(hours)} {L('sem visitar', 'away')}
             </span>
           </div>
 
@@ -188,23 +189,29 @@ export function AbsenceBanner() {
           {/* Pílulas de efeitos */}
           {showDetails && (
             <div className="flex flex-wrap gap-1.5 pt-1.5">
-              {absence.effect.trainingMultiplier === 0 && <Pill>Treinos parados</Pill>}
+              {absence.effect.trainingMultiplier === 0 && <Pill>{L('Treinos parados', 'Training halted')}</Pill>}
               {absence.effect.injuryRiskAdditive > 0 && (
-                <Pill>Risco lesão +{absence.effect.injuryRiskAdditive}</Pill>
+                <Pill>{L('Risco lesão', 'Injury risk')} +{absence.effect.injuryRiskAdditive}</Pill>
               )}
               {absence.effect.randomInjuryCount > 0 && (
                 <Pill emphasis="strong">
-                  {absence.effect.randomInjuryCount} lesão
-                  {absence.effect.randomInjuryCount > 1 ? 'ões' : ''} pendente
-                  {absence.effect.randomInjuryCount > 1 ? 's' : ''}
+                  {emIngles() ? (
+                    <>{absence.effect.randomInjuryCount} pending injur{absence.effect.randomInjuryCount > 1 ? 'ies' : 'y'}</>
+                  ) : (
+                    <>
+                      {absence.effect.randomInjuryCount} lesão
+                      {absence.effect.randomInjuryCount > 1 ? 'ões' : ''} pendente
+                      {absence.effect.randomInjuryCount > 1 ? 's' : ''}
+                    </>
+                  )}
                 </Pill>
               )}
               {absence.effect.crowdSupportDelta < 0 && (
-                <Pill>Torcida {absence.effect.crowdSupportDelta}%</Pill>
+                <Pill>{L('Torcida', 'Fans')} {absence.effect.crowdSupportDelta}%</Pill>
               )}
-              {!absence.effect.marketActivityEnabled && <Pill>Mercado parado</Pill>}
+              {!absence.effect.marketActivityEnabled && <Pill>{L('Mercado parado', 'Market frozen')}</Pill>}
               {absence.effect.starPlayerDepartureRisk && (
-                <Pill emphasis="strong">Estrelas cogitando sair</Pill>
+                <Pill emphasis="strong">{L('Estrelas cogitando sair', 'Stars considering leaving')}</Pill>
               )}
             </div>
           )}

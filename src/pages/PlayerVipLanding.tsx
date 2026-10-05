@@ -17,6 +17,7 @@ import { setPendingReferrerCode } from '@/wallet/referralCode';
 import { keyAttrsForPosition } from '@/admin/legendAttrCalibration';
 import { Hashtag } from '@/components/ui';
 import { moedaDoJogo } from '@/wallet/constants';
+import { L, LOCALE } from '@/i18n/L';
 
 /**
  * O OVR vem do `mint_overall` gravado no banco — mesma conta que o jogo faz,
@@ -33,15 +34,15 @@ function cardOvr(card: LandingCard): number | null {
 }
 
 function priceLabel(card: LandingCard): string {
-  if (card.currency === 'OLEFOOT') return `${card.priceCents.toLocaleString('pt-BR')} ${moedaDoJogo()}`;
+  if (card.currency === 'OLEFOOT') return `${card.priceCents.toLocaleString(LOCALE)} ${moedaDoJogo()}`;
   const dollars = card.priceCents / 100;
   return `$${Number.isInteger(dollars) ? dollars : dollars.toFixed(2)}`;
 }
 
 const PHASE_LABEL: Record<string, string> = {
-  revelacao: 'Revelação',
-  consolidacao: 'Consolidação',
-  expansao: 'Expansão',
+  revelacao: L('Revelação', 'Breakthrough'),
+  consolidacao: L('Consolidação', 'Consolidation'),
+  expansao: L('Expansão', 'Expansion'),
 };
 
 export function PlayerVipLanding() {
@@ -79,10 +80,10 @@ export function PlayerVipLanding() {
     return (
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 bg-deep-black px-6 text-center text-white">
         <Brand />
-        <h1 className="mt-4 font-impact text-[32px] uppercase leading-[1.05]">Página não encontrada</h1>
-        <p className="text-sm text-cimento">Esse link de lenda não existe ou foi removido.</p>
+        <h1 className="mt-4 font-impact text-[32px] uppercase leading-[1.05]">{L('Página não encontrada', 'Page not found')}</h1>
+        <p className="text-sm text-cimento">{L('Esse link de lenda não existe ou foi removido.', "This legend link doesn't exist or was removed.")}</p>
         <a href="https://game.olefoot.ai" className="mt-2 text-xs font-bold uppercase tracking-wider text-neon-yellow transition-colors hover:text-white">
-          Ir para a OLEFOOT
+          {L('Ir para a OLEFOOT', 'Go to OLEFOOT')}
         </a>
       </div>
     );
@@ -95,7 +96,7 @@ export function PlayerVipLanding() {
 
         {/* Hero */}
         <header className="mt-10">
-          <p className="ole-eyebrow-poster">Coleção oficial</p>
+          <p className="ole-eyebrow-poster">{L('Coleção oficial', 'Official collection')}</p>
           <h1 className="mt-2 font-impact uppercase leading-[1.02] [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(40px,12vw,68px)' }}>
             {data.displayName}
           </h1>
@@ -124,7 +125,7 @@ export function PlayerVipLanding() {
                         style={{ width: '100%', height: '100%' }}
                       />
                     ) : (
-                      <div className="flex h-full items-center justify-center font-mono text-[11px] text-poeira">sem foto</div>
+                      <div className="flex h-full items-center justify-center font-mono text-[11px] text-poeira">{L('sem foto', 'no photo')}</div>
                     )}
                     {ovr != null && (
                       <span className="ole-num absolute left-2 top-2 bg-neon-yellow px-1.5 py-0.5 text-sm text-black">
@@ -158,20 +159,20 @@ export function PlayerVipLanding() {
 
         {/* CTA */}
         <section className="mt-12 border border-white/10 bg-panel p-6 text-center">
-          <h2 className="font-impact text-[28px] uppercase leading-[1.05]">Coleção só no jogo</h2>
-          <Hashtag className="mt-2 text-center">#colecionável #mercado</Hashtag>
+          <h2 className="font-impact text-[28px] uppercase leading-[1.05]">{L('Coleção só no jogo', 'Collection only in-game')}</h2>
+          <Hashtag className="mt-2 text-center">{L('#colecionável #mercado', '#collectible #market')}</Hashtag>
           <div className="mt-6 flex flex-col gap-3">
             <Link
               to={cadastroHref}
               className="btn-primary flex h-14 w-full items-center justify-center gap-2"
             >
-              Criar conta e colecionar <ArrowRight className="h-4 w-4" />
+              {L('Criar conta e colecionar', 'Sign up and collect')} <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               to="/mercado/transfer"
               className="btn-secondary flex h-12 w-full items-center justify-center"
             >
-              Já jogo — ver no mercado
+              {L('Já jogo — ver no mercado', 'Already playing — view in market')}
             </Link>
           </div>
         </section>
@@ -181,9 +182,9 @@ export function PlayerVipLanding() {
             to="/playervip"
             className="btn-secondary flex h-12 w-full max-w-sm items-center justify-center"
           >
-            Entrar
+            {L('Entrar', 'Sign in')}
           </Link>
-          <p className="text-[12px] text-poeira">Apenas para jogadores e facilitadores</p>
+          <p className="text-[12px] text-poeira">{L('Apenas para jogadores e facilitadores', 'Players and facilitators only')}</p>
         </footer>
       </div>
     </div>
@@ -191,9 +192,9 @@ export function PlayerVipLanding() {
 }
 
 const ATTR_LABEL: Record<string, string> = {
-  passe: 'Passe', marcacao: 'Marcação', velocidade: 'Velocidade', drible: 'Drible',
-  finalizacao: 'Finalização', fisico: 'Físico', tatico: 'Tático',
-  mentalidade: 'Mentalidade', confianca: 'Confiança', fairPlay: 'Fair play',
+  passe: L('Passe', 'Passing'), marcacao: L('Marcação', 'Marking'), velocidade: L('Velocidade', 'Pace'), drible: L('Drible', 'Dribbling'),
+  finalizacao: L('Finalização', 'Finishing'), fisico: L('Físico', 'Physical'), tatico: L('Tático', 'Tactical'),
+  mentalidade: L('Mentalidade', 'Mentality'), confianca: L('Confiança', 'Confidence'), fairPlay: 'Fair play',
 };
 
 /**
@@ -224,7 +225,7 @@ function Progression({ cards }: { cards: LandingCard[] }) {
   if (cards.length < 2) return null;
   return (
     <section className="mt-12">
-      <p className="ole-eyebrow-poster">A trajetória</p>
+      <p className="ole-eyebrow-poster">{L('A trajetória', 'The journey')}</p>
       <ol className="mt-4 flex flex-col gap-0">
         {cards.map((c, i) => (
           <li key={c.id} className="relative flex gap-4 pb-6 last:pb-0">

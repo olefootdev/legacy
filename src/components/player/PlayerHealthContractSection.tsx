@@ -23,6 +23,7 @@ import { getPlayerHealth } from '@/systems/playerHealth/selectors';
 import { INJURY_LABEL_PT, INJURY_MATCHES_OUT } from '@/systems/injury';
 import { RenewContractModal } from '@/components/RenewContractModal';
 import type { PlayerEntity } from '@/entities/types';
+import { L, emIngles } from '@/i18n/L';
 
 interface Props {
   player: PlayerEntity;
@@ -168,7 +169,7 @@ export function PlayerHealthContractSection({ player }: Props) {
               letterSpacing: '0.18em',
             }}
           >
-            Saúde & Contrato
+            {L('Saúde & Contrato', 'Health & Contract')}
           </h3>
         </div>
 
@@ -203,7 +204,7 @@ export function PlayerHealthContractSection({ player }: Props) {
                   color: isInjured ? 'var(--color-danger)' : 'white',
                 }}
               >
-                Saúde
+                {L('Saúde', 'Health')}
               </span>
             </div>
 
@@ -218,11 +219,16 @@ export function PlayerHealthContractSection({ player }: Props) {
                     fontWeight: 800,
                   }}
                 >
-                  {severity ? INJURY_LABEL_PT[severity] : 'Lesionado'}
+                  {severity ? INJURY_LABEL_PT[severity] : L('Lesionado', 'Injured')}
                 </p>
                 <p className="mt-0.5 text-white/65" style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}>
-                  Faltam <span className="font-bold text-white">{h.outForMatches}</span>{' '}
-                  jogo{h.outForMatches === 1 ? '' : 's'} pro retorno
+                  {emIngles() ? (
+                    <><span className="font-bold text-white">{h.outForMatches}</span>{' '}
+                    game{h.outForMatches === 1 ? '' : 's'} until return</>
+                  ) : (
+                    <>Faltam <span className="font-bold text-white">{h.outForMatches}</span>{' '}
+                    jogo{h.outForMatches === 1 ? '' : 's'} pro retorno</>
+                  )}
                   {totalMatchesForInjury ? ` (${matchesCompleted}/${totalMatchesForInjury})` : ''}.
                 </p>
                 {totalMatchesForInjury ? (
@@ -237,7 +243,7 @@ export function PlayerHealthContractSection({ player }: Props) {
                         letterSpacing: '0.18em',
                       }}
                     >
-                      Recuperando · {Math.round(recoveryPct)}%
+                      {L('Recuperando', 'Recovering')} · {Math.round(recoveryPct)}%
                     </p>
                   </div>
                 ) : null}
@@ -252,10 +258,10 @@ export function PlayerHealthContractSection({ player }: Props) {
                     fontWeight: 800,
                   }}
                 >
-                  Suspenso
+                  {L('Suspenso', 'Suspended')}
                 </p>
                 <p className="mt-0.5 text-white/65" style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}>
-                  {h.suspendedMatches} jogo{h.suspendedMatches === 1 ? '' : 's'} de suspensão.
+                  {L(`${h.suspendedMatches} jogo${h.suspendedMatches === 1 ? '' : 's'} de suspensão.`, `${h.suspendedMatches}-game suspension.`)}
                 </p>
               </>
             ) : (
@@ -265,7 +271,7 @@ export function PlayerHealthContractSection({ player }: Props) {
                   className="text-[var(--color-success)]"
                   style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 800 }}
                 >
-                  Disponível
+                  {L('Disponível', 'Available')}
                 </span>
               </div>
             )}
@@ -273,12 +279,12 @@ export function PlayerHealthContractSection({ player }: Props) {
             {/* Métricas sempre visíveis: energia, fadiga, risco */}
             <div className="mt-3 space-y-2 border-t border-white/8 pt-3">
               <div>
-                <MetricRow label="Energia" value={`${energyPct}%`} tone={fatigueTone === 'bad' ? 'bad' : fatigueTone === 'warn' ? 'warn' : 'good'} />
+                <MetricRow label={L('Energia', 'Energy')} value={`${energyPct}%`} tone={fatigueTone === 'bad' ? 'bad' : fatigueTone === 'warn' ? 'warn' : 'good'} />
                 <div className="mt-1">
                   <ProgressBar pct={energyPct} tone={energyTone} />
                 </div>
               </div>
-              <MetricRow label="Risco de lesão" value={`${riskPct}/100`} tone={riskTone} />
+              <MetricRow label={L('Risco de lesão', 'Injury risk')} value={`${riskPct}/100`} tone={riskTone} />
             </div>
           </div>
 
@@ -314,7 +320,7 @@ export function PlayerHealthContractSection({ player }: Props) {
                   color: isExpired ? '#d4d4d8' : isLifetime ? 'var(--color-neon-yellow)' : 'white',
                 }}
               >
-                Contrato
+                {L('Contrato', 'Contract')}
               </span>
             </div>
 
@@ -324,10 +330,10 @@ export function PlayerHealthContractSection({ player }: Props) {
                   className="text-[var(--color-neon-yellow)]"
                   style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 800 }}
                 >
-                  Vitalício
+                  {L('Vitalício', 'Lifetime')}
                 </p>
                 <p className="mt-0.5 text-white/65" style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}>
-                  Jogador histórico do clube — sem fim de jogos.
+                  {L('Jogador histórico do clube — sem fim de jogos.', 'Club legend — no game limit.')}
                 </p>
               </>
             ) : isExpired ? (
@@ -336,10 +342,10 @@ export function PlayerHealthContractSection({ player }: Props) {
                   className="text-zinc-200"
                   style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 800 }}
                 >
-                  Vencido
+                  {L('Vencido', 'Expired')}
                 </p>
                 <p className="mt-0.5 text-white/65" style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}>
-                  Não pode entrar em XI oficial. Renove pra reativar.
+                  {L('Não pode entrar em XI oficial. Renove pra reativar.', 'Can’t be in an official XI. Renew to reactivate.')}
                 </p>
               </>
             ) : hasContract ? (
@@ -350,10 +356,10 @@ export function PlayerHealthContractSection({ player }: Props) {
                   )}
                   style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 800 }}
                 >
-                  {remaining} <span className="opacity-60">/ {included} jogos</span>
+                  {remaining} <span className="opacity-60">/ {included} {L('jogos', 'games')}</span>
                 </p>
                 <p className="mt-0.5 text-white/65" style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}>
-                  Decrementa 1 a cada partida em que o jogador participa.
+                  {L('Decrementa 1 a cada partida em que o jogador participa.', 'Counts down 1 for each match the player plays.')}
                 </p>
                 <div className="mt-2.5">
                   <ProgressBar pct={contractPct} tone={contractTone} />
@@ -366,13 +372,13 @@ export function PlayerHealthContractSection({ player }: Props) {
                       letterSpacing: '0.18em',
                     }}
                   >
-                    Restante · {Math.round(contractPct)}%
+                    {L('Restante', 'Remaining')} · {Math.round(contractPct)}%
                   </p>
                 </div>
               </>
             ) : (
               <p className="text-white/55" style={{ fontFamily: 'var(--font-ui)', fontSize: '12px' }}>
-                Sem contrato registrado.
+                {L('Sem contrato registrado.', 'No contract on record.')}
               </p>
             )}
 
@@ -396,7 +402,7 @@ export function PlayerHealthContractSection({ player }: Props) {
                 }}
               >
                 <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-                {isExpired ? 'Renovar agora' : 'Renovar contrato'}
+                {isExpired ? L('Renovar agora', 'Renew now') : L('Renovar contrato', 'Renew contract')}
               </button>
             ) : null}
 
@@ -420,7 +426,7 @@ export function PlayerHealthContractSection({ player }: Props) {
                   className="uppercase"
                   style={{ fontFamily: 'var(--font-display)', fontSize: '9.5px', fontWeight: 800, letterSpacing: '0.18em' }}
                 >
-                  Auto-renovar ({moedaDoJogo()})
+                  {L('Auto-renovar', 'Auto-renew')} ({moedaDoJogo()})
                 </span>
                 <span
                   className={cn(
@@ -444,7 +450,7 @@ export function PlayerHealthContractSection({ player }: Props) {
                   letterSpacing: '0.18em',
                 }}
               >
-                Jogador de catálogo — renovação não disponível.
+                {L('Jogador de catálogo — renovação não disponível.', 'Catalogue player — renewal unavailable.')}
               </p>
             ) : null}
           </div>

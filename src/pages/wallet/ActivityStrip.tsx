@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import type { WalletLedgerEntry, WalletLedgerType } from '@/wallet/types';
 import { SecaoVolt } from '@/components/ui';
+import { L, LOCALE } from '@/i18n/L';
 
 type ActivityStripProps = {
   ledger: WalletLedgerEntry[];
@@ -8,14 +9,14 @@ type ActivityStripProps = {
 };
 
 const TYPE_META: Record<WalletLedgerType, { label: string; icon: string }> = {
-  SPOT_EXP: { label: 'Movimento EXP', icon: '◆' },
-  SPOT_BRO: { label: 'Movimento USDT', icon: '◆' },
-  REFERRAL_OLE_GAME: { label: 'Indicação OLE', icon: '◈' },
-  REFERRAL_NFT: { label: 'Indicação NFT', icon: '◈' },
-  TRANSFER: { label: 'Transferência', icon: '↗' },
-  PURCHASE: { label: 'Compra', icon: '◉' },
-  MATCH_REWARD: { label: 'Prêmio de partida', icon: '★' },
-  STRUCTURE_UPGRADE: { label: 'Upgrade estrutura', icon: '⬡' },
+  SPOT_EXP: { label: L('Movimento EXP', 'EXP movement'), icon: '◆' },
+  SPOT_BRO: { label: L('Movimento USDT', 'USDT movement'), icon: '◆' },
+  REFERRAL_OLE_GAME: { label: L('Indicação OLE', 'OLE referral'), icon: '◈' },
+  REFERRAL_NFT: { label: L('Indicação NFT', 'NFT referral'), icon: '◈' },
+  TRANSFER: { label: L('Transferência', 'Transfer'), icon: '↗' },
+  PURCHASE: { label: L('Compra', 'Purchase'), icon: '◉' },
+  MATCH_REWARD: { label: L('Prêmio de partida', 'Match reward'), icon: '★' },
+  STRUCTURE_UPGRADE: { label: L('Upgrade estrutura', 'Facility upgrade'), icon: '⬡' },
 };
 
 function formatAmount(amount: number, currency: string): string {
@@ -27,7 +28,7 @@ function formatAmount(amount: number, currency: string): string {
     const usdt = (abs / 100).toFixed(2);
     return `${sign}${usdt} ${displayCurrency}`;
   }
-  return `${sign}${abs.toLocaleString('pt-BR')} ${displayCurrency}`;
+  return `${sign}${abs.toLocaleString(LOCALE)} ${displayCurrency}`;
 }
 
 function timeAgo(iso: string): string {
@@ -35,13 +36,13 @@ function timeAgo(iso: string): string {
   const now = Date.now();
   const diff = Math.max(0, now - then);
   const min = Math.floor(diff / 60000);
-  if (min < 1) return 'agora';
-  if (min < 60) return `há ${min}min`;
+  if (min < 1) return L('agora', 'now');
+  if (min < 60) return L(`há ${min}min`, `${min}min ago`);
   const h = Math.floor(min / 60);
-  if (h < 24) return `há ${h}h`;
+  if (h < 24) return L(`há ${h}h`, `${h}h ago`);
   const d = Math.floor(h / 24);
-  if (d < 7) return `há ${d}d`;
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  if (d < 7) return L(`há ${d}d`, `${d}d ago`);
+  return new Date(iso).toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit' });
 }
 
 export function ActivityStrip({ ledger, limit = 3 }: ActivityStripProps) {
@@ -54,13 +55,13 @@ export function ActivityStrip({ ledger, limit = 3 }: ActivityStripProps) {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <SecaoVolt label="Atividade recente" tone="neutro" className="min-w-0 grow" />
+        <SecaoVolt label={L('Atividade recente', 'Recent activity')} tone="neutro" className="min-w-0 grow" />
         <button
           type="button"
           onClick={() => navigate('/wallet/extract')}
           className="shrink-0 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento transition-colors hover:text-white"
         >
-          Extrato →
+          {L('Extrato →', 'Statement →')}
         </button>
       </div>
 
@@ -70,7 +71,7 @@ export function ActivityStrip({ ledger, limit = 3 }: ActivityStripProps) {
       >
         {recent.length === 0 ? (
           <div className="p-5 text-center">
-            <p className="text-[12px] text-cimento">Sem movimentações ainda</p>
+            <p className="text-[12px] text-cimento">{L('Sem movimentações ainda', 'No activity yet')}</p>
           </div>
         ) : (
           recent.map((entry) => {

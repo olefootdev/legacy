@@ -27,16 +27,17 @@ import {
 import { overallFromAttributes } from '@/entities/player';
 import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
 import type { PlayerEntity, TacticalZone } from '@/entities/types';
+import { L } from '@/i18n/L';
 
 const URGENCY_MARKUP = 1.3;
 
 const ZONE_LABELS: Record<TacticalZone, string> = {
-  gol: 'Goleiro',
-  defesa: 'Defensor',
-  lateral_esq: 'Lateral Esquerdo',
-  lateral_dir: 'Lateral Direito',
-  meio: 'Meio-campista',
-  ataque: 'Atacante',
+  gol: L('Goleiro', 'Goalkeeper'),
+  defesa: L('Defensor', 'Defender'),
+  lateral_esq: L('Lateral Esquerdo', 'Left Back'),
+  lateral_dir: L('Lateral Direito', 'Right Back'),
+  meio: L('Meio-campista', 'Midfielder'),
+  ataque: L('Atacante', 'Forward'),
 };
 
 function zoneMatchesPos(zone: TacticalZone, pos: string): boolean {
@@ -174,7 +175,7 @@ function CandidateRow({
         style={{
           borderRadius: 'var(--radius-sm)',
         }}
-        aria-label={`Comprar ${card.name} por ${formatExp(price)} EXP`}
+        aria-label={L(`Comprar ${card.name} por ${formatExp(price)} EXP`, `Buy ${card.name} for ${formatExp(price)} EXP`)}
       >
         {isBuying ? (
           <div className="w-3 h-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
@@ -279,7 +280,7 @@ export function EmergencyTransferWindow() {
         className="fixed inset-0 z-[200] flex items-center justify-center bg-deep-black/95 p-4"
         role="dialog"
         aria-modal="true"
-        aria-label="Reforço Emergencial"
+        aria-label={L('Reforço Emergencial', 'Emergency Signing')}
       >
         <motion.div
           initial={{ scale: 0.94, y: 18 }}
@@ -314,7 +315,7 @@ export function EmergencyTransferWindow() {
                       textTransform: 'uppercase',
                     }}
                   >
-                    Reforço Emergencial
+                    {L('Reforço Emergencial', 'Emergency Signing')}
                   </span>
                 </div>
                 {/* Headline Anton */}
@@ -325,7 +326,7 @@ export function EmergencyTransferWindow() {
                     letterSpacing: '0.01em',
                   }}
                 >
-                  {offer.injuredPlayerName} sofreu lesão grave
+                  {L(`${offer.injuredPlayerName} sofreu lesão grave`, `${offer.injuredPlayerName} suffered a serious injury`)}
                 </h2>
                 {/* Submetadata Agency */}
                 <p
@@ -338,7 +339,7 @@ export function EmergencyTransferWindow() {
                     textTransform: 'uppercase',
                   }}
                 >
-                  {ZONE_LABELS[offer.zone]} indisponível
+                  {L(`${ZONE_LABELS[offer.zone]} indisponível`, `${ZONE_LABELS[offer.zone]} unavailable`)}
                 </p>
               </div>
 
@@ -347,7 +348,7 @@ export function EmergencyTransferWindow() {
                 onClick={handleDismiss}
                 className="shrink-0 w-8 h-8 grid place-items-center text-white/45 hover:text-neon-yellow hover:bg-white/5 transition-colors"
                 style={{ borderRadius: 'var(--radius-sm)' }}
-                aria-label="Dispensar"
+                aria-label={L('Dispensar', 'Dismiss')}
               >
                 <X size={14} />
               </button>
@@ -360,7 +361,7 @@ export function EmergencyTransferWindow() {
               className="text-white/60 leading-snug"
               style={{ fontFamily: 'var(--font-ui)', fontSize: '12px' }}
             >
-              Substituto em EXP · urgência{' '}
+              {L('Substituto em EXP · urgência', 'Replacement in EXP · urgency')}{' '}
               <span className="text-[var(--color-danger)] font-semibold">+30%</span>
             </p>
 
@@ -379,7 +380,7 @@ export function EmergencyTransferWindow() {
                   borderRadius: 'var(--radius-md)',
                 }}
               >
-                Nenhum jogador disponível para esta posição no momento.
+                {L('Nenhum jogador disponível para esta posição no momento.', 'No players available for this position right now.')}
               </div>
             )}
 
@@ -408,7 +409,7 @@ export function EmergencyTransferWindow() {
                   textTransform: 'uppercase',
                 }}
               >
-                Saldo
+                {L('Saldo', 'Balance')}
               </span>
               <span
                 className="ole-num text-neon-yellow tabular-nums leading-none truncate"
@@ -442,7 +443,7 @@ export function EmergencyTransferWindow() {
                 textTransform: 'uppercase',
               }}
             >
-              Não, obrigado
+              {L('Não, obrigado', 'No, thanks')}
             </button>
           </div>
 
@@ -457,7 +458,7 @@ export function EmergencyTransferWindow() {
             }}
             aria-hidden
           >
-            ESC fecha
+            {L('ESC fecha', 'ESC closes')}
           </div>
         </motion.div>
       </motion.div>

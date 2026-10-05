@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { placeBid, useAuctionCountdown } from './liveAuctionEngine';
 import type { LiveAuction } from './socialTrade';
 import { formatPrice } from './socialTrade';
+import { L, LOCALE } from '@/i18n/L';
 
 interface LiveAuctionCardProps {
   key?: import("react").Key;
@@ -34,12 +35,12 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
     const amount = parseInt(bidInput.replace(/\D/g, ''), 10);
 
     if (!amount || amount < minBid) {
-      setBidError(`Lance mínimo: ${formatPrice(minBid, 'EXP')}`);
+      setBidError(L(`Lance mínimo: ${formatPrice(minBid, 'EXP')}`, `Minimum bid: ${formatPrice(minBid, 'EXP')}`));
       return;
     }
 
     if (amount > userBalance) {
-      setBidError('Saldo insuficiente');
+      setBidError(L('Saldo insuficiente', 'Insufficient balance'));
       return;
     }
 
@@ -48,7 +49,7 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
       setBidInput('');
       setShowBidForm(false);
     } else {
-      setBidError(result.error || 'Erro ao dar lance');
+      setBidError(result.error || L('Erro ao dar lance', 'Failed to place bid'));
     }
   };
 
@@ -106,7 +107,7 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
           >
             <Clock className={cn('h-4 w-4', isEnding && 'animate-pulse')} />
             <span className="text-sm font-bold tabular-nums">
-              {auction.status === 'ended' ? 'Fim' : formatCountdown(timeLeft)}
+              {auction.status === 'ended' ? L('Fim', 'End') : formatCountdown(timeLeft)}
             </span>
           </div>
         </div>
@@ -143,7 +144,7 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
           {/* Lance atual — número em Archivo (ole-num), sem itálico */}
           <div className="mb-3 text-center">
             <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/55 mb-1">
-              Lance atual
+              {L('Lance atual', 'Current bid')}
             </p>
             <p
               className="ole-num tabular-nums leading-none text-neon-yellow"
@@ -177,7 +178,7 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
                 className="mb-2 flex items-center gap-2 border border-alta/40 bg-panel px-3 py-2"
               >
                 <Trophy className="h-4 w-4 text-alta" />
-                <p className="text-xs font-bold text-alta">Você está vencendo!</p>
+                <p className="text-xs font-bold text-alta">{L('Você está vencendo!', 'You are winning!')}</p>
               </motion.div>
             ) : (
               <motion.div
@@ -189,7 +190,7 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
               >
                 <AlertCircle className="h-4 w-4 text-atencao" />
                 <p className="text-xs font-bold text-atencao">
-                  Mínimo: {formatPrice(minBid, 'EXP')}
+                  {L('Mínimo', 'Minimum')}: {formatPrice(minBid, 'EXP')}
                 </p>
               </motion.div>
             )}
@@ -198,7 +199,7 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
           {/* Últimos 3 lances */}
           {auction.bids.length > 0 && (
             <div className="mb-3 space-y-1">
-              <p className="text-[9px] uppercase tracking-wider text-white/40">Últimos Lances</p>
+              <p className="text-[9px] uppercase tracking-wider text-white/40">{L('Últimos Lances', 'Latest Bids')}</p>
               {auction.bids.slice(0, 3).map((bid, i) => (
                 <div
                   key={`${bid.bidderId}-${bid.timestamp.getTime()}`}
@@ -228,7 +229,7 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
               )}
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
-              {isWinning ? 'Você está vencendo' : 'Dar Lance'}
+              {isWinning ? L('Você está vencendo', 'You are winning') : L('Dar Lance', 'Place Bid')}
             </button>
           ) : (
             <motion.div
@@ -241,7 +242,7 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
                 type="text"
                 value={bidInput}
                 onChange={(e) => setBidInput(e.target.value)}
-                placeholder={`Mínimo: ${minBid.toLocaleString('pt-BR')}`}
+                placeholder={L(`Mínimo: ${minBid.toLocaleString(LOCALE)}`, `Minimum: ${minBid.toLocaleString(LOCALE)}`)}
                 className="w-full border border-white/20 bg-deep-black px-4 py-3 text-white placeholder:text-white/40 focus:border-neon-yellow focus:outline-none"
               />
               {bidError && <p className="text-xs text-baixa">{bidError}</p>}
@@ -255,14 +256,14 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
                   }}
                   className="flex-1 border border-white/30 bg-transparent py-2 text-sm font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-white"
                 >
-                  Cancelar
+                  {L('Cancelar', 'Cancel')}
                 </button>
                 <button
                   type="button"
                   onClick={handlePlaceBid}
                   className="flex-1 bg-neon-yellow py-2 text-sm font-bold uppercase tracking-wider text-black transition-colors hover:bg-white"
                 >
-                  Confirmar
+                  {L('Confirmar', 'Confirm')}
                 </button>
               </div>
             </motion.div>
@@ -273,9 +274,9 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
       {auction.status === 'ended' && (
         <div className="relative z-30 border-t border-white/10 bg-black/80 p-2.5 sm:p-3">
           <div className="rounded-lg bg-black/40 px-4 py-3 text-center">
-            <p className="text-sm font-bold text-white/60">Leilão Encerrado</p>
+            <p className="text-sm font-bold text-white/60">{L('Leilão Encerrado', 'Auction Ended')}</p>
             {auction.currentBidderName && (
-              <p className="mt-1 text-xs text-white/40">Vencedor: {auction.currentBidderName}</p>
+              <p className="mt-1 text-xs text-white/40">{L('Vencedor', 'Winner')}: {auction.currentBidderName}</p>
             )}
           </div>
         </div>

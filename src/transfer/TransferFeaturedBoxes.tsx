@@ -10,12 +10,14 @@
 import { motion } from 'motion/react';
 import { Hashtag, SecaoVolt } from '@/components/ui';
 import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
+import { L, LOCALE } from '@/i18n/L';
+import { rotuloPosicao } from '@/transfer/marketFilters';
 
 function formatBuyNow(p: MockAuctionPlayer): string {
-  if (p.auctionCurrency === 'EXP') return `${p.buyNow.toLocaleString('pt-BR')} EXP`;
+  if (p.auctionCurrency === 'EXP') return `${p.buyNow.toLocaleString(LOCALE)} EXP`;
   // BRO armazenado em centavos.
   const bro = p.buyNow / 100;
-  return `¢${bro.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`;
+  return `¢${bro.toLocaleString(LOCALE, { maximumFractionDigits: 2 })}`;
 }
 
 interface TransferFeaturedBoxesProps {
@@ -135,7 +137,7 @@ export function TransferFeaturedBoxes({
                     letterSpacing: '0.14em',
                   }}
                 >
-                  {p.pos} · {p.nat}
+                  {rotuloPosicao(p.pos)} · {p.nat}
                 </p>
               </div>
 
@@ -150,7 +152,7 @@ export function TransferFeaturedBoxes({
                       fontWeight: 600,
                     }}
                   >
-                    Compra
+                    {L('Compra', 'Buy now')}
                   </p>
                   <p
                     className="ole-num text-neon-yellow tabular-nums leading-none mt-0.5"

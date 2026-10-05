@@ -62,6 +62,8 @@ import { nemesisIsDerby } from '@/match/rivalDerby';
 import { dnaLabel } from '@/systems/clubDna';
 import { coachPersonaFor, personaLine } from '@/match/ligaOle/coachPersona';
 import type { AgentEchoTrait } from '@/match/quickAgentEcho';
+import { L, emIngles } from '@/i18n/L';
+import { posLabel } from '@/components/matchquick/posLabel';
 
 type Phase = 'loading' | 'kickoff' | 'playing' | 'finished' | 'error';
 
@@ -229,7 +231,7 @@ export default function MatchQuickEngaged() {
         input.isDerby = isDerbyMatch;
         const fetched = await fetchQuickPlan(input);
         if (!fetched) {
-          setError('Não foi possível gerar a partida (motor offline). Tente novamente.');
+          setError(L('Não foi possível gerar a partida (motor offline). Tente novamente.', 'Could not generate the match (engine offline). Try again.'));
           setPhase('error');
           return;
         }
@@ -462,10 +464,10 @@ export default function MatchQuickEngaged() {
     const awayGk = away.find((p) => p.role === 'gk');
     const homeKeeper: ShootoutKeeper = homeGk
       ? { id: homeGk.id, name: homeGk.name, marcacao: homeGk.payload.marcacao, confianca: homeGk.payload.confianca, fisico: homeGk.payload.fisico, fatigue: wear(homeGk.payload.fatigue) }
-      : { id: 'h-gk', name: 'Goleiro', marcacao: 62, confianca: 60, fisico: 65, fatigue: MATCH_WEAR };
+      : { id: 'h-gk', name: L('Goleiro', 'Goalkeeper'), marcacao: 62, confianca: 60, fisico: 65, fatigue: MATCH_WEAR };
     const awayKeeper: ShootoutKeeper = awayGk
       ? { id: awayGk.id, name: awayGk.name, marcacao: awayGk.marcacao, confianca: awayGk.confianca, fisico: awayGk.fisico, fatigue: wear(awayGk.fatigue) }
-      : { id: 'a-gk', name: 'Goleiro', marcacao: 62, confianca: 60, fisico: 65, fatigue: MATCH_WEAR };
+      : { id: 'a-gk', name: L('Goleiro', 'Goalkeeper'), marcacao: 62, confianca: 60, fisico: 65, fatigue: MATCH_WEAR };
 
     return { homeKickers: homeOutfield, awayKickers: awayOutfield, homeKeeper, awayKeeper };
   }, [players, playerScars]);
@@ -520,9 +522,9 @@ export default function MatchQuickEngaged() {
     return (
       <main className="min-h-screen bg-black flex items-center justify-center px-6">
         <div className="text-center">
-          <p className="text-white/70 mb-4">Nenhum adversário disponível para a partida rápida.</p>
+          <p className="text-white/70 mb-4">{L('Nenhum adversário disponível para a partida rápida.', 'No opponent available for the quick match.')}</p>
           <Link to="/" className="text-neon-yellow font-display uppercase tracking-[0.2em] text-[12px]">
-            ← Voltar
+            {L('← Voltar', '← Back')}
           </Link>
         </div>
       </main>
@@ -534,10 +536,10 @@ export default function MatchQuickEngaged() {
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <span className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow/80">
-            Partida Rápida
+            {L('Partida Rápida', 'Quick Match')}
             {isDerbyMatch && (
               <span className="ml-2 px-1.5 py-0.5 rounded-sm bg-danger/20 text-danger tracking-[0.18em]">
-                🔥 Clássico
+                {L('🔥 Clássico', '🔥 Derby')}
               </span>
             )}
           </span>
@@ -546,12 +548,12 @@ export default function MatchQuickEngaged() {
             onClick={() => navigate('/')}
             className="text-[11px] font-display uppercase tracking-[0.2em] text-white/40 hover:text-white"
           >
-            Sair
+            {L('Sair', 'Exit')}
           </button>
         </div>
 
         {phase === 'loading' && (
-          <p className="text-center text-white/50 py-20 animate-pulse">Preparando o time…</p>
+          <p className="text-center text-white/50 py-20 animate-pulse">{L('Preparando o time…', 'Preparing the team…')}</p>
         )}
 
         {phase === 'error' && (
@@ -576,7 +578,7 @@ export default function MatchQuickEngaged() {
               className="font-impact text-neon-yellow leading-none"
               style={{ fontSize: '8rem' }}
             >
-              {countdown > 0 ? countdown : 'BOLA!'}
+              {countdown > 0 ? countdown : L('BOLA!', 'GO!')}
             </motion.span>
           </div>
         )}
@@ -651,7 +653,7 @@ export default function MatchQuickEngaged() {
                 style={{ borderColor: 'var(--color-neon-yellow)', background: 'rgba(253,225,0,0.10)' }}
               >
                 <p className="font-display uppercase tracking-[0.2em] text-[11px] font-black text-neon-yellow">
-                  🏆 Novo recorde pessoal — {result.homeScore}–{result.awayScore}!
+                  {L('🏆 Novo recorde pessoal', '🏆 New personal record')} — {result.homeScore}–{result.awayScore}!
                 </p>
               </motion.div>
             )}
@@ -714,9 +716,9 @@ export default function MatchQuickEngaged() {
               return (
                 <div className="relative overflow-hidden border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
                   <div className="flex items-center justify-between mb-3">
-                    <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">Seu time evoluiu</p>
+                    <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">{L('Seu time evoluiu', 'Your team improved')}</p>
                     <span className="font-display tabular-nums text-[12px] font-black" style={{ color: teamUp >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                      Força {lastEvolution.teamOvrBefore.toFixed(1)} → {lastEvolution.teamOvrAfter.toFixed(1)}
+                      {L('Força', 'Strength')} {lastEvolution.teamOvrBefore.toFixed(1)} → {lastEvolution.teamOvrAfter.toFixed(1)}
                     </span>
                   </div>
                   {risers.length > 0 ? (
@@ -727,13 +729,13 @@ export default function MatchQuickEngaged() {
                             <img src={playerPortraitSrc(players[r.id]!, 32, 32)} alt="" className="w-7 h-7 rounded-full object-cover bg-deep-black shrink-0" />
                           )}
                           <span className="flex-1 truncate text-white" style={{ fontWeight: 700, fontSize: '15px' }}>{r.name}</span>
-                          <span className="font-display uppercase tracking-[0.1em] text-[9px] font-black text-white/35 shrink-0">{r.pos}</span>
+                          <span className="font-display uppercase tracking-[0.1em] text-[9px] font-black text-white/35 shrink-0">{posLabel(r.pos)}</span>
                           <span className="font-display tabular-nums text-[12px] font-black text-success shrink-0">{r.ovrBefore}→{r.ovrAfter}</span>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-white/50 text-[12px]">O elenco segurou o nível. Vença pra acelerar a evolução.</p>
+                    <p className="text-white/50 text-[12px]">{L('O elenco segurou o nível. Vença pra acelerar a evolução.', 'The squad held its level. Win to speed up progress.')}</p>
                   )}
                 </div>
               );
@@ -747,18 +749,18 @@ export default function MatchQuickEngaged() {
               return (
                 <div className="border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">DNA do clube</p>
+                    <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">{L('DNA do clube', 'Club DNA')}</p>
                     <span className="font-display tabular-nums text-[12px] font-black" style={{ color: romantic ? 'var(--color-neon-yellow)' : 'rgb(148,163,184)' }}>
-                      {romantic ? '+' : ''}{clubDna.lastShift} {romantic ? 'Romântico' : 'Pragmático'}
+                      {romantic ? '+' : ''}{clubDna.lastShift} {romantic ? L('Romântico', 'Romantic') : L('Pragmático', 'Pragmatic')}
                     </span>
                   </div>
                   <div className="relative h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.10)' }}>
                     <div className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-neon-yellow" style={{ left: `calc(${pct}% - 5px)` }} />
                   </div>
                   <div className="flex items-center justify-between mt-1.5">
-                    <span className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/35">Pragmático</span>
+                    <span className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/35">{L('Pragmático', 'Pragmatic')}</span>
                     <span className="text-white/80 text-[12px] font-bold">{dnaLabel(clubDna.axis)}</span>
-                    <span className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/35">Romântico</span>
+                    <span className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/35">{L('Romântico', 'Romantic')}</span>
                   </div>
                 </div>
               );
@@ -792,10 +794,10 @@ export default function MatchQuickEngaged() {
                       style={{ borderColor: 'var(--color-success)', background: 'rgba(34,197,94,0.12)' }}
                     >
                       <p className="font-display uppercase tracking-[0.18em] text-[10px] font-black text-success">
-                        ✓ Desafio concluído!
+                        {L('✓ Desafio concluído!', '✓ Challenge complete!')}
                       </p>
                       <p className="text-white text-[12px] mt-0.5">
-                        {justDone.map((c) => c.name).join(' · ')} — resgate a recompensa.
+                        {justDone.map((c) => c.name).join(' · ')} — {L('resgate a recompensa.', 'claim your reward.')}
                       </p>
                     </motion.div>
                   );
@@ -811,9 +813,9 @@ export default function MatchQuickEngaged() {
               if (!xi.length) return null;
               const shortNm = (n: string) => n.match(/"([^"]+)"/)?.[1] ?? n.split(/\s+/)[0] ?? n;
               const cats: { icon: string; label: string; key: 'drible' | 'tatico' | 'mentalidade' }[] = [
-                { icon: '🎩', label: 'Driblador', key: 'drible' },
-                { icon: '🧠', label: 'Cérebro', key: 'tatico' },
-                { icon: '❄️', label: 'Frieza', key: 'mentalidade' },
+                { icon: '🎩', label: L('Driblador', 'Dribbler'), key: 'drible' },
+                { icon: '🧠', label: L('Cérebro', 'Brain'), key: 'tatico' },
+                { icon: '❄️', label: L('Frieza', 'Composure'), key: 'mentalidade' },
               ];
               const picks = cats
                 .map((c) => {
@@ -824,7 +826,7 @@ export default function MatchQuickEngaged() {
               if (!picks.length) return null;
               return (
                 <div className="border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
-                  <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow mb-3">Destaques do elenco</p>
+                  <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow mb-3">{L('Destaques do elenco', 'Squad highlights')}</p>
                   <div className="flex flex-col gap-2">
                     {picks.map((p) => (
                       <div key={p.key} className="flex items-center gap-2.5">
@@ -854,27 +856,27 @@ export default function MatchQuickEngaged() {
                 : null;
               const rivalQuoteEl = rivalQuote ? (
                 <p className="text-[12px] mt-2" style={{ color: ligaFlash?.outcome === 'eliminated' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.65)' }}>
-                  {rivalQuote.persona.icon} {rivalQuote.persona.label}, treinador rival — “{rivalQuote.line}”
+                  {rivalQuote.persona.icon} {rivalQuote.persona.label}, {L('treinador rival', 'rival coach')} — “{rivalQuote.line}”
                 </p>
               ) : null;
               if (ligaFlash?.outcome === 'champion') {
                 return (
                   <div className="relative overflow-hidden bg-neon-yellow px-5 py-5 text-black mb-1" style={{ borderRadius: 'var(--radius-md)' }}>
-                    <Hashtag className="mb-1 text-black/70">#ligaole #campeão</Hashtag>
+                    <Hashtag className="mb-1 text-black/70">{L('#ligaole #campeão', '#ligaole #champion')}</Hashtag>
                     <p className="uppercase" style={{ fontFamily: M, fontSize: 'clamp(30px, 9vw, 46px)', lineHeight: 1.05 }}>{club.name}</p>
-                    <p className="font-display uppercase tracking-[0.2em] text-[11px] font-black text-black/80 mt-1">Levantou a taça!</p>
+                    <p className="font-display uppercase tracking-[0.2em] text-[11px] font-black text-black/80 mt-1">{L('Levantou a taça!', 'Lifted the trophy!')}</p>
                     {rivalQuoteEl}
-                    <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3 bg-black text-neon-yellow font-display uppercase tracking-[0.2em] text-[12px] font-black" style={{ borderRadius: 'var(--radius-sm)' }}>Ver Liga Ole</button>
+                    <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3 bg-black text-neon-yellow font-display uppercase tracking-[0.2em] text-[12px] font-black" style={{ borderRadius: 'var(--radius-sm)' }}>{L('Ver Liga Ole', 'View Liga Ole')}</button>
                   </div>
                 );
               }
               if (ligaFlash?.outcome === 'eliminated') {
                 return (
                   <div className="border px-5 py-5 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-danger)', backgroundColor: 'var(--color-dark-gray)' }}>
-                    <Hashtag className="mb-1 text-danger">#ligaole #eliminado</Hashtag>
-                    <p className="text-white uppercase" style={{ fontFamily: M, fontSize: 'clamp(24px, 7vw, 36px)', lineHeight: 1.05 }}>Caiu nas {ligaFlash.reachedRound}</p>
+                    <Hashtag className="mb-1 text-danger">{L('#ligaole #eliminado', '#ligaole #eliminated')}</Hashtag>
+                    <p className="text-white uppercase" style={{ fontFamily: M, fontSize: 'clamp(24px, 7vw, 36px)', lineHeight: 1.05 }}>{L('Caiu nas', 'Out in the')} {ligaFlash.reachedRound}</p>
                     {rivalQuoteEl}
-                    <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3 border border-white/20 text-white/80 font-display uppercase tracking-[0.18em] text-[11px] font-black hover:border-white/50 transition-colors" style={{ borderRadius: 'var(--radius-sm)' }}>Ver Liga Ole</button>
+                    <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3 border border-white/20 text-white/80 font-display uppercase tracking-[0.18em] text-[11px] font-black hover:border-white/50 transition-colors" style={{ borderRadius: 'var(--radius-sm)' }}>{L('Ver Liga Ole', 'View Liga Ole')}</button>
                   </div>
                 );
               }
@@ -882,14 +884,14 @@ export default function MatchQuickEngaged() {
                 return (
                   <div className="relative overflow-hidden border px-5 py-5 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'var(--color-dark-gray)' }}>
                     <Hashtag className="mb-1 text-neon-yellow">#ligaole</Hashtag>
-                    <p className="text-white uppercase" style={{ fontFamily: M, fontSize: 'clamp(22px, 6.5vw, 32px)', lineHeight: 1.05 }}>{club.name} avançou de fase!</p>
-                    <p className="font-display uppercase tracking-[0.2em] text-[10px] font-black text-white/50 mt-1">Próxima: {LIGA_OLE_ROUNDS[ligaOle.roundIndex]}</p>
+                    <p className="text-white uppercase" style={{ fontFamily: M, fontSize: 'clamp(22px, 6.5vw, 32px)', lineHeight: 1.05 }}>{emIngles() ? `${club.name} advanced!` : `${club.name} avançou de fase!`}</p>
+                    <p className="font-display uppercase tracking-[0.2em] text-[10px] font-black text-white/50 mt-1">{L('Próxima', 'Next')}: {LIGA_OLE_ROUNDS[ligaOle.roundIndex]}</p>
                     {rivalQuote && (
                       <p className="text-[12px] mt-2 text-white/60">
-                        {rivalQuote.persona.icon} {rivalQuote.persona.label}, treinador rival — “{rivalQuote.line}”
+                        {rivalQuote.persona.icon} {rivalQuote.persona.label}, {L('treinador rival', 'rival coach')} — “{rivalQuote.line}”
                       </p>
                     )}
-                    <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3.5 bg-neon-yellow hover:bg-white text-black font-display uppercase tracking-[0.2em] text-[13px] font-black transition-colors" style={{ borderRadius: 'var(--radius-sm)' }}>Avançar ›</button>
+                    <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3.5 bg-neon-yellow hover:bg-white text-black font-display uppercase tracking-[0.2em] text-[13px] font-black transition-colors" style={{ borderRadius: 'var(--radius-sm)' }}>{L('Avançar ›', 'Continue ›')}</button>
                   </div>
                 );
               }
@@ -915,8 +917,8 @@ export default function MatchQuickEngaged() {
                   <Hashtag className="text-neon-yellow">#legendscup</Hashtag>
                   <p className="mt-2 text-[15px] font-bold leading-snug text-white">
                     {won
-                      ? `Você venceu ${star.name}. Agora imagine ele do seu lado.`
-                      : `${star.name} decidiu contra você. Ele pode ser seu.`}
+                      ? L(`Você venceu ${star.name}. Agora imagine ele do seu lado.`, `You beat ${star.name}. Now imagine him on your side.`)
+                      : L(`${star.name} decidiu contra você. Ele pode ser seu.`, `${star.name} decided it against you. He can be yours.`)}
                   </p>
 
                   <div className="mt-3 flex gap-2 overflow-x-auto">
@@ -932,7 +934,7 @@ export default function MatchQuickEngaged() {
                             <img src={l.portraitUrl} alt={l.name} loading="lazy" referrerPolicy="no-referrer"
                               className="h-full w-full object-cover object-[50%_18%]" />
                           ) : (
-                            <div className="grid h-full place-items-center text-[10px] text-white/20">sem foto</div>
+                            <div className="grid h-full place-items-center text-[10px] text-white/20">{L('sem foto', 'no photo')}</div>
                           )}
                           <span className="absolute left-1 top-1 rounded bg-neon-yellow px-1 font-display text-[10px] font-black text-black">
                             {l.ovr}
@@ -948,7 +950,7 @@ export default function MatchQuickEngaged() {
                     className="mt-3 block w-full bg-neon-yellow py-3 text-center font-display text-[12px] font-black uppercase tracking-[0.18em] text-black transition-colors hover:bg-white"
                     style={{ borderRadius: 'var(--radius-sm)' }}
                   >
-                    Contratar uma lenda
+                    {L('Contratar uma lenda', 'Sign a legend')}
                   </Link>
                 </div>
               );
@@ -960,7 +962,7 @@ export default function MatchQuickEngaged() {
                 onClick={() => navigate(0)}
                 className="w-full py-3 bg-neon-yellow hover:bg-white text-black font-display uppercase tracking-[0.18em] text-[12px] font-black transition-colors"
               >
-                Jogar de novo
+                {L('Jogar de novo', 'Play again')}
               </button>
             )}
             <button
@@ -968,7 +970,7 @@ export default function MatchQuickEngaged() {
               onClick={() => navigate('/')}
               className="w-full py-2.5 border border-zinc-700 text-white/70 font-display uppercase tracking-[0.18em] text-[11px] hover:border-white/50 transition-colors"
             >
-              Voltar para a Home
+              {L('Voltar para a Home', 'Back to Home')}
             </button>
           </div>
         )}

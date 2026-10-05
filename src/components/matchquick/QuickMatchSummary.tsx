@@ -12,6 +12,7 @@ import { motion } from 'motion/react';
 import { Home, RotateCcw, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { L } from '@/i18n/L';
 
 interface QuickMatchSummaryProps {
   homeShort: string;
@@ -39,7 +40,7 @@ export function QuickMatchSummary({
   const isDraw = homeScore === awayScore;
   const isLoss = homeScore < awayScore;
 
-  const resultLabel = isWin ? 'Vitória' : isDraw ? 'Empate' : 'Derrota';
+  const resultLabel = isWin ? L('Vitória', 'Win') : isDraw ? L('Empate', 'Draw') : L('Derrota', 'Loss');
   const resultColor = isWin ? 'text-black' : isDraw ? 'text-white' : 'text-black';
   const resultBg = isWin ? 'bg-neon-yellow' : isDraw ? 'bg-card-hi' : 'bg-baixa';
 
@@ -153,7 +154,7 @@ export function QuickMatchSummary({
                   letterSpacing: '0.18em',
                 }}
               >
-                Momentos-chave
+                {L('Momentos-chave', 'Key moments')}
               </p>
             </div>
 
@@ -199,7 +200,7 @@ export function QuickMatchSummary({
             }}
           >
             <Trophy className="w-4 h-4" />
-            Ver postgame
+            {L('Ver postgame', 'View postgame')}
           </Link>
 
           <button
@@ -216,7 +217,7 @@ export function QuickMatchSummary({
             }}
           >
             <RotateCcw className="w-4 h-4" />
-            Nova partida
+            {L('Nova partida', 'New match')}
           </button>
 
           <Link

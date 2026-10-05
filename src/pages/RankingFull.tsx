@@ -11,6 +11,7 @@ import { useRankingFavorites } from '@/ranking/useRankingFavorites';
 import { LEAGUE_SCOPE_LABELS } from '@/match/adminLeagues';
 import { BackButton } from '@/components/BackButton';
 import { Hashtag } from '@/components/ui';
+import { L, LOCALE } from '@/i18n/L';
 
 const PER_PAGE = 25;
 
@@ -31,26 +32,26 @@ type MundialEntry = {
 type AnyRankRow = MundialEntry | LeagueScopeRankingEntry;
 
 const TAB_OPTIONS: { id: RankingTabId; label: string }[] = [
-  { id: 'mundial', label: 'Mundial' },
-  { id: 'nacional', label: LEAGUE_SCOPE_LABELS.national },
-  { id: 'estadual', label: LEAGUE_SCOPE_LABELS.state },
+  { id: 'mundial', label: L('Mundial', 'World') },
+  { id: 'nacional', label: L(LEAGUE_SCOPE_LABELS.national, 'National') },
+  { id: 'estadual', label: L(LEAGUE_SCOPE_LABELS.state, 'State') },
 ];
 
 const TAB_META: Record<RankingTabId, { icon: typeof Trophy; title: string; subtitle: string }> = {
   mundial: {
     icon: Trophy,
-    title: 'Mundial',
-    subtitle: 'Índice: média de pontos da temporada, força e engajamento',
+    title: L('Mundial', 'World'),
+    subtitle: L('Índice: média de pontos da temporada, força e engajamento', 'Index: average of season points, strength and engagement'),
   },
   nacional: {
     icon: TrendingUp,
-    title: 'Nacional',
-    subtitle: 'Soma de pontos nas competições nacionais',
+    title: L('Nacional', 'National'),
+    subtitle: L('Soma de pontos nas competições nacionais', 'Total points in national competitions'),
   },
   estadual: {
     icon: Award,
-    title: 'Estadual',
-    subtitle: 'Soma de pontos nas competições estaduais',
+    title: L('Estadual', 'State'),
+    subtitle: L('Soma de pontos nas competições estaduais', 'Total points in state competitions'),
   },
 };
 
@@ -63,12 +64,12 @@ const TAB_META: Record<RankingTabId, { icon: typeof Trophy; title: string; subti
 function formatExpSmart(n: number): string {
   if (n >= 1_000_000) {
     const m = n / 1_000_000;
-    return m >= 10 ? `${Math.floor(m)}M` : `${m.toFixed(1).replace('.', ',')}M`;
+    return m >= 10 ? `${Math.floor(m)}M` : `${L(m.toFixed(1).replace('.', ','), m.toFixed(1))}M`;
   }
   if (n >= 100_000) {
     return `${Math.floor(n / 1000)}K`;
   }
-  return n.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+  return n.toLocaleString(LOCALE, { maximumFractionDigits: 0 });
 }
 
 function parseTab(raw: string | null): RankingTabId {
@@ -188,7 +189,7 @@ export function RankingFull() {
 
   return (
     <div className="mx-auto min-w-0 max-w-4xl space-y-6 pb-8">
-      <BackButton to="/competicao" label="Competição" />
+      <BackButton to="/competicao" label={L('Competição', 'Competition')} />
 
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -246,9 +247,9 @@ export function RankingFull() {
             <input
               value={search}
               onChange={(e) => setSearchAndResetPage(e.target.value)}
-              placeholder="Buscar time"
+              placeholder={L('Buscar time', 'Search team')}
               className="w-full bg-deep-black border border-white/10 text-white placeholder:text-poeira px-9 py-2.5 text-sm transition-colors focus:border-neon-yellow/50 focus:outline-none"
-              aria-label="Buscar time no ranking"
+              aria-label={L('Buscar time no ranking', 'Search team in ranking')}
             />
           </div>
         </div>
@@ -259,9 +260,9 @@ export function RankingFull() {
             <thead>
               <tr>
                 <th style={{ width: '3.5rem' }} className="text-center">#</th>
-                <th>Equipe</th>
+                <th>{L('Equipe', 'Team')}</th>
                 <th style={{ width: '8rem' }} className="text-center">
-                  {tab === 'mundial' ? 'Índice' : 'Pontos'}
+                  {tab === 'mundial' ? L('Índice', 'Index') : L('Pontos', 'Points')}
                 </th>
                 <th style={{ width: '3rem' }} className="text-center">★</th>
               </tr>
@@ -272,8 +273,8 @@ export function RankingFull() {
                   <td colSpan={4} className="text-center py-12">
                     <p className="font-mono text-[12px] text-cimento">
                       {tab === 'mundial'
-                        ? 'Carregando a Liga Global…'
-                        : 'Nenhuma liga nesta aba.'}
+                        ? L('Carregando a Liga Global…', 'Loading the Global League…')
+                        : L('Nenhuma liga nesta aba.', 'No leagues in this tab.')}
                     </p>
                   </td>
                 </tr>
@@ -320,7 +321,7 @@ export function RankingFull() {
                         )}
                         {row.isMe && (
                           <span className="shrink-0 font-mono text-[9.5px] uppercase tracking-[0.12em] text-black/70">
-                            você
+                            {L('você', 'you')}
                           </span>
                         )}
                       </button>
@@ -333,7 +334,7 @@ export function RankingFull() {
                         )}
                       >
                         {tab === 'mundial'
-                          ? row.points.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                          ? row.points.toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
                           : formatExpSmart(row.points)}
                       </span>
                     </td>
@@ -351,7 +352,7 @@ export function RankingFull() {
                               ? 'border-neon-yellow text-neon-yellow'
                               : 'border-white/16 text-poeira hover:border-white/30 hover:text-white',
                         )}
-                        aria-label={favorites.has(row.team) ? 'Remover dos favoritos' : 'Marcar favorito'}
+                        aria-label={favorites.has(row.team) ? L('Remover dos favoritos', 'Remove from favorites') : L('Marcar favorito', 'Add to favorites')}
                       >
                         <Star
                           className={cn(
@@ -387,7 +388,7 @@ export function RankingFull() {
                 )}
               >
                 <ChevronLeft className="w-4 h-4" />
-                Anterior
+                {L('Anterior', 'Previous')}
               </button>
               <button
                 type="button"
@@ -400,7 +401,7 @@ export function RankingFull() {
                     : 'border-white/30 text-white hover:border-white hover:bg-white/5',
                 )}
               >
-                Próxima
+                {L('Próxima', 'Next')}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -429,11 +430,11 @@ export function RankingFull() {
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex items-center gap-3">
                   <span className="ole-num text-[18px] text-white">
-                    {selectedTeam.globalRank}º
+                    {L(`${selectedTeam.globalRank}º`, `#${selectedTeam.globalRank}`)}
                   </span>
                   {selectedTeam.isMe && (
                     <span className="bg-neon-yellow px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-black">
-                      Seu time
+                      {L('Seu time', 'Your team')}
                     </span>
                   )}
                 </div>
@@ -452,7 +453,7 @@ export function RankingFull() {
                 {selectedTeam.team}
               </h2>
               <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-cimento">
-                {tab === 'mundial' ? 'Ranking Mundial' : tab === 'nacional' ? 'Ranking Nacional' : 'Ranking Estadual'}
+                {tab === 'mundial' ? L('Ranking Mundial', 'World Ranking') : tab === 'nacional' ? L('Ranking Nacional', 'National Ranking') : L('Ranking Estadual', 'State Ranking')}
               </p>
             </div>
 
@@ -463,7 +464,7 @@ export function RankingFull() {
                 <div className="flex items-center gap-2 mb-2">
                   <Trophy className="w-4 h-4 text-neon-yellow" />
                   <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-cimento">
-                    {tab === 'mundial' ? 'Índice' : 'Pontos'}
+                    {tab === 'mundial' ? L('Índice', 'Index') : L('Pontos', 'Points')}
                   </span>
                 </div>
                 <div className="flex items-baseline gap-2">
@@ -472,8 +473,8 @@ export function RankingFull() {
                     style={{ fontSize: 'clamp(1.8rem, 5.5vw, 2.6rem)' }}
                   >
                     {tab === 'mundial'
-                      ? selectedTeam.points.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-                      : selectedTeam.points.toLocaleString('pt-BR')}
+                      ? selectedTeam.points.toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                      : selectedTeam.points.toLocaleString(LOCALE)}
                   </span>
                   <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-cimento">
                     {tab === 'mundial' ? '/ 100' : 'pts'}
@@ -483,9 +484,9 @@ export function RankingFull() {
                 {'breakdown' in selectedTeam && selectedTeam.breakdown && (
                   <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/10">
                     {([
-                      ['Pontos', selectedTeam.breakdown.points],
-                      ['Força', selectedTeam.breakdown.overall],
-                      ['Engaj.', selectedTeam.breakdown.engagement],
+                      [L('Pontos', 'Points'), selectedTeam.breakdown.points],
+                      [L('Força', 'Strength'), selectedTeam.breakdown.overall],
+                      [L('Engaj.', 'Engag.'), selectedTeam.breakdown.engagement],
                     ] as [string, number][]).map(([label, val]) => (
                       <div key={label} className="flex flex-col">
                         <span className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-cimento">{label}</span>
@@ -502,7 +503,7 @@ export function RankingFull() {
                   <div className="flex items-center gap-2 mb-2">
                     <TrendingUp className="w-4 h-4 text-cimento" />
                     <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-cimento">
-                      Diferença para o líder
+                      {L('Diferença para o líder', 'Gap to leader')}
                     </span>
                   </div>
                   <span className="ole-num text-[17px] text-giz">
@@ -511,8 +512,8 @@ export function RankingFull() {
                       if (!leader) return '—';
                       const diff = leader.points - selectedTeam.points;
                       return tab === 'mundial'
-                        ? `${diff.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de índice`
-                        : `${diff.toLocaleString('pt-BR')} pts`;
+                        ? L(`${diff.toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de índice`, `${diff.toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} index`)
+                        : `${diff.toLocaleString(LOCALE)} pts`;
                     })()}
                   </span>
                 </div>
@@ -533,7 +534,7 @@ export function RankingFull() {
                   )}
                 >
                   <Star className={cn('w-4 h-4', favorites.has(selectedTeam.team) && 'fill-neon-yellow')} />
-                  {favorites.has(selectedTeam.team) ? 'Favoritado' : 'Favoritar'}
+                  {favorites.has(selectedTeam.team) ? L('Favoritado', 'Favorited') : L('Favoritar', 'Favorite')}
                 </button>
               </div>
             </div>

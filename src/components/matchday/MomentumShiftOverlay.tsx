@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MomentumState } from '@/components/matchday/MomentumVisualBar';
+import { L } from '@/i18n/L';
 
 interface MomentumShiftDetectorProps {
   momentum: MomentumState | undefined;
@@ -123,7 +124,7 @@ export function MomentumShiftOverlay({ momentum, homeShort, awayShort }: Momentu
                 ease: 'easeInOut',
               }}
             >
-              VIRADA DE JOGO!
+              {L('VIRADA DE JOGO!', 'MOMENTUM SHIFT!')}
             </motion.h1>
 
             {/* Subtítulo */}
@@ -133,7 +134,7 @@ export function MomentumShiftOverlay({ momentum, homeShort, awayShort }: Momentu
               transition={{ delay: 0.3 }}
               className="mb-2 text-2xl font-bold text-white sm:text-3xl"
             >
-              {shiftEvent.newLeader} assumiu o controle!
+              {shiftEvent.newLeader} {L('assumiu o controle!', 'took control!')}
             </motion.p>
 
             <motion.p
@@ -142,7 +143,7 @@ export function MomentumShiftOverlay({ momentum, homeShort, awayShort }: Momentu
               transition={{ delay: 0.5 }}
               className="text-lg text-gray-400"
             >
-              +{shiftEvent.delta} momentum em 2 minutos
+              +{shiftEvent.delta} {L('momentum em 2 minutos', 'momentum in 2 minutes')}
             </motion.p>
 
             {/* Indicador de auto-dismiss */}

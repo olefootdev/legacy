@@ -6,6 +6,7 @@
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import { getSupabase } from '@/supabase/client';
 import type { PlayerEntity } from '@/entities/types';
+import { L } from '@/i18n/L';
 
 async function authHeaders(): Promise<Record<string, string> | null> {
   const sb = getSupabase();
@@ -16,7 +17,7 @@ async function authHeaders(): Promise<Record<string, string> | null> {
 
 async function chamar<T>(path: string, body?: unknown): Promise<T> {
   const headers = await authHeaders();
-  if (!headers) throw new Error('Sessão expirada — faz login novamente.');
+  if (!headers) throw new Error(L('Sessão expirada — faz login novamente.', 'Session expired — please log in again.'));
   const r = await fetch(`${olefootApiBase()}${path}`, {
     method: body === undefined ? 'GET' : 'POST',
     headers,
@@ -24,7 +25,7 @@ async function chamar<T>(path: string, body?: unknown): Promise<T> {
   });
   const data = (await r.json().catch(() => null)) as (T & { ok?: boolean; error?: string }) | null;
   if (!r.ok || !data || data.ok === false) {
-    throw new Error(data?.error ?? 'Não foi possível concluir a operação.');
+    throw new Error(data?.error ?? L('Não foi possível concluir a operação.', 'Could not complete the operation.'));
   }
   return data as T;
 }

@@ -10,6 +10,7 @@
 
 import type { GlobalFixture } from './globalMatch';
 import { newGlobalFixtureId } from './globalMatch';
+import { L } from '@/i18n/L';
 
 /** Status da liga global */
 export type GlobalLeagueStatus =
@@ -227,15 +228,15 @@ export const GLOBAL_LEAGUE_MVP_CONSTANTS = {
  */
 export const GLOBAL_DIVISION_NAME: Record<number, string> = {
   1: 'Elite',
-  2: 'Intermediária',
-  3: 'Acesso',
-  4: 'Várzea',
+  2: L('Intermediária', 'Intermediate'),
+  3: L('Acesso', 'Access'),
+  4: L('Várzea', 'Grassroots'),
 };
 
 /** Nome da divisão, com queda segura pra "Divisão N" se a liga crescer. */
 export function globalDivisionName(division: number | null | undefined): string {
-  if (division == null) return 'Sem divisão';
-  return GLOBAL_DIVISION_NAME[division] ?? `Divisão ${division}`;
+  if (division == null) return L('Sem divisão', 'No division');
+  return GLOBAL_DIVISION_NAME[division] ?? L(`Divisão ${division}`, `Division ${division}`);
 }
 
 /** Criar time inicial */

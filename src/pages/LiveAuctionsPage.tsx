@@ -21,6 +21,7 @@ import { fetchGenesisMarketAuctionCards } from '@/supabase/genesisMarket';
 import { isSupabaseConfigured } from '@/supabase/client';
 import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
 import { formatExp } from '@/systems/economy';
+import { L } from '@/i18n/L';
 
 export function LiveAuctionsPage() {
   const auctions = useActiveAuctions();
@@ -62,12 +63,12 @@ export function LiveAuctionsPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 pb-10">
-      <BackButton to="/mercado" label="Mercado" />
+      <BackButton to="/mercado" label={L('Mercado', 'Market')} />
 
       {/* Header — Padrão editorial do jogo */}
       <header className="text-center pt-2 pb-2">
         <div className="ole-eyebrow !text-neon-yellow mb-4">
-          <span>Leilões ao Vivo</span>
+          <span>{L('Leilões ao Vivo', 'Live Auctions')}</span>
         </div>
         <h1 className="leading-[0.95]">
           <span
@@ -78,7 +79,7 @@ export function LiveAuctionsPage() {
               letterSpacing: '0.005em',
             }}
           >
-            Leilões
+            {L('Leilões', 'Auctions')}
           </span>
           {activeAuctions.length > 0 && (
             <span
@@ -88,7 +89,7 @@ export function LiveAuctionsPage() {
                 letterSpacing: '-0.01em',
               }}
             >
-              {activeAuctions.length} {activeAuctions.length === 1 ? 'ativo' : 'ativos'}
+              {activeAuctions.length} {activeAuctions.length === 1 ? L('ativo', 'active') : L('ativos', 'active')}
             </span>
           )}
         </h1>
@@ -110,7 +111,7 @@ export function LiveAuctionsPage() {
               fontWeight: 600,
             }}
           >
-            Seu Saldo
+            {L('Seu Saldo', 'Your Balance')}
           </p>
           <p
             className="ole-num mt-1.5 tabular-nums leading-none text-neon-yellow"
@@ -136,7 +137,7 @@ export function LiveAuctionsPage() {
               fontWeight: 600,
             }}
           >
-            Notificações
+            {L('Notificações', 'Notifications')}
           </p>
           <p
             className="ole-num mt-1.5 tabular-nums leading-none text-white"
@@ -184,7 +185,7 @@ export function LiveAuctionsPage() {
       {/* Leilões Ativos — Header padrão editorial */}
       {activeAuctions.length > 0 && (
         <section className="space-y-4">
-          <SecaoVolt label={`Leilões ativos (${activeAuctions.length})`} className="px-0.5" />
+          <SecaoVolt label={L(`Leilões ativos (${activeAuctions.length})`, `Active auctions (${activeAuctions.length})`)} className="px-0.5" />
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {activeAuctions.map((auction) => (
@@ -203,7 +204,7 @@ export function LiveAuctionsPage() {
       {/* Leilões Encerrados */}
       {endedAuctions.length > 0 && (
         <section className="space-y-4">
-          <SecaoVolt label={`Encerrados (${endedAuctions.length})`} tone="neutro" className="px-0.5" />
+          <SecaoVolt label={L(`Encerrados (${endedAuctions.length})`, `Ended (${endedAuctions.length})`)} tone="neutro" className="px-0.5" />
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {endedAuctions.map((auction) => (
@@ -225,8 +226,8 @@ export function LiveAuctionsPage() {
           <Gavel className="mx-auto h-16 w-16 text-white/20 mb-4" />
           <p className="text-sm text-white/40 mb-4">
             {availablePlayers.length === 0
-              ? 'Carregando jogadores...'
-              : 'Nenhum leilão ativo no momento'}
+              ? L('Carregando jogadores...', 'Loading players...')
+              : L('Nenhum leilão ativo no momento', 'No active auctions right now')}
           </p>
         </div>
       )}

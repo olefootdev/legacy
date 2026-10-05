@@ -25,16 +25,17 @@ import {
   type TickerItem,
 } from '@/market/marketLiveClient';
 import { retirarMvp } from '@/market/squadMarketClient';
+import { L, LOCALE, emIngles } from '@/i18n/L';
 
 const TOKENS_POR_CENTAVO = 80;
-const tok = (n: number) => Math.round(n).toLocaleString('pt-BR');
+const tok = (n: number) => Math.round(n).toLocaleString(LOCALE);
 const olefootDeCents = (cents: number) => tok(cents * TOKENS_POR_CENTAVO);
 
 const FONTE: Record<string, string> = {
-  match: 'partida',
-  training: 'treino',
+  match: L('partida', 'match'),
+  training: L('treino', 'training'),
   checkpoint: 'checkpoint',
-  sale: 'venda',
+  sale: L('venda', 'sale'),
 };
 
 function Countdown({ ate }: { ate: string }) {
@@ -43,7 +44,7 @@ function Countdown({ ate }: { ate: string }) {
     const t = setInterval(() => setResta(new Date(ate).getTime() - Date.now()), 1000);
     return () => clearInterval(t);
   }, [ate]);
-  if (resta <= 0) return <span className="text-rose-300">ENCERRADO</span>;
+  if (resta <= 0) return <span className="text-rose-300">{L('ENCERRADO', 'ENDED')}</span>;
   const m = Math.floor(resta / 60000);
   const s = Math.floor((resta % 60000) / 1000);
   return <span className="tabular-nums">{m}:{String(s).padStart(2, '0')}</span>;
@@ -107,15 +108,15 @@ export function MercadoVivo() {
       const r = await darLanceMvp(mvp.id, Number(lance.replace(/\./g, '')));
       if (!r.ok) {
         const mapa: Record<string, string> = {
-          lance_baixo: `Lance mínimo agora: ${r.minimo != null ? tok(r.minimo) : '—'} OLEFOOT.`,
-          saldo_insuficiente: 'Saldo OLEFOOT insuficiente (o lance fica em escrow até alguém te cobrir).',
-          encerrado: 'O martelo já bateu.',
-          ja_es_o_maior: 'Teu lance já é o maior.',
-          indisponivel: 'Leilão indisponível.',
+          lance_baixo: L(`Lance mínimo agora: ${r.minimo != null ? tok(r.minimo) : '—'} OLEFOOT.`, `Minimum bid now: ${r.minimo != null ? tok(r.minimo) : '—'} OLEFOOT.`),
+          saldo_insuficiente: L('Saldo OLEFOOT insuficiente (o lance fica em escrow até alguém te cobrir).', 'Insufficient OLEFOOT balance (the bid stays in escrow until someone outbids you).'),
+          encerrado: L('O martelo já bateu.', 'The hammer has already fallen.'),
+          ja_es_o_maior: L('Teu lance já é o maior.', 'Your bid is already the highest.'),
+          indisponivel: L('Leilão indisponível.', 'Auction unavailable.'),
         };
-        setErro(mapa[r.motivo ?? ''] ?? 'Falha no lance.');
+        setErro(mapa[r.motivo ?? ''] ?? L('Falha no lance.', 'Bid failed.'));
       } else {
-        setAviso('Lance registrado — o valor fica em escrow; se alguém cobrir, volta na hora.');
+        setAviso(L('Lance registrado — o valor fica em escrow; se alguém cobrir, volta na hora.', 'Bid placed — the amount stays in escrow; if someone outbids you, it comes right back.'));
         setLance('');
       }
       await carregar();
@@ -131,10 +132,10 @@ export function MercadoVivo() {
     try {
       const r = await retirarMvp(mvp.id);
       dispatch({ type: 'MERGE_PLAYERS', players: { [r.player.id]: r.player } });
-      setAviso(`${r.player.name} (cópia única do MVP) entrou no teu plantel!`);
+      setAviso(L(`${r.player.name} (cópia única do MVP) entrou no teu plantel!`, `${r.player.name} (unique MVP copy) joined your squad!`));
       await carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao retirar.');
+      setErro(e instanceof Error ? e.message : L('Falha ao retirar.', 'Failed to claim.'));
     } finally {
       setAgindo(false);
     }
@@ -151,20 +152,20 @@ export function MercadoVivo() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8">
-      <section aria-label="Mercado ao vivo" className="ole-poster ole-rail px-5 py-5 sm:px-6">
+      <section aria-label={L('Mercado ao vivo', 'Live Market')} className="ole-poster ole-rail px-5 py-5 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <span className="ole-eyebrow-poster flex items-center gap-2" style={{ fontSize: '12px' }}>
-              <Activity className="h-4 w-4" /> Mercado ao vivo · índice OLE-100
+              <Activity className="h-4 w-4" /> {L('Mercado ao vivo · índice OLE-100', 'Live Market · OLE-100 index')}
             </span>
             <p className="mt-1 font-impact leading-none text-neon-yellow tabular-nums" style={{ fontSize: 'clamp(30px, 7vw, 52px)' }}>
               {indiceAtual == null ? '—' : olefootDeCents(indiceAtual)} <span className="text-[0.45em] text-white/70">OLEFOOT</span>
             </p>
             <p className="mt-1 text-[12px] text-white/50">
-              A soma dos 100 jogadores mais valiosos do mundo, de hora em hora
+              {L('A soma dos 100 jogadores mais valiosos do mundo, de hora em hora', 'The sum of the 100 most valuable players in the world, hourly')}
               {indiceDelta != null ? (
                 <span className={indiceDelta >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
-                  {' '}· {indiceDelta >= 0 ? '+' : ''}{indiceDelta.toFixed(2)}% na janela
+                  {' '}· {indiceDelta >= 0 ? '+' : ''}{indiceDelta.toFixed(2)}% {L('na janela', 'in window')}
                 </span>
               ) : null}
             </p>
@@ -179,11 +180,11 @@ export function MercadoVivo() {
       {/* ── LEILÃO DO MVP ────────────────────────────────────────────────── */}
       <section>
         <h2 className="ole-eyebrow-poster mb-3 flex items-center gap-2" style={{ fontSize: '13px' }}>
-          <Gavel className="h-4 w-4" /> Leilão-relâmpago do MVP · todo dia às 20h
+          <Gavel className="h-4 w-4" /> {L('Leilão-relâmpago do MVP · todo dia às 20h', 'MVP flash auction · daily at 8 PM')}
         </h2>
         {mvp == null ? (
           <p className="ole-poster p-6 text-sm text-white/45">
-            Nenhum leilão ainda — o artilheiro do dia sobe ao martelo às 20h (precisa ter gol nas últimas 24h).
+            {L('Nenhum leilão ainda — o artilheiro do dia sobe ao martelo às 20h (precisa ter gol nas últimas 24h).', 'No auction yet — the top scorer of the day goes under the hammer at 8 PM (needs a goal in the last 24h).')}
           </p>
         ) : (
           <div className="ole-poster ole-rail flex flex-wrap items-center justify-between gap-4 p-5">
@@ -191,21 +192,25 @@ export function MercadoVivo() {
               <p className="font-impact text-[24px] uppercase text-white">
                 <Crown className="mr-2 inline h-5 w-5 text-neon-yellow" />
                 {mvp.playerName}
-                <span className="ml-2 text-[12px] font-normal normal-case text-white/45">cópia única · {mvp.dia}</span>
+                <span className="ml-2 text-[12px] font-normal normal-case text-white/45">{L('cópia única', 'unique copy')} · {mvp.dia}</span>
               </p>
               <p className="mt-1 text-[12px] text-white/55">
                 {mvp.status === 'open' && !encerrado ? (
-                  <>Fecha em <Countdown ate={mvp.endsAt} /> · lance atual:{' '}
-                    <strong className="text-neon-yellow">{mvp.bidOlefoot ? tok(Number(mvp.bidOlefoot)) : `mínimo ${tok(Number(mvp.minBidOlefoot))}`} OLEFOOT</strong>
-                    {mvp.souOMaior ? ' · o maior é TEU' : ''}</>
+                  <>{L('Fecha em', 'Closes in')} <Countdown ate={mvp.endsAt} /> · {L('lance atual', 'current bid')}:{' '}
+                    <strong className="text-neon-yellow">{mvp.bidOlefoot ? tok(Number(mvp.bidOlefoot)) : L(`mínimo ${tok(Number(mvp.minBidOlefoot))}`, `minimum ${tok(Number(mvp.minBidOlefoot))}`)} OLEFOOT</strong>
+                    {mvp.souOMaior ? L(' · o maior é TEU', ' · highest is YOURS') : ''}</>
                 ) : mvp.status === 'settled' ? (
-                  <>Encerrado e retirado — por {tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT.</>
+                  <>{L(`Encerrado e retirado — por ${tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT.`, `Ended and claimed — for ${tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT.`)}</>
                 ) : encerrado && mvp.souOMaior ? (
-                  <>Martelo batido — <strong className="text-emerald-300">tu venceste por {tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT</strong>. Retira o card.</>
+                  emIngles() ? (
+                  <>Hammer down — <strong className="text-emerald-300">you won for {tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT</strong>. Claim the card.</>
                 ) : (
-                  <>Encerrado{mvp.bidOlefoot ? ` — maior lance ${tok(Number(mvp.bidOlefoot))} OLEFOOT` : ' sem lances'}.</>
+                  <>Martelo batido — <strong className="text-emerald-300">tu venceste por {tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT</strong>. Retira o card.</>
+                )
+                ) : (
+                  <>{L('Encerrado', 'Ended')}{mvp.bidOlefoot ? L(` — maior lance ${tok(Number(mvp.bidOlefoot))} OLEFOOT`, ` — top bid ${tok(Number(mvp.bidOlefoot))} OLEFOOT`) : L(' sem lances', ' with no bids')}.</>
                 )}
-                {' '}· 50% do martelo vai pro dono do MVP
+                {' '}· {L('50% do martelo vai pro dono do MVP', '50% of the hammer price goes to the MVP owner')}
               </p>
             </div>
             {mvp.status === 'open' && !encerrado ? (
@@ -218,13 +223,13 @@ export function MercadoVivo() {
                 />
                 <button type="button" onClick={() => void darLance()} disabled={agindo || !lance}
                   className="bg-neon-yellow px-4 py-2 font-display text-[11px] font-black uppercase text-black hover:bg-white disabled:opacity-50">
-                  Dar lance
+                  {L('Dar lance', 'Place bid')}
                 </button>
               </div>
             ) : encerrado && mvp.status === 'open' && mvp.souOMaior ? (
               <button type="button" onClick={() => void retirar()} disabled={agindo}
                 className="bg-emerald-400 px-4 py-2 font-display text-[11px] font-black uppercase text-black hover:bg-white disabled:opacity-50">
-                Retirar o card
+                {L('Retirar o card', 'Claim the card')}
               </button>
             ) : null}
           </div>
@@ -233,11 +238,11 @@ export function MercadoVivo() {
 
       {/* ── TICKER ───────────────────────────────────────────────────────── */}
       <section>
-        <h2 className="ole-eyebrow-poster mb-3" style={{ fontSize: '13px' }}>Ticker · últimas variações</h2>
+        <h2 className="ole-eyebrow-poster mb-3" style={{ fontSize: '13px' }}>{L('Ticker · últimas variações', 'Ticker · latest moves')}</h2>
         <div className="ole-poster max-h-[380px] overflow-auto">
           {ticker.length === 0 ? (
             <p className="p-6 text-sm text-white/45">
-              {carregando ? 'Carregando…' : 'Sem variações nas últimas 48h — joga uma partida e vê o preço andar.'}
+              {carregando ? L('Carregando…', 'Loading…') : L('Sem variações nas últimas 48h — joga uma partida e vê o preço andar.', 'No moves in the last 48h — play a match and watch the price move.')}
             </p>
           ) : (
             <ul className="divide-y divide-white/5">
@@ -264,21 +269,21 @@ export function MercadoVivo() {
 
       {/* ── OLE-100 ──────────────────────────────────────────────────────── */}
       <section>
-        <h2 className="ole-eyebrow-poster mb-3" style={{ fontSize: '13px' }}>OLE-100 · os mais valiosos do mundo</h2>
+        <h2 className="ole-eyebrow-poster mb-3" style={{ fontSize: '13px' }}>{L('OLE-100 · os mais valiosos do mundo', 'OLE-100 · most valuable in the world')}</h2>
         <div className="ole-poster max-h-[460px] overflow-auto">
           {top.length === 0 ? (
             <p className="p-6 text-sm text-white/45">
-              {carregando ? 'Carregando…' : 'O ranking nasce com as primeiras partidas no ar.'}
+              {carregando ? L('Carregando…', 'Loading…') : L('O ranking nasce com as primeiras partidas no ar.', 'The ranking starts with the first matches played.')}
             </p>
           ) : (
             <table className="w-full min-w-[520px] text-left text-[12px]">
               <thead className="sticky top-0 bg-black/90">
                 <tr className="border-b border-white/10 text-[9px] uppercase tracking-wider text-white/45">
                   <th className="px-3 py-2">#</th>
-                  <th className="px-3 py-2">Jogador</th>
-                  <th className="px-3 py-2">Clube</th>
+                  <th className="px-3 py-2">{L('Jogador', 'Player')}</th>
+                  <th className="px-3 py-2">{L('Clube', 'Club')}</th>
                   <th className="px-3 py-2">OVR</th>
-                  <th className="px-3 py-2">Valor (OLEFOOT)</th>
+                  <th className="px-3 py-2">{L('Valor (OLEFOOT)', 'Value (OLEFOOT)')}</th>
                   <th className="px-3 py-2">Δ 24h</th>
                 </tr>
               </thead>
@@ -300,8 +305,13 @@ export function MercadoVivo() {
           )}
         </div>
         <p className="mt-2 text-[11px] text-white/40">
-          Quer ver os teus aqui? O preço vive em <Link to="/clube/valores" className="text-neon-yellow underline">Valores do elenco</Link> —
-          cada partida e treino move o número.
+          {emIngles() ? (
+            <>Want to see yours here? The price lives in <Link to="/clube/valores" className="text-neon-yellow underline">Squad values</Link> —
+            every match and training session moves the number.</>
+          ) : (
+            <>Quer ver os teus aqui? O preço vive em <Link to="/clube/valores" className="text-neon-yellow underline">Valores do elenco</Link> —
+            cada partida e treino move o número.</>
+          )}
         </p>
       </section>
     </div>

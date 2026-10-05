@@ -28,6 +28,10 @@ import { fetchListedLegacyPlayerRows, legacyPortraitImageUrl } from '@/supabase/
 import { overallFromAttributes } from '@/entities/player';
 import { fetchMyOffers } from '@/supabase/marketOffers';
 import type { PlayerAttributes } from '@/entities/types';
+import { L, LOCALE } from '@/i18n/L';
+
+/** Rótulo de "agora" do countdown — também usado pra marcar o herói como ao vivo. */
+const AGORA_LABEL = L('Agora', 'Now');
 
 /** Telemetria de abertura: 1× por carga da página, não por render. */
 let openingTracked = false;
@@ -132,11 +136,14 @@ export function Home() {
           'olefoot-welcome-v1',
           'COMPANY_ANNOUNCEMENT',
           'CLUBE',
-          'Bem Vindo ao Olefoot',
+          L('Bem Vindo ao Olefoot', 'Welcome to Olefoot'),
           {
-            body: 'A Olefoot chega hoje carregando a alma do futebol que aprendemos a amar — aquele de táticas pensadas, decisões de boleiro e histórias que atravessam gerações.',
+            body: L(
+              'A Olefoot chega hoje carregando a alma do futebol que aprendemos a amar — aquele de táticas pensadas, decisões de boleiro e histórias que atravessam gerações.',
+              'Olefoot arrives today carrying the soul of the football we learned to love — smart tactics, real football calls and stories that cross generations.',
+            ),
             tag: 'Olefoot',
-            timeLabel: 'Agora',
+            timeLabel: L('Agora', 'Now'),
           }
         ),
       });
@@ -217,7 +224,7 @@ export function Home() {
   const nextRoundLabel = useMemo(() => {
     if (!nextGlobal) return null;
     const diff = nextGlobal.scheduledKickoffMs - nowMs;
-    if (diff <= 0) return 'Agora';
+    if (diff <= 0) return AGORA_LABEL;
     if (diff < 3_600_000) {
       const mm = Math.floor(diff / 60_000);
       const ss = Math.floor((diff % 60_000) / 1000);
@@ -225,10 +232,10 @@ export function Home() {
     }
     const d = new Date(nextGlobal.scheduledKickoffMs);
     const isToday = d.toDateString() === new Date(nowMs).toDateString();
-    const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = d.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
     return isToday
-      ? `Hoje, ${timeStr}`
-      : `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}, ${timeStr}`;
+      ? L(`Hoje, ${timeStr}`, `Today, ${timeStr}`)
+      : `${d.toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit' })}, ${timeStr}`;
   }, [nextGlobal, nowMs]);
 
   /** Legends Cup — campanha ativa mostra a fase atual. */
@@ -299,8 +306,10 @@ export function Home() {
       ? {
           opponentName: nextGlobal.opponentName,
           kickoffLabel: nextRoundLabel.replace(', ', ' · '),
-          isLive: nextRoundLabel === 'Agora',
-          tag: divisionView ? `#ligaglobal #div${divisionView.division}` : '#ligaglobal',
+          isLive: nextRoundLabel === AGORA_LABEL,
+          tag: divisionView
+            ? L(`#ligaglobal #div${divisionView.division}`, `#globalleague #div${divisionView.division}`)
+            : L('#ligaglobal', '#globalleague'),
         }
       : null;
   const nextOpponent = nextGlobal

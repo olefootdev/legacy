@@ -24,6 +24,7 @@ import { normalizeWalletState } from '@/wallet/initial';
 import { inviteLinkForCode } from '@/wallet/referralCode';
 import { computeCareerTier } from '@/systems/careerTiers';
 import { DashboardGrid, DashboardSection } from '@/components/dashboard';
+import { L } from '@/i18n/L';
 
 interface MissionStub {
   id: string;
@@ -40,38 +41,38 @@ interface MissionStub {
 }
 
 const EVENT_LABELS: Record<MissionEvent, string> = {
-  session_login: 'fazer login',
-  screen_home: 'abrir Home',
-  screen_team: 'abrir Meu Time',
-  screen_team_valores: 'abrir Valores do elenco',
-  screen_mercado_vivo: 'abrir o Mercado ao Vivo',
-  screen_wallet: 'abrir Wallet',
-  screen_city: 'abrir Cidade',
-  screen_transfer: 'abrir Transfer',
-  screen_store: 'abrir Loja',
-  screen_club_hub: 'abrir Clube',
-  screen_competition_hub: 'abrir Competição',
-  screen_market_hub: 'abrir Mercado',
-  screen_help_hub: 'abrir Ajuda',
-  match_started: 'iniciar partida',
-  match_completed: 'completar partida',
-  match_won: 'vencer partida',
-  goal_scored: 'marcar gol',
-  lineup_saved: 'salvar escalação',
-  structure_upgraded: 'evoluir estrutura',
-  store_purchase: 'comprar na loja',
-  transfer_listed: 'listar no transfer',
-  training_session: 'fazer sessão de treino',
-  fast_match_completed: 'completar partida rápida',
-  mission_claimed: 'resgatar missão',
+  session_login: L('fazer login', 'log in'),
+  screen_home: L('abrir Home', 'open Home'),
+  screen_team: L('abrir Meu Time', 'open My Team'),
+  screen_team_valores: L('abrir Valores do elenco', 'open Squad Values'),
+  screen_mercado_vivo: L('abrir o Mercado ao Vivo', 'open the Live Market'),
+  screen_wallet: L('abrir Wallet', 'open Wallet'),
+  screen_city: L('abrir Cidade', 'open City'),
+  screen_transfer: L('abrir Transfer', 'open Transfer'),
+  screen_store: L('abrir Loja', 'open Store'),
+  screen_club_hub: L('abrir Clube', 'open Club'),
+  screen_competition_hub: L('abrir Competição', 'open Competition'),
+  screen_market_hub: L('abrir Mercado', 'open Market'),
+  screen_help_hub: L('abrir Ajuda', 'open Help'),
+  match_started: L('iniciar partida', 'start a match'),
+  match_completed: L('completar partida', 'complete a match'),
+  match_won: L('vencer partida', 'win a match'),
+  goal_scored: L('marcar gol', 'score a goal'),
+  lineup_saved: L('salvar escalação', 'save lineup'),
+  structure_upgraded: L('evoluir estrutura', 'upgrade a structure'),
+  store_purchase: L('comprar na loja', 'buy in the store'),
+  transfer_listed: L('listar no transfer', 'list on transfer'),
+  training_session: L('fazer sessão de treino', 'do a training session'),
+  fast_match_completed: L('completar partida rápida', 'complete a quick match'),
+  mission_claimed: L('resgatar missão', 'claim a mission'),
 };
 
 const KIND_LABELS: Record<MissionKind, string> = {
-  onboarding: 'Iniciante',
-  daily: 'Diária',
-  weekly: 'Semanal',
-  achievement: 'Conquista',
-  special: 'Especial',
+  onboarding: L('Iniciante', 'Beginner'),
+  daily: L('Diária', 'Daily'),
+  weekly: L('Semanal', 'Weekly'),
+  achievement: L('Conquista', 'Achievement'),
+  special: L('Especial', 'Special'),
 };
 
 function statusColor(s: MissionStub['status']) {
@@ -161,9 +162,9 @@ export function Missions() {
         dispatch({
           type: 'GRANT_EARNED_EXP',
           amount: m.reward,
-          historySource: `Missão: ${m.title}`,
+          historySource: L(`Missão: ${m.title}`, `Mission: ${m.title}`),
         });
-        setFeedback(`Missão concluída: +${formatExp(m.reward)} EXP`);
+        setFeedback(L(`Missão concluída: +${formatExp(m.reward)} EXP`, `Mission complete: +${formatExp(m.reward)} EXP`));
         setTimeout(() => setFeedback(null), 4000);
       }
       return;
@@ -175,9 +176,9 @@ export function Missions() {
       .slice(0, 3);
     const missingText =
       missingDistinct.length > 0
-        ? `Falta: ${missingDistinct.join(', ')}.`
-        : `Faltam ${missingCount} progresso(s) para concluir.`;
-    setFeedback(`Você está chegando lá. ${missingText}`);
+        ? L(`Falta: ${missingDistinct.join(', ')}.`, `Missing: ${missingDistinct.join(', ')}.`)
+        : L(`Faltam ${missingCount} progresso(s) para concluir.`, `${missingCount} more step(s) to complete.`);
+    setFeedback(L(`Você está chegando lá. ${missingText}`, `You're getting there. ${missingText}`));
     setTimeout(() => setFeedback(null), 5000);
   };
 
@@ -196,12 +197,12 @@ export function Missions() {
   }
 
   const kinds: Array<{ id: MissionKind | 'all'; label: string }> = [
-    { id: 'all', label: 'Todas' },
-    { id: 'daily', label: 'Diárias' },
-    { id: 'weekly', label: 'Semanais' },
-    { id: 'achievement', label: 'Conquistas' },
-    { id: 'special', label: 'Especiais' },
-    { id: 'onboarding', label: 'Iniciante' },
+    { id: 'all', label: L('Todas', 'All') },
+    { id: 'daily', label: L('Diárias', 'Daily') },
+    { id: 'weekly', label: L('Semanais', 'Weekly') },
+    { id: 'achievement', label: L('Conquistas', 'Achievements') },
+    { id: 'special', label: L('Especiais', 'Special') },
+    { id: 'onboarding', label: L('Iniciante', 'Beginner') },
   ];
 
   return (
@@ -221,7 +222,7 @@ export function Missions() {
             {/* ── ESQUERDA: Título + Stats ────────────────────────── */}
             <div className="space-y-6 sm:space-y-8">
               <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-                Centro de missões
+                {L('Centro de missões', 'Mission center')}
               </span>
 
               {/* Manchete em Anton. */}
@@ -229,14 +230,14 @@ export function Missions() {
                 className="font-impact uppercase text-black leading-[0.84]"
                 style={{ fontSize: 'clamp(52px, 12vw, 104px)', letterSpacing: '-0.01em' }}
               >
-                Missões
+                {L('Missões', 'Missions')}
               </h1>
 
               {/* Stats grid — 3 cards apenas */}
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div className="bg-black px-4 py-4 text-center">
                   <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50">
-                    Concluídas
+                    {L('Concluídas', 'Completed')}
                   </p>
                   <p
                     className="font-impact text-neon-yellow mt-2 tabular-nums"
@@ -247,7 +248,7 @@ export function Missions() {
                 </div>
                 <div className="bg-black px-4 py-4 text-center">
                   <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50">
-                    Em Progresso
+                    {L('Em Progresso', 'In Progress')}
                   </p>
                   <p
                     className="font-impact text-neon-yellow mt-2 tabular-nums"
@@ -258,7 +259,7 @@ export function Missions() {
                 </div>
                 <div className="col-span-2 bg-deep-black border border-white/8 px-4 py-4 text-center">
                   <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50">
-                    EXP Total Ganho
+                    {L('EXP Total Ganho', 'Total EXP Earned')}
                   </p>
                   <p className="font-mono text-lg font-bold text-white mt-2 tabular-nums">
                     {formatExp(stats.totalExp)}
@@ -280,7 +281,7 @@ export function Missions() {
                     borderRadius: 'var(--radius-sm)',
                   }}
                 >
-                  Ver Missões
+                  {L('Ver Missões', 'View Missions')}
                   <ChevronDown className="w-4 h-4" />
                 </a>
               </div>
@@ -291,7 +292,7 @@ export function Missions() {
               {/* Total de missões — bloco chapado, sem número fantasma atrás. */}
               <div className="bg-black px-6 py-3 text-center sm:px-8 sm:py-4">
                 <p className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-cimento">
-                  Missões
+                  {L('Missões', 'Missions')}
                 </p>
                 <p className="ole-num mt-1 text-2xl text-white tabular-nums sm:text-3xl">
                   {stats.total}
@@ -338,7 +339,7 @@ export function Missions() {
                       letterSpacing: '0.18em',
                     }}
                   >
-                    Link de Indicação
+                    {L('Link de Indicação', 'Referral Link')}
                   </h3>
                 </div>
               </div>
@@ -355,7 +356,7 @@ export function Missions() {
                   borderRadius: 'var(--radius-sm)',
                 }}
               >
-                Ver Indicações
+                {L('Ver Indicações', 'View Referrals')}
                 <ChevronRight className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -384,7 +385,7 @@ export function Missions() {
                   }}
                 >
                   {copiedLink ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  <span className="hidden xs:inline">Copiar link</span>
+                  <span className="hidden xs:inline">{L('Copiar link', 'Copy link')}</span>
                   <span className="xs:hidden">Link</span>
                 </button>
                 <button
@@ -402,8 +403,8 @@ export function Missions() {
                   }}
                 >
                   {copiedCode ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  <span className="hidden xs:inline">Só código</span>
-                  <span className="xs:hidden">Código</span>
+                  <span className="hidden xs:inline">{L('Só código', 'Code only')}</span>
+                  <span className="xs:hidden">{L('Código', 'Code')}</span>
                 </button>
               </div>
             </div>
@@ -417,7 +418,7 @@ export function Missions() {
                   letterSpacing: '0.05em',
                 }}
               >
-                Código: <span className="text-white/50">{myReferralCode}</span>
+                {L('Código', 'Code')}: <span className="text-white/50">{myReferralCode}</span>
               </p>
             )}
           </div>
@@ -484,7 +485,7 @@ export function Missions() {
                         </span>
                         {m.status === 'completed' && (
                           <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-alta">
-                            Concluída
+                            {L('Concluída', 'Completed')}
                           </span>
                         )}
                         {m.status === 'locked' && m.minTier && (
@@ -541,7 +542,7 @@ export function Missions() {
                             : 'bg-white/5 text-white/35 cursor-not-allowed'
                         )}
                       >
-                        {isReady ? 'Resgatar' : 'Em progresso'}
+                        {isReady ? L('Resgatar', 'Claim') : L('Em progresso', 'In progress')}
                       </button>
                     )}
                   </div>
@@ -554,7 +555,7 @@ export function Missions() {
         {visibleMissions.length === 0 && (
           <div className="border border-white/10 bg-black/30 p-8 text-center">
             <Trophy className="mx-auto h-12 w-12 text-white/35 mb-3" strokeWidth={2} />
-            <p className="text-sm text-white/45">Nenhuma missão nesta categoria</p>
+            <p className="text-sm text-white/45">{L('Nenhuma missão nesta categoria', 'No missions in this category')}</p>
           </div>
         )}
         </div>

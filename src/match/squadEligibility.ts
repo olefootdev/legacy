@@ -1,5 +1,6 @@
 import type { PlayerEntity } from '@/entities/types';
 import { mergeLineupWithDefaults, PITCH_SLOT_ORDER, buildDefaultLineupWithMeta } from '@/entities/lineup';
+import { L } from '@/i18n/L';
 
 /** Início da janela oficial do dia de competição (jogos + treinos entre jogos). */
 const OFFICIAL_DAY_START_H = 9;
@@ -67,12 +68,12 @@ export function trainingWindowLabelAfterSlot(matchSlotIndex: OfficialSlotIndex):
   const train = OFFICIAL_TRAINING_SLOT_TIMES[i];
   const nextMatch = OFFICIAL_MATCH_SLOT_TIMES[i + 1];
   if (train && nextMatch) {
-    return `Treino oficial às ${train}, antes do jogo das ${nextMatch}. Indisponibilidades contam em todo o calendário.`;
+    return L(`Treino oficial às ${train}, antes do jogo das ${nextMatch}. Indisponibilidades contam em todo o calendário.`, `Official training at ${train}, before the ${nextMatch} match. Unavailabilities apply across the whole calendar.`);
   }
   if (train) {
-    return `Último jogo oficial ${thisMatch}; treino oficial às ${train}. Depois, tempo livre para outras ligas ou amistosos.`;
+    return L(`Último jogo oficial ${thisMatch}; treino oficial às ${train}. Depois, tempo livre para outras ligas ou amistosos.`, `Last official match ${thisMatch}; official training at ${train}. Then free time for other leagues or friendlies.`);
   }
-  return `Horário oficial de jogo ${thisMatch}.`;
+  return L(`Horário oficial de jogo ${thisMatch}.`, `Official kick-off ${thisMatch}.`);
 }
 
 export function trainingWindowLabelForCalendarSlot(hhmm: string): string {
@@ -83,21 +84,21 @@ export function trainingWindowLabelForCalendarSlot(hhmm: string): string {
     const prevM = OFFICIAL_MATCH_SLOT_TIMES[trainIdx]!;
     const nextM = OFFICIAL_MATCH_SLOT_TIMES[trainIdx + 1];
     if (nextM) {
-      return `Entre o jogo das ${prevM} e o das ${nextM}. Lesão ou suspensão aqui ou noutro jogo bloqueia titulares em toda a parte.`;
+      return L(`Entre o jogo das ${prevM} e o das ${nextM}. Lesão ou suspensão aqui ou noutro jogo bloqueia titulares em toda a parte.`, `Between the ${prevM} and ${nextM} matches. An injury or suspension here or in another match blocks starters everywhere.`);
     }
-    return `Após o jogo das ${prevM} — treino oficial; o GameSpirit mantém o mesmo estado de lesão para a liga e para outros jogos.`;
+    return L(`Após o jogo das ${prevM} — treino oficial; o GameSpirit mantém o mesmo estado de lesão para a liga e para outros jogos.`, `After the ${prevM} match — official training; GameSpirit keeps the same injury state for the league and other matches.`);
   }
   const [hStr, mStr] = hhmm.split(':');
   const h = Number(hStr);
   const m = Number(mStr) || 0;
   const mins = h * 60 + m;
   if (mins < OFFICIAL_DAY_START_H * 60) {
-    return 'Antes da janela oficial (09:00–22:00). Espaço livre para treinos leves ou explorar ligas.';
+    return L('Antes da janela oficial (09:00–22:00). Espaço livre para treinos leves ou explorar ligas.', 'Before the official window (09:00–22:00). Free time for light training or exploring leagues.');
   }
   if (mins > OFFICIAL_DAY_END_H * 60) {
-    return 'Após a janela oficial. Tempo livre para outras competições ou descanso.';
+    return L('Após a janela oficial. Tempo livre para outras competições ou descanso.', 'After the official window. Free time for other competitions or rest.');
   }
-  return 'Janela livre.';
+  return L('Janela livre.', 'Free window.');
 }
 
 /**
@@ -176,20 +177,20 @@ export function evaluateOfficialSquad(
       startersFilled,
       startersAvailable,
       benchAvailable,
-      reason: `Sem jogador puro disponível para: ${posLabels}. Renove contratos ou recupere lesionados — sem improviso.`,
+      reason: L(`Sem jogador puro disponível para: ${posLabels}. Renove contratos ou recupere lesionados — sem improviso.`, `No natural player available for: ${posLabels}. Renew contracts or get injured players back — no makeshift picks.`),
     };
   }
 
   if (startersAvailable < 11) {
     const causeLabel = exhaustedStarters > 0
-      ? `${exhaustedStarters} sem energia (<${MIN_ENERGY_PCT_TO_PLAY}%) + lesões/suspensões`
-      : 'lesões/suspensões';
+      ? L(`${exhaustedStarters} sem energia (<${MIN_ENERGY_PCT_TO_PLAY}%) + lesões/suspensões`, `${exhaustedStarters} out of energy (<${MIN_ENERGY_PCT_TO_PLAY}%) + injuries/suspensions`)
+      : L('lesões/suspensões', 'injuries/suspensions');
     return {
       ok: false,
       startersFilled,
       startersAvailable,
       benchAvailable,
-      reason: `Titulares disponíveis: ${startersAvailable}/11 (${causeLabel}).`,
+      reason: L(`Titulares disponíveis: ${startersAvailable}/11 (${causeLabel}).`, `Starters available: ${startersAvailable}/11 (${causeLabel}).`),
     };
   }
   if (benchAvailable < 5) {
@@ -198,7 +199,7 @@ export function evaluateOfficialSquad(
       startersFilled,
       startersAvailable,
       benchAvailable,
-      reason: `Banco disponível: ${benchAvailable}/5 (mínimo exigido).`,
+      reason: L(`Banco disponível: ${benchAvailable}/5 (mínimo exigido).`, `Subs available: ${benchAvailable}/5 (minimum required).`),
     };
   }
 

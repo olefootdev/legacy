@@ -6,6 +6,7 @@
  * destacado. O time do manager (myTeamId) recebe realce dourado.
  */
 
+import { L } from '@/i18n/L';
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Crown, Trophy } from 'lucide-react';
@@ -15,16 +16,16 @@ import type { GlobalFixture } from '@/match/globalMatch';
 function roundLabel(size: number): string {
   switch (size) {
     case 2: return 'Final';
-    case 4: return 'Semifinal';
-    case 8: return 'Quartas';
-    case 16: return 'Oitavas';
-    case 32: return 'Fase de 32';
-    default: return `Fase de ${size}`;
+    case 4: return L('Semifinal', 'Semi-final');
+    case 8: return L('Quartas', 'Quarters');
+    case 16: return L('Oitavas', 'Last 16');
+    case 32: return L('Fase de 32', 'Last 32');
+    default: return L(`Fase de ${size}`, `Last ${size}`);
   }
 }
 
 function fmtMs(ms: number): string {
-  if (ms <= 0) return 'já';
+  if (ms <= 0) return L('já', 'now');
   const s = Math.floor(ms / 1000);
   const m = Math.floor(s / 60);
   const ss = s % 60;
@@ -58,7 +59,7 @@ export function DailyBracket({ bracket, myTeamId, championName }: DailyBracketPr
   if (bracket.length === 0) {
     return (
       <p className="text-center text-text-soft py-8">
-        Bracket ainda não gerado. O mata-mata começa às 19h.
+        {L('Bracket ainda não gerado. O mata-mata começa às 19h.', 'Bracket not generated yet. The knockout starts at 7pm.')}
       </p>
     );
   }
@@ -83,22 +84,22 @@ export function DailyBracket({ bracket, myTeamId, championName }: DailyBracketPr
                   </h3>
                   {myAlive && round.status !== 'finished' && (
                     <span className="font-display text-[9px] font-bold uppercase tracking-wider text-neon-green">
-                      você está aqui
+                      {L('você está aqui', 'you are here')}
                     </span>
                   )}
                 </div>
               </div>
               {round.status === 'live' && (
-                <span className="text-[10px] font-mono text-neon-green animate-pulse">● ao vivo</span>
+                <span className="text-[10px] font-mono text-neon-green animate-pulse">● {L('ao vivo', 'live')}</span>
               )}
               {round.status === 'scheduled' && msToKick > 0 && (
-                <span className="text-[10px] font-mono text-text-soft">em {fmtMs(msToKick)}</span>
+                <span className="text-[10px] font-mono text-text-soft">{L('em', 'in')} {fmtMs(msToKick)}</span>
               )}
               {round.status === 'scheduled' && msToKick <= 0 && (
-                <span className="text-[10px] font-mono text-neon-yellow">iniciando…</span>
+                <span className="text-[10px] font-mono text-neon-yellow">{L('iniciando…', 'starting…')}</span>
               )}
               {round.status === 'finished' && (
-                <span className="text-[10px] font-mono text-text-soft">encerrada</span>
+                <span className="text-[10px] font-mono text-text-soft">{L('encerrada', 'finished')}</span>
               )}
             </div>
 

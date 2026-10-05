@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getSupabase } from '@/supabase/client';
 import { updateUserPassword } from '@/supabase/auth';
+import { L } from '@/i18n/L';
 
 export function ResetPassword() {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ export function ResetPassword() {
   useEffect(() => {
     const sb = getSupabase();
     if (!sb) {
-      setError('Supabase não configurado.');
+      setError(L('Supabase não configurado.', 'Supabase not configured.'));
       setReady(true);
       return;
     }
@@ -40,18 +41,18 @@ export function ResetPassword() {
     if (busy) return;
     setError(null);
     if (password.length < 6) {
-      setError('A senha precisa ter pelo menos 6 caracteres.');
+      setError(L('A senha precisa ter pelo menos 6 caracteres.', 'Password must be at least 6 characters.'));
       return;
     }
     if (password !== confirm) {
-      setError('As senhas não coincidem.');
+      setError(L('As senhas não coincidem.', "Passwords don't match."));
       return;
     }
     setBusy(true);
     try {
       const r = await updateUserPassword(password);
       if (!r.ok) {
-        setError(r.error ?? 'Falha ao atualizar a senha.');
+        setError(r.error ?? L('Falha ao atualizar a senha.', 'Could not update password.'));
         return;
       }
       setDone(true);
@@ -82,27 +83,27 @@ export function ResetPassword() {
         <div className="border border-white/10 bg-panel">
           <div className="px-5 py-6 sm:px-6">
             <h2 className="font-impact text-[30px] uppercase leading-[1.05] text-white">
-              Redefinir Senha
+              {L('Redefinir Senha', 'Reset Password')}
             </h2>
             {!ready ? (
-              <p className="mt-4 text-[12px] text-cimento">Validando link…</p>
+              <p className="mt-4 text-[12px] text-cimento">{L('Validando link…', 'Validating link…')}</p>
             ) : done ? (
               <p className="mt-4 border border-alta/40 bg-alta/10 px-3 py-2 text-[12px] text-giz">
-                ✓ Senha atualizada. Redirecionando ao login…
+                ✓ {L('Senha atualizada. Redirecionando ao login…', 'Password updated. Redirecting to sign in…')}
               </p>
             ) : !hasSession ? (
               <div className="mt-4 space-y-3">
                 <p className="border border-baixa/50 bg-baixa/10 px-3 py-2 text-[12px] text-giz">
-                  ✗ Link inválido ou expirado. Solicite um novo e-mail de recuperação.
+                  ✗ {L('Link inválido ou expirado. Solicite um novo e-mail de recuperação.', 'Invalid or expired link. Request a new reset email.')}
                 </p>
                 <Link to="/login" className="btn-primary flex h-12 w-full items-center justify-center">
-                  <span className="btn-primary-inner justify-center py-1">Voltar ao login</span>
+                  <span className="btn-primary-inner justify-center py-1">{L('Voltar ao login', 'Back to sign in')}</span>
                 </Link>
               </div>
             ) : (
               <form onSubmit={(e) => void onSubmit(e)} className="mt-4 space-y-3" autoComplete="off">
                 <label className="block">
-                  <span className="mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">Nova senha</span>
+                  <span className="mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Nova senha', 'New password')}</span>
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -114,7 +115,7 @@ export function ResetPassword() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">Confirmar senha</span>
+                  <span className="mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Confirmar senha', 'Confirm password')}</span>
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -136,7 +137,7 @@ export function ResetPassword() {
                   className="btn-primary flex h-12 w-full items-center justify-center disabled:pointer-events-none disabled:opacity-40"
                 >
                   <span className="btn-primary-inner justify-center py-1">
-                    {busy ? 'Atualizando…' : 'Atualizar senha'}
+                    {busy ? L('Atualizando…', 'Updating…') : L('Atualizar senha', 'Update password')}
                   </span>
                 </button>
               </form>

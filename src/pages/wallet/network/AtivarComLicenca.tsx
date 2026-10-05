@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { fraseDoMotivo, resgatarLicenca } from '@/supabase/expansaoLicenca';
 import { avisarQueAPosicaoMudou } from '@/wallet/eventosDaCarteira';
+import { L } from '@/i18n/L';
 
 /**
  * A segunda porta da ativação: a licença que a OLEFOOT entrega.
@@ -27,7 +28,7 @@ export function AtivarComLicenca({ aoAtivar }: { aoAtivar: () => void }) {
         onClick={() => setAberto(true)}
         className="mt-3 w-full text-center font-mono text-[11px] uppercase tracking-wider text-cimento underline-offset-4 hover:text-white hover:underline"
       >
-        Tenho uma licença
+        {L('Tenho uma licença', 'I have a license')}
       </button>
     );
   }
@@ -39,7 +40,7 @@ export function AtivarComLicenca({ aoAtivar }: { aoAtivar: () => void }) {
     const r = await resgatarLicenca(codigo);
     setEnviando(false);
     if ('motivo' in r) { setErro(fraseDoMotivo(r.motivo)); return; }
-    setOk(r.patrocinador ? `Conta ativada · time de @${r.patrocinador}` : 'Conta ativada');
+    setOk(r.patrocinador ? L(`Conta ativada · time de @${r.patrocinador}`, `Account activated · @${r.patrocinador}'s team`) : L('Conta ativada', 'Account activated'));
     avisarQueAPosicaoMudou();
     aoAtivar();
   };
@@ -50,7 +51,7 @@ export function AtivarComLicenca({ aoAtivar }: { aoAtivar: () => void }) {
       onSubmit={(e) => { e.preventDefault(); void enviar(); }}
     >
       <label htmlFor="licenca" className="font-mono text-[10px] uppercase tracking-wider text-cimento">
-        Licença
+        {L('Licença', 'License')}
       </label>
       <input
         id="licenca"
@@ -64,7 +65,7 @@ export function AtivarComLicenca({ aoAtivar }: { aoAtivar: () => void }) {
         className="mt-1.5 h-[46px] w-full min-w-0 border border-white/15 bg-black px-3 font-mono text-[15px] tracking-wider text-white placeholder:text-poeira focus:border-white focus:outline-none"
       />
       <p className="mt-1.5 font-mono text-[11px] leading-relaxed text-poeira">
-        Ativa o convite e a equiparação. Não gera OLEFOOT.
+        {L('Ativa o convite e a equiparação. Não gera OLEFOOT.', 'Activates the invite and matching. Doesn\'t generate OLEFOOT.')}
       </p>
       {erro ? <p role="alert" className="mt-2 text-[12px] text-atencao">{erro}</p> : null}
       <button
@@ -72,7 +73,7 @@ export function AtivarComLicenca({ aoAtivar }: { aoAtivar: () => void }) {
         disabled={enviando || !codigo.trim()}
         className="ole-num mt-3 flex h-[46px] w-full items-center justify-center border border-white/30 text-[12px] uppercase text-white transition-colors hover:border-white disabled:opacity-40"
       >
-        {enviando ? 'Ativando…' : 'Ativar com licença'}
+        {enviando ? L('Ativando…', 'Activating…') : L('Ativar com licença', 'Activate with license')}
       </button>
     </form>
   );

@@ -4,6 +4,8 @@ import { OBEDIENCE_TIER_BUBBLE } from '@/voiceCommand/types';
 import { rollObedience } from '@/voiceCommand/obedienceRoll';
 import type { PitchPlayerState } from '@/engine/types';
 
+import { L } from '@/i18n/L';
+import { posLabel } from './posLabel';
 interface FeedbackEntry {
   id: string;
   playerName: string;
@@ -17,37 +19,37 @@ interface FeedbackEntry {
 // Respostas contextuais por tier + intent
 const TIER_RESPONSES: Record<string, Record<string, string>> = {
   critical_accept: {
-    team_press_high:     'Vou pressionar sem parar!',
-    team_retreat:        'Recuando agora, Professor.',
-    pedal_to_metal:      'VAMOS! Tô na velocidade máxima!',
-    team_hold_possession:'Segurando a bola, pode deixar.',
-    stretch_team:        'Abrindo espaço já!',
-    left_back_overlap:   'Subindo pelo corredor!',
-    default:             'DEIXA COMIGO!',
+    team_press_high:     L('Vou pressionar sem parar!', 'Pressing non-stop!'),
+    team_retreat:        L('Recuando agora, Professor.', 'Dropping back now, Boss.'),
+    pedal_to_metal:      L('VAMOS! Tô na velocidade máxima!', "LET'S GO! Full speed!"),
+    team_hold_possession:L('Segurando a bola, pode deixar.', 'Keeping the ball, leave it to me.'),
+    stretch_team:        L('Abrindo espaço já!', 'Opening space now!'),
+    left_back_overlap:   L('Subindo pelo corredor!', 'Bombing up the flank!'),
+    default:             L('DEIXA COMIGO!', 'LEAVE IT TO ME!'),
   },
   accept: {
-    team_press_high:     'Entendido. Vou pressionar.',
-    team_retreat:        'Recuando, Professor.',
-    pedal_to_metal:      'Acelerando o ritmo.',
-    team_hold_possession:'Vou segurar a posse.',
-    stretch_team:        'Esticando o time.',
-    left_back_overlap:   'Vou subir pelo lado.',
-    default:             'Vou fazer.',
+    team_press_high:     L('Entendido. Vou pressionar.', 'Got it. Pressing.'),
+    team_retreat:        L('Recuando, Professor.', 'Dropping back, Boss.'),
+    pedal_to_metal:      L('Acelerando o ritmo.', 'Upping the tempo.'),
+    team_hold_possession:L('Vou segurar a posse.', 'Keeping possession.'),
+    stretch_team:        L('Esticando o time.', 'Stretching the team.'),
+    left_back_overlap:   L('Vou subir pelo lado.', 'Going up the flank.'),
+    default:             L('Vou fazer.', 'On it.'),
   },
   weak_accept: {
-    team_press_high:     'Vou tentar pressionar... estou cansado.',
-    team_retreat:        'Recuando, mas tô no limite.',
-    pedal_to_metal:      'Vou tentar acelerar.',
-    team_hold_possession:'Tentando segurar...',
-    stretch_team:        'Vou tentar abrir.',
-    left_back_overlap:   'Vou tentar subir.',
-    default:             'Vou tentar.',
+    team_press_high:     L('Vou tentar pressionar... estou cansado.', "I'll try to press... I'm tired."),
+    team_retreat:        L('Recuando, mas tô no limite.', "Dropping back, but I'm at my limit."),
+    pedal_to_metal:      L('Vou tentar acelerar.', "I'll try to speed up."),
+    team_hold_possession:L('Tentando segurar...', 'Trying to hold on...'),
+    stretch_team:        L('Vou tentar abrir.', "I'll try to stretch it."),
+    left_back_overlap:   L('Vou tentar subir.', "I'll try to push up."),
+    default:             L('Vou tentar.', "I'll try."),
   },
   refuse: {
-    default: 'Tá difícil agora...',
+    default: L('Tá difícil agora...', "It's tough right now..."),
   },
   protest: {
-    default: 'NÃO CONSIGO!',
+    default: L('NÃO CONSIGO!', "I CAN'T!"),
   },
 };
 
@@ -154,7 +156,7 @@ export function AgentFeedbackStream({ entries }: { entries: FeedbackEntry[] }) {
             textTransform: 'uppercase',
             marginBottom: 3,
           }}>
-            {e.pos} · {e.num}
+            {posLabel(e.pos)} · {e.num}
           </div>
           <div style={{
             fontFamily: 'var(--font-serif-hero)',

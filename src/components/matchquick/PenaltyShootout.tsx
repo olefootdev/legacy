@@ -25,6 +25,8 @@ import {
   type ShootoutResult,
   type ShootoutKick,
 } from '@/match/quickEngaged/penaltyShootout';
+import { L, emIngles } from '@/i18n/L';
+import { posLabel } from './posLabel';
 
 export interface ShootoutSetup {
   homeKickers: ShootoutKicker[];
@@ -51,7 +53,7 @@ const HEARTBEAT_SCALE = [0.9, 1.0, 0.96, 1.1, 0.98, 1.06, 1.0];
 const HEARTBEAT_TIMES = [0, 0.14, 0.28, 0.42, 0.56, 0.7, 1];
 
 const fatigueWord = (f: number): string =>
-  f <= 35 ? 'inteiro' : f <= 65 ? 'no ritmo' : f <= 85 ? 'no limite' : 'apagando';
+  f <= 35 ? L('inteiro', 'fresh') : f <= 65 ? L('no ritmo', 'in rhythm') : f <= 85 ? L('no limite', 'at the limit') : L('apagando', 'fading');
 
 const pick = (pool: string[], salt: number): string => pool[salt % pool.length]!;
 
@@ -59,23 +61,23 @@ const pick = (pool: string[], salt: number): string => pool[salt % pool.length]!
 function tensionLine(kick: ShootoutKick, decider: boolean, salt: number): string {
   if (decider) {
     return pick([
-      `É ESSA. ${kick.kickerName} pra decidir tudo.`,
-      `Tudo nessa bola. ${kick.kickerName} no ponto da cal.`,
-      `${kick.kickerName} carrega o jogo nos pés agora.`,
+      L(`É ESSA. ${kick.kickerName} pra decidir tudo.`, `THIS IS IT. ${kick.kickerName} to decide it all.`),
+      L(`Tudo nessa bola. ${kick.kickerName} no ponto da cal.`, `Everything on this kick. ${kick.kickerName} on the spot.`),
+      L(`${kick.kickerName} carrega o jogo nos pés agora.`, `${kick.kickerName} carries the match on his boots now.`),
     ], salt);
   }
   if (kick.suddenDeath) {
     return pick([
-      `Morte súbita. ${kick.kickerName} não pode falhar.`,
-      `Sem rede. ${kick.kickerName} ajeita a bola e respira.`,
-      `${kick.kickerName} encara o goleiro. Coração na boca.`,
+      L(`Morte súbita. ${kick.kickerName} não pode falhar.`, `Sudden death. ${kick.kickerName} can't miss.`),
+      L(`Sem rede. ${kick.kickerName} ajeita a bola e respira.`, `No safety net. ${kick.kickerName} sets the ball and breathes.`),
+      L(`${kick.kickerName} encara o goleiro. Coração na boca.`, `${kick.kickerName} stares down the keeper. Hearts in mouths.`),
     ], salt);
   }
   return pick([
-    `${kick.kickerName} na bola. Frieza agora.`,
-    `${kick.kickerName} ajeita a marca. Silêncio total.`,
-    `É a vez de ${kick.kickerName}. Pressão pura.`,
-    `${kick.kickerName} olha pro canto e respira fundo.`,
+    L(`${kick.kickerName} na bola. Frieza agora.`, `${kick.kickerName} on the ball. Ice in the veins.`),
+    L(`${kick.kickerName} ajeita a marca. Silêncio total.`, `${kick.kickerName} sets the spot. Total silence.`),
+    L(`É a vez de ${kick.kickerName}. Pressão pura.`, `${kick.kickerName} steps up. Pure pressure.`),
+    L(`${kick.kickerName} olha pro canto e respira fundo.`, `${kick.kickerName} eyes the corner and breathes deep.`),
   ], salt);
 }
 
@@ -83,29 +85,29 @@ function tensionLine(kick: ShootoutKick, decider: boolean, salt: number): string
 function reactionLine(kick: ShootoutKick, decider: boolean, winnerName: string, salt: number): string {
   if (kick.scored) {
     const base = pick([
-      'No canto, sem chance pro goleiro!',
-      'Pé firme — bateu com categoria!',
-      'Bola no fundo das redes!',
-      'Frieza absoluta. Marcou!',
+      L('No canto, sem chance pro goleiro!', 'In the corner, no chance for the keeper!'),
+      L('Pé firme — bateu com categoria!', 'Firm strike — taken with class!'),
+      L('Bola no fundo das redes!', 'Into the back of the net!'),
+      L('Frieza absoluta. Marcou!', 'Ice cold. Scored!'),
     ], salt);
-    return decider ? `${base} ACABOU — ${winnerName} é o campeão!` : base;
+    return decider ? L(`${base} ACABOU — ${winnerName} é o campeão!`, `${base} IT'S OVER — ${winnerName} are the champions!`) : base;
   }
   if (kick.outcome === 'save') {
     const base = pick([
-      'DEFENDEU! Que paredão!',
-      'O goleiro voou e pegou!',
-      'PEGOU! Herói da disputa!',
-      'Travou embaixo do travessão!',
+      L('DEFENDEU! Que paredão!', 'SAVED! What a wall!'),
+      L('O goleiro voou e pegou!', 'The keeper flies and saves!'),
+      L('PEGOU! Herói da disputa!', 'SAVED! Shootout hero!'),
+      L('Travou embaixo do travessão!', 'Stopped right under the bar!'),
     ], salt);
-    return decider ? `${base} ${winnerName} segura e leva!` : base;
+    return decider ? L(`${base} ${winnerName} segura e leva!`, `${base} ${winnerName} hold on and win it!`) : base;
   }
   const base = pick([
-    'PERDEU! Mandou pra fora!',
-    'Isolou! Que peso nessa bola...',
-    'Na trave! Inacreditável!',
-    'Jogou pra fora — vai pesar!',
+    L('PERDEU! Mandou pra fora!', 'MISSED! Sent it wide!'),
+    L('Isolou! Que peso nessa bola...', 'Skied it! The weight of that kick...'),
+    L('Na trave! Inacreditável!', 'Off the post! Unbelievable!'),
+    L('Jogou pra fora — vai pesar!', 'Wide — that will hurt!'),
   ], salt);
-  return decider ? `${base} ${winnerName} se aproveita e vence!` : base;
+  return decider ? L(`${base} ${winnerName} se aproveita e vence!`, `${base} ${winnerName} take advantage and win!`) : base;
 }
 
 /** Mini-barra de atributo (rótulo Agency + barra dourada). */
@@ -200,10 +202,10 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
     <div className="w-full">
       <div className="text-center mb-3">
         <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-neon-yellow">
-          Disputa de Pênaltis
+          {L('Disputa de Pênaltis', 'Penalty Shootout')}
         </p>
         {phase === 'setup' && (
-          <p className="text-white/70 text-[13px]">Escale os 5 batedores.</p>
+          <p className="text-white/70 text-[13px]">{L('Escale os 5 batedores.', 'Pick your 5 takers.')}</p>
         )}
       </div>
 
@@ -239,13 +241,13 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                 <span className="flex-1 min-w-0">
                   <span className="block font-display uppercase font-black text-white truncate text-[12px] tracking-[0.03em]">{k.name}</span>
                   <span className="block uppercase tracking-[0.12em] text-[9px]" style={{ color: tired ? 'var(--color-warning)' : 'rgba(255,255,255,0.45)' }}>
-                    {k.pos} · {fatigueWord(k.fatigue)}
+                    {posLabel(k.pos)} · {fatigueWord(k.fatigue)}
                   </span>
                 </span>
                 <span className="w-32 shrink-0 flex flex-col gap-0.5">
-                  <AttrBar label="Técnica" value={k.finalizacao} />
-                  <AttrBar label="Físico" value={k.fisico} />
-                  <AttrBar label="Cansaço" value={k.fatigue} />
+                  <AttrBar label={L('Técnica', 'Technique')} value={k.finalizacao} />
+                  <AttrBar label={L('Físico', 'Physical')} value={k.fisico} />
+                  <AttrBar label={L('Cansaço', 'Fatigue')} value={k.fatigue} />
                 </span>
               </button>
             );
@@ -257,7 +259,7 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
             className="mt-2 w-full py-3 font-display uppercase tracking-[0.18em] text-[12px] font-black transition-colors disabled:opacity-40"
             style={{ backgroundColor: 'var(--color-neon-yellow)', color: '#000', borderRadius: 'var(--radius-md)' }}
           >
-            {order.length === 5 ? 'Bater os pênaltis' : `Escale ${5 - order.length} batedor${5 - order.length === 1 ? '' : 'es'}`}
+            {order.length === 5 ? L('Bater os pênaltis', 'Take the penalties') : emIngles() ? `Pick ${5 - order.length} more taker${5 - order.length === 1 ? '' : 's'}` : `Escale ${5 - order.length} batedor${5 - order.length === 1 ? '' : 'es'}`}
           </button>
         </div>
       )}
@@ -303,12 +305,12 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                       </span>
                       {isDecider && (
                         <span className="font-display uppercase tracking-[0.2em] text-[9px] font-black text-neon-yellow">
-                          decisivo
+                          {L('decisivo', 'decider')}
                         </span>
                       )}
                       {currentKick.suddenDeath && (
                         <span className="flex items-center gap-1 font-display uppercase tracking-[0.16em] text-[9px] font-black text-neon-yellow">
-                          <Flame className="w-3 h-3" strokeWidth={2.5} aria-hidden /> morte súbita
+                          <Flame className="w-3 h-3" strokeWidth={2.5} aria-hidden /> {L('morte súbita', 'sudden death')}
                         </span>
                       )}
                     </div>
@@ -349,7 +351,7 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                         color: currentKick.scored ? 'var(--color-success)' : 'var(--color-danger)',
                       }}
                     >
-                      {currentKick.scored ? 'GOL!' : currentKick.outcome === 'save' ? 'DEFENDEU!' : 'PERDEU!'}
+                      {currentKick.scored ? L('GOL!', 'GOAL!') : currentKick.outcome === 'save' ? L('DEFENDEU!', 'SAVED!') : L('PERDEU!', 'MISSED!')}
                     </span>
                   </div>
                   <p className={`text-white/80 ${isDecider ? 'text-[16px] px-2' : 'text-[14px]'}`}>
@@ -426,8 +428,8 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                 {winnerName}
               </p>
               <p className="font-display uppercase tracking-[0.22em] text-[10px] font-black text-white/60 mt-0.5">
-                venceu nos pênaltis · {result.homeTally}–{result.awayTally}
-                {result.suddenDeath ? ' · morte súbita' : ''}
+                {L('venceu nos pênaltis', 'won on penalties')} · {result.homeTally}–{result.awayTally}
+                {result.suddenDeath ? L(' · morte súbita', ' · sudden death') : ''}
               </p>
             </motion.div>
           )}

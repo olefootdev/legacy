@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { MoveLeft, MoveRight, ChevronsUp, ArrowLeftToLine, ArrowRightToLine, ChevronsDown } from 'lucide-react';
 import { DecisionPromptCard } from './DecisionPromptCard';
+import { L } from '@/i18n/L';
 
 export type GkDistributionChoice = 'left' | 'long' | 'right';
 export type DefensivePressure = 'left' | 'deep' | 'right';
@@ -14,14 +15,14 @@ export function GoalkeeperDistribution({ onAttackerChoice, onTimeout }: Goalkeep
   const handle = useCallback((id: string) => onAttackerChoice(id as GkDistributionChoice), [onAttackerChoice]);
   return (
     <DecisionPromptCard
-      title="Distribuição"
+      title={L('Distribuição', 'Distribution')}
       timeoutMs={8000}
       onChoose={handle}
       onTimeout={onTimeout}
       choices={[
-        { id: 'left',  icon: <MoveLeft  size={32} />, label: 'Lat Esq', tone: 'safe' },
-        { id: 'long',  icon: <ChevronsUp size={32} />, label: 'Chutão', tone: 'risk' },
-        { id: 'right', icon: <MoveRight size={32} />, label: 'Lat Dir', tone: 'safe' },
+        { id: 'left',  icon: <MoveLeft  size={32} />, label: L('Lat Esq', 'LB'), tone: 'safe' },
+        { id: 'long',  icon: <ChevronsUp size={32} />, label: L('Chutão', 'Long'), tone: 'risk' },
+        { id: 'right', icon: <MoveRight size={32} />, label: L('Lat Dir', 'RB'), tone: 'safe' },
       ]}
     />
   );
@@ -31,14 +32,14 @@ export function GoalkeeperPressure({ onDefenderChoice, onTimeout }: { onDefender
   const handle = useCallback((id: string) => onDefenderChoice(id as DefensivePressure), [onDefenderChoice]);
   return (
     <DecisionPromptCard
-      title="Pressão"
+      title={L('Pressão', 'Press')}
       timeoutMs={8000}
       onChoose={handle}
       onTimeout={onTimeout}
       choices={[
-        { id: 'left',  icon: <ArrowLeftToLine  size={32} />, label: 'Esq',   tone: 'safe' },
-        { id: 'deep',  icon: <ChevronsDown      size={32} />, label: 'Recua', tone: 'risk' },
-        { id: 'right', icon: <ArrowRightToLine  size={32} />, label: 'Dir',   tone: 'safe' },
+        { id: 'left',  icon: <ArrowLeftToLine  size={32} />, label: L('Esq', 'Left'),   tone: 'safe' },
+        { id: 'deep',  icon: <ChevronsDown      size={32} />, label: L('Recua', 'Drop'), tone: 'risk' },
+        { id: 'right', icon: <ArrowRightToLine  size={32} />, label: L('Dir', 'Right'),   tone: 'safe' },
       ]}
     />
   );

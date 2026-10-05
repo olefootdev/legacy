@@ -1,5 +1,6 @@
 import type { PlayerAttributes } from '@/entities/types';
 import type { StaffRoleId, StaffState } from '@/game/types';
+import { L } from '@/i18n/L';
 
 const clampLvl = (n: number | undefined): number => {
   if (typeof n !== 'number' || !Number.isFinite(n)) return 1;
@@ -209,58 +210,58 @@ export const STAFF_BENEFIT_SUMMARY: Record<
   { title: string; lines: string[] }
 > = {
   preparador_fisico: {
-    title: 'Preparador físico',
+    title: L('Preparador físico', 'Fitness coach'),
     lines: [
-      'N1: +5% energia em jogo; +10% recuperação de fadiga/hora fora de jogo.',
-      'N2: +7,5% energia; +15% recuperação/hora.',
-      'N3: +10% energia; +20% recuperação/hora.',
-      'N4: +15% energia; +25% recuperação/hora.',
-      'N5: +25% energia; +35% recuperação/hora.',
+      L('N1: +5% energia em jogo; +10% recuperação de fadiga/hora fora de jogo.', 'L1: +5% in-game energy; +10% fatigue recovery/hour off the pitch.'),
+      L('N2: +7,5% energia; +15% recuperação/hora.', 'L2: +7.5% energy; +15% recovery/hour.'),
+      L('N3: +10% energia; +20% recuperação/hora.', 'L3: +10% energy; +20% recovery/hour.'),
+      L('N4: +15% energia; +25% recuperação/hora.', 'L4: +15% energy; +25% recovery/hour.'),
+      L('N5: +25% energia; +35% recuperação/hora.', 'L5: +25% energy; +35% recovery/hour.'),
     ],
   },
   mental: {
-    title: 'Preparador mental',
+    title: L('Preparador mental', 'Mental coach'),
     lines: [
-      'N1–N4: menos erros em passe/drible/remate; mais confiança sob pressão (5% → 15%).',
-      'N5: até −20% erros; +20% confiança sob pressão; +5% chance de execução “clutch”.',
+      L('N1–N4: menos erros em passe/drible/remate; mais confiança sob pressão (5% → 15%).', 'L1–L4: fewer passing/dribbling/shooting errors; more confidence under pressure (5% → 15%).'),
+      L('N5: até −20% erros; +20% confiança sob pressão; +5% chance de execução “clutch”.', 'L5: up to −20% errors; +20% confidence under pressure; +5% “clutch” execution chance.'),
     ],
   },
   nutricao: {
-    title: 'Nutrição',
+    title: L('Nutrição', 'Nutrition'),
     lines: [
-      'N1–N4: menos fadiga acumulada em jogo; menor acúmulo de risco de lesão.',
-      'N5: efeitos N4 + +10% recuperação de fadiga após jogo (sinergia com preparação física).',
+      L('N1–N4: menos fadiga acumulada em jogo; menor acúmulo de risco de lesão.', 'L1–L4: less in-game fatigue build-up; lower injury risk build-up.'),
+      L('N5: efeitos N4 + +10% recuperação de fadiga após jogo (sinergia com preparação física).', 'L5: L4 effects + +10% post-match fatigue recovery (synergy with fitness).'),
     ],
   },
   tatico: {
-    title: 'Preparador tático',
+    title: L('Preparador tático', 'Tactical coach'),
     lines: [
-      'N1: melhor posicionamento colectivo; bloco defensivo mais estável.',
-      'N2–N5: passes certos e criação de jogo conforme nível.',
+      L('N1: melhor posicionamento colectivo; bloco defensivo mais estável.', 'L1: better team positioning; steadier defensive block.'),
+      L('N2–N5: passes certos e criação de jogo conforme nível.', 'L2–L5: accurate passing and chance creation by level.'),
     ],
   },
   treinador: {
-    title: 'Treinador',
+    title: L('Treinador', 'Head coach'),
     lines: [
-      'N1–N3: boost global de atributos em jogo e ganhos de treino.',
-      'N4: +25% de recuperação de confiança após sofrer gol.',
-      'N5: +10% moral inicial no apito; +25% confiança positiva fora de casa.',
+      L('N1–N3: boost global de atributos em jogo e ganhos de treino.', 'L1–L3: global in-game attribute boost and training gains.'),
+      L('N4: +25% de recuperação de confiança após sofrer gol.', 'L4: +25% confidence recovery after conceding.'),
+      L('N5: +10% moral inicial no apito; +25% confiança positiva fora de casa.', 'L5: +10% starting morale at kick-off; +25% positive confidence away.'),
     ],
   },
   olheiro: {
-    title: 'Olheiro',
+    title: L('Olheiro', 'Scout'),
     lines: [
-      'N1–N2: mais chance de talentos NPC com atributos acima da média.',
-      'N3–N5: desconto em EXP no mercado de prospects NPC.',
-      'N5: +5% chance de talento raro no scouting.',
+      L('N1–N2: mais chance de talentos NPC com atributos acima da média.', 'L1–L2: better chance of NPC talents with above-average attributes.'),
+      L('N3–N5: desconto em EXP no mercado de prospects NPC.', 'L3–L5: EXP discount on the NPC prospect market.'),
+      L('N5: +5% chance de talento raro no scouting.', 'L5: +5% chance of a rare talent when scouting.'),
     ],
   },
   preparador_goleiros: {
-    title: 'Preparador de GR',
+    title: L('Preparador de GR', 'GK coach'),
     lines: [
-      'N1–N2: melhor taxa de defesa do goleiro do time.',
-      'N3–N4: menos rebotes perigosos após defesa.',
-      'N5: defesas fortes + chance de defesa “clutch”.',
+      L('N1–N2: melhor taxa de defesa do goleiro do time.', 'L1–L2: better save rate for the team\'s keeper.'),
+      L('N3–N4: menos rebotes perigosos após defesa.', 'L3–L4: fewer dangerous rebounds after saves.'),
+      L('N5: defesas fortes + chance de defesa “clutch”.', 'L5: strong saves + “clutch” save chance.'),
     ],
   },
 };

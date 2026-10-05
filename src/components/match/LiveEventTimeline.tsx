@@ -1,3 +1,4 @@
+import { L } from '@/i18n/L';
 /**
  * LiveEventTimeline — barra de memória horizontal com pills de eventos.
  * Mostra os últimos 5 eventos como pills clicáveis: '12' falta | 72' GOL'
@@ -13,20 +14,20 @@ function classifyPill(kind?: string, text?: string): 'goal' | 'set_piece' | 'sho
   // Fallback: inferir pelo texto
   const t = (text ?? '').toLowerCase();
   if (t.includes('gol') || t.includes('goal')) return 'goal';
-  if (t.includes('escanteio') || t.includes('falta') || t.includes('corner')) return 'set_piece';
+  if (t.includes('escanteio') || t.includes('falta') || t.includes('corner') || t.includes('foul') || t.includes('free kick')) return 'set_piece';
   if (t.includes('chut') || t.includes('finaliz') || t.includes('shot')) return 'shot';
   return 'narrative';
 }
 
 function pillLabel(kind: string | undefined, text: string, minute: number): string {
-  if (kind === 'goal_home' || kind === 'goal_away') return `${minute}' GOL`;
-  if (kind === 'whistle') return `${minute}' falta`;
-  if (kind === 'shot_home' || kind === 'shot_away') return `${minute}' chute`;
+  if (kind === 'goal_home' || kind === 'goal_away') return `${minute}' ${L('GOL', 'GOAL')}`;
+  if (kind === 'whistle') return `${minute}' ${L('falta', 'foul')}`;
+  if (kind === 'shot_home' || kind === 'shot_away') return `${minute}' ${L('chute', 'shot')}`;
   const t = text.toLowerCase();
-  if (t.includes('gol') || t.includes('goal')) return `${minute}' GOL`;
-  if (t.includes('escanteio') || t.includes('corner')) return `${minute}' escanteio`;
-  if (t.includes('falta')) return `${minute}' falta`;
-  if (t.includes('chut') || t.includes('finaliz')) return `${minute}' chute`;
+  if (t.includes('gol') || t.includes('goal')) return `${minute}' ${L('GOL', 'GOAL')}`;
+  if (t.includes('escanteio') || t.includes('corner')) return `${minute}' ${L('escanteio', 'corner')}`;
+  if (t.includes('falta') || t.includes('foul') || t.includes('free kick')) return `${minute}' ${L('falta', 'foul')}`;
+  if (t.includes('chut') || t.includes('finaliz') || t.includes('shot')) return `${minute}' ${L('chute', 'shot')}`;
   // Pega as primeiras 2 palavras do texto
   const words = text.split(' ').slice(0, 3).join(' ');
   return `${minute}' ${words}`;
@@ -46,7 +47,7 @@ export function LiveEventTimeline({ events, currentMinute }: LiveEventTimelinePr
         flexShrink: 0,
       }}>
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 7, letterSpacing: '0.25em', color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase' }}>
-          aguardando eventos...
+          {L('aguardando eventos...', 'waiting for events...')}
         </span>
       </div>
     );
@@ -65,7 +66,7 @@ export function LiveEventTimeline({ events, currentMinute }: LiveEventTimelinePr
         letterSpacing: '0.28em', color: 'rgba(255,255,255,0.2)',
         textTransform: 'uppercase', flexShrink: 0, marginRight: 4,
       }}>
-        LINHA DO TEMPO
+        {L('LINHA DO TEMPO', 'TIMELINE')}
       </span>
 
       {/* Linha conectora */}

@@ -19,17 +19,19 @@ import {
   type PlayerRequestKind,
 } from '@/systems/playerPersonality';
 import { track } from '@/analytics/track';
+import { L } from '@/i18n/L';
+import { posLabel } from '@/components/matchquick/posLabel';
 
 const KIND_TAG: Record<PlayerRequestKind, string> = {
-  minutes: '#minutos',
-  ambition: '#ambição',
+  minutes: L('#minutos', '#minutes'),
+  ambition: L('#ambição', '#ambition'),
   respect: '#status',
 };
 
 const CHOICE_SHORT: Record<PlayerRequestChoice, string> = {
-  grant: 'Dar chance',
-  challenge: 'Cobrar',
-  promise: 'Prometer',
+  grant: L('Dar chance', 'Give a chance'),
+  challenge: L('Cobrar', 'Demand more'),
+  promise: L('Prometer', 'Promise'),
 };
 
 export interface RespostaDada {
@@ -68,7 +70,7 @@ export function DecisaoDoDia({
   }, [request?.id, request?.kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (request) {
-    const meta = [player?.pos, player?.age != null ? String(player.age) : null, KIND_TAG[request.kind]]
+    const meta = [player?.pos ? posLabel(player.pos) : null, player?.age != null ? String(player.age) : null, KIND_TAG[request.kind]]
       .filter(Boolean)
       .join(' · ');
     const choose = (c: PlayerRequestChoice) => {
@@ -77,8 +79,8 @@ export function DecisaoDoDia({
     };
     const d = (c: PlayerRequestChoice) => resolveRequest(request.kind, c).moralDelta;
     return (
-      <section aria-label={`${request.playerName} quer conversar`} className="flex flex-col gap-3">
-        <SecaoVolt label="O vestiário chama" />
+      <section aria-label={L(`${request.playerName} quer conversar`, `${request.playerName} wants a word`)} className="flex flex-col gap-3">
+        <SecaoVolt label={L('O vestiário chama', 'The dressing room calls')} />
         <div className="flex flex-col gap-3.5 border border-white/10 bg-panel p-[18px]">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border-2 border-neon-yellow bg-card font-impact text-[18px] text-neon-yellow">
@@ -119,8 +121,8 @@ export function DecisaoDoDia({
   if (answered) {
     const up = answered.moralDelta >= 0;
     return (
-      <section aria-label="Resposta ao vestiário" className="flex flex-col gap-3">
-        <SecaoVolt label="O vestiário chama" />
+      <section aria-label={L('Resposta ao vestiário', 'Dressing room reply')} className="flex flex-col gap-3">
+        <SecaoVolt label={L('O vestiário chama', 'The dressing room calls')} />
         <div
           className={`flex min-w-0 items-center gap-3 border px-3.5 py-3 ${
             up ? 'border-alta/45 bg-alta/10' : 'border-baixa/45 bg-baixa/10'
@@ -134,7 +136,7 @@ export function DecisaoDoDia({
           <UmaLinha className="text-[14px] text-white">
             {answered.playerName} ·{' '}
             <span className={`font-mono font-semibold ${up ? 'text-alta' : 'text-baixa'}`}>
-              moral {up ? '+' : '−'}
+              {L('moral', 'morale')} {up ? '+' : '−'}
               {Math.abs(answered.moralDelta)}
             </span>
           </UmaLinha>
@@ -146,23 +148,26 @@ export function DecisaoDoDia({
   const rows = [
     suspendedCount > 0 && {
       key: 'susp',
-      text: `${suspendedCount} suspenso${suspendedCount > 1 ? 's' : ''}`,
-      tag: '#escalação',
-      cta: 'Escalar',
+      text: L(`${suspendedCount} suspenso${suspendedCount > 1 ? 's' : ''}`, `${suspendedCount} suspended`),
+      tag: L('#escalação', '#lineup'),
+      cta: L('Escalar', 'Pick XI'),
       to: '/clube/elenco',
     },
     expiredCount > 0 && {
       key: 'contrato',
-      text: `${expiredCount} contrato${expiredCount > 1 ? 's' : ''} vencido${expiredCount > 1 ? 's' : ''}`,
-      tag: '#renovar',
-      cta: 'Renovar',
+      text: L(
+        `${expiredCount} contrato${expiredCount > 1 ? 's' : ''} vencido${expiredCount > 1 ? 's' : ''}`,
+        `${expiredCount} contract${expiredCount > 1 ? 's' : ''} expired`,
+      ),
+      tag: L('#renovar', '#renew'),
+      cta: L('Renovar', 'Renew'),
       to: '/clube/elenco',
     },
     offersCount > 0 && {
       key: 'ofertas',
-      text: `${offersCount} proposta${offersCount > 1 ? 's' : ''}`,
-      tag: '#mercado',
-      cta: 'Responder',
+      text: L(`${offersCount} proposta${offersCount > 1 ? 's' : ''}`, `${offersCount} offer${offersCount > 1 ? 's' : ''}`),
+      tag: L('#mercado', '#market'),
+      cta: L('Responder', 'Reply'),
       to: '/mercado/transfer',
     },
   ].filter(Boolean) as { key: string; text: string; tag: string; cta: string; to: string }[];
@@ -170,8 +175,8 @@ export function DecisaoDoDia({
   if (rows.length === 0) return null;
 
   return (
-    <section aria-label="Mesa do manager" className="flex flex-col gap-3">
-      <SecaoVolt label="Mesa do manager" />
+    <section aria-label={L('Mesa do manager', 'Manager desk')} className="flex flex-col gap-3">
+      <SecaoVolt label={L('Mesa do manager', 'Manager desk')} />
       <ul className="border border-white/10 bg-panel">
         {rows.map((r) => (
           <li key={r.key} className="flex min-w-0 items-center gap-3 border-b border-white/[0.06] px-4 py-3 last:border-b-0">

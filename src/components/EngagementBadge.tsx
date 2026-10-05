@@ -1,5 +1,6 @@
 import { useGameStore } from '@/game/store';
 import { engagementBuffPercent, engagementBuffLabel } from '@/systems/engagement/engagementScore';
+import { L } from '@/i18n/L';
 
 export function EngagementBadge() {
   const score = useGameStore((s) => s.managerPresence?.engagementScore ?? 0);
@@ -28,7 +29,7 @@ export function EngagementBadge() {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
-            Engajamento
+            {L('Engajamento', 'Engagement')}
           </p>
           <p className="mt-0.5 font-display text-[15px] font-black uppercase tracking-tight text-white">
             +{pct}% <span className="text-[11px] font-bold text-white/50">{label}</span>
@@ -48,7 +49,7 @@ export function EngagementBadge() {
         />
       </div>
       <p className="mt-1.5 font-mono text-[10.5px] text-poeira">
-        #ligaglobal · reseta após 48h sem login
+        {L('#ligaglobal · reseta após 48h sem login', '#globalleague · resets after 48h without login')}
       </p>
     </div>
   );

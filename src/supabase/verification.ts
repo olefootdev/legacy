@@ -1,4 +1,5 @@
 import { getSupabase } from '@/supabase/client';
+import { L } from '@/i18n/L';
 
 export type VerificationStatus = 'not_submitted' | 'pending' | 'approved' | 'rejected';
 
@@ -42,7 +43,7 @@ export async function getMyVerification(): Promise<VerificationStateRow | null> 
 
 export async function submitVerification(payload: VerificationData): Promise<{ ok: boolean; error?: string }> {
   const sb = getSupabase();
-  if (!sb) return { ok: false, error: 'Supabase não configurado.' };
+  if (!sb) return { ok: false, error: L('Supabase não configurado.', 'Supabase not configured.') };
   const { error } = await sb.rpc('submit_verification', { p_data: payload });
   if (error) return { ok: false, error: error.message };
   return { ok: true };
@@ -72,7 +73,7 @@ export async function adminListVerifications(status: VerificationStatus = 'pendi
 
 export async function adminSetVerification(userId: string, approved: boolean, reason?: string): Promise<{ ok: boolean; error?: string }> {
   const sb = getSupabase();
-  if (!sb) return { ok: false, error: 'Supabase não configurado.' };
+  if (!sb) return { ok: false, error: L('Supabase não configurado.', 'Supabase not configured.') };
   const { error } = await sb.rpc('admin_set_verification', {
     p_user_id: userId,
     p_approved: approved,
@@ -90,18 +91,18 @@ export async function lookupCepBR(cep: string): Promise<{
   error?: string;
 } | null> {
   const cleaned = cep.replace(/\D/g, '');
-  if (cleaned.length !== 8) return { error: 'CEP inválido' };
+  if (cleaned.length !== 8) return { error: L('CEP inválido', 'Invalid ZIP code') };
   try {
     const r = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
-    if (!r.ok) return { error: 'Falha no lookup' };
+    if (!r.ok) return { error: L('Falha no lookup', 'Lookup failed') };
     const j = await r.json();
-    if (j.erro) return { error: 'CEP não encontrado' };
+    if (j.erro) return { error: L('CEP não encontrado', 'ZIP code not found') };
     return {
       street: j.logradouro ?? '',
       city: j.localidade ?? '',
       state: j.uf ?? '',
     };
   } catch {
-    return { error: 'Sem conexão' };
+    return { error: L('Sem conexão', 'No connection') };
   }
 }

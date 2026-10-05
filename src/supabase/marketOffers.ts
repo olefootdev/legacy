@@ -9,6 +9,7 @@
  * fallback localhost) + Bearer da sessão Supabase.
  */
 import { getSupabase } from '@/supabase/client';
+import { L } from '@/i18n/L';
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import type { MarketOffer, MarketOfferStatus } from '@/game/types';
 
@@ -26,12 +27,12 @@ async function authHeaders(): Promise<Record<string, string> | null> {
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const headers = await authHeaders();
-  if (!headers) throw new Error('Sessão expirada — faz login novamente.');
+  if (!headers) throw new Error(L('Sessão expirada — faz login novamente.', 'Session expired — log in again.'));
   const base = olefootApiBase();
   const r = await fetch(`${base}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
   const data = (await r.json().catch(() => null)) as (T & { ok?: boolean; error?: string }) | null;
   if (!r.ok || !data || data.ok === false) {
-    throw new Error(data?.error ?? 'Não foi possível concluir a operação.');
+    throw new Error(data?.error ?? L('Não foi possível concluir a operação.', 'Couldn\'t complete the operation.'));
   }
   return data as T;
 }

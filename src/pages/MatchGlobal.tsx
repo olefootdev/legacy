@@ -5,6 +5,7 @@
  * Adaptado para Global League MVP com 3 divisões
  */
 
+import { L, emIngles } from '@/i18n/L';
 import { useState, useMemo, useEffect, Fragment } from 'react';
 import { useGameStore } from '@/game/store';
 import { useNavigate, Link } from 'react-router-dom';
@@ -29,8 +30,8 @@ const DIV_THEME: Record<number, {
   name: string; text: string; bg: string; spineBg: string; dotBg: string; tabOn: string;
 }> = {
   1: { name: 'Elite',         text: 'text-neon-yellow', bg: 'bg-neon-yellow/10', spineBg: 'bg-neon-yellow', dotBg: 'bg-neon-yellow', tabOn: 'bg-neon-yellow text-black' },
-  2: { name: 'Intermediária', text: 'text-slate-300',   bg: 'bg-slate-400/10',   spineBg: 'bg-slate-300',   dotBg: 'bg-slate-300',   tabOn: 'bg-slate-300 text-black' },
-  3: { name: 'Acesso',        text: 'text-amber-500',   bg: 'bg-amber-600/10',   spineBg: 'bg-amber-500',   dotBg: 'bg-amber-500',   tabOn: 'bg-amber-500 text-black' },
+  2: { name: L('Intermediária', 'Intermediate'), text: 'text-slate-300',   bg: 'bg-slate-400/10',   spineBg: 'bg-slate-300',   dotBg: 'bg-slate-300',   tabOn: 'bg-slate-300 text-black' },
+  3: { name: L('Acesso', 'Access'),        text: 'text-amber-500',   bg: 'bg-amber-600/10',   spineBg: 'bg-amber-500',   dotBg: 'bg-amber-500',   tabOn: 'bg-amber-500 text-black' },
 };
 const divTheme = (d: number) => DIV_THEME[d] ?? DIV_THEME[3];
 
@@ -110,21 +111,21 @@ function NextSlotBanner({ slots, slotDurationMin, currentDay, competitionStarted
     <div className="bg-deep-black border border-white/10 rounded-lg px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex flex-col">
-          <span className="text-[10px] font-display uppercase tracking-wider text-white/40">Dia OleFoot</span>
+          <span className="text-[10px] font-display uppercase tracking-wider text-white/40">{L('Dia OleFoot', 'OleFoot Day')}</span>
           <span className="font-mono text-sm text-white/80">{today} UTC</span>
         </div>
         <span className="w-px h-8 bg-white/10" />
         <div className="flex flex-col">
           <span className="text-[10px] font-display uppercase tracking-wider text-white/40">
-            {inSlot.active ? 'Slot ao vivo' : 'Próximo slot'}
+            {inSlot.active ? L('Slot ao vivo', 'Live slot') : L('Próximo slot', 'Next slot')}
           </span>
           {inSlot.active ? (
             <span className="font-mono text-sm font-bold text-neon-green">
-              {inSlot.slotName} — termina em {formatCountdown((inSlot.endMs ?? tick) - tick)}
+              {inSlot.slotName} — {L('termina em', 'ends in')} {formatCountdown((inSlot.endMs ?? tick) - tick)}
             </span>
           ) : nextMs ? (
             <span className="font-mono text-sm font-bold text-neon-yellow">
-              {new Date(nextMs).toISOString().slice(11, 16)} UTC — em {formatCountdown(nextMs - tick)}
+              {new Date(nextMs).toISOString().slice(11, 16)} UTC — {L('em', 'in')} {formatCountdown(nextMs - tick)}
             </span>
           ) : (
             <span className="font-mono text-sm text-white/50">—</span>
@@ -134,7 +135,7 @@ function NextSlotBanner({ slots, slotDurationMin, currentDay, competitionStarted
           <>
             <span className="w-px h-8 bg-white/10" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-display uppercase tracking-wider text-white/40">Competição termina em</span>
+              <span className="text-[10px] font-display uppercase tracking-wider text-white/40">{L('Competição termina em', 'Competition ends in')}</span>
               <span className="font-mono text-sm font-bold text-neon-yellow">
                 {compDaysLeft}d {compMsLeft != null ? formatCountdown(compMsLeft % 86_400_000) : ''}
               </span>
@@ -313,10 +314,10 @@ function DivisionStandings({ division, teams, myTeamId, defaultOpen = true, isMi
             <Trophy className={`w-5 h-5 shrink-0 ${theme.text}`} />
             <div className="min-w-0">
               <h3 className="flex items-center gap-2 font-display text-base font-bold uppercase tracking-wider text-white">
-                Divisão {division}
+                {L('Divisão', 'Division')} {division}
                 {isMine && (
                   <span className="rounded-sm bg-neon-yellow px-1.5 py-0.5 font-display text-[8px] font-black uppercase tracking-wider text-black">
-                    Sua liga
+                    {L('Sua liga', 'Your league')}
                   </span>
                 )}
               </h3>
@@ -327,7 +328,7 @@ function DivisionStandings({ division, teams, myTeamId, defaultOpen = true, isMi
                 <p className="mt-0.5 truncate text-xs text-white/50">
                   {leader ? (
                     <>
-                      Líder <span className={`font-bold ${theme.text}`}>{leader.clubName}</span> · {leader.points} pts
+                      {L('Líder', 'Leader')} <span className={`font-bold ${theme.text}`}>{leader.clubName}</span> · {leader.points} pts
                     </>
                   ) : (
                     theme.name
@@ -355,12 +356,12 @@ function DivisionStandings({ division, teams, myTeamId, defaultOpen = true, isMi
           <thead className="bg-black/20">
             <tr className="text-left">
               <th className="px-2 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60">#</th>
-              <th className="px-2 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60">Time</th>
-              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">J</th>
-              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">V</th>
-              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">E</th>
-              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">D</th>
-              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">SG</th>
+              <th className="px-2 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60">{L('Time', 'Team')}</th>
+              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">{L('J', 'P')}</th>
+              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">{L('V', 'W')}</th>
+              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">{L('E', 'D')}</th>
+              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">{L('D', 'L')}</th>
+              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">{L('SG', 'GD')}</th>
               <th className="px-2 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">
                 PTS
               </th>
@@ -406,7 +407,7 @@ function DivisionStandings({ division, teams, myTeamId, defaultOpen = true, isMi
                     <tr aria-hidden>
                       <td colSpan={8} className="p-0">
                         <div className="flex items-center justify-center gap-2 bg-black/30 px-4 py-1.5 text-[10px] font-display uppercase tracking-[0.2em] text-white/30">
-                          ⋯ {myIdx - CAP} times acima de você
+                          ⋯ {L(`${myIdx - CAP} times acima de você`, `${myIdx - CAP} teams above you`)}
                         </div>
                       </td>
                     </tr>
@@ -433,7 +434,7 @@ function DivisionStandings({ division, teams, myTeamId, defaultOpen = true, isMi
                           <p className="text-[10px] text-white/40">{team.clubShort}</p>
                         </div>
                         {isMe && (
-                          <span className="shrink-0 text-[8px] font-display font-bold uppercase tracking-wider bg-neon-yellow text-black px-1.5 py-0.5 rounded-sm">você</span>
+                          <span className="shrink-0 text-[8px] font-display font-bold uppercase tracking-wider bg-neon-yellow text-black px-1.5 py-0.5 rounded-sm">{L('você', 'you')}</span>
                         )}
                       </div>
                     </td>
@@ -464,9 +465,9 @@ function DivisionStandings({ division, teams, myTeamId, defaultOpen = true, isMi
                         </span>
                         <span
                           className="font-mono text-[9px] text-white/40 mt-0.5"
-                          title={`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`}
+                          title={L(`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`, `All-time total over ${team.allTimeSeasonsPlayed ?? 0} season(s)`)}
                         >
-                          {team.allTimePoints ?? 0} hist.
+                          {team.allTimePoints ?? 0} {L('hist.', 'all-time')}
                         </span>
                       </div>
                     </td>
@@ -477,7 +478,7 @@ function DivisionStandings({ division, teams, myTeamId, defaultOpen = true, isMi
                         <div className="flex items-center gap-2 px-4 py-1 bg-emerald-500/[0.07]">
                           <div className="h-px flex-1 bg-emerald-500/40" />
                           <span className="text-[9px] font-display font-bold uppercase tracking-[0.2em] text-emerald-400 flex items-center gap-1">
-                            <ArrowUp className="w-3 h-3" strokeWidth={3} /> Zona de acesso
+                            <ArrowUp className="w-3 h-3" strokeWidth={3} /> {L('Zona de acesso', 'Promotion zone')}
                           </span>
                           <div className="h-px flex-1 bg-emerald-500/40" />
                         </div>
@@ -490,7 +491,7 @@ function DivisionStandings({ division, teams, myTeamId, defaultOpen = true, isMi
                         <div className="flex items-center gap-2 px-4 py-1 bg-red-500/[0.07]">
                           <div className="h-px flex-1 bg-red-500/40" />
                           <span className="text-[9px] font-display font-bold uppercase tracking-[0.2em] text-red-400 flex items-center gap-1">
-                            <ArrowDown className="w-3 h-3" strokeWidth={3} /> Zona de rebaixamento
+                            <ArrowDown className="w-3 h-3" strokeWidth={3} /> {L('Zona de rebaixamento', 'Relegation zone')}
                           </span>
                           <div className="h-px flex-1 bg-red-500/40" />
                         </div>
@@ -512,9 +513,9 @@ function DivisionStandings({ division, teams, myTeamId, defaultOpen = true, isMi
           className="flex w-full items-center justify-center gap-2 border-t border-white/10 bg-black/20 py-3 font-display text-[11px] font-bold uppercase tracking-wider text-white/55 transition-colors hover:text-neon-yellow"
         >
           {showFull ? (
-            <>Recolher tabela</>
+            <>{L('Recolher tabela', 'Collapse table')}</>
           ) : (
-            <>Ver tabela completa · {sortedTeams.length} times</>
+            <>{L(`Ver tabela completa · ${sortedTeams.length} times`, `View full table · ${sortedTeams.length} teams`)}</>
           )}
           <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showFull ? 'rotate-180' : ''}`} strokeWidth={2.5} />
         </button>
@@ -526,19 +527,19 @@ function DivisionStandings({ division, teams, myTeamId, defaultOpen = true, isMi
           {division === 1 && (
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-neon-yellow rounded-sm" />
-              <span className="text-white/60">Líder</span>
+              <span className="text-white/60">{L('Líder', 'Leader')}</span>
             </div>
           )}
           {division > 1 && (
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-emerald-500 rounded-sm" />
-              <span className="text-white/60">Zona de Promoção (Top 10%)</span>
+              <span className="text-white/60">{L('Zona de Promoção (Top 10%)', 'Promotion Zone (Top 10%)')}</span>
             </div>
           )}
           {division < 3 && (
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-red-500 rounded-sm" />
-              <span className="text-white/60">Zona de Rebaixamento (Bottom 10%)</span>
+              <span className="text-white/60">{L('Zona de Rebaixamento (Bottom 10%)', 'Relegation Zone (Bottom 10%)')}</span>
             </div>
           )}
         </div>
@@ -598,7 +599,7 @@ function PlayoffRoundStatusBar({ round, totalRounds }: { round: PlayoffRound | u
           {isScheduled && <Clock className="w-5 h-5 text-white/40 shrink-0" />}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-display">
-              {isLive ? 'Ao Vivo' : isFinished ? 'Próxima rodada em' : 'Kickoff em'}
+              {isLive ? L('Ao Vivo', 'Live') : isFinished ? L('Próxima rodada em', 'Next round in') : L('Kickoff em', 'Kickoff in')}
             </p>
             <p className={`font-serif-hero text-2xl font-bold ${isLive ? 'text-neon-green' : isFinished ? 'text-neon-yellow' : 'text-white'}`}>
               {isLive ? `${round.fixtures[0]?.currentMinute ?? 0}'` : countdown}
@@ -607,7 +608,7 @@ function PlayoffRoundStatusBar({ round, totalRounds }: { round: PlayoffRound | u
         </div>
 
         <div className="text-right">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-display">Rodada</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-display">{L('Rodada', 'Round')}</p>
           <p className="font-serif-hero text-2xl font-bold text-white">{round.roundNumber}<span className="text-white/30 text-sm">/{totalRounds}</span></p>
         </div>
       </div>
@@ -646,7 +647,7 @@ function ProjectedDivisionMini({
 }) {
   const accent = division === 1 ? 'text-neon-yellow' : division === 2 ? 'text-blue-400' : 'text-white/70';
   const accentBg = division === 1 ? 'bg-neon-yellow' : division === 2 ? 'bg-blue-400' : 'bg-white/40';
-  const label = division === 1 ? 'Elite' : division === 2 ? 'Intermediária' : 'Acesso';
+  const label = division === 1 ? 'Elite' : division === 2 ? L('Intermediária', 'Intermediate') : L('Acesso', 'Access');
   const promoCount = Math.max(1, Math.ceil(teams.length * 0.1));
   const releCount = Math.max(1, Math.ceil(teams.length * 0.1));
 
@@ -660,7 +661,7 @@ function ProjectedDivisionMini({
         <div className="flex items-center gap-2">
           <span className={`inline-block w-1.5 h-4 ${accentBg}`} />
           <h3 className="font-display text-[11px] font-bold uppercase tracking-wider text-white">
-            {division}ª Divisão
+            {emIngles() ? `Division ${division}` : `${division}ª Divisão`}
           </h3>
           <span className="text-[10px] text-white/40">· {label}</span>
         </div>
@@ -671,12 +672,12 @@ function ProjectedDivisionMini({
         <thead className="bg-black/30">
           <tr className="text-left text-white/40">
             <th className="px-2 py-1.5 font-display font-bold uppercase tracking-wider w-6">#</th>
-            <th className="px-2 py-1.5 font-display font-bold uppercase tracking-wider">Time</th>
-            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">J</th>
-            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">V</th>
-            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">E</th>
-            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">D</th>
-            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">SG</th>
+            <th className="px-2 py-1.5 font-display font-bold uppercase tracking-wider">{L('Time', 'Team')}</th>
+            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">{L('J', 'P')}</th>
+            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">{L('V', 'W')}</th>
+            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">{L('E', 'D')}</th>
+            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">{L('D', 'L')}</th>
+            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">{L('SG', 'GD')}</th>
             <th className="px-2 py-1.5 font-display font-bold uppercase tracking-wider text-center">PTS</th>
           </tr>
         </thead>
@@ -723,9 +724,9 @@ function ProjectedDivisionMini({
                     </span>
                     <span
                       className="font-mono text-[8px] text-white/40"
-                      title={`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`}
+                      title={L(`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`, `All-time total over ${team.allTimeSeasonsPlayed ?? 0} season(s)`)}
                     >
-                      {team.allTimePoints ?? 0} hist.
+                      {team.allTimePoints ?? 0} {L('hist.', 'all-time')}
                     </span>
                   </div>
                 </td>
@@ -771,10 +772,10 @@ function ProjectedDivisionsGrid({
         <Trophy className="w-5 h-5 text-neon-yellow" />
         <div>
           <h2 className="font-display text-sm font-bold uppercase tracking-wider text-white">
-            Classificação · Após rodada {roundNumber}
+            {L(`Classificação · Após rodada ${roundNumber}`, `Standings · After round ${roundNumber}`)}
           </h2>
           <p className="text-[11px] text-white/40 mt-0.5">
-            Projeção · Top 10% sobe · Bottom 10% desce
+            {L('Projeção · Top 10% sobe · Bottom 10% desce', 'Projection · Top 10% up · Bottom 10% down')}
           </p>
         </div>
       </div>
@@ -791,9 +792,9 @@ function ProjectedDivisionsGrid({
       </div>
 
       <div className="flex flex-wrap gap-3 text-[10px] text-white/50 px-1">
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-neon-yellow rounded-sm" />Líder</span>
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-emerald-500 rounded-sm" />Promoção projetada</span>
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-red-500 rounded-sm" />Rebaixamento projetado</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-neon-yellow rounded-sm" />{L('Líder', 'Leader')}</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-emerald-500 rounded-sm" />{L('Promoção projetada', 'Projected promotion')}</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-red-500 rounded-sm" />{L('Rebaixamento projetado', 'Projected relegation')}</span>
       </div>
     </div>
   );
@@ -864,29 +865,29 @@ export default function MatchGlobal() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5">
             <Activity className="w-3 h-3 text-neon-green animate-pulse" />
             <span className="font-display text-[10px] font-bold uppercase tracking-[0.25em] text-white/60">
-              {ready ? 'Próxima rodada em instantes' : 'Aguardando managers'}
+              {ready ? L('Próxima rodada em instantes', 'Next round shortly') : L('Aguardando managers', 'Waiting for managers')}
             </span>
           </div>
 
           <h1 className="font-display text-5xl sm:text-6xl font-bold uppercase text-white">
-            Liga Global
+            {L('Liga Global', 'Global League')}
           </h1>
 
           <p className="font-serif-hero text-lg sm:text-xl text-white/70 max-w-xl mx-auto">
             {ready
-              ? 'Começa sozinha em até 5 minutos.'
-              : `Faltam ${Math.max(0, minTeams - teamsNow)} ${minTeams - teamsNow === 1 ? 'manager' : 'managers'} para destravar os playoffs.`}
+              ? L('Começa sozinha em até 5 minutos.', 'Starts on its own within 5 minutes.')
+              : L(`Faltam ${Math.max(0, minTeams - teamsNow)} ${minTeams - teamsNow === 1 ? 'manager' : 'managers'} para destravar os playoffs.`, `${Math.max(0, minTeams - teamsNow)} more ${minTeams - teamsNow === 1 ? 'manager' : 'managers'} needed to unlock the playoffs.`)}
           </p>
 
           <div className="flex items-center justify-center gap-8 pt-4">
             <div>
               <p className="font-serif-hero text-4xl font-bold text-neon-yellow">{teamsNow}</p>
-              <p className="text-[10px] font-display font-bold uppercase tracking-wider text-white/40 mt-1">Inscritos</p>
+              <p className="text-[10px] font-display font-bold uppercase tracking-wider text-white/40 mt-1">{L('Inscritos', 'Registered')}</p>
             </div>
             <div className="h-12 w-px bg-white/10" />
             <div>
               <p className="font-serif-hero text-4xl font-bold text-white">{minTeams}</p>
-              <p className="text-[10px] font-display font-bold uppercase tracking-wider text-white/40 mt-1">Mínimo</p>
+              <p className="text-[10px] font-display font-bold uppercase tracking-wider text-white/40 mt-1">{L('Mínimo', 'Minimum')}</p>
             </div>
           </div>
 
@@ -894,7 +895,7 @@ export default function MatchGlobal() {
             onClick={() => navigate('/liga-global/registro')}
             className="mt-4 inline-flex items-center gap-2 bg-neon-yellow text-black px-6 py-3 font-display text-xs font-black uppercase tracking-[0.2em] hover:bg-white transition-colors"
           >
-            <span>Ver registro completo</span>
+            <span>{L('Ver registro completo', 'View full registry')}</span>
           </button>
         </motion.div>
         <CrownsGallery />
@@ -920,16 +921,16 @@ export default function MatchGlobal() {
             className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 text-center"
           >
             <p className="font-display text-xs font-bold uppercase tracking-[0.3em] text-black/60 mb-2">
-              Playoffs · Rodada {roundNumber} de {totalRounds}
+              {L(`Playoffs · Rodada ${roundNumber} de ${totalRounds}`, `Playoffs · Round ${roundNumber} of ${totalRounds}`)}
             </p>
             <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
-              Liga Global
+              {L('Liga Global', 'Global League')}
             </h1>
             <span aria-hidden className="mx-auto mt-4 block w-16 h-[3px] bg-black" />
             <p className="font-serif-hero text-xl sm:text-2xl text-black/80 mt-4">
-              {round?.status === 'live' ? 'Ao Vivo Agora' :
-               round?.status === 'finished' ? 'Rodada Encerrada' :
-               'Aguardando Kickoff'}
+              {round?.status === 'live' ? L('Ao Vivo Agora', 'Live Now') :
+               round?.status === 'finished' ? L('Rodada Encerrada', 'Round Finished') :
+               L('Aguardando Kickoff', 'Awaiting Kickoff')}
             </p>
           </motion.div>
         </section>
@@ -952,16 +953,16 @@ export default function MatchGlobal() {
             <div className="flex items-center gap-2 mb-4">
               {round.status === 'live' && (
                 <span className="flex items-center gap-1.5 bg-neon-green/20 text-neon-green border border-neon-green/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                  <Activity className="w-3 h-3 animate-pulse" /> Ao Vivo
+                  <Activity className="w-3 h-3 animate-pulse" /> {L('Ao Vivo', 'Live')}
                 </span>
               )}
               {round.status === 'finished' && (
                 <span className="flex items-center gap-1.5 bg-white/10 text-white/60 border border-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                  <Trophy className="w-3 h-3" /> Encerrado
+                  <Trophy className="w-3 h-3" /> {L('Encerrado', 'Finished')}
                 </span>
               )}
               <span className="text-white/40 text-xs font-display uppercase tracking-wider">
-                {round.fixtures.length} partidas
+                {round.fixtures.length} {L('partidas', 'matches')}
               </span>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1012,9 +1013,9 @@ export default function MatchGlobal() {
             animate={{ opacity: 1, y: 0 }}
             className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-center"
           >
-            <Hashtag className="mb-3 text-black/60">#ligaglobal</Hashtag>
+            <Hashtag className="mb-3 text-black/60">{L('#ligaglobal', '#globalleague')}</Hashtag>
             <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
-              Temporada Encerrada
+              {L('Temporada Encerrada', 'Season Over')}
             </h1>
             <span aria-hidden className="mx-auto mt-4 block w-16 h-[3px] bg-black" />
             {globalLeagueMVP.seasonName && (
@@ -1034,12 +1035,12 @@ export default function MatchGlobal() {
             className="sports-panel rounded-lg p-6 border border-neon-yellow/40 text-center"
           >
             <Trophy className="w-10 h-10 text-neon-yellow mx-auto mb-3" />
-            <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mb-1">Campeão</p>
+            <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mb-1">{L('Campeão', 'Champion')}</p>
             <h2 className="font-display text-3xl sm:text-4xl font-black uppercase text-neon-yellow">
               {champion.clubName}
             </h2>
             <p className="font-mono text-sm text-white/60 mt-2">
-              {champion.points} pts · {champion.wins}V {champion.draws}E {champion.losses}D
+              {champion.points} pts · {champion.wins}{L('V', 'W')} {champion.draws}{L('E', 'D')} {champion.losses}{L('D', 'L')}
             </p>
           </motion.div>
         )}
@@ -1055,7 +1056,7 @@ export default function MatchGlobal() {
             <div className="bg-deep-black px-5 py-3 border-b border-white/10 flex items-center gap-2">
               <Trophy className="w-4 h-4 text-neon-yellow" />
               <h3 className="font-display text-xs font-bold uppercase tracking-wider text-white">
-                Pódio · Divisão 1
+                {L('Pódio · Divisão 1', 'Podium · Division 1')}
               </h3>
             </div>
             <div className="divide-y divide-white/5">
@@ -1072,7 +1073,7 @@ export default function MatchGlobal() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-serif-hero text-xl font-bold text-neon-yellow">{team.points}</p>
-                    <p className="font-mono text-[10px] text-white/40">{team.wins}V {team.draws}E {team.losses}D</p>
+                    <p className="font-mono text-[10px] text-white/40">{team.wins}{L('V', 'W')} {team.draws}{L('E', 'D')} {team.losses}{L('D', 'L')}</p>
                   </div>
                 </div>
               ))}
@@ -1088,17 +1089,17 @@ export default function MatchGlobal() {
           className="grid grid-cols-3 gap-3"
         >
           <div className="sports-panel rounded-lg p-4 text-center">
-            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">Partidas</p>
+            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">{L('Partidas', 'Matches')}</p>
             <p className="font-serif-hero text-3xl font-bold text-white">{Math.round(totalMatches)}</p>
           </div>
           <div className="sports-panel rounded-lg p-4 text-center">
-            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">Gols</p>
+            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">{L('Gols', 'Goals')}</p>
             <p className="font-serif-hero text-3xl font-bold text-neon-yellow">{totalGoals}</p>
           </div>
           <div className="sports-panel rounded-lg p-4 text-center">
-            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">Maior Ataque</p>
+            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">{L('Maior Ataque', 'Best Attack')}</p>
             <p className="font-serif-hero text-lg font-bold text-white truncate">{topScorer?.clubShort ?? '—'}</p>
-            <p className="font-mono text-[10px] text-white/40">{topScorer?.goalsFor ?? 0} gols</p>
+            <p className="font-mono text-[10px] text-white/40">{topScorer?.goalsFor ?? 0} {L('gols', 'goals')}</p>
           </div>
         </motion.div>
 
@@ -1115,7 +1116,7 @@ export default function MatchGlobal() {
               className="flex items-center gap-2 px-5 py-2.5 rounded-sm font-display text-xs font-bold uppercase tracking-wider bg-panel border border-white/10 text-white/70 hover:text-neon-yellow hover:border-neon-yellow/40 transition-all"
             >
               <History className="w-4 h-4" />
-              Histórico de Rodadas
+              {L('Histórico de Rodadas', 'Round History')}
             </Link>
             <Link
               to="/match/global/all-time"
@@ -1126,7 +1127,7 @@ export default function MatchGlobal() {
             </Link>
           </div>
           <p className="text-center font-display text-[11px] uppercase tracking-[0.2em] text-white/30">
-            Nova temporada em breve
+            {L('Nova temporada em breve', 'New season soon')}
           </p>
         </motion.div>
 
@@ -1158,9 +1159,9 @@ export default function MatchGlobal() {
           animate={{ opacity: 1, y: 0 }}
           className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 text-center"
         >
-          <Hashtag className="mb-4 text-black/60">#ligaglobal #piramide</Hashtag>
+          <Hashtag className="mb-4 text-black/60">{L('#ligaglobal #piramide', '#globalleague #pyramid')}</Hashtag>
           <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
-            Liga Global
+            {L('Liga Global', 'Global League')}
           </h1>
           <span aria-hidden className="mx-auto mt-4 block w-16 h-[3px] bg-black" />
           {/* Strip vivo: o gigante a bater (líder da Elite) + pular pro meu time */}
@@ -1168,13 +1169,13 @@ export default function MatchGlobal() {
             {d1Leader && (
               <span className="inline-flex items-center gap-1.5 bg-black/85 rounded-full px-3 py-1.5 max-w-full">
                 <Trophy className="w-3.5 h-3.5 text-neon-yellow shrink-0" />
-                <span className="font-display text-[9px] font-bold uppercase tracking-wider text-neon-yellow/70 shrink-0">Líder Elite</span>
+                <span className="font-display text-[9px] font-bold uppercase tracking-wider text-neon-yellow/70 shrink-0">{L('Líder Elite', 'Elite Leader')}</span>
                 <span className="font-sans text-xs font-bold uppercase text-white truncate max-w-[110px]">{d1Leader.clubName}</span>
                 <span className="font-serif-hero text-sm font-bold text-neon-yellow shrink-0">{d1Leader.points}</span>
               </span>
             )}
             <span className="inline-flex items-center gap-1.5 bg-black/10 rounded-full px-3 py-1.5">
-              <span className="font-display text-[10px] font-bold uppercase tracking-wider text-black/70">{globalLeagueMVP.teams.length} clubes</span>
+              <span className="font-display text-[10px] font-bold uppercase tracking-wider text-black/70">{globalLeagueMVP.teams.length} {L('clubes', 'clubs')}</span>
             </span>
             {myTeam && (
               <button
@@ -1182,7 +1183,7 @@ export default function MatchGlobal() {
                 onClick={scrollToMyTeam}
                 className="inline-flex items-center gap-1.5 bg-black rounded-full px-3 py-1.5 hover:opacity-90 transition-opacity max-w-full"
               >
-                <span className="font-display text-[9px] font-bold uppercase tracking-wider text-neon-yellow/70 shrink-0">Meu time</span>
+                <span className="font-display text-[9px] font-bold uppercase tracking-wider text-neon-yellow/70 shrink-0">{L('Meu time', 'My team')}</span>
                 <span className="font-sans text-xs font-bold uppercase text-neon-yellow truncate max-w-[100px]">{myTeam.clubName}</span>
                 <ArrowDown className="w-3 h-3 text-neon-yellow shrink-0" strokeWidth={3} />
               </button>
@@ -1207,7 +1208,7 @@ export default function MatchGlobal() {
               filterMode === 'all' ? 'bg-neon-yellow text-black' : 'bg-panel text-white/60 hover:text-white'
             }`}
           >
-            Todas
+            {L('Todas', 'All')}
           </button>
           <button
             onClick={() => setFilterOverride('division_1')}
@@ -1215,7 +1216,7 @@ export default function MatchGlobal() {
               filterMode === 'division_1' ? 'bg-neon-yellow text-black' : 'bg-panel text-white/60 hover:text-white'
             }`}
           >
-            Divisão 1
+            {L('Divisão 1', 'Division 1')}
           </button>
           <button
             onClick={() => setFilterOverride('division_2')}
@@ -1223,7 +1224,7 @@ export default function MatchGlobal() {
               filterMode === 'division_2' ? 'bg-slate-300 text-black' : 'bg-panel text-white/60 hover:text-white'
             }`}
           >
-            Divisão 2
+            {L('Divisão 2', 'Division 2')}
           </button>
           <button
             onClick={() => setFilterOverride('division_3')}
@@ -1231,7 +1232,7 @@ export default function MatchGlobal() {
               filterMode === 'division_3' ? 'bg-amber-500 text-black' : 'bg-panel text-white/60 hover:text-white'
             }`}
           >
-            Divisão 3
+            {L('Divisão 3', 'Division 3')}
           </button>
 
           {/* Links de navegação */}
@@ -1248,7 +1249,7 @@ export default function MatchGlobal() {
               className="flex items-center gap-1.5 px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider bg-panel text-white/60 hover:text-neon-yellow hover:border-neon-yellow/40 border border-white/10 transition-all"
             >
               <History className="w-3.5 h-3.5" />
-              Histórico
+              {L('Histórico', 'History')}
             </Link>
           </div>
         </div>
@@ -1263,11 +1264,11 @@ export default function MatchGlobal() {
                 <>
                   <Trophy className="w-4 h-4 text-neon-yellow" />
                   <span className="font-display text-xs font-bold uppercase tracking-wider text-white/70">
-                    Rodada {lastFinishedRound.roundNumber} · Resultados
+                    {L(`Rodada ${lastFinishedRound.roundNumber} · Resultados`, `Round ${lastFinishedRound.roundNumber} · Results`)}
                   </span>
                   {myTeamId && lastFinishedRound.fixtures.some(f => f.homeTeamId === myTeamId || f.awayTeamId === myTeamId) && (
                     <span className="text-[9px] bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                      Seu jogo
+                      {L('Seu jogo', 'Your match')}
                     </span>
                   )}
                 </>
@@ -1275,7 +1276,7 @@ export default function MatchGlobal() {
                 <>
                   <Clock className="w-4 h-4 text-white/40" />
                   <span className="font-display text-xs font-bold uppercase tracking-wider text-white/50">
-                    Rodada {currentRound?.roundNumber} · Aguardando kickoff
+                    {L(`Rodada ${currentRound?.roundNumber} · Aguardando kickoff`, `Round ${currentRound?.roundNumber} · Awaiting kickoff`)}
                   </span>
                 </>
               )}
@@ -1284,7 +1285,7 @@ export default function MatchGlobal() {
               to="/match/global/history"
               className="text-[10px] text-white/40 hover:text-neon-yellow transition-colors font-display uppercase tracking-wider flex items-center gap-1"
             >
-              <History className="w-3 h-3" /> Ver todas
+              <History className="w-3 h-3" /> {L('Ver todas', 'View all')}
             </Link>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1321,7 +1322,7 @@ export default function MatchGlobal() {
             onClick={() => setFilterOverride('all')}
             className="mx-auto flex items-center gap-2 rounded-sm border border-white/10 bg-panel px-4 py-2.5 font-display text-[11px] font-bold uppercase tracking-wider text-white/55 transition-colors hover:text-neon-yellow"
           >
-            <Trophy className="h-3.5 w-3.5" /> Ver todas as divisões
+            <Trophy className="h-3.5 w-3.5" /> {L('Ver todas as divisões', 'View all divisions')}
           </button>
         )}
       </div>

@@ -1,6 +1,7 @@
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import { getSupabase } from '@/supabase/client';
 import type { HostedMediaDescriptor, PinataUploadApiResponse } from '@/media/hostedMediaTypes';
+import { L } from '@/i18n/L';
 
 export type PinataUploadMeta = {
   entityType: string;
@@ -42,7 +43,7 @@ export async function uploadImageToPinataViaServer(
     return {
       ok: false,
       error:
-        'Faz login no OLEFOOT (sessão Supabase) ou, para Admin local, define o mesmo segredo em VITE_OLEFOOT_PINATA_UPLOAD_TOKEN (.env raiz) e OLEFOOT_PINATA_UPLOAD_TOKEN (server/.env).',
+        L('Faz login no OLEFOOT (sessão Supabase) ou, para Admin local, define o mesmo segredo em VITE_OLEFOOT_PINATA_UPLOAD_TOKEN (.env raiz) e OLEFOOT_PINATA_UPLOAD_TOKEN (server/.env).', 'Log in to OLEFOOT (Supabase session) or, for local Admin, set the same secret in VITE_OLEFOOT_PINATA_UPLOAD_TOKEN (root .env) and OLEFOOT_PINATA_UPLOAD_TOKEN (server/.env).'),
     };
   }
 
@@ -75,11 +76,11 @@ export async function uploadImageToPinataViaServer(
   } catch (e) {
     clearTimeout(timeoutId);
     if (e instanceof Error && e.name === 'AbortError') {
-      return { ok: false, error: 'Timeout: upload não completou em 60s.' };
+      return { ok: false, error: L('Timeout: upload não completou em 60s.', 'Timeout: upload didn\'t finish in 60s.') };
     }
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[pinataUploadClient] fetch', msg);
-    return { ok: false, error: 'Sem ligação ao olefoot-server (URL ou rede).' };
+    return { ok: false, error: L('Sem ligação ao olefoot-server (URL ou rede).', 'No connection to olefoot-server (URL or network).') };
   }
 
   let json: PinataUploadApiResponse | null = null;
@@ -90,7 +91,7 @@ export async function uploadImageToPinataViaServer(
   }
 
   if (!json) {
-    return { ok: false, error: `Resposta inválida do servidor (HTTP ${res.status}).` };
+    return { ok: false, error: L(`Resposta inválida do servidor (HTTP ${res.status}).`, `Invalid server response (HTTP ${res.status}).`) };
   }
   if (json.ok === false) {
     return { ok: false, error: json.error || `HTTP ${res.status}` };

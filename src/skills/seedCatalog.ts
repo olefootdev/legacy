@@ -11,27 +11,28 @@
  */
 
 import type { CoachSkill } from '@/skills/playbookV1';
+import { L } from '@/i18n/L';
 
 // ── Camada 1: Genéricas (free, behaviors curtos) ────────────────────
 
 const skl_goleiro_padrao: CoachSkill = {
   schema: 'playbook_v1',
   id: 'skl_goleiro_padrao',
-  name: 'Goleiro Padrão',
+  name: L('Goleiro Padrão', 'Standard Goalkeeper'),
   role: 'goleiro',
   tier: 'generica',
-  philosophy: 'Defesa segura + distribuição básica.',
+  philosophy: L('Defesa segura + distribuição básica.', 'Safe saves + basic distribution.'),
   level: 1,
   behaviors: [
     {
       id: 'bh_passe_curto_seguro',
-      name: 'Passe curto pro zagueiro mais próximo',
+      name: L('Passe curto pro zagueiro mais próximo', 'Short pass to the nearest centre-back'),
       when: 'team_has_ball && carrier_is_me && no_press_nearby',
       bias: { passShortToDefender: 0.20, clearBall: -0.10 },
     },
     {
       id: 'bh_chutao_sob_pressao',
-      name: 'Afastar quando pressionado',
+      name: L('Afastar quando pressionado', 'Clear it when pressed'),
       when: 'team_has_ball && carrier_is_me && opp_press_nearby',
       bias: { clearBall: 0.25, passShortToDefender: -0.15 },
     },
@@ -42,21 +43,21 @@ const skl_goleiro_padrao: CoachSkill = {
 const skl_atacante_padrao: CoachSkill = {
   schema: 'playbook_v1',
   id: 'skl_atacante_padrao',
-  name: 'Atacante Padrão',
+  name: L('Atacante Padrão', 'Standard Striker'),
   role: 'atacante',
   tier: 'generica',
-  philosophy: 'Chute na área, recupera no rival quando perde.',
+  philosophy: L('Chute na área, recupera no rival quando perde.', 'Shoots in the box, presses to win it back when lost.'),
   level: 1,
   behaviors: [
     {
       id: 'bh_chute_na_area',
-      name: 'Finaliza ao receber dentro da área',
+      name: L('Finaliza ao receber dentro da área', 'Shoots on receiving inside the box'),
       when: 'carrier_is_me && isBox(zone)',
       bias: { shotPlaced: 0.22, passShortBack: -0.12 },
     },
     {
       id: 'bh_pressao_imediata',
-      name: 'Pressiona o zagueiro adversário ao perder a bola',
+      name: L('Pressiona o zagueiro adversário ao perder a bola', 'Presses the opposing centre-back after losing the ball'),
       when: '!team_has_ball && my_zone == "att"',
       bias: { pressNearestOpp: 0.18, dropBack: -0.10 },
     },
@@ -67,21 +68,21 @@ const skl_atacante_padrao: CoachSkill = {
 const skl_meia_padrao: CoachSkill = {
   schema: 'playbook_v1',
   id: 'skl_meia_padrao',
-  name: 'Meia Padrão',
+  name: L('Meia Padrão', 'Standard Midfielder'),
   role: 'meia',
   tier: 'generica',
-  philosophy: 'Passe pra frente quando livre, recompõe quando precisa.',
+  philosophy: L('Passe pra frente quando livre, recompõe quando precisa.', 'Passes forward when free, tracks back when needed.'),
   level: 1,
   behaviors: [
     {
       id: 'bh_passe_progressivo',
-      name: 'Passe vertical para o ataque quando livre',
+      name: L('Passe vertical para o ataque quando livre', 'Vertical pass to the attack when free'),
       when: 'carrier_is_me && no_press_nearby && team_has_ball',
       bias: { passProgressive: 0.20, passShortBack: -0.10 },
     },
     {
       id: 'bh_recompoe_meio',
-      name: 'Volta ao meio sem bola',
+      name: L('Volta ao meio sem bola', 'Drops back to midfield off the ball'),
       when: '!team_has_ball && my_zone == "mid"',
       bias: { recoverMid: 0.15, holdLine: -0.08 },
     },
@@ -94,41 +95,41 @@ const skl_meia_padrao: CoachSkill = {
 const skl_escola_taffarel: CoachSkill = {
   schema: 'playbook_v1',
   id: 'skl_escola_taffarel',
-  name: 'Escola Taffarel',
+  name: L('Escola Taffarel', 'Taffarel School'),
   role: 'goleiro',
   tier: 'historica',
-  philosophy: 'Defesa segura, reflexo elite e comando de linha defensiva.',
+  philosophy: L('Defesa segura, reflexo elite e comando de linha defensiva.', 'Safe hands, elite reflexes and command of the back line.'),
   level: 3,
   attrRequirements: { mentalidade: 70 },
   behaviors: [
     {
       id: 'bh_saida_curta',
-      name: 'Saída curta pro zagueiro',
+      name: L('Saída curta pro zagueiro', 'Short distribution to the centre-back'),
       when: 'team_has_ball && carrier_is_me && no_press_nearby',
       bias: { passShortToDefender: 0.30, clearBall: -0.18 },
     },
     {
       id: 'bh_antecipar_cruzamento',
-      name: 'Sair pra cortar cruzamento',
+      name: L('Sair pra cortar cruzamento', 'Come out to claim crosses'),
       when: 'opp_crossing && ball_in_my_box_zone',
       bias: { cornerCatch: 0.28, stayOnLine: -0.15 },
       cooldownSec: 30,
     },
     {
       id: 'bh_defender_1v1',
-      name: 'Fechar ângulo em 1v1',
+      name: L('Fechar ângulo em 1v1', 'Close the angle in a 1v1'),
       when: 'opp_through_ball && attacker_isolated',
       bias: { advanceToCloseAngle: 0.30, diveEarly: -0.22 },
     },
     {
       id: 'bh_reflexo_rebote',
-      name: 'Espalmar pro lado em rebote',
+      name: L('Espalmar pro lado em rebote', 'Parry wide on rebounds'),
       when: 'shot_incoming && shot_power == "power"',
       bias: { parryToSide: 0.28, holdRisk: -0.18 },
     },
     {
       id: 'bh_comando_linha',
-      name: 'Organiza linha de defesa',
+      name: L('Organiza linha de defesa', 'Organises the back line'),
       when: 'zone == "def" && team_defending',
       bias: { organizeLine: 0.18 },
       teammateEffect: {
@@ -151,34 +152,34 @@ const skl_escola_taffarel: CoachSkill = {
 const skl_ferrolho_italiano: CoachSkill = {
   schema: 'playbook_v1',
   id: 'skl_ferrolho_italiano',
-  name: 'Ferrolho Italiano',
+  name: L('Ferrolho Italiano', 'Italian Catenaccio'),
   role: 'zagueiro',
   tier: 'historica',
-  philosophy: 'Antecipação + leitura + falta calculada quando necessário.',
+  philosophy: L('Antecipação + leitura + falta calculada quando necessário.', 'Anticipation + reading + a calculated foul when needed.'),
   level: 3,
   attrRequirements: { marcacao: 75, mentalidade: 70 },
   behaviors: [
     {
       id: 'bh_antecipar_passe',
-      name: 'Roubar antes do atacante',
+      name: L('Roubar antes do atacante', 'Win it before the striker'),
       when: 'opp_through_ball && my_distance_to_ball < 6',
       bias: { interceptionAttempt: 0.30, stayInLine: -0.15 },
     },
     {
       id: 'bh_falta_estrategica',
-      name: 'Falta tática pra parar o contra-ataque',
+      name: L('Falta tática pra parar o contra-ataque', 'Tactical foul to stop the counter'),
       when: 'opp_counter && my_zone_depth < 0.4 && no_other_defender',
       bias: { tacticalFoul: 0.30, letRunGo: -0.25 },
     },
     {
       id: 'bh_marca_homem',
-      name: 'Marcação individual no homem-gol',
+      name: L('Marcação individual no homem-gol', 'Man-mark the goal threat'),
       when: 'opp_in_box && opponent_is_top_scorer',
       bias: { manMark: 0.30, zonalMark: -0.20 },
     },
     {
       id: 'bh_lider_defesa',
-      name: 'Sobe linha quando time tem posse',
+      name: L('Sobe linha quando time tem posse', 'Push the line up when the team has the ball'),
       when: 'team_has_ball && my_zone == "def"',
       bias: { stepUpLine: 0.20 },
       teammateEffect: {
@@ -197,28 +198,28 @@ const skl_ferrolho_italiano: CoachSkill = {
 const skl_artilheiro_clutch: CoachSkill = {
   schema: 'playbook_v1',
   id: 'skl_artilheiro_clutch',
-  name: 'Artilheiro Clutch',
+  name: L('Artilheiro Clutch', 'Clutch Goalscorer'),
   role: 'atacante',
   tier: 'historica',
-  philosophy: 'Sangue frio nos minutos finais. Decide o jogo.',
+  philosophy: L('Sangue frio nos minutos finais. Decide o jogo.', 'Ice-cold in the final minutes. Decides the game.'),
   level: 3,
   attrRequirements: { mentalidade: 80, finalizacao: 75 },
   behaviors: [
     {
       id: 'bh_chute_clutch',
-      name: 'Finaliza com calma na pressão',
+      name: L('Finaliza com calma na pressão', 'Finishes calmly under pressure'),
       when: 'minute > 75 && score_diff <= 1',
       bias: { shotPlaced: 0.30, shotPower: -0.15 },
     },
     {
       id: 'bh_busca_jogada',
-      name: 'Pede a bola no minuto final',
+      name: L('Pede a bola no minuto final', 'Demands the ball in the final minute'),
       when: 'minute > 85 && team_has_ball',
       bias: { callForBall: 0.30, stayPositioned: -0.20 },
     },
     {
       id: 'bh_chute_panico_inverso',
-      name: 'Não força em vantagem',
+      name: L('Não força em vantagem', 'Doesn\'t force it when ahead'),
       when: 'score_diff > 1 && minute > 70',
       bias: { passSafe: 0.25, shotForce: -0.20 },
     },

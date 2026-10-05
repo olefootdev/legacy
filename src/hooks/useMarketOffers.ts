@@ -26,6 +26,7 @@ import {
   fetchMyOffers,
   type OfferAction,
 } from '@/supabase/marketOffers';
+import { L } from '@/i18n/L';
 
 /**
  * Fallback ESTÁVEL para as listas de ofertas.
@@ -75,7 +76,7 @@ export function useMarketOffers() {
     async (listingId: string, offerExp: number) => {
       // Guard de saldo (o servidor não valida EXP — mesma dívida do buy-prospect).
       if (offerExp > getGameState().finance.ole) {
-        throw new Error('Saldo EXP insuficiente pra essa proposta.');
+        throw new Error(L('Saldo EXP insuficiente pra essa proposta.', 'Not enough EXP for this offer.'));
       }
       await proposeOffer(listingId, offerExp, clubName);
       await refetch();
@@ -115,7 +116,7 @@ export function useMarketOffers() {
       const target = getGameState().managerProspectMarket.outgoingOffers?.find((o) => o.offerId === offerId);
       const cost = target?.counterExp ?? target?.offerExp ?? 0;
       if (cost > getGameState().finance.ole) {
-        throw new Error('Saldo EXP insuficiente pra aceitar a contraproposta.');
+        throw new Error(L('Saldo EXP insuficiente pra aceitar a contraproposta.', 'Not enough EXP to accept the counter-offer.'));
       }
       const res = await acceptCounter(offerId);
       const player = res.playerSnapshot as unknown as PlayerEntity;

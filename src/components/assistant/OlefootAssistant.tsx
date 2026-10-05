@@ -25,6 +25,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Hashtag } from '@/components/ui';
 import { moedaDoJogo } from '@/wallet/constants';
+import { L } from '@/i18n/L';
 
 interface TutorialStep {
   id: string;
@@ -43,135 +44,138 @@ interface TutorialStep {
 const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome',
-    title: 'Bem-vindo ao Olefoot',
-    description: 'O simulador de futebol mais inteligente do Brasil. Aqui você monta seu time, disputa partidas e constrói uma carreira de manager.',
+    title: L('Bem-vindo ao Olefoot', 'Welcome to Olefoot'),
+    description: L('O simulador de futebol mais inteligente do Brasil. Aqui você monta seu time, disputa partidas e constrói uma carreira de manager.', 'The smartest football sim from Brazil. Build your team, play matches and grow a manager career.'),
     icon: Sparkles,
     category: 'inicio',
     tips: [
-      'Cada decisão importa — não é sorte, é estratégia',
-      'Seus jogadores têm DNA único com IA embarcada',
-      'Ganhe EXP, evolua seu time e conquiste títulos',
+      L('Cada decisão importa — não é sorte, é estratégia', 'Every decision matters — it is strategy, not luck'),
+      L('Seus jogadores têm DNA único com IA embarcada', 'Your players have unique AI-powered DNA'),
+      L('Ganhe EXP, evolua seu time e conquiste títulos', 'Earn EXP, improve your team and win titles'),
     ],
   },
   {
     id: 'first-match',
-    title: 'Sua primeira partida',
-    description: 'Escolha entre Partida Rápida (resultado instantâneo) ou Partida ao Vivo (simulação 2D completa com controle tático).',
+    title: L('Sua primeira partida', 'Your first match'),
+    description: L('Escolha entre Partida Rápida (resultado instantâneo) ou Partida ao Vivo (simulação 2D completa com controle tático).', 'Pick Quick Match (instant result) or Live Match (full 2D sim with tactical control).'),
     icon: PlayCircle,
     category: 'partida',
     tips: [
-      'Partida Rápida: ideal para ganhar EXP rapidamente',
-      'Partida ao Vivo: controle tático em tempo real',
-      'Cada vitória rende EXP e melhora sua reputação',
+      L('Partida Rápida: ideal para ganhar EXP rapidamente', 'Quick Match: best for earning EXP fast'),
+      L('Partida ao Vivo: controle tático em tempo real', 'Live Match: real-time tactical control'),
+      L('Cada vitória rende EXP e melhora sua reputação', 'Every win earns EXP and boosts your reputation'),
     ],
     action: {
-      label: 'Disputar partida',
+      label: L('Disputar partida', 'Play match'),
       href: '/match',
     },
   },
   {
     id: 'build-squad',
-    title: 'Monte seu elenco',
-    description: 'Escale seus 11 titulares na formação ideal. Cada posição tem peso diferente nos atributos — escolha com inteligência.',
+    title: L('Monte seu elenco', 'Build your squad'),
+    description: L('Escale seus 11 titulares na formação ideal. Cada posição tem peso diferente nos atributos — escolha com inteligência.', 'Pick your starting 11 in the right formation. Each position weighs attributes differently — choose wisely.'),
     icon: Users,
     category: 'time',
     tips: [
-      'Formações: 4-3-3, 4-4-2, 4-2-3-1 e mais',
-      'Atributos posicionais: cada slot valoriza skills diferentes',
-      'Química do time: jogadores da mesma nacionalidade rendem mais',
+      L('Formações: 4-3-3, 4-4-2, 4-2-3-1 e mais', 'Formations: 4-3-3, 4-4-2, 4-2-3-1 and more'),
+      L('Atributos posicionais: cada slot valoriza skills diferentes', 'Positional attributes: each slot values different skills'),
+      L('Química do time: jogadores da mesma nacionalidade rendem mais', 'Team chemistry: same-nationality players perform better'),
     ],
     action: {
-      label: 'Ver meu time',
+      label: L('Ver meu time', 'View my team'),
       href: '/team',
     },
   },
   {
     id: 'market',
-    title: 'Mercado de transferências',
-    description: 'Compre jogadores Genesis (cartas fundadoras) ou negocie com outros managers. Leilões em EXP ou BRO.',
+    title: L('Mercado de transferências', 'Transfer Market'),
+    description: L('Compre jogadores Genesis (cartas fundadoras) ou negocie com outros managers. Leilões em EXP ou BRO.', 'Buy Genesis players (founder cards) or trade with other managers. Auctions in EXP or BRO.'),
     icon: ShoppingBag,
     category: 'mercado',
     tips: [
-      'Genesis: cartas limitadas com overall alto',
-      'Leilões: dê lances e dispute com outros managers',
-      'Compra imediata: leve o jogador na hora',
+      L('Genesis: cartas limitadas com overall alto', 'Genesis: limited cards with high overall'),
+      L('Leilões: dê lances e dispute com outros managers', 'Auctions: place bids against other managers'),
+      L('Compra imediata: leve o jogador na hora', 'Buy now: get the player instantly'),
     ],
     action: {
-      label: 'Explorar mercado',
+      label: L('Explorar mercado', 'Explore Market'),
       href: '/market/transfer',
     },
   },
   {
     id: 'economy',
-    title: 'Sistema de economia',
+    title: L('Sistema de economia', 'Economy'),
     // Dizia "OLEFOOT (token do jogo)". Nenhum saldo do jogo é token: OLEFOOT
     // passou a ser o nome do token na Solana; o saldo virou OLEXP e, em
     // 2026-09-28, VERBA — OLEXP passou a ser a unidade de expansão da rede.
-    description: `Olefoot tem 3 saldos, todos do jogo: EXP (progressão), ${moedaDoJogo()} (lendas e contratos) e BRO (crédito comprado).`,
+    description: L(
+      `Olefoot tem 3 saldos, todos do jogo: EXP (progressão), ${moedaDoJogo()} (lendas e contratos) e BRO (crédito comprado).`,
+      `Olefoot has 3 in-game balances: EXP (progression), ${moedaDoJogo()} (legends and contracts) and BRO (purchased credit).`,
+    ),
     icon: Wallet,
     category: 'economia',
     tips: [
-      'EXP: ganhe em partidas e missões, use para evoluir',
-      'BRO: moeda premium para leilões e compras especiais',
-      `${moedaDoJogo()}: compre cards de lenda e renove contratos`,
+      L('EXP: ganhe em partidas e missões, use para evoluir', 'EXP: earn it in matches and missions, use it to level up'),
+      L('BRO: moeda premium para leilões e compras especiais', 'BRO: premium currency for auctions and special purchases'),
+      L(`${moedaDoJogo()}: compre cards de lenda e renove contratos`, `${moedaDoJogo()}: buy legend cards and renew contracts`),
     ],
     action: {
-      label: 'Ver carteira',
+      label: L('Ver carteira', 'View Wallet'),
       href: '/wallet',
     },
   },
   {
     id: 'missions',
-    title: 'Missões e progressão',
-    description: 'Complete missões diárias, semanais e especiais para ganhar EXP, troféus e desbloquear conteúdo exclusivo.',
+    title: L('Missões e progressão', 'Missions and progression'),
+    description: L('Complete missões diárias, semanais e especiais para ganhar EXP, troféus e desbloquear conteúdo exclusivo.', 'Complete daily, weekly and special missions to earn EXP, trophies and unlock exclusive content.'),
     icon: Target,
     category: 'inicio',
     tips: [
-      'Missões de onboarding: primeiros passos no jogo',
-      'Missões diárias: recompensas rápidas todo dia',
-      'Troféus: conquistas permanentes na sua carreira',
+      L('Missões de onboarding: primeiros passos no jogo', 'Onboarding missions: your first steps'),
+      L('Missões diárias: recompensas rápidas todo dia', 'Daily missions: quick rewards every day'),
+      L('Troféus: conquistas permanentes na sua carreira', 'Trophies: permanent career achievements'),
     ],
     action: {
-      label: 'Ver missões',
+      label: L('Ver missões', 'View missions'),
       href: '/missions',
     },
   },
   {
     id: 'career',
-    title: 'Carreira de manager',
-    description: 'Evolua de Fraldinha até Lenda. Cada tier desbloqueia novas funcionalidades e aumenta seu prestígio.',
+    title: L('Carreira de manager', 'Manager Career'),
+    description: L('Evolua de Fraldinha até Lenda. Cada tier desbloqueia novas funcionalidades e aumenta seu prestígio.', 'Rise from Fraldinha to Legend. Each tier unlocks new features and raises your prestige.'),
     icon: Trophy,
     category: 'inicio',
     tips: [
-      '8 tiers de carreira: de iniciante a lenda',
-      'EXP acumulado define seu tier atual',
-      'Cada tier desbloqueia benefícios exclusivos',
+      L('8 tiers de carreira: de iniciante a lenda', '8 career tiers: from rookie to legend'),
+      L('EXP acumulado define seu tier atual', 'Total EXP sets your current tier'),
+      L('Cada tier desbloqueia benefícios exclusivos', 'Each tier unlocks exclusive perks'),
     ],
     action: {
-      label: 'Ver carreira',
+      label: L('Ver carreira', 'View Career'),
       href: '/manager',
     },
   },
   {
     id: 'tactics',
-    title: 'Táticas avançadas',
-    description: 'Use comandos de coach durante a partida ao vivo: pressão alta, contra-ataque, posse de bola e mais.',
+    title: L('Táticas avançadas', 'Advanced Tactics'),
+    description: L('Use comandos de coach durante a partida ao vivo: pressão alta, contra-ataque, posse de bola e mais.', 'Use coach commands during live matches: high press, counter-attack, possession and more.'),
     icon: Zap,
     category: 'partida',
     tips: [
-      'Comandos táticos mudam o comportamento do time',
-      'Pressão alta: recupera bola mais rápido, gasta stamina',
-      'Contra-ataque: espera o adversário e explora espaços',
+      L('Comandos táticos mudam o comportamento do time', 'Tactical commands change how your team plays'),
+      L('Pressão alta: recupera bola mais rápido, gasta stamina', 'High press: wins the ball back faster, costs stamina'),
+      L('Contra-ataque: espera o adversário e explora espaços', 'Counter-attack: sit deep and exploit space'),
     ],
   },
 ];
 
 const CATEGORY_CONFIG = {
-  inicio: { label: 'Início', color: 'neon-yellow' },
-  partida: { label: 'Partida', color: 'cyan-400' },
-  time: { label: 'Time', color: 'emerald-400' },
-  mercado: { label: 'Mercado', color: 'fuchsia-400' },
-  economia: { label: 'Economia', color: 'amber-400' },
+  inicio: { label: L('Início', 'Start'), color: 'neon-yellow' },
+  partida: { label: L('Partida', 'Match'), color: 'cyan-400' },
+  time: { label: L('Time', 'Team'), color: 'emerald-400' },
+  mercado: { label: L('Mercado', 'Market'), color: 'fuchsia-400' },
+  economia: { label: L('Economia', 'Economy'), color: 'amber-400' },
 } as const;
 
 interface OlefootAssistantProps {
@@ -274,7 +278,7 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
         exit={{ scale: 0, opacity: 0 }}
         onClick={() => setIsOpen(true)}
         className="fixed bottom-24 right-6 sm:bottom-8 sm:right-8 z-50 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-neon-yellow text-black transition-colors hover:bg-white"
-        aria-label="Abrir assistente"
+        aria-label={L('Abrir assistente', 'Open assistant')}
       >
         <HelpCircle className="h-7 w-7 sm:h-8 sm:w-8" strokeWidth={2.5} />
       </motion.button>
@@ -298,7 +302,7 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
           </div>
           <div className="text-left">
             <p className="font-impact text-[15px] uppercase leading-[1.1] text-white">
-              Assistente
+              {L('Assistente', 'Assistant')}
             </p>
             <p className="font-mono text-[10.5px] text-cimento">
               {currentStepIndex + 1}/{TUTORIAL_STEPS.length}
@@ -349,11 +353,11 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
               </div>
               <div>
                 <h3 className="font-impact text-[17px] uppercase leading-[1.1] text-white flex items-center gap-2">
-                  Assistente Olefoot
+                  {L('Assistente Olefoot', 'Olefoot Assistant')}
                   <Move className="h-3 w-3 text-cimento" />
                 </h3>
                 <p className="font-mono text-[10.5px] text-cimento">
-                  Passo {currentStepIndex + 1} de {TUTORIAL_STEPS.length} • Arraste para mover
+                  {L(`Passo ${currentStepIndex + 1} de ${TUTORIAL_STEPS.length} • Arraste para mover`, `Step ${currentStepIndex + 1} of ${TUTORIAL_STEPS.length} • Drag to move`)}
                 </p>
               </div>
             </div>
@@ -361,14 +365,14 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
               <button
                 onClick={() => setIsMinimized(true)}
                 className="rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-                aria-label="Minimizar"
+                aria-label={L('Minimizar', 'Minimize')}
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
               <button
                 onClick={handleClose}
                 className="rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-                aria-label="Fechar"
+                aria-label={L('Fechar', 'Close')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -410,7 +414,7 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
             <div className="space-y-2 border border-white/10 bg-panel p-3">
               <p className="flex items-center gap-1.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
                 <Sparkles className="h-3 w-3" />
-                Dicas importantes
+                {L('Dicas importantes', 'Key tips')}
               </p>
               <ul className="space-y-1.5">
                 {currentStep.tips.map((tip, i) => (
@@ -448,7 +452,7 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
             )}
           >
             <ChevronLeft className="h-4 w-4" />
-            Anterior
+            {L('Anterior', 'Back')}
           </button>
 
           <div className="flex items-center gap-1">
@@ -464,7 +468,7 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
                       ? 'w-2 bg-alta'
                       : 'w-2 bg-white/20 hover:bg-white/40',
                 )}
-                aria-label={`Ir para passo ${i + 1}`}
+                aria-label={L(`Ir para passo ${i + 1}`, `Go to step ${i + 1}`)}
               />
             ))}
           </div>
@@ -475,12 +479,12 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
           >
             {isLastStep ? (
               <>
-                Concluir
+                {L('Concluir', 'Finish')}
                 <CheckCircle2 className="h-4 w-4" />
               </>
             ) : (
               <>
-                Próximo
+                {L('Próximo', 'Next')}
                 <ChevronRight className="h-4 w-4" />
               </>
             )}

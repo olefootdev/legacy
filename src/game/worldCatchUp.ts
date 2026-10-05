@@ -14,6 +14,7 @@ import { staffPhysicalRecoveryBonusPercent, staffRunMatchMinuteEffects } from '@
 // OLEFOOT PYTHON MODE — gate de fadiga regenera por absence tier
 import { evaluateAbsence } from '@/systems/engagement/absencePenalty';
 import { recoverHealthOffMatch } from '@/systems/playerHealth/reducer';
+import { L } from '@/i18n/L';
 
 /** BRT = UTC-3 */
 const BRT_OFFSET_MS = -3 * 60 * 60 * 1000;
@@ -156,7 +157,7 @@ export function applyWorldCatchUp(state: OlefootGameState, nowMs: number): Olefo
           {
             id: `ft-offline-${nowMs}`,
             minute: 90,
-            text: `90' — Tempo regulamentar (simulação offline).`,
+            text: L(`90' — Tempo regulamentar (simulação offline).`, `90' — Full time (offline simulation).`),
             kind: 'whistle',
           },
           ...liveMatch.events,

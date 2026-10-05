@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
+import { L } from '@/i18n/L';
 
 /**
  * Modal de confirmação canônico do DS (rail 3px + eyebrow + título display).
@@ -13,7 +14,7 @@ export function ConfirmDialog({
   eyebrow,
   title,
   children,
-  confirmLabel = 'Confirmar',
+  confirmLabel = L('Confirmar', 'Confirm'),
   confirmDisabled = false,
   accent = 'var(--color-neon-yellow)',
 }: {
@@ -35,7 +36,7 @@ export function ConfirmDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: accent }} aria-hidden />
-        <button onClick={onClose} className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center text-white/50 hover:text-white" aria-label="Fechar">
+        <button onClick={onClose} className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center text-white/50 hover:text-white" aria-label={L('Fechar', 'Close')}>
           <X className="h-4 w-4" />
         </button>
         <div className="font-mono text-[11px] font-medium uppercase tracking-[0.18em]" style={{ color: accent }}>
@@ -56,7 +57,7 @@ export function ConfirmDialog({
             onClick={onClose}
             className="ole-num whitespace-nowrap border border-white/30 px-4 py-3 text-[12px] uppercase text-white transition-colors hover:border-white"
           >
-            Cancelar
+            {L('Cancelar', 'Cancel')}
           </button>
         </div>
       </div>

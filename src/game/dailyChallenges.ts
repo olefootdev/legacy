@@ -1,3 +1,4 @@
+import { L } from '@/i18n/L';
 export type ChallengeType =
   | 'win_matches'
   | 'score_goals'
@@ -27,44 +28,44 @@ export interface DailyChallengesState {
 
 const CHALLENGE_TEMPLATES: Record<ChallengeType, { title: string; description: string; targetRange: [number, number]; rewardBase: number }> = {
   win_matches: {
-    title: 'Vencedor',
-    description: 'Vence {target} partidas na Liga Global',
+    title: L('Vencedor', 'Winner'),
+    description: L('Vence {target} partidas na Liga Global', 'Win {target} Global League matches'),
     targetRange: [3, 8],
     rewardBase: 1500,
   },
   score_goals: {
-    title: 'Artilheiro',
-    description: 'Marca {target} gols na Liga Global',
+    title: L('Artilheiro', 'Top scorer'),
+    description: L('Marca {target} gols na Liga Global', 'Score {target} goals in the Global League'),
     targetRange: [4, 12],
     rewardBase: 1000,
   },
   win_streak: {
-    title: 'Imparável',
-    description: 'Conquista {target} vitórias consecutivas na Liga Global',
+    title: L('Imparável', 'Unstoppable'),
+    description: L('Conquista {target} vitórias consecutivas na Liga Global', 'Win {target} Global League matches in a row'),
     targetRange: [3, 5],
     rewardBase: 2500,
   },
   clean_sheet: {
-    title: 'Muralha',
-    description: 'Vence {target} partidas sem sofrer gols na Liga Global',
+    title: L('Muralha', 'The Wall'),
+    description: L('Vence {target} partidas sem sofrer gols na Liga Global', 'Win {target} Global League matches without conceding'),
     targetRange: [1, 3],
     rewardBase: 2000,
   },
   comeback: {
-    title: 'Virada Épica',
-    description: 'Vira {target} partidas na Liga Global (perdendo e depois vencendo)',
+    title: L('Virada Épica', 'Epic Comeback'),
+    description: L('Vira {target} partidas na Liga Global (perdendo e depois vencendo)', 'Turn around {target} Global League matches (losing, then winning)'),
     targetRange: [1, 2],
     rewardBase: 3000,
   },
   dominant_win: {
-    title: 'Dominação',
-    description: 'Vence por {target}+ gols de diferença na Liga Global',
+    title: L('Dominação', 'Domination'),
+    description: L('Vence por {target}+ gols de diferença na Liga Global', 'Win by {target}+ goals in the Global League'),
     targetRange: [3, 5],
     rewardBase: 2000,
   },
   quick_goals: {
-    title: 'Goleador do Dia',
-    description: 'Marca em {target} partidas diferentes na Liga Global hoje',
+    title: L('Goleador do Dia', 'Scorer of the Day'),
+    description: L('Marca em {target} partidas diferentes na Liga Global hoje', 'Score in {target} different Global League matches today'),
     targetRange: [3, 6],
     rewardBase: 1500,
   },

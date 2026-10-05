@@ -4,6 +4,7 @@
  */
 
 import type { LiveMatchSnapshot } from '@/engine/types';
+import { L } from '@/i18n/L';
 
 /**
  * Fonte de verdade dos gols: o log append-only `snap.events`.
@@ -71,8 +72,8 @@ export interface MatchChallenge {
 export const MATCH_CHALLENGES: MatchChallenge[] = [
   {
     id: 'clean_sheet',
-    title: 'Muralha',
-    description: 'Vença sem sofrer gols',
+    title: L('Muralha', 'The Wall'),
+    description: L('Vença sem sofrer gols', 'Win without conceding'),
     condition: (snap, stats) => {
       return snap.awayScore === 0 && snap.homeScore > snap.awayScore;
     },
@@ -87,8 +88,8 @@ export const MATCH_CHALLENGES: MatchChallenge[] = [
   },
   {
     id: 'comeback_king',
-    title: 'Virada Épica',
-    description: 'Vire o jogo após estar perdendo por 2+',
+    title: L('Virada Épica', 'Epic Comeback'),
+    description: L('Vire o jogo após estar perdendo por 2+', 'Come back after trailing by 2+'),
     condition: (snap) => {
       // Replay do log de gols: precisa ter ESTADO perdendo por 2+ em algum
       // momento e AGORA estar vencendo.
@@ -101,7 +102,7 @@ export const MATCH_CHALLENGES: MatchChallenge[] = [
   {
     id: 'possession_master',
     title: 'Tiki-Taka',
-    description: 'Mantenha 70%+ de posse por 20 min',
+    description: L('Mantenha 70%+ de posse por 20 min', 'Keep 70%+ possession for 20 min'),
     condition: (snap, stats) => {
       return stats.possession.home >= 70 && snap.minute >= 20;
     },
@@ -116,7 +117,7 @@ export const MATCH_CHALLENGES: MatchChallenge[] = [
   {
     id: 'hat_trick',
     title: 'Hat-Trick',
-    description: 'Um jogador marque 3 gols',
+    description: L('Um jogador marque 3 gols', 'One player scores 3 goals'),
     condition: (snap) => {
       // Só completa quando o motor rastreia o autor (goal_home com playerId).
       // Sem autor no evento, nunca dispara — honesto, sem falso positivo.
@@ -129,8 +130,8 @@ export const MATCH_CHALLENGES: MatchChallenge[] = [
   },
   {
     id: 'no_fouls',
-    title: 'Jogo Limpo',
-    description: 'Vença cometendo menos de 5 faltas',
+    title: L('Jogo Limpo', 'Fair Play'),
+    description: L('Vença cometendo menos de 5 faltas', 'Win with fewer than 5 fouls'),
     condition: (snap, stats) => {
       return snap.homeScore > snap.awayScore && stats.fouls.home < 5;
     },
@@ -144,8 +145,8 @@ export const MATCH_CHALLENGES: MatchChallenge[] = [
   },
   {
     id: 'shot_accuracy',
-    title: 'Precisão Cirúrgica',
-    description: '80%+ dos chutes no alvo',
+    title: L('Precisão Cirúrgica', 'Surgical Precision'),
+    description: L('80%+ dos chutes no alvo', '80%+ of shots on target'),
     condition: (snap, stats) => {
       if (stats.shots.home === 0) return false;
       const accuracy = (stats.shotsOnTarget.home / stats.shots.home) * 100;
@@ -161,8 +162,8 @@ export const MATCH_CHALLENGES: MatchChallenge[] = [
   },
   {
     id: 'defensive_wall',
-    title: 'Muralha Defensiva',
-    description: 'Sofra menos de 5 finalizações',
+    title: L('Muralha Defensiva', 'Defensive Wall'),
+    description: L('Sofra menos de 5 finalizações', 'Concede fewer than 5 shots'),
     condition: (snap, stats) => {
       return snap.homeScore > snap.awayScore && stats.shots.away < 5;
     },
@@ -176,8 +177,8 @@ export const MATCH_CHALLENGES: MatchChallenge[] = [
   },
   {
     id: 'quick_goals',
-    title: 'Início Fulminante',
-    description: 'Marque 2 gols nos primeiros 15 minutos',
+    title: L('Início Fulminante', 'Blistering Start'),
+    description: L('Marque 2 gols nos primeiros 15 minutos', 'Score 2 goals in the first 15 minutes'),
     condition: (snap) => {
       // Conta pelos MINUTOS dos eventos de gol — completa mesmo se avaliado
       // depois do minuto 15 (antes exigia snap.minute<=15, quase nunca batia).

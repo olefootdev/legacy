@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { L, LOCALE } from '@/i18n/L';
 
 type RivalsLeaderboardMiniProps = {
   /** Posição atual do manager. */
@@ -17,7 +18,7 @@ type RivalsLeaderboardMiniProps = {
 function formatOle(n: number): string {
   if (n >= 1e6) return `${(Math.floor(n / 1e5) / 10).toFixed(1).replace(/\.0$/, '')}M`;
   if (n >= 1e3) return `${(Math.floor(n / 1e2) / 10).toFixed(1).replace(/\.0$/, '')}K`;
-  return n.toLocaleString('pt-BR');
+  return n.toLocaleString(LOCALE);
 }
 
 export function RivalsLeaderboardMini({
@@ -54,7 +55,7 @@ export function RivalsLeaderboardMini({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="truncate font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-cimento">
-            Ranking de patrimônio
+            {L('Ranking de patrimônio', 'Net worth ranking')}
           </p>
           {hasDelta ? (
             <span
@@ -69,12 +70,12 @@ export function RivalsLeaderboardMini({
         <p className="mt-1 text-[12px] text-giz">
           <span className="font-bold text-white">+{formatOle(gapToNextOle)} EXP</span>{' '}
           <span className="text-cimento">
-            pra ultrapassar{' '}
-            <span className="font-bold text-white/80">{nextRivalName ?? 'o próximo'}</span>
+            {L('pra ultrapassar', 'to overtake')}{' '}
+            <span className="font-bold text-white/80">{nextRivalName ?? L('o próximo', 'the next one')}</span>
           </span>
         </p>
         <p className="mt-0.5 font-mono text-[10px] text-poeira">
-          De {total.toLocaleString('pt-BR')} managers
+          {L('De', 'Of')} {total.toLocaleString(LOCALE)} managers
         </p>
       </div>
 

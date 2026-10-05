@@ -43,37 +43,40 @@ import {
 } from '@/entities/managerProspectHairStyles';
 import {
   MANAGER_SKIN_TONES,
+  skinToneDisplayName,
   skinTonePromptFromCatalogId,
   skinToneSelectLabel,
 } from '@/entities/managerProspectSkinTones';
 import { APPEARANCE_PRESETS, getPresetById } from '@/entities/managerProspectAppearancePresets';
+import { L, emIngles } from '@/i18n/L';
+import { posLabel } from '@/components/matchquick/posLabel';
 
 const POSITIONS = ['GOL', 'ZAG', 'LE', 'LD', 'VOL', 'MC', 'PE', 'PD', 'ATA'] as const;
 const NATIONS = [
   { code: 'PT', label: 'Portugal' },
-  { code: 'BR', label: 'Brasil' },
-  { code: 'ES', label: 'Espanha' },
+  { code: 'BR', label: L('Brasil', 'Brazil') },
+  { code: 'ES', label: L('Espanha', 'Spain') },
   { code: 'AR', label: 'Argentina' },
-  { code: 'FR', label: 'França' },
-  { code: 'DE', label: 'Alemanha' },
+  { code: 'FR', label: L('França', 'France') },
+  { code: 'DE', label: L('Alemanha', 'Germany') },
   { code: 'AO', label: 'Angola' },
-  { code: 'MZ', label: 'Moçambique' },
+  { code: 'MZ', label: L('Moçambique', 'Mozambique') },
 ] as const;
 
 const BEHAVIORS: { id: PlayerBehavior; label: string }[] = [
-  { id: 'equilibrado', label: 'Equilibrado' },
-  { id: 'ofensivo', label: 'Ofensivo' },
-  { id: 'defensivo', label: 'Defensivo' },
-  { id: 'criativo', label: 'Criativo' },
+  { id: 'equilibrado', label: L('Equilibrado', 'Balanced') },
+  { id: 'ofensivo', label: L('Ofensivo', 'Attacking') },
+  { id: 'defensivo', label: L('Defensivo', 'Defensive') },
+  { id: 'criativo', label: L('Criativo', 'Creative') },
 ];
 
 const EYE_COLOR_CHOICES: { value: string; label: string }[] = [
-  { value: '', label: 'Não especificar' },
-  { value: 'Olhos castanhos', label: 'Castanhos' },
-  { value: 'Olhos castanho-claros, mel ou âmbar', label: 'Mel / castanho-claro / âmbar' },
-  { value: 'Olhos verdes ou avelã', label: 'Verdes / avelã' },
-  { value: 'Olhos azuis, acinzentados ou gelo', label: 'Azuis / cinzentos / gelo' },
-  { value: 'Olhos pretos ou muito escuros', label: 'Pretos / muito escuros' },
+  { value: '', label: L('Não especificar', 'Not specified') },
+  { value: 'Olhos castanhos', label: L('Castanhos', 'Brown') },
+  { value: 'Olhos castanho-claros, mel ou âmbar', label: L('Mel / castanho-claro / âmbar', 'Hazel / light brown / amber') },
+  { value: 'Olhos verdes ou avelã', label: L('Verdes / avelã', 'Green / hazel') },
+  { value: 'Olhos azuis, acinzentados ou gelo', label: L('Azuis / cinzentos / gelo', 'Blue / grey / ice') },
+  { value: 'Olhos pretos ou muito escuros', label: L('Pretos / muito escuros', 'Black / very dark') },
 ];
 
 /** Careca: opção separada (checkbox); estilos com cabelo vêm do catálogo `MANAGER_HAIR_STYLES`. */
@@ -92,16 +95,27 @@ const ORIGIN_QUICK_TAGS = [
   'Misto',
 ] as const;
 
+/** Rótulo de TELA dos marcadores — o valor (PT) é o que vai pro servidor. */
+const ORIGIN_TAG_LABEL: Record<string, string> = {
+  Indígena: L('Indígena', 'Indigenous'),
+  Afrodescendente: L('Afrodescendente', 'Afro-descendant'),
+  Europeu: L('Europeu', 'European'),
+  Asiático: L('Asiático', 'Asian'),
+  Árabe: L('Árabe', 'Arab'),
+  Misto: L('Misto', 'Mixed'),
+};
+const rotuloOrigem = (tag: string): string => ORIGIN_TAG_LABEL[tag] ?? tag;
+
 const ATTR_SLIDERS: { key: keyof PlayerAttributes; label: string }[] = [
-  { key: 'passe', label: 'Passe' },
-  { key: 'marcacao', label: 'Marcação' },
-  { key: 'velocidade', label: 'Velocidade' },
-  { key: 'drible', label: 'Drible' },
-  { key: 'finalizacao', label: 'Finalização' },
-  { key: 'fisico', label: 'Físico' },
-  { key: 'tatico', label: 'Tático' },
-  { key: 'mentalidade', label: 'Mentalidade' },
-  { key: 'confianca', label: 'Confiança' },
+  { key: 'passe', label: L('Passe', 'Passing') },
+  { key: 'marcacao', label: L('Marcação', 'Marking') },
+  { key: 'velocidade', label: L('Velocidade', 'Pace') },
+  { key: 'drible', label: L('Drible', 'Dribbling') },
+  { key: 'finalizacao', label: L('Finalização', 'Finishing') },
+  { key: 'fisico', label: L('Físico', 'Physical') },
+  { key: 'tatico', label: L('Tático', 'Tactical') },
+  { key: 'mentalidade', label: L('Mentalidade', 'Mentality') },
+  { key: 'confianca', label: L('Confiança', 'Confidence') },
   { key: 'fairPlay', label: 'Fair play' },
 ];
 
@@ -343,11 +357,11 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
           });
           res = (await r.json()) as typeof res;
         } catch {
-          setServerError('Falha de rede ao validar criação. Tenta novamente.');
+          setServerError(L('Falha de rede ao validar criação. Tenta novamente.', 'Network error while validating. Try again.'));
           return;
         }
         if (!res?.ok) {
-          setServerError(res?.error ?? 'Não foi possível validar a criação.');
+          setServerError(res?.error ?? L('Não foi possível validar a criação.', 'Could not validate the player.'));
           return;
         }
       }
@@ -408,24 +422,23 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
           } catch {
             const text = await r.text().catch(() => '');
             setServerError(
-              `Servidor devolveu resposta inválida (HTTP ${r.status}). ${
-                text.length > 0 ? text.slice(0, 200) : 'Endpoint pode não estar deployado ainda.'
-              }`,
+              L(`Servidor devolveu resposta inválida (HTTP ${r.status}). `, `Server returned an invalid response (HTTP ${r.status}). `) +
+                (text.length > 0 ? text.slice(0, 200) : L('Endpoint pode não estar deployado ainda.', 'Endpoint may not be deployed yet.')),
             );
             return;
           }
         } catch (e) {
-          const msg = e instanceof Error ? e.message : 'erro desconhecido';
+          const msg = e instanceof Error ? e.message : L('erro desconhecido', 'unknown error');
           setServerError(
-            `Falha de rede ao enviar selfie: ${msg}. ` +
-              `Verifica se o servidor está no ar (${serverUrl}/health).`,
+            L(`Falha de rede ao enviar selfie: ${msg}. `, `Network error sending selfie: ${msg}. `) +
+              L(`Verifica se o servidor está no ar (${serverUrl}/health).`, `Check if the server is up (${serverUrl}/health).`),
           );
           return;
         }
         if (!res?.ok || !res.selfie_url) {
           const httpInfo = httpStatus ? ` [HTTP ${httpStatus}]` : '';
           const detail = res?.detail ? ` (${res.detail})` : '';
-          setServerError(`${res?.error ?? 'Falha no upload da selfie.'}${httpInfo}${detail}`);
+          setServerError(`${res?.error ?? L('Falha no upload da selfie.', 'Selfie upload failed.')}${httpInfo}${detail}`);
           return;
         }
         selfieUrl = res.selfie_url;
@@ -441,10 +454,10 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
   };
 
   const stepLabel =
-    step === 'identity' ? '1 · Ficha'
-    : step === 'tune' ? '2 · Atributos'
-    : step === 'review' ? '3 · Revisão'
-    : '4 · Foto';
+    step === 'identity' ? L('1 · Ficha', '1 · Profile')
+    : step === 'tune' ? L('2 · Atributos', '2 · Attributes')
+    : step === 'review' ? L('3 · Revisão', '3 · Review')
+    : L('4 · Foto', '4 · Photo');
 
   return (
     <AnimatePresence>
@@ -461,10 +474,10 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                 <Sparkles className="h-5 w-5 shrink-0 text-neon-yellow" aria-hidden />
                 <div className="min-w-0">
                   <h3 className="font-impact text-[17px] uppercase leading-[1.1] text-white">
-                    Academia OLE
+                    {L('Academia OLE', 'OLE Academy')}
                   </h3>
                   <p className="text-[10px] text-gray-500">
-                    {stepLabel} · criação OVR ≤ {MANAGER_PROSPECT_CREATE_MAX_OVR} · evolução até{' '}
+                    {stepLabel} · {L('criação OVR', 'creation OVR')} ≤ {MANAGER_PROSPECT_CREATE_MAX_OVR} · {L('evolução até', 'evolves up to')}{' '}
                     {MANAGER_PROSPECT_EVOLVED_MAX_OVR}
                   </p>
                 </div>
@@ -473,8 +486,8 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                 <span
                   title={
                     academyFull
-                      ? `Academia cheia (${academyUsed}/${academyCap}). Vende um prospect ao Market Maker pra liberar slot.`
-                      : `Slots da Academia: ${academyUsed}/${academyCap}`
+                      ? L(`Academia cheia (${academyUsed}/${academyCap}). Vende um prospect ao Market Maker pra liberar slot.`, `Academy full (${academyUsed}/${academyCap}). Sell a prospect to the Market Maker to free a slot.`)
+                      : L(`Slots da Academia: ${academyUsed}/${academyCap}`, `Academy slots: ${academyUsed}/${academyCap}`)
                   }
                   className={cn(
                     'inline-flex items-center gap-1 rounded border px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider',
@@ -489,7 +502,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                   type="button"
                   onClick={onClose}
                   className="rounded-full p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label="Fechar"
+                  aria-label={L('Fechar', 'Close')}
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -498,9 +511,19 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
 
             {academyFull && (
               <div className="border-b border-red-500/40 bg-red-950/40 px-4 py-3 text-[12px] text-red-200">
-                Academia cheia ({academyUsed}/{academyCap}). Vende um prospect ao{' '}
-                <span className="font-bold">Market Maker</span> (botão "Anunciar" no card do jogador)
-                para liberar slot e criar outro.
+                {emIngles() ? (
+                  <>
+                    Academy full ({academyUsed}/{academyCap}). Sell a prospect to the{' '}
+                    <span className="font-bold">Market Maker</span> ("List" button on the player card)
+                    to free a slot and create another.
+                  </>
+                ) : (
+                  <>
+                    Academia cheia ({academyUsed}/{academyCap}). Vende um prospect ao{' '}
+                    <span className="font-bold">Market Maker</span> (botão "Anunciar" no card do jogador)
+                    para liberar slot e criar outro.
+                  </>
+                )}
               </div>
             )}
 
@@ -531,32 +554,34 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                     </span>
                     <span className="flex-1 space-y-0.5">
                       <span className="block font-display text-[12px] font-black uppercase tracking-wide text-white">
-                        Eu sou esse jogador
+                        {L('Eu sou esse jogador', 'I am this player')}
                       </span>
                       <span className="block text-[10px] leading-relaxed text-gray-400">
                         {isSelfPlayer
-                          ? 'No fim a gente pede tua selfie pra gerar um cartão premium com tua cara.'
-                          : 'Jogador fictício — só atributos, sem foto. Pula a etapa de selfie e entra direto no plantel.'}
+                          ? L('No fim a gente pede tua selfie pra gerar um cartão premium com tua cara.', 'At the end we ask for your selfie to make a premium card with your face.')
+                          : L('Jogador fictício — só atributos, sem foto. Pula a etapa de selfie e entra direto no plantel.', 'Fictional player — attributes only, no photo. Skips the selfie step and joins the squad right away.')}
                       </span>
                     </span>
                   </button>
 
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/40 px-3 py-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">OVR estimado</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{L('OVR estimado', 'Estimated OVR')}</span>
                     <span className="font-display text-2xl font-black text-neon-yellow">{previewOvrIdentity}</span>
                   </div>
                   <p className="text-[10px] leading-relaxed text-gray-500">
-                    A seguir afinas atributos; na criação o teto é OVR {MANAGER_PROSPECT_CREATE_MAX_OVR} (treinos e
-                    jogos podem evoluir até {MANAGER_PROSPECT_EVOLVED_MAX_OVR}).
+                    {L(
+                      `A seguir afinas atributos; na criação o teto é OVR ${MANAGER_PROSPECT_CREATE_MAX_OVR} (treinos e jogos podem evoluir até ${MANAGER_PROSPECT_EVOLVED_MAX_OVR}).`,
+                      `Next you fine-tune attributes; the creation cap is OVR ${MANAGER_PROSPECT_CREATE_MAX_OVR} (training and matches can raise it up to ${MANAGER_PROSPECT_EVOLVED_MAX_OVR}).`,
+                    )}
                   </p>
 
                   <label className="block space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Nome no cartão</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{L('Nome no cartão', 'Name on card')}</span>
                     <input
                       value={name}
                       onChange={(e) => setName(e.target.value.toUpperCase())}
                       maxLength={24}
-                      placeholder="EX.: COSTA"
+                      placeholder={L('EX.: COSTA', 'E.G.: COSTA')}
                       className={cn(
                         'w-full rounded-lg border bg-black/50 px-3 py-2 font-display text-sm font-bold uppercase text-white outline-none focus:border-neon-yellow',
                         trimmed.length >= 2 && !namePolicy.ok ? 'border-red-500/50' : 'border-white/15',
@@ -570,7 +595,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
 
                   <div className="grid grid-cols-2 gap-3">
                     <label className="block space-y-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Idade</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{L('Idade', 'Age')}</span>
                       <input
                         type="number"
                         min={MANAGER_PROSPECT_MIN_AGE}
@@ -588,7 +613,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                       />
                     </label>
                     <label className="block space-y-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Nacionalidade</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{L('Nacionalidade', 'Nationality')}</span>
                       <select
                         value={country}
                         onChange={(e) => setCountry(e.target.value as (typeof NATIONS)[number]['code'])}
@@ -604,13 +629,13 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Pé bom</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{L('Pé bom', 'Strong foot')}</span>
                     <div className="flex flex-wrap gap-2">
                       {(
                         [
-                          { id: 'right' as const, label: 'Direito' },
-                          { id: 'left' as const, label: 'Esquerdo' },
-                          { id: 'both' as const, label: 'Ambos' },
+                          { id: 'right' as const, label: L('Direito', 'Right') },
+                          { id: 'left' as const, label: L('Esquerdo', 'Left') },
+                          { id: 'both' as const, label: L('Ambos', 'Both') },
                         ] as const
                       ).map((f) => (
                         <button
@@ -631,7 +656,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                   </div>
 
                   <label className="block space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Posição</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{L('Posição', 'Position')}</span>
                     <select
                       value={pos}
                       onChange={(e) => setPos(e.target.value as (typeof POSITIONS)[number])}
@@ -639,7 +664,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                     >
                       {POSITIONS.map((p) => (
                         <option key={p} value={p}>
-                          {p}
+                          {posLabel(p)}
                         </option>
                       ))}
                     </select>
@@ -647,7 +672,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
 
                   <div className="space-y-2 rounded-lg border border-white/10 bg-black/30 p-3">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                      Contrato (jogos)
+                      {L('Contrato (jogos)', 'Contract (matches)')}
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {MANAGER_PROSPECT_CONTRACT_GAMES.map((n) => (
@@ -670,13 +695,15 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                       ))}
                     </div>
                     <p className="text-[10px] leading-relaxed text-gray-500">
-                      Amistosos e oficiais contam por jogo; ao fim do contrato o jogador fica indisponível para XI
-                      oficial.
+                      {L(
+                        'Amistosos e oficiais contam por jogo; ao fim do contrato o jogador fica indisponível para XI oficial.',
+                        'Friendlies and official matches count per game; when the contract ends the player is unavailable for the official XI.',
+                      )}
                     </p>
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Característica</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{L('Característica', 'Style')}</span>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       {BEHAVIORS.map((b) => (
                         <button
@@ -701,12 +728,14 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
               {step === 'tune' ? (
                 <>
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/40 px-3 py-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">OVR com estes valores</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{L('OVR com estes valores', 'OVR with these values')}</span>
                     <span className="font-display text-2xl font-black text-neon-yellow">{previewOvrTune}</span>
                   </div>
                   <p className="text-[10px] leading-relaxed text-gray-500">
-                    Barras de 35 a {MANAGER_PROSPECT_CREATE_MAX_ATTR}; o clube equilibra para não passar de OVR{' '}
-                    {MANAGER_PROSPECT_CREATE_MAX_OVR} na ficha (evolução futura até {MANAGER_PROSPECT_EVOLVED_MAX_OVR}).
+                    {L(
+                      `Barras de 35 a ${MANAGER_PROSPECT_CREATE_MAX_ATTR}; o clube equilibra para não passar de OVR ${MANAGER_PROSPECT_CREATE_MAX_OVR} na ficha (evolução futura até ${MANAGER_PROSPECT_EVOLVED_MAX_OVR}).`,
+                      `Bars from 35 to ${MANAGER_PROSPECT_CREATE_MAX_ATTR}; the club balances them so the profile stays at or below OVR ${MANAGER_PROSPECT_CREATE_MAX_OVR} (future growth up to ${MANAGER_PROSPECT_EVOLVED_MAX_OVR}).`,
+                    )}
                   </p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {ATTR_SLIDERS.map(({ key, label }) => (
@@ -731,10 +760,10 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-neon-yellow">
-                          Origem para o retrato (obrigatório)
+                          {L('Origem para o retrato (obrigatório)', 'Origin for the portrait (required)')}
                         </p>
                         <p className="text-[9px] leading-relaxed text-gray-500">
-                          Guia o desenho do rosto; não muda a nacionalidade da ficha.
+                          {L('Guia o desenho do rosto; não muda a nacionalidade da ficha.', 'Guides how the face is drawn; does not change the nationality.')}
                         </p>
                       </div>
                     </div>
@@ -743,7 +772,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                     <div className="space-y-2 rounded-lg border border-white/10 bg-black/30 p-2">
                       <div className="flex items-center gap-1.5">
                         <Wand2 className="h-3 w-3 text-neon-yellow" />
-                        <span className="text-[9px] font-bold uppercase text-white/80">Presets rápidos</span>
+                        <span className="text-[9px] font-bold uppercase text-white/80">{L('Presets rápidos', 'Quick presets')}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-1.5">
                         {APPEARANCE_PRESETS.slice(0, 6).map((preset) => (
@@ -763,11 +792,11 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                         ))}
                       </div>
                       <p className="text-[8px] text-gray-600">
-                        Aplica origem, aparência e região automaticamente
+                        {L('Aplica origem, aparência e região automaticamente', 'Applies origin, appearance and region automatically')}
                       </p>
                     </div>
                     <label className="block space-y-1">
-                      <span className="text-[9px] font-bold uppercase text-gray-500">Estilo do retrato</span>
+                      <span className="text-[9px] font-bold uppercase text-gray-500">{L('Estilo do retrato', 'Portrait style')}</span>
                       <select
                         value={portraitStyleRegion}
                         onChange={(e) => setPortraitStyleRegion(e.target.value as ManagerProspectPortraitStyleRegion)}
@@ -781,7 +810,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                       </select>
                     </label>
                     <div className="space-y-1">
-                      <span className="text-[9px] font-bold uppercase text-gray-500">Marcadores (opcional)</span>
+                      <span className="text-[9px] font-bold uppercase text-gray-500">{L('Marcadores (opcional)', 'Tags (optional)')}</span>
                       <div className="flex flex-wrap gap-1.5">
                         {ORIGIN_QUICK_TAGS.map((tag) => (
                           <button
@@ -795,25 +824,25 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                                 : 'border-white/15 text-gray-400 hover:border-white/30 hover:text-white',
                             )}
                           >
-                            {tag}
+                            {rotuloOrigem(tag)}
                           </button>
                         ))}
                       </div>
                     </div>
                     <label className="block space-y-1">
-                      <span className="text-[9px] font-bold uppercase text-gray-500">Descrição</span>
+                      <span className="text-[9px] font-bold uppercase text-gray-500">{L('Descrição', 'Description')}</span>
                       <textarea
                         value={originText}
                         onChange={(e) => setOriginText(e.target.value)}
                         rows={3}
-                        placeholder="Ex.: Brasil, ascendência cabo-verdiana."
+                        placeholder={L('Ex.: Brasil, ascendência cabo-verdiana.', 'E.g.: Brazil, Cape Verdean descent.')}
                         className={cn(
                           'w-full resize-none rounded-lg border bg-black/50 px-2 py-2 text-xs text-white outline-none focus:border-neon-yellow',
                           heritageValid ? 'border-white/15' : 'border-atencao/40',
                         )}
                       />
                       <span className="text-[9px] text-gray-600">
-                        Mín. {MANAGER_HERITAGE_ORIGIN_TEXT_MIN_LEN} caracteres · {originText.trim().length}/
+                        {L('Mín.', 'Min.')} {MANAGER_HERITAGE_ORIGIN_TEXT_MIN_LEN} {L('caracteres', 'characters')} · {originText.trim().length}/
                         {MANAGER_HERITAGE_ORIGIN_TEXT_MIN_LEN}
                       </span>
                     </label>
@@ -821,20 +850,20 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
 
                   <div className="space-y-2 rounded-lg border border-white/10 bg-black/25 p-3">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                      Aparência (opcional)
+                      {L('Aparência (opcional)', 'Appearance (optional)')}
                     </p>
                     <p className="text-[9px] text-gray-600">
-                      Pele, olhos e cabelo ajudam o retrato. Em «Detalhe», tatuagem ou cicatriz, se quiseres.
+                      {L('Pele, olhos e cabelo ajudam o retrato. Em «Detalhe», tatuagem ou cicatriz, se quiseres.', 'Skin, eyes and hair help the portrait. Use «Detail» for a tattoo or scar, if you like.')}
                     </p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       <label className="block space-y-1">
-                        <span className="text-[9px] font-bold uppercase text-gray-500">Tom de pele</span>
+                        <span className="text-[9px] font-bold uppercase text-gray-500">{L('Tom de pele', 'Skin tone')}</span>
                         <select
                           value={skinTone}
                           onChange={(e) => setSkinTone(e.target.value)}
                           className="w-full rounded-lg border border-white/15 bg-black/50 px-2 py-2 text-xs font-bold text-white outline-none focus:border-neon-yellow"
                         >
-                          <option value="">Não especificar</option>
+                          <option value="">{L('Não especificar', 'Not specified')}</option>
                           {MANAGER_SKIN_TONES.map((s) => (
                             <option key={s.id} value={s.id}>
                               {skinToneSelectLabel(s)}
@@ -843,7 +872,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                         </select>
                       </label>
                       <label className="block space-y-1">
-                        <span className="text-[9px] font-bold uppercase text-gray-500">Cor dos olhos</span>
+                        <span className="text-[9px] font-bold uppercase text-gray-500">{L('Cor dos olhos', 'Eye colour')}</span>
                         <select
                           value={eyeColor}
                           onChange={(e) => setEyeColor(e.target.value)}
@@ -857,7 +886,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                         </select>
                       </label>
                       <label className="block space-y-1 sm:col-span-2">
-                        <span className="text-[9px] font-bold uppercase text-gray-500">Estilo do cabelo</span>
+                        <span className="text-[9px] font-bold uppercase text-gray-500">{L('Estilo do cabelo', 'Hair style')}</span>
                         <select
                           value={hairChoice}
                           onChange={(e) => setHairChoice(e.target.value)}
@@ -867,7 +896,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                             hairBald && 'cursor-not-allowed opacity-45',
                           )}
                         >
-                          <option value="">Não especificar</option>
+                          <option value="">{L('Não especificar', 'Not specified')}</option>
                           {MANAGER_HAIR_STYLES.map((h) => (
                             <option key={h.id} value={h.id}>
                               {hairStyleSelectLabel(h)}
@@ -886,14 +915,14 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                           }}
                           className="h-4 w-4 shrink-0 accent-neon-yellow"
                         />
-                        <span className="text-[11px] font-bold text-white/90">Sem cabelo (careca)</span>
+                        <span className="text-[11px] font-bold text-white/90">{L('Sem cabelo (careca)', 'No hair (bald)')}</span>
                       </label>
                       <label className="block space-y-1 sm:col-span-2">
-                        <span className="text-[9px] font-bold uppercase text-gray-500">Detalhe</span>
+                        <span className="text-[9px] font-bold uppercase text-gray-500">{L('Detalhe', 'Detail')}</span>
                         <input
                           value={extraDetails}
                           onChange={(e) => setExtraDetails(e.target.value)}
-                          placeholder="Ex.: tatuagem de um cruz no pescoço"
+                          placeholder={L('Ex.: tatuagem de um cruz no pescoço', 'E.g.: cross tattoo on the neck')}
                           className="w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1.5 text-xs text-white outline-none focus:border-neon-yellow"
                         />
                       </label>
@@ -905,71 +934,71 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
               {step === 'review' ? (
                 <>
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neon-yellow/25 bg-neon-yellow/5 px-3 py-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Antes de criar</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{L('Antes de criar', 'Before creating')}</span>
                     <span className="font-display text-2xl font-black text-neon-yellow">{previewOvrTune}</span>
                   </div>
                   <dl className="space-y-2 rounded-lg border border-white/10 bg-black/30 p-3 text-xs">
                     <div className="flex justify-between gap-2">
-                      <dt className="text-gray-500">Nome</dt>
+                      <dt className="text-gray-500">{L('Nome', 'Name')}</dt>
                       <dd className="font-display font-bold text-white">{trimmed}</dd>
                     </div>
                     <div className="flex justify-between gap-2">
-                      <dt className="text-gray-500">Posição e idade</dt>
+                      <dt className="text-gray-500">{L('Posição e idade', 'Position and age')}</dt>
                       <dd className="text-white">
-                        {pos} · {age}a
+                        {posLabel(pos)} · {age}{L('a', 'y')}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-2">
-                      <dt className="text-gray-500">País e pé</dt>
+                      <dt className="text-gray-500">{L('País e pé', 'Country and foot')}</dt>
                       <dd className="text-white">
-                        {country} · {strongFoot === 'right' ? 'Direito' : strongFoot === 'left' ? 'Esquerdo' : 'Ambos'}
+                        {country} · {strongFoot === 'right' ? L('Direito', 'Right') : strongFoot === 'left' ? L('Esquerdo', 'Left') : L('Ambos', 'Both')}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-2">
-                      <dt className="text-gray-500">Perfil</dt>
+                      <dt className="text-gray-500">{L('Perfil', 'Profile')}</dt>
                       <dd className="text-white">{BEHAVIORS.find((b) => b.id === behavior)?.label}</dd>
                     </div>
                     <div className="flex justify-between gap-2">
-                      <dt className="text-gray-500">Contrato</dt>
+                      <dt className="text-gray-500">{L('Contrato', 'Contract')}</dt>
                       <dd className="text-white">
-                        {contractMatches} jogos
+                        {contractMatches} {L('jogos', 'matches')}
                         {contractPremiumExp > 0 ? ` · +${formatExp(contractPremiumExp)} EXP` : null}
                       </dd>
                     </div>
                     <div className="border-t border-white/10 pt-2 text-[10px] text-white/80">
-                      <div className="font-bold uppercase text-neon-yellow/90">Origem (retrato)</div>
+                      <div className="font-bold uppercase text-neon-yellow/90">{L('Origem (retrato)', 'Origin (portrait)')}</div>
                       <div className="mt-1 text-gray-400">
-                        Estilo: <span className="text-white">{PORTRAIT_STYLE_REGION_LABELS[portraitStyleRegion]}</span>
+                        {L('Estilo', 'Style')}: <span className="text-white">{PORTRAIT_STYLE_REGION_LABELS[portraitStyleRegion]}</span>
                       </div>
                       {originTags.length ? (
                         <div className="mt-1 text-gray-400">
-                          Marcadores: <span className="text-white">{originTags.join(', ')}</span>
+                          {L('Marcadores', 'Tags')}: <span className="text-white">{originTags.map(rotuloOrigem).join(', ')}</span>
                         </div>
                       ) : null}
                       <p className="mt-1 leading-relaxed text-white/90">{originText.trim()}</p>
                     </div>
                     {visualBrief ? (
                       <div className="border-t border-white/10 pt-2 text-[10px] text-white/70">
-                        <div className="font-bold uppercase text-gray-500">Aparência</div>
+                        <div className="font-bold uppercase text-gray-500">{L('Aparência', 'Appearance')}</div>
                         {skinTone ? (
                           <div>
-                            Tom de pele: {MANAGER_SKIN_TONES.find((s) => s.id === skinTone)?.name ?? skinTone}
+                            {L('Tom de pele', 'Skin tone')}: {(() => { const t = MANAGER_SKIN_TONES.find((s) => s.id === skinTone); return t ? skinToneDisplayName(t) : skinTone; })()}
                           </div>
                         ) : null}
-                        {visualBrief.eyeColor ? <div>Olhos: {visualBrief.eyeColor}</div> : null}
+                        {visualBrief.eyeColor ? <div>{L('Olhos', 'Eyes')}: {EYE_COLOR_CHOICES.find((o) => o.value === visualBrief.eyeColor)?.label ?? visualBrief.eyeColor}</div> : null}
                         {hairBald ? (
-                          <div>Cabelo: careca</div>
+                          <div>{L('Cabelo: careca', 'Hair: bald')}</div>
                         ) : hairChoice ? (
-                          <div>Cabelo: {hairDisplayLabel ?? hairChoice}</div>
+                          <div>{L('Cabelo', 'Hair')}: {hairDisplayLabel ?? hairChoice}</div>
                         ) : null}
-                        {visualBrief.extraDetails ? <div>Detalhe: {visualBrief.extraDetails}</div> : null}
+                        {visualBrief.extraDetails ? <div>{L('Detalhe', 'Detail')}: {visualBrief.extraDetails}</div> : null}
                       </div>
                     ) : (
-                      <div className="border-t border-white/10 pt-2 text-[10px] text-gray-500">Sem extras de aparência</div>
+                      <div className="border-t border-white/10 pt-2 text-[10px] text-gray-500">{L('Sem extras de aparência', 'No appearance extras')}</div>
                     )}
                   </dl>
                   <p className="text-[10px] leading-relaxed text-gray-500">
-                    Próximo passo: tira uma foto pra IA estilizar a carta do teu jogador.
+                    {L('Próximo passo: tira uma foto pra IA estilizar a carta do teu jogador.', 'Next step: take a photo so the AI can style your player card.')}
                   </p>
                 </>
               ) : null}
@@ -984,9 +1013,9 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                   {generatingArt ? (
                     <div className="flex flex-col items-center justify-center gap-3 rounded border border-neon-yellow/40 bg-neon-yellow/5 p-8 text-center">
                       <div className="h-8 w-8 animate-spin rounded-full border-2 border-neon-yellow border-t-transparent" />
-                      <p className="text-sm text-white/90">Enviando selfie…</p>
+                      <p className="text-sm text-white/90">{L('Enviando selfie…', 'Sending selfie…')}</p>
                       <p className="text-[11px] text-white/60">
-                        Tua carta premium é feita à mão e entregue em breve no plantel.
+                        {L('Tua carta premium é feita à mão e entregue em breve no plantel.', 'Your premium card is handmade and will be delivered to your squad soon.')}
                       </p>
                     </div>
                   ) : (
@@ -1005,21 +1034,21 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                     canAfford ? 'border-white/10 bg-black/30 text-gray-400' : 'border-red-500/40 bg-red-950/30 text-red-200',
                   )}
                 >
-                  Custo base:{' '}
+                  {L('Custo base:', 'Base cost:')}{' '}
                 <span className="font-display font-black text-neon-yellow">{formatExp(createCostExp)} EXP</span>
                 {contractPremiumExp > 0 ? (
                   <>
                     {' · '}
-                    prémio contrato:{' '}
+                    {L('prémio contrato:', 'contract premium:')}{' '}
                     <span className="font-display font-bold text-white/90">{formatExp(contractPremiumExp)} EXP</span>
                   </>
                 ) : null}
                 {' · '}
-                total:{' '}
+                {L('total:', 'total:')}{' '}
                 <span className="font-display font-black text-neon-yellow">{formatExp(totalCreateCostExp)} EXP</span>
                 {' · '}
-                Saldo: <span className="text-white">{formatExp(oleBal)} EXP</span>
-                {!canAfford ? <span className="mt-1 block">EXP não chega.</span> : null}
+                {L('Saldo:', 'Balance:')} <span className="text-white">{formatExp(oleBal)} EXP</span>
+                {!canAfford ? <span className="mt-1 block">{L('EXP não chega.', 'Not enough EXP.')}</span> : null}
                 </div>
               ) : null}
             </div>
@@ -1035,7 +1064,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                     !canAdvanceIdentity && 'pointer-events-none opacity-40',
                   )}
                 >
-                  Avançar
+                  {L('Avançar', 'Next')}
                 </button>
               ) : null}
               {step === 'tune' ? (
@@ -1044,7 +1073,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                     type="button"
                     onClick={() => setStep('identity')}
                     className="flex shrink-0 items-center justify-center rounded-lg border border-white/20 px-3 py-3 text-white/80 hover:bg-white/10"
-                    aria-label="Voltar"
+                    aria-label={L('Voltar', 'Back')}
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
@@ -1057,7 +1086,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                       !heritageValid && 'pointer-events-none opacity-40',
                     )}
                   >
-                    Rever
+                    {L('Rever', 'Review')}
                   </button>
                 </div>
               ) : null}
@@ -1074,7 +1103,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                       onClick={() => setStep('tune')}
                       disabled={submitting}
                       className="flex shrink-0 items-center justify-center rounded-lg border border-white/20 px-3 py-3 text-white/80 hover:bg-white/10 disabled:opacity-40"
-                      aria-label="Voltar"
+                      aria-label={L('Voltar', 'Back')}
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>
@@ -1087,7 +1116,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                         (!canSubmit || submitting) && 'pointer-events-none opacity-40',
                       )}
                     >
-                      {submitting ? 'Validando…' : 'Continuar pra foto →'}
+                      {submitting ? L('Validando…', 'Validating…') : L('Continuar pra foto →', 'Continue to photo →')}
                     </button>
                   </div>
                 </div>

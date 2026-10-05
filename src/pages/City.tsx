@@ -38,6 +38,7 @@ import {
 } from '@/clubStructures/benefits';
 import { useTrackScreen, trackMissionEvent } from '@/progression/trackEvent';
 import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
+import { L, LOCALE } from '@/i18n/L';
 
 type CityStructDef = {
   uiId: string;
@@ -54,92 +55,92 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
   {
     uiId: 'stadium',
     structureId: 'stadium',
-    name: 'Estádio',
+    name: L('Estádio', 'Stadium'),
     icon: Building2,
-    desc: 'O coração do clube. Cada nível reforça capacidade, receita em dias de jogo e o ambiente para a torcida.',
-    action: 'Expandir Arquibancada',
+    desc: L('O coração do clube. Cada nível reforça capacidade, receita em dias de jogo e o ambiente para a torcida.', 'The heart of the club. Each level boosts capacity, matchday revenue and the atmosphere for the fans.'),
+    action: L('Expandir Arquibancada', 'Expand Stands'),
     actionIcon: Users,
     statsForLevel: (lvl) => [
       {
-        label: 'Capacidade',
-        value: `${stadiumCapacityByLevel(lvl).toLocaleString('pt-BR')} lugares`,
+        label: L('Capacidade', 'Capacity'),
+        value: L(`${stadiumCapacityByLevel(lvl).toLocaleString(LOCALE)} lugares`, `${stadiumCapacityByLevel(lvl).toLocaleString(LOCALE)} seats`),
       },
       {
-        label: 'EXP / assistente (casa)',
+        label: L('EXP / assistente (casa)', 'EXP / spectator (home)'),
         value: `${stadiumExpPerSpectatorByLevel(lvl)}`,
       },
-      { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
+      { label: L('Nível', 'Level'), value: `${lvl} / ${MAX_LEVEL}` },
     ],
   },
   {
     uiId: 'ct',
     structureId: 'training_center',
-    name: 'Centro de Treinamento',
+    name: L('Centro de Treinamento', 'Training Center'),
     icon: Dumbbell,
-    desc: 'Mais ganho e planos de treino',
+    desc: L('Mais ganho e planos de treino', 'More gains and training plans'),
     statsForLevel: (lvl) => [
-      { label: 'Slots por tipo de treino', value: String(maxSlotsByTrainingCenter(lvl)) },
+      { label: L('Slots por tipo de treino', 'Slots per training type'), value: String(maxSlotsByTrainingCenter(lvl)) },
       {
-        label: 'Coletivos simultâneos',
+        label: L('Coletivos simultâneos', 'Concurrent team sessions'),
         value: String(trainingCenterMaxConcurrentCollectivePlans(lvl)),
       },
       {
-        label: 'Booster atributos',
+        label: L('Booster atributos', 'Attribute booster'),
         value: `${Math.round((trainingCenterAttributeGainMultiplier(lvl) - 1) * 100)}%`,
       },
-      { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
+      { label: L('Nível', 'Level'), value: `${lvl} / ${MAX_LEVEL}` },
     ],
   },
   {
     uiId: 'dm',
     structureId: 'medical_dept',
-    name: 'Departamento Médico',
+    name: L('Departamento Médico', 'Medical Department'),
     icon: Activity,
-    desc: 'Menos fadiga e lesão',
+    desc: L('Menos fadiga e lesão', 'Less fatigue and injury'),
     statsForLevel: (lvl) => [
-      { label: 'Slots de tratamento', value: String(medicalDeptTreatmentSlots(lvl)) },
+      { label: L('Slots de tratamento', 'Treatment slots'), value: String(medicalDeptTreatmentSlots(lvl)) },
       {
-        label: 'Velocidade recuperação',
+        label: L('Velocidade recuperação', 'Recovery speed'),
         value: `+${medicalDeptRecoverySpeedBonusPercent(lvl)}%`,
       },
-      { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
+      { label: L('Nível', 'Level'), value: `${lvl} / ${MAX_LEVEL}` },
     ],
   },
   {
     uiId: 'base',
     structureId: 'youth_academy',
-    name: 'Categoria de Base',
+    name: L('Categoria de Base', 'Youth Academy'),
     icon: GraduationCap,
-    desc: 'Revela jovens promessas',
-    action: 'Buscar Promessas',
+    desc: L('Revela jovens promessas', 'Develops young prospects'),
+    action: L('Buscar Promessas', 'Scout Prospects'),
     actionIcon: Users,
     statsForLevel: (lvl) => [
       {
-        label: 'Booster treino (promessas)',
+        label: L('Booster treino (promessas)', 'Training booster (prospects)'),
         value: `${Math.round((youthAcademyProspectTrainingMultiplier(lvl) - 1) * 100)}%`,
       },
-      { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
+      { label: L('Nível', 'Level'), value: `${lvl} / ${MAX_LEVEL}` },
     ],
   },
   {
     uiId: 'store',
     structureId: 'megastore',
-    name: 'Megaloja',
+    name: L('Megaloja', 'Megastore'),
     icon: Store,
-    desc: 'Torcida vira EXP nas vitórias',
-    action: 'Campanha de Vendas',
+    desc: L('Torcida vira EXP nas vitórias', 'Fans turn into EXP on wins'),
+    action: L('Campanha de Vendas', 'Sales Campaign'),
     actionIcon: Coins,
     statsForLevel: (lvl) => [
-      { label: 'Campanha de vendas', value: `${CITY_QUICK_STORE_COST_EXP} EXP · reforça a torcida` },
+      { label: L('Campanha de vendas', 'Sales campaign'), value: L(`${CITY_QUICK_STORE_COST_EXP} EXP · reforça a torcida`, `${CITY_QUICK_STORE_COST_EXP} EXP · boosts fan support`) },
       {
-        label: 'Apoio em casa',
+        label: L('Apoio em casa', 'Home support'),
         value: `+${megastoreHomeConfidenceBonusPoints(lvl)} pts`,
       },
       {
-        label: 'Apoio fora',
+        label: L('Apoio fora', 'Away support'),
         value: lvl >= 4 ? `+${megastoreAwayConfidenceBonusPoints(lvl)} pts` : '—',
       },
-      { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
+      { label: L('Nível', 'Level'), value: `${lvl} / ${MAX_LEVEL}` },
     ],
   },
 ];
@@ -158,8 +159,8 @@ function upgradeLine(
   const c = getNextUpgradeCost(structureId, level, DEFAULT_BRO_PRICES_CENTS);
   if (!c) {
     return {
-      title: 'Nível máximo',
-      subtitle: 'Estrutura no topo da árvore de evolução.',
+      title: L('Nível máximo', 'Max level'),
+      subtitle: L('Estrutura no topo da árvore de evolução.', 'Structure at the top of the upgrade tree.'),
       canAfford: false,
       hasUpgrade: false,
     };
@@ -167,14 +168,14 @@ function upgradeLine(
   if (c.currency === 'exp') {
     return {
       title: `${formatExp(c.amount)} EXP`,
-      subtitle: 'Upgrade com tesouraria EXP (ranking).',
+      subtitle: L('Upgrade com tesouraria EXP (ranking).', 'Upgrade with EXP treasury (ranking).'),
       canAfford: ole >= c.amount,
       hasUpgrade: true,
     };
   }
   return {
     title: formatBroFromCents(c.amount),
-    subtitle: 'Upgrade com BRO na carteira.',
+    subtitle: L('Upgrade com BRO na carteira.', 'Upgrade with BRO from your wallet.'),
     canAfford: broCents >= c.amount,
     hasUpgrade: true,
   };
@@ -226,7 +227,7 @@ export function City() {
   const quickConfirmCopy = useMemo(() => {
     if (!quickPendingId) return null;
     const def = CITY_STRUCTURE_DEFS.find((d) => d.structureId === quickPendingId);
-    const title = def ? `Desejas fazer «${def.action}»?` : 'Desejas confirmar esta ação?';
+    const title = def ? L(`Desejas fazer «${def.action}»?`, `Do you want to run «${def.action}»?`) : L('Desejas confirmar esta ação?', 'Confirm this action?');
     const lines: string[] = [];
     let costExpLine: string | null = null;
     let confirmBlocked = false;
@@ -234,29 +235,29 @@ export function City() {
     if (quickPendingId === 'stadium') {
       const up = stadiumUpgrade;
       if (!up.hasUpgrade) {
-        lines.push('Não há próximo nível disponível para o estádio.');
+        lines.push(L('Não há próximo nível disponível para o estádio.', 'No next level available for the stadium.'));
         confirmBlocked = true;
       } else if (!up.canAfford) {
-        lines.push('Saldo insuficiente para este upgrade.');
+        lines.push(L('Saldo insuficiente para este upgrade.', 'Insufficient balance for this upgrade.'));
         confirmBlocked = true;
       } else {
         const c = getNextUpgradeCost('stadium', levelOf(structuresState, 'stadium'), DEFAULT_BRO_PRICES_CENTS);
         if (c?.currency === 'exp') {
-          costExpLine = `Custo em EXP: ${formatExp(c.amount)}`;
-          lines.push('O estádio sobe um nível. Reforço de ambiente e capacidade para a torcida.');
+          costExpLine = L(`Custo em EXP: ${formatExp(c.amount)}`, `EXP cost: ${formatExp(c.amount)}`);
+          lines.push(L('O estádio sobe um nível. Reforço de ambiente e capacidade para a torcida.', 'The stadium goes up one level. Better atmosphere and capacity for the fans.'));
         } else if (c?.currency === 'bro') {
-          costExpLine = 'Custo em EXP: nenhum neste nível.';
-          lines.push(`Custo em BRO: ${formatBroFromCents(c.amount)} (debitado da carteira).`);
-          lines.push('O estádio sobe um nível.');
+          costExpLine = L('Custo em EXP: nenhum neste nível.', 'EXP cost: none at this level.');
+          lines.push(L(`Custo em BRO: ${formatBroFromCents(c.amount)} (debitado da carteira).`, `BRO cost: ${formatBroFromCents(c.amount)} (charged to your wallet).`));
+          lines.push(L('O estádio sobe um nível.', 'The stadium goes up one level.'));
         }
       }
     } else if (quickPendingId === 'youth_academy') {
-      costExpLine = 'Custo em EXP: nenhum.';
-      lines.push('Abre o olheiro da categoria de base para ver promessas.');
+      costExpLine = L('Custo em EXP: nenhum.', 'EXP cost: none.');
+      lines.push(L('Abre o olheiro da categoria de base para ver promessas.', 'Opens the youth academy scout to see prospects.'));
     } else if (quickPendingId === 'megastore') {
-      costExpLine = `Custo em EXP: ${formatExp(CITY_QUICK_STORE_COST_EXP)}`;
+      costExpLine = L(`Custo em EXP: ${formatExp(CITY_QUICK_STORE_COST_EXP)}`, `EXP cost: ${formatExp(CITY_QUICK_STORE_COST_EXP)}`);
       lines.push(
-        `Reforça o apoio da torcida (atual ${crowd.supportPercent.toFixed(1)}%).`,
+        L(`Reforça o apoio da torcida (atual ${crowd.supportPercent.toFixed(1)}%).`, `Boosts fan support (currently ${crowd.supportPercent.toFixed(1)}%).`),
       );
       if (!canQuickStore) confirmBlocked = true;
     }
@@ -276,7 +277,7 @@ export function City() {
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto space-y-6 pb-8 overflow-x-hidden px-3 sm:px-4 lg:px-6">
       <div className="w-full max-w-6xl min-w-0 mx-auto">
-        <BackButton to="/clube" label="Clube" />
+        <BackButton to="/clube" label={L('Clube', 'Club')} />
       </div>
 
       <div className="w-full max-w-6xl min-w-0 mx-auto space-y-6">
@@ -291,7 +292,7 @@ export function City() {
           <div className="relative z-10 p-6 sm:p-8">
             {/* Eyebrow */}
             <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-              Estrutura principal
+              {L('Estrutura principal', 'Main structure')}
             </span>
 
             {/* Título */}
@@ -299,14 +300,14 @@ export function City() {
               className="mt-2 mb-5 font-impact uppercase text-black leading-none"
               style={{ fontSize: 'clamp(40px, 10vw, 72px)', letterSpacing: '-0.01em' }}
             >
-              Estádio
+              {L('Estádio', 'Stadium')}
             </h2>
 
             {/* Stats strip */}
             <div className="grid grid-cols-3 gap-3 mb-6">
               <div className="bg-black px-3 py-3 sm:px-4 sm:py-4 text-center" style={{ borderRadius: 'var(--radius-sm)' }}>
                 <p className="text-[9px] sm:text-[10px] text-white/65 uppercase tracking-[0.18em] mb-1.5">
-                  Capacidade
+                  {L('Capacidade', 'Capacity')}
                 </p>
                 <p
                   className="font-impact text-neon-yellow tabular-nums leading-none"
@@ -319,7 +320,7 @@ export function City() {
               </div>
               <div className="bg-black px-3 py-3 sm:px-4 sm:py-4 text-center" style={{ borderRadius: 'var(--radius-sm)' }}>
                 <p className="text-[9px] sm:text-[10px] text-white/65 uppercase tracking-[0.18em] mb-1.5">
-                  EXP/Torcedor
+                  {L('EXP/Torcedor', 'EXP/Fan')}
                 </p>
                 <p
                   className="font-impact text-neon-yellow tabular-nums leading-none"
@@ -332,7 +333,7 @@ export function City() {
               </div>
               <div className="bg-black px-3 py-3 sm:px-4 sm:py-4 text-center" style={{ borderRadius: 'var(--radius-sm)' }}>
                 <p className="text-[9px] sm:text-[10px] text-white/65 uppercase tracking-[0.18em] mb-1.5">
-                  Nível
+                  {L('Nível', 'Level')}
                 </p>
                 <p
                   className="font-impact text-neon-yellow tabular-nums leading-none"
@@ -359,7 +360,7 @@ export function City() {
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
               <ArrowUpCircle className="w-4 h-4" />
-              {stadiumUpgrade.hasUpgrade ? `Expandir · ${stadiumUpgrade.title}` : 'Nível Máximo'}
+              {stadiumUpgrade.hasUpgrade ? L(`Expandir · ${stadiumUpgrade.title}`, `Expand · ${stadiumUpgrade.title}`) : L('Nível Máximo', 'Max Level')}
             </button>
           </div>
         </motion.div>
@@ -399,7 +400,7 @@ export function City() {
                         {struct.name}
                       </h3>
                       <p className="text-[10px] text-white/45 uppercase tracking-wider">
-                        Nível {level}/{MAX_LEVEL}
+                        {L('Nível', 'Level')} {level}/{MAX_LEVEL}
                       </p>
                     </div>
                   </div>
@@ -443,7 +444,7 @@ export function City() {
                     style={{ borderRadius: 'var(--radius-sm)' }}
                   >
                     <TrendingUp className="w-3.5 h-3.5" />
-                    {upgrade.hasUpgrade ? `Evoluir · ${upgrade.title}` : 'Nível máximo'}
+                    {upgrade.hasUpgrade ? L(`Evoluir · ${upgrade.title}`, `Upgrade · ${upgrade.title}`) : L('Nível máximo', 'Max level')}
                   </button>
                   {struct.action && struct.actionIcon && (
                     <button
@@ -472,7 +473,7 @@ export function City() {
                     className="flex w-full items-center justify-center gap-1 pt-2 font-display font-black uppercase text-neon-yellow transition-colors hover:text-white"
                     style={{ fontSize: '10px', letterSpacing: '0.12em' }}
                   >
-                    <span>Ver promessas</span>
+                    <span>{L('Ver promessas', 'View prospects')}</span>
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -524,7 +525,7 @@ export function City() {
                       <div className="flex items-center gap-3">
                         {def && <def.icon className="h-8 w-8 text-neon-yellow" strokeWidth={2} />}
                         <h3 className="font-display text-xl font-black uppercase tracking-wider text-white">
-                          Evoluir {def?.name}
+                          {L('Evoluir', 'Upgrade')} {def?.name}
                         </h3>
                       </div>
                     </div>
@@ -533,7 +534,7 @@ export function City() {
                       {/* Custo (Archivo expandida) */}
                       <div className="rounded-lg border border-neon-yellow/20 bg-neon-yellow/5 p-4 text-center">
                         <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-neon-yellow/70">
-                          Custo da Evolução
+                          {L('Custo da Evolução', 'Upgrade Cost')}
                         </p>
                         <p
                           className="ole-num text-neon-yellow"
@@ -546,7 +547,7 @@ export function City() {
                       {/* Benefícios */}
                       <div className="space-y-2">
                         <p className="text-xs font-bold uppercase tracking-wider text-white/45">
-                          Benefícios do Nível {level + 1}
+                          {L(`Benefícios do Nível ${level + 1}`, `Level ${level + 1} Benefits`)}
                         </p>
                         <ul className="space-y-2 text-sm text-white/60">
                           {def?.statsForLevel(level + 1).slice(0, 3).map((stat, i) => (
@@ -566,7 +567,7 @@ export function City() {
                         onClick={handleClose}
                         className="flex-1 rounded-lg border border-white/20 px-4 py-3 font-display text-sm font-bold uppercase tracking-wider text-white transition-colors hover:bg-white/5"
                       >
-                        Cancelar
+                        {L('Cancelar', 'Cancel')}
                       </button>
                       <button
                         type="button"
@@ -579,7 +580,7 @@ export function City() {
                             : 'cursor-not-allowed bg-white/10 text-white/45',
                         )}
                       >
-                        Confirmar
+                        {L('Confirmar', 'Confirm')}
                       </button>
                     </div>
                   </>
@@ -610,7 +611,7 @@ export function City() {
                         transition={{ delay: 0.3 }}
                         className="mb-2 font-display text-2xl font-black uppercase tracking-wider text-neon-yellow"
                       >
-                        Sucesso!
+                        {L('Sucesso!', 'Success!')}
                       </motion.h3>
 
                       <motion.p
@@ -619,7 +620,7 @@ export function City() {
                         transition={{ delay: 0.4 }}
                         className="text-sm text-white/50"
                       >
-                        {def?.name} agora está no nível {level + 1}
+                        {L(`${def?.name} agora está no nível ${level + 1}`, `${def?.name} is now level ${level + 1}`)}
                       </motion.p>
                     </div>
 
@@ -629,7 +630,7 @@ export function City() {
                         onClick={handleClose}
                         className="w-full rounded-lg bg-neon-yellow px-4 py-3 font-display text-sm font-black uppercase tracking-wider text-black transition-colors hover:bg-white"
                       >
-                        Continuar
+                        {L('Continuar', 'Continue')}
                       </button>
                     </div>
                   </>
@@ -660,7 +661,7 @@ export function City() {
                         transition={{ delay: 0.3 }}
                         className="mb-2 font-display text-2xl font-black uppercase tracking-wider text-red-500"
                       >
-                        Saldo Insuficiente
+                        {L('Saldo Insuficiente', 'Insufficient Balance')}
                       </motion.h3>
 
                       <motion.p
@@ -670,8 +671,8 @@ export function City() {
                         className="text-sm text-white/50"
                       >
                         {cost?.currency === 'exp'
-                          ? `Precisa de ${formatExp(cost.amount)} EXP para evoluir ${def?.name}`
-                          : `Precisa de ${formatBroFromCents(cost?.amount ?? 0)} para evoluir ${def?.name}`
+                          ? L(`Precisa de ${formatExp(cost.amount)} EXP para evoluir ${def?.name}`, `You need ${formatExp(cost.amount)} EXP to upgrade ${def?.name}`)
+                          : L(`Precisa de ${formatBroFromCents(cost?.amount ?? 0)} para evoluir ${def?.name}`, `You need ${formatBroFromCents(cost?.amount ?? 0)} to upgrade ${def?.name}`)
                         }
                       </motion.p>
                     </div>
@@ -682,7 +683,7 @@ export function City() {
                         onClick={handleClose}
                         className="w-full rounded-lg bg-white/10 border border-white/20 px-4 py-3 font-display text-sm font-black uppercase tracking-wider text-white transition-all hover:bg-white/20"
                       >
-                        Fechar
+                        {L('Fechar', 'Close')}
                       </button>
                     </div>
                   </>
@@ -719,13 +720,13 @@ export function City() {
                   id="city-quick-confirm-title"
                   className="pr-2 font-display text-sm font-black uppercase tracking-wider text-white md:text-base"
                 >
-                  Confirmar ação
+                  {L('Confirmar ação', 'Confirm action')}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setQuickPendingId(null)}
                   className="shrink-0 p-1 text-white/50 transition-colors hover:text-white"
-                  aria-label="Fechar"
+                  aria-label={L('Fechar', 'Close')}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -749,7 +750,7 @@ export function City() {
                   onClick={() => setQuickPendingId(null)}
                   className="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-white/20 text-white font-display font-bold uppercase text-sm tracking-wider hover:bg-white/5 transition-colors"
                 >
-                  Cancelar
+                  {L('Cancelar', 'Cancel')}
                 </button>
                 <button
                   type="button"
@@ -766,7 +767,7 @@ export function City() {
                       : 'bg-neon-yellow text-black border-neon-yellow hover:brightness-110',
                   )}
                 >
-                  Confirmar
+                  {L('Confirmar', 'Confirm')}
                 </button>
               </div>
             </motion.div>

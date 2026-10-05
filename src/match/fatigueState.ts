@@ -12,6 +12,7 @@
  * `attrMultiplier` pra reduzir efetividade. Mantém a UX e o gameplay
  * sincronizados sem mágica espalhada pelo código.
  */
+import { L } from '@/i18n/L';
 
 export type FatigueLevel = 'fresh' | 'tired' | 'exhausted' | 'critical';
 
@@ -41,7 +42,7 @@ export function getFatigueState(fatigue: number): FatigueState {
       attrMultiplier: 0.85,
       injuryRiskMultiplier: 1.25,
       badgeTone: 'danger',
-      shortLabel: 'Crítico — risco alto de lesão',
+      shortLabel: L('Crítico — risco alto de lesão', 'Critical — high injury risk'),
     };
   }
   if (pct >= 71) {
@@ -51,7 +52,7 @@ export function getFatigueState(fatigue: number): FatigueState {
       attrMultiplier: 0.92,
       injuryRiskMultiplier: 1.15,
       badgeTone: 'alert',
-      shortLabel: 'Exausto — atributos reduzidos',
+      shortLabel: L('Exausto — atributos reduzidos', 'Exhausted — reduced attributes'),
     };
   }
   if (pct >= 50) {
@@ -61,7 +62,7 @@ export function getFatigueState(fatigue: number): FatigueState {
       attrMultiplier: 0.97,
       injuryRiskMultiplier: 1.05,
       badgeTone: 'warning',
-      shortLabel: 'Cansado',
+      shortLabel: L('Cansado', 'Tired'),
     };
   }
   return {
@@ -70,7 +71,7 @@ export function getFatigueState(fatigue: number): FatigueState {
     attrMultiplier: 1,
     injuryRiskMultiplier: 1,
     badgeTone: 'none',
-    shortLabel: 'Fresco',
+    shortLabel: L('Fresco', 'Fresh'),
   };
 }
 

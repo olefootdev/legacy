@@ -12,6 +12,7 @@
  */
 
 import { getSupabase } from '@/supabase/client';
+import { L } from '@/i18n/L';
 
 export type WithdrawalStatus = 'pending' | 'approved' | 'paid' | 'rejected';
 export type PixKeyType = 'cpf' | 'cnpj' | 'email' | 'phone' | 'random';
@@ -37,7 +38,7 @@ export async function requestWithdrawal(params: {
   note?: string;
 }): Promise<{ ok: boolean; id?: string; error?: string }> {
   const sb = getSupabase();
-  if (!sb) return { ok: false, error: 'Serviço indisponível.' };
+  if (!sb) return { ok: false, error: L('Serviço indisponível.', 'Service unavailable.') };
   const { data, error } = await sb.rpc('request_withdrawal', {
     p_amount_cents: Math.round(params.amountCents),
     p_pix_key: params.pixKey,
@@ -65,7 +66,7 @@ export async function sendSupportMessage(params: {
   body: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const sb = getSupabase();
-  if (!sb) return { ok: false, error: 'Serviço indisponível.' };
+  if (!sb) return { ok: false, error: L('Serviço indisponível.', 'Service unavailable.') };
   const { error } = await sb.rpc('send_support_message', {
     p_subject: params.subject ?? 'Suporte',
     p_body: params.body,
@@ -82,7 +83,7 @@ export async function requestNewCollection(params: {
   referredContact?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const sb = getSupabase();
-  if (!sb) return { ok: false, error: 'Serviço indisponível.' };
+  if (!sb) return { ok: false, error: L('Serviço indisponível.', 'Service unavailable.') };
   const { error } = await sb.rpc('request_new_collection', {
     p_athlete_name: params.athleteName,
     p_notes: params.notes ?? null,
@@ -217,12 +218,12 @@ export function subscribeMyCardSales(
 function mapError(msg: string): string {
   const m = msg.toLowerCase();
   if (m.includes('não verificada') || m.includes('nao verificada')) {
-    return 'Sua conta ainda não está verificada. Fale com a OLEFOOT para liberar saques.';
+    return L('Sua conta ainda não está verificada. Fale com a OLEFOOT para liberar saques.', 'Your account is not verified yet. Contact OLEFOOT to enable withdrawals.');
   }
-  if (m.includes('saldo insuficiente')) return 'Valor acima do seu saldo disponível para saque.';
-  if (m.includes('authenticated')) return 'Sua sessão expirou. Entre novamente.';
+  if (m.includes('saldo insuficiente')) return L('Valor acima do seu saldo disponível para saque.', 'Amount exceeds your balance available for withdrawal.');
+  if (m.includes('authenticated')) return L('Sua sessão expirou. Entre novamente.', 'Your session expired. Log in again.');
   if (m.includes('function') && m.includes('does not exist')) {
-    return 'Este recurso está sendo ativado. Tente novamente em instantes.';
+    return L('Este recurso está sendo ativado. Tente novamente em instantes.', 'This feature is being enabled. Try again shortly.');
   }
-  return 'Não foi possível concluir agora. Tente novamente.';
+  return L('Não foi possível concluir agora. Tente novamente.', 'Couldn\'t complete right now. Try again.');
 }

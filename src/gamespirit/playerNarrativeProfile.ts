@@ -14,6 +14,7 @@ import type { PitchPlayerState } from '@/engine/types';
 import type { PlayerEntity } from '@/entities/types';
 import type { MatchCognitiveArchetype, MatchPlayerPersonality } from '@/match/playerInMatch';
 import { derivePersonalityFromAttrs } from '@/match/playerInMatch';
+import { L } from '@/i18n/L';
 
 // ─── Tipos exportados ────────────────────────────────────────────────────────
 
@@ -257,14 +258,14 @@ export function buildSquadNarrativeProfiles(
 /** Retorna um fragmento narrativo curto baseado no traço do jogador. */
 export function traitPhrase(trait: NarrativeTrait, name: string): string {
   switch (trait) {
-    case 'sangue_frio':   return `${name}, gelado como sempre,`;
-    case 'agressivo':     return `${name}, no limite da intensidade,`;
-    case 'criativo':      return `${name}, com a visão que só ele tem,`;
-    case 'guerreiro':     return `${name}, que não para de correr,`;
-    case 'imprevisivel':  return `${name}, impossível de prever,`;
-    case 'experiente':    return `${name}, com a leitura de um veterano,`;
-    case 'destruidor':    return `${name}, que veio para destruir jogadas,`;
-    case 'finalizador':   return `${name}, que vive para o gol,`;
+    case 'sangue_frio':   return L(`${name}, gelado como sempre,`, `${name}, ice-cold as ever,`);
+    case 'agressivo':     return L(`${name}, no limite da intensidade,`, `${name}, right on the edge,`);
+    case 'criativo':      return L(`${name}, com a visão que só ele tem,`, `${name}, with vision only he has,`);
+    case 'guerreiro':     return L(`${name}, que não para de correr,`, `${name}, who never stops running,`);
+    case 'imprevisivel':  return L(`${name}, impossível de prever,`, `${name}, impossible to read,`);
+    case 'experiente':    return L(`${name}, com a leitura de um veterano,`, `${name}, with a veteran's reading of the game,`);
+    case 'destruidor':    return L(`${name}, que veio para destruir jogadas,`, `${name}, here to break up play,`);
+    case 'finalizador':   return L(`${name}, que vive para o gol,`, `${name}, who lives for goals,`);
     default:              return `${name}`;
   }
 }
@@ -272,9 +273,9 @@ export function traitPhrase(trait: NarrativeTrait, name: string): string {
 /** Retorna fragmento de humor para enriquecer a frase. */
 export function moodPhrase(mood: NarrativeMood): string {
   switch (mood) {
-    case 'em_chamas':   return ' em chamas nessa partida';
-    case 'pressionado': return ' sentindo o peso do cansaço';
-    case 'confiante':   return ' confiante no momento';
+    case 'em_chamas':   return L(' em chamas nessa partida', ' on fire today');
+    case 'pressionado': return L(' sentindo o peso do cansaço', ' feeling the fatigue');
+    case 'confiante':   return L(' confiante no momento', ' full of confidence');
     default:            return '';
   }
 }
@@ -282,10 +283,10 @@ export function moodPhrase(mood: NarrativeMood): string {
 /** Retorna fragmento de intenção para enriquecer a frase. */
 export function intentPhrase(intent: NarrativeIntent): string {
   switch (intent) {
-    case 'atacar':   return 'buscou o gol';
-    case 'criar':    return 'tentou criar a jogada';
-    case 'defender': return 'cortou o perigo';
-    case 'segurar':  return 'segurou a bola';
-    case 'disputar': return 'disputou o rebote';
+    case 'atacar':   return L('buscou o gol', 'went for goal');
+    case 'criar':    return L('tentou criar a jogada', 'tried to create');
+    case 'defender': return L('cortou o perigo', 'cut out the danger');
+    case 'segurar':  return L('segurou a bola', 'held the ball up');
+    case 'disputar': return L('disputou o rebote', 'fought for the rebound');
   }
 }

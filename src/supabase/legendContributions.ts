@@ -9,6 +9,7 @@
  * O áudio vai pro bucket privado `legend-stories`, na pasta do próprio usuário.
  */
 import { getSupabase } from './client';
+import { L } from '@/i18n/L';
 
 export type ContributionKind = 'correcao' | 'historia' | 'novo_card';
 export type ContributionStatus = 'pendente' | 'aceita' | 'recusada';
@@ -28,26 +29,26 @@ export interface LegendContribution {
 
 /** O que a lenda pode apontar numa correção. */
 export const CORRECTION_FIELDS: Array<{ value: string; label: string }> = [
-  { value: 'historia', label: 'A história / narrativa' },
-  { value: 'clube', label: 'Clube ou período' },
-  { value: 'atributos', label: 'Os atributos' },
-  { value: 'foto', label: 'A foto' },
-  { value: 'nome', label: 'O nome no card' },
-  { value: 'outro', label: 'Outro' },
+  { value: 'historia', label: L('A história / narrativa', 'The story / narrative') },
+  { value: 'clube', label: L('Clube ou período', 'Club or period') },
+  { value: 'atributos', label: L('Os atributos', 'The attributes') },
+  { value: 'foto', label: L('A foto', 'The photo') },
+  { value: 'nome', label: L('O nome no card', 'The name on the card') },
+  { value: 'outro', label: L('Outro', 'Other') },
 ];
 
 const KIND_ERROR: Record<string, string> = {
-  'dono do card': 'Só o dono do card pode enviar isso.',
-  'atletas com card': 'Só atletas com card publicado podem enviar.',
-  '10 envios': 'Você já tem 10 envios em análise. Aguarde a resposta.',
-  'vazia': 'Escreva ou grave alguma coisa antes de enviar.',
-  'does not exist': 'Este recurso está sendo ativado. Tente em instantes.',
+  'dono do card': L('Só o dono do card pode enviar isso.', 'Only the card owner can send this.'),
+  'atletas com card': L('Só atletas com card publicado podem enviar.', 'Only athletes with a published card can send.'),
+  '10 envios': L('Você já tem 10 envios em análise. Aguarde a resposta.', 'You already have 10 submissions under review. Wait for a reply.'),
+  'vazia': L('Escreva ou grave alguma coisa antes de enviar.', 'Write or record something before sending.'),
+  'does not exist': L('Este recurso está sendo ativado. Tente em instantes.', 'This feature is being enabled. Try again shortly.'),
 };
 
 function mapError(msg: string): string {
   const m = msg.toLowerCase();
   for (const [k, v] of Object.entries(KIND_ERROR)) if (m.includes(k)) return v;
-  return 'Não foi possível enviar agora. Tente de novo.';
+  return L('Não foi possível enviar agora. Tente de novo.', 'Couldn\'t send right now. Try again.');
 }
 
 /**
@@ -56,10 +57,10 @@ function mapError(msg: string): string {
  */
 export async function uploadStoryAudio(blob: Blob): Promise<{ path?: string; error?: string }> {
   const sb = getSupabase();
-  if (!sb) return { error: 'Serviço indisponível.' };
+  if (!sb) return { error: L('Serviço indisponível.', 'Service unavailable.') };
   const { data: auth } = await sb.auth.getUser();
   const uid = auth?.user?.id;
-  if (!uid) return { error: 'Sua sessão expirou. Entre novamente.' };
+  if (!uid) return { error: L('Sua sessão expirou. Entre novamente.', 'Your session expired. Log in again.') };
 
   const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
   const path = `${uid}/${Date.now()}.${ext}`;
@@ -69,7 +70,7 @@ export async function uploadStoryAudio(blob: Blob): Promise<{ path?: string; err
   });
   if (error) {
     console.warn('[legendContributions] upload:', error.message);
-    return { error: 'Não conseguimos guardar o áudio. Tente de novo.' };
+    return { error: L('Não conseguimos guardar o áudio. Tente de novo.', 'We couldn\'t save the audio. Try again.') };
   }
   return { path };
 }
@@ -82,7 +83,7 @@ export async function submitContribution(params: {
   audioPath?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const sb = getSupabase();
-  if (!sb) return { ok: false, error: 'Serviço indisponível.' };
+  if (!sb) return { ok: false, error: L('Serviço indisponível.', 'Service unavailable.') };
   const { error } = await sb.rpc('submit_legend_contribution', {
     p_kind: params.kind,
     p_message: params.message ?? null,

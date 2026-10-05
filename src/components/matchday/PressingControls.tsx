@@ -8,6 +8,7 @@
  * — Eyebrow `tracking-[0.35em]` no header da seção
  */
 import { useGameDispatch, useGameStore } from '@/game/store';
+import { L } from '@/i18n/L';
 
 const DEFAULT_PRESSING = {
   triggers: { onTurnover: true, whenLosing: true, whenLeading: false },
@@ -16,15 +17,15 @@ const DEFAULT_PRESSING = {
 };
 
 const ZONE_LABEL: Record<'high' | 'mid' | 'low', string> = {
-  high: 'Alta',
-  mid: 'Média',
-  low: 'Baixa',
+  high: L('Alta', 'High'),
+  mid: L('Média', 'Mid'),
+  low: L('Baixa', 'Low'),
 };
 
 const TRIGGERS: { key: 'onTurnover' | 'whenLosing' | 'whenLeading'; label: string }[] = [
-  { key: 'onTurnover', label: 'Prensar ao perder a bola' },
-  { key: 'whenLosing', label: 'Intensificar se atrás no placar' },
-  { key: 'whenLeading', label: 'Intensificar se ganhando' },
+  { key: 'onTurnover', label: L('Prensar ao perder a bola', 'Press on losing the ball') },
+  { key: 'whenLosing', label: L('Intensificar se atrás no placar', 'Step up when behind') },
+  { key: 'whenLeading', label: L('Intensificar se ganhando', 'Step up when ahead') },
 ];
 
 export function PressingControls() {
@@ -59,13 +60,13 @@ export function PressingControls() {
         className="text-[10px] uppercase tracking-[0.35em] font-bold text-white/55"
         style={{ fontFamily: 'var(--font-ui)' }}
       >
-        Prensa contextual
+        {L('Prensa contextual', 'Contextual press')}
       </div>
 
       {/* Zona ─────────────────────────────────────────────────── */}
       <div className="space-y-1.5">
         <div className="text-[9px] uppercase tracking-[0.28em] text-white/40">
-          Zona principal
+          {L('Zona principal', 'Main zone')}
         </div>
         <div className="grid grid-cols-3 gap-1.5">
           {(['high', 'mid', 'low'] as const).map((z) => {
@@ -99,7 +100,7 @@ export function PressingControls() {
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="text-[9px] uppercase tracking-[0.28em] text-white/40">
-            Intensidade
+            {L('Intensidade', 'Intensity')}
           </span>
           <span
             className="font-display font-black tabular-nums leading-none"
@@ -123,7 +124,7 @@ export function PressingControls() {
       {/* Gatilhos ──────────────────────────────────────────── */}
       <div className="space-y-1.5">
         <div className="text-[9px] uppercase tracking-[0.28em] text-white/40">
-          Gatilhos
+          {L('Gatilhos', 'Triggers')}
         </div>
         <div className="space-y-1">
           {TRIGGERS.map(({ key, label }) => {

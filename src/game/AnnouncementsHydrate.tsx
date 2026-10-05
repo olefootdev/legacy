@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { dispatchGame, getGameState } from '@/game/store';
 import { makeInboxItem } from '@/game/inboxItem';
+import { L, emIngles } from '@/i18n/L';
 
 /**
  * Entrega anúncios da plataforma uma única vez por manager.
@@ -27,12 +28,16 @@ export function AnnouncementsHydrate() {
         updateId,
         'COMPANY_ANNOUNCEMENT',
         'CLUBE',
-        'Novidades de hoje no Olefoot',
+        L('Novidades de hoje no Olefoot', "What's new on Olefoot today"),
         {
-          body:
+          body: L(
             'Atualizámos o ecrã inicial com um novo herói editorial, manchete dinâmica e um ticker de notícias. ' +
-            'O botão JOGAR também ficou mais visível no menu central. ' +
-            'Explora a home e diz-nos o que achaste.',
+              'O botão JOGAR também ficou mais visível no menu central. ' +
+              'Explora a home e diz-nos o que achaste.',
+            'We updated the home screen with a new editorial hero, a dynamic headline and a news ticker. ' +
+              'The PLAY button is also easier to find in the centre menu. ' +
+              'Explore the home and tell us what you think.',
+          ),
           deepLink: '/',
         },
       );
@@ -42,12 +47,19 @@ export function AnnouncementsHydrate() {
     const claimId = 'announce-claim-pack-2026-04-29';
     if (!inboxIds.has(claimId)) {
       const body = hasSquad
-        ? 'Lançámos o Pack Genesis de boas-vindas (11 titulares + 9 reservas + 500.000 EXP). ' +
+        ? emIngles()
+          ? 'We launched the welcome Genesis Pack (11 starters + 9 subs + 500,000 EXP). ' +
+            "Since you already have a squad, the pack isn't delivered automatically — if you want to start over and get the pack, " +
+            'contact us at contact@olefoot.ai and we will reset your squad.'
+          : 'Lançámos o Pack Genesis de boas-vindas (11 titulares + 9 reservas + 500.000 EXP). ' +
           'Como já tens plantel formado, o pack não é entregue automaticamente — se quiseres recomeçar e receber o pack, ' +
           'fala connosco em contact@olefoot.ai e fazemos o reset do teu plantel.'
-        : 'O Pack Genesis de boas-vindas (11 titulares + 9 reservas + 500.000 EXP) está disponível ' +
+        : emIngles()
+          ? 'The welcome Genesis Pack (11 starters + 9 subs + 500,000 EXP) is available ' +
+            'for your first squad. Go to Team to start.'
+          : 'O Pack Genesis de boas-vindas (11 titulares + 9 reservas + 500.000 EXP) está disponível ' +
           'para o teu primeiro plantel. Vai a Equipe para começar.';
-      const claim = makeInboxItem(claimId, 'SHOP_PACK', 'PLANTEL', 'Pack Genesis disponível', {
+      const claim = makeInboxItem(claimId, 'SHOP_PACK', 'PLANTEL', L('Pack Genesis disponível', 'Genesis Pack available'), {
         body,
         deepLink: '/team',
       });

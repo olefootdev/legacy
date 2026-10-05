@@ -4,6 +4,8 @@
  */
 import { motion } from 'motion/react';
 import { AlertTriangle } from 'lucide-react';
+import { L } from '@/i18n/L';
+import { posLabel } from './posLabel';
 
 interface RedCardOverlayProps {
   player: {
@@ -16,10 +18,10 @@ interface RedCardOverlayProps {
 
 export function RedCardOverlay({ player, reason }: RedCardOverlayProps) {
   const reasonLabel = reason === 'second_yellow'
-    ? 'Segundo Cartão Amarelo'
+    ? L('Segundo Cartão Amarelo', 'Second Yellow Card')
     : reason === 'violent_conduct'
-    ? 'Conduta Violenta'
-    : 'Falta Grave';
+    ? L('Conduta Violenta', 'Violent Conduct')
+    : L('Falta Grave', 'Serious Foul Play');
 
   return (
     <motion.div
@@ -73,7 +75,7 @@ export function RedCardOverlay({ player, reason }: RedCardOverlayProps) {
                 transition={{ delay: 0.3 }}
                 className="font-impact text-3xl sm:text-4xl uppercase leading-[1.1] text-white mb-2"
               >
-                Cartão vermelho
+                {L('Cartão vermelho', 'Red card')}
               </motion.p>
 
               <motion.p
@@ -86,7 +88,7 @@ export function RedCardOverlay({ player, reason }: RedCardOverlayProps) {
               </motion.p>
 
               <p className="text-xs sm:text-sm text-white/70 uppercase tracking-wider">
-                {player.position}
+                {posLabel(player.position)}
               </p>
             </div>
 
@@ -128,7 +130,7 @@ export function RedCardOverlay({ player, reason }: RedCardOverlayProps) {
           transition={{ delay: 0.7 }}
           className="text-center text-sm text-white/60 max-w-xs"
         >
-          Jogador expulso. Time jogará com um a menos.
+          {L('Jogador expulso. Time jogará com um a menos.', 'Player sent off. Team down to ten.')}
         </motion.p>
       </motion.div>
     </motion.div>

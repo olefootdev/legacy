@@ -4,6 +4,7 @@
  */
 
 import type { MatchEventEntry } from '@/engine/types';
+import { L } from '@/i18n/L';
 
 export type NarrativeArc =
   | 'underdog_fight'
@@ -31,7 +32,7 @@ interface ArcDetectionContext {
 function countRecentShots(events: MatchEventEntry[], sinceMinute: number): number {
   return events.filter(
     (e) =>
-      (e.kind === 'narrative' && e.text.toLowerCase().includes('chut')) ||
+      (e.kind === 'narrative' && /chut|shot|shoot/.test(e.text.toLowerCase())) ||
       e.kind === 'goal_home',
   ).length;
 }
@@ -157,14 +158,14 @@ export function getArcFeedSpeed(arc: NarrativeArc): number {
 export function getArcDescription(arc: NarrativeArc): string {
   switch (arc) {
     case 'late_drama':
-      return 'Drama nos minutos finais!';
+      return L('Drama nos minutos finais!', 'Late drama!');
     case 'collapse':
-      return 'A vantagem está a escapar...';
+      return L('A vantagem está a escapar...', 'The lead is slipping away...');
     case 'underdog_fight':
-      return 'Luta contra as probabilidades!';
+      return L('Luta contra as probabilidades!', 'Fighting against the odds!');
     case 'dominant_control':
-      return 'Domínio absoluto!';
+      return L('Domínio absoluto!', 'Total dominance!');
     case 'balanced':
-      return 'Jogo equilibrado';
+      return L('Jogo equilibrado', 'Even game');
   }
 }

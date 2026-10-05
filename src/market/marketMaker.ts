@@ -6,6 +6,7 @@
 import type { PlayerEntity } from '@/entities/types';
 import { overallFromAttributes } from '@/entities/player';
 import { genesisListingPriceExpFromMintOverall } from '@/playerContracts/playerContracts';
+import { L } from '@/i18n/L';
 
 /**
  * Desconto aplicado pelo Market Maker.
@@ -53,5 +54,5 @@ export function calcMarketMakerOffer(player: PlayerEntity): number {
 /** Label do desconto para exibir na UI. */
 export function marketMakerDiscountLabel(pos: string, ovr: number): string {
   const rate = marketMakerDiscountRate(pos, ovr);
-  return `${Math.round(rate * 100)}% abaixo do valor de mercado`;
+  return L(`${Math.round(rate * 100)}% abaixo do valor de mercado`, `${Math.round(rate * 100)}% below market value`);
 }

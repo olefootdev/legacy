@@ -16,6 +16,7 @@
  */
 
 import type { ManagerPresence } from './types';
+import { L } from '@/i18n/L';
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 const RESET_HOURS = 48;
@@ -83,9 +84,9 @@ export function engagementBuffOvr(score: number): number {
 
 export function engagementBuffLabel(score: number): string {
   const pct = engagementBuffPercent(score);
-  if (pct === 0) return 'Inativo';
-  if (pct <= 5) return 'Baixo';
-  if (pct <= 10) return 'Moderado';
-  if (pct <= 15) return 'Alto';
-  return 'Máximo';
+  if (pct === 0) return L('Inativo', 'Inactive');
+  if (pct <= 5) return L('Baixo', 'Low');
+  if (pct <= 10) return L('Moderado', 'Moderate');
+  if (pct <= 15) return L('Alto', 'High');
+  return L('Máximo', 'Max');
 }

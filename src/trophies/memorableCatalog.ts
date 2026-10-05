@@ -1,3 +1,4 @@
+import { L } from '@/i18n/L';
 /**
  * Troféus memoráveis: apenas títulos de liga / copa / supercopa (não missões nem marcos de temporada).
  * IDs persistidos em `OlefootGameState.memorableTrophyUnlockedIds`.
@@ -6,18 +7,18 @@
 export const MEMORABLE_TROPHY_SLOTS = [
   {
     id: 'mem_liga_ole',
-    name: 'Campeão da Liga',
-    blurb: 'Título da liga principal OLE.',
+    name: L('Campeão da Liga', 'League Champion'),
+    blurb: L('Título da liga principal OLE.', 'OLE main league title.'),
   },
   {
     id: 'mem_copa_ole',
     name: 'Copa OLE',
-    blurb: 'Taça de mata-mata.',
+    blurb: L('Taça de mata-mata.', 'Knockout cup.'),
   },
   {
     id: 'mem_supercopa_ole',
-    name: 'Supercopa',
-    blurb: 'Confronto entre campeões.',
+    name: L('Supercopa', 'Super Cup'),
+    blurb: L('Confronto entre campeões.', 'Champions face off.'),
   },
 ] as const;
 

@@ -1,3 +1,4 @@
+import { L } from '@/i18n/L';
 import type { ShootoutContext, ShotResult } from './types';
 
 export function PenaltyShootoutScore({
@@ -16,7 +17,7 @@ export function PenaltyShootoutScore({
         {/* Home */}
         <div className="flex flex-col items-start gap-2">
           <div className="text-[10px] uppercase tracking-[0.3em] font-bold text-black/70">
-            {ctx.homeLabel ?? 'Casa'}
+            {ctx.homeLabel ?? L('Casa', 'Home')}
           </div>
           <div className="flex items-center gap-2">
             {ctx.homeShots.map((s, i) => (
@@ -49,7 +50,7 @@ export function PenaltyShootoutScore({
         {/* Away */}
         <div className="flex flex-col items-end gap-2">
           <div className="text-[10px] uppercase tracking-[0.3em] font-bold text-black/70">
-            {ctx.awayLabel ?? 'Visitante'}
+            {ctx.awayLabel ?? L('Visitante', 'Away')}
           </div>
           <div className="flex items-center gap-2">
             {ctx.awayShots.map((s, i) => (
