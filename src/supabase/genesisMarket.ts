@@ -188,8 +188,13 @@ function genesisCreatorLabelToType(label: string | null | undefined): PlayerCrea
 }
 
 /**
- * Atributos e metadados vêm do Supabase; conserva progressão local (fadiga, XP, lesão)
- * quando o id coincide.
+ * Identidade vem do catálogo (nome, foto, bio, raridade, tag); a PROGRESSÃO vem do save
+ * quando o id coincide — atributos evoluídos, OVR de nascimento, XP, valor, fadiga, lesão.
+ *
+ * 🔴 Antes os atributos vinham do catálogo: trocar a foto de um Genesis no admin disparava
+ * este merge no jogo de quem tem a carta e APAGAVA a evolução conquistada em partida e
+ * treino. O catálogo é a ficha de nascimento; depois que a carta tem dono, quem manda
+ * nos atributos é a evolução.
  */
 export function mergeGenesisRowWithSavedPlayer(
   row: GenesisMarketPlayerRow,
@@ -199,6 +204,11 @@ export function mergeGenesisRowWithSavedPlayer(
   if (!saved || saved.id !== fresh.id) return fresh;
   return {
     ...fresh,
+    attrs: saved.attrs ?? fresh.attrs,
+    mintOverall: saved.mintOverall ?? fresh.mintOverall,
+    marketValueBroCents: saved.marketValueBroCents ?? fresh.marketValueBroCents,
+    marketValueExp: saved.marketValueExp ?? fresh.marketValueExp,
+    positionKnowledge: saved.positionKnowledge ?? fresh.positionKnowledge,
     fatigue: saved.fatigue,
     injuryRisk: saved.injuryRisk,
     evolutionXp: saved.evolutionXp,
