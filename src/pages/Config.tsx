@@ -1,3 +1,5 @@
+import { L } from '@/i18n/L';
+import { SeletorDeIdioma } from '@/components/ui/SeletorDeIdioma';
 import { motion } from 'motion/react';
 import {
   Settings,
@@ -256,11 +258,11 @@ export function Config() {
             <div className="flex items-center gap-3">
               <Globe className="w-4 h-4 text-white/45" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">Idioma</span>
-                <p className="text-[10px] text-white/45">Mais línguas em atualizações futuras.</p>
+                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Idioma', 'Language')}</span>
+                <p className="text-[10px] text-white/45">{L('Português ou inglês.', 'Portuguese or English.')}</p>
               </div>
             </div>
-            <span className="text-xs text-white/35 font-bold uppercase">PT-BR</span>
+            <SeletorDeIdioma />
           </div>
 
           <div className={rowClass}>

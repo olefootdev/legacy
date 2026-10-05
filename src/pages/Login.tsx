@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Zap, ShoppingCart, Trophy, Users, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Hashtag } from '@/components/ui';
+import { Hashtag, SeletorDeIdioma } from '@/components/ui';
 import { useGameDispatch, getGameState } from '@/game/store';
 import { signInWithEmail, fetchOnboardingProfile, sendPasswordResetEmail, saveOnboardingProfile } from '@/supabase/auth';
 import type { FormationSchemeId } from '@/match-engine/types';
@@ -285,7 +285,10 @@ export function Login() {
               className="h-10 w-auto max-h-11 max-w-[min(100%,280px)] object-contain object-left sm:h-12 sm:max-h-[3.25rem]"
             />
           </Link>
-          <Hashtag className="shrink-0 text-[12px] text-giz">#manager #futebol</Hashtag>
+          <div className="flex shrink-0 items-center gap-3">
+            <Hashtag className="hidden text-[12px] text-giz sm:inline">#manager #futebol</Hashtag>
+            <SeletorDeIdioma />
+          </div>
         </div>
       </header>
 
