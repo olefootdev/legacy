@@ -59,13 +59,14 @@ telegramAdminRoutes.use('/telegram/*', async (c, next) => {
   await next();
 });
 
+/** Menu "/" em inglês. Os apelidos em português (/jogar, /mercado, /ajuda) continuam respondendo. */
 const COMANDOS = [
-  { command: 'jogar', description: 'Entrar no jogo' },
-  { command: 'ranking', description: 'Top da Liga Global' },
-  { command: 'mercado', description: 'Maiores altas do dia' },
-  { command: 'mvp', description: 'O MVP de hoje' },
-  { command: 'token', description: 'Endereço oficial e links verdadeiros' },
-  { command: 'ajuda', description: 'Lista de comandos' },
+  { command: 'play', description: 'Jump into the game' },
+  { command: 'ranking', description: 'Global League top 10' },
+  { command: 'market', description: 'Biggest risers today' },
+  { command: 'mvp', description: "Today's MVP" },
+  { command: 'token', description: 'Official address and real links' },
+  { command: 'help', description: 'List of commands' },
 ];
 
 /** Registra o webhook (apontando pra `origem`) e o menu "/" do Telegram. */

@@ -7,7 +7,7 @@ import {
 } from './conteudo.js';
 import { lerAltasDoMercado, lerMvpDeHoje, lerRanking } from './dados.js';
 
-const FORA_DO_AR = 'Os dados do jogo estão indisponíveis agora. Tente de novo em instantes.';
+const FORA_DO_AR = 'Game data is unavailable right now. Please try again in a moment.';
 
 /** null = comando desconhecido: em grupo o bot fica calado (não polui a conversa). */
 export async function respostaPara(comando: string, arg: string, chatId: number | string): Promise<string | null> {
@@ -24,7 +24,7 @@ export async function respostaPara(comando: string, arg: string, chatId: number 
     case 'ca':
       return textoToken(enderecoDoToken());
     case 'ranking': {
-      // "/ranking 2" mostra a Intermediária; sem número, a Elite.
+      // "/ranking 2" mostra a Intermediate; sem número, a Elite.
       const d = Number.parseInt(arg, 10);
       const divisao = d >= 1 && d <= 4 ? d : 1;
       const linhas = await lerRanking(divisao, 10);
@@ -39,7 +39,7 @@ export async function respostaPara(comando: string, arg: string, chatId: number 
       return textoMvp(await lerMvpDeHoje());
     case 'id':
       // Pra configurar TELEGRAM_CHAT_ID: rodar /id dentro do grupo oficial.
-      return `ID deste chat: <code>${chatId}</code>`;
+      return `Chat ID: <code>${chatId}</code>`;
     default:
       return null;
   }
