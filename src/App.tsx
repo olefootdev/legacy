@@ -124,16 +124,10 @@ const PenaltyPreview = lazy(() => import('./pages/PenaltyPreview').then((m) => (
 const SetPiecePreview = lazy(() => import('./pages/SetPiecePreview').then((m) => ({ default: m.SetPiecePreview })));
 const LegacyCardPreview = lazy(() => import('./pages/LegacyCardPreview').then((m) => ({ default: m.LegacyCardPreview })));
 const CeremonyPreview = lazy(() => import('./pages/CeremonyPreview').then((m) => ({ default: m.CeremonyPreview })));
-const FieldViewPreview = lazy(() => import('./pages/FieldViewPreview').then((m) => ({ default: m.FieldViewPreview })));
-const AgentsDebugLog = lazy(() => import('./pages/AgentsDebugLog').then((m) => ({ default: m.AgentsDebugLog })));
-const AgentsFieldView = lazy(() => import('./pages/AgentsFieldView').then((m) => ({ default: m.AgentsFieldView })));
-const OleFieldLab = lazy(() => import('./pages/OleFieldLab').then((m) => ({ default: m.OleFieldLab })));
-const OleFieldLabLegacy = lazy(() => import('./pages/OleFieldLabLegacy').then((m) => ({ default: m.OleFieldLabLegacy })));
 // Prévia com dados de exemplo: o import só existe em DEV, pra o chunk não ir pro build.
 const HomeVolt2Preview = import.meta.env.DEV ? lazy(() => import('./pages/dev/HomeVolt2Preview')) : () => null;
 const NetworkPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/NetworkPreview')) : () => null;
 const EarningsPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/EarningsPreview')) : () => null;
-const OleFieldLabAerea = lazy(() => import('./pages/OleFieldLabAerea').then((m) => ({ default: m.OleFieldLabAerea })));
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
 const TeamValores = lazy(() => import('./pages/TeamValores').then((m) => ({ default: m.TeamValores })));
@@ -154,8 +148,6 @@ const NetworkTab = lazy(() => import('./pages/wallet/NetworkTab').then((m) => ({
 const CollectionTab = lazy(() => import('./pages/wallet/CollectionTab').then((m) => ({ default: m.CollectionTab })));
 const ExtractTab = lazy(() => import('./pages/wallet/ExtractTab').then((m) => ({ default: m.ExtractTab })));
 const LiveMatch = lazy(() => import('./pages/LiveMatch').then((m) => ({ default: m.LiveMatch })));
-const MatchClassic = lazy(() => import('./pages/MatchClassic').then((m) => ({ default: m.MatchClassic })));
-const MatchAuto = lazy(() => import('./pages/MatchAuto').then((m) => ({ default: m.MatchAuto })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
 const LegendsCup = lazy(() => import('./pages/LegendsCup').then((m) => ({ default: m.LegendsCup })));
 const QuickPlanPreview = lazy(() => import('./pages/QuickPlanPreview').then((m) => ({ default: m.default })));
@@ -684,21 +676,12 @@ as a nice MVP. Let's Play Together! ⚽
                 <Route path="/dev/setpiece-preview" element={<SetPiecePreview />} />
                 <Route path="/dev/legacy-card" element={<LegacyCardPreview />} />
                 <Route path="/dev/ceremony-preview" element={<CeremonyPreview />} />
-                <Route path="/dev/field-view" element={<FieldViewPreview />} />
-                <Route path="/dev/agents-field" element={<AgentsFieldView />} />
-                <Route
-                  path="/dev/agents-debug"
-                  element={
-                    <Suspense fallback={<RouteFallback />}>
-                      <AgentsDebugLog />
-                    </Suspense>
-                  }
-                />
               </>
             )}
-            <Route path="/match/legacy" element={<FieldViewPreview />} />
+            {/* Motores antigos e laboratórios aposentados (SMART-PROFILE, Fase 0, 05/10/2026). */}
+            <Route path="/match/legacy" element={<Navigate to="/match/quick" replace />} />
             <Route path="/match" element={<LiveMatch />} />
-            <Route path="/match/auto" element={<MatchAuto />} />
+            <Route path="/match/auto" element={<Navigate to="/match/quick" replace />} />
             <Route
               path="/match/quick"
               element={
@@ -730,7 +713,7 @@ as a nice MVP. Let's Play Together! ⚽
             </Route>{/* /RequireSquad */}
             </Route>{/* /GameShell */}
             {/* Fullscreen match modes — sem GameShell (sem nav global) */}
-            <Route path="/match/classic" element={<MatchClassic />} />
+            <Route path="/match/classic" element={<Navigate to="/match/quick" replace />} />
           </Route>
           {import.meta.env.DEV && (
             <>
@@ -759,30 +742,6 @@ as a nice MVP. Let's Play Together! ⚽
                 element={
                   <Suspense fallback={<RouteFallback />}>
                     <HomeVolt2Preview />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/dev/field-lab"
-                element={
-                  <Suspense fallback={<RouteFallback />}>
-                    <OleFieldLab />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/dev/field-lab/legacy"
-                element={
-                  <Suspense fallback={<RouteFallback />}>
-                    <OleFieldLabLegacy />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/dev/field-lab/aerea"
-                element={
-                  <Suspense fallback={<RouteFallback />}>
-                    <OleFieldLabAerea />
                   </Suspense>
                 }
               />
