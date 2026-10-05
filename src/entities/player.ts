@@ -86,12 +86,6 @@ export function zoneFromPos(pos: string): TacticalZone {
   return 'meio';
 }
 
-export function defaultArchetypeForSeed(name: string): PlayerArchetype {
-  const h = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  const r = h % 5;
-  return (['profissional', 'novo_talento', 'meme', 'profissional', 'ai_plus'] as const)[r];
-}
-
 /** Converte entidade → props que a UI de cards já espera (PAC/SHO/PAS + estilo visual) */
 export function playerToCardView(p: PlayerEntity, highlightOvr?: number) {
   const ovr = overallFromAttributes(p.attrs, p.pos);
@@ -187,7 +181,10 @@ export function createPlayer(partial: {
     },
     partial.pos,
   );
-  const archetype = partial.archetype ?? defaultArchetypeForSeed(partial.name);
+  // Sem tipo informado = profissional. Antes o tipo era sorteado pela soma das
+  // letras do nome — um jogador virava "meme" ou "novo talento" por acaso. A
+  // identidade de verdade agora é a classe do SMART-PROFILE (servidor).
+  const archetype = partial.archetype ?? 'profissional';
   const behavior: PlayerBehavior = partial.behavior ?? 'equilibrado';
   const mintOvr = overallFromAttributes(base, partial.pos);
   const evolutionRate =

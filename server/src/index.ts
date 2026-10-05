@@ -19,6 +19,7 @@ import { positionCoachRoutes } from './routes/positionCoach.js';
 import { marketRoutes } from './routes/market.js';
 import { marketOffersRoutes } from './routes/marketOffers.js';
 import { squadMarketRoutes } from './routes/squadMarket.js';
+import { playerProfilesRoutes } from './routes/playerProfiles.js';
 import { academyRoutes } from './routes/academy.js';
 import { academyAdminRoutes } from './routes/academyAdmin.js';
 import { academyArtRoutes } from './routes/academyArt.js';
@@ -149,6 +150,7 @@ app.route('/', positionCoachRoutes);
 app.route('/', marketRoutes);
 app.route('/', marketOffersRoutes);
 app.route('/', squadMarketRoutes);  // mercado de elenco em OLEFOOT (sessão do jogador)
+app.route('/', playerProfilesRoutes); // SMART-PROFILE: fichas e memória do jogador (sessão do jogador)
 app.route('/', solanaWalletRoutes);
 app.route('/', earningsRoutes);    // regras de Vault, Produção e Stake (públicas)
 app.route('/', vaultRoutes);       // leitura do Vault (sessão do jogador)

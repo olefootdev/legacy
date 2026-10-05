@@ -19,6 +19,7 @@ import { LegacyMentorSection } from '@/legacy/LegacyMentorSection';
 import { PlayerHealthContractSection } from '@/components/player/PlayerHealthContractSection';
 import { L, emIngles } from '@/i18n/L';
 import { rotuloPosicao } from '@/transfer/marketFilters';
+import { FichaDoJogador } from '@/smartProfile/FichaDoJogador';
 
 /** Rótulo de tela do escopo do booster (o valor continua sendo o id). */
 const ROTULO_ESCOPO: Record<string, string> = {
@@ -359,6 +360,9 @@ export function TeamPlayerSeasonSheet({
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 scrollbar-hide scroll-smooth-snap">
+          {/* ── SMART-PROFILE: classe, temperamento, gênese ───────── */}
+          <FichaDoJogador playerId={playerId} />
+
           {/* ── Insight inteligente ───────────────────────────────── */}
           <section
             className={cn(
