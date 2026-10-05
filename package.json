@@ -119,6 +119,7 @@
     "test:ativacao-casa": "node scripts/valida-ativacao-casa.mjs",
     "test:licenca-expansao": "node scripts/valida-licenca-expansao.mjs",
     "test:quem-te-indicou": "node scripts/valida-quem-te-indicou.mjs",
+    "test:telegram": "tsx server/src/lib/telegram/runTelegramSelfTest.mts",
     "test:carreira-paga": "node scripts/valida-carreira-paga.mjs",
     "test:fase0-pix": "node scripts/valida-fase0-pix.mjs",
     "test:recarga": "tsx server/src/lib/runRecargaSelfTest.mts",

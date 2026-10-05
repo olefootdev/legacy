@@ -28,6 +28,8 @@ import { classicCoachRoutes } from './routes/classicCoach.js';
 import { globalLeagueRoutes } from './routes/globalLeague.js';
 import { adminRoutes } from './routes/admin.js';
 import { adminPaymentsRoutes } from './routes/adminPayments.js';
+import { telegramWebhookRoutes, telegramAdminRoutes } from './routes/telegram.js';
+import { ligarAgenda } from './lib/telegram/agenda.js';
 import { adminLicencasRoutes } from './routes/adminLicencas.js';
 import { adminExpansaoRoutes } from './routes/adminExpansao.js';
 import { adminPresaleRoutes } from './routes/adminPresale.js';
@@ -128,6 +130,11 @@ app.use('/api/academy/upload-admin-image', bodyLimit(10 * 1024 * 1024)); // arte
 app.use('/api/csp-report', bodyLimit(32 * 1024));
 app.route('/', cspReportRoutes);
 
+// Webhook do Telegram também ANTES do csrfGuard: quem chama é o servidor do
+// Telegram, sem Origin. A autenticação é o segredo no header (routes/telegram.ts).
+app.use('/api/telegram/webhook', bodyLimit(256 * 1024));
+app.route('/', telegramWebhookRoutes);
+
 app.use('*', csrfGuard);
 
 app.route('/', healthRoutes);
@@ -156,6 +163,7 @@ app.route('/api/classic', classicCoachRoutes);
 app.route('/api/global-league', globalLeagueRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/admin', adminPaymentsRoutes);
+app.route('/api/admin', telegramAdminRoutes); // bot do Telegram: configurar + postar (gate no router)
 app.route('/api/admin', adminLicencasRoutes); // licenças da expansão (gate no próprio router)
 app.route('/api/admin', adminExpansaoRoutes); // ciclos, árvore, satélites, prêmios e claims (gate no router)
 app.route('/api/admin', adminPresaleRoutes);  // torneira e vitrine da pré-venda (gate no router)
@@ -168,6 +176,7 @@ app.route('/', insightsRoutes);
 const port = Number(process.env.PORT) || 4000;
 
 serve({ fetch: app.fetch, port }, () => {
+  ligarAgenda();
   console.log(`[olefoot-server] listening on http://localhost:${port}`);
   console.log(`
 🚀 ===================================================================
