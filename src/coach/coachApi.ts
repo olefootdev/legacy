@@ -1,5 +1,6 @@
 import type { CoachAgent, TeamContext, ManagerInstruction } from './types';
 import { L } from '@/i18n/L';
+import { CABECALHO_IDIOMA } from '@/i18n/cabecalho';
 
 // Prioriza VITE_OLEFOOT_API_URL sempre (inclusive em dev) — assim o dev que
 // não roda o server local também consegue testar contra o Railway.
@@ -53,7 +54,7 @@ export async function chatWithCoach(
   try {
     const response = await fetch(`${API_BASE}/api/coach/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...CABECALHO_IDIOMA },
       body: JSON.stringify({
         coach,
         teamContext,
@@ -84,7 +85,7 @@ export async function suggestTraining(
   try {
     const response = await fetch(`${API_BASE}/api/coach/suggest-training`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...CABECALHO_IDIOMA },
       body: JSON.stringify({ coach, teamContext }),
     });
 
@@ -110,7 +111,7 @@ export async function suggestStaff(
   try {
     const response = await fetch(`${API_BASE}/api/coach/suggest-staff`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...CABECALHO_IDIOMA },
       body: JSON.stringify({ coach, teamContext }),
     });
 

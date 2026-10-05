@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { getGameDecision } from '../services/anthropic/getGameDecision.js';
 import { parseGameSpiritRequestBody } from '../services/anthropic/gameSpiritContext.js';
+import { idiomaDoPedido } from '../lib/idioma.js';
 
 export async function postGameSpiritDecision(c: Context): Promise<Response> {
   let raw: unknown;
@@ -15,6 +16,6 @@ export async function postGameSpiritDecision(c: Context): Promise<Response> {
     return c.json({ error: 'Campo "player" obrigatório (string não vazia).' }, 400);
   }
 
-  const result = await getGameDecision(ctx);
+  const result = await getGameDecision(ctx, { idioma: idiomaDoPedido(c) });
   return c.json(result);
 }

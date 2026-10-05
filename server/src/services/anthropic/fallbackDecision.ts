@@ -1,4 +1,5 @@
 import type { GameSpiritDecisionContext, GameSpiritDecisionResult } from './gameSpiritContext.js';
+import { T, type Idioma } from '../../lib/idioma.js';
 
 function slugToken(label: string): string {
   return label
@@ -21,7 +22,8 @@ function hash01(s: string): number {
  * Decisão local quando a API falha ou não está configurada.
  * Usa pressão, objectivo e colegas próximos — não é aleatório puro.
  */
-export function intelligentFallbackDecision(ctx: GameSpiritDecisionContext): GameSpiritDecisionResult {
+export function intelligentFallbackDecision(ctx: GameSpiritDecisionContext, idioma: Idioma = 'pt'): GameSpiritDecisionResult {
+  const t = (pt: string, en: string) => T(idioma, pt, en);
   const seed = hash01(`${ctx.player}|${ctx.position}|${ctx.objective}|${ctx.nearbyPlayers.join(',')}`);
   const pressure = String(ctx.pressureLevel).toLowerCase();
   const obj = ctx.objective.toLowerCase();
@@ -34,14 +36,14 @@ export function intelligentFallbackDecision(ctx: GameSpiritDecisionContext): Gam
   };
 
   let decision = 'recuar';
-  let narration = `${ctx.player} segura e recua para reorganizar.`;
+  let narration = t(`${ctx.player} segura e recua para reorganizar.`, `${ctx.player} holds it and drops back to reorganise.`);
 
   const mate = pickMate();
   const mateSlug = mate ? slugToken(mate) : '';
 
   if (!ctx.ballOwner) {
     decision = 'press_or_block_lane';
-    narration = `${ctx.player} fecha linha de passe e pressiona o portador.`;
+    narration = t(`${ctx.player} fecha linha de passe e pressiona o portador.`, `${ctx.player} cuts off the passing lane and presses the ball carrier.`);
     return {
       decision,
       confidence: 0.42 + seed * 0.08,
@@ -52,29 +54,29 @@ export function intelligentFallbackDecision(ctx: GameSpiritDecisionContext): Gam
   if (pressure === 'high' || pressure === 'extreme') {
     if (mate && (obj.includes('build') || obj.includes('play'))) {
       decision = `pass_to_${mateSlug}`;
-      narration = `${ctx.player} solta rápido para ${mate} sob pressão.`;
+      narration = t(`${ctx.player} solta rápido para ${mate} sob pressão.`, `${ctx.player} releases it quickly to ${mate} under pressure.`);
     } else {
       decision = 'recuar';
-      narration = `${ctx.player} recua com segurança para sair da pressão.`;
+      narration = t(`${ctx.player} recua com segurança para sair da pressão.`, `${ctx.player} plays it back safely to escape the press.`);
     }
   } else if (obj.includes('shot') || obj.includes('finish') || obj.includes('remate')) {
     decision = 'chutar';
-    narration = `${ctx.player} procura o remate com espaço favorável.`;
+    narration = t(`${ctx.player} procura o remate com espaço favorável.`, `${ctx.player} looks for the shot with space to work.`);
   } else if (obj.includes('dribble') || obj.includes('drible')) {
     decision = 'driblar';
-    narration = `${ctx.player} conduz e tenta desequilibrar na condução.`;
+    narration = t(`${ctx.player} conduz e tenta desequilibrar na condução.`, `${ctx.player} drives forward and tries to unbalance the defence.`);
   } else if (mate) {
     const forwardBias = seed > 0.35;
     decision = forwardBias ? `pass_to_${mateSlug}` : 'conduzir';
     narration = forwardBias
-      ? `${ctx.player} toca para ${mate} para acelerar a jogada.`
-      : `${ctx.player} conduz a bola procurando melhor linha.`;
+      ? t(`${ctx.player} toca para ${mate} para acelerar a jogada.`, `${ctx.player} slips it to ${mate} to speed up the move.`)
+      : t(`${ctx.player} conduz a bola procurando melhor linha.`, `${ctx.player} carries the ball looking for a better line.`);
   } else if (seed > 0.55) {
     decision = 'driblar';
-    narration = `${ctx.player} tenta progredir na condução.`;
+    narration = t(`${ctx.player} tenta progredir na condução.`, `${ctx.player} tries to make ground on the ball.`);
   } else {
     decision = 'recuar';
-    narration = `${ctx.player} recua para manter posse.`;
+    narration = t(`${ctx.player} recua para manter posse.`, `${ctx.player} drops back to keep possession.`);
   }
 
   return {

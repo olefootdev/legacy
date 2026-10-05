@@ -11,6 +11,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { instrucaoDeIdioma, type Idioma } from './idioma.js';
 
 // ─── Modelos ──────────────────────────────────────────────────────────────
 // IDs ficam em ENV pra permitir override sem redeploy.
@@ -73,6 +74,11 @@ export interface AnthropicCallOptions {
    * caso quem monta o conteúdo é quem chamou.
    */
   imageUrls?: string[];
+  /**
+   * Idioma de quem joga (`idiomaDoPedido(c)`). 'en' acrescenta ao system a ordem
+   * de escrever em inglês; ausente ou 'pt' = como sempre foi.
+   */
+  idioma?: Idioma;
 }
 
 export interface AnthropicCallResult<T = unknown> {
@@ -110,7 +116,7 @@ export async function callAnthropic<T = unknown>(
         model: modelId,
         max_tokens: opts.maxTokens ?? 1024,
         temperature: opts.temperature ?? (opts.expectJson ? 0.3 : 0.7),
-        system: opts.system,
+        system: opts.system + instrucaoDeIdioma(opts.idioma),
         messages: opts.messages ?? [
           {
             role: 'user',

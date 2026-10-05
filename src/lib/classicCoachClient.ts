@@ -11,6 +11,7 @@
  * Custo aproximado: Claude Haiku 4.5 ~$0.0003 por leitura. ~3-5 leituras
  * numa partida de 1m30s real → ~$0.0015 por partida. Escalável.
  */
+import { CABECALHO_IDIOMA } from '@/i18n/cabecalho';
 
 // Em dev (vite dev) preferimos localhost:4000 mesmo que VITE_OLEFOOT_API_URL
 // aponte pra prod — assim o desenvolvedor testa contra o seu próprio server
@@ -125,7 +126,7 @@ export async function fetchClassicCoachReading(
 
       const res = await fetch(`${API_BASE}/api/classic/coach-reading`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...CABECALHO_IDIOMA },
         body: JSON.stringify(snapshot),
         signal: ctl.signal,
       });

@@ -15,6 +15,7 @@
 import { Hono } from 'hono';
 import { rateLimit } from '../lib/rateLimit.js';
 import { callAnthropic, hasAnthropicKey, jsonSystemPrompt } from '../lib/anthropic.js';
+import { idiomaDoPedido } from '../lib/idioma.js';
 
 interface BeatInput {
   id: string;
@@ -86,7 +87,8 @@ quickNarrateRoutes.post('/api/match/quick-narrate', rateLimit(20), async (c) => 
     return c.json({ ok: false, error: 'narração IA indisponível (sem chave)' }, 503);
   }
 
-  const key = fingerprint(body);
+  // O idioma entra na chave: a mesma partida narrada em PT não serve pra quem joga em EN.
+  const key = `${idiomaDoPedido(c)}|${fingerprint(body)}`;
   const cached = cache.get(key);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
     return c.json({ ok: true, narration: cached.data, cached: true });
@@ -115,6 +117,7 @@ quickNarrateRoutes.post('/api/match/quick-narrate', rateLimit(20), async (c) => 
   });
 
   const res = await callAnthropic<QuickNarration>({
+    idioma: idiomaDoPedido(c),
     model: 'sonnet',
     system: SYSTEM,
     user,

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { L } from '@/i18n/L';
+import { CABECALHO_IDIOMA } from '@/i18n/cabecalho';
 
 // Mesmo padrão dos outros clients (coachApi/quickPlanClient): prioriza env
 // VITE_OLEFOOT_API_URL — path relativo não funciona porque o front (Vite/
@@ -133,7 +134,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
       // Chama backend que processa a pergunta com contexto do código
       const response = await fetch(`${API_BASE}/api/assistant/ask`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...CABECALHO_IDIOMA },
         body: JSON.stringify({
           question: text,
           conversationHistory: messages.slice(-4), // últimas 4 mensagens para contexto

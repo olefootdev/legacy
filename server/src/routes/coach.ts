@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { rateLimit } from '../lib/rateLimit.js';
 import { sanitizePrompt } from '../lib/inputGuards.js';
 import { hasAnthropicKey, callAnthropic } from '../lib/anthropic.js';
+import { idiomaDoPedido } from '../lib/idioma.js';
 
 export const coachRoutes = new Hono();
 
@@ -38,6 +39,7 @@ coachRoutes.post('/chat', rateLimit(60), async (c) => {
     ];
 
     const result = await callAnthropic({
+      idioma: idiomaDoPedido(c),
       model: 'haiku',
       system: systemPrompt,
       user: sanitizedMessage,
@@ -108,6 +110,7 @@ Retorna JSON com esta estrutura:
 }`;
 
     const result = await callAnthropic({
+      idioma: idiomaDoPedido(c),
       model: 'haiku',
       system: systemPrompt,
       user: prompt,
@@ -186,6 +189,7 @@ Retorna JSON com array de sugestões:
 }`;
 
     const result = await callAnthropic({
+      idioma: idiomaDoPedido(c),
       model: 'haiku',
       system: systemPrompt,
       user: prompt,

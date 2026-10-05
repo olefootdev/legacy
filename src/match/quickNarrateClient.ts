@@ -8,6 +8,7 @@
  */
 
 import type { MatchPlan } from './quickPlanTypes';
+import { CABECALHO_IDIOMA } from '@/i18n/cabecalho';
 
 const ENV = (import.meta as { env?: Record<string, string | undefined> }).env;
 
@@ -60,7 +61,7 @@ export async function fetchQuickNarration(
     }));
     const res = await fetch(`${API_BASE}/api/match/quick-narrate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...CABECALHO_IDIOMA },
       body: JSON.stringify({
         seed: plan.seed,
         home: names.home,

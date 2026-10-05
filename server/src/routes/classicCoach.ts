@@ -17,6 +17,7 @@
 import { Hono } from 'hono';
 import { rateLimit } from '../lib/rateLimit.js';
 import { hasAnthropicKey, callAnthropic } from '../lib/anthropic.js';
+import { idiomaDoPedido } from '../lib/idioma.js';
 
 export const classicCoachRoutes = new Hono();
 
@@ -116,6 +117,7 @@ Lê a partida e devolve JSON:
 }`;
 
     const result = await callAnthropic({
+      idioma: idiomaDoPedido(c),
       model: 'haiku',
       system: systemPrompt,
       user: userPrompt,

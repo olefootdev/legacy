@@ -15,6 +15,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import { searchKnowledge, generateAnswer, findFAQAnswer } from '../lib/knowledgeSearch.js';
+import { idiomaDoPedido } from '../lib/idioma.js';
+import { callAnthropic, hasAnthropicKey } from '../lib/anthropic.js';
 
 /**
  * Knowledge base — arquivos-chave do projeto que o assistente pode consultar.
@@ -138,6 +140,25 @@ function searchKnowledgeOld(query: string, limit = 5): KnowledgeEntry[] {
  * Recebe pergunta do usuário e responde usando busca inteligente na knowledge base.
  * Sistema 100% local, sem APIs externas.
  */
+
+/**
+ * A base do assistente (FAQ + documentos) é em português. Quem joga em inglês
+ * recebe a resposta traduzida pelo Haiku; se a tradução falhar, vai o original
+ * — melhor uma resposta em PT do que nenhuma.
+ */
+async function noIdiomaDoJogador(texto: string, idioma: 'pt' | 'en'): Promise<string> {
+  if (idioma !== 'en' || !texto.trim() || !hasAnthropicKey()) return texto;
+  const r = await callAnthropic({
+    model: 'haiku',
+    system: 'You translate in-game help answers of the football manager game OLEFOOT from Brazilian Portuguese to natural English. Keep the markdown, line breaks, numbers, links and proper names (OLEFOOT, OLE, EXP, BRO, OLEWALLET, Liga Ole, Legends Cup) exactly. Output ONLY the translation.',
+    user: texto,
+    maxTokens: 1200,
+    temperature: 0.2,
+    timeoutMs: 12_000,
+  });
+  return r.ok && r.text?.trim() ? r.text.trim() : texto;
+}
+
 assistantRoutes.post('/ask', async (c) => {
   try {
     const body = await c.req.json();
@@ -158,7 +179,7 @@ assistantRoutes.post('/ask', async (c) => {
     const faqAnswer = findFAQAnswer(question);
     if (faqAnswer) {
       return c.json({
-        answer: faqAnswer.answer,
+        answer: await noIdiomaDoJogador(faqAnswer.answer, idiomaDoPedido(c)),
         sources: faqAnswer.sources,
         confidence: 'high',
         method: 'faq',
@@ -173,7 +194,7 @@ assistantRoutes.post('/ask', async (c) => {
     const { answer, sources, confidence } = generateAnswer(question, searchResults);
 
     return c.json({
-      answer,
+      answer: await noIdiomaDoJogador(answer, idiomaDoPedido(c)),
       sources,
       confidence,
       method: 'search',

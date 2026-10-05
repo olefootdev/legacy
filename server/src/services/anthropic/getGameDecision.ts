@@ -17,6 +17,7 @@ import type { GameSpiritDecisionCache } from './decisionCache.js';
 import { noopGameSpiritDecisionCache } from './decisionCache.js';
 import type { GameSpiritDecisionContext, GameSpiritDecisionResult } from './gameSpiritContext.js';
 import { stableCacheKey } from './gameSpiritContext.js';
+import type { Idioma } from '../../lib/idioma.js';
 import { intelligentFallbackDecision } from './fallbackDecision.js';
 import { logGameSpiritAiFireAndForget } from './logGameSpiritAi.js';
 
@@ -55,6 +56,8 @@ function parseModelJson(text: string): GameSpiritDecisionResult | null {
 
 export interface GetGameDecisionOptions {
   cache?: GameSpiritDecisionCache;
+  /** Idioma da narração (header X-Olefoot-Idioma). */
+  idioma?: Idioma;
 }
 
 export async function getGameDecision(
@@ -62,7 +65,9 @@ export async function getGameDecision(
   options: GetGameDecisionOptions = {},
 ): Promise<GameSpiritDecisionResult> {
   const cache = options.cache ?? noopGameSpiritDecisionCache;
-  const cacheKey = stableCacheKey(ctx);
+  const idioma = options.idioma ?? 'pt';
+  // O idioma entra na chave: a narração em PT em cache não serve pra quem joga em EN.
+  const cacheKey = `${idioma}|${stableCacheKey(ctx)}`;
   const t0 = Date.now();
 
   // Cache primeiro.
@@ -86,6 +91,7 @@ export async function getGameDecision(
   const r = await callAnthropic({
     model: 'haiku',
     system: SYSTEM,
+    idioma,
     user: `Analisa esta jogada e devolve o JSON:\n${JSON.stringify(ctx)}`,
     expectJson: true,
     temperature: 0.25,
@@ -113,7 +119,7 @@ export async function getGameDecision(
   }
 
   // Fallback local.
-  const fb = intelligentFallbackDecision(ctx);
+  const fb = intelligentFallbackDecision(ctx, idioma);
   logGameSpiritAiFireAndForget({
     ctx,
     result: fb,

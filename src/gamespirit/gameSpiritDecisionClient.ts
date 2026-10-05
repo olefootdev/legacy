@@ -1,5 +1,6 @@
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import { isFeatureEnabled } from '@/admin/platformConfigStore';
+import { CABECALHO_IDIOMA } from '@/i18n/cabecalho';
 
 export interface GameSpiritDecisionRequest {
   player: string;
@@ -41,7 +42,7 @@ export async function requestGameSpiritDecision(
   try {
     const r = await fetch(`${base}/api/gamespirit`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...CABECALHO_IDIOMA },
       body: JSON.stringify({ context: body }),
       signal: controller.signal,
     });
