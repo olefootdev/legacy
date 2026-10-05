@@ -11,7 +11,7 @@ par OLEFOOT/SOL, como **segundo caminho** — separada do $OLEFOOT já criado
 | Campo | Valor |
 |---|---|
 | **Name** | `OLEFOOT` |
-| **Ticker** | `OLEFOOT` |
+| **Ticker** | `OLEGAME` (decisão do fundador, 05/10) |
 | **Image (logo)** | `docs/pumpfun/olefoot-ball-logo.png` — a bola OLEFOOTBALL |
 | **Banner** | `docs/pumpfun/banner-camisa-1500x500.png` (alternativa: `banner-rosto-1500x500.png`) |
 | **Website** | `https://game.olefoot.ai` |
