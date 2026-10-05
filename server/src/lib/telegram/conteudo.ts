@@ -94,9 +94,12 @@ export function textoJogar(): string {
  * oficial é golpe. É a mensagem que mais protege a comunidade.
  */
 export function textoToken(enderecoOficial: string | null): string {
-  const linhas = ['🪙 <b>$OLEFOOT · Solana</b>'];
+  const linhas = ['🪙 <b>OLEFOOT · $OLEGAME · Solana</b>'];
   if (enderecoOficial) {
-    linhas.push('Endereço oficial (CA):', `<code>${esc(enderecoOficial)}</code>`);
+    linhas.push(
+      'Endereço oficial (CA):', `<code>${esc(enderecoOficial)}</code>`,
+      `🛒 <a href="https://pump.fun/coin/${encodeURIComponent(enderecoOficial)}">Comprar no pump.fun</a>`,
+    );
   } else {
     linhas.push('O endereço oficial sai <b>em breve</b>, aqui, no site e no @olefootgame.');
   }

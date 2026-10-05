@@ -16,7 +16,9 @@ const BASE = 'https://api.telegram.org';
 export const tokenDoBot = () => process.env.TELEGRAM_BOT_TOKEN?.trim() || null;
 export const segredoDoWebhook = () => process.env.TELEGRAM_WEBHOOK_SECRET?.trim() || null;
 export const chatOficial = () => process.env.TELEGRAM_CHAT_ID?.trim() || null;
-export const enderecoDoToken = () => process.env.OLEFOOT_TOKEN_CA?.trim() || null;
+/** CA oficial na pump.fun (OLEFOOT · $OLEGAME), publicado em olefoot.ai em 05/10. A env sobrepõe. */
+export const CA_OFICIAL = '2kE1Z2aL8ZbgKhAc8dmSXs8JuaiKjJG8egRLaj2ppump';
+export const enderecoDoToken = () => process.env.OLEFOOT_TOKEN_CA?.trim() || CA_OFICIAL;
 
 export interface RespostaTelegram<T = unknown> {
   ok: boolean;

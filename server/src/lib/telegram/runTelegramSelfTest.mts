@@ -66,6 +66,7 @@ console.log('\n⭐ MVP\n');
 console.log('\n🪙 token\n');
 check('sem endereço: em breve', textoToken(null).includes('em breve'));
 check('com endereço: mostra em <code>', textoToken('ABC123pump').includes('<code>ABC123pump</code>'));
+check('com endereço: link de compra no pump.fun', textoToken('ABC123pump').includes('pump.fun/coin/ABC123pump'));
 check('sempre avisa do golpe no privado', textoToken(null).includes('nunca'));
 
 console.log('\n⏰ agenda (horário de Brasília)\n');
