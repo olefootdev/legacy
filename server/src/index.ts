@@ -28,7 +28,7 @@ import { classicCoachRoutes } from './routes/classicCoach.js';
 import { globalLeagueRoutes } from './routes/globalLeague.js';
 import { adminRoutes } from './routes/admin.js';
 import { adminPaymentsRoutes } from './routes/adminPayments.js';
-import { telegramWebhookRoutes, telegramAdminRoutes } from './routes/telegram.js';
+import { telegramWebhookRoutes, telegramAdminRoutes, configurarNoBoot } from './routes/telegram.js';
 import { ligarAgenda } from './lib/telegram/agenda.js';
 import { adminLicencasRoutes } from './routes/adminLicencas.js';
 import { adminExpansaoRoutes } from './routes/adminExpansao.js';
@@ -177,6 +177,7 @@ const port = Number(process.env.PORT) || 4000;
 
 serve({ fetch: app.fetch, port }, () => {
   ligarAgenda();
+  void configurarNoBoot();
   console.log(`[olefoot-server] listening on http://localhost:${port}`);
   console.log(`
 🚀 ===================================================================

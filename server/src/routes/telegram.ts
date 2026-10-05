@@ -68,23 +68,18 @@ const COMANDOS = [
   { command: 'ajuda', description: 'Lista de comandos' },
 ];
 
-/**
- * Registra o webhook apontando pra ESTE servidor e o menu "/" do Telegram.
- * A URL sai do próprio pedido (o domínio do Railway), ou de TELEGRAM_WEBHOOK_URL.
- */
-telegramAdminRoutes.post('/telegram/configurar', async (c) => {
-  if (!tokenDoBot()) return c.json({ error: 'TELEGRAM_BOT_TOKEN ausente no Railway' }, 400);
+/** Registra o webhook (apontando pra `origem`) e o menu "/" do Telegram. */
+export async function configurarWebhook(origem: string) {
+  if (!tokenDoBot()) return { ok: false, erro: 'TELEGRAM_BOT_TOKEN ausente no Railway' };
   const segredo = segredoDoWebhook();
-  if (!segredo || segredo.length < 32) return c.json({ error: 'TELEGRAM_WEBHOOK_SECRET ausente ou curto (mínimo 32)' }, 400);
-
-  const origem = process.env.TELEGRAM_WEBHOOK_URL?.trim() || new URL(c.req.url).origin.replace(/^http:/, 'https:');
-  const url = `${origem}/api/telegram/webhook`;
+  if (!segredo || segredo.length < 32) return { ok: false, erro: 'TELEGRAM_WEBHOOK_SECRET ausente ou curto (mínimo 32)' };
+  const url = `${origem.replace(/\/+$/, '')}/api/telegram/webhook`;
   const webhook = await chamarTelegram('setWebhook', {
     url, secret_token: segredo, allowed_updates: ['message'], drop_pending_updates: true,
   });
   const menu = await chamarTelegram('setMyCommands', { commands: COMANDOS });
-  const info = await chamarTelegram<{ url?: string; pending_update_count?: number; last_error_message?: string }>('getWebhookInfo', {});
-  return c.json({
+  const info = await chamarTelegram<{ url?: string; last_error_message?: string }>('getWebhookInfo', {});
+  return {
     ok: webhook.ok && menu.ok,
     webhook: webhook.ok ? 'registrado' : webhook.description,
     menu: menu.ok ? 'registrado' : menu.description,
@@ -92,7 +87,25 @@ telegramAdminRoutes.post('/telegram/configurar', async (c) => {
     erroRecente: info.result?.last_error_message ?? null,
     bot: await usuarioDoBot(),
     grupoOficial: chatOficial() ? 'configurado' : 'falta TELEGRAM_CHAT_ID (rode /id no grupo)',
-  });
+  };
+}
+
+/**
+ * No boot: com TELEGRAM_WEBHOOK_URL definida, o servidor se registra sozinho —
+ * o fundador só põe as variáveis no Railway, sem chamar rota nenhuma.
+ */
+export async function configurarNoBoot(): Promise<void> {
+  const origem = process.env.TELEGRAM_WEBHOOK_URL?.trim();
+  if (!origem || !tokenDoBot()) return;
+  const r = await configurarWebhook(origem);
+  console.log('[telegram] boot:', r.ok ? `webhook ok (@${r.bot ?? '?'})` : r.erro ?? r.webhook ?? r.menu);
+}
+
+/** Mesmo registro, sob demanda. A URL sai do pedido (o domínio do Railway) se a env não existir. */
+telegramAdminRoutes.post('/telegram/configurar', async (c) => {
+  const origem = process.env.TELEGRAM_WEBHOOK_URL?.trim() || new URL(c.req.url).origin.replace(/^http:/, 'https:');
+  const r = await configurarWebhook(origem);
+  return c.json(r, r.ok || !('erro' in r) ? 200 : 400);
 });
 
 /** Roda a agenda agora — só posta o que estiver no horário e ainda não saiu hoje. */
