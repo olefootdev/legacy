@@ -36,6 +36,9 @@
   header{background:var(--nav);border-bottom:1px solid var(--panel)}
   .bar{display:flex;align-items:center;justify-content:space-between;height:60px}
   .bar img{height:19px;display:block}
+  .nav{display:flex;align-items:center;gap:14px}
+  .nav a{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;color:var(--cimento);text-decoration:none}
+  .nav a:hover{color:var(--giz)}
   .lang{display:flex;gap:2px;font-family:'IBM Plex Mono',monospace;font-size:10px}
   .lang button{
     background:transparent;border:1px solid var(--sheet);color:var(--poeira);
@@ -91,8 +94,11 @@
 
 <header><div class="wrap bar">
   <a href="/" aria-label="OLEFOOT"><img src="/olefoot.svg" alt="OLEFOOT"></a>
-  <div class="lang" role="group" aria-label="Idioma">
-    <button id="pt" aria-pressed="true">PT</button><button id="en" aria-pressed="false">EN</button>
+  <div class="nav">
+    <a href="/sobre/"><span data-pt>SOBRE</span><span data-en>ABOUT</span></a>
+    <div class="lang" role="group" aria-label="Idioma">
+      <button id="pt" aria-pressed="true">PT</button><button id="en" aria-pressed="false">EN</button>
+    </div>
   </div>
 </div></header>
 
@@ -144,7 +150,7 @@
 
 <footer class="wrap">
   <span>© 2026 OLEFOOT</span>
-  <span><a href="mailto:contact@olefoot.ai">contact@olefoot.ai</a></span>
+  <span><a href="/sobre/"><span data-pt>Sobre</span><span data-en>About</span></a> · <a href="mailto:contact@olefoot.ai">contact@olefoot.ai</a></span>
 </footer>
 
 <script>
