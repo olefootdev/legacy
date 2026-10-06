@@ -172,7 +172,14 @@ export default function MatchQuickEngaged() {
     buscaDeAdversarioRef.current = true;
     setBuscandoAdversario(true);
     setBuscaFalhou(false);
-    let cancelado = false;
+    // SEM flag de cancelamento, de propósito. Com `cancelado` + a ref de
+    // "já tentei", o StrictMode travava a tela em "Procurando adversário…"
+    // para sempre: ele monta, desmonta e remonta: o cleanup da 1ª passada
+    // marcava `cancelado`, a 2ª passada saía pela ref já marcada, e a busca
+    // original terminava sem poder nem desligar o "procurando". A ref sozinha
+    // já impede busca em dobro, e `setState` depois de desmontar é no-op no
+    // React 18. (O MatchQuickLegacy tem o mesmo par ref+cancelled — mesma
+    // armadilha, se algum dia voltar a renderizar.)
     (async () => {
       try {
         const { quickFindOpponent, opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
@@ -186,18 +193,17 @@ export default function MatchQuickEngaged() {
           ? Math.round(Object.values(elenco).reduce((s, p) => s + overallFromAttributes(p.attrs, p.pos), 0) / ids.length)
           : 70;
         const achado = await quickFindOpponent(club.id, meuOvr || 70, sessao?.user?.id, sessao?.user?.email);
-        if (cancelado) return;
         const stub = opponentMatchToStub(achado, meuOvr || 70);
+        console.info(`[MatchQuickEngaged] adversário: ${stub.name} (${stub.id}, força ${stub.strength})`);
         dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
       } catch (err) {
         // A busca só estoura por rede/sessão; a hierarquia em si não desiste.
         console.warn('[MatchQuickEngaged] busca de adversário falhou', err);
-        if (!cancelado) setBuscaFalhou(true);
+        setBuscaFalhou(true);
       } finally {
-        if (!cancelado) setBuscandoAdversario(false);
+        setBuscandoAdversario(false);
       }
     })();
-    return () => { cancelado = true; };
     // `tentativaDeBusca` entra nas deps de propósito: é o que faz o botão
     // "procurar de novo" rodar o efeito outra vez.
   }, [hasOpponent, club.id, dispatch, tentativaDeBusca]);
