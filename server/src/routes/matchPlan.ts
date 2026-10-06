@@ -16,6 +16,10 @@ import { rateLimit } from '../lib/rateLimit.js';
 import { donoDaSessao } from '../lib/sessao.js';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { resumirPlano } from '../lib/smartProfile/custodia.js';
+import {
+  conferenciaVazia, conferirEscalacao, impressaoDaEscalacao,
+  type Conferencia, type FichaDoMotor,
+} from '../lib/smartProfile/plano.js';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -31,6 +35,12 @@ interface QuickPlanPlayerInput {
   velocidade?: number;
   fisico?: number;
   confianca?: number;
+  // Os quatro que o jogo já mandava e esta interface não declarava — a
+  // conferência da Fase 3 olha todos, então ficam explícitos.
+  drible?: number;
+  tatico?: number;
+  mentalidade?: number;
+  fair_play?: number;
   fatigue?: number;
 }
 
@@ -117,17 +127,57 @@ function runPython(scriptPath: string, inputJson: string, timeoutMs = 5000): Pro
 }
 
 /**
+ * CONFERÊNCIA (SMART-PROFILE, Fase 3): com manager logado, os atributos de cada
+ * titular são conferidos contra a ficha em `player_profiles` antes de o corpo
+ * chegar ao Python. Partida honesta sai idêntica; o que passa do envelope legal
+ * dos tilts desce ao teto. ALTERA `body.home_team.lineup` no lugar — tem de
+ * rodar antes da chave do cache, senão um pedido adulterado deixaria o plano
+ * dele no cache para o próximo.
+ *
+ * Só o lado `home` é conferido: ver `conferirEscalacao` (ids de Genesis repetem
+ * entre managers, e a ficha do adversário tem outro dono).
+ *
+ * Sem login, sem a tabela ou com erro de banco, segue como antes — a guarda
+ * nunca derruba a geração do plano.
+ */
+async function conferirContraAsFichas(dono: string | null, body: QuickPlanRequestBody): Promise<Conferencia> {
+  const conferencia = conferenciaVazia();
+  if (!dono) return conferencia;
+  try {
+    const sb = getSupabaseAdmin();
+    if (!sb) return conferencia;
+    const ids = [...new Set(body.home_team.lineup.map((p) => p.id).filter((id) => typeof id === 'string' && id))];
+    if (!ids.length) return conferencia;
+    const { data, error } = await sb.from('player_profiles')
+      .select('player_id, atributos').eq('owner_id', dono).in('player_id', ids);
+    if (error || !data?.length) return conferencia;
+    const fichas = new Map<string, FichaDoMotor>(
+      data.map((f) => [f.player_id as string, { atributos: f.atributos } as FichaDoMotor]),
+    );
+    body.home_team.lineup = conferirEscalacao(body.home_team.lineup, fichas, conferencia).escalacao;
+    if (conferencia.corrigidos > 0) {
+      console.warn(`[plano] ${conferencia.corrigidos} titular(es) fora da ficha: ${conferencia.motivos.slice(0, 3).join('; ')}`);
+    }
+  } catch (e) {
+    console.error('[plano] conferência falhou', e instanceof Error ? e.message : e);
+  }
+  return conferencia;
+}
+
+/**
  * CUSTÓDIA (SMART-PROFILE, Fase 2B): com manager logado, o plano emitido fica
  * registrado em `quick_plans_emitidos` e o id volta ao celular, que o cita no
- * relato do fim da partida. Sem login (visitante) ou sem a tabela, a partida
- * segue igual — só não há custódia. Nunca derruba a geração do plano.
+ * relato do fim da partida. A conferência da Fase 3 viaja no resumo: o relato
+ * que citar um plano corrigido sai `suspeita`. Sem login (visitante) ou sem a
+ * tabela, a partida segue igual — só não há custódia. Nunca derruba o plano.
  */
-async function guardarCustodia(auth: string | undefined, body: QuickPlanRequestBody, plan: unknown): Promise<string | null> {
+async function guardarCustodia(
+  dono: string | null, body: QuickPlanRequestBody, plan: unknown, conferencia: Conferencia,
+): Promise<string | null> {
   try {
-    const dono = await donoDaSessao(auth);
     const sb = getSupabaseAdmin();
     if (!dono || !sb) return null;
-    const resumo = resumirPlano(plan, body.home_team.lineup.map((p) => p.id));
+    const resumo = { ...resumirPlano(plan, body.home_team.lineup.map((p) => p.id)), conferencia };
     const { data, error } = await sb.from('quick_plans_emitidos')
       .insert({ owner_id: dono, seed: String(body.seed).slice(0, 200), modo: resumo.modo, resumo })
       .select('id').single();
@@ -149,6 +199,11 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     return c.json({ ok: false, error: "mode 'second_half' exige first_half" }, 400);
   }
 
+  // FASE 3 — o motor para de receber atributo de fora. O dono sai do token uma
+  // vez e serve à conferência e à custódia.
+  const dono = await donoDaSessao(c.req.header('Authorization'));
+  const conferencia = await conferirContraAsFichas(dono, body);
+
   const cacheKey = JSON.stringify({
     s: body.seed,
     h: body.home_short,
@@ -167,10 +222,15 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
       .join('|'),
     // Derby entra na chave — mesmo seed com/sem clássico são planos distintos.
     dy: body.is_derby === true ? 1 : 0,
+    // Os NÚMEROS que vão ao motor (já conferidos). Antes a chave olhava só os
+    // ids: ativar a lenda não mudava o plano dentro da janela do cache, e um
+    // pedido adulterado deixava o plano dele para o próximo. Ver
+    // `impressaoDaEscalacao`.
+    af: impressaoDaEscalacao([body.home_team.lineup, body.away_team.lineup]),
   });
   const cached = simpleCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
-    return c.json({ ok: true, plan: cached.plan, cached: true, plano_id: await guardarCustodia(c.req.header('Authorization'), body, cached.plan) });
+    return c.json({ ok: true, plan: cached.plan, cached: true, plano_id: await guardarCustodia(dono, body, cached.plan, conferencia) });
   }
 
   const scriptPath = resolveScriptPath();
@@ -182,7 +242,7 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     const stdout = await runPython(scriptPath, JSON.stringify(body));
     const plan = JSON.parse(stdout);
     simpleCache.set(cacheKey, { ts: Date.now(), plan });
-    return c.json({ ok: true, plan, cached: false, plano_id: await guardarCustodia(c.req.header('Authorization'), body, plan) });
+    return c.json({ ok: true, plan, cached: false, plano_id: await guardarCustodia(dono, body, plan, conferencia) });
   } catch (e) {
     return c.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 502);
   }

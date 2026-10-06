@@ -19,7 +19,14 @@ import { atributosCompletos } from './derivar.js';
 const LANCE_DE_ATAQUE = new Set(['goal', 'shot', 'chance', 'save', 'woodwork', 'counter', 'corner', 'buildup']);
 
 export interface LanceResumido { k: string; lado: 'home' | 'away'; a: string | null; m: number; d: boolean }
-export interface ResumoDoPlano { modo: 'full' | 'second_half'; minutoInicial: number; escalacao: string[]; lances: LanceResumido[] }
+export interface ResumoDoPlano {
+  modo: 'full' | 'second_half';
+  minutoInicial: number;
+  escalacao: string[];
+  lances: LanceResumido[];
+  /** Conferência da Fase 3 (plano.ts). Ausente em plano emitido antes dela. */
+  conferencia?: { conferidos: number; sem_ficha: number; corrigidos: number; preenchidos?: number; motivos: string[] };
+}
 
 /** O que o servidor guarda de cada plano emitido: só o que a validação usa. */
 export function resumirPlano(plano: unknown, escalacaoCasa: string[]): ResumoDoPlano {
@@ -61,6 +68,14 @@ export function validarRelato(
   planos: ResumoDoPlano[],
 ): Veredito {
   const motivos: string[] = [];
+
+  // FASE 3: o plano que alimentou esta partida nasceu de número adulterado? O
+  // servidor já cortou na emissão, mas a partida não é limpa — fica registrado.
+  for (const p of planos) {
+    const corrigidos = p.conferencia?.corrigidos ?? 0;
+    if (corrigidos > 0) motivos.push(`plano emitido com ${corrigidos} titular(es) fora da ficha (atributo cortado pelo servidor)`);
+  }
+
   const lances = lancesDaPartida(planos);
   const casa = lances.filter((l) => l.lado === 'home');
   const fora = lances.filter((l) => l.lado === 'away');
