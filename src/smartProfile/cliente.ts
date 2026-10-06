@@ -31,7 +31,12 @@ export interface Ficha {
 
 /** Catálogo e curva vêm do SERVIDOR (Fase 4): o cliente não duplica número. */
 export interface TracoDoCatalogo { id: string; nome: string; comoSeGanha: string; atributo: string; bonus: number }
-export interface Rpg { tracos: TracoDoCatalogo[]; curvaDeXp: number[] }
+export interface IdeiaDoCatalogo {
+  id: string; nivel: number; setores: string[];
+  exige: { eixo: string; minimo: number };
+  efeito: Record<string, number>;
+}
+export interface Rpg { tracos: TracoDoCatalogo[]; curvaDeXp: number[]; ideias: IdeiaDoCatalogo[] }
 
 type Estado = { fichas: Map<string, Ficha>; rpg: Rpg | null; buscadoEm: number; carregando: boolean; indisponivel: boolean };
 
@@ -78,4 +83,33 @@ export function useFicha(playerId: string | null | undefined): { ficha: Ficha | 
     return () => { ouvintes.delete(setE); };
   }, []);
   return { ficha: playerId ? e.fichas.get(playerId) ?? null : null, carregando: e.carregando, rpg: e.rpg };
+}
+
+/**
+ * MANAGER-IDEAS (Fase 5) — o manager ensina ou faz o jogador esquecer.
+ *
+ * Quem decide se o jogador aceita é o SERVIDOR: a regra (espaço, nível, setor,
+ * temperamento) não mora aqui. A tela manda a intenção e mostra a recusa.
+ * Em caso de sucesso, recarrega as fichas pra ficha refletir o cérebro novo.
+ */
+export async function mexerNoCerebro(
+  playerId: string,
+  acao: { ensinar: string } | { esquecer: string },
+): Promise<{ ok: true } | { ok: false; erro: string; detalhe?: string }> {
+  const sb = getSupabase();
+  const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+  if (!token) return { ok: false, erro: 'sem-sessao' };
+  try {
+    const r = await fetch(`${olefootApiBase()}/api/player-profiles/${encodeURIComponent(playerId)}/cerebro`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(acao),
+    });
+    const data = (await r.json().catch(() => null)) as { ok?: boolean; erro?: string; detalhe?: string } | null;
+    if (!r.ok || !data?.ok) return { ok: false, erro: data?.erro ?? 'falhou', detalhe: data?.detalhe };
+    await buscarFichas(true);
+    return { ok: true };
+  } catch {
+    return { ok: false, erro: 'sem-rede' };
+  }
 }

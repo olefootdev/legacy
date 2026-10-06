@@ -160,7 +160,7 @@ async function conferirContraAsFichas(dono: string | null, body: QuickPlanReques
     const { fichas: atualizadas } = await sincronizarFichas(sb, dono);
     if (!atualizadas.length) return conferencia;
     const fichas = new Map<string, FichaDoMotor>(
-      atualizadas.map((f) => [f.player_id, { atributos: f.atributos, ovr: f.ovr, tracos: f.tracos }]),
+      atualizadas.map((f) => [f.player_id, { atributos: f.atributos, ovr: f.ovr, tracos: f.tracos, cerebro: f.cerebro }]),
     );
     body.home_team.lineup = conferirEscalacao(body.home_team.lineup, fichas, conferencia).escalacao;
 
@@ -189,11 +189,24 @@ async function conferirContraAsFichas(dono: string | null, body: QuickPlanReques
     // celular não sabe do traço e não poderia reivindicá-lo, então o envelope
     // não precisa acomodá-lo. Antes da impressão do cache, porque o traço muda
     // os números que vão ao motor.
-    const comTracos = aplicarTracos(body.home_team.lineup, fichas);
+    // FASE 5 (MANAGER-IDEAS) — o contexto que aciona o cérebro. `minhaForca`
+    // vem da ficha (firme); a do adversário e o clássico vêm do pedido, e não
+    // são brecha: inflar o adversário deixa a partida MAIS difícil no motor.
+    const contexto = {
+      minhaForca: conferencia.forca?.daFicha ?? null,
+      forcaAdversario: Number(body.away_team?.strength) || 0,
+      derby: body.is_derby === true,
+      intensidade: body.home_team.intensity ?? 'balanced',
+      segundoTempo: body.mode === 'second_half',
+    } as const;
+    const comTracos = aplicarTracos(body.home_team.lineup, fichas, contexto);
     body.home_team.lineup = comTracos.escalacao;
     if (comTracos.aplicados.jogadores > 0) {
       conferencia.tracos = comTracos.aplicados;
-      console.info(`[rpg] traços em ${comTracos.aplicados.jogadores} titular(es), +${comTracos.aplicados.pontos} ponto(s)`);
+      const acionadas = Object.values(comTracos.aplicados.ideias ?? {}).flat();
+      console.info(`[rpg] ajustes em ${comTracos.aplicados.jogadores} titular(es), ${comTracos.aplicados.pontos} ponto(s)`
+        + (acionadas.length ? ` · ideias acionadas: ${[...new Set(acionadas)].join(', ')}` : '')
+        + (comTracos.aplicados.dormindo ? ` · ${comTracos.aplicados.dormindo} dormindo` : ''));
     }
 
     // FADIGA — medida, nunca trocada. Ver `Conferencia.fadiga`.

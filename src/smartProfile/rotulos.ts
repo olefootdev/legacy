@@ -96,3 +96,48 @@ export const NOME_DO_ATRIBUTO: Record<string, string> = {
   confianca: L('confiança', 'confidence'),
   fairPlay: L('fair play', 'fair play'),
 };
+
+/**
+ * MANAGER-IDEAS (Fase 5). Mesma divisão de sempre: o SERVIDOR é dono dos ids,
+ * dos requisitos e do efeito (`catalogoDeIdeias` em ideias.ts); aqui ficam as
+ * palavras e o QUANDO em linguagem de jogo, porque a condição é o que o manager
+ * precisa entender para escolher.
+ */
+export const NOME_DA_IDEIA: Record<string, string> = {
+  mata_leao: L('Mata-leão', 'Giant-killer'),
+  chave_do_jogo: L('Chave do jogo', 'Game-breaker'),
+  dono_do_classico: L('Dono do clássico', 'Derby king'),
+  segura_o_jogo: L('Segura o jogo', 'Hold the line'),
+  favorito_nao_relaxa: L('Favorito não relaxa', 'No complacency'),
+};
+
+/** Quando a ideia acorda em campo. */
+export const QUANDO_A_IDEIA_VALE: Record<string, string> = {
+  mata_leao: L('contra time mais forte', 'against a stronger side'),
+  chave_do_jogo: L('com o time montado para atacar', 'when set up to attack'),
+  dono_do_classico: L('em clássico', 'in a derby'),
+  segura_o_jogo: L('postura defensiva ou 2º tempo', 'defensive setup or second half'),
+  favorito_nao_relaxa: L('quando você é o favorito', 'when you are the favourite'),
+};
+
+/** Por que o jogador recusou. */
+export const RECUSA_DO_JOGADOR: Record<string, string> = {
+  'ideia-desconhecida': L('essa ideia não existe', 'that idea does not exist'),
+  'ja-sabe': L('ele já sabe', 'he already knows it'),
+  'sem-espaco': L('o cérebro dele está cheio', 'his brain is full'),
+  'nivel-baixo': L('nível ainda baixo', 'level too low'),
+  'fora-do-setor': L('não é ideia para a posição dele', 'not an idea for his position'),
+  'nao-topa': L('ele não topa — não é do temperamento dele', 'he is not up for it — not his temperament'),
+  'nao-sabe': L('ele não sabe essa ideia', 'he does not know that idea'),
+  'sem-sessao': L('entre na sua conta', 'sign in first'),
+  'sem-rede': L('sem conexão', 'no connection'),
+  indisponivel: L('indisponível agora', 'unavailable right now'),
+};
+
+/** Eixos do temperamento, pro requisito aparecer na voz do jogo. */
+export const NOME_DO_EIXO: Record<string, string> = {
+  ousadia: L('ousadia', 'daring'),
+  frieza: L('frieza', 'composure'),
+  ambicao: L('ambição', 'ambition'),
+  lealdade: L('lealdade', 'loyalty'),
+};

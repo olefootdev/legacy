@@ -30,6 +30,7 @@
  */
 import type { Atributos } from './tipos.js';
 import { efeitoDosTracos } from './rpg.js';
+import { efeitoDasIdeias, type ContextoDaPartida } from './ideias.js';
 
 /** O mínimo que a conferência precisa saber de uma ficha. */
 export interface FichaDoMotor {
@@ -38,6 +39,8 @@ export interface FichaDoMotor {
   ovr?: number;
   /** Fase 4 (RPG): traços conquistados, que temperam o que vai ao motor. */
   tracos?: unknown[];
+  /** Fase 5 (MANAGER-IDEAS): o cérebro — o que o manager ensinou. */
+  cerebro?: { espacos: number; ideias: unknown[] };
 }
 
 /** Campo do payload do motor → atributo da ficha. */
@@ -258,14 +261,18 @@ export function conferirEscalacao<T extends object>(
   return { escalacao: saida, conferencia };
 }
 
-/** O que os traços mudaram na escalação que foi ao motor (Fase 4). */
+/** O que traços e ideias mudaram na escalação que foi ao motor (Fases 4 e 5). */
 export interface TracosAplicados {
-  /** Titulares que levaram algum bônus de traço. */
+  /** Titulares que levaram algum ajuste. */
   jogadores: number;
-  /** Soma de pontos somados, para dar escala ao efeito. */
+  /** Soma dos pontos mexidos (positivos e negativos em módulo), pra dar escala. */
   pontos: number;
-  /** `id: {atributo: +n}` dos primeiros afetados, para auditoria do plano. */
+  /** `id: {atributo: ±n}` dos primeiros afetados, para auditoria do plano. */
   exemplos: Record<string, Partial<Record<string, number>>>;
+  /** Fase 5: ideias que a partida acionou, por jogador. */
+  ideias?: Record<string, string[]>;
+  /** Fase 5: ideias que ficaram dormindo (não casaram com a partida). */
+  dormindo?: number;
 }
 
 /**
@@ -283,6 +290,8 @@ export interface TracosAplicados {
 export function aplicarTracos<T extends object>(
   escalacao: readonly T[],
   fichas: Map<string, FichaDoMotor>,
+  /** Fase 5: sem contexto, só os traços entram (o cérebro precisa saber a partida). */
+  ctx?: ContextoDaPartida,
 ): { escalacao: T[]; aplicados: TracosAplicados } {
   const aplicados: TracosAplicados = { jogadores: 0, pontos: 0, exemplos: {} };
   const saida: T[] = [];
@@ -290,22 +299,33 @@ export function aplicarTracos<T extends object>(
     const linha = bruta as LinhaDoMotor;
     const id = typeof linha.id === 'string' ? linha.id : '';
     const ficha = id ? fichas.get(id) : undefined;
-    const efeito = ficha?.tracos?.length ? efeitoDosTracos(ficha.tracos) : null;
-    if (!efeito || !Object.keys(efeito).length) { saida.push(bruta); continue; }
+
+    // Fase 4 (sempre) + Fase 5 (só o que a partida acionar).
+    const deltas: Partial<Record<string, number>> = ficha?.tracos?.length ? { ...efeitoDosTracos(ficha.tracos) } : {};
+    if (ctx && ficha?.cerebro?.ideias?.length) {
+      const doCerebro = efeitoDasIdeias(ficha.cerebro, ctx);
+      for (const [k, v] of Object.entries(doCerebro.deltas)) deltas[k] = (deltas[k] ?? 0) + (v ?? 0);
+      if (doCerebro.acionadas.length) {
+        aplicados.ideias ??= {};
+        if (Object.keys(aplicados.ideias).length < 5) aplicados.ideias[id] = doCerebro.acionadas;
+      }
+      if (doCerebro.dormindo.length) aplicados.dormindo = (aplicados.dormindo ?? 0) + doCerebro.dormindo.length;
+    }
+    if (!Object.keys(deltas).length) { saida.push(bruta); continue; }
 
     const nova: Record<string, unknown> = { ...linha };
     const doJogador: Record<string, number> = {};
-    for (const [atributo, bonus] of Object.entries(efeito)) {
-      if (!bonus) continue;
+    for (const [atributo, delta] of Object.entries(deltas)) {
+      if (!delta) continue;
       // O campo do motor tem o mesmo nome do atributo (só fairPlay difere, e
-      // nenhum traço mexe nele).
+      // nem traço nem ideia mexem nele).
       const atual = numero(nova[atributo]);
       if (atual === null) continue;
-      const valor = limitar(atual + bonus);
+      const valor = limitar(atual + delta);
       if (valor === Math.round(atual)) continue;
       nova[atributo] = valor;
-      doJogador[atributo] = bonus;
-      aplicados.pontos += bonus;
+      doJogador[atributo] = delta;
+      aplicados.pontos += Math.abs(delta);
     }
     if (!Object.keys(doJogador).length) { saida.push(bruta); continue; }
     aplicados.jogadores++;

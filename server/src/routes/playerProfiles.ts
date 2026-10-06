@@ -9,6 +9,7 @@ import { ovrDe } from '../lib/smartProfile/ovr.js';
 import {
   NIVEL_MAXIMO, carreiraDe, catalogoDeTracos, nivelPorXp, tracosDaFicha, tracosGanhos, xpParaNivel,
 } from '../lib/smartProfile/rpg.js';
+import { catalogoDeIdeias, ideiaPorId, ideiasDoCerebro, podeAprender } from '../lib/smartProfile/ideias.js';
 
 /**
  * RPG que o cliente precisa para desenhar a ficha sem duplicar número nenhum:
@@ -19,6 +20,8 @@ import {
 const rpgDoCliente = () => ({
   tracos: catalogoDeTracos(),
   curvaDeXp: Array.from({ length: NIVEL_MAXIMO + 1 }, (_, n) => xpParaNivel(n)),
+  // Fase 5: o catálogo de ideias, pro manager saber o que pode ensinar e a quem.
+  ideias: catalogoDeIdeias(),
 });
 
 /** A linha de `evolucao_sombra` não guarda o crédito — ele vai pra ficha. */
@@ -208,4 +211,73 @@ playerProfilesRoutes.post('/api/player-profiles/sombra/partida', rateLimit(30), 
   if (custodia === 'suspeita') console.warn(`[custodia] suspeita seed=${relato.seed}: ${custodia_motivos.slice(0, 3).join('; ')}`);
   // `aplicar` é a ordem para o celular: estes são os números que valem.
   return c.json({ ok: true, divergencias: cmp.divergencias, jogadores: cmp.jogadores, custodia, aplicar });
+});
+
+/**
+ * MANAGER-IDEAS (Fase 5) — o manager ensina, e o jogador leva a campo.
+ *
+ *   POST /api/player-profiles/:playerId/cerebro  { ensinar } | { esquecer }
+ *
+ * Quem decide se o jogador aceita é o SERVIDOR, com as portas das fases
+ * anteriores: espaço no cérebro (raridade), nível (Fase 4), setor da classe e
+ * temperamento (Fase 1). O cliente manda a intenção; a regra não mora nele.
+ *
+ * Aprender e esquecer entram na memória append-only do jogador — a carreira
+ * dele guarda o que o treinador tentou, não só o que deu certo.
+ */
+playerProfilesRoutes.post('/api/player-profiles/:playerId/cerebro', rateLimit(30), async (c) => {
+  const sb = getSupabaseAdmin();
+  if (!sb) return c.json({ ok: false, erro: 'banco indisponível' }, 503);
+  const dono = await donoDaSessao(c.req.header('Authorization'));
+  if (!dono) return c.json({ ok: false, erro: 'sessão inválida' }, 401);
+
+  const playerId = c.req.param('playerId');
+  const corpo = (await c.req.json().catch(() => null)) as { ensinar?: unknown; esquecer?: unknown } | null;
+  const ensinar = typeof corpo?.ensinar === 'string' ? corpo.ensinar : null;
+  const esquecer = typeof corpo?.esquecer === 'string' ? corpo.esquecer : null;
+  if (!playerId || (!ensinar && !esquecer) || (ensinar && esquecer)) {
+    return c.json({ ok: false, erro: 'mande ensinar OU esquecer' }, 400);
+  }
+
+  try {
+    const { data, error } = await sb.from('player_profiles').select('*')
+      .eq('owner_id', dono).eq('player_id', playerId).maybeSingle();
+    if (error) throw Object.assign(new Error(error.message), { code: error.code });
+    if (!data) return c.json({ ok: false, erro: 'jogador sem ficha' }, 404);
+    const ficha = data as unknown as Ficha;
+
+    const sabia = ideiasDoCerebro(ficha.cerebro?.ideias);
+    let ideias: string[];
+    let tipo: 'aprendeu_ideia' | 'esqueceu_ideia';
+
+    if (ensinar) {
+      const v = podeAprender(ficha, ensinar);
+      if (!v.pode) return c.json({ ok: false, erro: v.motivo, detalhe: v.detalhe }, 409);
+      ideias = [...sabia, ensinar];
+      tipo = 'aprendeu_ideia';
+    } else {
+      if (!sabia.includes(esquecer!)) return c.json({ ok: false, erro: 'nao-sabe' }, 409);
+      ideias = sabia.filter((i) => i !== esquecer);
+      tipo = 'esqueceu_ideia';
+    }
+
+    const cerebro = { ...(ficha.cerebro ?? { espacos: 1, ideias: [] }), ideias };
+    const { error: eGravar } = await sb.from('player_profiles')
+      .update({ cerebro, atualizado_em: new Date().toISOString() })
+      .eq('owner_id', dono).eq('player_id', playerId);
+    if (eGravar) throw new Error(eGravar.message);
+
+    const ideia = ideiaPorId((ensinar ?? esquecer)!);
+    await sb.from('player_profile_events').insert({
+      owner_id: dono, player_id: playerId, tipo,
+      dados: { ideia: ensinar ?? esquecer, nivel: ficha.nivel, classe: ficha.classe,
+        espacos: `${ideias.length}/${cerebro.espacos}`, efeito: ideia?.efeito ?? null },
+    });
+    console.info(`[cerebro] ${playerId}: ${tipo} ${ensinar ?? esquecer} (${ideias.length}/${cerebro.espacos})`);
+    return c.json({ ok: true, cerebro });
+  } catch (e) {
+    if (semTabela(e as { code?: string; message?: string })) return c.json({ ok: false, erro: 'indisponivel' }, 503);
+    console.error('[cerebro]', e instanceof Error ? e.message : e);
+    return c.json({ ok: false, erro: 'falha ao mexer no cérebro' }, 500);
+  }
 });

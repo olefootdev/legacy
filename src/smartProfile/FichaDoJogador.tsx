@@ -3,9 +3,10 @@
  * Some quando a ficha ainda não existe (visitante, servidor fora, migration
  * pendente): é complemento, nunca bloqueia a tela.
  */
+import { useState } from 'react';
 import { L } from '@/i18n/L';
-import { useFicha } from './cliente';
-import { COMO_SE_GANHA, DESCRICAO_DA_CLASSE, NOME_DA_RARIDADE, NOME_DO_ATRIBUTO, NOME_DO_TEMPERAMENTO, NOME_DO_TRACO, nomeDaClasse } from './rotulos';
+import { mexerNoCerebro, useFicha, type IdeiaDoCatalogo } from './cliente';
+import { COMO_SE_GANHA, DESCRICAO_DA_CLASSE, NOME_DA_IDEIA, NOME_DA_RARIDADE, NOME_DO_ATRIBUTO, NOME_DO_EIXO, NOME_DO_TEMPERAMENTO, NOME_DO_TRACO, QUANDO_A_IDEIA_VALE, RECUSA_DO_JOGADOR, nomeDaClasse } from './rotulos';
 
 const ROTULO = { fontFamily: 'var(--font-display)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.16em' } as const;
 
@@ -110,6 +111,19 @@ export function FichaDoJogador({ playerId }: { playerId: string }) {
         );
       })() : null}
 
+      {/* FASE 5 (MANAGER-IDEAS) — o cérebro. É aqui que o manager age: ensina a
+          ideia, ela ocupa um espaço (vem da raridade) e só acorda quando a
+          partida pede. A regra de quem aceita é do SERVIDOR; esta tela manda a
+          intenção e mostra a recusa na voz do jogador. */}
+      {rpg?.ideias?.length ? (
+        <Cerebro
+          playerId={playerId}
+          espacos={ficha.cerebro.espacos}
+          sabidas={ficha.cerebro.ideias}
+          catalogo={rpg.ideias}
+        />
+      ) : null}
+
       <dl className="mt-4 grid grid-cols-3 gap-3 border-t border-white/10 pt-3">
         <div>
           <dt className="text-gray-500 uppercase" style={ROTULO}>{L('XP', 'XP')}</dt>
@@ -130,5 +144,114 @@ export function FichaDoJogador({ playerId }: { playerId: string }) {
         {L('Gênese selada', 'Sealed genesis')} · <span className="font-mono">{ficha.genese_hash.slice(0, 12)}</span>
       </p>
     </section>
+  );
+}
+
+/**
+ * O CÉREBRO na tela. Mostra o que o jogador já sabe (com o efeito e quando
+ * vale) e o que o manager pode ensinar. A recusa vem do servidor e aparece como
+ * frase, não como código de erro: "ele não topa — não é do temperamento dele"
+ * diz mais ao manager do que `nao-topa`.
+ */
+function Cerebro({ playerId, espacos, sabidas, catalogo }: {
+  playerId: string; espacos: number; sabidas: unknown[]; catalogo: IdeiaDoCatalogo[];
+}) {
+  const [ocupado, setOcupado] = useState<string | null>(null);
+  const [recusa, setRecusa] = useState<{ erro: string; detalhe?: string } | null>(null);
+
+  const sabeId = (id: string) => sabidas.some((x) => x === id || (x as { id?: unknown })?.id === id);
+  const sabe = catalogo.filter((i) => sabeId(i.id));
+  const resto = catalogo.filter((i) => !sabeId(i.id));
+  const cheio = sabe.length >= espacos;
+
+  const agir = async (acao: { ensinar: string } | { esquecer: string }, id: string) => {
+    setOcupado(id);
+    setRecusa(null);
+    const r = await mexerNoCerebro(playerId, acao);
+    if (r.ok === false) setRecusa({ erro: r.erro, detalhe: r.detalhe });
+    setOcupado(null);
+  };
+
+  const efeitoEmTexto = (efeito: Record<string, number>) =>
+    Object.entries(efeito)
+      .map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${NOME_DO_ATRIBUTO[k] ?? k}`)
+      .join(' · ');
+
+  return (
+    <div className="mt-4 border-t border-white/10 pt-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-gray-500 uppercase" style={ROTULO}>{L('Cérebro', 'Brain')}</span>
+        <span className="font-mono text-[10.5px] tabular-nums text-white/50">{sabe.length}/{espacos}</span>
+      </div>
+
+      {sabe.length === 0 ? (
+        <p className="mt-1 text-[11px] text-white/40">
+          {L('Nada ensinado. Toda ideia abaixo é uma escolha sua.', 'Nothing taught yet. Every idea below is your call.')}
+        </p>
+      ) : (
+        <ul className="mt-1.5 space-y-1.5">
+          {sabe.map((i) => (
+            <li key={i.id} className="border border-neon-yellow/40 bg-neon-yellow/10 px-2 py-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-[11.5px] font-semibold text-white">{NOME_DA_IDEIA[i.id] ?? i.id}</span>
+                  <span className="ml-1.5 text-[10.5px] text-white/50">
+                    {QUANDO_A_IDEIA_VALE[i.id] ?? ''}
+                  </span>
+                  <div className="font-mono text-[10px] tabular-nums text-neon-yellow">{efeitoEmTexto(i.efeito)}</div>
+                </div>
+                <button
+                  type="button"
+                  disabled={ocupado === i.id}
+                  onClick={() => void agir({ esquecer: i.id }, i.id)}
+                  className="shrink-0 border border-white/20 px-1.5 py-0.5 text-[10px] uppercase text-white/60 disabled:opacity-40"
+                  style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.14em' }}
+                >
+                  {L('Esquecer', 'Forget')}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {resto.length > 0 && (
+        <>
+          <p className="mt-2.5 text-gray-500 uppercase" style={ROTULO}>
+            {cheio ? L('Cérebro cheio — esqueça uma para ensinar outra', 'Brain full — forget one to teach another') : L('Ensinar', 'Teach')}
+          </p>
+          <ul className="mt-1.5 space-y-1">
+            {resto.map((i) => (
+              <li key={i.id} className="flex items-start justify-between gap-2 border border-white/10 px-2 py-1.5">
+                <div>
+                  <span className="text-[11.5px] text-white/85">{NOME_DA_IDEIA[i.id] ?? i.id}</span>
+                  <span className="ml-1.5 text-[10.5px] text-white/45">{QUANDO_A_IDEIA_VALE[i.id] ?? ''}</span>
+                  <div className="font-mono text-[10px] tabular-nums text-white/55">{efeitoEmTexto(i.efeito)}</div>
+                  <div className="text-[10px] text-white/35">
+                    {L('Exige', 'Requires')}: {L('nível', 'level')} {i.nivel} · {NOME_DO_EIXO[i.exige.eixo] ?? i.exige.eixo} {i.exige.minimo}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={ocupado === i.id || cheio}
+                  onClick={() => void agir({ ensinar: i.id }, i.id)}
+                  className="shrink-0 bg-neon-yellow px-2 py-0.5 text-[10px] uppercase text-black disabled:bg-white/10 disabled:text-white/30"
+                  style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.14em' }}
+                >
+                  {ocupado === i.id ? L('…', '…') : L('Ensinar', 'Teach')}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {recusa && (
+        <p className="mt-2 text-[11px] text-danger">
+          {RECUSA_DO_JOGADOR[recusa.erro] ?? recusa.erro}
+          {recusa.detalhe ? <span className="text-white/40"> ({recusa.detalhe})</span> : null}
+        </p>
+      )}
+    </div>
   );
 }
