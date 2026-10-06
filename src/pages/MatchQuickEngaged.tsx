@@ -11,9 +11,12 @@
  *
  * Tempo-alvo: ~25s por tempo (speedMultiplier derivado do plano).
  *
- * NOTA (Fase D): a progressão real (XP/fadiga/economia) ainda NÃO é creditada
- * aqui — o reducer FINALIZE_MATCH depende do loop tick. A flag fica OFF em
- * produção até a Fase D plugar a progressão consolidada.
+ * A nota antiga dizia que a progressão não era creditada aqui e que a flag
+ * ficava OFF em produção. As duas coisas deixaram de ser verdade: o
+ * `FINALIZE_QUICK_PLAN` credita XP/fadiga/economia (ver o fim deste arquivo) e
+ * `VITE_QUICK_PLAN_ENABLED=1` está no `.env.production` — ou seja, ESTA é a
+ * Partida Rápida que todo mundo joga. O caminho tick-by-tick (MatchQuickLegacy)
+ * só roda com a flag desligada.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -147,11 +150,71 @@ export default function MatchQuickEngaged() {
   const opponent = nextFixture?.opponent;
   const hasOpponent = !!opponent && opponent.id !== 'placeholder-opponent' && opponent.id !== 'no-opponent-available';
 
-  // As LENDAS que estavam do outro lado — capturadas no mount, porque o
+  /**
+   * MATCHMAKING — a Partida Rápida acha o próprio adversário.
+   *
+   * O gate do Quick 2.0 (`MatchQuick`: flag ON → esta página) deixou a busca de
+   * adversário dentro do `MatchQuickLegacy`, que não renderiza mais. Quem
+   * entrava sem jogo marcado batia em "Nenhum adversário disponível" e não
+   * tinha como jogar — com a base pequena, quase sempre.
+   *
+   * `findFriendlyOpponent` (src/match/friendlyMatchmaking.ts) é a decisão de
+   * produto de 2026-05-27 e SEMPRE devolve partida, nesta ordem: manager real
+   * (a IA joga por ele quando está offline) → time da Liga Global → bot do
+   * nível do manager. Por isso aqui não há caminho que desista.
+   */
+  const buscaDeAdversarioRef = useRef(false);
+  const [buscandoAdversario, setBuscandoAdversario] = useState(false);
+  const [buscaFalhou, setBuscaFalhou] = useState(false);
+  const [tentativaDeBusca, setTentativaDeBusca] = useState(0);
+  useEffect(() => {
+    if (hasOpponent || buscaDeAdversarioRef.current) return;
+    buscaDeAdversarioRef.current = true;
+    setBuscandoAdversario(true);
+    setBuscaFalhou(false);
+    let cancelado = false;
+    (async () => {
+      try {
+        const { quickFindOpponent, opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
+        const { getSupabase } = await import('@/supabase/client');
+        const sb = getSupabase();
+        const sessao = sb ? (await sb.auth.getSession()).data.session : null;
+        // Snapshot do elenco fora das deps, pra não refazer a busca a cada tick.
+        const elenco = getGameState().players;
+        const ids = Object.keys(elenco);
+        const meuOvr = ids.length
+          ? Math.round(Object.values(elenco).reduce((s, p) => s + overallFromAttributes(p.attrs, p.pos), 0) / ids.length)
+          : 70;
+        const achado = await quickFindOpponent(club.id, meuOvr || 70, sessao?.user?.id, sessao?.user?.email);
+        if (cancelado) return;
+        const stub = opponentMatchToStub(achado, meuOvr || 70);
+        dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
+      } catch (err) {
+        // A busca só estoura por rede/sessão; a hierarquia em si não desiste.
+        console.warn('[MatchQuickEngaged] busca de adversário falhou', err);
+        if (!cancelado) setBuscaFalhou(true);
+      } finally {
+        if (!cancelado) setBuscandoAdversario(false);
+      }
+    })();
+    return () => { cancelado = true; };
+    // `tentativaDeBusca` entra nas deps de propósito: é o que faz o botão
+    // "procurar de novo" rodar o efeito outra vez.
+  }, [hasOpponent, club.id, dispatch, tentativaDeBusca]);
+
+  /** Tentar de novo depois de uma falha de rede. */
+  const buscarAdversarioDeNovo = useCallback(() => {
+    buscaDeAdversarioRef.current = false;
+    setBuscaFalhou(false);
+    setTentativaDeBusca((n) => n + 1);
+  }, []);
+
+  // As LENDAS que estavam do outro lado — capturadas quando o adversário
+  // aparece (pode chegar pelo matchmaking acima, um render depois), porque o
   // FINALIZE mexe no nextFixture. É o que alimenta o CTA "leve ele pro seu
   // time": o manager acabou de sentir o card em campo, é a hora de oferecer.
   const facedLegendsRef = useRef<Array<{ id: string; name: string; portraitUrl?: string; ovr: number }> | null>(null);
-  if (facedLegendsRef.current === null) {
+  if (facedLegendsRef.current === null && hasOpponent) {
     facedLegendsRef.current = (opponent?.genesisAwayPlayers ?? [])
       .filter((p) => String(p.id).startsWith('legacy-'))
       .map((p) => ({
@@ -540,10 +603,33 @@ export default function MatchQuickEngaged() {
     return (
       <main className="min-h-screen bg-black flex items-center justify-center px-6">
         <div className="text-center">
-          <p className="text-white/70 mb-4">{L('Nenhum adversário disponível para a partida rápida.', 'No opponent available for the quick match.')}</p>
-          <Link to="/" className="text-neon-yellow font-display uppercase tracking-[0.2em] text-[12px]">
-            {L('← Voltar', '← Back')}
-          </Link>
+          {buscandoAdversario ? (
+            <p className="text-white/70 mb-4 font-display uppercase tracking-[0.2em] text-[12px] animate-pulse">
+              {L('Procurando adversário…', 'Finding an opponent…')}
+            </p>
+          ) : (
+            <>
+              <p className="text-white/70 mb-4">
+                {buscaFalhou
+                  ? L('Não deu pra procurar adversário agora — confira a conexão.', 'Could not search for an opponent right now — check your connection.')
+                  : L('Nenhum adversário disponível para a partida rápida.', 'No opponent available for the quick match.')}
+              </p>
+              {buscaFalhou && (
+                <button
+                  type="button"
+                  onClick={buscarAdversarioDeNovo}
+                  className="mb-4 px-4 py-2 rounded-sm bg-neon-yellow text-black font-display uppercase tracking-[0.2em] text-[12px]"
+                >
+                  {L('Procurar de novo', 'Search again')}
+                </button>
+              )}
+            </>
+          )}
+          <div>
+            <Link to="/" className="text-neon-yellow font-display uppercase tracking-[0.2em] text-[12px]">
+              {L('← Voltar', '← Back')}
+            </Link>
+          </div>
         </div>
       </main>
     );
