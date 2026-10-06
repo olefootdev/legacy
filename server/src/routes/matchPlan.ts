@@ -17,7 +17,7 @@ import { donoDaSessao } from '../lib/sessao.js';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { resumirPlano } from '../lib/smartProfile/custodia.js';
 import {
-  conferenciaVazia, conferirEscalacao, impressaoDaEscalacao,
+  conferenciaVazia, conferirEscalacao, conferirFadiga, forcaDaEscalacao, impressaoDaEscalacao,
   type Conferencia, type FichaDoMotor,
 } from '../lib/smartProfile/plano.js';
 import { sincronizarFichas } from '../lib/smartProfile/sincronizar.js';
@@ -160,16 +160,90 @@ async function conferirContraAsFichas(dono: string | null, body: QuickPlanReques
     const { fichas: atualizadas } = await sincronizarFichas(sb, dono);
     if (!atualizadas.length) return conferencia;
     const fichas = new Map<string, FichaDoMotor>(
-      atualizadas.map((f) => [f.player_id, { atributos: f.atributos } as FichaDoMotor]),
+      atualizadas.map((f) => [f.player_id, { atributos: f.atributos, ovr: f.ovr }]),
     );
     body.home_team.lineup = conferirEscalacao(body.home_team.lineup, fichas, conferencia).escalacao;
+
+    // FASE 3B — FORÇA DO TIME. `strength` escala a probabilidade de gol no
+    // Python: mandar 95 é cheat mais barato que inflar atributo. O servidor
+    // refaz a média de OVR pelas fichas.
+    //
+    // No replano do 2º tempo o cliente FIXA de propósito a força do 1º tempo
+    // (`baseStrengthRef` em MatchQuickEngaged) — recalcular pela escalação nova,
+    // com as substituições do intervalo, mudaria o jogo de quem joga limpo. Por
+    // isso o 2º tempo herda a força do plano do 1º, pela seed.
+    const daFicha = forcaDaEscalacao(body.home_team.lineup, fichas);
+    if (daFicha !== null) {
+      const enviada = Number(body.home_team.strength);
+      let valor = daFicha;
+      let fonte: 'ficha' | 'plano-do-1o-tempo' = 'ficha';
+      if (body.mode === 'second_half') {
+        const doPrimeiroTempo = await forcaDoPrimeiroTempo(sb, dono, String(body.seed));
+        if (doPrimeiroTempo !== null) { valor = doPrimeiroTempo; fonte = 'plano-do-1o-tempo'; }
+      }
+      body.home_team.strength = valor;
+      conferencia.forca = { daFicha, enviada: Number.isFinite(enviada) ? enviada : 0, fonte };
+    }
+
+    // FADIGA — medida, nunca trocada. Ver `Conferencia.fadiga`.
+    conferencia.fadiga = conferirFadiga(body.home_team.lineup, await fadigaConhecida(sb, dono));
+
     if (conferencia.corrigidos > 0) {
       console.warn(`[plano] ${conferencia.corrigidos} titular(es) fora da ficha: ${conferencia.motivos.slice(0, 3).join('; ')}`);
+    }
+    if (conferencia.forca && Math.abs(conferencia.forca.enviada - conferencia.forca.daFicha) > 1) {
+      console.warn(`[plano] força enviada ${conferencia.forca.enviada} vs ficha ${conferencia.forca.daFicha} (usei ${body.home_team.strength}, fonte ${conferencia.forca.fonte})`);
     }
   } catch (e) {
     console.error('[plano] conferência falhou', e instanceof Error ? e.message : e);
   }
   return conferencia;
+}
+
+/**
+ * Força do time que o servidor usou no plano do 1º TEMPO desta seed. O replano
+ * do 2º tempo herda esse número — é o que o cliente faz, e recalcular com as
+ * substituições do intervalo mudaria a partida de quem joga limpo.
+ */
+async function forcaDoPrimeiroTempo(
+  sb: ReturnType<typeof getSupabaseAdmin>, dono: string, seed: string,
+): Promise<number | null> {
+  if (!sb) return null;
+  const { data, error } = await sb.from('quick_plans_emitidos')
+    .select('resumo').eq('owner_id', dono).eq('seed', seed.slice(0, 200)).eq('modo', 'full')
+    .order('criado_em', { ascending: false }).limit(1).maybeSingle();
+  if (error || !data) return null;
+  const forca = (data.resumo as { conferencia?: { forca?: { daFicha?: unknown } } } | null)?.conferencia?.forca?.daFicha;
+  return typeof forca === 'number' && Number.isFinite(forca) ? forca : null;
+}
+
+/**
+ * Fadiga que o servidor conhece de cada jogador: `manager_game_state.player_health`
+ * manda, com o `fatigue` do elenco como reserva — a mesma ordem de
+ * `getEffectiveFatigue` (src/systems/fatigue.ts), que é o SSOT do jogo.
+ *
+ * Serve só para MEDIR: as duas fontes são escritas pelo snapshot do cliente e
+ * podem estar atrás do jogo sem ninguém ter trapaceado.
+ */
+async function fadigaConhecida(
+  sb: ReturnType<typeof getSupabaseAdmin>, dono: string,
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (!sb) return out;
+  try {
+    const [elenco, estado] = await Promise.all([
+      sb.from('manager_squad').select('players').eq('user_id', dono).maybeSingle(),
+      sb.from('manager_game_state').select('player_health').eq('user_id', dono).maybeSingle(),
+    ]);
+    for (const p of (elenco.data?.players ?? []) as Record<string, unknown>[]) {
+      if (p && typeof p.id === 'string' && typeof p.fatigue === 'number') out.set(p.id, p.fatigue);
+    }
+    const saude = (estado.data?.player_health ?? {}) as Record<string, { fatigue?: unknown }>;
+    for (const [id, h] of Object.entries(saude)) {
+      if (h && typeof h.fatigue === 'number') out.set(id, h.fatigue);
+    }
+  } catch { /* medir é opcional: nunca derruba o plano */ }
+  return out;
 }
 
 /**

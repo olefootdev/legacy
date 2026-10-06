@@ -7,7 +7,8 @@
  * escolhidos à mão — se o envelope aqui ficar apertado demais, este teste
  * quebra antes de cortar a jogada de alguém.
  */
-import { conferirEscalacao, conferenciaVazia, impressaoDaEscalacao, type FichaDoMotor } from './plano.js';
+import { conferirEscalacao, conferenciaVazia, conferirFadiga, forcaDaEscalacao, impressaoDaEscalacao, type FichaDoMotor } from './plano.js';
+import { ovrDe } from './ovr.js';
 import { validarRelato, resumirPlano, type ResumoDoPlano } from './custodia.js';
 import { atributosCompletos } from './derivar.js';
 import { playerToQuickPlanPayload, applyLegacyBoostToLineup, moralTilt } from '../../../../src/match/quickPlanClient.js';
@@ -186,6 +187,49 @@ console.log('\n🧮 envelope cobre a escala declarada dos tilts\n');
   const vazia = conferenciaVazia();
   check('conferência vazia é neutra',
     vazia.conferidos === 0 && vazia.corrigidos === 0 && vazia.preenchidos === 0 && vazia.motivos.length === 0);
+}
+
+console.log('\n💪 FASE 3B — força do time pela ficha\n');
+{
+  // O cliente soma `overallFromAttributes` dos 11 e divide. O servidor faz o
+  // mesmo com o `ovr` da ficha (cópia verificada da fórmula).
+  const ovrDaFicha = ovrDe(atributosCompletos(ATTRS, 'ATA'), 'ATA');
+  const onze = Array.from({ length: 11 }, (_, i) => ({ id: `p${i}` }));
+  const mapa = new Map<string, FichaDoMotor>(onze.map((p) => [p.id, { atributos: atributosCompletos(ATTRS, 'ATA'), ovr: ovrDaFicha }]));
+  check('11 fichas iguais → a média é o OVR delas', forcaDaEscalacao(onze, mapa) === ovrDaFicha);
+
+  // Um titular sem ficha → null. Média de meio time daria número errado, e
+  // errar aqui mexe no PLACAR de quem joga limpo.
+  const comBuraco = new Map(mapa); comBuraco.delete('p7');
+  check('um titular sem ficha → não arrisca, devolve null', forcaDaEscalacao(onze, comBuraco) === null);
+
+  // Ficha sem ovr (payload antigo) também não arrisca.
+  const semOvr = new Map<string, FichaDoMotor>(onze.map((p) => [p.id, { atributos: atributosCompletos(ATTRS, 'ATA') }]));
+  check('ficha sem ovr → devolve null', forcaDaEscalacao(onze, semOvr) === null);
+  check('escalação vazia → devolve null', forcaDaEscalacao([], mapa) === null);
+
+  // Média de verdade: dois níveis diferentes.
+  const fraco = atributosCompletos({ ...ATTRS, finalizacao: 40, passe: 40, marcacao: 40, velocidade: 40, drible: 40, fisico: 40, tatico: 40, mentalidade: 40, confianca: 40 }, 'ATA');
+  const misto = new Map<string, FichaDoMotor>([
+    ['a', { atributos: atributosCompletos(ATTRS, 'ATA'), ovr: 80 }],
+    ['b', { atributos: fraco, ovr: 40 }],
+  ]);
+  check('média de 80 e 40 dá 60', forcaDaEscalacao([{ id: 'a' }, { id: 'b' }], misto) === 60);
+}
+
+console.log('\n😮‍💨 FASE 3B — fadiga é MEDIDA, não trocada\n');
+{
+  const servidor = new Map<string, number>([['a', 40], ['b', 10], ['c', 0]]);
+  const escalacao = [{ id: 'a', fatigue: 40 }, { id: 'b', fatigue: 0 }, { id: 'c', fatigue: 0 }, { id: 'd', fatigue: 0 }];
+  const r = conferirFadiga(escalacao, servidor);
+  check('bate → iguais', r.iguais === 2, JSON.stringify(r));
+  check('não bate → diferentes', r.diferentes === 1, JSON.stringify(r));
+  check('sem referência no servidor é contado à parte', r.sem_referencia === 1, JSON.stringify(r));
+  check('desvio negativo = chegou mais descansado do que o servidor sabe', r.desvio === -10, JSON.stringify(r));
+  // A medição não pode alterar a escalação.
+  check('a escalação não é tocada pela medição', escalacao[1]!.fatigue === 0);
+  const folga = conferirFadiga([{ id: 'a', fatigue: 41 }], servidor);
+  check('1 ponto de folga não acusa (o cliente arredonda)', folga.iguais === 1 && folga.diferentes === 0);
 }
 
 console.log(`\n${falhou === 0 ? '🟢' : '🔴'} ${ok} passaram, ${falhou} falharam`);

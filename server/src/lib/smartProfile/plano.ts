@@ -22,14 +22,19 @@
  * desce ao teto e fica registrado na custódia do plano — e o relato do fim da
  * partida que citar esse plano sai `suspeita`.
  *
- * O que a Fase 3B ainda tem para fechar: a fadiga e a força do time
- * (`strength`) continuam vindo do celular, e só quem tem ficha é conferido.
+ * FASE 3B — a força do time (`strength`), que escala a probabilidade de gol no
+ * Python, também deixou de vir do celular: `forcaDaEscalacao` a recalcula pela
+ * média de OVR das fichas. A fadiga é MEDIDA e não trocada; o porquê está em
+ * `Conferencia.fadiga`. O que ainda não é conferido: quem não tem ficha (o
+ * adversário) e a fadiga.
  */
 import type { Atributos } from './tipos.js';
 
 /** O mínimo que a conferência precisa saber de uma ficha. */
 export interface FichaDoMotor {
   atributos: Atributos;
+  /** OVR pela fórmula do servidor (cópia verificada da do cliente). */
+  ovr?: number;
 }
 
 /** Campo do payload do motor → atributo da ficha. */
@@ -77,6 +82,26 @@ const FOLGA = 1;
 const limitar = (v: number) => Math.max(1, Math.min(99, Math.round(v)));
 const numero = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
+export interface ForcaConferida {
+  /** Média de OVR das fichas dos 11 — o que o servidor calcula. */
+  daFicha: number;
+  /** O que o celular mandou. */
+  enviada: number;
+  /** De onde saiu o número que foi ao motor. */
+  fonte: 'ficha' | 'plano-do-1o-tempo' | 'celular';
+}
+
+export interface FadigaConferida {
+  /** Titulares em que a fadiga enviada bate com a do servidor. */
+  iguais: number;
+  /** Titulares em que não bate (snapshot do cliente atrasado OU adulteração). */
+  diferentes: number;
+  /** Titulares sem fadiga conhecida no servidor. */
+  sem_referencia: number;
+  /** Soma de (enviada − servidor): negativo = chegou mais descansado do que o servidor sabe. */
+  desvio: number;
+}
+
 export interface Conferencia {
   /** Titulares com ficha — os únicos que o servidor sabe conferir. */
   conferidos: number;
@@ -93,11 +118,69 @@ export interface Conferencia {
    * fica registrado, porque sem isso o motor leria NaN.
    */
   preenchidos: number;
+  /** Força do time: imposta pelo servidor (ver `forcaDaEscalacao`). */
+  forca?: ForcaConferida;
+  /**
+   * Fadiga: MEDIDA, não trocada. O `player_health` do servidor é escrito pelo
+   * snapshot do cliente, então pode estar atrás do jogo (treino, descanso) sem
+   * ninguém ter trapaceado — impor aqui castigaria jogador honesto, o mesmo
+   * erro da ficha defasada. Fadiga é SAÍDA de partida e descanso: só quando o
+   * servidor passar a creditar a partida (Fase 2C) ele pode mandar nela.
+   */
+  fadiga?: FadigaConferida;
   motivos: string[];
 }
 
 export const conferenciaVazia = (): Conferencia =>
   ({ conferidos: 0, sem_ficha: 0, corrigidos: 0, preenchidos: 0, motivos: [] });
+
+/**
+ * Força do time pela ficha: média do OVR dos titulares, do mesmo jeito que o
+ * cliente faz (`buildQuickPlanInputs`: soma `overallFromAttributes` dos 11 e
+ * divide). `ovrDe` no servidor é cópia verificada dessa fórmula — o portão da
+ * Fase 1 mediu 0 divergência em 1.969 jogadores.
+ *
+ * Devolve null se QUALQUER titular não tem ficha: média pela metade do time
+ * daria um número errado, e errar aqui mexe no placar de quem joga limpo.
+ */
+export function forcaDaEscalacao(
+  escalacao: readonly object[],
+  fichas: Map<string, FichaDoMotor>,
+): number | null {
+  if (!escalacao.length) return null;
+  let soma = 0;
+  for (const bruta of escalacao) {
+    const id = (bruta as LinhaDoMotor).id;
+    const ficha = typeof id === 'string' ? fichas.get(id) : undefined;
+    const ovr = ficha?.ovr;
+    if (typeof ovr !== 'number' || !Number.isFinite(ovr)) return null;
+    soma += ovr;
+  }
+  return Math.round(soma / escalacao.length);
+}
+
+/**
+ * Compara a fadiga enviada com a que o servidor conhece. NÃO altera a
+ * escalação — ver o comentário de `Conferencia.fadiga`.
+ */
+export function conferirFadiga(
+  escalacao: readonly object[],
+  fadigaDoServidor: Map<string, number>,
+): FadigaConferida {
+  const out: FadigaConferida = { iguais: 0, diferentes: 0, sem_referencia: 0, desvio: 0 };
+  for (const bruta of escalacao) {
+    const linha = bruta as LinhaDoMotor;
+    const id = typeof linha.id === 'string' ? linha.id : '';
+    const referencia = id ? fadigaDoServidor.get(id) : undefined;
+    if (referencia === undefined) { out.sem_referencia++; continue; }
+    const enviada = numero(linha.fatigue) ?? 0;
+    // 1 ponto de folga: o cliente arredonda a fadiga efetiva em alguns caminhos.
+    if (Math.abs(enviada - referencia) <= 1) { out.iguais++; continue; }
+    out.diferentes++;
+    out.desvio += enviada - referencia;
+  }
+  return out;
+}
 
 /** Uma linha do payload que vai ao Python. Chaves livres: só os CAMPOS importam. */
 export type LinhaDoMotor = Record<string, unknown>;
