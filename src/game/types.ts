@@ -636,6 +636,16 @@ export type GameAction =
     }
   /** Crédito da Partida Rápida 2.0 (motor Python) — progressão sem o loop tick. */
   | {
+      /**
+       * SMART-PROFILE Fase 2C — a conta do SERVIDOR vale. Depois da partida o
+       * servidor refaz a evolução partindo da ficha dele e devolve os números;
+       * esta ação os aplica no lugar dos que o reducer calculou otimista.
+       * Chega depois do FINALIZE (uma ida ao servidor), então sobrescreve.
+       */
+      type: 'APLICAR_EVOLUCAO_DO_SERVIDOR';
+      jogadores: Array<{ id: string; attrs: Record<string, number>; xp: number }>;
+    }
+  | {
       type: 'FINALIZE_QUICK_PLAN';
       homeScore: number;
       awayScore: number;

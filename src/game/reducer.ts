@@ -4288,6 +4288,38 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         inbox: [deliveryInbox, ...state.inbox].slice(0, 14),
       };
     }
+    /**
+     * SMART-PROFILE Fase 2C — o servidor manda na progressão do jogador.
+     *
+     * O reducer já creditou a partida de forma otimista (FINALIZE_QUICK_PLAN) pra
+     * tela não esperar a rede. Quando a resposta do servidor chega, ela VALE: o
+     * servidor refez a conta partindo da ficha dele, com a nota conferida contra
+     * os lances do plano que ele mesmo emitiu.
+     *
+     * Só atributos e XP. Economia, fadiga, moral, contratos e forma continuam do
+     * reducer — o servidor ainda não credita isso.
+     */
+    case 'APLICAR_EVOLUCAO_DO_SERVIDOR': {
+      if (!action.jogadores?.length) return state;
+      const players = { ...state.players };
+      let mudou = false;
+      for (const j of action.jogadores) {
+        const pl = players[j.id];
+        if (!pl) continue;
+        const attrs = { ...pl.attrs };
+        let difere = false;
+        for (const [k, v] of Object.entries(j.attrs ?? {})) {
+          if (!(k in attrs) || typeof v !== 'number' || !Number.isFinite(v)) continue;
+          if ((attrs as Record<string, number>)[k] !== v) { (attrs as Record<string, number>)[k] = v; difere = true; }
+        }
+        const xp = Number.isFinite(j.xp) ? j.xp : pl.evolutionXp;
+        if (!difere && xp === pl.evolutionXp) continue;
+        players[j.id] = { ...pl, attrs, evolutionXp: xp };
+        mudou = true;
+      }
+      return mudou ? { ...state, players } : state;
+    }
+
     case 'ADMIN_PATCH_NEXT_FIXTURE': {
       const prev = state.nextFixture;
       const p = action.partial;

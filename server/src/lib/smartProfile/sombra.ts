@@ -79,23 +79,77 @@ export interface Comparacao {
   detalhes: Array<{ id: string; atributos?: Record<string, [number, number]>; xp?: [number, number]; antes?: Record<string, [number, number]> }>;
 }
 
-export function compararPartida(r: RelatoPartida, fichas: Map<string, Pick<Ficha, 'atributos'>>): Comparacao {
+/** O que o servidor decidiu para um jogador — Fase 2C grava isto na ficha. */
+export interface CreditoJogador {
+  id: string;
+  posicao: string;
+  atributos: Atributos;
+  xp: number;
+  swing: number;
+  /** false = não havia ficha; a base foi o "antes" do celular (não é autoridade). */
+  daFicha: boolean;
+}
+
+/**
+ * Teto na linha da partida (Fase 2C). O caminho vivo manda passe, desarme e
+ * km em ZERO (MatchQuickEngaged: `passesOk: 0, passesAttempt: 0, tackles: 0,
+ * km: 0`), então o swing nasce só da NOTA — que a custódia confere contra os
+ * lances do plano — e do resultado. Mas o corpo é do cliente: sem teto, um
+ * pedido forjado pediria km 99 e passe perfeito e ganharia +2 de swing por
+ * partida sem passar pela custódia. Os limites são generosos de propósito:
+ * cortam o absurdo, não a jogada boa.
+ */
+export function limitarLinha(l: LinhaDaPartida | undefined): { linha: LinhaDaPartida | undefined; cortou: boolean } {
+  if (!l) return { linha: undefined, cortou: false };
+  const tet = (v: number, max: number) => Math.min(max, Math.max(0, Number.isFinite(v) ? v : 0));
+  const linha: LinhaDaPartida = {
+    rating: Math.min(10, Math.max(0, Number.isFinite(l.rating) ? l.rating : 6.5)),
+    passesAttempt: tet(l.passesAttempt, 150),
+    passesOk: 0,
+    tackles: tet(l.tackles, 15),
+    km: tet(l.km, 14),
+  };
+  linha.passesOk = Math.min(linha.passesAttempt, tet(l.passesOk, 150));
+  const cortou = linha.rating !== l.rating || linha.passesAttempt !== l.passesAttempt
+    || linha.passesOk !== l.passesOk || linha.tackles !== l.tackles || linha.km !== l.km;
+  return { linha, cortou };
+}
+
+/**
+ * FASE 2C — a conta do servidor passa a VALER, e por isso ela parte da FICHA.
+ *
+ * Na 2A o "antes" vinha do celular e isto era só comparação. Agora a base é a
+ * ficha que o servidor guarda (sincronizada com o elenco na emissão do plano,
+ * ver plano.ts): o celular informa o DESEMPENHO — e a nota é conferida pela
+ * custódia contra os lances do plano —, não o ponto de partida.
+ *
+ * Sem ficha (jogador que o servidor não conhece) o servidor não tem autoridade:
+ * cai no "antes" do celular e marca `daFicha: false`, para o chamador não
+ * gravar isso como verdade.
+ *
+ * `divergencias` continua medindo a mesma coisa útil: a conta do celular bate
+ * com a do servidor? Só que agora, quando não bate, quem vale é o servidor.
+ */
+export function compararPartida(r: RelatoPartida, fichas: Map<string, Pick<Ficha, 'atributos'>>): Comparacao & { credito: CreditoJogador[] } {
   const resultado = resultadoDe(r.placar, r.penaltis);
   const pesos = pesosValidos(r.estilo);
   const xpLeitura = Math.round(r.leitura * 3);
-  const out: Comparacao = { resultado, jogadores: r.jogadores.length, divergencias: 0, antes_diferente: 0, detalhes: [] };
+  const out: Comparacao & { credito: CreditoJogador[] } = { resultado, jogadores: r.jogadores.length, divergencias: 0, antes_diferente: 0, detalhes: [], credito: [] };
   for (const j of r.jogadores) {
-    const antes = atributosCompletos(j.antes.attrs, j.pos);
+    const doCelular = atributosCompletos(j.antes.attrs, j.pos);
+    const ficha0 = fichas.get(j.id);
+    const antes = ficha0 ? atributosCompletos(ficha0.atributos, j.pos) : doCelular;
+    const { linha: linhaLimitada } = limitarLinha(j.linha);
     const srv = evoluirPorPartida(
       { posicao: j.pos, atributos: antes, xp: j.antes.xp, taxaEvolucao: j.antes.taxa, ovrNascimento: j.antes.ovrNascimento, criadoPeloManager: j.antes.criadoPeloManager },
-      j.linha, resultado, pesos, xpLeitura,
+      linhaLimitada, resultado, pesos, xpLeitura,
     );
+    out.credito.push({ id: j.id, posicao: j.pos, atributos: srv.atributos, xp: srv.xp, swing: srv.swing, daFicha: !!ficha0 });
     const cel = atributosCompletos(j.depois.attrs, j.pos);
     // Diferença = [servidor, celular] por atributo.
     const difAttrs = diferencaDeAtributos(srv.atributos, cel as Atributos);
     const difXp = srv.xp !== j.depois.xp ? ([srv.xp, j.depois.xp] as [number, number]) : undefined;
-    const ficha = fichas.get(j.id);
-    const difAntes = ficha ? diferencaDeAtributos(ficha.atributos, antes) : undefined;
+    const difAntes = ficha0 ? diferencaDeAtributos(atributosCompletos(ficha0.atributos, j.pos), doCelular) : undefined;
     const temDifAntes = !!difAntes && Object.keys(difAntes).length > 0;
     if (Object.keys(difAttrs).length || difXp) out.divergencias++;
     if (temDifAntes) out.antes_diferente++;

@@ -7,7 +7,8 @@ import { styleAttrWeights } from '../../../../src/tactics/styleAttrWeights.ts';
 import { STYLE_PRESETS } from '../../../../src/tactics/playingStyle.ts';
 import { evoluirPorPartida, pesosValidos, type Resultado } from './evolucao.js';
 import { atributosCompletos } from './derivar.js';
-import { compararPartida, lerRelato, resultadoDe } from './sombra.js';
+import { compararPartida, lerRelato, limitarLinha, resultadoDe } from './sombra.js';
+import { ovrDe } from './ovr.js';
 
 let ok = 0, falhou = 0;
 const check = (nome: string, cond: boolean, extra = '') => {
@@ -91,6 +92,66 @@ console.log('\n🌗 modo sombra\n');
   const outraBase = compararPartida(lerRelato(corpo)!, new Map([['genesis-x', { atributos: { ...atributosCompletos(pl.attrs, 'ATA'), passe: 50 } }]]));
   check('"antes" diferente da ficha do servidor é marcado', outraBase.antes_diferente === 1);
   check('relato fora do formato é recusado', lerRelato({ seed: 'x', placar: [1], jogadores: [] }) === null && lerRelato({ ...corpo, placar: [-1, 0] }) === null);
+}
+
+console.log('\n🏛️  FASE 2C — a conta do servidor VALE e parte da ficha\n');
+{
+  const ATTRS = { passe: 60, marcacao: 60, velocidade: 60, drible: 60, finalizacao: 60,
+    fisico: 60, tatico: 60, mentalidade: 60, confianca: 60, fairPlay: 60 };
+  const linha = { rating: 8.5, passesOk: 0, passesAttempt: 0, tackles: 0, km: 0 };
+  const jogador = (attrsAntes: Record<string, number>) => ({
+    id: 'p1', pos: 'ATA',
+    antes: { attrs: attrsAntes, xp: 0, ovrNascimento: null, taxa: 1, criadoPeloManager: false },
+    linha, gols: 1, chutes: 2,
+    depois: { attrs: attrsAntes, xp: 0 },
+  });
+  const relato = (attrsAntes: Record<string, number>) => ({
+    seed: 's1', placar: [2, 1] as [number, number], penaltis: null, leitura: 0, estilo: undefined,
+    planos: [], jogadores: [jogador(attrsAntes)],
+  });
+
+  // O CELULAR MENTE: diz que o jogador tinha 95 em tudo. O servidor tem ficha de 60.
+  const mentira = { passe: 95, marcacao: 95, velocidade: 95, drible: 95, finalizacao: 95,
+    fisico: 95, tatico: 95, mentalidade: 95, confianca: 95, fairPlay: 95 };
+  const fichaHonesta = new Map([['p1', { atributos: atributosCompletos(ATTRS, 'ATA') }]]);
+  const r = compararPartida(relato(mentira), fichaHonesta);
+  const c = r.credito[0]!;
+  check('a base é a FICHA, não o "antes" do celular',
+    ovrDe(c.atributos, 'ATA') < 70, `ovr creditado ${ovrDe(c.atributos, 'ATA')}`);
+  check('a mentira é registrada em antes_diferente', r.antes_diferente === 1);
+  check('o crédito vem marcado como vindo da ficha', c.daFicha === true);
+
+  // SEM ficha o servidor não finge autoridade.
+  const semFicha = compararPartida(relato(ATTRS), new Map());
+  check('sem ficha → daFicha false (o chamador não grava como verdade)', semFicha.credito[0]!.daFicha === false);
+
+  // Honesto: a conta do servidor sobe o jogador de verdade.
+  const honesto = compararPartida(relato(ATTRS), fichaHonesta);
+  const antesOvr = ovrDe(atributosCompletos(ATTRS, 'ATA'), 'ATA');
+  check('nota 8.5 + vitória faz o jogador subir', honesto.credito[0]!.swing > 0
+    && ovrDe(honesto.credito[0]!.atributos, 'ATA') >= antesOvr);
+  check('XP é creditado', honesto.credito[0]!.xp > 0);
+  check('um crédito por jogador relatado', honesto.credito.length === 1);
+}
+
+console.log('\n✂️  teto na linha da partida (o swing não é do cliente)\n');
+{
+  const absurdo = { rating: 99, passesOk: 500, passesAttempt: 400, tackles: 99, km: 999 };
+  const { linha, cortou } = limitarLinha(absurdo);
+  check('nota tem teto 10', linha!.rating === 10);
+  check('km tem teto 14', linha!.km === 14);
+  check('desarmes têm teto 15', linha!.tackles === 15);
+  check('passes certos nunca passam das tentativas', linha!.passesOk <= linha!.passesAttempt);
+  check('o corte é sinalizado', cortou === true);
+  const honesta = { rating: 7.2, passesOk: 0, passesAttempt: 0, tackles: 0, km: 0 };
+  const r2 = limitarLinha(honesta);
+  // Campo a campo: `limitarLinha` reconstrói o objeto, então a ORDEM das chaves
+  // muda e um JSON.stringify compararia a ordem, não os números.
+  check('a linha que o jogo manda de verdade passa intacta',
+    !r2.cortou && r2.linha!.rating === 7.2 && r2.linha!.km === 0 && r2.linha!.tackles === 0
+    && r2.linha!.passesOk === 0 && r2.linha!.passesAttempt === 0,
+    JSON.stringify(r2));
+  check('sem linha → sem linha (não inventa)', limitarLinha(undefined).linha === undefined);
 }
 
 console.log(`\n${falhou === 0 ? '🟢' : '🔴'} ${ok} passaram, ${falhou} falharam`);

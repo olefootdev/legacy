@@ -601,6 +601,8 @@ export default function MatchQuickEngaged() {
       planos: planIdsRef.current,
       antes: antesDoCredito,
       depois: getGameState(),
+      // FASE 2C: quando o servidor responde, a conta dele vale.
+      aoAplicar: (jogadores) => dispatch({ type: 'APLICAR_EVOLUCAO_DO_SERVIDOR', jogadores }),
     });
   }, [dispatch]);
 

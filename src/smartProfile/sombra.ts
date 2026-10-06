@@ -24,6 +24,8 @@ export function relatarPartidaSombra(args: {
   planos: (string | null | undefined)[];
   antes: OlefootGameState;
   depois: OlefootGameState;
+  /** Fase 2C: os números que o servidor decidiu. Chamado só quando ele responde. */
+  aoAplicar?: (jogadores: Array<{ id: string; attrs: Record<string, number>; xp: number }>) => void;
 }): void {
   void (async () => {
     try {
@@ -45,7 +47,7 @@ export function relatarPartidaSombra(args: {
         }];
       });
       if (!jogadores.length) return;
-      await fetch(`${olefootApiBase()}/api/player-profiles/sombra/partida`, {
+      const resposta = await fetch(`${olefootApiBase()}/api/player-profiles/sombra/partida`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -59,8 +61,16 @@ export function relatarPartidaSombra(args: {
         }),
         keepalive: true,
       });
+      if (!args.aoAplicar || !resposta.ok) return;
+      const corpo = (await resposta.json().catch(() => null)) as
+        { aplicar?: Array<{ id?: unknown; attrs?: unknown; xp?: unknown }> } | null;
+      const aplicar = (corpo?.aplicar ?? []).flatMap((j) =>
+        typeof j?.id === 'string' && j.attrs && typeof j.attrs === 'object' && typeof j.xp === 'number'
+          ? [{ id: j.id, attrs: j.attrs as Record<string, number>, xp: j.xp }]
+          : []);
+      if (aplicar.length) args.aoAplicar(aplicar);
     } catch {
-      // Sombra nunca atrapalha o jogo.
+      // O crédito do servidor nunca atrapalha o jogo: sem rede, vale o otimista.
     }
   })();
 }
