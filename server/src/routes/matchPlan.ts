@@ -17,7 +17,7 @@ import { donoDaSessao } from '../lib/sessao.js';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { resumirPlano } from '../lib/smartProfile/custodia.js';
 import {
-  conferenciaVazia, conferirEscalacao, conferirFadiga, forcaDaEscalacao, impressaoDaEscalacao,
+  aplicarTracos, conferenciaVazia, conferirEscalacao, conferirFadiga, forcaDaEscalacao, impressaoDaEscalacao,
   type Conferencia, type FichaDoMotor,
 } from '../lib/smartProfile/plano.js';
 import { sincronizarFichas } from '../lib/smartProfile/sincronizar.js';
@@ -160,7 +160,7 @@ async function conferirContraAsFichas(dono: string | null, body: QuickPlanReques
     const { fichas: atualizadas } = await sincronizarFichas(sb, dono);
     if (!atualizadas.length) return conferencia;
     const fichas = new Map<string, FichaDoMotor>(
-      atualizadas.map((f) => [f.player_id, { atributos: f.atributos, ovr: f.ovr }]),
+      atualizadas.map((f) => [f.player_id, { atributos: f.atributos, ovr: f.ovr, tracos: f.tracos }]),
     );
     body.home_team.lineup = conferirEscalacao(body.home_team.lineup, fichas, conferencia).escalacao;
 
@@ -183,6 +183,17 @@ async function conferirContraAsFichas(dono: string | null, body: QuickPlanReques
       }
       body.home_team.strength = valor;
       conferencia.forca = { daFicha, enviada: Number.isFinite(enviada) ? enviada : 0, fonte };
+    }
+
+    // FASE 4 (RPG) — o efeito dos traços entra aqui, DEPOIS da conferência: o
+    // celular não sabe do traço e não poderia reivindicá-lo, então o envelope
+    // não precisa acomodá-lo. Antes da impressão do cache, porque o traço muda
+    // os números que vão ao motor.
+    const comTracos = aplicarTracos(body.home_team.lineup, fichas);
+    body.home_team.lineup = comTracos.escalacao;
+    if (comTracos.aplicados.jogadores > 0) {
+      conferencia.tracos = comTracos.aplicados;
+      console.info(`[rpg] traços em ${comTracos.aplicados.jogadores} titular(es), +${comTracos.aplicados.pontos} ponto(s)`);
     }
 
     // FADIGA — medida, nunca trocada. Ver `Conferencia.fadiga`.

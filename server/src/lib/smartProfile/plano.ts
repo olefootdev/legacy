@@ -29,12 +29,15 @@
  * adversário) e a fadiga.
  */
 import type { Atributos } from './tipos.js';
+import { efeitoDosTracos } from './rpg.js';
 
 /** O mínimo que a conferência precisa saber de uma ficha. */
 export interface FichaDoMotor {
   atributos: Atributos;
   /** OVR pela fórmula do servidor (cópia verificada da do cliente). */
   ovr?: number;
+  /** Fase 4 (RPG): traços conquistados, que temperam o que vai ao motor. */
+  tracos?: unknown[];
 }
 
 /** Campo do payload do motor → atributo da ficha. */
@@ -120,6 +123,8 @@ export interface Conferencia {
   preenchidos: number;
   /** Força do time: imposta pelo servidor (ver `forcaDaEscalacao`). */
   forca?: ForcaConferida;
+  /** Fase 4: o que os traços somaram no que foi ao motor. */
+  tracos?: TracosAplicados;
   /**
    * Fadiga: MEDIDA, não trocada. O `player_health` do servidor é escrito pelo
    * snapshot do cliente, então pode estar atrás do jogo (treino, descanso) sem
@@ -251,6 +256,63 @@ export function conferirEscalacao<T extends object>(
     saida.push(corrigido ? (corrigido as T) : bruta);
   }
   return { escalacao: saida, conferencia };
+}
+
+/** O que os traços mudaram na escalação que foi ao motor (Fase 4). */
+export interface TracosAplicados {
+  /** Titulares que levaram algum bônus de traço. */
+  jogadores: number;
+  /** Soma de pontos somados, para dar escala ao efeito. */
+  pontos: number;
+  /** `id: {atributo: +n}` dos primeiros afetados, para auditoria do plano. */
+  exemplos: Record<string, Partial<Record<string, number>>>;
+}
+
+/**
+ * FASE 4 — o efeito dos traços entra nos atributos que vão ao motor.
+ *
+ * Roda DEPOIS da conferência de propósito: o celular não sabe que o traço
+ * existe, não o manda e não poderia reivindicá-lo — então o envelope de tilts
+ * de `conferirEscalacao` não precisa ser alargado para acomodar o bônus. Quem
+ * concede o traço (o crédito da partida) e quem o aplica (aqui) são os dois o
+ * servidor.
+ *
+ * É isto que separa traço de enfeite: a `form` e a moral eram escritas a cada
+ * partida e a simulação não as lia. O traço chega ao Python.
+ */
+export function aplicarTracos<T extends object>(
+  escalacao: readonly T[],
+  fichas: Map<string, FichaDoMotor>,
+): { escalacao: T[]; aplicados: TracosAplicados } {
+  const aplicados: TracosAplicados = { jogadores: 0, pontos: 0, exemplos: {} };
+  const saida: T[] = [];
+  for (const bruta of escalacao) {
+    const linha = bruta as LinhaDoMotor;
+    const id = typeof linha.id === 'string' ? linha.id : '';
+    const ficha = id ? fichas.get(id) : undefined;
+    const efeito = ficha?.tracos?.length ? efeitoDosTracos(ficha.tracos) : null;
+    if (!efeito || !Object.keys(efeito).length) { saida.push(bruta); continue; }
+
+    const nova: Record<string, unknown> = { ...linha };
+    const doJogador: Record<string, number> = {};
+    for (const [atributo, bonus] of Object.entries(efeito)) {
+      if (!bonus) continue;
+      // O campo do motor tem o mesmo nome do atributo (só fairPlay difere, e
+      // nenhum traço mexe nele).
+      const atual = numero(nova[atributo]);
+      if (atual === null) continue;
+      const valor = limitar(atual + bonus);
+      if (valor === Math.round(atual)) continue;
+      nova[atributo] = valor;
+      doJogador[atributo] = bonus;
+      aplicados.pontos += bonus;
+    }
+    if (!Object.keys(doJogador).length) { saida.push(bruta); continue; }
+    aplicados.jogadores++;
+    if (Object.keys(aplicados.exemplos).length < 5) aplicados.exemplos[id] = doJogador;
+    saida.push(nova as T);
+  }
+  return { escalacao: saida, aplicados };
 }
 
 /**

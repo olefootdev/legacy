@@ -29,9 +29,13 @@ export interface Ficha {
   cerebro: { espacos: number; ideias: unknown[] };
 }
 
-type Estado = { fichas: Map<string, Ficha>; buscadoEm: number; carregando: boolean; indisponivel: boolean };
+/** Catálogo e curva vêm do SERVIDOR (Fase 4): o cliente não duplica número. */
+export interface TracoDoCatalogo { id: string; nome: string; comoSeGanha: string; atributo: string; bonus: number }
+export interface Rpg { tracos: TracoDoCatalogo[]; curvaDeXp: number[] }
 
-let estado: Estado = { fichas: new Map(), buscadoEm: 0, carregando: false, indisponivel: false };
+type Estado = { fichas: Map<string, Ficha>; rpg: Rpg | null; buscadoEm: number; carregando: boolean; indisponivel: boolean };
+
+let estado: Estado = { fichas: new Map(), rpg: null, buscadoEm: 0, carregando: false, indisponivel: false };
 const ouvintes = new Set<(e: Estado) => void>();
 const VALIDADE_MS = 60_000;
 
@@ -49,9 +53,14 @@ export async function buscarFichas(forcar = false): Promise<void> {
   publicar({ carregando: true });
   try {
     const r = await fetch(`${olefootApiBase()}/api/player-profiles`, { headers: { Authorization: `Bearer ${token}` } });
-    const data = (await r.json().catch(() => null)) as { ok?: boolean; fichas?: Ficha[]; indisponivel?: boolean } | null;
+    const data = (await r.json().catch(() => null)) as { ok?: boolean; fichas?: Ficha[]; rpg?: Rpg; indisponivel?: boolean } | null;
     if (r.ok && data?.ok) {
-      publicar({ fichas: new Map((data.fichas ?? []).map((f) => [f.player_id, f])), buscadoEm: Date.now(), indisponivel: !!data.indisponivel });
+      publicar({
+        fichas: new Map((data.fichas ?? []).map((f) => [f.player_id, f])),
+        rpg: data.rpg ?? estado.rpg,
+        buscadoEm: Date.now(),
+        indisponivel: !!data.indisponivel,
+      });
     }
   } catch {
     // Rede fora: mantém o que já tinha. A ficha é complemento, nunca trava a tela.
@@ -61,12 +70,12 @@ export async function buscarFichas(forcar = false): Promise<void> {
 }
 
 /** A ficha de um jogador (ou null enquanto não chega / se ainda não existe). */
-export function useFicha(playerId: string | null | undefined): { ficha: Ficha | null; carregando: boolean } {
+export function useFicha(playerId: string | null | undefined): { ficha: Ficha | null; carregando: boolean; rpg: Rpg | null } {
   const [e, setE] = useState(estado);
   useEffect(() => {
     ouvintes.add(setE);
     void buscarFichas();
     return () => { ouvintes.delete(setE); };
   }, []);
-  return { ficha: playerId ? e.fichas.get(playerId) ?? null : null, carregando: e.carregando };
+  return { ficha: playerId ? e.fichas.get(playerId) ?? null : null, carregando: e.carregando, rpg: e.rpg };
 }

@@ -6,6 +6,20 @@ import { semTabela, sincronizarFichas } from '../lib/smartProfile/sincronizar.js
 import { compararPartida, lerRelato, type Comparacao, type CreditoJogador } from '../lib/smartProfile/sombra.js';
 import { diferencaDeAtributos } from '../lib/smartProfile/ficha.js';
 import { ovrDe } from '../lib/smartProfile/ovr.js';
+import {
+  NIVEL_MAXIMO, carreiraDe, catalogoDeTracos, nivelPorXp, tracosDaFicha, tracosGanhos, xpParaNivel,
+} from '../lib/smartProfile/rpg.js';
+
+/**
+ * RPG que o cliente precisa para desenhar a ficha sem duplicar número nenhum:
+ * o catálogo de traços (ids, atributo e bônus) e a curva de XP indexada por
+ * nível. Mudar a curva ou o catálogo no servidor muda a tela, sem deploy do
+ * front. Os NOMES ficam no cliente, que é quem fala PT/EN.
+ */
+const rpgDoCliente = () => ({
+  tracos: catalogoDeTracos(),
+  curvaDeXp: Array.from({ length: NIVEL_MAXIMO + 1 }, (_, n) => xpParaNivel(n)),
+});
 
 /** A linha de `evolucao_sombra` não guarda o crédito — ele vai pra ficha. */
 const semCredito = (c: Comparacao & { credito: CreditoJogador[] }): Comparacao => {
@@ -36,6 +50,7 @@ playerProfilesRoutes.get('/api/player-profiles', rateLimit(30), async (c) => {
     return c.json({
       ok: true,
       fichas: r.fichas,
+      rpg: rpgDoCliente(),
       sync: { criadas: r.criadas, atualizadas: r.atualizadas, inativadas: r.inativadas, eventos: r.eventos },
     });
   } catch (e) {
@@ -139,21 +154,49 @@ playerProfilesRoutes.post('/api/player-profiles/sombra/partida', rateLimit(30), 
     const doServidor = cmp.credito.filter((c) => c.daFicha);
     if (doServidor.length) {
       const agora = new Date().toISOString();
+      // FASE 4 (RPG) — a partida também move carreira, nível e traços.
+      const golsPorId = new Map(relato.jogadores.map((j) => [j.id, j.gols]));
+      const subiuDeNivel: Array<{ id: string; de: number; para: number }> = [];
+      const tracosNovos: Array<{ id: string; tracos: string[] }> = [];
       const linhas = doServidor.map((c) => {
         const base = porId.get(c.id)!;
+        const carreira = carreiraDe(base.vinculo);
+        carreira.partidas += 1;
+        carreira.gols += golsPorId.get(c.id) ?? 0;
+        if (cmp.resultado === 'win') carreira.vitorias += 1;
+
+        const nivel = nivelPorXp(c.xp);
+        if (nivel !== base.nivel) subiuDeNivel.push({ id: c.id, de: base.nivel, para: nivel });
+
+        const ganhos = tracosGanhos({ nivel, carreira, classe: base.classe, tracos: base.tracos });
+        const tracos = [...tracosDaFicha(base.tracos), ...ganhos];
+        if (ganhos.length) tracosNovos.push({ id: c.id, tracos: ganhos });
+
         return { ...(base as unknown as Record<string, unknown>), owner_id: dono, player_id: c.id,
-          atributos: c.atributos, ovr: ovrDe(c.atributos, c.posicao), xp: c.xp, atualizado_em: agora };
+          atributos: c.atributos, ovr: ovrDe(c.atributos, c.posicao), xp: c.xp,
+          nivel, tracos, vinculo: { ...(base.vinculo ?? {}), ...carreira }, atualizado_em: agora };
       });
       const { error: eFicha } = await sb.from('player_profiles').upsert(linhas, { onConflict: 'owner_id,player_id' });
       if (eFicha) {
         console.error('[credito] gravar fichas', eFicha.message);
       } else {
+        const nivelPorJogador = new Map(subiuDeNivel.map((n) => [n.id, n]));
+        const tracosPorJogador = new Map(tracosNovos.map((t) => [t.id, t.tracos]));
         const eventos = doServidor
-          .map((c) => ({ owner_id: dono, player_id: c.id, tipo: 'atributos' as const,
-            dados: { mudancas: diferencaDeAtributos(porId.get(c.id)!.atributos, c.atributos),
-              xp: c.xp, swing: c.swing, seed: relato.seed, fonte: 'servidor' } }))
-          .filter((e) => Object.keys(e.dados.mudancas as object).length > 0 || e.dados.swing !== 0);
+          .map((c) => {
+            const subiu = nivelPorJogador.get(c.id);
+            const ganhou = tracosPorJogador.get(c.id);
+            return { owner_id: dono, player_id: c.id, tipo: 'atributos' as const,
+              dados: { mudancas: diferencaDeAtributos(porId.get(c.id)!.atributos, c.atributos),
+                xp: c.xp, swing: c.swing, seed: relato.seed, fonte: 'servidor',
+                ...(subiu ? { nivel: [subiu.de, subiu.para] } : {}),
+                ...(ganhou ? { tracos_ganhos: ganhou } : {}) } };
+          })
+          .filter((e) => Object.keys(e.dados.mudancas as object).length > 0 || e.dados.swing !== 0
+            || 'nivel' in e.dados || 'tracos_ganhos' in e.dados);
         if (eventos.length) await sb.from('player_profile_events').insert(eventos);
+        for (const n of subiuDeNivel) console.info(`[rpg] ${n.id} subiu do nível ${n.de} para ${n.para}`);
+        for (const t of tracosNovos) console.info(`[rpg] ${t.id} conquistou: ${t.tracos.join(', ')}`);
         for (const c of doServidor) aplicar.push({ id: c.id, attrs: c.atributos, xp: c.xp });
       }
     }

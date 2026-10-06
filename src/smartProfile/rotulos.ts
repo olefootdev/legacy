@@ -58,3 +58,41 @@ export const NOME_DO_TEMPERAMENTO: Record<'ousadia' | 'frieza' | 'ambicao' | 'le
 };
 
 export const nomeDaClasse = (id: string | null | undefined) => (id ? NOME_DA_CLASSE[id] ?? id : '');
+
+
+/**
+ * Nomes dos traços (Fase 4). O SERVIDOR é dono dos ids, do atributo e do bônus
+ * — ver `catalogoDeTracos` em server/src/lib/smartProfile/rpg.ts. Aqui ficam só
+ * as palavras, porque é o cliente que fala PT/EN. Traço sem nome aqui aparece
+ * pelo id: catálogo novo no servidor não quebra a tela.
+ */
+export const NOME_DO_TRACO: Record<string, string> = {
+  matador: L('Matador', 'Finisher'),
+  maestro: L('Maestro', 'Playmaker'),
+  xerifao: L('Xerifão', 'Enforcer'),
+  veterano: L('Veterano', 'Veteran'),
+  incansavel: L('Incansável', 'Relentless'),
+};
+
+/** Como se ganha, na voz do jogo. */
+export const COMO_SE_GANHA: Record<string, string> = {
+  matador: L('10 gols na carreira', '10 career goals'),
+  maestro: L('nível 10', 'level 10'),
+  xerifao: L('25 partidas na defesa', '25 matches in defence'),
+  veterano: L('50 partidas', '50 matches'),
+  incansavel: L('nível 20', 'level 20'),
+};
+
+/** Atributo do bônus, pro chip dizer o efeito. */
+export const NOME_DO_ATRIBUTO: Record<string, string> = {
+  finalizacao: L('finalização', 'finishing'),
+  passe: L('passe', 'passing'),
+  marcacao: L('marcação', 'marking'),
+  velocidade: L('velocidade', 'pace'),
+  drible: L('drible', 'dribbling'),
+  fisico: L('físico', 'physical'),
+  tatico: L('tático', 'tactical'),
+  mentalidade: L('mentalidade', 'mentality'),
+  confianca: L('confiança', 'confidence'),
+  fairPlay: L('fair play', 'fair play'),
+};
