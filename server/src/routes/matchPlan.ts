@@ -20,6 +20,7 @@ import {
   conferenciaVazia, conferirEscalacao, impressaoDaEscalacao,
   type Conferencia, type FichaDoMotor,
 } from '../lib/smartProfile/plano.js';
+import { sincronizarFichas } from '../lib/smartProfile/sincronizar.js';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -146,13 +147,20 @@ async function conferirContraAsFichas(dono: string | null, body: QuickPlanReques
   try {
     const sb = getSupabaseAdmin();
     if (!sb) return conferencia;
-    const ids = [...new Set(body.home_team.lineup.map((p) => p.id).filter((id) => typeof id === 'string' && id))];
-    if (!ids.length) return conferencia;
-    const { data, error } = await sb.from('player_profiles')
-      .select('player_id, atributos').eq('owner_id', dono).in('player_id', ids);
-    if (error || !data?.length) return conferencia;
+    if (!body.home_team.lineup.some((p) => typeof p.id === 'string' && p.id)) return conferencia;
+    // SINCRONIZA ANTES DE CONFERIR. A ficha só se atualizava quando o cliente
+    // abria GET /api/player-profiles; entre uma leitura e outra o elenco evolui
+    // (treino, partida) e a ficha fica atrás. Conferir contra ficha velha corta
+    // jogador HONESTO e marca a partida como suspeita — foi o que aconteceu com
+    // `fair_play` 40 no elenco contra 39 na ficha. O sync lê `manager_squad`,
+    // concilia e registra cada mudança no histórico, então o número conferido é
+    // o de agora. Enquanto a evolução é do cliente (até a Fase 2C) é isto que o
+    // servidor pode garantir: não que o atributo seja dele, mas que seja o MESMO
+    // em todo canal — e que mudar deixe rastro.
+    const { fichas: atualizadas } = await sincronizarFichas(sb, dono);
+    if (!atualizadas.length) return conferencia;
     const fichas = new Map<string, FichaDoMotor>(
-      data.map((f) => [f.player_id as string, { atributos: f.atributos } as FichaDoMotor]),
+      atualizadas.map((f) => [f.player_id, { atributos: f.atributos } as FichaDoMotor]),
     );
     body.home_team.lineup = conferirEscalacao(body.home_team.lineup, fichas, conferencia).escalacao;
     if (conferencia.corrigidos > 0) {

@@ -108,6 +108,31 @@ console.log('\n🟥 número fora da ficha é cortado\n');
   check('lista de motivos tem teto (não vira jsonb gigante)', r.conferencia.motivos.length === 20 && r.conferencia.corrigidos === 30);
 }
 
+console.log('\n⏳ ficha DEFASADA — por que a rota sincroniza antes de conferir\n');
+{
+  // Produção, 06/10: elenco com fair_play 40, ficha ainda em 39 (a ficha só se
+  // atualizava quando o cliente abria GET /api/player-profiles). A conferência
+  // cortou o jogador HONESTO e marcou a partida como suspeita. Este teste trava
+  // o caso: com ficha velha o corte acontece, e é por isso que
+  // `conferirContraAsFichas` chama `sincronizarFichas` ANTES de conferir.
+  const fichaVelha = new Map<string, FichaDoMotor>([
+    ['genesis-9', { atributos: atributosCompletos({ ...ATTRS, fairPlay: 39 }, 'ATA') }],
+  ]);
+  const doElenco = playerToQuickPlanPayload(entidade('equilibrado'), 0, 'attack', 50); // fairPlay 40
+  const r = conferirEscalacao([doElenco], fichaVelha);
+  check('ficha 1 ponto atrás do elenco CORTA jogador honesto (o bug de 06/10)',
+    r.conferencia.corrigidos === 1 && r.conferencia.motivos.some((m) => m.includes('fair_play')),
+    r.conferencia.motivos.join(' | '));
+
+  // Com a ficha sincronizada — o mesmo elenco, a mesma jogada — não corta nada.
+  const fichaEmDia = new Map<string, FichaDoMotor>([
+    ['genesis-9', { atributos: atributosCompletos(ATTRS, 'ATA') }],
+  ]);
+  const r2 = conferirEscalacao([doElenco], fichaEmDia);
+  check('com a ficha sincronizada, a mesma jogada passa intacta', r2.conferencia.corrigidos === 0,
+    r2.conferencia.motivos.join(' | '));
+}
+
 console.log('\n🔑 impressão dos números na chave do cache\n');
 {
   const a = playerToQuickPlanPayload(entidade('ofensivo'), 10, 'attack', 50);

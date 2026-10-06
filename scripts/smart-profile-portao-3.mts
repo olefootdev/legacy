@@ -3,17 +3,26 @@
  *
  *   npm run smart-profile:portao-3
  *
- * Passa quando NENHUM titular de NENHUM elenco de produção é cortado. Para cada
- * jogador com ficha, monta o payload do motor com as mesmas funções que o jogo
- * usa (`playerToQuickPlanPayload` + `applyLegacyBoostToLineup`) nos extremos de
- * moral e com o boost de lenda no teto do CAP — o pior caso honesto — e passa
- * pela conferência.
+ * Passa quando NENHUM titular de NENHUM elenco de produção é cortado. O payload
+ * do motor é montado a partir do ELENCO SALVO (`manager_squad`), com as mesmas
+ * funções que o jogo usa (`playerToQuickPlanPayload` + `applyLegacyBoostToLineup`)
+ * nos extremos de moral e com o boost de lenda no teto do CAP — o pior caso
+ * honesto — e conferido contra a ficha.
  *
- * Um corte aqui é falso positivo: o envelope de `plano.ts` está apertado demais
- * e tiraria ponto de quem joga limpo. Só leitura.
+ * A primeira versão deste portão montava o payload a partir da PRÓPRIA FICHA:
+ * testava a ficha contra si mesma, e por isso dava 0 corte mesmo com a Fase 3
+ * cortando gente honesta em produção. A diferença que importa é exatamente a
+ * que ele não via — ficha DEFASADA em relação ao elenco. Agora o portão
+ * reproduz o fluxo real: elenco → payload → conferência contra a ficha que o
+ * servidor usa (reconciliada por `conciliar`, como a rota faz antes de conferir).
+ *
+ * Um corte aqui é falso positivo: tiraria ponto de quem joga limpo. Só leitura.
  */
 import { createClient } from '@supabase/supabase-js';
 import { conferirEscalacao, type FichaDoMotor } from '../server/src/lib/smartProfile/plano.js';
+import { conciliar } from '../server/src/lib/smartProfile/ficha.js';
+import { diferencaDeAtributos } from '../server/src/lib/smartProfile/ficha.js';
+import type { Ficha } from '../server/src/lib/smartProfile/tipos.js';
 import { playerToQuickPlanPayload, applyLegacyBoostToLineup } from '../src/match/quickPlanClient.js';
 import type { PlayerEntity } from '../src/entities/types.js';
 
@@ -32,13 +41,13 @@ for (let pagina = 0; ; pagina++) {
   if ((data ?? []).length < 1000) break;
 }
 
-// O behavior de cada jogador vive no elenco salvo, não na ficha — e é ele que
-// manda no tilt. Puxamos o elenco para testar o behavior REAL de cada um.
+// O ELENCO é a origem do que o celular envia: atributos E behavior. É daqui
+// que o payload tem de nascer — senão o portão não vê a defasagem da ficha.
 const { data: elencos } = await sb.from('manager_squad').select('user_id, players');
-const behaviorDe = new Map<string, string>();
+const entidadeDe = new Map<string, Record<string, unknown>>();
 for (const e of elencos ?? []) {
   for (const p of (e.players ?? []) as Record<string, unknown>[]) {
-    if (p && typeof p.id === 'string') behaviorDe.set(`${e.user_id}|${p.id}`, String(p.behavior ?? 'equilibrado'));
+    if (p && typeof p.id === 'string' && p.attrs) entidadeDe.set(`${e.user_id}|${p.id}`, p);
   }
 }
 
@@ -48,17 +57,23 @@ const LENDA_NO_TETO = [
   { label: 'PASSE', pct: 99 }, { label: 'VELOCIDADE', pct: 99 },
 ];
 
-let titulares = 0, cortados = 0;
+let titulares = 0, cortados = 0, semElenco = 0, defasadas = 0;
 const motivos: string[] = [];
 const porAtributo = new Map<string, number>();
+const AGORA = '2026-01-01T00:00:00.000Z'; // `conciliar` é pura; a data não entra na conta
 
 for (const f of fichas) {
-  const ficha: FichaDoMotor = { atributos: f.atributos };
-  const mapa = new Map<string, FichaDoMotor>([[f.player_id as string, ficha]]);
-  const behavior = behaviorDe.get(`${f.owner_id}|${f.player_id}`) ?? 'equilibrado';
-  const entidade = {
-    id: f.player_id, name: f.nome, pos: f.posicao, attrs: f.atributos, behavior,
-  } as unknown as PlayerEntity;
+  const bruta = entidadeDe.get(`${f.owner_id}|${f.player_id}`);
+  if (!bruta) { semElenco++; continue; }
+
+  // A rota sincroniza a ficha com o elenco ANTES de conferir. Reproduzimos isso
+  // com a mesma função pura, e contamos quantas estavam defasadas no banco.
+  const r = conciliar(f.owner_id, bruta, f as unknown as Ficha, null, AGORA);
+  if (Object.keys(diferencaDeAtributos(f.atributos, r.ficha.atributos)).length) defasadas++;
+
+  const mapa = new Map<string, FichaDoMotor>([[f.player_id, { atributos: r.ficha.atributos }]]);
+  const behavior = String(bruta.behavior ?? 'equilibrado');
+  const entidade = { ...bruta, behavior } as unknown as PlayerEntity;
 
   // Pior caso honesto: moral no chão e no teto, com e sem lenda em campo.
   for (const moral of [0, 50, 100]) {
@@ -82,13 +97,15 @@ for (const f of fichas) {
 const elencosVistos = new Set(fichas.map((f) => f.owner_id)).size;
 console.log(`\n${fichas.length} fichas ativas · ${elencosVistos} elencos · ${titulares} combinações honestas testadas`);
 console.log(`cortes em jogada honesta: ${cortados}`);
+console.log(`fichas defasadas em relação ao elenco: ${defasadas} (o sync da rota resolve antes de conferir)`);
+if (semElenco) console.log(`fichas sem jogador no elenco salvo (ignoradas): ${semElenco}`);
 if (porAtributo.size) console.log(`por atributo: ${[...porAtributo].map(([k, v]) => `${k} ${v}`).join(' · ')}`);
 for (const m of motivos) console.log(`  ✗ ${m}`);
 
 // Contraprova: a conferência não pode ser um carimbo que deixa tudo passar.
 let pegou = 0;
 for (const f of fichas.slice(0, 50)) {
-  const mapa = new Map<string, FichaDoMotor>([[f.player_id as string, { atributos: f.atributos }]]);
+  const mapa = new Map<string, FichaDoMotor>([[f.player_id, { atributos: f.atributos }]]);
   const r = conferirEscalacao([{ id: f.player_id, finalizacao: 99, passe: 99, marcacao: 99, velocidade: 99 }], mapa);
   if (r.conferencia.corrigidos > 0) pegou++;
 }
