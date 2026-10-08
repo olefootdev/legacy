@@ -5,8 +5,10 @@
  *
  * O elenco inicial sai daqui, não do cliente:
  *   · 12 Genesis do catálogo listado (2 GOL, 4 DEF, 3 MEI, 3 ATA; tiers de base);
- *   · 3 cards premium, cada um com chance de virar LENDA — 35%, 25%, 15%
- *     (decisão do fundador). Lenda = EDIÇÃO FUNDAÇÃO: cópia jogável de uma
+ *   · 3 cards premium, cada um com chance de virar LENDA — 60%, 45%, 30%
+ *     (decisão do fundador; eram 35/25/15 até 08/10/2026). ~85% dos clubes
+ *     saem com pelo menos uma lenda, e a média é 1,35 por sorteio. O pool de
+ *     lendas são as `legacy_players` listadas — os craques que criamos. Lenda = EDIÇÃO FUNDAÇÃO: cópia jogável de uma
  *     legacy_player listada, que não conta no supply e não se vende. Sem
  *     lenda, o card vem do topo do catálogo Genesis (gold/next/ultra rare);
  *   · a faixa de EXP inicial (mesmos pesos de `rollStarterExp`).
@@ -26,7 +28,7 @@ import { rateLimit } from '../lib/rateLimit.js';
 import { donoDaSessao } from '../lib/sessao.js';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 
-export const CHANCES_DE_LENDA = [0.35, 0.25, 0.15] as const;
+export const CHANCES_DE_LENDA = [0.6, 0.45, 0.3] as const;
 /** Mesmos pesos de `src/onboarding/rollStarterExp.ts` (índice da faixa). */
 const PESOS_EXP = [20, 35, 25, 15, 5];
 

@@ -40,7 +40,7 @@ for (const id of s.genesis) cont[grupo(porId.get(id)!.pos)]!++;
 checa('2 GOL, 4 DEF, 3 MEI, 3 ATA', cont.GOL === 2 && cont.DEF === 4 && cont.MEI === 3 && cont.ATA === 3, JSON.stringify(cont));
 checa('os 12 são de base (basic/rare)', s.genesis.every((id) => ['basic', 'rare'].includes(tierDoRotulo(porId.get(id)!.rarity_label))));
 checa('premium sem lenda vem do topo (gold/next/ultra)', s.premium.filter((p) => p.tipo === 'premium').every((p) => ['epic', 'legendary'].includes(tierDoRotulo(porId.get(p.id)!.rarity_label))));
-checa('chances gravadas 35/25/15', s.premium.map((p) => p.chance).join(',') === CHANCES_DE_LENDA.join(','));
+checa(`chances gravadas ${CHANCES_DE_LENDA.map((c) => c * 100).join('/')}`, s.premium.map((p) => p.chance).join(',') === CHANCES_DE_LENDA.join(','));
 
 console.log('2) Chances reais (20.000 sorteios)');
 const N = 20000;
@@ -59,7 +59,7 @@ CHANCES_DE_LENDA.forEach((c, k) => {
   const obs = lendaPorCard[k]! / N;
   checa(`card ${k + 1}: ~${c * 100}% de lenda`, Math.abs(obs - c) < 0.015, `${(obs * 100).toFixed(1)}%`);
 });
-const esperado = 1 - (1 - 0.35) * (1 - 0.25) * (1 - 0.15);
+const esperado = 1 - CHANCES_DE_LENDA.reduce((nenhuma, c) => nenhuma * (1 - c), 1);
 checa(`pelo menos uma lenda ≈ ${(esperado * 100).toFixed(1)}%`, Math.abs(peloMenosUma / N - esperado) < 0.015, `${((peloMenosUma / N) * 100).toFixed(1)}%`);
 checa('nunca a mesma lenda duas vezes no mesmo sorteio', lendaRepetida === 0);
 
