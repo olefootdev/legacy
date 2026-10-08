@@ -13,7 +13,7 @@
  * Manager novo cai aqui antes da cerimônia de elenco (`FundacaoGate`);
  * manager antigo chega pelo convite da Home e pode refazer quando quiser.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { flushAllPersistence } from '@/game/flushPersistence';
@@ -24,6 +24,7 @@ import { FitaRua, MarcaRua, SecaoRua } from '@/components/ui/Rua';
 import { PranchetaViva } from '@/components/fundacao/PranchetaViva';
 import { CamisaSVG, CORES_DE_CAMISA, EscudoSVG, PADROES_DE_CAMISA } from '@/components/fundacao/Camisa';
 import { LEAGUE_BUCKETS } from '@/settings/worldClubs';
+import { BarraAcao, BotaoBarra, useAlturaComoVariavel } from '@/components/ui/BarraAcao';
 import type { FavoriteRealTeamRef } from '@/game/types';
 import type { FormationSchemeId } from '@/match-engine/types';
 import {
@@ -182,6 +183,8 @@ export default function Fundacao() {
   );
   const [frase, setFrase] = useState(anterior?.frase ?? '');
   const [salvando, setSalvando] = useState(false);
+  const cabecalho = useRef<HTMLElement>(null);
+  useAlturaComoVariavel(cabecalho, '--altura-cabecalho');
 
   const P = PASSOS[passo]!;
   const doAto = PASSOS.filter((p) => p.ato === P.ato);
@@ -207,6 +210,18 @@ export default function Fundacao() {
     treino: true,
     camisa: true,
     frase: frase.trim().length > 0,
+  };
+
+  // O que falta para liberar o botão, dito em cima dele. Botão apagado sem
+  // motivo lê como "travou"; com motivo, lê como "falta isso".
+  const motivoBloqueio: Partial<Record<PassoId, string>> = {
+    casa: L('Escolha o país e o estado da casa', 'Pick the home country and state'),
+    coracao: L('Escolha o time do coração', 'Pick your heart team'),
+    pontos:
+      resta > 0
+        ? L(`Distribua mais ${resta} pontos`, `Spend ${resta} more points`)
+        : L(`Tire ${-resta} pontos para fechar 100`, `Remove ${-resta} points to make 100`),
+    frase: L('Escreva a frase do clube', 'Write the club motto'),
   };
 
   async function concluir() {
@@ -263,7 +278,7 @@ export default function Fundacao() {
     <div className="rua-grao min-h-[100dvh] bg-black text-papel">
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col bg-asfalto-27 min-[480px]:border-x-2 min-[480px]:border-linha">
         {/* Topo: voltar · marca · atos */}
-        <header className="sticky top-0 z-20 flex flex-col gap-2 border-b-2 border-linha bg-black px-4 pb-2.5 pt-[max(12px,env(safe-area-inset-top,0px))]">
+        <header ref={cabecalho} className="sticky top-0 z-20 flex flex-col gap-2 border-b-2 border-linha bg-black px-4 pb-2.5 pt-[max(12px,env(safe-area-inset-top,0px))]">
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
@@ -291,12 +306,14 @@ export default function Fundacao() {
         </header>
 
         {P.ato === 1 && (
-          <div className="sticky top-[86px] z-10 border-b-2 border-linha bg-black px-4 pb-3 pt-2.5">
+          // Fixa sob o header só em tela alta. Num celular de 667px, header +
+          // prancheta + botão comiam a tela e sobrava uma fresta para rolar.
+          <div className="z-10 border-b-2 border-linha bg-black px-4 pb-3 pt-2.5 [@media(min-height:780px)]:sticky [@media(min-height:780px)]:top-[var(--altura-cabecalho,86px)]">
             <PranchetaViva identidade={escolhas} formacao={formacao} />
           </div>
         )}
 
-        <main className="flex flex-1 flex-col gap-6 px-4 pb-32 pt-5">
+        <main className="flex flex-1 flex-col gap-6 px-4 pb-6 pt-5">
           {P.id === 'casa' && (
             <>
               <FitaRua className="-mx-4 -mt-3 py-2" />
@@ -609,17 +626,11 @@ export default function Fundacao() {
           )}
         </main>
 
-        {/* CTA fixo */}
-        <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center bg-black/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3">
-          <button
-            type="button"
-            onClick={avancar}
-            disabled={!podeAvancar[P.id] || salvando}
-            className="min-h-[56px] w-full max-w-[408px] bg-rua font-impact text-[22px] uppercase text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:border-2 disabled:border-dashed disabled:border-fio disabled:bg-transparent disabled:text-mudo disabled:shadow-none"
-          >
+        <BarraAcao ajuda={!podeAvancar[P.id] ? motivoBloqueio[P.id] : undefined}>
+          <BotaoBarra onClick={avancar} disabled={!podeAvancar[P.id] || salvando}>
             {rotuloCta}
-          </button>
-        </div>
+          </BotaoBarra>
+        </BarraAcao>
       </div>
     </div>
   );

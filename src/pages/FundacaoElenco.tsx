@@ -21,6 +21,7 @@ import { flushAllPersistence } from '@/game/flushPersistence';
 import { track } from '@/analytics/track';
 import { L } from '@/i18n/L';
 import { cn } from '@/lib/utils';
+import { BarraAcao, BotaoBarra } from '@/components/ui/BarraAcao';
 import { BarraSegmentos, BotaoRua, DEGRAU_CLASSES, FitaRua, MarcaRua, SecaoRua, SeloRua, degrauDe } from '@/components/ui/Rua';
 import { EscudoSVG } from '@/components/fundacao/Camisa';
 import { PITCH_SLOT_ORDER } from '@/entities/lineup';
@@ -184,7 +185,7 @@ export default function FundacaoElenco() {
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col gap-6 px-4 pb-32 pt-5">
+        <main className="flex flex-1 flex-col gap-6 px-4 pb-6 pt-5">
           {etapa.k === 'sorteando' && (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
               <span className="font-impact text-[44px] uppercase leading-none text-rua">{L('Sorteando…', 'Drawing…')}</span>
@@ -197,7 +198,6 @@ export default function FundacaoElenco() {
               <Cabecalho rotulo={L('Sorteio', 'Draw')} titulo={L('Deu ruim', 'Something broke')} destaque={L('no sorteio.', 'in the draw.')} />
               <p className="border-l-[5px] border-rua bg-concreto p-4 text-[15px]">{etapa.msg}</p>
               <p className="font-prova text-[12px] text-mudo">{L('Teu sorteio fica guardado: tentar de novo traz o mesmo elenco.', 'Your draw is saved: retrying brings the same squad.')}</p>
-              <BotaoRua onClick={() => { iniciou.current = false; setEtapa({ k: 'sorteando' }); }}>{L('Tentar de novo', 'Try again')}</BotaoRua>
             </div>
           )}
 
@@ -231,25 +231,34 @@ export default function FundacaoElenco() {
           {etapa.k === 'escalar' && <Escalar players={players} lineup={lineup} dna={dna} formacao={formacao} />}
         </main>
 
-        {(etapa.k === 'revelando' || etapa.k === 'janela') && (
-          <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center bg-black/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3">
-            <button
-              type="button"
+        {/* O Escalar tem a própria barra (o salvar mora nele). Nas outras
+            etapas a barra existe sempre — inclusive sorteando e no erro,
+            onde antes não havia botão nenhum na tela. */}
+        {etapa.k !== 'escalar' && (
+          <BarraAcao ajuda={etapa.k === 'sorteando' ? L('Sorteando teus 15 jogadores…', 'Drawing your 15 players…') : undefined}>
+            <BotaoBarra
+              disabled={etapa.k === 'sorteando'}
               onClick={() => {
-                if (etapa.k === 'revelando') {
+                if (etapa.k === 'erro') {
+                  iniciou.current = false;
+                  setEtapa({ k: 'sorteando' });
+                } else if (etapa.k === 'revelando') {
                   if (etapa.viradas < etapa.cartas.length) setEtapa({ ...etapa, viradas: etapa.cartas.length });
                   else setEtapa(janelaAberta(janelaAte) ? { k: 'janela' } : { k: 'escalar' });
-                } else setEtapa({ k: 'escalar' });
+                } else if (etapa.k === 'janela') setEtapa({ k: 'escalar' });
               }}
-              className="min-h-[56px] w-full max-w-[408px] bg-rua font-impact text-[22px] uppercase text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5"
             >
-              {etapa.k === 'revelando'
-                ? etapa.viradas < etapa.cartas.length
-                  ? L('Revelar tudo', 'Reveal all')
-                  : L('Abrir a Janela →', 'Open the window →')
-                : L('Escalar o time →', 'Pick the XI →')}
-            </button>
-          </div>
+              {etapa.k === 'sorteando'
+                ? L('Sorteando…', 'Drawing…')
+                : etapa.k === 'erro'
+                  ? L('Tentar de novo', 'Try again')
+                  : etapa.k === 'revelando'
+                    ? etapa.viradas < etapa.cartas.length
+                      ? L('Revelar tudo', 'Reveal all')
+                      : L('Abrir a Janela →', 'Open the window →')
+                    : L('Escalar o time →', 'Pick the XI →')}
+            </BotaoBarra>
+          </BarraAcao>
         )}
       </div>
     </div>
@@ -590,16 +599,17 @@ function Escalar({
           );
         })}
       </ul>
-      <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center bg-black/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3">
-        <button
-          type="button"
-          onClick={() => void confirmar()}
-          disabled={salvando || Object.keys(xi).length < 11}
-          className="min-h-[56px] w-full max-w-[408px] bg-rua font-impact text-[22px] uppercase text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 disabled:opacity-40"
-        >
+      <BarraAcao
+        ajuda={
+          Object.keys(xi).length < 11
+            ? L(`Faltam ${11 - Object.keys(xi).length} titulares`, `${11 - Object.keys(xi).length} starters missing`)
+            : undefined
+        }
+      >
+        <BotaoBarra onClick={() => void confirmar()} disabled={salvando || Object.keys(xi).length < 11}>
           {salvando ? L('Salvando…', 'Saving…') : L('Fechar o elenco →', 'Lock the squad →')}
-        </button>
-      </div>
+        </BotaoBarra>
+      </BarraAcao>
     </>
   );
 }

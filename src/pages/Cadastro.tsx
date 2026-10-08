@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { User, Shield, Heart, ArrowRight, ArrowLeft, Check, Sparkles, Trophy, Users, Briefcase, Mic, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BarraAcao } from '@/components/ui/BarraAcao';
 import { Hashtag, MarcaRua } from '@/components/ui';
 import { COUNTRY_DIAL_OPTIONS, isoToFlag, type CountryDialOption } from '@/lib/countryDialCodes';
 import type { FormationSchemeId } from '@/match-engine/types';
@@ -504,7 +505,7 @@ export function Cadastro() {
   };
 
   return (
-    <div className="rua-grao relative flex min-h-svh flex-col overflow-hidden bg-asfalto-27">
+    <div className="rua-grao relative flex min-h-svh flex-col overflow-hidden bg-asfalto-27 max-sm:pb-[var(--altura-barra-acao,0px)]">
       {/* Quem veio de um convite de expansão precisa ver isso aqui — senão a
           tela de venda apaga o motivo pelo qual a pessoa clicou. */}
       <div className="relative z-20"><FaixaConvitePendente /></div>
@@ -1121,11 +1122,28 @@ export function Cadastro() {
           </div>
         ) : null}
 
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-between">
+        {/* No celular o Continuar fica preso embaixo: o passo 3 (escolha do
+            time) é longo e o botão ficava muito abaixo da dobra. Do `sm` para
+            cima a barra volta ao fluxo, onde sempre esteve. */}
+        <div className="mt-8">
+        <BarraAcao
+          fixaAte="sm"
+          espacador={false}
+          ajuda={
+            step === 1 && !step1Valid
+              ? L('Preencha seus dados para continuar', 'Fill in your details to continue')
+              : step === 2 && !step2Valid
+                ? L('Dê nome e sigla ao clube', 'Name your club and pick initials')
+                : step === 3 && !step3Valid
+                  ? L('Escolha o time do coração e o perfil', 'Pick your heart team and profile')
+                  : undefined
+          }
+          className="sm:[&>div:last-child]:max-w-none sm:[&>div:last-child]:justify-between"
+        >
           {step > 1 ? (
             <button
               type="button"
-              className="btn-secondary flex min-h-[52px] items-center justify-center text-[19px] sm:order-1"
+              className="btn-secondary flex min-h-[52px] basis-2/5 items-center justify-center text-[19px] sm:basis-auto"
               onClick={() => setStep((step - 1) as 1 | 2 | 3)}
             >
               {L('Voltar', 'Back')}
@@ -1133,7 +1151,7 @@ export function Cadastro() {
           ) : (
             <Link
               to="/login"
-              className="btn-secondary flex min-h-[52px] items-center justify-center text-[19px] sm:order-1"
+              className="btn-secondary flex min-h-[52px] basis-2/5 items-center justify-center text-[19px] sm:basis-auto"
             >
               {L('Cancelar', 'Cancel')}
             </Link>
@@ -1141,10 +1159,7 @@ export function Cadastro() {
           {step < 3 ? (
             <button
               type="button"
-              className={cn(
-                'btn-primary flex min-h-[52px] items-center justify-center text-[20px] sm:order-2',
-                (step === 1 && !step1Valid) || (step === 2 && !step2Valid) ? 'pointer-events-none opacity-40' : '',
-              )}
+              className="btn-primary flex min-h-[52px] flex-1 items-center justify-center text-[20px] disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
               disabled={(step === 1 && !step1Valid) || (step === 2 && !step2Valid)}
               onClick={goNext}
             >
@@ -1153,16 +1168,14 @@ export function Cadastro() {
           ) : (
             <button
               type="button"
-              className={cn(
-                'btn-primary flex min-h-[52px] items-center justify-center text-[20px] sm:order-2',
-                !step3Valid || finishBusy ? 'pointer-events-none opacity-40' : '',
-              )}
+              className="btn-primary flex min-h-[52px] flex-1 items-center justify-center text-[20px] disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
               disabled={!step3Valid || finishBusy}
               onClick={() => void finish()}
             >
               {finishBusy ? L('Preparando plantel…', 'Preparing squad…') : <>{L('Concluir', 'Finish')} <span aria-hidden>→</span></>}
             </button>
           )}
+        </BarraAcao>
         </div>
         </div>
       </div>

@@ -613,7 +613,12 @@
 }
 
 html {
+  /* `clip`, não `hidden`: corta o vazamento lateral sem transformar html/body
+     em contêiner de rolagem. Com `hidden` nos dois, o iOS passava a rolar o
+     body — quebrando `position: sticky`, `window.scrollTo` e a barra fixa do
+     onboarding. `hidden` fica como recuo para navegador antigo. */
   overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100vw;
   width: 100%;
   position: relative;
@@ -639,6 +644,7 @@ body {
   font-synthesis-weight: none;
   font-synthesis-style: none;
   overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100vw;
   width: 100%;
   position: relative;
@@ -810,4 +816,10 @@ html[data-graphic-quality='low'] .sports-panel::after {
 
 @media (prefers-reduced-motion: reduce) {
   .rua-fita-trilho { animation: none; }
+}
+
+/* `pb-safe` era usado (Layout, MatchModeBottomSheet) sem estar definido — não
+   fazia nada. Reserva a área do indicador de início do iPhone. */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }

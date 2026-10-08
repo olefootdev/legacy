@@ -20,7 +20,7 @@ import { L } from '@/i18n/L';
 import { cn } from '@/lib/utils';
 import { BotaoRua, FitaRua, MarcaRua, SecaoRua, SeloRua } from '@/components/ui/Rua';
 import { CamisaSVG, EscudoSVG } from '@/components/fundacao/Camisa';
-import { PranchetaViva } from '@/components/fundacao/PranchetaViva';
+import { BarraAcao, BotaoBarra, BotaoBarraSecundario } from '@/components/ui/BarraAcao';
 import { fetchAnaliseDeIdentidade, fetchQuickPlan } from '@/match/quickPlanClient';
 import type { MatchPlan, MatchPlanEvent } from '@/match/quickPlanTypes';
 import { dnaDoClubeParaMotor, dnaEfetivo, ESTILOS, TECNICOS_INSPIRADORES, type EixoDna } from '@/club/identidade';
@@ -129,7 +129,9 @@ export default function FundacaoEstreia() {
   const placarCasa = vistos.filter((e) => e.kind === 'goal_home').length;
   const placarFora = vistos.filter((e) => e.kind === 'goal_away').length;
   const momento = plano?.momentum_curve?.[Math.max(0, Math.min(minuto, (plano.momentum_curve.length || 1)) - 1)] ?? 50;
-  const lances = vistos.filter((e) => LANCE_QUE_NARRA.test(e.kind)).slice(-6).reverse();
+  // Todos os lances narrados até agora, o mais recente em cima. Sem o campo
+  // ilustrativo (que não seguia o motor), a narração É a partida.
+  const lances = vistos.filter((e) => LANCE_QUE_NARRA.test(e.kind)).reverse();
 
   async function assinar() {
     if (assinando || !plano || !identidade || !fantasma) return;
@@ -185,7 +187,7 @@ export default function FundacaoEstreia() {
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col gap-6 px-4 pb-32 pt-5">
+        <main className="flex flex-1 flex-col gap-6 px-4 pb-6 pt-5">
           {/* ── 1 · Túnel ── */}
           {etapa === 'tunel' && (
             <>
@@ -244,7 +246,6 @@ export default function FundacaoEstreia() {
                   <span className="absolute inset-y-[-3px] left-1/2 w-0.5 bg-papel" aria-hidden />
                 </div>
               </div>
-              <PranchetaViva identidade={identidade} formacao={formacao} />
               <ul className="flex flex-col gap-1.5" aria-live="polite">
                 {lances.map((e, i) => (
                   <Lance key={`${e.minute}-${e.kind}-${i}`} e={e} recente={i === 0} />
@@ -359,19 +360,11 @@ export default function FundacaoEstreia() {
           )}
         </main>
 
-        <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center gap-2 bg-black/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3">
-          {etapa === 'jogo' && (
-            <button
-              type="button"
-              onClick={() => setMinuto(90)}
-              className="min-h-[56px] w-full max-w-[408px] border-2 border-linha font-impact text-[20px] uppercase text-mudo hover:border-papel hover:text-papel"
-            >
-              {L('Pular pro apito final', 'Skip to full time')}
-            </button>
-          )}
-          {etapa !== 'jogo' && (
-            <button
-              type="button"
+        <BarraAcao ajuda={etapa === 'tunel' && !plano ? L('O motor está preparando a partida…', 'The engine is preparing the match…') : undefined}>
+          {etapa === 'jogo' ? (
+            <BotaoBarraSecundario onClick={() => setMinuto(90)}>{L('Pular pro apito final', 'Skip to full time')}</BotaoBarraSecundario>
+          ) : (
+            <BotaoBarra
               disabled={(etapa === 'tunel' && !plano) || assinando}
               onClick={() => {
                 if (etapa === 'tunel') {
@@ -380,10 +373,6 @@ export default function FundacaoEstreia() {
                 } else if (etapa === 'relatorio') setEtapa('ata');
                 else void assinar();
               }}
-              className={cn(
-                'min-h-[56px] w-full max-w-[408px] bg-rua font-impact text-[22px] uppercase text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5',
-                'disabled:cursor-not-allowed disabled:border-2 disabled:border-dashed disabled:border-fio disabled:bg-transparent disabled:text-mudo disabled:shadow-none',
-              )}
             >
               {etapa === 'tunel'
                 ? plano
@@ -394,9 +383,9 @@ export default function FundacaoEstreia() {
                   : assinando
                     ? L('Assinando…', 'Signing…')
                     : L('Assinar e entrar no clube →', 'Sign and enter the club →')}
-            </button>
+            </BotaoBarra>
           )}
-        </div>
+        </BarraAcao>
       </div>
     </div>
   );
