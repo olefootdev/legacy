@@ -1,10 +1,12 @@
 /**
- * Badge animado para itens míticos/featured
- * Aparece no canto superior esquerdo do card — etiqueta volt chapada, sem brilho
+ * Selo de destaque para itens míticos/featured (DS 2027).
+ *
+ * Selo em linha (não flutua por cima do card): contorno na cor do texto da
+ * carta, então funciona em qualquer degrau da escada — no ouro vira preto,
+ * no asfalto vira papel. Sem brilho, sem ícone de faísca.
  */
 
 import { motion } from 'motion/react';
-import { Sparkles } from 'lucide-react';
 import type { ShopRarity } from '@/game/shopCatalog';
 import { L } from '@/i18n/L';
 
@@ -17,24 +19,14 @@ export function LegendaryBadge({ rarity, featured }: LegendaryBadgeProps) {
   if (rarity !== 'mitico' && !featured) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.1, type: 'spring', stiffness: 300 }}
-      className="absolute left-3 top-3 z-10"
+    <motion.span
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.1, duration: 0.2 }}
+      className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-2 border-current px-2 py-0.5 font-prova text-[12px] font-bold uppercase tracking-[0.08em]"
     >
-      {/* Badge */}
-      <div className="relative flex items-center gap-2 rounded-lg bg-neon-yellow px-3 py-1.5">
-        <Sparkles className="h-3.5 w-3.5 text-black" strokeWidth={2.4} />
-        {/* Topo da escada de raridade: amarelo sólido, texto preto. É o mesmo
-            tratamento que o layer final dá ao que importa mais. */}
-        <span
-          className="font-impact uppercase text-black"
-          style={{ fontSize: '13px', letterSpacing: '0.04em' }}
-        >
-          {L('Lendário', 'Legendary')}
-        </span>
-      </div>
-    </motion.div>
+      <span aria-hidden>★</span>
+      {rarity === 'mitico' ? L('Lendário', 'Legendary') : L('Destaque', 'Featured')}
+    </motion.span>
   );
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Zap, Sparkles, Wallet, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { ManagerOutcomePanel } from '@/components/manager/ManagerOutcomePanel';
@@ -8,13 +8,13 @@ import { cn } from '@/lib/utils';
 import type { ShopCatalogItem, ShopRarity, ShopTabId } from '@/game/shopCatalog';
 import { trackGrowthCommerce } from '@/admin/platformStore';
 import { StoreFeaturedBoxes } from '@/store/StoreFeaturedBoxes';
-import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
 import { trackMissionEvent } from '@/progression/trackEvent';
 import { BackButton } from '@/components/BackButton';
 import { LegendaryBadge } from '@/store/LegendaryBadge';
 import { PremiumPriceReveal } from '@/store/PremiumPriceReveal';
 import { StoreViewToggle, type StoreViewMode } from '@/store/StoreViewToggle';
 import { StoreItemList } from '@/store/StoreItemList';
+import { BotaoRua, FitaRua, SecaoRua, SeloRua } from '@/components/ui/Rua';
 import { L, LOCALE } from '@/i18n/L';
 
 type ShopTab = 'todos' | ShopTabId;
@@ -24,77 +24,38 @@ type StorePurchaseOutcome =
   | { kind: 'error'; title: string; message: string };
 
 /**
- * Estilo por raridade do pack.
+ * Estilo por raridade do pack — a ESCADA do DS 2027 ("Respeito é ouro").
  *
- * ── Alinhado à regra canônica (2026-08-01) ─────────────────────────────────
- * A escada de raridade do OLEFOOT tem uma regra escrita pelo fundador em
- * `src/entities/rarityLabels.ts`: **prestígio = GRAU DE AMARELO** (o topo vem
- * amarelo sólido, a base vem sem amarelo nenhum).
- *
- * Esta tela ignorava a regra e usava quatro matizes soltos — cinza, ciano,
- * fúcsia e âmbar. O problema não era só destoar do layer final: o jogo tinha
- * DUAS escalas de raridade conflitantes ao mesmo tempo (o `Badge` do DS pintava
- * épico de ROXO enquanto aqui épico era FÚCSIA), então a cor não ensinava nada
- * — o jogador via a mesma palavra em duas cores diferentes.
- *
- * Agora a raridade se lê pela quantidade de amarelo: comum não tem, raro tem um
- * fio, épico tem trilho e etiqueta, mítico vem sólido. A informação continua
- * inteira; o vocabulário passa a ser um só.
- *
- * VOLT2 (2026-09-19): sem brilho, sem sombra de adesivo e sem degradê de fundo.
- * A escada fica só na borda (`frame`), no trilho e na etiqueta chapada.
+ * Antes (VOLT2) a raridade se lia pelo grau de amarelo. No DS 2027 o amarelo
+ * é só de AÇÃO (o botão de comprar), então a raridade sobe a escada:
+ *   comum  → 01 CHÃO     (contorno tracejado: a carta base)
+ *   raro   → concreto chapado (superfície, ainda sem fio)
+ *   épico  → 03 RESPEITO (asfalto + fio de ouro)
+ *   mítico → 04 LENDA    (ouro chapado — raro de propósito)
+ * Ouro e rua não disputam a mesma peça: na carta de ouro o botão é asfalto.
  */
+type BotaoLoja = 'corre' | 'contorno' | 'asfalto-ouro';
 function rarityStyles(r: ShopRarity): {
-  border: string;
-  /** Moldura do card por raridade — cor chapada; o topo ganha borda volt 2px. */
-  frame: string;
+  /** Fundo/borda/texto da carta. */
+  carta: string;
   label: string;
-  labelClass: string;
-  /** Cor sólida do trilho lateral. */
-  rail: string;
+  /** Selo da raridade. */
+  selo: 'mudo' | 'cal' | 'ouro-contorno' | 'ouro';
+  /** Texto secundário (descrição, moeda) dentro da carta. */
+  sub: string;
+  botao: BotaoLoja;
 } {
   switch (r) {
     case 'comum':
-      return {
-        border: 'border-white/12',
-        frame: 'hover:border-white/30',
-        label: L('COMUM', 'COMMON'),
-        labelClass: 'bg-white/10 text-white/70',
-        rail: 'bg-white/25',
-      };
+      return { carta: 'border-2 border-dashed border-fio bg-asfalto-27 text-papel', label: L('Comum', 'Common'), selo: 'mudo', sub: 'text-suave', botao: 'contorno' };
     case 'raro':
-      return {
-        border: 'border-neon-yellow/25',
-        frame: 'hover:border-white/30',
-        label: L('RARO', 'RARE'),
-        labelClass: 'bg-neon-yellow/12 text-neon-yellow/85',
-        rail: 'bg-neon-yellow/45',
-      };
+      return { carta: 'bg-concreto text-papel', label: L('Raro', 'Rare'), selo: 'cal', sub: 'text-suave', botao: 'contorno' };
     case 'epico':
-      return {
-        border: 'border-neon-yellow/55',
-        frame: 'border-neon-yellow/55',
-        label: L('ÉPICO', 'EPIC'),
-        labelClass: 'bg-neon-yellow/25 text-neon-yellow',
-        rail: 'bg-neon-yellow',
-      };
+      return { carta: 'border-[3px] border-ouro-27 bg-asfalto-27 text-papel', label: L('Épico', 'Epic'), selo: 'ouro-contorno', sub: 'text-suave', botao: 'contorno' };
     case 'mitico':
-      // O topo da escada: borda volt 2px + etiqueta volt chapada invertida.
-      return {
-        border: 'border-neon-yellow',
-        frame: 'border-2 border-neon-yellow',
-        label: L('MÍTICO', 'MYTHIC'),
-        labelClass: 'bg-neon-yellow text-black',
-        rail: 'bg-neon-yellow',
-      };
+      return { carta: 'bg-ouro-27 text-asfalto-27', label: L('Mítico', 'Mythic'), selo: 'ouro', sub: 'text-asfalto-27/75', botao: 'asfalto-ouro' };
     default:
-      return {
-        border: 'border-white/12',
-        frame: 'hover:border-white/30',
-        label: '',
-        labelClass: '',
-        rail: 'bg-white/25',
-      };
+      return { carta: 'bg-concreto text-papel', label: '', selo: 'mudo', sub: 'text-suave', botao: 'contorno' };
   }
 }
 
@@ -243,82 +204,45 @@ export function Store() {
   const tabMeta = TAB_META[tab] ?? TAB_META.todos;
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 overflow-x-hidden pb-28 md:pb-12">
+    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8 overflow-x-hidden px-3 pb-28 sm:px-4 md:pb-12">
       <BackButton to="/mercado" label={L('Mercado', 'Market')} />
-      {/* ── HERO EDITORIAL — diagonal split + watermark cinematográfico (espelha /transfer) ── */}
-      <section
-        aria-label={L('Loja Olefoot', 'Olefoot Store')}
-        className="relative w-full overflow-hidden bg-neon-yellow"
-      >
-        {/* ── HERO no layer final ──────────────────────────────────────────
-            Saíram watermark, subtítulo em serifa itálica, régua decorativa e a
-            frase entre aspas por aba. Ficou o que decide a compra: onde estou e
-            quanto tenho. */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative z-10 px-5 sm:px-8"
-          style={{ paddingBlock: 'clamp(26px, 5vw, 46px)' }}
-        >
-          <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-            {tabMeta.eyebrow}
-          </span>
 
-          <h1
-            className="mt-2 font-impact uppercase"
-            style={{
-              color: 'var(--color-deep-black)',
-              fontSize: 'clamp(42px, 11vw, 88px)',
-              lineHeight: 0.84,
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {L('Loja', 'Store')}
+      {/* ── HERO: título na voz + saldo no degrau RESPEITO ─────────────── */}
+      <section aria-label={L('Loja Olefoot', 'Olefoot Store')} className="flex min-w-0 flex-col gap-5">
+        <div className="flex min-w-0 flex-col gap-1">
+          <SecaoRua label={tabMeta.eyebrow} />
+          <h1 className="flex flex-col font-impact uppercase leading-[0.88]">
+            <span className="font-voz text-[clamp(48px,13vw,84px)] normal-case leading-[0.9] text-papel">{L('Loja', 'Store')}</span>
+            <span className="text-[clamp(30px,8.5vw,54px)] text-rua">{L('Arma o teu time.', 'Gear up your team.')}</span>
           </h1>
+        </div>
 
-          <div className="mt-5 flex flex-wrap items-baseline gap-x-6 gap-y-2">
-            <span className="font-impact tabular-nums" style={{ fontSize: '30px', lineHeight: 0.85, color: 'var(--color-deep-black)' }}>
-              {expDisplay}
-              <span className="ml-1.5 font-display font-black" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>EXP</span>
-            </span>
-            <span className="font-impact tabular-nums" style={{ fontSize: '30px', lineHeight: 0.85, color: 'rgba(13,13,13,0.55)' }}>
-              {broDisplay}
-              <span className="ml-1.5 font-display font-black" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>BRO</span>
-            </span>
+        <div className="grid min-w-0 grid-cols-2 border-[3px] border-ouro-27 bg-asfalto-27">
+          <div className="flex min-w-0 flex-col gap-1 p-4 sm:p-5">
+            <span className="font-prova text-[11px] font-bold uppercase tracking-[0.22em] text-mudo">{L('Saldo', 'Balance')} · EXP</span>
+            <span className="block min-w-0 font-spray text-[clamp(24px,7vw,48px)] font-black leading-[0.9] tabular-nums text-ouro-27 [overflow-wrap:anywhere]">{expDisplay}</span>
           </div>
+          <div className="flex min-w-0 flex-col gap-1 border-l-2 border-linha p-4 sm:p-5">
+            <span className="font-prova text-[11px] font-bold uppercase tracking-[0.22em] text-mudo">{L('Saldo', 'Balance')} · BRO</span>
+            <span className="block min-w-0 font-spray text-[clamp(24px,7vw,48px)] font-black leading-[0.9] tabular-nums text-papel [overflow-wrap:anywhere]">{broDisplay}</span>
+          </div>
+        </div>
 
-          {/* CTAs — primary preto sobre amarelo + outline preto */}
-          <div className="mt-7 flex flex-wrap items-center gap-3">
-            <Link
-              to="/wallet"
-              className="inline-flex items-center gap-2 bg-black px-7 py-3 text-neon-yellow font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-deep-black/80 transition-colors"
-              style={{
-                fontFamily: 'var(--font-display)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <Wallet className="w-4 h-4" />
-              {L('Carteira', 'Wallet')}
-            </Link>
-            <button
-              type="button"
-              onClick={() => setTab('packs')}
-              className="inline-flex items-center gap-2 border border-black/70 bg-transparent px-7 py-3 text-black font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-black/10 transition-colors"
-              style={{
-                fontFamily: 'var(--font-display)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <Sparkles className="w-4 h-4" />
-              {L('Ver packs', 'View packs')}
-            </button>
-          </div>
-        </motion.div>
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <BotaoRua onClick={() => setTab('packs')}>
+            {L('Ver packs', 'View packs')} <span aria-hidden>→</span>
+          </BotaoRua>
+          <BotaoRua variante="contorno" to="/wallet" className="px-5 text-[18px]">
+            {L('Carteira', 'Wallet')}
+          </BotaoRua>
+        </div>
       </section>
 
-      {/* Slider de abas */}
-      <div className="flex flex-wrap gap-2">
+      {/* ── MOMENTO RUA: a fita da casa ─────────────────────────────────── */}
+      <FitaRua tags={['#lojadarua', '#correloko', '#persista']} inclinacao={-2} className="py-2" />
+
+      {/* Abas */}
+      <div role="tablist" aria-label={L('Categorias', 'Categories')} className="flex min-w-0 flex-wrap gap-2">
         {(
           [
             { id: 'todos' as const, label: L('Todos', 'All') },
@@ -330,12 +254,14 @@ export function Store() {
           <button
             key={t.id}
             type="button"
+            role="tab"
+            aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
             className={cn(
-              'rounded-full border px-4 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition',
+              'inline-flex min-h-[44px] items-center px-4 font-impact text-[17px] uppercase leading-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rua',
               tab === t.id
-                ? 'border-neon-yellow bg-neon-yellow/15 text-neon-yellow'
-                : 'border-white/10 bg-white/[0.03] text-gray-400 hover:border-white/20 hover:text-white',
+                ? 'bg-rua text-asfalto-27'
+                : 'border-2 border-linha text-mudo hover:border-papel hover:text-papel',
             )}
           >
             {t.label}
@@ -343,13 +269,16 @@ export function Store() {
         ))}
       </div>
 
-      {/* Header com toggle de visualização */}
-      <div className="flex items-start justify-between gap-4">
-        <StoreSectionHeadline
-          variant="moret"
-          title={tab === 'todos' ? L('Raros da Semana', 'Rares of the Week') : L(`Todos os ${TAB_META[tab].eyebrow}`, `All ${TAB_META[tab].eyebrow}`)}
-          subtitle={`${filtered.length} ${filtered.length === 1 ? L('item disponível', 'item available') : L('itens disponíveis', 'items available')}.`}
-        />
+      {/* Título da vitrine + toggle */}
+      <div className="flex min-w-0 items-end justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-1">
+          <SecaoRua
+            label={`${filtered.length} ${filtered.length === 1 ? L('item disponível', 'item available') : L('itens disponíveis', 'items available')}`}
+          />
+          <h2 className="block min-w-0 font-voz text-[clamp(32px,9vw,48px)] leading-[0.95] text-papel">
+            {tab === 'todos' ? L('Raros da semana', 'Rares of the week') : L(`Todos os ${TAB_META[tab].eyebrow}`, `All ${TAB_META[tab].eyebrow}`)}
+          </h2>
+        </div>
         <StoreViewToggle mode={viewMode} onChange={setViewMode} />
       </div>
 
@@ -360,14 +289,19 @@ export function Store() {
           inventory={inventory}
           onSelect={(item) => { setPurchaseErr(null); setConfirmItem(item); }}
         />
+      ) : filtered.length === 0 ? (
+        <p className="border-2 border-dashed border-fio px-5 py-8 text-center font-sans text-[14px] text-suave">
+          {L('Nenhum item nesta categoria por enquanto.', 'No items in this category yet.')}
+        </p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item, index) => {
             const rs = rarityStyles(item.rarity);
             const inv = inventory[item.id] ?? 0;
             const handleSelect = () => { setPurchaseErr(null); setConfirmItem(item); };
-            const broText = item.priceBroCents != null && item.priceBroCents > 0 ? `${formatBro(item.priceBroCents)} BRO` : null;
-            const expText = item.priceExp != null && item.priceExp > 0 ? `${item.priceExp.toLocaleString(LOCALE)} EXP` : null;
+            const broText = item.priceBroCents != null && item.priceBroCents > 0 ? formatBro(item.priceBroCents) : null;
+            const expText = item.priceExp != null && item.priceExp > 0 ? item.priceExp.toLocaleString(LOCALE) : null;
+            const lenda = item.rarity === 'mitico';
             return (
               <PremiumPriceReveal
                 key={item.id}
@@ -379,91 +313,59 @@ export function Store() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.02, type: 'spring', stiffness: 380, damping: 28 }}
                   className={cn(
-                    'group relative isolate flex h-full cursor-pointer overflow-hidden border border-white/10',
-                    'transition-colors duration-300',
-                    rs.frame,
+                    'group relative isolate flex h-full min-w-0 cursor-pointer flex-col gap-4 p-5 transition-transform duration-200 hover:-translate-y-1',
+                    rs.carta,
+                    // Mítico é lambe colado: torto e com sombra dura de papel.
+                    lenda && '-rotate-1 shadow-[6px_6px_0_var(--color-papel)] hover:rotate-0',
                   )}
-                  style={{
-                    borderRadius: 'var(--radius-card)',
-                    background: 'var(--color-panel-elevated)',
-                  }}
                 >
-                  {/* Trilho lateral colorido (raridade) — texto-claro, sem ícone solto */}
-                  <span
-                    aria-hidden
-                    className={cn('absolute left-0 top-0 h-full w-[3px]', rs.rail)}
-                  />
-
-                  {/* Badge Lendário (já é texto-claro) */}
-                  <LegendaryBadge rarity={item.rarity} featured={item.featured} />
-
-                  <div className="relative flex w-full flex-col gap-4 p-5 pl-6">
-                    {/* Eyebrow + raridade */}
-                    <div className="flex items-center justify-between gap-2">
-                      <span
-                        className={cn(
-                          'inline-flex items-center rounded-sm px-2.5 py-1 font-display text-[9px] font-black uppercase tracking-[0.22em]',
-                          rs.labelClass,
-                        )}
-                      >
-                        {rs.label || 'Item'}
-                      </span>
-                      {item.consumable && inv > 0 ? (
-                        <span className="rounded-sm bg-[var(--color-success)]/15 px-2.5 py-1 font-display text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--color-success)]">
-                          {inv}× {L('inventário', 'inventory')}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    {/* Título — peso editorial, mais legível que antes */}
-                    <h3
-                      className="font-display text-[20px] font-black uppercase leading-tight tracking-tight text-white line-clamp-2"
-                      style={{ letterSpacing: '0.005em' }}
-                    >
-                      {item.title}
-                    </h3>
-
-                    {/* Descrição — texto-claro, sem icone */}
-                    <p className="text-[12px] leading-relaxed text-white/55 line-clamp-2">
-                      {item.blurb}
-                    </p>
-
-                    {/* Preço — Anton tabular (número não usa serifa). */}
-                    <div className="flex items-baseline gap-3 border-t border-[var(--color-divider-yellow)] pt-3">
-                      {broText ? (
-                        <span
-                          className="font-impact tabular-nums text-white/80"
-                          style={{ fontSize: 'clamp(22px, 3vw, 30px)', lineHeight: 1 }}
-                        >
-                          {broText}
-                        </span>
-                      ) : null}
-                      {broText && expText ? (
-                        <span className="text-[10px] uppercase tracking-[0.2em] text-white/30">{L('ou', 'or')}</span>
-                      ) : null}
-                      {expText ? (
-                        <span
-                          className="font-impact tabular-nums text-neon-yellow"
-                          style={{ fontSize: 'clamp(22px, 3vw, 30px)', lineHeight: 1 }}
-                        >
-                          {expText}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    {/* CTA — botão texto-claro */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelect();
-                      }}
-                      className="mt-auto inline-flex items-center justify-center rounded-sm bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black transition-colors hover:bg-white"
-                    >
-                      {L('Comprar', 'Buy')}
-                    </button>
+                  {/* Selos: raridade + destaque + inventário */}
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    {rs.label ? (
+                      <SeloRua tom={rs.selo} className={cn(lenda && 'bg-asfalto-27 text-ouro-27')}>{rs.label}</SeloRua>
+                    ) : null}
+                    <LegendaryBadge rarity={item.rarity} featured={item.featured} />
+                    {item.consumable && inv > 0 ? (
+                      <SeloRua tom={lenda ? 'cal' : 'mudo'} className="ml-auto">
+                        {inv}× {L('no inventário', 'in inventory')}
+                      </SeloRua>
+                    ) : null}
                   </div>
 
+                  <h3 className="line-clamp-2 font-impact text-[clamp(24px,6.5vw,30px)] uppercase leading-[0.95]">
+                    {item.title}
+                  </h3>
+
+                  <p className={cn('line-clamp-2 font-sans text-[13px] leading-snug', rs.sub)}>
+                    {item.blurb}
+                  </p>
+
+                  {/* Preço — Anton; a moeda em mono. */}
+                  <div className={cn('mt-auto flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1 border-t-2 pt-3', lenda ? 'border-asfalto-27' : 'border-linha')}>
+                    {broText ? (
+                      <span className="inline-flex items-baseline gap-1.5">
+                        <span className="font-impact text-[clamp(26px,7vw,32px)] leading-none tabular-nums">{broText}</span>
+                        <span className={cn('font-prova text-[11px] font-bold tracking-[0.16em]', rs.sub)}>BRO</span>
+                      </span>
+                    ) : null}
+                    {broText && expText ? (
+                      <span className={cn('font-prova text-[11px] uppercase tracking-[0.2em]', rs.sub)}>{L('ou', 'or')}</span>
+                    ) : null}
+                    {expText ? (
+                      <span className="inline-flex items-baseline gap-1.5">
+                        <span className="font-impact text-[clamp(26px,7vw,32px)] leading-none tabular-nums">{expText}</span>
+                        <span className={cn('font-prova text-[11px] font-bold tracking-[0.16em]', rs.sub)}>EXP</span>
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <BotaoRua
+                    variante={rs.botao}
+                    onClick={handleSelect}
+                    className="w-full"
+                  >
+                    {L('Comprar', 'Buy')} <span aria-hidden>→</span>
+                  </BotaoRua>
                 </motion.article>
               </PremiumPriceReveal>
             );
@@ -476,154 +378,130 @@ export function Store() {
           <motion.div
             key="store-checkout-overlay"
             role="presentation"
-            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/75 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-6"
+            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/80 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={() => setConfirmItem(null)}
           >
+            {/* O RECIBO: corpo de concreto, picote e o canhoto com o preço em spray. */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ type: 'spring', stiffness: 380, damping: 32 }}
               className={cn(
-                "relative w-full max-w-md overflow-hidden rounded-md border bg-panel",
-                confirmItem.rarity === 'mitico'
-                  ? 'border-2 border-neon-yellow'
-                  : 'border-neon-yellow/35'
+                'relative flex max-h-[92vh] w-full max-w-md min-w-0 flex-col overflow-hidden bg-concreto text-papel',
+                confirmItem.rarity === 'mitico' ? 'border-[3px] border-ouro-27' : 'border-2 border-linha',
               )}
               role="dialog"
               aria-modal="true"
               aria-labelledby="store-checkout-title"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className={cn(
-                "flex items-start justify-between gap-2 border-b px-4 py-4",
-                confirmItem.rarity === 'mitico' ? 'border-neon-yellow/20 bg-card' : 'border-white/10'
-              )}>
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-[9px] font-bold uppercase tracking-widest text-neon-yellow/90">
-                    {L('Confirmar compra', 'Confirm purchase')}
-                  </p>
-
-                  {/* Nome do item — Anton. Serifa itálica é assinatura de LENDA. */}
-                  {(confirmItem.rarity === 'mitico' || confirmItem.rarity === 'epico') ? (
-                    <h2
-                      id="store-checkout-title"
-                      className="mt-2 font-impact uppercase text-neon-yellow"
-                      style={{
-                        fontSize: 'clamp(1.35rem, 4.5vw, 1.9rem)',
-                        letterSpacing: '-0.01em',
-                        lineHeight: 1.05,
-                      }}
-                    >
-                      {confirmItem.title}
-                    </h2>
-                  ) : (
-                    <h2 id="store-checkout-title" className="mt-1 font-display text-lg font-black text-white">
-                      {confirmItem.title}
-                    </h2>
-                  )}
+              <div className="rua-grao flex min-w-0 items-start justify-between gap-3 px-5 pb-4 pt-5">
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <span className="font-prova text-[11px] font-bold uppercase tracking-[0.22em] text-mudo">
+                    — {L('Confirmar compra', 'Confirm purchase')}
+                  </span>
+                  <h2
+                    id="store-checkout-title"
+                    className={cn(
+                      'font-impact text-[clamp(28px,8vw,38px)] uppercase leading-[0.92] [overflow-wrap:anywhere]',
+                      confirmItem.rarity === 'mitico' || confirmItem.rarity === 'epico' ? 'text-ouro-27' : 'text-papel',
+                    )}
+                  >
+                    {confirmItem.title}
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {checkoutRarity?.label ? <SeloRua tom={checkoutRarity.selo}>{checkoutRarity.label}</SeloRua> : null}
+                    {confirmItem.consumable ? <SeloRua tom="cal">{L('Consumível', 'Consumable')}</SeloRua> : null}
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setConfirmItem(null)}
-                  className="rounded-full p-2 text-gray-400 transition hover:bg-white/10 hover:text-white"
+                  className="-mr-2 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center text-mudo transition-colors hover:text-papel"
                   aria-label={L('Fechar', 'Close')}
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-6 w-6" />
                 </button>
               </div>
-              <div className="max-h-[min(60vh,420px)] space-y-4 overflow-y-auto overscroll-y-contain px-4 py-4">
-                <div className="rounded-xl border border-white/10 bg-black/40 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{L('Resumo', 'Summary')}</p>
-                  <p className="mt-2 text-sm leading-relaxed text-gray-300">{confirmItem.blurb}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span
-                      className={cn(
-                        'rounded px-2 py-0.5 font-display text-[8px] font-black uppercase tracking-widest',
-                        checkoutRarity?.labelClass,
-                      )}
-                    >
-                      {checkoutRarity?.label}
-                    </span>
-                    <span className="rounded border border-white/10 bg-white/[0.04] px-2 py-0.5 font-mono text-[9px] text-gray-400">
-                      ID: {confirmItem.id}
-                    </span>
-                    {confirmItem.consumable ? (
-                      <span className="rounded border border-[var(--color-success)]/30 bg-[var(--color-success)]/10 px-2 py-0.5 font-display text-[8px] font-bold uppercase text-[var(--color-success)]">
-                        {L('Consumível', 'Consumable')}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-black/40 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{L('Preço', 'Price')}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {checkoutPrices?.bro ? (
-                      <span className="rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 font-impact tabular-nums text-white" style={{ fontSize: '15px' }}>
-                        {checkoutPrices.bro}
-                      </span>
-                    ) : null}
+
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-5 pb-5">
+                <p className="font-sans text-[14px] leading-relaxed text-suave">{confirmItem.blurb}</p>
+                <span className="block font-prova text-[11px] uppercase tracking-[0.12em] text-fio">ID · {confirmItem.id}</span>
+              </div>
+
+              {/* Picote */}
+              <div aria-hidden className="relative h-3 shrink-0">
+                <span className="rua-picote-h absolute inset-x-0 top-1/2 h-2 -translate-y-1/2" />
+              </div>
+
+              {/* Canhoto */}
+              <div className="flex min-w-0 flex-col gap-4 bg-asfalto-27 px-5 pb-5 pt-4">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <span className="font-prova text-[11px] font-bold uppercase tracking-[0.22em] text-mudo">{L('Preço', 'Price')}</span>
+                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
                     {checkoutPrices?.exp ? (
-                      <span className="rounded-lg border border-neon-yellow/35 bg-neon-yellow/10 px-3 py-2 font-impact tabular-nums text-neon-yellow" style={{ fontSize: '15px' }}>
-                        {checkoutPrices.exp}
-                      </span>
+                      <span className="font-spray text-[clamp(36px,10vw,48px)] font-black leading-[0.9] tabular-nums text-papel">{checkoutPrices.exp}</span>
+                    ) : null}
+                    {checkoutPrices?.bro && checkoutPrices?.exp ? (
+                      <span className="font-prova text-[11px] uppercase tracking-[0.2em] text-mudo">{L('ou', 'or')}</span>
+                    ) : null}
+                    {checkoutPrices?.bro ? (
+                      <span className="font-spray text-[clamp(36px,10vw,48px)] font-black leading-[0.9] tabular-nums text-papel">{checkoutPrices.bro}</span>
                     ) : null}
                     {!checkoutPrices?.bro && !checkoutPrices?.exp ? (
-                      <span className="text-sm text-gray-500">{L('Sem preço definido', 'No price set')}</span>
+                      <span className="font-sans text-sm text-mudo">{L('Sem preço definido', 'No price set')}</span>
                     ) : null}
                   </div>
-                  <p className="mt-3 text-[10px] leading-relaxed text-gray-600">
-                    {L('Saldo', 'Balance')}: <span className="font-impact tabular-nums text-neon-yellow">{expDisplay} EXP</span>
-                    <span className="mx-1.5 text-white/20">·</span>
-                    <span className="font-impact tabular-nums text-white/80">{broDisplay} BRO</span>
-                  </p>
-                  {purchaseErr ? (
-                    <div className="mt-3 space-y-2 rounded-lg border border-[var(--color-danger)]/25 bg-[var(--color-danger)]/10 p-3">
-                      <p className="text-xs font-bold leading-snug text-[var(--color-danger)]">{purchaseErr}</p>
-                      <Link
-                        to="/wallet"
-                        className="inline-flex w-full items-center justify-center rounded-lg border border-[var(--color-danger)]/35 bg-[var(--color-danger)]/15 py-2.5 font-display text-[10px] font-black uppercase tracking-wide text-[var(--color-danger)] transition hover:bg-[var(--color-danger)]/25 sm:w-auto sm:px-4"
-                      >
-                        {L('Ver saldo na Wallet', 'Check balance in Wallet')}
-                      </Link>
-                    </div>
-                  ) : null}
+                  <span className="font-prova text-[11px] uppercase tracking-[0.12em] text-mudo">
+                    {L('Teu saldo', 'Your balance')} · <span className="text-ouro-27">{expDisplay} EXP</span> · <span className="text-papel">{broDisplay} BRO</span>
+                  </span>
                 </div>
-              </div>
-              <div className="flex flex-col gap-2 border-t border-white/10 bg-black/50 px-4 py-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => setConfirmItem(null)}
-                  className="flex-1 rounded-xl border border-white/15 py-3 font-display text-[10px] font-bold uppercase tracking-wide text-gray-300 transition hover:bg-white/5"
-                >
-                  {L('Cancelar', 'Cancel')}
-                </button>
-                {confirmItem.priceExp != null && confirmItem.priceExp > 0 ? (
+
+                {purchaseErr ? (
+                  <div className="flex min-w-0 flex-col gap-2 border-l-4 border-baixa bg-concreto px-4 py-3">
+                    <p className="font-sans text-[13px] font-semibold leading-snug text-papel">{purchaseErr}</p>
+                    <Link
+                      to="/wallet"
+                      className="inline-flex min-h-[44px] items-center gap-2 self-start font-impact text-[17px] uppercase text-rua hover:text-papel"
+                    >
+                      {L('Ver saldo na Wallet', 'Check balance in Wallet')} <span aria-hidden>→</span>
+                    </Link>
+                  </div>
+                ) : null}
+
+                <div className="flex min-w-0 flex-col gap-3">
+                  {confirmItem.priceExp != null && confirmItem.priceExp > 0 ? (
+                    <BotaoRua
+                      disabled={!canExpBuy}
+                      onClick={() => tryPurchase(confirmItem, 'exp')}
+                      className="w-full px-4 text-[19px]"
+                    >
+                      {L('Pagar', 'Pay')} {checkoutPrices?.exp ?? 'EXP'} <span aria-hidden>→</span>
+                    </BotaoRua>
+                  ) : null}
+                  {confirmItem.priceBroCents != null && confirmItem.priceBroCents > 0 ? (
+                    <BotaoRua
+                      variante="contorno"
+                      disabled={!canBroBuy}
+                      onClick={() => tryPurchase(confirmItem, 'bro')}
+                      className="w-full px-4 text-[19px]"
+                    >
+                      {L('Pagar', 'Pay')} {checkoutPrices?.bro ?? 'BRO'}
+                    </BotaoRua>
+                  ) : null}
                   <button
                     type="button"
-                    disabled={!canExpBuy}
-                    onClick={() => tryPurchase(confirmItem, 'exp')}
-                    className="btn-primary flex flex-1 items-center justify-center gap-2 py-3 font-display text-[10px] font-black uppercase tracking-wide disabled:opacity-40"
+                    onClick={() => setConfirmItem(null)}
+                    className="inline-flex min-h-[44px] items-center justify-center font-prova text-[12px] font-bold uppercase tracking-[0.2em] text-mudo transition-colors hover:text-papel"
                   >
-                    <Zap className="h-4 w-4" />
-                    {L('Pagar', 'Pay')} {checkoutPrices?.exp ?? 'EXP'}
+                    {L('Cancelar', 'Cancel')}
                   </button>
-                ) : null}
-                {confirmItem.priceBroCents != null && confirmItem.priceBroCents > 0 ? (
-                  <button
-                    type="button"
-                    disabled={!canBroBuy}
-                    onClick={() => tryPurchase(confirmItem, 'bro')}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 py-3 font-display text-[10px] font-black uppercase tracking-wide text-white transition hover:bg-white/20 disabled:opacity-40"
-                  >
-                    <Wallet className="h-4 w-4" />
-                    {L('Pagar', 'Pay')} {checkoutPrices?.bro ?? 'BRO'}
-                  </button>
-                ) : null}
+                </div>
               </div>
             </motion.div>
           </motion.div>

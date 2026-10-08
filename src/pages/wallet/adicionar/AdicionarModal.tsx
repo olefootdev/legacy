@@ -51,7 +51,7 @@ export function AdicionarModal({
 
   return (
     <div
-      className="fixed inset-0 z-[190] flex items-end justify-center bg-black/80 p-0 sm:items-center sm:p-4"
+      className="fixed inset-0 z-[190] flex items-end justify-center bg-black/85 p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label={L('Adicionar', 'Add')}
@@ -60,21 +60,26 @@ export function AdicionarModal({
       <motion.div
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="flex max-h-[92dvh] w-full max-w-md flex-col border border-white/16 bg-panel"
+        className="flex max-h-[92dvh] w-full max-w-md flex-col border-t-[3px] border-rua bg-asfalto-27 sm:border-[3px]"
       >
-        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
-          <h2 className="font-impact text-lg uppercase leading-[1.1] text-white">{L('Adicionar', 'Add')}</h2>
+        {/* DS 2027: alambrado no topo da gaveta — a peça é de ação (rua). */}
+        <div className="relative flex items-center justify-between gap-3 px-5 pb-4 pt-5">
+          <div aria-hidden className="rua-alambrado pointer-events-none absolute inset-x-0 top-0 h-16 [--alambrado:rgba(242,230,30,.16)]" />
+          <div className="relative flex min-w-0 flex-col gap-1">
+            <p className="font-prova text-[11.5px] font-bold uppercase tracking-[0.22em] text-mudo">— Pix</p>
+            <h2 className="font-voz text-[clamp(38px,11vw,48px)] leading-[0.92] text-papel">{L('Adicionar', 'Add')}</h2>
+          </div>
           <button
             type="button"
             onClick={onFechar}
-            className="p-2 text-cimento hover:text-white"
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center border-2 border-linha text-mudo transition-colors hover:border-papel hover:text-papel"
             aria-label={L('Fechar', 'Close')}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-1 border-b border-white/10 p-1" role="tablist" aria-label={L('O que adicionar', 'What to add')}>
+        <div className="mx-5 grid grid-cols-2 border-2 border-linha p-0.5" role="tablist" aria-label={L('O que adicionar', 'What to add')}>
           {(['bro', 'olefoot'] as const).map((p) => (
             <button
               key={p}
@@ -83,8 +88,8 @@ export function AdicionarModal({
               aria-selected={produto === p}
               onClick={() => setProduto(p)}
               className={cn(
-                'py-2.5 text-center font-mono text-[11.5px] font-medium uppercase tracking-[0.2em] transition-colors',
-                produto === p ? 'bg-white text-black' : 'text-cimento hover:text-white',
+                'min-h-[46px] text-center font-impact text-[20px] uppercase leading-none transition-colors',
+                produto === p ? 'bg-rua text-asfalto-27' : 'text-mudo hover:text-papel',
               )}
             >
               {p === 'bro' ? 'BRO' : 'OLEFOOT'}

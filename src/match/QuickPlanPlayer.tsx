@@ -65,7 +65,7 @@ import {
 import { TACTICAL_INTENSITY_PRESETS, type TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
 import { detectLiveArc, getArcDescription } from '@/match/quickNarrativeArcs';
 import { QuickNarrativeArcIndicator } from '@/components/matchquick/QuickNarrativeArcIndicator';
-import { Hashtag } from '@/components/ui';
+import { ResultadoRua } from '@/components/match/ResultadoRua';
 import { buildAgentEcho, type AgentEchoTrait } from '@/match/quickAgentEcho';
 import { L, emIngles } from '@/i18n/L';
 
@@ -127,6 +127,8 @@ export interface QuickPlanPlayResult {
 
 interface Props {
   plan: MatchPlan;
+  /** EXP real do bônus de performance (vem do pai depois do crédito) — entra na fita do resultado. */
+  resultadoExp?: number | null;
   onComplete?: (plan: MatchPlan, result: QuickPlanPlayResult) => void;
   /** Reduz duração total se o user quiser ainda mais rápido (default 1.0). */
   speedMultiplier?: number;
@@ -291,58 +293,50 @@ function RosterRow({ card, isTop, rating, subbable, onSub }: {
   subbable?: boolean;
   onSub?: () => void;
 }) {
-  const rail = isTop ? 'var(--color-neon-yellow)' : card.fatigue > 85 ? 'var(--color-warning)' : 'var(--color-border)';
+  // DS 2027: rail rua pro destaque, atenção pro cansado, linha pro resto.
+  const rail = isTop ? 'border-l-rua' : card.fatigue > 85 ? 'border-l-atencao' : 'border-l-linha';
   const tired = card.fatigue > 85;
   const inner = (
     <>
-      {/* Foto do jogador — destaque (anel amarelo) pra quem brilha, cinza sutil
-          pros demais. Dá MORAL ao jogador em evidência. */}
+      {/* Foto do jogador — destaque (anel rua) pra quem brilha, cinza pros demais. */}
       {card.portrait ? (
         <img
           src={card.portrait}
           alt=""
-          className={`w-8 h-8 rounded-full object-cover object-top shrink-0 ${isTop ? 'border-2 border-neon-yellow' : 'border border-white/15 grayscale opacity-90'}`}
+          className={`h-9 w-9 shrink-0 rounded-full object-cover object-top ${isTop ? 'border-2 border-rua' : 'grayscale opacity-90'}`}
         />
       ) : (
         <span
-          className={`w-8 h-8 rounded-full shrink-0 grid place-items-center bg-dark-gray font-display font-black text-white/70 ${isTop ? 'border-2 border-neon-yellow' : 'border border-white/10'}`}
-          style={{ fontSize: '13px' }}
+          className={`grid h-9 w-9 shrink-0 place-items-center rounded-full bg-concreto font-impact text-[14px] text-suave ${isTop ? 'border-2 border-rua' : ''}`}
           aria-hidden
         >
           {card.name.trim().charAt(0).toUpperCase() || '?'}
         </span>
       )}
-      <span
-        className="ole-num leading-none w-8 text-center shrink-0"
-        style={{ fontSize: '16px', color: isTop ? 'var(--color-neon-yellow)' : '#fff' }}
-      >
+      <span className={`w-8 shrink-0 text-center font-impact text-[18px] leading-none tabular-nums ${isTop ? 'text-rua' : 'text-papel'}`}>
         {card.ovr}
       </span>
-      <span className="flex-1 min-w-0">
-        <span className="block font-display uppercase font-black text-white truncate" style={{ fontSize: '12px', letterSpacing: '0.04em' }}>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-voz text-[19px] leading-none text-papel">
           {shortName(card.name)}
         </span>
-        <span className="block uppercase tracking-[0.14em] text-[9px]" style={{ color: tired ? 'var(--color-warning)' : 'rgba(255,255,255,0.45)' }}>
+        <span className={`mt-1 block font-prova text-[9.5px] font-bold uppercase tracking-[0.1em] ${tired ? 'text-atencao' : 'text-mudo'}`}>
           {posLabel(card.pos)} · {fatigueWord(card.fatigue)}
         </span>
       </span>
       {rating !== undefined && (
-        <span
-          className="ole-num leading-none shrink-0"
-          style={{ fontSize: '14px', color: rating >= 7.5 ? 'var(--color-neon-yellow)' : 'rgba(255,255,255,0.85)' }}
-        >
+        <span className={`shrink-0 font-spray font-black text-[20px] leading-none tabular-nums ${rating >= 7.5 ? 'text-rua' : 'text-suave'}`}>
           {rating.toFixed(1)}
         </span>
       )}
-      {subbable && <ArrowRightLeft className="w-3.5 h-3.5 text-neon-yellow shrink-0" strokeWidth={2.5} aria-hidden />}
+      {subbable && <ArrowRightLeft className="h-3.5 w-3.5 shrink-0 text-rua" strokeWidth={2.5} aria-hidden />}
     </>
   );
-  const cls = 'flex items-center gap-2.5 px-2.5 py-1.5 border-l-[3px] bg-deep-black/40 w-full text-left';
-  const style = { borderLeftColor: rail, borderRadius: 'var(--radius-sm)' };
+  const cls = `flex min-h-[50px] w-full min-w-0 items-center gap-2.5 border-l-[3px] bg-concreto px-2.5 py-1.5 text-left ${rail}`;
   return subbable ? (
-    <button type="button" onClick={onSub} className={`${cls} transition-all active:scale-[0.98] hover:bg-deep-black/70`} style={style}>{inner}</button>
+    <button type="button" onClick={onSub} className={`${cls} transition-colors hover:bg-linha active:translate-y-px`}>{inner}</button>
   ) : (
-    <div className={cls} style={style}>{inner}</div>
+    <div className={cls}>{inner}</div>
   );
 }
 
@@ -389,19 +383,19 @@ const FORMATION_TILT: Record<string, number> = {
 };
 
 const FEED_STYLE: Record<QuickPlanFeedItem['kind'], string> = {
-  insight: 'text-white/70',
-  decision: 'text-neon-yellow',
-  goal_home: 'text-neon-yellow font-bold',
-  goal_away: 'text-white/90 font-bold',
-  save: 'text-[var(--color-success)]',
-  chance: 'text-white/80',
-  woodwork: 'text-[var(--color-warning)] font-semibold',
-  counter: 'text-[var(--color-success)]',
-  penalty: 'text-neon-yellow font-bold',
-  red: 'text-[var(--color-danger)]',
-  yellow: 'text-amber-300 font-semibold',
-  injury: 'text-orange-300 font-semibold',
-  halftime: 'text-white/50 uppercase tracking-[0.2em] text-[10px]',
+  insight: 'text-suave',
+  decision: 'text-rua',
+  goal_home: 'text-rua font-bold',
+  goal_away: 'text-papel font-bold',
+  save: 'text-papel',
+  chance: 'text-papel',
+  woodwork: 'text-atencao font-semibold',
+  counter: 'text-papel',
+  penalty: 'text-rua font-bold',
+  red: 'text-[var(--color-event-card-red)] font-semibold',
+  yellow: 'text-[var(--color-event-card-yellow)] font-semibold',
+  injury: 'text-atencao font-semibold',
+  halftime: 'font-prova text-mudo uppercase tracking-[0.2em] text-[10px]',
 };
 
 /** Tempo real por minuto de jogo CORRIDO (relógio 1,2,3…). 90 min ≈ 22s. */
@@ -413,7 +407,7 @@ const LEADIN_REACT_MS = 2800;
 /** Quanto o relógio "segura" num lance pra dar tempo de ler. */
 const HOLD_MS: Record<MatchEventTier, number> = { epic: 2400, big: 1700, normal: 950, minor: 600 };
 
-export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, secondHalfLineup, narration, buildShootout, agentTraits }: Props) {
+export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, secondHalfLineup, narration, buildShootout, agentTraits }: Props) {
   void speedMultiplier;
   const [phase, setPhase] = useState<PlayerPhase>('playing');
   const [minute, setMinute] = useState(0);
@@ -1306,87 +1300,93 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     awayShort: plan.away_short,
     homeNames,
     awayNames,
-    homeClassName: 'text-neon-yellow',
-    awayClassName: 'text-white',
+    homeClassName: 'text-rua',
+    awayClassName: 'text-papel',
     fontSize,
   });
   const momentumNow = momentumRef.current[Math.max(0, Math.min(89, currentMinute - 1))] ?? 50;
 
   return (
-    <div
-      className="relative w-full max-w-2xl mx-auto bg-deep-black border border-l-[3px] overflow-hidden"
-      style={{ borderColor: 'var(--color-border)', borderLeftColor: 'var(--color-neon-yellow)', borderRadius: 'var(--radius-md)' }}
-    >
-      {/* Placar: escudos + ole-num gigante + minuto (VOLT2, fundo chapado) */}
-      <div className="px-4 pt-5 pb-4 bg-panel border-b border-zinc-800">
-        <div className="flex items-center justify-center gap-3 sm:gap-5">
-          {/* Casa */}
-          <div className="flex items-center gap-2.5 flex-1 justify-end min-w-0">
-            <div className="text-right min-w-0">
-              <p className="font-display uppercase tracking-[0.14em] text-[10px] sm:text-[11px] font-black text-neon-yellow truncate">
+    <div className="relative mx-auto w-full max-w-2xl overflow-hidden bg-asfalto-27">
+      {/* PLACAR AO VIVO (DS 2027): spray em rua, times em Anton, minuto em spray.
+          No fim de jogo some — o RESULTADO (spray gigante) assume o palco. */}
+      {phase !== 'done' && (
+        <div className="rua-grao bg-concreto px-4 pb-4 pt-3">
+          <div className="mb-2 flex min-w-0 items-center justify-between gap-3">
+            {phase === 'halftime' ? (
+              <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">{L('Intervalo', 'Half-time')}</span>
+            ) : phase === 'shootout' ? (
+              <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-rua">{L('Pênaltis', 'Penalties')}</span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 bg-rua px-2 py-0.5 font-prova text-[11px] font-bold uppercase tracking-[0.1em] text-asfalto-27">
+                <span aria-hidden className="animate-pulse">●</span> {L('Ao vivo', 'Live')}
+              </span>
+            )}
+            <span className="flex items-baseline gap-1 font-spray font-black leading-none tabular-nums text-papel" aria-label={L(`Minuto ${currentMinute}`, `Minute ${currentMinute}`)}>
+              {phase === 'beat' || phase === 'clutch' || phase === 'penalty' || phase === 'forced' || phase === 'leadin' ? (
+                <span className="font-prova text-[11px] font-bold text-mudo">{L('PAUSA', 'PAUSED')}</span>
+              ) : null}
+              <span className="text-[28px]">{currentMinute}</span>
+              <span className="text-[18px] text-mudo">&prime;</span>
+            </span>
+          </div>
+
+          <div className="flex items-center justify-center gap-2.5 sm:gap-5">
+            {/* Casa */}
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+              <p className="min-w-0 truncate text-right font-impact text-[15px] uppercase leading-none text-papel sm:text-[18px]">
                 {homeName ?? plan.home_short}
               </p>
+              {homeCrestUrl ? (
+                <img src={homeCrestUrl} alt="" referrerPolicy="no-referrer" draggable={false}
+                  className="h-9 w-9 shrink-0 object-contain sm:h-11 sm:w-11" />
+              ) : (
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-rua sm:h-11 sm:w-11">
+                  <span className="font-impact text-[10px] text-rua">{plan.home_short}</span>
+                </div>
+              )}
             </div>
-            {homeCrestUrl ? (
-              <img src={homeCrestUrl} alt="" referrerPolicy="no-referrer" draggable={false}
-                className="w-9 h-9 sm:w-11 sm:h-11 object-contain shrink-0" />
-            ) : (
-              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full border-2 border-neon-yellow grid place-items-center shrink-0">
-                <span className="font-display font-black text-[9px] text-neon-yellow">{plan.home_short}</span>
-              </div>
-            )}
-          </div>
 
-          {/* Placar */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="ole-num text-neon-yellow leading-none"
-              style={{ fontSize: 'clamp(36px, 10vw, 56px)' }}>
-              {homeScore}
-            </span>
-            <span className="text-white/25 text-2xl sm:text-3xl">–</span>
-            <span className="ole-num text-white leading-none"
-              style={{ fontSize: 'clamp(36px, 10vw, 56px)' }}>
-              {awayScore}
-            </span>
-          </div>
+            {/* Placar em spray */}
+            <div className="flex shrink-0 items-center font-spray font-black leading-[0.85] tabular-nums text-rua" style={{ fontSize: 'clamp(52px, 15vw, 76px)' }}>
+              <span>{homeScore}</span>
+              <span className="mx-[0.08em] text-[0.55em]">×</span>
+              <span>{awayScore}</span>
+            </div>
 
-          {/* Visitante */}
-          <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            {awayCrestUrl ? (
-              <img src={awayCrestUrl} alt="" referrerPolicy="no-referrer" draggable={false}
-                className="w-9 h-9 sm:w-11 sm:h-11 object-contain shrink-0" />
-            ) : (
-              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full border-2 border-white/40 grid place-items-center shrink-0">
-                <span className="font-display font-black text-[9px] text-white">{plan.away_short}</span>
-              </div>
-            )}
-            <p className="font-display uppercase tracking-[0.14em] text-[10px] sm:text-[11px] font-black text-white/80 truncate">
-              {awayName ?? plan.away_short}
-            </p>
+            {/* Visitante */}
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              {awayCrestUrl ? (
+                <img src={awayCrestUrl} alt="" referrerPolicy="no-referrer" draggable={false}
+                  className="h-9 w-9 shrink-0 object-contain sm:h-11 sm:w-11" />
+              ) : (
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-fio sm:h-11 sm:w-11">
+                  <span className="font-impact text-[10px] text-suave">{plan.away_short}</span>
+                </div>
+              )}
+              <p className="min-w-0 truncate font-impact text-[15px] uppercase leading-none text-suave sm:text-[18px]">
+                {awayName ?? plan.away_short}
+              </p>
+            </div>
           </div>
         </div>
-
-        {/* Minuto */}
-        <div className="flex justify-center mt-2">
-          <span className="font-display tabular-nums text-neon-yellow text-[13px] font-bold tracking-[0.1em]">
-            {phase === 'beat' || phase === 'clutch' || phase === 'penalty' || phase === 'forced' || phase === 'leadin' ? '⏸ ' : phase === 'halftime' ? L('INTERVALO · ', 'HALF-TIME · ') : ''}{currentMinute}&prime;
-          </span>
-        </div>
-      </div>
+      )}
 
       {/* Progress bar do tempo de jogo */}
-      <div className="h-0.5 bg-zinc-900">
-        <motion.div
-          className="h-full bg-neon-yellow"
-          initial={{ width: 0 }}
-          animate={{ width: `${progress * 100}%` }}
-          transition={{ ease: 'linear', duration: 0.3 }}
-        />
-      </div>
+      {phase !== 'done' && (
+        <div className="h-1 bg-linha">
+          <motion.div
+            className="h-full bg-rua"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress * 100}%` }}
+            transition={{ ease: 'linear', duration: 0.3 }}
+          />
+        </div>
+      )}
 
-      {/* Barra de MOMENTO — PERSISTENTE (nunca desmonta): narra o jogo o tempo
-          todo, inclusive durante decisões. Não volta mais ao meio. */}
-      <div className="px-5 pt-4 relative">
+      {/* Barra de MOMENTO — persistente durante o jogo (nunca desmonta até o apito
+          final): narra o jogo o tempo todo, inclusive durante decisões. */}
+      <div className={phase === 'done' ? 'hidden' : 'relative px-5 pt-4'}>
         <MomentumBar
           momentum={momentumNow / 100}
           homeShort={plan.home_short}
@@ -1403,15 +1403,10 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               animate={{ opacity: 1, y: -26, scale: 1 }}
               exit={{ opacity: 0, y: -44 }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
-              className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-0 z-20 bg-deep-black px-1.5 py-0.5 font-display font-black tabular-nums whitespace-nowrap"
-              style={{
-                fontSize: floatFx.tier === 'crit' ? '15px' : '13px',
-                letterSpacing: '0.04em',
-                color: floatFx.tier === 'crit' ? 'rgb(196,181,253)'
-                  : floatFx.tier === 'pos' ? 'var(--color-success)'
-                  : floatFx.tier === 'neg' ? 'var(--color-danger)'
-                  : 'rgba(255,255,255,0.7)',
-              }}
+              className={`pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 font-impact tabular-nums ${
+                floatFx.tier === 'crit' ? 'bg-ouro-27 text-asfalto-27' : 'bg-asfalto-27'
+              } ${floatFx.tier === 'pos' ? 'text-alta' : floatFx.tier === 'neg' ? 'text-baixa' : floatFx.tier === 'crit' ? '' : 'text-suave'}`}
+              style={{ fontSize: floatFx.tier === 'crit' ? '17px' : '15px' }}
             >
               {floatFx.text}
             </motion.div>
@@ -1421,14 +1416,9 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         {/* Chip de BUFF ATIVO (#3): mostra o buff vigente + contagem da janela. */}
         {activeBuff && (
           <div
-            className="absolute right-5 -bottom-1 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-display font-black tabular-nums"
-            style={{
-              fontSize: '9px',
-              letterSpacing: '0.08em',
-              background: 'rgba(0,0,0,0.55)',
-              border: `1px solid ${activeBuff.tier === 'crit' ? 'rgb(167,139,250)' : activeBuff.tier === 'pos' ? 'var(--color-success)' : 'var(--color-danger)'}`,
-              color: activeBuff.tier === 'crit' ? 'rgb(196,181,253)' : activeBuff.tier === 'pos' ? 'var(--color-success)' : 'var(--color-danger)',
-            }}
+            className={`absolute -bottom-1 right-5 z-10 inline-flex items-center gap-1 bg-asfalto-27 px-2 py-0.5 font-prova text-[10px] font-bold tabular-nums border-2 ${
+              activeBuff.tier === 'crit' ? 'border-ouro-27 text-ouro-27' : activeBuff.tier === 'pos' ? 'border-alta text-alta' : 'border-baixa text-baixa'
+            }`}
           >
             {activeBuff.tier === 'crit' ? '⚡' : '●'} {activeBuff.pct > 0 ? '+' : ''}{activeBuff.pct.toFixed(1)}% · {Math.max(0, activeBuff.untilMinute - currentMinute)}&prime;
           </div>
@@ -1455,21 +1445,21 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       {/* DOCK DE ESTILO — controle tático AO VIVO. O estilo certo pro momento
           converte chance em gol e blinda o perigo; o errado custa caro. Faixa
           fina, sempre à mão (não some durante o jogo). */}
-      <div className="px-5 pt-3">
+      <div className={phase === 'done' ? 'hidden' : 'px-5 pt-4'}>
         {/* Header do dock: rótulo + RISCO do estilo atual (trade-off legível). */}
-        <div className="flex items-center justify-between px-0.5 mb-1.5">
-          <span className="font-display uppercase tracking-[0.2em] text-[9px] font-black text-white/40">{L('Estilo', 'Style')}</span>
+        <div className="mb-2 flex items-center justify-between px-0.5">
+          <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">— {L('Estilo', 'Style')}</span>
           {(() => {
             const d = TACTICAL_INTENSITY_PRESETS[style].defensiveBonus;
             const r = d <= -0.08
-              ? { t: L('Risco alto', 'High risk'), c: 'var(--color-danger)' }
+              ? { t: L('Risco alto', 'High risk'), c: 'var(--color-baixa)' }
               : d <= 0.05
-              ? { t: L('Risco médio', 'Medium risk'), c: 'var(--color-warning)' }
-              : { t: L('Risco baixo', 'Low risk'), c: 'var(--color-success)' };
-            return <span className="font-display uppercase tracking-[0.16em] text-[9px] font-black" style={{ color: r.c }}>{r.t}</span>;
+              ? { t: L('Risco médio', 'Medium risk'), c: 'var(--color-atencao)' }
+              : { t: L('Risco baixo', 'Low risk'), c: 'var(--color-alta)' };
+            return <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ color: r.c }}>{r.t}</span>;
           })()}
         </div>
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-5 gap-1.5 pb-1 pr-1">
           {STYLE_CHIPS.map((c) => {
             const on = style === c.id;
             return (
@@ -1477,13 +1467,12 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 key={c.id}
                 type="button"
                 onClick={() => changeStyle(c.id)}
-                className="py-2 font-display uppercase tracking-[0.03em] text-[10px] font-black transition-colors active:scale-[0.97]"
-                style={{
-                  borderRadius: 'var(--radius-sm)',
-                  backgroundColor: on ? 'var(--color-neon-yellow)' : 'transparent',
-                  color: on ? '#000' : 'rgba(255,255,255,0.6)',
-                  border: on ? 'none' : '1px solid var(--color-border)',
-                }}
+                aria-pressed={on}
+                className={`min-h-[46px] min-w-0 px-0.5 font-impact text-[12px] uppercase leading-[1.05] transition-[transform,box-shadow,background-color,color] [overflow-wrap:anywhere] sm:text-[14px] ${
+                  on
+                    ? 'bg-rua text-asfalto-27 shadow-[3px_3px_0_var(--color-papel)]'
+                    : 'border-2 border-linha text-suave hover:border-papel hover:text-papel active:translate-y-px'
+                }`}
               >
                 {c.label}
               </button>
@@ -1521,28 +1510,34 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
                 transition={{ duration: 0.22 }}
-                className="w-full border border-l-[3px] px-4 py-4"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: legendary ? 'var(--color-lenda)' : solidVolt ? 'var(--color-neon-yellow)' : yellow ? 'rgba(253,225,0,0.10)' : 'var(--color-dark-gray)',
-                  borderLeftColor: legendary ? 'var(--color-giz)' : solidVolt ? 'var(--color-deep-black)' : 'var(--color-neon-yellow)',
-                }}
+                className={`relative w-full overflow-hidden px-4 py-4 ${
+                  legendary
+                    ? '-rotate-1 bg-ouro-27 text-asfalto-27'
+                    : solidVolt
+                    ? 'bg-rua text-asfalto-27'
+                    : yellow
+                    ? 'border-l-[4px] border-rua bg-concreto text-papel'
+                    : 'border-l-[4px] border-linha bg-concreto text-papel'
+                }`}
               >
+                {solidVolt && (
+                  <span aria-hidden className="rua-alambrado pointer-events-none absolute inset-x-0 top-0 h-16 [--alambrado:rgba(13,13,12,0.22)]" />
+                )}
                 <p
-                  className="font-display uppercase tracking-[0.3em] text-[9px] font-black mb-1.5"
-                  style={{ color: legendary ? 'var(--color-giz)' : solidVolt ? 'rgba(0,0,0,0.7)' : 'var(--color-neon-yellow)' }}
+                  className={`relative mb-1.5 font-prova text-[10.5px] font-bold uppercase tracking-[0.2em] ${
+                    legendary || solidVolt ? 'text-asfalto-27/75' : yellow ? 'text-rua' : 'text-mudo'
+                  }`}
                 >
                   {eyebrow}
                 </p>
                 <p
-                  className="font-impact leading-[1.1] mb-1.5"
-                  style={{ color: solidVolt ? 'var(--color-deep-black)' : '#FFFFFF', fontSize: yellow ? 'clamp(20px, 4.6vw, 28px)' : 'clamp(22px, 5vw, 30px)' }}
+                  className={`relative mb-1.5 leading-[1.05] ${yellow || legendary ? 'font-impact uppercase' : 'font-voz'}`}
+                  style={{ fontSize: yellow || legendary ? 'clamp(22px, 5.4vw, 30px)' : 'clamp(24px, 6vw, 32px)' }}
                 >
                   {headline}
                 </p>
                 {detail && (
-                  <p className="text-[12px]" style={{ fontFamily: 'var(--font-sans)', color: solidVolt ? 'rgba(0,0,0,0.75)' : legendary ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.65)' }}>
+                  <p className={`relative text-[13px] leading-snug ${legendary || solidVolt ? 'text-asfalto-27/80' : 'text-suave'}`}>
                     {detail}
                   </p>
                 )}
@@ -1554,10 +1549,10 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         <AnimatePresence mode="wait">
           {phase === 'leadin' && leadIn && (() => {
             const tone = leadIn.intent === 'attack'
-              ? 'var(--color-success)'
+              ? 'var(--color-rua)'
               : leadIn.intent === 'defend'
-              ? 'var(--color-danger)'
-              : 'var(--color-neon-yellow)';
+              ? 'var(--color-baixa)'
+              : 'var(--color-papel)';
             return (
               <motion.div
                 key={`leadin-${leadIn.kind}-${currentMinute}`}
@@ -1565,20 +1560,20 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 1.06 }}
                 transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-                className="w-full border border-l-[3px] px-4 py-5 text-center"
-                style={{ borderColor: 'var(--color-border)', borderLeftColor: tone, borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-dark-gray)' }}
+                className="w-full border-l-[4px] bg-concreto px-4 py-5 text-center"
+                style={{ borderLeftColor: tone }}
               >
                 <motion.p
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ duration: 0.9, repeat: Infinity }}
-                  className="font-display uppercase tracking-[0.32em] text-[9px] font-black mb-2"
+                  className="mb-2 font-prova text-[11px] font-bold uppercase tracking-[0.24em]"
                   style={{ color: tone }}
                 >
-                  {L('Atenção', 'Heads up')}
+                  — {L('Atenção', 'Heads up')}
                 </motion.p>
                 <p
-                  className="font-impact text-white leading-[1.1]"
-                  style={{ fontSize: 'clamp(22px, 5.6vw, 32px)' }}
+                  className="font-voz leading-[1.02] text-papel"
+                  style={{ fontSize: 'clamp(28px, 7.5vw, 38px)' }}
                 >
                   {leadIn.text}
                 </p>
@@ -1587,22 +1582,20 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                     o tier NÃO é revelado. Acertar dá buff; errar pune; ignorar = neutro. */}
                 {leadInReactable && (
                   <>
-                    <div className="mt-3 flex flex-col gap-1.5">
+                    <div className="mt-4 flex flex-col gap-2.5">
                       {leadIn.reactions.map((c) => (
                         <button
                           key={`${c.effect}-${c.label}`}
                           type="button"
                           onClick={() => reactToLeadIn(c)}
-                          className="px-3 py-2.5 border font-display uppercase tracking-[0.14em] text-[12px] font-black text-white/90 transition-colors active:scale-[0.98]"
-                          style={{ borderRadius: 'var(--radius-sm)', borderColor: 'color-mix(in srgb, ' + tone + ' 40%, transparent)' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = tone; e.currentTarget.style.color = '#000'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; e.currentTarget.style.color = ''; }}
+                          className="flex min-h-[50px] items-center justify-between gap-3 border-2 border-papel px-4 text-left font-impact text-[17px] uppercase leading-[1.05] text-papel transition-[transform,box-shadow,background-color,color,border-color] hover:border-rua hover:bg-rua hover:text-asfalto-27 hover:shadow-[4px_4px_0_var(--color-papel)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                         >
-                          {c.label}
+                          <span className="min-w-0">{c.label}</span>
+                          <span aria-hidden className="shrink-0">→</span>
                         </button>
                       ))}
                     </div>
-                    <div className="mt-2 mx-auto h-0.5 w-32 bg-deep-black/60 overflow-hidden" style={{ borderRadius: 999 }}>
+                    <div className="mx-auto mt-3 h-1 w-32 overflow-hidden bg-linha">
                       <motion.div
                         className="h-full"
                         style={{ backgroundColor: tone }}
@@ -1629,10 +1622,10 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               exit={{ opacity: 0 }}
               className="text-center"
             >
-              <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-neon-yellow mb-2">
-                {L('Intervalo', 'Half-time')}
+              <p className="mb-2 font-prova text-[11px] font-bold uppercase tracking-[0.24em] text-rua">
+                — {L('Intervalo', 'Half-time')}
               </p>
-              <p className="text-[12px] text-white/60">
+              <p className="font-voz text-[26px] leading-[1.05] text-papel">
                 {L('Recalculando o jogo com as suas decisões…', 'Recalculating the match with your decisions…')}
               </p>
             </motion.div>
@@ -1644,14 +1637,14 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              className="w-full border border-l-[3px] bg-dark-gray"
-              style={{ borderColor: 'var(--color-border)', borderLeftColor: 'var(--color-neon-yellow)', borderRadius: 'var(--radius-md)' }}
+              className="relative w-full overflow-hidden bg-rua text-asfalto-27"
             >
-              <p className="px-4 pt-3 pb-1 flex items-center gap-2 font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">
-                <Target className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Pênalti', 'Penalty')} · {penalty.minute}&prime;
+              <span aria-hidden className="rua-alambrado pointer-events-none absolute inset-x-0 top-0 h-20 [--alambrado:rgba(13,13,12,0.24)]" />
+              <p className="relative flex items-center gap-2 px-4 pt-3 font-prova text-[11px] font-bold uppercase tracking-[0.2em]">
+                <Target className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> {L('Pênalti', 'Penalty')} · {penalty.minute}&prime;
               </p>
-              <p className="px-4 pb-3 text-sm text-white font-semibold">{L('Quem vai bater?', 'Who takes it?')}</p>
-              <div className="px-3 pb-3 flex flex-col gap-1.5">
+              <p className="relative px-4 pb-3 pt-1 font-impact text-[30px] uppercase leading-none">{L('Quem vai bater?', 'Who takes it?')}</p>
+              <div className="relative flex flex-col gap-2 px-4 pb-4">
                 {(penaltyTakers && penaltyTakers.length > 0
                   ? penaltyTakers
                   : [{ id: 'def', name: eventsRef.current[penalty.idx]?.actor_name ?? L('Capitão', 'Captain'), finalizacao: 75, portrait: null }]
@@ -1660,18 +1653,15 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                     key={t.id}
                     type="button"
                     onClick={() => takePenalty(t)}
-                    className="flex items-center gap-2.5 px-3 py-2 border text-left transition-all active:scale-[0.98] group"
-                    style={{ borderColor: 'color-mix(in srgb, var(--color-neon-yellow) 40%, transparent)', borderRadius: 'var(--radius-sm)' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-neon-yellow)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
+                    className="flex min-h-[54px] min-w-0 items-center gap-3 bg-asfalto-27 px-3 py-2 text-left text-papel transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0_var(--color-papel)] active:translate-x-0 active:translate-y-0 active:shadow-none"
                   >
                     {t.portrait ? (
-                      <img src={t.portrait} alt="" className="h-7 w-7 rounded-full object-cover object-top border border-neon-yellow/50" />
+                      <img src={t.portrait} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover object-top" />
                     ) : (
-                      <span className="h-7 w-7 rounded-full border border-neon-yellow/40 grid place-items-center text-neon-yellow"><Target className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /></span>
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-rua text-rua"><Target className="h-4 w-4" strokeWidth={2.5} aria-hidden /></span>
                     )}
-                    <span className="flex-1 text-[13px] font-bold text-white group-hover:text-black">{t.name}</span>
-                    <span className="ole-num text-[15px] text-neon-yellow group-hover:text-black">
+                    <span className="min-w-0 flex-1 truncate font-voz text-[20px] leading-none">{t.name}</span>
+                    <span className="shrink-0 font-impact text-[20px] leading-none tabular-nums text-rua">
                       {t.finalizacao}
                     </span>
                   </button>
@@ -1687,33 +1677,31 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-              className="w-full border border-l-[3px] bg-dark-gray"
-              style={(() => { const tk = clutch.moment.intent === 'attack' ? 'var(--color-success)' : 'var(--color-danger)'; return { borderColor: 'var(--color-border)', borderLeftColor: tk, borderRadius: 'var(--radius-md)' }; })()}
+              className={`w-full border-l-[4px] bg-concreto ${clutch.moment.intent === 'attack' ? 'border-rua' : 'border-baixa'}`}
             >
               {(() => {
                 const atk = clutch.moment.intent === 'attack';
-                const tk = atk ? 'var(--color-success)' : 'var(--color-danger)';
                 const Icon = atk ? Crosshair : ShieldAlert;
                 return (
                   <>
-                    <p className="px-4 pt-3 flex items-center gap-2 font-display uppercase tracking-[0.28em] text-[10px] font-black" style={{ color: tk }}>
-                      <Icon className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden />
-                      {atk ? L('Chance de gol', 'Goal chance') : L('Perigo na área', 'Danger in the box')} · {clutch.moment.minute}&prime;
-                    </p>
-                    <p className="px-4 pt-1.5 pb-1 text-sm text-white font-bold">{clutch.moment.context}</p>
-                    <p className="px-4 pb-3 text-[11px] text-white/55">
+                    <div className="flex min-w-0 items-center justify-between gap-3 px-4 pt-3">
+                      <p className={`flex min-w-0 items-center gap-2 font-prova text-[11px] font-bold uppercase tracking-[0.2em] ${atk ? 'text-rua' : 'text-baixa'}`}>
+                        <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                        <span className="truncate">— {atk ? L('Chance de gol', 'Goal chance') : L('Perigo na área', 'Danger in the box')}</span>
+                      </p>
+                      <span className={`shrink-0 font-spray font-black text-[26px] leading-none tabular-nums ${atk ? 'text-rua' : 'text-baixa'}`}>{clutch.moment.minute}&prime;</span>
+                    </div>
+                    <p className="px-4 pb-1 pt-2 font-voz text-[26px] leading-[1.04] text-papel">{clutch.moment.context}</p>
+                    <p className="px-4 pb-3 text-[13px] text-suave">
                       {atk ? L(`${clutch.moment.actorName} na bola — o que fazer?`, `${clutch.moment.actorName} on the ball — what now?`) : L('Decisão na hora — como parar?', 'Split-second call — how to stop it?')}
                     </p>
-                    <div className="px-3 pb-3 grid grid-cols-3 gap-1.5">
+                    <div className="grid grid-cols-3 gap-2 px-4 pb-4">
                       {clutch.moment.options.map((o) => (
                         <button
                           key={o.key}
                           type="button"
                           onClick={() => resolveClutchChoice(o.key)}
-                          className="py-3 font-display uppercase tracking-[0.1em] text-[12px] font-black border text-white/90 transition-all active:scale-[0.97]"
-                          style={{ borderColor: 'color-mix(in srgb, ' + tk + ' 40%, transparent)', borderRadius: 'var(--radius-sm)' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = tk; e.currentTarget.style.color = '#000'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; e.currentTarget.style.color = ''; }}
+                          className="min-h-[54px] min-w-0 border-2 border-papel px-1 font-impact text-[15px] uppercase leading-[1.05] text-papel transition-[transform,box-shadow,background-color,color,border-color] [overflow-wrap:anywhere] hover:border-rua hover:bg-rua hover:text-asfalto-27 hover:shadow-[4px_4px_0_var(--color-papel)] active:translate-x-0.5 active:translate-y-0.5 active:bg-rua active:text-asfalto-27 active:shadow-[2px_2px_0_var(--color-papel)]"
                         >
                           {o.label}
                         </button>
@@ -1731,16 +1719,15 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              className="w-full border border-l-[3px] bg-dark-gray"
-              style={{ borderColor: 'var(--color-border)', borderLeftColor: 'var(--color-warning)', borderRadius: 'var(--radius-md)' }}
+              className="w-full border-l-[4px] border-atencao bg-concreto"
             >
-              <p className="px-4 pt-3 pb-1 flex items-center gap-2 font-display uppercase tracking-[0.28em] text-[10px] font-black" style={{ color: 'var(--color-warning)' }}>
-                <Cross className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Lesão', 'Injury')} · {forced.minute}&prime;
+              <p className="flex items-center gap-2 px-4 pb-1 pt-3 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-atencao">
+                <Cross className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> {L('Lesão', 'Injury')} · {forced.minute}&prime;
               </p>
-              <p className="px-4 pb-3 text-sm text-white font-semibold">
-                {L(`${forced.outName} caiu. Quem entra?`, `${forced.outName} is down. Who comes on?`)}
+              <p className="px-4 pb-3 text-[14px] text-suave">
+                <span className="font-voz text-[24px] leading-none text-papel">{forced.outName}</span> {L('caiu. Quem entra?', 'is down. Who comes on?')}
               </p>
-              <div className="px-3 pb-3 flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2 px-4 pb-4">
                 {(benchPool.length > 0
                   ? benchPool
                   : [{ id: 'res', name: L('Reserva', 'Sub'), pos: '—', ovr: 70, fatigue: 0, portrait: null }]
@@ -1749,14 +1736,12 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                     key={b.id}
                     type="button"
                     onClick={() => resolveInjury(b)}
-                    className="flex items-center gap-2.5 px-3 py-2 border text-left transition-all active:scale-[0.98] group"
-                    style={{ borderColor: 'color-mix(in srgb, var(--color-warning) 40%, transparent)', borderRadius: 'var(--radius-sm)' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-warning)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
+                    className="flex min-h-[52px] min-w-0 items-center gap-3 border-2 border-linha bg-asfalto-27 px-3 py-2 text-left transition-colors hover:border-rua"
                   >
-                    <span className="ole-num text-[15px] w-8 shrink-0 text-center" style={{ color: 'var(--color-warning)' }}>{b.ovr}</span>
-                    <span className="flex-1 text-[13px] font-bold text-white group-hover:text-black">{b.name}</span>
-                    <span className="text-[10px] uppercase tracking-[0.12em] text-white/45 group-hover:text-black/60">{posLabel(b.pos)}</span>
+                    <span className="w-8 shrink-0 text-center font-impact text-[19px] leading-none tabular-nums text-papel">{b.ovr}</span>
+                    <span className="min-w-0 flex-1 truncate font-voz text-[20px] leading-none text-papel">{b.name}</span>
+                    <span className="shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.1em] text-mudo">{posLabel(b.pos)}</span>
+                    <span aria-hidden className="shrink-0 font-impact text-[17px] text-rua">→</span>
                   </button>
                 ))}
               </div>
@@ -1769,34 +1754,30 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              className="w-full border border-l-[3px] bg-dark-gray"
-              style={{ borderColor: 'var(--color-border)', borderLeftColor: 'var(--color-neon-yellow)', borderRadius: 'var(--radius-md)' }}
+              className="w-full border-l-[4px] border-rua bg-concreto"
             >
-              <div className="px-4 pt-3 pb-1 flex items-center justify-between">
-                <span className="flex items-center gap-2 font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">
-                  <ArrowRightLeft className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Substituição', 'Substitution')} · {minute}&prime;
+              <div className="flex items-center justify-between gap-3 px-4 pb-1 pt-3">
+                <span className="flex min-w-0 items-center gap-2 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-rua">
+                  <ArrowRightLeft className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden /> <span className="truncate">{L('Substituição', 'Substitution')} · {minute}&prime;</span>
                 </span>
-                <button type="button" onClick={() => { setSubOut(null); setPhase('playing'); scheduleNext(300); }} className="text-[10px] text-white/40 hover:text-white uppercase tracking-[0.14em]">{L('Cancelar', 'Cancel')}</button>
+                <button type="button" onClick={() => { setSubOut(null); setPhase('playing'); scheduleNext(300); }} className="min-h-[40px] shrink-0 font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-mudo hover:text-papel">{L('Cancelar', 'Cancel')}</button>
               </div>
-              <p className="px-4 pb-3 text-[12px] text-white/70">
+              <p className="px-4 pb-3 text-[13px] text-suave">
                 {emIngles()
-                  ? <>Off: <span className="text-white font-bold">{field.find((p) => p.id === subOut)?.name}</span> — who comes on? <span className="text-white/40">(any position)</span></>
-                  : <>Sai <span className="text-white font-bold">{field.find((p) => p.id === subOut)?.name}</span> — quem entra? <span className="text-white/40">(qualquer posição)</span></>}
+                  ? <>Off: <span className="font-voz text-[22px] leading-none text-papel">{field.find((p) => p.id === subOut)?.name}</span> — who comes on? <span className="text-mudo">(any position)</span></>
+                  : <>Sai <span className="font-voz text-[22px] leading-none text-papel">{field.find((p) => p.id === subOut)?.name}</span> — quem entra? <span className="text-mudo">(qualquer posição)</span></>}
               </p>
-              <div className="px-3 pb-3 flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2 px-4 pb-4">
                 {benchPool.map((b) => (
                   <button
                     key={b.id}
                     type="button"
                     onClick={() => applyAnytimeSub(b)}
-                    className="flex items-center gap-2.5 px-3 py-2 border text-left transition-all active:scale-[0.98] group"
-                    style={{ borderColor: 'color-mix(in srgb, var(--color-neon-yellow) 40%, transparent)', borderRadius: 'var(--radius-sm)' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-neon-yellow)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
+                    className="flex min-h-[52px] min-w-0 items-center gap-3 border-2 border-linha bg-asfalto-27 px-3 py-2 text-left transition-colors hover:border-rua"
                   >
-                    <span className="ole-num text-[15px] text-neon-yellow group-hover:text-black w-8 shrink-0 text-center">{b.ovr}</span>
-                    <span className="flex-1 text-[13px] font-bold text-white group-hover:text-black">{b.name}</span>
-                    <span className="text-[10px] uppercase tracking-[0.12em] text-white/45 group-hover:text-black/60">{posLabel(b.pos)} · {L('fad', 'fat')} {Math.round(b.fatigue)}%</span>
+                    <span className="w-8 shrink-0 text-center font-impact text-[19px] leading-none tabular-nums text-papel">{b.ovr}</span>
+                    <span className="min-w-0 flex-1 truncate font-voz text-[20px] leading-none text-papel">{b.name}</span>
+                    <span className="shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.08em] text-mudo">{posLabel(b.pos)} · {L('fad', 'fat')} {Math.round(b.fatigue)}%</span>
                   </button>
                 ))}
               </div>
@@ -1809,23 +1790,24 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              className="w-full border border-l-[3px] bg-dark-gray text-center"
-              style={{ borderColor: 'var(--color-border)', borderLeftColor: 'var(--color-danger)', borderRadius: 'var(--radius-md)' }}
+              className="rua-grao w-full bg-concreto px-4 pb-4 pt-4 text-center"
             >
-              <p className="px-4 pt-4 flex items-center justify-center gap-2 font-display uppercase tracking-[0.28em] text-[10px] font-black" style={{ color: 'var(--color-danger)' }}>
-                <AlertTriangle className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Cartão Vermelho', 'Red Card')} · {forced.minute}&prime;
+              {/* O cartão em si: retângulo do token de evento, levantado torto. */}
+              <span aria-hidden className="mx-auto mb-3 block h-14 w-10 rotate-[8deg] bg-[var(--color-event-card-red)] shadow-[3px_3px_0_var(--color-asfalto-27)]" />
+              <p className="flex items-center justify-center gap-2 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--color-event-card-red)]">
+                <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> {L('Cartão vermelho', 'Red card')} · {forced.minute}&prime;
               </p>
-              <p className="px-4 pt-1 pb-3 text-sm text-white font-semibold">
-                {L(`${forced.outName} foi expulso. Vai ter que segurar com 10!`, `${forced.outName} sent off. Hold on with 10!`)}
+              <p className="mt-2 font-voz text-[30px] leading-none text-papel">{forced.outName}</p>
+              <p className="mb-4 mt-1.5 text-[14px] text-suave">
+                {L('Foi expulso. Vai ter que segurar com 10.', 'Sent off. Hold on with 10.')}
               </p>
-              <div className="px-4 pb-4">
+              <div>
                 <button
                   type="button"
                   onClick={resolveRedCard}
-                  className="w-full py-2.5 text-black font-display uppercase tracking-[0.16em] text-[12px] font-black transition-all active:scale-[0.99] hover:bg-white"
-                  style={{ backgroundColor: 'var(--color-danger)', borderRadius: 'var(--radius-sm)' }}
+                  className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 bg-rua font-impact text-[19px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)]"
                 >
-                  {L('Segurar com 10', 'Hold with 10')}
+                  {L('Segurar com 10', 'Hold with 10')} <span aria-hidden>→</span>
                 </button>
               </div>
             </motion.div>
@@ -1859,26 +1841,18 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               animate={{ opacity: 1, y: 0 }}
               className="w-full text-left"
             >
+              {/* O RESULTADO (DS 2027, PDF pág. 6) — placar em spray, frase na voz,
+                  MVP em post-it de ouro, fita com o EXP real. Funde o antigo
+                  "Vitória · arco" + card amarelo de MVP numa peça só. #9: assists
+                  reais + fallback quando ninguém marcou (0-0): premia o goleiro/
+                  destaque por defesas/finalizações (statsRef) pra NUNCA ficar sem craque. */}
               {(() => {
                 // No empate, a disputa de pênaltis decide o vencedor.
                 const decided = shootoutResult ? shootoutResult.winner : homeScore > awayScore ? 'home' : homeScore < awayScore ? 'away' : null;
                 const res = decided === 'home' ? 'win' : decided === 'away' ? 'loss' : 'draw';
-                const resWord = res === 'win' ? L('Vitória', 'Win') : res === 'loss' ? L('Não foi dessa vez', 'Not this time') : L('Empate', 'Draw');
-                const resColor = res === 'win' ? 'var(--color-success)' : res === 'loss' ? 'var(--color-danger)' : 'var(--color-neon-yellow)';
                 const detail = shootoutResult
                   ? L(`nos pênaltis ${shootoutResult.homeTally}–${shootoutResult.awayTally}`, `on penalties ${shootoutResult.homeTally}–${shootoutResult.awayTally}`)
                   : getArcDescription(plan.narrative_arc); // #14: arco em PT legível
-                return (
-                  <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black mb-4 text-center" style={{ color: resColor }}>
-                    {resWord} · {detail}
-                  </p>
-                );
-              })()}
-
-              {/* CARD DE MVP — padrão Crown Jewel (hero amarelo). #9: assists reais +
-                  fallback quando ninguém marcou (0-0): premia o goleiro/destaque por
-                  defesas/finalizações (statsRef) pra NUNCA ficar sem craque. */}
-              {(() => {
                 const proj = plan.mvp_projection;
                 const fallback = (() => {
                   if (proj) return null;
@@ -1893,66 +1867,64 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                   return { name: card.name, goals: best.s.goals, assists: 0, rating: matchRating(card.ovr, best.s) };
                 })();
                 const mvp = proj ?? fallback;
-                if (!mvp) return null;
-                const parts: string[] = [];
-                if (mvp.goals > 0) parts.push(`${mvp.goals} ${mvp.goals === 1 ? L('gol', 'goal') : L('gols', 'goals')}`);
-                if (mvp.assists > 0) parts.push(`${mvp.assists} ${mvp.assists === 1 ? 'assist.' : 'assist.'}`);
-                parts.push(`${L('Nota', 'Rating')} ${mvp.rating.toFixed(1)}`);
                 return (
-                  <div className="mb-4 px-5 py-5 bg-neon-yellow" style={{ borderRadius: 'var(--radius-md)' }}>
-                    <Hashtag className="mb-2 text-black/70">{L('#craquedojogo #mvp', '#playerofthematch #mvp')}</Hashtag>
-                    <p
-                      className="font-impact uppercase text-black leading-[1.05]"
-                      style={{ fontSize: 'clamp(34px, 9vw, 52px)' }}
-                    >
-                      {shortName(mvp.name)}
-                    </p>
-                    <span aria-hidden className="block w-12 h-[3px] bg-black/80 mt-2 mb-3" />
-                    <p className="font-display uppercase tracking-[0.2em] text-[12px] font-black text-black/85">
-                      {parts.join(' · ')}
-                    </p>
-                  </div>
+                  <ResultadoRua
+                    className="-mx-5 mb-5"
+                    homeName={homeName ?? plan.home_short}
+                    awayName={awayName ?? plan.away_short}
+                    homeScore={homeScore}
+                    awayScore={awayScore}
+                    resultado={res}
+                    rotuloDir={L('Partida rápida', 'Quick match')}
+                    detalhe={detail}
+                    mvp={mvp ? { name: shortName(mvp.name), goals: mvp.goals, assists: mvp.assists, rating: mvp.rating } : null}
+                    exp={resultadoExp ?? null}
+                  />
                 );
               })()}
 
               {/* Estatísticas do jogo */}
-              <div className="grid grid-cols-3 gap-px bg-white/8 border border-white/8 text-center mb-4" style={{ borderRadius: 'var(--radius-sm)' }}>
+              <p className="mb-2 font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">— {L('Números do jogo', 'Match numbers')}</p>
+              <div className="mb-5 grid grid-cols-3 gap-px bg-linha text-center">
                 {[
                   { l: L('Posse', 'Possession'), h: `${doneInfo.stats.possessionHome}%`, a: `${100 - doneInfo.stats.possessionHome}%` },
                   { l: L('Finalizações', 'Shots'), h: doneInfo.stats.homeShots, a: doneInfo.stats.awayShots },
                   { l: L('Defesas', 'Saves'), h: doneInfo.stats.homeSaves, a: doneInfo.stats.awaySaves },
                 ].map((s) => (
-                  <div key={s.l} className="bg-deep-black py-3">
-                    <p className="ole-num text-neon-yellow text-lg leading-none">{s.h}</p>
-                    <p className="text-[8px] uppercase tracking-[0.18em] text-white/45 my-1">{s.l}</p>
-                    <p className="ole-num text-white/80 text-lg leading-none">{s.a}</p>
+                  <div key={s.l} className="bg-concreto px-1 py-3">
+                    <p className="font-spray font-black text-[30px] leading-none tabular-nums text-rua">{s.h}</p>
+                    <p className="my-1.5 font-prova text-[9.5px] font-bold uppercase tracking-[0.12em] text-mudo">{s.l}</p>
+                    <p className="font-spray font-black text-[24px] leading-none tabular-nums text-suave">{s.a}</p>
                   </div>
                 ))}
               </div>
 
               {/* Leitura de Jogo — o placar da inteligência do manager */}
-              <div className="border-t border-white/8 pt-3">
-                <p className="font-display uppercase tracking-[0.26em] text-[10px] font-black text-neon-yellow mb-2 text-center">
-                  {L('Leitura de Jogo', 'Game Reading')} · {doneInfo.reading.good}/{doneInfo.reading.total}
-                </p>
+              <div className="bg-concreto px-4 py-4">
+                <div className="mb-3 flex items-baseline justify-between gap-3">
+                  <p className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">— {L('Leitura de jogo', 'Game reading')}</p>
+                  <p className="shrink-0 font-spray font-black text-[30px] leading-none tabular-nums text-rua">
+                    {doneInfo.reading.good}<span className="text-[0.6em] text-mudo">/{doneInfo.reading.total}</span>
+                  </p>
+                </div>
                 {narration?.reading && (
-                  <p className="text-white/85 text-[15px] leading-snug text-center mb-3 px-2">
+                  <p className="mb-3 font-voz text-[22px] leading-[1.08] text-papel">
                     {narration.reading}
                   </p>
                 )}
                 {doneInfo.verdicts.length === 0 ? (
-                  <p className="text-[11px] text-white/50 text-center">
+                  <p className="text-[13px] text-mudo">
                     {L('Você não decidiu nada — o Analista falou sozinho.', 'You decided nothing — the Analyst talked to himself.')}
                   </p>
                 ) : (
-                  <ul className="flex flex-col gap-1.5">
+                  <ul className="flex flex-col">
                     {doneInfo.verdicts.map((v) => (
-                      <li key={v.beatId} className="flex items-start gap-2 text-[12px] leading-snug">
-                        <span style={{ color: v.kind === 'hit' ? 'var(--color-success)' : v.kind === 'neutral' ? 'var(--color-neon-yellow)' : 'var(--color-danger)' }}>
+                      <li key={v.beatId} className="flex items-start gap-2.5 border-b border-linha py-2.5 text-[13px] leading-snug last:border-b-0">
+                        <span className={`shrink-0 font-impact text-[16px] leading-none ${v.kind === 'hit' ? 'text-alta' : v.kind === 'neutral' ? 'text-mudo' : 'text-baixa'}`}>
                           {v.kind === 'hit' ? '✓' : v.kind === 'neutral' ? '•' : '✗'}
                         </span>
-                        <span className="text-white/80">
-                          <span className="text-white/45">{v.minute}&prime; {v.choiceLabel} — </span>
+                        <span className="text-suave">
+                          <span className="font-prova text-[11px] font-bold uppercase text-mudo">{v.minute}&prime; {v.choiceLabel} — </span>
                           {richText(v.text, '13px')}
                         </span>
                       </li>
@@ -1960,7 +1932,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                   </ul>
                 )}
                 {doneInfo.skipped > 0 && (
-                  <p className="text-[11px] text-white/40 mt-2 text-center">
+                  <p className="mt-3 font-prova text-[11px] text-mudo">
                     {emIngles()
                       ? `You let ${doneInfo.skipped} decision${doneInfo.skipped === 1 ? '' : 's'} slip — the Analyst called and nobody answered.`
                       : <>Você deixou passar {doneInfo.skipped} decisã{doneInfo.skipped === 1 ? 'o' : 'ões'} — o Analista chamou e ninguém respondeu.</>}
@@ -1980,17 +1952,17 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         const portrait = portraitOf?.(latest.actorId, latest.side) ?? null;
         return (
           <div className="px-4 pb-3">
-            <div className="flex items-start gap-3 border-l-[3px] pl-3 py-1" style={{ borderLeftColor: 'var(--color-neon-yellow)' }}>
+            <div className="flex items-start gap-3 border-l-[3px] border-rua py-1 pl-3">
               {portrait ? (
-                <img src={portrait} alt="" className="h-9 w-9 rounded-full object-cover object-top shrink-0 border border-neon-yellow/60" />
+                <img src={portrait} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover object-top" />
               ) : (
-                <span className="h-9 w-9 rounded-full shrink-0 border border-neon-yellow/40 bg-dark-gray grid place-items-center ole-num text-neon-yellow text-[12px]" aria-hidden>{latest.minute}</span>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-concreto font-spray font-black text-[17px] text-rua" aria-hidden>{latest.minute}</span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="font-display uppercase tracking-[0.24em] text-[9px] font-black text-neon-yellow mb-0.5">
+                <p className="mb-1 font-prova text-[10.5px] font-bold uppercase tracking-[0.2em] text-mudo">
                   {latest.minute}&prime; · {L('Narração', 'Commentary')}
                 </p>
-                <p className={`text-[14px] leading-snug ${FEED_STYLE[latest.kind]}`} style={{ fontFamily: 'var(--font-sans)' }}>
+                <p className={`text-[14px] leading-snug ${FEED_STYLE[latest.kind]}`}>
                   {richText(latest.text, '15px')}
                 </p>
               </div>
@@ -2007,32 +1979,32 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         const canPick = !legacyActive && availableBoosters.length > 0;
         return (
           <div className="px-3 pt-1 pb-2">
-            <style>{`.legacy-ring::before{content:'';position:absolute;inset:0;z-index:2;border-radius:inherit;border:1.5px solid var(--color-neon-yellow);pointer-events:none}`}</style>
 
             <div className="grid grid-cols-2 gap-2">
               {/* Formação — só o número, cicla ao toque */}
               <button
                 type="button"
                 onClick={cycleFormation}
-                className="py-2.5 flex items-center justify-center transition-colors active:scale-[0.98]"
-                style={{ borderRadius: 'var(--radius-sm)', backgroundColor: 'transparent', border: '1px solid var(--color-border)' }}
+                aria-label={L(`Formação ${formation} — tocar pra trocar`, `Formation ${formation} — tap to change`)}
+                className="flex min-h-[48px] items-center justify-center gap-2 border-2 border-linha transition-colors hover:border-papel active:translate-y-px"
               >
-                <span className="ole-num" style={{ fontSize: '16px', color: 'var(--color-neon-yellow)' }}>{formation}</span>
+                <span className="font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{L('Formação', 'Formation')}</span>
+                <span className="font-impact text-[18px] leading-none tabular-nums text-papel">{formation}</span>
               </button>
 
               {/* Legacy — mostra a CONTAGEM de buffs; toque abre a lista pra escolher */}
-              <div className={`relative ${canPick ? 'legacy-ring' : ''}`} style={{ borderRadius: 'var(--radius-sm)' }}>
+              <div className="relative">
                 <button
                   type="button"
                   onClick={() => { if (canPick) setLegacyPickerOpen((v) => !v); }}
                   disabled={!canPick}
-                  className="relative w-full py-2.5 font-display uppercase tracking-[0.12em] text-[11px] font-black flex items-center justify-center gap-1.5 transition-colors active:scale-[0.98] disabled:cursor-default truncate"
-                  style={{
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: legacyActive ? 'var(--color-neon-yellow)' : canPick ? 'var(--color-deep-black)' : 'transparent',
-                    color: legacyActive ? '#000' : (noLegend || allUsed) ? 'rgba(255,255,255,0.35)' : 'var(--color-neon-yellow)',
-                    border: legacyActive || canPick ? 'none' : '1px solid var(--color-border)',
-                  }}
+                className={`relative flex min-h-[48px] w-full items-center justify-center gap-1.5 truncate px-2 font-impact text-[16px] uppercase leading-none transition-colors disabled:cursor-default ${
+                    legacyActive
+                      ? 'bg-ouro-27 text-asfalto-27'
+                      : canPick
+                      ? 'border-[3px] border-ouro-27 bg-asfalto-27 text-ouro-27 active:translate-y-px'
+                      : 'border-2 border-dashed border-fio text-fio'
+                  }`}
                 >
                   {legacyActive ? L('★ Legacy ativo', '★ Legacy active') : allUsed ? L('★ Legacy usado', '★ Legacy used') : noLegend ? L('★ Sem lenda', '★ No legend') : `★ Legacy (${availableBoosters.length})`}
                 </button>
@@ -2041,8 +2013,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
 
             {/* Lista de buffs disponíveis — escolha contextual (defesa sob pressão, ataque pra pressionar) */}
             {legacyPickerOpen && canPick && (
-              <div className="mt-2 flex flex-col gap-1.5" style={{ borderRadius: 'var(--radius-sm)' }}>
-                <p className="text-[9px] uppercase tracking-[0.16em] text-white/40 font-display font-bold px-0.5">
+              <div className="mt-2 flex flex-col gap-2">
+                <p className="px-0.5 font-prova text-[10.5px] font-bold uppercase tracking-[0.12em] text-mudo">
                   {L('Ativar buff — defesa sob pressão · ataque pra pressionar', 'Activate buff — defence under pressure · attack to push')}
                 </p>
                 {availableBoosters.map((b) => {
@@ -2052,21 +2024,13 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                       key={b.id}
                       type="button"
                       onClick={() => activateLegacy(b)}
-                      className="w-full flex items-center justify-between gap-2 px-3 py-2.5 transition-colors active:scale-[0.99] text-left"
-                      style={{ borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--color-deep-black)', border: '1px solid var(--color-border)' }}
+                      className="flex min-h-[50px] w-full min-w-0 items-center justify-between gap-2 border-l-[3px] border-ouro-27 bg-concreto px-3 py-2 text-left transition-colors hover:bg-linha active:translate-y-px"
                     >
-                      <span className="min-w-0 flex items-center gap-2">
-                        <span className="text-[13px]" style={{ color: 'var(--color-neon-yellow)' }}>★</span>
-                        <span className="text-[12px] font-bold text-white truncate">{b.name}</span>
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="text-[14px] text-ouro-27" aria-hidden>★</span>
+                        <span className="truncate font-voz text-[20px] leading-none text-papel">{b.name}</span>
                       </span>
-                      <span
-                        className="shrink-0 px-2 py-0.5 text-[10px] font-display font-black uppercase tracking-[0.12em]"
-                        style={{
-                          borderRadius: 'var(--radius-sm)',
-                          color: def ? 'var(--color-success, #22c55e)' : 'var(--color-neon-yellow)',
-                          border: `1px solid ${def ? 'var(--color-success, #22c55e)' : 'var(--color-neon-yellow)'}`,
-                        }}
-                      >
+                      <span className={`shrink-0 px-2 py-0.5 font-prova text-[10.5px] font-bold uppercase tracking-[0.08em] ${def ? 'border-2 border-papel text-papel' : 'bg-ouro-27 text-asfalto-27'}`}>
                         +{b.pct}% {legacyLabel(b.label)}
                       </span>
                     </button>
@@ -2081,16 +2045,15 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       {/* MEU ELENCO EM CAMPO — só o nosso time (o adversário não interessa ver).
           Toca num dos teus pra trocar a qualquer momento. */}
       {homeFive.length >= 5 && phase !== 'done' && (
-        <div className="px-3 pb-3 pt-2 border-t border-white/8 flex flex-col gap-1">
-          <div className="flex items-center gap-2 mb-0.5">
-            {homeCrestUrl && <img src={homeCrestUrl} alt="" className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />}
-            <span className="font-display uppercase tracking-[0.24em] text-[9px] font-black text-neon-yellow truncate">
-              {homeName ?? plan.home_short} · {L('em campo', 'on the pitch')}
+        <div className="flex flex-col gap-1.5 border-t border-linha px-3 pb-4 pt-3">
+          <div className="mb-1 flex min-w-0 items-center gap-2">
+            {homeCrestUrl && <img src={homeCrestUrl} alt="" className="h-4 w-4 object-contain" referrerPolicy="no-referrer" />}
+            <span className="truncate font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+              — {homeName ?? plan.home_short} · {L('em campo', 'on the pitch')}
             </span>
             {/* Teto de substituições — toque num jogador pra trocar. */}
             <span
-              className="ml-auto shrink-0 flex items-center gap-1 font-display uppercase tracking-[0.14em] text-[9px] font-black"
-              style={{ color: subsUsed >= MAX_SUBS ? 'var(--color-warning)' : 'rgba(255,255,255,0.5)' }}
+              className={`ml-auto flex shrink-0 items-center gap-1 font-prova text-[11px] font-bold tabular-nums ${subsUsed >= MAX_SUBS ? 'text-atencao' : 'text-mudo'}`}
               title={L('Substituições usadas (intervalo + jogo)', 'Substitutions used (half-time + match)')}
             >
               <ArrowRightLeft className="w-3 h-3" strokeWidth={2.5} aria-hidden />

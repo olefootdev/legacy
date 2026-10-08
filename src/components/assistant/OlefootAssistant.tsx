@@ -23,7 +23,6 @@ import {
   Move,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Hashtag } from '@/components/ui';
 import { moedaDoJogo } from '@/wallet/constants';
 import { L } from '@/i18n/L';
 
@@ -277,7 +276,7 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0, opacity: 0 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 right-6 sm:bottom-8 sm:right-8 z-50 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-neon-yellow text-black transition-colors hover:bg-white"
+        className="fixed bottom-24 right-6 sm:bottom-8 sm:right-8 z-50 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-rua text-asfalto-27 shadow-[4px_4px_0_var(--color-papel)] transition-colors hover:bg-papel"
         aria-label={L('Abrir assistente', 'Open assistant')}
       >
         <HelpCircle className="h-7 w-7 sm:h-8 sm:w-8" strokeWidth={2.5} />
@@ -295,16 +294,16 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
       >
         <button
           onClick={() => setIsMinimized(false)}
-          className="flex items-center gap-3 border border-white/16 bg-panel px-4 py-3 transition-colors hover:border-white/30"
+          className="flex items-center gap-3 border-2 border-linha bg-asfalto-27 px-4 py-3 transition-colors hover:border-papel"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-card-hi">
-            <HelpCircle className="h-5 w-5 text-white" strokeWidth={2.5} />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-rua">
+            <HelpCircle className="h-5 w-5 text-rua" strokeWidth={2.5} />
           </div>
           <div className="text-left">
-            <p className="font-impact text-[15px] uppercase leading-[1.1] text-white">
+            <p className="font-impact text-[17px] uppercase leading-[1.1] text-papel">
               {L('Assistente', 'Assistant')}
             </p>
-            <p className="font-mono text-[10.5px] text-cimento">
+            <p className="font-prova text-[11px] text-mudo">
               {currentStepIndex + 1}/{TUTORIAL_STEPS.length}
             </p>
           </div>
@@ -340,23 +339,23 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
           isDragging && 'cursor-grabbing'
         )}
       >
-        <div className="relative overflow-hidden border border-white/16 bg-deep-black">
+        <div className="relative overflow-hidden border-2 border-linha bg-asfalto-27">
 
           {/* Header com handle para arrastar */}
           <div
-            className="relative z-10 flex items-center justify-between border-b border-white/10 bg-nav px-4 py-3 cursor-grab active:cursor-grabbing"
+            className="relative z-10 flex items-center justify-between border-b-2 border-linha bg-concreto px-4 py-3 cursor-grab active:cursor-grabbing"
             onPointerDown={(e) => dragControls.start(e)}
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/16 bg-card-hi">
-                <HelpCircle className="h-5 w-5 text-white" strokeWidth={2.5} />
+              <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-rua">
+                <HelpCircle className="h-5 w-5 text-rua" strokeWidth={2.5} />
               </div>
               <div>
-                <h3 className="font-impact text-[17px] uppercase leading-[1.1] text-white flex items-center gap-2">
+                <h3 className="flex items-center gap-2 font-impact text-[19px] uppercase leading-[1.1] text-papel">
                   {L('Assistente Olefoot', 'Olefoot Assistant')}
-                  <Move className="h-3 w-3 text-cimento" />
+                  <Move className="h-3 w-3 text-mudo" />
                 </h3>
-                <p className="font-mono text-[10.5px] text-cimento">
+                <p className="font-prova text-[10.5px] text-mudo">
                   {L(`Passo ${currentStepIndex + 1} de ${TUTORIAL_STEPS.length} • Arraste para mover`, `Step ${currentStepIndex + 1} of ${TUTORIAL_STEPS.length} • Drag to move`)}
                 </p>
               </div>
@@ -364,14 +363,14 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsMinimized(true)}
-                className="rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                className="p-2 text-mudo transition-colors hover:text-papel"
                 aria-label={L('Minimizar', 'Minimize')}
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
               <button
                 onClick={handleClose}
-                className="rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                className="p-2 text-mudo transition-colors hover:text-papel"
                 aria-label={L('Fechar', 'Close')}
               >
                 <X className="h-4 w-4" />
@@ -380,30 +379,30 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
           </div>
 
         {/* Progress bar */}
-        <div className="relative h-1 bg-white/5">
+        <div className="relative h-1.5 bg-linha">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.3 }}
-            className="h-full bg-neon-yellow"
+            className="h-full bg-rua"
           />
         </div>
 
         {/* Content */}
         <div className="relative z-10 p-5 space-y-4">
-          {/* Categoria vira #hashtag (VOLT2) */}
-          <Hashtag>#{categoryConfig.label.toLowerCase()}</Hashtag>
+          {/* Categoria vira #hashtag em prova */}
+          <span className="font-prova text-[11px] font-bold text-mudo">#{categoryConfig.label.toLowerCase()}</span>
 
           {/* Step icon + title */}
           <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center border border-white/16 bg-card-hi">
-              <StepIcon className="h-7 w-7 text-white" strokeWidth={2.5} />
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center border-2 border-rua">
+              <StepIcon className="h-7 w-7 text-rua" strokeWidth={2.5} />
             </div>
             <div className="min-w-0 flex-1">
-              <h4 className="font-impact text-xl uppercase leading-[1.1] text-white">
+              <h4 className="font-impact text-[24px] uppercase leading-[1.02] text-papel">
                 {currentStep.title}
               </h4>
-              <p className="mt-2 text-sm leading-relaxed text-giz">
+              <p className="mt-2 text-[14px] leading-relaxed text-suave">
                 {currentStep.description}
               </p>
             </div>
@@ -411,15 +410,15 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
 
           {/* Tips */}
           {currentStep.tips && currentStep.tips.length > 0 && (
-            <div className="space-y-2 border border-white/10 bg-panel p-3">
-              <p className="flex items-center gap-1.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
+            <div className="space-y-2 border-l-[3px] border-fio bg-concreto p-3">
+              <p className="flex items-center gap-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo">
                 <Sparkles className="h-3 w-3" />
                 {L('Dicas importantes', 'Key tips')}
               </p>
               <ul className="space-y-1.5">
                 {currentStep.tips.map((tip, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs text-giz">
-                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-cimento" />
+                  <li key={i} className="flex items-start gap-2 text-[13px] text-suave">
+                    <span className="mt-[7px] h-1.5 w-1.5 shrink-0 bg-rua" />
                     <span>{tip}</span>
                   </li>
                 ))}
@@ -432,7 +431,7 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
             <a
               href={currentStep.action.href}
               onClick={currentStep.action.onClick}
-              className="block w-full border border-white/30 px-4 py-2.5 text-center font-display text-sm uppercase tracking-wider text-white transition-colors hover:border-white"
+              className="flex min-h-[48px] w-full items-center justify-center gap-2 border-2 border-papel px-4 text-center font-impact text-[17px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
             >
               {currentStep.action.label}
             </a>
@@ -440,15 +439,15 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
         </div>
 
         {/* Footer navigation */}
-        <div className="relative z-10 flex items-center justify-between border-t border-white/10 bg-nav px-4 py-3">
+        <div className="relative z-10 flex items-center justify-between gap-2 border-t-2 border-linha bg-concreto px-4 py-3">
           <button
             onClick={handlePrev}
             disabled={isFirstStep}
             className={cn(
-              'flex items-center gap-1.5 rounded-sm px-3 py-2 font-display text-xs font-bold uppercase tracking-wider transition-all',
+              'flex min-h-[40px] items-center gap-1.5 px-2 font-impact text-[15px] uppercase leading-none transition-colors',
               isFirstStep
-                ? 'cursor-not-allowed text-white/30'
-                : 'text-white/70 hover:bg-white/10 hover:text-white',
+                ? 'cursor-not-allowed text-fio'
+                : 'text-suave hover:text-papel',
             )}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -461,12 +460,12 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
                 key={step.id}
                 onClick={() => handleStepSelect(i)}
                 className={cn(
-                  'h-2 rounded-full transition-all',
+                  'h-2 transition-all',
                   i === currentStepIndex
-                    ? 'w-6 bg-neon-yellow'
+                    ? 'w-6 bg-rua'
                     : completedSteps.has(step.id)
-                      ? 'w-2 bg-alta'
-                      : 'w-2 bg-white/20 hover:bg-white/40',
+                      ? 'w-2 bg-papel'
+                      : 'w-2 bg-linha hover:bg-fio',
                 )}
                 aria-label={L(`Ir para passo ${i + 1}`, `Go to step ${i + 1}`)}
               />
@@ -475,7 +474,7 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
 
           <button
             onClick={handleNext}
-            className="flex items-center gap-1.5 rounded-sm bg-neon-yellow px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-black transition-all hover:bg-white"
+            className="flex min-h-[40px] items-center gap-1.5 bg-rua px-3 font-impact text-[15px] uppercase leading-none text-asfalto-27 shadow-[3px_3px_0_var(--color-papel)] transition-colors hover:bg-papel"
           >
             {isLastStep ? (
               <>

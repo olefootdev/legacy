@@ -41,10 +41,11 @@ interface Props {
   onGoToMarket?: () => void;
 }
 
+// Fadiga é delta de jogo: baixa = cansado, atenção = no limite, papel = inteiro.
 function fatigueTone(f: number): string {
-  if (f >= FATIGUE_EXHAUSTED_THRESHOLD) return 'var(--color-danger, #ef4444)';
-  if (f >= 65) return 'var(--color-warning, #f59e0b)';
-  return 'var(--color-success, #22c55e)';
+  if (f >= FATIGUE_EXHAUSTED_THRESHOLD) return 'var(--color-baixa)';
+  if (f >= 65) return 'var(--color-atencao)';
+  return 'var(--color-suave)';
 }
 
 // Ganho ESTIMADO de fadiga por partida (titular joga ~90'). Heurística pra
@@ -102,6 +103,7 @@ export function MatchPreviewModal({
   onGoToMarket,
 }: Props) {
   const players = useGameStore((s) => s.players);
+  const clubName = useGameStore((s) => s.club.name);
   const lineup = useGameStore((s) => s.lineup);
   const playerHealth = useGameStore((s) => s.playerHealth);
   const currentScheme = useGameStore((s) => s.manager.formationScheme);
@@ -304,67 +306,69 @@ export function MatchPreviewModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[105] flex items-center justify-center p-4 bg-black/92"
+      className="fixed inset-0 z-[105] flex items-end justify-center bg-asfalto-27/95 p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
     >
       <motion.div
         initial={{ y: 18, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="w-full max-w-md bg-deep-black border border-neon-yellow/30 overflow-hidden"
-        style={{ borderRadius: 'var(--radius-md)' }}
+        className="flex max-h-[100dvh] w-full max-w-md flex-col overflow-hidden bg-asfalto-27 sm:border-[3px] sm:border-rua"
       >
-        {/* Header */}
-        <div className="px-5 py-3 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">
+        {/* Header — a CONVOCAÇÃO (DS 2027, PDF pág. 5): X vs Y, o "x" na voz, alambrado. */}
+        <div className="relative shrink-0 overflow-hidden bg-rua px-5 pb-4 pt-3 text-asfalto-27">
+          <span aria-hidden className="rua-alambrado pointer-events-none absolute inset-x-0 top-0 h-24 [--alambrado:rgba(13,13,12,0.24)]" />
+          <div className="relative flex min-w-0 items-center justify-between gap-3">
+            <p className="truncate font-prova text-[11px] font-bold uppercase tracking-[0.22em]">
               {L('Antes da partida', 'Before the match')}
+              {opponentOverall ? <span className="opacity-70"> · OVR {opponentOverall}</span> : null}
             </p>
-            <p className="text-[12px] text-white/60 truncate mt-0.5">
-              vs {opponentName}
-              {opponentOverall ? <span className="text-white/35"> · OVR {opponentOverall}</span> : null}
-            </p>
+            <button
+              type="button"
+              onClick={handleClose}
+              className="-mr-2 flex h-10 w-10 shrink-0 items-center justify-center hover:bg-asfalto-27 hover:text-rua"
+              aria-label={picking ? L('Voltar', 'Back') : L('Fechar', 'Close')}
+            >
+              <X className="h-5 w-5" strokeWidth={2.5} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="text-white/40 hover:text-white transition-colors"
-            aria-label={picking ? L('Voltar', 'Back') : L('Fechar', 'Close')}
-          >
-            <X className="w-5 h-5" strokeWidth={2.5} />
-          </button>
+          <p className="relative mt-1 flex min-w-0 flex-wrap items-baseline gap-x-2 font-impact uppercase leading-[0.9]" style={{ fontSize: 'clamp(26px, 8vw, 36px)' }}>
+            <span className="min-w-0 [overflow-wrap:anywhere]">{clubName}</span>
+            <span aria-hidden className="font-voz normal-case" style={{ fontSize: '1.15em' }}>x</span>
+            <span className="min-w-0 [overflow-wrap:anywhere]">{opponentName}</span>
+          </p>
         </div>
 
-        <div className="p-4 space-y-4 max-h-[72vh] overflow-y-auto">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
           {pickingSlot ? (
             /* Picker de reserva pra um slot */
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] text-white/70">
-                  {posLabel(pickingSlot.label)} · {L('entra no lugar de', 'replaces')}{' '}
-                  <span className="text-neon-yellow font-bold">
+                <p className="min-w-0 text-[13px] text-suave">
+                  <span className="font-prova text-[11px] font-bold uppercase text-mudo">{posLabel(pickingSlot.label)}</span> · {L('entra no lugar de', 'replaces')}{' '}
+                  <span className="font-voz text-[19px] leading-none text-papel">
                     {players[working[pickingSlot.id]]?.name ?? '—'}
                   </span>
                 </p>
                 <button
                   type="button"
                   onClick={() => setPicking(null)}
-                  className="text-[10px] text-white/40 hover:text-white uppercase tracking-[0.14em]"
+                  className="min-h-[40px] shrink-0 font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-mudo hover:text-papel"
                 >
                   {L('Cancelar', 'Cancel')}
                 </button>
               </div>
               {benchFor(pickingSlot.label).length === 0 && (
                 <div className="space-y-2.5">
-                  <p className="text-[12px] text-white/50">{L('Sem reservas pra essa posição.', 'No subs for this position.')}</p>
+                  <p className="text-[13px] text-mudo">{L('Sem reservas pra essa posição.', 'No subs for this position.')}</p>
                   <button
                     type="button"
                     onClick={goToMarket}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-neon-yellow/10 border border-neon-yellow/40 text-neon-yellow text-[11px] font-display font-bold uppercase tracking-[0.14em] hover:bg-neon-yellow hover:text-black transition-colors"
+                    className="flex min-h-[48px] w-full items-center justify-center gap-2 border-2 border-papel px-3 font-impact text-[16px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
                   >
                     <ShoppingBag className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Buscar reforço no mercado', 'Find a signing in the Market')}
                   </button>
-                  <p className="text-[10px] text-white/35 text-center">{L('Sua escalação é salva antes de ir ao mercado.', 'Your lineup is saved before going to the Market.')}</p>
+                  <p className="text-center font-prova text-[10px] text-mudo">{L('Sua escalação é salva antes de ir ao mercado.', 'Your lineup is saved before going to the Market.')}</p>
                 </div>
               )}
               {benchFor(pickingSlot.label).slice(0, 10).map((b) => {
@@ -374,14 +378,14 @@ export function MatchPreviewModal({
                     key={b.id}
                     type="button"
                     onClick={() => doSub(pickingSlot.id, b.id)}
-                    className="w-full flex items-center gap-3 px-3 py-2 border border-zinc-800 hover:border-neon-yellow/60 hover:bg-neon-yellow/5 transition-colors text-left"
+                    className="flex min-h-[54px] w-full min-w-0 items-center gap-3 border-2 border-linha bg-concreto px-3 py-2 text-left transition-colors hover:border-rua"
                   >
-                    <span className="ole-num text-[14px] text-white/85 w-8 shrink-0 text-center">
+                    <span className="w-8 shrink-0 text-center font-impact text-[19px] leading-none tabular-nums text-papel">
                       {overallFromAttributes(b.attrs, b.pos)}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-bold text-white truncate">{b.name}</p>
-                      <p className="text-[10px] uppercase tracking-[0.14em]" style={{ color: fatigueTone(f) }}>
+                      <p className="truncate font-voz text-[19px] leading-none text-papel">{b.name}</p>
+                      <p className="mt-1 font-prova text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: fatigueTone(f) }}>
                         {L('fadiga', 'fatigue')} {f}% → ~{forecastFatigue(f)}% {L('pós-jogo', 'post-match')}
                       </p>
                     </div>
@@ -394,8 +398,8 @@ export function MatchPreviewModal({
               {/* FOCO — a decisão da partida. Vem antes de escalação e formação
                   de propósito: é a única escolha aqui que muda o jogo por si só. */}
               <div>
-                <p className="mb-1.5 font-display text-[9px] font-black uppercase tracking-[0.2em] text-white/50">
-                  {L('Foco', 'Focus')}
+                <p className="mb-2 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+                  — {L('Foco', 'Focus')}
                 </p>
                 <div className="grid grid-cols-5 gap-1">
                   {FOCUS_ORDER.map((level) => {
@@ -413,10 +417,10 @@ export function MatchPreviewModal({
                           dispatch({ type: 'SET_TACTICAL_INTENSITY', level });
                         }}
                         className={
-                          'min-h-[40px] border px-1 py-2 font-display text-[10px] font-black uppercase leading-tight tracking-[0.06em] transition-colors ' +
+                          'min-h-[46px] px-0.5 py-2 font-impact text-[12px] uppercase leading-[1.05] transition-colors [overflow-wrap:anywhere] ' +
                           (active
-                            ? 'border-neon-yellow bg-neon-yellow text-black'
-                            : 'border-zinc-800 text-white/60 hover:border-neon-yellow/60 hover:text-white')
+                            ? 'bg-rua text-asfalto-27'
+                            : 'border-2 border-linha text-suave hover:border-papel hover:text-papel')
                         }
                       >
                         {preset.label}
@@ -424,33 +428,33 @@ export function MatchPreviewModal({
                     );
                   })}
                 </div>
-                <p className="mt-1.5 text-[11px] leading-snug text-white/45">
+                <p className="mt-2 text-[12.5px] leading-snug text-suave">
                   {TACTICAL_INTENSITY_PRESETS[focus].description}
                 </p>
               </div>
 
               {/* Presets salvos (Fase 4) */}
               <div>
-                <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-display font-black mb-1.5">
-                  Presets
+                <p className="mb-2 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+                  — Presets
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {presets.map((p) => (
                     <span
                       key={p.name}
-                      className="inline-flex items-center gap-1 border border-zinc-700 text-white/70 text-[10px] font-display font-bold uppercase tracking-[0.1em]"
+                      className="inline-flex items-center gap-1 border-2 border-linha font-prova text-[11px] font-bold uppercase tracking-[0.06em] text-suave"
                     >
                       <button
                         type="button"
                         onClick={() => loadPreset(p)}
-                        className="px-2 py-1.5 hover:text-neon-yellow transition-colors"
+                        className="min-h-[36px] px-2 transition-colors hover:text-rua"
                       >
                         {p.name}
                       </button>
                       <button
                         type="button"
                         onClick={() => deletePreset(p.name)}
-                        className="pr-1.5 text-white/30 hover:text-danger"
+                        className="min-h-[36px] pr-1.5 text-fio hover:text-baixa"
                         aria-label={L(`Apagar preset ${p.name}`, `Delete preset ${p.name}`)}
                       >
                         <X className="w-3 h-3" strokeWidth={2.5} />
@@ -462,7 +466,7 @@ export function MatchPreviewModal({
                       type="button"
                       onClick={saveAsPreset}
                       disabled={!complete}
-                      className="inline-flex items-center gap-1 px-2 py-1.5 border border-dashed border-neon-yellow/40 text-neon-yellow/80 text-[10px] font-display font-bold uppercase tracking-[0.1em] hover:bg-neon-yellow/10 transition-colors disabled:opacity-40"
+                      className="inline-flex min-h-[36px] items-center gap-1 border-2 border-dashed border-fio px-2 font-prova text-[11px] font-bold uppercase tracking-[0.06em] text-mudo transition-colors hover:border-papel hover:text-papel disabled:opacity-40"
                     >
                       <Plus className="w-3 h-3" strokeWidth={3} aria-hidden /> {L('Salvar atual', 'Save current')}
                     </button>
@@ -472,8 +476,8 @@ export function MatchPreviewModal({
 
               {/* Formação */}
               <div>
-                <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-display font-black mb-1.5">
-                  {L('Formação', 'Formation')}
+                <p className="mb-2 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+                  — {L('Formação', 'Formation')}
                 </p>
                 <div className="grid grid-cols-4 gap-1.5">
                   {FORMATION_SCHEME_LIST.map((f) => (
@@ -481,10 +485,11 @@ export function MatchPreviewModal({
                       key={f}
                       type="button"
                       onClick={() => changeFormation(f)}
-                      className={`py-2 text-[10px] font-display tabular-nums font-bold border transition-colors ${
+                      aria-pressed={formation === f}
+                      className={`min-h-[42px] font-impact text-[14px] tabular-nums leading-none transition-colors ${
                         formation === f
-                          ? 'bg-neon-yellow text-black border-neon-yellow'
-                          : 'border-zinc-700 text-white/60 hover:border-neon-yellow/50'
+                          ? 'bg-rua text-asfalto-27'
+                          : 'border-2 border-linha text-suave hover:border-papel hover:text-papel'
                       }`}
                     >
                       {f}
@@ -496,11 +501,11 @@ export function MatchPreviewModal({
               {/* Lista de titulares */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-display font-black">
-                    {L('Titulares', 'Starters')} ({filled}/{slots.length})
+                  <p className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+                    — {L('Titulares', 'Starters')} ({filled}/{slots.length})
                   </p>
                   {tiredCount > 0 && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold" style={{ color: fatigueTone(99) }}>
+                    <span className="inline-flex items-center gap-1 font-prova text-[11px] font-bold" style={{ color: fatigueTone(99) }}>
                       <AlertTriangle className="w-3 h-3" strokeWidth={2.5} /> {tiredCount} {L(`cansado${tiredCount > 1 ? 's' : ''}`, 'tired')}
                     </span>
                   )}
@@ -509,7 +514,7 @@ export function MatchPreviewModal({
                   <button
                     type="button"
                     onClick={autoManageSquad}
-                    className="w-full mb-2 flex items-center justify-center gap-2 px-3 py-2.5 bg-neon-yellow/10 border border-neon-yellow/40 text-neon-yellow text-[11px] font-display font-bold uppercase tracking-[0.14em] hover:bg-neon-yellow hover:text-black transition-colors"
+                    className="mb-3 flex min-h-[48px] w-full items-center justify-center gap-2 border-2 border-rua px-3 font-impact text-[16px] uppercase leading-none text-rua transition-colors hover:bg-rua hover:text-asfalto-27"
                   >
                     <Wand2 className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Gerir elenco · IA troca os cansados', 'Manage squad · AI swaps the tired')}
                   </button>
@@ -526,30 +531,30 @@ export function MatchPreviewModal({
                     return (
                       <div
                         key={slot.id}
-                        className="flex items-center gap-3 px-3 py-2 border-l-[3px] bg-dark-gray"
-                        style={{ borderLeftColor: outLabel ? 'var(--color-danger, #ef4444)' : fatigueTone(f) }}
+                        className="flex min-h-[56px] min-w-0 items-center gap-3 border-l-[3px] bg-concreto px-3 py-2"
+                        style={{ borderLeftColor: outLabel ? 'var(--color-baixa)' : fatigueTone(f) }}
                       >
-                        <span className="text-[10px] font-display font-black uppercase tracking-[0.1em] text-white/40 w-9 text-center">
+                        <span className="w-9 shrink-0 text-center font-prova text-[10.5px] font-bold uppercase tracking-[0.06em] text-mudo">
                           {posLabel(slot.label)}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-bold text-white truncate flex items-center gap-1.5">
+                          <p className="flex min-w-0 items-center gap-1.5 truncate font-voz text-[19px] leading-none text-papel">
                             {p?.name ?? L('— vazio —', '— empty —')}
                             {(tired || outLabel) && (
-                              <AlertTriangle className="w-3 h-3 shrink-0" strokeWidth={2.5} style={{ color: 'var(--color-danger, #ef4444)' }} />
+                              <AlertTriangle className="h-3 w-3 shrink-0 text-baixa" strokeWidth={2.5} />
                             )}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
-                            <div className="h-1 flex-1 max-w-[120px] bg-white/10 rounded-full overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: `${Math.min(100, f)}%`, backgroundColor: fatigueTone(f) }} />
+                            <div className="h-1.5 max-w-[120px] flex-1 overflow-hidden bg-linha">
+                              <div className="h-full" style={{ width: `${Math.min(100, f)}%`, backgroundColor: fatigueTone(f) }} />
                             </div>
-                            <span className="text-[10px] tabular-nums" style={{ color: outLabel ? 'var(--color-danger, #ef4444)' : fatigueTone(f) }}>
+                            <span className="font-prova text-[10.5px] font-bold tabular-nums" style={{ color: outLabel ? 'var(--color-baixa)' : fatigueTone(f) }}>
                               {outLabel ?? `${f}%`}
                             </span>
                             {!outLabel && pid && (
                               <span
-                                className="text-[9px] tabular-nums"
-                                style={{ color: willCross ? 'var(--color-warning, #f59e0b)' : 'rgba(255,255,255,0.3)' }}
+                                className="font-prova text-[10px] tabular-nums"
+                                style={{ color: willCross ? 'var(--color-atencao)' : 'var(--color-fio)' }}
                                 title={L('Previsão de fadiga após este jogo (estimativa)', 'Fatigue forecast after this match (estimate)')}
                               >
                                 → ~{after}%
@@ -560,7 +565,7 @@ export function MatchPreviewModal({
                         <button
                           type="button"
                           onClick={() => setPicking(slot.id)}
-                          className="px-2.5 py-1 border border-neon-yellow/40 text-neon-yellow/80 text-[10px] font-display uppercase tracking-[0.12em] font-bold hover:bg-neon-yellow hover:text-black transition-colors inline-flex items-center gap-1"
+                          className="inline-flex min-h-[38px] shrink-0 items-center gap-1 border-2 border-papel px-2.5 font-impact text-[14px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
                         >
                           <ArrowRightLeft className="w-3 h-3" strokeWidth={2.5} aria-hidden /> {L('Trocar', 'Swap')}
                         </button>
@@ -575,12 +580,12 @@ export function MatchPreviewModal({
 
         {/* Confirmar / Salvar */}
         {!pickingSlot && (
-          <div className="p-4 border-t border-zinc-800 space-y-2">
+          <div className="shrink-0 space-y-3 border-t border-linha p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={confirm}
               disabled={!complete || busy}
-              className="w-full py-3 bg-neon-yellow hover:bg-white text-black font-display uppercase tracking-[0.18em] text-[12px] font-black transition-colors disabled:opacity-50"
+              className="inline-flex min-h-[56px] w-full items-center justify-center gap-2 bg-rua px-4 font-impact text-[20px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow,opacity] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)] disabled:opacity-50 disabled:shadow-none"
             >
               {busy ? L('Preparando…', 'Preparing…') : L(`Entrar em campo vs ${opponentShort} →`, `Take the field vs ${opponentShort} →`)}
             </button>
@@ -588,7 +593,7 @@ export function MatchPreviewModal({
               type="button"
               onClick={save}
               disabled={!complete || busy}
-              className="w-full py-2.5 border border-zinc-700 text-white/70 hover:border-neon-yellow/50 hover:text-white font-display uppercase tracking-[0.16em] text-[11px] font-bold transition-colors disabled:opacity-40 inline-flex items-center justify-center gap-2"
+              className="inline-flex min-h-[46px] w-full items-center justify-center gap-2 border-2 border-linha font-impact text-[16px] uppercase leading-none text-suave transition-colors hover:border-papel hover:text-papel disabled:opacity-40"
             >
               {savedFlash ? (
                 <><Check className="w-3.5 h-3.5" strokeWidth={3} aria-hidden /> {L('Elenco salvo', 'Squad saved')}</>
@@ -597,7 +602,7 @@ export function MatchPreviewModal({
               )}
             </button>
             {!complete && (
-              <p className="text-[10px] text-center" style={{ color: 'var(--color-danger, #ef4444)' }}>
+              <p className="text-center font-prova text-[11px] font-bold text-baixa">
                 {L(`Faltam titulares — preencha os ${slots.length} para entrar.`, `Starters missing — fill all ${slots.length} to play.`)}
               </p>
             )}

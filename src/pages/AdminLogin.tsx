@@ -29,8 +29,8 @@ export function AdminLogin() {
   };
 
   return (
-    <div className="flex min-h-svh w-full min-w-0 flex-col items-center justify-center bg-deep-black px-4 py-10 sm:px-6">
-      <div className="sports-panel w-full min-w-0 max-w-md rounded-xl p-6 sm:p-8">
+    <div className="flex min-h-svh w-full min-w-0 flex-col items-center justify-center bg-asfalto-27 px-4 py-10 sm:px-6">
+      <div className="w-full min-w-0 max-w-md border-t-[5px] border-rua bg-concreto p-6 sm:p-8">
         <div className="mb-6 flex flex-col items-center">
           <img
             src="/brand/olefoot-yellow-01.svg"
@@ -51,7 +51,7 @@ export function AdminLogin() {
           <input type="password" name="fake-pass" autoComplete="current-password" style={{ display: 'none' }} tabIndex={-1} aria-hidden />
 
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-white/65">E-mail do painel</span>
+            <span className="mb-1.5 block font-prova text-[11.5px] font-bold uppercase tracking-[0.2em] text-mudo">E-mail do painel</span>
             <input
               type="email"
               name="admin-panel-email"
@@ -60,23 +60,23 @@ export function AdminLogin() {
               spellCheck={false}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-white/35 focus:border-neon-yellow/50 focus:outline-none focus:ring-1 focus:ring-neon-yellow/30"
+              className="min-h-[50px] w-full border-2 border-linha bg-concreto px-3.5 py-2.5 text-sm text-papel placeholder:text-fio focus:border-rua focus:outline-none"
               placeholder="credencial separada do jogo"
               required
             />
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-white/65">Senha do painel</span>
+            <span className="mb-1.5 block font-prova text-[11.5px] font-bold uppercase tracking-[0.2em] text-mudo">Senha do painel</span>
             <div className="relative">
-              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fio" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 name="admin-panel-password"
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-white/15 bg-black/50 px-3 py-2.5 pl-9 pr-10 text-sm text-white placeholder:text-white/35 focus:border-neon-yellow/50 focus:outline-none focus:ring-1 focus:ring-neon-yellow/30"
+                className="min-h-[50px] w-full border-2 border-linha bg-concreto px-3.5 py-2.5 pl-9 pr-10 text-sm text-papel placeholder:text-fio focus:border-rua focus:outline-none"
                 placeholder="mínimo 12 caracteres"
                 required
                 minLength={12}
@@ -86,7 +86,7 @@ export function AdminLogin() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-white/70"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-mudo transition-colors hover:text-papel"
                 aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
               >
                 {showPassword ? (
@@ -96,15 +96,15 @@ export function AdminLogin() {
                 )}
               </button>
             </div>
-            <p className="mt-1.5 text-[10px] leading-snug text-white/35">
+            <p className="mt-1.5 text-[10px] leading-snug text-fio">
               ⚠️ Senha forte: mín. 12 caracteres com maiúscula, minúscula, número e símbolo (@$!%*?&).
-              Esta senha é <strong className="text-white/60">separada</strong> da senha do jogo.
+              Esta senha é <strong className="text-suave">separada</strong> da senha do jogo.
             </p>
           </label>
 
           {error ? (
-            <div className="flex items-start gap-2 rounded-lg border border-rose-500/50 bg-rose-500/15 px-3 py-2.5 text-[12px] leading-snug text-rose-100">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
+            <div className="flex items-start gap-2 border-l-[5px] border-baixa bg-concreto px-3 py-2.5 text-[12px] leading-snug text-papel">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-baixa" />
               <span className="flex-1">{error}</span>
             </div>
           ) : null}
@@ -120,8 +120,8 @@ export function AdminLogin() {
           </button>
         </form>
 
-        <div className="mt-6 flex justify-center border-t border-white/5 pt-4">
-          <Link to="/" className="text-[11px] text-white/40 transition-colors hover:text-white">
+        <div className="mt-6 flex justify-center border-t border-linha pt-4">
+          <Link to="/" className="text-[11px] text-mudo transition-colors hover:text-papel">
             ← Voltar para o jogo
           </Link>
         </div>

@@ -1,14 +1,11 @@
 /**
- * VOLT2 — as peças que se repetem em toda tela nova (A VIRADA · V3).
+ * Peças herdadas do VOLT2, já repintadas pro DS 2027 "Respeito é ouro"
+ * (docs/DS-2027.md). Ficam com os nomes antigos porque 20+ telas usam.
  *
- * Regras que estas peças carregam pra ninguém precisar lembrar:
  *   · UMA LINHA SÓ: categoria vira #hashtag; texto que quebraria em duas corta
  *     com reticências (min-w-0 + truncate), nunca empurra o layout.
  *   · A CONSEQUÊNCIA MORA NO BOTÃO: "Dar chance +10", não um parágrafo acima.
- *   · SÓLIDO: cor chapada. Gradiente só no acabamento (a linha que se apaga, o
- *     selo da rede). Sem sombra, sem inclinação, sem enfeite solto.
- *   · OURO É DA REDE: só ativo que está na Solana usa ouro e o SeloRede. EXP e
- *     OLEFOOT do jogo são fictícios e nunca aparecem assim.
+ *   · Sem degradê. Ouro chapado é valor (respeito) e lenda; amarelo é ação.
  */
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
@@ -45,20 +42,15 @@ export function SecaoVolt({
 }) {
   return (
     <div className={cn('flex min-w-0 flex-col gap-1.5', className)}>
-      <div className="flex min-w-0 items-center gap-2.5">
-        <span
-          aria-hidden
-          className={cn('block h-0.5 w-[18px] shrink-0', tone === 'volt' ? 'bg-neon-yellow' : 'bg-[#3A3D40]')}
-        />
-        <h2 className="min-w-0 truncate font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-giz">
-          {label}
-        </h2>
-        <span
-          aria-hidden
-          className="block h-px min-w-3 grow"
-          style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0))' }}
-        />
-      </div>
+      {/* DS 2027: "— RÓTULO" em Geist Mono espaçado. Sem linha que se apaga. */}
+      <h2
+        className={cn(
+          'min-w-0 truncate font-mono text-[12px] font-bold uppercase tracking-[0.22em]',
+          tone === 'volt' ? 'text-mudo' : 'text-fio',
+        )}
+      >
+        <span className={tone === 'volt' ? 'text-neon-yellow' : undefined}>—</span> {label}
+      </h2>
       {children}
     </div>
   );
@@ -97,10 +89,10 @@ export function BotaoConsequencia({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'ole-num inline-flex h-[50px] min-w-0 items-center justify-center gap-1.5 px-3 text-[13px] uppercase transition-colors disabled:pointer-events-none disabled:opacity-40',
+        'ole-num inline-flex h-[50px] min-w-0 items-center justify-center gap-1.5 px-3 text-[18px] uppercase transition-[transform,box-shadow,background-color,color] disabled:pointer-events-none disabled:opacity-40',
         variant === 'primary'
-          ? 'bg-neon-yellow text-black hover:bg-white [--corte:12px] [clip-path:var(--clip-corte)] focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-black'
-          : 'border border-white/30 font-bold text-white hover:border-white hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon-yellow',
+          ? 'bg-neon-yellow text-black shadow-[4px_4px_0_var(--color-giz)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_var(--color-giz)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-neon-yellow'
+          : 'border-2 border-giz text-giz hover:bg-giz hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon-yellow',
         className,
       )}
     >
@@ -115,7 +107,7 @@ export function BotaoConsequencia({
  * amarelo. Usar com parcimônia: título da Resenha, convite.
  */
 export function Placa({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('bg-giz text-deep-black', className)}>{children}</div>;
+  return <div className={cn('bg-cal text-deep-black', className)}>{children}</div>;
 }
 
 /** Selo da rede Solana. Só aparece junto de ativo que está na cadeia. */
@@ -127,12 +119,8 @@ export function SeloRede({ className }: { className?: string }) {
         className,
       )}
     >
-      <span
-        aria-hidden
-        className="block h-2 w-2 shrink-0"
-        style={{ background: 'linear-gradient(135deg, #9945FF 0%, #14F195 100%)' }}
-      />
       Solana
+      <span aria-hidden className="text-ouro-27">●</span>
     </span>
   );
 }

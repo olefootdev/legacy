@@ -20,6 +20,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { MarcaRua } from '@/components/ui/Rua';
 import { cn } from '@/lib/utils';
 import { L, LOCALE } from '@/i18n/L';
 import { HeaderOtzStrip } from '@/components/HeaderOtzStrip';
@@ -232,7 +233,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className="flex min-h-[100dvh] w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden bg-deep-black font-sans lg:flex-row"
+      className="rua-grao flex min-h-[100dvh] w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden bg-black font-sans lg:flex-row"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
@@ -248,7 +249,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <LegacyOlefootWelcomeToast />
 
       {/* Desktop Sidebar — visible only at ≥1024px */}
-      <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-panel border border-white/5 overflow-x-hidden overflow-y-visible border-r border-white/10 fixed h-screen z-50 rounded-none">
+      <aside className="rua-grao hidden lg:flex flex-col w-64 shrink-0 bg-black overflow-x-hidden overflow-y-visible border-r-2 border-linha fixed h-screen z-50 rounded-none">
         <div className="flex items-center mb-10 p-6 pb-0">
           <img
             src="/brand/olefoot-yellow-01.svg"
@@ -268,24 +269,24 @@ export function Layout({ children }: { children: ReactNode }) {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex items-center gap-4 px-4 py-3 transition-all duration-200 group relative',
+                  'flex items-center gap-4 px-4 py-2.5 transition-colors duration-200 group relative',
                   isAccent
                     ? 'text-neon-yellow'
                     : isActive
-                      ? 'text-white'
-                      : 'text-gray-500 hover:text-white',
+                      ? 'bg-neon-yellow text-black'
+                      : 'text-mudo hover:text-papel',
                 )}
               >
-                {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-neon-yellow" />}
                 <item.icon
                   className={cn(
                     'w-5 h-5',
                     isAccent
                       ? 'text-neon-yellow'
                       : isActive
-                        ? 'text-neon-yellow'
+                        ? 'text-black'
                         : 'group-hover:text-neon-yellow transition-colors',
                   )}
+                  strokeWidth={2.2}
                 />
                 {isAccent ? (
                   <span
@@ -300,7 +301,7 @@ export function Layout({ children }: { children: ReactNode }) {
                     {item.label.charAt(0) + item.label.slice(1).toLowerCase()}
                   </span>
                 ) : (
-                  <span className="font-display font-bold tracking-wider text-lg">{item.label}</span>
+                  <span className="font-impact text-[19px] uppercase tracking-[0.02em] leading-none">{item.label}</span>
                 )}
               </Link>
             );
@@ -313,22 +314,10 @@ export function Layout({ children }: { children: ReactNode }) {
             type="button"
             onClick={() => setMatchModeSheetOpen(true)}
             aria-expanded={matchModeSheetOpen}
-            className="group w-full flex items-center gap-4 px-4 py-3 transition-all duration-200 bg-neon-yellow hover:bg-neon-yellow/85 active:scale-[0.98] rounded-lg"
+            className="btn-primary w-full flex items-center justify-between gap-4 !px-5 !py-3.5 text-[24px] leading-none"
           >
-            <span className="flex h-5 w-5 items-center justify-center">
-              <img src="/test-botao-01-01.svg" alt="" aria-hidden className="w-5 h-5" />
-            </span>
-            <span
-              className="italic text-black leading-none"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontSize: '24px',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {L('Jogar', 'Play')}
-            </span>
+            <span>{L('Bora jogar', 'Let\'s play')}</span>
+            <span aria-hidden>→</span>
           </button>
         </div>
 
@@ -360,52 +349,32 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
 
         {/* Status do jogo — Fase Beta sempre visível + número real de clubes. */}
-        <div className="mx-4 mb-3 px-4 py-3 border border-white/10 bg-white/[0.02]" style={{ borderRadius: 'var(--radius-sm)' }}>
-          <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600 }}>
-            {L('Status do jogo', 'Game status')}
+        <div className="mx-4 mb-3 mt-3 flex flex-col gap-2 border-2 border-dashed border-fio px-4 py-3 font-prova">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+            — {L('Status do jogo', 'Game status')}
           </p>
           <p
-            className="mt-1"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500 }}
           >
-            <span
-              className="inline-flex items-center gap-1.5 px-2 py-0.5 text-neon-yellow"
-              style={{
-                border: '1px solid var(--color-divider-yellow-strong)',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '11px',
-                letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                fontWeight: 700,
-              }}
-            >
-              <span
-                className="inline-block w-1.5 h-1.5 rounded-full"
-                style={{ background: 'var(--color-neon-yellow)' }}
-                aria-hidden
-              />
-              {L('Fase Beta', 'Beta')}
+            <span className="inline-flex items-center gap-1.5 bg-rua px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.12em] text-asfalto-27">
+              ● {L('Fase Beta', 'Beta')}
             </span>
           </p>
-          <p
-            className="text-white/70 mt-2"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', fontWeight: 500 }}
-          >
+          <p className="text-[12px] uppercase tracking-[0.08em] text-suave">
             {L('Clubes criados:', 'Clubs created:')}{' '}
-            <span className="text-neon-yellow font-semibold tabular-nums">
+            <span className="font-impact text-[18px] tracking-normal text-ouro-27 tabular-nums">
               {totalManagers != null ? totalManagers.toLocaleString(LOCALE) : '—'}
             </span>
           </p>
         </div>
 
-        <div className="p-6 border-t border-white/10 bg-[#0a0a0a]">
+        <div className="p-6 border-t-2 border-linha">
           <button
             type="button"
             onClick={() => void handleSignOut()}
-            className="flex w-full items-center gap-3 px-4 py-3 text-gray-500 hover:text-white transition-colors group"
+            className="flex w-full items-center gap-3 px-4 py-3 text-mudo hover:text-papel transition-colors group"
           >
             <LogOut className="w-5 h-5 group-hover:text-neon-yellow transition-colors" />
-            <span className="font-display font-bold tracking-wider text-sm">{L('SAIR', 'LOG OUT')}</span>
+            <span className="font-impact text-[16px] uppercase tracking-[0.04em]">{L('Sair', 'Log out')}</span>
           </button>
         </div>
       </aside>
@@ -425,7 +394,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* IMPORTANTE: Logo SEMPRE visível em todas as páginas e subpáginas */}
         {!isPenaltyRoute && (
         <header
-          className="sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] min-h-14 shrink-0 items-center gap-3 border-b border-white/[0.07] bg-nav px-4 supports-[padding:max(0px)]:pt-[max(0px,env(safe-area-inset-top,0px))] sm:min-h-16 sm:px-6"
+          className="sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] min-h-14 shrink-0 items-center gap-3 border-b-2 border-linha bg-nav px-4 supports-[padding:max(0px)]:pt-[max(0px,env(safe-area-inset-top,0px))] sm:min-h-16 sm:px-6"
         >
           {/* Esquerda — hamburger (só abaixo de lg; desktop tem sidebar) */}
           <div className="flex justify-start">
@@ -459,7 +428,7 @@ export function Layout({ children }: { children: ReactNode }) {
             {/* Wallet */}
             <Link
               to="/wallet"
-              className="flex h-10 w-10 items-center justify-center border border-white/16 bg-nav text-white/80 transition-colors hover:border-white hover:text-white"
+              className="flex h-10 w-10 items-center justify-center border-2 border-linha bg-nav text-papel transition-colors hover:border-rua hover:text-rua"
               aria-label="Wallet"
             >
               <Wallet className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={2.25} />
@@ -468,7 +437,7 @@ export function Layout({ children }: { children: ReactNode }) {
             {/* Config */}
             <Link
               to="/manager/config"
-              className="flex h-10 w-10 items-center justify-center border border-white/16 bg-nav text-white/80 transition-colors hover:border-white hover:text-white"
+              className="flex h-10 w-10 items-center justify-center border-2 border-linha bg-nav text-papel transition-colors hover:border-rua hover:text-rua"
               aria-label={L('Configurações', 'Settings')}
             >
               <Settings className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={2.25} />
@@ -523,9 +492,9 @@ export function Layout({ children }: { children: ReactNode }) {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', bounce: 0, duration: 0.35 }}
-              className="fixed top-0 left-0 bottom-0 w-72 bg-deep-black border-r border-white/10 z-[70] lg:hidden flex flex-col"
+              className="fixed top-0 left-0 bottom-0 w-72 rua-grao bg-black border-r-2 border-linha z-[70] lg:hidden flex flex-col"
             >
-              <div className="flex items-center justify-between p-5 border-b border-white/10">
+              <div className="flex items-center justify-between p-5 border-b-2 border-linha">
                 <img
                   src="/brand/olefoot-yellow-01.svg"
                   alt="Olefoot"
@@ -552,24 +521,24 @@ export function Layout({ children }: { children: ReactNode }) {
                       to={item.path}
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={cn(
-                        'flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 group relative',
+                        'flex items-center gap-4 px-4 py-2.5 transition-colors duration-200 group relative',
                         isAccent
-                          ? 'text-neon-yellow hover:bg-neon-yellow/[0.06]'
+                          ? 'text-neon-yellow'
                           : isActive
-                            ? 'bg-white/10 text-white'
-                            : 'text-gray-500 hover:text-white hover:bg-white/5',
+                            ? 'bg-neon-yellow text-black'
+                            : 'text-mudo hover:text-papel',
                       )}
                     >
-                      {isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-neon-yellow rounded-r" />}
                       <item.icon
                         className={cn(
                           'w-5 h-5',
                           isAccent
                             ? 'text-neon-yellow'
                             : isActive
-                              ? 'text-neon-yellow'
+                              ? 'text-black'
                               : 'group-hover:text-neon-yellow transition-colors',
                         )}
+                        strokeWidth={2.2}
                       />
                       {isAccent ? (
                         <span
@@ -584,7 +553,7 @@ export function Layout({ children }: { children: ReactNode }) {
                           {item.label.charAt(0) + item.label.slice(1).toLowerCase()}
                         </span>
                       ) : (
-                        <span className="font-display font-bold tracking-wider">{item.label}</span>
+                        <span className="font-impact text-[19px] uppercase tracking-[0.02em] leading-none">{item.label}</span>
                       )}
                     </Link>
                   );
@@ -618,52 +587,29 @@ export function Layout({ children }: { children: ReactNode }) {
                 })}
               </div>
 
-              <div className="mx-4 mb-3 px-4 py-3 border border-white/10 bg-white/[0.02]" style={{ borderRadius: 'var(--radius-sm)' }}>
-                <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600 }}>
-                  {L('Status do jogo', 'Game status')}
-                </p>
-                <p
-                  className="mt-1"
-                  style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500 }}
-                >
-                  <span
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 text-neon-yellow"
-                    style={{
-                      border: '1px solid var(--color-divider-yellow-strong)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '11px',
-                      letterSpacing: '0.18em',
-                      textTransform: 'uppercase',
-                      fontWeight: 700,
-                    }}
-                  >
-                    <span
-                      className="inline-block w-1.5 h-1.5 rounded-full"
-                      style={{ background: 'var(--color-neon-yellow)' }}
-                      aria-hidden
-                    />
-                    {L('Fase Beta', 'Beta')}
+              <div className="mx-4 mb-3 mt-3 flex flex-col gap-2 border-2 border-dashed border-fio px-4 py-3 font-prova">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">— {L('Status do jogo', 'Game status')}</p>
+                <p>
+                  <span className="inline-flex items-center gap-1.5 bg-rua px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.12em] text-asfalto-27">
+                    ● {L('Fase Beta', 'Beta')}
                   </span>
                 </p>
-                <p
-                  className="text-white/70 mt-2"
-                  style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', fontWeight: 500 }}
-                >
+                <p className="text-[12px] uppercase tracking-[0.08em] text-suave">
                   {L('Clubes criados:', 'Clubs created:')}{' '}
-                  <span className="text-neon-yellow font-semibold tabular-nums">
+                  <span className="font-impact text-[18px] tracking-normal text-ouro-27 tabular-nums">
                     {totalManagers != null ? totalManagers.toLocaleString(LOCALE) : '—'}
                   </span>
                 </p>
               </div>
 
-              <div className="p-5 border-t border-white/10 bg-[#0a0a0a]">
+              <div className="p-5 border-t-2 border-linha">
                 <button
                   type="button"
                   onClick={() => { setIsMobileMenuOpen(false); void handleSignOut(); }}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-gray-500 hover:text-white transition-colors group rounded-lg hover:bg-white/5"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-mudo hover:text-papel transition-colors group"
                 >
                   <LogOut className="w-5 h-5 group-hover:text-neon-yellow transition-colors" />
-                  <span className="font-display font-bold tracking-wider">{L('SAIR', 'LOG OUT')}</span>
+                  <span className="font-impact text-[16px] uppercase tracking-[0.04em]">{L('Sair', 'Log out')}</span>
                 </button>
               </div>
             </motion.div>
@@ -677,7 +623,7 @@ export function Layout({ children }: { children: ReactNode }) {
       {!hideMobileBottomNav && (
         <nav
           aria-label={L('Navegação principal', 'Main navigation')}
-          className="lg:hidden fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 items-start border-t border-white/[0.07] bg-nav pb-safe"
+          className="lg:hidden fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 items-start border-t-2 border-linha bg-concreto pb-safe"
         >
           {bottomNavItems.map((item) => {
             if (item.kind === 'action') {
@@ -689,10 +635,10 @@ export function Layout({ children }: { children: ReactNode }) {
                     aria-haspopup="dialog"
                     aria-expanded={matchModeSheetOpen}
                     onClick={() => setMatchModeSheetOpen(true)}
-                    className="-mt-5 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-nav ring-1 ring-white/[0.08] transition-colors [-webkit-tap-highlight-color:transparent] hover:ring-neon-yellow/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon-yellow"
+                    className="-mt-6 flex h-[68px] w-[68px] items-center justify-center rounded-full border-[5px] border-black bg-rua transition-transform [-webkit-tap-highlight-color:transparent] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon-yellow"
                   >
-                    {/* Símbolo em volt sobre o círculo escuro (o SVG de antes era preto, feito pro amarelo). */}
-                    <img src="/brand/olefoot-icone-yellow-01.svg" alt="" draggable={false} className="h-11 w-11 object-contain" />
+                    {/* DS 2027 · nav do app: escudo preto no círculo de rua. */}
+                    <MarcaRua tipo="escudo" className="h-9 bg-black" />
                   </button>
                 </div>
               );
@@ -708,15 +654,15 @@ export function Layout({ children }: { children: ReactNode }) {
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'relative flex min-h-16 min-w-0 flex-col items-center gap-[5px] px-0.5 pt-3 pb-2 transition-colors [-webkit-tap-highlight-color:transparent]',
-                  isActive ? 'text-white' : 'text-poeira hover:text-white/90',
+                  isActive ? 'text-rua' : 'text-mudo hover:text-papel',
                 )}
               >
                 {isActive ? (
-                  <span aria-hidden className="absolute left-1/2 top-[-1px] h-0.5 w-6 -translate-x-1/2 bg-neon-yellow" />
+                  <span aria-hidden className="absolute left-1/2 top-[-2px] h-[3px] w-8 -translate-x-1/2 bg-neon-yellow" />
                 ) : null}
-                <Icon className="h-[22px] w-[22px] shrink-0" strokeWidth={isActive ? 2.2 : 1.8} />
-                <span className={cn('block max-w-full truncate text-[10px] leading-none', isActive ? 'font-semibold' : 'font-medium')}>
-                  {item.label.charAt(0) + item.label.slice(1).toLowerCase()}
+                <Icon className="h-[21px] w-[21px] shrink-0" strokeWidth={isActive ? 2.4 : 1.9} />
+                <span className="block max-w-full truncate font-prova text-[9.5px] font-bold uppercase leading-none tracking-[0.08em]">
+                  {item.label}
                 </span>
               </Link>
             );

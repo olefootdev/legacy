@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { L } from '@/i18n/L';
 
 /**
- * Modal de confirmação canônico do DS (rail 3px + eyebrow + título display).
+ * Modal de confirmação canônico do DS 2027 (topo de cor + "— rótulo" + título Anton).
  * O corpo (`children`) é livre — custo/saldo/projeção conforme a ação.
  * Reusado antes de qualquer evolução/gasto/compromisso irreversível.
  */
@@ -30,32 +30,37 @@ export function ConfirmDialog({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/70 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/80 p-4" onClick={onClose}>
+      {/* DS 2027: concreto com topo de cor chapada; confirmar é a ação (sombra
+          dura de papel), cancelar é contorno. */}
       <div
-        className="relative w-full max-w-sm overflow-hidden border border-white/10 bg-sheet p-6 pl-7"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="rua-grao relative w-full max-w-sm overflow-hidden border-t-[5px] bg-concreto p-6"
+        style={{ borderTopColor: accent }}
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: accent }} aria-hidden />
-        <button onClick={onClose} className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center text-white/50 hover:text-white" aria-label={L('Fechar', 'Close')}>
-          <X className="h-4 w-4" />
+        <button onClick={onClose} className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center text-mudo hover:text-papel" aria-label={L('Fechar', 'Close')}>
+          <X className="h-5 w-5" strokeWidth={2.4} />
         </button>
-        <div className="font-mono text-[11px] font-medium uppercase tracking-[0.18em]" style={{ color: accent }}>
-          {eyebrow}
+        <div className="font-prova text-[11.5px] font-bold uppercase tracking-[0.2em]" style={{ color: accent }}>
+          — {eyebrow}
         </div>
-        <h4 className="mt-1 font-display text-xl font-bold uppercase tracking-wide text-white">{title}</h4>
+        <h4 className="mt-1.5 pr-8 font-impact text-[30px] uppercase leading-[0.95] text-papel">{title}</h4>
         {children}
-        <div className="mt-5 flex gap-2">
+        <div className="mt-6 flex gap-3">
           <button
             onClick={onConfirm}
             disabled={confirmDisabled}
             style={confirmDisabled ? undefined : { background: accent }}
-            className="ole-num flex-1 whitespace-nowrap py-3 text-[13px] uppercase text-black transition-opacity [--corte:12px] [clip-path:var(--clip-corte)] hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
+            className="inline-flex min-h-[52px] flex-1 items-center justify-center gap-2 whitespace-nowrap px-4 font-impact text-[19px] uppercase leading-none text-asfalto-27 shadow-[4px_4px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:border-2 disabled:border-dashed disabled:border-fio disabled:bg-transparent disabled:text-mudo disabled:shadow-none"
           >
-            {confirmLabel}
+            {confirmLabel} <span aria-hidden>→</span>
           </button>
           <button
             onClick={onClose}
-            className="ole-num whitespace-nowrap border border-white/30 px-4 py-3 text-[12px] uppercase text-white transition-colors hover:border-white"
+            className="inline-flex min-h-[52px] items-center whitespace-nowrap border-2 border-papel px-4 font-impact text-[17px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
           >
             {L('Cancelar', 'Cancel')}
           </button>

@@ -189,11 +189,11 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0, opacity: 0 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 left-4 z-50 flex h-12 w-12 sm:h-14 sm:w-14 sm:bottom-6 sm:left-6 items-center justify-center rounded-full bg-neon-yellow text-black transition-colors hover:bg-white"
+        className="fixed bottom-20 left-4 z-50 flex h-12 w-12 sm:h-14 sm:w-14 sm:bottom-6 sm:left-6 items-center justify-center rounded-full bg-rua text-asfalto-27 shadow-[4px_4px_0_var(--color-papel)] transition-colors hover:bg-papel"
         aria-label={L('Abrir assistente IA', 'Open AI assistant')}
       >
         <MessageCircle className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.5} />
-        <span className="absolute -top-1 -right-1 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full border border-black bg-white text-[8px] sm:text-[9px] font-bold text-black">
+        <span className="absolute -top-1 -right-1 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full border-2 border-asfalto-27 bg-papel font-prova text-[8px] sm:text-[9px] font-bold text-asfalto-27">
           {L('IA', 'AI')}
         </span>
       </motion.button>
@@ -227,21 +227,21 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
             }
           }}
           className={cn(
-            'flex items-center gap-3 border border-white/16 bg-panel px-4 py-3 transition-colors hover:border-white/30',
+            'flex items-center gap-3 border-2 border-linha bg-asfalto-27 px-4 py-3 transition-colors hover:border-papel',
             'cursor-grab active:cursor-grabbing',
           )}
         >
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-card-hi">
-            <MessageCircle className="h-5 w-5 text-white" strokeWidth={2.5} />
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[8px] font-bold text-black">
+          <div className="relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-rua">
+            <MessageCircle className="h-5 w-5 text-rua" strokeWidth={2.5} />
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-papel font-prova text-[8px] font-bold text-asfalto-27">
               {L('IA', 'AI')}
             </span>
           </div>
           <div className="text-left pointer-events-none">
-            <p className="font-impact text-[15px] uppercase leading-[1.1] text-white">
+            <p className="font-impact text-[17px] uppercase leading-[1.1] text-papel">
               {L('Assistente IA', 'AI Assistant')}
             </p>
-            <p className="font-mono text-[10.5px] text-cimento">
+            <p className="font-prova text-[11px] text-mudo">
               {messages.length > 0 ? L(`${messages.length} mensagens`, `${messages.length} messages`) : L('Pergunte qualquer coisa', 'Ask anything')}
             </p>
           </div>
@@ -267,7 +267,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
         isDragging && 'cursor-grabbing',
       )}
     >
-      <div className="flex h-full flex-col overflow-hidden border border-white/16 bg-deep-black">
+      <div className="flex h-full flex-col overflow-hidden border-2 border-linha bg-asfalto-27">
         {/* Header - Draggable */}
         <div
           onPointerDown={(e) => {
@@ -278,22 +278,22 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
             }
           }}
           className={cn(
-            'relative z-10 flex items-center justify-between border-b border-white/10 bg-nav px-4 py-3',
+            'relative z-10 flex items-center justify-between border-b-2 border-linha bg-concreto px-4 py-3',
             'cursor-grab active:cursor-grabbing select-none',
           )}
         >
           <div className="flex items-center gap-3 pointer-events-none">
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/16 bg-card-hi">
-              <MessageCircle className="h-5 w-5 text-white" strokeWidth={2.5} />
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[8px] font-bold text-black">
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-rua">
+              <MessageCircle className="h-5 w-5 text-rua" strokeWidth={2.5} />
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-papel font-prova text-[8px] font-bold text-asfalto-27">
                 {L('IA', 'AI')}
               </span>
             </div>
             <div>
-              <h3 className="font-impact text-[17px] uppercase leading-[1.1] text-white">
+              <h3 className="font-impact text-[19px] uppercase leading-[1.1] text-papel">
                 {L('Assistente IA', 'AI Assistant')}
               </h3>
-              <p className="flex items-center gap-1 font-mono text-[10.5px] text-cimento">
+              <p className="flex items-center gap-1 font-prova text-[11px] text-mudo">
                 <Move className="h-3 w-3" />
                 {L('Arraste para mover', 'Drag to move')}
               </p>
@@ -305,7 +305,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
                 e.stopPropagation();
                 setIsMinimized(true);
               }}
-              className="rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              className="p-2 text-mudo transition-colors hover:text-papel"
               aria-label={L('Minimizar', 'Minimize')}
             >
               <ChevronDown className="h-4 w-4" />
@@ -315,7 +315,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
                 e.stopPropagation();
                 setIsOpen(false);
               }}
-              className="rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              className="p-2 text-mudo transition-colors hover:text-papel"
               aria-label={L('Fechar', 'Close')}
             >
               <X className="h-4 w-4" />
@@ -327,10 +327,10 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 && (
             <div className="flex h-full flex-col items-center justify-center text-center px-4">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-white/16 bg-card-hi">
-                <Sparkles className="h-8 w-8 text-white" strokeWidth={2.5} />
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-rua">
+                <Sparkles className="h-8 w-8 text-rua" strokeWidth={2.5} />
               </div>
-              <h4 className="font-impact text-2xl uppercase leading-[1.1] text-white">
+              <h4 className="font-voz text-[34px] leading-none text-papel">
                 {L('Olá, Manager!', 'Hi, Manager!')}
               </h4>
             </div>
@@ -347,22 +347,22 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
               )}
             >
               {msg.role === 'assistant' && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/16 bg-card-hi">
-                  <Sparkles className="h-4 w-4 text-white" strokeWidth={2.5} />
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-rua">
+                  <Sparkles className="h-4 w-4 text-rua" strokeWidth={2.5} />
                 </div>
               )}
               <div
                 className={cn(
                   'max-w-[80%] px-4 py-2.5',
                   msg.role === 'user'
-                    ? 'bg-card-hi border border-white/16 text-white'
-                    : 'bg-panel border border-white/10 text-giz',
+                    ? 'rotate-[-0.6deg] bg-cal text-asfalto-27 shadow-[3px_3px_0_rgba(0,0,0,0.5)]'
+                    : 'border-l-[3px] border-rua bg-concreto text-papel',
                 )}
               >
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 {msg.sources && msg.sources.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-white/10">
-                    <p className="flex items-center gap-1 text-[9px] text-white/40 uppercase tracking-wider mb-1">
+                  <div className="mt-2 border-t-2 border-dashed border-linha pt-2">
+                    <p className="mb-1 flex items-center gap-1 font-prova text-[9px] uppercase tracking-[0.14em] text-mudo">
                       <BookOpen className="h-3 w-3" />
                       {L('Fontes consultadas', 'Sources')}
                     </p>
@@ -370,7 +370,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
                       {msg.sources.map((source, i) => (
                         <span
                           key={i}
-                          className="font-mono text-[9.5px] text-cimento border border-white/10 px-1.5 py-0.5"
+                          className="border border-linha px-1.5 py-0.5 font-prova text-[9.5px] text-mudo"
                         >
                           {source}
                         </span>
@@ -388,11 +388,11 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
               animate={{ opacity: 1, y: 0 }}
               className="flex gap-3"
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/16 bg-card-hi">
-                <Loader2 className="h-4 w-4 text-white animate-spin" strokeWidth={2.5} />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-rua">
+                <Loader2 className="h-4 w-4 animate-spin text-rua" strokeWidth={2.5} />
               </div>
-              <div className="bg-panel border border-white/10 px-4 py-2.5">
-                <p className="text-sm text-white/60">{L('Pensando...', 'Thinking...')}</p>
+              <div className="border-l-[3px] border-rua bg-concreto px-4 py-2.5">
+                <p className="font-voz text-[18px] text-suave">{L('Pensando...', 'Thinking...')}</p>
               </div>
             </motion.div>
           )}
@@ -402,8 +402,8 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
 
         {/* Quick Questions */}
         {showQuickQuestions && messages.length === 0 && (
-          <div className="border-t border-white/10 bg-panel p-3">
-            <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white/50 mb-2">
+          <div className="border-t-2 border-linha bg-concreto p-3">
+            <p className="mb-2 flex items-center gap-1.5 font-prova text-[10px] font-bold uppercase tracking-[0.16em] text-mudo">
               <Zap className="h-3 w-3" />
               {L('Perguntas rápidas', 'Quick questions')}
             </p>
@@ -412,7 +412,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
                 <button
                   key={i}
                   onClick={() => handleQuickQuestion(q.question)}
-                  className="border border-white/10 bg-card px-2.5 py-2 text-left text-[11px] text-giz transition-colors hover:border-white/30 hover:text-white"
+                  className="border-2 border-linha bg-asfalto-27 px-2.5 py-2 text-left text-[12px] text-suave transition-colors hover:border-rua hover:text-papel"
                 >
                   {q.label}
                 </button>
@@ -422,7 +422,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
         )}
 
         {/* Input */}
-        <form onSubmit={handleSubmit} className="border-t border-white/10 bg-nav p-3">
+        <form onSubmit={handleSubmit} className="border-t-2 border-linha bg-concreto p-3">
           <div className="flex items-center gap-2">
             <input
               ref={inputRef}
@@ -431,12 +431,12 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
               onChange={(e) => setInput(e.target.value)}
               placeholder={L('Pergunte qualquer coisa sobre o Olefoot...', 'Ask anything about Olefoot...')}
               disabled={isLoading}
-              className="flex-1 rounded-sm border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-neon-yellow/60 focus:outline-none disabled:opacity-50"
+              className="min-w-0 flex-1 border-2 border-linha bg-asfalto-27 px-3 py-2.5 text-[14px] text-papel placeholder:text-mudo focus:border-rua focus:outline-none disabled:opacity-50"
             />
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-neon-yellow text-black transition-all hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex h-11 w-11 shrink-0 items-center justify-center bg-rua text-asfalto-27 transition-colors hover:bg-papel disabled:cursor-not-allowed disabled:opacity-50"
               aria-label={L('Enviar', 'Send')}
             >
               {isLoading ? (

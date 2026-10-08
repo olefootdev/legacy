@@ -9,6 +9,7 @@ import { BackButton } from '@/components/BackButton';
 import { suggestTraining, suggestStaff } from '@/coach/coachApi';
 import { createTrainingAction, createUpgradeStaffAction } from '@/coach/coachActions';
 import { cn } from '@/lib/utils';
+import { SecaoRua } from '@/components/ui/Rua';
 import { L, LOCALE } from '@/i18n/L';
 
 /** Rótulo de tela do grupo de treino — o valor (`defensivo`…) segue intacto. */
@@ -297,121 +298,88 @@ I created ${actionsCreated} pending action(s) for approval. Check the cards in t
   if (!coach) {
     return (
       <div className="w-full max-w-4xl mx-auto px-4 py-8">
-        <div className="sports-panel p-6 text-center">
-          <Bot className="w-12 h-12 mx-auto text-white/45 mb-4" />
-          <p className="text-white/50">{L('Coach não disponível', 'Coach unavailable')}</p>
-        </div>
+        <p className="border-2 border-dashed border-fio p-6 font-voz text-[24px] text-suave">{L('Coach não disponível.', 'Coach unavailable.')}</p>
       </div>
     );
   }
 
+  const disponiveis = Object.values(gameState.players).filter((p) => p.outForMatches <= 0);
+  const fadigaMedia = Math.round(disponiveis.reduce((sum, p) => sum + p.fatigue, 0) / Math.max(1, disponiveis.length));
+  const ativas = coach.memory.managerInstructions.filter((i) => i.active);
+
   return (
     <div className="relative w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-32 sm:pb-8">
-      <div className="relative z-10 w-full max-w-4xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-4">
+      <div className="relative z-10 w-full max-w-4xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-5">
         <BackButton to="/clube/staff" label="Staff" />
 
-        <div className="ole-eyebrow !text-neon-yellow">
-          <span>{L('Treinador · Assistente de IA', 'Coach · AI Assistant')}</span>
-        </div>
-
         {/* Header do Coach */}
-        <motion.div
+        <motion.header
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="sports-panel p-4"
+          className="flex min-w-0 flex-col gap-3"
         >
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-neon-yellow/20 flex items-center justify-center">
-              <Bot className="w-8 h-8 text-neon-yellow" />
+          <span className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
+            — {L('Treinador · Assistente de IA', 'Coach · AI Assistant')}
+          </span>
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border-[3px] border-rua">
+              <Bot className="h-7 w-7 text-rua" />
             </div>
-            <div className="flex-1">
-              <h2 className="text-lg font-display font-black uppercase tracking-wider text-white">
-                {coach.name}
-              </h2>
-              <p className="text-xs text-white/50 mt-0.5">
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate font-voz text-[clamp(32px,9vw,46px)] leading-none text-papel">{coach.name}</h1>
+              <p className="mt-1 font-prova text-[11px] font-bold uppercase tracking-[0.08em] text-mudo">
                 {coach.personality} · {L('Reputação', 'Reputation')} {coach.reputation}/100
               </p>
             </div>
-            <div className="hidden sm:flex items-center gap-3 text-xs">
-              <div className="text-center">
-                <div className="text-white/45 uppercase text-[10px]">{L('Tático', 'Tactical')}</div>
-                <div className="text-white font-bold">{coach.tactical}/20</div>
-              </div>
-              <div className="text-center">
-                <div className="text-white/45 uppercase text-[10px]">{L('Motivação', 'Motivation')}</div>
-                <div className="text-white font-bold">{coach.motivation}/20</div>
-              </div>
-              <div className="text-center">
-                <div className="text-white/45 uppercase text-[10px]">{L('Autonomia', 'Autonomy')}</div>
-                <div className="text-neon-yellow font-bold">{coach.autonomyLevel}%</div>
-              </div>
-            </div>
           </div>
-        </motion.div>
+          <dl className="grid grid-cols-3 gap-px bg-linha">
+            {[
+              [L('Tático', 'Tactical'), `${coach.tactical}/20`],
+              [L('Motivação', 'Motivation'), `${coach.motivation}/20`],
+              [L('Autonomia', 'Autonomy'), `${coach.autonomyLevel}%`],
+            ].map(([l, v]) => (
+              <div key={l} className="bg-asfalto-27 px-3 py-2.5">
+                <dt className="font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-mudo">{l}</dt>
+                <dd className="font-impact text-[22px] leading-none text-papel tabular-nums">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </motion.header>
 
         {/* Quick Context */}
-        <motion.div
+        <motion.dl
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-2"
+          className="grid grid-cols-2 gap-px bg-linha sm:grid-cols-4"
         >
-          <div className="bg-black/40 border border-white/10 rounded p-2.5 text-xs">
-            <div className="flex items-center gap-1.5 text-white/45 mb-1">
-              <Users className="w-3.5 h-3.5" />
-              <span className="uppercase text-[10px] font-medium">{L('Jogadores', 'Players')}</span>
+          {[
+            { icon: Users, l: L('Jogadores', 'Players'), v: String(disponiveis.length) },
+            { icon: TrendingUp, l: L('Fadiga', 'Fatigue'), v: `${fadigaMedia}%` },
+            { icon: Dumbbell, l: L('Treinos', 'Training'), v: String(gameState.manager.trainingPlans.filter((p) => p.status === 'running').length) },
+            { icon: Sparkles, l: 'Staff', v: `N${gameState.manager.staff.roles.treinador ?? 1}` },
+          ].map(({ icon: Icon, l, v }) => (
+            <div key={l} className="bg-concreto px-3 py-2.5">
+              <dt className="flex items-center gap-1.5 font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-mudo">
+                <Icon className="h-3.5 w-3.5" /> {l}
+              </dt>
+              <dd className="mt-0.5 font-impact text-[22px] leading-none text-papel tabular-nums">{v}</dd>
             </div>
-            <div className="text-white text-base font-black">
-              {Object.values(gameState.players).filter((p) => p.outForMatches <= 0).length}
-            </div>
-          </div>
-          <div className="bg-black/40 border border-white/10 rounded p-2.5 text-xs">
-            <div className="flex items-center gap-1.5 text-white/45 mb-1">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span className="uppercase text-[10px] font-medium">{L('Fadiga', 'Fatigue')}</span>
-            </div>
-            <div className="text-white text-base font-black">
-              {Math.round(
-                Object.values(gameState.players)
-                  .filter((p) => p.outForMatches <= 0)
-                  .reduce((sum, p) => sum + p.fatigue, 0) /
-                  Math.max(1, Object.values(gameState.players).filter((p) => p.outForMatches <= 0).length)
-              )}%
-            </div>
-          </div>
-          <div className="bg-black/40 border border-white/10 rounded p-2.5 text-xs">
-            <div className="flex items-center gap-1.5 text-white/45 mb-1">
-              <Dumbbell className="w-3.5 h-3.5" />
-              <span className="uppercase text-[10px] font-medium">{L('Treinos', 'Training')}</span>
-            </div>
-            <div className="text-white text-base font-black">
-              {gameState.manager.trainingPlans.filter((p) => p.status === 'running').length}
-            </div>
-          </div>
-          <div className="bg-black/40 border border-white/10 rounded p-2.5 text-xs">
-            <div className="flex items-center gap-1.5 text-white/45 mb-1">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span className="uppercase text-[10px] font-medium">Staff</span>
-            </div>
-            <div className="text-white text-base font-black">
-              N{gameState.manager.staff.roles.treinador ?? 1}
-            </div>
-          </div>
-        </motion.div>
+          ))}
+        </motion.dl>
 
         {/* Chat Messages */}
-        <motion.div
+        <motion.section
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="sports-panel p-4 h-[min(500px,60vh)] flex flex-col"
+          className="flex h-[min(520px,62vh)] flex-col bg-concreto p-3 sm:p-4"
         >
-          <div className="flex-1 overflow-y-auto space-y-3 mb-4">
+          <div className="mb-3 flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-1 py-1">
             {messages.length === 0 && (
-              <div className="text-center py-8">
-                <Bot className="w-12 h-12 mx-auto text-gray-600 mb-3" />
-                <p className="text-sm text-white/50">
+              <div className="border-2 border-dashed border-fio p-5">
+                <p className="font-voz text-[22px] leading-tight text-papel">
                   {L('Olá! Sou o teu assistente técnico. Posso ajudar com treinos, staff e análise do plantel.', 'Hi! I am your assistant coach. I can help with training, staff and squad analysis.')}
                 </p>
-                <p className="text-xs text-white/45 mt-2">
+                <p className="mt-2 font-prova text-[11px] uppercase tracking-[0.1em] text-mudo">
                   {L('Usa os botões abaixo ou escreve tua pergunta.', 'Use the buttons below or type your question.')}
                 </p>
               </div>
@@ -423,19 +391,21 @@ I created ${actionsCreated} pending action(s) for approval. Check the cards in t
                 className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-full bg-neon-yellow/20 flex items-center justify-center shrink-0">
-                    <Bot className="w-5 h-5 text-neon-yellow" />
+                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full border-2 border-rua">
+                    <Bot className="h-4 w-4 text-rua" />
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] rounded-lg p-3 text-sm ${
+                  className={cn(
+                    'max-w-[82%] p-3 text-[14px] leading-relaxed',
                     msg.role === 'user'
-                      ? 'bg-neon-yellow text-black'
-                      : 'bg-black/60 border border-white/10 text-white'
-                  }`}
+                      // A fala do manager é um lambe de cal colado (levemente torto).
+                      ? 'rotate-[-0.6deg] bg-cal text-asfalto-27 shadow-[3px_3px_0_rgba(0,0,0,0.5)]'
+                      : 'border-l-[3px] border-rua bg-asfalto-27 text-papel',
+                  )}
                 >
                   <div className="whitespace-pre-wrap break-words">{msg.content}</div>
-                  <div className="text-[10px] opacity-60 mt-1">
+                  <div className="mt-1 font-prova text-[10px] opacity-60">
                     {new Date(msg.timestamp).toLocaleTimeString(LOCALE, {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -443,23 +413,23 @@ I created ${actionsCreated} pending action(s) for approval. Check the cards in t
                   </div>
                 </div>
                 {msg.role === 'user' && (
-                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                    <User className="w-5 h-5 text-white" />
+                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full border-2 border-linha">
+                    <User className="h-4 w-4 text-papel" />
                   </div>
                 )}
               </div>
             ))}
 
             {loading && (
-              <div className="flex gap-3 justify-start">
-                <div className="w-8 h-8 rounded-full bg-neon-yellow/20 flex items-center justify-center shrink-0">
-                  <Bot className="w-5 h-5 text-neon-yellow animate-pulse" />
+              <div className="flex justify-start gap-3">
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full border-2 border-rua">
+                  <Bot className="h-4 w-4 animate-pulse text-rua" />
                 </div>
-                <div className="bg-black/60 border border-white/10 rounded-lg p-3">
+                <div className="border-l-[3px] border-rua bg-asfalto-27 p-3">
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-100" />
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-200" />
+                    <div className="h-2 w-2 animate-bounce bg-mudo" />
+                    <div className="h-2 w-2 animate-bounce bg-mudo delay-100" />
+                    <div className="h-2 w-2 animate-bounce bg-mudo delay-200" />
                   </div>
                 </div>
               </div>
@@ -469,33 +439,34 @@ I created ${actionsCreated} pending action(s) for approval. Check the cards in t
           </div>
 
           {/* Input Area */}
-          <div className="border-t border-white/10 pt-3">
+          <div className="border-t-2 border-linha pt-3">
             <div className="flex gap-2">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={L('Escreve tua mensagem...', 'Type your message...')}
-                className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-gray-500 resize-none focus:outline-none focus:border-neon-yellow/50"
+                className="min-w-0 flex-1 resize-none border-2 border-linha bg-asfalto-27 px-3 py-2 text-[14px] text-papel placeholder:text-mudo focus:border-rua focus:outline-none"
                 rows={2}
                 disabled={loading}
               />
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() || loading}
-                className="px-4 bg-neon-yellow text-black rounded font-bold uppercase text-xs disabled:opacity-40 disabled:cursor-not-allowed hover:bg-neon-yellow/90 transition-colors"
+                aria-label={L('Enviar', 'Send')}
+                className="inline-flex w-14 shrink-0 items-center justify-center bg-rua text-asfalto-27 transition-colors hover:bg-papel disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <Send className="w-4 h-4" />
+                <Send className="h-5 w-5" />
               </button>
             </div>
           </div>
-        </motion.div>
+        </motion.section>
 
         {/* Quick Actions */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-4"
+          className="grid grid-cols-2 gap-2 pb-4 sm:grid-cols-4"
         >
           {quickActions.map((action, i) => (
             <button
@@ -503,50 +474,47 @@ I created ${actionsCreated} pending action(s) for approval. Check the cards in t
               onClick={() => handleQuickAction(action)}
               disabled={loading || suggestingAction}
               className={cn(
-                "relative z-20 bg-white/5 border border-white/10 rounded px-3 py-2.5 text-xs font-medium text-white hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]",
-                action.action && "border-neon-yellow/30 hover:border-neon-yellow/50"
+                'relative z-20 min-h-[48px] px-3 py-2.5 text-left font-impact text-[14px] uppercase leading-tight transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+                action.action
+                  ? 'border-2 border-rua text-rua hover:bg-rua hover:text-asfalto-27'
+                  : 'border-2 border-linha text-papel hover:border-papel',
               )}
             >
-              {action.action && <Zap className="w-3 h-3 inline mr-1 text-neon-yellow" />}
+              {action.action && <Zap className="mr-1 inline h-3 w-3" />}
               {action.label}
             </button>
           ))}
         </motion.div>
 
         {/* Instruções Ativas */}
-        {coach.memory.managerInstructions.filter((i) => i.active).length > 0 && (
-          <motion.div
+        {ativas.length > 0 && (
+          <motion.section
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="sports-panel p-4"
+            className="flex flex-col gap-3"
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white/50 mb-2">
-              {L('Instruções Ativas', 'Active Instructions')} ({coach.memory.managerInstructions.filter((i) => i.active).length})
-            </h3>
-            <div className="space-y-1.5">
-              {coach.memory.managerInstructions
-                .filter((i) => i.active)
+            <SecaoRua label={L('Instruções Ativas', 'Active Instructions')} aside={ativas.length} />
+            <div className="flex flex-col gap-px bg-linha">
+              {ativas
                 .slice(-5)
                 .map((instruction, i) => (
-                  <div
-                    key={i}
-                    className="bg-black/40 border border-white/10 rounded p-2 text-xs"
-                  >
+                  <div key={i} className="bg-asfalto-27 p-3">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <span className="text-white">{instruction.instruction}</span>
-                        <div className="text-[10px] text-white/45 mt-0.5">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[14px] text-papel">{instruction.instruction}</span>
+                        <div className="mt-0.5 font-prova text-[10px] text-mudo">
                           {instruction.category} · {instruction.priority}
                         </div>
                       </div>
                       <span
-                        className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                        className={cn(
+                          'shrink-0 px-1.5 py-0.5 font-prova text-[9px] font-bold uppercase',
                           instruction.priority === 'high'
-                            ? 'bg-red-500/20 text-red-400'
+                            ? 'border border-baixa text-baixa'
                             : instruction.priority === 'medium'
-                              ? 'bg-yellow-500/20 text-yellow-400'
-                              : 'bg-gray-500/20 text-white/50'
-                        }`}
+                              ? 'border border-rua text-rua'
+                              : 'border border-linha text-mudo',
+                        )}
                       >
                         {instruction.priority}
                       </span>
@@ -554,7 +522,7 @@ I created ${actionsCreated} pending action(s) for approval. Check the cards in t
                   </div>
                 ))}
             </div>
-          </motion.div>
+          </motion.section>
         )}
       </div>
     </div>

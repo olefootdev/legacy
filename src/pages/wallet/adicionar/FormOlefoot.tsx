@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Hashtag } from '@/components/ui';
 import {
   lerEstadoDaPresale, previaDoValor,
   type EstadoDaPresaleCarregado, type MotivoPackFechado,
@@ -117,20 +115,20 @@ export function FormOlefoot({
   }, [estado, escolhido, outroCents]);
 
   if (carga.status === 'carregando' || naArvore === null) {
-    return <p className="py-6 font-mono text-[12px] text-cimento">{L('Carregando a pré-venda…', 'Loading the presale…')}</p>;
+    return <p className="py-6 font-prova text-[12px] uppercase tracking-[0.16em] text-mudo">{L('Carregando a pré-venda…', 'Loading the presale…')}</p>;
   }
   if (carga.status === 'erro' || !estado) {
     return (
-      <div className="border border-atencao/40 bg-atencao/10 px-3 py-3">
-        <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-atencao">{L('Pré-venda', 'Presale')}</p>
-        <p className="mt-1 text-xs text-giz">{L('Não deu para carregar os packs agora. Tente de novo em instantes.', 'Couldn\'t load the packs right now. Try again in a moment.')}</p>
+      <div className="border-2 border-dashed border-fio px-4 py-4">
+        <p className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">— {L('Pré-venda', 'Presale')}</p>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-suave">{L('Não deu para carregar os packs agora. Tente de novo em instantes.', 'Couldn\'t load the packs right now. Try again in a moment.')}</p>
       </div>
     );
   }
   if (!estado.aberta) {
     return (
-      <div className="border border-white/10 bg-card px-3 py-4">
-        <p className="font-impact text-[20px] uppercase leading-[1.1] text-white">{L('Pré-venda fechada', 'Presale closed')}</p>
+      <div className="border-2 border-dashed border-fio px-4 py-5">
+        <p className="font-voz text-[32px] leading-none text-papel">{L('Pré-venda fechada', 'Presale closed')}</p>
       </div>
     );
   }
@@ -154,12 +152,12 @@ export function FormOlefoot({
   return (
     <div className="space-y-4">
       {precisaIndicador && (
-        <div className="border border-white/10 bg-card px-3.5 py-3">
-          <label htmlFor="quem-indicou" className="font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
+        <div className="bg-concreto px-4 py-4">
+          <label htmlFor="quem-indicou" className="block font-voz text-[28px] leading-none text-papel">
             {L('Quem te indicou?', 'Who referred you?')}
           </label>
-          <div className="relative mt-1.5">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-poeira">@</span>
+          <div className="relative mt-3">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-prova text-[15px] font-bold text-mudo">@</span>
             <input
               id="quem-indicou"
               value={indicador}
@@ -169,24 +167,24 @@ export function FormOlefoot({
               autoCapitalize="none"
               autoComplete="off"
               spellCheck={false}
-              className="w-full border border-white/16 bg-deep-black py-2.5 pl-8 pr-3 font-mono text-[15px] text-white placeholder:text-poeira focus:border-neon-yellow/60 focus:outline-none disabled:opacity-40"
+              className="w-full min-w-0 border-2 border-linha bg-asfalto-27 py-3 pl-8 pr-3 font-prova text-[16px] font-bold text-papel placeholder:text-fio transition-colors focus:border-rua focus:outline-none disabled:opacity-40"
             />
           </div>
-          <label className="mt-2 flex cursor-pointer items-center gap-2 font-mono text-[11px] text-cimento">
-            <input type="checkbox" checked={ninguem}
+          <label className="mt-2.5 flex min-h-[44px] cursor-pointer items-center gap-2.5 font-prova text-[12px] text-suave">
+            <input className="h-4 w-4 accent-[var(--color-rua)]" type="checkbox" checked={ninguem}
               onChange={(e) => { setNinguem(e.target.checked); setErroIndicador(null); }} />
             {L('Ninguém me indicou', 'No one referred me')}
           </label>
-          <p className="mt-1.5 font-mono text-[10.5px] leading-relaxed text-poeira">
+          <p className="font-prova text-[11px] leading-relaxed text-mudo">
             {L('Você entra no time de quem te indicou. A posição na rede é definitiva.', 'You join the team of whoever referred you. Your network position is permanent.')}
           </p>
-          {erroIndicador && <p role="alert" className="mt-1.5 text-[12px] text-atencao">{erroIndicador}</p>}
+          {erroIndicador && <p role="alert" className="mt-2 font-prova text-[12px] text-atencao">{erroIndicador}</p>}
         </div>
       )}
 
-      <Hashtag>{emIngles() ? `#presale · $${estado.preco} per OLEFOOT` : `#prevenda · $${estado.preco.replace('.', ',')} por OLEFOOT`}</Hashtag>
+      <p className="min-w-0 truncate font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">— {emIngles() ? `#presale · $${estado.preco} per OLEFOOT` : `#prevenda · $${estado.preco.replace('.', ',')} por OLEFOOT`}</p>
 
-      <div className="border border-white/10">
+      <div className="border-2 border-linha">
         {estado.packs.map((p) => {
           const ativo = outroCents == null && escolhido === p.usdCents;
           return (
@@ -196,19 +194,19 @@ export function FormOlefoot({
               disabled={!p.disponivel}
               onClick={() => { setEscolhido(p.usdCents); setOutro(''); }}
               className={cn(
-                'flex w-full min-w-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3 text-left transition-colors last:border-b-0 disabled:cursor-not-allowed disabled:opacity-40',
-                ativo ? 'bg-neon-yellow text-black' : 'bg-deep-black text-white hover:bg-card',
+                'flex min-h-[60px] w-full min-w-0 items-center justify-between gap-3 border-b-2 border-linha px-4 py-3 text-left transition-colors last:border-b-0 disabled:cursor-not-allowed disabled:opacity-40',
+                ativo ? 'bg-rua text-asfalto-27' : 'bg-asfalto-27 text-papel hover:bg-concreto',
               )}
             >
-              <span className="ole-num shrink-0 text-[17px] tabular-nums">{dolar(p.usdCents)}</span>
+              <span className="shrink-0 font-impact text-[26px] leading-none tabular-nums">{dolar(p.usdCents)}</span>
               {/* Tokens em cima, reais embaixo. Numa linha só os três números
                   não cabem em 320px, e o que cortava era justamente o dado. */}
               <span className="flex min-w-0 flex-col items-end gap-0.5">
-                <span className="whitespace-nowrap font-mono text-[11.5px] tabular-nums">
+                <span className="whitespace-nowrap font-prova text-[12px] font-bold tabular-nums">
                   {p.disponivel ? `${br(p.recebe)} OLEFOOT` : FECHADO[p.motivo ?? 'cotacao_invalida']}
                 </span>
                 {p.disponivel && (
-                  <span className={cn('whitespace-nowrap font-mono text-[11px] tabular-nums', ativo ? 'text-black' : 'text-cimento')}>
+                  <span className={cn('whitespace-nowrap font-prova text-[11px] tabular-nums', ativo ? 'text-asfalto-27' : 'text-mudo')}>
                     R$ {reais(p.brlCents)}
                   </span>
                 )}
@@ -230,17 +228,17 @@ export function FormOlefoot({
             disabled={!plano.disponivel}
             onClick={() => { setEscolhido('ativacao_3x'); setOutro(''); }}
             className={cn(
-              'block w-full border px-4 py-3.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40',
-              ativo ? 'border-neon-yellow bg-neon-yellow text-black' : 'border-neon-yellow/40 bg-deep-black text-white hover:bg-card',
+              'block w-full border-2 px-4 py-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+              ativo ? 'border-rua bg-rua text-asfalto-27' : 'border-rua bg-asfalto-27 text-papel hover:bg-concreto',
             )}
           >
             <span className="flex items-center justify-between gap-3">
-              <span className="ole-num shrink-0 text-[15px] uppercase">{L('Ativação 3×', '3× Activation')} · {dolar(plano.usdCents)}</span>
-              <span className="whitespace-nowrap font-mono text-[11px] tabular-nums">
+              <span className="min-w-0 font-impact text-[20px] uppercase leading-none">{L('Ativação 3×', '3× Activation')} · {dolar(plano.usdCents)}</span>
+              <span className="shrink-0 whitespace-nowrap font-prova text-[11.5px] font-bold tabular-nums">
                 {plano.disponivel ? `R$ ${reais(plano.brlCents)}` : FECHADO[plano.motivo ?? 'cotacao_invalida']}
               </span>
             </span>
-            <span className={cn('mt-1.5 block text-[12px] leading-relaxed', ativo ? 'text-black' : 'text-cimento')}>
+            <span className={cn('mt-2 block text-[12.5px] leading-relaxed', ativo ? 'text-asfalto-27' : 'text-suave')}>
               {L('Seu pack de $10 + 1 conta de $10 no Time 1 e no Time 2 — as duas são suas. Ativa o bônus na hora, com 1 em cada time.', 'Your $10 pack + one $10 account on Team 1 and on Team 2 — both are yours. Activates the bonus instantly, with 1 on each team.')}
             </span>
           </button>
@@ -248,30 +246,30 @@ export function FormOlefoot({
       })}
 
       <div>
-        <label className="mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
-          {L('Ou outro valor, em dólar', 'Or another amount, in USD')}
+        <label className="mb-2 block font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+          — {L('Ou outro valor, em dólar', 'Or another amount, in USD')}
         </label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-poeira">$</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-prova text-[15px] font-bold text-mudo">$</span>
           <input
             value={outro}
             onChange={(e) => setOutro(e.target.value)}
             inputMode="decimal"
             placeholder="0"
-            className="w-full border border-white/16 bg-deep-black py-2.5 pl-8 pr-3 font-mono text-lg tabular-nums text-white focus:border-neon-yellow/60 focus:outline-none"
+            className="w-full min-w-0 border-2 border-linha bg-concreto py-3 pr-3 font-prova text-[18px] font-bold tabular-nums text-papel placeholder:text-fio transition-colors focus:border-rua focus:outline-none pl-8"
           />
         </div>
         {outroCents != null && outroCents < estado.minimoUsdCents && (
-          <p className="mt-1 text-[10px] text-baixa">{L('Mínimo de', 'Minimum')} {dolar(estado.minimoUsdCents)}</p>
+          <p className="mt-1.5 font-prova text-[11px] text-baixa">{L('Mínimo de', 'Minimum')} {dolar(estado.minimoUsdCents)}</p>
         )}
       </div>
 
       {pedido && (
-        <div className="flex min-w-0 items-baseline justify-between gap-3 border border-white/10 bg-card px-3 py-2.5">
-          <span className="shrink-0 font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
+        <div className="flex min-w-0 items-baseline justify-between gap-3 border-b-2 border-linha pb-3">
+          <span className="shrink-0 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
             {L('Você recebe', 'You get')}
           </span>
-          <span className="ole-num min-w-0 truncate text-[16px] text-white tabular-nums">
+          <span className="min-w-0 truncate font-impact text-[22px] leading-none text-papel tabular-nums">
             {pedido.plano === 'ativacao_3x'
               ? `${br(pedido.recebe)} OLEFOOT × ${L('3 contas', '3 accounts')}`
               : `${br(pedido.recebe)} OLEFOOT`}
@@ -284,17 +282,16 @@ export function FormOlefoot({
         onClick={() => void pagar()}
         disabled={!pedido || conferindo}
         className={cn(
-          'ole-num inline-flex h-[50px] w-full items-center justify-center gap-2 whitespace-nowrap text-[13px] uppercase transition-colors [--corte:12px] [clip-path:var(--clip-corte)]',
-          pedido ? 'bg-neon-yellow text-black hover:bg-white' : 'cursor-not-allowed bg-card-hi text-poeira',
+          'inline-flex min-h-[54px] w-full items-center justify-center gap-2 whitespace-nowrap px-4 font-impact text-[19px] uppercase leading-none transition-[transform,box-shadow,background-color]',
+          pedido ? 'bg-rua text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)]' : 'cursor-not-allowed border-2 border-dashed border-fio text-mudo',
         )}
       >
-        <Zap className="h-4 w-4" />
-        {conferindo ? L('Conferindo…', 'Checking…') : pedido ? L(`Pagar R$ ${reais(pedido.brlCents)} no Pix`, `Pay R$ ${reais(pedido.brlCents)} with Pix`) : L('Escolha o pack', 'Choose a pack')}
+        {conferindo ? L('Conferindo…', 'Checking…') : pedido ? <>{L(`Pagar R$ ${reais(pedido.brlCents)} no Pix`, `Pay R$ ${reais(pedido.brlCents)} with Pix`)} <span aria-hidden>→</span></> : L('Escolha o pack', 'Choose a pack')}
       </button>
 
       {/* Texto de custódia e de trava: a pessoa precisa saber ANTES de pagar
           que o token entra travado e ainda não está na carteira dela. */}
-      <p className="border-l-2 border-cimento bg-card px-3.5 py-3 text-[12px] leading-relaxed text-cimento">
+      <p className="bg-cal px-4 py-3.5 text-[13px] font-medium leading-relaxed text-asfalto-27">
         {L('O OLEFOOT entra travado na sua posição e libera com o tempo ou com nova compra. O que for liberado vai para a sua carteira Solana vinculada.', 'OLEFOOT enters your position locked and unlocks over time or with a new buy. What unlocks goes to your linked Solana wallet.')}
       </p>
     </div>

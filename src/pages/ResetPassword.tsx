@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getSupabase } from '@/supabase/client';
 import { updateUserPassword } from '@/supabase/auth';
 import { L } from '@/i18n/L';
+import { FitaRua, MarcaRua } from '@/components/ui';
 
 export function ResetPassword() {
   const navigate = useNavigate();
@@ -63,47 +64,37 @@ export function ResetPassword() {
   };
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-deep-black">
-      <div
-        className="absolute inset-0 z-0 scale-105 bg-cover bg-[center_22%] bg-no-repeat sm:bg-center"
-        style={{ backgroundImage: 'url(/login-hero.png)' }}
-        aria-hidden
-      />
-      {/* Scrim da foto (legibilidade) — único degradê permitido nesta tela. */}
-      <div
-        aria-hidden
-        className="absolute inset-0 z-0"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(13,13,13,0.85) 0%, rgba(13,13,13,0.45) 20%, rgba(13,13,13,0.8) 45%, #0D0D0D 80%)',
-        }}
-      />
+    <div className="rua-grao relative flex min-h-svh flex-col overflow-hidden bg-asfalto-27">
+      {/* A fita da capa, colada no topo do muro. */}
+      <FitaRua inclinacao={-3} className="relative z-10 mt-6 py-3" />
 
       <div className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 py-10">
-        <div className="border border-white/10 bg-panel">
-          <div className="px-5 py-6 sm:px-6">
-            <h2 className="font-impact text-[30px] uppercase leading-[1.05] text-white">
+        <MarcaRua tipo="wordmark" label="Olefoot" className="mb-8 h-[22px] self-start bg-rua" />
+        <div className="border-t-2 border-papel">
+          <div className="pt-5">
+            <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.22em] text-mudo">— {L('Senha', 'Password')}</span>
+            <h2 className="mt-2 font-impact text-[clamp(38px,11vw,52px)] uppercase leading-[0.92] text-papel">
               {L('Redefinir Senha', 'Reset Password')}
             </h2>
             {!ready ? (
-              <p className="mt-4 text-[12px] text-cimento">{L('Validando link…', 'Validating link…')}</p>
+              <p className="mt-4 font-prova text-[12px] text-mudo">{L('Validando link…', 'Validating link…')}</p>
             ) : done ? (
-              <p className="mt-4 border border-alta/40 bg-alta/10 px-3 py-2 text-[12px] text-giz">
+              <p className="mt-5 -rotate-1 bg-cal px-4 py-3.5 text-[13.5px] text-asfalto-27">
                 ✓ {L('Senha atualizada. Redirecionando ao login…', 'Password updated. Redirecting to sign in…')}
               </p>
             ) : !hasSession ? (
               <div className="mt-4 space-y-3">
-                <p className="border border-baixa/50 bg-baixa/10 px-3 py-2 text-[12px] text-giz">
+                <p role="alert" className="border-l-[5px] border-baixa bg-concreto px-3.5 py-3 text-[13px] text-papel">
                   ✗ {L('Link inválido ou expirado. Solicite um novo e-mail de recuperação.', 'Invalid or expired link. Request a new reset email.')}
                 </p>
-                <Link to="/login" className="btn-primary flex h-12 w-full items-center justify-center">
+                <Link to="/login" className="btn-primary flex min-h-[54px] w-full text-[20px] items-center justify-center">
                   <span className="btn-primary-inner justify-center py-1">{L('Voltar ao login', 'Back to sign in')}</span>
                 </Link>
               </div>
             ) : (
-              <form onSubmit={(e) => void onSubmit(e)} className="mt-4 space-y-3" autoComplete="off">
+              <form onSubmit={(e) => void onSubmit(e)} className="mt-5 flex flex-col gap-3.5" autoComplete="off">
                 <label className="block">
-                  <span className="mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Nova senha', 'New password')}</span>
+                  <span className="mb-1.5 block font-prova text-[11.5px] font-bold uppercase tracking-[0.2em] text-mudo">{L('Nova senha', 'New password')}</span>
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -111,11 +102,11 @@ export function ResetPassword() {
                     onChange={(e: import('react').ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full border border-white/16 bg-deep-black px-3 py-2.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
+                    className="min-h-[50px] w-full border-2 border-linha bg-concreto px-3.5 py-3 text-[15px] text-papel focus:border-rua focus:outline-none"
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Confirmar senha', 'Confirm password')}</span>
+                  <span className="mb-1.5 block font-prova text-[11.5px] font-bold uppercase tracking-[0.2em] text-mudo">{L('Confirmar senha', 'Confirm password')}</span>
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -123,21 +114,21 @@ export function ResetPassword() {
                     onChange={(e: import('react').ChangeEvent<HTMLInputElement>) => setConfirm(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full border border-white/16 bg-deep-black px-3 py-2.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
+                    className="min-h-[50px] w-full border-2 border-linha bg-concreto px-3.5 py-3 text-[15px] text-papel focus:border-rua focus:outline-none"
                   />
                 </label>
                 {error ? (
-                  <p className="border border-baixa/50 bg-baixa/10 px-3 py-2 text-[11px] text-giz">
+                  <p role="alert" className="border-l-[5px] border-baixa bg-concreto px-3.5 py-3 text-[13px] text-papel">
                     ✗ {error}
                   </p>
                 ) : null}
                 <button
                   type="submit"
                   disabled={busy || !password || !confirm}
-                  className="btn-primary flex h-12 w-full items-center justify-center disabled:pointer-events-none disabled:opacity-40"
+                  className="btn-primary flex min-h-[54px] w-full text-[20px] items-center justify-center disabled:pointer-events-none disabled:opacity-40"
                 >
                   <span className="btn-primary-inner justify-center py-1">
-                    {busy ? L('Atualizando…', 'Updating…') : L('Atualizar senha', 'Update password')}
+                    {busy ? L('Atualizando…', 'Updating…') : <>{L('Atualizar senha', 'Update password')} <span aria-hidden>→</span></>}
                   </span>
                 </button>
               </form>

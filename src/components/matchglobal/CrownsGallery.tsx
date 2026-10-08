@@ -40,48 +40,46 @@ export function CrownsGallery({ limit = 10 }: Props) {
   if (crowns.length === 0) return null;
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-white/40">
-            {L('Galeria de Coroas', 'Crown Gallery')}
-          </p>
-          <h3 className="font-display text-xl font-bold uppercase text-white">
-            {L('Campeões Recentes', 'Recent Champions')}
-          </h3>
+    <section className="flex min-w-0 flex-col gap-3">
+      <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex min-w-0 items-baseline justify-between gap-3">
+          <span className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">— {L('Galeria de coroas', 'Crown gallery')}</span>
+          <span className="shrink-0 font-prova text-[12px] font-bold text-mudo">
+            {crowns.length} {L('coroa', 'crown')}{crowns.length === 1 ? '' : 's'}
+          </span>
         </div>
-        <span className="font-mono text-[10px] text-white/40">
-          {crowns.length} {L('coroa', 'crown')}{crowns.length === 1 ? '' : 's'}
-        </span>
+        <h3 className="font-voz text-[clamp(30px,8vw,44px)] leading-[0.95] text-papel">{L('Quem já levou a coroa', 'Who wore the crown')}</h3>
       </div>
 
-      <div className="overflow-x-auto -mx-3 px-3 pb-1">
-        <div className="flex gap-3 min-w-max">
+      <div className="-mx-3 overflow-x-auto px-3 pb-2">
+        <div className="flex min-w-max gap-2">
           {crowns.map((c, i) => (
             <motion.div
               key={c.id}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
-              className="sports-panel rounded-lg p-4 min-w-[200px] border border-neon-yellow/20 hover:border-neon-yellow/50 transition-colors"
+              className={i === 0
+                ? 'flex min-w-[200px] flex-col gap-1.5 bg-ouro-27 p-4 text-asfalto-27'
+                : 'flex min-w-[200px] flex-col gap-1.5 border-2 border-ouro-27 p-4'}
             >
-              <div className="flex items-start justify-between mb-2">
-                <Crown className="w-5 h-5 text-neon-yellow" />
-                <span className="font-mono text-[10px] text-text-soft">
+              <div className="flex items-start justify-between">
+                <Crown aria-hidden className={i === 0 ? 'h-5 w-5' : 'h-5 w-5 text-ouro-27'} />
+                <span className={i === 0 ? 'font-prova text-[10.5px] font-bold' : 'font-prova text-[10.5px] font-bold text-mudo'}>
                   {formatDate(c.dailyDate)}
                 </span>
               </div>
-              <p className="font-display text-base font-bold uppercase text-white truncate">
+              <p className={i === 0 ? 'truncate font-impact text-[22px] uppercase leading-none' : 'truncate font-impact text-[22px] uppercase leading-none text-papel'}>
                 {c.clubName}
               </p>
               {c.runnerUpClubName && c.finalScoreHome != null && c.finalScoreAway != null && (
-                <p className="font-mono text-[11px] text-text-soft mt-2">
-                  {c.finalScoreHome}–{c.finalScoreAway} vs {c.runnerUpClubName}
+                <p className={i === 0 ? 'truncate font-prova text-[11px]' : 'truncate font-prova text-[11px] text-suave'}>
+                  {c.finalScoreHome}×{c.finalScoreAway} vs {c.runnerUpClubName}
                   {c.finalWentToPens ? ' (P)' : ''}
                 </p>
               )}
-              <p className="font-mono text-[10px] text-text-soft mt-1">
-                bracket {c.bracketSize}
+              <p className={i === 0 ? 'font-prova text-[10px] uppercase opacity-70' : 'font-prova text-[10px] uppercase text-mudo'}>
+                {L(`chave de ${c.bracketSize}`, `bracket of ${c.bracketSize}`)}
               </p>
             </motion.div>
           ))}

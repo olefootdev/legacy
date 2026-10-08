@@ -10,7 +10,7 @@ type ActivityStripProps = {
 
 const TYPE_META: Record<WalletLedgerType, { label: string; icon: string }> = {
   SPOT_EXP: { label: L('Movimento EXP', 'EXP movement'), icon: '◆' },
-  SPOT_BRO: { label: L('Movimento USDT', 'USDT movement'), icon: '◆' },
+  SPOT_BRO: { label: L('Movimento BRO', 'BRO movement'), icon: '◆' },
   REFERRAL_OLE_GAME: { label: L('Indicação OLE', 'OLE referral'), icon: '◈' },
   REFERRAL_NFT: { label: L('Indicação NFT', 'NFT referral'), icon: '◈' },
   TRANSFER: { label: L('Transferência', 'Transfer'), icon: '↗' },
@@ -23,7 +23,8 @@ function formatAmount(amount: number, currency: string): string {
   const positive = amount >= 0;
   const sign = positive ? '+' : '−';
   const abs = Math.abs(amount);
-  const displayCurrency = currency === 'BRO' ? 'USDT' : currency;
+  // BRO é crédito do jogo, não Tether — o rótulo "USDT" era resto do nome antigo.
+  const displayCurrency = currency;
   if (currency === 'BRO') {
     const usdt = (abs / 100).toFixed(2);
     return `${sign}${usdt} ${displayCurrency}`;
@@ -59,39 +60,37 @@ export function ActivityStrip({ ledger, limit = 3 }: ActivityStripProps) {
         <button
           type="button"
           onClick={() => navigate('/wallet/extract')}
-          className="shrink-0 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento transition-colors hover:text-white"
+          className="shrink-0 font-impact text-[16px] uppercase text-rua transition-colors hover:text-papel"
         >
           {L('Extrato →', 'Statement →')}
         </button>
       </div>
 
-      <div
-        className="border border-white/10 bg-panel divide-y divide-white/[0.07]"
-        style={{ borderRadius: 'var(--radius-card)' }}
-      >
+      <div className="divide-y-2 divide-linha">
         {recent.length === 0 ? (
-          <div className="p-5 text-center">
-            <p className="text-[12px] text-cimento">{L('Sem movimentações ainda', 'No activity yet')}</p>
+          <div className="flex flex-col items-start gap-1 border-2 border-dashed border-fio p-5">
+            <p className="font-voz text-[26px] leading-none text-papel">{L('Nada rolou ainda.', 'Nothing yet.')}</p>
+            <p className="font-prova text-[12px] text-mudo">{L('Joga uma partida e o prêmio cai aqui.', 'Play a match and the prize lands here.')}</p>
           </div>
         ) : (
           recent.map((entry) => {
             const meta = TYPE_META[entry.type] ?? { label: entry.type, icon: '•' };
             const positive = entry.amount >= 0;
             return (
-              <div key={entry.id} className="flex items-center gap-3 p-3 sm:p-4">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-card-hi text-cimento text-[14px]">
+              <div key={entry.id} className="flex min-h-[60px] items-center gap-3 py-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-linha text-[14px] text-suave">
                   {meta.icon}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-medium text-white truncate">{meta.label}</p>
-                  <p className="font-mono text-[10.5px] text-cimento">
+                  <p className="truncate font-prova text-[13px] text-papel">{meta.label}</p>
+                  <p className="font-prova text-[11px] text-mudo">
                     {timeAgo(entry.createdAt)}
                     {entry.status !== 'confirmed' ? ` · ${entry.status}` : ''}
                   </p>
                 </div>
                 <p
-                  className={`font-mono text-[13px] font-medium tabular-nums shrink-0 ${
-                    positive ? 'text-alta' : 'text-giz'
+                  className={`shrink-0 font-impact text-[19px] leading-none tabular-nums ${
+                    positive ? 'text-rua' : 'text-papel'
                   }`}
                 >
                   {formatAmount(entry.amount, entry.currency)}

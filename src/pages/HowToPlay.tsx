@@ -7,13 +7,12 @@ import {
   TrendingUp,
   BookOpen,
   RotateCcw,
-  ChevronRight,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
-import { SecaoVolt } from '@/components/ui';
+import { SecaoRua } from '@/components/ui';
 import { BackButton } from '@/components/BackButton';
 import { L } from '@/i18n/L';
 
@@ -96,115 +95,103 @@ export function HowToPlay() {
   };
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 pb-8 overflow-x-hidden">
-      <div className="px-3 sm:px-4 lg:px-8">
-        <BackButton to="/ajuda" label={L('Ajuda', 'Help')} />
-      </div>
-      {/* ── HERO — volt chapado + título em Anton ── */}
-      <section
+    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-7 overflow-x-hidden px-3 pb-8 sm:px-4">
+      <BackButton to="/ajuda" label={L('Ajuda', 'Help')} />
+
+      {/* ── HERO — o grito em Anton ── */}
+      <motion.section
         aria-label={L('Como jogar', 'How to play')}
-        className="relative w-full overflow-hidden bg-neon-yellow -mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-2"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="flex flex-col gap-2 border-b-2 border-papel pb-4"
       >
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14"
-        >
-          <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-            {L('Tutorial · 7 passos', 'Tutorial · 7 steps')}
-          </span>
-          <h1
-            className="mt-2 font-impact uppercase text-deep-black"
-            style={{ fontSize: 'clamp(44px, 12vw, 88px)', lineHeight: 0.95, letterSpacing: '-0.01em' }}
-          >
-            {L('Como jogar', 'How to play')}
-          </h1>
-        </motion.div>
+        <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.22em] text-rua">
+          — {L('Tutorial · 7 passos', 'Tutorial · 7 steps')}
+        </span>
+        <h1 className="font-impact uppercase leading-[0.86] text-papel" style={{ fontSize: 'clamp(56px, 17vw, 104px)' }}>
+          {L('Como jogar', 'How to play')}
+        </h1>
+        <p className="font-voz text-[clamp(22px,6.4vw,30px)] leading-[1.05] text-suave">
+          {L('Pequeno, constante, todo dia.', 'Small, steady, every day.')}
+        </p>
+      </motion.section>
+
+      {/* ── 7 passos — a escada, um degrau por vez ── */}
+      <section className="flex flex-col gap-2">
+        <SecaoRua label={L('Os 7 passos', 'The 7 steps')} aside="07" />
+        <ol className="flex flex-col">
+          {STEPS.map((step, i) => {
+            const Icon = step.icon;
+            return (
+              <li key={step.title} className="flex min-w-0 items-start gap-3.5 border-b border-linha py-5 last:border-b-0">
+                <span className="w-12 shrink-0 font-spray font-black leading-[0.85] text-rua" style={{ fontSize: 'clamp(40px, 11vw, 52px)' }}>
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 font-prova text-[10.5px] font-bold uppercase tracking-[0.18em] text-mudo">
+                    <Icon aria-hidden className="h-3.5 w-3.5" />
+                    {L('Passo', 'Step')} {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <h3 className="mt-1 font-impact text-[22px] uppercase leading-[1.05] text-papel">{step.title}</h3>
+                  <p className="mt-1.5 text-[13.5px] leading-relaxed text-suave">{step.body}</p>
+                  <Link
+                    to={step.cta.to}
+                    className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 border-2 border-papel px-4 font-impact text-[16px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
+                  >
+                    {step.cta.label}
+                    <span aria-hidden>→</span>
+                  </Link>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
       </section>
 
       {/* ── Opções ── */}
-      <section className="space-y-3">
-        <SecaoVolt label={L('Opções', 'Options')} />
-        <div className="bg-panel border border-white/10 overflow-hidden divide-y divide-white/5">
-          <div className="flex items-center justify-between gap-3 px-5 py-4">
+      <section className="flex flex-col gap-2">
+        <SecaoRua label={L('Opções', 'Options')} />
+        <div className="divide-y divide-linha bg-concreto">
+          <div className="flex items-center justify-between gap-3 px-4 py-4">
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white">{L('Ativar assistente', 'Enable assistant')}</p>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-cimento">
+              <p className="font-impact text-[18px] uppercase leading-[1.1] text-papel">{L('Ativar assistente', 'Enable assistant')}</p>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-mudo">
                 {L('Dicas flutuantes fora das partidas.', 'Floating tips outside matches.')}
               </p>
             </div>
             <button
               type="button"
               onClick={toggleAssistant}
+              aria-pressed={assistantEnabled}
               className={cn(
-                'shrink-0 px-4 py-1.5 text-[10px] font-display font-bold uppercase tracking-[0.18em] transition-colors',
+                'min-h-[42px] shrink-0 px-4 font-prova text-[11.5px] font-bold uppercase tracking-[0.14em] transition-colors',
                 assistantEnabled
-                  ? 'bg-neon-yellow text-black hover:bg-white'
-                  : 'border border-white/16 text-cimento hover:border-white/30 hover:text-white',
+                  ? 'bg-rua text-asfalto-27 hover:bg-papel'
+                  : 'border-2 border-dashed border-fio text-mudo hover:border-papel hover:text-papel',
               )}
             >
               {assistantEnabled ? L('Ligado', 'On') : L('Desligado', 'Off')}
             </button>
           </div>
 
-          <div className="flex items-center justify-between gap-3 px-5 py-4">
+          <div className="flex items-center justify-between gap-3 px-4 py-4">
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white">{L('Refazer tutorial inicial', 'Redo intro tutorial')}</p>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-cimento">
+              <p className="font-impact text-[18px] uppercase leading-[1.1] text-papel">{L('Refazer tutorial inicial', 'Redo intro tutorial')}</p>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-mudo">
                 {L('Plantel → tática → mercado → primeira partida.', 'Squad → tactics → market → first match.')}
               </p>
             </div>
             <button
               type="button"
               onClick={restartTutorial}
-              className="inline-flex shrink-0 items-center gap-1.5 border border-white/30 bg-deep-black px-3 py-1.5 text-[10px] font-display font-bold uppercase tracking-[0.18em] text-white transition-colors hover:border-white"
+              className="inline-flex min-h-[42px] shrink-0 items-center gap-1.5 border-2 border-papel px-3 font-prova text-[11.5px] font-bold uppercase tracking-[0.14em] text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
             >
-              <RotateCcw className="h-3 w-3" />
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
               {L('Reiniciar', 'Restart')}
             </button>
           </div>
         </div>
-      </section>
-
-      {/* ── 7 passos ── */}
-      <section className="space-y-3">
-        <SecaoVolt label={L('Os 7 passos', 'The 7 steps')} />
-        <ol className="space-y-3">
-          {STEPS.map((step, i) => {
-            const Icon = step.icon;
-            return (
-              <li
-                key={step.title}
-                className="border border-white/10 bg-panel p-4"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center bg-neon-yellow text-black">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-neon-yellow">
-                      {L('Passo', 'Step')} {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <h3 className="mt-0.5 font-impact text-[20px] uppercase leading-[1.1] text-white">
-                      {step.title}
-                    </h3>
-                    <p className="mt-1.5 text-[13px] leading-relaxed text-giz">
-                      {step.body}
-                    </p>
-                    <Link
-                      to={step.cta.to}
-                      className="mt-3 inline-flex items-center gap-1.5 bg-neon-yellow px-4 py-2 text-[11px] font-display font-bold uppercase tracking-[0.18em] text-black transition-colors hover:bg-white [clip-path:var(--clip-corte)]"
-                    >
-                      {step.cta.label}
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
       </section>
     </div>
   );

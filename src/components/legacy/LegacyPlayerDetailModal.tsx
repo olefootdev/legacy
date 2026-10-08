@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Crown, ShoppingCart, AlertTriangle, Loader2, TrendingUp, BookText, GraduationCap, Sparkles } from 'lucide-react';
+import { X, AlertTriangle, Loader2 } from 'lucide-react';
 import {
   legacyPortraitImageUrl,
   legacyPortraitFocusStyle,
@@ -12,6 +12,20 @@ import type { PlayerAttributes } from '@/entities/types';
 import { moedaDoJogo } from '@/wallet/constants';
 import { L, LOCALE } from '@/i18n/L';
 import { posLabel } from '@/components/matchquick/posLabel';
+import { cn } from '@/lib/utils';
+import { DEGRAU_CLASSES, MarcaRua, SeloRua } from '@/components/ui/Rua';
+import {
+  ACAO_CONTORNO,
+  ACAO_OURO,
+  ACAO_RUA,
+  AtributoRua,
+  DEGRAU_INFO,
+  FECHAR_RUA,
+  degrauDe,
+  faixaClasses,
+  fotoFundo,
+  ovrClasses,
+} from '@/components/market/rua/escada';
 
 const ATTR_LABELS: Array<[keyof PlayerAttributes, string]> = [
   ['velocidade', L('Velocidade', 'Pace')],
@@ -37,24 +51,9 @@ function fmtBrl(cents: number): string {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 }
 
-/** Barra de atributo (mesmo espírito do StatBar do mercado Genesis). */
+/** Barra de atributo — 10 segmentos de rua (mesma régua do mercado Genesis). */
 function StatBar({ label, value }: { label: string; value: number }) {
-  // Atributos sempre em amarelo (mesma cor do mercado Genesis — sem faixa por valor).
-  const color = 'bg-neon-yellow';
-  return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <span className="w-24 shrink-0 text-[11px] font-medium text-white/55">{label}</span>
-      <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full border border-white/5 bg-black/50">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${value}%` }}
-          transition={{ duration: 0.9, ease: 'easeOut' }}
-          className={`h-full rounded-full ${color}`}
-        />
-      </div>
-      <span className="w-7 shrink-0 text-right font-display text-sm font-bold tabular-nums text-white">{value}</span>
-    </div>
-  );
+  return <AtributoRua label={label} value={value} largo />;
 }
 
 /**
@@ -120,27 +119,39 @@ export function LegacyPlayerDetailModal({
     ['PAS', entity.attrs.passe],
   ];
 
+  const d = degrauDe(ovr);
+  const info = DEGRAU_INFO[d];
+  const destaque = d === 'respeito' ? 'text-ouro-27' : '';
+  // Compra de lenda é ouro; carta de base (corre/chão) compra no amarelo.
+  const acaoCompra = d === 'respeito' || d === 'lenda' ? ACAO_OURO : ACAO_RUA;
+  const rotulo = 'font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo';
+  const aviso = (msg: string) => (
+    <div className="flex items-start gap-2 border-l-[3px] border-baixa bg-concreto px-3 py-2">
+      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-baixa" strokeWidth={2.5} aria-hidden />
+      <p className="text-[12px] text-baixa">{msg}</p>
+    </div>
+  );
+
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[80] flex min-h-0 flex-col overflow-y-auto overscroll-y-contain bg-black/90 px-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom,0px)+5.5rem))] sm:items-center sm:justify-center sm:px-4 sm:pb-6 sm:pt-4">
+      <div className="fixed inset-0 z-[80] flex min-h-0 flex-col overflow-y-auto overscroll-y-contain bg-asfalto-27/95 px-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom,0px)+5.5rem))] sm:items-center sm:justify-center sm:px-4 sm:pb-6 sm:pt-4">
         <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 20 }}
+          initial={{ opacity: 0, scale: 0.97, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 20 }}
-          className="my-2 flex w-full min-h-0 max-w-[min(100%,60rem)] flex-col overflow-hidden rounded-2xl border-2 border-lenda/60 bg-deep-black sm:my-4 max-h-[min(920px,calc(100dvh-7.5rem))] sm:max-h-[min(920px,calc(100dvh-4.5rem))]"
+          exit={{ opacity: 0, scale: 0.97, y: 20 }}
+          className="my-2 flex w-full min-h-0 max-w-[min(100%,60rem)] flex-col overflow-hidden border-[3px] border-ouro-27 bg-asfalto-27 sm:my-4 max-h-[min(920px,calc(100dvh-7.5rem))] sm:max-h-[min(920px,calc(100dvh-4.5rem))]"
         >
           {/* Topbar */}
-          <div className="z-[60] flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
+          <div className="z-[60] flex shrink-0 items-center justify-between gap-3 border-b-2 border-linha px-4 py-3">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="inline-flex shrink-0 items-center gap-1.5 bg-lenda px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white">
-                <Crown className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} />
-                {L('Lenda', 'Legend')}
-              </span>
+              <SeloRua tom="ouro">{L('Lenda', 'Legend')}</SeloRua>
               {row.collection_title && (
-                <span className="truncate text-[10px] text-white/40">· {row.collection_title}</span>
+                <span className="min-w-0 truncate font-prova text-[10.5px] uppercase tracking-[0.12em] text-mudo">
+                  {row.collection_title}
+                </span>
               )}
             </div>
-            <button type="button" onClick={onClose} aria-label={L('Fechar', 'Close')} className="border border-white/16 bg-panel p-2 text-cimento hover:border-white/30 hover:text-white">
+            <button type="button" onClick={onClose} aria-label={L('Fechar', 'Close')} className={FECHAR_RUA}>
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -148,35 +159,36 @@ export function LegacyPlayerDetailModal({
           {/* Corpo com scroll */}
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
             <div className="flex flex-col md:flex-row">
-              {/* ESQUERDA — card */}
-              <div className="flex w-full shrink-0 items-start justify-center border-b border-white/10 bg-black/20 p-4 sm:p-6 md:w-2/5 md:border-b-0 md:border-r">
-                <div className="w-full max-w-[300px]">
-                  <div className="overflow-hidden rounded-2xl border-2 border-lenda/40 bg-panel">
-                    <div className="relative aspect-[11/15.6] w-full overflow-hidden bg-card">
+              {/* ESQUERDA — a carta colada no muro */}
+              <div className="rua-grao flex w-full shrink-0 items-start justify-center border-b-2 border-linha bg-concreto px-6 py-8 md:w-2/5 md:border-b-0 md:border-r-2">
+                <div className="w-full max-w-[280px] -rotate-[1.5deg]">
+                  <div className={cn('flex flex-col gap-2.5 p-3 shadow-[8px_10px_0_rgba(0,0,0,0.6)]', DEGRAU_CLASSES[d])}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex flex-col">
+                        <span className={cn('font-impact text-[64px] leading-[0.85] tabular-nums', ovrClasses(d))}>{ovr}</span>
+                        <span className={cn('mt-1 font-impact text-[15px] uppercase leading-none', destaque)}>{posLabel(entity.pos)}</span>
+                      </div>
+                      <MarcaRua tipo="escudo" className={cn('h-8', d === 'respeito' ? 'bg-ouro-27' : 'bg-asfalto-27')} />
+                    </div>
+                    <div className={cn('relative aspect-[11/14] w-full overflow-hidden', fotoFundo(d))}>
                       {portrait ? (
                         <img src={portrait} alt={entity.name} style={legacyPortraitFocusStyle(row)} className="absolute inset-0 h-full w-full" />
                       ) : (
-                        <div className="grid h-full w-full place-items-center text-lenda/40">
-                          <Crown className="h-16 w-16" />
-                        </div>
+                        <MarcaRua tipo="escudo" className="absolute left-1/2 top-1/2 h-16 -translate-x-1/2 -translate-y-1/2 bg-current opacity-30" />
                       )}
-                      <div className="absolute left-2.5 top-2.5 rounded-lg border border-lenda/40 bg-deep-black px-2.5 py-1">
-                        <p className="font-impact leading-none tabular-nums text-neon-yellow" style={{ fontSize: '24px' }}>
-                          {ovr}
-                        </p>
-                      </div>
-                      {/* sem overlay de nome aqui: a coluna da direita já traz o nome
-                          grande, e sobrepor duplicaria o nome estampado na arte. */}
                     </div>
-                    <div className="grid grid-cols-3 gap-px bg-white/5">
+                    <div className="flex justify-between gap-1">
                       {cardStats.map(([label, val]) => (
-                        <div key={label} className="bg-deep-black px-1 py-2 text-center">
-                          <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-white/40">{label}</p>
-                          <p className="font-impact leading-none tabular-nums text-neon-yellow" style={{ fontSize: '16px' }}>
-                            {val}
-                          </p>
+                        <div key={label} className="flex flex-col items-start">
+                          <span className="font-prova text-[9.5px] font-bold uppercase tracking-[0.14em] opacity-70">{label}</span>
+                          <span className={cn('font-impact text-[20px] leading-none tabular-nums', destaque)}>{val}</span>
                         </div>
                       ))}
+                    </div>
+                    <div className={faixaClasses(d)}>
+                      <span className="truncate">
+                        {info.n} · {info.nome}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -184,36 +196,35 @@ export function LegacyPlayerDetailModal({
 
               {/* DIREITA — ficha */}
               <div className="min-w-0 flex-1 p-4 sm:p-6">
-                <div className="flex flex-col gap-5">
-                  {/* Header */}
-                  <div className="border-b border-white/10 pb-4">
-                    <h2 className="break-words font-display text-2xl font-black uppercase leading-[1.1] tracking-wider text-white sm:text-3xl">
+                <div className="flex flex-col gap-7">
+                  {/* Cabeçalho */}
+                  <div className="flex flex-col gap-2 border-b-2 border-linha pb-5">
+                    <h2 className="break-words font-voz leading-[0.9] text-papel [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(40px, 10vw, 64px)' }}>
                       {entity.name}
                     </h2>
-                    <p className="break-words text-sm font-bold uppercase tracking-widest text-neon-yellow">
-                      {posLabel(entity.pos)} • Overall {ovr}
+                    <p className="flex flex-wrap items-baseline gap-x-3 font-impact uppercase leading-none">
+                      <span className="text-[22px] text-suave">{posLabel(entity.pos)}</span>
+                      <span className="text-[22px] text-ouro-27">OVR {ovr}</span>
                     </p>
-                    <p className="mt-1.5 text-[10px] text-gray-500">
+                    <p className="font-prova text-[10.5px] uppercase tracking-[0.12em] text-mudo">
                       {row.collection_title ? `${row.collection_title} · ` : ''}
                       {row.country ?? '—'}{row.age ? L(` · ${row.age} anos`, ` · ${row.age} yrs`) : ''}
                     </p>
                   </div>
 
-                  {/* História */}
-                  <div className="rounded-xl border border-white/10 bg-black/35 p-4">
-                    <h3 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-                      <BookText className="h-4 w-4" /> {L('História', 'Story')}
-                    </h3>
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/85">
-                      {(row.bio ?? '').trim() || L('Sem história registrada para este Legacy.', 'No story recorded for this Legacy.')}
-                    </p>
+                  {/* História — lambe de cal colado torto no muro. */}
+                  <div className="flex flex-col gap-2">
+                    <h3 className={rotulo}>— {L('História', 'Story')}</h3>
+                    <div className="-rotate-[0.8deg] bg-cal px-4 py-4 text-asfalto-27 shadow-[5px_5px_0_rgba(0,0,0,0.55)]">
+                      <p className="whitespace-pre-wrap text-[14px] leading-relaxed">
+                        {(row.bio ?? '').trim() || L('Sem história registrada pra este Legacy.', 'No story recorded for this Legacy.')}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Atributos */}
-                  <div>
-                    <h3 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-                      <TrendingUp className="h-4 w-4" /> {L('Atributos Detalhados', 'Detailed Attributes')}
-                    </h3>
+                  <div className="flex flex-col gap-3">
+                    <h3 className={rotulo}>— {L('Atributos', 'Attributes')}</h3>
                     <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
                       {ATTR_LABELS.map(([key, label]) => (
                         <StatBar key={key} label={label} value={entity.attrs[key] ?? 0} />
@@ -222,9 +233,7 @@ export function LegacyPlayerDetailModal({
 
                     {/* Especialistas — bola parada, cabeça, pênalti. Bloco à parte
                         porque não entram no OVR: decidem quem marca cada lance. */}
-                    <h4 className="mb-3 mt-6 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-cimento">
-                      <Sparkles className="h-3.5 w-3.5" /> {L('Especialista', 'Specialist')}
-                    </h4>
+                    <h4 className={cn(rotulo, 'mt-4')}>— {L('Especialista', 'Specialist')}</h4>
                     <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
                       {SPECIALIST_LABELS.map(([key, label]) => (
                         <StatBar key={key} label={label} value={entity.attrs[key] ?? 0} />
@@ -234,13 +243,11 @@ export function LegacyPlayerDetailModal({
 
                   {/* Ensina aos companheiros */}
                   {taught.length > 0 && (
-                    <div className="rounded-xl border border-lenda/30 bg-panel p-4">
-                      <h3 className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cimento">
-                        <GraduationCap className="h-4 w-4" /> {L('Ensina aos companheiros', 'Teaches teammates')}
-                      </h3>
+                    <div className="flex flex-col gap-2.5">
+                      <h3 className={rotulo}>— {L('Ensina aos companheiros', 'Teaches teammates')}</h3>
                       <div className="flex flex-wrap gap-1.5">
                         {taught.map((a) => (
-                          <span key={a} className="rounded-full border border-lenda/50 bg-card px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-giz">
+                          <span key={a} className="border-2 border-papel px-2.5 py-1 font-impact text-[15px] uppercase leading-none text-papel">
                             {a}
                           </span>
                         ))}
@@ -250,14 +257,12 @@ export function LegacyPlayerDetailModal({
 
                   {/* Booster do time */}
                   {boosterEntries.length > 0 && (
-                    <div className="rounded-xl border border-alta/30 bg-panel p-4">
-                      <h3 className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cimento">
-                        <Sparkles className="h-4 w-4" /> {L('Booster do time (titular)', 'Team booster (starter)')}
-                      </h3>
+                    <div className="flex flex-col gap-2.5">
+                      <h3 className={rotulo}>— {L('Booster do time (titular)', 'Team booster (starter)')}</h3>
                       <div className="flex flex-wrap gap-1.5">
                         {boosterEntries.map(([k, v]) => (
-                          <span key={k} className="rounded-full border border-alta/40 bg-card px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-alta">
-                            {k} +{v}
+                          <span key={k} className="inline-flex items-baseline gap-1.5 border-2 border-linha px-2.5 py-1 font-prova text-[11px] font-bold uppercase tracking-[0.08em] text-suave">
+                            {k} <span className="font-impact text-[15px] tracking-normal text-alta">+{v}</span>
                           </span>
                         ))}
                       </div>
@@ -265,54 +270,45 @@ export function LegacyPlayerDetailModal({
                   )}
 
                   {/* Compra — o preço vive NO botão (sem repetir em cima).
-                      Tem saldo → carrinho de 1 clique. Sem saldo → aviso + PIX. */}
-                  <div className="relative overflow-hidden rounded-xl border border-white/10 bg-panel p-4 sm:p-5">
+                      Tem saldo → 1 clique. Sem saldo → aviso + PIX. */}
+                  <div className="rua-grao border-2 border-linha bg-concreto p-4 sm:p-5">
                     {isOwned ? (
-                      <div className="rounded-lg bg-white/5 py-2.5 text-center text-[12px] font-bold uppercase tracking-wider text-gray-400">
-                        {L('Você já tem este jogador', 'You already own this player')}
+                      <div className="border-2 border-dashed border-fio py-3 text-center font-impact text-[17px] uppercase leading-none text-suave">
+                        ✓ {L('Já tá no seu time', 'Already in your squad')}
                       </div>
                     ) : notListed ? (
                       /* Fora de catálogo: label honesto, sem CTA de compra. */
-                      <div className="space-y-1.5 rounded-lg bg-white/5 py-3 text-center">
-                        <p className="text-[12px] font-bold uppercase tracking-wider text-gray-400">
+                      <div className="space-y-1.5 border-2 border-dashed border-fio px-3 py-4 text-center">
+                        <p className="font-impact text-[18px] uppercase leading-none text-suave">
                           {L('Fora de catálogo', 'Not in catalogue')}
                         </p>
-                        <p className="text-[11px] text-white/45">
-                          {L('Esta lenda não está à venda no momento.', 'This legend is not for sale right now.')}
+                        <p className="font-prova text-[11px] uppercase tracking-[0.1em] text-mudo">
+                          {L('Esta lenda não está à venda agora.', 'This legend is not for sale right now.')}
                         </p>
                       </div>
                     ) : canAfford === null ? (
-                      <div className="flex items-center justify-center gap-2 rounded-lg bg-white/5 py-3 text-center text-[12px] font-bold uppercase tracking-wider text-gray-400">
-                        <Loader2 className="h-4 w-4 animate-spin" /> {L('Verificando saldo…', 'Checking balance…')}
+                      <div className="flex items-center justify-center gap-2 py-3 text-center font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-mudo">
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {L('Conferindo saldo…', 'Checking balance…')}
                       </div>
                     ) : canAfford ? (
-                      /* Tem saldo: carrinho direto, preço no botão. Alto valor pede 2º clique. */
-                      <div className="space-y-2.5">
-                        {errorMsg && (
-                          <div className="flex items-start gap-2 rounded-lg border border-baixa/40 bg-deep-black px-3 py-2">
-                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-baixa" strokeWidth={2.5} />
-                            <p className="text-[11px] text-baixa">{errorMsg}</p>
-                          </div>
-                        )}
+                      /* Tem saldo: compra direta, preço no botão. Alto valor pede 2º clique. */
+                      <div className="space-y-3">
+                        {errorMsg && aviso(errorMsg)}
                         {confirming && needsConfirm && !buying ? (
                           <>
-                            <p className="text-center text-[12px] text-white/70">
-                              {L('Confirmar a compra de', 'Confirm purchase for')} <span className="font-bold text-neon-yellow">{priceExp.toLocaleString(LOCALE)} {moedaDoJogo()}</span>?
+                            <p className="text-center text-[14px] text-suave">
+                              {L('Fechar a compra por', 'Close the deal for')}{' '}
+                              <span className="font-spray text-[22px] font-black text-ouro-27">
+                                {priceExp.toLocaleString(LOCALE)} {moedaDoJogo()}
+                              </span>
+                              ?
                             </p>
-                            <div className="grid grid-cols-2 gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setConfirming(false)}
-                                className="rounded-xl border border-white/30 py-3 text-[12px] font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-white hover:text-white"
-                              >
+                            <div className="grid grid-cols-2 gap-3">
+                              <button type="button" onClick={() => setConfirming(false)} className={ACAO_CONTORNO}>
                                 {L('Cancelar', 'Cancel')}
                               </button>
-                              <button
-                                type="button"
-                                onClick={onBuy}
-                                className="flex items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3 text-[12px] font-black uppercase tracking-wider text-black transition-colors hover:bg-white"
-                              >
-                                <ShoppingCart className="h-4 w-4" strokeWidth={2.5} /> {L('Confirmar', 'Confirm')}
+                              <button type="button" onClick={onBuy} className={acaoCompra}>
+                                {L('Confirmar', 'Confirm')} <span aria-hidden>→</span>
                               </button>
                             </div>
                           </>
@@ -324,51 +320,37 @@ export function LegacyPlayerDetailModal({
                               if (needsConfirm) setConfirming(true);
                               else onBuy();
                             }}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3.5 text-sm font-black uppercase tracking-wide text-black transition-colors hover:bg-white disabled:opacity-60"
+                            className={acaoCompra}
                           >
                             {buying ? (
-                              <><Loader2 className="h-4 w-4 animate-spin" /> {L('Comprando…', 'Buying…')}</>
+                              <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {L('Comprando…', 'Buying…')}</>
                             ) : (
-                              <><ShoppingCart className="h-4 w-4" strokeWidth={2.5} /> {L('Comprar', 'Buy')} · {priceExp.toLocaleString(LOCALE)} {moedaDoJogo()}</>
+                              <>{L('Comprar', 'Buy')} · {priceExp.toLocaleString(LOCALE)} {moedaDoJogo()} <span aria-hidden>→</span></>
                             )}
                           </button>
                         )}
                       </div>
                     ) : (
-                      /* Sem saldo: avisa e oferece recarga via PIX. */
+                      /* Sem saldo: avisa e oferece PIX. */
                       <div className="space-y-3">
-                        {errorMsg && (
-                          <div className="flex items-start gap-2 rounded-lg border border-baixa/40 bg-deep-black px-3 py-2">
-                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-baixa" strokeWidth={2.5} />
-                            <p className="text-[11px] text-baixa">{errorMsg}</p>
-                          </div>
-                        )}
-                        <div className="flex items-start gap-2 rounded-lg border border-baixa/40 bg-deep-black px-3 py-2.5">
-                          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-baixa" strokeWidth={2.5} />
-                          <div className="min-w-0">
-                            <p className="text-[12px] font-black uppercase tracking-wider text-baixa">{L('Saldo insuficiente', 'Insufficient balance')}</p>
-                            <p className="text-[11px] text-white/55">
-                              {balanceLabel ? L(`Você tem ${balanceLabel} · `, `You have ${balanceLabel} · `) : ''}{L('custa', 'costs')} {priceExp.toLocaleString(LOCALE)} {moedaDoJogo()}
-                            </p>
-                          </div>
+                        {errorMsg && aviso(errorMsg)}
+                        <div className="flex flex-col gap-1 border-l-[3px] border-baixa pl-3">
+                          <p className="font-impact text-[17px] uppercase leading-none text-baixa">{L('Saldo não fecha', 'Balance falls short')}</p>
+                          <p className="font-prova text-[11px] uppercase tracking-[0.08em] text-mudo">
+                            {balanceLabel ? L(`Você tem ${balanceLabel} · `, `You have ${balanceLabel} · `) : ''}{L('custa', 'costs')} {priceExp.toLocaleString(LOCALE)} {moedaDoJogo()}
+                          </p>
                         </div>
                         {pixState === 'ready' && brlCents != null ? (
-                          <button
-                            type="button"
-                            disabled={buying}
-                            onClick={onPixBuy}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3.5 text-sm font-black uppercase tracking-wide text-black transition-colors hover:bg-white disabled:opacity-60"
-                          >
-                            <ShoppingCart className="h-4 w-4" strokeWidth={2.5} />
-                            {L('Comprar com PIX', 'Buy with PIX')} · {fmtBrl(brlCents)}
+                          <button type="button" disabled={buying} onClick={onPixBuy} className={ACAO_RUA}>
+                            {L('Comprar com PIX', 'Buy with PIX')} · {fmtBrl(brlCents)} <span aria-hidden>→</span>
                           </button>
                         ) : pixState === 'loading' ? (
-                          <p className="flex items-center justify-center gap-2 rounded-lg bg-white/5 py-2.5 text-center text-[11px] text-white/45">
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {L('Cotação indisponível, tente em instantes…', 'Quote unavailable, try again shortly…')}
+                          <p className="flex items-center justify-center gap-2 border-2 border-dashed border-fio py-2.5 text-center font-prova text-[11px] uppercase tracking-[0.08em] text-mudo">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> {L('Cotação indisponível, tente em instantes…', 'Quote unavailable, try again shortly…')}
                           </p>
                         ) : (
-                          <p className="rounded-lg bg-white/5 py-2.5 text-center text-[11px] text-white/45">
-                            {L(`Recarregue ${moedaDoJogo()} na carteira para adquirir esta lenda.`, `Top up ${moedaDoJogo()} in your wallet to get this legend.`)}
+                          <p className="border-2 border-dashed border-fio px-3 py-2.5 text-center font-prova text-[11px] uppercase tracking-[0.08em] text-mudo">
+                            {L(`Recarregue ${moedaDoJogo()} na carteira pra levar esta lenda.`, `Top up ${moedaDoJogo()} in your wallet to get this legend.`)}
                           </p>
                         )}
                       </div>

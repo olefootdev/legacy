@@ -65,17 +65,14 @@ function MiniCard({
 }) {
   return (
     <div
-      className="flex items-center gap-3 px-3 py-2 border-l-[3px] bg-dark-gray"
-      style={{ borderLeftColor: tone === 'top' ? 'var(--color-success)' : 'var(--color-warning)' }}
+      className={`flex min-h-[54px] min-w-0 items-center gap-3 border-l-[3px] bg-concreto px-3 py-2 ${
+        tone === 'top' ? 'border-alta' : 'border-dashed border-fio'
+      }`}
     >
-      <span
-        className="ole-num text-base text-white/90 w-8 shrink-0 text-center"
-      >
-        {p.ovr}
-      </span>
-      <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-bold text-white truncate">{p.name}</p>
-        <p className="text-[10px] uppercase tracking-[0.14em] text-white/45">
+      <span className="w-8 shrink-0 text-center font-impact text-[20px] leading-none text-papel tabular-nums">{p.ovr}</span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-voz text-[20px] leading-none text-papel">{p.name}</p>
+        <p className="mt-1 font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-mudo">
           {posLabel(p.pos)} · {L('fadiga', 'fatigue')} {Math.round(p.fatigue)}%
         </p>
       </div>
@@ -83,6 +80,11 @@ function MiniCard({
     </div>
   );
 }
+
+const TROCAR =
+  'inline-flex min-h-[38px] shrink-0 items-center gap-1 bg-rua px-2.5 font-impact text-[14px] uppercase leading-none text-asfalto-27 shadow-[3px_3px_0_var(--color-papel)] transition-[transform,box-shadow] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0_var(--color-papel)]';
+
+const ROTULO = 'font-prova text-[11px] font-bold uppercase tracking-[0.2em]';
 
 export function QuickHalftimePanel({
   homeShort,
@@ -142,41 +144,42 @@ export function QuickHalftimePanel({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[95] flex items-center justify-center p-4 bg-black/92"
+      className="fixed inset-0 z-[95] flex items-end justify-center bg-asfalto-27/95 p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
+      aria-label={L('Intervalo', 'Half-time')}
     >
       <motion.div
         initial={{ y: 18, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="w-full max-w-md bg-deep-black border border-neon-yellow/30 overflow-hidden"
-        style={{ borderRadius: 'var(--radius-md)' }}
+        className="flex max-h-[100dvh] w-full max-w-md flex-col overflow-hidden border-t-[3px] border-rua bg-asfalto-27 sm:border-[3px]"
       >
-        {/* Header */}
-        <div className="px-5 py-3 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between">
-          <div>
-            <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">
-              {L('Intervalo', 'Half-time')}
+        {/* Header — o placar do intervalo em spray, o relógio contando */}
+        <div className="rua-grao flex min-w-0 items-end justify-between gap-3 bg-concreto px-5 pb-4 pt-4">
+          <div className="min-w-0">
+            <p className={`${ROTULO} text-rua`}>— {L('Intervalo', 'Half-time')}</p>
+            <p className="mt-1 flex min-w-0 items-baseline gap-2 font-impact uppercase leading-none text-papel">
+              <span className="truncate text-[17px]">{homeShort}</span>
+              <span className="shrink-0 font-spray font-black text-[44px] tabular-nums text-rua">
+                {homeScore}×{awayScore}
+              </span>
+              <span className="truncate text-[17px] text-mudo">{awayShort}</span>
             </p>
-            <p className="text-[12px] text-white/60 tabular-nums mt-0.5">
-              {homeShort} {homeScore} – {awayScore} {awayShort}
-            </p>
-            <p className="text-[10px] mt-0.5 font-display uppercase tracking-[0.14em]" style={{ color: subsLeft === 0 ? 'var(--color-warning)' : 'rgba(255,255,255,0.4)' }}>
-              {emIngles() ? `${subsLeft} sub${subsLeft === 1 ? '' : 's'} left` : `${subsLeft} sub${subsLeft === 1 ? '' : 's'} restante${subsLeft === 1 ? '' : 's'}`}
+            <p className={`${ROTULO} mt-1.5 ${subsLeft === 0 ? 'text-baixa' : 'text-mudo'}`}>
+              {emIngles() ? `${subsLeft} sub${subsLeft === 1 ? '' : 's'} left` : `${subsLeft} troca${subsLeft === 1 ? '' : 's'} restante${subsLeft === 1 ? '' : 's'}`}
             </p>
           </div>
-          <span className="font-display tabular-nums text-neon-yellow text-2xl font-black">
-            {remaining}s
+          <span className="shrink-0 font-spray font-black text-[48px] leading-none tabular-nums text-papel" aria-label={L(`${remaining} segundos`, `${remaining} seconds`)}>
+            {remaining}
+            <span className="font-prova text-[14px] text-mudo">s</span>
           </span>
         </div>
 
-        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
           {/* 5 cards */}
           {picking === null ? (
             <div className="space-y-2">
-              <p className="text-[9px] uppercase tracking-[0.2em] font-display font-black" style={{ color: 'var(--color-success)' }}>
-                {L('Em alta', 'On fire')}
-              </p>
+              <p className={`${ROTULO} text-alta`}>{L('Em alta', 'On fire')}</p>
               {five.top.map((p) => (
                 <MiniCard
                   key={p.id}
@@ -184,20 +187,14 @@ export function QuickHalftimePanel({
                   tone="top"
                   action={
                     availableBench.length > 0 && subsLeft > 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => setPicking(p.id)}
-                        className="px-2.5 py-1 border border-neon-yellow/40 text-neon-yellow/80 text-[10px] font-display uppercase tracking-[0.12em] font-bold hover:bg-neon-yellow hover:text-black transition-colors inline-flex items-center gap-1"
-                      >
-                        <ArrowRightLeft className="w-3 h-3" strokeWidth={2.5} aria-hidden /> {L('Trocar', 'Swap')}
+                      <button type="button" onClick={() => setPicking(p.id)} className={TROCAR}>
+                        <ArrowRightLeft className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> {L('Trocar', 'Swap')}
                       </button>
                     ) : null
                   }
                 />
               ))}
-              <p className="text-[9px] uppercase tracking-[0.2em] font-display font-black pt-1" style={{ color: 'var(--color-warning)' }}>
-                {L('Apagados — trocar?', 'Off the pace — swap?')}
-              </p>
+              <p className={`${ROTULO} pt-2 text-mudo`}>{L('Apagados — trocar?', 'Off the pace — swap?')}</p>
               {five.bottom.map((p) => (
                 <MiniCard
                   key={p.id}
@@ -205,12 +202,8 @@ export function QuickHalftimePanel({
                   tone="bottom"
                   action={
                     availableBench.length > 0 && subsLeft > 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => setPicking(p.id)}
-                        className="px-2.5 py-1 border border-neon-yellow/50 text-neon-yellow text-[10px] font-display uppercase tracking-[0.12em] font-bold hover:bg-neon-yellow hover:text-black transition-colors inline-flex items-center gap-1"
-                      >
-                        <ArrowRightLeft className="w-3 h-3" strokeWidth={2.5} aria-hidden /> {L('Trocar', 'Swap')}
+                      <button type="button" onClick={() => setPicking(p.id)} className={TROCAR}>
+                        <ArrowRightLeft className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> {L('Trocar', 'Swap')}
                       </button>
                     ) : null
                   }
@@ -220,42 +213,39 @@ export function QuickHalftimePanel({
           ) : (
             /* Picker de reserva */
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-[11px] text-white/70">
+              <div className="flex min-w-0 items-center justify-between gap-3">
+                <p className="min-w-0 text-[13px] text-suave">
                   {L('Entra no lugar de', 'Coming on for')}{' '}
-                  <span className="text-neon-yellow font-bold">
+                  <span className="font-voz text-[20px] leading-none text-papel">
                     {working.find((w) => w.id === picking)?.name}
                   </span>
                 </p>
                 <button
                   type="button"
                   onClick={() => setPicking(null)}
-                  className="text-[10px] text-white/40 hover:text-white uppercase tracking-[0.14em]"
+                  className={`${ROTULO} min-h-[40px] shrink-0 text-mudo hover:text-papel`}
                 >
                   {L('Cancelar', 'Cancel')}
                 </button>
               </div>
               {availableBench.length === 0 && (
-                <p className="text-[12px] text-white/50">{L('Sem reservas disponíveis.', 'No subs available.')}</p>
+                <p className="text-[13px] text-mudo">{L('Sem reservas disponíveis.', 'No subs available.')}</p>
               )}
               {availableBench.slice(0, 8).map((b) => (
                 <button
                   key={b.id}
                   type="button"
                   onClick={() => doSub(picking, b)}
-                  className="w-full flex items-center gap-3 px-3 py-2 border border-zinc-800 hover:border-neon-yellow/60 hover:bg-neon-yellow/5 transition-colors text-left"
+                  className="flex min-h-[54px] w-full min-w-0 items-center gap-3 border-2 border-linha bg-concreto px-3 py-2 text-left transition-colors hover:border-rua"
                 >
-                  <span
-                    className="ole-num text-[15px] text-white/85 w-8 shrink-0 text-center"
-                  >
-                    {b.ovr}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-bold text-white truncate">{b.name}</p>
-                    <p className="text-[10px] uppercase tracking-[0.14em] text-white/45">
+                  <span className="w-8 shrink-0 text-center font-impact text-[20px] leading-none text-papel tabular-nums">{b.ovr}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-voz text-[20px] leading-none text-papel">{b.name}</p>
+                    <p className="mt-1 font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-mudo">
                       {posLabel(b.pos)} · {L('fadiga', 'fatigue')} {Math.round(b.fatigue)}%
                     </p>
                   </div>
+                  <span aria-hidden className="shrink-0 font-impact text-[18px] text-rua">→</span>
                 </button>
               ))}
             </div>
@@ -264,19 +254,18 @@ export function QuickHalftimePanel({
           {/* Intensidade tática */}
           {picking === null && (
             <div>
-              <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-display font-black mb-1.5">
-                {L('Estratégia', 'Strategy')}
-              </p>
-              <div className="grid grid-cols-3 gap-1.5">
+              <p className={`${ROTULO} mb-2 text-mudo`}>— {L('Estratégia', 'Strategy')}</p>
+              <div className="grid grid-cols-3 gap-2">
                 {INTENSITIES.map((it) => (
                   <button
                     key={it.id}
                     type="button"
                     onClick={() => setIntensity(it.id)}
-                    className={`py-2 text-[10px] font-display uppercase tracking-[0.1em] font-bold border transition-colors ${
+                    aria-pressed={intensity === it.id}
+                    className={`min-h-[46px] px-1 font-impact text-[15px] uppercase leading-none transition-colors ${
                       intensity === it.id
-                        ? 'bg-neon-yellow text-black border-neon-yellow'
-                        : 'border-zinc-700 text-white/60 hover:border-neon-yellow/50'
+                        ? 'bg-rua text-asfalto-27'
+                        : 'border-2 border-linha text-suave hover:border-papel hover:text-papel'
                     }`}
                   >
                     {it.label}
@@ -289,19 +278,18 @@ export function QuickHalftimePanel({
           {/* Formação */}
           {picking === null && (
             <div>
-              <p className="text-[9px] uppercase tracking-[0.2em] text-white/50 font-display font-black mb-1.5">
-                {L('Formação', 'Formation')}
-              </p>
+              <p className={`${ROTULO} mb-2 text-mudo`}>— {L('Formação', 'Formation')}</p>
               <div className="grid grid-cols-5 gap-1.5">
                 {FORMATIONS.map((f) => (
                   <button
                     key={f}
                     type="button"
                     onClick={() => setFormation(f)}
-                    className={`py-2 text-[10px] font-display tabular-nums font-bold border transition-colors ${
+                    aria-pressed={formation === f}
+                    className={`min-h-[44px] font-impact text-[14px] tabular-nums leading-none transition-colors ${
                       formation === f
-                        ? 'bg-neon-yellow text-black border-neon-yellow'
-                        : 'border-zinc-700 text-white/60 hover:border-neon-yellow/50'
+                        ? 'bg-rua text-asfalto-27'
+                        : 'border-2 border-linha text-suave hover:border-papel hover:text-papel'
                     }`}
                   >
                     {f}
@@ -314,16 +302,16 @@ export function QuickHalftimePanel({
 
         {/* Voltar pro jogo */}
         {picking === null && (
-          <div className="p-4 border-t border-zinc-800">
+          <div className="border-t border-linha p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={resume}
-              className="w-full py-3 bg-neon-yellow hover:bg-white text-black font-display uppercase tracking-[0.18em] text-[12px] font-black transition-colors"
+              className="inline-flex min-h-[54px] w-full items-center justify-center gap-2 bg-rua font-impact text-[20px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)]"
             >
-              {L('Voltar para o jogo →', 'Back to the match →')}
+              {L('Voltar pro jogo', 'Back to the match')} <span aria-hidden>→</span>
             </button>
             {subsUsed > 0 && (
-              <p className="text-[10px] text-white/40 text-center mt-2">
+              <p className="mt-3 text-center font-prova text-[11px] text-mudo">
                 {emIngles() ? `${subsUsed} substitution${subsUsed === 1 ? '' : 's'} · 2nd half will be recalculated` : `${subsUsed} substituiç${subsUsed === 1 ? 'ão' : 'ões'} · o 2º tempo será recalculado`}
               </p>
             )}

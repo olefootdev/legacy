@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RailStat } from '@/components/ui/RailStat';
+import { cn } from '@/lib/utils';
+import { SecaoRua } from '@/components/ui/Rua';
+import { OvrSelo, PlacarRua, VazioRua } from '@/components/clube/escada';
 import { motion } from 'motion/react';
 import { BatteryCharging, Brain, Check, Clock, Crosshair, Dumbbell, Footprints, LayoutGrid, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -90,9 +92,6 @@ const GROUP_LABEL: Record<string, string> = {
   defensivo: L('Bloco defensivo', 'Defensive block'), criativo: L('Meio / criação', 'Midfield / creation'), ataque: L('Ataque', 'Attack'), all: L('Plantel completo', 'Full squad'),
 };
 
-/** Fonte de número do layer final: Anton. (Era serifa itálica.) */
-const NUM = 'var(--font-impact)';
-
 function trainingTypeLabel(p: TrainingPlan): string {
   return RUNNING_TYPE_LABEL[p.trainingType] ?? p.trainingType;
 }
@@ -125,11 +124,11 @@ function formatCountdownRemaining(msRemaining: number): string {
   return `${pad(h)}:${pad(m)}:${pad(s)}`;
 }
 
-/** Cor do rail comunica a fadiga do jogador (padrão do DS). */
+/** Cor da barra de cansaço: baixa (alto), aviso (médio), papel (descansado). */
 function fatigueRail(fatigue: number): string {
-  if (fatigue >= 35) return 'var(--color-danger)';
+  if (fatigue >= 35) return 'var(--color-baixa)';
   if (fatigue >= 20) return 'var(--color-warning)';
-  return 'var(--color-neon-yellow)';
+  return 'var(--color-papel)';
 }
 
 export function TeamTraining() {
@@ -252,32 +251,27 @@ export function TeamTraining() {
 
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-14">
-      <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-6">
+      <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-8">
         <BackButton to="/clube" label={L('Clube', 'Club')} />
 
         <EditorialHero
-          watermark="TREINO"
           eyebrow={L('Gestão do clube · Desenvolvimento', 'Club management · Development')}
           title={L('Treino', 'Training')}
-          subtitle={L('Evolua seu time', 'Develop your team')}
+          subtitle={L('Suor hoje, OVR amanhã.', 'Sweat today, OVR tomorrow.')}
           stats={L(`${running.length} planos ativos · ${completedPlans.length} concluídos · ${slots} slots disponíveis`, `${running.length} active plans · ${completedPlans.length} completed · ${slots} slots available`)}
-          icon={
-            <div className="group/icon relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 transition-colors hover:border-black/80"
-                 style={{ borderRadius: 'var(--radius-sm)' }}>
-              <div className="flex h-full w-full items-center justify-center">
-                <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-neon-yellow/90" aria-hidden />
-              </div>
-            </div>
-          }
+          icon={<Dumbbell aria-hidden />}
+          lambe={{ rotulo: 'AI Labs', valor: `+${boosterPct}%` }}
         />
 
-        {/* ---- STAT CARDS (rail 3px + número) ---- */}
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
-          <RailStat label={L('Slots por sessão', 'Slots per session')} value={<>{slots}</>} />
-          <RailStat label={L('Coletivos simult.', 'Team sessions')} value={<>{runningCollective}<small className="text-white/45"> /{maxColl}</small></>} />
-          <RailStat label={L('Em execução', 'Running')} value={<>{running.length}</>} />
-          <RailStat label="Booster AI Labs" value={<>+{boosterPct}<small className="text-white/45">%</small></>} />
-        </div>
+        {/* ---- Placar ---- */}
+        <PlacarRua
+          itens={[
+            { label: L('Slots por sessão', 'Slots per session'), value: slots },
+            { label: L('Coletivos simult.', 'Team sessions'), value: <>{runningCollective}<small className="text-[0.5em] text-mudo"> /{maxColl}</small></> },
+            { label: L('Em execução', 'Running'), value: running.length },
+            { label: 'Booster AI Labs', value: <>+{boosterPct}<small className="text-[0.5em] text-mudo">%</small></> },
+          ]}
+        />
 
         {/* ================= STEP 1 · O QUE TREINAR ================= */}
         <StepHeader n={1} title={L('O que treinar', 'What to train')} />
@@ -292,42 +286,35 @@ export function TeamTraining() {
                 type="button"
                 onClick={() => setTrainingType(id)}
                 aria-pressed={sel}
-                className={`group relative overflow-hidden rounded-md border bg-card p-4 pl-[18px] text-left transition-colors ${
-                  sel
-                    ? 'border-neon-yellow'
-                    : 'border-white/10 hover:border-white/30'
-                }`}
+                className={cn(
+                  'group relative flex min-w-0 flex-col p-4 text-left transition-colors',
+                  sel ? 'bg-rua text-asfalto-27' : 'bg-concreto text-papel hover:bg-linha',
+                )}
               >
-                <span
-                  className={`absolute inset-y-0 left-0 w-[3px] transition-colors ${
-                    sel ? 'bg-neon-yellow' : 'bg-white/15 group-hover:bg-neon-yellow/60'
-                  }`}
-                  aria-hidden
-                />
                 <div className="flex items-start justify-between">
-                  <span className="grid h-9 w-9 place-items-center rounded-sm bg-neon-yellow/10">
-                    <Icon className="h-5 w-5 text-neon-yellow" aria-hidden />
-                  </span>
+                  <Icon className={cn('h-6 w-6', sel ? 'text-asfalto-27' : 'text-rua')} aria-hidden />
                   <span
-                    className="leading-none text-neon-yellow"
-                    style={{ fontFamily: NUM, fontSize: meta.grade.length > 1 ? '13px' : '26px' }}
+                    className={cn(
+                      'font-impact leading-none',
+                      meta.grade.length > 1 ? 'text-[14px]' : 'text-[30px]',
+                      sel ? 'text-asfalto-27' : 'text-papel',
+                    )}
                   >
                     {meta.grade}
                   </span>
                 </div>
-                <h3 className="mt-3 font-display text-[16px] font-semibold uppercase tracking-[0.03em] leading-tight">{meta.label}</h3>
-                <p className="mt-1 truncate text-[11.5px] leading-snug text-white/55">{meta.desc}</p>
-                <div className="mt-3 flex flex-wrap gap-1.5">
+                <h3 className="mt-3 font-impact text-[22px] uppercase leading-[0.95]">{meta.label}</h3>
+                <p className={cn('mt-1 truncate text-[12px] leading-snug', sel ? 'text-asfalto-27/75' : 'text-suave')}>{meta.desc}</p>
+                <div className="mt-3 flex flex-col gap-0.5">
                   {meta.gains.map((g) => (
                     <span
                       key={g.t}
-                      className={`rounded-md px-1.5 py-0.5 font-display text-[10.5px] uppercase tracking-[0.04em] ${
-                        g.muted
-                          ? 'bg-white/[0.06] text-white/45'
-                          : g.down
-                            ? 'bg-red-500/10 text-red-300'
-                            : 'bg-neon-green/10 text-neon-green'
-                      }`}
+                      className={cn(
+                        'font-prova text-[11px] font-bold uppercase tracking-[0.04em]',
+                        sel
+                          ? g.muted ? 'text-asfalto-27/50' : 'text-asfalto-27'
+                          : g.muted ? 'text-mudo' : g.down ? 'text-baixa' : 'text-alta',
+                      )}
                     >
                       {g.t}
                     </span>
@@ -346,22 +333,22 @@ export function TeamTraining() {
           <WhoButton active={who === 'individual'} onClick={() => setWho('individual')} title="Individual" desc={L(`Até ${slots} jogadores na lista.`, `Up to ${slots} players on the list.`)} />
         </div>
 
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="sports-panel p-4 sm:p-5">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-concreto p-4 sm:p-5">
           {who === 'elenco' && (
             <div className="flex items-center gap-5">
-              <div className="tabular-nums leading-none text-neon-yellow" style={{ fontFamily: NUM, fontSize: '44px' }}>
+              <div className="font-spray text-[56px] font-black leading-none text-papel tabular-nums">
                 {elencoCount}
               </div>
-              <p className="text-[12.5px] leading-relaxed text-white/60">
-                {emIngles() ? <><span className="text-white">Full squad</span> · smaller gain per player · 1 team slot (max {maxColl})</> : <><span className="text-white">Plantel completo</span> · ganho menor por jogador · 1 slot coletivo (máx. {maxColl})</>}
+              <p className="text-[13px] leading-relaxed text-suave">
+                {emIngles() ? <><span className="text-papel">Full squad</span> · smaller gain per player · 1 team slot (max {maxColl})</> : <><span className="text-papel">Plantel completo</span> · ganho menor por jogador · 1 slot coletivo (máx. {maxColl})</>}
               </p>
             </div>
           )}
 
           {who === 'setor' && (
             <div className="space-y-3">
-              <p className="text-[12px] text-white/55">{L('Escolha o bloco que treina em conjunto.', 'Choose the unit that trains together.')}</p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <p className="text-[13px] text-suave">{L('Escolha o bloco que treina em conjunto.', 'Choose the unit that trains together.')}</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {SECTOR_ORDER.map((id) => {
                   const meta = SECTOR_META[id];
                   const sel = sector === id;
@@ -371,16 +358,18 @@ export function TeamTraining() {
                       type="button"
                       onClick={() => setSector(id)}
                       aria-pressed={sel}
-                      className={`group relative overflow-hidden rounded-md border bg-card p-3.5 pl-[18px] text-left transition-colors ${
-                        sel ? 'border-neon-yellow' : 'border-white/10 hover:border-white/30'
-                      }`}
+                      className={cn(
+                        'flex min-w-0 items-center justify-between gap-3 p-3.5 text-left transition-colors',
+                        sel ? 'border-2 border-rua bg-asfalto-27' : 'border-2 border-linha bg-asfalto-27 hover:border-fio',
+                      )}
                     >
-                      <span className={`absolute inset-y-0 left-0 w-[3px] ${sel ? 'bg-neon-yellow' : 'bg-white/15 group-hover:bg-neon-yellow/60'}`} aria-hidden />
-                      <div className="font-display text-[14px] font-semibold uppercase tracking-[0.04em]">{meta.title}</div>
-                      <div className="mt-0.5 text-[11px] text-white/50">{meta.sub}</div>
-                      <div className="tabular-nums mt-2 leading-none text-neon-yellow" style={{ fontFamily: NUM, fontSize: '24px' }}>
-                        {sectorCounts[id]}
-                        <span className="ml-1 align-baseline text-[11px] text-white/50" style={{ fontFamily: 'var(--font-sans)' }}>{L('jogadores', 'players')}</span>
+                      <div className="min-w-0">
+                        <div className={cn('font-impact text-[20px] uppercase leading-none', sel ? 'text-rua' : 'text-papel')}>{meta.title}</div>
+                        <div className="mt-1 text-[12px] text-suave">{meta.sub}</div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="font-impact text-[28px] leading-none text-papel tabular-nums">{sectorCounts[id]}</div>
+                        <div className="font-prova text-[10px] uppercase text-mudo">{L('jogadores', 'players')}</div>
                       </div>
                     </button>
                   );
@@ -391,26 +380,27 @@ export function TeamTraining() {
 
           {who === 'individual' && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[12px] text-white/55">{L(`Selecione até ${slots} — a cor do rail é a fadiga.`, `Select up to ${slots} — the rail colour shows fatigue.`)}</p>
-                <div className="flex items-center gap-2 text-[11px] text-white/50">
-                  <span className="font-semibold tabular-nums text-white">{selectedPlayers.length}/{slots}</span>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[13px] text-suave">{L(`Selecione até ${slots} — a barra é o cansaço.`, `Select up to ${slots} — the bar shows fatigue.`)}</p>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="font-impact text-[18px] text-papel tabular-nums">{selectedPlayers.length}/{slots}</span>
                   <button
                     type="button"
                     onClick={() => setSelectedPlayers([])}
                     disabled={selectedPlayers.length === 0}
-                    className="rounded border border-white/15 px-1.5 py-0.5 font-display text-[10px] uppercase tracking-wide text-white/70 hover:bg-white/10 disabled:opacity-30"
+                    className="inline-flex min-h-[36px] items-center border-2 border-linha px-2.5 font-prova text-[11px] font-bold uppercase text-suave hover:border-papel hover:text-papel disabled:opacity-30"
                   >
                     {L('Limpar', 'Clear')}
                   </button>
                 </div>
               </div>
               {roster.length === 0 ? (
-                <div className="rounded-md border border-dashed border-white/15 bg-black/30 px-4 py-6 text-center text-[13px] text-white/60">
-                  {L('Nenhum jogador no elenco ainda.', 'No players in the squad yet.')}
-                </div>
+                <VazioRua
+                  frase={L('Nenhum jogador no elenco ainda.', 'No players in the squad yet.')}
+                  acao={{ label: L('Ir pro mercado', 'Go to the market'), to: '/mercado/transfer' }}
+                />
               ) : (
-              <div className="flex max-h-[min(20rem,42dvh)] flex-col gap-2 overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable]">
+              <div className="flex max-h-[min(22rem,46dvh)] flex-col gap-px overflow-y-auto overscroll-y-contain bg-linha [scrollbar-gutter:stable]">
                 {roster.map((p) => {
                   const active = selectedPlayers.includes(p.id);
                   const disabled = !active && selectedPlayers.length >= slots;
@@ -425,31 +415,33 @@ export function TeamTraining() {
                       onClick={() => togglePlayer(p.id)}
                       disabled={disabled}
                       aria-pressed={active}
-                      className={`group relative flex min-h-[64px] shrink-0 items-stretch overflow-hidden rounded-md border bg-card text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                        active ? 'border-neon-yellow' : 'border-white/10 hover:border-white/25'
-                      }`}
+                      className={cn(
+                        'group relative flex min-h-[68px] shrink-0 items-center gap-3 px-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+                        active ? 'bg-asfalto-27 outline outline-2 -outline-offset-2 outline-rua' : 'bg-asfalto-27 hover:bg-concreto',
+                      )}
                     >
-                      <span className="absolute inset-y-0 left-0 z-10 w-[3px]" style={{ background: active ? 'var(--color-neon-yellow)' : rail }} aria-hidden />
-                      <div className="relative flex w-[86px] shrink-0 flex-col justify-center overflow-hidden bg-black/60 py-3 pl-4">
-                        <span className="tabular-nums leading-none" style={{ fontFamily: NUM, fontSize: '32px', color: rail }}>{ovr}</span>
-                        <span className="mt-1 font-display text-[10px] uppercase tracking-[0.1em] text-white/45">{rotuloPosicao(p.pos)}</span>
-                      </div>
-                      <div className="flex flex-1 items-center px-4">
-                        <div className="min-w-0">
-                          <div className="truncate font-display text-[15px] font-bold uppercase tracking-[0.02em]">
-                            <span className="text-white/45">{p.num}</span> {p.name}
+                      <OvrSelo ovr={ovr} className="h-11 w-11 text-[22px]" />
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <div className="flex min-w-0 items-baseline gap-2">
+                          <span className="shrink-0 font-prova text-[11px] text-mudo">{p.num}</span>
+                          <span className="block min-w-0 truncate font-voz text-[21px] leading-none text-papel">{p.name}</span>
+                        </div>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.08em] text-mudo">{rotuloPosicao(p.pos)}</span>
+                          <div className="flex min-w-0 max-w-[110px] flex-1 items-center gap-1.5" title={L(`${Math.round(fatigue)}% cansaço`, `${Math.round(fatigue)}% fatigue`)}>
+                            <span aria-hidden className="grid h-1.5 min-w-0 flex-1 grid-cols-10 gap-[2px]">
+                              {Array.from({ length: 10 }, (_, i) => (
+                                <span key={i} style={{ background: i < Math.round(Math.min(100, Math.max(0, fatigue)) / 10) ? rail : 'var(--color-linha)' }} />
+                              ))}
+                            </span>
+                            <span className="shrink-0 font-prova text-[10px] text-mudo tabular-nums">{Math.round(fatigue)}%</span>
                           </div>
-                          <div className="mt-0.5 flex items-center gap-2">
-                            <span className="font-display text-[10.5px] uppercase tracking-[0.1em] text-white/45">{Math.round(fatigue)}% {L('cansaço', 'fatigue')}</span>
-                            {tag && <span className="rounded bg-red-500/15 px-1.5 py-0.5 font-display text-[9px] uppercase tracking-wide text-red-300">{tag}</span>}
-                          </div>
+                          {tag && <span className="shrink-0 border border-baixa px-1 font-prova text-[9px] font-bold uppercase text-baixa">{tag}</span>}
                         </div>
                       </div>
-                      <div className="flex items-center pr-4">
-                        <span className={`grid h-[22px] w-[22px] place-items-center rounded-sm border ${active ? 'border-neon-yellow bg-neon-yellow' : 'border-white/20'}`}>
-                          {active && <Check className="h-3 w-3 text-black" strokeWidth={3} />}
-                        </span>
-                      </div>
+                      <span className={cn('grid h-6 w-6 shrink-0 place-items-center', active ? 'bg-rua' : 'border-2 border-dashed border-fio')}>
+                        {active && <Check className="h-3.5 w-3.5 text-asfalto-27" strokeWidth={3} />}
+                      </span>
                     </button>
                   );
                 })}
@@ -460,33 +452,36 @@ export function TeamTraining() {
         </motion.div>
 
         {/* ================= AÇÃO ================= */}
-        <div className="sports-panel flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5">
-          <div className="flex-1 text-[13px] leading-relaxed text-white/60">
-            {L('Treino', 'Training')} <span className="text-white">{CARD_META[trainingType].label}</span>
-            {' · '}{L('em', 'for')}{' '}
-            <span className={who === 'individual' && selectedPlayers.length === 0 ? 'text-[color:var(--color-warning)]' : 'text-white'}>{whoSummary}</span>
-            {' · '}{L('por', 'over')} <span className="text-white">{durationHours}h</span>
+        <div className="flex flex-col gap-5 border-t-2 border-linha pt-5 sm:flex-row sm:items-end sm:gap-6">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <SecaoRua label={L('Resumo', 'Summary')} />
+            <p className="font-voz text-[24px] leading-tight text-papel">
+              {CARD_META[trainingType].label}
+              {' · '}
+              <span className={who === 'individual' && selectedPlayers.length === 0 ? 'text-[color:var(--color-warning)]' : ''}>{whoSummary}</span>
+              {' · '}{durationHours}h
+            </p>
           </div>
-          <div className="flex flex-col gap-1.5 sm:w-[190px]">
-            <label htmlFor="dur" className="font-display text-[10px] uppercase tracking-[0.16em] text-white/50">{L('Duração de execução', 'Duration')}</label>
-            <input id="dur" type="range" min={6} max={72} step={6} value={durationHours} onChange={(e) => setDurationHours(Number(e.target.value))} className="w-full accent-neon-yellow" />
-            <div className="font-display text-[11px] uppercase tracking-wide text-neon-yellow tabular-nums">
+          <div className="flex flex-col gap-1.5 sm:w-[210px]">
+            <label htmlFor="dur" className="font-prova text-[10px] font-bold uppercase tracking-[0.16em] text-mudo">{L('Duração de execução', 'Duration')}</label>
+            <input id="dur" type="range" min={6} max={72} step={6} value={durationHours} onChange={(e) => setDurationHours(Number(e.target.value))} className="w-full accent-rua" />
+            <div className="font-prova text-[11px] font-bold uppercase tracking-[0.04em] text-papel tabular-nums">
               {durationHours}h · {trainingType === 'descanso' ? L('recuperação', 'recovery') : L(`ganho ×${durMult.toFixed(2)}`, `gain ×${durMult.toFixed(2)}`)} · {L('booster CT', 'TC booster')} +{boosterPct}%
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3 pb-1 pr-1">
             <button
               type="button"
               onClick={startTraining}
               disabled={!canStartTraining}
-              className="rounded-md bg-neon-yellow px-6 py-3.5 font-display text-[14px] font-bold uppercase tracking-[0.08em] text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
+              className="inline-flex min-h-[52px] flex-1 items-center justify-center gap-2 bg-rua px-6 font-impact text-[20px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)] disabled:cursor-not-allowed disabled:bg-linha disabled:text-mudo disabled:shadow-none sm:flex-none"
             >
-              {L('Iniciar treino', 'Start training')}
+              {L('Iniciar treino', 'Start training')} <span aria-hidden>→</span>
             </button>
             <button
               type="button"
               onClick={completeDueNow}
-              className="rounded-md border border-white/20 bg-white/[0.06] px-4 py-3.5 font-display text-[12px] font-bold uppercase tracking-[0.08em] text-white/80 transition-colors hover:bg-white/10"
+              className="inline-flex min-h-[52px] items-center justify-center border-2 border-papel px-4 font-impact text-[17px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
             >
               {L('Concluir', 'Complete')}
             </button>
@@ -494,35 +489,31 @@ export function TeamTraining() {
         </div>
 
         {/* ================= EM ANDAMENTO ================= */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="sports-panel overflow-visible p-3 pb-4 sm:p-4 sm:pb-5">
-          <div className="mb-2 flex flex-wrap items-end justify-between gap-1">
-            <h3 className="font-display text-[15px] font-bold uppercase tracking-[0.05em] text-white/90">{L('Em andamento', 'In progress')}</h3>
-            {completedPlans.length > 0 && (
-              <span className="text-[10px] text-gray-500">{L(`${completedPlans.length} no histórico recente`, `${completedPlans.length} in recent history`)}</span>
-            )}
-          </div>
+        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3">
+          <SecaoRua
+            label={L('Em andamento', 'In progress')}
+            aside={completedPlans.length > 0 ? L(`${completedPlans.length} no histórico`, `${completedPlans.length} in history`) : undefined}
+          />
           {running.length === 0 ? (
-            <p className="text-[11px] text-gray-500">{L('Nenhum treino em curso.', 'No training in progress.')}</p>
+            <p className="border-2 border-dashed border-fio p-4 font-voz text-[21px] leading-tight text-suave">{L('Nenhum treino em curso. O campo tá vazio.', 'No training in progress. The pitch is empty.')}</p>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-px bg-linha">
               {running.map((p) => {
                 const dh = planDurationHours(p);
                 const remainingMs = new Date(p.endAt).getTime() - countdownNowMs;
                 const endShort = new Date(p.endAt).toLocaleString(LOCALE, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                 const done = remainingMs <= 0;
                 return (
-                  <div key={p.id} className="relative flex items-center gap-3 overflow-hidden ole-poster py-3 pl-[18px] pr-3">
-                    <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: done ? 'var(--color-neon-green)' : 'var(--color-neon-yellow)' }} aria-hidden />
-                    <span className="shrink-0 rounded-md bg-neon-yellow/12 px-2 py-1 font-display text-[10.5px] uppercase tracking-[0.04em] text-neon-yellow">
+                  <div key={p.id} className="flex min-w-0 items-center gap-3 bg-asfalto-27 px-3 py-3">
+                    <span className={cn('shrink-0 px-2 py-1 font-prova text-[10px] font-bold uppercase tracking-[0.06em]', done ? 'bg-rua text-asfalto-27' : 'border-2 border-linha text-suave')}>
                       {trainingTypeLabel(p)}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[13.5px] font-medium text-white">{planDisplayName(p, players)}</div>
-                      <div className="text-[10.5px] text-white/45">{dh}h · {L('até', 'until')} {endShort}</div>
+                      <div className="truncate text-[14px] font-medium text-papel">{planDisplayName(p, players)}</div>
+                      <div className="font-prova text-[10px] text-mudo">{dh}h · {L('até', 'until')} {endShort}</div>
                     </div>
                     <span
-                      className={`inline-flex shrink-0 items-center gap-1.5 ${done ? 'text-neon-green' : 'text-white'}`}
-                      style={{ fontFamily: NUM, fontSize: '17px' }}
+                      className={cn('inline-flex shrink-0 items-center gap-1.5 font-spray text-[20px] font-black leading-none tabular-nums', done ? 'text-rua' : 'text-papel')}
                       title={done ? L('Prazo atingido — usa «Concluir» para aplicar', 'Time is up — use “Complete” to apply') : L(`Termina a ${endShort}`, `Ends ${endShort}`)}
                     >
                       <Clock className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
@@ -533,17 +524,14 @@ export function TeamTraining() {
               })}
             </div>
           )}
-        </motion.div>
+        </motion.section>
 
         {/* ================= DEPARTAMENTO MÉDICO ================= */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="sports-panel space-y-2 p-3 pb-4 sm:p-4 sm:pb-5">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="font-display text-[15px] font-bold uppercase tracking-[0.05em] text-white/90">{L('Departamento médico', 'Medical department')}</h3>
-            <span className="text-[10px] text-gray-500 tabular-nums">{runningTreat.length}/{treatSlots} slots · ~{TREATMENT_PLAN_DURATION_H}h</span>
-          </div>
-          <p className="text-[10px] text-gray-500">{L(`Clica num jogador disponível para ocupar um slot médico (nível ${medLevel}).`, `Tap an available player to fill a medical slot (level ${medLevel}).`)}</p>
-          <div className="max-h-[min(12rem,32svh)] overflow-y-auto overscroll-y-contain rounded border border-white/10 bg-black/25 [scrollbar-gutter:stable]">
-            <ul className="divide-y divide-white/10">
+        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3">
+          <SecaoRua label={L('Departamento médico', 'Medical department')} aside={`${runningTreat.length}/${treatSlots} · ~${TREATMENT_PLAN_DURATION_H}h`} />
+          <p className="text-[12px] text-suave">{L(`Clica num jogador disponível para ocupar um slot médico (nível ${medLevel}).`, `Tap an available player to fill a medical slot (level ${medLevel}).`)}</p>
+          <div className="max-h-[min(14rem,34svh)] overflow-y-auto overscroll-y-contain bg-concreto [scrollbar-gutter:stable]">
+            <ul className="divide-y divide-linha">
               {roster.map((p) => {
                 const busy = runningTreat.some((t) => t.playerId === p.id);
                 const full = runningTreat.length >= treatSlots;
@@ -553,13 +541,14 @@ export function TeamTraining() {
                       type="button"
                       onClick={() => !busy && !full && startTreatment(p.id)}
                       disabled={busy || full}
-                      className={`flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left text-[11px] transition-colors disabled:cursor-not-allowed ${
-                        busy ? 'bg-neon-green/5' : full ? 'opacity-40' : 'hover:bg-white/5'
-                      }`}
+                      className={cn(
+                        'flex min-h-[44px] w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors disabled:cursor-not-allowed',
+                        busy ? 'bg-asfalto-27' : full ? 'opacity-40' : 'hover:bg-linha',
+                      )}
                     >
-                      <span className="font-medium text-white"><span className="font-mono text-gray-400">{p.num}</span> · {p.name}</span>
-                      <span className="shrink-0 font-display text-[10px] uppercase tracking-wide text-gray-500">
-                        {busy ? L('Em tratamento', 'In treatment') : full ? L('Slots cheios', 'Slots full') : L('Iniciar', 'Start')}
+                      <span className="min-w-0 truncate text-[13px] text-papel"><span className="font-prova text-[11px] text-mudo">{p.num}</span> · {p.name}</span>
+                      <span className={cn('shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.08em]', busy ? 'text-rua' : full ? 'text-mudo' : 'text-suave')}>
+                        {busy ? L('Em tratamento', 'In treatment') : full ? L('Slots cheios', 'Slots full') : <>{L('Iniciar', 'Start')} →</>}
                       </span>
                     </button>
                   </li>
@@ -568,16 +557,16 @@ export function TeamTraining() {
             </ul>
           </div>
           {treatmentPlans.length > 0 && (
-            <div className="space-y-0.5 border-t border-white/10 pt-2">
+            <div className="space-y-1 border-t-2 border-linha pt-2">
               {treatmentPlans.map((t) => (
-                <div key={t.id} className="flex justify-between gap-2 text-[10px] text-gray-400">
-                  <span className="text-white/90">{players[t.playerId]?.name ?? t.playerId}</span>
+                <div key={t.id} className="flex justify-between gap-2 font-prova text-[10px] text-mudo">
+                  <span className="min-w-0 truncate text-papel">{players[t.playerId]?.name ?? t.playerId}</span>
                   <span className="shrink-0 tabular-nums">{t.status} · {L('fim', 'ends')} {new Date(t.endAt).toLocaleString(LOCALE)}</span>
                 </div>
               ))}
             </div>
           )}
-        </motion.div>
+        </motion.section>
 
         <div className="h-[max(1.5rem,3dvh)] shrink-0 sm:h-8 md:h-10" aria-hidden />
       </div>
@@ -590,9 +579,12 @@ export function TeamTraining() {
 
 function StepHeader({ n, title }: { n: number; title: string }) {
   return (
-    <div className="flex items-center gap-3.5 pt-1">
-      <div className="tabular-nums leading-none text-neon-yellow" style={{ fontFamily: NUM, fontSize: '34px' }}>{n}</div>
-      <h2 className="ole-eyebrow-poster" style={{ fontSize: '15px' }}>{title}</h2>
+    <div className="flex items-end gap-3 pt-2">
+      {/* Número vazado (degrau CHÃO): o passo ainda vai acontecer. */}
+      <div className="font-spray text-[52px] font-black leading-[0.8] text-transparent [-webkit-text-stroke:1.5px_var(--color-rua)] tabular-nums">
+        {String(n).padStart(2, '0')}
+      </div>
+      <h2 className="font-impact text-[28px] uppercase leading-none text-papel">{title}</h2>
     </div>
   );
 }
@@ -603,13 +595,13 @@ function WhoButton({ active, onClick, title, desc }: { active: boolean; onClick:
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`group relative overflow-hidden rounded-md border bg-card p-4 pl-[18px] text-left transition-colors ${
-        active ? 'border-neon-yellow' : 'border-white/10 hover:border-white/20'
-      }`}
+      className={cn(
+        'flex min-w-0 flex-col gap-1 p-4 text-left transition-colors',
+        active ? 'bg-rua text-asfalto-27' : 'bg-concreto text-papel hover:bg-linha',
+      )}
     >
-      <span className={`absolute inset-y-0 left-0 w-[3px] ${active ? 'bg-neon-yellow' : 'bg-white/15 group-hover:bg-neon-yellow/60'}`} aria-hidden />
-      <div className={`font-display text-[15px] font-semibold uppercase tracking-[0.05em] ${active ? 'text-neon-yellow' : 'text-white'}`}>{title}</div>
-      <div className="mt-1 text-[11.5px] text-white/50">{desc}</div>
+      <div className="font-impact text-[22px] uppercase leading-none">{title}</div>
+      <div className={cn('text-[12px]', active ? 'text-asfalto-27/75' : 'text-suave')}>{desc}</div>
     </button>
   );
 }

@@ -32,7 +32,7 @@ export function GameBannerBackdrop({
         // fora de camada, que vence o h-full do Tailwind.
         style={{ width: '100%', height: '100%', maxWidth: 'none', opacity: imageOpacity }}
       />
-      {/* Scrim da foto (legibilidade) — degradê permitido pelo VOLT2. */}
+      {/* Scrim da foto (legibilidade) — único degradê do DS 2027: escurecer foto pra leitura. */}
       <div
         className={cn(
           'absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent',

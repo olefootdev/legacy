@@ -48,30 +48,30 @@ export function LegacyOlefootWelcomeToast() {
 
   return (
     <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/85 px-4">
-      <div className="relative max-w-md w-full border border-white/16 bg-panel p-6">
+      <div className="relative w-full max-w-md border-t-[5px] border-rua bg-concreto p-6">
         <button
           onClick={dismiss}
-          className="absolute right-3 top-3 text-white/40 hover:text-white/80 text-xl leading-none"
+          className="absolute right-3 top-3 text-mudo hover:text-papel text-xl leading-none"
           aria-label={L('Fechar', 'Close')}
         >
           ×
         </button>
-        <div className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-cimento">
+        <div className="font-prova text-[11px] font-medium uppercase tracking-[0.2em] text-mudo">
           {L('Bem-vindo de volta', 'Welcome back')}
         </div>
-        <div className="mt-2 font-impact text-2xl uppercase leading-[1.1] text-white">
+        <div className="mt-2 font-impact text-[34px] uppercase leading-[0.95] text-papel">
           {L('Seu saldo da era anterior foi recuperado', 'Your balance from the previous era was recovered')}
         </div>
-        <div className="mt-5 border border-white/10 bg-card p-4">
-          <div className="font-mono text-[10.5px] text-cimento uppercase tracking-wider">{L('Saldo', 'Balance')} {moedaDoJogo()}</div>
-          <div className="mt-1 font-mono text-3xl font-medium text-white tabular-nums">
+        <div className="mt-5 border-[3px] border-ouro-27 bg-asfalto-27 p-4">
+          <div className="font-prova text-[10.5px] text-mudo uppercase tracking-wider">{L('Saldo', 'Balance')} {moedaDoJogo()}</div>
+          <div className="mt-1 font-spray text-[36px] font-black leading-none text-ouro-27 tabular-nums">
             {formatBalance(balanceHuman)}
           </div>
-          <div className="mt-1 font-mono text-[11px] text-poeira">
+          <div className="mt-1 font-prova text-[11px] text-mudo">
             ({balanceHuman} {moedaDoJogo()} — {L('snapshot da carteira BSC', 'BSC wallet snapshot')})
           </div>
         </div>
-        <p className="mt-4 text-sm text-white/70 leading-relaxed">
+        <p className="mt-4 text-sm text-papel leading-relaxed">
           {L(
             'A carteira antiga foi desativada nessa versão. Seu saldo foi creditado off-chain na sua conta nova — disponível para usar no jogo.',
             'The old wallet was retired in this version. Your balance was credited off-chain to your new account — ready to use in the game.',

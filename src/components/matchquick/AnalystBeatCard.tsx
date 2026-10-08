@@ -41,11 +41,13 @@ export function AnalystBeatCard({ beat, onChoose }: Props) {
   }, [beat.id]);
 
   const intent = beat.intent ?? 'neutral';
+  // DS 2027: a peça é concreto; a intenção vira só o rail + o rótulo.
+  // Ataque = rua (é onde se age), perigo = baixa, leitura = papel.
   const theme = intent === 'attack'
-    ? { token: 'var(--color-success)', Icon: Crosshair, label: L('Chance de gol', 'Goal chance') }
+    ? { rail: 'border-l-rua', text: 'text-rua', bar: 'bg-rua', Icon: Crosshair, label: L('Chance de gol', 'Goal chance') }
     : intent === 'defend'
-    ? { token: 'var(--color-danger)', Icon: ShieldAlert, label: L('Perigo — segura', 'Danger — hold on') }
-    : { token: 'var(--color-neon-yellow)', Icon: Eye, label: L('Leitura do Analista', 'Analyst read') };
+    ? { rail: 'border-l-baixa', text: 'text-baixa', bar: 'bg-baixa', Icon: ShieldAlert, label: L('Perigo — segura', 'Danger — hold on') }
+    : { rail: 'border-l-papel', text: 'text-papel', bar: 'bg-papel', Icon: Eye, label: L('Leitura do Analista', 'Analyst read') };
 
   return (
     <motion.div
@@ -53,36 +55,35 @@ export function AnalystBeatCard({ beat, onChoose }: Props) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-      className="w-full border border-l-[3px] bg-dark-gray"
-      style={{ borderColor: 'var(--color-border)', borderLeftColor: theme.token, borderRadius: 'var(--radius-md)' }}
+      className={`w-full border-l-[4px] bg-concreto ${theme.rail}`}
     >
-      <div className="px-4 pt-3 pb-2 flex items-center justify-between">
-        <span className="flex items-center gap-2 font-display uppercase tracking-[0.28em] text-[10px] font-black" style={{ color: theme.token }}>
-          <theme.Icon className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden />
-          {theme.label}
+      <div className="flex min-w-0 items-center justify-between gap-3 px-4 pb-2 pt-3">
+        <span className={`flex min-w-0 items-center gap-2 font-prova text-[11px] font-bold uppercase tracking-[0.2em] ${theme.text}`}>
+          <theme.Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+          <span className="truncate">{theme.label}</span>
         </span>
-        <span className="font-display tabular-nums text-[11px] font-bold" style={{ color: theme.token }}>
+        <span className={`shrink-0 font-spray font-black text-[26px] leading-none tabular-nums ${theme.text}`}>
           {beat.minute}&prime;
         </span>
       </div>
 
       {reading ? (
-        <div className="px-4 py-6 flex items-center gap-2 text-white/55">
+        <div className="flex items-center gap-2 px-4 pb-6 pt-3 text-suave">
           <motion.span
             animate={{ opacity: [0.3, 1, 0.3] }}
             transition={{ duration: 1, repeat: Infinity }}
-            className="font-sans text-[13px]"
+            className="font-voz text-[22px] leading-none"
           >
             {L('O Analista está lendo o jogo…', 'The Analyst is reading the game…')}
           </motion.span>
         </div>
       ) : (
         <>
-          <p className="px-4 pb-3 text-[13px] sm:text-sm text-white/90 leading-snug">
+          <p className="px-4 pb-3 text-[14px] leading-snug text-papel">
             {beat.insight.text}
           </p>
 
-          <div className="px-3 pb-3 flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2.5 px-4 pb-4">
             {beat.choices.map((c) => {
               const isPicked = chosen === c.id;
               const isDimmed = chosen !== null && !isPicked;
@@ -92,29 +93,25 @@ export function AnalystBeatCard({ beat, onChoose }: Props) {
                   type="button"
                   disabled={chosen !== null}
                   onClick={() => resolve(c)}
-                  className={`text-left px-3 py-2.5 border font-display uppercase tracking-[0.16em] text-[11px] font-black transition-all active:scale-[0.98] ${
-                    isPicked ? 'text-black' : isDimmed ? 'border-white/8 text-white/25' : 'text-white/90 hover:text-black'
+                  className={`flex min-h-[50px] items-center justify-between gap-3 px-4 text-left font-impact text-[17px] uppercase leading-[1.05] transition-[transform,box-shadow,background-color,color] ${
+                    isPicked
+                      ? 'translate-x-0.5 translate-y-0.5 bg-rua text-asfalto-27 shadow-[2px_2px_0_var(--color-papel)]'
+                      : isDimmed
+                      ? 'border-2 border-linha text-fio'
+                      : 'border-2 border-papel text-papel hover:bg-rua hover:border-rua hover:text-asfalto-27 hover:shadow-[4px_4px_0_var(--color-papel)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
                   }`}
-                  style={{
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: isPicked ? theme.token : undefined,
-                    borderColor: isPicked ? theme.token : isDimmed ? undefined : 'color-mix(in srgb, ' + theme.token + ' 40%, transparent)',
-                    ...(isPicked ? {} : isDimmed ? {} : { ['--hover-bg' as string]: theme.token }),
-                  }}
-                  onMouseEnter={(e) => { if (!isPicked && !isDimmed) e.currentTarget.style.backgroundColor = theme.token; }}
-                  onMouseLeave={(e) => { if (!isPicked && !isDimmed) e.currentTarget.style.backgroundColor = ''; }}
                 >
-                  {c.label}
+                  <span className="min-w-0">{c.label}</span>
+                  {!isDimmed && <span aria-hidden className="shrink-0">→</span>}
                 </button>
               );
             })}
           </div>
 
-          {/* Janela de decisão — barra esvaziando no token da intenção */}
-          <div className="h-0.5 bg-deep-black/60">
+          {/* Janela de decisão — barra esvaziando no tom da intenção */}
+          <div className="h-1 bg-linha">
             <motion.div
-              className="h-full"
-              style={{ backgroundColor: theme.token }}
+              className={`h-full ${theme.bar}`}
               initial={{ width: '100%' }}
               animate={{ width: chosen !== null ? undefined : '0%' }}
               transition={{ ease: 'linear', duration: beat.window_ms / 1000 }}

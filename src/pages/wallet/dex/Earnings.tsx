@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { SecaoVolt, Hashtag } from '@/components/ui';
+import { SecaoRua } from '@/components/ui/Rua';
 import { useEarnings } from './useEarnings';
 import { BlocoVault } from './BlocoVault';
 import { BlocoProducao } from './BlocoProducao';
@@ -33,11 +33,10 @@ export function Earnings() {
 
   return (
     <section className="min-w-0 space-y-3">
-      <SecaoVolt label="Earnings">
-        <Hashtag>{L('#vault #producao #stake', '#vault #production #stake')}</Hashtag>
-      </SecaoVolt>
+      <SecaoRua label="Earnings" aside={L('#vault #producao #stake', '#vault #production #stake')} />
 
-      <div className="grid grid-cols-3 gap-1 border border-white/16 bg-panel p-1" role="tablist" aria-label="Earnings">
+      {/* DS 2027: o mesmo segmento do SPOT | DEX — Anton, a aba aberta em rua. */}
+      <div className="grid grid-cols-3 border-2 border-linha p-0.5" role="tablist" aria-label="Earnings">
         {ABAS.map((a) => (
           <button
             key={a.id}
@@ -46,8 +45,8 @@ export function Earnings() {
             aria-selected={qual === a.id}
             onClick={() => setQual(a.id)}
             className={cn(
-              'min-w-0 truncate py-2 text-center font-mono text-[11px] font-medium uppercase tracking-[0.16em] transition-colors',
-              qual === a.id ? 'bg-white text-black' : 'text-cimento hover:text-white',
+              'min-h-[44px] min-w-0 truncate px-1 text-center font-impact text-[18px] uppercase leading-none transition-colors',
+              qual === a.id ? 'bg-rua text-asfalto-27' : 'text-mudo hover:text-papel',
             )}
           >
             {a.rotulo}
@@ -56,11 +55,12 @@ export function Earnings() {
       </div>
 
       {e.status === 'carregando' && (
-        <p className="py-4 font-mono text-[12px] text-cimento">{L('Carregando…', 'Loading…')}</p>
+        <p className="py-4 font-prova text-[12px] uppercase tracking-[0.16em] text-mudo">{L('Carregando…', 'Loading…')}</p>
       )}
       {e.status === 'erro' && (
-        <div className="border border-atencao/40 bg-atencao/10 px-3.5 py-3">
-          <p className="text-[12px] leading-relaxed text-giz">
+        <div className="border-2 border-dashed border-fio px-4 py-4">
+          <p className="font-voz text-[24px] leading-none text-papel">{L('Deu ruim aqui.', 'Something broke.')}</p>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-suave">
             {L('Não deu para carregar as regras agora. Tente de novo em instantes.', 'Couldn\'t load the rules right now. Try again in a moment.')}
           </p>
         </div>

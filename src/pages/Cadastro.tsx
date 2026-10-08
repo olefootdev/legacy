@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { User, Shield, Heart, ArrowRight, ArrowLeft, Check, Sparkles, Trophy, Users, Briefcase, Mic, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Hashtag } from '@/components/ui';
+import { Hashtag, MarcaRua } from '@/components/ui';
 import { COUNTRY_DIAL_OPTIONS, isoToFlag, type CountryDialOption } from '@/lib/countryDialCodes';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -299,18 +299,18 @@ function simpleEmailOk(email: string): boolean {
 }
 
 const inputClass =
-  'w-full border border-white/16 bg-deep-black px-3 py-2.5 text-sm text-white placeholder:text-poeira focus:border-neon-yellow focus:outline-none';
+  'w-full min-h-[48px] border-2 border-linha bg-concreto px-3.5 py-2.5 text-[15px] text-papel placeholder:text-fio focus:border-rua focus:outline-none';
 
-/** Rótulo de campo VOLT2 (mono, cimento). */
-const labelClass = 'mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento';
+/** Rótulo de campo DS 2027 (A PROVA: Geist Mono, mudo). */
+const labelClass = 'mb-1.5 block font-prova text-[11.5px] font-bold uppercase tracking-[0.2em] text-mudo';
 /** Aviso inline de limite/caractere — mono, cor de atenção. */
-const warnClass = 'animate-pulse font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-atencao';
-const hintClass = 'text-[10.5px] text-poeira';
+const warnClass = 'font-prova text-[11px] font-bold uppercase tracking-[0.14em] text-rua';
+const hintClass = 'font-prova text-[11px] text-mudo';
 /** Opção selecionável (perfil, clube): card chapado; selecionado = borda volt. */
 const opcao = (selected: boolean) =>
   cn(
-    'border bg-deep-black transition-colors',
-    selected ? 'border-neon-yellow bg-neon-yellow/10' : 'border-white/10 hover:border-white/30',
+    'border-2 bg-concreto transition-colors',
+    selected ? 'border-rua' : 'border-linha hover:border-fio',
   );
 
 export function Cadastro() {
@@ -504,88 +504,78 @@ export function Cadastro() {
   };
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-deep-black">
+    <div className="rua-grao relative flex min-h-svh flex-col overflow-hidden bg-asfalto-27">
       {/* Quem veio de um convite de expansão precisa ver isso aqui — senão a
           tela de venda apaga o motivo pelo qual a pessoa clicou. */}
       <div className="relative z-20"><FaixaConvitePendente /></div>
       {/* Background layers */}
+      {/* Foto do muro só no topo, apagada; o scrim preto → transparente é o
+          único degradê do DS (escurecer foto pra leitura). */}
       <div
-        className="absolute inset-0 z-0 scale-105 bg-cover bg-[center_22%] bg-no-repeat sm:bg-center"
+        className="absolute inset-x-0 top-0 z-0 h-[48svh] bg-cover bg-[center_22%] bg-no-repeat opacity-35 grayscale sm:bg-center"
         style={{ backgroundImage: 'url(/login-hero.png)' }}
         aria-hidden
       />
-      {/* Scrim da foto (legibilidade) — único degradê permitido nesta tela. */}
       <div
         aria-hidden
-        className="absolute inset-0 z-0"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(13,13,13,0.85) 0%, rgba(13,13,13,0.45) 20%, rgba(13,13,13,0.8) 45%, #0D0D0D 80%)',
-        }}
+        className="absolute inset-x-0 top-0 z-0 h-[48svh]"
+        style={{ background: 'linear-gradient(180deg, rgba(13,13,12,0.55) 0%, rgba(13,13,12,0.8) 50%, #0D0D0C 100%)' }}
       />
 
       {/* Header */}
       <header role="banner" className="relative z-[100] w-full shrink-0 bg-transparent px-4 pb-2 pt-5 sm:px-6 sm:pb-3 sm:pt-6 md:px-8">
         <div className="mx-auto flex w-full min-w-0 max-w-6xl items-center justify-between gap-3">
           <Link to="/login" className="flex min-w-0 flex-1 items-center gap-3" aria-label="Olefoot">
-            <img
-              src="/test-pitch/olefoot-logo-game.svg"
-              alt="Olefoot"
-              width={260}
-              height={72}
-              decoding="async"
-              fetchPriority="high"
-              className="h-10 w-auto max-h-11 max-w-[min(100%,280px)] object-contain object-left sm:h-12 sm:max-h-[3.25rem]"
-            />
+            <MarcaRua tipo="wordmark" label="Olefoot" className="h-[22px] bg-rua sm:h-[26px]" />
           </Link>
-          <Hashtag className="shrink-0 text-[12px] text-giz">{L('#cadastro', '#signup')}</Hashtag>
+          <Hashtag className="shrink-0 text-[12px] text-suave">{L('#cadastro', '#signup')}</Hashtag>
         </div>
       </header>
 
       <div className="relative z-10 flex min-h-0 flex-1 flex-col px-5 pb-6 sm:px-8 sm:pb-8 md:px-10">
-        <div className="min-h-[8vh] shrink-0 sm:min-h-[10vh]" aria-hidden />
+        <div className="min-h-[4vh] shrink-0 sm:min-h-[8vh]" aria-hidden />
 
         <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center">
-          <div className="border border-white/10 bg-panel p-6 sm:p-8">
+          <div className="flex flex-col">
 
-            {/* Step indicator */}
-            <div className="mb-8 flex items-center justify-center gap-2">
-              {([1, 2, 3] as const).map((n) => {
-                const Icon = n === 1 ? User : n === 2 ? Shield : Heart;
-                const isActive = step === n;
-                const isComplete = step > n;
-                return (
-                  <div key={n} className="flex items-center gap-2">
-                    <div
-                      className={cn(
-                        'flex h-10 w-10 items-center justify-center border-2 transition-colors',
-                        isActive
-                          ? 'border-neon-yellow bg-neon-yellow text-black'
-                          : isComplete
-                            ? 'border-neon-yellow bg-deep-black text-neon-yellow'
-                            : 'border-white/16 bg-deep-black text-poeira',
-                      )}
-                    >
-                      {isComplete ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
-                    </div>
-                    {n < 3 && (
-                      <div
+            {/* Passos: 3 segmentos de rua + contagem em spray. */}
+            <div className="mb-6 flex flex-col gap-2.5" aria-label={L(`Passo ${step} de 3`, `Step ${step} of 3`)}>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.22em] text-mudo">
+                  — {L('Cadastro', 'Sign-up')}
+                </span>
+                <span className="font-spray text-[30px] font-black leading-none text-rua">
+                  0{step}<span className="text-fio">/03</span>
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([1, 2, 3] as const).map((n) => {
+                  const Icon = step > n ? Check : n === 1 ? User : n === 2 ? Shield : Heart;
+                  return (
+                    <div key={n} className="flex min-w-0 flex-col gap-1.5">
+                      <span aria-hidden className={cn('h-2', step >= n ? 'bg-rua' : 'bg-linha')} />
+                      <span
                         className={cn(
-                          'h-0.5 w-8 transition-colors',
-                          step > n ? 'bg-neon-yellow' : 'bg-white/10',
+                          'flex min-w-0 items-center gap-1 font-prova text-[10.5px] font-bold uppercase tracking-[0.12em]',
+                          step === n ? 'text-papel' : step > n ? 'text-suave' : 'text-fio',
                         )}
-                      />
-                    )}
-                  </div>
-                );
-              })}
+                      >
+                        <Icon aria-hidden className="h-3 w-3 shrink-0" />
+                        <span className="truncate">
+                          {n === 1 ? L('Conta', 'Account') : n === 2 ? L('Clube', 'Club') : L('Coração', 'Heart')}
+                        </span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Step title */}
-            <div className="mb-6 text-center">
+            <div className="mb-2 border-t-2 border-papel pt-5">
               <h1
-                className="font-impact uppercase leading-[1.05] text-white"
-                style={{ fontSize: 'clamp(30px, 8vw, 42px)' }}
+                className="font-impact uppercase leading-[0.92] text-papel"
+                style={{ fontSize: 'clamp(40px, 12vw, 58px)' }}
               >
                 {step === 1 && L('Crie sua conta', 'Create your account')}
                 {step === 2 && L('Monte seu clube', 'Build your club')}
@@ -631,21 +621,21 @@ export function Cadastro() {
                 aria-invalid={emailTaken || undefined}
               />
               {simpleEmailOk(email) && emailChecking ? (
-                <p className="mt-1 text-[11px] text-poeira">{L('Verificando…', 'Checking…')}</p>
+                <p className="mt-1 text-[11px] text-mudo">{L('Verificando…', 'Checking…')}</p>
               ) : null}
               {emailTaken ? (
                 <p className="mt-1 text-[11px] text-baixa">
                   ✗ {L('E-mail já cadastrado.', 'Email already registered.')}{' '}
-                  <Link to="/login" className="underline decoration-baixa/50 hover:text-white">
+                  <Link to="/login" className="underline decoration-baixa/50 hover:text-papel">
                     {L('Fazer login', 'Sign in')}
                   </Link>
                 </p>
               ) : null}
             </label>
             <label className="block">
-              <span className="mb-1 block text-[11px] text-cimento">
-                <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em]">{L('Senha', 'Password')}</span>{' '}
-                <span className="text-poeira">{L('(mín. 6 chars — usada pra entrar de qualquer dispositivo)', '(min. 6 chars — used to sign in on any device)')}</span>
+              <span className="mb-1 block text-[11px] text-mudo">
+                <span className="font-prova text-[10.5px] font-medium uppercase tracking-[0.14em]">{L('Senha', 'Password')}</span>{' '}
+                <span className="text-mudo">{L('(mín. 6 chars — usada pra entrar de qualquer dispositivo)', '(min. 6 chars — used to sign in on any device)')}</span>
               </span>
               <input
                 type="password"
@@ -658,11 +648,11 @@ export function Cadastro() {
             </label>
             <label className="block">
               <span className="mb-1 flex items-center justify-between gap-2">
-                <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento">
-                  {L('Código de indicação', 'Referral code')} <span className="normal-case tracking-normal text-poeira">{L('(opcional)', '(optional)')}</span>
+                <span className="font-prova text-[10.5px] font-medium uppercase tracking-[0.14em] text-mudo">
+                  {L('Código de indicação', 'Referral code')} <span className="normal-case tracking-normal text-mudo">{L('(opcional)', '(optional)')}</span>
                 </span>
                 {referrerFromInvite && normalizeReferralCode(referrerCode) ? (
-                  <span className="shrink-0 border border-alta/40 bg-alta/10 px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wide text-alta">
+                  <span className="shrink-0 bg-rua px-2 py-0.5 font-prova text-[10.5px] font-bold uppercase tracking-[0.1em] text-asfalto-27">
                     ✓ {L('Convite aplicado', 'Invite applied')}
                   </span>
                 ) : null}
@@ -678,7 +668,7 @@ export function Cadastro() {
                 maxLength={8}
                 autoComplete="off"
               />
-              <p className="mt-1 text-[10.5px] text-poeira">
+              <p className="mt-1 text-[10.5px] text-mudo">
                 {L('Se você tiver um link de convite, o código já vem preenchido. Não dá pra alterar depois de concluir o cadastro.', "If you have an invite link, the code is already filled in. It can't be changed after you finish signing up.")}
               </p>
             </label>
@@ -688,7 +678,7 @@ export function Cadastro() {
                 {/* Linha 1: DDI + DDD */}
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <label className="mb-1 block text-[10.5px] text-poeira">{L('DDI (País)', 'Country code')}</label>
+                    <label className="mb-1 block text-[10.5px] text-mudo">{L('DDI (País)', 'Country code')}</label>
                     <select
                       className={inputClass}
                       value={dialOption.iso2}
@@ -712,7 +702,7 @@ export function Cadastro() {
                   </div>
                   {dialOption.iso2 === 'OTHER' && (
                     <div className="w-28">
-                      <label className="mb-1 block text-[10.5px] text-poeira">{L('Código', 'Code')}</label>
+                      <label className="mb-1 block text-[10.5px] text-mudo">{L('Código', 'Code')}</label>
                       <input
                         className={inputClass}
                         placeholder={L('ex. 352', 'e.g. 352')}
@@ -724,7 +714,7 @@ export function Cadastro() {
                   )}
                   {dialOption.iso2 === 'BR' ? (
                     <div className="w-20">
-                      <label className="mb-1 block text-[10.5px] text-poeira">{L('UF', 'State')}</label>
+                      <label className="mb-1 block text-[10.5px] text-mudo">{L('UF', 'State')}</label>
                       <select
                         className={inputClass}
                         value={brazilState}
@@ -744,7 +734,7 @@ export function Cadastro() {
                     </div>
                   ) : dialOption.iso2 !== 'OTHER' ? (
                     <div className="w-24">
-                      <label className="mb-1 block text-[10.5px] text-poeira">{L('DDD', 'Area code')}</label>
+                      <label className="mb-1 block text-[10.5px] text-mudo">{L('DDD', 'Area code')}</label>
                       <input
                         className={inputClass}
                         placeholder={L('DDD', 'Area code')}
@@ -760,7 +750,7 @@ export function Cadastro() {
                 <div className="flex gap-2">
                   {dialOption.iso2 === 'BR' && brazilState ? (
                     <div className="flex-1">
-                      <label className="mb-1 block text-[10.5px] text-poeira">{L('Cidade/Região', 'City/Region')}</label>
+                      <label className="mb-1 block text-[10.5px] text-mudo">{L('Cidade/Região', 'City/Region')}</label>
                       <select
                         className={inputClass}
                         value={brazilCity}
@@ -783,7 +773,7 @@ export function Cadastro() {
                     </div>
                   ) : null}
                   <div className={dialOption.iso2 === 'BR' && brazilState ? 'flex-1' : 'w-full'}>
-                    <label className="mb-1 block text-[10.5px] text-poeira">{L('Número', 'Number')}</label>
+                    <label className="mb-1 block text-[10.5px] text-mudo">{L('Número', 'Number')}</label>
                     <input
                       className={inputClass}
                       placeholder={L('Número do telefone', 'Phone number')}
@@ -796,7 +786,7 @@ export function Cadastro() {
                 </div>
               </div>
               {phoneE164 ? (
-                <p className="mt-1.5 font-mono text-[10.5px] text-cimento">{L('Seu telefone é', 'Your phone is')} {phoneE164}</p>
+                <p className="mt-1.5 font-prova text-[10.5px] text-mudo">{L('Seu telefone é', 'Your phone is')} {phoneE164}</p>
               ) : null}
             </div>
           </div>
@@ -806,8 +796,8 @@ export function Cadastro() {
           <div className="mt-8 space-y-6">
             {/* Seleção de perfil */}
             <div>
-              <p className="mb-3 text-center font-impact text-[20px] uppercase leading-[1.1] text-white">
-                {L('Qual seu perfil?', "What's your profile?")}
+              <p className="mb-3 font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
+                — {L('Qual seu perfil?', "What's your profile?")}
               </p>
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 {[
@@ -829,14 +819,14 @@ export function Cadastro() {
                       aria-pressed={selected}
                     >
                       <div className={cn(
-                        'flex h-10 w-10 items-center justify-center border transition-colors',
-                        selected ? 'border-neon-yellow bg-neon-yellow text-black' : 'border-white/16 text-cimento',
+                        'flex h-10 w-10 items-center justify-center transition-colors',
+                        selected ? 'bg-rua text-asfalto-27' : 'border-2 border-linha text-mudo',
                       )}>
                         <Icon className="h-5 w-5" />
                       </div>
                       <span className={cn(
-                        'text-center text-[11px] font-bold leading-tight',
-                        selected ? 'text-neon-yellow' : 'text-giz',
+                        'text-center font-impact text-[14px] uppercase leading-tight',
+                        selected ? 'text-rua' : 'text-papel',
                       )}>
                         {profile.label}
                       </span>
@@ -845,8 +835,8 @@ export function Cadastro() {
                 })}
               </div>
               {userProfile === 'ex_jogador' && (
-                <div className="mt-3 border border-atencao/40 bg-atencao/10 px-3 py-2">
-                  <p className="text-center text-[11px] text-giz">
+                <div className="mt-3 -rotate-1 bg-cal px-3.5 py-2.5">
+                  <p className="text-center text-[12px] text-asfalto-27">
                     {L('Entraremos em contato para validar seu perfil de ex-jogador', "We'll contact you to verify your former-player profile")}
                   </p>
                 </div>
@@ -854,13 +844,13 @@ export function Cadastro() {
             </div>
 
             {/* Divisor */}
-            <div className="border-t border-white/10" />
+            <div className="border-t-2 border-dashed border-linha" />
 
             <div>
-              <p className="mb-1 text-center font-impact text-[20px] uppercase leading-[1.1] text-white">
-                {L('Time do coração', 'Team you support')}
+              <p className="mb-1 font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
+                — {L('Time do coração', 'Team you support')}
               </p>
-              <Hashtag className="text-center">{L(`#${LEAGUE_BUCKETS.length}ligas`, `#${LEAGUE_BUCKETS.length}leagues`)}</Hashtag>
+              <Hashtag>{L(`#${LEAGUE_BUCKETS.length}ligas`, `#${LEAGUE_BUCKETS.length}leagues`)}</Hashtag>
             </div>
 
             {/* Seleção Brasil em destaque (1 card cheio no topo) */}
@@ -870,7 +860,7 @@ export function Cadastro() {
               className={cn('flex w-full items-center gap-3 p-3', opcao(favoriteTeam?.id === SELECAO_BRASIL.id))}
               aria-pressed={favoriteTeam?.id === SELECAO_BRASIL.id}
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/16 bg-panel">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-linha bg-asfalto-27">
                 {SELECAO_BRASIL.logo ? (
                   <img
                     src={SELECAO_BRASIL.logo}
@@ -883,23 +873,23 @@ export function Cadastro() {
                 ) : null}
               </div>
               <div className="min-w-0 flex-1 text-left">
-                <p className="truncate font-impact text-[17px] uppercase leading-[1.1] text-white">🇧🇷 {L('Seleção Brasil', 'Brazil National Team')}</p>
+                <p className="truncate font-voz text-[22px] leading-[1.05] text-papel">🇧🇷 {L('Seleção Brasil', 'Brazil National Team')}</p>
                 <Hashtag className="text-[11px]">{L('#seleção', '#nationalteam')}</Hashtag>
               </div>
             </button>
 
             {/* Chips de ligas */}
-            <div className="flex flex-wrap gap-1.5 border-t border-white/5 pt-3">
+            <div className="flex flex-wrap gap-1.5 pt-1">
               {LEAGUE_BUCKETS.map((b) => (
                 <button
                   key={b.id}
                   type="button"
                   onClick={() => setLeagueBucketId(b.id)}
                   className={cn(
-                    'border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                    'min-h-[34px] border-2 px-2.5 py-1 font-prova text-[11px] font-bold uppercase tracking-[0.08em] transition-colors',
                     leagueBucketId === b.id
-                      ? 'border-neon-yellow bg-neon-yellow text-black'
-                      : 'border-white/10 bg-deep-black text-cimento hover:border-white/30 hover:text-white',
+                      ? 'border-rua bg-rua text-asfalto-27'
+                      : 'border-linha text-mudo hover:border-fio hover:text-papel',
                   )}
                 >
                   <span className="mr-1">{b.flag}</span>
@@ -922,7 +912,7 @@ export function Cadastro() {
                   >
                     <div className={cn(
                       'flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border',
-                      selected ? 'border-neon-yellow bg-panel' : 'border-white/16 bg-panel',
+                      selected ? 'border-2 border-rua bg-asfalto-27' : 'border-2 border-linha bg-asfalto-27',
                     )}>
                       {c.logo ? (
                         <img
@@ -936,8 +926,8 @@ export function Cadastro() {
                       ) : null}
                     </div>
                     <span className={cn(
-                      'line-clamp-2 text-center text-[10px] font-bold leading-tight',
-                      selected ? 'text-neon-yellow' : 'text-giz',
+                      'line-clamp-2 text-center text-[11px] font-semibold leading-tight',
+                      selected ? 'text-rua' : 'text-papel',
                     )}>
                       {c.name}
                     </span>
@@ -947,7 +937,7 @@ export function Cadastro() {
             </div>
 
             {favoriteTeam ? (
-              <p className="text-center text-[11px] font-medium text-neon-yellow">
+              <p className="text-center font-voz text-[22px] leading-none text-rua">
                 ✓ {favoriteTeam.name} {L('selecionado', 'selected')}
               </p>
             ) : null}
@@ -1007,7 +997,7 @@ export function Cadastro() {
                     {L('Máximo 10 caracteres', 'Max 10 characters')}
                   </p>
                 )}
-                <span className="ole-num text-[10.5px] text-poeira">
+                <span className="ole-num text-[10.5px] text-mudo">
                   {clubName.length}/10
                 </span>
               </div>
@@ -1019,7 +1009,7 @@ export function Cadastro() {
                 {L('Iniciais', 'Initials')}
               </span>
               <input
-                className={cn(inputClass, 'tracking-[0.4em] text-center font-display font-black uppercase')}
+                className={cn(inputClass, 'tracking-[0.4em] text-center font-spray font-black uppercase')}
                 value={initials}
                 onChange={(e) => {
                   const raw = e.target.value.toUpperCase();
@@ -1063,7 +1053,7 @@ export function Cadastro() {
                     {L('3 letras (sem pontos ou números)', '3 letters (no dots or numbers)')}
                   </p>
                 )}
-                <span className="ole-num text-[10.5px] text-poeira">
+                <span className="ole-num text-[10.5px] text-mudo">
                   {initials.length}/3
                 </span>
               </div>
@@ -1074,11 +1064,11 @@ export function Cadastro() {
                   {initialsChecking ? (
                     <p className={hintClass}>{L('Verificando…', 'Checking…')}</p>
                   ) : initialsTaken ? (
-                    <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-baixa">
+                    <p className="font-prova text-[10px] font-medium uppercase tracking-[0.14em] text-baixa">
                       ✗ {L('Iniciais já em uso — escolha outras', 'Initials taken — pick others')}
                     </p>
                   ) : (
-                    <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-alta">
+                    <p className="font-prova text-[10px] font-medium uppercase tracking-[0.14em] text-alta">
                       ✓ {L('DISPONÍVEL', 'AVAILABLE')}
                     </p>
                   )}
@@ -1087,11 +1077,11 @@ export function Cadastro() {
 
               {/* Preview do @username */}
               {previewUsername && !initialsTaken && !initialsChecking && (
-                <div className="mt-2 flex min-w-0 items-center gap-1.5 border border-white/10 bg-deep-black px-3 py-1.5">
-                  <span className="shrink-0 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">
+                <div className="mt-2 flex min-w-0 items-center gap-1.5 border border-linha bg-concreto px-3 py-1.5">
+                  <span className="shrink-0 font-prova text-[10px] font-medium uppercase tracking-[0.14em] text-mudo">
                     {L('Seu username:', 'Your username:')}
                   </span>
-                  <span className="min-w-0 truncate font-mono text-[12px] font-medium text-neon-yellow">
+                  <span className="min-w-0 truncate font-prova text-[12px] font-medium text-rua">
                     @{previewUsername}
                   </span>
                 </div>
@@ -1114,9 +1104,9 @@ export function Cadastro() {
                   </option>
                 ))}
               </select>
-              <p className="mt-1.5 text-[10.5px] text-cimento">
+              <p className="mt-1.5 text-[10.5px] text-mudo">
                 {L('Estilo tático:', 'Tactical style:')}{' '}
-                <span className="font-mono font-medium uppercase tracking-[0.14em] text-neon-yellow">
+                <span className="font-prova font-medium uppercase tracking-[0.14em] text-rua">
                   {PRESET_LABEL_PT[FORMATION_TACTICAL_DEFAULTS[formationScheme].presetId]}
                 </span>
               </p>
@@ -1125,8 +1115,8 @@ export function Cadastro() {
         )}
 
         {finishError ? (
-          <div className="mt-6 flex items-start gap-2 border border-baixa/50 bg-baixa/10 px-4 py-3 text-sm text-giz">
-            <span className="text-baixa">✗</span>
+          <div role="alert" className="mt-6 flex items-start gap-2.5 border-l-[5px] border-baixa bg-concreto px-4 py-3 text-[13px] text-papel">
+            <span aria-hidden className="font-impact text-baixa">✗</span>
             <span>{finishError}</span>
           </div>
         ) : null}
@@ -1135,7 +1125,7 @@ export function Cadastro() {
           {step > 1 ? (
             <button
               type="button"
-              className="btn-secondary flex h-12 items-center justify-center sm:order-1"
+              className="btn-secondary flex min-h-[52px] items-center justify-center text-[19px] sm:order-1"
               onClick={() => setStep((step - 1) as 1 | 2 | 3)}
             >
               {L('Voltar', 'Back')}
@@ -1143,7 +1133,7 @@ export function Cadastro() {
           ) : (
             <Link
               to="/login"
-              className="btn-secondary flex h-12 items-center justify-center sm:order-1"
+              className="btn-secondary flex min-h-[52px] items-center justify-center text-[19px] sm:order-1"
             >
               {L('Cancelar', 'Cancel')}
             </Link>
@@ -1152,25 +1142,25 @@ export function Cadastro() {
             <button
               type="button"
               className={cn(
-                'btn-primary flex h-12 items-center justify-center sm:order-2',
+                'btn-primary flex min-h-[52px] items-center justify-center text-[20px] sm:order-2',
                 (step === 1 && !step1Valid) || (step === 2 && !step2Valid) ? 'pointer-events-none opacity-40' : '',
               )}
               disabled={(step === 1 && !step1Valid) || (step === 2 && !step2Valid)}
               onClick={goNext}
             >
-              {L('Continuar', 'Continue')}
+              <>{L('Continuar', 'Continue')} <span aria-hidden>→</span></>
             </button>
           ) : (
             <button
               type="button"
               className={cn(
-                'btn-primary flex h-12 items-center justify-center sm:order-2',
+                'btn-primary flex min-h-[52px] items-center justify-center text-[20px] sm:order-2',
                 !step3Valid || finishBusy ? 'pointer-events-none opacity-40' : '',
               )}
               disabled={!step3Valid || finishBusy}
               onClick={() => void finish()}
             >
-              {finishBusy ? L('Preparando plantel…', 'Preparing squad…') : L('Concluir', 'Finish')}
+              {finishBusy ? L('Preparando plantel…', 'Preparing squad…') : <>{L('Concluir', 'Finish')} <span aria-hidden>→</span></>}
             </button>
           )}
         </div>
@@ -1178,7 +1168,7 @@ export function Cadastro() {
       </div>
     </div>
 
-    <footer className="relative z-10 mx-auto mt-6 max-w-md text-center text-[10px] text-poeira sm:text-[11px]">
+    <footer className="relative z-10 mx-auto mt-8 w-full max-w-md pb-6 text-center font-prova text-[11px] uppercase tracking-[0.14em] text-fio">
       Olefoot © 2026 · {L('Todos os direitos reservados', 'All rights reserved')}
     </footer>
   </div>

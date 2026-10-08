@@ -6,18 +6,18 @@
  * do Genesis Market. Preço em EXP com markup de urgência (+30%).
  * One-shot: se dispensar, não volta.
  *
- * Visual VOLT2 (sólido, sem enfeite):
- *   - Backdrop deep-black/95 chapado (sem blur)
- *   - Painel card border-l-[3px] danger (situação crítica), sem sombra
- *   - Header com ícone, eyebrow, headline Anton
- *   - Cards de candidato: OVR Anton + nome, sem brilho
- *   - CTA primário amarelo dominante (não verde)
- *   - Footer: saldo em número (ole-num) + link ghost "Dispensar"
+ * Visual DS 2027 "Respeito é ouro":
+ *   - Fita de isolamento no topo (o momento "rua"), painel asfalto sem canto
+ *   - Rótulo em prova (baixa = situação crítica), manchete Anton
+ *   - Candidato: OVR na escada (OvrSelo), nome na voz (Pirata)
+ *   - CTA rua com sombra dura de papel; footer com saldo em Anton
  */
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ShieldAlert, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { FitaRua } from '@/components/ui/Rua';
+import { OvrSelo } from '@/components/clube/escada';
 import { useGameStore, dispatchGame } from '@/game/store';
 import { formatExp } from '@/systems/economy';
 import {
@@ -95,101 +95,45 @@ function CandidateRow({
   const { card, price } = candidate;
   const canAfford = oleBal >= price;
   const isBuying = purchasing === card.genesisCatalogId;
-  const ovrColor =
-    card.ovr >= 85 ? 'text-neon-yellow' : card.ovr >= 75 ? 'text-white' : 'text-white/75';
 
   return (
     <motion.div
       className={cn(
-        'flex items-stretch gap-3 p-3 border border-l-[3px] bg-[var(--color-card)] transition-colors',
-        canAfford && !purchasing
-          ? 'border-l-neon-yellow border-white/12 hover:border-neon-yellow/40'
-          : 'border-l-white/15 border-white/8 opacity-70',
+        'flex min-w-0 items-center gap-3 bg-concreto p-3 transition-colors',
+        !(canAfford && !purchasing) && 'opacity-60',
       )}
-      style={{ borderRadius: 'var(--radius-md)' }}
     >
-      {/* OVR Anton + POS chip */}
-      <div className="shrink-0 w-12 flex flex-col items-center justify-center gap-1 self-center">
-        <div
-          className={cn('font-impact leading-none tabular-nums', ovrColor)}
-          style={{
-            fontSize: '28px',
-            letterSpacing: '-0.01em',
-          }}
-        >
-          {card.ovr}
-        </div>
-        <div
-          className="px-1.5 py-0.5 bg-deep-black border border-white/12 text-white/70"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 900,
-            fontSize: '8px',
-            letterSpacing: '0.22em',
-            borderRadius: 'var(--radius-sm)',
-          }}
-        >
-          {card.pos}
-        </div>
+      {/* OVR na escada + posição */}
+      <div className="flex shrink-0 flex-col items-center gap-1">
+        <OvrSelo ovr={card.ovr} className="h-12 w-12 text-[26px]" />
+        <span className="font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-mudo">{card.pos}</span>
       </div>
 
       {/* Nome + nat */}
-      <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-        <span
-          className="truncate text-white leading-tight"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 900,
-            fontSize: '13px',
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {card.name}
-        </span>
-        <span
-          className="text-white/50 truncate"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: '10px',
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {card.nat}
-        </span>
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+        <span className="block min-w-0 truncate font-voz text-[22px] leading-none text-papel">{card.name}</span>
+        <span className="block min-w-0 truncate font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{card.nat}</span>
       </div>
 
-      {/* CTA amarelo dominante (preço em ole-num) */}
+      {/* CTA — rua com sombra dura; preço em Anton */}
       <motion.button
         whileTap={{ scale: 0.96 }}
         onClick={() => onBuy(candidate)}
         disabled={!canAfford || !!purchasing}
         className={cn(
-          'shrink-0 flex items-center gap-1.5 px-3 py-2 transition-colors',
+          'mb-1 mr-1 inline-flex min-h-[44px] shrink-0 items-center gap-1.5 px-3 font-impact text-[17px] leading-none transition-[transform,box-shadow]',
           canAfford && !purchasing
-            ? 'bg-neon-yellow text-deep-black hover:bg-white'
-            : 'bg-white/5 text-white/35 cursor-not-allowed border border-white/8',
+            ? 'bg-rua text-asfalto-27 shadow-[3px_3px_0_var(--color-papel)] hover:-translate-x-px hover:-translate-y-px hover:shadow-[4px_4px_0_var(--color-papel)]'
+            : 'cursor-not-allowed border-2 border-dashed border-fio text-mudo',
         )}
-        style={{
-          borderRadius: 'var(--radius-sm)',
-        }}
         aria-label={L(`Comprar ${card.name} por ${formatExp(price)} EXP`, `Buy ${card.name} for ${formatExp(price)} EXP`)}
       >
         {isBuying ? (
-          <div className="w-3 h-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+          <div className="h-3 w-3 animate-spin rounded-full border-2 border-current/30 border-t-current" />
         ) : (
-          <ShoppingCart size={11} />
+          <ShoppingCart size={13} />
         )}
-        <span
-          className="ole-num tabular-nums"
-          style={{
-            fontSize: '14px',
-          }}
-        >
-          {formatExp(price)}
-        </span>
+        <span className="tabular-nums">{formatExp(price)}</span>
       </motion.button>
     </motion.div>
   );
@@ -277,7 +221,7 @@ export function EmergencyTransferWindow() {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.25 }}
         onClick={handleDismiss}
-        className="fixed inset-0 z-[200] flex items-center justify-center bg-deep-black/95 p-4"
+        className="fixed inset-0 z-[200] flex items-center justify-center bg-asfalto-27/95 p-4"
         role="dialog"
         aria-modal="true"
         aria-label={L('Reforço Emergencial', 'Emergency Signing')}
@@ -288,100 +232,56 @@ export function EmergencyTransferWindow() {
           exit={{ scale: 0.94, y: 18 }}
           transition={{ type: 'spring', stiffness: 280, damping: 26 }}
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-md bg-[var(--color-card)] border border-l-[3px] border-l-[var(--color-danger)] border-white/12 overflow-hidden"
-          style={{
-            borderRadius: 'var(--radius-md)',
-          }}
+          className="relative w-full max-w-md overflow-hidden border-2 border-linha bg-asfalto-27"
         >
+          {/* Fita de isolamento — o momento "rua": jogador caído, área isolada. */}
+          <FitaRua tags={[L('#lesão', '#injury'), L('#reforço', '#signing'), L('#urgência', '#urgent')]} inclinacao={-2} className="py-2" />
+
           {/* ── Header ─────────────────────────────────────────── */}
-          <div className="relative px-5 py-5 border-b border-white/8 bg-[var(--color-danger)]/8">
+          <div className="relative border-b-2 border-linha px-5 pb-5 pt-3">
             <div className="flex items-start gap-3">
-              <div className="shrink-0 w-10 h-10 grid place-items-center bg-[var(--color-danger)]/15 text-[var(--color-danger)] border border-[var(--color-danger)]/30"
-                style={{ borderRadius: 'var(--radius-sm)' }}
-              >
+              <div className="grid h-11 w-11 shrink-0 place-items-center border-2 border-baixa text-baixa">
                 <ShieldAlert size={18} />
               </div>
-              <div className="flex-1 min-w-0 space-y-1">
-                {/* Eyebrow Agency */}
-                <div className="flex items-center gap-2">
-                  <span aria-hidden className="block h-px w-6 bg-[var(--color-danger)]/55" />
-                  <span
-                    className="text-[var(--color-danger)]"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontWeight: 800,
-                      fontSize: '10px',
-                      letterSpacing: '0.32em',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {L('Reforço Emergencial', 'Emergency Signing')}
-                  </span>
-                </div>
-                {/* Headline Anton */}
-                <h2
-                  className="font-impact uppercase text-white leading-[1.1]"
-                  style={{
-                    fontSize: 'clamp(18px, 3vw, 22px)',
-                    letterSpacing: '0.01em',
-                  }}
-                >
+              <div className="min-w-0 flex-1 space-y-1">
+                <span className="font-prova text-[11px] font-bold uppercase tracking-[0.22em] text-baixa">
+                  — {L('Reforço Emergencial', 'Emergency Signing')}
+                </span>
+                <h2 className="font-impact text-[clamp(22px,6vw,28px)] uppercase leading-[1.02] text-papel">
                   {L(`${offer.injuredPlayerName} sofreu lesão grave`, `${offer.injuredPlayerName} suffered a serious injury`)}
                 </h2>
-                {/* Submetadata Agency */}
-                <p
-                  className="text-white/55"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 700,
-                    fontSize: '10px',
-                    letterSpacing: '0.22em',
-                    textTransform: 'uppercase',
-                  }}
-                >
+                <p className="font-prova text-[11px] font-bold uppercase tracking-[0.14em] text-mudo">
                   {L(`${ZONE_LABELS[offer.zone]} indisponível`, `${ZONE_LABELS[offer.zone]} unavailable`)}
                 </p>
               </div>
 
-              {/* Botão X */}
               <button
                 onClick={handleDismiss}
-                className="shrink-0 w-8 h-8 grid place-items-center text-white/45 hover:text-neon-yellow hover:bg-white/5 transition-colors"
-                style={{ borderRadius: 'var(--radius-sm)' }}
+                className="grid h-11 w-11 shrink-0 place-items-center border-2 border-linha text-mudo transition-colors hover:border-papel hover:text-papel"
                 aria-label={L('Dispensar', 'Dismiss')}
               >
-                <X size={14} />
+                <X size={16} />
               </button>
             </div>
           </div>
 
           {/* ── Body ───────────────────────────────────────────── */}
-          <div className="px-5 py-4 space-y-3">
-            <p
-              className="text-white/60 leading-snug"
-              style={{ fontFamily: 'var(--font-ui)', fontSize: '12px' }}
-            >
+          <div className="space-y-2 px-5 py-4">
+            <p className="font-voz text-[20px] leading-tight text-suave">
               {L('Substituto em EXP · urgência', 'Replacement in EXP · urgency')}{' '}
-              <span className="text-[var(--color-danger)] font-semibold">+30%</span>
+              <span className="font-prova text-[13px] font-bold text-baixa">+30%</span>
             </p>
 
             {loading && (
               <div className="flex items-center justify-center py-8">
-                <div className="w-5 h-5 border-2 border-white/15 border-t-neon-yellow rounded-full animate-spin" />
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-linha border-t-rua" />
               </div>
             )}
 
             {!loading && candidates.length === 0 && (
-              <div
-                className="text-center py-6 px-4 bg-deep-black border border-dashed border-white/12 text-white/45"
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '12px',
-                  borderRadius: 'var(--radius-md)',
-                }}
-              >
+              <p className="border-2 border-dashed border-fio p-4 font-voz text-[20px] leading-tight text-suave">
                 {L('Nenhum jogador disponível para esta posição no momento.', 'No players available for this position right now.')}
-              </div>
+              </p>
             )}
 
             {!loading &&
@@ -397,67 +297,22 @@ export function EmergencyTransferWindow() {
           </div>
 
           {/* ── Footer ─────────────────────────────────────────── */}
-          <div className="px-5 py-3.5 border-t border-white/8 bg-deep-black flex items-center justify-between gap-3">
-            <div className="flex items-baseline gap-2 min-w-0">
-              <span
-                className="text-white/45 shrink-0"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 800,
-                  fontSize: '9px',
-                  letterSpacing: '0.28em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {L('Saldo', 'Balance')}
-              </span>
-              <span
-                className="ole-num text-neon-yellow tabular-nums leading-none truncate"
-                style={{
-                  fontSize: '15px',
-                }}
-              >
-                {formatExp(oleBal)}
-              </span>
-              <span
-                className="text-white/40 shrink-0"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 700,
-                  fontSize: '9px',
-                  letterSpacing: '0.22em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                EXP
-              </span>
+          <div className="flex items-center justify-between gap-3 border-t-2 border-linha px-5 py-3.5">
+            <div className="flex min-w-0 items-baseline gap-2">
+              <span className="shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.2em] text-mudo">{L('Saldo', 'Balance')}</span>
+              <span className="truncate font-impact text-[20px] leading-none text-papel tabular-nums">{formatExp(oleBal)}</span>
+              <span className="shrink-0 font-prova text-[10px] font-bold uppercase text-mudo">EXP</span>
             </div>
             <button
               onClick={handleDismiss}
-              className="text-white/55 hover:text-neon-yellow transition-colors shrink-0"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: '10px',
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-              }}
+              className="inline-flex min-h-[44px] shrink-0 items-center font-impact text-[16px] uppercase text-mudo transition-colors hover:text-papel"
             >
               {L('Não, obrigado', 'No, thanks')}
             </button>
           </div>
 
-          {/* ESC hint (DS §11 — mobile não tem ESC, ok ser desktop-only) */}
-          <div
-            className="hidden sm:block absolute bottom-1 right-3 text-white/25"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '8px',
-              letterSpacing: '0.22em',
-              textTransform: 'uppercase',
-            }}
-            aria-hidden
-          >
+          {/* ESC hint (desktop) */}
+          <div className="absolute bottom-1 right-3 hidden font-prova text-[9px] uppercase tracking-[0.2em] text-fio sm:block" aria-hidden>
             {L('ESC fecha', 'ESC closes')}
           </div>
         </motion.div>

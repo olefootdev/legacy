@@ -10,7 +10,7 @@ import { useState, useMemo, useEffect, Fragment } from 'react';
 import { useGameStore } from '@/game/store';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Activity, Clock, ArrowUp, ArrowDown, History, ChevronDown } from 'lucide-react';
+import { Trophy, ArrowUp, ArrowDown, History, ChevronDown } from 'lucide-react';
 import type { GlobalFixture } from '@/match/globalMatch';
 import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
 import { GLOBAL_LEAGUE_MVP_CONSTANTS } from '@/match/globalLeagueMVP';
@@ -20,18 +20,19 @@ import { DailyCycleHero } from '@/components/matchglobal/DailyCycleHero';
 import { CrownsGallery } from '@/components/matchglobal/CrownsGallery';
 import { CoronationModal } from '@/components/matchglobal/CoronationModal';
 import { useCoronationListener } from '@/hooks/useCoronationListener';
-import { Hashtag } from '@/components/ui';
+import { BarraSegmentos, BotaoRua, FitaRua, MarcaRua, SecaoRua, SeloRua } from '@/components/ui/Rua';
+import { FaltaRua, LinhaRua, ZonaRua } from '@/components/leagues/RuaTabela';
+import { cn } from '@/lib/utils';
 
 type FilterMode = 'all' | 'division_1' | 'division_2' | 'division_3';
 
-// ─── Identidade visual das divisões (pirâmide: ouro=Elite, aço=Intermediária,
-// bronze=Acesso). Classes ESTÁTICAS — o Tailwind não compila `text-${x}`. ─────
-const DIV_THEME: Record<number, {
-  name: string; text: string; bg: string; spineBg: string; dotBg: string; tabOn: string;
-}> = {
-  1: { name: 'Elite',         text: 'text-neon-yellow', bg: 'bg-neon-yellow/10', spineBg: 'bg-neon-yellow', dotBg: 'bg-neon-yellow', tabOn: 'bg-neon-yellow text-black' },
-  2: { name: L('Intermediária', 'Intermediate'), text: 'text-slate-300',   bg: 'bg-slate-400/10',   spineBg: 'bg-slate-300',   dotBg: 'bg-slate-300',   tabOn: 'bg-slate-300 text-black' },
-  3: { name: L('Acesso', 'Access'),        text: 'text-amber-500',   bg: 'bg-amber-600/10',   spineBg: 'bg-amber-500',   dotBg: 'bg-amber-500',   tabOn: 'bg-amber-500 text-black' },
+// ─── Identidade das divisões na escada do DS 2027: Elite em ouro (respeito),
+// Intermediária em papel, Acesso em mudo. Sem aço/bronze/azul de enfeite.
+// Classes ESTÁTICAS — o Tailwind não compila `text-${x}`. ─────────────────────
+const DIV_THEME: Record<number, { name: string; text: string; spineBg: string }> = {
+  1: { name: 'Elite', text: 'text-ouro-27', spineBg: 'bg-ouro-27' },
+  2: { name: L('Intermediária', 'Intermediate'), text: 'text-papel', spineBg: 'bg-papel' },
+  3: { name: L('Acesso', 'Access'), text: 'text-suave', spineBg: 'bg-fio' },
 };
 const divTheme = (d: number) => DIV_THEME[d] ?? DIV_THEME[3];
 
@@ -108,43 +109,38 @@ function NextSlotBanner({ slots, slotDurationMin, currentDay, competitionStarted
   const compDaysLeft = compMsLeft != null ? Math.max(0, Math.ceil(compMsLeft / 86_400_000)) : null;
 
   return (
-    <div className="bg-deep-black border border-white/10 rounded-lg px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="flex flex-col">
-          <span className="text-[10px] font-display uppercase tracking-wider text-white/40">{L('Dia OleFoot', 'OleFoot Day')}</span>
-          <span className="font-mono text-sm text-white/80">{today} UTC</span>
+    <div className="rua-grao flex min-w-0 flex-col gap-4 bg-concreto px-4 py-4 sm:px-5">
+      <div className="grid min-w-0 grid-cols-2 gap-4 sm:flex sm:flex-wrap sm:items-end sm:gap-8">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.18em] text-mudo">{L('Dia OleFoot', 'OleFoot Day')}</span>
+          <span className="truncate font-impact text-[20px] leading-none text-papel">{today} <span className="font-prova text-[11px] text-mudo">UTC</span></span>
         </div>
-        <span className="w-px h-8 bg-white/10" />
-        <div className="flex flex-col">
-          <span className="text-[10px] font-display uppercase tracking-wider text-white/40">
-            {inSlot.active ? L('Slot ao vivo', 'Live slot') : L('Próximo slot', 'Next slot')}
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.18em] text-mudo">
+            {inSlot.active ? L('Slot ao vivo · termina em', 'Live slot · ends in') : L('Próximo slot', 'Next slot')}
           </span>
           {inSlot.active ? (
-            <span className="font-mono text-sm font-bold text-neon-green">
-              {inSlot.slotName} — {L('termina em', 'ends in')} {formatCountdown((inSlot.endMs ?? tick) - tick)}
-            </span>
+            <span className="font-spray text-[30px] font-black leading-none text-rua">{formatCountdown((inSlot.endMs ?? tick) - tick)}</span>
           ) : nextMs ? (
-            <span className="font-mono text-sm font-bold text-neon-yellow">
-              {new Date(nextMs).toISOString().slice(11, 16)} UTC — {L('em', 'in')} {formatCountdown(nextMs - tick)}
+            <span className="font-spray text-[30px] font-black leading-none text-rua">
+              {formatCountdown(nextMs - tick)}
+              <span className="ml-2 font-prova text-[11px] font-bold text-mudo">{new Date(nextMs).toISOString().slice(11, 16)} UTC</span>
             </span>
           ) : (
-            <span className="font-mono text-sm text-white/50">—</span>
+            <span className="font-impact text-[20px] text-mudo">—</span>
           )}
         </div>
         {compDaysLeft != null && (
-          <>
-            <span className="w-px h-8 bg-white/10" />
-            <div className="flex flex-col">
-              <span className="text-[10px] font-display uppercase tracking-wider text-white/40">{L('Competição termina em', 'Competition ends in')}</span>
-              <span className="font-mono text-sm font-bold text-neon-yellow">
-                {compDaysLeft}d {compMsLeft != null ? formatCountdown(compMsLeft % 86_400_000) : ''}
-              </span>
-            </div>
-          </>
+          <div className="col-span-2 flex min-w-0 flex-col gap-1 sm:col-span-1">
+            <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.18em] text-mudo">{L('Competição termina em', 'Competition ends in')}</span>
+            <span className="font-spray text-[30px] font-black leading-none text-papel">
+              {compDaysLeft}d {compMsLeft != null ? formatCountdown(compMsLeft % 86_400_000) : ''}
+            </span>
+          </div>
         )}
       </div>
-      <div className="flex items-center gap-1.5 text-[9px] text-white/50 font-mono uppercase tracking-wider">
-        <span>SLOTS:</span>
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5 font-prova text-[10.5px] font-bold uppercase tracking-[0.12em]">
+        <span className="text-mudo">Slots</span>
         {slotsArr.map((s, i) => {
           const [h, m] = s.split(':').map(Number);
           const day = new Date(tick);
@@ -154,11 +150,10 @@ function NextSlotBanner({ slots, slotDurationMin, currentDay, competitionStarted
           return (
             <span
               key={i}
-              className={`px-1.5 py-0.5 rounded ${
-                isCurrent ? 'bg-neon-green/20 text-neon-green border border-neon-green/40' :
-                isPast ? 'bg-white/5 text-white/30' :
-                'bg-neon-yellow/10 text-neon-yellow/80 border border-neon-yellow/30'
-              }`}
+              className={cn(
+                'px-1.5 py-0.5',
+                isCurrent ? 'bg-rua text-asfalto-27' : isPast ? 'bg-linha text-fio line-through' : 'border-2 border-rua text-rua',
+              )}
             >
               {s}
             </span>
@@ -184,74 +179,56 @@ function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: G
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={`sports-panel rounded-lg px-3 py-2 transition-all group min-w-0 ${
-        isLive
-          ? 'border border-neon-green/40'
-          : 'hover:border-neon-yellow/30'
-      }`}
+      className={cn('min-w-0 bg-concreto px-3 py-2.5', isLive && 'border-l-[5px] border-rua')}
     >
       {/* Confronto compacto — tudo numa linha só */}
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-        {/* Spine + tag da divisão — identidade da pirâmide (ouro/aço/bronze) */}
-        <span className={`shrink-0 w-1 h-7 rounded-full ${theme.spineBg}`} aria-hidden />
-        <span className={`shrink-0 text-[9px] font-display font-bold uppercase tracking-wider tabular-nums ${theme.text}`}>
-          D{fixture.division}
-        </span>
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        <span className={cn('shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.1em]', theme.text)}>D{fixture.division}</span>
 
-        {/* Time Casa (nome trunca, OVR colado à direita, junto do placar) */}
-        <div className="flex-1 min-w-0 flex items-baseline justify-end gap-1.5">
-          <span
-            className="font-sans text-sm sm:text-base font-bold text-white truncate uppercase group-hover:text-neon-yellow transition-colors"
-            title={fixture.homeTeamName}
-          >
+        {/* Time Casa */}
+        <div className="flex min-w-0 flex-1 items-baseline justify-end gap-1.5">
+          <span className="truncate font-impact text-[15px] uppercase leading-none text-papel sm:text-[18px]" title={fixture.homeTeamName}>
             {fixture.homeTeamName}
           </span>
-          <span className="shrink-0 text-[10px] text-text-soft tabular-nums">{fixture.homeOverall}</span>
+          <span className="shrink-0 font-prova text-[10px] text-mudo">{fixture.homeOverall}</span>
         </div>
 
-        {/* Placar */}
-        <div className="shrink-0 flex items-center gap-1.5 px-2 py-0.5 bg-deep-black rounded-md border border-white/5">
+        {/* Placar em spray */}
+        <div className="flex shrink-0 items-center gap-1 bg-asfalto-27 px-2 py-0.5">
           <motion.span
             key={`home-${fixture.scoreHome}`}
             initial={{ scale: hasGoal ? 1.4 : 1 }}
             animate={{ scale: 1 }}
-            className="font-serif-hero text-lg sm:text-2xl font-bold text-neon-yellow tabular-nums"
+            className="font-spray text-[22px] font-black leading-none tabular-nums text-rua sm:text-[28px]"
           >
             {fixture.scoreHome}
           </motion.span>
-          <span className="text-text-muted text-xs">×</span>
+          <span className="font-spray text-[16px] font-black text-mudo">×</span>
           <motion.span
             key={`away-${fixture.scoreAway}`}
             initial={{ scale: hasGoal ? 1.4 : 1 }}
             animate={{ scale: 1 }}
-            className="font-serif-hero text-lg sm:text-2xl font-bold text-neon-yellow tabular-nums"
+            className="font-spray text-[22px] font-black leading-none tabular-nums text-rua sm:text-[28px]"
           >
             {fixture.scoreAway}
           </motion.span>
         </div>
 
-        {/* Time Visitante (OVR colado à esquerda, nome trunca) */}
-        <div className="flex-1 min-w-0 flex items-baseline gap-1.5">
-          <span className="shrink-0 text-[10px] text-text-soft tabular-nums">{fixture.awayOverall}</span>
-          <span
-            className="font-sans text-sm sm:text-base font-bold text-white truncate uppercase group-hover:text-neon-yellow transition-colors"
-            title={fixture.awayTeamName}
-          >
+        {/* Time Visitante */}
+        <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
+          <span className="shrink-0 font-prova text-[10px] text-mudo">{fixture.awayOverall}</span>
+          <span className="truncate font-impact text-[15px] uppercase leading-none text-papel sm:text-[18px]" title={fixture.awayTeamName}>
             {fixture.awayTeamName}
           </span>
         </div>
 
         {/* Minuto */}
-        <div className="shrink-0 flex items-center gap-1 w-8 justify-end">
-          <Clock className={`w-3 h-3 ${isLive ? 'text-neon-green' : 'text-white/30'}`} />
-          <span className={`font-serif-hero text-xs sm:text-sm font-bold tabular-nums ${isLive ? 'text-neon-green' : 'text-white/50'}`}>
-            {fixture.currentMinute}'
-          </span>
-          {isLive && <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse shrink-0" />}
-        </div>
+        <span className={cn('w-9 shrink-0 text-right font-spray text-[16px] font-black tabular-nums', isLive ? 'text-rua' : 'text-mudo')}>
+          {fixture.currentMinute}'
+        </span>
       </div>
 
-      {/* Último Evento — linha fina, só quando há lance */}
+      {/* Último evento — linha fina, só quando há lance */}
       <AnimatePresence mode="wait">
         {lastEvent && (
           <motion.div
@@ -259,11 +236,10 @@ function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: G
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-1.5 pl-7 overflow-hidden"
+            className="mt-1.5 overflow-hidden pl-7"
           >
-            <p className="text-[11px] text-gray-400 truncate">
-              <span className="font-serif-hero font-bold text-neon-yellow">{lastEvent.minute}'</span>{' '}
-              {lastEvent.text}
+            <p className="truncate font-prova text-[11px] text-suave">
+              <span className="font-bold text-rua">{lastEvent.minute}'</span> {lastEvent.text}
             </p>
           </motion.div>
         )}
@@ -295,79 +271,59 @@ function DivisionStandings({ division, teams, myTeamId, defaultOpen = true, isMi
   const myIdx = myTeamId ? sortedTeams.findIndex((t) => t.id === myTeamId) : -1;
   const windowed = open && !showFull && sortedTeams.length > CAP;
 
+  // DS 2027: "quanto falta pro acesso" — pontos reais até a última vaga da zona.
+  const me = myIdx >= 0 ? sortedTeams[myIdx] : undefined;
+  const lastPromo = division > 1 && promotionCount > 0 ? sortedTeams[promotionCount - 1] : undefined;
+  const gapToPromo = isMine && me && lastPromo && myIdx >= promotionCount ? Math.max(0, lastPromo.points - me.points) : null;
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`sports-panel rounded-lg overflow-hidden ${isMine ? 'ring-1 ring-neon-yellow/40' : ''}`}
-    >
-      {/* Header — clicável: expande/colapsa a divisão (condensa 1000 times) */}
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex min-w-0 flex-col gap-3">
+      {/* Cabeçalho — clicável: expande/colapsa a divisão (condensa 1000 times) */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="relative w-full bg-deep-black px-6 py-4 border-b border-white/10 text-left transition-colors hover:bg-white/[0.03]"
+        className={cn('relative flex w-full min-w-0 items-center justify-between gap-3 bg-concreto px-4 py-4 text-left transition-colors hover:bg-linha', isMine && 'border-l-[5px] border-rua')}
       >
-        <span className={`absolute left-0 top-0 bottom-0 w-1 ${theme.spineBg}`} aria-hidden />
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <Trophy className={`w-5 h-5 shrink-0 ${theme.text}`} />
-            <div className="min-w-0">
-              <h3 className="flex items-center gap-2 font-display text-base font-bold uppercase tracking-wider text-white">
-                {L('Divisão', 'Division')} {division}
-                {isMine && (
-                  <span className="rounded-sm bg-neon-yellow px-1.5 py-0.5 font-display text-[8px] font-black uppercase tracking-wider text-black">
-                    {L('Sua liga', 'Your league')}
-                  </span>
-                )}
-              </h3>
-              {/* Colapsada: mostra o líder num relance (sem abrir a tabela inteira) */}
-              {open ? (
-                <p className="text-xs text-white/60 mt-0.5">{theme.name}</p>
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <h3 className="font-impact text-[26px] uppercase leading-none text-papel">
+              {L('Divisão', 'Division')} {division}
+            </h3>
+            {isMine && <SeloRua tom="corre" className="py-0.5 text-[10px]">{L('Tua liga', 'Your league')}</SeloRua>}
+          </div>
+          {open ? (
+            <p className={cn('font-voz text-[20px] leading-none', theme.text)}>{theme.name}</p>
+          ) : (
+            <p className="truncate font-prova text-[11px] uppercase tracking-[0.1em] text-mudo">
+              {leader ? (
+                <>
+                  {L('Líder', 'Leader')} <span className="font-bold text-ouro-27">{leader.clubName}</span> · {leader.points} pts
+                </>
               ) : (
-                <p className="mt-0.5 truncate text-xs text-white/50">
-                  {leader ? (
-                    <>
-                      {L('Líder', 'Leader')} <span className={`font-bold ${theme.text}`}>{leader.clubName}</span> · {leader.points} pts
-                    </>
-                  ) : (
-                    theme.name
-                  )}
-                </p>
+                theme.name
               )}
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-3">
-            <span className={`font-serif-hero text-2xl font-bold ${theme.text}`}>{teams.length}</span>
-            <ChevronDown
-              className={`h-4 w-4 text-white/40 transition-transform ${open ? 'rotate-180' : ''}`}
-              strokeWidth={2.5}
-              aria-hidden
-            />
-          </div>
+            </p>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <span className={cn('font-spray text-[32px] font-black leading-none', theme.text)}>{teams.length}</span>
+          <ChevronDown className={cn('h-5 w-5 text-mudo transition-transform', open && 'rotate-180')} strokeWidth={2.5} aria-hidden />
         </div>
       </button>
 
       {open && (
-      <>
-      {/* Tabela */}
-      <div className="overflow-x-auto -mx-0">
-        <table className="w-full min-w-[340px]">
-          <thead className="bg-black/20">
-            <tr className="text-left">
-              <th className="px-2 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60">#</th>
-              <th className="px-2 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60">{L('Time', 'Team')}</th>
-              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">{L('J', 'P')}</th>
-              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">{L('V', 'W')}</th>
-              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">{L('E', 'D')}</th>
-              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">{L('D', 'L')}</th>
-              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">{L('SG', 'GD')}</th>
-              <th className="px-2 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">
-                PTS
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          {gapToPromo != null && (
+            <FaltaRua
+              valor={gapToPromo}
+              unidade={L('pts', 'pts')}
+              frase={L('é o que separa tu do acesso.', "is all that's between you and promotion.")}
+            />
+          )}
+
+          {/* Tabela — linhas em concreto, líder no fio de ouro, o meu time colado torto. */}
+          <div className="flex min-w-0 flex-col gap-1.5">
             {sortedTeams.map((team, index) => {
               // Janela: esconde o miolo quando a tabela é gigante, mantendo topo + meu time.
               if (windowed && index >= CAP && index !== myIdx) return null;
@@ -377,174 +333,64 @@ function DivisionStandings({ division, teams, myTeamId, defaultOpen = true, isMi
               const isLeader = index === 0;
               const isMe = !!myTeamId && team.id === myTeamId;
 
-              let bgClass = '';
-              let borderClass = 'border-l-4 border-l-transparent';
-              if (isMe) {
-                bgClass = 'bg-neon-yellow/[0.10]';                       // meu time SEMPRE se destaca
-                borderClass = 'border-l-4 border-l-neon-yellow';
-              } else if (isRelegation) {
-                bgClass = 'bg-red-600/20';
-                borderClass = 'border-l-4 border-l-red-500/70';
-              } else if (isPromotion) {
-                bgClass = 'bg-emerald-400/[0.05]';
-                borderClass = 'border-l-4 border-l-emerald-400';
-              } else if (isLeader) {
-                bgClass = theme.bg;
-                borderClass = `border-l-4 ${division === 1 ? 'border-l-neon-yellow' : division === 2 ? 'border-l-slate-300' : 'border-l-amber-500'}`;
-              }
+              const positionChange = team.previousPosition ? team.previousPosition - (team.position || 0) : 0;
 
-              const positionChange = team.previousPosition
-                ? team.previousPosition - (team.position || 0)
-                : 0;
-
-              // Linha de corte: divisor DEPOIS da zona de acesso e ANTES da de rebaixamento.
+              // Linha de corte: DEPOIS da zona de acesso e ANTES da de rebaixamento.
               const showPromoCut = division > 1 && index === promotionCount - 1 && sortedTeams.length > promotionCount;
               const showReleCut = division < 3 && index === sortedTeams.length - relegationCount - 1 && sortedTeams.length > relegationCount;
 
               return (
                 <Fragment key={team.id}>
                   {gapBefore && (
-                    <tr aria-hidden>
-                      <td colSpan={8} className="p-0">
-                        <div className="flex items-center justify-center gap-2 bg-black/30 px-4 py-1.5 text-[10px] font-display uppercase tracking-[0.2em] text-white/30">
-                          ⋯ {L(`${myIdx - CAP} times acima de você`, `${myIdx - CAP} teams above you`)}
-                        </div>
-                      </td>
-                    </tr>
+                    <div aria-hidden className="flex h-8 items-center justify-center font-prova text-[10.5px] font-bold uppercase tracking-[0.2em] text-mudo">
+                      ··· {L(`${myIdx - CAP} times acima de ti`, `${myIdx - CAP} teams above you`)}
+                    </div>
                   )}
-                  <tr
+                  <LinhaRua
                     id={isMe ? 'my-global-team' : undefined}
-                    className={`border-t border-white/5 transition-colors ${bgClass} ${borderClass} ${isMe ? 'ring-1 ring-inset ring-neon-yellow/50' : 'hover:bg-white/5'}`}
-                  >
-                    <td className="px-2 sm:px-4 py-2 sm:py-3">
-                      <div className="flex items-center gap-1">
-                        <span className="font-mono text-xs sm:text-sm text-white/60">{team.position}</span>
-                        {positionChange > 0 && (
-                          <ArrowUp className="w-3 h-3 text-emerald-400" strokeWidth={3} />
-                        )}
-                        {positionChange < 0 && (
-                          <ArrowDown className="w-3 h-3 text-red-400" strokeWidth={3} />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 max-w-[100px] sm:max-w-none">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="min-w-0">
-                          <p className={`font-sans text-xs sm:text-sm font-bold truncate ${isMe ? 'text-neon-yellow' : 'text-white'}`}>{team.clubName}</p>
-                          <p className="text-[10px] text-white/40">{team.clubShort}</p>
-                        </div>
-                        {isMe && (
-                          <span className="shrink-0 text-[8px] font-display font-bold uppercase tracking-wider bg-neon-yellow text-black px-1.5 py-0.5 rounded-sm">{L('você', 'you')}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
-                      <span className="font-mono text-xs sm:text-sm text-white/80">{team.matchesPlayed}</span>
-                    </td>
-                    <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
-                      <span className="font-mono text-xs sm:text-sm text-emerald-400">{team.wins}</span>
-                    </td>
-                    <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
-                      <span className="font-mono text-xs sm:text-sm text-amber-400">{team.draws}</span>
-                    </td>
-                    <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
-                      <span className="font-mono text-xs sm:text-sm text-red-400">{team.losses}</span>
-                    </td>
-                    <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
-                      <span className={`font-mono text-xs sm:text-sm ${
-                        team.goalDifference > 0 ? 'text-emerald-400' :
-                        team.goalDifference < 0 ? 'text-red-400' : 'text-white/60'
-                      }`}>
-                        {team.goalDifference > 0 ? '+' : ''}{team.goalDifference}
-                      </span>
-                    </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
-                      <div className="flex flex-col items-center leading-tight">
-                        <span className="font-serif-hero text-base sm:text-lg font-bold text-neon-yellow">
-                          {team.points}
-                        </span>
-                        <span
-                          className="font-mono text-[9px] text-white/40 mt-0.5"
-                          title={L(`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`, `All-time total over ${team.allTimeSeasonsPlayed ?? 0} season(s)`)}
-                        >
-                          {team.allTimePoints ?? 0} {L('hist.', 'all-time')}
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                  {showPromoCut && (
-                    <tr aria-hidden>
-                      <td colSpan={8} className="p-0">
-                        <div className="flex items-center gap-2 px-4 py-1 bg-emerald-500/[0.07]">
-                          <div className="h-px flex-1 bg-emerald-500/40" />
-                          <span className="text-[9px] font-display font-bold uppercase tracking-[0.2em] text-emerald-400 flex items-center gap-1">
-                            <ArrowUp className="w-3 h-3" strokeWidth={3} /> {L('Zona de acesso', 'Promotion zone')}
-                          </span>
-                          <div className="h-px flex-1 bg-emerald-500/40" />
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  {showReleCut && (
-                    <tr aria-hidden>
-                      <td colSpan={8} className="p-0">
-                        <div className="flex items-center gap-2 px-4 py-1 bg-red-500/[0.07]">
-                          <div className="h-px flex-1 bg-red-500/40" />
-                          <span className="text-[9px] font-display font-bold uppercase tracking-[0.2em] text-red-400 flex items-center gap-1">
-                            <ArrowDown className="w-3 h-3" strokeWidth={3} /> {L('Zona de rebaixamento', 'Relegation zone')}
-                          </span>
-                          <div className="h-px flex-1 bg-red-500/40" />
-                        </div>
-                      </td>
-                    </tr>
-                  )}
+                    pos={team.position ?? index + 1}
+                    tom={isMe ? 'eu' : isLeader ? 'lider' : isPromotion ? 'zona' : isRelegation ? 'abaixo' : 'normal'}
+                    nome={team.clubName}
+                    sub={`${L('J', 'P')}${team.matchesPlayed} ${L('V', 'W')}${team.wins} ${L('E', 'D')}${team.draws} ${L('D', 'L')}${team.losses} · ${L('SG', 'GD')} ${team.goalDifference > 0 ? '+' : ''}${team.goalDifference} · ${team.allTimePoints ?? 0} ${L('hist.', 'all-time')}`}
+                    chip={
+                      positionChange > 0 ? (
+                        <ArrowUp aria-label={L('Subiu', 'Up')} className={cn('h-4 w-4 shrink-0', isMe ? 'text-asfalto-27' : 'text-alta')} strokeWidth={3} />
+                      ) : positionChange < 0 ? (
+                        <ArrowDown aria-label={L('Caiu', 'Down')} className={cn('h-4 w-4 shrink-0', isMe ? 'text-asfalto-27' : 'text-baixa')} strokeWidth={3} />
+                      ) : null
+                    }
+                    valor={team.points}
+                  />
+                  {showPromoCut && <ZonaRua label={L('Zona de acesso', 'Promotion zone')} />}
+                  {showReleCut && <ZonaRua label={L('Zona de queda', 'Relegation zone')} tom="fio" />}
                 </Fragment>
               );
             })}
-          </tbody>
-        </table>
-      </div>
+          </div>
 
-      {/* Ver tabela completa — só quando a divisão é grande demais pra rolar inteira */}
-      {sortedTeams.length > CAP && (
-        <button
-          type="button"
-          onClick={() => setShowFull((v) => !v)}
-          className="flex w-full items-center justify-center gap-2 border-t border-white/10 bg-black/20 py-3 font-display text-[11px] font-bold uppercase tracking-wider text-white/55 transition-colors hover:text-neon-yellow"
-        >
-          {showFull ? (
-            <>{L('Recolher tabela', 'Collapse table')}</>
-          ) : (
-            <>{L(`Ver tabela completa · ${sortedTeams.length} times`, `View full table · ${sortedTeams.length} teams`)}</>
+          {/* Ver tabela completa — só quando a divisão é grande demais pra rolar inteira */}
+          {sortedTeams.length > CAP && (
+            <button
+              type="button"
+              onClick={() => setShowFull((v) => !v)}
+              className="flex w-full items-center justify-center gap-2 border-2 border-dashed border-fio py-3 font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-mudo transition-colors hover:border-papel hover:text-papel"
+            >
+              {showFull ? L('Recolher tabela', 'Collapse table') : L(`Ver tabela completa · ${sortedTeams.length} times`, `View full table · ${sortedTeams.length} teams`)}
+              <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showFull && 'rotate-180')} strokeWidth={2.5} />
+            </button>
           )}
-          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showFull ? 'rotate-180' : ''}`} strokeWidth={2.5} />
-        </button>
-      )}
 
-      {/* Legenda */}
-      <div className="bg-black/20 px-6 py-4 border-t border-white/10">
-        <div className="flex flex-wrap gap-4 text-xs">
-          {division === 1 && (
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-neon-yellow rounded-sm" />
-              <span className="text-white/60">{L('Líder', 'Leader')}</span>
-            </div>
-          )}
-          {division > 1 && (
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-emerald-500 rounded-sm" />
-              <span className="text-white/60">{L('Zona de Promoção (Top 10%)', 'Promotion Zone (Top 10%)')}</span>
-            </div>
-          )}
-          {division < 3 && (
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-500 rounded-sm" />
-              <span className="text-white/60">{L('Zona de Rebaixamento (Bottom 10%)', 'Relegation Zone (Bottom 10%)')}</span>
-            </div>
-          )}
-        </div>
-      </div>
-      </>
+          {/* Legenda */}
+          <div className="flex flex-wrap gap-x-4 gap-y-2 font-prova text-[10.5px] font-bold uppercase tracking-[0.12em] text-mudo">
+            <span className="flex items-center gap-2"><span className="h-3 w-3 border-2 border-ouro-27" />{L('Líder', 'Leader')}</span>
+            {division > 1 && (
+              <span className="flex items-center gap-2"><span className="w-5 border-t-2 border-dashed border-rua" />{L('Acesso · top 10%', 'Promotion · top 10%')}</span>
+            )}
+            {division < 3 && (
+              <span className="flex items-center gap-2"><span className="w-5 border-t-2 border-dashed border-fio" />{L('Queda · últimos 10%', 'Relegation · bottom 10%')}</span>
+            )}
+          </div>
+        </>
       )}
     </motion.div>
   );
@@ -587,50 +433,25 @@ function PlayoffRoundStatusBar({ round, totalRounds }: { round: PlayoffRound | u
   const isScheduled = round.status === 'scheduled';
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="sports-panel rounded-lg p-4 border border-white/10"
-    >
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          {isLive && <Activity className="w-5 h-5 text-neon-green animate-pulse shrink-0" />}
-          {isFinished && <Trophy className="w-5 h-5 text-neon-yellow shrink-0" />}
-          {isScheduled && <Clock className="w-5 h-5 text-white/40 shrink-0" />}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-display">
-              {isLive ? L('Ao Vivo', 'Live') : isFinished ? L('Próxima rodada em', 'Next round in') : L('Kickoff em', 'Kickoff in')}
-            </p>
-            <p className={`font-serif-hero text-2xl font-bold ${isLive ? 'text-neon-green' : isFinished ? 'text-neon-yellow' : 'text-white'}`}>
-              {isLive ? `${round.fixtures[0]?.currentMinute ?? 0}'` : countdown}
-            </p>
-          </div>
+    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className={cn('flex min-w-0 flex-col gap-3 bg-concreto p-4', isLive && 'border-l-[5px] border-rua')}>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.18em] text-mudo">
+            {isLive ? L('● Ao vivo', '● Live') : isFinished ? L('Próxima rodada em', 'Next round in') : L('Kickoff em', 'Kickoff in')}
+          </span>
+          <span className={cn('font-spray text-[44px] font-black leading-none', isLive || isFinished ? 'text-rua' : 'text-papel')}>
+            {isLive ? `${round.fixtures[0]?.currentMinute ?? 0}'` : countdown}
+          </span>
         </div>
-
-        <div className="text-right">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-display">{L('Rodada', 'Round')}</p>
-          <p className="font-serif-hero text-2xl font-bold text-white">{round.roundNumber}<span className="text-white/30 text-sm">/{totalRounds}</span></p>
+        <div className="flex flex-col items-end gap-1">
+          <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.18em] text-mudo">{L('Rodada', 'Round')}</span>
+          <span className="font-spray text-[44px] font-black leading-none text-papel">
+            {round.roundNumber}<span className="text-[22px] text-fio">/{totalRounds}</span>
+          </span>
         </div>
       </div>
-
-      {/* Progresso das rodadas — linha separada para não comprimir em mobile */}
-      <div className="flex items-center gap-1.5 mt-3 overflow-x-auto pb-0.5">
-        {Array.from({ length: totalRounds }, (_, i) => {
-          const r = i + 1;
-          const isCurrent = r === round.roundNumber;
-          const isDone = r < round.roundNumber;
-          return (
-            <div
-              key={r}
-              className={`h-1.5 rounded-full transition-all shrink-0 ${
-                isDone ? 'w-4 bg-neon-yellow' :
-                isCurrent ? 'w-6 bg-neon-green' :
-                'w-4 bg-white/20'
-              }`}
-            />
-          );
-        })}
-      </div>
+      {/* Progresso das rodadas em segmentos */}
+      <BarraSegmentos valor={isScheduled ? round.roundNumber - 1 : round.roundNumber} max={totalRounds} segmentos={Math.max(1, totalRounds)} />
     </motion.div>
   );
 }
@@ -645,96 +466,37 @@ function ProjectedDivisionMini({
   teams: GlobalTeam[];
   totalDivisions: number;
 }) {
-  const accent = division === 1 ? 'text-neon-yellow' : division === 2 ? 'text-blue-400' : 'text-white/70';
-  const accentBg = division === 1 ? 'bg-neon-yellow' : division === 2 ? 'bg-blue-400' : 'bg-white/40';
-  const label = division === 1 ? 'Elite' : division === 2 ? L('Intermediária', 'Intermediate') : L('Acesso', 'Access');
+  const theme = divTheme(division);
   const promoCount = Math.max(1, Math.ceil(teams.length * 0.1));
   const releCount = Math.max(1, Math.ceil(teams.length * 0.1));
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="sports-panel rounded-lg overflow-hidden"
-    >
-      <div className="bg-deep-black px-3 py-2 border-b border-white/10 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className={`inline-block w-1.5 h-4 ${accentBg}`} />
-          <h3 className="font-display text-[11px] font-bold uppercase tracking-wider text-white">
-            {emIngles() ? `Division ${division}` : `${division}ª Divisão`}
-          </h3>
-          <span className="text-[10px] text-white/40">· {label}</span>
-        </div>
-        <span className={`font-serif-hero text-base font-bold ${accent}`}>{teams.length}</span>
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex min-w-0 flex-col gap-1.5">
+      <div className="flex min-w-0 items-baseline justify-between gap-2 px-1">
+        <h3 className="min-w-0 truncate font-impact text-[20px] uppercase leading-none text-papel">
+          {emIngles() ? `Division ${division}` : `${division}ª Divisão`} <span className={cn('font-voz text-[18px] normal-case', theme.text)}>{theme.name}</span>
+        </h3>
+        <span className={cn('shrink-0 font-spray text-[24px] font-black leading-none', theme.text)}>{teams.length}</span>
       </div>
-
-      <table className="w-full text-[11px]">
-        <thead className="bg-black/30">
-          <tr className="text-left text-white/40">
-            <th className="px-2 py-1.5 font-display font-bold uppercase tracking-wider w-6">#</th>
-            <th className="px-2 py-1.5 font-display font-bold uppercase tracking-wider">{L('Time', 'Team')}</th>
-            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">{L('J', 'P')}</th>
-            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">{L('V', 'W')}</th>
-            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">{L('E', 'D')}</th>
-            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">{L('D', 'L')}</th>
-            <th className="px-1 py-1.5 font-display font-bold uppercase tracking-wider text-center">{L('SG', 'GD')}</th>
-            <th className="px-2 py-1.5 font-display font-bold uppercase tracking-wider text-center">PTS</th>
-          </tr>
-        </thead>
-        <tbody>
-          {teams.map((team, index) => {
-            const sg = team.playoffGoalsFor - team.playoffGoalsAgainst;
-            const isLeader = index === 0;
-            // Promoção: top N (não na 1ª divisão — já está no topo)
-            const isPromotion = division > 1 && index < promoCount;
-            // Rebaixamento: bottom N (não na última divisão — já está no fundo)
-            const isRelegation = division < totalDivisions && index >= teams.length - releCount;
-            let rowBg = '';
-            let rowBorder = 'border-l-2 border-l-transparent';
-            if (isRelegation) {
-              rowBg = 'bg-red-600/30';                           // vermelho com opacidade
-              rowBorder = 'border-l-2 border-l-red-500/70';
-            } else if (isPromotion) {
-              rowBorder = 'border-l-4 border-l-neon-yellow';     // borda amarela
-              rowBg = 'bg-neon-yellow/[0.04]';
-            } else if (isLeader) {
-              rowBg = 'bg-neon-yellow/10';
-              rowBorder = 'border-l-2 border-l-neon-yellow';
-            }
-            return (
-              <tr key={team.id} className={`border-t border-white/5 ${rowBg} ${rowBorder}`}>
-                <td className="px-2 py-1.5"><span className="font-mono text-white/60">{index + 1}</span></td>
-                <td className="px-2 py-1.5 truncate">
-                  <span className="font-sans font-bold text-white truncate">{team.clubName}</span>
-                  <span className="text-[10px] text-white/40 ml-1.5">{team.clubShort}</span>
-                </td>
-                <td className="px-1 py-1.5 text-center font-mono text-white/80">{team.playoffMatchesPlayed}</td>
-                <td className="px-1 py-1.5 text-center font-mono text-emerald-400">{team.playoffWins}</td>
-                <td className="px-1 py-1.5 text-center font-mono text-amber-400">{team.playoffDraws}</td>
-                <td className="px-1 py-1.5 text-center font-mono text-red-400">{team.playoffLosses}</td>
-                <td className="px-1 py-1.5 text-center">
-                  <span className={`font-mono ${sg > 0 ? 'text-emerald-400' : sg < 0 ? 'text-red-400' : 'text-white/60'}`}>
-                    {sg > 0 ? '+' : ''}{sg}
-                  </span>
-                </td>
-                <td className="px-2 py-1.5 text-center">
-                  <div className="flex flex-col items-center leading-tight">
-                    <span className="font-serif-hero text-base font-bold text-neon-yellow">
-                      {team.playoffPoints}
-                    </span>
-                    <span
-                      className="font-mono text-[8px] text-white/40"
-                      title={L(`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`, `All-time total over ${team.allTimeSeasonsPlayed ?? 0} season(s)`)}
-                    >
-                      {team.allTimePoints ?? 0} {L('hist.', 'all-time')}
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {teams.map((team, index) => {
+        const sg = team.playoffGoalsFor - team.playoffGoalsAgainst;
+        const isLeader = index === 0;
+        const isPromotion = division > 1 && index < promoCount;
+        const isRelegation = division < totalDivisions && index >= teams.length - releCount;
+        return (
+          <Fragment key={team.id}>
+            <LinhaRua
+              pos={index + 1}
+              tom={isLeader ? 'lider' : isPromotion ? 'zona' : isRelegation ? 'abaixo' : 'normal'}
+              nome={team.clubName}
+              sub={`${L('J', 'P')}${team.playoffMatchesPlayed} ${L('V', 'W')}${team.playoffWins} ${L('E', 'D')}${team.playoffDraws} ${L('D', 'L')}${team.playoffLosses} · ${L('SG', 'GD')} ${sg > 0 ? '+' : ''}${sg} · ${team.allTimePoints ?? 0} ${L('hist.', 'all-time')}`}
+              valor={team.playoffPoints}
+            />
+            {division > 1 && index === promoCount - 1 && teams.length > promoCount && <ZonaRua label={L('Sobe', 'Up')} />}
+            {division < totalDivisions && index === teams.length - releCount - 1 && teams.length > releCount && <ZonaRua label={L('Desce', 'Down')} tom="fio" />}
+          </Fragment>
+        );
+      })}
     </motion.div>
   );
 }
@@ -767,34 +529,18 @@ function ProjectedDivisionsGrid({
   );
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-3">
-        <Trophy className="w-5 h-5 text-neon-yellow" />
-        <div>
-          <h2 className="font-display text-sm font-bold uppercase tracking-wider text-white">
-            {L(`Classificação · Após rodada ${roundNumber}`, `Standings · After round ${roundNumber}`)}
-          </h2>
-          <p className="text-[11px] text-white/40 mt-0.5">
-            {L('Projeção · Top 10% sobe · Bottom 10% desce', 'Projection · Top 10% up · Bottom 10% down')}
-          </p>
-        </div>
+    <div className="flex min-w-0 flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <SecaoRua label={L(`Classificação · após rodada ${roundNumber}`, `Standings · after round ${roundNumber}`)} />
+        <p className="font-voz text-[22px] leading-[1.05] text-suave">
+          {L('Projeção: top 10% sobe, últimos 10% descem.', 'Projection: top 10% up, bottom 10% down.')}
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {divisions.map((divTeams, idx) => (
-          <ProjectedDivisionMini
-            key={idx}
-            division={idx + 1}
-            teams={divTeams}
-            totalDivisions={totalDivisions}
-          />
+          <ProjectedDivisionMini key={idx} division={idx + 1} teams={divTeams} totalDivisions={totalDivisions} />
         ))}
-      </div>
-
-      <div className="flex flex-wrap gap-3 text-[10px] text-white/50 px-1">
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-neon-yellow rounded-sm" />{L('Líder', 'Leader')}</span>
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-emerald-500 rounded-sm" />{L('Promoção projetada', 'Projected promotion')}</span>
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-red-500 rounded-sm" />{L('Rebaixamento projetado', 'Projected relegation')}</span>
       </div>
     </div>
   );
@@ -857,46 +603,34 @@ export default function MatchGlobal() {
       <div className="mx-auto min-w-0 w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-10 overflow-x-hidden space-y-8">
         <CoronationModal crown={coronation.crown} onClose={coronation.dismiss} />
         <DailyCycleHero />
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6 text-center"
-        >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5">
-            <Activity className="w-3 h-3 text-neon-green animate-pulse" />
-            <span className="font-display text-[10px] font-bold uppercase tracking-[0.25em] text-white/60">
-              {ready ? L('Próxima rodada em instantes', 'Next round shortly') : L('Aguardando managers', 'Waiting for managers')}
-            </span>
-          </div>
-
-          <h1 className="font-display text-5xl sm:text-6xl font-bold uppercase text-white">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex min-w-0 flex-col gap-5">
+          <SeloRua tom={ready ? 'corre' : 'corre-contorno'} className="self-start">
+            {ready ? L('● Próxima rodada em instantes', '● Next round shortly') : L('Aguardando managers', 'Waiting for managers')}
+          </SeloRua>
+          <h1 className="font-impact uppercase leading-[0.86] text-papel" style={{ fontSize: 'clamp(52px, 14vw, 96px)' }}>
             {L('Liga Global', 'Global League')}
           </h1>
-
-          <p className="font-serif-hero text-lg sm:text-xl text-white/70 max-w-xl mx-auto">
+          <p className="font-voz text-[clamp(24px,6.4vw,32px)] leading-[1.05] text-suave">
             {ready
               ? L('Começa sozinha em até 5 minutos.', 'Starts on its own within 5 minutes.')
-              : L(`Faltam ${Math.max(0, minTeams - teamsNow)} ${minTeams - teamsNow === 1 ? 'manager' : 'managers'} para destravar os playoffs.`, `${Math.max(0, minTeams - teamsNow)} more ${minTeams - teamsNow === 1 ? 'manager' : 'managers'} needed to unlock the playoffs.`)}
+              : L(`Faltam ${Math.max(0, minTeams - teamsNow)} ${minTeams - teamsNow === 1 ? 'manager' : 'managers'} pros playoffs.`, `${Math.max(0, minTeams - teamsNow)} more ${minTeams - teamsNow === 1 ? 'manager' : 'managers'} to the playoffs.`)}
           </p>
 
-          <div className="flex items-center justify-center gap-8 pt-4">
-            <div>
-              <p className="font-serif-hero text-4xl font-bold text-neon-yellow">{teamsNow}</p>
-              <p className="text-[10px] font-display font-bold uppercase tracking-wider text-white/40 mt-1">{L('Inscritos', 'Registered')}</p>
+          <div className="grid max-w-md grid-cols-2 gap-1.5">
+            <div className="flex flex-col gap-1 bg-concreto p-4">
+              <span className="font-spray text-[56px] font-black leading-none text-rua">{teamsNow}</span>
+              <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.16em] text-mudo">{L('Inscritos', 'Registered')}</span>
             </div>
-            <div className="h-12 w-px bg-white/10" />
-            <div>
-              <p className="font-serif-hero text-4xl font-bold text-white">{minTeams}</p>
-              <p className="text-[10px] font-display font-bold uppercase tracking-wider text-white/40 mt-1">{L('Mínimo', 'Minimum')}</p>
+            <div className="flex flex-col gap-1 border-2 border-dashed border-fio p-4">
+              <span className="font-spray text-[56px] font-black leading-none text-papel">{minTeams}</span>
+              <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.16em] text-mudo">{L('Mínimo', 'Minimum')}</span>
             </div>
           </div>
+          <BarraSegmentos valor={teamsNow} max={minTeams} className="max-w-md" />
 
-          <button
-            onClick={() => navigate('/liga-global/registro')}
-            className="mt-4 inline-flex items-center gap-2 bg-neon-yellow text-black px-6 py-3 font-display text-xs font-black uppercase tracking-[0.2em] hover:bg-white transition-colors"
-          >
-            <span>{L('Ver registro completo', 'View full registry')}</span>
-          </button>
+          <BotaoRua onClick={() => navigate('/liga-global/registro')} className="self-start">
+            {L('Ver registro completo', 'View full registry')} <span aria-hidden>→</span>
+          </BotaoRua>
         </motion.div>
         <CrownsGallery />
       </div>
@@ -913,27 +647,19 @@ export default function MatchGlobal() {
         <CoronationModal crown={coronation.crown} onClose={coronation.dismiss} />
         <DailyCycleHero />
 
-        {/* Hero */}
-        <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 text-center"
-          >
-            <p className="font-display text-xs font-bold uppercase tracking-[0.3em] text-black/60 mb-2">
-              {L(`Playoffs · Rodada ${roundNumber} de ${totalRounds}`, `Playoffs · Round ${roundNumber} of ${totalRounds}`)}
-            </p>
-            <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
-              {L('Liga Global', 'Global League')}
-            </h1>
-            <span aria-hidden className="mx-auto mt-4 block w-16 h-[3px] bg-black" />
-            <p className="font-serif-hero text-xl sm:text-2xl text-black/80 mt-4">
-              {round?.status === 'live' ? L('Ao Vivo Agora', 'Live Now') :
-               round?.status === 'finished' ? L('Rodada Encerrada', 'Round Finished') :
-               L('Aguardando Kickoff', 'Awaiting Kickoff')}
-            </p>
-          </motion.div>
-        </section>
+        {/* Hero — fita de rua + grito; o status da rodada na voz. */}
+        <FitaRua tags={['#playoffs', '#ligaglobal']} className="-mx-3 sm:-mx-4 lg:-mx-8" />
+        <motion.header initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex min-w-0 flex-col gap-2">
+          <SecaoRua label={L(`Playoffs · rodada ${roundNumber} de ${totalRounds}`, `Playoffs · round ${roundNumber} of ${totalRounds}`)} />
+          <h1 className="font-impact uppercase leading-[0.86] text-papel" style={{ fontSize: 'clamp(52px, 14vw, 96px)' }}>
+            {L('Liga Global', 'Global League')}
+          </h1>
+          <p className={cn('font-voz text-[clamp(24px,6.4vw,32px)] leading-[1.05]', round?.status === 'live' ? 'text-rua' : 'text-suave')}>
+            {round?.status === 'live' ? L('Bola rolando agora.', 'Ball rolling now.') :
+             round?.status === 'finished' ? L('Rodada encerrada.', 'Round finished.') :
+             L('Aguardando o apito.', 'Waiting for kickoff.')}
+          </p>
+        </motion.header>
 
         {/* Slot banner — Etapa 2 */}
         <NextSlotBanner
@@ -949,23 +675,15 @@ export default function MatchGlobal() {
 
         {/* Jogos ao vivo ou finalizados */}
         {round && (round.status === 'live' || round.status === 'finished') && (
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              {round.status === 'live' && (
-                <span className="flex items-center gap-1.5 bg-neon-green/20 text-neon-green border border-neon-green/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                  <Activity className="w-3 h-3 animate-pulse" /> {L('Ao Vivo', 'Live')}
-                </span>
-              )}
-              {round.status === 'finished' && (
-                <span className="flex items-center gap-1.5 bg-white/10 text-white/60 border border-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                  <Trophy className="w-3 h-3" /> {L('Encerrado', 'Finished')}
-                </span>
-              )}
-              <span className="text-white/40 text-xs font-display uppercase tracking-wider">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              {round.status === 'live' && <SeloRua tom="corre">● {L('Ao vivo', 'Live')}</SeloRua>}
+              {round.status === 'finished' && <SeloRua tom="cal">{L('Encerrado', 'Finished')}</SeloRua>}
+              <span className="font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-mudo">
                 {round.fixtures.length} {L('partidas', 'matches')}
               </span>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-1.5 lg:grid-cols-2">
               {round.fixtures.map((fixture, index) => (
                 <FixtureCard key={fixture.id} fixture={fixture} index={index} />
               ))}
@@ -1007,128 +725,93 @@ export default function MatchGlobal() {
         <CoronationModal crown={coronation.crown} onClose={coronation.dismiss} />
         <DailyCycleHero />
         {/* Hero */}
-        <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-center"
-          >
-            <Hashtag className="mb-3 text-black/60">{L('#ligaglobal', '#globalleague')}</Hashtag>
-            <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
-              {L('Temporada Encerrada', 'Season Over')}
-            </h1>
-            <span aria-hidden className="mx-auto mt-4 block w-16 h-[3px] bg-black" />
-            {globalLeagueMVP.seasonName && (
-              <p className="font-serif-hero text-xl sm:text-2xl text-black/80 mt-4">
-                {globalLeagueMVP.seasonName}
-              </p>
-            )}
-          </motion.div>
-        </section>
+        <motion.header initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex min-w-0 flex-col gap-2">
+          <SecaoRua label={L('#ligaglobal · fim de temporada', '#globalleague · season over')} />
+          <h1 className="font-impact uppercase leading-[0.86] text-papel" style={{ fontSize: 'clamp(48px, 13vw, 92px)' }}>
+            {L('Temporada encerrada', 'Season over')}
+          </h1>
+          {globalLeagueMVP.seasonName && (
+            <p className="font-voz text-[clamp(24px,6.4vw,32px)] leading-[1.05] text-suave">{globalLeagueMVP.seasonName}</p>
+          )}
+        </motion.header>
 
-        {/* Campeão */}
+        {/* Campeão — LENDA: ouro chapado, o topo da escada. */}
         {champion && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="sports-panel rounded-lg p-6 border border-neon-yellow/40 text-center"
+            className="relative flex min-w-0 items-end justify-between gap-4 overflow-hidden bg-ouro-27 p-5 text-asfalto-27 sm:p-7"
           >
-            <Trophy className="w-10 h-10 text-neon-yellow mx-auto mb-3" />
-            <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mb-1">{L('Campeão', 'Champion')}</p>
-            <h2 className="font-display text-3xl sm:text-4xl font-black uppercase text-neon-yellow">
-              {champion.clubName}
-            </h2>
-            <p className="font-mono text-sm text-white/60 mt-2">
-              {champion.points} pts · {champion.wins}{L('V', 'W')} {champion.draws}{L('E', 'D')} {champion.losses}{L('D', 'L')}
-            </p>
+            <span
+              aria-hidden
+              className="rua-reticula absolute -right-4 -top-4 h-40 w-48 [--reticula:rgba(13,13,12,0.4)]"
+              style={{
+                WebkitMaskImage: 'radial-gradient(circle at 100% 0%, #000 0%, transparent 72%)',
+                maskImage: 'radial-gradient(circle at 100% 0%, #000 0%, transparent 72%)',
+              }}
+            />
+            <div className="relative flex min-w-0 flex-col gap-2">
+              <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.22em]">{L('Campeão', 'Champion')}</span>
+              <h2 className="font-impact uppercase leading-[0.86] [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(40px, 11vw, 72px)' }}>
+                {champion.clubName}
+              </h2>
+              <p className="font-voz text-[24px] leading-none">{L('Respeito é ouro.', 'Respect is gold.')}</p>
+              <p className="font-prova text-[12px] font-bold uppercase tracking-[0.1em]">
+                {champion.points} pts · {champion.wins}{L('V', 'W')} {champion.draws}{L('E', 'D')} {champion.losses}{L('D', 'L')}
+              </p>
+            </div>
+            <MarcaRua tipo="nove" className="relative h-24 bg-asfalto-27 sm:h-32" />
           </motion.div>
         )}
 
         {/* Pódio divisão 1 */}
         {podium.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="sports-panel rounded-lg overflow-hidden"
-          >
-            <div className="bg-deep-black px-5 py-3 border-b border-white/10 flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-neon-yellow" />
-              <h3 className="font-display text-xs font-bold uppercase tracking-wider text-white">
-                {L('Pódio · Divisão 1', 'Podium · Division 1')}
-              </h3>
-            </div>
-            <div className="divide-y divide-white/5">
-              {podium.map((team, idx) => (
-                <div key={team.id} className={`flex items-center gap-4 px-5 py-4 ${idx === 0 ? 'bg-neon-yellow/10' : ''}`}>
-                  <span className={`font-serif-hero text-2xl font-bold w-8 shrink-0 ${
-                    idx === 0 ? 'text-neon-yellow' : idx === 1 ? 'text-white/60' : 'text-white/40'
-                  }`}>
-                    {idx + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-sans text-sm font-bold uppercase text-white truncate">{team.clubName}</p>
-                    <p className="font-mono text-[10px] text-white/40">{team.clubShort}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-serif-hero text-xl font-bold text-neon-yellow">{team.points}</p>
-                    <p className="font-mono text-[10px] text-white/40">{team.wins}{L('V', 'W')} {team.draws}{L('E', 'D')} {team.losses}{L('D', 'L')}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="flex min-w-0 flex-col gap-2">
+            <SecaoRua label={L('Pódio · Divisão 1', 'Podium · Division 1')} />
+            {podium.map((team, idx) => (
+              <LinhaRua
+                key={team.id}
+                pos={idx + 1}
+                tom={idx === 0 ? 'lider' : 'normal'}
+                nome={team.clubName}
+                sub={`${team.clubShort} · ${team.wins}${L('V', 'W')} ${team.draws}${L('E', 'D')} ${team.losses}${L('D', 'L')}`}
+                valor={team.points}
+              />
+            ))}
           </motion.div>
         )}
 
-        {/* Stats da temporada */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-3 gap-3"
-        >
-          <div className="sports-panel rounded-lg p-4 text-center">
-            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">{L('Partidas', 'Matches')}</p>
-            <p className="font-serif-hero text-3xl font-bold text-white">{Math.round(totalMatches)}</p>
+        {/* Números da temporada */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="grid grid-cols-3 gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1 bg-concreto p-4">
+            <span className="font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{L('Partidas', 'Matches')}</span>
+            <span className="font-spray text-[40px] font-black leading-none text-papel">{Math.round(totalMatches)}</span>
           </div>
-          <div className="sports-panel rounded-lg p-4 text-center">
-            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">{L('Gols', 'Goals')}</p>
-            <p className="font-serif-hero text-3xl font-bold text-neon-yellow">{totalGoals}</p>
+          <div className="flex min-w-0 flex-col gap-1 bg-concreto p-4">
+            <span className="font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{L('Gols', 'Goals')}</span>
+            <span className="font-spray text-[40px] font-black leading-none text-rua">{totalGoals}</span>
           </div>
-          <div className="sports-panel rounded-lg p-4 text-center">
-            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">{L('Maior Ataque', 'Best Attack')}</p>
-            <p className="font-serif-hero text-lg font-bold text-white truncate">{topScorer?.clubShort ?? '—'}</p>
-            <p className="font-mono text-[10px] text-white/40">{topScorer?.goalsFor ?? 0} {L('gols', 'goals')}</p>
+          <div className="flex min-w-0 flex-col gap-1 bg-concreto p-4">
+            <span className="truncate font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{L('Maior ataque', 'Best attack')}</span>
+            <span className="truncate font-impact text-[24px] uppercase leading-none text-papel">{topScorer?.clubShort ?? '—'}</span>
+            <span className="font-prova text-[10px] text-mudo">{topScorer?.goalsFor ?? 0} {L('gols', 'goals')}</span>
           </div>
         </motion.div>
 
         {/* Links e mensagem */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="space-y-4"
-        >
-          <div className="flex flex-wrap gap-3 justify-center">
-            <Link
-              to="/match/global/history"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-sm font-display text-xs font-bold uppercase tracking-wider bg-panel border border-white/10 text-white/70 hover:text-neon-yellow hover:border-neon-yellow/40 transition-all"
-            >
-              <History className="w-4 h-4" />
-              {L('Histórico de Rodadas', 'Round History')}
-            </Link>
-            <Link
-              to="/match/global/all-time"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-sm font-display text-xs font-bold uppercase tracking-wider bg-panel border border-white/10 text-white/70 hover:text-neon-yellow hover:border-neon-yellow/40 transition-all"
-            >
-              <Trophy className="w-4 h-4" />
-              Ranking All-Time
-            </Link>
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="flex flex-col gap-4">
+          <div className="flex flex-wrap gap-3">
+            <BotaoRua to="/match/global/history" variante="contorno">
+              <History aria-hidden className="h-4 w-4" />
+              {L('Histórico', 'History')}
+            </BotaoRua>
+            <BotaoRua to="/match/global/all-time" variante="contorno">
+              <Trophy aria-hidden className="h-4 w-4" />
+              All-Time
+            </BotaoRua>
           </div>
-          <p className="text-center font-display text-[11px] uppercase tracking-[0.2em] text-white/30">
-            {L('Nova temporada em breve', 'New season soon')}
-          </p>
+          <p className="font-voz text-[24px] leading-none text-suave">{L('Nova temporada em breve.', 'New season soon.')}</p>
         </motion.div>
 
         <CrownsGallery />
@@ -1152,45 +835,35 @@ export default function MatchGlobal() {
       <CoronationModal crown={coronation.crown} onClose={coronation.dismiss} />
       <DailyCycleHero />
 
-      {/* Hero */}
-      <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 text-center"
-        >
-          <Hashtag className="mb-4 text-black/60">{L('#ligaglobal #piramide', '#globalleague #pyramid')}</Hashtag>
-          <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
-            {L('Liga Global', 'Global League')}
-          </h1>
-          <span aria-hidden className="mx-auto mt-4 block w-16 h-[3px] bg-black" />
-          {/* Strip vivo: o gigante a bater (líder da Elite) + pular pro meu time */}
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-            {d1Leader && (
-              <span className="inline-flex items-center gap-1.5 bg-black/85 rounded-full px-3 py-1.5 max-w-full">
-                <Trophy className="w-3.5 h-3.5 text-neon-yellow shrink-0" />
-                <span className="font-display text-[9px] font-bold uppercase tracking-wider text-neon-yellow/70 shrink-0">{L('Líder Elite', 'Elite Leader')}</span>
-                <span className="font-sans text-xs font-bold uppercase text-white truncate max-w-[110px]">{d1Leader.clubName}</span>
-                <span className="font-serif-hero text-sm font-bold text-neon-yellow shrink-0">{d1Leader.points}</span>
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1.5 bg-black/10 rounded-full px-3 py-1.5">
-              <span className="font-display text-[10px] font-bold uppercase tracking-wider text-black/70">{globalLeagueMVP.teams.length} {L('clubes', 'clubs')}</span>
+      {/* Hero — fita de rua + grito + selos vivos (líder da Elite e o meu time). */}
+      <FitaRua tags={['#ligaglobal', '#pirâmide']} className="-mx-3 sm:-mx-4 lg:-mx-8" />
+      <motion.header initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex min-w-0 flex-col gap-3">
+        <SecaoRua label={L(`${globalLeagueMVP.teams.length} clubes · 3 divisões`, `${globalLeagueMVP.teams.length} clubs · 3 divisions`)} />
+        <h1 className="font-impact uppercase leading-[0.86] text-papel" style={{ fontSize: 'clamp(52px, 14vw, 96px)' }}>
+          {L('Liga Global', 'Global League')}
+        </h1>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {d1Leader && (
+            <span className="inline-flex min-w-0 max-w-full items-center gap-2 border-2 border-ouro-27 px-2.5 py-1">
+              <Trophy aria-hidden className="h-3.5 w-3.5 shrink-0 text-ouro-27" />
+              <span className="shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-mudo">{L('Líder Elite', 'Elite leader')}</span>
+              <span className="min-w-0 truncate font-impact text-[15px] uppercase leading-none text-ouro-27">{d1Leader.clubName}</span>
+              <span className="shrink-0 font-impact text-[15px] leading-none text-ouro-27">{d1Leader.points}</span>
             </span>
-            {myTeam && (
-              <button
-                type="button"
-                onClick={scrollToMyTeam}
-                className="inline-flex items-center gap-1.5 bg-black rounded-full px-3 py-1.5 hover:opacity-90 transition-opacity max-w-full"
-              >
-                <span className="font-display text-[9px] font-bold uppercase tracking-wider text-neon-yellow/70 shrink-0">{L('Meu time', 'My team')}</span>
-                <span className="font-sans text-xs font-bold uppercase text-neon-yellow truncate max-w-[100px]">{myTeam.clubName}</span>
-                <ArrowDown className="w-3 h-3 text-neon-yellow shrink-0" strokeWidth={3} />
-              </button>
-            )}
-          </div>
-        </motion.div>
-      </section>
+          )}
+          {myTeam && (
+            <button
+              type="button"
+              onClick={scrollToMyTeam}
+              className="inline-flex min-w-0 max-w-full -rotate-1 items-center gap-2 bg-rua px-2.5 py-1 text-asfalto-27 shadow-[3px_3px_0_var(--color-papel)] transition-transform hover:-translate-y-0.5"
+            >
+              <span className="shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.12em]">{L('Meu time', 'My team')}</span>
+              <span className="min-w-0 truncate font-impact text-[15px] uppercase leading-none">{myTeam.clubName}</span>
+              <ArrowDown aria-hidden className="h-3.5 w-3.5 shrink-0" strokeWidth={3} />
+            </button>
+          )}
+        </div>
+      </motion.header>
 
       {/* Slot banner — Etapa 2 */}
       <NextSlotBanner
@@ -1201,54 +874,41 @@ export default function MatchGlobal() {
 
       {/* Filtros */}
       {(lastFinishedRound ?? currentRound) && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          <button
-            onClick={() => setFilterOverride('all')}
-            className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
-              filterMode === 'all' ? 'bg-neon-yellow text-black' : 'bg-panel text-white/60 hover:text-white'
-            }`}
-          >
-            {L('Todas', 'All')}
-          </button>
-          <button
-            onClick={() => setFilterOverride('division_1')}
-            className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
-              filterMode === 'division_1' ? 'bg-neon-yellow text-black' : 'bg-panel text-white/60 hover:text-white'
-            }`}
-          >
-            {L('Divisão 1', 'Division 1')}
-          </button>
-          <button
-            onClick={() => setFilterOverride('division_2')}
-            className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
-              filterMode === 'division_2' ? 'bg-slate-300 text-black' : 'bg-panel text-white/60 hover:text-white'
-            }`}
-          >
-            {L('Divisão 2', 'Division 2')}
-          </button>
-          <button
-            onClick={() => setFilterOverride('division_3')}
-            className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
-              filterMode === 'division_3' ? 'bg-amber-500 text-black' : 'bg-panel text-white/60 hover:text-white'
-            }`}
-          >
-            {L('Divisão 3', 'Division 3')}
-          </button>
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          {([
+            ['all', L('Todas', 'All')],
+            ['division_1', L('Divisão 1', 'Division 1')],
+            ['division_2', L('Divisão 2', 'Division 2')],
+            ['division_3', L('Divisão 3', 'Division 3')],
+          ] as [FilterMode, string][]).map(([mode, label]) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setFilterOverride(mode)}
+              aria-pressed={filterMode === mode}
+              className={cn(
+                'inline-flex min-h-[44px] items-center px-3.5 font-impact text-[15px] uppercase leading-none transition-colors',
+                filterMode === mode ? 'bg-rua text-asfalto-27' : 'border-2 border-linha text-suave hover:border-papel hover:text-papel',
+              )}
+            >
+              {label}
+            </button>
+          ))}
 
           {/* Links de navegação */}
-          <div className="ml-auto flex items-center gap-2 shrink-0">
+          <div className="flex shrink-0 items-center gap-1.5 sm:ml-auto">
             <Link
               to="/match/global/all-time"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider bg-panel text-white/60 hover:text-neon-yellow hover:border-neon-yellow/40 border border-white/10 transition-all"
+              className="inline-flex min-h-[44px] items-center gap-1.5 px-3 font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-mudo transition-colors hover:text-rua"
             >
-              <Trophy className="w-3.5 h-3.5" />
+              <Trophy aria-hidden className="h-3.5 w-3.5" />
               All-Time
             </Link>
             <Link
               to="/match/global/history"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider bg-panel text-white/60 hover:text-neon-yellow hover:border-neon-yellow/40 border border-white/10 transition-all"
+              className="inline-flex min-h-[44px] items-center gap-1.5 px-3 font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-mudo transition-colors hover:text-rua"
             >
-              <History className="w-3.5 h-3.5" />
+              <History aria-hidden className="h-3.5 w-3.5" />
               {L('Histórico', 'History')}
             </Link>
           </div>
@@ -1257,38 +917,24 @@ export default function MatchGlobal() {
 
       {/* Partidas — última rodada finalizada ou rodada atual */}
       {filteredFixtures.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              {lastFinishedRound ? (
-                <>
-                  <Trophy className="w-4 h-4 text-neon-yellow" />
-                  <span className="font-display text-xs font-bold uppercase tracking-wider text-white/70">
-                    {L(`Rodada ${lastFinishedRound.roundNumber} · Resultados`, `Round ${lastFinishedRound.roundNumber} · Results`)}
-                  </span>
-                  {myTeamId && lastFinishedRound.fixtures.some(f => f.homeTeamId === myTeamId || f.awayTeamId === myTeamId) && (
-                    <span className="text-[9px] bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                      {L('Seu jogo', 'Your match')}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Clock className="w-4 h-4 text-white/40" />
-                  <span className="font-display text-xs font-bold uppercase tracking-wider text-white/50">
-                    {L(`Rodada ${currentRound?.roundNumber} · Aguardando kickoff`, `Round ${currentRound?.roundNumber} · Awaiting kickoff`)}
-                  </span>
-                </>
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="min-w-0 truncate font-prova text-[12px] font-bold uppercase tracking-[0.2em] text-mudo">
+                —{' '}
+                {lastFinishedRound
+                  ? L(`Rodada ${lastFinishedRound.roundNumber} · resultados`, `Round ${lastFinishedRound.roundNumber} · results`)
+                  : L(`Rodada ${currentRound?.roundNumber} · aguardando kickoff`, `Round ${currentRound?.roundNumber} · awaiting kickoff`)}
+              </span>
+              {lastFinishedRound && myTeamId && lastFinishedRound.fixtures.some(f => f.homeTeamId === myTeamId || f.awayTeamId === myTeamId) && (
+                <SeloRua tom="corre-contorno" className="py-0 text-[10px]">{L('Teu jogo', 'Your match')}</SeloRua>
               )}
             </div>
-            <Link
-              to="/match/global/history"
-              className="text-[10px] text-white/40 hover:text-neon-yellow transition-colors font-display uppercase tracking-wider flex items-center gap-1"
-            >
-              <History className="w-3 h-3" /> {L('Ver todas', 'View all')}
+            <Link to="/match/global/history" className="shrink-0 font-impact text-[15px] uppercase text-rua transition-colors hover:text-papel">
+              {L('Ver todas', 'View all')} <span aria-hidden>→</span>
             </Link>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-1.5 lg:grid-cols-2">
             {filteredFixtures.map((fixture, index) => (
               <FixtureCard key={fixture.id} fixture={fixture} index={index} />
             ))}
@@ -1296,10 +942,10 @@ export default function MatchGlobal() {
         </div>
       )}
 
-      {/* Tabelas de Classificação — condensadas por divisão.
+      {/* Tabelas de classificação — condensadas por divisão.
           Default (sem filtro): só a MINHA divisão aberta; as outras entram
           colapsadas, um toque abre. Com filtro de divisão: só ela. */}
-      <div className="space-y-4">
+      <div className="flex min-w-0 flex-col gap-6">
         {[1, 2, 3].map((div) => {
           const divTeams = div === 1 ? division1Teams : div === 2 ? division2Teams : division3Teams;
           const isMine = myDivision === div;
@@ -1317,13 +963,9 @@ export default function MatchGlobal() {
           );
         })}
         {filterMode !== 'all' && (
-          <button
-            type="button"
-            onClick={() => setFilterOverride('all')}
-            className="mx-auto flex items-center gap-2 rounded-sm border border-white/10 bg-panel px-4 py-2.5 font-display text-[11px] font-bold uppercase tracking-wider text-white/55 transition-colors hover:text-neon-yellow"
-          >
-            <Trophy className="h-3.5 w-3.5" /> {L('Ver todas as divisões', 'View all divisions')}
-          </button>
+          <BotaoRua onClick={() => setFilterOverride('all')} variante="contorno" className="self-center">
+            {L('Ver todas as divisões', 'View all divisions')}
+          </BotaoRua>
         )}
       </div>
 

@@ -110,15 +110,15 @@ function reactionLine(kick: ShootoutKick, decider: boolean, winnerName: string, 
   return decider ? L(`${base} ${winnerName} se aproveita e vence!`, `${base} ${winnerName} take advantage and win!`) : base;
 }
 
-/** Mini-barra de atributo (rótulo Agency + barra dourada). */
+/** Mini-barra de atributo (rótulo de prova + barra chapada). */
 function AttrBar({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="font-display uppercase tracking-[0.14em] text-[8px] text-white/45 w-12 shrink-0">{label}</span>
-      <span className="flex-1 h-1 rounded-full bg-deep-black/70 overflow-hidden">
-        <span className="block h-full rounded-full" style={{ width: `${Math.max(4, Math.min(100, value))}%`, backgroundColor: 'var(--color-neon-yellow)' }} />
+      <span className="w-12 shrink-0 font-prova text-[8.5px] uppercase tracking-[0.1em] text-mudo">{label}</span>
+      <span className="h-1.5 flex-1 overflow-hidden bg-linha">
+        <span className="block h-full bg-papel" style={{ width: `${Math.max(4, Math.min(100, value))}%` }} />
       </span>
-      <span className="font-display tabular-nums text-[10px] font-bold text-white/80 w-6 text-right">{Math.round(value)}</span>
+      <span className="w-6 text-right font-impact text-[11px] tabular-nums text-papel">{Math.round(value)}</span>
     </div>
   );
 }
@@ -200,18 +200,18 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
 
   return (
     <div className="w-full">
-      <div className="text-center mb-3">
-        <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-neon-yellow">
-          {L('Disputa de Pênaltis', 'Penalty Shootout')}
+      <div className="mb-4 text-center">
+        <p className="font-prova text-[11px] font-bold uppercase tracking-[0.24em] text-rua">
+          — {L('Disputa de pênaltis', 'Penalty shootout')}
         </p>
         {phase === 'setup' && (
-          <p className="text-white/70 text-[13px]">{L('Escale os 5 batedores.', 'Pick your 5 takers.')}</p>
+          <p className="mt-1 font-voz text-[26px] leading-none text-papel">{L('Escale os 5 batedores.', 'Pick your 5 takers.')}</p>
         )}
       </div>
 
       {/* ─── SETUP ──────────────────────────────────────────────────────────── */}
       {phase === 'setup' && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           {candidates.map((k) => {
             const idx = order.indexOf(k.id);
             const picked = idx >= 0;
@@ -221,30 +221,25 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                 key={k.id}
                 type="button"
                 onClick={() => toggle(k.id)}
-                className="flex items-center gap-3 px-3 py-2 border text-left transition-all active:scale-[0.99]"
-                style={{
-                  borderRadius: 'var(--radius-md)',
-                  borderColor: picked ? 'var(--color-neon-yellow)' : 'var(--color-border)',
-                  backgroundColor: picked ? 'color-mix(in srgb, var(--color-neon-yellow) 10%, transparent)' : 'var(--color-dark-gray)',
-                }}
+                aria-pressed={picked}
+                className={`flex min-h-[58px] min-w-0 items-center gap-3 px-3 py-2 text-left transition-colors ${
+                  picked ? 'border-2 border-rua bg-concreto' : 'border-2 border-linha bg-concreto hover:border-fio'
+                }`}
               >
                 <span
-                  className="ole-num w-7 h-7 shrink-0 flex items-center justify-center text-[13px] rounded-full"
-                  style={{
-                    backgroundColor: picked ? 'var(--color-neon-yellow)' : 'transparent',
-                    color: picked ? '#000' : 'rgba(255,255,255,0.4)',
-                    border: picked ? 'none' : '1px solid var(--color-border)',
-                  }}
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center font-spray font-black text-[20px] leading-none ${
+                    picked ? 'bg-rua text-asfalto-27' : 'border-2 border-dashed border-fio text-fio'
+                  }`}
                 >
                   {picked ? idx + 1 : '–'}
                 </span>
-                <span className="flex-1 min-w-0">
-                  <span className="block font-display uppercase font-black text-white truncate text-[12px] tracking-[0.03em]">{k.name}</span>
-                  <span className="block uppercase tracking-[0.12em] text-[9px]" style={{ color: tired ? 'var(--color-warning)' : 'rgba(255,255,255,0.45)' }}>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-voz text-[19px] leading-none text-papel">{k.name}</span>
+                  <span className={`mt-1 block font-prova text-[9.5px] font-bold uppercase tracking-[0.1em] ${tired ? 'text-baixa' : 'text-mudo'}`}>
                     {posLabel(k.pos)} · {fatigueWord(k.fatigue)}
                   </span>
                 </span>
-                <span className="w-32 shrink-0 flex flex-col gap-0.5">
+                <span className="flex w-[7.5rem] shrink-0 flex-col gap-0.5 sm:w-32">
                   <AttrBar label={L('Técnica', 'Technique')} value={k.finalizacao} />
                   <AttrBar label={L('Físico', 'Physical')} value={k.fisico} />
                   <AttrBar label={L('Cansaço', 'Fatigue')} value={k.fatigue} />
@@ -256,10 +251,9 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
             type="button"
             disabled={order.length !== 5}
             onClick={start}
-            className="mt-2 w-full py-3 font-display uppercase tracking-[0.18em] text-[12px] font-black transition-colors disabled:opacity-40"
-            style={{ backgroundColor: 'var(--color-neon-yellow)', color: '#000', borderRadius: 'var(--radius-md)' }}
+            className="mt-3 inline-flex min-h-[54px] w-full items-center justify-center gap-2 bg-rua font-impact text-[19px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow,opacity] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)] disabled:opacity-40 disabled:shadow-none"
           >
-            {order.length === 5 ? L('Bater os pênaltis', 'Take the penalties') : emIngles() ? `Pick ${5 - order.length} more taker${5 - order.length === 1 ? '' : 's'}` : `Escale ${5 - order.length} batedor${5 - order.length === 1 ? '' : 'es'}`}
+            {order.length === 5 ? <>{L('Bater os pênaltis', 'Take the penalties')} <span aria-hidden>→</span></> : emIngles() ? `Pick ${5 - order.length} more taker${5 - order.length === 1 ? '' : 's'}` : `Escale ${5 - order.length} batedor${5 - order.length === 1 ? '' : 'es'}`}
           </button>
         </div>
       )}
@@ -267,24 +261,23 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
       {/* ─── PLAYING / RESULT ───────────────────────────────────────────────── */}
       {(phase === 'playing' || phase === 'result') && result && (
         <div className="flex flex-col gap-4">
-          {/* Placar grande */}
-          <div className="flex items-center justify-center gap-5">
-            <span className="font-display uppercase tracking-[0.1em] text-[11px] font-black text-neon-yellow text-right w-24 truncate">{homeName}</span>
+          {/* Placar grande, em spray */}
+          <div className="flex min-w-0 items-center justify-center gap-3">
+            <span className="w-24 truncate text-right font-impact text-[14px] uppercase leading-none text-papel">{homeName}</span>
             <motion.span
               key={`${liveHome}-${liveAway}`}
-              initial={{ scale: 1.25 }}
+              initial={{ scale: 1.2 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 400, damping: 18 }}
-              className="ole-num text-5xl"
-              style={{ color: '#fff' }}
+              className="font-spray font-black text-[64px] leading-none tabular-nums text-rua"
             >
-              {liveHome}<span className="text-white/40 mx-1">–</span>{liveAway}
+              {liveHome}<span className="mx-1 text-[0.6em]">×</span>{liveAway}
             </motion.span>
-            <span className="font-display uppercase tracking-[0.1em] text-[11px] font-black text-white/70 text-left w-24 truncate">{awayName}</span>
+            <span className="w-24 truncate text-left font-impact text-[14px] uppercase leading-none text-mudo">{awayName}</span>
           </div>
 
           {/* Palco da cobrança atual (sobe pra bola → desfecho) */}
-          <div className="min-h-[78px] flex items-center justify-center px-2">
+          <div className="flex min-h-[86px] items-center justify-center px-2">
             <AnimatePresence mode="wait">
               {phase === 'playing' && currentKick && stage === 'stepup' && (
                 <motion.div
@@ -299,32 +292,30 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                     animate={isDecider ? { scale: HEARTBEAT_SCALE } : { scale: 1 }}
                     transition={isDecider ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut', times: HEARTBEAT_TIMES } : undefined}
                   >
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <span className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45">
+                    <div className="mb-1.5 flex flex-wrap items-center justify-center gap-2">
+                      <span className="font-prova text-[10px] font-bold uppercase tracking-[0.16em] text-mudo">
                         {currentKick.side === 'home' ? homeName : awayName}
                       </span>
                       {isDecider && (
-                        <span className="font-display uppercase tracking-[0.2em] text-[9px] font-black text-neon-yellow">
+                        <span className="bg-rua px-1.5 py-0.5 font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-asfalto-27">
                           {L('decisivo', 'decider')}
                         </span>
                       )}
                       {currentKick.suddenDeath && (
-                        <span className="flex items-center gap-1 font-display uppercase tracking-[0.16em] text-[9px] font-black text-neon-yellow">
-                          <Flame className="w-3 h-3" strokeWidth={2.5} aria-hidden /> {L('morte súbita', 'sudden death')}
+                        <span className="flex items-center gap-1 font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-rua">
+                          <Flame className="h-3 w-3" strokeWidth={2.5} aria-hidden /> {L('morte súbita', 'sudden death')}
                         </span>
                       )}
                     </div>
                     {isDecider ? (
-                      <p
-                        className="font-impact text-[22px] leading-[1.15] text-neon-yellow px-2"
-                      >
+                      <p className="px-2 font-voz text-[28px] leading-[1.05] text-rua">
                         {tensionLine(currentKick, isDecider, kickIdx)}
                       </p>
                     ) : (
                       <motion.p
                         animate={{ opacity: [0.6, 1, 0.6] }}
                         transition={{ duration: 1.1, repeat: Infinity }}
-                        className="font-semibold text-[16px] text-white/90"
+                        className="font-voz text-[23px] leading-[1.05] text-papel"
                       >
                         {tensionLine(currentKick, isDecider, kickIdx)}
                       </motion.p>
@@ -341,21 +332,18 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                   transition={{ type: 'spring', stiffness: isDecider ? 240 : 360, damping: isDecider ? 14 : 18 }}
                   className="text-center"
                 >
-                  <div className="flex items-center justify-center gap-2 mb-0.5">
+                  <p
+                    className={`font-spray font-black uppercase leading-none ${isDecider ? 'text-[56px]' : 'text-[40px]'} ${
+                      currentKick.scored ? 'text-rua' : 'text-papel'
+                    }`}
+                  >
+                    {currentKick.scored ? L('GOL!', 'GOAL!') : currentKick.outcome === 'save' ? L('DEFENDEU!', 'SAVED!') : L('PERDEU!', 'MISSED!')}
+                  </p>
+                  <p className={`mt-1 text-suave ${isDecider ? 'px-2 text-[16px]' : 'text-[14px]'}`}>
                     {currentKick.scored
-                      ? <Crosshair className={isDecider ? 'w-7 h-7 text-success' : 'w-5 h-5 text-success'} strokeWidth={2.5} aria-hidden />
-                      : <Hand className={isDecider ? 'w-7 h-7 text-danger' : 'w-5 h-5 text-danger'} strokeWidth={2.5} aria-hidden />}
-                    <span
-                      className={`font-display uppercase font-black ${isDecider ? 'tracking-[0.22em] text-[24px]' : 'tracking-[0.2em] text-[15px]'}`}
-                      style={{
-                        color: currentKick.scored ? 'var(--color-success)' : 'var(--color-danger)',
-                      }}
-                    >
-                      {currentKick.scored ? L('GOL!', 'GOAL!') : currentKick.outcome === 'save' ? L('DEFENDEU!', 'SAVED!') : L('PERDEU!', 'MISSED!')}
-                    </span>
-                  </div>
-                  <p className={`text-white/80 ${isDecider ? 'text-[16px] px-2' : 'text-[14px]'}`}>
-                    {currentKick.kickerName} — {reactionLine(currentKick, isDecider, winnerName, kickIdx)}
+                      ? <Crosshair className="mr-1 inline h-4 w-4 align-[-2px] text-rua" strokeWidth={2.5} aria-hidden />
+                      : <Hand className="mr-1 inline h-4 w-4 align-[-2px] text-papel" strokeWidth={2.5} aria-hidden />}
+                    <span className="font-voz text-[19px] leading-none text-papel">{currentKick.kickerName}</span> — {reactionLine(currentKick, isDecider, winnerName, kickIdx)}
                   </p>
                 </motion.div>
               )}
@@ -365,13 +353,8 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
           {/* Placar HUMANO: quem fez e quem perdeu, embaixo de cada time */}
           <div className="grid grid-cols-2 gap-2">
             {(['home', 'away'] as const).map((side) => (
-              <div
-                key={side}
-                className="border p-2 flex flex-col gap-1"
-                style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}
-              >
-                <p className="font-display uppercase tracking-[0.2em] text-[8px] font-black text-center mb-0.5"
-                   style={{ color: side === 'home' ? 'var(--color-neon-yellow)' : 'rgba(255,255,255,0.5)' }}>
+              <div key={side} className="flex min-w-0 flex-col gap-1.5 bg-concreto p-2.5">
+                <p className={`mb-0.5 truncate text-center font-prova text-[9.5px] font-bold uppercase tracking-[0.16em] ${side === 'home' ? 'text-rua' : 'text-mudo'}`}>
                   {side === 'home' ? homeName : awayName}
                 </p>
                 <AnimatePresence initial={false}>
@@ -382,30 +365,25 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                         key={gi}
                         initial={{ opacity: 0, x: side === 'home' ? -8 : 8 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-1.5"
+                        className="flex min-w-0 items-center gap-1.5"
                       >
                         {pending ? (
-                          <span
-                            className="w-3.5 h-3.5 rounded-full shrink-0 flex items-center justify-center"
-                            style={{ border: '1px solid var(--color-neon-yellow)' }}
-                          >
-                            <motion.span
-                              animate={{ scale: [0.5, 1, 0.5], opacity: [0.4, 1, 0.4] }}
-                              transition={{ duration: 1, repeat: Infinity }}
-                              className="w-1.5 h-1.5 rounded-full"
-                              style={{ backgroundColor: 'var(--color-neon-yellow)' }}
-                            />
-                          </span>
+                          <span className="h-3.5 w-3.5 shrink-0 animate-pulse border-2 border-rua" aria-hidden />
                         ) : (
-                          <span className="w-3.5 h-3.5 shrink-0 flex items-center justify-center leading-none" style={{ fontSize: '12px' }} aria-hidden>
-                            {k.scored ? '⚽' : '🚫'}
+                          <span
+                            aria-label={k.scored ? L('Gol', 'Goal') : L('Perdeu', 'Missed')}
+                            className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center font-impact text-[10px] leading-none ${
+                              k.scored ? 'bg-rua text-asfalto-27' : 'border-2 border-fio text-fio'
+                            }`}
+                          >
+                            {k.scored ? '' : '×'}
                           </span>
                         )}
-                        <span className={`font-display uppercase tracking-[0.04em] text-[10px] truncate ${pending ? 'text-neon-yellow' : 'text-white/75'}`}>
+                        <span className={`truncate font-impact text-[12px] uppercase leading-none ${pending ? 'text-rua' : k.scored ? 'text-papel' : 'text-mudo line-through'}`}>
                           {k.kickerName}
                         </span>
                         {k.suddenDeath && !pending && (
-                          <Flame className="w-2.5 h-2.5 text-neon-yellow shrink-0" strokeWidth={2.5} aria-hidden />
+                          <Flame className="h-2.5 w-2.5 shrink-0 text-rua" strokeWidth={2.5} aria-hidden />
                         )}
                       </motion.div>
                     );
@@ -421,13 +399,13 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-              className="text-center py-3 border-t border-white/8"
+              className="border-t border-linha py-4 text-center"
             >
-              <Check className="w-7 h-7 mx-auto mb-1" style={{ color: result.winner === 'home' ? 'var(--color-success)' : 'var(--color-danger)' }} strokeWidth={3} aria-hidden />
-              <p className="font-impact uppercase text-2xl leading-[1.1]" style={{ color: result.winner === 'home' ? 'var(--color-neon-yellow)' : '#fff' }}>
+              <Check className={`mx-auto mb-1 h-7 w-7 ${result.winner === 'home' ? 'text-rua' : 'text-mudo'}`} strokeWidth={3} aria-hidden />
+              <p className={`font-impact text-[30px] uppercase leading-none ${result.winner === 'home' ? 'text-rua' : 'text-papel'}`}>
                 {winnerName}
               </p>
-              <p className="font-display uppercase tracking-[0.22em] text-[10px] font-black text-white/60 mt-0.5">
+              <p className="mt-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo">
                 {L('venceu nos pênaltis', 'won on penalties')} · {result.homeTally}–{result.awayTally}
                 {result.suddenDeath ? L(' · morte súbita', ' · sudden death') : ''}
               </p>

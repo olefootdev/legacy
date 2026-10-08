@@ -1,9 +1,9 @@
 /**
  * Legend Page — perfil de embaixador/lenda do futebol ("museu vivo").
  *
- * Modelo visual: BVB Rebrand 2023 (DesignStudio) + Legacy Tech Olefoot.
+ * DS 2027 "Respeito é ouro": a lenda é o topo da escada — OURO CHAPADO.
  * Composto por blocos reutilizáveis pra qualquer lenda futura:
- *  - Hero: fundo amarelo + foto B&W + OVR (ole-num) + nome em Anton
+ *  - Hero: ouro chapado + nome na voz + a carta colada torta (OVR em Anton)
  *  - Achievements: mini-cards com número em ole-num
  *  - Trajetória: timeline horizontal de marcos
  *  - DNA do Campeão: grid 3x2 de atributos
@@ -17,7 +17,7 @@
 
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Eyebrow } from '@/components/ui';
+import { BarraSegmentos, FitaRua, MarcaRua, SecaoRua } from '@/components/ui';
 import { ALL_LEGEND_SLUGS, findLegend } from '@/data/legends';
 import { useLegendSocial } from '@/hooks/useLegendSocial';
 import { useLegendMeta } from '@/hooks/useLegendMeta';
@@ -37,201 +37,134 @@ export function Legend() {
   // SEO + Open Graph (para divulgação social)
   useLegendMeta(legend);
 
+  const ordem = ALL_LEGEND_SLUGS.indexOf(legend.slug) + 1;
+  const nome = legend.name.charAt(0) + legend.name.slice(1).toLowerCase();
+
   return (
-    <div className="min-h-screen bg-deep-black text-white">
-      {/* ── HERO: fundo amarelo + foto + OVR/era badge ─────────────── */}
-      <section className="relative w-full overflow-hidden bg-neon-yellow">
-        <div className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-8 sm:py-12">
-          {/* 1. Search centralizada com borda preta — primeiro elemento
-              do hero. Navegação back disponível pelo header global +
-              bottom nav; mudança de lenda via este search. */}
-          <div className="mb-9 sm:mb-12 mt-2">
-            <LegendSearchBar
-              onOpen={() => setSearchOpen(true)}
-              totalCount={ALL_LEGEND_SLUGS.length}
-            />
-          </div>
-
-          {/* 2. Eyebrow (frase) */}
-          <Eyebrow align="center" className="!text-black mb-5 sm:mb-6">
-            <span className="!text-black">{legend.epithet}</span>
-          </Eyebrow>
-
-          {/* 3. Nome */}
-          <h1
-            className="font-impact uppercase break-words text-black text-center leading-[1.1]"
-            style={{ fontSize: 'clamp(56px, 15vw, 128px)' }}
-          >
-            {legend.name.charAt(0) + legend.name.slice(1).toLowerCase()}
-          </h1>
-
-          {/* 5. Data/conquista textual editorial — substitui "era · país" */}
-          <p
-            className="mt-4 text-center font-mono uppercase text-black/75"
-            style={{
-              fontSize: '11.5px',
-              letterSpacing: '0.16em',
-              lineHeight: 1.4,
-            }}
-          >
-            {legend.signature}
-          </p>
-
-          {/* 6. Foto + OVR overlay */}
-          <div className="relative mx-auto mt-8 sm:mt-10 w-full max-w-[320px] aspect-[4/5]">
-            {legend.photoUrl ? (
-              <img
-                src={legend.photoUrl}
-                alt={legend.fullName}
-                className="w-full h-full object-cover ole-player-photo-bw transition-all duration-500 hover:[filter:none]"
-                draggable={false}
-              />
-            ) : (
-              <div className="w-full h-full bg-black grid place-items-center">
-                <span
-                  className="font-impact text-white/15 uppercase"
-                  style={{
-                    fontSize: 'clamp(96px, 18vw, 160px)',
-                    lineHeight: 1,
-                  }}
-                  aria-hidden
-                >
-                  {legend.name.charAt(0)}
-                </span>
-              </div>
+    <div className="min-h-screen text-papel">
+      {/* ── HERO: degrau LENDA — ouro chapado, a carta colada torta ───── */}
+      <section className="rua-grao relative w-full overflow-hidden bg-ouro-27 text-asfalto-27">
+        <div className="relative z-10 mx-auto flex max-w-5xl flex-col gap-8 px-5 py-7 sm:px-8 sm:py-10">
+          <div className="flex items-center justify-between gap-3 border-b-2 border-asfalto-27 pb-3 font-prova text-[11.5px] font-bold uppercase tracking-[0.2em]">
+            <span>{L('Olefoot · Legends', 'Olefoot · Legends')}</span>
+            {ordem > 0 && (
+              <span className="tabular-nums">
+                Nº {String(ordem).padStart(2, '0')}/{String(ALL_LEGEND_SLUGS.length).padStart(2, '0')}
+              </span>
             )}
-            {/* OVR badge — número Archivo volt no preto */}
-            <div className="absolute top-3 left-3 z-10 bg-black px-2.5 py-1.5">
-              <p
-                className="ole-num text-neon-yellow leading-none"
-                style={{ fontSize: 'clamp(26px, 4.2vw, 36px)' }}
-              >
-                {legend.ovr}
-              </p>
-              <p className="mt-0.5 font-mono uppercase text-giz" style={{ fontSize: '9px', letterSpacing: '0.16em' }}>
-                OVR
-              </p>
+          </div>
+
+          <LegendSearchBar onOpen={() => setSearchOpen(true)} totalCount={ALL_LEGEND_SLUGS.length} />
+
+          <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-[1.1fr_1fr]">
+            <div className="flex min-w-0 flex-col gap-4 text-center md:text-left">
+              <p className="font-impact text-[clamp(18px,4.6vw,26px)] uppercase leading-tight">{legend.epithet}</p>
+              <h1 className="font-voz leading-[0.85] [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(76px, 22vw, 168px)' }}>
+                {nome}
+              </h1>
+              <p className="font-prova text-[12px] font-bold uppercase leading-relaxed tracking-[0.14em]">{legend.signature}</p>
             </div>
-            {/* Selo — canto superior direito */}
-            <div className="absolute top-3 right-3 z-10 bg-black px-2 py-1">
-              <p className="font-mono uppercase text-neon-yellow" style={{ fontSize: '9.5px', letterSpacing: '0.14em' }}>
-                {L('Lenda', 'Legend')}
-              </p>
+
+            {/* A carta — moldura de asfalto, OVR em Anton, inclinada como lambe. */}
+            <div className="relative mx-auto w-full max-w-[320px] -rotate-2 bg-asfalto-27 p-3 shadow-[10px_10px_0_rgba(13,13,12,0.85)] transition-transform duration-300 hover:rotate-0">
+              <div className="flex items-start justify-between gap-2 pb-3">
+                <div className="flex flex-col">
+                  <span className="font-impact text-[64px] leading-[0.82] text-ouro-27">{legend.ovr}</span>
+                  <span className="mt-1 font-prova text-[10.5px] font-bold uppercase tracking-[0.2em] text-papel">OVR</span>
+                </div>
+                <MarcaRua tipo="escudo" className="h-10 bg-ouro-27" />
+              </div>
+              <div className="relative aspect-[4/5] w-full overflow-hidden bg-concreto">
+                {legend.photoUrl ? (
+                  <img
+                    src={legend.photoUrl}
+                    alt={legend.fullName}
+                    className="ole-player-photo-bw h-full w-full object-cover transition-all duration-500 hover:[filter:none]"
+                    draggable={false}
+                  />
+                ) : (
+                  <span aria-hidden className="grid h-full w-full place-items-center font-voz text-[160px] leading-none text-ouro-27/30">
+                    {legend.name.charAt(0)}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-3 font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-ouro-27">
+                <span>04 · {L('Lenda', 'Legend')}</span>
+                <span className="block min-w-0 truncate font-voz text-[22px] normal-case tracking-normal text-papel">{nome}</span>
+              </div>
             </div>
           </div>
 
-          {/* 7. Frase — quote logo abaixo da foto */}
-          <blockquote
-            className="mt-8 sm:mt-10 font-semibold text-black/85 text-center max-w-2xl mx-auto leading-snug"
-            style={{ fontSize: 'clamp(17px, 2.4vw, 22px)' }}
+          <figure className="mx-auto flex max-w-3xl flex-col items-center gap-3 text-center">
+            <blockquote className="font-voz leading-[1.05]" style={{ fontSize: 'clamp(28px, 6.5vw, 44px)' }}>
+              “{legend.quote}”
+            </blockquote>
+            {legend.quoteAuthor ? (
+              <figcaption className="font-prova text-[11.5px] font-bold uppercase tracking-[0.16em]">— {legend.quoteAuthor}</figcaption>
+            ) : null}
+          </figure>
+
+          <LegendActions
+            slug={legend.slug}
+            name={legend.name}
+            liked={social.liked}
+            likeCount={social.likeCount}
+            onToggleLike={social.toggleLike}
+            storeHighlightId={legend.storeHighlightId}
+            variant="on-yellow"
+          />
+        </div>
+      </section>
+
+      <FitaRua tags={['#persista', '#lenda', '#correloko', '#respeitoéouro']} inclinacao={2} className="-mt-5 py-2" />
+
+      {/* ── TRAJETÓRIA — datas em spray, marcos em concreto com fio de ouro ── */}
+      <section className="py-10 sm:py-14">
+        <div className="mx-auto flex max-w-5xl flex-col gap-6 px-5 sm:px-8">
+          <div className="flex flex-col gap-1.5">
+            <SecaoRua label={L('Trajetória', 'Career path')} aside={legend.trajectory.length} />
+            <h2 className="font-voz text-[clamp(40px,10vw,60px)] leading-none">{L('Do chão até lenda.', 'From the ground to legend.')}</h2>
+          </div>
+          <div
+            className="ole-scroll-x hide-scrollbar flex snap-x snap-mandatory gap-3 pb-2 sm:gap-4"
+            role="list"
+            aria-label={L(`Marcos da carreira de ${legend.name}`, `${legend.name} career milestones`)}
           >
-            "{legend.quote}"
-          </blockquote>
-          {legend.quoteAuthor ? (
-            <p
-              className="mt-3 text-black/60 font-mono uppercase text-center"
-              style={{ fontSize: '11px', letterSpacing: '0.14em' }}
-            >
-              — {legend.quoteAuthor}
-            </p>
-          ) : null}
-
-          {/* 8. CTA Treinar + 9. Modal social (Curtir + Compartilhar) */}
-          <div className="mt-9 sm:mt-11">
-            <LegendActions
-              slug={legend.slug}
-              name={legend.name}
-              liked={social.liked}
-              likeCount={social.likeCount}
-              onToggleLike={social.toggleLike}
-              storeHighlightId={legend.storeHighlightId}
-              variant="on-yellow"
-            />
+            {legend.trajectory.map((ev, i) => (
+              <article
+                key={ev.year}
+                role="listitem"
+                className={`flex w-[220px] shrink-0 snap-start flex-col gap-3 p-4 sm:w-[240px] ${
+                  i === legend.trajectory.length - 1 ? 'bg-ouro-27 text-asfalto-27' : 'border-l-[5px] border-ouro-27 bg-concreto'
+                }`}
+              >
+                <p className={`font-spray text-[44px] font-black leading-none ${i === legend.trajectory.length - 1 ? '' : 'text-papel'}`}>{ev.year}</p>
+                <p className={`text-[13px] leading-snug ${i === legend.trajectory.length - 1 ? 'font-medium' : 'text-suave'}`}>{ev.text}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ── TRAJETÓRIA — timeline horizontal ──────────────────────── */}
-      <section className="relative bg-deep-black py-10 sm:py-14">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8">
-          <header className="flex items-center gap-3 mb-6">
-            <span aria-hidden className="w-1 h-8 bg-neon-yellow" />
-            <h2
-              className="font-impact uppercase text-neon-yellow leading-[1.1]"
-              style={{ fontSize: 'clamp(28px, 4.5vw, 40px)' }}
-            >
-              {L('Trajetória', 'Career path')}
+      {/* ── DNA DO CAMPEÃO — barras em segmentos de ouro ─────────────── */}
+      <section className="pb-10 sm:pb-14">
+        <div className="mx-auto flex max-w-5xl flex-col gap-6 px-5 sm:px-8">
+          <div className="flex flex-col gap-1.5">
+            <SecaoRua label={L('DNA do campeão', "Champion's DNA")} />
+            <h2 className="font-impact text-[clamp(40px,10vw,64px)] uppercase leading-[0.9]">
+              {L('O que não', 'What you')} <span className="text-ouro-27">{L('se ensina.', "can't teach.")}</span>
             </h2>
-          </header>
-
-          <div className="relative">
-            <div
-              className="ole-scroll-x hide-scrollbar flex gap-3 sm:gap-4 pb-2 snap-x snap-mandatory scroll-smooth"
-              style={{ scrollPaddingLeft: '0px' }}
-              role="list"
-              aria-label={L(`Marcos da carreira de ${legend.name}`, `${legend.name} career milestones`)}
-            >
-              {legend.trajectory.map((ev) => (
-                <article
-                  key={ev.year}
-                  role="listitem"
-                  className="shrink-0 snap-start w-[210px] sm:w-[230px] bg-card border border-white/10 border-l-2 border-l-neon-yellow p-4 transition-colors hover:bg-card-hi"
-                >
-                  <p
-                    className="ole-num text-neon-yellow leading-none"
-                    style={{ fontSize: 'clamp(24px, 3.4vw, 28px)' }}
-                  >
-                    {ev.year}
-                  </p>
-                  <p className="mt-3 text-giz text-[12px] sm:text-[13px] leading-snug">
-                    {ev.text}
-                  </p>
-                </article>
-              ))}
-            </div>
-            <div className="mt-3 h-[3px] bg-card-hi relative overflow-hidden">
-              <div className="absolute inset-y-0 left-0 w-1/3 bg-neon-yellow" aria-hidden />
-            </div>
           </div>
-        </div>
-      </section>
-
-      {/* ── DNA DO CAMPEÃO — grid 3x2 ─────────────────────────────── */}
-      <section className="relative bg-deep-black pb-10 sm:pb-14">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8 relative">
-          <header className="flex items-center gap-3 mb-6">
-            <span aria-hidden className="w-1 h-8 bg-neon-yellow" />
-            <h2
-              className="font-impact uppercase text-neon-yellow leading-[1.1]"
-              style={{ fontSize: 'clamp(28px, 4.5vw, 40px)' }}
-            >
-              {L('DNA do Campeão', "Champion's DNA")}
-            </h2>
-          </header>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {legend.dna.map((attr) => {
               const v = Math.max(0, Math.min(100, attr.value));
               return (
-                <div
-                  key={attr.label}
-                  className="relative bg-card border border-white/10 p-4 overflow-hidden"
-                >
+                <div key={attr.label} className="flex flex-col gap-3 border-l-[5px] border-ouro-27 bg-concreto px-4 py-3.5">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="min-w-0 truncate font-mono uppercase text-cimento" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
-                      {attr.label}
-                    </span>
-                    <span className="ole-num shrink-0 text-neon-yellow leading-none" style={{ fontSize: '28px' }}>
-                      {v}
-                    </span>
+                    <span className="min-w-0 truncate font-prova text-[12px] font-bold uppercase tracking-[0.14em] text-papel">{attr.label}</span>
+                    <span className="shrink-0 font-impact text-[32px] leading-none text-ouro-27 tabular-nums">{v}</span>
                   </div>
-                  <div className="mt-3 h-[3px] bg-card-hi overflow-hidden">
-                    <div
-                      className="h-full bg-neon-yellow transition-all duration-500"
-                      style={{ width: `${v}%` }}
-                      aria-hidden
-                    />
-                  </div>
+                  <BarraSegmentos valor={v} max={100} tom="ouro" />
                 </div>
               );
             })}
@@ -239,45 +172,26 @@ export function Legend() {
         </div>
       </section>
 
-      {/* ── TRIBUTOS — outras lendas falando sobre esta ────────────── */}
+      {/* ── A VOZ DO POVO — tributos colados no muro como lambe ───────── */}
       {legend.tributes && legend.tributes.length > 0 ? (
-        <section className="relative bg-deep-black pb-10 sm:pb-14">
-          <div className="mx-auto max-w-3xl px-5 sm:px-8">
-            <header className="flex items-center gap-3 mb-6">
-              <span aria-hidden className="w-1 h-8 bg-neon-yellow" />
-              <h2
-                className="font-impact uppercase text-neon-yellow leading-[1.1]"
-                style={{ fontSize: 'clamp(28px, 4.5vw, 40px)' }}
+        <section className="pb-12 sm:pb-16">
+          <div className="mx-auto flex max-w-3xl flex-col gap-8 px-5 sm:px-8">
+            <SecaoRua label={L('A voz do povo', 'Voice of the people')} />
+            {legend.tributes.map((t, i) => (
+              <blockquote
+                key={i}
+                className="bg-cal px-5 py-6 text-asfalto-27 shadow-[8px_8px_0_rgba(0,0,0,0.6)] sm:px-7"
+                style={{ transform: `rotate(${i % 2 === 0 ? -1.5 : 1.2}deg)` }}
               >
-                {L('A Voz do Povo', 'Voice of the People')}
-              </h2>
-            </header>
-            <div className="flex flex-col gap-4">
-              {legend.tributes.map((t, i) => (
-                <blockquote
-                  key={i}
-                  className="border-l-[3px] border-l-neon-yellow bg-card px-5 py-5 sm:px-7 sm:py-7"
-                >
-                  <p
-                    className="font-semibold text-giz leading-snug"
-                    style={{ fontSize: 'clamp(17px, 2.4vw, 22px)' }}
-                  >
-                    "{t.text}"
-                  </p>
-                  <footer
-                    className="mt-3 font-mono uppercase text-neon-yellow"
-                    style={{ fontSize: '11px', letterSpacing: '0.14em' }}
-                  >
-                    — {t.author}
-                    {t.context ? (
-                      <span className="text-cimento ml-2 normal-case font-normal">
-                        ({t.context})
-                      </span>
-                    ) : null}
-                  </footer>
-                </blockquote>
-              ))}
-            </div>
+                <p className="font-voz leading-[1.1]" style={{ fontSize: 'clamp(24px, 5.6vw, 34px)' }}>
+                  “{t.text}”
+                </p>
+                <footer className="mt-4 font-prova text-[11.5px] font-bold uppercase tracking-[0.14em]">
+                  — {t.author}
+                  {t.context ? <span className="ml-2 font-normal normal-case tracking-normal">({t.context})</span> : null}
+                </footer>
+              </blockquote>
+            ))}
           </div>
         </section>
       ) : null}

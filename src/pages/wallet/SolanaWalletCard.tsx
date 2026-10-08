@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
 import { conectarOleWallet, oleWalletDisponivel } from '@/supabase/oleWalletConnect';
 import {
   connectAndLinkSolanaWallet,
@@ -9,6 +8,7 @@ import {
   type SolanaWalletLink,
   type SolanaWalletOption,
 } from '@/supabase/solanaWallet';
+import { MarcaRua } from '@/components/ui/Rua';
 import { L } from '@/i18n/L';
 
 function truncateAddress(addr: string): string {
@@ -20,7 +20,8 @@ function truncateAddress(addr: string): string {
  * carteira Solana instalada pelo Wallet Standard — não só a Phantom — e só
  * vincula depois que a própria carteira assina. Ver src/supabase/solanaWallet.ts.
  *
- * VOLT2: categoria em #hashtag, uma linha por texto, a ação é o nome da carteira.
+ * DS 2027: vinculada = carteirinha de sócio (RESPEITO); sem vínculo = vazio
+ * com saída. A ação é o nome da carteira.
  */
 export function SolanaWalletCard() {
   const [link, setLink] = useState<SolanaWalletLink | null>(null);
@@ -85,79 +86,99 @@ export function SolanaWalletCard() {
 
   const verified = Boolean(link?.verified);
 
+  // ── VINCULADA: a carteirinha de sócio (DS 2027 · 3d). Asfalto com fio de
+  // ouro e o canhoto em ouro chapado — a única peça com canto redondo do DS.
+  // Só mostra o que é real: o endereço e o ano do vínculo.
+  if (verified && link) {
+    const desde = link.linkedAt ? new Date(link.linkedAt).getFullYear() : null;
+    return (
+      <section
+        aria-label={L('Carteira Solana vinculada', 'Linked Solana wallet')}
+        className="flex min-h-[176px] min-w-0 overflow-hidden rounded-[18px] border-[3px] border-ouro-27 bg-asfalto-27"
+      >
+        <div className="rua-grao flex min-w-0 grow flex-col justify-between gap-4 bg-concreto p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <MarcaRua tipo="wordmark" label="Olefoot" className="h-[15px] bg-papel" />
+            <span className="inline-flex shrink-0 items-center gap-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo">
+              Solana <span aria-hidden className="text-ouro-27">●</span>
+            </span>
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.22em] text-ouro-27">
+              {L('Sócio de respeito', 'Member of respect')}
+            </span>
+            <span className="block min-w-0 truncate font-prova text-[clamp(20px,6vw,26px)] font-bold text-papel" title={link.walletAddress}>
+              {truncateAddress(link.walletAddress)}
+            </span>
+            <span className="font-prova text-[11.5px] uppercase tracking-[0.12em] text-suave">
+              {[L('assinada pela carteira', 'signed by the wallet'), desde ? L(`desde ${desde}`, `since ${desde}`) : null].filter(Boolean).join(' · ')}
+            </span>
+          </div>
+        </div>
+        <div className="flex w-[26%] max-w-[120px] shrink-0 items-center justify-center bg-ouro-27 px-3">
+          <MarcaRua tipo="nove" className="w-full max-w-[84px] bg-asfalto-27" />
+        </div>
+      </section>
+    );
+  }
+
+  // ── SEM VÍNCULO: vazio com saída. Tracejado, frase na voz, e a ação é o
+  // nome da carteira.
   return (
-    <section className="border border-white/10 bg-panel px-5 py-4">
+    <section className="border-2 border-dashed border-fio px-4 py-5 sm:px-5">
       <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-mono text-[11.5px] text-poeira">#solana</p>
-          {verified && link ? (
-            <p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm text-white">
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-alta" strokeWidth={2.5} />
-              <span className="truncate font-mono">{truncateAddress(link.walletAddress)}</span>
-            </p>
-          ) : (
-            <p className="mt-1 truncate text-[13px] text-giz">
-              {link ? L('Confirme com a carteira', 'Confirm with your wallet') : L('Carteira na Solana', 'Solana wallet')}
-            </p>
-          )}
-        </div>
+        <p className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">— #solana</p>
+        <span className="inline-flex shrink-0 items-center gap-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo">
+          Solana <span aria-hidden className="text-fio">●</span>
+        </span>
       </div>
+      <p className="mt-2 font-voz text-[clamp(30px,8.5vw,40px)] leading-[0.95] text-papel">
+        {link ? L('Confirme com a carteira', 'Confirm with your wallet') : L('Tua chave, teu cofre.', 'Your key, your vault.')}
+      </p>
 
-      {!verified && (
-        /* A fronteira, dita onde a dúvida nasce: quem só quer jogar não precisa
-           disto. Sem esta linha, o card parece uma etapa obrigatória do cadastro
-           — e a carteira é a única parte do produto que a pessoa pode perder
-           sozinha. Ninguém deve ser empurrado pra ela. */
-        <p className="mt-2 text-[12px] leading-relaxed text-cimento">
-          {L('Opcional. Seu time, seu EXP e suas compras continuam funcionando sem ela.', 'Optional. Your team, your EXP and your purchases keep working without it.')}
-        </p>
+      {/* A fronteira, dita onde a dúvida nasce: quem só quer jogar não precisa
+          disto. Sem esta linha, o card parece uma etapa obrigatória do cadastro
+          — e a carteira é a única parte do produto que a pessoa pode perder
+          sozinha. Ninguém deve ser empurrado pra ela. */}
+      <p className="mt-2 text-[13px] leading-relaxed text-suave">
+        {L('Opcional. Seu time, seu EXP e suas compras continuam funcionando sem ela.', 'Optional. Your team, your EXP and your purchases keep working without it.')}
+      </p>
+
+      {oleWalletDisponivel() && (
+        <button
+          type="button"
+          onClick={() => void onLinkOleWallet()}
+          disabled={busy != null}
+          className="mt-4 inline-flex min-h-[52px] w-full items-center justify-center gap-2.5 bg-rua px-5 font-impact text-[20px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)] disabled:pointer-events-none disabled:opacity-40"
+        >
+          <MarcaRua tipo="escudo" className="h-5 bg-asfalto-27" />
+          {busy === 'OLEWALLET' ? L('Aguardando…', 'Waiting…') : <>OLEWALLET <span aria-hidden>→</span></>}
+        </button>
       )}
 
-      {!verified && (
-        <div className="mt-2.5 flex flex-wrap gap-2">
-          {oleWalletDisponivel() && (
+      {wallets.length > 0 ? (
+        <div className="mt-4 flex flex-wrap gap-2.5">
+          {wallets.map((w) => (
             <button
+              key={w.name}
               type="button"
-              onClick={() => void onLinkOleWallet()}
+              onClick={() => void onLink(w)}
               disabled={busy != null}
-              className="btn-primary px-3 py-1.5 text-[12px] disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex min-h-[46px] min-w-0 items-center gap-2 border-2 border-papel px-4 font-impact text-[17px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27 disabled:pointer-events-none disabled:opacity-40"
             >
-              <span className="btn-primary-inner flex items-center gap-1.5">
-                <img src="/brand/olefoot-icone-yellow-01.svg" alt="" className="h-4 w-4" />
-                {busy === 'OLEWALLET' ? L('Aguardando…', 'Waiting…') : 'OLEWALLET'}
-              </span>
+              <img src={w.icon} alt="" className="h-5 w-5 shrink-0" />
+              <span className="min-w-0 truncate">{busy === w.name ? L('Assinando…', 'Signing…') : w.name}</span>
             </button>
-          )}
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 space-y-1 border-t-2 border-linha pt-3">
+          <p className="font-prova text-[12px] text-mudo">{L('Nenhuma extensão de carteira neste navegador', 'No wallet extension in this browser')}</p>
+          <p className="font-prova text-[12px] leading-relaxed text-fio">{L('Use a OLEWALLET acima — ou abra o jogo pelo app da Phantom ou da MetaMask', 'Use the OLEWALLET above — or open the game in the Phantom or MetaMask app')}</p>
         </div>
       )}
 
-      {!verified && (
-        wallets.length > 0 ? (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {wallets.map((w) => (
-              <button
-                key={w.name}
-                type="button"
-                onClick={() => void onLink(w)}
-                disabled={busy != null}
-                className="btn-secondary px-3 py-1.5 text-[12px] disabled:pointer-events-none disabled:opacity-40"
-              >
-                <span className="btn-secondary-inner">
-                  <img src={w.icon} alt="" className="h-4 w-4" />
-                  {busy === w.name ? L('Assinando…', 'Signing…') : w.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-2 space-y-1">
-            <p className="text-[12px] text-cimento">{L('Nenhuma extensão de carteira neste navegador', 'No wallet extension in this browser')}</p>
-            <p className="text-[12px] text-poeira">{L('Use a OLEWALLET acima — ou abra o jogo pelo app da Phantom ou da MetaMask', 'Use the OLEWALLET above — or open the game in the Phantom or MetaMask app')}</p>
-          </div>
-        )
-      )}
-
-      {error && <p className="mt-2 text-[12px] text-baixa">{error}</p>}
+      {error && <p role="alert" className="mt-3 font-prova text-[12px] text-baixa">{error}</p>}
     </section>
   );
 }

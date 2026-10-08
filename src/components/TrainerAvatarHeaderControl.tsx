@@ -15,18 +15,18 @@ export function TrainerAvatarHeaderControl({ className }: { className?: string }
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-white/20 bg-white/5 transition-colors hover:border-neon-yellow/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon-yellow"
+        className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-linha bg-concreto transition-colors hover:border-rua focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rua"
         title={L('Carregar foto do treinador', 'Upload manager photo')}
         aria-label={L('Carregar ou alterar foto do treinador', 'Upload or change manager photo')}
       >
         {avatar ? (
           <img src={avatar} alt="" className="h-full w-full object-cover" />
         ) : (
-          <span className="flex h-full w-full items-center justify-center text-white/45">
+          <span className="flex h-full w-full items-center justify-center text-mudo">
             <User className="h-5 w-5" />
           </span>
         )}
-        <span className="pointer-events-none absolute bottom-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-neon-yellow text-black shadow-sm ring-2 ring-deep-black">
+        <span className="pointer-events-none absolute bottom-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-rua text-asfalto-27 ring-2 ring-asfalto-27">
           <Camera className="h-2.5 w-2.5" strokeWidth={2.5} />
         </span>
       </button>
@@ -39,7 +39,7 @@ export function TrainerAvatarHeaderControl({ className }: { className?: string }
       />
       {error ? (
         <p
-          className="absolute left-0 top-[calc(100%+4px)] z-[60] max-w-[min(220px,70vw)] text-[10px] leading-tight text-red-400"
+          className="absolute left-0 top-[calc(100%+4px)] z-[60] max-w-[min(220px,70vw)] font-prova text-[10px] leading-tight text-baixa"
           role="alert"
         >
           {error}

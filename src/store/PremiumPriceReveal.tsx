@@ -1,6 +1,6 @@
 /**
  * Preço em destaque para itens caros
- * Para itens acima de ¢50, mostra o preço grande (Anton, sem itálico) no hover.
+ * Para itens acima de ¢50, mostra o preço grande em spray no hover (DS 2027).
  */
 
 import { motion, AnimatePresence } from 'motion/react';
@@ -20,7 +20,7 @@ export function PremiumPriceReveal({ item, children, onSelect }: PremiumPriceRev
   const isPremium = (item.priceBroCents ?? 0) >= 5000; // ¢50+
 
   if (!isPremium) {
-    return <div onClick={onSelect}>{children}</div>;
+    return <div className="h-full" onClick={onSelect}>{children}</div>;
   }
 
   const priceDisplay = item.priceBroCents
@@ -29,14 +29,14 @@ export function PremiumPriceReveal({ item, children, onSelect }: PremiumPriceRev
 
   return (
     <motion.div
-      className="relative"
+      className="relative h-full"
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       onClick={onSelect}
     >
       {children}
 
-      {/* Overlay de preço — fundo chapado, sem vidro fosco (VOLT2) */}
+      {/* Overlay de preço — asfalto chapado, preço em spray (DS 2027). */}
       <AnimatePresence>
         {isHovered && (
           <motion.div
@@ -44,43 +44,17 @@ export function PremiumPriceReveal({ item, children, onSelect }: PremiumPriceRev
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-lg bg-deep-black"
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 border-[3px] border-ouro-27 bg-asfalto-27"
           >
-            <motion.div
-              initial={{ scale: 0.9, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="text-center"
-            >
-              <p
-                className="mb-1 uppercase tracking-[0.3em] text-neon-yellow/70"
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '9px',
-                }}
-              >
-                {L('Preço Premium', 'Premium Price')}
-              </p>
-              <p
-                className="font-impact tabular-nums text-neon-yellow"
-                style={{
-                  fontSize: 'clamp(2rem, 5vw, 3rem)',
-                  letterSpacing: '-0.01em',
-                  lineHeight: 1,
-                }}
-              >
-                {priceDisplay}
-              </p>
-              <p
-                className="mt-2 text-white/60"
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '11px',
-                }}
-              >
-                {L('Clique para ver detalhes', 'Click for details')}
-              </p>
-            </motion.div>
+            <span className="font-prova text-[11px] font-bold uppercase tracking-[0.22em] text-mudo">
+              — {L('Preço premium', 'Premium price')}
+            </span>
+            <span className="font-spray text-[clamp(48px,12vw,72px)] font-black leading-[0.85] tabular-nums text-ouro-27">
+              {priceDisplay}
+            </span>
+            <span className="font-impact text-[17px] uppercase text-rua">
+              {L('Ver detalhes', 'See details')} <span aria-hidden>→</span>
+            </span>
           </motion.div>
         )}
       </AnimatePresence>

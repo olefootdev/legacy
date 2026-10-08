@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Zap, ShoppingCart, Trophy, Users, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Hashtag, SeletorDeIdioma } from '@/components/ui';
+import { FitaRua, Hashtag, MarcaRua, SeletorDeIdioma } from '@/components/ui';
 import { useGameDispatch, getGameState } from '@/game/store';
 import { signInWithEmail, fetchOnboardingProfile, sendPasswordResetEmail, saveOnboardingProfile } from '@/supabase/auth';
 import type { FormationSchemeId } from '@/match-engine/types';
@@ -37,38 +37,29 @@ const VALUE_PROP = {
 };
 
 /**
- * Feature card VOLT2 — card chapado (bg-panel), ícone volt em caixa de canto
- * vivo, título em Anton. Sem trilho lateral, sem vidro, sem pular no hover.
- * O texto vem de VALUE_PROP.
+ * DS 2027 · "RESPEITO É OURO" — o login é a capa do PDF: fita inclinada,
+ * o grito em Anton com OURO chapado, o 9 de respeito. Formulário em concreto,
+ * rótulo em mono, botão rua com sombra dura de papel.
  */
-function FeatureCard({
-  icon,
-  title,
-  desc,
-}: {
-  icon: import('react').ReactNode;
-  title: string;
-  desc: string;
-}) {
+const INPUT =
+  'w-full min-h-[50px] border-2 border-linha bg-concreto px-3.5 py-3 text-[15px] text-papel placeholder:text-fio focus:border-rua focus:outline-none';
+const LABEL = 'mb-1.5 block font-prova text-[11.5px] font-bold uppercase tracking-[0.2em] text-mudo';
+const CAIXA = 'flex flex-col border-t-2 border-papel pt-5';
+const TITULO = 'font-impact text-[clamp(38px,11vw,52px)] uppercase leading-[0.92] text-papel';
+/** Botão de ação do DS (rua + sombra dura de papel) — aqui precisa ser type="submit". */
+const BOTAO_RUA =
+  'inline-flex min-h-[54px] w-full items-center justify-center gap-2 bg-rua px-6 font-impact text-[21px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rua disabled:pointer-events-none disabled:opacity-40';
+const VOLTAR =
+  'mt-5 min-h-[40px] self-center font-prova text-[12px] font-bold uppercase tracking-[0.18em] text-mudo transition-colors hover:text-papel';
+
+function Erro({ children }: { children: import('react').ReactNode }) {
   return (
-    <div className="flex items-center gap-3 border border-white/10 bg-panel px-4 py-3.5">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-white/16 bg-deep-black text-neon-yellow">
-        {icon}
-      </div>
-      <div className="min-w-0 flex-1">
-        <h3 className="truncate font-impact text-[17px] uppercase leading-[1.1] text-white">{title}</h3>
-        <p className="mt-0.5 text-[12px] leading-snug text-cimento">{desc}</p>
-      </div>
+    <div role="alert" className="flex items-start gap-2.5 border-l-[5px] border-baixa bg-concreto px-3.5 py-3 text-[13px] leading-snug text-papel">
+      <span aria-hidden className="shrink-0 font-impact text-baixa">✗</span>
+      <span className="flex-1">{children}</span>
     </div>
   );
 }
-
-/** Campo de formulário VOLT2: asfalto chapado, canto vivo, foco em volt. */
-const INPUT =
-  'w-full border border-white/16 bg-deep-black px-3 py-2.5 text-sm text-white placeholder:text-poeira focus:border-neon-yellow focus:outline-none';
-const LABEL = 'mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento';
-const CAIXA = 'border border-white/10 bg-panel px-5 py-6 sm:px-6';
-const TITULO = 'font-impact text-[30px] uppercase leading-[1.05] text-white';
 
 export function Login() {
   const navigate = useNavigate();
@@ -250,341 +241,315 @@ export function Login() {
   };
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-deep-black">
+    <div className="rua-grao relative flex min-h-svh flex-col overflow-hidden bg-asfalto-27">
       {/* Quem veio de um convite de expansão precisa ver isso aqui — senão a
           tela de venda apaga o motivo pelo qual a pessoa clicou. */}
       <div className="relative z-20"><FaixaConvitePendente /></div>
+      {/* Foto do muro só no topo, apagada; o scrim (preto → transparente) é o
+          único degradê que o DS aceita: escurecer foto pra leitura. */}
       <div
-        className="absolute inset-0 z-0 scale-105 bg-cover bg-[center_22%] bg-no-repeat sm:bg-center"
+        className="absolute inset-x-0 top-0 z-0 h-[62svh] bg-cover bg-[center_22%] bg-no-repeat opacity-45 grayscale sm:bg-center"
         style={{ backgroundImage: 'url(/login-hero.png)' }}
         aria-hidden
       />
-      {/* Scrim da foto (legibilidade) — o único degradê que o VOLT2 aceita aqui.
-          Clareia em cima pra foto respirar e fecha em asfalto onde mora o texto. */}
       <div
         aria-hidden
-        className="absolute inset-0 z-0"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(13,13,13,0.85) 0%, rgba(13,13,13,0.35) 18%, rgba(13,13,13,0.7) 40%, rgba(13,13,13,0.93) 60%, #0D0D0D 85%)',
-        }}
+        className="absolute inset-x-0 top-0 z-0 h-[62svh]"
+        style={{ background: 'linear-gradient(180deg, rgba(13,13,12,0.55) 0%, rgba(13,13,12,0.75) 45%, #0D0D0C 100%)' }}
       />
 
       <header
         role="banner"
-        className="relative z-[100] w-full shrink-0 bg-transparent px-4 pb-2 pt-5 sm:px-6 sm:pb-3 sm:pt-6 md:px-8"
+        className="relative z-[100] w-full shrink-0 px-4 pb-2 pt-5 sm:px-6 sm:pb-3 sm:pt-6 md:px-8"
       >
         <div className="mx-auto flex w-full min-w-0 max-w-6xl items-center justify-between gap-3">
-          <Link to="/login" className="flex min-w-0 flex-1 items-center gap-3" aria-label="Olefoot">
-            <img
-              src="/test-pitch/olefoot-logo-game.svg"
-              alt="Olefoot"
-              width={260}
-              height={72}
-              decoding="async"
-              fetchPriority="high"
-              className="h-10 w-auto max-h-11 max-w-[min(100%,280px)] object-contain object-left sm:h-12 sm:max-h-[3.25rem]"
-            />
+          <Link to="/login" className="flex min-w-0 flex-1 items-center" aria-label="Olefoot">
+            <MarcaRua tipo="wordmark" label="Olefoot" className="h-[22px] bg-rua sm:h-[26px]" />
           </Link>
           <div className="flex shrink-0 items-center gap-3">
-            <Hashtag className="hidden text-[12px] text-giz sm:inline">{L('#manager #futebol', '#manager #football')}</Hashtag>
+            <Hashtag className="hidden text-[12px] text-suave sm:inline">{L('#manager #futebol', '#manager #football')}</Hashtag>
             <SeletorDeIdioma />
           </div>
         </div>
       </header>
 
+      {/* A fita da capa: #persista #correloko, inclinada, colada no muro. */}
+      <FitaRua inclinacao={-3} className="relative z-10 mt-3 py-3" />
+
       <div className="relative z-10 flex min-h-0 flex-1 flex-col px-5 pb-6 sm:px-8 sm:pb-8 md:px-10">
-        <div className="min-h-[10vh] shrink-0 sm:min-h-[12vh] md:min-h-[14vh]" aria-hidden />
+        <div className="min-h-[5vh] shrink-0 sm:min-h-[8vh]" aria-hidden />
 
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-end">
           {mode === 'landing' ? (
             <>
               <div className="flex flex-col gap-4">
-                <span className="self-start bg-neon-yellow px-2.5 pb-1 pt-[5px] font-impact text-[14px] uppercase tracking-[0.06em] text-black">
-                  {L('Jogue agora', 'Play now')}
+                <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.24em] text-rua">
+                  Olefoot 2027 — {L('Jogue agora', 'Play now')}
                 </span>
 
-                                <h1
-                  className="font-impact uppercase leading-[1.04] text-white"
-                  style={{ fontSize: 'clamp(32px, 9.5vw, 52px)' }}
-                >
-                  <span className="text-white">{VALUE_PROP.headline.white1} </span>
-                  <span className="text-neon-yellow">{VALUE_PROP.headline.yellow} </span>
-                  <span className="text-white">{VALUE_PROP.headline.white2}</span>
-                </h1>
-
-                <p className="ole-eyebrow-poster">{VALUE_PROP.subheadline}</p>
-
-                <div className="flex flex-wrap gap-x-4 gap-y-2 text-[12px] font-medium text-giz">
-                  {VALUE_PROP.features.map((feature, i) => (
-                    <span key={i} className="flex items-center gap-1.5">
-                      <feature.icon className="h-3.5 w-3.5 shrink-0 text-neon-yellow" />
-                      {feature.text}
-                    </span>
-                  ))}
+                <div className="flex min-w-0 items-end justify-between gap-3">
+                  <h1
+                    className="min-w-0 font-impact uppercase leading-[0.9] text-papel"
+                    style={{ fontSize: 'clamp(56px, 17vw, 92px)' }}
+                  >
+                    {L('Respeito', 'Respect')}
+                    <br />
+                    {L('é ', 'is ')}
+                    <span className="text-ouro-27">{L('ouro.', 'gold.')}</span>
+                  </h1>
+                  <div className="flex w-[22%] max-w-[96px] shrink-0 flex-col items-center gap-1 pb-1">
+                    <MarcaRua tipo="nove" label={L('9 de respeito', '9 of respect')} className="w-full bg-rua" />
+                  </div>
                 </div>
+
+                {/* A frase do fundador, na voz. */}
+                <p className="font-voz text-[clamp(22px,6.4vw,28px)] leading-[1.08] text-papel">
+                  {VALUE_PROP.headline.white1}{' '}
+                  <span className="text-rua">{VALUE_PROP.headline.yellow}</span>{' '}
+                  {VALUE_PROP.headline.white2}
+                </p>
+
+                <p className="font-prova text-[12.5px] leading-relaxed text-suave">
+                  {L(
+                    'A rua é o suporte. O jogo é a régua. O ouro é o prêmio de quem subiu do chão até lenda.',
+                    'The street is the support. The game is the measure. Gold is the prize for whoever rose from the ground to legend.',
+                  )}
+                </p>
               </div>
 
-              {/* Os destaques da proposta acima, em card. */}
-              <div className="mt-6 space-y-3">
-                <FeatureCard
-                  icon={<ShoppingCart className="h-5 w-5" strokeWidth={2.5} />}
-                  title={L('Mercado Real', 'Real Market')}
-                  desc={L('Leilões ao vivo, garimpe talentos baratos e venda por fortuna', 'Live auctions: scout cheap talent and sell for a fortune')}
-                />
-                <FeatureCard
-                  icon={<Trophy className="h-5 w-5" strokeWidth={2.5} />}
-                  title={L('Construa Sua Dinastia', 'Build Your Dynasty')}
-                  desc={L('Décadas de carreira, jogadores envelhecem e novos talentos surgem', 'Decades of career: players age and new talent emerges')}
-                />
-                <FeatureCard
-                  icon={<Zap className="h-5 w-5" strokeWidth={2.5} />}
-                  title={L('O Jogo Começou', 'Kick-off')}
-                  desc={L('Mostre que você entende de futebol e domine o ranking mundial', 'Prove you know football and rule the world ranking')}
-                />
-              </div>
+              {/* O que é o jogo — lista de muro, não fila de cards. */}
+              <ul className="mt-6 flex flex-col border-t-2 border-linha" aria-label={VALUE_PROP.subheadline}>
+                {[
+                  {
+                    icon: ShoppingCart,
+                    title: L('Mercado Real', 'Real Market'),
+                    desc: L('Leilões ao vivo, garimpe talentos baratos e venda por fortuna', 'Live auctions: scout cheap talent and sell for a fortune'),
+                  },
+                  {
+                    icon: Trophy,
+                    title: L('Construa Sua Dinastia', 'Build Your Dynasty'),
+                    desc: L('Décadas de carreira, jogadores envelhecem e novos talentos surgem', 'Decades of career: players age and new talent emerges'),
+                  },
+                  {
+                    icon: Zap,
+                    title: L('O Jogo Começou', 'Kick-off'),
+                    desc: L('Mostre que você entende de futebol e domine o ranking mundial', 'Prove you know football and rule the world ranking'),
+                  },
+                ].map((f, i) => (
+                  <li key={f.title} className="flex min-w-0 items-center gap-3.5 border-b border-linha py-3">
+                    <span className="w-9 shrink-0 font-spray text-[26px] font-black leading-none text-rua">
+                      0{i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate font-impact text-[19px] uppercase leading-[1.05] text-papel">{f.title}</h3>
+                      <p className="mt-0.5 text-[12.5px] leading-snug text-suave">{f.desc}</p>
+                    </div>
+                    <f.icon aria-hidden className="h-5 w-5 shrink-0 text-mudo" strokeWidth={2.25} />
+                  </li>
+                ))}
+              </ul>
+              <p className="sr-only">{VALUE_PROP.features.map((f) => f.text).join(' · ')}</p>
             </>
           ) : mode === 'complete' ? (
             <div className={CAIXA}>
-              <div>
-                <span className="ole-eyebrow-poster mb-3">{L('Bem-vindo de volta', 'Welcome back')}</span>
-                <h2 className={TITULO}>
-                  {L('Completar Cadastro', 'Complete Sign-up')}
-                </h2>
-                <p className="mt-2 text-[12px] leading-relaxed text-cimento">
-                  {L('Encontramos tua conta da era anterior. Completa os dados abaixo para entrar na nova plataforma.', 'We found your account from the previous era. Fill in the details below to join the new platform.')}
-                </p>
-                <form onSubmit={(e) => void onCompleteSubmit(e)} className="mt-4 space-y-3" autoComplete="on">
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="block">
-                      <span className={LABEL}>{L('Nome', 'First name')}</span>
-                      <input
-                        type="text"
-                        autoComplete="given-name"
-                        value={compFirstName}
-                        onChange={(e) => setCompFirstName(e.target.value)}
-                        required
-                        className={INPUT}
-                      />
-                    </label>
-                    <label className="block">
-                      <span className={LABEL}>{L('Sobrenome', 'Last name')}</span>
-                      <input
-                        type="text"
-                        autoComplete="family-name"
-                        value={compLastName}
-                        onChange={(e) => setCompLastName(e.target.value)}
-                        required
-                        className={INPUT}
-                      />
-                    </label>
-                  </div>
-                  <label className="block">
-                    <span className={LABEL}>{L('Telefone (com DDD)', 'Phone (with country code)')}</span>
-                    <input
-                      type="tel"
-                      autoComplete="tel"
-                      value={compPhone}
-                      onChange={(e) => setCompPhone(e.target.value)}
-                      placeholder="+5511999999999"
-                      className={INPUT}
-                    />
-                  </label>
-                  <label className="block">
-                    <span className={LABEL}>{L('Nome do Clube', 'Club name')}</span>
+              <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.22em] text-ouro-27">
+                — {L('Bem-vindo de volta', 'Welcome back')}
+              </span>
+              <h2 className={cn(TITULO, 'mt-2')}>{L('Completar cadastro', 'Complete sign-up')}</h2>
+              <p className="mt-3 font-voz text-[21px] leading-[1.1] text-suave">
+                {L('Tua conta da era anterior tá aqui. Completa e entra.', 'Your account from the previous era is here. Fill it in and come in.')}
+              </p>
+              <p className="sr-only">
+                {L('Encontramos tua conta da era anterior. Completa os dados abaixo para entrar na nova plataforma.', 'We found your account from the previous era. Fill in the details below to join the new platform.')}
+              </p>
+              <form onSubmit={(e) => void onCompleteSubmit(e)} className="mt-5 flex flex-col gap-3.5" autoComplete="on">
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block min-w-0">
+                    <span className={LABEL}>{L('Nome', 'First name')}</span>
                     <input
                       type="text"
-                      value={compClubName}
-                      onChange={(e) => setCompClubName(e.target.value)}
+                      autoComplete="given-name"
+                      value={compFirstName}
+                      onChange={(e) => setCompFirstName(e.target.value)}
                       required
-                      placeholder={L('Ex: Olefoot FC', 'e.g. Olefoot FC')}
                       className={INPUT}
                     />
                   </label>
-                  <label className="block">
-                    <span className={LABEL}>{L('Formação', 'Formation')}</span>
-                    <select
-                      value={compFormation}
-                      onChange={(e) => setCompFormation(e.target.value as FormationSchemeId)}
+                  <label className="block min-w-0">
+                    <span className={LABEL}>{L('Sobrenome', 'Last name')}</span>
+                    <input
+                      type="text"
+                      autoComplete="family-name"
+                      value={compLastName}
+                      onChange={(e) => setCompLastName(e.target.value)}
+                      required
                       className={INPUT}
-                    >
-                      {(['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1', '5-3-2', '3-4-3'] as FormationSchemeId[]).map((f) => (
-                        <option key={f} value={f}>{f}</option>
-                      ))}
-                    </select>
+                    />
                   </label>
-                  {error ? (
-                    <div className="flex items-start gap-2 border border-baixa/50 bg-baixa/10 px-3 py-2.5 text-[12px] leading-snug text-giz">
-                      <span className="shrink-0 text-baixa">✗</span>
-                      <span className="flex-1">{error}</span>
-                    </div>
-                  ) : null}
-                  <button
-                    type="submit"
-                    disabled={busy || !compFirstName.trim() || !compLastName.trim() || !compClubName.trim()}
-                    className="btn-primary flex h-12 w-full items-center justify-center disabled:pointer-events-none disabled:opacity-40"
+                </div>
+                <label className="block">
+                  <span className={LABEL}>{L('Telefone (com DDD)', 'Phone (with country code)')}</span>
+                  <input
+                    type="tel"
+                    autoComplete="tel"
+                    value={compPhone}
+                    onChange={(e) => setCompPhone(e.target.value)}
+                    placeholder="+5511999999999"
+                    className={INPUT}
+                  />
+                </label>
+                <label className="block">
+                  <span className={LABEL}>{L('Nome do Clube', 'Club name')}</span>
+                  <input
+                    type="text"
+                    value={compClubName}
+                    onChange={(e) => setCompClubName(e.target.value)}
+                    required
+                    placeholder={L('Ex: Olefoot FC', 'e.g. Olefoot FC')}
+                    className={INPUT}
+                  />
+                </label>
+                <label className="block">
+                  <span className={LABEL}>{L('Formação', 'Formation')}</span>
+                  <select
+                    value={compFormation}
+                    onChange={(e) => setCompFormation(e.target.value as FormationSchemeId)}
+                    className={INPUT}
                   >
-                    <span className="btn-primary-inner justify-center py-1">
-                      {busy ? L('Salvando…', 'Saving…') : L('Entrar na Plataforma', 'Enter the Platform')}
-                    </span>
-                  </button>
-                </form>
-              </div>
+                    {(['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1', '5-3-2', '3-4-3'] as FormationSchemeId[]).map((f) => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </label>
+                {error ? <Erro>{error}</Erro> : null}
+                <button
+                  type="submit"
+                  disabled={busy || !compFirstName.trim() || !compLastName.trim() || !compClubName.trim()}
+                  className={cn(BOTAO_RUA, 'mt-1')}
+                >
+                  {busy ? L('Salvando…', 'Saving…') : <>{L('Entrar na Plataforma', 'Enter the Platform')} <span aria-hidden>→</span></>}
+                </button>
+              </form>
             </div>
           ) : mode === 'forgot' ? (
             <div className={CAIXA}>
-              <div>
-                <h2 className={TITULO}>
-                  {L('Recuperar Senha', 'Reset Password')}
-                </h2>
-                {forgotSent ? (
-                  <div className="mt-4 space-y-3">
-                    <p className="border border-alta/40 bg-alta/10 px-3 py-2 text-[12px] text-giz">
-                      {emIngles()
-                        ? <>✓ We sent a reset link to <strong>{email}</strong>. Open the email to set a new password.</>
-                        : <>✓ Enviamos um link de recuperação para <strong>{email}</strong>. Abre o e-mail para definir uma nova senha.</>}
-                    </p>
-                    <p className="text-[11px] text-cimento">
-                      {L('Não recebeu? Verifica a pasta de spam ou tenta novamente.', "Didn't get it? Check your spam folder or try again.")}
-                    </p>
-                  </div>
-                ) : (
-                  <form onSubmit={(e) => void onForgotSubmit(e)} className="mt-4 space-y-3" autoComplete="on">
-                    <p className="text-[12px] text-giz">
-                      {L('Informa o e-mail da tua conta. Te enviaremos um link para redefinir a senha.', "Enter your account email. We'll send you a link to reset your password.")}
-                    </p>
-                    <label className="block">
-                      <span className={LABEL}>{L('E-mail', 'Email')}</span>
-                      <input
-                        type="email"
-                        autoComplete="email"
-                        value={email}
-                        onChange={(e: import('react').ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                        required
-                        className={INPUT}
-                      />
-                    </label>
-                    {error ? (
-                      <div className="flex items-start gap-2 border border-baixa/50 bg-baixa/10 px-3 py-2.5 text-[12px] leading-snug text-giz">
-                        <span className="shrink-0 text-baixa">✗</span>
-                        <span className="flex-1">{error}</span>
-                      </div>
-                    ) : null}
-                    <button
-                      type="submit"
-                      disabled={busy || !email}
-                      className="btn-primary flex h-12 w-full items-center justify-center disabled:pointer-events-none disabled:opacity-40"
-                    >
-                      <span className="btn-primary-inner justify-center py-1">
-                        {busy ? L('Enviando…', 'Sending…') : L('Enviar link', 'Send link')}
-                      </span>
-                    </button>
-                  </form>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('landing');
-                    setError(null);
-                    setForgotSent(false);
-                  }}
-                  className="mt-4 w-full text-center text-[12px] text-cimento transition-colors hover:text-white"
-                >
-                  ← {L('Voltar', 'Back')}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className={CAIXA}>
-              <div>
-                <h2 className={TITULO}>
-                  {L('Entrar', 'Sign in')}
-                </h2>
-                <form onSubmit={(e) => void onSubmit(e)} className="mt-4 space-y-3" autoComplete="on">
+              <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.22em] text-mudo">— {L('Senha', 'Password')}</span>
+              <h2 className={cn(TITULO, 'mt-2')}>{L('Recuperar senha', 'Reset password')}</h2>
+              {forgotSent ? (
+                <div className="mt-5 flex flex-col gap-3">
+                  {/* Lambe colado: o aviso de que o link saiu. */}
+                  <p className="-rotate-1 bg-cal px-4 py-3.5 text-[13.5px] leading-snug text-asfalto-27">
+                    {emIngles()
+                      ? <>✓ We sent a reset link to <strong>{email}</strong>. Open the email to set a new password.</>
+                      : <>✓ Enviamos um link de recuperação para <strong>{email}</strong>. Abre o e-mail para definir uma nova senha.</>}
+                  </p>
+                  <p className="font-prova text-[12px] text-mudo">
+                    {L('Não recebeu? Verifica a pasta de spam ou tenta novamente.', "Didn't get it? Check your spam folder or try again.")}
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={(e) => void onForgotSubmit(e)} className="mt-4 flex flex-col gap-3.5" autoComplete="on">
+                  <p className="text-[13px] leading-snug text-suave">
+                    {L('Informa o e-mail da tua conta. Te enviaremos um link para redefinir a senha.', "Enter your account email. We'll send you a link to reset your password.")}
+                  </p>
                   <label className="block">
                     <span className={LABEL}>{L('E-mail', 'Email')}</span>
                     <input
                       type="email"
                       autoComplete="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e: import('react').ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                       required
                       className={INPUT}
                     />
                   </label>
-                  <label className="block">
-                    <span className={LABEL}>{L('Senha', 'Password')}</span>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        autoComplete="current-password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        minLength={6}
-                        className={cn(INPUT, 'pr-10')}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-cimento transition-colors hover:text-white"
-                        aria-label={showPassword ? L('Ocultar senha', 'Hide password') : L('Mostrar senha', 'Show password')}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </label>
-                  {error ? (
-                    <div className="flex items-start gap-2 border border-baixa/50 bg-baixa/10 px-3 py-2.5 text-[12px] leading-snug text-giz">
-                      <span className="shrink-0 text-baixa">✗</span>
-                      <span className="flex-1">{error}</span>
-                    </div>
-                  ) : null}
-                  <button
-                    type="submit"
-                    disabled={busy || !email || !password}
-                    className="btn-primary flex h-12 w-full items-center justify-center disabled:pointer-events-none disabled:opacity-40"
-                  >
-                    <span className="btn-primary-inner justify-center py-1">
-                      {busy ? L('Entrando…', 'Signing in…') : L('Entrar', 'Sign in')}
-                    </span>
+                  {error ? <Erro>{error}</Erro> : null}
+                  <button type="submit" disabled={busy || !email} className={cn(BOTAO_RUA, 'mt-1')}>
+                    {busy ? L('Enviando…', 'Sending…') : <>{L('Enviar link', 'Send link')} <span aria-hidden>→</span></>}
                   </button>
                 </form>
-                <button
-                  type="button"
-                  onClick={() => setMode('landing')}
-                  className="mt-4 w-full text-center text-[12px] text-cimento transition-colors hover:text-white"
-                >
-                  ← {L('Voltar', 'Back')}
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('landing');
+                  setError(null);
+                  setForgotSent(false);
+                }}
+                className={VOLTAR}
+              >
+                ← {L('Voltar', 'Back')}
+              </button>
+            </div>
+          ) : (
+            <div className={CAIXA}>
+              <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.22em] text-mudo">— {L('Vestiário', 'Locker room')}</span>
+              <h2 className={cn(TITULO, 'mt-2')}>{L('Entrar', 'Sign in')}</h2>
+              <form onSubmit={(e) => void onSubmit(e)} className="mt-5 flex flex-col gap-3.5" autoComplete="on">
+                <label className="block">
+                  <span className={LABEL}>{L('E-mail', 'Email')}</span>
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className={INPUT}
+                  />
+                </label>
+                <label className="block">
+                  <span className={LABEL}>{L('Senha', 'Password')}</span>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      className={cn(INPUT, 'pr-12')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-mudo transition-colors hover:text-papel"
+                      aria-label={showPassword ? L('Ocultar senha', 'Hide password') : L('Mostrar senha', 'Show password')}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </label>
+                {error ? <Erro>{error}</Erro> : null}
+                <button type="submit" disabled={busy || !email || !password} className={cn(BOTAO_RUA, 'mt-1')}>
+                  {busy ? L('Entrando…', 'Signing in…') : <>{L('Entrar', 'Sign in')} <span aria-hidden>→</span></>}
                 </button>
-              </div>
+              </form>
+              <button type="button" onClick={() => setMode('landing')} className={VOLTAR}>
+                ← {L('Voltar', 'Back')}
+              </button>
             </div>
           )}
 
           {mode === 'landing' ? (
-            <nav className="mt-8 flex w-full flex-col gap-3 sm:mt-10" aria-label={L('Acesso à conta', 'Account access')}>
+            <nav className="mt-8 flex w-full flex-col gap-4 sm:mt-10" aria-label={L('Acesso à conta', 'Account access')}>
               <button
                 type="button"
                 onClick={() => {
                   setMode('form');
                 }}
-                className="btn-primary flex h-14 w-full items-center justify-center text-[16px]"
+                className={BOTAO_RUA}
               >
-                {L('Entrar', 'Sign in')}
+                {L('Entrar', 'Sign in')} <span aria-hidden>→</span>
               </button>
               <Link
                 to="/cadastro"
-                className="btn-secondary flex h-14 w-full items-center justify-center text-[16px]"
+                className="inline-flex min-h-[54px] w-full items-center justify-center border-2 border-papel font-impact text-[21px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rua"
               >
                 {L('Cadastrar', 'Sign up')}
               </Link>
               <button
                 type="button"
-                className="mt-2 pt-1 text-center font-sans text-xs font-bold uppercase tracking-wider text-cimento underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60"
+                className="min-h-[40px] self-center font-prova text-[12px] font-bold uppercase tracking-[0.18em] text-mudo underline decoration-fio underline-offset-4 transition-colors hover:text-papel"
                 onClick={() => {
                   setError(null);
                   setForgotSent(false);
@@ -597,14 +562,13 @@ export function Login() {
           ) : null}
         </div>
 
-        <footer className="mx-auto mt-8 max-w-md text-center sm:mt-10">
-          {/* Redes sociais */}
-          <div className="flex items-center justify-center gap-4 mb-4">
+        <footer className="mx-auto mt-10 w-full max-w-md text-center">
+          <div className="mb-4 flex items-center justify-center gap-3">
             <a
               href="https://www.instagram.com/olefootgame"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-10 w-10 items-center justify-center border border-white/16 text-cimento transition-colors hover:border-white/30 hover:text-white"
+              className="flex h-11 w-11 items-center justify-center border-2 border-linha text-mudo transition-colors hover:border-papel hover:text-papel"
               aria-label="Instagram"
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -615,7 +579,7 @@ export function Login() {
               href="https://www.youtube.com/@olefoot"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-10 w-10 items-center justify-center border border-white/16 text-cimento transition-colors hover:border-white/30 hover:text-white"
+              className="flex h-11 w-11 items-center justify-center border-2 border-linha text-mudo transition-colors hover:border-papel hover:text-papel"
               aria-label="YouTube"
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -626,7 +590,7 @@ export function Login() {
               href="https://x.com/olefootgame"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-10 w-10 items-center justify-center border border-white/16 text-cimento transition-colors hover:border-white/30 hover:text-white"
+              className="flex h-11 w-11 items-center justify-center border-2 border-linha text-mudo transition-colors hover:border-papel hover:text-papel"
               aria-label="X (Twitter)"
             >
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -634,7 +598,7 @@ export function Login() {
               </svg>
             </a>
           </div>
-          <p className="text-[10px] text-poeira sm:text-[11px]">
+          <p className="font-prova text-[11px] uppercase tracking-[0.14em] text-fio">
             Olefoot © 2026 · {L('Todos os direitos reservados', 'All rights reserved')}
           </p>
         </footer>

@@ -1,5 +1,5 @@
 /**
- * Toggle de visualização Grid/Lista para a Store
+ * Toggle de visualização Grid/Lista para a Store (DS 2027: foco em rua, canto vivo)
  * Grid: 3 colunas, cards grandes com emoção
  * Lista: compacta, máximo de itens visíveis, menos rolagem
  */
@@ -17,15 +17,15 @@ interface StoreViewToggleProps {
 
 export function StoreViewToggle({ mode, onChange }: StoreViewToggleProps) {
   return (
-    <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-panel p-1">
+    <div className="flex shrink-0 items-center border-2 border-linha">
       <button
         type="button"
         onClick={() => onChange('grid')}
         className={cn(
-          'flex items-center gap-1.5 rounded px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider transition-colors',
+          'flex min-h-[44px] items-center gap-1.5 px-3 font-impact text-[15px] uppercase leading-none transition-colors',
           mode === 'grid'
-            ? 'bg-neon-yellow text-black'
-            : 'text-gray-500 hover:text-gray-300'
+            ? 'bg-rua text-asfalto-27'
+            : 'text-mudo hover:text-papel'
         )}
         aria-label={L('Visualização em grade', 'Grid view')}
       >
@@ -36,10 +36,10 @@ export function StoreViewToggle({ mode, onChange }: StoreViewToggleProps) {
         type="button"
         onClick={() => onChange('list')}
         className={cn(
-          'flex items-center gap-1.5 rounded px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider transition-colors',
+          'flex min-h-[44px] items-center gap-1.5 px-3 font-impact text-[15px] uppercase leading-none transition-colors',
           mode === 'list'
-            ? 'bg-neon-yellow text-black'
-            : 'text-gray-500 hover:text-gray-300'
+            ? 'bg-rua text-asfalto-27'
+            : 'text-mudo hover:text-papel'
         )}
         aria-label={L('Visualização em lista', 'List view')}
       >

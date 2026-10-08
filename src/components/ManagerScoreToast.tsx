@@ -45,24 +45,16 @@ export function ManagerScoreToast() {
             transition={{ type: 'spring', stiffness: 380, damping: 30 }}
             role="status"
             aria-live="polite"
-            className="flex max-w-[92vw] items-center gap-3 border border-white/16 bg-panel px-4 py-2.5"
-            style={{ borderRadius: 'var(--radius-md)' }}
+            className="flex max-w-[92vw] -rotate-1 items-center gap-3 bg-cal px-4 py-2.5 text-asfalto-27 shadow-[4px_4px_0_var(--color-asfalto-27)]"
           >
-            <span
-              aria-hidden
-              className="grid h-8 w-8 flex-none place-items-center"
-              style={{ borderRadius: 'var(--radius-sm)', background: 'var(--color-card-hi)' }}
-            >
-              <TrendingUp className="h-4 w-4 text-alta" strokeWidth={2.4} />
+            <span aria-hidden className="grid h-8 w-8 flex-none place-items-center bg-asfalto-27">
+              <TrendingUp className="h-4 w-4 text-rua" strokeWidth={2.4} />
             </span>
             <span className="min-w-0">
-              <span
-                className="ole-num uppercase leading-none text-white tabular-nums"
-                style={{ fontSize: '15px' }}
-              >
+              <span className="block font-spray font-black text-[24px] uppercase leading-none tabular-nums">
                 +{shown.points} {L('pontos', 'points')}
               </span>
-              <span className="mt-1 block truncate font-mono text-cimento" style={{ fontSize: '11px' }}>
+              <span className="mt-1 block truncate font-prova text-[11px] font-bold">
                 {shown.label}
               </span>
             </span>

@@ -39,7 +39,7 @@ function TrophyArt({ imageSrc, leagueName }: { imageSrc?: string; leagueName: st
 
   // Placeholder SVG estilo "troféu wireframe" enquanto o PNG 3D não chega.
   return (
-    <svg viewBox="0 0 64 80" className="h-full w-full text-giz/70" aria-hidden>
+    <svg viewBox="0 0 64 80" className="h-full w-full" aria-hidden>
       <path
         d="M16 8 L48 8 L48 22 Q48 38 32 42 Q16 38 16 22 Z"
         fill="currentColor"
@@ -63,24 +63,22 @@ export function TrophyShowcase({
       <div className="flex items-center justify-between gap-3">
         <SecaoVolt label={L('Conquistas', 'Achievements')} tone="neutro" className="min-w-0 grow" />
         {trophies.length > 0 ? (
-          <span className="shrink-0 font-mono text-[11px] text-cimento">
+          <span className="shrink-0 font-prova text-[12px] font-bold text-ouro-27">
             {trophies.length} {trophies.length === 1 ? L('troféu', 'trophy') : L('troféus', 'trophies')}
           </span>
         ) : null}
       </div>
 
       {trophies.length === 0 ? (
-        <div
-          className="relative overflow-hidden border border-white/10 bg-panel p-6 text-center"
-          style={{ borderRadius: 'var(--radius-card)' }}
-        >
-          <div className="mx-auto h-20 w-20 opacity-40">
+        // DS 2027 · degrau CHÃO: contorno tracejado, promessa do que vem.
+        <div className="flex items-center gap-5 border-2 border-dashed border-fio p-5">
+          <div className="h-16 w-14 shrink-0 text-fio">
             <TrophyArt leagueName="placeholder" />
           </div>
-          <p className="mt-4 font-impact text-[16px] uppercase leading-[1.1] text-giz">
-            {L('Vitrine vazia', 'Cabinet empty')}
-          </p>
-          <p className="mt-1 text-[12px] text-cimento">{teaserMessage}</p>
+          <div className="flex min-w-0 flex-col gap-1">
+            <p className="font-voz text-[28px] leading-none text-papel">{L('Vitrine vazia.', 'Empty cabinet.')}</p>
+            <p className="font-prova text-[12px] text-mudo">{teaserMessage}</p>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -90,28 +88,29 @@ export function TrophyShowcase({
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: i * 0.06 }}
-              className="relative overflow-hidden border border-white/10 bg-panel p-5"
-              style={{ borderRadius: 'var(--radius-card)' }}
+              // DS 2027 · degrau LENDA: troféu é ouro chapado, colado torto.
+              className="relative overflow-hidden bg-ouro-27 p-5 text-asfalto-27 shadow-[6px_6px_0_rgba(0,0,0,0.6)]"
+              style={{ transform: `rotate(${i % 2 === 0 ? -1.5 : 1.5}deg)` }}
             >
               <div className="mx-auto h-28 w-28">
                 <TrophyArt imageSrc={t.imageSrc} leagueName={t.leagueName} />
               </div>
               <div className="mt-4 text-center">
-                <p className="font-impact text-[15px] uppercase leading-[1.1] text-white">
+                <p className="font-impact text-[22px] uppercase leading-none">
                   {t.leagueName}
                 </p>
                 {t.season ? (
-                  <p className="mt-1 font-mono text-[10.5px] text-cimento">
+                  <p className="mt-1 font-prova text-[11px] font-bold">
                     {t.season}
                   </p>
                 ) : null}
-                <div className="mt-3 inline-flex items-center bg-giz px-2.5 pb-0.5 pt-1">
-                  <span className="font-impact text-[13px] uppercase tracking-[0.06em] text-black">
+                <div className="mt-3 inline-flex items-center bg-asfalto-27 px-2.5 pb-0.5 pt-1">
+                  <span className="font-impact text-[14px] uppercase tracking-[0.04em] text-ouro-27">
                     {t.position}
                   </span>
                 </div>
                 {t.note ? (
-                  <p className="mt-2 font-mono text-[10.5px] text-cimento">{t.note}</p>
+                  <p className="mt-2 font-prova text-[11px]">{t.note}</p>
                 ) : null}
               </div>
             </motion.div>

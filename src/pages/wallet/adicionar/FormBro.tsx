@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { OlefootUsdBrlQuoteState } from '@/wallet/olefootUsdBrlQuote';
 import { L, LOCALE } from '@/i18n/L';
@@ -58,26 +57,26 @@ export function FormBro({
   return (
     <div className="space-y-4">
       {(quote.status === 'loading' || quote.status === 'idle') && (
-        <div className="border border-white/10 bg-card px-3 py-3">
-          <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-cimento">{L('Nossa cotação', 'Our rate')}</p>
-          <p className="mt-1 text-sm text-poeira">{L('Carregando…', 'Loading…')}</p>
+        <div className="bg-concreto px-4 py-3.5">
+          <p className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">— {L('Nossa cotação', 'Our rate')}</p>
+          <p className="mt-1.5 font-prova text-[12px] text-mudo">{L('Carregando…', 'Loading…')}</p>
         </div>
       )}
       {quote.status === 'error' && (
-        <div className="border border-atencao/40 bg-atencao/10 px-3 py-3">
-          <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-atencao">{L('Nossa cotação', 'Our rate')}</p>
-          <p className="mt-1 text-xs text-giz">{quote.message}</p>
+        <div className="border-2 border-dashed border-fio px-4 py-3.5">
+          <p className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">— {L('Nossa cotação', 'Our rate')}</p>
+          <p className="mt-1.5 text-[13px] text-atencao">{quote.message}</p>
         </div>
       )}
       {quote.status === 'ok' && (
-        <div className="space-y-2 border border-white/10 bg-card px-3 py-3">
-          <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-alta">
-            {L('Nossa cotação (PIX → BRO)', 'Our rate (PIX → BRO)')}
+        <div className="space-y-2 bg-concreto px-4 py-3.5">
+          <p className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+            — {L('Nossa cotação (PIX → BRO)', 'Our rate (PIX → BRO)')}
           </p>
-          <p className="font-mono text-lg font-medium leading-tight text-white tabular-nums">
+          <p className="font-impact text-[clamp(26px,7.5vw,32px)] leading-none text-papel tabular-nums">
             1 BRO = R$ {fmtBrl(quote.olefootVenda)}
           </p>
-          <p className="text-[10px] leading-relaxed text-cimento">
+          <p className="font-prova text-[11px] leading-relaxed text-suave">
             {/* A margem sai da própria cotação (servidor), não de uma constante
                 copiada aqui — copiada, ela divergiria em silêncio. Uma casa
                 decimal: a margem é 2,5%, e arredondada pra inteiro a tela
@@ -89,7 +88,7 @@ export function FormBro({
             {L('% de custos. 1 BRO = 1 USD.', '% in costs. 1 BRO = 1 USD.')}
           </p>
           {quote.fetchedAt && (
-            <p className="font-mono text-[9.5px] text-poeira">
+            <p className="font-prova text-[10.5px] text-mudo">
               {L('Cotação consultada:', 'Rate checked:')} {fmtQuoteUpdated(quote.fetchedAt)}
             </p>
           )}
@@ -97,8 +96,8 @@ export function FormBro({
       )}
 
       <div className="space-y-2">
-        <label className="block font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
-          {L('Quanto quer depositar?', 'How much to deposit?')}
+        <label className="block font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+          — {L('Quanto quer depositar?', 'How much to deposit?')}
         </label>
         <div className="grid grid-cols-5 gap-2">
           {QUICK_AMOUNTS_BRL.map((amount) => (
@@ -107,10 +106,10 @@ export function FormBro({
               type="button"
               onClick={() => { setSelectedChip(amount); setBrl(amount.toString()); }}
               className={cn(
-                'min-w-0 border py-2.5 font-mono text-[12px] font-medium tabular-nums transition-colors',
+                'min-h-[48px] min-w-0 border-2 font-impact text-[16px] leading-none tabular-nums transition-colors',
                 selectedChip === amount
-                  ? 'border-neon-yellow bg-neon-yellow text-black'
-                  : 'border-white/16 bg-deep-black text-white hover:border-white/30',
+                  ? 'border-rua bg-rua text-asfalto-27'
+                  : 'border-linha bg-asfalto-27 text-papel hover:border-papel',
               )}
             >
               R${amount}
@@ -120,30 +119,30 @@ export function FormBro({
       </div>
 
       <div>
-        <label className="mb-1 block font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
-          {L('Ou outro valor, em reais', 'Or another amount, in BRL')}
+        <label className="mb-2 block font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+          — {L('Ou outro valor, em reais', 'Or another amount, in BRL')}
         </label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-poeira">R$</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-prova text-[14px] font-bold text-mudo">R$</span>
           <input
             value={brl}
             onChange={(e) => { setBrl(e.target.value); setSelectedChip(null); }}
             inputMode="decimal"
             placeholder={L('0,00', '0.00')}
-            className="w-full border border-white/16 bg-deep-black py-2.5 pl-10 pr-3 font-mono text-lg tabular-nums text-white focus:border-neon-yellow/60 focus:outline-none"
+            className="w-full min-w-0 border-2 border-linha bg-concreto py-3 pr-3 font-prova text-[18px] font-bold tabular-nums text-papel placeholder:text-fio transition-colors focus:border-rua focus:outline-none pl-11"
           />
         </div>
         {numericAmount !== null && numericAmount < MIN_BRL && (
-          <p className="mt-1 text-[10px] text-baixa">{L('Mínimo de', 'Minimum')} R$ {fmtBrl(MIN_BRL)}</p>
+          <p className="mt-1.5 font-prova text-[11px] text-baixa">{L('Mínimo de', 'Minimum')} R$ {fmtBrl(MIN_BRL)}</p>
         )}
       </div>
 
       {broPreview !== null && (
-        <div className="flex items-center justify-between gap-3 border border-white/10 bg-card px-3 py-2.5">
-          <span className="font-mono text-[10.5px] font-medium uppercase tracking-wider text-cimento">
+        <div className="flex min-w-0 items-baseline justify-between gap-3 border-b-2 border-linha pb-3">
+          <span className="shrink-0 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
             {L('Você recebe ≈', 'You get ≈')}
           </span>
-          <span className="font-mono text-lg font-medium text-white tabular-nums">
+          <span className="min-w-0 truncate font-impact text-[26px] leading-none text-papel tabular-nums">
             {fmtBrl(broPreview)} BRO
           </span>
         </div>
@@ -154,12 +153,11 @@ export function FormBro({
         onClick={submit}
         disabled={!valid}
         className={cn(
-          'ole-num inline-flex h-[50px] w-full items-center justify-center gap-2 whitespace-nowrap text-[13px] uppercase transition-colors [--corte:12px] [clip-path:var(--clip-corte)]',
-          valid ? 'bg-neon-yellow text-black hover:bg-white' : 'cursor-not-allowed bg-card-hi text-poeira',
+          'inline-flex min-h-[54px] w-full items-center justify-center gap-2 whitespace-nowrap px-4 font-impact text-[19px] uppercase leading-none transition-[transform,box-shadow,background-color]',
+          valid ? 'bg-rua text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)]' : 'cursor-not-allowed border-2 border-dashed border-fio text-mudo',
         )}
       >
-        <Zap className="h-4 w-4" />
-        {valid && numericAmount !== null ? L(`Pagar R$ ${fmtBrl(numericAmount)} no Pix`, `Pay R$ ${fmtBrl(numericAmount)} with Pix`) : L('Escolha o valor', 'Choose the amount')}
+        {valid && numericAmount !== null ? <>{L(`Pagar R$ ${fmtBrl(numericAmount)} no Pix`, `Pay R$ ${fmtBrl(numericAmount)} with Pix`)} <span aria-hidden>→</span></> : L('Escolha o valor', 'Choose the amount')}
       </button>
     </div>
   );

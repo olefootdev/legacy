@@ -44,7 +44,7 @@ export function SquadValuationCard({
         <button
           type="button"
           onClick={() => navigate('/team')}
-          className="shrink-0 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento transition-colors hover:text-white"
+          className="shrink-0 font-impact text-[16px] uppercase text-rua transition-colors hover:text-papel"
         >
           {L('Plantel →', 'Squad →')}
         </button>
@@ -54,44 +54,37 @@ export function SquadValuationCard({
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="relative isolate overflow-hidden border border-white/10 bg-panel"
-        style={{ borderRadius: 'var(--radius-card)' }}
+        className="relative isolate overflow-hidden border-l-[5px] border-rua bg-concreto"
       >
         <div className="relative grid grid-cols-1 sm:grid-cols-[1fr_auto] items-stretch gap-4 p-5 sm:p-6">
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-cimento">
+              <span className="font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-papel">
                 {L(`Total · ${playerCount} jogadores`, `Total · ${playerCount} players`)}
               </span>
               <ChangePill change={change24h} compact />
             </div>
 
             <p
-              className="ole-num tabular-nums leading-none text-white"
-              style={{ fontSize: 'clamp(30px, 7vw, 48px)' }}
+              className="font-impact tabular-nums leading-none text-papel"
+              style={{ fontSize: 'clamp(40px, 11vw, 60px)' }}
             >
               {formatOle(totalOle)} EXP
             </p>
 
-            <p className="font-mono text-[11px] text-cimento tabular-nums">
+            <p className="font-prova text-[11.5px] text-mudo tabular-nums">
               {totalOle.toLocaleString(LOCALE)} EXP · {L('valor de mercado', 'market value')}
             </p>
 
             {highlight ? (
-              <div className="mt-2 flex items-center gap-3 border border-white/10 bg-card px-3 py-2">
-                <div className="flex h-8 w-8 items-center justify-center bg-card-hi text-[12px] text-white">
-                  ★
-                </div>
+              <div className="mt-2 flex -rotate-1 items-center gap-3 bg-ouro-27 px-3 py-2.5 text-asfalto-27 shadow-[4px_4px_0_rgba(0,0,0,0.6)]">
                 <div className="min-w-0 flex-1">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-poeira">
-                    {L('Maior valor', 'Highest value')}
+                  <p className="font-prova text-[10.5px] font-bold uppercase tracking-[0.16em]">
+                    {L('Maior valor', 'Highest value')} · {posLabel(highlight.position)}
                   </p>
-                  <p className="text-[12px] font-bold text-white truncate">
-                    {highlight.name}{' '}
-                    <span className="text-cimento">· {posLabel(highlight.position)}</span>
-                  </p>
+                  <p className="truncate font-voz text-[24px] leading-none">{highlight.name}</p>
                 </div>
-                <p className="font-mono text-[12px] font-medium text-white tabular-nums">
+                <p className="font-impact text-[20px] leading-none tabular-nums">
                   {formatOle(highlight.valueOle)} EXP
                 </p>
               </div>

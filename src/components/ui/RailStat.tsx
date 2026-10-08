@@ -25,12 +25,9 @@ export function RailStat({
   rail?: string;
 }) {
   return (
-    <div className="ole-poster relative min-w-0 overflow-hidden py-3.5 pl-[18px] pr-3">
-      <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: rail }} aria-hidden />
-      <div
-        className="font-display font-semibold uppercase text-neon-yellow"
-        style={{ fontSize: '10px', letterSpacing: '0.13em' }}
-      >
+    <div className="relative min-w-0 overflow-hidden bg-concreto py-3.5 pl-[20px] pr-3">
+      <span className="absolute inset-y-0 left-0 w-[5px]" style={{ background: rail }} aria-hidden />
+      <div className="font-prova font-bold uppercase text-mudo" style={{ fontSize: '10.5px', letterSpacing: '0.16em' }}>
         {label}
       </div>
       <div
@@ -45,7 +42,7 @@ export function RailStat({
       >
         {value}
       </div>
-      {hint && <div className="mt-1 text-[10px] text-white/40">{hint}</div>}
+      {hint && <div className="mt-1 font-prova text-[10.5px] text-mudo">{hint}</div>}
     </div>
   );
 }

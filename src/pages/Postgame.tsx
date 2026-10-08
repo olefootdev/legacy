@@ -1,12 +1,14 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Trophy, ArrowRight, Star, Megaphone, Share2, Check } from 'lucide-react';
+import { ArrowRight, Megaphone, Share2, Check } from 'lucide-react';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { trackMissionEvent } from '@/progression/trackEvent';
 import { syncMyExpLifetime } from '@/supabase/referrals';
 import { recordPvpMatchResult } from '@/supabase/pvpMatches';
 import { Hashtag } from '@/components/ui';
+import { SecaoRua } from '@/components/ui/Rua';
+import { ResultadoRua, type ResultadoTipo } from '@/components/match/ResultadoRua';
 import { L, emIngles } from '@/i18n/L';
 
 type TeamStats = {
@@ -172,12 +174,7 @@ export default function Postgame() {
   const homeWin = homeScore > awayScore;
   const draw = homeScore === awayScore;
   const resultLabel = homeWin ? L('Vitória.', 'Win.') : draw ? L('Empate.', 'Draw.') : L('Derrota.', 'Loss.');
-  const resultColor = homeWin ? 'text-neon-green' : draw ? 'text-neon-yellow' : 'text-rose-400';
-  const resultNarrative = homeWin
-    ? L('enfim.', 'at last.')
-    : draw
-      ? L('fica pra próxima.', 'next time.')
-      : L('amanhã o sol nasce de novo.', 'the sun rises again tomorrow.');
+  const resultado: ResultadoTipo = homeWin ? 'win' : draw ? 'draw' : 'loss';
 
   const voiceStats = (() => {
     let total = 0, accepted = 0, refused = 0;
@@ -194,110 +191,59 @@ export default function Postgame() {
   const passAcc = formatPct(teamStats.passesOk, teamStats.passesAttempt);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8">
+    <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:py-8">
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+        transition={{ duration: 0.35 }}
         className="space-y-6"
       >
-        {/* Header — #hashtag + resultado em Anton grande, cor chapada */}
-        <header className="text-center space-y-4">
-          <Hashtag>{L('#posjogo', '#postmatch')}</Hashtag>
-          {homeWin && (
-            <Trophy
-              className="mx-auto h-10 w-10 text-neon-yellow"
-              strokeWidth={1.6}
-              aria-hidden
-            />
-          )}
-          <h1
-            className={`ole-headline ${resultColor} leading-[1.05]`}
-            style={{ fontSize: 'clamp(64px, 14vw, 128px)' }}
-          >
-            {resultLabel}
-          </h1>
-          <div className="mx-auto w-12 h-[3px] bg-white/30" aria-hidden />
-        </header>
+        <Hashtag className="font-prova text-mudo">{L('#posjogo', '#postmatch')}</Hashtag>
 
-        {/* Resultado — placar monumental + narrativa */}
-        <section className="ole-card p-6 text-center">
-          <h1 className="ole-headline text-5xl sm:text-7xl">
-            {clubName}{' '}
-            <span className="text-neon-yellow tabular-nums">{homeScore}</span>
-            <span className="ole-scoreboard__separator">×</span>
-            <span className="text-neon-yellow tabular-nums">{awayScore}</span>{' '}
-            {live.awayShort ?? L('Visitante', 'Away')}
-          </h1>
-          <p className="ole-headline-italic mt-2 text-lg sm:text-xl text-white/55">
-            {resultNarrative}
-          </p>
-          <p className="mt-3 text-xs text-white/45">
-            {live.homeShort} vs {live.awayShort} · {Math.max(90, live.minute ?? 0)}′
-          </p>
-        </section>
+        {/* O RESULTADO (DS 2027, PDF pág. 6): spray, voz, MVP em post-it, fita. */}
+        <ResultadoRua
+          homeName={clubName}
+          awayName={live.awayShort ?? L('Visitante', 'Away')}
+          homeScore={homeScore}
+          awayScore={awayScore}
+          resultado={resultado}
+          rotuloDir={`${live.homeShort} × ${live.awayShort} · ${Math.max(90, live.minute ?? 0)}′`}
+          mvp={mvp ? { name: mvp.name, rating: mvp.rating } : null}
+        />
 
-        {/* MVP */}
-        <section className="ole-card-accent p-5 bg-neon-yellow/[0.06]">
-          <header className="mb-3 flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-neon-yellow" />
-            <h2 className="font-display text-sm font-black uppercase tracking-[0.25em] text-neon-yellow">
-              {L('Prêmio MVP', 'MVP Award')}
-            </h2>
-          </header>
+        {/* MVP — os números do craque */}
+        <section className="bg-concreto px-5 py-4">
+          <SecaoRua label={L('Prêmio MVP', 'MVP award')} className="mb-3" />
           {mvp ? (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-display text-2xl font-black text-white uppercase tracking-wide">{mvp.name}</p>
-                <p className="text-[11px] uppercase tracking-wider text-white/50">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="truncate font-voz text-[30px] leading-none text-papel">{mvp.name}</p>
+                <p className="mt-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.14em] text-mudo">
                   {mvp.pos} · {L('nota', 'rating')}{' '}
                   <span className="ole-attr text-base" data-tier={ratingTier(mvp.rating)}>
                     {mvp.rating.toFixed(1)}
                   </span>
                 </p>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-center sm:text-right">
-                <div>
-                  <p className="ole-attr text-2xl" data-tier={attrTier(mvp.stats.shotsOn * 20)}>
-                    {mvp.stats.shotsOn}
-                  </p>
-                  <p className="text-[9px] uppercase tracking-wider text-white/40">{L('Chutes no alvo', 'Shots on target')}</p>
-                </div>
-                <div>
-                  <p className="ole-attr text-2xl" data-tier={attrTier(mvp.stats.tackles * 15)}>
-                    {mvp.stats.tackles}
-                  </p>
-                  <p className="text-[9px] uppercase tracking-wider text-white/40">{L('Desarmes', 'Tackles')}</p>
-                </div>
-                <div>
-                  <p
-                    className="ole-attr text-2xl"
-                    data-tier={
-                      mvp.stats.passesAttempt > 0
-                        ? attrTier((mvp.stats.passesOk / mvp.stats.passesAttempt) * 100)
-                        : 'avg'
-                    }
-                  >
-                    {mvp.stats.passesOk}/{mvp.stats.passesAttempt || '—'}
-                  </p>
-                  <p className="text-[9px] uppercase tracking-wider text-white/40">Passes</p>
-                </div>
+              <div className="grid grid-cols-3 gap-px bg-linha text-center">
+                <MvpNum valor={String(mvp.stats.shotsOn)} tier={attrTier(mvp.stats.shotsOn * 20)} label={L('No alvo', 'On target')} />
+                <MvpNum valor={String(mvp.stats.tackles)} tier={attrTier(mvp.stats.tackles * 15)} label={L('Desarmes', 'Tackles')} />
+                <MvpNum
+                  valor={`${mvp.stats.passesOk}/${mvp.stats.passesAttempt || '—'}`}
+                  tier={mvp.stats.passesAttempt > 0 ? attrTier((mvp.stats.passesOk / mvp.stats.passesAttempt) * 100) : 'avg'}
+                  label="Passes"
+                />
               </div>
             </div>
           ) : (
-            <p className="text-sm text-white/50">{L('Sem dados suficientes para eleger o MVP.', 'Not enough data to pick the MVP.')}</p>
+            <p className="text-[13px] text-mudo">{L('Sem dados suficientes para eleger o MVP.', 'Not enough data to pick the MVP.')}</p>
           )}
         </section>
 
         {/* Estatísticas do time */}
-        <section className="ole-card p-5 bg-white/[0.02]">
-          <header className="mb-3 flex items-center gap-2">
-            <Star className="h-4 w-4 text-white/60" />
-            <h2 className="font-display text-xs font-black uppercase tracking-[0.25em] text-white/70">
-              {L('Estatísticas do time', 'Team stats')}
-            </h2>
-          </header>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <section>
+          <SecaoRua label={L('Estatísticas do time', 'Team stats')} className="mb-3" />
+          <div className="grid grid-cols-2 gap-px bg-linha sm:grid-cols-4">
             <StatTile label={L('Passes certos', 'Passes completed')} value={teamStats.passesOk.toString()} />
             <StatTile
               label={L('Passes errados', 'Passes missed')}
@@ -314,14 +260,14 @@ export default function Postgame() {
         </section>
 
         {voiceStats.total > 0 ? (
-          <section className="ole-card p-5 border-l-4 border-l-violet-400/70 bg-violet-950/30">
+          <section className="border-l-[3px] border-papel bg-concreto px-5 py-4">
             <header className="mb-3 flex items-center gap-2">
-              <Megaphone className="h-4 w-4 text-violet-300" />
-              <h2 className="font-display text-xs font-black uppercase tracking-[0.25em] text-violet-200">
+              <Megaphone className="h-4 w-4 text-papel" aria-hidden />
+              <h2 className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
                 {L('Comandos de voz', 'Voice commands')}
               </h2>
             </header>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-px bg-linha">
               <StatTile label={L('Emitidos', 'Issued')} value={voiceStats.total.toString()} />
               <StatTile label={L('Aceitos', 'Accepted')} value={voiceStats.accepted.toString()} />
               <StatTile label={L('Recusados', 'Refused')} value={voiceStats.refused.toString()} />
@@ -330,7 +276,15 @@ export default function Postgame() {
         ) : null}
 
         {/* CTA */}
-        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+        <div className="flex flex-col gap-3 pt-2 sm:flex-row-reverse sm:items-center sm:justify-start">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="inline-flex min-h-[54px] items-center justify-center gap-2 bg-rua px-7 font-impact text-[20px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)]"
+          >
+            {L('Continuar', 'Continue')}
+            <ArrowRight className="h-5 w-5" strokeWidth={2.5} aria-hidden />
+          </button>
           <button
             type="button"
             onClick={async () => {
@@ -345,20 +299,23 @@ export default function Postgame() {
                 setTimeout(() => setShareState('idle'), 2200);
               } catch { /* usuário cancelou o share — sem ação */ }
             }}
-            className="inline-flex items-center gap-2 rounded-sm border border-neon-yellow/40 bg-neon-yellow/[0.08] px-5 py-3 font-display text-sm font-black uppercase tracking-[0.2em] text-neon-yellow transition-colors hover:bg-neon-yellow/[0.16]"
+            className="inline-flex min-h-[52px] items-center justify-center gap-2 border-2 border-papel px-6 font-impact text-[18px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
           >
-            {shareState === 'done' ? <><Check className="h-4 w-4" /> {L('Copiado', 'Copied')}</> : <><Share2 className="h-4 w-4" /> {L('Compartilhar', 'Share')}</>}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 rounded-sm bg-neon-yellow px-6 py-3 font-display text-sm font-black uppercase tracking-[0.25em] text-black transition-colors hover:bg-white"
-          >
-            {L('Continuar', 'Continue')}
-            <ArrowRight className="h-4 w-4" />
+            {shareState === 'done' ? <><Check className="h-4 w-4" aria-hidden /> {L('Copiado', 'Copied')}</> : <><Share2 className="h-4 w-4" aria-hidden /> {L('Compartilhar', 'Share')}</>}
           </button>
         </div>
       </motion.div>
+    </div>
+  );
+}
+
+function MvpNum({ valor, tier, label }: { valor: string; tier: 'elite' | 'good' | 'avg' | 'weak'; label: string }) {
+  return (
+    <div className="min-w-[5.5rem] bg-asfalto-27 px-2 py-2.5">
+      <p className="ole-attr text-2xl" data-tier={tier}>
+        {valor}
+      </p>
+      <p className="mt-1 font-prova text-[9.5px] font-bold uppercase tracking-[0.12em] text-mudo">{label}</p>
     </div>
   );
 }
@@ -375,15 +332,12 @@ function StatTile({
   highlight?: boolean;
 }) {
   return (
-    <div className="ole-card p-3 text-center">
-      <p
-        className="ole-attr text-xl"
-        style={highlight ? { color: 'var(--color-neon-yellow)' } : undefined}
-      >
+    <div className="bg-concreto px-3 py-3 text-center">
+      <p className={`font-spray font-black text-[34px] leading-none tabular-nums ${highlight ? 'text-rua' : 'text-papel'}`}>
         {value}
       </p>
-      <p className="mt-0.5 text-[9px] uppercase tracking-wider text-white/50">{label}</p>
-      {sub ? <p className="text-[9px] text-white/30">{sub}</p> : null}
+      <p className="mt-1.5 font-prova text-[9.5px] font-bold uppercase tracking-[0.12em] text-mudo">{label}</p>
+      {sub ? <p className="mt-0.5 font-prova text-[10px] text-fio">{sub}</p> : null}
     </div>
   );
 }

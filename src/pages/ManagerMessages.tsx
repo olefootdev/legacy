@@ -52,45 +52,34 @@ export function ManagerMessages() {
   const deleteMessage = (id: string) => dispatch({ type: 'DISMISS_INBOX_ITEM', id });
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-2xl space-y-6 pb-10">
+    <div className="mx-auto w-full min-w-0 max-w-2xl space-y-6 px-3 pb-10 sm:px-4">
       <BackButton to="/manager" label="Manager" />
 
-      {/* Header */}
-      <header className="text-center pt-2 pb-2">
-        <div className="ole-eyebrow-poster !text-neon-yellow mb-4">
-          <span>{L('Central do Manager', 'Manager Hub')}</span>
-        </div>
-        <h1 className="leading-[0.95]">
-          <span
-            className="block font-bold uppercase text-white"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(2.25rem, 6vw, 3.5rem)',
-              letterSpacing: '0.005em',
-            }}
-          >
-            {L('Mensagens', 'Messages')}
+      {/* Header — grito em Anton, contagem em spray */}
+      <header className="flex min-w-0 items-end justify-between gap-3 border-b-2 border-papel pb-3">
+        <div className="min-w-0">
+          <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.22em] text-mudo">
+            — {L('Central do Manager', 'Manager Hub')}
           </span>
-          {unreadCount > 0 && (
-            <span
-              className="block text-neon-yellow mt-1"
-              style={{
-                fontFamily: 'var(--font-sans)',
-                fontWeight: 400,
-                fontSize: 'clamp(1.5rem, 4vw, 2.25rem)',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {unreadCount} {L(`não ${unreadCount === 1 ? 'lida' : 'lidas'}`, 'unread')}
+          <h1 className="mt-1 font-impact uppercase leading-[0.9] text-papel" style={{ fontSize: 'clamp(44px, 13vw, 68px)' }}>
+            {L('Mensagens', 'Messages')}
+          </h1>
+        </div>
+        {unreadCount > 0 && (
+          <span className="flex shrink-0 flex-col items-end gap-1 pb-1">
+            <span className="font-spray font-black leading-none text-rua" style={{ fontSize: 'clamp(36px, 11vw, 56px)' }}>
+              {unreadCount}
             </span>
-          )}
-        </h1>
-        <span aria-hidden className="mx-auto mt-5 block w-12 h-[3px] bg-neon-yellow" />
+            <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.16em] text-mudo">
+              {L(`não ${unreadCount === 1 ? 'lida' : 'lidas'}`, 'unread')}
+            </span>
+          </span>
+        )}
       </header>
 
       {/* Filtros */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2" role="tablist">
           {[
             { key: 'all' as const, label: L('Todas', 'All') },
             { key: 'unread' as const, label: L('Não lidas', 'Unread') },
@@ -98,12 +87,14 @@ export function ManagerMessages() {
             <button
               key={f.key}
               type="button"
+              role="tab"
+              aria-selected={filter === f.key}
               onClick={() => setFilter(f.key)}
               className={cn(
-                'rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider transition-all',
+                'min-h-[40px] border-2 px-3.5 font-prova text-[12px] font-bold uppercase tracking-[0.12em] transition-colors',
                 filter === f.key
-                  ? 'bg-neon-yellow text-black'
-                  : 'border border-white/20 bg-white/5 text-white/60 hover:border-white/30 hover:text-white',
+                  ? 'border-rua bg-rua text-asfalto-27'
+                  : 'border-linha text-mudo hover:border-fio hover:text-papel',
               )}
             >
               {f.label}
@@ -115,7 +106,7 @@ export function ManagerMessages() {
           <button
             type="button"
             onClick={markAllAsRead}
-            className="text-xs font-bold uppercase tracking-wider text-neon-yellow hover:text-neon-yellow transition-colors"
+            className="min-h-[40px] font-prova text-[11.5px] font-bold uppercase tracking-[0.14em] text-rua underline decoration-2 underline-offset-4 hover:text-papel"
           >
             {L('Marcar todas como lidas', 'Mark all as read')}
           </button>
@@ -123,19 +114,35 @@ export function ManagerMessages() {
       </div>
 
       {/* Lista de mensagens */}
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <AnimatePresence mode="popLayout">
           {filtered.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-center py-12"
+              className="flex flex-col items-start gap-3 border-2 border-dashed border-fio px-4 py-5"
             >
-              <Bell className="mx-auto h-12 w-12 text-white/20 mb-4" />
-              <p className="text-sm text-white/40">
-                {inbox.length === 0 ? L('Caixa vazia', 'Inbox empty') : L('Nenhuma mensagem neste filtro', 'No messages in this filter')}
+              <Bell aria-hidden className="h-6 w-6 text-fio" />
+              <p className="font-voz text-[24px] leading-[1.05] text-papel">
+                {inbox.length === 0 ? L('Caixa vazia. Joga que o recado chega.', 'Inbox empty. Play and the news will come.') : L('Nenhuma mensagem neste filtro.', 'No messages in this filter.')}
               </p>
+              {inbox.length === 0 ? (
+                <Link
+                  to="/"
+                  className="inline-flex min-h-[46px] items-center gap-2 border-2 border-papel px-4 font-impact text-[17px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
+                >
+                  {L('Ir pra Home', 'Go Home')} <span aria-hidden>→</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setFilter('all')}
+                  className="inline-flex min-h-[46px] items-center gap-2 border-2 border-papel px-4 font-impact text-[17px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
+                >
+                  {L('Ver todas', 'See all')} <span aria-hidden>→</span>
+                </button>
+              )}
             </motion.div>
           ) : (
             filtered.map((msg) => (
@@ -158,60 +165,55 @@ function MessageCard({ msg, onRead, onDelete }: { msg: InboxItem; onRead: () => 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0, scale: 0.97 }}
       animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+      exit={{ opacity: 0, scale: 0.97 }}
       className={cn(
-        'group relative overflow-hidden border transition-all',
-        !msg.read ? 'border-neon-yellow/30 bg-neon-yellow/5' : 'border-white/10 bg-white/5 hover:border-white/20',
+        'relative min-w-0 border-l-[5px] bg-concreto',
+        !msg.read ? 'border-rua' : 'border-linha',
       )}
-      style={{ borderRadius: 'var(--radius-md)' }}
     >
-      <span aria-hidden className={cn('absolute left-0 top-0 h-full w-1', !msg.read ? 'bg-neon-yellow' : 'bg-white/15')} />
-
-      <div className="px-4 py-4 pl-5">
+      <div className="px-4 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Icon className={cn('h-4 w-4 shrink-0', msg.colorClass || 'text-white/60')} strokeWidth={2.2} />
-              <h3 className="min-w-0 truncate text-sm font-bold text-white">{msg.title}</h3>
-              {!msg.read && <span className="ml-auto shrink-0 h-2 w-2 rounded-full bg-neon-yellow" />}
-            </div>
-
-            {msg.body && <p className="text-xs text-white/70 leading-relaxed">{msg.body}</p>}
-
-            <p className="mt-2 flex items-center gap-2 text-[10px] uppercase tracking-wider text-white/40">
-              <span className="font-display font-bold">{msg.tag}</span>
-              <span className="text-white/20">·</span>
-              <span>{msg.timeLabel}</span>
+            <p className="mb-1.5 flex min-w-0 items-center gap-2 font-prova text-[10.5px] font-bold uppercase tracking-[0.16em] text-mudo">
+              <Icon aria-hidden className={cn('h-3.5 w-3.5 shrink-0', !msg.read ? 'text-rua' : 'text-mudo')} strokeWidth={2.4} />
+              <span className="truncate">{msg.tag}</span>
+              <span aria-hidden>·</span>
+              <span className="shrink-0">{msg.timeLabel}</span>
             </p>
+            <h3 className={cn('min-w-0 font-voz text-[22px] leading-[1.05]', !msg.read ? 'text-papel' : 'text-suave')}>{msg.title}</h3>
 
-            <div className="mt-3 flex items-center gap-2">
-              {msg.deepLink && (
-                <Link
-                  to={msg.deepLink}
-                  onClick={onRead}
-                  className="rounded-full bg-neon-yellow px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-black transition-all hover:bg-neon-yellow"
-                >
-                  {L('Ver detalhes', 'View details')}
-                </Link>
-              )}
-              {!msg.read && (
-                <button
-                  type="button"
-                  onClick={onRead}
-                  className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-all hover:border-white/30 hover:text-white"
-                >
-                  {L('Marcar como lida', 'Mark as read')}
-                </button>
-              )}
-            </div>
+            {msg.body && <p className="mt-1.5 text-[13px] leading-relaxed text-suave">{msg.body}</p>}
+
+            {(msg.deepLink || !msg.read) && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {msg.deepLink && (
+                  <Link
+                    to={msg.deepLink}
+                    onClick={onRead}
+                    className="inline-flex min-h-[40px] items-center gap-1.5 bg-rua px-3.5 font-impact text-[15px] uppercase leading-none text-asfalto-27 transition-colors hover:bg-papel"
+                  >
+                    {L('Ver detalhes', 'View details')} <span aria-hidden>→</span>
+                  </Link>
+                )}
+                {!msg.read && (
+                  <button
+                    type="button"
+                    onClick={onRead}
+                    className="inline-flex min-h-[40px] items-center border-2 border-linha px-3 font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-mudo transition-colors hover:border-papel hover:text-papel"
+                  >
+                    {L('Marcar como lida', 'Mark as read')}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <button
             type="button"
             onClick={onDelete}
-            className="shrink-0 rounded-full p-1 text-white/40 transition-colors hover:bg-[var(--color-danger)]/20 hover:text-[var(--color-danger)]"
+            className="flex h-10 w-10 shrink-0 items-center justify-center text-mudo transition-colors hover:text-baixa"
             aria-label={L('Apagar mensagem', 'Delete message')}
           >
             <X className="h-4 w-4" />

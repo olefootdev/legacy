@@ -10,7 +10,6 @@ import {
   Trophy,
   UserCircle,
   CheckCircle2,
-  ChevronRight,
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -48,7 +47,22 @@ import { BackButton } from '@/components/BackButton';
 import { useMarketOffers } from '@/hooks/useMarketOffers';
 import { MakeOfferModal } from '@/components/market/MakeOfferModal';
 import { MarketOffersPanel } from '@/components/market/MarketOffersPanel';
-import { Hashtag, SecaoVolt } from '@/components/ui';
+import { DEGRAU_CLASSES, FitaRua, MarcaRua, SecaoRua, type Degrau } from '@/components/ui/Rua';
+import {
+  ACAO_CONTORNO,
+  ACAO_RUA,
+  AtributoRua,
+  CAMPO_RUA,
+  DEGRAU_INFO,
+  FECHAR_RUA,
+  TORTO,
+  VazioRua,
+  ctaCartaClasses,
+  degrauDe,
+  faixaClasses,
+  fotoFundo,
+  ovrClasses,
+} from '@/components/market/rua/escada';
 import { recordMarketActivity } from '@/supabase/marketActivities';
 
 const BIO_MAX_LEN = 250;
@@ -236,7 +250,7 @@ function useHighlightRailSizing(
   }, [enabled, trackLength]);
 }
 
-/** Célula final dos carrosseis (borda tracejada, fundo chapado), ação “Ver mais”. */
+/** Célula final dos carrosseis: degrau CHÃO (tracejado), ação "Ver mais →". */
 function TransferCarouselVerMaisTile({
   onClick,
   topLabel,
@@ -257,24 +271,18 @@ function TransferCarouselVerMaisTile({
       disabled={disabled}
       aria-label={bottomLabel ? L(`Ver mais — ${bottomLabel}`, `See more — ${bottomLabel}`) : L('Ver mais', 'See more')}
       className={cn(
-        'flex w-[min(5.25rem,calc(100vw-2rem))] max-w-[5.5rem] shrink-0 flex-col items-center justify-center gap-1.5 border border-dashed px-1.5 py-5 text-center transition-colors sm:w-[5.25rem] sm:px-2 sm:py-6',
-        variant === 'neon'
-          ? 'border-neon-yellow/40 bg-panel hover:border-neon-yellow hover:bg-card disabled:pointer-events-none disabled:opacity-40'
-          : 'border-white/25 bg-panel hover:border-white/30 hover:bg-card disabled:pointer-events-none disabled:opacity-40',
+        'flex w-[6.5rem] max-w-none shrink-0 flex-col items-center justify-center gap-2 border-2 border-dashed px-2 py-6 text-center transition-colors disabled:pointer-events-none disabled:opacity-40',
+        variant === 'neon' ? 'border-fio text-rua hover:border-rua' : 'border-linha text-mudo hover:border-fio',
       )}
     >
       {topLabel ? (
-        <span className="text-[7px] font-bold uppercase leading-tight tracking-widest text-white/45 sm:text-[8px]">
-          {topLabel}
-        </span>
+        <span className="font-prova text-[9px] font-bold uppercase leading-tight tracking-[0.14em] text-mudo">{topLabel}</span>
       ) : null}
-      <span className="font-display text-[11px] font-black uppercase leading-tight tracking-wide text-neon-yellow sm:text-xs">
-        {L('Ver mais', 'See more')}
+      <span className="font-impact text-[18px] uppercase leading-none">
+        {L('Ver mais', 'See more')} <span aria-hidden>→</span>
       </span>
       {bottomLabel ? (
-        <span className="max-w-[4.5rem] px-0.5 text-[7px] leading-tight text-white/45 sm:max-w-none sm:text-[8px]">
-          {bottomLabel}
-        </span>
+        <span className="font-prova text-[10px] leading-tight text-mudo">{bottomLabel}</span>
       ) : null}
     </button>
   );
@@ -860,124 +868,102 @@ export function Transfer() {
   ];
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 overflow-x-hidden pb-20 md:pb-24">
+    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-7 overflow-x-hidden px-3 pb-20 sm:px-4 md:pb-24">
       <BackButton to="/mercado" label={L('Mercado', 'Market')} />
       {/* ── PROPOSTAS P2P (negociação entre managers) ── */}
       <MarketOffersPanel />
-      {/* ── HERO EDITORIAL — diagonal split + watermark cinematográfico ── */}
+
+      {/* ── HERO · O MURO DO MERCADO (DS 2027) ───────────────────────────────
+          Concreto com grão e retícula no canto; título na VOZ + GRITO; a aba
+          corrente vira um lambe de cal colado torto; estoque e saldo como
+          prova (o saldo é valor que já existe → fio de ouro). A busca é o
+          balcão: nome, posição e ordem à mão. A fita fecha o muro. */}
       <section
         aria-label={L('Mercado de transferências', 'Transfer market')}
-        className="relative w-full overflow-hidden bg-neon-yellow"
+        className="rua-grao relative isolate w-full min-w-0 overflow-hidden bg-concreto"
       >
-        {/* ── HERO no layer final ──────────────────────────────────────────
-            Saíram: o número da aba em marca-d'água gigante atrás do título, o
-            nome da aba em serifa itálica do tamanho da manchete, a régua
-            decorativa e a frase entre aspas que trocava por aba. Ficou o que o
-            comprador precisa pra decidir: onde ele está, quantas cartas
-            existem e quanto ele tem no bolso. */}
+        <span
+          aria-hidden
+          className="rua-reticula pointer-events-none absolute -right-6 -top-6 h-52 w-60 [--reticula:rgba(242,230,30,0.20)] sm:h-72 sm:w-96"
+          style={{
+            WebkitMaskImage: 'radial-gradient(circle at 100% 0%, #000 0%, transparent 70%)',
+            maskImage: 'radial-gradient(circle at 100% 0%, #000 0%, transparent 70%)',
+          }}
+        />
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative z-10 px-5 sm:px-8"
-          style={{ paddingBlock: 'clamp(26px, 5vw, 46px)' }}
+          transition={{ duration: 0.45 }}
+          className="relative z-10 flex min-w-0 flex-col gap-5 px-5 pb-5 pt-6 sm:px-8 sm:pt-8"
         >
-          <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-            {tabMeta.eyebrow}
-          </span>
+          <SecaoRua label={`${L('Transfer', 'Transfer')} · ${tabMeta.eyebrow}`} />
 
-          <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <h1
-              className="font-impact uppercase"
-              style={{
-                color: 'var(--color-deep-black)',
-                fontSize: 'clamp(42px, 11vw, 88px)',
-                lineHeight: 0.84,
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {L('Mercado', 'Market')}
+          <div className="flex min-w-0 flex-col items-start gap-2">
+            <h1 className="flex min-w-0 flex-col">
+              <span className="font-voz leading-[0.82] text-papel" style={{ fontSize: 'clamp(60px, 16vw, 120px)' }}>
+                {L('Mercado', 'Market')}
+              </span>
+              <span className="font-impact uppercase leading-[0.9] text-rua" style={{ fontSize: 'clamp(34px, 9.6vw, 72px)' }}>
+                {L('de cartas.', 'of cards.')}
+              </span>
             </h1>
-            {/* A aba corrente vira chip preto — é navegação, não subtítulo. */}
-            <span
-              className="inline-flex items-center font-impact uppercase"
-              style={{
-                background: 'var(--color-deep-black)',
-                color: 'var(--color-neon-yellow)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '4px 10px',
-                fontSize: 'clamp(16px, 4vw, 24px)',
-                lineHeight: 1,
-              }}
-            >
+            {/* A aba corrente vira um lambe de cal colado torto. */}
+            <span className="mt-1 inline-flex -rotate-[3deg] items-center bg-cal px-3 py-1 font-voz text-[26px] leading-none text-asfalto-27 shadow-[4px_4px_0_rgba(0,0,0,0.55)]">
               {tabMeta.subtitle}
             </span>
           </div>
 
-          {/* Estoque e saldo: o número manda, o rótulo acompanha. */}
-          <div className="mt-5 flex flex-wrap items-baseline gap-x-6 gap-y-2">
-            <span
-              className="font-impact tabular-nums"
-              style={{ fontSize: '30px', lineHeight: 0.85, color: 'var(--color-deep-black)' }}
-            >
-              {/* O estoque da aba que está aberta. Antes dizia sempre o total
-                  dos leilões — nas Legacies o hero falava 42 e a grade logo
-                  abaixo dizia 23. */}
-              {marketTab === 'legacies' ? legacyRows.length : auctionPool.length}
-              <span className="ml-1.5 font-display font-black" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
-                {L('cartas', 'cards')}
+          {/* Estoque e saldo — o número manda, o rótulo acompanha. */}
+          <div className="grid min-w-0 grid-cols-2 gap-3 sm:max-w-xl">
+            <div className="flex min-w-0 flex-col gap-1 border-2 border-linha bg-asfalto-27 p-3">
+              <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.2em] text-mudo">
+                — {L('Na vitrine', 'Listed')}
               </span>
-            </span>
-            <span
-              className="font-impact tabular-nums"
-              style={{ fontSize: '30px', lineHeight: 0.85, color: 'rgba(13,13,13,0.55)' }}
-            >
-              {formatExp(oleBal)}
-              <span className="ml-1.5 font-display font-black" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
-                EXP
+              {/* O estoque da aba aberta (nas Legacies, as lendas listadas). */}
+              <span className="font-spray text-[40px] font-black leading-none tabular-nums text-papel">
+                {marketTab === 'legacies' ? legacyRows.length : auctionPool.length}
               </span>
-            </span>
+              <span className="font-prova text-[10.5px] uppercase tracking-[0.14em] text-mudo">{L('cartas', 'cards')}</span>
+            </div>
+            <div className="flex min-w-0 flex-col gap-1 border-[3px] border-ouro-27 bg-asfalto-27 p-3">
+              <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.2em] text-mudo">
+                — {L('No bolso', 'In pocket')}
+              </span>
+              <span className="min-w-0 font-spray text-[clamp(24px,7vw,40px)] font-black leading-none tabular-nums text-ouro-27 [overflow-wrap:anywhere]">
+                {formatExp(oleBal)}
+              </span>
+              <span className="font-prova text-[10.5px] uppercase tracking-[0.14em] text-mudo">EXP</span>
+            </div>
           </div>
 
-          {/* ── BUSCA — o balcão do mercado ───────────────────────────────
-              Antes eram dois botões ("Buscar carta" / "Filtrar") que abriam
-              painéis sanfonados: ninguém abre o que não vê. Agora a busca é o
-              hero. Nome, posição e ordem ficam à mão, do jeito do Elifoot:
-              o manager procura, não navega. */}
-          <div
-            className="mt-6 border border-black/20 bg-deep-black p-3 sm:p-4"
-            style={{ borderRadius: 'var(--radius-sm)' }}
-          >
-            <div className="flex items-center gap-2">
+          {/* ── BUSCA — o balcão do mercado ──────────────────────────────── */}
+          <div className="flex min-w-0 flex-col gap-4 border-2 border-linha bg-asfalto-27 p-3 sm:p-4">
+            <div className="flex min-w-0 items-center gap-2">
               <label className="sr-only" htmlFor="mercado-busca">
                 {L('Buscar jogador pelo nome', 'Search player by name')}
               </label>
               <div className="relative min-w-0 flex-1">
-                <Search
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neon-yellow"
-                  aria-hidden
-                />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-rua" aria-hidden />
                 <input
                   id="mercado-busca"
                   ref={searchInputRef}
                   type="search"
                   inputMode="search"
-                  placeholder={L('Buscar jogador…', 'Search player…')}
+                  placeholder={L('Quem você procura?', 'Who are you looking for?')}
                   value={filters.name}
                   onChange={(e) => setFilters({ ...filters, name: e.target.value })}
                   onKeyDown={(e) => {
                     if (e.key === 'Escape') setFilters({ ...filters, name: '' });
                   }}
                   autoComplete="off"
-                  className="h-11 w-full min-w-0 border border-white/15 bg-black pl-9 pr-9 text-[14px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-neon-yellow"
-                  style={{ fontFamily: 'var(--font-ui)', borderRadius: 'var(--radius-sm)' }}
+                  className={cn(CAMPO_RUA, 'h-12 py-0 pl-10 pr-10')}
                 />
                 {filters.name.trim() !== '' && (
                   <button
                     type="button"
                     onClick={() => setFilters({ ...filters, name: '' })}
                     aria-label={L('Limpar busca', 'Clear search')}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-white/45 hover:text-white"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-mudo hover:text-papel"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -987,8 +973,7 @@ export function Transfer() {
                 <button
                   type="button"
                   onClick={limparFiltros}
-                  className="ole-num h-11 shrink-0 whitespace-nowrap border border-white/20 px-3 text-[11px] uppercase text-cimento transition-colors hover:border-white hover:text-white"
-                  style={{ borderRadius: 'var(--radius-sm)' }}
+                  className="h-12 shrink-0 whitespace-nowrap border-2 border-linha px-3 font-impact text-[16px] uppercase leading-none text-suave transition-colors hover:border-papel hover:text-papel"
                 >
                   {L('Limpar', 'Clear')}
                 </button>
@@ -996,9 +981,9 @@ export function Transfer() {
             </div>
 
             {/* Posição — rolagem horizontal no celular, tudo à vista no desktop. */}
-            <div className="mt-3">
-              <p className="ole-eyebrow-poster mb-1.5 text-poeira" style={{ fontSize: '10px' }}>
-                {L('Posição', 'Position')}
+            <div className="min-w-0">
+              <p className="mb-2 font-prova text-[10.5px] font-bold uppercase tracking-[0.2em] text-mudo">
+                — {L('Posição', 'Position')}
               </p>
               <div className="hide-scrollbar -mx-1 flex max-w-none gap-1.5 overflow-x-auto px-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
                 {['', ...POSITIONS].map((p) => (
@@ -1008,12 +993,11 @@ export function Transfer() {
                     onClick={() => setFilters({ ...filters, pos: p })}
                     aria-pressed={filters.pos === p}
                     className={cn(
-                      'ole-num h-8 shrink-0 whitespace-nowrap px-2.5 text-[11px] uppercase transition-colors',
+                      'h-9 shrink-0 whitespace-nowrap px-3 font-impact text-[15px] uppercase leading-none transition-colors',
                       filters.pos === p
-                        ? 'bg-neon-yellow text-black'
-                        : 'border border-white/15 text-cimento hover:border-white hover:text-white',
+                        ? 'bg-rua text-asfalto-27'
+                        : 'border-2 border-linha text-suave hover:border-papel hover:text-papel',
                     )}
-                    style={{ borderRadius: 'var(--radius-sm)' }}
                   >
                     {p ? rotuloPosicao(p) : L('Todas', 'All')}
                   </button>
@@ -1022,9 +1006,9 @@ export function Transfer() {
             </div>
 
             {/* Ordenar — mesmo vocabulário nas duas abas. */}
-            <div className="mt-3">
-              <p className="ole-eyebrow-poster mb-1.5 text-poeira" style={{ fontSize: '10px' }}>
-                {L('Ordenar', 'Sort')}
+            <div className="min-w-0">
+              <p className="mb-2 font-prova text-[10.5px] font-bold uppercase tracking-[0.2em] text-mudo">
+                — {L('Ordenar', 'Sort')}
               </p>
               <div className="hide-scrollbar -mx-1 flex max-w-none gap-1.5 overflow-x-auto px-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
                 {MARKET_SORTS.map((s) => (
@@ -1034,12 +1018,11 @@ export function Transfer() {
                     onClick={() => setFilters({ ...filters, sort: s.id })}
                     aria-pressed={filters.sort === s.id}
                     className={cn(
-                      'ole-num h-8 shrink-0 whitespace-nowrap px-2.5 text-[11px] uppercase transition-colors',
+                      'h-9 shrink-0 whitespace-nowrap px-3 font-impact text-[15px] uppercase leading-none transition-colors',
                       filters.sort === s.id
-                        ? 'bg-neon-yellow text-black'
-                        : 'border border-white/15 text-cimento hover:border-white hover:text-white',
+                        ? 'bg-rua text-asfalto-27'
+                        : 'border-2 border-linha text-suave hover:border-papel hover:text-papel',
                     )}
-                    style={{ borderRadius: 'var(--radius-sm)' }}
                   >
                     {s.label}
                   </button>
@@ -1048,30 +1031,36 @@ export function Transfer() {
             </div>
           </div>
         </motion.div>
+
+        {/* A fita fecha o muro — marca, não informação. */}
+        <FitaRua tags={[L('#respeitoéouro', '#respectisgold'), '#correloko']} inclinacao={-1.5} className="pb-3 pt-1" />
       </section>
 
-      {/* Sprint B-4: ordem padronizada com /loja — DESTAQUES vem antes do SLIDER */}
-      {/* ── DESTAQUES DA SEMANA ───────────────────────────────────────
-          Some enquanto há busca/filtro: é curadoria, não obedece ao filtro —
-          deixar o carrossel no topo do resultado confundia (procurava um nome
-          e o primeiro card da tela era outro jogador). */}
+      {/* ── DESTAQUES DA SEMANA ─────────────────────────────────────────────
+          Some enquanto há busca/filtro: é curadoria, não obedece ao filtro.
+          As cartas entram coladas tortas como lambe; o hover endireita. */}
       {!isFiltered && highlightsOrdered.length > 0 ? (
-        <section className="min-w-0 space-y-3">
-          <SecaoVolt label={L('Destaques da semana', 'Weekly highlights')} className="px-0.5" />
-          <div className="relative -mx-3 sm:-mx-4 lg:-mx-8">
+        <section className="min-w-0 space-y-1">
+          <SecaoRua label={L('Destaques da semana', 'Weekly highlights')} aside={String(highlightsOrdered.length)} />
+          <h2 className="flex flex-col font-impact uppercase leading-[0.92]" style={{ fontSize: 'clamp(30px, 8.4vw, 50px)' }}>
+            <span className="font-voz text-[1.2em] normal-case leading-[0.9] text-papel">{L('Carta boa', 'A good card')}</span>
+            <span className="text-transparent [-webkit-text-stroke:1.5px_var(--color-papel)]">{L('não fica parada.', "doesn't sit still.")}</span>
+          </h2>
+          <div className="relative -mx-3 max-w-none sm:-mx-4 lg:-mx-8">
             <div
               ref={highlightsScrollRef}
-              className="hide-scrollbar overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] "
+              className="hide-scrollbar overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch]"
             >
-              <div className="inline-flex flex-nowrap items-stretch gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 lg:px-8">
+              <div className="inline-flex flex-nowrap items-stretch gap-4 px-5 py-7 sm:gap-5 sm:px-6 lg:px-10">
                 {highlightsOrdered.slice(0, highlightsShownLen).map((player, i) => {
                   const legacyRow = legacyHighlightMap.get(player.id);
                   return (
                   <motion.div
                     key={`hl-${player.id}`}
-                    initial={{ opacity: 0, scale: 0.96 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.02, duration: 0.18 }}
+                    initial={{ opacity: 0, scale: 0.96, rotate: 0 }}
+                    animate={{ opacity: 1, scale: 1, rotate: TORTO[i % TORTO.length] }}
+                    whileHover={{ rotate: 0, y: -4 }}
+                    transition={{ delay: i * 0.02, duration: 0.2 }}
                     className="min-w-0 shrink-0 cursor-pointer w-[var(--highlight-card-px,min(200px,calc(100dvw-3rem)))]"
                     onClick={() => {
                       if (legacyRow) {
@@ -1122,10 +1111,8 @@ export function Transfer() {
         </section>
       ) : null}
 
-      {/* Slider promocional removido (poluía a tela). */}
-
-      {/* ── TAB BAR scoreboard-tape ───────────────── */}
-      <div className="flex items-stretch gap-0 border-b border-white/10 overflow-x-auto hide-scrollbar">
+      {/* ── ABAS — placa de rua: a corrente é amarela (é onde se age) ─────── */}
+      <div className="hide-scrollbar flex max-w-none items-stretch gap-2 overflow-x-auto border-b-2 border-linha pb-3">
         {tabsList.map((t) => {
           const active = marketTab === t.id;
           return (
@@ -1133,32 +1120,15 @@ export function Transfer() {
               key={t.id}
               type="button"
               onClick={() => setMarketTab(t.id)}
+              aria-pressed={active}
               className={cn(
-                'relative inline-flex items-center gap-2 px-4 sm:px-6 py-3 font-bold uppercase whitespace-nowrap transition-colors',
+                'inline-flex min-h-11 shrink-0 items-center whitespace-nowrap px-4 font-impact text-[18px] uppercase leading-none transition-colors sm:px-5',
                 active
-                  ? 'text-neon-yellow'
-                  : 'text-white/45 hover:text-white/85',
+                  ? 'bg-rua text-asfalto-27'
+                  : 'border-2 border-linha text-mudo hover:border-papel hover:text-papel',
               )}
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '12px',
-                letterSpacing: '0.18em',
-              }}
             >
-              {active && (
-                <span
-                  aria-hidden
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-neon-yellow"
-                />
-              )}
-              <span className={active ? 'pl-2' : ''}>{t.label}</span>
-              {active && (
-                <motion.span
-                  layoutId="tab-underline"
-                  aria-hidden
-                  className="absolute left-0 right-0 -bottom-px h-[2px] bg-neon-yellow"
-                />
-              )}
+              {t.label}
             </button>
           );
         })}
@@ -1179,25 +1149,20 @@ export function Transfer() {
           <motion.div
             role="status"
             aria-live="polite"
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: -8, rotate: 0 }}
+            animate={{ opacity: 1, y: 0, rotate: -1 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25 }}
-            className="flex items-center justify-between gap-3 border border-l-[3px] border-[var(--color-border)] border-l-[var(--color-success)] bg-dark-gray px-4 py-3.5 sm:px-5"
-            style={{ borderRadius: 'var(--radius-md)' }}
+            className="flex items-center justify-between gap-3 bg-cal px-4 py-3 text-asfalto-27 shadow-[5px_5px_0_rgba(0,0,0,0.55)] sm:px-5"
           >
+            {/* Recibo de papel colado torto: a compra fechou. */}
             <div className="flex min-w-0 items-center gap-3">
-              <CheckCircle2 className="h-7 w-7 shrink-0 text-[var(--color-success)]" aria-hidden />
+              <span className="grid h-10 w-10 shrink-0 place-items-center bg-asfalto-27 text-rua">
+                <CheckCircle2 className="h-5 w-5" aria-hidden />
+              </span>
               <div className="min-w-0">
-                <p
-                  className="text-[var(--color-success)] uppercase"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    letterSpacing: '0.2em',
-                  }}
-                >
+                <p className="font-voz text-[26px] leading-none">{L('Fechou negócio.', 'Deal closed.')}</p>
+                <p className="mt-1 font-prova text-[10.5px] font-bold uppercase tracking-[0.18em]">
                   {L('Compra concluída', 'Purchase complete')}
                 </p>
               </div>
@@ -1211,8 +1176,7 @@ export function Transfer() {
                 }
                 setPurchaseCompleteBanner(false);
               }}
-              className="shrink-0 grid h-8 w-8 place-items-center text-white/45 transition-colors hover:bg-white/10 hover:text-white"
-              style={{ borderRadius: 'var(--radius-sm)' }}
+              className="grid h-9 w-9 shrink-0 place-items-center border-2 border-asfalto-27 transition-colors hover:bg-asfalto-27 hover:text-cal"
               aria-label={L('Fechar aviso de compra', 'Close purchase notice')}
             >
               <X className="h-4 w-4" />
@@ -1221,29 +1185,31 @@ export function Transfer() {
         )}
       </AnimatePresence>
 
-      {/* ── GENESIS EM FOCO ─ headline + view toggle (padrão /loja) ── */}
-      <div className="flex flex-wrap items-end justify-between gap-3 px-0.5 pb-3 sm:pb-4">
-        <SecaoVolt label={L('Genesis em foco', 'Genesis spotlight')} className="min-w-0 flex-1">
-          <Hashtag>
-            {gridPlayers.length}{' '}
-            {gridPlayers.length === 1
-              ? L('carta disponível', 'card available')
-              : L('cartas disponíveis', 'cards available')}
-            {isFiltered ? L(' (filtros aplicados)', ' (filters applied)') : ''}
-          </Hashtag>
-        </SecaoVolt>
-        {/* View toggle Grid / List — Sprint B-4 */}
-        <div className="flex items-center gap-1 border border-white/10 bg-panel p-1">
+      {/* ── GENESIS EM FOCO ─ headline + grade/lista ── */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-1">
+          <SecaoRua
+            label={L('Genesis em foco', 'Genesis spotlight')}
+            aside={`${gridPlayers.length} ${gridPlayers.length === 1 ? L('carta', 'card') : L('cartas', 'cards')}`}
+          />
+          <h2 className="font-voz leading-[0.9] text-papel" style={{ fontSize: 'clamp(34px, 9vw, 54px)' }}>
+            {L('Cartas fundadoras', 'Founder cards')}
+          </h2>
+          {isFiltered ? (
+            <p className="font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-mudo">
+              {L('Com filtro aplicado', 'Filter applied')}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-1 border-2 border-linha p-1">
           {(['grid', 'list'] as const).map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => setGenesisViewMode(m)}
               className={cn(
-                'inline-flex items-center px-4 py-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em] transition-colors',
-                genesisViewMode === m
-                  ? 'bg-neon-yellow text-black'
-                  : 'text-white/55 hover:text-white',
+                'inline-flex min-h-9 items-center px-4 font-impact text-[15px] uppercase leading-none transition-colors',
+                genesisViewMode === m ? 'bg-rua text-asfalto-27' : 'text-mudo hover:text-papel',
               )}
               aria-pressed={genesisViewMode === m}
               aria-label={
@@ -1252,7 +1218,7 @@ export function Transfer() {
                   : L('Visualização em lista horizontal', 'List view')
               }
             >
-              {m === 'grid' ? 'Grid' : 'List'}
+              {m === 'grid' ? L('Grade', 'Grid') : L('Lista', 'List')}
             </button>
           ))}
         </div>
@@ -1260,58 +1226,35 @@ export function Transfer() {
 
       {/* Body do catálogo — switch por viewMode (filtros sempre aplicam) */}
       {genesisViewMode === 'grid' ? (
-        <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4">
+        <div className="grid min-w-0 grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4">
           {gridPlayers.map((player, i) => (
             <motion.div
               key={player.id}
               className="min-w-0"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05, duration: 0.3 }}
+              transition={{ delay: Math.min(i, 12) * 0.04, duration: 0.3 }}
               onClick={() => setSelectedPlayer(player)}
             >
               <PlayerCard player={player} listHomonym={homonymRankById.get(player.id)} />
             </motion.div>
           ))}
           {gridPlayers.length === 0 && (
-            <div className="col-span-full py-16 text-center">
-              <p className="font-impact uppercase text-white" style={{ fontSize: '18px' }}>
-                {L('Nenhuma carta encontrada', 'No cards found')}
-              </p>
-              <p
-                className="mx-auto mt-1.5 max-w-md text-white/50"
-                style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
-              >
-                {L('Nenhuma carta atende esses filtros. Tente afrouxar a busca.', 'No cards match these filters. Try a broader search.')}
-              </p>
-              <p
-                className="mt-3 text-white/35 uppercase"
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '10px',
-                  letterSpacing: '0.22em',
-                }}
-              >
-                {L('Tenta ajustar a busca acima', 'Try adjusting the search above')}
-              </p>
-            </div>
+            <VazioRua
+              className="col-span-full"
+              titulo={L('Nada com esse filtro.', 'Nothing with that filter.')}
+              linha={L('Afrouxa a busca ali em cima', 'Loosen the search above')}
+            />
           )}
         </div>
       ) : (
         <div className="space-y-3 sm:space-y-4">
-          {/* List view: cards horizontais um abaixo do outro (Sprint B-4) */}
+          {/* List view: cards horizontais um abaixo do outro */}
           {gridPlayers.length === 0 && (
-            <div className="py-16 text-center">
-              <p className="font-impact uppercase text-white" style={{ fontSize: '18px' }}>
-                {L('Nenhuma carta encontrada', 'No cards found')}
-              </p>
-              <p
-                className="mx-auto mt-1.5 max-w-md text-white/50"
-                style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
-              >
-                {L('Nenhuma carta atende esses filtros. Tente afrouxar a busca.', 'No cards match these filters. Try a broader search.')}
-              </p>
-            </div>
+            <VazioRua
+              titulo={L('Nada com esse filtro.', 'Nothing with that filter.')}
+              linha={L('Afrouxa a busca ali em cima', 'Loosen the search above')}
+            />
           )}
           {gridPlayers.map((player, i) => (
             <TransferRowCard
@@ -1319,36 +1262,27 @@ export function Transfer() {
               player={player}
               listHomonym={homonymRankById.get(player.id)}
               onSelect={() => setSelectedPlayer(player)}
-              delay={i * 0.04}
+              delay={Math.min(i, 12) * 0.04}
             />
           ))}
 
-
           {managerAuctionCards.length > 0 ? (
-            <section className="min-w-0 space-y-3">
-              <div className="flex items-center justify-between gap-2 px-0.5">
-                <SecaoVolt label={L('Jogadores anunciados', 'Listed players')} className="min-w-0 flex-1">
-                  <Hashtag>{L('Toque pra mudar preço ou retirar', 'Tap to change price or delist')}</Hashtag>
-                </SecaoVolt>
+            <section className="min-w-0 space-y-2 pt-4">
+              <SecaoRua label={L('Jogadores anunciados', 'Listed players')} aside={String(managerAuctionCards.length)} />
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <p className="font-voz text-[28px] leading-none text-papel">
+                  {L('Toque pra mudar ou retirar.', 'Tap to change or delist.')}
+                </p>
                 <Link
                   to="/team"
-                  className="shrink-0 inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-3.5 py-1.5 text-white/80 transition-colors hover:border-neon-yellow/60 hover:text-neon-yellow"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                    textTransform: 'uppercase',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
+                  className="inline-flex min-h-11 shrink-0 items-center gap-2 font-impact text-[17px] uppercase leading-none text-rua transition-colors hover:text-papel"
                 >
-                  {L('Anunciar mais', 'List more')}
-                  <ChevronRight className="h-3 w-3" />
+                  {L('Anunciar mais', 'List more')} <span aria-hidden>→</span>
                 </Link>
               </div>
-              <div className="relative -mx-3 sm:-mx-4 lg:-mx-8">
+              <div className="relative -mx-3 max-w-none sm:-mx-4 lg:-mx-8">
                 <div className="hide-scrollbar overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch]">
-                  <div className="inline-flex flex-nowrap items-stretch gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 lg:px-8">
+                  <div className="inline-flex flex-nowrap items-stretch gap-3 px-3 py-3 sm:gap-4 sm:px-4 lg:px-8">
                     {managerAuctionCards.map((player) => (
                       <motion.div
                         key={`own-${player.id}`}
@@ -1368,54 +1302,62 @@ export function Transfer() {
         </div>
       )}
 
-      {/* Player Details Modal — overlay com scroll; painel limitado a viewport menos safe areas e barra inferior */}
+      {/* Ficha da carta — overlay com scroll; painel limitado à viewport menos safe areas e barra inferior */}
       <AnimatePresence>
-        {selectedPlayer && (
-          <div className="fixed inset-0 z-50 flex min-h-0 flex-col overflow-y-auto overscroll-y-contain bg-black/90 px-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom,0px)+5.5rem))] sm:items-center sm:justify-center sm:px-4 sm:pb-[max(1.5rem,calc(env(safe-area-inset-bottom,0px)+2rem))] sm:pt-[max(1rem,env(safe-area-inset-top,0px))] md:px-6">
+        {selectedPlayer && (() => {
+          const dSel = degrauDe(selectedPlayer.ovr);
+          const infoSel = DEGRAU_INFO[dSel];
+          return (
+          <div className="fixed inset-0 z-50 flex min-h-0 flex-col overflow-y-auto overscroll-y-contain bg-asfalto-27/95 px-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom,0px)+5.5rem))] sm:items-center sm:justify-center sm:px-4 sm:pb-[max(1.5rem,calc(env(safe-area-inset-bottom,0px)+2rem))] sm:pt-[max(1rem,env(safe-area-inset-top,0px))] md:px-6">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.97, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              exit={{ opacity: 0, scale: 0.97, y: 20 }}
               className={cn(
-                'sports-panel my-2 flex w-full min-h-0 max-w-[min(100%,64rem)] flex-col overflow-hidden rounded-none p-0 sm:my-4 sm:rounded-xl',
+                'my-2 flex w-full min-h-0 max-w-[min(100%,64rem)] flex-col overflow-hidden bg-asfalto-27 p-0 sm:my-4',
                 // Não usar h=100dvh no painel: soma com padding do overlay cortava o fundo; max-h deixa o scroll interior funcionar.
                 'max-h-[min(920px,calc(100dvh-7.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))] sm:max-h-[min(920px,calc(100dvh-4.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))]',
-                selectedPlayer.category === 'gold'
-                  ? `border-2 border-neon-yellow ${GOLD_CARD_GLOW}`
-                  : 'border-neon-yellow/50',
+                dSel === 'respeito' || dSel === 'lenda' ? 'border-[3px] border-ouro-27' : 'border-2 border-linha',
               )}
             >
-              <div className="z-[60] flex shrink-0 justify-end px-3 pb-1 pt-3">
+              <div className="z-[60] flex shrink-0 items-center justify-between gap-3 border-b-2 border-linha px-4 py-3">
+                <span className="min-w-0 truncate font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+                  — {L('Ficha da carta', 'Card file')} · {infoSel.n} {infoSel.nome}
+                </span>
                 <button
                   type="button"
                   onClick={() => setSelectedPlayer(null)}
-                  className="border border-white/16 bg-panel p-2 text-white/50 hover:border-white/30 hover:text-white"
+                  className={FECHAR_RUA}
+                  aria-label={L('Fechar', 'Close')}
                 >
-                  <X className="h-6 w-6" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
               {/* Corpo com scroll até ao fim (leilão, histórico, bio) */}
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain scroll-pb-4 [-webkit-overflow-scrolling:touch]">
                 <div className="flex flex-col pb-[max(2.5rem,env(safe-area-inset-bottom,0px))] md:flex-row md:pb-10">
-                  {/* Left: Card */}
-                  <div className="flex w-full shrink-0 items-start justify-center border-b border-white/10 bg-black/20 p-4 sm:p-6 md:w-2/5 md:border-b-0 md:border-r md:px-8 md:pb-8 md:pt-2">
-                    <div className="w-full max-w-[300px]">
+                  {/* Esquerda: a carta, colada no muro */}
+                  <div className="rua-grao flex w-full shrink-0 items-start justify-center border-b-2 border-linha bg-concreto px-6 py-8 md:w-2/5 md:border-b-0 md:border-r-2 md:px-8">
+                    <div className="w-full max-w-[280px] -rotate-[1.5deg]">
                       <PlayerCard player={selectedPlayer} isModal />
                     </div>
                   </div>
 
-                  {/* Right: Details & Bidding */}
-                  <div className="min-w-0 flex-1 p-4 sm:p-6 md:px-8 md:pb-8 md:pt-2">
-                    <div className="flex flex-col gap-6">
-                    {/* Header */}
-                    <div className="border-b border-white/10 pb-4">
-                      <div className="flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                        <h2 className="min-w-0 max-w-full break-words text-2xl font-display font-black uppercase leading-[1.1] tracking-wider text-white [overflow-wrap:anywhere] sm:text-3xl md:text-4xl">
+                  {/* Direita: ficha + compra */}
+                  <div className="min-w-0 flex-1 p-4 sm:p-6 md:px-8 md:pb-8 md:pt-6">
+                    <div className="flex flex-col gap-7">
+                    {/* Cabeçalho */}
+                    <div className="flex flex-col gap-2 border-b-2 border-linha pb-5">
+                      <div className="flex min-w-0 items-start justify-between gap-3">
+                        <h2
+                          className="min-w-0 max-w-full break-words font-voz leading-[0.9] text-papel [overflow-wrap:anywhere]"
+                          style={{ fontSize: 'clamp(40px, 10vw, 64px)' }}
+                        >
                           {selectedPlayer.name}
                         </h2>
                         <span
-                          className="shrink-0 rounded border border-white/20 bg-white/10 px-2 py-1 text-xl leading-none"
+                          className="grid h-11 w-11 shrink-0 place-items-center border-2 border-linha text-xl leading-none"
                           title={
                             selectedPlayer.nat?.trim() && selectedPlayer.nat !== '—'
                               ? L(`País (código): ${selectedPlayer.nat}`, `Country (code): ${selectedPlayer.nat}`)
@@ -1425,24 +1367,27 @@ export function Transfer() {
                           {natFlagDisplay(selectedPlayer.nat) || '—'}
                         </span>
                       </div>
-                      <p className="min-w-0 max-w-full break-words text-sm font-bold uppercase tracking-widest text-neon-yellow [overflow-wrap:anywhere]">
-                        {rotuloPosicao(selectedPlayer.pos)} • Overall {selectedPlayer.ovr}
+                      <p className="flex min-w-0 flex-wrap items-baseline gap-x-3 font-impact uppercase leading-none">
+                        <span className="text-[22px] text-suave">{rotuloPosicao(selectedPlayer.pos)}</span>
+                        <span className={cn('text-[22px]', dSel === 'respeito' || dSel === 'lenda' ? 'text-ouro-27' : 'text-papel')}>
+                          OVR {selectedPlayer.ovr}
+                        </span>
                       </p>
-                      <p className="mt-1.5 text-[10px] text-white/45">
+                      <p className="min-w-0 break-words font-prova text-[10.5px] uppercase tracking-[0.12em] text-mudo [overflow-wrap:anywhere]">
                         {L('Anúncio', 'Listing')} #{selectedPlayer.id} · {playerIdentityLine(selectedPlayer)}
                       </p>
                     </div>
 
                     {/* Bio (até 250 caracteres) */}
-                    <div className="rounded-xl border border-white/10 bg-black/35 p-4">
-                      <h3 className="font-bold text-white/50 uppercase text-xs mb-2 flex items-center gap-2 tracking-wider">
-                        <UserCircle className="w-4 h-4" /> Bio
+                    <div className="flex flex-col gap-2">
+                      <h3 className="flex items-center gap-2 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+                        <UserCircle className="h-3.5 w-3.5" aria-hidden /> — Bio
                       </h3>
-                      <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">
-                        {(selectedPlayer.bio ?? '').trim() || L('Sem bio disponível para este anúncio.', 'No bio available for this listing.')}
+                      <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-suave">
+                        {(selectedPlayer.bio ?? '').trim() || L('Sem bio neste anúncio.', 'No bio on this listing.')}
                       </p>
                       {selectedPlayer.bio && (
-                        <p className="mt-2 text-[10px] text-white/45">
+                        <p className="font-prova text-[10px] uppercase tracking-[0.14em] text-fio">
                           {Math.min(selectedPlayer.bio.length, BIO_MAX_LEN)} / {BIO_MAX_LEN} {L('caracteres', 'characters')}
                         </p>
                       )}
@@ -1450,12 +1395,12 @@ export function Transfer() {
 
                     <TransferMemorablesInfoBox ids={selectedPlayer.memorableTrophyIds} />
 
-                    {/* Attributes Grid */}
-                    <div>
-                      <h3 className="font-bold text-white/50 uppercase text-xs mb-4 flex items-center gap-2 tracking-wider">
-                        <TrendingUp className="w-4 h-4"/> {L('Atributos Detalhados', 'Detailed Attributes')}
+                    {/* Atributos */}
+                    <div className="flex flex-col gap-3">
+                      <h3 className="flex items-center gap-2 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+                        <TrendingUp className="h-3.5 w-3.5" aria-hidden /> — {L('Atributos', 'Attributes')}
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                      <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
                         <StatBar label="PAC" value={selectedPlayer.pac} />
                         <StatBar label="DRI" value={selectedPlayer.dri} />
                         <StatBar label="SHO" value={selectedPlayer.sho} />
@@ -1465,61 +1410,61 @@ export function Transfer() {
                       </div>
                     </div>
 
-                    {/* History */}
-                    <div className="bg-black/40 p-5 rounded-xl border border-white/5">
-                      <h3 className="font-bold text-white/50 uppercase text-xs mb-3 tracking-wider">{L('Histórico Recente', 'Recent History')}</h3>
-                      <div className="space-y-2">
+                    {/* Histórico */}
+                    <div className="flex flex-col gap-2">
+                      <h3 className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+                        — {L('Histórico', 'History')}
+                      </h3>
+                      <div className="border-2 border-linha">
                         {selectedPlayer.history.map((h: any, idx: number) => (
                           <div
                             key={idx}
-                            className="flex flex-col gap-2 border-b border-white/5 pb-3 text-sm last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:pb-2"
+                            className="flex flex-col gap-1 border-b-2 border-linha px-3 py-2.5 last:border-0 sm:flex-row sm:items-center sm:justify-between"
                           >
-                            <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
-                              <span className="font-bold text-white/45">{h.year}</span>
-                              <span className="font-medium text-white">{h.club}</span>
+                            <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+                              <span className="font-spray text-[20px] font-black leading-none text-mudo">{h.year}</span>
+                              <span className="font-impact text-[17px] uppercase leading-none text-papel">{h.club}</span>
                             </div>
-                            <div className="flex shrink-0 gap-4 text-white/50">
+                            <div className="flex shrink-0 gap-4 font-prova text-[11px] uppercase tracking-[0.12em] text-mudo">
                               <span>{h.apps} {L('Jogos', 'Apps')}</span>
-                              <span className="font-bold text-white">{h.goals} {L('Gols', 'Goals')}</span>
+                              <span className="text-papel">{h.goals} {L('Gols', 'Goals')}</span>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Bidding Area */}
-                    <div className="pt-2">
-                      <div className="relative overflow-hidden border border-white/10 bg-panel p-4 sm:p-6">
-                        <div className="relative z-10">
-                          <div className="mb-5 flex flex-col gap-4 md:mb-6 md:flex-row md:items-end md:justify-between">
+                    {/* ── Balcão de compra ── */}
+                    <div className="rua-grao relative overflow-hidden border-2 border-linha bg-concreto p-4 sm:p-6">
+                          <div className="mb-5 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 md:mb-6">
                             <div className="min-w-0">
-                              <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cimento">
-                                <Gavel className="h-4 w-4 shrink-0" /> {L('Lance Atual', 'Current Bid')}
+                              <div className="mb-1 flex items-center gap-2 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+                                <Gavel className="h-3.5 w-3.5 shrink-0" aria-hidden /> — {L('Lance atual', 'Current bid')}
                               </div>
-                              <div className="ole-num max-w-full break-words text-xl text-white [overflow-wrap:anywhere] sm:text-2xl md:text-3xl lg:text-4xl">
+                              <div className="max-w-full break-words font-spray font-black leading-none tabular-nums text-papel [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(30px, 8vw, 46px)' }}>
                                 {formatAuctionDisplay(selectedPlayer.auctionCurrency, selectedPlayer.currentBid)}
                               </div>
                             </div>
-                            <div className="text-left md:text-right">
-                              <div className="mb-1 text-xs font-bold uppercase tracking-widest text-white/50">{L('Tempo Restante', 'Time Left')}</div>
-                              <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 font-display text-lg font-bold tabular-nums text-white sm:text-xl md:text-2xl">
-                                <Clock className="h-5 w-5 shrink-0 text-neon-yellow sm:h-6 sm:w-6" aria-hidden />
+                            <div className="min-w-0 sm:text-right">
+                              <div className="mb-1 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">— {L('Encerra em', 'Ends in')}</div>
+                              <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 font-spray font-black leading-none tabular-nums text-papel sm:justify-end" style={{ fontSize: 'clamp(24px, 6vw, 34px)' }}>
+                                <Clock className="h-5 w-5 shrink-0 text-rua" aria-hidden />
                                 <span className="min-w-0 break-all">{selectedPlayer.timeLeft}</span>
                               </div>
                             </div>
                           </div>
-                          
+
                           {selectedPlayer.marketKind === 'manager_other' &&
                           selectedPlayer.managerListingId ? (
                             <div className="space-y-3">
-                              <p className="text-[10px] text-white/50">
+                              <p className="font-prova text-[11px] uppercase tracking-[0.14em] text-mudo">
                                 {L('Saldo EXP:', 'EXP balance:')}{' '}
-                                <span className="font-display font-bold text-white">{formatExp(oleBal)}</span>
+                                <span className="font-impact text-[15px] text-ouro-27">{formatExp(oleBal)}</span>
                               </p>
                               {(() => {
                                 const pending = marketOffers.pendingForListing(selectedPlayer.managerListingId!);
                                 return pending ? (
-                                  <p className="text-[11px] text-neon-yellow/80">
+                                  <p className="border-l-[3px] border-rua pl-3 text-[13px] text-papel">
                                     {pending.status === 'countered' && pending.counterExp != null
                                       ? L(
                                           `Contraproposta do vendedor: ${formatExp(pending.counterExp)}.`,
@@ -1533,30 +1478,25 @@ export function Transfer() {
                                 ) : null;
                               })()}
                               {purchaseError && (
-                                <p className="text-xs text-baixa font-medium">{purchaseError}</p>
+                                <p className="text-[13px] font-medium text-baixa">{purchaseError}</p>
                               )}
                               <button
                                 type="button"
                                 onClick={handleAcademiaMarketAction}
                                 disabled={isPurchasing || oleBal < selectedPlayer.buyNow}
-                                className={cn(
-                                  'btn-primary min-h-12 w-full px-3 py-3 sm:py-4',
-                                  (isPurchasing || oleBal < selectedPlayer.buyNow) && 'pointer-events-none opacity-40',
-                                )}
+                                className={ACAO_RUA}
                               >
-                                <span className="block text-center text-sm font-black uppercase sm:text-base">
-                                  {isPurchasing
-                                    ? L('Processando…', 'Processing…')
-                                    : `${L('Comprar agora', 'Buy now')} · ${formatAuctionDisplay(
-                                        selectedPlayer.auctionCurrency,
-                                        selectedPlayer.buyNow,
-                                      )}`}
-                                </span>
+                                {isPurchasing
+                                  ? L('Processando…', 'Processing…')
+                                  : <>{`${L('Comprar agora', 'Buy now')} · ${formatAuctionDisplay(
+                                      selectedPlayer.auctionCurrency,
+                                      selectedPlayer.buyNow,
+                                    )}`} <span aria-hidden>→</span></>}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setOfferModalListingId(selectedPlayer.managerListingId!)}
-                                className="min-h-12 w-full border border-white/30 bg-transparent px-3 py-3 font-display text-sm font-black uppercase tracking-wide text-white transition-colors hover:border-white hover:bg-white/5 sm:py-4"
+                                className={cn(ACAO_CONTORNO, 'mt-2')}
                               >
                                 {marketOffers.pendingForListing(selectedPlayer.managerListingId)
                                   ? L('Atualizar proposta', 'Update offer')
@@ -1567,21 +1507,21 @@ export function Transfer() {
                           selectedPlayer.marketKind === 'genesis' ? (
                             <div className="space-y-3">
                               {selectedPlayer.marketKind === 'manager_own' ? (
-                                <p className="text-[10px] text-white/50">{L('Seu anúncio', 'Your listing')}</p>
+                                <p className="font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-mudo">{L('Seu anúncio', 'Your listing')}</p>
                               ) : (
                                 <>
-                                  <p className="text-[10px] text-white/50">
+                                  <p className="font-prova text-[11px] uppercase tracking-[0.14em] text-mudo">
                                     {L('Saldo EXP:', 'EXP balance:')}{' '}
-                                    <span className="font-display font-bold text-white">{formatExp(oleBal)}</span>
+                                    <span className="font-impact text-[15px] text-ouro-27">{formatExp(oleBal)}</span>
                                     {selectedPlayer.marketKind === 'genesis' &&
                                     oleBal < selectedPlayer.buyNow ? (
-                                      <span className="mt-1 block text-baixa">
-                                        {L('Saldo insuficiente para compra imediata.', 'Not enough balance to buy now.')}
+                                      <span className="mt-1 block normal-case tracking-normal text-baixa">
+                                        {L('Saldo não fecha a compra agora.', 'Balance falls short right now.')}
                                       </span>
                                     ) : null}
                                   </p>
                                   {selectedPlayer.marketKind === 'genesis' && selectedPlayer.genesisCatalogId ? (
-                                    <p className="text-[10px] text-white/50">
+                                    <p className="font-prova text-[11px] uppercase tracking-[0.12em] text-mudo">
                                       {genesisListedEntities[selectedPlayer.genesisCatalogId] == null
                                         ? L('Sincronizando catálogo Genesis… recarregue se o botão travar.', 'Syncing Genesis catalog… reload if the button gets stuck.')
                                         : genesisListedEntities[selectedPlayer.genesisCatalogId]!.contractIsLifetime
@@ -1601,7 +1541,7 @@ export function Transfer() {
                                 </>
                               )}
                               {purchaseError && (
-                                <p className="text-xs text-baixa font-medium">{purchaseError}</p>
+                                <p className="text-[13px] font-medium text-baixa">{purchaseError}</p>
                               )}
                               <button
                                 type="button"
@@ -1613,33 +1553,23 @@ export function Transfer() {
                                       (!!selectedPlayer.genesisCatalogId &&
                                         genesisListedEntities[selectedPlayer.genesisCatalogId] == null)))
                                 }
-                                className={cn(
-                                  'btn-primary min-h-12 w-full px-3 py-3 sm:py-4',
-                                  (isPurchasing ||
-                                    (selectedPlayer.marketKind === 'genesis' &&
-                                      (oleBal < selectedPlayer.buyNow ||
-                                        (!!selectedPlayer.genesisCatalogId &&
-                                          genesisListedEntities[selectedPlayer.genesisCatalogId] == null)))) &&
-                                    'pointer-events-none opacity-40',
-                                )}
+                                className={selectedPlayer.marketKind === 'manager_own' ? ACAO_CONTORNO : ACAO_RUA}
                               >
-                                <span className="block text-center text-sm font-black uppercase sm:text-base">
-                                  {isPurchasing
-                                    ? L('Processando…', 'Processing…')
-                                    : selectedPlayer.marketKind === 'manager_own'
-                                    ? L('Retirar do mercado · grátis', 'Remove from market · free')
-                                    : `${L('Comprar agora', 'Buy now')} · ${formatAuctionDisplay(
-                                        selectedPlayer.auctionCurrency,
-                                        selectedPlayer.buyNow,
-                                      )}`}
-                                </span>
+                                {isPurchasing
+                                  ? L('Processando…', 'Processing…')
+                                  : selectedPlayer.marketKind === 'manager_own'
+                                  ? L('Retirar do mercado · grátis', 'Remove from market · free')
+                                  : <>{`${L('Comprar agora', 'Buy now')} · ${formatAuctionDisplay(
+                                      selectedPlayer.auctionCurrency,
+                                      selectedPlayer.buyNow,
+                                    )}`} <span aria-hidden>→</span></>}
                               </button>
                             </div>
                           ) : (
                             <>
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
                                 <div className="relative min-w-0 flex-1">
-                                  <span className="pointer-events-none absolute left-3 top-1/2 w-12 -translate-y-1/2 text-center font-display text-[10px] font-bold text-white/50 sm:left-4 sm:text-xs sm:w-14">
+                                  <span className="pointer-events-none absolute left-3 top-1/2 w-12 -translate-y-1/2 text-center font-prova text-[11px] font-bold text-mudo">
                                     {selectedPlayer.auctionCurrency === 'EXP' ? 'EXP' : '¢'}
                                   </span>
                                   <input
@@ -1649,24 +1579,22 @@ export function Transfer() {
                                         ? `${selectedPlayer.currentBid + 100000}`
                                         : `${selectedPlayer.currentBid + 1000}`
                                     }
-                                    className="w-full min-h-12 border border-white/20 bg-deep-black py-3 pl-14 pr-3 font-display text-lg font-bold text-white transition-colors focus:border-neon-yellow focus:outline-none sm:min-h-0 sm:py-4 sm:pl-16 sm:pr-4 sm:text-xl"
+                                    className={cn(CAMPO_RUA, 'min-h-[52px] pl-16 font-spray text-[22px] font-black')}
                                   />
                                 </div>
                                 <button
                                   type="button"
-                                  className="btn-primary min-h-12 w-full max-w-full shrink-0 px-3 py-3 sm:w-auto sm:min-h-0 sm:self-stretch sm:px-8 sm:py-4"
+                                  className={cn(ACAO_RUA, 'sm:w-auto sm:px-8')}
                                 >
-                                  <span className="flex min-w-0 max-w-full items-center justify-center gap-2 whitespace-normal text-center text-sm leading-tight sm:text-base md:text-lg">
-                                    <Gavel className="h-5 w-5 shrink-0" aria-hidden />
-                                    {L('Confirmar Lance', 'Confirm Bid')}
-                                  </span>
+                                  <Gavel className="h-5 w-5 shrink-0" aria-hidden />
+                                  {L('Confirmar lance', 'Confirm bid')} <span aria-hidden>→</span>
                                 </button>
                               </div>
-                              <div className="mt-4 text-center">
+                              <div className="mt-5 text-center">
                                 <button
                                   type="button"
                                   onClick={handleMockBuyNow}
-                                  className="mx-auto block max-w-full break-words px-2 text-left text-xs text-white/50 underline underline-offset-4 transition-colors [overflow-wrap:anywhere] hover:text-white sm:text-center"
+                                  className="mx-auto block max-w-full break-words px-2 font-prova text-[11px] uppercase tracking-[0.12em] text-mudo underline underline-offset-4 transition-colors [overflow-wrap:anywhere] hover:text-papel"
                                 >
                                   {L('Ou comprar agora por', 'Or buy now for')}{' '}
                                   {formatAuctionDisplay(selectedPlayer.auctionCurrency, selectedPlayer.buyNow)}
@@ -1674,8 +1602,6 @@ export function Transfer() {
                               </div>
                             </>
                           )}
-                        </div>
-                      </div>
                     </div>
                     </div>
                   </div>
@@ -1683,7 +1609,8 @@ export function Transfer() {
               </div>
             </motion.div>
           </div>
-        )}
+          );
+        })()}
       </AnimatePresence>
 
       {/* Modal de PROPOSTA (negociação P2P) por listagem de outro manager */}
@@ -1709,90 +1636,61 @@ export function Transfer() {
   );
 }
 
-/** Mesmo espírito visual do box MEMORÁVEIS na Sala de Troféus (Perfil). */
+/** Memoráveis da carta: com título é LENDA (ouro); sem título é CHÃO (tracejado). */
 function TransferMemorablesInfoBox({ ids }: { ids?: MemorableTrophyId[] }) {
   const labels = memorableLabels(ids);
   const has = labels.length > 0;
+  if (!has) {
+    return (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-2 border-dashed border-fio px-4 py-3">
+        <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+          — {L('Memoráveis', 'Memorables')}
+        </span>
+        <span className="font-prova text-[11px] uppercase tracking-[0.1em] text-fio">
+          {L('Sem títulos memoráveis neste anúncio.', 'No memorable titles on this listing.')}
+        </span>
+      </div>
+    );
+  }
   return (
-    <div
-      className={cn(
-        'relative overflow-hidden border-2 p-5 md:p-6',
-        has ? 'border-neon-yellow bg-panel' : 'border-white/10 bg-panel',
-      )}
-    >
-      <div className="relative z-10">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <span
-            className={cn(
-              'inline-flex max-w-full min-w-0 self-start px-3 py-1.5 font-display text-xs font-black uppercase tracking-[0.2em] md:px-4 md:text-sm md:tracking-[0.25em]',
-              has
-                ? 'bg-neon-yellow text-black'
-                : 'bg-white/10 text-white/50 border border-white/10',
-            )}
-          >
-            <span className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 shrink-0" strokeWidth={2.2} />
-              {L('MEMORÁVEIS', 'MEMORABLES')}
+    <div className="border-[3px] border-ouro-27 bg-asfalto-27 p-4 md:p-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-2 bg-ouro-27 px-2.5 py-1 font-impact text-[16px] uppercase leading-none text-asfalto-27">
+          <Trophy className="h-4 w-4 shrink-0" strokeWidth={2.2} aria-hidden />
+          {L('Memoráveis', 'Memorables')}
+        </span>
+        <span className="font-prova text-[11px] uppercase tracking-[0.12em] text-mudo">
+          {L('#liga #copa #supercopa', '#league #cup #supercup')}
+        </span>
+      </div>
+      <ul className="space-y-2">
+        {labels.map((label) => (
+          <li key={label} className="flex min-w-0 items-center gap-3 border-2 border-linha px-3 py-2.5">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ouro-27 text-asfalto-27">
+              <Trophy className="h-4 w-4" strokeWidth={2.2} aria-hidden />
             </span>
-          </span>
-          <p
-            className={cn(
-              'min-w-0 max-w-full font-mono text-[11.5px] font-medium leading-relaxed [overflow-wrap:anywhere] break-words md:max-w-md',
-              has ? 'text-cimento' : 'text-white/45',
-            )}
-          >
-            {has
-              ? L('#liga #copa #supercopa', '#league #cup #supercup')
-              : L('Sem títulos memoráveis neste anúncio.', 'No memorable titles on this listing.')}
-          </p>
-        </div>
-        {has && (
-          <ul className="space-y-2">
-            {labels.map((label) => (
-              <li
-                key={label}
-                className="flex min-w-0 items-center gap-3 border border-neon-yellow/40 bg-card px-3 py-2.5"
-              >
-                <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-neon-yellow bg-neon-yellow text-black shrink-0">
-                  <Trophy className="w-5 h-5" strokeWidth={2.2} />
-                </div>
-                <span className="min-w-0 flex-1 break-words font-display text-sm font-bold uppercase tracking-wide text-white [overflow-wrap:anywhere]">
-                  {label}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+            <span className="min-w-0 flex-1 break-words font-impact text-[17px] uppercase leading-tight text-papel [overflow-wrap:anywhere]">
+              {label}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-function StatBar({ label, value }: { label: string, value: number }) {
-  // Atributos sempre em amarelo (Genesis e Legacy unificados — sem cor por faixa).
-  const color = 'bg-neon-yellow';
-  return (
-    <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-      <span className="w-7 shrink-0 text-[10px] font-bold uppercase tracking-wider text-white/50 sm:w-8 sm:text-xs">
-        {label}
-      </span>
-      <div className="min-w-0 flex-1 overflow-hidden rounded-full border border-white/5 bg-black/50 h-2.5">
-        <motion.div 
-          initial={{ width: 0 }}
-          animate={{ width: `${value}%` }}
-          transition={{ duration: 1, ease: "easeOut" }}
-          className={cn("h-full rounded-full", color)} 
-        />
-      </div>
-      <span className="w-7 shrink-0 text-right font-display text-sm font-bold tabular-nums text-white sm:w-8 sm:text-base">
-        {value}
-      </span>
-    </div>
-  );
+function StatBar({ label, value }: { label: string; value: number }) {
+  // Barra em 10 segmentos de rua (DS 2027) — mesma régua em Genesis e Legacy.
+  return <AtributoRua label={label} value={value} />;
 }
 
-/** Topo da escada: borda volt chapada, sem brilho (VOLT2). */
-const GOLD_CARD_GLOW = 'border-neon-yellow';
+/** Selo de moeda/venda dentro da carta: não some em nenhum degrau. */
+function seloCarta(d: Degrau): string {
+  return cn(
+    'inline-flex max-w-[6.5rem] shrink-0 items-center truncate whitespace-nowrap px-1.5 py-0.5 font-prova text-[9.5px] font-bold uppercase tracking-[0.08em]',
+    d === 'respeito' ? 'border-2 border-ouro-27 text-ouro-27' : 'bg-asfalto-27 text-papel',
+  );
+}
 
 /** Carta estreita para carris horizontais — poucos nós DOM vs. `PlayerCard` completo. */
 function TransferMarketCompactCard({
@@ -1802,155 +1700,78 @@ function TransferMarketCompactCard({
   player: MockAuctionPlayer;
   listHomonym?: { index: number; total: number };
 }) {
-  const tier = cardTierOf(player);
+  const d = degrauDe(player.ovr);
   const showHomonymStrip = listHomonym && listHomonym.total > 1;
   return (
     <div
       className={cn(
-        'relative flex h-full min-h-0 min-w-0 w-full cursor-pointer flex-col overflow-hidden border-2 bg-dark-gray transition-opacity duration-200 hover:opacity-95 active:opacity-90',
-        TIER_MOLDURA[tier],
+        'group relative flex h-full min-h-0 w-full min-w-0 cursor-pointer flex-col gap-2 p-2.5 shadow-[4px_5px_0_rgba(0,0,0,0.55)] transition-transform duration-200 hover:-translate-y-0.5',
+        DEGRAU_CLASSES[d],
       )}
     >
-      <div className="relative flex flex-1 flex-col">
-        {/* OVR em etiqueta chapada — legível sobre a foto sem sombra. */}
-        <div className="absolute left-2 top-2 z-20 flex flex-col items-center bg-deep-black px-1.5 py-1">
-          <div
-            className="font-impact text-xl leading-none tabular-nums text-neon-yellow"
-          >
-            {player.ovr}
-          </div>
-          <div className="mt-0.5 text-[8px] font-bold uppercase tracking-widest text-white">{rotuloPosicao(player.pos)}</div>
-        </div>
-        <div className="absolute right-2 top-2 z-20 flex flex-col items-end gap-0.5">
-          <div
-            className="flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-white/10 text-base leading-none"
-            title={player.nat?.trim() && player.nat !== '—' ? player.nat : undefined}
-          >
-            {natFlagDisplay(player.nat) || <span className="text-[8px] font-bold text-white/60">—</span>}
-          </div>
-          <span
-            className={cn(
-              'rounded border px-1 py-0.5 font-display text-[7px] font-bold uppercase tracking-wider',
-              player.auctionCurrency === 'EXP'
-                ? 'border-neon-yellow/50 bg-black/70 text-neon-yellow'
-                : 'border-white/35 bg-black/70 text-white',
-            )}
-          >
-            {player.auctionCurrency === 'EXP' ? 'EXP' : 'BRO'}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-col">
+          <span className={cn('font-impact text-[34px] leading-[0.85] tabular-nums', ovrClasses(d))}>{player.ovr}</span>
+          <span className={cn('mt-0.5 font-impact text-[12px] uppercase leading-none', d === 'respeito' && 'text-ouro-27')}>
+            {rotuloPosicao(player.pos)}
           </span>
         </div>
-        <div className="relative flex aspect-[3/4] items-end justify-center">
-          <img
-            src={player.portraitSrc?.trim() || `https://picsum.photos/seed/transfer-${player.id}/200/260`}
-            alt=""
-            className="h-full w-full object-cover object-top grayscale transition-all duration-300 group-hover:grayscale-0"
-            referrerPolicy="no-referrer"
-            style={{
-              maskImage: 'linear-gradient(to bottom, black 75%, transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(to bottom, black 75%, transparent 100%)',
-            }}
-          />
-        </div>
-        <div className="relative z-20 flex flex-1 flex-col justify-end px-2 pb-2 pt-2">
-          <div className="text-center">
-            <div className="line-clamp-1 font-impact text-[14px] uppercase leading-none tracking-wide text-white">
-              {player.name}
-            </div>
-            {showHomonymStrip && listHomonym ? (
-              <p
-                className="mt-0.5 line-clamp-2 text-[7px] font-bold leading-tight tracking-wide text-neon-yellow/90 [overflow-wrap:anywhere]"
-                title={playerIdentityLine(player)}
-              >
-                {listHomonym.index}/{listHomonym.total} · {playerIdentityLine(player)}
-              </p>
-            ) : null}
-          </div>
-          <div
-            className={cn(
-              'mx-auto mb-1.5 mt-1.5 h-px w-3/5 opacity-45',
-              tier === 'comum' ? 'bg-white/30' : 'bg-neon-yellow',
-            )}
-          />
-          <div className="grid grid-cols-3 gap-0.5 text-center">
-            <div>
-              <div className="text-[7px] font-bold uppercase text-white/45">PAC</div>
-              <div className="font-display text-[10px] font-bold text-white">{player.pac}</div>
-            </div>
-            <div className="border-x border-white/10">
-              <div className="text-[7px] font-bold uppercase text-white/45">SHO</div>
-              <div className="font-display text-[10px] font-bold text-white">{player.sho}</div>
-            </div>
-            <div>
-              <div className="text-[7px] font-bold uppercase text-white/45">PAS</div>
-              <div className="font-display text-[10px] font-bold text-white">{player.pas}</div>
-            </div>
-          </div>
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-base leading-none" title={player.nat?.trim() && player.nat !== '—' ? player.nat : undefined}>
+            {natFlagDisplay(player.nat) || '—'}
+          </span>
+          <span className={seloCarta(d)}>{player.auctionCurrency === 'EXP' ? 'EXP' : 'BRO'}</span>
         </div>
       </div>
-      <div className="relative z-30 border-t border-white/10 bg-black/85 px-2 py-1.5">
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-1">
-            <span className="flex shrink-0 items-center justify-center gap-0.5 text-[8px] font-bold uppercase tracking-wide text-white/50 sm:justify-start">
-              <Clock className="h-2.5 w-2.5 shrink-0" aria-hidden />
-              <span className="tabular-nums">{player.timeLeft}</span>
-            </span>
-            <span className="min-w-0 max-w-full truncate text-center font-display text-[8px] font-bold leading-tight text-white sm:text-right sm:text-[9px]">
-              {formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
-            </span>
-          </div>
-          <div className="flex min-h-9 w-full max-w-full items-center justify-center gap-1 bg-neon-yellow px-1 py-1.5 font-display text-[7px] font-black uppercase leading-tight tracking-wider text-black min-[340px]:text-[8px]">
-            <Gavel className="h-3 w-3 shrink-0" aria-hidden />
-            {L('Abrir', 'Open')}
-          </div>
+      <div className={cn('relative aspect-[4/5] w-full overflow-hidden', fotoFundo(d))}>
+        <img
+          src={player.portraitSrc?.trim() || `https://picsum.photos/seed/transfer-${player.id}/200/260`}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover object-top grayscale transition-[filter] duration-300 group-hover:grayscale-0"
+          style={{ maxWidth: 'none' }}
+          referrerPolicy="no-referrer"
+        />
+      </div>
+      <div className="min-w-0">
+        <div className="truncate font-voz text-[21px] leading-none">{player.name}</div>
+        {showHomonymStrip && listHomonym ? (
+          <p className="mt-1 line-clamp-2 font-prova text-[9px] leading-tight [overflow-wrap:anywhere]" title={playerIdentityLine(player)}>
+            {listHomonym.index}/{listHomonym.total} · {playerIdentityLine(player)}
+          </p>
+        ) : null}
+      </div>
+      <div className="flex justify-between gap-1 font-prova text-[10px] font-bold uppercase">
+        <span>PAC {player.pac}</span>
+        <span>SHO {player.sho}</span>
+        <span>PAS {player.pas}</span>
+      </div>
+      <div className="mt-auto flex min-w-0 flex-col gap-1.5">
+        <div className="flex min-w-0 items-baseline justify-between gap-1 font-prova text-[9.5px] uppercase tracking-[0.08em]">
+          <span className="flex shrink-0 items-center gap-1 tabular-nums">
+            <Clock className="h-2.5 w-2.5 shrink-0" aria-hidden />
+            {player.timeLeft}
+          </span>
         </div>
+        <span className="min-w-0 truncate font-spray text-[19px] font-black leading-none tabular-nums">
+          {formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
+        </span>
+        <span className={cn(ctaCartaClasses(d), 'min-h-9 text-[14px]')}>
+          {L('Abrir', 'Open')} <span aria-hidden>→</span>
+        </span>
       </div>
     </div>
   );
 }
 
 /**
- * Escada de raridade do card — fonte ÚNICA.
+ * A ESCADA DA CARTA — fonte única (DS 2027 · docs/DS-2027.md §1).
  *
- * Antes existiam DOIS cortes do mesmo OVR, com limiares que não batiam:
- * `style` virava 'white' a partir de 68, `category` virava 'gold' a partir de
- * 70 e 'silver' a partir de 65. Um jogador de OVR 69 saía "white + silver" —
- * duas escalas discordando sobre a mesma carta, e nenhuma seguindo a regra da
- * casa (`src/entities/rarityLabels.ts`: prestígio = GRAU DE AMARELO).
- *
- * Agora é uma escada só, e ela é o que a moldura comunica.
+ * O OVR decide o degrau e o degrau decide a pele inteira da carta:
+ *   <70 CHÃO (cal tracejado, OVR vazado) · 70–79 CORRE (rua chapada)
+ *   80–89 RESPEITO (asfalto + fio de ouro) · 90+ LENDA (ouro chapado).
+ * Antes eram duas escalas (style/category) discordando sobre a mesma carta;
+ * agora é uma régua só, a mesma da Home (`DropLenda`).
  */
-type CardTier = 'comum' | 'raro' | 'epico' | 'lendario';
-
-function cardTierOf(player: MockAuctionPlayer): CardTier {
-  if (player.category === 'gold' || player.ovr >= 80) return 'lendario';
-  if (player.ovr >= 72) return 'epico';
-  if (player.ovr >= 65) return 'raro';
-  return 'comum';
-}
-
-const TIER_LABEL: Record<CardTier, string> = {
-  comum: L('Comum', 'Common'),
-  raro: L('Raro', 'Rare'),
-  epico: L('Épico', 'Epic'),
-  lendario: L('Lendário', 'Legendary'),
-};
-
-/** Moldura por raridade. A quantidade de amarelo É a informação. */
-const TIER_MOLDURA: Record<CardTier, string> = {
-  comum: 'border-white/12',
-  raro: 'border-neon-yellow/30',
-  epico: 'border-neon-yellow/60',
-  lendario: 'border-neon-yellow',
-};
-
-/** Selo de raridade — só o topo da escada inverte para amarelo sólido. */
-const TIER_SELO: Record<CardTier, string> = {
-  comum: 'bg-white/10 text-white/70',
-  raro: 'bg-neon-yellow/12 text-neon-yellow/85',
-  epico: 'bg-neon-yellow/30 text-neon-yellow',
-  lendario: 'bg-neon-yellow text-black',
-};
-
 export function PlayerCard({
   player,
   isModal = false,
@@ -1976,186 +1797,125 @@ export function PlayerCard({
   const currencyLabel = fixedSale
     ? fixedSale.badge
     : player.auctionCurrency === 'EXP'
-      ? L('Lances em EXP', 'Bids in EXP')
-      : L('Lances em BRO', 'Bids in BRO');
-  const tier = cardTierOf(player);
+      ? L('Lance EXP', 'EXP bid')
+      : L('Lance BRO', 'BRO bid');
+  const d = degrauDe(player.ovr);
+  const info = DEGRAU_INFO[d];
   const showHomonymStrip = !isModal && listHomonym && listHomonym.total > 1;
+  const preco = fixedSale ? fixedSale.price : formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card');
   return (
-    <div className={cn(
-      'relative group flex h-full min-w-0 cursor-pointer flex-col overflow-hidden border-2 bg-dark-gray transition-colors duration-300',
-      carouselStrip && 'w-full max-w-full',
-      !isModal && !carouselStrip && 'w-full',
-      // A moldura É o indicador de raridade — uma escada só, sem dois sistemas
-      // discordando sobre a mesma carta. O topo (lendário) é a borda volt 2px
-      // chapada + o selo volt sólido; sem sombra de adesivo (VOLT2).
-      TIER_MOLDURA[tier],
-      !isModal && tier === 'comum' && 'hover:border-white/30',
-    )}>
-      {/* Moldura interna: um fio que separa a arte da borda — o mesmo papel do
-          frame que, no Sorare, amarra frente e verso. Linha, não sombra. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-[3px] z-[26] border border-giz/10"
-      />
-      {/* Card Content Wrapper */}
-      <div className="relative flex-1">
-
-        {/* ── CAMADA DE CIMA: contexto ─────────────────────────────────────
-            Quem é esta carta antes de você olhar a foto: o quanto ela vale
-            (OVR), onde joga, de onde vem e que raridade é. O Sorare separa o
-            card em duas leituras — contexto em cima, jogador embaixo. */}
-        <div className="absolute top-3 left-3 z-20 flex flex-col items-center bg-deep-black px-2 py-1.5">
-          <div
-            className="font-impact text-3xl leading-none tabular-nums text-neon-yellow"
+    <div
+      className={cn(
+        'group relative flex h-full min-w-0 cursor-pointer flex-col gap-2.5 p-2.5 sm:p-3',
+        DEGRAU_CLASSES[d],
+        !isModal && 'shadow-[5px_6px_0_rgba(0,0,0,0.55)]',
+        isModal && 'shadow-[8px_10px_0_rgba(0,0,0,0.6)]',
+        carouselStrip && 'w-full max-w-full',
+        !isModal && !carouselStrip && 'w-full',
+      )}
+    >
+      {/* ── Topo: OVR + posição | escudo + bandeira ── */}
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <div className="flex flex-col">
+          <span
+            className={cn('font-impact leading-[0.85] tabular-nums', ovrClasses(d))}
+            style={{ fontSize: isModal ? '64px' : 'clamp(40px, 11vw, 54px)' }}
           >
             {player.ovr}
-          </div>
-          <div className="mt-1 font-display text-[10px] font-bold uppercase tracking-widest text-white">
-            {rotuloPosicao(player.pos)}
-          </div>
-        </div>
-
-        <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
-          {/* Raridade: o selo diz por escrito o que a moldura já diz por cor. */}
-          <span
-            className={cn(
-              'rounded px-2 py-[3px] font-display text-[8px] font-black uppercase tracking-[0.16em]',
-              TIER_SELO[tier],
-            )}
-          >
-            {TIER_LABEL[tier]}
           </span>
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/50 text-lg leading-none"
+          <span className={cn('mt-1 font-impact text-[14px] uppercase leading-none', d === 'respeito' && 'text-ouro-27')}>
+            {rotuloPosicao(player.pos)}
+          </span>
+        </div>
+        <div className="flex flex-col items-end gap-1.5">
+          <MarcaRua tipo="escudo" className={cn('h-7', d === 'respeito' ? 'bg-ouro-27' : 'bg-asfalto-27')} />
+          <span
+            className="text-lg leading-none"
             title={player.nat?.trim() && player.nat !== '—' ? player.nat : undefined}
           >
-            {natFlagDisplay(player.nat) || <span className="text-[9px] font-bold text-white/60">—</span>}
-          </div>
-          <span
-            title={currencyLabel}
-            className={cn(
-              'max-w-[5.5rem] truncate rounded border px-1.5 py-0.5 font-display text-[7px] font-bold uppercase tracking-wider sm:max-w-none sm:text-[8px]',
-              player.auctionCurrency === 'EXP'
-                ? 'border-neon-yellow/60 bg-black/70 text-neon-yellow'
-                : 'border-white/40 bg-black/70 text-white',
-            )}
-          >
-            {currencyLabel}
+            {natFlagDisplay(player.nat) || '—'}
           </span>
-        </div>
-
-        {/* Player Image */}
-        <div className="aspect-[3/4] relative flex items-end justify-center">
-          <img
-            src={player.portraitSrc?.trim() || `https://picsum.photos/seed/transfer-${player.id}/300/400`}
-            alt={player.name}
-            className={cn('w-full h-full object-cover object-top transition-all duration-500', portraitClassName ?? 'grayscale group-hover:grayscale-0')}
-            referrerPolicy="no-referrer"
-            // A foto é a estrela: o recorte começa mais embaixo (88% em vez de
-            // 75%), então sobra mais imagem antes do texto assumir.
-            style={portraitStyle ?? { maskImage: 'linear-gradient(to bottom, black 88%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 88%, transparent 100%)' }}
-          />
-        </div>
-
-        {/* Card Footer / Info */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 z-20 bg-gradient-to-t from-black via-black/90 to-transparent pt-12">
-          <div className="mb-2 min-w-0 px-0.5 text-center">
-            <div className="break-words font-impact text-[22px] uppercase leading-[1.1] tracking-wide text-white [overflow-wrap:anywhere] sm:text-2xl md:text-3xl">
-              {player.name}
-            </div>
-            {showHomonymStrip && listHomonym ? (
-              <p
-                className="mt-1.5 line-clamp-2 text-center text-[7px] font-display font-bold leading-tight tracking-wide text-neon-yellow/90 [overflow-wrap:anywhere] sm:text-[8px]"
-                title={`${L('Anúncio', 'Listing')} #${player.id} · ${playerIdentityLine(player)}`}
-              >
-                {listHomonym.index}/{listHomonym.total} · {playerIdentityLine(player)}
-              </p>
-            ) : null}
-          </div>
-
-          {!isModal && player.bio && (
-            <p
-              className="text-center text-[9px] text-white/65 line-clamp-2 px-0.5 mb-2 leading-snug"
-              title={player.bio.slice(0, BIO_MAX_LEN)}
-            >
-              {truncateBio(player.bio, 140)}
-            </p>
-          )}
-
-          {/* Divider */}
-          <div className={cn('mx-auto mb-3 h-px w-2/3', tier === 'comum' ? 'bg-white/25' : 'bg-neon-yellow/50')} />
-
-          {/* Mini Stats — número em Anton, sem serifa nem itálico (VOLT2) */}
-          <div className="grid grid-cols-3 gap-1">
-            <div className="text-center">
-              <div className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">PAC</div>
-              <div
-                className="mt-0.5 font-impact tabular-nums leading-none text-neon-yellow"
-                style={{ fontSize: '17px' }}
-              >
-                {player.pac}
-              </div>
-            </div>
-            <div className="text-center border-x border-white/10">
-              <div className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">SHO</div>
-              <div
-                className="mt-0.5 font-impact tabular-nums leading-none text-neon-yellow"
-                style={{ fontSize: '17px' }}
-              >
-                {player.sho}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">PAS</div>
-              <div
-                className="mt-0.5 font-impact tabular-nums leading-none text-neon-yellow"
-                style={{ fontSize: '17px' }}
-              >
-                {player.pas}
-              </div>
-            </div>
-          </div>
-
         </div>
       </div>
 
-      {/* Transfer Action Area */}
-      {!isModal && (
-        <div className="relative z-30 border-t border-white/10 bg-black/80 p-2.5 sm:p-3">
-          <div className="flex flex-col gap-2">
-            <div
-              className={cn(
-                'flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2',
-                carouselStrip ? 'items-stretch' : 'sm:justify-between',
-              )}
-            >
-              {/* Tempo restante — só leilão (venda fixa esconde) */}
-              {!fixedSale && (
-                <span className="flex shrink-0 items-center justify-center gap-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/55 sm:justify-start sm:text-[10px]">
-                  {L('Encerra em', 'Ends in')} <span className="text-white/85">{player.timeLeft}</span>
-                </span>
-              )}
-              {/* Preço — Anton, sem itálico (VOLT2) */}
-              <span
-                className={cn(
-                  'min-w-0 max-w-full break-words text-center tabular-nums leading-tight [overflow-wrap:anywhere] sm:text-right',
-                  player.auctionCurrency === 'EXP' ? 'text-neon-yellow' : 'text-white',
-                  carouselStrip ? 'w-full truncate' : fixedSale ? 'w-full text-center' : 'sm:max-w-[58%]',
-                )}
-                style={{ fontFamily: 'var(--font-impact)', fontSize: 'clamp(16px, 3vw, 22px)' }}
-                title={fixedSale ? fixedSale.price : formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
-              >
-                {fixedSale ? fixedSale.price : formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
-              </span>
-            </div>
-            <button
-              type="button"
-              className="flex w-full min-h-11 max-w-full items-center justify-center bg-neon-yellow px-3 py-2.5 font-display text-[12px] font-black uppercase leading-tight tracking-[0.18em] text-black transition-colors hover:bg-white [-webkit-tap-highlight-color:transparent] sm:py-3 sm:text-[13px]"
-              style={{ borderRadius: 'var(--radius-sm)' }}
-            >
-              {fixedSale ? fixedSale.cta : L('Dar Lance', 'Place Bid')}
-            </button>
+      {/* ── Janela da foto ── */}
+      <div className={cn('relative aspect-[4/5] w-full overflow-hidden', fotoFundo(d))}>
+        <img
+          src={player.portraitSrc?.trim() || `https://picsum.photos/seed/transfer-${player.id}/300/400`}
+          alt={player.name}
+          className={cn(
+            'absolute inset-0 h-full w-full object-cover object-top transition-[filter] duration-500',
+            portraitClassName ?? 'grayscale group-hover:grayscale-0',
+          )}
+          referrerPolicy="no-referrer"
+          style={portraitStyle ?? { maxWidth: 'none' }}
+        />
+        <span className={cn(seloCarta(d === 'respeito' ? 'corre' : d), 'absolute left-0 top-2')} title={currencyLabel}>
+          {currencyLabel}
+        </span>
+      </div>
+
+      {/* ── Nome na VOZ ── */}
+      <div className="min-w-0">
+        <div
+          className={cn(
+            'min-w-0 font-voz leading-[0.95]',
+            isModal ? 'break-words text-[32px] [overflow-wrap:anywhere]' : 'truncate text-[24px] sm:text-[26px]',
+          )}
+        >
+          {player.name}
+        </div>
+        {showHomonymStrip && listHomonym ? (
+          <p
+            className="mt-1 line-clamp-2 font-prova text-[9.5px] leading-tight [overflow-wrap:anywhere]"
+            title={`${L('Anúncio', 'Listing')} #${player.id} · ${playerIdentityLine(player)}`}
+          >
+            {listHomonym.index}/{listHomonym.total} · {playerIdentityLine(player)}
+          </p>
+        ) : null}
+        {!isModal && player.bio && (
+          <p className="mt-1 line-clamp-2 text-[11px] leading-snug opacity-75" title={player.bio.slice(0, BIO_MAX_LEN)}>
+            {truncateBio(player.bio, 140)}
+          </p>
+        )}
+      </div>
+
+      {/* ── Três números da carta, em prova ── */}
+      <div className="flex min-w-0 justify-between gap-1">
+        {([['PAC', player.pac], ['SHO', player.sho], ['PAS', player.pas]] as const).map(([k, v]) => (
+          <div key={k} className="flex flex-col items-start">
+            <span className="font-prova text-[9.5px] font-bold uppercase tracking-[0.14em] opacity-70">{k}</span>
+            <span className={cn('font-impact text-[19px] leading-none tabular-nums', d === 'respeito' && 'text-ouro-27')}>{v}</span>
           </div>
+        ))}
+      </div>
+
+      {/* ── Faixa do degrau ── */}
+      <div className={faixaClasses(d)}>
+        <span className="truncate">
+          {info.n} · {info.nome}
+        </span>
+        {!fixedSale && !isModal && player.timeLeft ? (
+          <span className="flex shrink-0 items-center gap-1 tabular-nums normal-case tracking-normal">
+            <Clock className="h-3 w-3 shrink-0" aria-hidden />
+            {player.timeLeft}
+          </span>
+        ) : null}
+      </div>
+
+      {/* ── Preço + ação ── */}
+      {!isModal && (
+        <div className="mt-auto flex min-w-0 flex-col gap-2">
+          <span
+            className={cn('min-w-0 truncate font-spray font-black leading-none tabular-nums', d === 'respeito' && 'text-ouro-27')}
+            style={{ fontSize: carouselStrip ? '26px' : 'clamp(20px, 5.6vw, 28px)' }}
+            title={preco}
+          >
+            {preco}
+          </span>
+          <button type="button" className={ctaCartaClasses(d)}>
+            {fixedSale ? fixedSale.cta : L('Dar lance', 'Place bid')} <span aria-hidden>→</span>
+          </button>
         </div>
       )}
     </div>
@@ -2163,9 +1923,9 @@ export function PlayerCard({
 }
 
 /**
- * TransferRowCard — Sprint B-4: card horizontal pra visualização "List".
- * Foto à esquerda + info-claro à direita + ação dominante.
- * Pattern espelha o JOGADORES DISPONÍVEIS de Team.tsx.
+ * TransferRowCard — carta deitada pra visualização "Lista".
+ * Foto à esquerda com a etiqueta de OVR no degrau da carta; ficha no concreto
+ * à direita; preço em spray e ação dominante.
  */
 export function TransferRowCard({
   player,
@@ -2185,14 +1945,9 @@ export function TransferRowCard({
   portraitStyle?: import('react').CSSProperties;
   portraitClassName?: string;
 }) {
-  const tier = cardTierOf(player);
-  // Na lista, o trilho de 3px carrega a raridade — mesma escada dos outros dois
-  // cards, para a carta não mudar de identidade ao trocar de visualização.
-  const railColor =
-    tier === 'lendario' ? 'border-l-neon-yellow'
-    : tier === 'epico' ? 'border-l-neon-yellow/60'
-    : tier === 'raro' ? 'border-l-neon-yellow/30'
-    : 'border-l-white/15';
+  const d = degrauDe(player.ovr);
+  const info = DEGRAU_INFO[d];
+  const topo = d === 'respeito' || d === 'lenda';
   const stats = [
     { label: 'PAC', val: player.pac },
     { label: 'SHO', val: player.sho },
@@ -2207,157 +1962,86 @@ export function TransferRowCard({
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ delay, duration: 0.22 }}
       className={cn(
-        'group flex w-full overflow-hidden border border-l-[3px] border-[var(--color-border)] bg-dark-gray transition-colors duration-200 hover:border-white/30',
-        railColor,
+        'group flex w-full min-w-0 overflow-hidden bg-concreto transition-colors duration-200',
+        topo ? 'border-[3px] border-ouro-27' : 'border-2 border-linha hover:border-fio',
       )}
-      style={{ borderRadius: 'var(--radius-md)' }}
     >
-      {/* Foto + OVR overlay */}
+      {/* Foto + etiqueta de OVR no degrau */}
       <button
         type="button"
         onClick={onSelect}
-        className="relative w-28 sm:w-36 md:w-44 flex-shrink-0 overflow-hidden bg-black border-r border-white/8 cursor-pointer [-webkit-tap-highlight-color:transparent]"
+        className="relative w-28 flex-shrink-0 cursor-pointer overflow-hidden bg-asfalto-27 [-webkit-tap-highlight-color:transparent] sm:w-36 md:w-44"
         aria-label={L(`Ver ${player.name}`, `View ${player.name}`)}
       >
-        <div
-          className={cn(
-            'absolute inset-0',
-            tier === 'comum' ? 'bg-white/5' : 'bg-neon-yellow/10',
-          )}
-          aria-hidden
-        />
         <img
           src={player.portraitSrc?.trim() || `https://picsum.photos/seed/transfer-${player.id}/300/400`}
           alt={player.name}
-          className={cn('absolute inset-0 h-full w-full object-cover object-top transition-all duration-300', portraitClassName ?? 'grayscale group-hover:grayscale-0')}
-          style={portraitStyle}
+          className={cn(
+            'absolute inset-0 h-full w-full object-cover object-top transition-[filter] duration-300',
+            portraitClassName ?? 'grayscale group-hover:grayscale-0',
+          )}
+          style={portraitStyle ?? { maxWidth: 'none' }}
           referrerPolicy="no-referrer"
         />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent"
-        />
-        {/* OVR — Anton gigante; o scrim da foto dá a leitura */}
-        <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10">
-          <p
-            className="font-impact text-neon-yellow tabular-nums leading-none"
-            style={{
-              fontSize: 'clamp(36px, 5.5vw, 56px)',
-              letterSpacing: '-0.04em',
-            }}
-          >
+        <div className={cn('absolute left-0 top-0 z-10 flex flex-col items-start px-2 pb-1.5 pt-1.5', DEGRAU_CLASSES[d])}>
+          <span className={cn('font-impact leading-[0.85] tabular-nums', ovrClasses(d))} style={{ fontSize: 'clamp(32px, 5vw, 44px)' }}>
             {player.ovr}
-          </p>
-          <p className="mt-0.5 font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white/85">
-            {rotuloPosicao(player.pos)}
-          </p>
-        </div>
-        {tier === 'lendario' ? (
-          <span
-            className={cn(
-              'absolute bottom-2 left-2 z-10 inline-flex items-center px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-[0.18em]',
-              TIER_SELO[tier],
-            )}
-            style={{ borderRadius: 'var(--radius-sm)' }}
-          >
-            {TIER_LABEL[tier]}
           </span>
-        ) : null}
+          <span className={cn('mt-0.5 font-impact text-[12px] uppercase leading-none', d === 'respeito' && 'text-ouro-27')}>
+            {rotuloPosicao(player.pos)}
+          </span>
+        </div>
       </button>
 
-      {/* Info — header + stats + footer */}
+      {/* Ficha */}
       <div className="flex min-w-0 flex-1 flex-col gap-3 px-3 py-3 md:px-4 md:py-3.5">
-        {/* Header: nome + nação + raridade */}
-        <div className="flex items-start justify-between gap-2 min-w-0">
+        <div className="flex min-w-0 items-start justify-between gap-2">
           <button
             type="button"
             onClick={onSelect}
-            className="min-w-0 flex-1 text-left cursor-pointer [-webkit-tap-highlight-color:transparent]"
+            className="min-w-0 flex-1 cursor-pointer text-left [-webkit-tap-highlight-color:transparent]"
           >
-            <p
-              className="text-white uppercase truncate"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: 'clamp(16px, 2.2vw, 22px)',
-                letterSpacing: '0.03em',
-                lineHeight: 1.05,
-              }}
-            >
+            <p className="truncate font-voz leading-[0.95] text-papel" style={{ fontSize: 'clamp(24px, 3vw, 30px)' }}>
               {player.name}
             </p>
-            <p
-              className="text-white/50 uppercase mt-0.5 truncate"
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: '10px',
-                letterSpacing: '0.22em',
-                fontWeight: 600,
-              }}
-            >
-              {flag ? <span className="mr-1.5 not-italic" aria-hidden>{flag}</span> : null}
+            <p className="mt-1 truncate font-prova text-[10.5px] uppercase tracking-[0.14em] text-mudo">
+              {flag ? <span className="mr-1.5" aria-hidden>{flag}</span> : null}
               {player.nat?.trim() && player.nat !== '—' ? player.nat : L('Sem nação', 'No nation')}
+              {' · '}
+              <span className={topo ? 'text-ouro-27' : 'text-suave'}>
+                {info.n} {info.nome}
+              </span>
               {listHomonym && listHomonym.total > 1 ? (
-                <span className="ml-2 text-neon-yellow/85">
+                <span className="ml-1 text-papel">
                   · {listHomonym.index}/{listHomonym.total}
                 </span>
               ) : null}
             </p>
           </button>
-          <span
-            className={cn(
-              'shrink-0 inline-flex items-center border px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-[0.18em]',
-              fixedSale || player.auctionCurrency === 'EXP'
-                ? 'border-neon-yellow/60 bg-black/70 text-neon-yellow'
-                : 'border-white/40 bg-black/70 text-white',
-            )}
-            style={{ borderRadius: 'var(--radius-sm)' }}
-          >
+          <span className="inline-flex shrink-0 items-center border-2 border-linha px-1.5 py-0.5 font-prova text-[10px] font-bold uppercase tracking-[0.08em] text-suave">
             {fixedSale ? fixedSale.badge : player.auctionCurrency}
           </span>
         </div>
 
-        {/* Mini-stats — Anton, sem itálico (VOLT2) */}
         <div className="grid grid-cols-3 gap-3 md:gap-5">
           {stats.map((s) => (
-            <div key={s.label} className="min-w-0">
-              <div className="flex items-baseline justify-between gap-2">
-                <span
-                  className="text-white/55 uppercase"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    letterSpacing: '0.22em',
-                  }}
-                >
-                  {s.label}
-                </span>
-                <span
-                  className="font-impact text-neon-yellow tabular-nums leading-none"
-                  style={{
-                    fontSize: 'clamp(16px, 1.8vw, 20px)',
-                    letterSpacing: '-0.02em',
-                  }}
-                >
-                  {s.val}
-                </span>
-              </div>
+            <div key={s.label} className="flex min-w-0 items-baseline justify-between gap-1 border-b-2 border-linha pb-1">
+              <span className="font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{s.label}</span>
+              <span className="font-impact text-[20px] leading-none tabular-nums text-papel">{s.val}</span>
             </div>
           ))}
         </div>
 
-        {/* Footer: (encerra em) + preço + CTA */}
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-divider-yellow)] pt-3">
-          <div className="flex min-w-0 flex-col">
+        <div className="mt-auto flex flex-wrap items-end justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1">
             {!fixedSale && (
-              <span className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50">
-                {L('Encerra em', 'Ends in')} <span className="text-white/85">{player.timeLeft}</span>
+              <span className="font-prova text-[10px] uppercase tracking-[0.14em] text-mudo">
+                {L('Encerra em', 'Ends in')} <span className="text-papel">{player.timeLeft}</span>
               </span>
             )}
             <span
-              className="font-impact tabular-nums leading-tight text-white"
-              style={{ fontSize: 'clamp(18px, 2.4vw, 24px)' }}
+              className={cn('min-w-0 truncate font-spray font-black leading-none tabular-nums', topo ? 'text-ouro-27' : 'text-papel')}
+              style={{ fontSize: 'clamp(22px, 2.6vw, 28px)' }}
             >
               {fixedSale ? fixedSale.price : formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
             </span>
@@ -2368,10 +2052,12 @@ export function TransferRowCard({
               e.stopPropagation();
               onSelect();
             }}
-            className="inline-flex items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black transition-colors hover:bg-white"
-            style={{ borderRadius: 'var(--radius-sm)' }}
+            className={cn(
+              'inline-flex min-h-11 items-center gap-1.5 px-4 font-impact text-[16px] uppercase leading-none text-asfalto-27 shadow-[3px_3px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-px hover:-translate-y-px hover:shadow-[4px_4px_0_var(--color-papel)] active:translate-x-px active:translate-y-px active:shadow-[1px_1px_0_var(--color-papel)]',
+              topo ? 'bg-ouro-27' : 'bg-rua',
+            )}
           >
-            {fixedSale ? fixedSale.cta : L('Dar Lance', 'Place Bid')}
+            {fixedSale ? fixedSale.cta : L('Dar lance', 'Place bid')} <span aria-hidden>→</span>
           </button>
         </div>
       </div>

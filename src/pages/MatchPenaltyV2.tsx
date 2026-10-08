@@ -13,6 +13,7 @@ import {
   type SlotIndex,
 } from '@/components/penalty';
 import { Hashtag } from '@/components/ui';
+import { FitaRua } from '@/components/ui/Rua';
 import { L } from '@/i18n/L';
 
 const REGULAR_KICKS = 5;
@@ -219,65 +220,62 @@ export function MatchPenaltyV2() {
   if (phase === 'setup') {
     return (
       <div
-        className="bg-deep-black text-white px-4 sm:px-6"
+        className="bg-asfalto-27 px-4 text-papel sm:px-6"
         style={{
           minHeight: '100dvh',
           paddingTop: 'max(env(safe-area-inset-top), 16px)',
           paddingBottom: 'max(env(safe-area-inset-bottom), 24px)',
         }}
       >
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+        <div className="mx-auto w-full max-w-3xl">
+          <div className="mb-5 flex items-center justify-between">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="p-2 rounded-lg hover:bg-zinc-800"
+              aria-label={L('Voltar', 'Back')}
+              className="flex h-11 w-11 items-center justify-center text-suave hover:text-papel"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="h-5 w-5" />
             </button>
-            <Hashtag className="w-auto">{L('#penaltis', '#penalties')}</Hashtag>
-            <div className="w-9" />
+            <Hashtag className="w-auto font-prova text-mudo">{L('#penaltis', '#penalties')}</Hashtag>
+            <div className="w-11" />
           </div>
 
+          <p className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">— {L('Disputa de pênaltis', 'Penalty shootout')}</p>
           <h1
-            className="ole-headline text-center mb-2 leading-[1.1]"
-            style={{ fontSize: 'clamp(28px, min(5vh, 5vw), 56px)' }}
+            className="mt-1 font-impact uppercase leading-[0.92] text-papel"
+            style={{ fontSize: 'clamp(40px, 12vw, 72px)' }}
           >
             {L('Escolha 5 batedores', 'Choose 5 takers')}
           </h1>
-          <p className="text-center text-white/60 text-sm mb-4 sm:mb-8">
-            {L(`Ordenados por finalização. ${takerOrder.length}/${REGULAR_KICKS} selecionados.`, `Sorted by finishing. ${takerOrder.length}/${REGULAR_KICKS} selected.`)}
+          <p className="mb-5 mt-2 font-voz text-[24px] leading-none text-suave sm:mb-8">
+            {L('Quem bate, bate com respeito.', 'Whoever steps up, steps up with respect.')}{' '}
+            <span className="ml-1 font-prova text-[12px] font-bold tabular-nums text-rua">
+              {takerOrder.length}/{REGULAR_KICKS}
+            </span>
           </p>
 
           {availablePlayers.length === 0 ? (
             // Empty-state — sem plantel não dá pra escolher batedores.
             // Mostra CTA pra criar/recrutar jogadores no clube.
-            <div className="rounded-md border border-dashed border-white/15 bg-deep-black/40 px-5 py-10 text-center mb-8">
-              <p
-                className="text-white/65 mb-2 uppercase"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  letterSpacing: '0.22em',
-                }}
-              >
+            <div className="mb-8 border-[3px] border-dashed border-fio bg-cal px-5 py-8 text-center text-asfalto-27">
+              <p className="mb-2 font-prova text-[11px] font-bold uppercase tracking-[0.22em]">
                 {L('Plantel vazio', 'Empty squad')}
               </p>
-              <p className="text-white/45 text-[13px] leading-snug mb-5">
+              <p className="mb-5 font-voz text-[22px] leading-[1.05]">
                 {L(`Você precisa de pelo menos ${REGULAR_KICKS} jogadores no plantel pra montar a disputa.`, `You need at least ${REGULAR_KICKS} players in the squad to set up the shootout.`)}
               </p>
               <button
                 type="button"
                 onClick={() => navigate('/clube/elenco')}
-                className="inline-flex items-center justify-center bg-neon-yellow text-black px-6 py-2.5 font-display font-black uppercase tracking-wider text-xs hover:bg-white transition-colors"
+                className="inline-flex min-h-[48px] items-center justify-center gap-2 bg-asfalto-27 px-6 font-impact text-[18px] uppercase leading-none text-rua"
               >
-                {L('Ir ao Elenco', 'Go to Squad')}
+                {L('Ir ao Elenco', 'Go to Squad')} <span aria-hidden>→</span>
               </button>
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 sm:mb-8">
+          <div className="mb-5 grid grid-cols-1 gap-2 sm:mb-8 sm:grid-cols-2">
             {availablePlayers.slice(0, 12).map((p: any) => {
               const idx = takerOrder.indexOf(p.id);
               const selected = idx >= 0;
@@ -286,28 +284,31 @@ export function MatchPenaltyV2() {
                   key={p.id}
                   type="button"
                   onClick={() => toggleTaker(p.id)}
-                  className={`flex items-center justify-between px-4 py-3 border-2 transition-all ${
+                  aria-pressed={selected}
+                  className={`flex min-h-[60px] min-w-0 items-center justify-between gap-3 px-4 py-2.5 transition-colors ${
                     selected
-                      ? 'bg-neon-yellow text-black border-neon-yellow'
-                      : 'bg-zinc-900 border-zinc-700 hover:border-white/40'
+                      ? 'bg-rua text-asfalto-27'
+                      : 'border-2 border-linha bg-concreto text-papel hover:border-fio'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    {selected && (
-                      <div className="font-display font-black text-lg w-6 text-center">
-                        {idx + 1}
-                      </div>
-                    )}
-                    <div className="text-left">
-                      <div className="font-display font-bold uppercase tracking-wider text-sm">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center font-spray font-black text-[22px] leading-none ${
+                        selected ? 'bg-asfalto-27 text-rua' : 'border-2 border-dashed border-fio text-fio'
+                      }`}
+                    >
+                      {selected ? idx + 1 : ''}
+                    </div>
+                    <div className="min-w-0 text-left">
+                      <div className="truncate font-voz text-[20px] leading-none">
                         {p.name}
                       </div>
-                      <div className="text-[10px] uppercase tracking-[0.2em] opacity-70">
+                      <div className={`mt-1 font-prova text-[10px] font-bold uppercase tracking-[0.14em] ${selected ? 'text-asfalto-27/70' : 'text-mudo'}`}>
                         {p.position} · #{p.shirtNumber ?? '?'}
                       </div>
                     </div>
                   </div>
-                  <div className="font-display font-black text-2xl">
+                  <div className="shrink-0 font-impact text-[26px] leading-none tabular-nums">
                     {p.attrs?.finalizacao ?? '-'}
                   </div>
                 </button>
@@ -319,9 +320,9 @@ export function MatchPenaltyV2() {
             type="button"
             disabled={takerOrder.length < REGULAR_KICKS}
             onClick={startMatch}
-            className="w-full bg-neon-yellow text-black px-8 py-4 font-display font-black uppercase tracking-wider disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white"
+            className="inline-flex min-h-[56px] w-full items-center justify-center gap-2 bg-rua px-8 font-impact text-[21px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow,opacity] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)] disabled:cursor-not-allowed disabled:opacity-30 disabled:shadow-none"
           >
-            {L('Começar Disputa', 'Start Shootout')}
+            {L('Começar disputa', 'Start shootout')} <span aria-hidden>→</span>
           </button>
         </div>
       </div>
@@ -330,45 +331,49 @@ export function MatchPenaltyV2() {
 
   // ── FINAL PHASE ──
   if (phase === 'final' && winner) {
+    const ganhamos = winner === 'home';
     return (
       <div
-        className="bg-neon-yellow flex flex-col items-center justify-center px-4 sm:px-6"
+        className="rua-grao relative flex flex-col items-center justify-center overflow-hidden bg-asfalto-27 px-4 sm:px-6"
         style={{
           minHeight: '100dvh',
           paddingTop: 'max(env(safe-area-inset-top), 16px)',
           paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
         }}
       >
-        <div className="text-[10px] uppercase tracking-[0.35em] text-black/70 mb-4 sm:mb-6">
-          {L('Final da Disputa', 'Shootout Over')}
+        <div className="mb-3 font-prova text-[11px] font-bold uppercase tracking-[0.24em] text-mudo sm:mb-5">
+          {L('Final da disputa', 'Shootout over')}
+        </div>
+        <div
+          className="mb-2 font-spray font-black leading-[0.82] tabular-nums text-rua"
+          style={{ fontSize: 'clamp(96px, min(22vh, 34vw), 220px)' }}
+          aria-label={`${homeGoals} × ${awayGoals}`}
+        >
+          {homeGoals}<span className="mx-[0.06em] text-[0.6em]">×</span>{awayGoals}
         </div>
         <h1
-          className="ole-headline text-black text-center mb-3 sm:mb-4"
-          style={{ fontSize: 'clamp(56px, min(13vh, 14vw), 160px)', lineHeight: 1 }}
+          className="mb-8 text-center font-voz leading-[0.98] text-papel sm:mb-12"
+          style={{ fontSize: 'clamp(44px, min(9vh, 12vw), 96px)' }}
         >
-          {winner === 'home' ? L('GANHAMOS!', 'WE WON!') : L('PERDEMOS', 'WE LOST')}
+          {ganhamos ? L('Vitória na moral.', 'Won it with respect.') : L('Perdeu hoje. Volta amanhã.', 'Lost today. Back tomorrow.')}
         </h1>
-        <div className="font-display font-black tabular-nums text-black/85 mb-6 sm:mb-12"
-          style={{ fontSize: 'clamp(44px, min(9vh, 10vw), 120px)' }}
-        >
-          {homeGoals} — {awayGoals}
-        </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap justify-center gap-3">
           <button
             type="button"
             onClick={fullReset}
-            className="bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider hover:bg-deep-black transition-colors"
+            className="inline-flex min-h-[54px] items-center gap-2 bg-rua px-7 font-impact text-[20px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)]"
           >
-            {L('Nova Disputa', 'New Shootout')}
+            {L('Nova disputa', 'New shootout')} <span aria-hidden>→</span>
           </button>
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="bg-transparent border-2 border-black text-black px-8 py-3 font-display font-black uppercase tracking-wider"
+            className="inline-flex min-h-[54px] items-center border-2 border-papel px-7 font-impact text-[20px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
           >
             {L('Voltar', 'Back')}
           </button>
         </div>
+        <FitaRua tags={['#penaltis', '#correloko']} inclinacao={-2} className="absolute inset-x-0 bottom-6" />
       </div>
     );
   }
@@ -405,26 +410,27 @@ export function MatchPenaltyV2() {
   if (phase === 'awaiting-away') {
     return (
       <div
-        className="bg-neon-yellow flex flex-col items-center justify-center px-4 sm:px-6"
+        className="flex flex-col items-center justify-center bg-asfalto-27 px-4 sm:px-6"
         style={{
           minHeight: '100dvh',
           paddingTop: 'max(env(safe-area-inset-top), 16px)',
           paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
         }}
       >
-        <div className="text-[10px] uppercase tracking-[0.35em] text-black/70 mb-2">
+        <div className="mb-2 font-prova text-[11px] font-bold uppercase tracking-[0.24em] text-mudo">
           {L(`${opponentShort} bate agora`, `${opponentShort} shooting now`)}
         </div>
         <h2
-          className="ole-headline text-black animate-pulse"
-          style={{ fontSize: 'clamp(32px, min(6vh, 6vw), 64px)' }}
+          className="animate-pulse font-voz leading-none text-papel"
+          style={{ fontSize: 'clamp(40px, min(7vh, 11vw), 72px)' }}
         >
           {L('Aguarde…', 'Wait…')}
         </h2>
-        <div className="font-display font-black tabular-nums mt-4 sm:mt-8"
-          style={{ fontSize: 'clamp(36px, min(6vh, 6vw), 64px)' }}
+        <div
+          className="mt-4 font-spray font-black leading-none tabular-nums text-rua sm:mt-8"
+          style={{ fontSize: 'clamp(64px, min(12vh, 22vw), 120px)' }}
         >
-          {homeGoals} — {awayGoals}
+          {homeGoals}<span className="mx-[0.06em] text-[0.6em]">×</span>{awayGoals}
         </div>
       </div>
     );

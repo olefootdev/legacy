@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, FileText, Filter } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
 
 import { queryLedger } from '@/wallet/ledger';
 import { createInitialWalletState } from '@/wallet/initial';
 import type { WalletLedgerType, WalletCurrencyExt, WalletLedgerEntry } from '@/wallet/types';
 import { moedaDoJogo } from '@/wallet/constants';
+import { BotaoRua, SecaoRua } from '@/components/ui/Rua';
+import { cn } from '@/lib/utils';
 import { L, LOCALE } from '@/i18n/L';
 
 const LEDGER_TYPE_OPTIONS: { value: WalletLedgerType | ''; label: string }[] = [
@@ -32,22 +34,13 @@ const currencyOptions = (): { value: WalletCurrencyExt | ''; label: string }[] =
 ];
 
 /**
- * Chip do tipo de lançamento — NEUTRO de propósito.
- *
- * Antes cada tipo tinha sua cor (referral azul, partida verde, compra vermelha,
- * transferência ciano). Só que quem lê um extrato quer saber se o dinheiro
- * ENTROU ou SAIU — e isso o valor já diz, em verde ou vermelho, logo ao lado.
- * O chip colorido repetia a informação num vocabulário diferente e disputava a
- * atenção com o número, que é o que importa.
+ * Status em palavra, não em bolinha colorida (DS 2027: verde/vermelho é só
+ * delta). Confirmado não diz nada — é o normal; o resto aparece na linha.
  */
-function badgeColor(_type: WalletLedgerType): string {
-  return 'bg-white/8 text-white/65 border-white/10';
-}
-
-function statusDot(status: string): string {
-  if (status === 'confirmed') return 'bg-alta';
-  if (status === 'pending') return 'bg-atencao';
-  return 'bg-baixa';
+function statusTexto(status: string): string | null {
+  if (status === 'confirmed') return null;
+  if (status === 'pending') return L('pendente', 'pending');
+  return status;
 }
 
 function formatLedgerDate(iso: string): string {
@@ -59,8 +52,18 @@ function formatLedgerDate(iso: string): string {
   }
 }
 
+/** Rótulo legível do tipo — o mesmo da lista de filtros. */
+const rotuloDoTipo = (t: WalletLedgerType): string => LEDGER_TYPE_OPTIONS.find((o) => o.value === t)?.label ?? t;
+
+// DS 2027: select em concreto, rótulo em A PROVA; o foco é ação (rua).
+const SELECT =
+  'min-h-[46px] w-full min-w-0 appearance-none border-2 border-linha bg-concreto px-3 font-prova text-[12px] font-bold uppercase tracking-[0.1em] text-papel transition-colors focus:border-rua focus:outline-none';
+
+/**
+ * Extrato completo — a lista MOVIMENTO do DS 2027 (peça 3b): uma linha por
+ * lançamento, entrada (+) em rua, saída (−) em papel, meta em A PROVA.
+ */
 export function ExtractTab() {
-  const navigate = useNavigate();
   const finance = useGameStore((s) => s.finance);
   const wallet = finance.wallet ?? createInitialWalletState();
 
@@ -73,98 +76,118 @@ export function ExtractTab() {
   });
 
   const sorted = [...entries].sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
+  const filtrando = filterType !== '' || filterCurrency !== '';
 
   return (
-    <div className="mx-auto min-w-0 max-w-3xl space-y-6 pb-8">
-      <button
-        type="button"
-        onClick={() => navigate('/wallet')}
-        className="flex items-center gap-2 text-sm text-cimento hover:text-white transition-colors mb-2"
-      >
-        <ArrowLeft className="w-4 h-4" /> {L('Carteira', 'Wallet')}
-      </button>
-
-      <div className="flex items-center gap-3 mb-2">
-        <FileText className="w-6 h-6 text-white" />
-        <h2 className="font-impact text-2xl uppercase leading-[1.1] text-white">{L('Extrato Completo', 'Full statement')}</h2>
+    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-8 px-4 pb-28 sm:px-8 md:pb-12">
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            to="/wallet"
+            className="inline-flex min-h-[44px] items-center gap-2 font-prova text-[12px] font-bold uppercase tracking-[0.16em] text-mudo transition-colors hover:text-papel"
+          >
+            <ArrowLeft className="h-4 w-4" strokeWidth={2.4} /> {L('Carteira', 'Wallet')}
+          </Link>
+          <span className="inline-flex shrink-0 items-center gap-1.5 font-prova text-[11.5px] font-bold uppercase tracking-[0.2em] text-mudo">
+            Solana <span aria-hidden className="text-ouro-27">●</span>
+          </span>
+        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="flex min-w-0 flex-col gap-1.5 border-b-[3px] border-ouro-27 pb-5"
+        >
+          <p className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">— {L('#extrato', '#statement')}</p>
+          <h1 className="font-voz text-[clamp(52px,14vw,92px)] leading-[0.92] text-papel">{L('Extrato Completo', 'Full statement')}</h1>
+        </motion.div>
       </div>
 
-      {/* Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass-panel border border-white/10 bg-panel p-4 flex flex-wrap gap-3 items-center"
-      >
-        <Filter className="w-4 h-4 text-cimento" />
-        <select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value as WalletLedgerType | '')}
-          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-neon-yellow transition-colors appearance-none"
-        >
-          {LEDGER_TYPE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value} className="bg-black">
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filterCurrency}
-          onChange={(e) => setFilterCurrency(e.target.value as WalletCurrencyExt | '')}
-          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-neon-yellow transition-colors appearance-none"
-        >
-          {currencyOptions().map((o) => (
-            <option key={o.value} value={o.value} className="bg-black">
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <span className="ml-auto font-mono text-[11px] text-cimento">{sorted.length} {L('registros', 'entries')}</span>
-      </motion.div>
-
-      {/* Entries */}
-      {sorted.length === 0 ? (
-        <div className="text-center py-12 text-cimento text-sm">
-          {L('Nenhuma transação encontrada.', 'No transactions found.')}
+      {/* Filtros */}
+      <div className="space-y-3">
+        <SecaoRua label={L('Filtrar', 'Filter')} aside={`${sorted.length} ${L('registros', 'entries')}`} />
+        <div className="grid grid-cols-2 gap-2.5">
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value as WalletLedgerType | '')}
+            aria-label={L('Tipo', 'Type')}
+            className={SELECT}
+          >
+            {LEDGER_TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value} className="bg-asfalto-27">
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filterCurrency}
+            onChange={(e) => setFilterCurrency(e.target.value as WalletCurrencyExt | '')}
+            aria-label={L('Moeda', 'Currency')}
+            className={SELECT}
+          >
+            {currencyOptions().map((o) => (
+              <option key={o.value} value={o.value} className="bg-asfalto-27">
+                {o.label}
+              </option>
+            ))}
+          </select>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {sorted.map((entry) => (
-            <motion.div
-              key={entry.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-center justify-between border border-white/10 bg-panel p-4 hover:border-white/30 transition-colors"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusDot(entry.status)}`} />
-                <span
-                  className={`font-mono text-[10px] font-medium px-2 py-0.5 border shrink-0 ${badgeColor(entry.type)}`}
-                >
-                  {entry.type}
-                </span>
-                <div className="min-w-0">
-                  <div className="text-sm text-giz truncate">{entry.source}</div>
-                  <div className="font-mono text-[10.5px] text-poeira">
-                    {formatLedgerDate(entry.createdAt)} · {entry.currency}
+      </div>
+
+      {/* Movimento */}
+      <section className="space-y-2">
+        <SecaoRua label={L('Movimento', 'Activity')} />
+        {sorted.length === 0 ? (
+          <div className="flex flex-col items-start gap-3 border-2 border-dashed border-fio p-5">
+            <p className="font-voz text-[clamp(28px,8vw,36px)] leading-none text-papel">{L('Nada por aqui.', 'Nothing here.')}</p>
+            <p className="font-prova text-[12px] text-mudo">{L('Nenhuma transação encontrada.', 'No transactions found.')}</p>
+            {filtrando ? (
+              <BotaoRua
+                variante="contorno"
+                onClick={() => { setFilterType(''); setFilterCurrency(''); }}
+                className="min-h-[46px] px-5 text-[18px]"
+              >
+                {L('Limpar filtros', 'Clear filters')} <span aria-hidden>→</span>
+              </BotaoRua>
+            ) : (
+              <BotaoRua to="/" className="mt-1">
+                {L('Bora jogar', "Let's play")} <span aria-hidden>→</span>
+              </BotaoRua>
+            )}
+          </div>
+        ) : (
+          <div className="divide-y-2 divide-linha">
+            {sorted.map((entry) => {
+              const entrou = entry.amount >= 0;
+              const st = statusTexto(entry.status);
+              return (
+                <div key={entry.id} className="flex min-h-[64px] min-w-0 items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <div className="truncate font-prova text-[13px] text-papel">{entry.source}</div>
+                    <div className="mt-0.5 truncate font-prova text-[11px] text-mudo">
+                      {formatLedgerDate(entry.createdAt)} · {rotuloDoTipo(entry.type)}
+                      {st ? <span className="text-suave"> · {st}</span> : null}
+                    </div>
+                  </div>
+                  <div
+                    className={cn(
+                      'shrink-0 whitespace-nowrap font-impact text-[19px] leading-none tabular-nums',
+                      entrou ? 'text-rua' : 'text-papel',
+                    )}
+                  >
+                    {entry.currency === 'EXP'
+                      ? `${entry.amount < 0 ? '-' : '+'}${Math.abs(entry.amount).toLocaleString(LOCALE)}`
+                      : `${entry.amount >= 0 ? '+' : ''}${(entry.amount / 100).toFixed(2)}`}
+                    <span className="ml-1 font-prova text-[10.5px] font-bold text-mudo">
+                      {entry.currency}
+                    </span>
                   </div>
                 </div>
-              </div>
-              <div
-                className={`font-mono font-medium text-sm tabular-nums shrink-0 ml-4 ${
-                  entry.amount >= 0 ? 'text-alta' : 'text-baixa'
-                }`}
-              >
-                {entry.currency === 'EXP'
-                  ? `${entry.amount < 0 ? '-' : '+'}${Math.abs(entry.amount).toLocaleString(LOCALE)}`
-                  : `${entry.amount >= 0 ? '+' : ''}${(entry.amount / 100).toFixed(2)}`}
-                <span className="text-[10px] font-normal text-poeira ml-1">
-                  {entry.currency === 'BRO' ? 'USDT' : entry.currency}
-                </span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

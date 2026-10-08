@@ -1,24 +1,16 @@
 /**
- * EditorialHero — o cabeçalho amarelo das telas internas do Clube
- * (Staff, Treino, Academia, Estruturas).
+ * EditorialHero — o cabeçalho das telas internas do Clube (Staff, Treino,
+ * Academia). DS 2027 "Respeito é ouro".
  *
- * ── Alinhado ao layer final (2026-08-01) ───────────────────────────────────
- * A versão anterior empilhava, nesta ordem, antes de qualquer dado útil:
- * watermark gigante do título atrás do próprio título, subtítulo em serifa
- * itálica do tamanho da manchete, régua decorativa, um ícone dentro de uma
- * caixa, e uma frase entre aspas. Cinco camadas de enfeite.
+ * Asfalto, não amarelo: amarelo é só onde se age (degrau CORRE), e o hero é
+ * leitura. Rótulo "— EYEBROW" em prova, título no grito (Anton) em papel,
+ * subtítulo na voz (Pirata — nome do treinador, frase), dado em prova.
  *
- * O layer final é o oposto: eyebrow com risco, manchete em Anton, e o dado.
- * Três razões concretas para o corte:
- *   1. o watermark repetia a palavra que já estava escrita em cima dele — e
- *      sobre amarelo virava um borrão cinza;
- *   2. serifa itálica é assinatura de NOME DE LENDA, não de subtítulo;
- *   3. a frase entre aspas era decoração: nunca dizia nada que o manager já
- *      não soubesse.
+ * `lambe` é o momento "rua" da tela: um adesivo de cal colado torto no canto,
+ * com um dado real (nível, booster, reputação). Um por tela, não em tudo.
  *
  * `watermark` e `quote` seguem na assinatura por compatibilidade, mas não são
- * mais desenhados — quem chama não quebra, e as props somem quando as páginas
- * pararem de passá-las.
+ * desenhados.
  */
 
 import { motion } from 'motion/react';
@@ -33,61 +25,53 @@ interface EditorialHeroProps {
   /** @deprecated Não é mais desenhado. */
   quote?: string;
   stats?: string;
+  /** Ícone (lucide) — vira selo em contorno de rua ao lado do título. */
   icon?: ReactNode;
+  /** Adesivo de cal colado torto (o momento "rua"). Dado real ou nada. */
+  lambe?: { rotulo: string; valor: ReactNode };
 }
 
-export function EditorialHero({ eyebrow, title, subtitle, stats, icon }: EditorialHeroProps) {
+export function EditorialHero({ eyebrow, title, subtitle, stats, icon, lambe }: EditorialHeroProps) {
   return (
-    <section
-      aria-label={title}
-      className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8"
-    >
+    <section aria-label={title} className="relative w-full max-w-full min-w-0">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8"
-        style={{ paddingBlock: 'clamp(24px, 5vw, 44px)' }}
+        className="relative flex min-w-0 items-start gap-4 pt-2"
       >
-        <div className="min-w-0 flex-1">
-          <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-            {eyebrow}
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <span className="block min-w-0 truncate font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
+            — {eyebrow}
           </span>
 
-          <h1
-            className="mt-2 font-impact uppercase"
-            style={{
-              color: 'var(--color-deep-black)',
-              fontSize: 'clamp(40px, 11vw, 84px)',
-              lineHeight: 0.84,
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {title}
-          </h1>
+          <div className="flex min-w-0 items-center gap-3">
+            {icon && (
+              <span
+                aria-hidden
+                className="hidden h-14 w-14 shrink-0 items-center justify-center border-2 border-rua text-rua sm:flex [&_svg]:h-7 [&_svg]:w-7"
+              >
+                {icon}
+              </span>
+            )}
+            <h1 className="min-w-0 font-impact text-[clamp(52px,15vw,104px)] uppercase leading-[0.84] text-papel [overflow-wrap:anywhere]">
+              {title}
+            </h1>
+          </div>
 
-          {subtitle && (
-            <p
-              className="mt-2 font-display font-black uppercase"
-              style={{ fontSize: '12px', letterSpacing: '0.16em', color: 'rgba(13,13,13,0.7)' }}
-            >
-              {subtitle}
-            </p>
-          )}
+          {subtitle && <p className="min-w-0 font-voz text-[clamp(24px,7vw,34px)] leading-none text-papel">{subtitle}</p>}
 
           {stats && (
-            <p
-              className="mt-2.5"
-              style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'rgba(13,13,13,0.62)' }}
-            >
-              {stats}
-            </p>
+            <p className="font-prova text-[12px] font-bold uppercase tracking-[0.12em] text-mudo">{stats}</p>
           )}
         </div>
 
-        {/* O ícone vira selo lateral: acompanha o título em vez de empurrar o
-            conteúdo pra baixo. Some no mobile, onde o espaço é do texto. */}
-        {icon && <div className="hidden flex-none sm:block">{icon}</div>}
+        {lambe && (
+          <span className="mt-6 inline-flex shrink-0 rotate-[3deg] flex-col items-center bg-cal px-3 py-2 text-asfalto-27 shadow-[4px_4px_0_rgba(0,0,0,0.55)]">
+            <span className="font-prova text-[9px] font-bold uppercase tracking-[0.2em]">{lambe.rotulo}</span>
+            <span className="font-spray text-[clamp(26px,8vw,40px)] font-black leading-none">{lambe.valor}</span>
+          </span>
+        )}
       </motion.div>
     </section>
   );

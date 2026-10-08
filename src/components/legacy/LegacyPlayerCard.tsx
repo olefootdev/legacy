@@ -13,8 +13,8 @@ import { posLabel } from '@/components/matchquick/posLabel';
  * de coliseu) e foto do jogador são opcionais; quando ausentes, o card usa
  * apenas o painel ornamentado em dourado/preto.
  *
- * Tipografia herda de tokens globais: font-display e font-impact (Anton).
- * Cor primária: --color-neon-yellow.
+ * DS 2027: OVR/números em Anton, nome na VOZ (Pirata One), rótulos em prova
+ * (Geist Mono). Cor: ouro chapado (--color-ouro-27) sobre asfalto.
  *
  * VOLT2 (2026-09-19): sem halo, sem degradê de superfície, sem serifa/itálico,
  * sem texto girado decorativo. Fica só o fade da base da foto (scrim).
@@ -48,14 +48,14 @@ export interface LegacyPlayerCardProps {
 const VB_W = 1024;
 const VB_H = 1536;
 
-// Paleta — tokens VOLT2 em hex (atributo SVG não lê var()). "GOLD" aqui é o
-// volt do jogo (#FDE100), não o ouro da rede.
-const GOLD = '#FDE100'; // --color-neon-yellow
-const GOLD_DARK = '#C9B000'; // --color-neon-yellow-dark
-const GOLD_DEEP = '#7E8185'; // --color-poeira
-const BLACK = '#08090A'; // --color-nav
-const DEEP_BLACK = '#0D0D0D'; // --color-deep-black
-const PANEL = '#141516'; // --color-panel
+// Paleta DS 2027 · "Respeito é ouro" em hex (atributo SVG não lê var()).
+// Carta Legadão = degrau LENDA/RESPEITO: asfalto + OURO CHAPADO, sem brilho.
+const GOLD = '#C9A13B'; // --color-ouro-27
+const GOLD_DARK = '#9A958A'; // --color-mudo (rótulo)
+const GOLD_DEEP = '#6B6860'; // --color-fio
+const BLACK = '#0D0D0C'; // --color-asfalto-27
+const DEEP_BLACK = '#0D0D0C'; // --color-asfalto-27
+const PANEL = '#1C1C1A'; // --color-concreto
 
 function StatPip({
   x,
@@ -73,8 +73,8 @@ function StatPip({
         x="0"
         y="0"
         fill={GOLD_DARK}
-        fontFamily="var(--font-display)"
-        fontSize="28"
+        fontFamily="var(--font-prova)"
+        fontSize="24"
         fontWeight="700"
         letterSpacing="0.18em"
         textAnchor="middle"
@@ -85,9 +85,8 @@ function StatPip({
         x="0"
         y="44"
         fill={GOLD}
-        fontFamily="var(--font-display)"
-        fontSize="48"
-        fontWeight="900"
+        fontFamily="var(--font-impact)"
+        fontSize="52"
         textAnchor="middle"
       >
         {value}
@@ -213,7 +212,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
         x="120"
         y="135"
         fill={GOLD}
-        fontFamily="var(--font-display)"
+        fontFamily="var(--font-prova)"
         fontSize="18"
         fontWeight="700"
         letterSpacing="0.32em"
@@ -224,7 +223,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
         x={VB_W - 120}
         y="135"
         fill={GOLD}
-        fontFamily="var(--font-display)"
+        fontFamily="var(--font-prova)"
         fontSize="18"
         fontWeight="700"
         letterSpacing="0.32em"
@@ -259,9 +258,8 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           x="0"
           y="0"
           fill={GOLD}
-          fontFamily="var(--font-display)"
-          fontSize="160"
-          fontWeight="900"
+          fontFamily="var(--font-impact)"
+          fontSize="170"
           letterSpacing="-0.04em"
         >
           {ovr}
@@ -270,7 +268,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           x="0"
           y="60"
           fill={GOLD}
-          fontFamily="var(--font-display)"
+          fontFamily="var(--font-prova)"
           fontSize="56"
           fontWeight="700"
           letterSpacing="0.08em"
@@ -295,7 +293,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
             x="0"
             y="0"
             fill={GOLD}
-            fontFamily="var(--font-display)"
+            fontFamily="var(--font-prova)"
             fontSize="40"
             fontWeight="900"
             letterSpacing="0.05em"
@@ -307,7 +305,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
             x="0"
             y="46"
             fill={GOLD_DARK}
-            fontFamily="var(--font-display)"
+            fontFamily="var(--font-prova)"
             fontSize="22"
             fontWeight="700"
             letterSpacing="0.22em"
@@ -319,7 +317,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
             x="0"
             y="76"
             fill={GOLD_DARK}
-            fontFamily="var(--font-display)"
+            fontFamily="var(--font-prova)"
             fontSize="22"
             fontWeight="700"
             letterSpacing="0.22em"
@@ -353,12 +351,12 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
         x={VB_W / 2}
         y="1280"
         fill={GOLD}
-        fontFamily="var(--font-impact)"
-        fontSize="124"
+        fontFamily="var(--font-voz)"
+        fontSize="132"
         letterSpacing="0.01em"
         textAnchor="middle"
       >
-        {name.toUpperCase()}
+        {name}
       </text>
 
       {/* === TAGLINE === */}
@@ -366,7 +364,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
         x={VB_W / 2}
         y="1318"
         fill={GOLD_DARK}
-        fontFamily="var(--font-display)"
+        fontFamily="var(--font-prova)"
         fontSize="22"
         fontWeight="700"
         letterSpacing="0.28em"
@@ -408,7 +406,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           x="100"
           y="0"
           fill={GOLD_DARK}
-          fontFamily="var(--font-display)"
+          fontFamily="var(--font-prova)"
           fontSize="20"
           fontWeight="700"
           letterSpacing="0.22em"
@@ -419,7 +417,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           x="100"
           y="30"
           fill={GOLD}
-          fontFamily="var(--font-display)"
+          fontFamily="var(--font-prova)"
           fontSize="26"
           fontWeight="900"
           letterSpacing="0.1em"
@@ -431,7 +429,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           x={VB_W * 0.34}
           y="14"
           fill={GOLD}
-          fontFamily="var(--font-display)"
+          fontFamily="var(--font-prova)"
           fontSize="22"
           fontWeight="700"
           letterSpacing="0.32em"
@@ -459,7 +457,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           x={VB_W * 0.66}
           y="14"
           fill={GOLD}
-          fontFamily="var(--font-display)"
+          fontFamily="var(--font-prova)"
           fontSize="22"
           fontWeight="700"
           letterSpacing="0.32em"
@@ -472,7 +470,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           x={VB_W - 100}
           y="0"
           fill={GOLD_DARK}
-          fontFamily="var(--font-display)"
+          fontFamily="var(--font-prova)"
           fontSize="16"
           fontWeight="700"
           letterSpacing="0.22em"
@@ -484,7 +482,7 @@ export function LegacyPlayerCard(props: LegacyPlayerCardProps) {
           x={VB_W - 100}
           y="22"
           fill={GOLD_DARK}
-          fontFamily="var(--font-display)"
+          fontFamily="var(--font-prova)"
           fontSize="16"
           fontWeight="700"
           letterSpacing="0.22em"

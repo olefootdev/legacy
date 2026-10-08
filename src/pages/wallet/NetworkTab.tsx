@@ -1,7 +1,7 @@
 import { WalletShell } from './WalletShell';
 import { PainelExpansao } from './network/PainelExpansao';
 import { useMinhaExpansao } from './network/useMinhaExpansao';
-import { SecaoVolt, Hashtag } from '@/components/ui';
+import { FitaRua, SecaoRua } from '@/components/ui';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { L } from '@/i18n/L';
 
@@ -27,10 +27,15 @@ export function NetworkTab() {
   // dois times"). Repetir em cima daria o mesmo saldo duas vezes na mesma tela.
   return (
     <WalletShell title="Network" hashtag="#network" heroVariant="compact" voltar>
-      <section className="min-w-0 space-y-3">
-        <SecaoVolt label={L('Expansão', 'Expansion')}>
-          <Hashtag>{L('#equiparacao #time1 #time2', '#matching #team1 #team2')}</Hashtag>
-        </SecaoVolt>
+      <section className="min-w-0 space-y-4">
+        <SecaoRua label={L('Expansão', 'Expansion')} />
+        {/* DS 2027 · o momento "rua" da tela: a fita da arquibancada com as
+            hashtags da rede, inclinada. Decorativa. */}
+        <FitaRua
+          tags={[L('#equiparacao', '#matching'), L('#time1', '#team1'), L('#time2', '#team2')]}
+          inclinacao={-2}
+          className="py-2"
+        />
         <PainelExpansao dados={expansao} />
       </section>
 

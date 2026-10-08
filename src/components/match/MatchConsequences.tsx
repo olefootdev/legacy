@@ -71,45 +71,30 @@ export function MatchConsequences({ playerNames, nowMs }: MatchConsequencesProps
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5, duration: 0.35 }}
       aria-label={L('O que esta partida causou', 'What this match caused')}
-      className="border"
-      style={{
-        borderRadius: 'var(--radius-md)',
-        borderColor: 'var(--color-border)',
-        backgroundColor: 'var(--color-dark-gray)',
-        padding: '16px 18px',
-      }}
+      className="bg-concreto px-5 py-4"
     >
-      <p
-        className="mb-3 font-display font-black uppercase text-neon-yellow"
-        style={{ fontSize: '10px', letterSpacing: '0.28em' }}
-      >
-        {L('O que este jogo causou', 'What this match caused')}
+      <p className="mb-2 font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
+        — {L('O que este jogo causou', 'What this match caused')}
       </p>
 
-      <ul className="flex flex-col gap-2.5">
+      <ul className="flex flex-col">
         {rows.map(({ consequence: c, template: t }) => {
           const good = c.magnitude > 0;
           const Icon = good ? TrendingUp : TrendingDown;
-          const color = good ? 'var(--color-success)' : 'var(--color-danger)';
+          // alta/baixa só como delta (+/−) — nunca bloco.
+          const tone = good ? 'text-alta' : 'text-baixa';
           const who = c.playerId ? playerNames?.[c.playerId] : null;
           return (
-            <li key={c.id} className="flex items-start gap-2.5">
-              <Icon
-                aria-hidden
-                className="mt-0.5 h-3.5 w-3.5 flex-none"
-                style={{ color }}
-                strokeWidth={2.6}
-              />
+            <li key={c.id} className="flex items-start gap-3 border-b border-linha py-3 last:border-b-0">
+              <Icon aria-hidden className={`mt-1 h-4 w-4 flex-none ${tone}`} strokeWidth={2.6} />
               <div className="min-w-0">
-                <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 700, color: '#fff' }}>
-                  {who ? <span style={{ color }}>{who}</span> : null}
-                  {who ? ' · ' : null}
+                <p className="text-[14px] font-semibold leading-snug text-papel">
+                  {who ? <span className="font-voz text-[19px] leading-none">{who}</span> : null}
+                  {who ? <span className="text-mudo"> · </span> : null}
                   {t.label}
                 </p>
                 {/* "Por que isso aconteceu" — texto que já existia no catálogo. */}
-                <p className="mt-0.5 text-white/50" style={{ fontFamily: 'var(--font-sans)', fontSize: '11.5px', lineHeight: 1.45 }}>
-                  {t.description}
-                </p>
+                <p className="mt-1 text-[12.5px] leading-[1.45] text-suave">{t.description}</p>
               </div>
             </li>
           );

@@ -12,11 +12,11 @@ export function PenaltyShootoutScore({
   const awayGoals = ctx.awayShots.filter((s) => s === 'goal').length;
 
   return (
-    <div className="w-full max-w-[920px] mt-4 mb-6 border-t-2 border-black/80 pt-4">
+    <div className="w-full max-w-[920px] mt-4 mb-6 border-t-2 border-asfalto-27/80 pt-4">
       <div className="grid grid-cols-3 items-center gap-4">
         {/* Home */}
         <div className="flex flex-col items-start gap-2">
-          <div className="text-[10px] uppercase tracking-[0.3em] font-bold text-black/70">
+          <div className="font-prova text-[10.5px] uppercase tracking-[0.16em] font-bold text-asfalto-27/75">
             {ctx.homeLabel ?? L('Casa', 'Home')}
           </div>
           <div className="flex items-center gap-2">
@@ -33,15 +33,15 @@ export function PenaltyShootoutScore({
         {/* Placar central */}
         <div className="flex items-center justify-center gap-3">
           <div
-            className="font-display font-black text-black tabular-nums leading-none"
-            style={{ fontSize: 'clamp(40px, 6vw, 64px)' }}
+            className="font-spray font-black text-asfalto-27 tabular-nums leading-none"
+            style={{ fontSize: 'clamp(48px, 13vw, 76px)' }}
           >
             {homeGoals}
           </div>
-          <div className="text-black/50 text-3xl">—</div>
+          <div className="font-spray font-black text-asfalto-27/60 text-3xl">×</div>
           <div
-            className="font-display font-black text-black tabular-nums leading-none"
-            style={{ fontSize: 'clamp(40px, 6vw, 64px)' }}
+            className="font-spray font-black text-asfalto-27 tabular-nums leading-none"
+            style={{ fontSize: 'clamp(48px, 13vw, 76px)' }}
           >
             {awayGoals}
           </div>
@@ -49,7 +49,7 @@ export function PenaltyShootoutScore({
 
         {/* Away */}
         <div className="flex flex-col items-end gap-2">
-          <div className="text-[10px] uppercase tracking-[0.3em] font-bold text-black/70">
+          <div className="font-prova text-[10.5px] uppercase tracking-[0.16em] font-bold text-asfalto-27/75">
             {ctx.awayLabel ?? L('Visitante', 'Away')}
           </div>
           <div className="flex items-center gap-2">
@@ -66,25 +66,25 @@ export function PenaltyShootoutScore({
 function ShotDot({ result, active = false }: { key?: import("react").Key; result: ShotResult; active?: boolean }) {
   if (result === 'goal') {
     return (
-      <div className="w-5 h-5 rounded-full bg-black flex items-center justify-center">
-        <div className="w-2 h-2 rounded-full bg-neon-yellow" />
+      <div className="w-5 h-5 bg-asfalto-27 flex items-center justify-center" aria-label={L('Gol', 'Goal')}>
+        <div className="w-2 h-2 bg-rua" />
       </div>
     );
   }
   if (result === 'save') {
     return (
-      <div className="w-5 h-5 rounded-full border-2 border-black flex items-center justify-center">
+      <div className="w-5 h-5 border-2 border-asfalto-27 flex items-center justify-center" aria-label={L('Defendido', 'Saved')}>
         <svg viewBox="0 0 12 12" className="w-3 h-3">
-          <line x1="2" y1="2" x2="10" y2="10" stroke="#000" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="10" y1="2" x2="2" y2="10" stroke="#000" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="2" y1="2" x2="10" y2="10" stroke="#0D0D0C" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="10" y1="2" x2="2" y2="10" stroke="#0D0D0C" strokeWidth="2.5" strokeLinecap="round" />
         </svg>
       </div>
     );
   }
   return (
     <div
-      className={`w-5 h-5 rounded-full border-2 ${
-        active ? 'border-black animate-pulse bg-black/10' : 'border-black/30'
+      className={`w-5 h-5 border-2 ${
+        active ? 'border-asfalto-27 animate-pulse bg-asfalto-27/10' : 'border-dashed border-asfalto-27/35'
       }`}
     />
   );

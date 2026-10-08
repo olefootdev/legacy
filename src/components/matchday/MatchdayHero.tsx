@@ -139,7 +139,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
   const rightTextSoft = solid ? 'text-black/70' : 'text-white/70';
   const rightTextMuted = solid ? 'text-black/40' : 'text-white/40';
   const rightCrestRing = solid ? 'border-black' : 'border-white';
-  const rightCrestBg = solid ? 'bg-neon-yellow' : 'bg-deep-black';
+  const rightCrestBg = solid ? 'bg-rua' : 'bg-asfalto-27';
   const rightCrestText = solid ? 'text-black' : 'text-white';
   const statusPrimaryColor = solid ? 'text-black/85' : 'text-white';
   const statusSubColor = solid ? 'text-black/65' : 'text-white/70';
@@ -149,18 +149,18 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
     if (solid) return 'bg-black px-3 py-3 sm:px-4 sm:py-4 text-center';
     return i < 2
       ? 'bg-black px-3 py-3 sm:px-4 sm:py-4 text-center'
-      : 'bg-deep-black border border-white/8 px-3 py-3 sm:px-4 sm:py-4 text-center';
+      : 'bg-asfalto-27 border border-linha px-3 py-3 sm:px-4 sm:py-4 text-center';
   };
 
   // Bg da section: solid amarelo, ou dark com split
-  const sectionBg = solid ? 'bg-neon-yellow' : 'bg-deep-black';
+  const sectionBg = solid ? 'bg-rua' : 'bg-asfalto-27';
 
   return (
     <section className={`relative w-full overflow-hidden ${sectionBg}`}>
       {/* Camada amarela com clip-path (esq → 62%) — só no modo split */}
       {!solid && (
         <div
-          className="absolute inset-0 bg-neon-yellow"
+          className="absolute inset-0 bg-rua"
           style={{ clipPath: 'polygon(0 0, 62% 0, 38% 100%, 0% 100%)' }}
           aria-hidden
         />
@@ -172,20 +172,20 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
           {data.topLeft?.href ? (
             <Link
               to={data.topLeft.href}
-              className="inline-flex items-center gap-2 text-black/80 hover:text-black font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px]"
+              className="inline-flex items-center gap-2 text-black/80 hover:text-black font-prova font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px]"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               {data.topLeft.label}
             </Link>
           ) : (
-            <span className="inline-flex items-center gap-2 text-black/80 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px]">
+            <span className="inline-flex items-center gap-2 text-black/80 font-prova font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px]">
               {data.topLeft?.label ?? 'Olefoot'}
             </span>
           )}
-          <span className="text-black/70 font-display font-bold uppercase tracking-[0.22em] text-[10px] sm:text-[12px] text-center flex-1 truncate">
+          <span className="text-black/70 font-prova font-bold uppercase tracking-[0.22em] text-[10px] sm:text-[12px] text-center flex-1 truncate">
             {data.competition}
           </span>
-          <span className={`inline-flex items-center gap-1.5 ${statusPrimaryColor} font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px]`}>
+          <span className={`inline-flex items-center gap-1.5 ${statusPrimaryColor} font-prova font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px]`}>
             <span className={statusSubColor}>{data.statusPrimary}</span>
             {data.statusSecondary ? (
               <>
@@ -194,10 +194,10 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                   <span
                     className={
                       data.statusVariant === 'live'
-                        ? 'w-1.5 h-1.5 rounded-full bg-rose-500 live-dot'
+                        ? 'w-1.5 h-1.5 bg-rose-500 live-dot'
                         : solid
-                          ? 'w-1.5 h-1.5 rounded-full bg-black'
-                          : 'w-1.5 h-1.5 rounded-full bg-neon-yellow'
+                          ? 'w-1.5 h-1.5 bg-black'
+                          : 'w-1.5 h-1.5 bg-rua'
                     }
                     aria-hidden
                   />
@@ -220,7 +220,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
             />
             <div className="text-center min-w-0 w-full">
               <h2
-                className="ole-headline text-black leading-[0.85] uppercase"
+                className="font-impact text-black leading-[0.85] uppercase"
                 style={{ fontSize: 'clamp(20px, 3.5vw, 40px)' }}
               >
                 {data.home.name}
@@ -230,7 +230,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                   <FormPills form={data.home.form} variant="onYellow" />
                 </div>
               ) : data.home.sublabel ? (
-                <p className="mt-1.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] text-black/70">
+                <p className="mt-1.5 font-prova font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] text-black/70">
                   {data.home.sublabel}
                 </p>
               ) : null}
@@ -242,7 +242,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
             {showScore ? (
               <>
                 <span
-                  className="ole-num leading-none text-black tabular-nums"
+                  className="font-spray font-black leading-none text-black tabular-nums"
                   style={{ fontSize: 'clamp(52px, 12vw, 128px)' }}
                 >
                   {data.home.score}
@@ -254,7 +254,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                   –
                 </span>
                 <span
-                  className={`ole-num leading-none tabular-nums ${rightTextStrong}`}
+                  className={`font-spray font-black leading-none tabular-nums ${rightTextStrong}`}
                   style={{ fontSize: 'clamp(52px, 12vw, 128px)' }}
                 >
                   {data.away.score}
@@ -282,10 +282,10 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
               />
             ) : (
               <div
-                className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[2.5px] grid place-items-center shrink-0 ${rightCrestRing} ${rightCrestBg}`}
+                className={`w-12 h-12 sm:w-16 sm:h-16 border-[2.5px] grid place-items-center shrink-0 ${rightCrestRing} ${rightCrestBg}`}
               >
                 <span
-                  className={`font-display font-black uppercase ${rightCrestText} text-[11px] sm:text-[14px] tracking-[0.06em]`}
+                  className={`font-impact uppercase ${rightCrestText} text-[11px] sm:text-[14px] tracking-[0.06em]`}
                 >
                   {data.away.short}
                 </span>
@@ -293,7 +293,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
             )}
             <div className="text-center min-w-0 w-full">
               <h2
-                className={`ole-headline ${rightTextStrong} leading-[0.85] uppercase`}
+                className={`font-impact ${rightTextStrong} leading-[0.85] uppercase`}
                 style={{ fontSize: 'clamp(20px, 3.5vw, 40px)' }}
               >
                 {data.away.name}
@@ -303,7 +303,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                   <FormPills form={data.away.form} variant={solid ? 'onYellow' : 'onDark'} align="center" />
                 </div>
               ) : data.away.sublabel ? (
-                <p className={`mt-1.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] ${rightTextSoft}`}>
+                <p className={`mt-1.5 font-prova font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] ${rightTextSoft}`}>
                   {data.away.sublabel}
                 </p>
               ) : null}
@@ -332,11 +332,11 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                     ? 'text-baixa'
                     : s.tone === 'muted'
                       ? 'text-white/65'
-                      : 'text-neon-yellow';
+                      : 'text-rua';
             const inner = (
               <>
                 <p
-                  className={cn('ole-num tabular-nums leading-none', toneColor)}
+                  className={cn('font-spray font-black tabular-nums leading-none', toneColor)}
                   style={{ fontSize: 'clamp(20px, 4vw, 40px)' }}
                 >
                   {s.value}
@@ -378,7 +378,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                   draggable={false}
                   referrerPolicy="no-referrer"
                 />
-                <div className="absolute inset-x-0 bottom-0 h-[3px] bg-neon-yellow" aria-hidden />
+                <div className="absolute inset-x-0 bottom-0 h-[3px] bg-rua" aria-hidden />
               </div>
             ) : null}
           </div>
@@ -389,13 +389,13 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
                 <span
-                  className="inline-flex items-center rounded-full bg-black px-3 py-1 font-display text-[9px] font-black uppercase tracking-[0.22em] text-neon-yellow"
+                  className="inline-flex items-center bg-black px-3 py-1 font-prova text-[9px] font-black uppercase tracking-[0.22em] text-rua"
                 >
                   MVP
                 </span>
                 {data.highlight.tag ? (
                   <span
-                    className="inline-flex items-center rounded-full bg-black px-3 py-1 font-display text-[9px] font-black uppercase tracking-[0.22em] text-neon-yellow"
+                    className="inline-flex items-center bg-black px-3 py-1 font-prova text-[9px] font-black uppercase tracking-[0.22em] text-rua"
                   >
                     {data.highlight.tag}
                   </span>
@@ -410,12 +410,12 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                 {data.highlight.name.split(' ').slice(1).join(' ')}
               </h3>
               {data.highlight.position ? (
-                <p className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2 font-display text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.28em] text-black/75">
+                <p className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2 font-prova text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.28em] text-black/75">
                   <span>{data.highlight.position}</span>
                   {typeof data.highlight.deltaOvr === 'number' && data.highlight.deltaOvr !== 0 ? (
                     <span
                       className={cn(
-                        'inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-black tracking-[0.18em]',
+                        'inline-flex items-center px-2 py-0.5 text-[10px] font-black tracking-[0.18em]',
                         data.highlight.deltaOvr > 0
                           ? 'bg-alta text-black'
                           : 'bg-baixa text-white',
@@ -445,12 +445,12 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                 {typeof data.highlight.goalsSeason === 'number' ? (
                   <div className="min-w-0">
                     <p
-                      className="ole-num text-black tabular-nums leading-none"
+                      className="font-spray font-black text-black tabular-nums leading-none"
                       style={{ fontSize: 'clamp(24px, 4.4vw, 40px)' }}
                     >
                       {data.highlight.goalsSeason}
                     </p>
-                    <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
+                    <p className="mt-1 font-prova text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
                       {L('Gols', 'Goals')}
                     </p>
                   </div>
@@ -458,12 +458,12 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                 {typeof data.highlight.assistsSeason === 'number' ? (
                   <div className="min-w-0">
                     <p
-                      className="ole-num text-black tabular-nums leading-none"
+                      className="font-spray font-black text-black tabular-nums leading-none"
                       style={{ fontSize: 'clamp(24px, 4.4vw, 40px)' }}
                     >
                       {data.highlight.assistsSeason}
                     </p>
-                    <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
+                    <p className="mt-1 font-prova text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
                       {L('Assistências', 'Assists')}
                     </p>
                   </div>
@@ -471,12 +471,12 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                 {typeof data.highlight.mvpsSeason === 'number' ? (
                   <div className="min-w-0">
                     <p
-                      className="ole-num text-black tabular-nums leading-none"
+                      className="font-spray font-black text-black tabular-nums leading-none"
                       style={{ fontSize: 'clamp(24px, 4.4vw, 40px)' }}
                     >
                       {data.highlight.mvpsSeason}
                     </p>
-                    <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
+                    <p className="mt-1 font-prova text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
                       MVPs
                     </p>
                   </div>
@@ -488,7 +488,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                         <span
                           key={i}
                           className={cn(
-                            'inline-flex h-4 w-4 items-center justify-center rounded-sm font-display text-[9px] font-black uppercase',
+                            'inline-flex h-4 w-4 items-center justify-center font-prova text-[9px] font-black uppercase',
                             r === 'W'
                               ? 'bg-alta text-black'
                               : r === 'D'
@@ -501,7 +501,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                         </span>
                       ))}
                     </div>
-                    <p className="mt-1.5 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
+                    <p className="mt-1.5 font-prova text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
                       {L('Forma · 5 jogos', 'Form · last 5')}
                     </p>
                   </div>
@@ -516,8 +516,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                   data.highlight.ctaPrimary.href ? (
                     <Link
                       to={data.highlight.ctaPrimary.href}
-                      className="inline-flex items-center bg-black px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-neon-yellow transition-colors hover:bg-deep-black"
-                      style={{ borderRadius: 'var(--radius-sm)' }}
+                      className="inline-flex items-center bg-black min-h-[48px] px-5 font-impact text-[18px] uppercase text-rua transition-colors hover:bg-asfalto-27"
                     >
                       {data.highlight.ctaPrimary.label}
                     </Link>
@@ -525,8 +524,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                     <button
                       type="button"
                       onClick={data.highlight.ctaPrimary.onClick}
-                      className="inline-flex items-center bg-black px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-neon-yellow transition-colors hover:bg-deep-black"
-                      style={{ borderRadius: 'var(--radius-sm)' }}
+                      className="inline-flex items-center bg-black min-h-[48px] px-5 font-impact text-[18px] uppercase text-rua transition-colors hover:bg-asfalto-27"
                     >
                       {data.highlight.ctaPrimary.label}
                     </button>
@@ -536,8 +534,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                   data.highlight.ctaSecondary.href ? (
                     <Link
                       to={data.highlight.ctaSecondary.href}
-                      className="inline-flex items-center border border-black/70 bg-transparent px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black transition-colors hover:bg-black/10"
-                      style={{ borderRadius: 'var(--radius-sm)' }}
+                      className="inline-flex items-center border border-black/70 bg-transparent min-h-[48px] px-5 font-impact text-[18px] uppercase text-black transition-colors hover:bg-black/10"
                     >
                       {data.highlight.ctaSecondary.label}
                     </Link>
@@ -545,8 +542,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                     <button
                       type="button"
                       onClick={data.highlight.ctaSecondary.onClick}
-                      className="inline-flex items-center border border-black/70 bg-transparent px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black transition-colors hover:bg-black/10"
-                      style={{ borderRadius: 'var(--radius-sm)' }}
+                      className="inline-flex items-center border border-black/70 bg-transparent min-h-[48px] px-5 font-impact text-[18px] uppercase text-black transition-colors hover:bg-black/10"
                     >
                       {data.highlight.ctaSecondary.label}
                     </button>
@@ -568,8 +564,8 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                 {actions.map((a) => {
                   const cls =
                     a.variant === 'primary'
-                      ? 'bg-neon-yellow text-black hover:bg-white px-4 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] transition-colors rounded-sm'
-                      : 'bg-black border border-white/15 text-white px-4 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] hover:border-neon-yellow hover:text-neon-yellow transition-colors rounded-sm';
+                      ? 'bg-rua text-black hover:bg-white min-h-[44px] px-4 font-impact text-[16px] uppercase transition-colors'
+                      : 'bg-black border border-white/15 text-white min-h-[44px] px-4 font-impact text-[16px] uppercase hover:border-rua hover:text-rua transition-colors';
                   if (a.href) {
                     return (
                       <Link key={a.label} to={a.href} className={cls}>
@@ -593,7 +589,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                   const el = document.getElementById(data.scrollCueTargetId!);
                   el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
-                className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:bg-neon-yellow transition-colors"
+                className="w-9 h-9 bg-white text-black flex items-center justify-center hover:bg-rua transition-colors"
               >
                 <ChevronDown className="w-4 h-4" />
               </button>
@@ -618,7 +614,7 @@ function CrestCircle({
 }) {
   const ring = variant === 'onYellow' ? 'border-black' : 'border-white';
   const text = variant === 'onYellow' ? 'text-black' : 'text-white';
-  const bg = variant === 'onYellow' ? 'bg-neon-yellow' : 'bg-deep-black';
+  const bg = variant === 'onYellow' ? 'bg-rua' : 'bg-asfalto-27';
   const baseSize = 'w-12 h-12 sm:w-16 sm:h-16';
   if (crestUrl?.trim()) {
     // Brasão real — sem circle/border/bg, só a logo respirando sobre o fundo
@@ -634,10 +630,10 @@ function CrestCircle({
   }
   return (
     <div
-      className={`${baseSize} rounded-full border-[2.5px] grid place-items-center shrink-0 ${ring} ${bg}`}
+      className={`${baseSize} border-[2.5px] grid place-items-center shrink-0 ${ring} ${bg}`}
     >
       <span
-        className={`font-display font-black uppercase ${text} text-[11px] sm:text-[14px] tracking-[0.06em]`}
+        className={`font-impact uppercase ${text} text-[11px] sm:text-[14px] tracking-[0.06em]`}
       >
         {short}
       </span>
@@ -657,7 +653,7 @@ function FormPills({
   const sub = variant === 'onYellow' ? 'text-black/70' : 'text-white/70';
   return (
     <p
-      className={`mt-1.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] ${sub} ${
+      className={`mt-1.5 font-prova font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] ${sub} ${
         align === 'right' ? 'text-right' : 'text-left'
       }`}
     >

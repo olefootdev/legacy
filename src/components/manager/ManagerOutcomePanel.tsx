@@ -35,25 +35,25 @@ export type ManagerOutcomePanelProps = {
 
 const shell: Record<ManagerOutcomeVariant, { border: string; bg: string; icon: typeof CheckCircle2; iconWrap: string; iconClass: string }> = {
   success: {
-    border: 'border-alta/45',
-    bg: 'bg-panel',
+    border: 'border-t-[5px] border-rua',
+    bg: 'bg-concreto',
     icon: CheckCircle2,
-    iconWrap: 'border-alta/40 bg-alta/15',
+    iconWrap: 'border-linha bg-asfalto-27',
     iconClass: 'text-alta',
   },
   error: {
-    border: 'border-baixa/45',
-    bg: 'bg-panel',
+    border: 'border-t-[5px] border-baixa',
+    bg: 'bg-concreto',
     icon: AlertCircle,
-    iconWrap: 'border-baixa/40 bg-baixa/15',
+    iconWrap: 'border-linha bg-asfalto-27',
     iconClass: 'text-baixa',
   },
   info: {
-    border: 'border-white/16',
-    bg: 'bg-panel',
+    border: 'border-t-[5px] border-linha',
+    bg: 'bg-concreto',
     icon: Info,
-    iconWrap: 'border-white/16 bg-card-hi',
-    iconClass: 'text-white',
+    iconWrap: 'border-linha bg-asfalto-27',
+    iconClass: 'text-papel',
   },
 };
 
@@ -85,7 +85,7 @@ export function ManagerOutcomePanel({
         aria-describedby="manager-outcome-desc"
         aria-live={ariaLive}
         className={cn(
-          'relative w-full max-w-md overflow-hidden border',
+          'relative w-full max-w-md overflow-hidden',
           s.border,
           s.bg,
         )}
@@ -95,7 +95,7 @@ export function ManagerOutcomePanel({
           <button
             type="button"
             onClick={onDismiss}
-            className="absolute right-2 top-2 p-2 text-cimento transition hover:bg-white/10 hover:text-white"
+            className="absolute right-2 top-2 p-2 text-mudo transition hover:bg-linha hover:text-papel"
             aria-label={L('Fechar', 'Close')}
           >
             <X className="h-5 w-5" aria-hidden />
@@ -104,17 +104,17 @@ export function ManagerOutcomePanel({
         <div className="flex gap-3 px-4 pb-4 pt-5 sm:px-5">
           <div
             className={cn(
-              'flex h-11 w-11 shrink-0 items-center justify-center border',
+              'flex h-11 w-11 shrink-0 items-center justify-center border-2',
               s.iconWrap,
             )}
           >
             <Icon className={cn('h-5 w-5', s.iconClass)} aria-hidden />
           </div>
           <div className="min-w-0 flex-1 pr-6">
-            <h2 id="manager-outcome-title" className="font-impact text-lg uppercase leading-[1.1] text-white">
+            <h2 id="manager-outcome-title" className="font-impact text-[26px] uppercase leading-[1] text-papel">
               {title}
             </h2>
-            <p id="manager-outcome-desc" className="mt-2 text-sm leading-relaxed text-giz">
+            <p id="manager-outcome-desc" className="mt-2 text-sm leading-relaxed text-papel">
               {message}
             </p>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -124,12 +124,12 @@ export function ManagerOutcomePanel({
                   type="button"
                   onClick={a.onClick}
                   className={cn(
-                    'ole-num min-h-[44px] px-4 py-3 text-[12px] uppercase transition sm:flex-1',
+                    'min-h-[48px] px-4 py-3 font-impact text-[17px] uppercase leading-none transition sm:flex-1',
                     a.variant === 'primary' || (!a.variant && i === 0)
                       ? 'btn-primary border-0'
                       : a.variant === 'ghost'
-                        ? 'text-cimento hover:bg-white/5 hover:text-white'
-                        : 'border border-white/30 text-white hover:border-white',
+                        ? 'text-mudo hover:bg-linha hover:text-papel'
+                        : 'border-2 border-papel text-papel hover:bg-papel hover:text-asfalto-27',
                   )}
                 >
                   {a.label}

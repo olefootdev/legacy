@@ -13,7 +13,8 @@ import {
   type LegacyLotInfo,
 } from '@/supabase/legacyPlayers';
 import { LegacyMarketCard } from '@/components/legacy/LegacyMarketCard';
-import { Hashtag, SecaoVolt } from '@/components/ui';
+import { SecaoRua } from '@/components/ui/Rua';
+import { TORTO, VazioRua } from '@/components/market/rua/escada';
 import { recordMarketActivity } from '@/supabase/marketActivities';
 import { getSupabase } from '@/supabase/client';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
@@ -269,7 +270,11 @@ export function TransferLegaciesTab({
   }, [rows, sort, pos, buscaNorm, quote]);
 
   if (loading) {
-    return <div className="py-10 text-center text-sm text-gray-500">{L('Carregando legacies…', 'Loading Legacies…')}</div>;
+    return (
+      <div className="py-12 text-center font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+        — {L('Colando as lendas no muro…', 'Pasting the legends up…')}
+      </div>
+    );
   }
 
   // GRADE ÚNICA (2026-09-19). Antes: uma seção com carrossel POR ATLETA — com
@@ -338,27 +343,33 @@ export function TransferLegaciesTab({
 
 
   return (
-    <div className="space-y-5 px-4 sm:px-5">
+    <div className="space-y-5">
       {/* Vazio SEM early-return: o modal de detalhe (deep-link do Legends Cup
           pra lenda fora de catálogo) precisa renderizar mesmo sem listados. */}
       {rows.length === 0 && (
-        <div className="rounded-xl border border-white/10 bg-panel py-12 text-center text-sm text-cimento">
-          {L('Nenhum Legacy disponível no momento.', 'No Legacy available right now.')}
-        </div>
+        <VazioRua
+          titulo={L('Muro vazio por enquanto.', 'Empty wall for now.')}
+          linha={L('Nenhum Legacy à venda agora', 'No Legacy for sale right now')}
+        />
       )}
 
-      {/* Barra da grade: quantas cartas e como ver. Ordenar/buscar é no hero. */}
+      {/* Cabeçalho da parede: quantas cartas e como ver. Ordenar/buscar é no hero. */}
       {rows.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <SecaoVolt label={L('Lendas à venda', 'Legends for sale')}>
-            <Hashtag>
-              {L(
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-1">
+            <SecaoRua
+              label={L('Lendas à venda', 'Legends for sale')}
+              aside={L(
                 `${ordenada.length} ${ordenada.length === 1 ? 'carta' : 'cartas'} · ${atletas} ${atletas === 1 ? 'atleta' : 'atletas'}`,
                 `${ordenada.length} ${ordenada.length === 1 ? 'card' : 'cards'} · ${atletas} ${atletas === 1 ? 'athlete' : 'athletes'}`,
               )}
-            </Hashtag>
-          </SecaoVolt>
-          <div className="flex items-center gap-1.5">
+            />
+            <h2 className="flex flex-col font-impact uppercase leading-[0.92]" style={{ fontSize: 'clamp(30px, 8.4vw, 50px)' }}>
+              <span className="font-voz text-[1.2em] normal-case leading-[0.9] text-papel">{L('Lenda', 'Legends')}</span>
+              <span className="text-ouro-27">{L('tem história.', 'carry history.')}</span>
+            </h2>
+          </div>
+          <div className="flex items-center gap-1 border-2 border-linha p-1">
             {(['grid', 'list'] as const).map((m) => (
               <button
                 key={m}
@@ -366,10 +377,8 @@ export function TransferLegaciesTab({
                 onClick={() => setView(m)}
                 aria-pressed={view === m}
                 className={cn(
-                  'ole-num h-9 px-3 text-[11.5px] uppercase transition-colors',
-                  view === m
-                    ? 'bg-neon-yellow text-black'
-                    : 'border border-white/20 text-cimento hover:border-white hover:text-white',
+                  'inline-flex min-h-9 items-center px-4 font-impact text-[15px] uppercase leading-none transition-colors',
+                  view === m ? 'bg-rua text-asfalto-27' : 'text-mudo hover:text-papel',
                 )}
               >
                 {m === 'grid' ? L('Grade', 'Grid') : L('Lista', 'List')}
@@ -381,14 +390,16 @@ export function TransferLegaciesTab({
 
       {/* Busca sem resultado: diz o que aconteceu, não some com a tela. */}
       {rows.length > 0 && ordenada.length === 0 && (
-        <div className="border border-white/10 bg-panel py-12 text-center text-sm text-cimento">
-          {L('Nenhuma lenda com esse filtro.', 'No legends match this filter.')}
-        </div>
+        <VazioRua
+          titulo={L('Nenhuma lenda com esse filtro.', 'No legend with that filter.')}
+          linha={L('Afrouxa a busca ali em cima', 'Loosen the search above')}
+        />
       )}
 
       {view === 'grid' ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-          {ordenada.map((row) => {
+        /* A parede de lambes: cartas coladas tortas (até 2,5°), o hover endireita. */
+        <div className="grid grid-cols-2 gap-x-3 gap-y-5 py-2 sm:grid-cols-3 sm:gap-x-5 sm:gap-y-7 lg:grid-cols-4">
+          {ordenada.map((row, i) => {
             const entity = legacyRowToPlayerEntity(row);
             const sale = fixedSaleFor(row);
             return (
@@ -402,6 +413,7 @@ export function TransferLegaciesTab({
                 lot={lots.get(row.id)}
                 owned={owned.has(entity.id)}
                 tag={faseDaCarta(row)}
+                torto={(TORTO[i % TORTO.length] ?? 0) * 0.6}
                 onOpen={() => setDetailRow(row)}
               />
             );

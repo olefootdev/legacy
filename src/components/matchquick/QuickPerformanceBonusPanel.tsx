@@ -19,63 +19,47 @@ export function QuickPerformanceBonusPanel({ bonuses, totalOle, totalExp }: Prop
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <span className="text-lg">🏆</span>
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-          {L('Bônus de Performance', 'Performance Bonus')}
-        </h3>
-      </div>
+      <h3 className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
+        — {L('Bônus de performance', 'Performance bonus')}
+      </h3>
 
-      <div className="space-y-2">
+      <ul className="flex flex-col">
         {bonuses.map((bonus, i) => (
-          <motion.div
+          <motion.li
             key={bonus.id}
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.15 }}
-            className={cn(
-              'p-3 border',
-              'bg-panel',
-              'border-white/10',
-            )}
+            transition={{ delay: i * 0.12 }}
+            className="flex min-w-0 items-start justify-between gap-3 border-b border-linha py-3 last:border-b-0"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-2 flex-1">
-                <span className="text-2xl">{bonus.icon}</span>
-                <div>
-                  <div className="text-sm font-bold text-white">{bonus.name}</div>
-                  <div className="text-xs text-white/60">{bonus.description}</div>
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="font-mono text-sm font-medium text-neon-yellow">+{bonus.ole} OLE</div>
-                {bonus.exp > 0 && (
-                  <div className="font-mono text-xs text-giz">+{bonus.exp} EXP</div>
-                )}
-              </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-voz text-[21px] leading-none text-papel">{bonus.name}</p>
+              <p className="mt-1 text-[12.5px] leading-snug text-suave">{bonus.description}</p>
             </div>
-          </motion.div>
+            <div className="shrink-0 text-right">
+              <p className="font-impact text-[18px] leading-none tabular-nums text-papel">+{bonus.ole} OLE</p>
+              {bonus.exp > 0 && (
+                <p className="mt-1 font-prova text-[11px] font-bold text-mudo">+{bonus.exp} EXP</p>
+              )}
+            </div>
+          </motion.li>
         ))}
-      </div>
+      </ul>
 
-      {/* Total */}
+      {/* Total — lambe de papel colado torto */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: bonuses.length * 0.15 + 0.2 }}
-        className={cn(
-          'p-4 border-2',
-          'bg-card',
-          'border-neon-yellow',
-        )}
+        transition={{ delay: bonuses.length * 0.12 + 0.15 }}
+        className={cn('-rotate-1 bg-cal px-4 py-3 text-asfalto-27')}
       >
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-white uppercase tracking-wider">
-            {L('Total de Bônus', 'Total Bonus')}
+        <div className="flex min-w-0 items-end justify-between gap-3">
+          <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em]">
+            {L('Total de bônus', 'Total bonus')}
           </span>
           <div className="text-right">
-            <div className="font-mono text-lg font-medium text-neon-yellow">+{totalOle} OLE</div>
-            {totalExp > 0 && <div className="font-mono text-sm text-giz">+{totalExp} EXP</div>}
+            <p className="font-spray font-black text-[34px] leading-none tabular-nums">+{totalOle} OLE</p>
+            {totalExp > 0 && <p className="font-prova text-[12px] font-bold">+{totalExp} EXP</p>}
           </div>
         </div>
       </motion.div>

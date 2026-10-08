@@ -1,21 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import {
-  CalendarDays,
-  Clock,
-  AlertTriangle,
-  Trophy,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  Play,
-} from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
-import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
 import { BackButton } from '@/components/BackButton';
 import { cn } from '@/lib/utils';
-import { Hashtag } from '@/components/ui';
+import { BotaoRua, SecaoRua, SeloRua } from '@/components/ui/Rua';
+import { CabecalhoRua, VazioRua } from '@/components/leagues/RuaTabela';
+import { Convocacao, PlacarRua } from '@/components/leagues/Convocacao';
 import {
   fixtureKickoffMs,
   fixtureInvolvesUser,
@@ -66,18 +58,10 @@ function addDaysIso(iso: string, delta: number): string {
   return localDateIso(d);
 }
 
-function statusBadge(fx: ScheduledLeagueFixture): { text: string; className: string } {
-  if (fx.status === 'scheduled')
-    return { text: L('Agendado', 'Scheduled'), className: 'border border-white/16 text-cimento' };
-  if (fx.status === 'walkover')
-    return {
-      text: 'WO',
-      className: 'border border-baixa/50 text-baixa',
-    };
-  return {
-    text: 'FT',
-    className: 'border border-alta/50 text-alta',
-  };
+function statusBadge(fx: ScheduledLeagueFixture): { text: string; tom: 'mudo' | 'cal' | 'corre-contorno' } {
+  if (fx.status === 'scheduled') return { text: L('Agendado', 'Scheduled'), tom: 'mudo' };
+  if (fx.status === 'walkover') return { text: 'WO', tom: 'corre-contorno' };
+  return { text: L('Fim', 'FT'), tom: 'cal' };
 }
 
 function formatCountdown(
@@ -116,54 +100,27 @@ function FixtureCard({ fx, mine }: FixtureCardProps) {
   return (
     <div
       className={cn(
-        'relative px-4 py-3 transition-colors',
-        mine
-          ? 'bg-card border-l-[3px] border-l-neon-yellow border border-neon-yellow/40'
-          : 'bg-panel border-l-[3px] border-l-white/10 border border-white/10 hover:bg-card',
+        'relative flex min-w-0 flex-col gap-2 bg-concreto px-4 py-3',
+        mine && 'border-l-[5px] border-rua',
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-[10.5px] tabular-nums text-cimento">
-              {fx.kickoffHHmm}
-            </span>
-            {mine && (
-              <span className="bg-neon-yellow text-black px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em]">
-                {L('Seu jogo', 'Your match')}
-              </span>
-            )}
-          </div>
-          <p
-            className={cn(
-              'text-[14px] leading-tight truncate',
-              mine ? 'font-bold text-white' : 'text-giz',
-            )}
-          >
-            {fx.homeName} <span className="text-poeira">×</span> {fx.awayName}
-          </p>
-          {hasScore && (
-            <p className="ole-num mt-1 text-white text-base">
-              {fx.scoreHome}–{fx.scoreAway}
-            </p>
-          )}
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="font-spray text-[22px] font-black leading-none tabular-nums text-papel">{fx.kickoffHHmm}</span>
+          {mine && <SeloRua tom="corre" className="py-0.5 text-[10px]">{L('Teu jogo', 'Your match')}</SeloRua>}
         </div>
-        <span
-          className={cn(
-            'shrink-0 px-[5px] py-0.5 font-mono text-[9.5px] tracking-[0.12em] uppercase',
-            st.className,
-          )}
-        >
-          {st.text}
-        </span>
+        <SeloRua tom={st.tom} className="py-0.5 text-[10px]">{st.text}</SeloRua>
+      </div>
+      <div className="flex min-w-0 items-center gap-3">
+        <p className={cn('min-w-0 grow truncate font-impact text-[19px] uppercase leading-none', mine ? 'text-papel' : 'text-suave')}>
+          {fx.homeName} <span className="font-voz normal-case text-mudo">x</span> {fx.awayName}
+        </p>
+        {hasScore && <PlacarRua golsCasa={fx.scoreHome!} golsFora={fx.scoreAway!} tamanho="pequeno" className="shrink-0" />}
       </div>
       {mine && fx.status === 'scheduled' && (
-        <Link
-          to="/match/quick"
-          className="mt-3 ole-num inline-flex h-11 items-center gap-1.5 whitespace-nowrap bg-neon-yellow px-4 text-[12px] uppercase text-black transition-colors hover:bg-white [--corte:10px] [clip-path:var(--clip-corte)]"
-        >
-          <Play className="h-3.5 w-3.5" /> {L('Jogar', 'Play')}
-        </Link>
+        <BotaoRua to="/match/quick" className="mt-1 min-h-[44px] self-start px-4 text-[17px]">
+          {L('Jogar', 'Play')} <span aria-hidden>→</span>
+        </BotaoRua>
       )}
     </div>
   );
@@ -246,147 +203,98 @@ export function Calendar() {
       : { isHome: false, opponent: nextUser.homeName };
   }, [nextUser, userTeamId]);
 
+  const myName = nextUser && myOpponent ? (myOpponent.isHome ? nextUser.homeName : nextUser.awayName) : club.name;
+
   return (
-    <div className="mx-auto min-w-0 max-w-3xl space-y-4 pb-28 md:pb-12">
+    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-8 overflow-x-hidden pb-28 md:pb-12 px-3 sm:px-4">
       <BackButton to="/competicao" label={L('Competição', 'Competition')} />
 
       {/* ── HERO ─────────────────────────────────────────────────── */}
       {!squad.ok ? (
+        /* Aviso de WO = lambe de cal colado torto: é o que pede ação agora. */
         <motion.section
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden border border-baixa/60 bg-panel"
+          className="relative mx-1 flex -rotate-1 flex-col gap-3 bg-cal p-5 text-asfalto-27 shadow-[5px_5px_0_var(--color-rua)]"
         >
-          <div className="relative z-10 p-5">
-            <div className="flex items-center gap-2 text-baixa">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span className="font-mono text-[11px] font-medium uppercase tracking-[0.16em]">
-                {L('Risco de WO', 'Walkover risk')}
-              </span>
-            </div>
-            <h1 className="mt-2 font-impact uppercase leading-[1.1] text-white" style={{ fontSize: 'clamp(28px, 7vw, 40px)' }}>
-              {L('Ajuste o elenco', 'Fix your squad')}
-            </h1>
-            <p className="mt-2 text-sm leading-snug text-giz">
-              {emIngles() ? (
-                <>
-                  <strong className="text-white">11 starters</strong> and{' '}
-                  <strong className="text-white">5 on the bench</strong>, no injuries or suspensions.
-                </>
-              ) : (
-                <>
-                  <strong className="text-white">11 titulares</strong> e{' '}
-                  <strong className="text-white">5 no banco</strong>, sem lesão ou suspensão.
-                </>
-              )}
+          <span className="flex items-center gap-2 font-prova text-[11.5px] font-bold uppercase tracking-[0.2em]">
+            <AlertTriangle aria-hidden className="h-4 w-4 shrink-0" />
+            {L('Risco de WO', 'Walkover risk')}
+          </span>
+          <h1 className="font-impact uppercase leading-[0.88]" style={{ fontSize: 'clamp(38px, 10vw, 60px)' }}>
+            {L('Ajusta o elenco', 'Fix your squad')}
+          </h1>
+          <p className="font-voz text-[clamp(20px,5.4vw,26px)] leading-[1.05]">
+            {emIngles() ? '11 starters and 5 on the bench, no injuries or suspensions.' : '11 titulares e 5 no banco, sem lesão nem suspensão.'}
+          </p>
+          {nextUser && countdown && (
+            <p className="truncate font-prova text-[11.5px] font-bold uppercase tracking-[0.1em]">
+              {L('Próximo', 'Next')}: {nextUser.homeName} x {nextUser.awayName} · {countdown.label}
             </p>
-            {nextUser && countdown && (
-              <p className="mt-2 truncate text-[12px] text-cimento">
-                {L('Próximo', 'Next')}: <strong className="text-white">{nextUser.homeName} × {nextUser.awayName}</strong>
-                {' · '}
-                <span className="font-bold text-baixa">{countdown.label}</span>
-              </p>
-            )}
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link
-                to="/clube/elenco"
-                className="ole-num inline-flex h-11 items-center gap-1.5 whitespace-nowrap bg-neon-yellow px-4 text-[12px] uppercase text-black transition-colors hover:bg-white [--corte:10px] [clip-path:var(--clip-corte)]"
-              >
-                {L('Ajustar escalação', 'Edit lineup')}
-              </Link>
-              <Link
-                to="/mercado/transfer"
-                className="ole-num inline-flex h-11 items-center whitespace-nowrap border border-white/30 px-4 text-[12px] uppercase text-white transition-colors hover:border-white hover:bg-white/5"
-              >
-                {L('Mercado', 'Market')}
-              </Link>
-            </div>
+          )}
+          <div className="mt-1 flex flex-wrap gap-3">
+            <BotaoRua to="/clube/elenco" variante="asfalto">
+              {L('Ajustar escalação', 'Edit lineup')} <span aria-hidden>→</span>
+            </BotaoRua>
+            <Link
+              to="/mercado/transfer"
+              className="inline-flex min-h-[52px] items-center border-2 border-asfalto-27 px-5 font-impact text-[19px] uppercase leading-none transition-colors hover:bg-asfalto-27 hover:text-cal"
+            >
+              {L('Mercado', 'Market')}
+            </Link>
           </div>
         </motion.section>
       ) : nextUser && myOpponent && countdown ? (
-        <motion.section
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden border border-neon-yellow/40"
-        >
-          <GameBannerBackdrop slot="leagues_header" imageOpacity={0.35} />
-          <div className="absolute inset-0 bg-black/70" aria-hidden />
-          <div className="relative z-10 p-5">
-            <div className="flex items-center gap-2 text-neon-yellow">
-              <Clock className={cn('h-4 w-4 shrink-0', countdown.live && 'animate-pulse')} />
-              <span className="truncate font-mono text-[11px] font-medium uppercase tracking-[0.16em]">
-                {L('Próximo', 'Next')} · {countdown.label}
-              </span>
-            </div>
-            <div className="mt-3 flex items-end justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <Hashtag>{myOpponent.isHome ? L('#emcasa', '#home') : L('#fora', '#away')}</Hashtag>
-                <h1
-                  className="mt-1 truncate font-impact uppercase text-white"
-                  style={{ fontSize: 'clamp(28px, 7vw, 44px)', lineHeight: 1.1 }}
-                >
-                  {myOpponent.opponent}
-                </h1>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-cimento">
-                  {formatDayLabel(nextUser.dateIso)}
-                </p>
-                <p
-                  className="ole-num text-neon-yellow"
-                  style={{ fontSize: 'clamp(26px, 6.5vw, 38px)' }}
-                >
-                  {nextUser.kickoffHHmm}
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {canPlayNow ? (
-                <Link
-                  to="/match/quick"
-                  className="ole-num inline-flex h-11 items-center gap-1.5 whitespace-nowrap bg-neon-yellow px-4 text-[12px] uppercase text-black transition-colors hover:bg-white [--corte:10px] [clip-path:var(--clip-corte)]"
-                >
-                  {L('Jogar agora', 'Play now')}
-                </Link>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+          <Convocacao
+            ariaLabel={L(`Próximo jogo: ${myName} contra ${myOpponent.opponent}`, `Next match: ${myName} vs ${myOpponent.opponent}`)}
+            rotulo={`${myOpponent.isHome ? L('#emcasa', '#home') : L('#fora', '#away')}${league ? ` · ${league.name}` : ''}`}
+            quando={
+              countdown.live ? (
+                <SeloRua tom="corre" className="bg-asfalto-27 text-rua">● {L('Ao vivo', 'Live')}</SeloRua>
               ) : (
-                <Link
-                  to="/clube/elenco"
-                  className="ole-num inline-flex h-11 items-center gap-1.5 whitespace-nowrap bg-neon-yellow px-4 text-[12px] uppercase text-black transition-colors hover:bg-white [--corte:10px] [clip-path:var(--clip-corte)]"
-                >
-                  {L('Preparar escalação', 'Set lineup')}
-                </Link>
-              )}
-              <Link
-                to="/clube/treino"
-                className="ole-num inline-flex h-11 items-center whitespace-nowrap border border-white/30 px-4 text-[12px] uppercase text-white transition-colors hover:border-white hover:bg-white/5"
-              >
-                {L('Treino', 'Training')}
-              </Link>
-            </div>
-          </div>
-        </motion.section>
+                `${formatDayLabel(nextUser.dateIso)} · ${nextUser.kickoffHHmm}`
+              )
+            }
+            casa={myName}
+            fora={myOpponent.opponent}
+            frase={canPlayNow ? L('A bola já tá na marca.', 'The ball is on the spot.') : L('Escala teu time antes do apito.', 'Set your team before kickoff.')}
+            sub={`${L('Próximo', 'Next')} · ${countdown.label}`}
+            acoes={
+              <>
+                {canPlayNow ? (
+                  <BotaoRua to="/match/quick">
+                    {L('Jogar agora', 'Play now')} <span aria-hidden>→</span>
+                  </BotaoRua>
+                ) : (
+                  <BotaoRua to="/clube/elenco">
+                    {L('Preparar escalação', 'Set lineup')} <span aria-hidden>→</span>
+                  </BotaoRua>
+                )}
+                <BotaoRua to="/clube/treino" variante="contorno">
+                  {L('Treino', 'Training')}
+                </BotaoRua>
+              </>
+            }
+          />
+        </motion.div>
       ) : (
-        <section
-          className="relative overflow-hidden border border-white/10"
+        <CabecalhoRua
+          rotulo={L('#calendário', '#calendar')}
+          titulo={L('Sem jogos agendados', 'No matches scheduled')}
+          voz={L('Rodada parada? A bola rola igual.', 'No fixture? The ball still rolls.')}
         >
-          <GameBannerBackdrop slot="leagues_header" imageOpacity={0.22} />
-          <div className="absolute inset-0 bg-black/55" aria-hidden />
-          <div className="relative z-10 p-5">
-            <div className="flex items-center gap-2 text-neon-yellow">
-              <CalendarDays className="h-4 w-4" />
-              <Hashtag className="text-neon-yellow">{L('#calendário', '#calendar')}</Hashtag>
-            </div>
-            <h1 className="mt-2 font-impact uppercase leading-[1.1] text-white" style={{ fontSize: 'clamp(28px, 7vw, 44px)' }}>
-              {L('Sem jogos agendados', 'No matches scheduled')}
-            </h1>
-          </div>
-        </section>
+          <BotaoRua to="/match/quick" className="mt-2 self-start">
+            {L('Partida rápida', 'Quick match')} <span aria-hidden>→</span>
+          </BotaoRua>
+        </CabecalhoRua>
       )}
 
-      {/* ── Week strip ──────────────────────────────────────────── */}
+      {/* ── Faixa da semana — canhotos de ingresso ─────────────────── */}
       {bucket?.fixtures.length ? (
-        <div className="border border-white/10 bg-panel p-3">
-          <div className="-mx-1 flex gap-1 overflow-x-auto hide-scrollbar">
+        <div className="flex flex-col gap-3">
+          <SecaoRua label={L('Semana', 'Week')} />
+          <div className="hide-scrollbar flex gap-1.5 overflow-x-auto pb-1">
             {weekDays.map((d) => {
               const short = formatDayShort(d.iso);
               const isToday = d.iso === todayIso;
@@ -397,39 +305,32 @@ export function Calendar() {
                   key={d.iso}
                   type="button"
                   onClick={() => setDayIso(d.iso)}
+                  aria-pressed={isSelected}
                   className={cn(
-                    'flex shrink-0 min-w-[54px] flex-col items-center gap-0.5 border px-2 py-2 transition-colors',
+                    'flex min-w-[56px] shrink-0 flex-col items-center gap-1 px-2 py-2.5 transition-colors',
                     isSelected
-                      ? 'border-neon-yellow bg-neon-yellow'
+                      ? 'bg-rua text-asfalto-27'
                       : hasUserMatch
-                      ? 'border-neon-yellow/40 bg-deep-black hover:border-neon-yellow'
-                      : 'border-white/10 bg-deep-black hover:border-white/30',
+                        ? 'border-2 border-rua bg-concreto text-papel'
+                        : 'bg-concreto text-papel hover:bg-linha',
                   )}
                 >
                   <span
                     className={cn(
-                      'font-mono text-[9.5px] uppercase tracking-[0.12em]',
-                      isSelected ? 'text-black' : 'text-cimento',
-                      !isSelected && isToday && 'text-neon-yellow',
+                      'font-prova text-[10px] font-bold uppercase tracking-[0.14em]',
+                      isSelected ? 'text-asfalto-27' : isToday ? 'text-rua' : 'text-mudo',
                     )}
                   >
                     {isToday ? L('HOJE', 'TODAY') : short.weekday}
                   </span>
-                  <span
-                    className={cn(
-                      'ole-num text-base',
-                      isSelected ? 'text-black' : 'text-white',
-                    )}
-                  >
-                    {short.day}
-                  </span>
-                  <span className="flex gap-0.5 h-1.5">
+                  <span className="font-spray text-[28px] font-black leading-none">{short.day}</span>
+                  <span className="flex h-1.5 gap-0.5">
                     {hasUserMatch ? (
                       Array.from({ length: d.userMatchCount }).map((_, i) => (
-                        <span key={i} className={cn('h-1.5 w-1.5 rounded-full', isSelected ? 'bg-black' : 'bg-neon-yellow')} />
+                        <span key={i} className={cn('h-1.5 w-1.5', isSelected ? 'bg-asfalto-27' : 'bg-rua')} />
                       ))
                     ) : d.anyMatchCount > 0 ? (
-                      <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
+                      <span className="h-1.5 w-1.5 bg-fio" />
                     ) : null}
                   </span>
                 </button>
@@ -439,26 +340,23 @@ export function Calendar() {
         </div>
       ) : null}
 
-      {/* ── Day fixtures ────────────────────────────────────────── */}
-      <div className="border border-white/10 bg-panel p-4">
-        {/* Day navigator */}
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
+      {/* ── Jogos do dia ───────────────────────────────────────── */}
+      <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
               onClick={() => setDayIso((d) => addDaysIso(d, -1))}
-              className="border border-white/16 p-1.5 text-cimento hover:border-white/30 hover:text-white"
+              className="grid h-10 w-10 shrink-0 place-items-center border-2 border-linha text-mudo hover:border-papel hover:text-papel"
               aria-label={L('Dia anterior', 'Previous day')}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="font-mono text-[11.5px] uppercase tracking-[0.14em] text-white truncate">
-              {formatDayLabel(dayIso)}
-            </span>
+            <span className="min-w-0 truncate font-impact text-[20px] uppercase leading-none text-papel">{formatDayLabel(dayIso)}</span>
             <button
               type="button"
               onClick={() => setDayIso((d) => addDaysIso(d, 1))}
-              className="border border-white/16 p-1.5 text-cimento hover:border-white/30 hover:text-white"
+              className="grid h-10 w-10 shrink-0 place-items-center border-2 border-linha text-mudo hover:border-papel hover:text-papel"
               aria-label={L('Dia seguinte', 'Next day')}
             >
               <ChevronRight className="h-4 w-4" />
@@ -468,25 +366,21 @@ export function Calendar() {
             <button
               type="button"
               onClick={() => setDayIso(todayIso)}
-              className="border border-neon-yellow/50 px-2 py-1 font-mono text-[10.5px] uppercase tracking-[0.12em] text-neon-yellow hover:border-neon-yellow"
+              className="shrink-0 border-2 border-rua px-3 py-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.14em] text-rua hover:bg-rua hover:text-asfalto-27"
             >
               {L('Hoje', 'Today')}
             </button>
           ) : null}
         </div>
 
-        {/* Fixtures list — só jogos da liga */}
+        {/* Lista — só jogos da liga */}
         {fixturesOnDay.length === 0 ? (
-          <div className="py-10 text-center">
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-poeira">
-              {L('Sem jogos da liga neste dia', 'No league matches this day')}
-            </p>
-          </div>
+          <VazioRua titulo={L('Dia sem bola', 'No ball today')} frase={L('Sem jogos da liga neste dia.', 'No league matches this day.')} />
         ) : (
           <>
             {/* Meus jogos primeiro */}
             {myFixturesOnDay.length > 0 && (
-              <ul className="space-y-2">
+              <ul className="space-y-1.5">
                 {myFixturesOnDay.map((fx) => (
                   <li key={fx.id}>
                     <FixtureCard fx={fx} mine />
@@ -502,14 +396,9 @@ export function Calendar() {
                   <button
                     type="button"
                     onClick={() => setShowOthers((v) => !v)}
-                    className="mt-3 flex w-full items-center justify-center gap-1.5 border border-white/16 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-cimento hover:border-white/30 hover:text-white"
+                    className="flex w-full items-center justify-center gap-1.5 border-2 border-dashed border-fio py-2.5 font-prova text-[11px] font-bold uppercase tracking-[0.14em] text-mudo hover:border-papel hover:text-papel"
                   >
-                    <ChevronDown
-                      className={cn(
-                        'h-3.5 w-3.5 transition-transform',
-                        showOthers && 'rotate-180',
-                      )}
-                    />
+                    <ChevronDown aria-hidden className={cn('h-3.5 w-3.5 transition-transform', showOthers && 'rotate-180')} />
                     {showOthers
                       ? L('Ocultar liga', 'Hide league')
                       : L(
@@ -519,7 +408,7 @@ export function Calendar() {
                   </button>
                 )}
                 {(showOthers || myFixturesOnDay.length === 0) && (
-                  <ul className={cn('space-y-2', myFixturesOnDay.length > 0 && 'mt-2')}>
+                  <ul className="space-y-1.5">
                     {otherFixturesOnDay.map((fx) => (
                       <li key={fx.id}>
                         <FixtureCard fx={fx} mine={false} />
@@ -533,20 +422,18 @@ export function Calendar() {
         )}
       </div>
 
-      {/* ── Footer liga ────────────────────────────────────────── */}
+      {/* ── Rodapé da liga ─────────────────────────────────────── */}
       {league ? (
-        <Link
-          to="/leagues"
-          className="flex items-center gap-2 border border-white/10 bg-panel px-4 py-3 hover:border-white/30 transition-colors"
-        >
-          <Trophy className="h-4 w-4 shrink-0 text-neon-yellow" />
+        <Link to="/leagues" className="flex min-w-0 items-center gap-3 border-t-2 border-linha pt-5 transition-colors hover:text-rua">
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-semibold text-white truncate">{league.name}</p>
-            <p className="truncate font-mono text-[10.5px] text-cimento">
-              {league.format === 'round_robin' ? L('Pontos corridos', 'Round robin') : league.format} ·{' '}
-              {league.division} · {L('Ver classificação', 'View table')} →
+            <p className="truncate font-impact text-[22px] uppercase leading-none text-papel">{league.name}</p>
+            <p className="mt-1 truncate font-prova text-[11px] uppercase tracking-[0.12em] text-mudo">
+              {league.format === 'round_robin' ? L('Pontos corridos', 'Round robin') : league.format} · {league.division}
             </p>
           </div>
+          <span className="shrink-0 font-impact text-[18px] uppercase text-rua">
+            {L('Classificação', 'Table')} <span aria-hidden>→</span>
+          </span>
         </Link>
       ) : null}
     </div>

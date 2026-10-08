@@ -24,7 +24,9 @@
 *,
 ::before,
 ::after {
-  --clip-corte: polygon(0 0, 100% 0, 100% calc(100% - var(--corte, 12px)), calc(100% - var(--corte, 12px)) 100%, 0 100%);
+  /* DS 2027: canto vivo, sem o corte do escudo do VOLT2 (ele cortava a sombra
+     dura dos botões). A variável fica pra não mexer nos usos. */
+  --clip-corte: none;
 }
 
 :root {

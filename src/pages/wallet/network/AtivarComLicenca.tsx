@@ -18,7 +18,7 @@ export function AtivarComLicenca({ aoAtivar }: { aoAtivar: () => void }) {
   const [ok, setOk] = useState<string | null>(null);
 
   if (ok) {
-    return <p className="mt-3 font-mono text-[11px] uppercase tracking-wider text-emerald-300">{ok}</p>;
+    return <p className="mt-4 font-prova text-[12px] font-bold uppercase tracking-[0.14em] text-ouro-27">● {ok}</p>;
   }
 
   if (!aberto) {
@@ -26,7 +26,7 @@ export function AtivarComLicenca({ aoAtivar }: { aoAtivar: () => void }) {
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="mt-3 w-full text-center font-mono text-[11px] uppercase tracking-wider text-cimento underline-offset-4 hover:text-white hover:underline"
+        className="mt-4 min-h-[44px] w-full text-center font-prova text-[12px] font-bold uppercase tracking-[0.16em] text-mudo underline underline-offset-4 transition-colors hover:text-papel"
       >
         {L('Tenho uma licença', 'I have a license')}
       </button>
@@ -47,11 +47,11 @@ export function AtivarComLicenca({ aoAtivar }: { aoAtivar: () => void }) {
 
   return (
     <form
-      className="mt-4 border-t border-white/10 pt-4"
+      className="mt-5 border-t-2 border-linha pt-4"
       onSubmit={(e) => { e.preventDefault(); void enviar(); }}
     >
-      <label htmlFor="licenca" className="font-mono text-[10px] uppercase tracking-wider text-cimento">
-        {L('Licença', 'License')}
+      <label htmlFor="licenca" className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+        — {L('Licença', 'License')}
       </label>
       <input
         id="licenca"
@@ -62,18 +62,18 @@ export function AtivarComLicenca({ aoAtivar }: { aoAtivar: () => void }) {
         autoCapitalize="characters"
         spellCheck={false}
         maxLength={24}
-        className="mt-1.5 h-[46px] w-full min-w-0 border border-white/15 bg-black px-3 font-mono text-[15px] tracking-wider text-white placeholder:text-poeira focus:border-white focus:outline-none"
+        className="mt-2 h-[52px] w-full min-w-0 border-2 border-linha bg-asfalto-27 px-3 font-prova text-[16px] font-bold tracking-[0.12em] text-papel placeholder:text-fio transition-colors focus:border-rua focus:outline-none"
       />
-      <p className="mt-1.5 font-mono text-[11px] leading-relaxed text-poeira">
+      <p className="mt-2 font-prova text-[11.5px] leading-relaxed text-mudo">
         {L('Ativa o convite e a equiparação. Não gera OLEFOOT.', 'Activates the invite and matching. Doesn\'t generate OLEFOOT.')}
       </p>
-      {erro ? <p role="alert" className="mt-2 text-[12px] text-atencao">{erro}</p> : null}
+      {erro ? <p role="alert" className="mt-2 font-prova text-[12px] text-atencao">{erro}</p> : null}
       <button
         type="submit"
         disabled={enviando || !codigo.trim()}
-        className="ole-num mt-3 flex h-[46px] w-full items-center justify-center border border-white/30 text-[12px] uppercase text-white transition-colors hover:border-white disabled:opacity-40"
+        className="mt-3 flex min-h-[52px] w-full items-center justify-center gap-2 border-2 border-papel px-4 font-impact text-[18px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27 disabled:pointer-events-none disabled:opacity-40"
       >
-        {enviando ? L('Ativando…', 'Activating…') : L('Ativar com licença', 'Activate with license')}
+        {enviando ? L('Ativando…', 'Activating…') : <>{L('Ativar com licença', 'Activate with license')} <span aria-hidden>→</span></>}
       </button>
     </form>
   );

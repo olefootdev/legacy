@@ -6,9 +6,9 @@
  *
  * Compacto: só badge + tempo restante. Tooltip pra detalhes.
  *
- * Tipografia Legacy Tech: Agency 800 uppercase tracking-wide nos labels,
- * Moret italic tabular-nums no tempo. Cores via tokens (--color-danger /
- * --color-warning / --color-success / --color-neon-yellow).
+ * DS 2027: selo em contorno (sem fundo tingido), rótulo e tempo em prova.
+ * Vermelho/laranja/verde só como sinal de jogo; MVP/hat-trick é respeito
+ * (contorno de ouro).
  */
 import { L } from '@/i18n/L';
 import { ShieldOff, Activity, TrendingUp, TrendingDown, BadgeCheck } from 'lucide-react';
@@ -37,7 +37,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
     return {
       Icon: ShieldOff,
       className:
-        'bg-[var(--color-danger)]/12 text-[var(--color-danger)] border-[var(--color-danger)]/35',
+        'text-baixa border-baixa',
       label: L('Suspenso', 'Suspended'),
     };
   }
@@ -45,7 +45,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
     return {
       Icon: Activity,
       className:
-        'bg-[var(--color-danger)]/15 text-[var(--color-danger)] border-[var(--color-danger)]/40',
+        'text-baixa border-baixa',
       label: L('Lesão grave', 'Serious injury'),
     };
   }
@@ -53,7 +53,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
     return {
       Icon: Activity,
       className:
-        'bg-[var(--color-warning)]/12 text-[var(--color-warning)] border-[var(--color-warning)]/35',
+        'text-atencao border-atencao',
       label: L('Lesão moderada', 'Moderate injury'),
     };
   }
@@ -61,14 +61,14 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
     return {
       Icon: Activity,
       className:
-        'bg-[var(--color-warning)]/10 text-[var(--color-warning)] border-[var(--color-warning)]/30',
+        'text-atencao border-atencao',
       label: L('Lesão leve', 'Minor injury'),
     };
   }
   if (kind === 'forced_rest') {
     return {
       Icon: Activity,
-      className: 'bg-white/5 text-white/75 border-white/15',
+      className: 'text-suave border-linha',
       label: L('Descanso', 'Rest'),
     };
   }
@@ -76,7 +76,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
     return {
       Icon: BadgeCheck,
       className:
-        'bg-neon-yellow/12 text-neon-yellow border-neon-yellow/35',
+        'text-ouro-27 border-ouro-27',
       label: kind === 'morale_boost_hat_trick' ? 'Hat-trick' : 'MVP',
     };
   }
@@ -84,7 +84,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
     return {
       Icon: TrendingUp,
       className:
-        'bg-[var(--color-success)]/12 text-[var(--color-success)] border-[var(--color-success)]/35',
+        'text-alta border-alta',
       label: L('Em alta', 'Rising'),
     };
   }
@@ -92,7 +92,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
     return {
       Icon: TrendingUp,
       className:
-        'bg-[var(--color-success)]/12 text-[var(--color-success)] border-[var(--color-success)]/35',
+        'text-alta border-alta',
       label: L('Cobiçado', 'In demand'),
     };
   }
@@ -100,7 +100,7 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
     return {
       Icon: TrendingDown,
       className:
-        'bg-[var(--color-danger)]/12 text-[var(--color-danger)] border-[var(--color-danger)]/35',
+        'text-baixa border-baixa',
       label: L('Valor em queda', 'Value falling'),
     };
   }
@@ -135,33 +135,16 @@ export function PlayerConsequencesBadge({ playerId, compact = true }: Props) {
           <div
             key={c.consequence.id}
             className={cn(
-              'inline-flex items-center gap-1 px-2 py-1 border',
+              'inline-flex items-center gap-1 border-2 px-2 py-1',
               meta.className,
             )}
-            style={{ borderRadius: 'var(--radius-sm)' }}
             title={L(`${meta.label} · expira em ${formatTimeLeft(c.msUntilExpiry)}`, `${meta.label} · expires in ${formatTimeLeft(c.msUntilExpiry)}`)}
           >
             <meta.Icon size={10} />
-            <span
-              className="truncate max-w-[100px] leading-none"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: '9px',
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-              }}
-            >
+            <span className="max-w-[100px] truncate font-prova text-[10px] font-bold uppercase leading-none tracking-[0.1em]">
               {meta.label}
             </span>
-            <span
-              className="tabular-nums opacity-70 leading-none"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 500,
-                fontSize: '11px',
-              }}
-            >
+            <span className="font-prova text-[11px] leading-none tabular-nums opacity-70">
               {formatTimeLeft(c.msUntilExpiry)}
             </span>
           </div>

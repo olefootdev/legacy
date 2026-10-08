@@ -4,6 +4,7 @@ import { definirPernaPadrao, type NoDoMapa, type Carreira, type MeuBonus, type C
 import { mensagemDoPin } from '@/wallet/pinClient';
 import { CampoPin } from '@/pages/wallet/PinDaCarteira';
 import { cn } from '@/lib/utils';
+import { BarraSegmentos, BotaoRua, SeloRua } from '@/components/ui/Rua';
 import type { MinhaExpansao } from './useMinhaExpansao';
 import { AtivarComLicenca } from './AtivarComLicenca';
 import { L, LOCALE, emIngles } from '@/i18n/L';
@@ -23,6 +24,9 @@ import { L, LOCALE, emIngles } from '@/i18n/L';
  * 🔑 A regra de leitura que o desenho segue: num binário quem paga é a perna
  * MENOR. Painel que dá dois números grandes iguais faz a pessoa engordar o lado
  * errado — então o herói é o equiparado, e os times são contexto.
+ *
+ * DS 2027: o equiparado é RESPEITO (asfalto + fio de ouro, número em Anton
+ * ouro); os times e a árvore em concreto; nomes na voz; ação em rua.
  */
 
 const NOME_DEGRAU: Record<string, string> = {
@@ -38,6 +42,9 @@ function pctDegrau(c: Carreira): number {
 }
 
 const br = (v: bigint) => v.toLocaleString(LOCALE);
+
+/** Rótulo de bloco: "— RÓTULO" em A PROVA. */
+const ROTULO = 'font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo';
 
 /** O convite sai sempre com o domínio público, mesmo visto de outro lugar. */
 const ORIGEM_DO_CONVITE = 'https://game.olefoot.ai';
@@ -55,12 +62,9 @@ const ATIVAR = '/wallet?adicionar=olefoot&pack=1000';
 
 function BotaoAtivar() {
   return (
-    <Link
-      to={ATIVAR}
-      className="ole-num mt-4 flex h-[50px] w-full items-center justify-center whitespace-nowrap bg-neon-yellow text-[13px] uppercase text-black transition-colors hover:bg-white [--corte:12px] [clip-path:var(--clip-corte)]"
-    >
-      {L('Ativar com $10', 'Activate with $10')}
-    </Link>
+    <BotaoRua to={ATIVAR} className="mt-5 w-full">
+      {L('Ativar com $10', 'Activate with $10')} <span aria-hidden>→</span>
+    </BotaoRua>
   );
 }
 
@@ -76,7 +80,7 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
   };
 
   if (carregando) {
-    return <p className="font-mono text-[12px] text-cimento">{L('Carregando…', 'Loading…')}</p>;
+    return <p className="font-prova text-[12px] uppercase tracking-[0.16em] text-mudo">{L('Carregando…', 'Loading…')}</p>;
   }
 
   if (!naArvore) {
@@ -84,16 +88,17 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
     // a compra do primeiro pack — quem compra entra na árvore sozinho. A tela
     // dizia que só havia o convite, e mandava a pessoa de volta pro jogo.
     return (
-      <div className="border border-white/10 bg-panel px-4 py-5">
-        <h3 className="font-impact text-[24px] uppercase leading-[1.1] text-white">
+      // Vazio com saída: tracejado, frase na voz, botão.
+      <div className="border-2 border-dashed border-fio px-4 py-6 sm:px-5">
+        <h3 className="font-voz text-[clamp(34px,9.5vw,46px)] leading-[0.95] text-papel">
           {L('Você ainda não entrou', 'You haven\'t joined yet')}
         </h3>
-        <p className="mt-2.5 text-[13px] leading-relaxed text-cimento">
+        <p className="mt-3 text-[13.5px] leading-relaxed text-suave">
           {emIngles() ? <>
-          You join by buying your first <strong className="text-giz">$10</strong> OLEFOOT pack,
+          You join by buying your first <strong className="text-papel">$10</strong> OLEFOOT pack,
           or by confirming an invite from someone already in.
           </> : <>
-          Entra quem compra o primeiro pack de <strong className="text-giz">$10</strong> de OLEFOOT,
+          Entra quem compra o primeiro pack de <strong className="text-papel">$10</strong> de OLEFOOT,
           ou quem confirma o convite de alguém que já está.
           </>}
         </p>
@@ -120,73 +125,74 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
           Beco sem saída em painel é o que faz a pessoa achar que travou.
           A ordem real é: comprar o pack → convidar → equiparar. */}
       {!convida ? (
-        <div className="mb-6 border-l-2 border-atencao bg-card px-4 py-3.5">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-atencao">{L('Primeiro passo', 'First step')}</div>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-giz">
+        <div className="mb-8 border-l-[3px] border-rua bg-concreto px-4 py-4">
+          <div className={ROTULO}>— {L('Primeiro passo', 'First step')}</div>
+          <p className="mt-2 text-[14px] leading-relaxed text-papel">
             {emIngles()
               ? <>Activate your account with a <strong>$10</strong> presale pack. That&apos;s what unlocks your invite.</>
               : <>Ative sua conta com um pack de <strong>$10</strong> na pré-venda. É ele que libera o seu convite.</>}
           </p>
-          <p className="mt-1.5 font-mono text-[11px] leading-relaxed text-poeira">
+          <p className="mt-2 font-prova text-[11.5px] leading-relaxed text-mudo">
             {L('Depois de ativar: 1 indicado em cada time e o bônus começa a contar.', 'After activating: 1 referral on each team and the bonus starts counting.')}
           </p>
           <BotaoAtivar />
           <AtivarComLicenca aoAtivar={reler} />
         </div>
       ) : ativacao && !ativacao.ativo ? (
-        <div className="mb-6 border-l-2 border-atencao bg-card px-4 py-3.5">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-atencao">{L('Falta ativar o bônus', 'Bonus not active yet')}</div>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-giz">
+        <div className="mb-8 border-l-[3px] border-rua bg-concreto px-4 py-4">
+          <div className={ROTULO}>— {L('Falta ativar o bônus', 'Bonus not active yet')}</div>
+          <p className="mt-2 text-[14px] leading-relaxed text-papel">
             {emIngles()
               ? <>1 more referral on <strong>Team {ativacao.faltaNaPerna}</strong> and the bonus starts counting.</>
               : <>Falta 1 indicado no <strong>Time {ativacao.faltaNaPerna}</strong> para o bônus começar a contar.</>}
           </p>
-          <p className="mt-1.5 font-mono text-[11px] text-poeira">
+          <p className="mt-2 font-prova text-[11.5px] text-mudo">
             {L(`Hoje: ${ativacao.diretosT1} no Time 1 · ${ativacao.diretosT2} no Time 2`, `Today: ${ativacao.diretosT1} on Team 1 · ${ativacao.diretosT2} on Team 2`)}
           </p>
         </div>
       ) : null}
 
       {/* ── herói: o equiparado, não os times ── */}
-      <div className="border border-white/10 bg-panel px-4 py-5">
-        <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-poeira">{L('Equiparado', 'Matched')}</div>
-        <div className="mt-1.5 flex items-baseline gap-2">
-          <span className="ole-num text-[46px] font-extrabold leading-none text-neon-yellow">{br(equiparado)}</span>
-          <span className="text-[12px] font-semibold text-cimento">OLEXP</span>
+      <div className="border-[3px] border-ouro-27 bg-asfalto-27 px-4 py-5 sm:px-5">
+        <div className={ROTULO}>— {L('Equiparado', 'Matched')}</div>
+        <div className="mt-2 flex min-w-0 flex-wrap items-baseline gap-x-2.5 gap-y-1">
+          <span className="font-impact leading-[0.88] text-ouro-27 tabular-nums [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(54px, 16vw, 88px)' }}>{br(equiparado)}</span>
+          <span className="font-prova text-[12px] font-bold uppercase tracking-[0.16em] text-mudo">OLEXP</span>
         </div>
-        <p className="mt-2 text-[11.5px] leading-relaxed text-cimento">
+        <p className="mt-3 text-[13px] leading-relaxed text-suave">
           {emIngles()
-            ? <>It&apos;s the <strong className="text-giz">smaller</strong> of the two teams. It sets the bonus — always.</>
-            : <>É o <strong className="text-giz">menor</strong> dos dois times. Ele define o bônus — sempre.</>}
+            ? <>It&apos;s the <strong className="text-papel">smaller</strong> of the two teams. It sets the bonus — always.</>
+            : <>É o <strong className="text-papel">menor</strong> dos dois times. Ele define o bônus — sempre.</>}
         </p>
       </div>
 
       {/* ── barra espelhada ── */}
-      <div className="mt-5">
-        <div className="mb-2 flex justify-between font-mono text-[9px] uppercase tracking-wider text-poeira">
+      {/* Ouro = o equiparado (o que paga); linha = a sobra do lado maior. */}
+      <div className="mt-6 bg-concreto px-4 py-4">
+        <div className="mb-2.5 flex justify-between font-impact text-[18px] uppercase leading-none text-papel">
           <span>{L('Time 1', 'Team 1')}</span><span>{L('Time 2', 'Team 2')}</span>
         </div>
-        <div className="flex h-8 items-stretch">
-          <div className="flex flex-1 justify-end gap-[2px]">
-            {pernaMaior === 1 && <div style={{ width: `${100 - pct(t2)}%` }} className="bg-[#3A3C3F]" />}
-            <div style={{ width: `${pct(t1 > t2 ? t2 : t1)}%` }} className="bg-neon-yellow" />
+        <div className="flex h-9 items-stretch">
+          <div className="flex flex-1 justify-end gap-1">
+            {pernaMaior === 1 && <div style={{ width: `${100 - pct(t2)}%` }} className="bg-linha" />}
+            <div style={{ width: `${pct(t1 > t2 ? t2 : t1)}%` }} className="bg-ouro-27" />
           </div>
-          <div className="w-[2px] bg-giz" />
-          <div className="flex flex-1 gap-[2px]">
-            <div style={{ width: `${pct(t1 > t2 ? t2 : t1)}%` }} className="bg-neon-yellow" />
-            {pernaMaior === 2 && <div style={{ width: `${100 - pct(t1)}%` }} className="bg-[#3A3C3F]" />}
+          <div className="mx-1 w-[3px] bg-papel" />
+          <div className="flex flex-1 gap-1">
+            <div style={{ width: `${pct(t1 > t2 ? t2 : t1)}%` }} className="bg-ouro-27" />
+            {pernaMaior === 2 && <div style={{ width: `${100 - pct(t1)}%` }} className="bg-linha" />}
           </div>
         </div>
-        <div className="mt-2 flex justify-between">
-          <div>
-            <div className="ole-num text-[20px] font-bold leading-none text-giz">{br(t1)}</div>
-            <div className="mt-1 font-mono text-[9px] uppercase tracking-wider text-poeira">
+        <div className="mt-3 flex justify-between gap-3">
+          <div className="min-w-0">
+            <div className="font-impact text-[26px] leading-none text-papel tabular-nums">{br(t1)}</div>
+            <div className={cn('mt-1.5 font-prova text-[10.5px] font-bold uppercase tracking-[0.12em]', t1 <= t2 ? 'text-ouro-27' : 'text-mudo')}>
               {t1 <= t2 ? L('★ o que paga', '★ the one that pays') : L('pontos', 'points')}
             </div>
           </div>
-          <div className="text-right">
-            <div className="ole-num text-[20px] font-bold leading-none text-giz">{br(t2)}</div>
-            <div className="mt-1 font-mono text-[9px] uppercase tracking-wider text-poeira">
+          <div className="min-w-0 text-right">
+            <div className="font-impact text-[26px] leading-none text-papel tabular-nums">{br(t2)}</div>
+            <div className={cn('mt-1.5 font-prova text-[10.5px] font-bold uppercase tracking-[0.12em]', t2 <= t1 ? 'text-ouro-27' : 'text-mudo')}>
               {t2 <= t1 ? L('★ o que paga', '★ the one that pays') : L('pontos', 'points')}
             </div>
           </div>
@@ -195,12 +201,12 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
 
       {/* ── sobra: o que mais destrói confiança é sumir com ela ── */}
       {sobra > 0n && (
-        <div className="mt-4 flex items-center justify-between border-l-2 border-cimento bg-card px-3.5 py-3">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L(`Sobra do Time ${pernaMaior}`, `Team ${pernaMaior} carry-over`)}</div>
-            <div className="mt-1 text-[11px] text-cimento">{L('não se perde — entra no próximo ciclo', 'not lost — rolls into the next cycle')}</div>
+        <div className="mt-3 flex items-center justify-between gap-3 border-l-[3px] border-fio bg-concreto px-4 py-3">
+          <div className="min-w-0">
+            <div className={ROTULO}>{L(`Sobra do Time ${pernaMaior}`, `Team ${pernaMaior} carry-over`)}</div>
+            <div className="mt-1 font-voz text-[19px] leading-tight text-suave">{L('não se perde — entra no próximo ciclo', 'not lost — rolls into the next cycle')}</div>
           </div>
-          <div className="ole-num text-[18px] font-bold text-cimento">{br(sobra)}</div>
+          <div className="shrink-0 font-impact text-[24px] leading-none text-suave tabular-nums">{br(sobra)}</div>
         </div>
       )}
 
@@ -208,38 +214,37 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
       <BlocoBonus bonus={bonus} />
 
       {/* ── carreira: conta o que foi PAGO, e por isso nunca cai ── */}
-      <div className="mt-6 border border-white/10 bg-panel px-4 py-4">
-        <div className="flex items-baseline justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Carreira', 'Career')}</span>
-          <span className="font-display text-[15px] font-bold text-giz">
-            {carreira?.degrau ? NOME_DEGRAU[carreira.degrau] ?? carreira.degrau : '—'}
-          </span>
+      <div className="mt-6 bg-concreto px-4 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <span className={ROTULO}>— {L('Carreira', 'Career')}</span>
+          {carreira?.degrau ? (
+            <SeloRua tom="ouro">{NOME_DEGRAU[carreira.degrau] ?? carreira.degrau}</SeloRua>
+          ) : (
+            <span className="font-prova text-[12px] text-fio">—</span>
+          )}
         </div>
-        <div className="mt-2 flex items-baseline gap-2">
-          <span className="ole-num text-[20px] font-bold leading-none text-giz">
+        <div className="mt-2.5 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="font-impact text-[32px] leading-none text-papel tabular-nums">
             {br(carreira?.acumulado ?? 0n)}
           </span>
-          <span className="text-[11px] text-cimento">{L('já pagos em equiparação', 'already paid in matching')}</span>
+          <span className="font-prova text-[11.5px] text-mudo">{L('já pagos em equiparação', 'already paid in matching')}</span>
         </div>
         {carreira?.proximo && (
           <>
-            <div className="mt-3 h-1.5 w-full bg-sheet">
-              <div className="h-full bg-neon-yellow"
-                   style={{ width: `${pctDegrau(carreira)}%` }} />
-            </div>
-            <p className="mt-2 font-mono text-[10.5px] text-poeira">
+            <BarraSegmentos valor={pctDegrau(carreira)} max={100} className="mt-3.5" />
+            <p className="mt-2.5 font-prova text-[11.5px] leading-relaxed text-mudo">
               {br(carreira.falta)} {L('para', 'to')} {NOME_DEGRAU[carreira.proximo] ?? carreira.proximo}
               {' '}· {L('conta o que foi pago, não o que está parado', 'counts what was paid, not what is idle')}
             </p>
             {carreira.premioProximo != null && (
-              <p className="mt-2 text-[12px] text-giz">
-                {L('Chegou, ganhou', 'Reach it, win')} <strong className="text-neon-yellow">{br(carreira.premioProximo)} OLEFOOT</strong>
+              <p className="mt-2.5 font-voz text-[22px] leading-tight text-suave">
+                {L('Chegou, ganhou', 'Reach it, win')} <strong className="font-impact text-[20px] font-normal text-papel">{br(carreira.premioProximo)} OLEFOOT</strong>
               </p>
             )}
           </>
         )}
         {carreira && carreira.premiosOlefoot > 0n && (
-          <p className="mt-2 border-t border-white/10 pt-2 font-mono text-[10.5px] text-poeira">
+          <p className="mt-3 border-t-2 border-linha pt-2.5 font-prova text-[11.5px] text-mudo">
             {br(carreira.premiosOlefoot)} {L('OLEFOOT já ganhos em prêmios de carreira', 'OLEFOOT already won in career rewards')}
           </p>
         )}
@@ -253,28 +258,28 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
       <MapaHorizontal nos={mapa} />
 
       {/* ── convite ── */}
-      <div className="mt-6 border border-white/10 bg-panel px-4 py-4">
-        <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Seu convite', 'Your invite')}</div>
+      <div className="mt-6 bg-concreto px-4 py-4">
+        <div className={ROTULO}>— {L('Seu convite', 'Your invite')}</div>
         {convida && link ? (
           <>
-            <p className="mt-2 break-all font-mono text-[11px] leading-relaxed text-giz"
+            {/* O link é PROVA: mono, colado num papel de lambe. */}
+            <p className="mt-3 -rotate-1 bg-cal px-3 py-2.5 font-prova text-[12px] font-medium leading-relaxed text-asfalto-27"
                style={{ wordBreak: 'break-all' }}>{link}</p>
-            <button type="button" onClick={copiar}
-              className="mt-3 w-full bg-neon-yellow px-4 py-3 text-[13px] font-bold text-deep-black">
-              {copiado ? L('COPIADO', 'COPIED') : L('COPIAR LINK', 'COPY LINK')}
-            </button>
+            <BotaoRua onClick={() => void copiar()} className="mt-5 w-full">
+              {copiado ? L('COPIADO', 'COPIED') : <>{L('COPIAR LINK', 'COPY LINK')} <span aria-hidden>→</span></>}
+            </BotaoRua>
             <PernaPadrao atual={bonus?.pernaPadrao ?? null} aoMudar={reler} />
           </>
         ) : (
-          <p className="mt-2 text-[12.5px] leading-relaxed text-cimento">
+          <p className="mt-2 text-[13px] leading-relaxed text-suave">
             {L('Seu link aparece aqui depois que você ativar a conta com um pack de $10 na pré-venda.', 'Your link shows up here after you activate your account with a $10 presale pack.')}
           </p>
         )}
       </div>
 
       {padrinho && (
-        <p className="mt-5 text-center font-mono text-[10.5px] text-poeira">
-          {L('Você entrou por', 'You joined via')} @{padrinho}
+        <p className="mt-6 text-center font-prova text-[11.5px] text-mudo">
+          {L('Você entrou por', 'You joined via')} <span className="font-voz text-[20px] text-papel">@{padrinho}</span>
         </p>
       )}
     </div>
@@ -306,23 +311,23 @@ function dataCurta(iso: string | null): string {
 function SeusIndicados({ nos }: { nos: readonly NoDoMapa[] }) {
   const diretos = nos.filter((n) => n.direto);
   return (
-    <div className="mt-6 border border-white/10 bg-panel">
-      <div className="flex items-baseline justify-between px-4 pb-2 pt-3.5">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Seus indicados', 'Your referrals')}</span>
-        <span className="font-mono text-[10px] text-cimento">{diretos.length}</span>
+    <div className="mt-6 bg-concreto">
+      <div className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-4">
+        <span className={ROTULO}>— {L('Seus indicados', 'Your referrals')}</span>
+        <span className="font-impact text-[20px] leading-none text-papel tabular-nums">{diretos.length}</span>
       </div>
       {diretos.length === 0 ? (
-        <p className="px-4 pb-4 text-[12.5px] text-cimento">{L('Ninguém ainda. Quem entrar pelo seu convite aparece aqui.', 'No one yet. Whoever joins via your invite shows up here.')}</p>
+        <p className="px-4 pb-4 text-[13px] leading-relaxed text-suave">{L('Ninguém ainda. Quem entrar pelo seu convite aparece aqui.', 'No one yet. Whoever joins via your invite shows up here.')}</p>
       ) : (
         diretos.map((n) => (
-          <div key={n.userId} className="border-t border-white/10 px-4 py-3">
-            <div className="flex min-w-0 items-baseline justify-between gap-3">
-              <span className="min-w-0 truncate text-[14px] font-semibold text-white">
+          <div key={n.userId} className="border-t-2 border-linha px-4 py-3">
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <span className="min-w-0 truncate font-voz text-[24px] leading-none text-papel">
                 {n.username ? `@${n.username}` : L('Sem nome de usuário', 'No username')}
               </span>
-              <span className="ole-num shrink-0 text-[12px] uppercase text-neon-yellow">{L('Time', 'Team')} {n.perna}</span>
+              <SeloRua tom={n.ativado ? 'ouro-contorno' : 'mudo'}>{L('Time', 'Team')} {n.perna}</SeloRua>
             </div>
-            <div className="mt-0.5 truncate font-mono text-[10.5px] text-poeira">
+            <div className="mt-1 truncate font-prova text-[11px] text-mudo">
               {[n.clube, n.entrouEm ? L(`entrou ${dataCurta(n.entrouEm)}`, `joined ${dataCurta(n.entrouEm)}`) : null,
                 n.ativado ? L('conta ativada', 'account activated') : L('sem ativação', 'not activated')].filter(Boolean).join(' · ')}
             </div>
@@ -337,37 +342,35 @@ function SeusIndicados({ nos }: { nos: readonly NoDoMapa[] }) {
 function FichaDoNo({ n }: { n: NoDoMapa }) {
   if (!n.daMinhaEquipe) {
     return (
-      <div className="border-t border-white/10 px-4 py-3">
-        <div className="text-[13px] font-semibold text-giz">{L('Chegou por derramamento', 'Arrived by spillover')}</div>
-        <p className="mt-1 text-[12px] leading-relaxed text-cimento">
+      <div className="border-t-2 border-linha px-4 py-3.5">
+        <div className="font-voz text-[22px] leading-none text-suave">{L('Chegou por derramamento', 'Arrived by spillover')}</div>
+        <p className="mt-1.5 text-[12.5px] leading-relaxed text-mudo">
           {L(`Time ${n.perna} · nível ${n.nivel}. Não foi indicado pela sua equipe: ocupa a vaga e soma pontos no seu Time ${n.perna}, mas o nome não aparece pra você.`, `Team ${n.perna} · level ${n.nivel}. Not referred by your team: fills the spot and adds points to your Team ${n.perna}, but the name isn't shown to you.`)}
         </p>
       </div>
     );
   }
   return (
-    <div className="border-t border-white/10 px-4 py-3">
-      <div className="flex min-w-0 items-baseline justify-between gap-3">
-        <span className="min-w-0 truncate text-[15px] font-semibold text-white">
+    <div className="border-t-2 border-linha px-4 py-3.5">
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <span className="min-w-0 truncate font-voz text-[28px] leading-none text-papel">
           {n.username ? `@${n.username}` : L('Sem nome de usuário', 'No username')}
         </span>
-        <span className="ole-num shrink-0 text-[12px] uppercase text-neon-yellow">{L('Time', 'Team')} {n.perna}</span>
+        <SeloRua tom="mudo">{L('Time', 'Team')} {n.perna}</SeloRua>
       </div>
-      {n.clube && <div className="mt-0.5 truncate text-[12px] text-giz">{n.clube}</div>}
-      <p className="mt-1.5 font-mono text-[10.5px] leading-relaxed text-poeira">
+      {n.clube && <div className="mt-1 truncate font-prova text-[12px] uppercase tracking-[0.08em] text-suave">{n.clube}</div>}
+      <p className="mt-1.5 font-prova text-[11px] leading-relaxed text-mudo">
         {[L(`nível ${n.nivel}`, `level ${n.nivel}`), n.direto ? L('indicado direto seu', 'your direct referral') : L('da sua equipe', 'from your team'),
           n.entrouEm ? `${L('entrou', 'joined')} ${dataCurta(n.entrouEm)}${n.origem && PELA_ORIGEM[n.origem] ? ` ${PELA_ORIGEM[n.origem]}` : ''}` : null,
         ].filter(Boolean).join(' · ')}
       </p>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        <span className={cn('px-2 py-0.5 font-mono text-[10px] uppercase',
-          n.ativado ? 'bg-neon-yellow text-black' : 'border border-white/20 text-cimento')}>
+      <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <SeloRua tom={n.ativado ? 'ouro-contorno' : 'mudo'}>
           {n.ativado ? L('Conta ativada', 'Account activated') : L('Sem ativação', 'Not activated')}
-        </span>
-        <span className={cn('px-2 py-0.5 font-mono text-[10px] uppercase',
-          n.binarioAtivo ? 'bg-white text-black' : 'border border-white/20 text-cimento')}>
+        </SeloRua>
+        <SeloRua tom={n.binarioAtivo ? 'cal' : 'mudo'}>
           {n.binarioAtivo ? L('Binário ativo', 'Binary active') : L('Binário inativo', 'Binary inactive')}
-        </span>
+        </SeloRua>
       </div>
     </div>
   );
@@ -377,9 +380,9 @@ function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
   const [selecionado, setSelecionado] = useState<string | null>(null);
   if (nos.length === 0) {
     return (
-      <div className="mt-6 border border-white/10 bg-panel px-4 py-6 text-center">
-        <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Sua rede', 'Your network')}</div>
-        <p className="mt-2 text-[12.5px] text-cimento">{L('Ninguém ainda. Seu primeiro convite começa aqui.', 'No one yet. Your first invite starts here.')}</p>
+      <div className="mt-6 border-2 border-dashed border-fio px-4 py-6">
+        <div className={ROTULO}>— {L('Sua rede', 'Your network')}</div>
+        <p className="mt-2 font-voz text-[26px] leading-[1.05] text-papel">{L('Ninguém ainda. Seu primeiro convite começa aqui.', 'No one yet. Your first invite starts here.')}</p>
       </div>
     );
   }
@@ -418,17 +421,17 @@ function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
     .filter((e) => e.resto > 0);
 
   return (
-    <div className="mt-6 border border-white/10 bg-panel">
-      <div className="flex items-baseline justify-between px-4 pb-1 pt-3.5">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Sua rede', 'Your network')}</span>
-        <span className="font-mono text-[10px] text-cimento">
+    <div className="rua-grao mt-6 bg-concreto">
+      <div className="flex items-baseline justify-between gap-3 px-4 pb-1 pt-4">
+        <span className={ROTULO}>— {L('Sua rede', 'Your network')}</span>
+        <span className="min-w-0 truncate font-prova text-[11px] text-mudo">
           {nos.length} {nos.length === 1 ? L('pessoa', 'person') : L('pessoas', 'people')} · {L('até o nível', 'up to level')} {maxNivel}
         </span>
       </div>
       <svg viewBox={`0 0 ${LARG} ${A}`} className="block h-[220px] w-full">
-        <line x1={X0} y1={EIXO} x2={LARG - 8} y2={EIXO} stroke="#1B1D1F" strokeWidth="1" />
-        <text x="4" y="26" fill="#4A4C4F" fontSize="8" fontFamily="monospace">{L('TIME 1', 'TEAM 1')}</text>
-        <text x="4" y={A - 14} fill="#4A4C4F" fontSize="8" fontFamily="monospace">{L('TIME 2', 'TEAM 2')}</text>
+        <line x1={X0} y1={EIXO} x2={LARG - 8} y2={EIXO} stroke="#2E2C28" strokeWidth="2" />
+        <text x="4" y="26" fill="#9A958A" fontSize="12" fontFamily="Anton, Impact, sans-serif">{L('TIME 1', 'TEAM 1')}</text>
+        <text x="4" y={A - 14} fill="#9A958A" fontSize="12" fontFamily="Anton, Impact, sans-serif">{L('TIME 2', 'TEAM 2')}</text>
 
         {nos.map((n) => {
           const p = pos.get(n.userId);
@@ -439,8 +442,8 @@ function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
           return (
             <line key={`l-${n.userId}`}
               x1={origem.x} y1={origem.y} x2={p.x} y2={p.y}
-              stroke={n.daMinhaEquipe ? '#8A7A18' : '#2E3033'}
-              strokeWidth={1.5}
+              stroke={n.daMinhaEquipe ? '#9A958A' : '#3A3833'}
+              strokeWidth={2}
               strokeDasharray={forade ? '3 3' : undefined} />
           );
         })}
@@ -455,8 +458,8 @@ function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
               {/* Área de toque maior que a bolinha: no celular 4,5px não se acerta. */}
               <circle cx={p.x} cy={p.y} r={11} fill="transparent" />
               <circle cx={p.x} cy={p.y} r={n.nivel === 1 ? 6 : 4.5}
-                fill={n.daMinhaEquipe ? '#FDE100' : '#5A5C5F'}
-                stroke={ativo ? '#FFFFFF' : 'none'} strokeWidth={ativo ? 2 : 0} />
+                fill={n.daMinhaEquipe ? '#EEE9DF' : '#6B6860'}
+                stroke={ativo ? '#F2E61E' : 'none'} strokeWidth={ativo ? 3 : 0} />
               <title>{n.username ? `@${n.username}` : L('derramamento', 'spillover')}</title>
             </g>
           );
@@ -465,25 +468,27 @@ function MapaHorizontal({ nos }: { nos: readonly NoDoMapa[] }) {
         {niveisComExcesso.map((e) => (
           <text key={`e-${e.lado}-${e.nivel}`}
             x={colX(e.nivel)} y={e.lado === 1 ? EIXO - 92 : EIXO + 98}
-            fill="#7E8185" fontSize="9" fontFamily="monospace" textAnchor="middle">
+            fill="#9A958A" fontSize="9" fontFamily="'Geist Mono', monospace" fontWeight="bold" textAnchor="middle">
             +{e.resto}
           </text>
         ))}
 
-        <circle cx={X0} cy={EIXO} r="8" fill="#ECECE7" />
-        <text x={X0 - 18} y={EIXO + 22} fill="#ECECE7" fontSize="8" fontFamily="monospace" fontWeight="bold">{L('VOCÊ', 'YOU')}</text>
+        {/* Você é a raiz — o único ponto em ouro da árvore. */}
+        <circle cx={X0} cy={EIXO} r="9" fill="#C9A13B" />
+        <text x={X0 - 22} y={EIXO + 25} fill="#C9A13B" fontSize="11" fontFamily="Anton, Impact, sans-serif">{L('VOCÊ', 'YOU')}</text>
       </svg>
       {(() => {
         const n = nos.find((x) => x.userId === selecionado);
         return n ? <FichaDoNo n={n} /> : (
-          <p className="border-t border-white/10 px-4 py-2.5 font-mono text-[10px] text-cimento">
+          <p className="border-t-2 border-linha px-4 py-3 font-prova text-[11px] text-mudo">
             {L('Toque numa bolinha pra ver quem é.', 'Tap a dot to see who it is.')}
           </p>
         );
       })()}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-white/10 px-4 py-2.5 font-mono text-[9px] text-poeira">
-        <span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-neon-yellow align-middle" />{L('sua equipe', 'your team')}</span>
-        <span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#5A5C5F] align-middle" />{L('derramou', 'spillover')}</span>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 border-t-2 border-linha px-4 py-3 font-prova text-[10.5px] text-mudo">
+        <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-ouro-27 align-middle" />{L('você', 'you')}</span>
+        <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-papel align-middle" />{L('sua equipe', 'your team')}</span>
+        <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-fio align-middle" />{L('derramou', 'spillover')}</span>
         {niveisComExcesso.length > 0 && <span>{L('+N = mais gente no nível', '+N = more people on this level')}</span>}
       </div>
     </div>
@@ -509,19 +514,19 @@ const dolar = (cents: bigint) => {
 function BlocoBonus({ bonus }: { bonus: MeuBonus | null }) {
   const aReceber = bonus ? bonus.olefoot - bonus.olefootSacado : 0n;
   return (
-    <div className="mt-6 border border-white/10 bg-panel px-4 py-4">
-      <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Bônus a receber', 'Bonus to receive')}</div>
-      <div className="mt-1.5 whitespace-nowrap">
-        <span className="ole-num text-[26px] font-bold leading-none text-white tabular-nums">{br(aReceber)}</span>
-        <span className="ml-2 text-[12px] font-semibold text-cimento">OLEFOOT</span>
+    <div className="mt-6 bg-concreto px-4 py-4">
+      <div className={ROTULO}>— {L('Bônus a receber', 'Bonus to receive')}</div>
+      <div className="mt-2 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="font-impact text-[clamp(36px,10vw,48px)] leading-none text-papel tabular-nums">{br(aReceber)}</span>
+        <span className="font-prova text-[12px] font-bold uppercase tracking-[0.16em] text-mudo">OLEFOOT</span>
       </div>
-      <p className="mt-1.5 font-mono text-[11px] text-poeira">
+      <p className="mt-2 font-prova text-[11.5px] text-suave">
         {bonus && bonus.ciclosPagos > 0
           ? L(`${dolar(bonus.usdCents)} em ${bonus.ciclosPagos} ${bonus.ciclosPagos === 1 ? 'ciclo' : 'ciclos'}`, `${dolar(bonus.usdCents)} in ${bonus.ciclosPagos} ${bonus.ciclosPagos === 1 ? 'cycle' : 'cycles'}`)
           : L('Nenhum ciclo pagou você ainda', 'No cycle has paid you yet')}
       </p>
       {bonus && bonus.tetoDiarioCents > 0n ? <TetoDeHoje hoje={bonus.hojeUsdCents} teto={bonus.tetoDiarioCents} /> : null}
-      <p className="mt-2.5 border-t border-white/10 pt-2.5 text-[11.5px] leading-relaxed text-cimento">
+      <p className="mt-3 border-t-2 border-linha pt-3 text-[12.5px] leading-relaxed text-suave">
         {L('O saque abre quando o OLEFOOT for lançado na Solana, para a carteira vinculada.', 'Withdrawals open when OLEFOOT launches on Solana, to your linked wallet.')}
       </p>
     </div>
@@ -535,18 +540,21 @@ function BlocoBonus({ bonus }: { bonus: MeuBonus | null }) {
 function TetoDeHoje({ hoje, teto }: { hoje: bigint; teto: bigint }) {
   const pct = teto === 0n ? 0 : Math.min(100, Number((hoje * 100n) / teto));
   return (
-    <div className="mt-3">
-      <div className="flex items-baseline justify-between gap-3 font-mono text-[10.5px]">
-        <span className="uppercase tracking-wider text-poeira">{L('Hoje', 'Today')}</span>
-        <span className={cn('tabular-nums', pct >= 100 ? 'text-atencao' : 'text-giz')}>
+    <div className="mt-3.5">
+      <div className="flex items-baseline justify-between gap-3 font-prova text-[11.5px]">
+        <span className="font-bold uppercase tracking-[0.16em] text-mudo">{L('Hoje', 'Today')}</span>
+        <span className={cn('tabular-nums', pct >= 100 ? 'text-atencao' : 'text-papel')}>
           {dolar(hoje)} {L('de', 'of')} {dolar(teto)}
         </span>
       </div>
-      <div className="mt-1 h-1.5 w-full bg-white/10">
-        <div className={cn('h-full', pct >= 100 ? 'bg-atencao' : 'bg-neon-yellow')} style={{ width: `${pct}%` }} />
+      {/* Segmentos em papel: é medida, não ação. Bateu o teto, acende aviso. */}
+      <div aria-hidden className="mt-1.5 grid h-2.5 grid-cols-10 gap-1">
+        {Array.from({ length: 10 }, (_, i) => (
+          <span key={i} className={i < Math.round(pct / 10) ? (pct >= 100 ? 'bg-atencao' : 'bg-papel') : 'bg-linha'} />
+        ))}
       </div>
       {pct >= 100 ? (
-        <p className="mt-1.5 font-mono text-[10.5px] text-atencao">{L('Teto do dia batido. Volta amanhã.', 'Daily cap reached. Back tomorrow.')}</p>
+        <p className="mt-2 font-voz text-[20px] leading-none text-atencao">{L('Teto do dia batido. Volta amanhã.', 'Daily cap reached. Back tomorrow.')}</p>
       ) : null}
     </div>
   );
@@ -567,23 +575,23 @@ function quando(iso: string): string {
  */
 function BlocoCiclos({ ciclos }: { ciclos: readonly CicloFechado[] }) {
   return (
-    <div className="mt-6 border border-white/10 bg-panel">
-      <div className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-3.5">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Ciclos pagos', 'Paid cycles')}</span>
-        <span className="font-mono text-[10px] text-cimento">{L('a cada hora', 'every hour')}</span>
+    <div className="mt-6 bg-concreto">
+      <div className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-4">
+        <span className={ROTULO}>— {L('Ciclos pagos', 'Paid cycles')}</span>
+        <span className="font-prova text-[11px] text-mudo">{L('a cada hora', 'every hour')}</span>
       </div>
       {ciclos.length === 0 ? (
-        <p className="px-4 pb-4 text-[12.5px] leading-relaxed text-cimento">
+        <p className="px-4 pb-4 text-[13px] leading-relaxed text-suave">
           {L('Nenhum ainda. Um ciclo paga quando alguém equipara na hora.', 'None yet. A cycle pays when someone matches within the hour.')}
         </p>
       ) : (
         ciclos.map((c) => (
-          <div key={c.abreEm} className="border-t border-white/10 px-4 py-2.5">
+          <div key={c.abreEm} className="border-t-2 border-linha px-4 py-3">
             <div className="flex min-w-0 items-baseline justify-between gap-3">
-              <span className="shrink-0 font-mono text-[11px] text-giz">{quando(c.abreEm)}</span>
-              <span className="ole-num whitespace-nowrap text-[13px] text-white tabular-nums">{L('pago', 'paid')} {dolar(c.bonusTotalUsdCents)}</span>
+              <span className="shrink-0 font-prova text-[12px] text-papel">{quando(c.abreEm)}</span>
+              <span className="whitespace-nowrap font-impact text-[18px] leading-none text-papel tabular-nums">{L('pago', 'paid')} {dolar(c.bonusTotalUsdCents)}</span>
             </div>
-            <div className="mt-0.5 font-mono text-[10.5px] text-poeira">
+            <div className="mt-1 font-prova text-[11px] text-mudo">
               {br(c.equiparadoTotal)} {L('OLEXP equiparados', 'OLEXP matched')}
             </div>
           </div>
@@ -628,9 +636,9 @@ function PernaPadrao({ atual, aoMudar }: { atual: 1 | 2 | null; aoMudar: () => v
     await aplicar(v);
   };
   return (
-    <div className="mt-4 border-t border-white/10 pt-3.5">
-      <div className="font-mono text-[10px] uppercase tracking-wider text-poeira">{L('Próximo indicado entra no', 'Next referral goes to')}</div>
-      <div className="mt-2 grid grid-cols-3 gap-1 border border-white/16 p-1" role="radiogroup" aria-label={L('Time do próximo indicado', 'Next referral team')}>
+    <div className="mt-5 border-t-2 border-linha pt-4">
+      <div className={ROTULO}>— {L('Próximo indicado entra no', 'Next referral goes to')}</div>
+      <div className="mt-2.5 grid grid-cols-3 border-2 border-linha p-0.5" role="radiogroup" aria-label={L('Time do próximo indicado', 'Next referral team')}>
         {opcoes.map((o) => (
           <button
             key={o.rotulo}
@@ -640,8 +648,8 @@ function PernaPadrao({ atual, aoMudar }: { atual: 1 | 2 | null; aoMudar: () => v
             disabled={salvando}
             onClick={() => void escolher(o.valor)}
             className={cn(
-              'py-2 text-center font-mono text-[11px] font-medium uppercase tracking-[0.12em] transition-colors disabled:opacity-50',
-              atual === o.valor ? 'bg-white text-black' : 'text-cimento hover:text-white',
+              'min-h-[44px] min-w-0 truncate px-1 text-center font-impact text-[17px] uppercase leading-none transition-colors disabled:opacity-50',
+              atual === o.valor ? 'bg-rua text-asfalto-27' : 'text-mudo hover:text-papel',
             )}
           >
             {o.rotulo}
@@ -656,13 +664,13 @@ function PernaPadrao({ atual, aoMudar }: { atual: 1 | 2 | null; aoMudar: () => v
             type="button"
             disabled={salvando || pin.length !== 6}
             onClick={() => void aplicar(pendente.lado, pin)}
-            className="ole-num shrink-0 bg-neon-yellow px-4 text-[12px] uppercase text-black disabled:opacity-50"
+            className="min-h-[54px] shrink-0 bg-rua px-5 font-impact text-[20px] uppercase leading-none text-asfalto-27 transition-colors hover:bg-papel disabled:opacity-40"
           >
             OK
           </button>
         </div>
       )}
-      {erro && <p className="mt-2 text-[11px] text-baixa">{erro}</p>}
+      {erro && <p role="alert" className="mt-2 font-prova text-[12px] text-baixa">{erro}</p>}
     </div>
   );
 }

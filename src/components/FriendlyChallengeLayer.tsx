@@ -96,58 +96,63 @@ export function FriendlyChallengeLayer() {
   const left = secondsLeft(incoming.expires_at);
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/85 p-4 sm:items-center">
+    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-asfalto-27/90 p-0 sm:items-center sm:p-4">
       <div
-        className={cn(
-          'relative w-full max-w-md border border-neon-yellow/40 bg-panel p-5',
-          'sports-panel',
-        )}
+        role="dialog"
+        aria-modal="true"
+        aria-label={L('Desafio amistoso', 'Friendly challenge')}
+        className={cn('relative w-full max-w-md overflow-hidden bg-rua text-asfalto-27')}
       >
-        <button
-          type="button"
-          onClick={() => void onDecline()}
-          className="absolute right-3 top-3 p-2 text-cimento hover:text-white"
-          aria-label={L('Fechar', 'Close')}
-        >
-          <X className="h-5 w-5" />
-        </button>
-        <p className="font-mono text-[11.5px] font-medium text-neon-yellow">{L('#desafio · amistoso', '#challenge · friendly')}</p>
-        <h2 className="mt-2 truncate pr-8 font-impact text-2xl uppercase leading-[1.1] text-white">
-          {incoming.challenger_club_name}
-        </h2>
-        <p className="mt-2 text-sm text-cimento">
-          {incoming.mode === 'live' ? L('Te convidou pra um jogo ao vivo.', 'Invited you to a live match.') : L('Te convidou pra um jogo rápido.', 'Invited you to a quick match.')}
+        <span aria-hidden className="rua-alambrado pointer-events-none absolute inset-x-0 top-0 h-28 [--alambrado:rgba(13,13,12,0.24)]" />
+        <div className="relative p-5">
+          <button
+            type="button"
+            onClick={() => void onDecline()}
+            className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center hover:bg-asfalto-27 hover:text-rua"
+            aria-label={L('Fechar', 'Close')}
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <p className="font-prova text-[11.5px] font-bold uppercase tracking-[0.16em]">{L('#desafio · amistoso', '#challenge · friendly')}</p>
+          <h2 className="mt-2 pr-10 font-impact uppercase leading-[0.9] [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(34px, 10vw, 48px)' }}>
+            {incoming.challenger_club_name}
+          </h2>
+          <p className="mt-2 font-voz text-[24px] leading-[1.05]">
+            {incoming.mode === 'live' ? L('Te convidou pra um jogo ao vivo.', 'Invited you to a live match.') : L('Te convidou pra um jogo rápido.', 'Invited you to a quick match.')}
+          </p>
           {incoming.bet_currency === 'BRO' && incoming.bet_bro_cents != null ? (
-            <span className="mt-1 block text-white">
+            <p className="mt-2 font-prova text-[12px] font-bold uppercase tracking-[0.08em]">
               {L('Aposta', 'Stake')}: {(incoming.bet_bro_cents / 100).toFixed(2)} BRO ({L('vencedor', 'winner')})
-            </span>
+            </p>
           ) : null}
           {incoming.bet_currency === 'EXP' && incoming.bet_exp != null ? (
-            <span className="mt-1 block text-white">{L('Aposta', 'Stake')}: {formatExp(incoming.bet_exp)} EXP</span>
+            <p className="mt-2 font-prova text-[12px] font-bold uppercase tracking-[0.08em]">{L('Aposta', 'Stake')}: {formatExp(incoming.bet_exp)} EXP</p>
           ) : null}
-        </p>
-        <div className="mt-4 flex items-center justify-between border border-white/10 bg-deep-black px-3 py-2">
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-cimento">{L('Tempo para aceitar', 'Time to accept')}</span>
-          <span className="ole-num text-2xl text-neon-yellow">{left}s</span>
         </div>
-        <p className="mt-2 font-mono text-[10.5px] text-poeira">{L(`Máx. ${FRIENDLY_CHALLENGE_TTL_SEC}s · os dois managers online`, `Max. ${FRIENDLY_CHALLENGE_TTL_SEC}s · both managers online`)}</p>
-        <div className="mt-5 grid grid-cols-[auto_1fr] gap-2">
-          <button
-            type="button"
-            disabled={busy || left <= 0}
-            onClick={() => void onDecline()}
-            className="ole-num h-[50px] whitespace-nowrap border border-white/30 px-4 text-[11.5px] uppercase text-white transition-colors hover:border-white hover:bg-white/5 disabled:opacity-40"
-          >
-            {L('Recusar', 'Decline')}
-          </button>
-          <button
-            type="button"
-            disabled={busy || left <= 0}
-            onClick={() => void onAccept()}
-            className="ole-num h-[50px] min-w-0 whitespace-nowrap bg-neon-yellow px-3 text-[11.5px] uppercase text-black transition-colors hover:bg-white disabled:opacity-40 [--corte:12px] [clip-path:var(--clip-corte)]"
-          >
-            {L('Aceitar e entrar', 'Accept and join')}
-          </button>
+        <div className="rua-grao bg-asfalto-27 p-5 text-papel">
+          <div className="flex items-end justify-between gap-3">
+            <span className="font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-mudo">{L('Tempo para aceitar', 'Time to accept')}</span>
+            <span className="font-spray font-black text-[44px] leading-none tabular-nums text-rua">{left}<span className="font-prova text-[14px] text-mudo">s</span></span>
+          </div>
+          <p className="mt-1 font-prova text-[10.5px] text-mudo">{L(`Máx. ${FRIENDLY_CHALLENGE_TTL_SEC}s · os dois managers online`, `Max. ${FRIENDLY_CHALLENGE_TTL_SEC}s · both managers online`)}</p>
+          <div className="mt-5 grid grid-cols-[auto_1fr] gap-3 pb-[env(safe-area-inset-bottom)]">
+            <button
+              type="button"
+              disabled={busy || left <= 0}
+              onClick={() => void onDecline()}
+              className="min-h-[52px] whitespace-nowrap border-2 border-papel px-4 font-impact text-[17px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27 disabled:opacity-40"
+            >
+              {L('Recusar', 'Decline')}
+            </button>
+            <button
+              type="button"
+              disabled={busy || left <= 0}
+              onClick={() => void onAccept()}
+              className="inline-flex min-h-[52px] min-w-0 items-center justify-center gap-2 whitespace-nowrap bg-rua px-3 font-impact text-[18px] uppercase leading-none text-asfalto-27 shadow-[4px_4px_0_var(--color-papel)] transition-[transform,box-shadow] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0_var(--color-papel)] disabled:opacity-40"
+            >
+              {L('Aceitar e entrar', 'Accept and join')} <span aria-hidden>→</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

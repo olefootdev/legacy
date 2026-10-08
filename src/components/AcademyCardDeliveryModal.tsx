@@ -12,7 +12,6 @@ import { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Share2, Download, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Hashtag } from '@/components/ui';
 import { getSupabase } from '@/supabase/client';
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import { L } from '@/i18n/L';
@@ -120,20 +119,20 @@ export function AcademyCardDeliveryModal({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="relative my-auto flex max-h-[95vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-neon-yellow/40 bg-deep-black"
+            className="relative my-auto flex max-h-[95vh] w-full max-w-2xl flex-col overflow-hidden border-2 border-linha bg-asfalto-27"
           >
             {/* Header */}
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-neon-yellow/30 bg-panel px-4 py-3">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b-2 border-linha px-4 py-3">
               <div className="min-w-0">
-                <Hashtag>{L('#academia #entrega', '#academy #delivery')}</Hashtag>
-                <h3 className="font-display text-base font-black uppercase tracking-wide text-white">
-                  🎁 {playerName}
+                <span className="font-prova text-[11px] font-bold text-mudo">{L('#academia #entrega', '#academy #delivery')}</span>
+                <h3 className="truncate font-voz text-[30px] leading-none text-papel">
+                  {playerName}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="border border-white/16 p-2 text-white/60 hover:border-white/30 hover:text-white"
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-linha text-mudo hover:border-papel hover:text-papel"
                 aria-label={L('Fechar', 'Close')}
               >
                 <X className="h-5 w-5" />
@@ -142,18 +141,19 @@ export function AcademyCardDeliveryModal({
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-4 py-4">
-              <p className="mb-4 text-center text-[12px] leading-relaxed text-cimento">
-                {L('Feita à mão pela equipe Olefoot', 'Handmade by the Olefoot team')}
+              <p className="mb-5 font-impact text-[clamp(26px,7vw,36px)] uppercase leading-none text-papel">
+                {L('Chegou. ', 'It landed. ')}<span className="font-voz normal-case text-suave">{L('Feita à mão pela equipe Olefoot.', 'Handmade by the Olefoot team.')}</span>
               </p>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* Card do jogo */}
                 {portraitUrl ? (
                   <div className="flex flex-col gap-2">
-                    <p className="text-center text-[10px] font-bold uppercase tracking-wider text-neon-yellow/85">
-                      {L('Carta no jogo', 'In-game card')}
+                    <p className="font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo">
+                      — {L('Carta no jogo', 'In-game card')}
                     </p>
-                    <div className="overflow-hidden rounded-lg border border-white/15 bg-deep-black">
+                    {/* Carta colada torta como lambe — o momento "rua" da entrega. */}
+                    <div className="-rotate-2 overflow-hidden bg-cal p-1.5 shadow-[6px_8px_0_rgba(0,0,0,0.55)]">
                       <img
                         src={portraitUrl}
                         alt={L(`Carta de ${playerName}`, `${playerName} card`)}
@@ -164,7 +164,7 @@ export function AcademyCardDeliveryModal({
                     <button
                       type="button"
                       onClick={() => void downloadImageAs(portraitUrl, `olefoot-${playerName}-carta.png`)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white/85 hover:border-white hover:bg-white/5"
+                      className="mt-2 inline-flex min-h-[44px] items-center justify-center gap-1.5 border-2 border-linha px-3 font-impact text-[15px] uppercase leading-none text-papel hover:border-papel"
                     >
                       <Download className="h-3.5 w-3.5" />
                       {L('Baixar carta', 'Download card')}
@@ -175,10 +175,10 @@ export function AcademyCardDeliveryModal({
                 {/* Card promocional */}
                 {promotionalUrl ? (
                   <div className="flex flex-col gap-2">
-                    <p className="text-center text-[10px] font-bold uppercase tracking-wider text-giz">
-                      {L('Card promocional', 'Promo card')}
+                    <p className="font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo">
+                      — {L('Card promocional', 'Promo card')}
                     </p>
-                    <div className="overflow-hidden rounded-lg border border-white/15 bg-deep-black">
+                    <div className="rotate-[1.5deg] overflow-hidden bg-cal p-1.5 shadow-[6px_8px_0_rgba(0,0,0,0.55)]">
                       <img
                         src={promotionalUrl}
                         alt={L(`Card promocional de ${playerName}`, `${playerName} promo card`)}
@@ -189,7 +189,7 @@ export function AcademyCardDeliveryModal({
                     <button
                       type="button"
                       onClick={() => void downloadImageAs(promotionalUrl, `olefoot-${playerName}-promo.png`)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white/85 hover:border-white hover:bg-white/5"
+                      className="mt-2 inline-flex min-h-[44px] items-center justify-center gap-1.5 border-2 border-linha px-3 font-impact text-[15px] uppercase leading-none text-papel hover:border-papel"
                     >
                       <Download className="h-3.5 w-3.5" />
                       {L('Baixar promocional', 'Download promo')}
@@ -199,35 +199,35 @@ export function AcademyCardDeliveryModal({
               </div>
 
               {/* Texto pré-formatado */}
-              <div className="mt-5 rounded-lg border border-white/10 bg-panel p-3">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-white/50">
-                  {L('Texto pra postar', 'Text to post')}
+              <div className="mt-6 border-l-[3px] border-fio bg-concreto p-3">
+                <p className="mb-1 font-prova text-[10px] font-bold uppercase tracking-[0.18em] text-mudo">
+                  — {L('Texto pra postar', 'Text to post')}
                 </p>
-                <pre className="whitespace-pre-wrap font-sans text-[12px] leading-relaxed text-white/85">
+                <pre className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-papel">
                   {shareText}
                 </pre>
               </div>
             </div>
 
             {/* Bottom — share buttons */}
-            <div className="shrink-0 space-y-2 border-t border-white/10 bg-panel px-4 py-3">
-              <div className="flex flex-wrap gap-2">
+            <div className="shrink-0 space-y-2 border-t-2 border-linha px-4 py-4 pr-5">
+              <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={() => void handleShare()}
-                  className="btn-primary inline-flex flex-1 items-center justify-center gap-2 px-4 py-2.5 font-display text-xs font-black uppercase tracking-wider"
+                  className="inline-flex min-h-[52px] flex-1 items-center justify-center gap-2 bg-rua px-4 font-impact text-[19px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)]"
                 >
                   <Share2 className="h-4 w-4" />
-                  {L('Compartilhar', 'Share')}
+                  {L('Compartilhar', 'Share')} <span aria-hidden>→</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleCopy()}
                   className={cn(
-                    'inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 font-display text-xs font-black uppercase tracking-wider transition-colors',
+                    'inline-flex min-h-[52px] items-center justify-center gap-2 border-2 px-4 font-impact text-[17px] uppercase leading-none transition-colors',
                     copied
-                      ? 'border-alta/50 text-alta'
-                      : 'border-white/30 text-white/85 hover:border-white hover:bg-white/5',
+                      ? 'border-alta text-alta'
+                      : 'border-papel text-papel hover:bg-papel hover:text-asfalto-27',
                   )}
                 >
                   {copied ? (

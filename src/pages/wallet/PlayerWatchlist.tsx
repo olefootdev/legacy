@@ -1,7 +1,9 @@
 import { motion } from 'motion/react';
 import { ChangePill } from './ChangePill';
 import { Sparkline } from './Sparkline';
-import { SecaoVolt } from '@/components/ui';
+import { DEGRAU_CLASSES, SecaoVolt } from '@/components/ui';
+import { degrauDe } from '@/components/home/rua/DropLenda';
+import { cn } from '@/lib/utils';
 import { L, LOCALE } from '@/i18n/L';
 
 export type WatchlistEntry = {
@@ -30,7 +32,7 @@ const COPY = {
     empty: L('Você ainda não scoutou nenhum jogador. Comece pelo Mercado.', 'You haven\'t scouted any players yet. Start in the Market.'),
   },
   topSquad: {
-    eyebrow: L('Top do Plantel', 'Squad top'),
+    eyebrow: L('Tuas joias', 'Your gems'),
     title: L('Mais valiosos', 'Most valuable'),
     cta: L('Ver plantel →', 'View squad →'),
     empty: L('Nenhum jogador com valor de mercado registrado.', 'No players with a recorded market value.'),
@@ -63,55 +65,56 @@ export function PlayerWatchlist({
           <button
             type="button"
             onClick={onScout}
-            className="shrink-0 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento transition-colors hover:text-white"
+            className="shrink-0 font-impact text-[16px] uppercase text-rua transition-colors hover:text-papel"
           >
             {copy.cta}
           </button>
         ) : null}
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="border border-white/10 bg-panel divide-y divide-white/[0.07]"
-        style={{ borderRadius: 'var(--radius-card)' }}
-      >
-        {players.length === 0 ? (
-          <div className="p-5 text-center text-[12px] text-cimento">{copy.empty}</div>
-        ) : (
-          players.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 p-3 sm:p-4">
-              <div className="ole-num flex h-9 w-9 shrink-0 items-center justify-center bg-card-hi text-[12px] text-white tabular-nums">
-                {p.ovr}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-bold text-white truncate">{p.name}</p>
-                <p className="truncate font-mono text-[10.5px] text-cimento">
-                  {posLabel(p.position)} · {p.club}
-                </p>
-              </div>
-              {p.spark && p.spark.length > 1 ? (
-                <div className="hidden sm:block shrink-0">
-                  <Sparkline
-                    data={p.spark}
-                    positive={p.change24h >= 0}
-                    width={60}
-                    height={20}
-                    className="opacity-70"
-                  />
+      {players.length === 0 ? (
+        <div className="border-2 border-dashed border-fio p-5 font-prova text-[12px] text-mudo">{copy.empty}</div>
+      ) : (
+        // DS 2027 · "Tuas joias": cada carta no degrau do OVR, coladas tortas.
+        <motion.ul
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="grid grid-cols-3 gap-2.5 sm:gap-4"
+        >
+          {players.map((p, i) => {
+            const d = degrauDe(p.ovr);
+            return (
+              <li
+                key={p.id}
+                className={cn('flex min-h-[150px] min-w-0 flex-col justify-between gap-2 p-2.5 sm:p-3', DEGRAU_CLASSES[d])}
+                style={{ transform: `rotate(${[-1.5, 1, -0.5][i % 3]}deg)` }}
+              >
+                <div className="flex items-start justify-between gap-1">
+                  <span
+                    className={cn(
+                      'font-impact text-[clamp(32px,9vw,46px)] leading-[0.85] tabular-nums',
+                      d === 'respeito' && 'text-ouro-27',
+                      d === 'chao' && 'text-transparent [-webkit-text-stroke:1.5px_var(--color-asfalto-27)]',
+                    )}
+                  >
+                    {p.ovr}
+                  </span>
+                  <span className={cn('font-impact text-[13px] uppercase leading-none', d === 'respeito' && 'text-ouro-27')}>
+                    {posLabel(p.position)}
+                  </span>
                 </div>
-              ) : null}
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                <p className="font-mono text-[13px] font-medium text-white tabular-nums">
-                  {formatOle(p.priceOle)} EXP
-                </p>
-                <ChangePill change={p.change24h} compact />
-              </div>
-            </div>
-          ))
-        )}
-      </motion.div>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <span className="block min-w-0 truncate font-voz text-[clamp(18px,5vw,24px)] leading-none">{p.name}</span>
+                  <span className="block min-w-0 truncate font-prova text-[10.5px] font-bold uppercase tracking-[0.06em]">
+                    {formatOle(p.priceOle)} EXP
+                  </span>
+                </div>
+              </li>
+            );
+          })}
+        </motion.ul>
+      )}
     </section>
   );
 }

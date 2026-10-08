@@ -48,7 +48,7 @@ export function InstantRewards({
       label: result === 'win' ? L('Vitória', 'Win') : result === 'draw' ? L('Empate', 'Draw') : L('Participação', 'Participation'),
       value: baseExp,
       icon: 'trophy',
-      color: result === 'win' ? '#FDE100' : result === 'draw' ? '#ECECE7' : '#9A9C9F',
+      color: result === 'win' ? '#F2E61E' : result === 'draw' ? '#EEE9DF' : '#9A958A',
     },
   ];
 
@@ -68,7 +68,7 @@ export function InstantRewards({
       label: bonus.label,
       value: bonus.value,
       icon: 'star',
-      color: '#8B5CF6',
+      color: '#C9A13B',
     });
   });
 
@@ -108,7 +108,7 @@ export function InstantRewards({
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.8, opacity: 0 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="relative w-full max-w-md mx-4 bg-panel border-2 border-neon-yellow/30 rounded-2xl p-6"
+          className="relative w-full max-w-md mx-4 bg-concreto border-t-[3px] border-rua  p-6"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close Button */}
@@ -155,7 +155,7 @@ export function InstantRewards({
                       animate={{ x: 0, opacity: 1 }}
                       exit={{ x: 50, opacity: 0 }}
                       transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-                      className="flex items-center justify-between bg-black/40 border border-white/10 rounded-lg p-4 relative overflow-hidden"
+                      className="flex items-center justify-between bg-asfalto-27 border-2 border-linha  p-4 relative overflow-hidden"
                     >
                       {/* Icon */}
                       <div className="flex items-center gap-3 relative z-10">
@@ -220,29 +220,17 @@ export function InstantRewards({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.3, type: 'spring', damping: 20, stiffness: 300 }}
-              className="bg-neon-yellow/10 border-2 border-neon-yellow rounded-lg p-4 mb-4"
+              className="bg-cal text-asfalto-27 -rotate-1  p-4 mb-4"
             >
               <div className="flex items-center justify-between">
-                <span
-                  className="text-white uppercase"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '16px',
-                    fontWeight: 700,
-                    letterSpacing: '0.15em',
-                  }}
-                >
+                <span className="font-prova text-[12px] font-bold uppercase tracking-[0.2em]">
                   Total
                 </span>
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: [0, 1.3, 1] }}
                   transition={{ delay: 0.4, duration: 0.5 }}
-                  className="text-neon-yellow font-black tabular-nums"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '32px',
-                  }}
+                  className="font-spray text-[40px] font-black leading-none tabular-nums"
                 >
                   +{totalExp}
                   <span className="text-sm ml-2">EXP</span>
@@ -259,7 +247,7 @@ export function InstantRewards({
               transition={{ delay: 0.5 }}
               type="button"
               onClick={onClose}
-              className="w-full py-3 bg-neon-yellow text-black hover:bg-white transition-colors rounded-lg"
+              className="w-full min-h-[52px] bg-rua font-impact text-[19px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)] "
               style={{
                 fontFamily: 'var(--font-display)',
                 fontSize: '14px',

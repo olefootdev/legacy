@@ -93,7 +93,7 @@ export function QuickTacticalIntensityInfo({ level }: { level: TacticalIntensity
       key={level}
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-2 rounded-lg bg-black/30 border border-white/10"
+      className="p-2 bg-concreto border-2 border-linha"
     >
       <p className="text-xs text-white/70 text-center">{emIngles() ? INTENSITY_EN[level].description : preset.description}</p>
     </motion.div>

@@ -9,7 +9,7 @@
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Share2, ChevronRight } from 'lucide-react';
+import { Heart, Share2 } from 'lucide-react';
 import { L } from '@/i18n/L';
 
 interface LegendActionsProps {
@@ -62,14 +62,11 @@ export function LegendActions({
   };
 
   const isYellow = variant === 'on-yellow';
+  // DS 2027: 'on-yellow' = sobre o OURO da lenda (o nome da prop ficou).
   const ghostBtn = isYellow
-    ? 'border-black/30 text-black hover:border-black'
-    : 'border-white/30 text-white hover:border-white hover:bg-white/5';
-  const heartFillCls = liked
-    ? 'fill-current text-baixa'
-    : isYellow
-      ? 'text-black/65'
-      : 'text-white/65';
+    ? 'border-2 border-asfalto-27 text-asfalto-27 hover:bg-asfalto-27 hover:text-ouro-27'
+    : 'border-2 border-papel text-papel hover:bg-papel hover:text-asfalto-27';
+  const heartFillCls = liked ? 'fill-current' : '';
 
   const trainHref = storeHighlightId
     ? `/mercado/loja?tab=legacies&legend=${storeHighlightId}`
@@ -80,10 +77,14 @@ export function LegendActions({
       {/* CTA dominante */}
       <Link
         to={trainHref}
-        className="ole-num inline-flex h-[50px] max-w-full items-center gap-2 whitespace-nowrap bg-black px-6 text-[13px] uppercase text-neon-yellow transition-colors hover:bg-deep-black [--corte:12px] [clip-path:var(--clip-corte)]"
+        className={`inline-flex min-h-[56px] max-w-full items-center gap-2 whitespace-nowrap px-7 font-impact text-[21px] uppercase leading-none transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 ${
+          isYellow
+            ? 'bg-asfalto-27 text-ouro-27 shadow-[5px_5px_0_var(--color-papel)]'
+            : 'bg-rua text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)]'
+        }`}
       >
         <span className="min-w-0 truncate">{L('Treinar com', 'Train with')} {name}</span>
-        <ChevronRight className="w-4 h-4 shrink-0" />
+        <span aria-hidden>→</span>
       </Link>
 
       {/* Linha de social: like + share */}
@@ -93,7 +94,7 @@ export function LegendActions({
           onClick={onToggleLike}
           aria-pressed={liked}
           aria-label={liked ? L('Descurtir', 'Unlike') : L('Curtir', 'Like')}
-          className={`ole-num group inline-flex h-10 items-center gap-2 border px-4 text-[11px] uppercase transition-colors ${ghostBtn}`}
+          className={`group inline-flex min-h-[44px] items-center gap-2 px-4 font-impact text-[16px] uppercase leading-none transition-colors ${ghostBtn}`}
         >
           <Heart
             className={`w-4 h-4 ${heartFillCls}`}
@@ -106,7 +107,7 @@ export function LegendActions({
           type="button"
           onClick={() => void handleShare()}
           aria-label={L('Compartilhar', 'Share')}
-          className={`ole-num relative inline-flex h-10 items-center gap-2 whitespace-nowrap border px-4 text-[11px] uppercase transition-colors ${ghostBtn}`}
+          className={`relative inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap px-4 font-impact text-[16px] uppercase leading-none transition-colors ${ghostBtn}`}
         >
           <Share2 className="w-4 h-4" strokeWidth={2.5} />
           {shareFlash ? L('Link copiado', 'Link copied') : L('Compartilhar', 'Share')}

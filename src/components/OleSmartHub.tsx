@@ -121,14 +121,14 @@ function RadarSVG({ values }: { values: number[] }) {
       <path
         d={hexPath(values, maxR, cx, cy)}
         fill="rgba(253,225,0,0.15)"
-        stroke="var(--color-neon-yellow)"
+        stroke="var(--color-rua)"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
       {/* Vertex dots */}
       {values.map((v, i) => {
         const [x, y] = hexPoint((360 / n) * i, (v / 100) * maxR, cx, cy);
-        return <circle key={i} cx={x.toFixed(2)} cy={y.toFixed(2)} r="2.5" fill="var(--color-neon-yellow)" />;
+        return <circle key={i} cx={x.toFixed(2)} cy={y.toFixed(2)} r="2.5" fill="var(--color-rua)" />;
       })}
       {/* Labels */}
       {RADAR_LABELS.map((label, i) => {
@@ -159,15 +159,15 @@ function SectionHeader({ label, icon: Icon }: { label: string; icon: React.Eleme
   return (
     <div className="flex items-center justify-between mb-2">
       <div className="flex items-center gap-1.5">
-        <span className="w-[3px] h-4 bg-neon-yellow rounded-sm shrink-0" />
+        <span className="w-[3px] h-4 bg-rua  shrink-0" />
         <span
-          className="text-white/85 tracking-[0.28em] uppercase"
-          style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}
+          className="text-papel tracking-[0.28em] uppercase"
+          style={{ fontFamily: 'var(--font-prova)', fontSize: '9px' }}
         >
           {label}
         </span>
       </div>
-      <Icon className="w-3 h-3 text-white/35" strokeWidth={2} />
+      <Icon className="w-3 h-3 text-fio" strokeWidth={2} />
     </div>
   );
 }
@@ -226,7 +226,7 @@ function NewsWidget() {
           items.push({
             text: L(`Lesão: ${mod} OVR por ${myTeam.injuryRoundsRemaining} rodada${myTeam.injuryRoundsRemaining > 1 ? 's' : ''} na Liga Global`, `Injury: ${mod} OVR for ${myTeam.injuryRoundsRemaining} matchday${myTeam.injuryRoundsRemaining > 1 ? 's' : ''} in the Global League`),
             icon: AlertTriangle,
-            color: 'text-orange-400',
+            color: 'text-rua',
           });
         }
 
@@ -236,7 +236,7 @@ function NewsWidget() {
           items.push({
             text: L(`${myTeam.clubName} em chamas — 3 vitórias seguidas na Liga Global`, `${myTeam.clubName} on fire — 3 straight wins in the Global League`),
             icon: Flame,
-            color: 'text-neon-yellow',
+            color: 'text-rua',
           });
         }
       }
@@ -271,7 +271,7 @@ function NewsWidget() {
       items.push({
         text: L(`${recentWins} vitórias nos últimos jogos — sequência em chamas`, `${recentWins} wins in recent matches — on a hot streak`),
         icon: Flame,
-        color: 'text-neon-yellow',
+        color: 'text-rua',
       });
     }
 
@@ -279,7 +279,7 @@ function NewsWidget() {
       items.push({
         text: L(`${clubName} começa a temporada. Primeira partida define o tom.`, `${clubName} kick off the season. The first match sets the tone.`),
         icon: Star,
-        color: 'text-white/55',
+        color: 'text-suave',
       });
     }
 
@@ -294,7 +294,7 @@ function NewsWidget() {
           <div key={i} className="flex items-start gap-2">
             <h.icon className={cn('w-3 h-3 mt-0.5 shrink-0', h.color)} strokeWidth={2} />
             <p
-              className="text-white/65 leading-snug"
+              className="text-suave leading-snug"
               style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}
             >
               {h.text}
@@ -334,8 +334,8 @@ function FormWidget() {
       {hasGlobal && (
         <div className="mb-3">
           <div
-            className="text-white/35 tracking-[0.18em] uppercase mb-1.5"
-            style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
+            className="text-fio tracking-[0.18em] uppercase mb-1.5"
+            style={{ fontFamily: 'var(--font-prova)', fontSize: '8px' }}
           >
             {L('Liga Global', 'Global League')}
           </div>
@@ -343,10 +343,10 @@ function FormWidget() {
             {globalForm.map((r, i) => (
               <div
                 key={i}
-                className={cn('flex items-center justify-center rounded-sm shrink-0', formColor(r as 'W' | 'D' | 'L'))}
+                className={cn('flex items-center justify-center  shrink-0', formColor(r as 'W' | 'D' | 'L'))}
                 style={{ width: 24, height: 24 }}
               >
-                <span className="text-black font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}>
+                <span className="text-asfalto-27 font-bold" style={{ fontFamily: 'var(--font-prova)', fontSize: '9px' }}>
                   {formLabel(r as 'W' | 'D' | 'L')}
                 </span>
               </div>
@@ -357,15 +357,15 @@ function FormWidget() {
 
       {/* Local */}
       {last5Local.length === 0 && !hasGlobal ? (
-        <p className="text-white/35" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
+        <p className="text-fio" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
           {L('Nenhuma partida jogada.', 'No matches played.')}
         </p>
       ) : last5Local.length > 0 ? (
         <div className="mb-3">
           {hasGlobal && (
             <div
-              className="text-white/35 tracking-[0.18em] uppercase mb-1.5"
-              style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
+              className="text-fio tracking-[0.18em] uppercase mb-1.5"
+              style={{ fontFamily: 'var(--font-prova)', fontSize: '8px' }}
             >
               Local
             </div>
@@ -374,10 +374,10 @@ function FormWidget() {
             {last5Local.map((r, i) => (
               <div
                 key={i}
-                className={cn('flex items-center justify-center rounded-sm shrink-0', formColor(r))}
+                className={cn('flex items-center justify-center  shrink-0', formColor(r))}
                 style={{ width: 24, height: 24 }}
               >
-                <span className="text-black font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}>
+                <span className="text-asfalto-27 font-bold" style={{ fontFamily: 'var(--font-prova)', fontSize: '9px' }}>
                   {formLabel(r)}
                 </span>
               </div>
@@ -390,7 +390,7 @@ function FormWidget() {
         <div className="grid grid-cols-3 gap-1 text-center">
           {([
             { label: L('VITÓRIAS', 'WINS'), value: ranking.wins, color: 'text-alta' },
-            { label: L('EMPATES', 'DRAWS'), value: ranking.draws, color: 'text-giz' },
+            { label: L('EMPATES', 'DRAWS'), value: ranking.draws, color: 'text-papel' },
             { label: L('DERROTAS', 'LOSSES'), value: ranking.losses, color: 'text-baixa' },
           ] as const).map((s) => (
             <div key={s.label}>
@@ -401,8 +401,8 @@ function FormWidget() {
                 {s.value}
               </div>
               <div
-                className="text-white/45 tracking-[0.14em]"
-                style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
+                className="text-mudo tracking-[0.14em]"
+                style={{ fontFamily: 'var(--font-prova)', fontSize: '8px' }}
               >
                 {s.label}
               </div>
@@ -467,7 +467,7 @@ function RadarWidget() {
     <div>
       <SectionHeader label={L('PERFORMANCE · XI', 'PERFORMANCE · XI')} icon={Target} />
       {!hasLineup ? (
-        <p className="text-white/35" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
+        <p className="text-fio" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
           {L('Escala o teu plantel para ver o radar.', 'Pick your lineup to see the radar.')}
         </p>
       ) : (
@@ -477,7 +477,7 @@ function RadarWidget() {
           </div>
           <div className="flex-1 min-w-0">
             <div
-              className="ole-num tabular-nums text-white mb-2 leading-none"
+              className="ole-num tabular-nums text-papel mb-2 leading-none"
               style={{ fontSize: '26px' }}
             >
               {avgOvr}
@@ -486,19 +486,19 @@ function RadarWidget() {
               {barStats.map((s) => (
                 <div key={s.label} className="flex items-center gap-1.5">
                   <span
-                    className="text-white/55 w-7 shrink-0 tracking-[0.1em]"
-                    style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
+                    className="text-suave w-7 shrink-0 tracking-[0.1em]"
+                    style={{ fontFamily: 'var(--font-prova)', fontSize: '8px' }}
                   >
                     {s.label}
                   </span>
-                  <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div className="flex-1 h-1 bg-concreto rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-neon-yellow rounded-full"
+                      className="h-full bg-rua rounded-full"
                       style={{ width: `${s.value}%` }}
                     />
                   </div>
                   <span
-                    className="tabular-nums text-white/65 w-5 text-right shrink-0"
+                    className="tabular-nums text-suave w-5 text-right shrink-0"
                     style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}
                   >
                     {s.value}
@@ -567,7 +567,7 @@ function MarketWidget() {
     <div>
       <SectionHeader label={L('MERCADO · IA', 'MARKET · AI')} icon={Star} />
       {picks.length === 0 ? (
-        <p className="text-white/35" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
+        <p className="text-fio" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
           {L('Nenhum jogador disponível.', 'No players available.')}
         </p>
       ) : (
@@ -577,13 +577,13 @@ function MarketWidget() {
             return (
               <div
                 key={p.id}
-                className="flex items-center gap-2 border border-white/10 bg-white/[0.02] px-2 py-1.5"
-                style={{ borderRadius: 'var(--radius-sm)' }}
+                className="flex items-center gap-2 border border-linha bg-concreto px-2 py-1.5"
+                style={{ }}
               >
                 {/* Foto ou placeholder */}
                 <div
-                  className="shrink-0 flex items-center justify-center bg-white/5 border border-white/10"
-                  style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)' }}
+                  className="shrink-0 flex items-center justify-center bg-concreto border border-linha"
+                  style={{ width: 32, height: 32, }}
                 >
                   {p.portraitUrl ? (
                     <img
@@ -592,13 +592,12 @@ function MarketWidget() {
                       className="w-full h-full object-cover"
                       style={{
                         filter: 'grayscale(40%)',
-                        borderRadius: 'var(--radius-sm)',
                       }}
                     />
                   ) : (
                     <span
-                      className="text-neon-yellow font-bold"
-                      style={{ fontFamily: 'var(--font-display)', fontSize: '10px' }}
+                      className="text-rua font-bold"
+                      style={{ fontFamily: 'var(--font-prova)', fontSize: '10px' }}
                     >
                       {rotuloPosicao(p.pos)}
                     </span>
@@ -606,13 +605,13 @@ function MarketWidget() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div
-                    className="text-white/85 truncate tracking-wide uppercase"
-                    style={{ fontFamily: 'var(--font-display)', fontSize: '10px' }}
+                    className="text-papel truncate tracking-wide uppercase"
+                    style={{ fontFamily: 'var(--font-prova)', fontSize: '10px' }}
                   >
                     {p.name}
                   </div>
                   <div
-                    className="text-white/45 flex items-center gap-1.5"
+                    className="text-mudo flex items-center gap-1.5"
                     style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}
                   >
                     <span className="truncate">
@@ -631,7 +630,7 @@ function MarketWidget() {
                         <span
                           className={cn(
                             'inline-flex items-center gap-0.5 shrink-0 tabular-nums',
-                            up ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]',
+                            up ? 'text-alta' : 'text-baixa',
                           )}
                           title={L(`Variação no histórico de mercado: ${up ? '+' : ''}${pct.toFixed(1)}%`, `Market history change: ${up ? '+' : ''}${pct.toFixed(1)}%`)}
                         >
@@ -644,7 +643,7 @@ function MarketWidget() {
                   </div>
                 </div>
                 <div
-                  className="ole-num tabular-nums text-white shrink-0"
+                  className="ole-num tabular-nums text-papel shrink-0"
                   style={{ fontSize: '16px' }}
                 >
                   {playerOvr}
@@ -657,12 +656,11 @@ function MarketWidget() {
       <button
         type="button"
         onClick={() => navigate('/mercado')}
-        className="w-full border border-white/15 bg-white/[0.03] text-white/55 hover:border-neon-yellow/40 hover:text-white/85 transition-all text-center tracking-[0.22em] uppercase"
+        className="w-full border border-linha bg-concreto text-suave hover:border-rua hover:text-papel transition-all text-center tracking-[0.22em] uppercase"
         style={{
-          fontFamily: 'var(--font-display)',
+          fontFamily: 'var(--font-prova)',
           fontSize: '9px',
           padding: '6px 0',
-          borderRadius: 'var(--radius-sm)',
         }}
       >
         {L('VER MERCADO COMPLETO', 'VIEW FULL MARKET')}
@@ -1288,10 +1286,10 @@ function CoachInlineChat() {
     <div className="flex flex-col gap-2">
       {/* Knowledge badge */}
       {activeInstructions > 0 && (
-        <div className="flex items-center gap-1.5 px-2 py-1 border border-neon-yellow/20 bg-neon-yellow/[0.04]"
-          style={{ borderRadius: 'var(--radius-sm)' }}>
-          <Brain className="w-3 h-3 text-neon-yellow shrink-0" strokeWidth={2} />
-          <span className="text-neon-yellow/80" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>
+        <div className="flex items-center gap-1.5 px-2 py-1 border border-rua bg-concreto"
+          style={{ }}>
+          <Brain className="w-3 h-3 text-rua shrink-0" strokeWidth={2} />
+          <span className="text-rua" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>
             {L(`${activeInstructions} instrução${activeInstructions !== 1 ? 'ões' : ''} aprendida${activeInstructions !== 1 ? 's' : ''}`, `${activeInstructions} instruction${activeInstructions !== 1 ? 's' : ''} learned`)}
           </span>
         </div>
@@ -1307,16 +1305,16 @@ function CoachInlineChat() {
                 key={i}
                 className={cn(
                   'flex-1 h-0.5 rounded-full transition-all',
-                  i < effectiveStep ? 'bg-neon-yellow' : i === effectiveStep ? 'bg-neon-yellow/50' : 'bg-white/10',
+                  i < effectiveStep ? 'bg-rua' : i === effectiveStep ? 'bg-fio' : 'bg-linha',
                 )}
               />
             ))}
           </div>
 
           {/* Pergunta do coach */}
-          <div className="px-2.5 py-2 border border-white/10 bg-white/[0.03]"
-            style={{ borderRadius: 'var(--radius-sm)' }}>
-            <p className="text-white/80 leading-snug" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
+          <div className="px-2.5 py-2 border border-linha bg-concreto"
+            style={{ }}>
+            <p className="text-papel leading-snug" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
               {localMessages.length === 0
                 ? currentQ.question
                 : localMessages[localMessages.length - 1]?.role === 'assistant'
@@ -1333,8 +1331,8 @@ function CoachInlineChat() {
                   key={chip}
                   type="button"
                   onClick={() => currentQ.isHeartTeam ? handleHeartTeamAnswer(chip) : handleOnboardingAnswer(chip, effectiveStep)}
-                  className="px-2 py-1 border border-white/15 bg-white/[0.04] text-white/65 hover:border-neon-yellow/50 hover:text-neon-yellow/90 hover:bg-neon-yellow/[0.06] transition-all"
-                  style={{ borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: '10px' }}
+                  className="px-2 py-1 border border-linha bg-concreto text-suave hover:border-rua hover:text-rua hover:bg-concreto transition-all"
+                  style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}
                 >
                   {chip}
                 </button>
@@ -1343,7 +1341,7 @@ function CoachInlineChat() {
           )}
 
           {loading && (
-            <div className="flex items-center gap-1.5 text-white/40">
+            <div className="flex items-center gap-1.5 text-mudo">
               <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2} />
               <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>{L('Treinador respondendo…', 'Coach is replying…')}</span>
             </div>
@@ -1366,25 +1364,25 @@ function CoachInlineChat() {
                 className={cn(
                   'px-2.5 py-1.5 leading-snug',
                   m.role === 'user'
-                    ? 'self-end border border-neon-yellow/25 bg-neon-yellow/[0.06] text-white/85 ml-4'
-                    : 'self-start border border-white/10 bg-white/[0.03] text-white/70 mr-4',
+                    ? 'self-end border border-rua bg-concreto text-papel ml-4'
+                    : 'self-start border border-linha bg-concreto text-papel mr-4',
                 )}
-                style={{ borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: '11px', maxWidth: '90%' }}
+                style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', maxWidth: '90%' }}
               >
                 {m.content}
               </div>
             ))}
             {loading && (
-              <div className="self-start flex items-center gap-1.5 px-2.5 py-1.5 border border-white/10 bg-white/[0.03]"
-                style={{ borderRadius: 'var(--radius-sm)' }}>
-                <Loader2 className="w-3 h-3 animate-spin text-white/40" strokeWidth={2} />
-                <span className="text-white/35" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>{L('digitando…', 'typing…')}</span>
+              <div className="self-start flex items-center gap-1.5 px-2.5 py-1.5 border border-linha bg-concreto"
+                style={{ }}>
+                <Loader2 className="w-3 h-3 animate-spin text-mudo" strokeWidth={2} />
+                <span className="text-fio" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>{L('digitando…', 'typing…')}</span>
               </div>
             )}
           </div>
 
           {localMessages.length === 0 && !loading && (
-            <p className="text-white/30 text-center" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>
+            <p className="text-fio text-center" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>
               {L('Pergunte qualquer coisa ao seu treinador', 'Ask your coach anything')}
             </p>
           )}
@@ -1408,10 +1406,10 @@ function CoachInlineChat() {
               className={cn(
                 'flex items-center gap-1 px-2 py-1 border transition-all disabled:opacity-40 disabled:cursor-not-allowed',
                 chip.action
-                  ? 'border-neon-yellow/25 bg-neon-yellow/[0.05] text-neon-yellow/85 hover:border-neon-yellow/50 hover:bg-neon-yellow/[0.09]'
-                  : 'border-white/15 bg-white/[0.04] text-white/65 hover:border-white/30 hover:text-white/85',
+                  ? 'border-rua bg-concreto text-rua hover:border-rua hover:bg-concreto'
+                  : 'border-linha bg-concreto text-suave hover:border-fio hover:text-papel',
               )}
-              style={{ borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: '10px' }}
+              style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}
             >
               {chip.action && <Zap className="w-2.5 h-2.5 shrink-0" strokeWidth={2} />}
               {chip.label}
@@ -1421,7 +1419,7 @@ function CoachInlineChat() {
       )}
 
       {suggestingAction && (
-        <div className="flex items-center gap-1.5 text-white/40">
+        <div className="flex items-center gap-1.5 text-mudo">
           <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2} />
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>{L('Preparando sugestão…', 'Preparing suggestion…')}</span>
         </div>
@@ -1429,8 +1427,8 @@ function CoachInlineChat() {
 
       {/* Input — aparece sempre (onboarding: texto livre opcional; chat: principal) */}
       <div
-        className="flex items-end gap-1.5 border border-white/10 bg-white/[0.03] px-2 py-1.5 focus-within:border-neon-yellow/40 transition-colors"
-        style={{ borderRadius: 'var(--radius-sm)' }}
+        className="flex items-end gap-1.5 border border-linha bg-concreto px-2 py-1.5 focus-within:border-rua transition-colors"
+        style={{ }}
       >
         <textarea
           ref={inputRef}
@@ -1451,7 +1449,7 @@ function CoachInlineChat() {
           placeholder={isOnboarding ? L('Ou escreva sua resposta…', 'Or type your answer…') : L('Fale com seu treinador…', 'Talk to your coach…')}
           rows={2}
           disabled={loading}
-          className="flex-1 bg-transparent text-white/85 placeholder:text-white/25 outline-none resize-none leading-snug min-w-0 disabled:opacity-50"
+          className="flex-1 bg-transparent text-papel placeholder:text-fio outline-none resize-none leading-snug min-w-0 disabled:opacity-50"
           style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}
         />
         <button
@@ -1468,8 +1466,8 @@ function CoachInlineChat() {
           className={cn(
             'flex items-center justify-center shrink-0 mb-0.5 transition-all',
             input.trim() && !loading
-              ? 'text-neon-yellow hover:text-white'
-              : 'text-white/20 cursor-not-allowed',
+              ? 'text-rua hover:text-papel'
+              : 'text-fio cursor-not-allowed',
           )}
           aria-label={L('Enviar', 'Send')}
         >
@@ -1530,8 +1528,8 @@ function ManagerContactPicker({
   return (
     <div className="space-y-2">
       <p
-        className="text-white/45 tracking-[0.18em] uppercase"
-        style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}
+        className="text-mudo tracking-[0.18em] uppercase"
+        style={{ fontFamily: 'var(--font-prova)', fontSize: '9px' }}
       >
         {L('Com quem quer falar?', 'Who do you want to talk to?')}
       </p>
@@ -1546,22 +1544,22 @@ function ManagerContactPicker({
               <button
                 type="button"
                 onClick={() => onSelect(f.username)}
-                className="flex flex-1 items-center gap-2 px-2 py-1.5 border border-white/10 bg-white/[0.03] hover:border-neon-yellow/40 hover:bg-neon-yellow/[0.04] transition-all text-left"
-                style={{ borderRadius: 'var(--radius-sm)' }}
+                className="flex flex-1 items-center gap-2 px-2 py-1.5 border border-linha bg-concreto hover:border-rua hover:bg-concreto transition-all text-left"
+                style={{ }}
               >
-                <AtSign className="w-3 h-3 text-neon-yellow shrink-0" strokeWidth={2} />
+                <AtSign className="w-3 h-3 text-rua shrink-0" strokeWidth={2} />
                 <span
-                  className="flex-1 text-white/75 tabular-nums"
+                  className="flex-1 text-papel tabular-nums"
                   style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}
                 >
                   {f.username}
                 </span>
-                <ChevronRight className="w-3 h-3 text-white/25 shrink-0" strokeWidth={2} />
+                <ChevronRight className="w-3 h-3 text-fio shrink-0" strokeWidth={2} />
               </button>
               <button
                 type="button"
                 onClick={() => onRemove(f.username)}
-                className="opacity-0 group-hover:opacity-100 text-white/25 hover:text-red-400 transition-all p-1"
+                className="opacity-0 group-hover:opacity-100 text-fio hover:text-red-400 transition-all p-1"
                 aria-label={L('Remover amigo', 'Remove friend')}
               >
                 <X className="w-3 h-3" strokeWidth={2} />
@@ -1573,7 +1571,7 @@ function ManagerContactPicker({
 
       {friends.length === 0 && !addMode && (
         <p
-          className="text-white/35 py-1"
+          className="text-fio py-1"
           style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}
         >
           {L('Nenhum amigo adicionado ainda.', 'No friends added yet.')}
@@ -1583,10 +1581,10 @@ function ManagerContactPicker({
       {addMode ? (
         <div className="space-y-1.5">
           <div className="flex items-center gap-1.5">
-            <div className="flex flex-1 items-center gap-1 border border-neon-yellow/40 bg-white/[0.04] px-2"
-              style={{ borderRadius: 'var(--radius-sm)' }}
+            <div className="flex flex-1 items-center gap-1 border border-rua bg-concreto px-2"
+              style={{ }}
             >
-              <AtSign className="w-3 h-3 text-neon-yellow/70 shrink-0" strokeWidth={2} />
+              <AtSign className="w-3 h-3 text-rua shrink-0" strokeWidth={2} />
               <input
                 ref={inputRef}
                 type="text"
@@ -1595,7 +1593,7 @@ function ManagerContactPicker({
                 onKeyDown={(e) => { if (e.key === 'Enter') void handleAdd(); if (e.key === 'Escape') setAddMode(false); }}
                 placeholder={L('nomedeusuario', 'username')}
                 disabled={addBusy}
-                className="flex-1 bg-transparent text-white/85 placeholder:text-white/25 outline-none min-w-0"
+                className="flex-1 bg-transparent text-papel placeholder:text-fio outline-none min-w-0"
                 style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', padding: '6px 0' }}
                 autoFocus
               />
@@ -1605,10 +1603,10 @@ function ManagerContactPicker({
               onClick={() => void handleAdd()}
               disabled={addBusy}
               className={cn(
-                'flex items-center justify-center bg-neon-yellow text-black transition-all shrink-0',
-                addBusy ? 'opacity-50' : 'hover:brightness-105 active:scale-[0.97]',
+                'flex items-center justify-center bg-rua text-asfalto-27 transition-all shrink-0',
+                addBusy ? 'opacity-50' : 'hover:bg-papel',
               )}
-              style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)' }}
+              style={{ width: 30, height: 30, }}
               aria-label={L('Confirmar', 'Confirm')}
             >
               {addBusy
@@ -1618,8 +1616,8 @@ function ManagerContactPicker({
             <button
               type="button"
               onClick={() => { setAddMode(false); setAddError(''); setAddInput(''); }}
-              className="flex items-center justify-center border border-white/15 text-white/45 hover:text-white/75 transition-all shrink-0"
-              style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)' }}
+              className="flex items-center justify-center border border-linha text-mudo hover:text-papel transition-all shrink-0"
+              style={{ width: 30, height: 30, }}
               aria-label={L('Cancelar', 'Cancel')}
             >
               <X className="w-3.5 h-3.5" strokeWidth={2} />
@@ -1635,8 +1633,8 @@ function ManagerContactPicker({
         <button
           type="button"
           onClick={() => { setAddMode(true); }}
-          className="flex items-center gap-1.5 text-white/45 hover:text-neon-yellow transition-colors"
-          style={{ fontFamily: 'var(--font-display)', fontSize: '9px', letterSpacing: '0.18em' }}
+          className="flex items-center gap-1.5 text-mudo hover:text-rua transition-colors"
+          style={{ fontFamily: 'var(--font-prova)', fontSize: '9px', letterSpacing: '0.18em' }}
         >
           <UserPlus className="w-3 h-3" strokeWidth={2} />
           {L('+ ADICIONAR AMIGO', '+ ADD FRIEND')}
@@ -1701,7 +1699,7 @@ function ChatPanel() {
     (mode === 'support' || (mode === 'manager' && selectedFriend !== null));
 
   return (
-    <div className="border-t border-white/10 pt-3 space-y-3">
+    <div className="border-t border-linha pt-3 space-y-3">
       {/* Tab selector */}
       <div className="flex gap-1">
         {CHAT_TABS.map(({ mode: m, Icon, label }) => {
@@ -1714,22 +1712,22 @@ function ChatPanel() {
               className={cn(
                 'flex flex-1 flex-col items-center gap-1 py-2 border transition-all relative',
                 active
-                  ? 'border-neon-yellow/60 bg-neon-yellow/[0.07] text-neon-yellow'
-                  : 'border-white/10 bg-white/[0.02] text-white/40 hover:border-white/20 hover:text-white/60',
+                  ? 'border-rua bg-concreto text-rua'
+                  : 'border-linha bg-concreto text-mudo hover:border-linha hover:text-suave',
               )}
-              style={{ borderRadius: 'var(--radius-sm)' }}
+              style={{ }}
             >
               <Icon className="w-3.5 h-3.5" strokeWidth={active ? 2.5 : 2} />
               <span
                 className="tracking-[0.15em]"
-                style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
+                style={{ fontFamily: 'var(--font-prova)', fontSize: '8px' }}
               >
                 {label}
               </span>
               {/* Badge de conhecimento no tab do treinador */}
               {m === 'coach' && activeInstructions > 0 && (
                 <span
-                  className="absolute -top-1 -right-1 flex items-center justify-center bg-neon-yellow text-black font-bold rounded-full"
+                  className="absolute -top-1 -right-1 flex items-center justify-center bg-rua text-asfalto-27 font-bold rounded-full"
                   style={{ width: 14, height: 14, fontFamily: 'var(--font-display)', fontSize: '7px' }}
                 >
                   {activeInstructions > 9 ? '9+' : activeInstructions}
@@ -1758,22 +1756,22 @@ function ChatPanel() {
         <div className="space-y-1">
           <div className="flex items-center gap-1.5">
             <div
-              className="flex flex-1 items-center gap-1 border border-white/10 bg-white/[0.03] px-2"
-              style={{ borderRadius: 'var(--radius-sm)' }}
+              className="flex flex-1 items-center gap-1 border border-linha bg-concreto px-2"
+              style={{ }}
             >
-              <AtSign className="w-3 h-3 text-white/30 shrink-0" strokeWidth={2} />
+              <AtSign className="w-3 h-3 text-fio shrink-0" strokeWidth={2} />
               <input
                 type="text"
                 value={atInput}
                 onChange={(e) => { setAtInput(e.target.value); setAtError(''); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleManagerConfirm(); }}
                 placeholder={L('ou digitar @usuário', 'or type @username')}
-                className="flex-1 bg-transparent text-white/65 placeholder:text-white/25 outline-none min-w-0"
+                className="flex-1 bg-transparent text-suave placeholder:text-fio outline-none min-w-0"
                 style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', padding: '5px 0' }}
               />
               {atInput && (
                 <button type="button" onClick={handleManagerConfirm}
-                  className="text-neon-yellow hover:brightness-110 transition-all shrink-0">
+                  className="text-rua hover:text-papel transition-all shrink-0">
                   <ChevronRight className="w-3.5 h-3.5" strokeWidth={2.5} />
                 </button>
               )}
@@ -1791,12 +1789,12 @@ function ChatPanel() {
       {mode === 'manager' && selectedFriend && (
         <div className="flex items-center gap-2">
           <div
-            className="flex flex-1 items-center gap-1.5 px-2 py-1.5 border border-neon-yellow/30 bg-neon-yellow/[0.05]"
-            style={{ borderRadius: 'var(--radius-sm)' }}
+            className="flex flex-1 items-center gap-1.5 px-2 py-1.5 border border-rua bg-concreto"
+            style={{ }}
           >
-            <AtSign className="w-3 h-3 text-neon-yellow shrink-0" strokeWidth={2} />
+            <AtSign className="w-3 h-3 text-rua shrink-0" strokeWidth={2} />
             <span
-              className="flex-1 text-neon-yellow tabular-nums"
+              className="flex-1 text-rua tabular-nums"
               style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600 }}
             >
               {selectedFriend}
@@ -1806,8 +1804,8 @@ function ChatPanel() {
           <button
             type="button"
             onClick={() => { setSelectedFriend(null); setMessage(''); }}
-            className="flex items-center justify-center border border-white/15 text-white/40 hover:text-white/70 transition-all shrink-0"
-            style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)' }}
+            className="flex items-center justify-center border border-linha text-mudo hover:text-papel transition-all shrink-0"
+            style={{ width: 30, height: 30, }}
             aria-label={L('Trocar destinatário', 'Change recipient')}
           >
             <X className="w-3.5 h-3.5" strokeWidth={2} />
@@ -1818,8 +1816,8 @@ function ChatPanel() {
       {/* Message input — só para support e manager (coach tem CoachInlineChat) */}
       {(mode === 'support' || (mode === 'manager' && selectedFriend)) && (
         <div
-          className="flex items-end gap-1.5 border border-white/10 bg-white/[0.03] px-2 py-1.5 focus-within:border-neon-yellow/40 transition-colors"
-          style={{ borderRadius: 'var(--radius-sm)' }}
+          className="flex items-end gap-1.5 border border-linha bg-concreto px-2 py-1.5 focus-within:border-rua transition-colors"
+          style={{ }}
         >
           <textarea
             ref={msgRef}
@@ -1833,7 +1831,7 @@ function ChatPanel() {
             }}
             placeholder={placeholders[mode]}
             rows={2}
-            className="flex-1 bg-transparent text-white/85 placeholder:text-white/25 outline-none resize-none leading-snug min-w-0"
+            className="flex-1 bg-transparent text-papel placeholder:text-fio outline-none resize-none leading-snug min-w-0"
             style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}
           />
           <button
@@ -1843,8 +1841,8 @@ function ChatPanel() {
             className={cn(
               'flex items-center justify-center shrink-0 mb-0.5 transition-all',
               canSend
-                ? 'text-neon-yellow hover:text-white'
-                : 'text-white/20 cursor-not-allowed',
+                ? 'text-rua hover:text-papel'
+                : 'text-fio cursor-not-allowed',
             )}
             aria-label={L('Enviar', 'Send')}
           >
@@ -1867,14 +1865,14 @@ function HubHeader({ onClose }: { onClose?: () => void }) {
   return (
     <div className="shrink-0">
       {/* Filete de topo — chapado */}
-      <span aria-hidden className="block h-px bg-white/10" />
+      <span aria-hidden className="block h-px bg-concreto" />
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-neon-yellow" strokeWidth={2.5} />
+            <Zap className="w-4 h-4 text-rua" strokeWidth={2.5} />
             <span
-              className="text-white/85 tracking-[0.18em] uppercase"
-              style={{ fontFamily: 'var(--font-display)', fontSize: '10px' }}
+              className="text-papel tracking-[0.18em] uppercase"
+              style={{ fontFamily: 'var(--font-prova)', fontSize: '10px' }}
             >
               OLEFOOT · SMART HUB
             </span>
@@ -1883,7 +1881,7 @@ function HubHeader({ onClose }: { onClose?: () => void }) {
             <button
               type="button"
               onClick={onClose}
-              className="text-white/45 hover:text-white transition-colors p-0.5"
+              className="text-mudo hover:text-papel transition-colors p-0.5"
               aria-label={L('Fechar hub', 'Close hub')}
             >
               <X className="w-4 h-4" strokeWidth={2} />
@@ -1894,7 +1892,7 @@ function HubHeader({ onClose }: { onClose?: () => void }) {
           <div className="min-w-0">
             {managerFirst && (
               <span
-                className="font-impact uppercase text-white leading-[1.1] block"
+                className="font-impact uppercase text-papel leading-[1.1] block"
                 style={{ fontSize: '17px' }}
               >
                 {managerFirst}
@@ -1902,7 +1900,7 @@ function HubHeader({ onClose }: { onClose?: () => void }) {
             )}
             {myUsername && (
               <span
-                className="text-white/40 tabular-nums block mt-0.5"
+                className="text-mudo tabular-nums block mt-0.5"
                 style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}
               >
                 @{myUsername}
@@ -1910,7 +1908,7 @@ function HubHeader({ onClose }: { onClose?: () => void }) {
             )}
           </div>
           <span
-            className="font-mono font-medium tabular-nums text-white ml-auto"
+            className="font-prova font-medium tabular-nums text-papel ml-auto"
             style={{ fontSize: '14px' }}
           >
             {formatOle(expBalance)} EXP
@@ -1983,7 +1981,7 @@ function ScoutsStatusWidget() {
       ? 'border-l-[var(--color-danger)]'
       : alerts > 0
         ? 'border-l-[var(--color-warning)]'
-        : 'border-l-neon-yellow';
+        : 'border-l-rua';
 
   return (
     <motion.button
@@ -1992,21 +1990,21 @@ function ScoutsStatusWidget() {
       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
       onClick={() => navigate('/manager/scouts')}
       className={cn(
-        'group w-full text-left border border-l-[3px] border-white/10 bg-[var(--color-card)] p-3 transition-colors',
-        'hover:border-neon-yellow/40',
+        'group w-full text-left border border-l-[3px] border-linha bg-concreto p-3 transition-colors',
+        'hover:border-rua',
         railColor,
       )}
-      style={{ borderRadius: 'var(--radius-md)' }}
+      style={{ }}
       aria-label={L('Abrir painel SCOUTS', 'Open SCOUTS panel')}
     >
       {/* Eyebrow */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5">
-          <span aria-hidden className="block h-px w-4 bg-neon-yellow/55" />
+          <span aria-hidden className="block h-px w-4 bg-concreto" />
           <span
-            className="text-neon-yellow"
+            className="text-rua"
             style={{
-              fontFamily: 'var(--font-display)',
+              fontFamily: 'var(--font-prova)',
               fontWeight: 800,
               fontSize: '9px',
               letterSpacing: '0.32em',
@@ -2018,7 +2016,7 @@ function ScoutsStatusWidget() {
         </div>
         <ChevronRight
           size={12}
-          className="text-white/30 group-hover:text-neon-yellow transition shrink-0"
+          className="text-fio group-hover:text-rua transition shrink-0"
         />
       </div>
 
@@ -2028,7 +2026,7 @@ function ScoutsStatusWidget() {
           <span
             className={cn(
               'leading-none tabular-nums',
-              unavailable > 0 ? 'text-[var(--color-danger)]' : 'text-white/70',
+              unavailable > 0 ? 'text-baixa' : 'text-papel',
             )}
             style={{
               fontFamily: 'var(--font-num)',
@@ -2040,9 +2038,9 @@ function ScoutsStatusWidget() {
             {unavailable}
           </span>
           <span
-            className="text-white/45 mt-1"
+            className="text-mudo mt-1"
             style={{
-              fontFamily: 'var(--font-display)',
+              fontFamily: 'var(--font-prova)',
               fontWeight: 800,
               fontSize: '8px',
               letterSpacing: '0.22em',
@@ -2057,10 +2055,10 @@ function ScoutsStatusWidget() {
             className={cn(
               'leading-none tabular-nums',
               alerts > 3
-                ? 'text-[var(--color-danger)]'
+                ? 'text-baixa'
                 : alerts > 0
                   ? 'text-[var(--color-warning)]'
-                  : 'text-white/70',
+                  : 'text-papel',
             )}
             style={{
               fontFamily: 'var(--font-num)',
@@ -2072,9 +2070,9 @@ function ScoutsStatusWidget() {
             {alerts}
           </span>
           <span
-            className="text-white/45 mt-1"
+            className="text-mudo mt-1"
             style={{
-              fontFamily: 'var(--font-display)',
+              fontFamily: 'var(--font-prova)',
               fontWeight: 800,
               fontSize: '8px',
               letterSpacing: '0.22em',
@@ -2088,7 +2086,7 @@ function ScoutsStatusWidget() {
           <span
             className={cn(
               'leading-none tabular-nums',
-              celebrations > 0 ? 'text-[var(--color-success)]' : 'text-white/70',
+              celebrations > 0 ? 'text-alta' : 'text-papel',
             )}
             style={{
               fontFamily: 'var(--font-num)',
@@ -2100,9 +2098,9 @@ function ScoutsStatusWidget() {
             {celebrations}
           </span>
           <span
-            className="text-white/45 mt-1"
+            className="text-mudo mt-1"
             style={{
-              fontFamily: 'var(--font-display)',
+              fontFamily: 'var(--font-prova)',
               fontWeight: 800,
               fontSize: '8px',
               letterSpacing: '0.22em',
@@ -2117,16 +2115,16 @@ function ScoutsStatusWidget() {
       {/* Hint da consequência mais urgente */}
       {mostUrgent && (
         <div
-          className="flex items-center gap-1.5 pt-2 border-t border-white/5 text-white/55"
+          className="flex items-center gap-1.5 pt-2 border-t border-linha text-suave"
           style={{ fontFamily: 'var(--font-ui)', fontSize: '10px' }}
         >
           <Timer size={9} className="opacity-50" />
           <span className="truncate">
-            <span className="text-white/85">{mostUrgent.name}</span> · {L('expira em', 'expires in')}{' '}
+            <span className="text-papel">{mostUrgent.name}</span> · {L('expira em', 'expires in')}{' '}
             <span
-              className="text-white/85 tabular-nums"
+              className="text-papel tabular-nums"
               style={{
-                fontFamily: 'var(--font-mono)',
+                fontFamily: 'var(--font-prova)',
                 fontWeight: 500,
               }}
             >
@@ -2170,16 +2168,16 @@ function HubQuickMenu() {
             type="button"
             whileTap={{ scale: 0.97 }}
             onClick={() => navigate(to)}
-            className="group flex items-center gap-2.5 border border-white/10 bg-panel px-3 transition-colors hover:border-white/30"
-            style={{ minHeight: 56, borderRadius: 'var(--radius-md)' }}
+            className="group flex items-center gap-2.5 border border-linha bg-concreto px-3 transition-colors hover:border-fio"
+            style={{ minHeight: 56, }}
           >
             <Icon
-              className="w-[18px] h-[18px] text-neon-yellow shrink-0"
+              className="w-[18px] h-[18px] text-rua shrink-0"
               strokeWidth={2}
             />
             <span
-              className="text-white/70 group-hover:text-white text-left leading-tight tracking-[0.14em] uppercase transition-colors"
-              style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}
+              className="text-papel group-hover:text-papel text-left leading-tight tracking-[0.14em] uppercase transition-colors"
+              style={{ fontFamily: 'var(--font-prova)', fontSize: '9px' }}
             >
               {label}
             </span>
@@ -2195,8 +2193,8 @@ function HubQuickMenu() {
 function HubCard({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="border border-white/10 bg-[var(--color-card)] p-4"
-      style={{ borderRadius: 'var(--radius-md)' }}
+      className="border border-linha bg-concreto p-4"
+      style={{ }}
     >
       {children}
     </div>
@@ -2205,7 +2203,7 @@ function HubCard({ children }: { children: React.ReactNode }) {
 
 function HubBody({ onClose }: { onClose?: () => void }) {
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-deep-black border-l border-white/10">
+    <div className="flex flex-col h-full overflow-hidden bg-asfalto-27 border-l border-linha">
       <HubHeader onClose={onClose} />
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
@@ -2237,7 +2235,7 @@ function HubBody({ onClose }: { onClose?: () => void }) {
 /** Painel desktop fixo (xl+), lado direito, w-72, fixed right-0 top-0 h-screen z-40 */
 export function OleSmartHubPanel() {
   return (
-    <div className="hidden xl:flex fixed right-2 top-2 bottom-2 w-72 z-40 flex-col rounded-xl overflow-hidden">
+    <div className="hidden xl:flex fixed right-2 top-2 bottom-2 w-72 z-40 flex-col  overflow-hidden">
       <HubBody />
     </div>
   );
@@ -2291,12 +2289,12 @@ export function OleSmartHubTrigger({
     <button
       type="button"
       onClick={onClick}
-      className="xl:hidden relative flex h-10 w-10 items-center justify-center border border-white/16 bg-nav text-white/80 transition-colors hover:border-white hover:text-white"
+      className="xl:hidden relative flex h-10 w-10 items-center justify-center border border-linha bg-nav text-papel transition-colors hover:border-papel hover:text-papel"
       aria-label={L('Abrir Smart Hub', 'Open Smart Hub')}
     >
       <Zap className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={2.25} />
       {hasActivity && (
-        <span className="absolute top-2 right-2 h-2 w-2 bg-neon-yellow" />
+        <span className="absolute top-2 right-2 h-2 w-2 bg-rua" />
       )}
     </button>
   );

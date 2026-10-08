@@ -2,7 +2,7 @@
  * Badge unificado de status do jogador — chip compacto com hierarquia clara.
  *
  * Hierarquia (do mais grave pro mais leve, primeiro vencedor exibe):
- *   1. contract_expired  ← preto/zinc — bloqueia escalação
+ *   1. contract_expired  ← chão tracejado — bloqueia escalação
  *   2. injured           ← danger     — fora N jogos por lesão
  *   3. suspended         ← warning    — fora N jogos por suspensão
  *   4. exhausted         ← warning    — fadiga ≥ 75%
@@ -10,9 +10,8 @@
  *   6. injury_risk       ← warning    — injuryRisk ≥ 70
  *   ─ default: nada renderiza (jogador saudável)
  *
- * Tokens usados (zero hex hardcode):
- *   var(--color-danger), var(--color-warning), var(--color-info),
- *   var(--font-display), var(--radius-sm)
+ * DS 2027: selo quadrado em A PROVA (Geist Mono); estado de jogo usa só
+ * baixa (vermelho) e atenção (laranja); contrato vencido é CHÃO (tracejado).
  *
  * Variantes de tamanho:
  *   - 'sm' (default) — uso em lista de plantel (compacto, ao lado do nome)
@@ -51,8 +50,7 @@ function classifyPlayer(p: PlayerEntity, h: PlayerHealth | undefined): BadgeConf
       Icon: Ban,
       label: L('Contrato', 'Contract'),
       detail: L('vencido', 'expired'),
-      className:
-        'bg-[var(--color-deep-black)]/70 text-zinc-200 border-zinc-500/60',
+      className: 'bg-asfalto-27 text-suave border-dashed border-fio',
       tooltip: L('Contrato vencido — jogador não pode entrar em XI oficial. Renove pra reativar.', 'Contract expired — player can’t be in an official XI. Renew to reactivate.'),
     };
   }
@@ -65,8 +63,7 @@ function classifyPlayer(p: PlayerEntity, h: PlayerHealth | undefined): BadgeConf
       Icon: Activity,
       label: severityLabel,
       detail: L(`${outForMatches}j`, `${outForMatches}g`),
-      className:
-        'bg-[var(--color-danger)]/12 text-[var(--color-danger)] border-[var(--color-danger)]/40',
+      className: 'bg-baixa/12 text-baixa border-baixa/50',
       tooltip: L(`${severityLabel} — ${outForMatches} jogo${outForMatches === 1 ? '' : 's'} de recuperação restante${outForMatches === 1 ? '' : 's'}.`, `${severityLabel} — ${outForMatches} game${outForMatches === 1 ? '' : 's'} of recovery left.`),
     };
   }
@@ -78,8 +75,7 @@ function classifyPlayer(p: PlayerEntity, h: PlayerHealth | undefined): BadgeConf
       Icon: ShieldOff,
       label: L('Suspenso', 'Suspended'),
       detail: L(`${suspended}j`, `${suspended}g`),
-      className:
-        'bg-[var(--color-warning)]/14 text-[var(--color-warning)] border-[var(--color-warning)]/50',
+      className: 'bg-atencao/10 text-atencao border-atencao/50',
       tooltip: L(`Suspenso por ${suspended} jogo${suspended === 1 ? '' : 's'} oficial${suspended === 1 ? '' : 's'}.`, `Suspended for ${suspended} official game${suspended === 1 ? '' : 's'}.`),
     };
   }
@@ -91,8 +87,7 @@ function classifyPlayer(p: PlayerEntity, h: PlayerHealth | undefined): BadgeConf
       Icon: Flame,
       label: L('Fadiga', 'Fatigue'),
       detail: `${Math.round(fatigue)}%`,
-      className:
-        'bg-[var(--color-warning)]/12 text-[var(--color-warning)] border-[var(--color-warning)]/40',
+      className: 'bg-atencao/10 text-atencao border-atencao/50',
       tooltip: L(`Fadiga em ${Math.round(fatigue)}%. Ainda escalável, mas considere poupar pra evitar lesão.`, `Fatigue at ${Math.round(fatigue)}%. Still selectable, but consider resting him to avoid injury.`),
     };
   }
@@ -110,8 +105,7 @@ function classifyPlayer(p: PlayerEntity, h: PlayerHealth | undefined): BadgeConf
         Icon: Coins,
         label: L('Contrato', 'Contract'),
         detail: L(`${p.contractMatchesRemaining}j`, `${p.contractMatchesRemaining}g`),
-        className:
-          'bg-[var(--color-warning)]/12 text-[var(--color-warning)] border-[var(--color-warning)]/40',
+        className: 'bg-atencao/10 text-atencao border-atencao/50',
         tooltip: L(`Contrato perto do fim: ${p.contractMatchesRemaining} jogo${p.contractMatchesRemaining === 1 ? '' : 's'} restante${p.contractMatchesRemaining === 1 ? '' : 's'} de ${p.contractMatchesIncluded}. Renove em breve.`, `Contract ending: ${p.contractMatchesRemaining} of ${p.contractMatchesIncluded} game${p.contractMatchesIncluded === 1 ? '' : 's'} left. Renew soon.`),
       };
     }
@@ -124,8 +118,7 @@ function classifyPlayer(p: PlayerEntity, h: PlayerHealth | undefined): BadgeConf
       Icon: AlertTriangle,
       label: L('Risco', 'Risk'),
       detail: `${Math.round(injuryRisk)}`,
-      className:
-        'bg-[var(--color-warning)]/12 text-[var(--color-warning)] border-[var(--color-warning)]/40',
+      className: 'bg-atencao/10 text-atencao border-atencao/50',
       tooltip: L(`Risco de lesão acumulado em ${Math.round(injuryRisk)}/100. Considere dar descanso ou priorizar recuperação.`, `Accumulated injury risk at ${Math.round(injuryRisk)}/100. Consider rest or prioritising recovery.`),
     };
   }
@@ -148,28 +141,18 @@ export function PlayerStatusBadge({ player, health, size = 'sm', className }: Pr
   return (
     <span
       className={cn(
-        'shrink-0 inline-flex items-center gap-1 border uppercase',
-        isMd ? 'px-2 py-1' : 'px-1.5 py-0.5',
+        'shrink-0 inline-flex items-center gap-1 border-2 font-prova font-bold uppercase',
+        isMd ? 'px-2 py-1 text-[10.5px] tracking-[0.12em]' : 'px-1.5 py-0.5 text-[9.5px] tracking-[0.1em]',
         cfg.className,
         className,
       )}
-      style={{
-        borderRadius: 'var(--radius-sm)',
-        fontFamily: 'var(--font-display)',
-        fontSize: isMd ? '10px' : '9px',
-        fontWeight: 700,
-        letterSpacing: '0.18em',
-      }}
       title={cfg.tooltip}
       aria-label={cfg.tooltip}
     >
       <cfg.Icon size={isMd ? 12 : 10} aria-hidden />
       <span className="leading-none">{cfg.label}</span>
       {cfg.detail && (
-        <span
-          className="tabular-nums leading-none opacity-90"
-          style={{ fontWeight: 800 }}
-        >
+        <span className="tabular-nums leading-none opacity-90">
           {cfg.detail}
         </span>
       )}

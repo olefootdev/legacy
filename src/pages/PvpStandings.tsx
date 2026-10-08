@@ -7,14 +7,15 @@
  */
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Trophy, Zap, Target } from 'lucide-react';
+import { Zap, Target } from 'lucide-react';
 import { fetchPvpStandings, type PvpStandingRow, type PvpMatchMode } from '@/supabase/pvpMatches';
 import { localCrestUrl } from '@/settings/crestUrl';
 import { cn } from '@/lib/utils';
 import { BackButton } from '@/components/BackButton';
-import { Hashtag } from '@/components/ui';
+import { SecaoRua } from '@/components/ui/Rua';
+import { AbasRua, CabecalhoRua, FaltaRua, VazioRua, posRua } from '@/components/leagues/RuaTabela';
 import { useGameStore } from '@/game/store';
-import { L } from '@/i18n/L';
+import { L, LOCALE } from '@/i18n/L';
 
 const MODE_LABEL: Record<PvpMatchMode, string> = {
   quick: L('Liga Rápida', 'Quick League'),
@@ -41,146 +42,130 @@ export function PvpStandings() {
     };
   }, [mode]);
 
+  const myIdx = rows.findIndex((r) => !!r.clubName && r.clubName === myClubName);
+  const me = myIdx >= 0 ? rows[myIdx] : null;
+  const above = myIdx > 0 ? rows[myIdx - 1] : null;
+  const gapAbove = me && above ? Math.max(0, above.points - me.points) : null;
+
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 py-6 space-y-5">
+    <div className="mx-auto w-full min-w-0 max-w-5xl space-y-8 overflow-x-hidden px-3 py-6 sm:px-4">
       <BackButton to="/competicao" label={L('Competição', 'Competition')} />
 
-      {/* Header */}
-      <header className="space-y-2">
-        <Hashtag className="text-neon-yellow">{L('#pvp · classificação', '#pvp · standings')}</Hashtag>
-        <h1
-          className="truncate font-impact uppercase text-white"
-          style={{ fontSize: 'clamp(32px, 6vw, 56px)', lineHeight: 1.1 }}
-        >
-          {MODE_LABEL[mode]}
-        </h1>
-      </header>
+      <CabecalhoRua
+        rotulo={L('#pvp · classificação', '#pvp · standings')}
+        titulo={MODE_LABEL[mode]}
+        voz={L('Vitória vale 3. Respeito vale mais.', 'A win is worth 3. Respect is worth more.')}
+      />
 
-      {/* Mode tabs */}
-      <div className="inline-flex border border-white/16">
-        {(['quick', 'classic'] as PvpMatchMode[]).map((m) => {
-          const active = m === mode;
+      <AbasRua
+        ariaLabel={L('Modo', 'Mode')}
+        ativa={mode}
+        onChange={setMode}
+        abas={(['quick', 'classic'] as PvpMatchMode[]).map((m) => {
           const Icon = m === 'quick' ? Zap : Target;
-          return (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              className={cn(
-                'ole-num inline-flex h-10 items-center gap-1.5 whitespace-nowrap px-3 text-[11px] uppercase transition-colors sm:px-4 sm:text-[12px]',
-                active
-                  ? 'bg-neon-yellow text-black'
-                  : 'bg-transparent text-cimento hover:text-white',
-              )}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {MODE_LABEL[m]}
-            </button>
-          );
+          return {
+            id: m,
+            label: (
+              <span className="inline-flex items-center gap-2">
+                <Icon aria-hidden className="h-4 w-4" />
+                {MODE_LABEL[m]}
+              </span>
+            ),
+          };
         })}
-      </div>
+      />
 
       {loading ? (
-        <div className="bg-panel border border-dashed border-white/10 p-6 text-center">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-cimento">{L('Carregando classificação…', 'Loading standings…')}</p>
+        <div className="border-2 border-dashed border-fio p-6">
+          <p className="font-prova text-[12px] uppercase tracking-[0.14em] text-mudo">{L('Carregando classificação…', 'Loading standings…')}</p>
         </div>
       ) : rows.length === 0 ? (
-        <div className="bg-panel border border-dashed border-white/10 p-8 text-center space-y-3">
-          <Trophy className="w-10 h-10 text-poeira mx-auto" />
-          <p className="text-sm text-cimento">{L('Nenhuma partida nesta liga ainda.', 'No matches in this league yet.')}</p>
-        </div>
+        <VazioRua titulo={L('Tabela em branco', 'Blank table')} frase={L('Nenhuma partida nesta liga ainda. A primeira é tua.', 'No matches in this league yet. The first one is yours.')} />
       ) : (
-        <div className="bg-panel border border-white/10 overflow-x-auto">
-          {/* 8 colunas não cabem em 320px: a tabela rola dentro do card, a página não. */}
-          {/* Header */}
-          <div
-            className="grid min-w-[440px] items-center gap-3 px-4 py-2.5 bg-deep-black border-b border-white/10 font-mono text-[9.5px] uppercase tracking-[0.14em] text-cimento"
-            style={{ gridTemplateColumns: '40px 1fr 36px 36px 36px 36px 50px 44px' }}
-          >
-            <span>#</span>
-            <span>Manager</span>
-            <span className="text-center">{L('J', 'P')}</span>
-            <span className="text-center">{L('V', 'W')}</span>
-            <span className="text-center">{L('E', 'D')}</span>
-            <span className="text-center">{L('D', 'L')}</span>
-            <span className="text-center">{L('SG', 'GD')}</span>
-            <span className="text-right">Pts</span>
-          </div>
-          {/* Rows */}
-          <div className="divide-y divide-white/5">
-            {rows.map((row, idx) => {
-              const isTop3 = row.rank <= 3;
-              const isMe = !!row.clubName && row.clubName === myClubName;
-              return (
-                <motion.div
-                  key={row.userId}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: Math.min(0.02 * idx, 0.4) }}
-                  className={cn(
-                    'grid min-w-[440px] items-center gap-3 px-4 py-2.5 transition-colors',
-                    isMe ? 'bg-neon-yellow text-black' : 'hover:bg-card',
-                  )}
-                  style={{
-                    gridTemplateColumns: '40px 1fr 36px 36px 36px 36px 50px 44px',
-                  }}
-                >
+        <>
+          {me && (
+            <div className="flex flex-col gap-1">
+              {gapAbove != null ? (
+                <FaltaRua
+                  valor={gapAbove}
+                  unidade={L('pts', 'pts')}
+                  frase={L(`é o que separa tu do ${posRua(above!.rank)}.`, `is all that's between you and ${posRua(above!.rank)}.`)}
+                />
+              ) : (
+                <span className="font-spray font-black uppercase leading-[0.85] text-ouro-27" style={{ fontSize: 'clamp(56px, 16vw, 96px)' }}>
+                  {L('Topo', 'Top')}
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-3">
+            <SecaoRua label={L('Classificação', 'Standings')} aside={`${rows.length} managers`} />
+            {/* Linhas em concreto; V-E-D e saldo descem pra linha mono — cabe em 320px sem rolar. */}
+            <div className="flex flex-col gap-1.5">
+              {rows.map((row, idx) => {
+                const isMe = !!row.clubName && row.clubName === myClubName;
+                const leader = row.rank === 1;
+                const below = myIdx >= 0 && idx > myIdx;
+                const gd = `${row.goalDiff > 0 ? '+' : ''}${row.goalDiff}`;
+                const crest = row.favoriteTeamId ? (
+                  <img src={localCrestUrl(row.favoriteTeamId)} alt="" className="h-8 w-8 shrink-0 object-contain" loading="lazy" />
+                ) : (
                   <span
                     className={cn(
-                      'ole-num text-base',
-                      isMe ? 'text-black' : isTop3 ? 'text-white' : 'text-cimento',
+                      'grid h-8 w-8 shrink-0 place-items-center font-prova text-[9px] font-bold',
+                      isMe ? 'bg-asfalto-27 text-rua' : 'bg-asfalto-27 text-mudo',
                     )}
                   >
-                    {row.rank}
+                    {(row.clubShort ?? '—').slice(0, 3)}
                   </span>
-                  <div className="min-w-0 flex items-center gap-2.5">
-                    {row.favoriteTeamId ? (
-                      <img
-                        src={localCrestUrl(row.favoriteTeamId)}
-                        alt=""
-                        className="w-7 h-7 shrink-0 object-contain"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className={cn('w-7 h-7 shrink-0 grid place-items-center font-mono text-[9px]', isMe ? 'bg-black/10 text-black/70' : 'bg-card-hi text-cimento')}>
-                        {(row.clubShort ?? '—').slice(0, 3)}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className={cn('text-sm font-bold truncate', isMe ? 'text-black' : 'text-white')}>
-                        {row.clubName ?? row.displayName ?? 'Manager'}
-                      </p>
-                      <p className={cn('font-mono text-[10px] uppercase tracking-[0.1em] truncate', isMe ? 'text-black/70' : 'text-cimento')}>
-                        {row.displayName ?? '—'}
-                        {row.clubShort ? ` · ${row.clubShort}` : ''}
-                      </p>
+                );
+                const sub = `${row.displayName ?? '—'} · ${L('J', 'P')}${row.played} ${L('V', 'W')}${row.wins} ${L('E', 'D')}${row.draws} ${L('D', 'L')}${row.losses} · ${L('SG', 'GD')} ${gd}`;
+                const nome = row.clubName ?? row.displayName ?? 'Manager';
+                if (isMe) {
+                  return (
+                    <div
+                      key={row.userId}
+                      className="relative z-[1] my-1 flex min-h-[64px] min-w-0 -rotate-1 items-center gap-3 bg-rua px-4 py-2 text-asfalto-27 shadow-[4px_4px_0_var(--color-papel)]"
+                    >
+                      <span className="w-12 shrink-0 font-impact text-[24px] leading-none">{posRua(row.rank)}</span>
+                      {crest}
+                      <span className="flex min-w-0 grow flex-col gap-1">
+                        <span className="truncate font-impact text-[22px] uppercase leading-none">{nome}</span>
+                        <span className="truncate font-prova text-[10px] font-bold uppercase tracking-[0.1em] text-asfalto-27/70">{sub}</span>
+                      </span>
+                      <span className="shrink-0 font-impact text-[28px] leading-none">{row.points.toLocaleString(LOCALE)}</span>
                     </div>
-                  </div>
-                  <span className={cn('ole-num text-center text-sm', isMe ? 'text-black' : 'text-giz')}>{row.played}</span>
-                  <span className={cn('ole-num text-center text-sm', isMe ? 'text-black' : 'text-alta')}>{row.wins}</span>
-                  <span className={cn('ole-num text-center text-sm', isMe ? 'text-black' : 'text-cimento')}>{row.draws}</span>
-                  <span className={cn('ole-num text-center text-sm', isMe ? 'text-black' : 'text-baixa')}>{row.losses}</span>
-                  <span
+                  );
+                }
+                return (
+                  <motion.div
+                    key={row.userId}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: Math.min(0.02 * idx, 0.4) }}
                     className={cn(
-                      'ole-num text-center text-sm',
-                      isMe ? 'text-black' : row.goalDiff > 0 ? 'text-alta' : row.goalDiff < 0 ? 'text-baixa' : 'text-cimento',
+                      'flex min-h-[56px] min-w-0 items-center gap-3 px-4 py-2',
+                      leader ? 'border-2 border-ouro-27 text-ouro-27' : 'bg-concreto',
+                      !leader && (below ? 'text-mudo' : 'text-papel'),
                     )}
                   >
-                    {row.goalDiff > 0 ? '+' : ''}{row.goalDiff}
-                  </span>
-                  <span
-                    className={cn('ole-num text-right text-base', isMe ? 'text-black' : 'text-white')}
-                  >
-                    {row.points}
-                  </span>
-                </motion.div>
-              );
-            })}
+                    <span className={cn('w-12 shrink-0 font-impact text-[20px] leading-none', !leader && row.rank <= 3 && 'text-rua')}>{posRua(row.rank)}</span>
+                    {crest}
+                    <span className="flex min-w-0 grow flex-col gap-1">
+                      <span className="truncate font-impact text-[19px] uppercase leading-none">{nome}</span>
+                      <span className={cn('truncate font-prova text-[10px] font-bold uppercase tracking-[0.1em]', leader ? 'text-ouro-27/80' : 'text-mudo')}>{sub}</span>
+                    </span>
+                    <span className="shrink-0 font-impact text-[21px] leading-none">{row.points.toLocaleString(LOCALE)}</span>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
-      <p className="font-mono text-[10.5px] text-cimento text-center pt-2">
+      <p className="pt-2 font-prova text-[10.5px] uppercase tracking-[0.12em] text-mudo">
         {L('Vitória 3 · empate 1 · derrota 0 · desempate: saldo, depois gols pró', 'Win 3 · draw 1 · loss 0 · tiebreak: goal difference, then goals for')}
       </p>
     </div>

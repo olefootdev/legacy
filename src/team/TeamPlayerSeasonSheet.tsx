@@ -1,7 +1,9 @@
-import { useMemo, useRef, useEffect } from 'react';
+import { useMemo, useRef, useEffect, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { X, TrendingDown, TrendingUp, Minus, Activity, Zap, Megaphone, Sparkles, Flame, Lock, Eye, CircleDollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BarraSegmentos, DEGRAU_CLASSES, degrauDe } from '@/components/ui/Rua';
+import { DEGRAU_INFO, ovrNumeroClasses } from '@/components/clube/escada';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { shopEffectNeedsPlayer, shopEffectScope, shopItemIcon } from '@/game/shopCatalog';
@@ -30,10 +32,10 @@ const ROTULO_ESCOPO: Record<string, string> = {
 };
 
 function TrendGlyph({ label }: { label: 'up' | 'down' | 'flat' | 'unknown' }) {
-  if (label === 'up') return <TrendingUp className="h-4 w-4" style={{ color: 'var(--color-success)' }} aria-hidden />;
-  if (label === 'down') return <TrendingDown className="h-4 w-4" style={{ color: 'var(--color-danger)' }} aria-hidden />;
-  if (label === 'flat') return <Minus className="h-4 w-4 text-gray-500" aria-hidden />;
-  return <span className="text-[10px] font-bold uppercase text-gray-500">—</span>;
+  if (label === 'up') return <TrendingUp className="h-4 w-4 text-alta" aria-hidden />;
+  if (label === 'down') return <TrendingDown className="h-4 w-4 text-baixa" aria-hidden />;
+  if (label === 'flat') return <Minus className="h-4 w-4 text-mudo" aria-hidden />;
+  return <span className="font-prova text-[10px] font-bold uppercase text-mudo">—</span>;
 }
 
 export function TeamPlayerSeasonSheet({
@@ -169,6 +171,9 @@ export function TeamPlayerSeasonSheet({
     return { momentum, highlight, recommendation };
   }, [ledger, player.pos, trendSeason.pct, trendSinceLastMatch.pct, ovrDelta, passPct]);
 
+  const d = degrauDe(ovrNow);
+  const valorLabel = usesExpMarket ? `${formatExp(marketCurrent)} EXP` : `${formatBroFromCents(marketCurrent)}`;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -184,9 +189,8 @@ export function TeamPlayerSeasonSheet({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.96, opacity: 0, y: 12 }}
         onClick={(e) => e.stopPropagation()}
-        className="my-auto flex w-full max-w-2xl flex-col border border-white/10 bg-dark-gray"
+        className="my-auto flex w-full max-w-2xl flex-col border-2 border-linha bg-asfalto-27"
         style={{
-          borderRadius: 'var(--radius-md)',
           maxHeight: 'min(92vh, calc(100vh - 2rem))',
           overflow: 'hidden',
         }}
@@ -194,15 +198,9 @@ export function TeamPlayerSeasonSheet({
         aria-modal="true"
         aria-labelledby="team-player-sheet-title"
       >
-        {/* Hero Header — foto hero slider + info sobreposta */}
-        <div className="relative w-full border-b border-white/10 bg-black overflow-hidden shrink-0">
-          {/* Foto do jogador — hero slider generoso */}
-          <div className="relative w-full overflow-hidden bg-black" style={{ height: 'clamp(280px, 45vh, 500px)' }}>
-            {/* Fundo chapado atrás da foto (tom volt leve no card destaque) */}
-            <div
-              aria-hidden
-              className={card.style === 'neon-yellow' ? 'absolute inset-0 bg-neon-yellow/[0.06]' : 'absolute inset-0 bg-deep-black'}
-            />
+        {/* Hero — foto + carta do degrau (OVR) colada no canto */}
+        <div className="relative w-full shrink-0 overflow-hidden border-b-2 border-linha bg-asfalto-27">
+          <div className="relative w-full overflow-hidden bg-concreto" style={{ height: 'clamp(280px, 45vh, 480px)' }}>
             {/* Foto — object-contain garante que a cabeça nunca seja cortada */}
             <img
               src={playerPortraitSrc({ id: player.id, name: player.name, portraitUrl: player.portraitUrl }, 800, 1200)}
@@ -210,80 +208,38 @@ export function TeamPlayerSeasonSheet({
               className="absolute inset-0 h-full w-full object-contain object-center grayscale"
               referrerPolicy="no-referrer"
             />
-            {/* Vinheta superior — headroom visual: se a foto encostar no topo, lê como moldura, não como corte */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/70 to-transparent"
-            />
-            {/* Gradient overlay para leitura — mais forte nas bordas */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/95"
-            />
+            {/* Escurece a foto pra leitura (preto → transparente; permitido pelo DS) */}
+            <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/95" />
 
-            {/* OVR — Anton (canto superior esquerdo; o scrim garante a leitura) */}
-            <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10">
-              <p
-                className="text-neon-yellow tabular-nums leading-none"
-                style={{
-                  fontFamily: 'var(--font-impact)',
-                  fontSize: 'clamp(72px, 15vw, 120px)',
-                  letterSpacing: '-0.04em',
-                }}
-              >
-                {ovrNow}
-              </p>
-              <p
-                className="mt-1 text-white/60 uppercase"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  letterSpacing: '0.22em',
-                }}
-              >
-                Overall
-              </p>
+            {/* OVR — carta do degrau colada torta (o momento "rua" da ficha) */}
+            <div
+              className={cn('absolute left-4 top-4 z-10 flex -rotate-3 flex-col px-3 py-2 shadow-[5px_6px_0_rgba(0,0,0,0.55)] sm:left-6 sm:top-6', DEGRAU_CLASSES[d])}
+            >
+              <span className={cn('font-impact text-[clamp(56px,14vw,96px)] leading-[0.85] tabular-nums', ovrNumeroClasses(d))}>{ovrNow}</span>
+              <span className="mt-1 font-prova text-[10px] font-bold uppercase tracking-[0.16em]">
+                {DEGRAU_INFO[d].n} · {DEGRAU_INFO[d].nome}
+              </span>
             </div>
 
-            {/* Botão fechar (canto superior direito) */}
+            {/* Botão fechar */}
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 shrink-0 rounded-full border border-white/20 bg-black/70 p-2 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+              className="absolute right-4 top-4 z-20 inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-linha bg-asfalto-27 text-mudo transition-colors hover:border-papel hover:text-papel sm:right-6 sm:top-6"
               aria-label={L('Fechar', 'Close')}
             >
               <X className="h-5 w-5" />
             </button>
 
             {/* Info do jogador — sobreposta no rodapé da foto */}
-            <div className="absolute bottom-0 left-0 right-0 z-10 p-4 sm:p-6 bg-gradient-to-t from-black via-black/95 to-transparent">
-              {/* Nome + posição */}
+            <div className="absolute bottom-0 left-0 right-0 z-10 p-4 sm:p-6">
               <div className="pr-12">
-                <p
-                  id="team-player-sheet-title"
-                  className="text-white uppercase leading-none"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 800,
-                    fontSize: 'clamp(24px, 5vw, 38px)',
-                    letterSpacing: '0.03em',
-                    lineHeight: 1.05,
-                  }}
-                >
+                <p id="team-player-sheet-title" className="font-voz text-[clamp(34px,9vw,52px)] leading-none text-papel [overflow-wrap:anywhere]">
                   {player.name}
                 </p>
-                <p
-                  className="text-white/60 uppercase mt-2"
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: '9px',
-                    letterSpacing: '0.22em',
-                    fontWeight: 600,
-                  }}
-                >
+                <p className="mt-2 font-prova text-[11px] font-bold uppercase tracking-[0.14em] text-suave">
                   {player.country ? (
-                    <span className="mr-2 not-italic text-sm" title={player.country ?? undefined} aria-hidden>
+                    <span className="mr-2 not-italic" title={player.country ?? undefined} aria-hidden>
                       {player.country}
                     </span>
                   ) : null}
@@ -291,146 +247,72 @@ export function TeamPlayerSeasonSheet({
                 </p>
               </div>
 
-              {/* OVR mint + delta — destaque editorial */}
-              <div className="mt-4 flex items-baseline gap-3">
+              {/* OVR mint + delta */}
+              <div className="mt-4 flex items-end gap-3">
                 <div>
-                  <p
-                    className="text-white/50 uppercase"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '9px',
-                      fontWeight: 700,
-                      letterSpacing: '0.22em',
-                    }}
-                  >
-                    Overall mint
-                  </p>
-                  <p
-                    className="text-white tabular-nums leading-none mt-1"
-                    style={{
-                      fontFamily: 'var(--font-impact)',
-                      fontSize: 'clamp(28px, 4vw, 40px)',
-                      letterSpacing: '-0.02em',
-                    }}
-                  >
-                    {mintOvr}
-                  </p>
+                  <p className="font-prova text-[10px] font-bold uppercase tracking-[0.18em] text-mudo">Overall mint</p>
+                  <p className="mt-1 font-impact text-[clamp(28px,4vw,40px)] leading-none text-papel tabular-nums">{mintOvr}</p>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className="text-white/40"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '14px',
-                      fontWeight: 700,
-                    }}
-                  >
-                    →
-                  </span>
-                  <p
-                    className={cn(
-                      'tabular-nums',
-                      ovrDelta > 0 ? 'text-emerald-400' : ovrDelta < 0 ? 'text-rose-400' : 'text-gray-500'
-                    )}
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: 'clamp(20px, 3.5vw, 28px)',
-                      fontWeight: 800,
-                    }}
-                  >
-                    {ovrDelta >= 0 ? '+' : ''}{ovrDelta}
-                  </p>
-                </div>
+                <span aria-hidden className="pb-1 font-impact text-[22px] leading-none text-rua">→</span>
+                <p
+                  className={cn(
+                    'pb-0.5 font-impact text-[clamp(24px,4vw,32px)] leading-none tabular-nums',
+                    ovrDelta > 0 ? 'text-alta' : ovrDelta < 0 ? 'text-baixa' : 'text-mudo',
+                  )}
+                >
+                  {ovrDelta >= 0 ? '+' : ''}{ovrDelta}
+                </p>
               </div>
-              <p
-                className="mt-2 text-white/40"
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '11px',
-                }}
-              >
+              <p className="mt-2 font-voz text-[18px] leading-none text-suave">
                 {ovrDelta > 0 ? L('Evoluiu no clube', 'Improved at the club') : ovrDelta < 0 ? L('Regrediu desde o mint', 'Dropped since mint') : L('Mantém o nível inicial', 'Holding initial level')}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="border-b border-white/10 bg-black/30 px-4 py-1.5">
+        <div className="border-b-2 border-linha px-4 py-1.5">
           <VeracityPillarsStrip />
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 scrollbar-hide scroll-smooth-snap">
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 scrollbar-hide scroll-smooth-snap">
           {/* ── SMART-PROFILE: classe, temperamento, gênese ───────── */}
           <FichaDoJogador playerId={playerId} />
 
           {/* ── Insight inteligente ───────────────────────────────── */}
           <section
             className={cn(
-              'border p-4 scroll-snap-section',
-              insight.momentum.tone === 'good' && 'border-emerald-400/30 bg-emerald-950/20',
-              insight.momentum.tone === 'bad' && 'border-rose-400/30 bg-rose-950/20',
-              insight.momentum.tone === 'neutral' && 'border-white/10 bg-white/[0.02]',
+              'scroll-snap-section border-l-[3px] bg-concreto p-4',
+              insight.momentum.tone === 'good' && 'border-alta',
+              insight.momentum.tone === 'bad' && 'border-baixa',
+              insight.momentum.tone === 'neutral' && 'border-fio',
             )}
-            style={{ borderRadius: 'var(--radius-md)' }}
           >
-            <div className="flex items-center gap-2.5">
-              <span aria-hidden className="shrink-0 w-[3px] h-5 bg-neon-yellow" />
-              <h3
-                className="text-neon-yellow uppercase"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  letterSpacing: '0.18em',
-                }}
-              >
-                {L('Leitura rápida', 'Quick read')}
-              </h3>
-            </div>
+            <Rotulo>{L('Leitura rápida', 'Quick read')}</Rotulo>
             <p
               className={cn(
-                'mt-3',
-                insight.momentum.tone === 'good' && 'text-emerald-300',
-                insight.momentum.tone === 'bad' && 'text-rose-300',
-                insight.momentum.tone === 'neutral' && 'text-white',
+                'mt-2 font-voz text-[24px] leading-tight',
+                insight.momentum.tone === 'good' && 'text-alta',
+                insight.momentum.tone === 'bad' && 'text-baixa',
+                insight.momentum.tone === 'neutral' && 'text-papel',
               )}
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '15px',
-                fontWeight: 700,
-              }}
             >
               {insight.momentum.label}
             </p>
             {insight.highlight ? (
-              <p className="mt-2 flex items-center gap-2 text-white/85"
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '12px',
-                }}
-              >
-                <Flame className="h-3.5 w-3.5 shrink-0 text-neon-yellow/80" aria-hidden />
+              <p className="mt-2 flex items-center gap-2 text-[13px] text-suave">
+                <Flame className="h-3.5 w-3.5 shrink-0 text-rua" aria-hidden />
                 {insight.highlight}
               </p>
             ) : null}
             <div
               className={cn(
-                'mt-3 border px-3 py-2',
-                insight.recommendation.action === 'sell' && 'border-neon-yellow/35 bg-neon-yellow/5 text-neon-yellow',
-                insight.recommendation.action === 'hold' && 'border-white/12 bg-white/[0.04] text-white/75',
-                insight.recommendation.action === 'watch' && 'border-white/10 bg-black/30 text-gray-300',
+                'mt-3 px-3 py-2.5 text-[13px]',
+                insight.recommendation.action === 'sell' && 'border-2 border-rua text-papel',
+                insight.recommendation.action === 'hold' && 'border-2 border-linha text-papel',
+                insight.recommendation.action === 'watch' && 'border-2 border-dashed border-fio text-suave',
               )}
-              style={{ borderRadius: 'var(--radius-sm)' }}
             >
-              <span
-                className="mr-1.5 inline-flex items-center gap-1.5 uppercase align-middle"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  letterSpacing: '0.18em',
-                }}
-              >
+              <span className={cn('mr-1.5 inline-flex items-center gap-1.5 align-middle font-prova text-[10px] font-bold uppercase tracking-[0.16em]', insight.recommendation.action === 'sell' ? 'text-rua' : 'text-mudo')}>
                 {insight.recommendation.action === 'sell' && (
                   <>
                     <CircleDollarSign className="h-3.5 w-3.5 shrink-0" aria-hidden strokeWidth={2.2} />
@@ -450,42 +332,19 @@ export function TeamPlayerSeasonSheet({
                   </>
                 )}
               </span>
-              <span style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}>
-                {insight.recommendation.text}
-              </span>
+              <span>{insight.recommendation.text}</span>
             </div>
           </section>
 
           {player ? <PlayerHealthContractSection player={player} /> : null}
           {player ? <LegacyMentorSection student={player} /> : null}
           {boosterRows.length ? (
-            <section className="ole-poster p-4 scroll-snap-section"
-              style={{ borderRadius: 'var(--radius-md)' }}
-            >
-              <div className="flex items-center gap-2.5">
-                <span aria-hidden className="shrink-0 w-[3px] h-5 bg-neon-yellow" />
-                <h3
-                  className="text-white uppercase"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                  }}
-                >
-                  {L('Boosters (inventário)', 'Boosters (inventory)')}
-                </h3>
-              </div>
-              <p className="mt-2 text-gray-500"
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '10px',
-                  lineHeight: 1.5,
-                }}
-              >
+            <section className="scroll-snap-section flex flex-col gap-3">
+              <Rotulo aside={boosterRows.length}>{L('Boosters (inventário)', 'Boosters (inventory)')}</Rotulo>
+              <p className="text-[12px] leading-relaxed text-mudo">
                 {L('Itens comprados na loja. Os que valem para um só jogador usam sempre esta ficha. Os de plantel ou clube aplicam ao save completo.', 'Items bought in the shop. Single-player items apply to this player. Squad or club items apply to the whole save.')}
               </p>
-              <ul className="mt-3 space-y-2">
+              <ul className="flex flex-col gap-px bg-linha">
                 {boosterRows.map(({ item, qty }) => {
                   const Icon = shopItemIcon(item.iconKey);
                   const needP = shopEffectNeedsPlayer(item.effect);
@@ -494,27 +353,13 @@ export function TeamPlayerSeasonSheet({
                   return (
                     <li
                       key={item.id}
-                      className="flex flex-col gap-2 border border-white/10 bg-black/35 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
-                      style={{ borderRadius: 'var(--radius-sm)' }}
+                      className="flex flex-col gap-2 bg-concreto px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="flex min-w-0 items-start gap-2">
-                        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-neon-yellow/70" aria-hidden />
+                        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-rua" aria-hidden />
                         <div className="min-w-0">
-                          <p className="text-white"
-                            style={{
-                              fontFamily: 'var(--font-display)',
-                              fontSize: '12px',
-                              fontWeight: 700,
-                            }}
-                          >
-                            {item.title}
-                          </p>
-                          <p className="text-gray-500"
-                            style={{
-                              fontFamily: 'var(--font-ui)',
-                              fontSize: '10px',
-                            }}
-                          >
+                          <p className="font-impact text-[16px] uppercase leading-tight text-papel">{item.title}</p>
+                          <p className="font-prova text-[10px] text-mudo">
                             {qty}× · {L('escopo', 'scope')}: {ROTULO_ESCOPO[scope] ?? scope}
                             {needP ? L(' · este jogador', ' · this player') : ''}
                           </p>
@@ -531,17 +376,9 @@ export function TeamPlayerSeasonSheet({
                             playerId: needP ? playerId ?? undefined : undefined,
                           });
                         }}
-                        className="shrink-0 border border-neon-yellow/40 bg-neon-yellow/15 px-3 py-2 text-neon-yellow transition hover:bg-neon-yellow/25 disabled:cursor-not-allowed disabled:opacity-35"
-                        style={{
-                          fontFamily: 'var(--font-display)',
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          letterSpacing: '0.2em',
-                          textTransform: 'uppercase',
-                          borderRadius: 'var(--radius-sm)',
-                        }}
+                        className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 self-start border-2 border-rua px-3 font-impact text-[15px] uppercase leading-none text-rua transition-colors hover:bg-rua hover:text-asfalto-27 disabled:cursor-not-allowed disabled:opacity-35 sm:self-auto"
                       >
-                        {L('Usar', 'Use')}
+                        {L('Usar', 'Use')} <span aria-hidden>→</span>
                       </button>
                     </li>
                   );
@@ -550,84 +387,31 @@ export function TeamPlayerSeasonSheet({
             </section>
           ) : null}
 
-          {/* Mercado */}
-          <section className="ole-poster p-4 scroll-snap-section"
-            style={{ borderRadius: 'var(--radius-md)' }}
-          >
-            <div className="flex items-center gap-2.5">
-              <span aria-hidden className="shrink-0 w-[3px] h-5 bg-neon-yellow" />
-              <h3
-                className="text-white uppercase"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  letterSpacing: '0.18em',
-                }}
-              >
-                {L('Valor de mercado (referência)', 'Market value (reference)')}
-              </h3>
-            </div>
-            <p className="mt-3 text-white tabular-nums"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '24px',
-                fontWeight: 700,
-              }}
-            >
-              {usesExpMarket ? `${formatExp(marketCurrent)} EXP` : `${formatBroFromCents(marketCurrent)}`}
-            </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <div className="border border-white/10 bg-black/30 px-3 py-2"
-                style={{ borderRadius: 'var(--radius-sm)' }}
-              >
-                <p className="text-gray-500 uppercase"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                  }}
-                >
-                  {L('Vs. início de registo', 'Vs. first record')}
+          {/* Mercado — valor que já existe: degrau RESPEITO */}
+          <section className="scroll-snap-section flex flex-col gap-3 border-[3px] border-ouro-27 p-4">
+            <Rotulo>{L('Valor de mercado (referência)', 'Market value (reference)')}</Rotulo>
+            <p className="font-spray text-[clamp(36px,10vw,48px)] font-black leading-none text-ouro-27 tabular-nums">{valorLabel}</p>
+            <div className="grid gap-px bg-linha sm:grid-cols-2">
+              <div className="bg-asfalto-27 px-3 py-2.5">
+                <p className="font-prova text-[10px] font-bold uppercase tracking-[0.16em] text-mudo">
+                  {L('Vs. início de registro', 'Vs. first record')}
                 </p>
                 <div className="mt-1.5 flex items-center gap-2">
                   <TrendGlyph label={trendSeason.label} />
-                  <span className="text-white"
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                    }}
-                  >
+                  <span className="text-[12px] text-papel">
                     {ledger?.seasonBaselineMarketBroCents != null
                       ? `${usesExpMarket ? formatExp(ledger.seasonBaselineMarketBroCents) : formatBroFromCents(ledger.seasonBaselineMarketBroCents)}${usesExpMarket ? ' EXP' : ' BRO'} → ${trendSeason.pct != null ? `${trendSeason.pct >= 0 ? '+' : ''}${trendSeason.pct.toFixed(1)}%` : '—'}`
                       : L('Ainda sem linha base (1.º jogo ou treino contado)', 'No baseline yet (1st match or training counted)')}
                   </span>
                 </div>
               </div>
-              <div className="border border-white/10 bg-black/30 px-3 py-2"
-                style={{ borderRadius: 'var(--radius-sm)' }}
-              >
-                <p className="text-gray-500 uppercase"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                  }}
-                >
+              <div className="bg-asfalto-27 px-3 py-2.5">
+                <p className="font-prova text-[10px] font-bold uppercase tracking-[0.16em] text-mudo">
                   {L('Desde o último jogo', 'Since last match')}
                 </p>
                 <div className="mt-1.5 flex items-center gap-2">
                   <TrendGlyph label={trendSinceLastMatch.label} />
-                  <span className="text-white"
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                    }}
-                  >
+                  <span className="text-[12px] text-papel">
                     {ledger?.lastMarketBroCentsAfterMatch != null
                       ? `${trendSinceLastMatch.pct != null ? `${trendSinceLastMatch.pct >= 0 ? '+' : ''}${trendSinceLastMatch.pct.toFixed(1)}%` : '—'} ${L('vs. pós-jogo', 'vs. post-match')} (${usesExpMarket ? `${formatExp(ledger.lastMarketBroCentsAfterMatch)} EXP` : `${formatBroFromCents(ledger.lastMarketBroCentsAfterMatch)}`})`
                       : L('Sem jogo finalizado ainda', 'No finished match yet')}
@@ -635,305 +419,70 @@ export function TeamPlayerSeasonSheet({
                 </div>
               </div>
             </div>
-            <p className="mt-3 text-gray-500"
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: '10px',
-                lineHeight: 1.5,
-              }}
-            >
+            <p className="text-[11px] leading-relaxed text-mudo">
               {usesExpMarket
-                ? L('Valor de mercado em EXP (catálogo Genesis). A linha base grava-se no primeiro jogo ou treino contabilizado; «desde o último jogo» mede evolução após o apito final.', 'Market value in EXP (Genesis catalog). The baseline is set on the first recorded match or training; “since last match” tracks progress after the final whistle.')
-                : L('Sem BRO no cartão, o valor mostrado estima a partir do OVR. A linha base da temporada grava-se no primeiro jogo ou treino contabilizado; «desde o último jogo» mede treinos e evolução após o apito final.', 'With no BRO on the card, the value is estimated from OVR. The season baseline is set on the first recorded match or training; “since last match” tracks training and progress after the final whistle.')}
+                ? L('Valor de mercado em EXP (catálogo Genesis). A linha base é gravada no primeiro jogo ou treino contabilizado; «desde o último jogo» mede a evolução após o apito final.', 'Market value in EXP (Genesis catalog). The baseline is set on the first recorded match or training; “since last match” tracks progress after the final whistle.')
+                : L('Sem BRO no cartão, o valor mostrado é estimado a partir do OVR. A linha base da temporada é gravada no primeiro jogo ou treino contabilizado; «desde o último jogo» mede treinos e evolução após o apito final.', 'With no BRO on the card, the value is estimated from OVR. The season baseline is set on the first recorded match or training; “since last match” tracks training and progress after the final whistle.')}
             </p>
           </section>
 
           {/* Jogos */}
-          <section className="border border-white/10 bg-black/25 p-4 scroll-snap-section"
-            style={{ borderRadius: 'var(--radius-md)' }}
-          >
-            <div className="flex items-center gap-2.5">
-              <span aria-hidden className="shrink-0 w-[3px] h-5 bg-neon-yellow" />
-              <h3
-                className="text-neon-yellow uppercase"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  letterSpacing: '0.18em',
-                }}
-              >
-                {L('Competição & jogo', 'Competition & match')}
-              </h3>
-            </div>
-            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-              <div>
-                <dt className="text-gray-500 uppercase"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                  }}
-                >
-                  {L('Jogos', 'Matches')}
-                </dt>
-                <dd className="text-white tabular-nums mt-1"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                  }}
-                >
-                  {ledger?.matchesPlayed ?? 0}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-gray-500 uppercase"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                  }}
-                >
-                  {L('Golos', 'Goals')}
-                </dt>
-                <dd className="text-white tabular-nums mt-1"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                  }}
-                >
-                  {ledger?.goals ?? 0}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-gray-500 uppercase"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                  }}
-                >
-                  {L('Amarelos / Vermelhos', 'Yellows / Reds')}
-                </dt>
-                <dd className="text-white tabular-nums mt-1"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                  }}
-                >
-                  {ledger?.yellowCards ?? 0} / {ledger?.redCards ?? 0}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-gray-500 uppercase"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                  }}
-                >
-                  {L('Passes OK / tent.', 'Passes OK / att.')}
-                </dt>
-                <dd className="text-white tabular-nums mt-1"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                  }}
-                >
-                  {ledger?.passesOk ?? 0} / {ledger?.passesAttempt ?? 0}
-                  {passPct != null ? <span className="text-gray-400"> ({passPct}%)</span> : null}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-gray-500 uppercase"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                  }}
-                >
-                  {L('Desarmes', 'Tackles')}
-                </dt>
-                <dd className="text-white tabular-nums mt-1"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                  }}
-                >
-                  {ledger?.tackles ?? 0}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-gray-500 uppercase"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                  }}
-                >
-                  {L('Km (motor)', 'Km (engine)')}
-                </dt>
-                <dd className="text-white tabular-nums mt-1"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                  }}
-                >
-                  {km.toFixed(1)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-gray-500 uppercase"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                  }}
-                >
-                  {L('Remates (agreg.)', 'Shots (total)')}
-                </dt>
-                <dd className="text-white tabular-nums mt-1"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                  }}
-                >
-                  {ledger?.shots ?? 0}
-                </dd>
-              </div>
+          <section className="scroll-snap-section flex flex-col gap-3">
+            <Rotulo>{L('Competição & jogo', 'Competition & match')}</Rotulo>
+            <dl className="grid grid-cols-2 gap-px bg-linha sm:grid-cols-3">
+              <Dado label={L('Jogos', 'Matches')} valor={ledger?.matchesPlayed ?? 0} />
+              <Dado label={L('Gols', 'Goals')} valor={ledger?.goals ?? 0} />
+              <Dado label={L('Amarelos / Vermelhos', 'Yellows / Reds')} valor={`${ledger?.yellowCards ?? 0} / ${ledger?.redCards ?? 0}`} />
+              <Dado
+                label={L('Passes OK / tent.', 'Passes OK / att.')}
+                valor={<>{ledger?.passesOk ?? 0} / {ledger?.passesAttempt ?? 0}{passPct != null ? <span className="font-prova text-[11px] text-mudo"> ({passPct}%)</span> : null}</>}
+              />
+              <Dado label={L('Desarmes', 'Tackles')} valor={ledger?.tackles ?? 0} />
+              <Dado label={L('Km (motor)', 'Km (engine)')} valor={km.toFixed(1)} />
+              <Dado label={L('Finalizações (agreg.)', 'Shots (total)')} valor={ledger?.shots ?? 0} />
             </dl>
           </section>
 
           {/* Treinos */}
-          <section className="border border-white/10 bg-black/25 p-4 scroll-snap-section"
-            style={{ borderRadius: 'var(--radius-md)' }}
-          >
-            <div className="flex items-center gap-2.5">
-              <span aria-hidden className="shrink-0 w-[3px] h-5 bg-white/70" />
-              <h3
-                className="text-white/90 uppercase"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  letterSpacing: '0.18em',
-                }}
-              >
-                {L('Treinos', 'Training')}
-              </h3>
-            </div>
-            <p className="mt-2 text-gray-500"
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: '11px',
-              }}
-            >
-              {L('Planos concluídos', 'Plans completed')}: <span className="font-mono font-bold text-white">{ledger?.trainingPlansCompleted ?? 0}</span>
+          <section className="scroll-snap-section flex flex-col gap-3">
+            <Rotulo>{L('Treinos', 'Training')}</Rotulo>
+            <p className="text-[12px] text-suave">
+              {L('Planos concluídos', 'Plans completed')}: <span className="font-impact text-[16px] text-papel">{ledger?.trainingPlansCompleted ?? 0}</span>
               {' · '}
-              {L('Sessões leves', 'Light sessions')}: <span className="font-mono font-bold text-white">{ledger?.trainingLightSessions ?? 0}</span>
+              {L('Sessões leves', 'Light sessions')}: <span className="font-impact text-[16px] text-papel">{ledger?.trainingLightSessions ?? 0}</span>
             </p>
             {ledger && Object.keys(ledger.trainingByType).length > 0 ? (
-              <ul className="mt-3 max-h-28 space-y-1 overflow-y-auto">
+              <ul className="max-h-28 overflow-y-auto">
                 {Object.entries(ledger.trainingByType).map(([k, n]) => (
-                  <li key={k} className="flex justify-between gap-2 border-b border-white/5 py-1.5">
-                    <span className="text-gray-400"
-                      style={{
-                        fontFamily: 'var(--font-ui)',
-                        fontSize: '11px',
-                      }}
-                    >
-                      {trainingTypeLabel(k)}
-                    </span>
-                    <span className="text-white tabular-nums"
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                      }}
-                    >
-                      {n}
-                    </span>
+                  <li key={k} className="flex justify-between gap-2 border-b border-linha py-1.5">
+                    <span className="text-[12px] text-suave">{trainingTypeLabel(k)}</span>
+                    <span className="font-impact text-[15px] text-papel tabular-nums">{n}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-2 text-gray-500"
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '11px',
-                }}
-              >
+              <p className="border-2 border-dashed border-fio p-3 font-voz text-[19px] leading-tight text-suave">
                 {L('Sem treinos contabilizados nesta temporada.', 'No training recorded this season.')}
               </p>
             )}
           </section>
 
-          {/* Atributos actuais */}
-          <section className="border border-white/10 bg-black/25 p-4 scroll-snap-section"
-            style={{ borderRadius: 'var(--radius-md)' }}
-          >
-            <div className="flex items-center gap-2.5">
-              <span aria-hidden className="shrink-0 w-[3px] h-5 bg-white/70" />
-              <h3
-                className="text-white/90 uppercase"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  letterSpacing: '0.18em',
-                }}
-              >
-                {L('Atributos actuais', 'Current attributes')}
-              </h3>
-            </div>
-            <p className="mt-2 text-gray-500"
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: '10px',
-              }}
-            >
+          {/* Atributos atuais — em segmentos */}
+          <section className="scroll-snap-section flex flex-col gap-3">
+            <Rotulo>{L('Atributos atuais', 'Current attributes')}</Rotulo>
+            <p className="text-[11px] text-mudo">
               {emIngles()
                 ? <>The full card model. Overall progress boils down to mint OVR ({mintOvr}) vs. current ({ovrNow}).</>
-                : <>O modelo completo do cartão. A evolução global resume-se ao OVR mint ({mintOvr}) vs. actual ({ovrNow}).</>}
+                : <>O modelo completo do cartão. A evolução global se resume ao OVR mint ({mintOvr}) vs. atual ({ovrNow}).</>}
             </p>
-            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+            <ul className="grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
               {PLAYER_SEASON_ATTR_KEYS.map((key) => (
-                <li
-                  key={key}
-                  className="flex items-center justify-between border border-white/5 bg-black/30 px-3 py-2"
-                  style={{ borderRadius: 'var(--radius-sm)' }}
-                >
-                  <span className="text-gray-400"
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: '11px',
-                    }}
-                  >
-                    {PLAYER_SEASON_ATTR_LABELS[key]}
-                  </span>
-                  <span className="text-white tabular-nums"
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '13px',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {player.attrs[key]}
-                  </span>
+                <li key={key} className="min-w-0">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="font-prova text-[11px] font-bold uppercase tracking-[0.08em] text-mudo">{PLAYER_SEASON_ATTR_LABELS[key]}</span>
+                    <span className="font-impact text-[18px] leading-none text-papel tabular-nums">{player.attrs[key]}</span>
+                  </div>
+                  <BarraSegmentos valor={Math.max(0, Math.min(100, Number(player.attrs[key]) || 0))} max={100} className="mt-1.5 h-2 gap-[3px]" />
                 </li>
               ))}
             </ul>
@@ -942,35 +491,18 @@ export function TeamPlayerSeasonSheet({
 
         {/* ── Footer CTA ───────────────────────────────────────────── */}
         {onAnnounceSale ? (
-          <div className="shrink-0 border-t border-white/10 bg-black/55 px-4 py-4">
+          <div className="shrink-0 border-t-2 border-linha px-4 py-4 pr-5">
             <button
               type="button"
               onClick={() => onAnnounceSale(player.id)}
-              className="group flex w-full items-center justify-center gap-2 bg-neon-yellow px-4 py-3 text-black transition-colors hover:bg-white"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '12px',
-                fontWeight: 700,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                borderRadius: 'var(--radius-sm)',
-              }}
+              className="flex min-h-[52px] w-full items-center justify-center gap-2 bg-rua px-4 font-impact text-[19px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)]"
             >
               <Megaphone className="h-4 w-4 shrink-0" aria-hidden />
-              {L('Anunciar Venda', 'List for Sale')}
-              <span className="ml-1.5 border border-black/20 bg-black/15 px-2 py-1 font-mono text-[10px] font-bold tracking-wider text-black/80 group-hover:bg-black/20"
-                style={{ borderRadius: 'var(--radius-sm)' }}
-              >
-                {usesExpMarket ? `${formatExp(marketCurrent)} EXP` : `${formatBroFromCents(marketCurrent)}`}
-              </span>
+              <span className="min-w-0 truncate">{L('Anunciar Venda', 'List for Sale')}</span>
+              <span className="shrink-0 border-2 border-asfalto-27 px-2 py-1 font-prova text-[11px] font-bold">{valorLabel}</span>
             </button>
             {insight.recommendation.action === 'sell' ? (
-              <p className="mt-2 text-center text-neon-yellow/85"
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '10px',
-                }}
-              >
+              <p className="mt-3 text-center font-voz text-[17px] text-rua">
                 {L('Oportunidade detectada — valor subiu recentemente.', 'Opportunity spotted — value rose recently.')}
               </p>
             ) : null}
@@ -978,5 +510,24 @@ export function TeamPlayerSeasonSheet({
         ) : null}
       </motion.div>
     </motion.div>
+  );
+}
+
+/** Rótulo de seção da ficha: "— TÍTULO" em prova. */
+function Rotulo({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
+  return (
+    <div className="flex min-w-0 items-baseline justify-between gap-3">
+      <h3 className="min-w-0 truncate font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">— {children}</h3>
+      {aside != null && <span className="shrink-0 font-prova text-[12px] font-bold text-mudo">{aside}</span>}
+    </div>
+  );
+}
+
+function Dado({ label, valor }: { label: string; valor: ReactNode }) {
+  return (
+    <div className="min-w-0 bg-asfalto-27 px-3 py-2.5">
+      <dt className="truncate font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-mudo">{label}</dt>
+      <dd className="mt-1 font-impact text-[22px] leading-none text-papel tabular-nums">{valor}</dd>
+    </div>
   );
 }

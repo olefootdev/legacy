@@ -89,7 +89,7 @@ export default function ConviteExpansao() {
   const guardaDestino = () => guardarConvitePendente(username);
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center bg-deep-black px-4 py-10">
+    <div className="rua-grao flex min-h-svh w-full flex-col items-center justify-center bg-asfalto-27 px-4 py-10">
       <div className="w-full max-w-[380px]">
         {/* 🐞 Altura por style, não por classe: `.h-4` NÃO sai no CSS gerado
             deste projeto, e a regra global `img { height: auto }` vence — a
@@ -102,7 +102,7 @@ export default function ConviteExpansao() {
         />
 
         {estado.t === 'carregando' && (
-          <p className="font-mono text-[12px] text-cimento">{L('Abrindo convite…', 'Opening invite…')}</p>
+          <p className="font-prova text-[12px] text-mudo">{L('Abrindo convite…', 'Opening invite…')}</p>
         )}
 
         {estado.t === 'inexistente' && (
@@ -115,7 +115,7 @@ export default function ConviteExpansao() {
         {estado.t === 'nao_ativado' && (
           <Bloco titulo={L('Convite ainda não ativado', 'Invite not activated yet')}
                  texto={L(`@${estado.info.username} precisa ativar a conta antes de convidar.`, `@${estado.info.username} must activate their account before inviting.`)}>
-            <p className="mb-5 font-mono text-[11px] leading-relaxed text-poeira">
+            <p className="mb-5 font-prova text-[11px] leading-relaxed text-mudo">
               {L('A ativação acontece com um pack de $10 na pré-venda. Avise quem te mandou o link.', 'Activation takes a $10 pack in the presale. Let whoever sent you the link know.')}
             </p>
             <BotaoLinha onClick={() => navigate('/')}>{L('IR PARA O INÍCIO', 'GO TO HOME')}</BotaoLinha>
@@ -125,13 +125,13 @@ export default function ConviteExpansao() {
         {estado.t === 'precisa_entrar' && (
           <Bloco titulo={L('Você foi convidado', "You've been invited")}
                  texto={L(`@${estado.info.username} está te chamando para a expansão.`, `@${estado.info.username} is calling you to the expansion.`)}>
-            <p className="mb-5 font-mono text-[11px] leading-relaxed text-poeira">
+            <p className="mb-5 font-prova text-[11px] leading-relaxed text-mudo">
               {L('Se você já tem conta na OLEFOOT, use o mesmo e-mail — o login é o mesmo de sempre.', 'If you already have an OLEFOOT account, use the same email — same sign-in as always.')}
             </p>
             <BotaoVolt onClick={() => { guardaDestino(); navigate('/login'); }}>
               {L('JÁ TENHO CONTA', 'I HAVE AN ACCOUNT')}
             </BotaoVolt>
-            <div className="h-2.5" />
+            <div className="h-4" />
             {/* Cadastro novo pelo convite grava quem indicou: vai pra
                 /cadastro/<código de quem convidou>, não pra /cadastro solto. */}
             <BotaoLinha onClick={() => {
@@ -148,13 +148,13 @@ export default function ConviteExpansao() {
           <Bloco titulo={L('Confirma a ativação?', 'Confirm activation?')}
                  texto={L(`Você está sendo ativado por @${estado.info.username}.`, `You're being activated by @${estado.info.username}.`)}>
             {/* 🔒 O aviso de permanência fica ANTES do botão, não no rodapé. */}
-            <p className="mb-5 border-l-2 border-atencao bg-card px-3 py-2.5 font-mono text-[11px] leading-relaxed text-cimento">
+            <p className="mb-6 -rotate-1 bg-cal px-4 py-3 font-prova text-[12px] font-bold leading-relaxed text-asfalto-27">
               {L('A posição na rede é definitiva. Depois de confirmar, não muda.', "Your network position is permanent. Once confirmed, it can't change.")}
             </p>
             <BotaoVolt onClick={confirmar} desabilitado={estado.t === 'enviando'}>
               {estado.t === 'enviando' ? L('CONFIRMANDO…', 'CONFIRMING…') : L('SIM, CONFIRMAR', 'YES, CONFIRM')}
             </BotaoVolt>
-            <div className="h-2.5" />
+            <div className="h-4" />
             <BotaoLinha onClick={() => navigate('/')} desabilitado={estado.t === 'enviando'}>
               {L('NÃO, AGORA NÃO', 'NOT NOW')}
             </BotaoLinha>
@@ -179,7 +179,7 @@ export default function ConviteExpansao() {
             <BotaoVolt onClick={() => navigate('/wallet/network')}>
               {L('ABRIR O NETWORK', 'OPEN NETWORK')}
             </BotaoVolt>
-            <div className="h-2.5" />
+            <div className="h-4" />
             <BotaoLinha onClick={() => navigate('/')}>{L('IR PARA O JOGO', 'GO TO GAME')}</BotaoLinha>
           </Bloco>
         )}
@@ -189,7 +189,7 @@ export default function ConviteExpansao() {
             <BotaoVolt onClick={() => navigate('/wallet/network')}>
               {L('ABRIR O NETWORK', 'OPEN NETWORK')}
             </BotaoVolt>
-            <div className="h-2.5" />
+            <div className="h-4" />
             <BotaoLinha onClick={() => navigate('/')}>{L('IR PARA O JOGO', 'GO TO GAME')}</BotaoLinha>
           </Bloco>
         )}
@@ -203,8 +203,8 @@ function Bloco({ titulo, texto, children }: {
 }) {
   return (
     <div>
-      <h1 className="font-impact text-[30px] uppercase leading-[1.1] text-white">{titulo}</h1>
-      <p className="mb-6 mt-2.5 text-[14px] leading-relaxed text-cimento">{texto}</p>
+      <h1 className="border-t-2 border-papel pt-4 font-impact text-[clamp(36px,10vw,46px)] uppercase leading-[0.95] text-papel">{titulo}</h1>
+      <p className="mb-6 mt-3 font-voz text-[23px] leading-[1.1] text-suave">{texto}</p>
       {children}
     </div>
   );
@@ -215,8 +215,7 @@ function BotaoVolt({ children, onClick, desabilitado }: {
 }) {
   return (
     <button type="button" onClick={onClick} disabled={desabilitado}
-      className="w-full bg-neon-yellow px-4 py-3.5 text-[13px] font-bold tracking-wide text-deep-black
-                 transition-opacity disabled:opacity-50">
+      className="inline-flex min-h-[54px] w-full items-center justify-center bg-rua px-4 font-impact text-[20px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)] disabled:opacity-50">
       {children}
     </button>
   );
@@ -227,8 +226,7 @@ function BotaoLinha({ children, onClick, desabilitado }: {
 }) {
   return (
     <button type="button" onClick={onClick} disabled={desabilitado}
-      className="w-full border border-white/15 px-4 py-3.5 text-[13px] font-bold tracking-wide text-giz
-                 transition-colors hover:border-white/35 disabled:opacity-50">
+      className="inline-flex min-h-[54px] w-full items-center justify-center border-2 border-papel px-4 font-impact text-[20px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27 disabled:opacity-50">
       {children}
     </button>
   );

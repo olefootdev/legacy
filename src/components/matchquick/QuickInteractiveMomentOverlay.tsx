@@ -75,57 +75,57 @@ export function QuickInteractiveMomentOverlay({ moment, onChoice }: Props) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 px-4"
+        className="fixed inset-0 z-50 flex items-end justify-center bg-asfalto-27/95 px-0 sm:items-center sm:px-4"
       >
         <motion.div
-          initial={{ scale: 0.9, y: 20 }}
+          initial={{ scale: 0.96, y: 20 }}
           animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.9, y: 20 }}
-          className="relative w-full max-w-2xl overflow-hidden border border-neon-yellow/30 bg-deep-black"
+          exit={{ scale: 0.96, y: 20 }}
+          className="relative max-h-[100dvh] w-full max-w-2xl overflow-y-auto bg-asfalto-27"
         >
-          {/* Trilho volt */}
-          <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow" />
-
-          {/* Header */}
-          <div className="border-b border-black bg-neon-yellow px-6 py-4 text-black">
-            <div className="flex items-center justify-between gap-3">
+          {/* Header — peça amarela com alambrado: é o momento de agir */}
+          <div className="relative overflow-hidden bg-rua px-5 py-4 text-asfalto-27 sm:px-6">
+            <span aria-hidden className="rua-alambrado pointer-events-none absolute inset-x-0 top-0 h-20 [--alambrado:rgba(13,13,12,0.24)]" />
+            <div className="relative flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-black">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-asfalto-27">
                   {getMomentIcon()}
                 </div>
                 <div className="min-w-0">
-                  <div className="font-mono text-xs font-medium uppercase tracking-wider text-black/60">
+                  <div className="font-prova text-[11px] font-bold uppercase tracking-[0.18em]">
                     {L('Minuto', 'Minute')} {moment.minute}'
                   </div>
-                  <div className="truncate font-impact text-2xl uppercase leading-[1.1] text-black">
+                  <div className="truncate font-impact text-[28px] uppercase leading-none">
                     {getMomentLabel()}
                   </div>
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2 bg-black px-4 py-2">
-                <Clock className="h-4 w-4 text-neon-yellow" />
+              <div className="flex shrink-0 items-baseline gap-0.5 bg-asfalto-27 px-3 py-1.5">
+                <Clock className="mr-1 h-4 w-4 self-center text-rua" aria-hidden />
                 <span
                   className={cn(
-                    'font-display text-xl font-black tabular-nums',
-                    countdown <= 1 ? 'text-red-400 animate-pulse' : 'text-neon-yellow',
+                    'font-spray font-black text-[32px] leading-none tabular-nums',
+                    countdown <= 1 ? 'animate-pulse text-baixa' : 'text-rua',
                   )}
                 >
-                  {countdown}s
+                  {countdown}
                 </span>
+                <span className="font-prova text-[12px] text-mudo">s</span>
               </div>
             </div>
           </div>
 
           {/* Context */}
-          <div className="border-b border-white/10 bg-black/40 px-6 py-4">
-            <p className="text-sm leading-relaxed text-white/80">{moment.context}</p>
+          <div className="border-b border-linha px-5 py-4 sm:px-6">
+            <p className="font-voz text-[24px] leading-[1.08] text-papel">{moment.context}</p>
           </div>
 
           {/* Choices */}
-          <div className="space-y-3 p-6">
+          <div className="space-y-3 p-5 sm:p-6">
             {moment.choices.map((choice) => {
               const isRecommended = moment.choices.every(c => choice.successChance >= c.successChance);
               const shouldPulse = countdown <= 1 && !selected && isRecommended;
+              const picked = selected === choice.id;
               return (
               <motion.button
                 key={choice.id}
@@ -133,45 +133,36 @@ export function QuickInteractiveMomentOverlay({ moment, onChoice }: Props) {
                 disabled={selected !== null}
                 whileTap={{ scale: 0.98 }}
                 className={cn(
-                  'group relative w-full overflow-hidden rounded-lg border p-4 text-left transition-all',
-                  selected === choice.id
-                    ? 'border-neon-yellow bg-neon-yellow/10'
+                  'group relative w-full overflow-hidden p-4 text-left transition-[transform,box-shadow,background-color,border-color]',
+                  picked
+                    ? 'translate-x-0.5 translate-y-0.5 bg-rua text-asfalto-27 shadow-[2px_2px_0_var(--color-papel)]'
                     : selected
-                      ? 'border-white/10 bg-black/20 opacity-40'
-                      : 'border-white/10 bg-black/40 hover:border-neon-yellow/40 hover:bg-black/60',
-                  shouldPulse && 'animate-pulse border-neon-yellow/60'
+                      ? 'border-2 border-linha text-fio'
+                      : 'border-2 border-papel bg-concreto text-papel hover:border-rua',
+                  shouldPulse && 'animate-pulse border-rua',
                 )}
               >
-                {selected === choice.id && (
-                  <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow" />
-                )}
-                <div className="flex items-start gap-4">
-                  <div className="flex-1">
-                    <div className="mb-2 flex items-center gap-2">
-                      <span
-                        className={cn(
-                          'font-display text-base font-bold uppercase tracking-tight',
-                          selected === choice.id ? 'text-neon-yellow' : 'text-white',
-                        )}
-                      >
-                        {choice.label}
-                      </span>
-                      <div className="flex items-center gap-1 rounded bg-white/10 px-2 py-0.5">
-                        <TrendingUp className="h-3 w-3 text-green-400" />
-                        <span className="text-xs font-bold text-white/80">
-                          {Math.round(choice.successChance * 100)}%
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-xs leading-relaxed text-white/60">{choice.description}</p>
-                    {choice.reward.ole && (
-                      <div className="mt-3 flex items-center gap-3 text-xs font-bold">
-                        <span className="text-neon-yellow">+{choice.reward.ole} OLE</span>
-                        {choice.reward.exp && <span className="text-white/60">+{choice.reward.exp} EXP</span>}
-                      </div>
+                <div className="mb-1.5 flex min-w-0 items-center justify-between gap-3">
+                  <span className="min-w-0 font-impact text-[20px] uppercase leading-none">
+                    {choice.label}
+                  </span>
+                  <span
+                    className={cn(
+                      'flex shrink-0 items-center gap-1 px-2 py-0.5 font-prova text-[11px] font-bold',
+                      picked ? 'bg-asfalto-27 text-rua' : 'border-2 border-linha',
                     )}
-                  </div>
+                  >
+                    <TrendingUp className={cn('h-3 w-3', picked ? 'text-rua' : 'text-alta')} aria-hidden />
+                    {Math.round(choice.successChance * 100)}%
+                  </span>
                 </div>
+                <p className={cn('text-[13px] leading-snug', picked ? 'text-asfalto-27/80' : 'text-suave')}>{choice.description}</p>
+                {choice.reward.ole && (
+                  <div className="mt-3 flex items-center gap-3 font-prova text-[12px] font-bold">
+                    <span>+{choice.reward.ole} OLE</span>
+                    {choice.reward.exp && <span className={picked ? 'text-asfalto-27/70' : 'text-mudo'}>+{choice.reward.exp} EXP</span>}
+                  </div>
+                )}
               </motion.button>
             );
             })}
@@ -182,10 +173,10 @@ export function QuickInteractiveMomentOverlay({ moment, onChoice }: Props) {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mx-6 mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-3"
+              className="mx-5 mb-6 border-l-[3px] border-baixa bg-concreto p-3 sm:mx-6"
             >
-              <p className="text-center text-xs font-semibold text-red-400">
-                {L('⚠️ A IA decidirá por você se o tempo esgotar!', '⚠️ The AI will decide for you if time runs out!')}
+              <p className="text-center font-prova text-[12px] font-bold text-baixa">
+                {L('A IA decide por você se o tempo esgotar.', 'The AI decides for you if time runs out.')}
               </p>
             </motion.div>
           )}

@@ -1,17 +1,13 @@
 /**
- * Bloco "Saúde & Contrato" pra ficha do jogador.
+ * Bloco "Saúde & Contrato" pra ficha do jogador — DS 2027 · "Respeito é ouro".
  *
- * 2 sub-blocos verticais:
- *   1. Saúde     — fadiga atual + recuperação de lesão (se houver) + risco.
- *   2. Contrato  — barra de progresso + CTA "Renovar contrato" quando aplicável.
+ * 2 sub-blocos:
+ *   1. Saúde     — energia (fadiga) + recuperação de lesão (se houver) + risco.
+ *   2. Contrato  — barra em segmentos + CTA "Renovar contrato" quando aplicável.
  *
- * Design tokens (zero hex hardcode):
- *   var(--color-success | warning | danger | info | neon-yellow)
- *   var(--font-display), var(--font-ui)
- *   var(--radius-sm | md)
- *
- * Padrão de section igual ao usado em TeamPlayerSeasonSheet:
- *   border + bg + padding 4 + barra lateral 3px da cor da família.
+ * Pele: concreto, rótulo "— " em prova, número em Anton. Estado de jogo usa só
+ * baixa/atenção; contrato vitalício é RESPEITO (fio de ouro); vencido é CHÃO
+ * (tracejado); renovar é ação → rua.
  */
 
 import { useState } from 'react';
@@ -29,7 +25,7 @@ interface Props {
   player: PlayerEntity;
 }
 
-/** Mini-barra horizontal segmentada com porcentagem (0–100). */
+/** Barra em 10 segmentos (0–100), cor pelo tom. */
 function ProgressBar({
   pct,
   tone,
@@ -38,29 +34,22 @@ function ProgressBar({
   tone: 'success' | 'warning' | 'danger' | 'neon';
 }) {
   const clamped = Math.max(0, Math.min(100, pct));
-  const colorVar =
-    tone === 'success' ? 'var(--color-success)'
-    : tone === 'warning' ? 'var(--color-warning)'
-    : tone === 'danger' ? 'var(--color-danger)'
-    : 'var(--color-neon-yellow)';
+  const cheios = Math.round((clamped / 100) * 10);
+  const cor =
+    tone === 'success' ? 'bg-papel'
+    : tone === 'warning' ? 'bg-atencao'
+    : tone === 'danger' ? 'bg-baixa'
+    : 'bg-rua';
   return (
-    <div
-      className="relative h-1.5 w-full overflow-hidden bg-white/8"
-      style={{ borderRadius: 'var(--radius-sm)' }}
-    >
-      <div
-        className="absolute inset-y-0 left-0 transition-[width] duration-500"
-        style={{
-          width: `${clamped}%`,
-          background: colorVar,
-          borderRadius: 'var(--radius-sm)',
-        }}
-      />
+    <div aria-hidden className="grid h-2 w-full grid-cols-10 gap-[3px]">
+      {Array.from({ length: 10 }, (_, i) => (
+        <span key={i} className={i < cheios ? cor : 'bg-linha'} />
+      ))}
     </div>
   );
 }
 
-/** Linha label + valor com tipografia padrão da ficha. */
+/** Linha rótulo (prova) + valor (Anton). */
 function MetricRow({
   label,
   value,
@@ -71,37 +60,19 @@ function MetricRow({
   tone?: 'good' | 'warn' | 'bad' | 'neutral';
 }) {
   const colorClass =
-    tone === 'good' ? 'text-[var(--color-success)]'
-    : tone === 'warn' ? 'text-[var(--color-warning)]'
-    : tone === 'bad' ? 'text-[var(--color-danger)]'
-    : 'text-white';
+    tone === 'warn' ? 'text-atencao'
+    : tone === 'bad' ? 'text-baixa'
+    : 'text-papel';
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <span
-        className="uppercase text-white/55"
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: '10px',
-          fontWeight: 700,
-          letterSpacing: '0.18em',
-        }}
-      >
-        {label}
-      </span>
-      <span
-        className={cn('tabular-nums', colorClass)}
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: '13px',
-          fontWeight: 800,
-          letterSpacing: '0.04em',
-        }}
-      >
-        {value}
-      </span>
+      <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.16em] text-mudo">{label}</span>
+      <span className={cn('font-impact text-[17px] leading-none tabular-nums', colorClass)}>{value}</span>
     </div>
   );
 }
+
+const ROTULO = 'font-prova text-[10.5px] font-bold uppercase tracking-[0.2em]';
+const PEQUENO = 'font-prova text-[10px] font-bold uppercase tracking-[0.16em] text-mudo';
 
 export function PlayerHealthContractSection({ player }: Props) {
   const playerHealth = useGameStore((s) => s.playerHealth);
@@ -153,80 +124,38 @@ export function PlayerHealthContractSection({ player }: Props) {
 
   return (
     <>
-      <section
-        className="border border-white/10 bg-black/25 p-4 scroll-snap-section"
-        style={{ borderRadius: 'var(--radius-md)' }}
-      >
-        {/* Header com barra lateral neon — padrão da ficha */}
-        <div className="mb-3 flex items-center gap-2.5">
-          <span aria-hidden className="shrink-0 w-[3px] h-5 bg-neon-yellow" />
-          <h3
-            className="text-neon-yellow uppercase"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '11px',
-              fontWeight: 700,
-              letterSpacing: '0.18em',
-            }}
-          >
-            {L('Saúde & Contrato', 'Health & Contract')}
-          </h3>
-        </div>
+      <section className="scroll-snap-section border-2 border-linha bg-concreto p-4">
+        <h3 className={cn(ROTULO, 'mb-3 text-mudo')}>— {L('Saúde & Contrato', 'Health & Contract')}</h3>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {/* ── Sub-bloco: Saúde ────────────────────────────────────────────── */}
           <div
             className={cn(
-              'border p-3',
+              'border-2 p-3',
               isInjured
-                ? 'border-[var(--color-danger)]/35 bg-[var(--color-danger)]/8'
+                ? 'border-baixa/50 bg-baixa/[0.06]'
                 : isSuspended
-                  ? 'border-[var(--color-warning)]/35 bg-[var(--color-warning)]/8'
-                  : 'border-white/10 bg-white/[0.02]',
+                  ? 'border-atencao/50 bg-atencao/[0.06]'
+                  : 'border-linha bg-asfalto-27',
             )}
-            style={{ borderRadius: 'var(--radius-sm)' }}
           >
             <div className="mb-2 flex items-center gap-2">
-              <Activity
-                className={cn(
-                  'h-3.5 w-3.5 shrink-0',
-                  isInjured ? 'text-[var(--color-danger)]' : 'text-white/80',
-                )}
-                aria-hidden
-              />
-              <span
-                className="uppercase"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '10px',
-                  fontWeight: 800,
-                  letterSpacing: '0.22em',
-                  color: isInjured ? 'var(--color-danger)' : 'white',
-                }}
-              >
-                {L('Saúde', 'Health')}
-              </span>
+              <Activity className={cn('h-3.5 w-3.5 shrink-0', isInjured ? 'text-baixa' : 'text-mudo')} aria-hidden />
+              <span className={cn(ROTULO, isInjured ? 'text-baixa' : 'text-suave')}>{L('Saúde', 'Health')}</span>
             </div>
 
             {/* Estado primário (lesão / suspensão / disponível) */}
             {isInjured ? (
               <>
-                <p
-                  className="text-[var(--color-danger)]"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '14px',
-                    fontWeight: 800,
-                  }}
-                >
+                <p className="font-impact text-[20px] uppercase leading-none text-baixa">
                   {severity ? INJURY_LABEL_PT[severity] : L('Lesionado', 'Injured')}
                 </p>
-                <p className="mt-0.5 text-white/65" style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}>
+                <p className="mt-1 text-[12px] text-suave">
                   {emIngles() ? (
-                    <><span className="font-bold text-white">{h.outForMatches}</span>{' '}
+                    <><span className="font-bold text-papel">{h.outForMatches}</span>{' '}
                     game{h.outForMatches === 1 ? '' : 's'} until return</>
                   ) : (
-                    <>Faltam <span className="font-bold text-white">{h.outForMatches}</span>{' '}
+                    <>Faltam <span className="font-bold text-papel">{h.outForMatches}</span>{' '}
                     jogo{h.outForMatches === 1 ? '' : 's'} pro retorno</>
                   )}
                   {totalMatchesForInjury ? ` (${matchesCompleted}/${totalMatchesForInjury})` : ''}.
@@ -234,15 +163,7 @@ export function PlayerHealthContractSection({ player }: Props) {
                 {totalMatchesForInjury ? (
                   <div className="mt-2.5">
                     <ProgressBar pct={recoveryPct} tone="warning" />
-                    <p
-                      className="mt-1 uppercase text-white/45"
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '9px',
-                        fontWeight: 700,
-                        letterSpacing: '0.18em',
-                      }}
-                    >
+                    <p className={cn(PEQUENO, 'mt-1')}>
                       {L('Recuperando', 'Recovering')} · {Math.round(recoveryPct)}%
                     </p>
                   </div>
@@ -250,37 +171,23 @@ export function PlayerHealthContractSection({ player }: Props) {
               </>
             ) : isSuspended ? (
               <>
-                <p
-                  className="text-[var(--color-warning)]"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '14px',
-                    fontWeight: 800,
-                  }}
-                >
-                  {L('Suspenso', 'Suspended')}
-                </p>
-                <p className="mt-0.5 text-white/65" style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}>
+                <p className="font-impact text-[20px] uppercase leading-none text-atencao">{L('Suspenso', 'Suspended')}</p>
+                <p className="mt-1 text-[12px] text-suave">
                   {L(`${h.suspendedMatches} jogo${h.suspendedMatches === 1 ? '' : 's'} de suspensão.`, `${h.suspendedMatches}-game suspension.`)}
                 </p>
               </>
             ) : (
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 shrink-0 text-[var(--color-success)]" aria-hidden />
-                <span
-                  className="text-[var(--color-success)]"
-                  style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 800 }}
-                >
-                  {L('Disponível', 'Available')}
-                </span>
+                <ShieldCheck className="h-4 w-4 shrink-0 text-papel" aria-hidden />
+                <span className="font-impact text-[20px] uppercase leading-none text-papel">{L('Disponível', 'Available')}</span>
               </div>
             )}
 
             {/* Métricas sempre visíveis: energia, fadiga, risco */}
-            <div className="mt-3 space-y-2 border-t border-white/8 pt-3">
+            <div className="mt-3 space-y-2.5 border-t-2 border-linha pt-3">
               <div>
                 <MetricRow label={L('Energia', 'Energy')} value={`${energyPct}%`} tone={fatigueTone === 'bad' ? 'bad' : fatigueTone === 'warn' ? 'warn' : 'good'} />
-                <div className="mt-1">
+                <div className="mt-1.5">
                   <ProgressBar pct={energyPct} tone={energyTone} />
                 </div>
               </div>
@@ -291,95 +198,55 @@ export function PlayerHealthContractSection({ player }: Props) {
           {/* ── Sub-bloco: Contrato ─────────────────────────────────────────── */}
           <div
             className={cn(
-              'border p-3',
+              'p-3',
               isExpired
-                ? 'border-zinc-500/45 bg-zinc-900/40'
+                ? 'border-2 border-dashed border-fio bg-asfalto-27'
                 : isLifetime
-                  ? 'border-[var(--color-neon-yellow)]/35 bg-[var(--color-neon-yellow)]/8'
+                  ? 'border-[3px] border-ouro-27 bg-asfalto-27'
                   : contractPct <= 10
-                    ? 'border-[var(--color-warning)]/35 bg-[var(--color-warning)]/8'
-                    : 'border-white/10 bg-white/[0.02]',
+                    ? 'border-2 border-atencao/50 bg-atencao/[0.06]'
+                    : 'border-2 border-linha bg-asfalto-27',
             )}
-            style={{ borderRadius: 'var(--radius-sm)' }}
           >
             <div className="mb-2 flex items-center gap-2">
               <FileText
-                className={cn(
-                  'h-3.5 w-3.5 shrink-0',
-                  isExpired ? 'text-zinc-300' : isLifetime ? 'text-[var(--color-neon-yellow)]' : 'text-white/80',
-                )}
+                className={cn('h-3.5 w-3.5 shrink-0', isLifetime ? 'text-ouro-27' : 'text-mudo')}
                 aria-hidden
               />
-              <span
-                className="uppercase"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '10px',
-                  fontWeight: 800,
-                  letterSpacing: '0.22em',
-                  color: isExpired ? '#d4d4d8' : isLifetime ? 'var(--color-neon-yellow)' : 'white',
-                }}
-              >
-                {L('Contrato', 'Contract')}
-              </span>
+              <span className={cn(ROTULO, isLifetime ? 'text-ouro-27' : 'text-suave')}>{L('Contrato', 'Contract')}</span>
             </div>
 
             {isLifetime ? (
               <>
-                <p
-                  className="text-[var(--color-neon-yellow)]"
-                  style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 800 }}
-                >
-                  {L('Vitalício', 'Lifetime')}
-                </p>
-                <p className="mt-0.5 text-white/65" style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}>
+                <p className="font-impact text-[20px] uppercase leading-none text-ouro-27">{L('Vitalício', 'Lifetime')}</p>
+                <p className="mt-1 text-[12px] text-suave">
                   {L('Jogador histórico do clube — sem fim de jogos.', 'Club legend — no game limit.')}
                 </p>
               </>
             ) : isExpired ? (
               <>
-                <p
-                  className="text-zinc-200"
-                  style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 800 }}
-                >
-                  {L('Vencido', 'Expired')}
-                </p>
-                <p className="mt-0.5 text-white/65" style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}>
+                <p className="font-impact text-[20px] uppercase leading-none text-suave">{L('Vencido', 'Expired')}</p>
+                <p className="mt-1 text-[12px] text-suave">
                   {L('Não pode entrar em XI oficial. Renove pra reativar.', 'Can’t be in an official XI. Renew to reactivate.')}
                 </p>
               </>
             ) : hasContract ? (
               <>
-                <p
-                  className={cn(
-                    contractPct <= 10 ? 'text-[var(--color-warning)]' : 'text-white',
-                  )}
-                  style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 800 }}
-                >
-                  {remaining} <span className="opacity-60">/ {included} {L('jogos', 'games')}</span>
+                <p className={cn('font-impact text-[22px] leading-none tabular-nums', contractPct <= 10 ? 'text-atencao' : 'text-papel')}>
+                  {remaining} <span className="font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-mudo">/ {included} {L('jogos', 'games')}</span>
                 </p>
-                <p className="mt-0.5 text-white/65" style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}>
-                  {L('Decrementa 1 a cada partida em que o jogador participa.', 'Counts down 1 for each match the player plays.')}
+                <p className="mt-1 text-[12px] text-suave">
+                  {L('Desconta 1 a cada partida em que o jogador entra.', 'Counts down 1 for each match the player plays.')}
                 </p>
                 <div className="mt-2.5">
                   <ProgressBar pct={contractPct} tone={contractTone} />
-                  <p
-                    className="mt-1 uppercase text-white/45"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '9px',
-                      fontWeight: 700,
-                      letterSpacing: '0.18em',
-                    }}
-                  >
+                  <p className={cn(PEQUENO, 'mt-1')}>
                     {L('Restante', 'Remaining')} · {Math.round(contractPct)}%
                   </p>
                 </div>
               </>
             ) : (
-              <p className="text-white/55" style={{ fontFamily: 'var(--font-ui)', fontSize: '12px' }}>
-                {L('Sem contrato registrado.', 'No contract on record.')}
-              </p>
+              <p className="text-[12px] text-suave">{L('Sem contrato registrado.', 'No contract on record.')}</p>
             )}
 
             {/* CTA de renovação — prospects do manager + Genesis não-vitalícios. */}
@@ -388,21 +255,14 @@ export function PlayerHealthContractSection({ player }: Props) {
                 type="button"
                 onClick={() => setRenewOpen(true)}
                 className={cn(
-                  'mt-3 inline-flex h-9 w-full touch-manipulation items-center justify-center gap-1.5 border uppercase transition-colors',
+                  'mt-3 inline-flex min-h-10 w-full touch-manipulation items-center justify-center gap-1.5 font-impact text-[16px] uppercase leading-none transition-[transform,background-color,color]',
                   isExpired
-                    ? 'border-[var(--color-warning)] bg-[var(--color-warning)]/15 text-[var(--color-warning)] hover:bg-[var(--color-warning)]/25'
-                    : 'border-cyan-400/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20',
+                    ? 'bg-rua text-asfalto-27 shadow-[3px_3px_0_var(--color-papel)] hover:-translate-y-px'
+                    : 'border-2 border-rua text-rua hover:bg-rua hover:text-asfalto-27',
                 )}
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '10px',
-                  fontWeight: 800,
-                  letterSpacing: '0.22em',
-                  borderRadius: 'var(--radius-sm)',
-                }}
               >
                 <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-                {isExpired ? L('Renovar agora', 'Renew now') : L('Renovar contrato', 'Renew contract')}
+                {isExpired ? L('Renovar agora', 'Renew now') : L('Renovar contrato', 'Renew contract')} <span aria-hidden>→</span>
               </button>
             ) : null}
 
@@ -414,42 +274,28 @@ export function PlayerHealthContractSection({ player }: Props) {
                   dispatchGame({ type: 'SET_AUTO_RENEW_CONTRACT', playerId: player.id, enabled: !autoRenewOn })
                 }
                 className={cn(
-                  'mt-2 flex w-full touch-manipulation items-center justify-between gap-2 border px-3 py-2 transition-colors',
-                  autoRenewOn
-                    ? 'border-amber-400/45 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'
-                    : 'border-white/12 bg-white/[0.03] text-white/55 hover:bg-white/[0.06]',
+                  'mt-2 flex w-full touch-manipulation items-center justify-between gap-2 border-2 px-3 py-2 transition-colors',
+                  autoRenewOn ? 'border-rua text-rua' : 'border-linha text-mudo hover:border-fio',
                 )}
-                style={{ borderRadius: 'var(--radius-sm)' }}
                 aria-pressed={autoRenewOn}
               >
-                <span
-                  className="uppercase"
-                  style={{ fontFamily: 'var(--font-display)', fontSize: '9.5px', fontWeight: 800, letterSpacing: '0.18em' }}
-                >
+                <span className="font-prova text-[10px] font-bold uppercase tracking-[0.14em]">
                   {L('Auto-renovar', 'Auto-renew')} ({moedaDoJogo()})
                 </span>
                 <span
                   className={cn(
                     'flex h-4 w-7 shrink-0 items-center rounded-full px-0.5 transition-colors',
-                    autoRenewOn ? 'justify-end bg-amber-400/80' : 'justify-start bg-white/15',
+                    autoRenewOn ? 'justify-end bg-rua' : 'justify-start bg-linha',
                   )}
                 >
-                  <span className="h-3 w-3 rounded-full bg-white" />
+                  <span className={cn('h-3 w-3 rounded-full', autoRenewOn ? 'bg-asfalto-27' : 'bg-mudo')} />
                 </span>
               </button>
             ) : null}
 
-            {/* Hint sutil pra jogadores sem possibilidade de renovação (Genesis etc) */}
+            {/* Hint pra jogadores sem possibilidade de renovação (Genesis etc) */}
             {!canRenew && !isLifetime && !isExpired && hasContract && contractPct <= 10 ? (
-              <p
-                className="mt-2 uppercase text-white/45"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  letterSpacing: '0.18em',
-                }}
-              >
+              <p className={cn(PEQUENO, 'mt-2')}>
                 {L('Jogador de catálogo — renovação não disponível.', 'Catalogue player — renewal unavailable.')}
               </p>
             ) : null}

@@ -284,7 +284,7 @@ export function PenaltyShoot({
 
   return (
     <div
-      className="bg-neon-yellow flex flex-col items-center px-4 sm:px-6 select-none w-full flex-1"
+      className="relative bg-rua text-asfalto-27 flex flex-col items-center px-4 sm:px-6 select-none w-full flex-1"
       style={{
         touchAction: 'none',
         // Standalone (página inteira): 100dvh. Embedded em modal: altura
@@ -301,37 +301,40 @@ export function PenaltyShoot({
             }),
       }}
     >
+      {/* Alambrado no topo da peça amarela (DS 2027) — textura, não enfeite. */}
+      <span aria-hidden className="rua-alambrado pointer-events-none absolute inset-x-0 top-0 h-40 [--alambrado:rgba(13,13,12,0.22)]" />
+
       {/* Header */}
-      <div className="w-full max-w-[920px] flex items-baseline justify-between mb-1">
-        <div className="text-[10px] uppercase tracking-[0.35em] font-medium text-black/70">
+      <div className="relative w-full max-w-[920px] flex items-baseline justify-between gap-3 mb-1">
+        <div className="min-w-0 truncate font-prova text-[11px] font-bold uppercase tracking-[0.2em]">
           {headerLabel}
         </div>
         {shootoutContext && (
-          <div className="text-[10px] uppercase tracking-[0.35em] font-medium text-black/70">
+          <div className="shrink-0 font-prova text-[11px] font-bold uppercase tracking-[0.2em]">
             {L('Batedor', 'Taker')} {shootoutContext.currentShooter + 1} {L('de', 'of')} {shootoutContext.rounds}
           </div>
         )}
       </div>
 
       {/* Timer + Headline */}
-      <div className="w-full max-w-[920px] flex flex-col items-center">
+      <div className="relative w-full max-w-[920px] flex flex-col items-center">
         <div
-          className={`font-display font-black leading-none tabular-nums transition-colors duration-200 ${
-            timeLeft <= 3 && phase === 'pick' ? 'text-black animate-pulse' : 'text-black/85'
+          className={`font-spray font-black leading-none tabular-nums transition-colors duration-200 ${
+            timeLeft <= 3 && phase === 'pick' ? 'text-asfalto-27 animate-pulse' : 'text-asfalto-27/85'
           }`}
-          style={{ fontSize: 'clamp(32px, min(5vh, 8vw), 80px)' }}
+          style={{ fontSize: 'clamp(44px, min(7vh, 14vw), 96px)' }}
         >
           {phase === 'pick' ? timeLeft.toString().padStart(2, '0') : '00'}
         </div>
 
         <h1
-          className="ole-headline text-black text-center mt-1"
+          className={`text-center mt-1 uppercase text-asfalto-27 ${phase === 'result' ? 'font-spray font-black' : 'font-impact'}`}
           style={{
             fontSize:
               phase === 'result'
-                ? 'clamp(36px, min(7vh, 9vw), 100px)'
-                : 'clamp(18px, min(3.5vh, 3.5vw), 40px)',
-            lineHeight: 1.1,
+                ? 'clamp(48px, min(9vh, 14vw), 112px)'
+                : 'clamp(22px, min(4vh, 6.5vw), 44px)',
+            lineHeight: phase === 'result' ? 0.9 : 1.05,
           }}
         >
           {headline}
@@ -339,14 +342,14 @@ export function PenaltyShoot({
       </div>
 
       {/* Sub-info do batedor + goleiro */}
-      <div className="flex items-center gap-2 mt-1 mb-1 sm:mt-3 sm:mb-2 text-black/80 text-[10px] uppercase tracking-[0.18em] flex-wrap justify-center">
-        <span className="border border-black/40 px-2 py-1 bg-black text-neon-yellow">
-          {shooter.displayName} · #{shooter.shirtNumber}
+      <div className="relative flex items-center gap-2 mt-1 mb-1 sm:mt-3 sm:mb-2 font-prova font-bold text-asfalto-27/80 text-[10.5px] uppercase tracking-[0.14em] flex-wrap justify-center">
+        <span className="-rotate-1 bg-asfalto-27 px-2.5 py-1 text-rua">
+          <span className="font-voz text-[17px] normal-case leading-none tracking-normal">{shooter.displayName}</span> · #{shooter.shirtNumber}
         </span>
         <span>{L('Finalização', 'Finishing')} {shooter.finishingRating}</span>
         {keeperHint && (
           <>
-            <span className="text-black/50">|</span>
+            <span className="text-asfalto-27/50">|</span>
             <span>{keeperHint}</span>
           </>
         )}
@@ -382,12 +385,12 @@ export function PenaltyShoot({
             {onNextShooter && (
               <button
                 onClick={handleNextShooter}
-                className="relative bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider hover:bg-white hover:text-black transition-colors overflow-hidden"
+                className="relative inline-flex min-h-[52px] items-center bg-asfalto-27 text-rua px-7 font-impact text-[20px] uppercase leading-none hover:bg-concreto transition-colors overflow-hidden"
               >
                 <span className="relative z-10">
                   {L('Próximo', 'Next')}
                   {autoAdvanceLeft != null && (
-                    <span className="ml-3 tabular-nums text-neon-yellow/70">
+                    <span className="ml-3 font-prova text-[13px] tabular-nums text-rua/70">
                       {autoAdvanceLeft}s
                     </span>
                   )}
@@ -395,7 +398,7 @@ export function PenaltyShoot({
                 {/* Barra de progresso decrescente embaixo do botão */}
                 {autoAdvanceLeft != null && autoAdvanceMs && (
                   <span
-                    className="absolute bottom-0 left-0 h-[3px] bg-neon-yellow/50 transition-[width] duration-200 ease-linear"
+                    className="absolute bottom-0 left-0 h-[3px] bg-rua/60 transition-[width] duration-200 ease-linear"
                     style={{
                       width: `${Math.max(0, (autoAdvanceLeft * 1000) / autoAdvanceMs) * 100}%`,
                     }}
@@ -406,14 +409,14 @@ export function PenaltyShoot({
             {onReset && (
               <button
                 onClick={handleReset}
-                className="bg-transparent border-2 border-black text-black px-8 py-3 font-display font-black uppercase tracking-wider hover:bg-black hover:text-neon-yellow transition-colors"
+                className="inline-flex min-h-[52px] items-center border-2 border-asfalto-27 text-asfalto-27 px-7 font-impact text-[20px] uppercase leading-none hover:bg-asfalto-27 hover:text-rua transition-colors"
               >
                 {L('Reiniciar', 'Restart')}
               </button>
             )}
           </div>
           {autoAdvanceLeft != null && (
-            <div className="text-[10px] uppercase tracking-[0.3em] text-black/50">
+            <div className="font-prova text-[10px] font-bold uppercase tracking-[0.18em] text-asfalto-27/60">
               {L(`Auto-avança em ${autoAdvanceLeft}s · clique pra adiantar`, `Auto-advance in ${autoAdvanceLeft}s · click to skip`)}
             </div>
           )}
@@ -422,12 +425,12 @@ export function PenaltyShoot({
 
       {/* Hint */}
       {phase === 'pick' && (
-        <div className="mt-3 sm:mt-6 text-[9px] sm:text-[10px] uppercase tracking-[0.25em] text-black/50 max-w-[920px] text-center leading-relaxed px-2">
+        <div className="mt-3 sm:mt-6 font-prova font-bold text-[10px] uppercase tracking-[0.14em] text-asfalto-27/60 max-w-[920px] text-center leading-relaxed px-2">
           {L(`Pressione e segure um slot pra carregar a força · Solte pra chutar · ${pickTimeSeconds}s pra decidir`, `Press and hold a slot to charge power · Release to shoot · ${pickTimeSeconds}s to decide`)}
         </div>
       )}
       {pov === 'player' && (
-        <div className="mt-2 text-[10px] uppercase tracking-[0.3em] text-black/40">
+        <div className="mt-2 font-prova text-[10px] uppercase tracking-[0.2em] text-asfalto-27/40">
           [POV: Player · placeholder]
         </div>
       )}

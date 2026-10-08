@@ -12,15 +12,16 @@ import { DEFAULT_BRO_PRICES_CENTS } from '@/clubStructures/broDefaults';
 import { formatBroFromCents, formatExp } from '@/systems/economy';
 import { BackButton } from '@/components/BackButton';
 import { EditorialHero } from '@/components/EditorialHero';
-import { RailStat } from '@/components/ui/RailStat';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Hashtag } from '@/components/ui';
+import { BarraSegmentos, DEGRAU_CLASSES, MarcaRua } from '@/components/ui/Rua';
+import { DEGRAU_INFO, OvrSelo, PlacarRua, VazioRua, degrauDe, ovrNumeroClasses } from '@/components/clube/escada';
+import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { trackMissionEvent } from '@/progression/trackEvent';
 import { rotuloPosicao } from '@/transfer/marketFilters';
 import { L, emIngles } from '@/i18n/L';
 
-/** Fonte de número do layer final: Anton. (Era serifa itálica.) */
-const NUM = 'var(--font-impact)';
+/** Inclinações de lambe colado — alternam pra não parecer grade (até 6°). */
+const TORTO = [-2, 1.5, -1, 2, -1.5, 1];
 
 export function YouthProspects() {
   const players = useGameStore((s) => s.players);
@@ -62,127 +63,144 @@ export function YouthProspects() {
   };
 
   return (
-    <div className="mx-auto min-w-0 max-w-6xl space-y-6 px-3 pb-10 sm:px-4 lg:px-8">
+    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-8 px-3 pb-10 sm:px-4 lg:px-8">
       <BackButton to="/clube" label={L('Clube', 'Club')} />
 
       <EditorialHero
-        watermark="BASE"
         eyebrow={L('Gestão do clube · Categoria de base', 'Club management · Youth academy')}
         title={L('Academia', 'Academy')}
+        subtitle={L('Cria da casa não se compra.', "Homegrown can't be bought.")}
         stats={L(`${allCrias.length} cria(s) no elenco · nível ${youthLvl}/5`, `${allCrias.length} homegrown player(s) in squad · level ${youthLvl}/5`)}
-        icon={
-          <div className="relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28" style={{ borderRadius: 'var(--radius-sm)' }}>
-            <div className="flex h-full w-full items-center justify-center">
-              <GraduationCap className="h-12 w-12 text-neon-yellow/90 sm:h-14 sm:w-14" aria-hidden />
-            </div>
-          </div>
-        }
+        icon={<GraduationCap aria-hidden />}
+        lambe={{ rotulo: L('Nível', 'Level'), valor: `${youthLvl}/5` }}
       />
 
-      {/* Stat cards (rail) */}
-      <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-        <RailStat label={L('Nível academia', 'Academy level')} value={<>{youthLvl}<small className="text-white/40">/5</small></>} />
-        <RailStat label={L('Booster de treino', 'Training booster')} value={<>+{boosterPct}<small className="text-white/40">%</small></>} />
-        <RailStat label={L('Crias no elenco', 'Homegrown in squad')} value={<>{allCrias.length}</>} />
-      </div>
+      {/* Placar */}
+      <PlacarRua
+        className="grid-cols-3 sm:grid-cols-3"
+        itens={[
+          { label: L('Nível academia', 'Academy level'), value: <>{youthLvl}<small className="text-[0.5em] text-mudo">/5</small></> },
+          { label: L('Booster de treino', 'Training booster'), value: <>+{boosterPct}<small className="text-[0.5em] text-mudo">%</small></> },
+          { label: L('Crias no elenco', 'Homegrown in squad'), value: allCrias.length },
+        ]}
+      />
 
       {/* Como funciona + Evoluir academia */}
-      <div className="relative overflow-hidden ole-poster p-5 pl-[18px]">
-        <span className="absolute inset-y-0 left-0 w-[3px] bg-neon-yellow" aria-hidden />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="max-w-lg">
-            <h3 className="font-display text-[16px] font-bold uppercase tracking-[0.04em]">{L('Como a base evolui', 'How the academy grows')}</h3>
-            <p className="mt-1.5 text-[12.5px] leading-relaxed text-white/60">
-              {emIngles() ? <>Level boosts the <span className="text-white">training gains</span> of homegrown players ·{' '}</> : <>Nível turbina o <span className="text-white">ganho de treino</span> das crias ·{' '}</>}
-              <Link to="/team/treino" className="text-neon-yellow underline hover:text-white">{L('Treino', 'Training')}</Link>
-            </p>
-          </div>
-          <div className="shrink-0">
-            {upCost ? (
-              <button
-                onClick={() => setConfirmUpgrade(true)}
-                className="inline-flex items-center gap-1.5 rounded-md bg-neon-yellow px-5 py-3 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-black transition-colors hover:bg-white"
-              >
-                <TrendingUp className="h-4 w-4" /> {L('Evoluir', 'Upgrade')} · {upLabel}
-              </button>
-            ) : (
-              <span className="inline-flex items-center rounded-md border border-white/15 px-5 py-3 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-white/40">
-                {L('Nível máximo', 'Max level')}
-              </span>
-            )}
-          </div>
+      <section className="flex flex-col gap-4 bg-concreto p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="max-w-lg">
+          <h3 className="font-impact text-[24px] uppercase leading-none text-papel">{L('Como a base evolui', 'How the academy grows')}</h3>
+          <BarraSegmentos valor={youthLvl} max={5} segmentos={5} className="mt-3 h-2.5 max-w-[220px]" />
+          <p className="mt-3 text-[13px] leading-relaxed text-suave">
+            {emIngles() ? <>Level boosts the <span className="text-papel">training gains</span> of homegrown players ·{' '}</> : <>Nível turbina o <span className="text-papel">ganho de treino</span> das crias ·{' '}</>}
+            <Link to="/team/treino" className="font-impact uppercase text-rua hover:text-papel">{L('Treino', 'Training')} →</Link>
+          </p>
         </div>
-      </div>
+        <div className="shrink-0 pb-1 pr-1">
+          {upCost ? (
+            <button
+              onClick={() => setConfirmUpgrade(true)}
+              className="inline-flex min-h-[52px] items-center gap-2 bg-rua px-5 font-impact text-[19px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)]"
+            >
+              <TrendingUp className="h-4 w-4" /> {L('Evoluir', 'Upgrade')} · {upLabel} <span aria-hidden>→</span>
+            </button>
+          ) : (
+            <span className="inline-flex min-h-[52px] items-center bg-ouro-27 px-5 font-impact text-[19px] uppercase leading-none text-asfalto-27">
+              {L('Nível máximo', 'Max level')}
+            </span>
+          )}
+        </div>
+      </section>
 
       {allCrias.length === 0 ? (
-        <div className="sports-panel p-8 text-center">
-          <GraduationCap className="mx-auto h-8 w-8 text-neon-yellow/70" aria-hidden />
-          <p className="mt-3 text-sm text-white/80">{L('Nenhuma cria no elenco.', 'No homegrown players in the squad.')}</p>
-          <p className="mt-1 text-xs text-gray-500">{L('Jogadores «novo talento» aparecem aqui.', '“New talent” players show up here.')}</p>
-        </div>
+        <VazioRua
+          frase={L('Nenhuma cria no elenco. A base começa contigo.', 'No homegrown players yet. The academy starts with you.')}
+          detalhe={L('Jogadores «novo talento» aparecem aqui.', '“New talent” players show up here.')}
+          acao={{ label: L('Criar jogador', 'Create player'), to: '/clube/elenco' }}
+        />
       ) : (
         <>
           {/* Filtros */}
-          <div className="sports-panel grid grid-cols-1 gap-3 p-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mudo" />
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={L('Buscar por nome', 'Search by name')}
-                className="w-full rounded border border-white/10 bg-black/40 px-9 py-2 text-sm" />
+                className="w-full border-2 border-linha bg-concreto px-9 py-2.5 font-prova text-[13px] text-papel placeholder:text-mudo focus:border-rua focus:outline-none" />
             </div>
-            <select value={pos} onChange={(e) => setPos(e.target.value)} className="rounded border border-white/10 bg-black/40 px-3 py-2 text-sm">
+            <select value={pos} onChange={(e) => setPos(e.target.value)} className="border-2 border-linha bg-concreto px-3 py-2.5 font-prova text-[13px] text-papel focus:border-rua focus:outline-none">
               <option value="">{L('Todas posições', 'All positions')}</option>
               {positions.map((p) => <option key={p} value={p}>{rotuloPosicao(p)}</option>)}
             </select>
-            <div className="flex items-center justify-between rounded border border-white/10 bg-black/40 px-3 py-2 text-xs text-gray-400">
-              <span>{L('Crias encontradas', 'Players found')}</span><span className="font-bold text-neon-yellow">{crias.length}</span>
+            <div className="flex items-center justify-between border-2 border-linha px-3 py-2.5 font-prova text-[12px] uppercase tracking-[0.08em] text-mudo">
+              <span>{L('Crias encontradas', 'Players found')}</span><span className="font-impact text-[18px] text-papel">{crias.length}</span>
             </div>
           </div>
 
-          {/* Grid de crias — view-player-card horizontal */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {crias.map((p) => {
+          {/* Crias — cartas na escada por OVR, coladas tortas como lambe */}
+          <ul className="grid grid-cols-2 gap-x-3 gap-y-5 py-2 sm:grid-cols-3 lg:grid-cols-4">
+            {crias.map((p, i) => {
               const ovr = overallFromAttributes(p.attrs, p.pos);
               const cap = getEvolvedOverallCap(p);
               const headroom = Math.max(0, cap - ovr);
+              const d = degrauDe(ovr);
               return (
-                <button key={p.id} type="button" onClick={() => setSelectedId(p.id)}
-                  className="group relative flex items-stretch overflow-hidden ole-poster text-left transition-colors hover:border-white/25">
-                  <span className="absolute inset-y-0 left-0 z-10 w-[3px] bg-neon-yellow" aria-hidden />
-                  <div className="relative flex w-[86px] shrink-0 flex-col justify-center overflow-hidden bg-black/60 py-3 pl-4">
-                    <span className="tabular-nums leading-none text-neon-yellow" style={{ fontFamily: NUM, fontSize: '32px' }}>{ovr}</span>
-                    <span className="mt-1 font-display text-[10px] uppercase tracking-[0.1em] text-white/45">{rotuloPosicao(p.pos)}</span>
-                  </div>
-                  <div className="flex flex-1 items-center px-4">
-                    <div className="min-w-0">
-                      <div className="truncate font-display text-[15px] font-bold uppercase tracking-[0.02em]"><span className="text-white/45">{p.num}</span> {p.name}</div>
-                      <div className="mt-0.5 font-display text-[10.5px] uppercase tracking-[0.1em] text-white/45">
-                        {L('Teto', 'Cap')} {cap} · {headroom > 0 ? L(`+${headroom} p/ evoluir`, `+${headroom} to grow`) : L('no teto', 'at cap')}
+                <li key={p.id} className="min-w-0">
+                  <button type="button" onClick={() => setSelectedId(p.id)}
+                    aria-label={L(`${p.name}, OVR ${ovr}, ${DEGRAU_INFO[d].nome}`, `${p.name}, OVR ${ovr}, ${DEGRAU_INFO[d].nome}`)}
+                    className={cn(
+                      'flex w-full min-w-0 flex-col gap-2 p-2.5 text-left shadow-[5px_6px_0_rgba(0,0,0,0.55)] transition-transform duration-200 hover:!rotate-0 hover:-translate-y-1',
+                      DEGRAU_CLASSES[d],
+                    )}
+                    style={{ transform: `rotate(${TORTO[i % TORTO.length]}deg)` }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex flex-col">
+                        <span className={cn('font-impact text-[42px] leading-[0.85] tabular-nums', ovrNumeroClasses(d))}>{ovr}</span>
+                        <span className={cn('mt-1 font-impact text-[13px] uppercase leading-none', d === 'respeito' && 'text-ouro-27')}>{rotuloPosicao(p.pos)}</span>
                       </div>
+                      <MarcaRua tipo="escudo" className={cn('h-7', d === 'respeito' ? 'bg-ouro-27' : 'bg-asfalto-27')} />
                     </div>
-                  </div>
-                  <div className="flex items-center pr-4"><GraduationCap className="h-4 w-4 text-white/30" aria-hidden /></div>
-                </button>
+                    <div className={cn('relative aspect-[4/5] w-full overflow-hidden', d === 'respeito' ? 'bg-concreto' : 'bg-asfalto-27/10')}>
+                      <img
+                        src={playerPortraitSrc({ id: p.id, name: p.name, portraitUrl: p.portraitUrl }, 200, 250)}
+                        alt=""
+                        loading="lazy"
+                        className="absolute inset-0 object-cover object-top"
+                        style={{ width: '100%', height: '100%', maxWidth: 'none' }}
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                    <span className="block min-w-0 truncate font-voz text-[21px] leading-none">{p.name}</span>
+                    <span className="font-prova text-[10px] font-bold uppercase tracking-[0.06em] opacity-80">
+                      {L('Teto', 'Cap')} {cap} · {headroom > 0 ? L(`+${headroom} p/ evoluir`, `+${headroom} to grow`) : L('no teto', 'at cap')}
+                    </span>
+                  </button>
+                </li>
               );
             })}
-          </div>
+          </ul>
 
           {crias.length === 0 && (
-            <div className="sports-panel p-8 text-center text-sm text-gray-500">{L('Nenhuma cria com os filtros atuais.', 'No players match the current filters.')}</div>
+            <p className="border-2 border-dashed border-fio p-5 font-voz text-[21px] leading-tight text-suave">{L('Nenhuma cria com os filtros atuais.', 'No players match the current filters.')}</p>
           )}
         </>
       )}
 
       {/* ── MODAL: detalhe da cria (sem compra — só desenvolvimento) ── */}
-      {selected && (
+      {selected && (() => {
+        const selOvr = overallFromAttributes(selected.attrs, selected.pos);
+        return (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/85 p-4" onClick={() => setSelectedId(null)}>
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="relative w-full max-w-3xl overflow-hidden rounded-lg border border-neon-yellow/40 bg-panel" onClick={(e) => e.stopPropagation()}>
-            <button type="button" onClick={() => setSelectedId(null)} className="absolute right-4 top-4 z-10 rounded-full bg-black/60 p-2 text-gray-300 hover:text-white"><X className="h-5 w-5" /></button>
+            className="relative my-auto w-full max-w-3xl overflow-hidden border-2 border-linha bg-asfalto-27" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={() => setSelectedId(null)} aria-label={L('Fechar', 'Close')} className="absolute right-3 top-3 z-10 inline-flex h-11 w-11 items-center justify-center border-2 border-linha bg-asfalto-27 text-mudo hover:border-papel hover:text-papel"><X className="h-5 w-5" /></button>
             <div className="grid grid-cols-1 md:grid-cols-2">
-              <div className="border-b border-white/10 bg-black/40 p-6 md:border-b-0 md:border-r">
-                <Hashtag>{L('#novotalento #base', '#newtalent #academy')}</Hashtag>
-                <h3 className="mt-1 font-display text-3xl font-black uppercase">{selected.name}</h3>
-                <div className="mt-5 space-y-2">
+              <div className="border-b-2 border-linha p-6 md:border-b-0 md:border-r-2">
+                <span className="font-prova text-[11px] font-bold text-mudo">{L('#novotalento #base', '#newtalent #academy')}</span>
+                <div className="mt-2 flex min-w-0 items-center gap-3 pr-12">
+                  <OvrSelo ovr={selOvr} className="h-14 w-14 text-[30px]" />
+                  <h3 className="min-w-0 font-voz text-[34px] leading-none text-papel [overflow-wrap:anywhere]">{selected.name}</h3>
+                </div>
+                <div className="mt-6 space-y-2.5">
                   <AttrRow label={L('Passe', 'Passing')} value={selected.attrs.passe} />
                   <AttrRow label={L('Drible', 'Dribbling')} value={selected.attrs.drible} />
                   <AttrRow label={L('Finalização', 'Finishing')} value={selected.attrs.finalizacao} />
@@ -192,27 +210,28 @@ export function YouthProspects() {
                   <AttrRow label={L('Tático', 'Tactical')} value={selected.attrs.tatico} />
                 </div>
               </div>
-              <div className="flex flex-col p-6">
-                <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-5 p-6">
+                <dl className="grid grid-cols-2 gap-px bg-linha">
                   <Info label={L('Posição', 'Position')} value={rotuloPosicao(selected.pos)} />
-                  <Info label="Overall" value={String(overallFromAttributes(selected.attrs, selected.pos))} />
+                  <Info label="Overall" value={String(selOvr)} />
                   <Info label={L('Teto de OVR', 'OVR cap')} value={String(getEvolvedOverallCap(selected))} />
                   <Info label={L('Ritmo de evolução', 'Growth rate')} value={`×${(selected.evolutionRate ?? 1).toFixed(2)}`} />
-                </div>
-                <div className="mt-5 rounded-xl border border-neon-yellow/30 bg-neon-yellow/10 p-4">
-                  <div className="font-display text-[10px] uppercase tracking-widest text-white/50">{L('Booster da academia', 'Academy booster')}</div>
-                  <div className="tabular-nums mt-1 text-neon-yellow" style={{ fontFamily: NUM, fontSize: '30px' }}>+{boosterPct}%</div>
-                  <p className="mt-1 text-[11px] text-gray-400">{L('ganho extra de treino · academia nível', 'extra training gain · academy level')} {youthLvl}</p>
+                </dl>
+                <div className="border-[3px] border-ouro-27 p-4">
+                  <div className="font-prova text-[10px] font-bold uppercase tracking-[0.2em] text-mudo">— {L('Booster da academia', 'Academy booster')}</div>
+                  <div className="mt-1 font-spray text-[40px] font-black leading-none text-ouro-27 tabular-nums">+{boosterPct}%</div>
+                  <p className="mt-1 font-prova text-[11px] text-mudo">{L('ganho extra de treino · academia nível', 'extra training gain · academy level')} {youthLvl}</p>
                 </div>
                 <Link to="/team/treino"
-                  className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3 font-display text-sm font-black uppercase tracking-wider text-black transition-colors hover:bg-white">
-                  <Dumbbell className="h-4 w-4" /> {L('Desenvolver no Treino', 'Develop in Training')}
+                  className="mb-1 mr-1 mt-auto inline-flex min-h-[52px] w-[calc(100%-0.25rem)] items-center justify-center gap-2 bg-rua font-impact text-[19px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)]">
+                  <Dumbbell className="h-4 w-4" /> {L('Desenvolver no Treino', 'Develop in Training')} <span aria-hidden>→</span>
                 </Link>
               </div>
             </div>
           </motion.div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ── MODAL: confirmar evolução da academia ── */}
       <ConfirmDialog
@@ -226,15 +245,15 @@ export function YouthProspects() {
         {confirmUpgrade && upCost && (
           <>
             <div className="mt-4 flex items-center gap-3">
-              <span className="tabular-nums text-white/70" style={{ fontFamily: NUM, fontSize: '30px' }}>{youthLvl}</span>
-              <TrendingUp className="h-5 w-5 text-neon-yellow" />
-              <span className="tabular-nums text-neon-yellow" style={{ fontFamily: NUM, fontSize: '30px' }}>{youthLvl + 1}</span>
+              <span className="font-spray text-[40px] font-black leading-none text-transparent [-webkit-text-stroke:1.5px_var(--color-papel)] tabular-nums">{youthLvl}</span>
+              <span aria-hidden className="font-impact text-[28px] text-rua">→</span>
+              <span className="font-spray text-[40px] font-black leading-none text-papel tabular-nums">{youthLvl + 1}</span>
             </div>
-            <div className="mt-4 space-y-1.5 text-[12.5px]">
-              <div className="flex justify-between"><span className="text-white/50">{L('Custo', 'Cost')}</span><span className="font-semibold text-white">{upLabel}</span></div>
-              <div className="flex justify-between"><span className="text-white/50">{L('Booster de treino', 'Training booster')}</span><span className="text-white">+{boosterPct}% → <span className="text-neon-yellow">+{nextBoosterPct}%</span></span></div>
+            <div className="mt-4 space-y-1.5 font-prova text-[12px]">
+              <div className="flex justify-between"><span className="text-mudo">{L('Custo', 'Cost')}</span><span className="font-bold text-papel">{upLabel}</span></div>
+              <div className="flex justify-between"><span className="text-mudo">{L('Booster de treino', 'Training booster')}</span><span className="text-papel">+{boosterPct}% → <span className="text-alta">+{nextBoosterPct}%</span></span></div>
             </div>
-            {!upCanAfford && <p className="mt-3 text-[11.5px] text-[color:var(--color-danger)]">{L('Saldo insuficiente para esta evolução.', 'Insufficient balance for this upgrade.')}</p>}
+            {!upCanAfford && <p className="mt-3 text-[12px] text-baixa">{L('Saldo insuficiente para esta evolução.', 'Insufficient balance for this upgrade.')}</p>}
           </>
         )}
       </ConfirmDialog>
@@ -244,21 +263,19 @@ export function YouthProspects() {
 
 function AttrRow({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="w-20 text-[10px] font-bold uppercase tracking-widest text-gray-500">{label}</span>
-      <div className="h-2 flex-1 overflow-hidden rounded bg-black/50">
-        <div className={cn('h-full', value >= 85 ? 'bg-neon-yellow' : value >= 72 ? 'bg-neon-green' : 'bg-blue-400')} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
-      </div>
-      <span className="w-8 text-right text-xs font-bold text-white">{value}</span>
+    <div className="flex items-center gap-3">
+      <span className="w-24 shrink-0 truncate font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-mudo">{label}</span>
+      <BarraSegmentos valor={Math.max(0, Math.min(100, value))} max={100} className="h-2.5 flex-1 gap-[3px]" />
+      <span className="w-8 text-right font-impact text-[17px] leading-none text-papel tabular-nums">{value}</span>
     </div>
   );
 }
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-white/10 bg-black/30 p-2.5">
-      <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{label}</div>
-      <div className="mt-0.5 text-sm font-bold text-white">{value}</div>
+    <div className="bg-concreto p-3">
+      <dt className="font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{label}</dt>
+      <dd className="mt-1 font-impact text-[22px] leading-none text-papel">{value}</dd>
     </div>
   );
 }

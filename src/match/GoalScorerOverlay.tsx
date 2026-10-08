@@ -46,9 +46,10 @@ export function GoalScorerOverlay({
   scorerCardStyle = 'gray-400',
   className,
 }: GoalScorerOverlayProps) {
-  const accent = side === 'home' ? 'text-neon-yellow' : 'text-white';
+  const nosso = side === 'home';
   const dorsalBadge =
     scorerNumber != null && scorerNumber > 0 ? String(scorerNumber) : '—';
+  const titulo = isGoal ? (nosso ? L('Gol!', 'Goal!') : L('Tomamos gol...', 'We conceded...')) : L('Defesa!', 'Save!');
 
   return (
     <motion.div
@@ -63,111 +64,108 @@ export function GoalScorerOverlay({
     >
       <div
         className={cn(
-          'glass-panel w-full p-5 border bg-panel text-center relative overflow-hidden',
-          side === 'away'
-            ? 'border-red-500/40'
-            : 'border-neon-yellow',
+          'relative w-full overflow-hidden px-5 pb-5 pt-4 text-center',
+          nosso ? 'bg-rua text-asfalto-27' : 'rua-grao bg-concreto text-papel border-l-[4px] border-baixa',
         )}
       >
-        {side === 'away' && (
+        {nosso ? (
+          <span aria-hidden className="rua-alambrado pointer-events-none absolute inset-x-0 top-0 h-24 [--alambrado:rgba(13,13,12,0.24)]" />
+        ) : (
           <>
             <img
               src="/test-pitch/tomamos-o-gol.jpg"
               alt=""
-              className="absolute inset-0 w-full h-full object-cover opacity-25"
+              className="absolute inset-0 h-full w-full object-cover opacity-20 grayscale"
             />
-            {/* Scrim da foto: legibilidade do texto sobre a imagem. */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/60" />
+            {/* Escurece a foto pra leitura (preto → transparente). */}
+            <div className="absolute inset-0 bg-gradient-to-t from-asfalto-27/90 via-asfalto-27/50 to-asfalto-27/70" />
           </>
         )}
-        <p className={cn(
-          'relative z-10 font-impact text-4xl sm:text-5xl uppercase leading-[1.1] tracking-[0.04em]',
-          side === 'away' ? 'text-red-400' : 'inline-block bg-neon-yellow px-4 pt-1 text-black',
-        )}>
-          {isGoal ? (side === 'away' ? L('Tomamos gol...', 'We conceded...') : L('Gol!', 'Goal!')) : L('Defesa!', 'Save!')}
+
+        {/* GOL em spray — pichado no muro */}
+        <p
+          className={cn(
+            'relative z-10 font-spray font-black uppercase leading-[0.85]',
+            nosso ? 'text-asfalto-27' : isGoal ? 'text-papel' : 'text-rua',
+          )}
+          style={{ fontSize: nosso || !isGoal ? 'clamp(64px, 22vw, 112px)' : 'clamp(40px, 12vw, 64px)' }}
+        >
+          {titulo}
         </p>
 
-        <div className="relative z-10 mt-6 flex flex-col items-stretch gap-4">
-          <div className="flex min-h-[6rem] items-stretch gap-0 overflow-hidden rounded-xl border border-white/10 bg-dark-gray/80 sm:min-h-[6.75rem] sm:gap-0">
-            {scorerPortraitUrl ? (
-              <div className="relative w-[6.25rem] shrink-0 self-stretch overflow-hidden border-r border-white/10 bg-neutral-900 sm:w-28 md:w-32">
+        <div className="relative z-10 mt-4 flex min-w-0 items-center gap-4 text-left">
+          {/* Lambe do artilheiro: foto colada torta + fita adesiva */}
+          <div className="relative shrink-0 -rotate-3">
+            <span aria-hidden className="absolute -top-2.5 left-1/2 z-10 h-5 w-14 -translate-x-1/2 rotate-[5deg] bg-papel/70" />
+            <div className={cn('relative h-24 w-20 overflow-hidden border-4 sm:h-28 sm:w-24', nosso ? 'border-asfalto-27 bg-asfalto-27' : 'border-papel bg-asfalto-27')}>
+              {scorerPortraitUrl ? (
                 <img
                   src={scorerPortraitUrl}
                   alt=""
-                  className="absolute inset-0 h-full w-full object-cover object-top grayscale"
+                  className="absolute inset-0 h-full w-full object-cover object-top"
                   referrerPolicy="no-referrer"
                 />
-                <div
-                  className={cn(
-                    'absolute left-1 top-1 z-[1] rounded px-1 py-0.5 font-display text-[9px] font-black tabular-nums sm:left-1.5 sm:top-1.5 sm:px-1.5 sm:text-[10px]',
-                    side === 'home'
-                      ? 'bg-neon-yellow text-black'
-                      : 'bg-black/80 text-white border border-white/20',
-                  )}
-                >
+              ) : scorerPortraitSeed ? (
+                <TeamStylePortraitColumn
+                  portraitSeed={scorerPortraitSeed}
+                  style={scorerCardStyle}
+                  badgeText={dorsalBadge}
+                  fullBleed
+                  className="!h-full !w-full rounded-none border-0"
+                />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center font-spray font-black text-[40px] leading-none tabular-nums text-rua" aria-hidden>
                   {dorsalBadge}
-                </div>
-              </div>
-            ) : scorerPortraitSeed ? (
-              <TeamStylePortraitColumn
-                portraitSeed={scorerPortraitSeed}
-                style={scorerCardStyle}
-                badgeText={dorsalBadge}
-                fullBleed
-                className="!w-[6.25rem] rounded-none border-y-0 border-l-0 border-r border-white/10 sm:!w-28 md:!w-32"
-              />
-            ) : (
-              <div
-                className={cn(
-                  'flex min-h-[6rem] w-[6.25rem] shrink-0 items-center justify-center border-r border-white/10 bg-black/50 font-display text-3xl font-black tabular-nums sm:min-h-[6.75rem] sm:w-28 md:w-32',
-                  accent,
-                )}
-                aria-hidden
-              >
-                {dorsalBadge}
-              </div>
-            )}
-            <div className="min-w-0 flex flex-1 flex-col justify-center p-3 text-left sm:p-4">
-              <p
-                className={cn(
-                  'font-display text-lg font-black uppercase leading-[1.1] tracking-wide sm:text-2xl',
-                  accent,
-                  'truncate',
-                )}
-              >
-                {scorerName}
-              </p>
-              <p className="mt-1.5 text-[13px] font-medium leading-snug text-gray-400 sm:text-sm">
-                <span className="font-display font-bold tabular-nums text-gray-500">{minute}&apos;</span>
-                {storyline ? (
-                  <>
-                    <span className="mx-1.5 text-gray-600">·</span>
-                    <span className="text-gray-300">{storyline}</span>
-                  </>
-                ) : goalBuildUp === 'counter' ? (
-                  <>
-                    <span className="mx-1.5 text-gray-600">·</span>
-                    <span className="text-gray-400">{L('Contra-ataque', 'Counter-attack')}</span>
-                  </>
-                ) : goalBuildUp === 'positional' ? (
-                  <>
-                    <span className="mx-1.5 text-gray-600">·</span>
-                    <span className="text-gray-400">{L('Jogo posicional', 'Build-up play')}</span>
-                  </>
-                ) : null}
-              </p>
+                </span>
+              )}
+              {scorerPortraitUrl ? (
+                <span className="absolute bottom-0 left-0 z-[1] bg-asfalto-27 px-1.5 py-0.5 font-impact text-[12px] leading-none tabular-nums text-rua">
+                  {dorsalBadge}
+                </span>
+              ) : null}
             </div>
           </div>
 
-          <div className="relative z-10 flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-lg border border-white/10 bg-black/30 px-4 py-3 font-display font-black text-lg tabular-nums">
-            <span className={side === 'home' ? 'text-neon-yellow' : 'text-gray-500'}>{homeShort}</span>
-            <span className="text-2xl text-white">
-              <span className={side === 'home' ? 'text-neon-yellow' : ''}>{homeScore}</span>
-              <span className="mx-1 text-gray-600">–</span>
-              <span className={side === 'away' ? 'text-white' : 'text-gray-400'}>{awayScore}</span>
-            </span>
-            <span className={side === 'away' ? 'text-white' : 'text-gray-500'}>{awayShort}</span>
+          <div className="min-w-0 flex-1">
+            <p className="font-voz text-[clamp(28px,8vw,40px)] leading-[0.98] [overflow-wrap:anywhere]">
+              {scorerName}
+            </p>
+            <p className={cn('mt-1.5 text-[13px] leading-snug', nosso ? 'text-asfalto-27/80' : 'text-suave')}>
+              <span className="font-spray font-black text-[20px] tabular-nums">{minute}&apos;</span>
+              {storyline ? (
+                <>
+                  <span className="mx-1.5 opacity-50">·</span>
+                  <span>{storyline}</span>
+                </>
+              ) : goalBuildUp === 'counter' ? (
+                <>
+                  <span className="mx-1.5 opacity-50">·</span>
+                  <span>{L('Contra-ataque', 'Counter-attack')}</span>
+                </>
+              ) : goalBuildUp === 'positional' ? (
+                <>
+                  <span className="mx-1.5 opacity-50">·</span>
+                  <span>{L('Jogo posicional', 'Build-up play')}</span>
+                </>
+              ) : null}
+            </p>
           </div>
+        </div>
+
+        {/* Placar */}
+        <div
+          className={cn(
+            'relative z-10 mt-5 flex min-w-0 items-center justify-center gap-3 px-3 py-2',
+            nosso ? 'bg-asfalto-27 text-papel' : 'bg-asfalto-27/80 text-papel',
+          )}
+        >
+          <span className={cn('min-w-0 truncate font-impact text-[16px] uppercase leading-none', nosso ? 'text-rua' : 'text-mudo')}>{homeShort}</span>
+          <span className="shrink-0 font-spray font-black text-[34px] leading-none tabular-nums">
+            <span className={nosso ? 'text-rua' : ''}>{homeScore}</span>
+            <span className="mx-1 text-[0.6em] text-mudo">×</span>
+            <span className={nosso ? 'text-suave' : 'text-papel'}>{awayScore}</span>
+          </span>
+          <span className={cn('min-w-0 truncate font-impact text-[16px] uppercase leading-none', nosso ? 'text-mudo' : 'text-papel')}>{awayShort}</span>
         </div>
       </div>
     </motion.div>

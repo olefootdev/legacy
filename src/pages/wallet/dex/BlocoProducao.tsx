@@ -8,16 +8,17 @@ import { L } from '@/i18n/L';
  * O split vem do servidor, do mesmo `harvestSplit.ts` que o rateio usa pra
  * pagar. A OLEWALLET tinha os seis números copiados na tela.
  *
- * Cor: volt é a fatia de quem depositou, verde é a rede, cinza é a casa. É a
- * única leitura que a barra precisa dar — quanto fica com você.
+ * Cor (DS 2027): ouro é a fatia de quem depositou — o que fica com você é
+ * RESPEITO —, papel é a rede, linha é a casa. É a única leitura que a barra
+ * precisa dar: quanto fica com você.
  */
 const COR: Record<string, string> = {
-  depositante: 'bg-neon-yellow',
-  casa: 'bg-card-hi',
+  depositante: 'bg-ouro-27',
+  casa: 'bg-linha',
 };
 const TOM: Record<string, string> = {
-  depositante: 'text-neon-yellow',
-  casa: 'text-cimento',
+  depositante: 'text-ouro-27',
+  casa: 'text-mudo',
 };
 
 const NOTA: Record<string, string> = {
@@ -39,48 +40,48 @@ export function BlocoProducao({
 
   return (
     <div className="min-w-0 space-y-3">
-      <h3 className="font-impact text-[24px] uppercase leading-[1.1] text-white">{L('Como a colheita se divide', 'How the harvest is split')}</h3>
+      <h3 className="pt-1 font-impact text-[clamp(30px,8.5vw,40px)] uppercase leading-[0.95] text-papel">{L('Como a colheita se divide', 'How the harvest is split')}</h3>
 
-      <div className="flex h-3 gap-[2px]" aria-hidden>
+      <div className="flex h-4 gap-1" aria-hidden>
         {regra.fatias.map((f) => (
           <div key={f.id} style={{ width: `${(f.bps / regra.totalBps) * 100}%` }}
-               className={COR[f.papel] ?? 'bg-alta'} />
+               className={COR[f.papel] ?? 'bg-papel'} />
         ))}
       </div>
 
-      <div className="border border-white/10 bg-panel">
+      <div className="bg-concreto">
         {regra.fatias.map((f) => (
           <div key={f.id}
-               className="flex min-w-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-2.5 last:border-b-0">
+               className="flex min-w-0 items-center justify-between gap-3 border-b-2 border-linha px-4 py-3 last:border-b-0">
             <div className="min-w-0">
-              <div className="ole-num truncate text-[13px] uppercase text-giz">{f.rotulo}</div>
-              {NOTA[f.papel] && <div className="text-[11px] text-poeira">{NOTA[f.papel]}</div>}
+              <div className="truncate font-impact text-[18px] uppercase leading-none text-papel">{f.rotulo}</div>
+              {NOTA[f.papel] && <div className="mt-1 font-prova text-[11px] text-mudo">{NOTA[f.papel]}</div>}
             </div>
-            <span className={`ole-num shrink-0 text-[17px] tabular-nums ${TOM[f.papel] ?? 'text-alta'}`}>
+            <span className={`shrink-0 font-impact text-[22px] leading-none tabular-nums ${TOM[f.papel] ?? 'text-papel'}`}>
               {emPorcento(f.bps)}
             </span>
           </div>
         ))}
-        <div className="flex items-baseline justify-between border-t border-white/10 px-4 py-2.5">
-          <span className="font-mono text-[10.5px] uppercase tracking-wider text-poeira">Total</span>
-          <span className="ole-num text-[15px] text-giz tabular-nums">{emPorcento(soma)}</span>
+        <div className="flex items-baseline justify-between border-t-2 border-linha px-4 py-3">
+          <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">Total</span>
+          <span className="font-impact text-[20px] leading-none text-papel tabular-nums">{emPorcento(soma)}</span>
         </div>
       </div>
 
-      <p className="text-[11.5px] leading-relaxed text-poeira">
+      <p className="text-[12.5px] leading-relaxed text-suave">
         {L('O split roda sobre o que a pool colheu — nunca sobre o que você depositou. Fatia sem dono na rede não vai para a casa: fica na pool e sobe a cota de todo mundo.', 'The split runs on what the pool harvested — never on what you deposited. An unowned network slice doesn\'t go to the house: it stays in the pool and lifts everyone\'s share.')}
       </p>
 
       {/* O que já chegou. Só aparece quando há fundo — sem fundo não há colheita. */}
       {fundo && (
-        <div className="border border-white/10 bg-panel">
+        <div className="border-[3px] border-ouro-27 bg-asfalto-27">
           <LinhaDeValor rotulo={L('Você já recebeu', 'You\'ve received')}
                         valor={`${emUnidades(recebido, fundo.decimais)} ${fundo.ativo}`} forte />
           {(meu?.fatias ?? []).slice(0, 8).map((f, i) => (
             <div key={`${f.colheita}-${f.fatia}-${i}`}
-                 className="flex min-w-0 items-baseline justify-between gap-3 border-b border-white/10 px-4 py-2.5 last:border-b-0">
-              <span className="min-w-0 truncate font-mono text-[11px] uppercase text-cimento">{nomeDa(f.fatia)}</span>
-              <span className="shrink-0 font-mono text-[11.5px] text-giz tabular-nums">
+                 className="flex min-w-0 items-baseline justify-between gap-3 border-b-2 border-linha px-4 py-3 last:border-b-0">
+              <span className="min-w-0 truncate font-prova text-[12px] uppercase text-suave">{nomeDa(f.fatia)}</span>
+              <span className="shrink-0 font-impact text-[17px] leading-none text-papel tabular-nums">
                 +{emUnidades(f.unidades, fundo.decimais)} {fundo.ativo}
               </span>
             </div>

@@ -134,7 +134,7 @@ export function PenaltyShootSVG({
               y={r.y + 2}
               width={SLOT_W - 4}
               height={SLOT_H - 4}
-              fill={isPicked ? '#FDE100' : isHover ? '#FDE100' : 'transparent'}
+              fill={isPicked ? '#F2E61E' : isHover ? '#F2E61E' : 'transparent'}
               fillOpacity={isPicked ? 0.85 : isHover ? 0.18 : 0}
               stroke={isPicked ? '#000' : isHover ? '#000' : 'transparent'}
               strokeWidth={isPicked ? 3 : 1.5}
@@ -202,7 +202,7 @@ export function PenaltyShootSVG({
                   fontFamily="ui-sans-serif, system-ui"
                   fontWeight="800"
                   letterSpacing="2"
-                  fill="#FDE100"
+                  fill="#F2E61E"
                 >
                   GK
                 </text>

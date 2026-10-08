@@ -6,7 +6,6 @@
 import { motion } from 'motion/react';
 import { Trophy, Clock } from 'lucide-react';
 import type { StreakChallenge } from '@/match/quickStreakChallenges';
-import { getDifficultyColor, getDifficultyIcon } from '@/match/quickStreakChallenges';
 import { cn } from '@/lib/utils';
 import { L } from '@/i18n/L';
 
@@ -29,70 +28,54 @@ export function QuickStreakChallengesPanel({ challenges, onClaimReward }: Props)
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-neon-yellow" />
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-            {L('Desafios Semanais', 'Weekly Challenges')}
-          </h3>
-        </div>
-        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/40">
-          <Clock className="w-3 h-3 text-white/60" />
-          <span className="text-xs text-white/60">
-            {formatTimeRemaining(challenges[0]?.expiresAt ?? '')}
-          </span>
-        </div>
+      <div className="flex min-w-0 items-baseline justify-between gap-3">
+        <h3 className="flex min-w-0 items-center gap-2 font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
+          <Trophy className="h-4 w-4 shrink-0 text-rua" aria-hidden />
+          <span className="truncate">{L('Desafios semanais', 'Weekly challenges')}</span>
+        </h3>
+        <span className="flex shrink-0 items-center gap-1 font-prova text-[11px] font-bold text-mudo">
+          <Clock className="h-3 w-3" aria-hidden />
+          {formatTimeRemaining(challenges[0]?.expiresAt ?? '')}
+        </span>
       </div>
 
-      <div className="space-y-2">
+      <ul className="flex flex-col">
         {challenges.map((challenge, i) => {
-          const progress = (challenge.progress / challenge.target) * 100;
+          const progress = Math.max(0, Math.min(100, (challenge.progress / challenge.target) * 100));
           const isCompleted = challenge.completed;
 
           return (
-            <motion.div
+            <motion.li
               key={challenge.id}
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className={cn(
-                'p-3 border',
-                isCompleted
-                  ? 'bg-panel border-alta'
-                  : 'bg-panel border-white/10',
-              )}
+              transition={{ delay: i * 0.08 }}
+              className="border-b border-linha py-3 last:border-b-0"
             >
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div className="flex items-start gap-2 flex-1">
-                  <span className="text-lg">{getDifficultyIcon(challenge.difficulty)}</span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-white">{challenge.name}</span>
-                      {isCompleted && !challenge.claimed && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-bold">
-                          {L('✓ Completo', '✓ Complete')}
-                        </span>
-                      )}
-                      {challenge.claimed && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 font-bold">
-                          {L('✓ Resgatado', '✓ Claimed')}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-white/60 mt-0.5">{challenge.description}</p>
-                  </div>
-                </div>
-                <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                  <div>
-                    <div className="font-mono text-xs font-medium text-giz">
-                      +{challenge.reward.ole + challenge.reward.exp} EXP
-                    </div>
-                    {challenge.reward.item && (
-                      <div className="text-xs text-purple-400 mt-0.5">
-                        +{challenge.reward.item}
-                      </div>
+              <div className="mb-2 flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="font-voz text-[20px] leading-none text-papel">{challenge.name}</span>
+                    {isCompleted && !challenge.claimed && (
+                      <span className="bg-rua px-1.5 py-0.5 font-prova text-[10px] font-bold uppercase tracking-[0.08em] text-asfalto-27">
+                        {L('✓ Completo', '✓ Complete')}
+                      </span>
+                    )}
+                    {challenge.claimed && (
+                      <span className="border-2 border-linha px-1.5 py-0.5 font-prova text-[10px] font-bold uppercase tracking-[0.08em] text-mudo">
+                        {L('✓ Resgatado', '✓ Claimed')}
+                      </span>
                     )}
                   </div>
+                  <p className="mt-1 text-[12.5px] leading-snug text-suave">{challenge.description}</p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1.5 text-right">
+                  <p className="font-impact text-[16px] leading-none tabular-nums text-papel">
+                    +{challenge.reward.ole + challenge.reward.exp} EXP
+                  </p>
+                  {challenge.reward.item && (
+                    <p className="font-prova text-[11px] font-bold text-suave">+{challenge.reward.item}</p>
+                  )}
                   {isCompleted && !challenge.claimed && onClaimReward && (
                     <motion.button
                       initial={{ scale: 0 }}
@@ -100,42 +83,35 @@ export function QuickStreakChallengesPanel({ challenges, onClaimReward }: Props)
                       whileTap={{ scale: 0.95 }}
                       type="button"
                       onClick={() => onClaimReward(challenge.id)}
-                      className="whitespace-nowrap text-[10px] bg-neon-yellow text-black px-2.5 py-1 font-bold uppercase tracking-wider hover:bg-white transition-colors"
+                      className="min-h-[36px] whitespace-nowrap bg-rua px-3 font-impact text-[14px] uppercase leading-none text-asfalto-27 shadow-[3px_3px_0_var(--color-papel)]"
                     >
-                      {L('Resgatar', 'Claim')} +{challenge.reward.ole + challenge.reward.exp} EXP
+                      {L('Resgatar', 'Claim')} →
                     </motion.button>
                   )}
                 </div>
               </div>
 
-              {/* Progress Bar */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className={getDifficultyColor(challenge.difficulty)}>
-                    {challenge.difficulty.toUpperCase()}
-                  </span>
-                  <span className="text-white/60 tabular-nums">
-                    {challenge.progress}/{challenge.target}
-                  </span>
-                </div>
-                <div className="h-2 bg-card-hi rounded-full overflow-hidden">
+              {/* Progresso — chapado, sem pílula */}
+              <div className="flex items-center gap-3">
+                <span className="w-14 shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-mudo">
+                  {challenge.difficulty}
+                </span>
+                <div className="h-2 flex-1 overflow-hidden bg-linha">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.5, delay: i * 0.1 + 0.2 }}
-                    className={cn(
-                      'h-full rounded-full',
-                      isCompleted
-                        ? 'bg-alta'
-                        : 'bg-neon-yellow',
-                    )}
+                    transition={{ duration: 0.5, delay: i * 0.08 + 0.15 }}
+                    className={cn('h-full', isCompleted ? 'bg-rua' : 'bg-papel')}
                   />
                 </div>
+                <span className="shrink-0 font-impact text-[14px] leading-none tabular-nums text-papel">
+                  {challenge.progress}/{challenge.target}
+                </span>
               </div>
-            </motion.div>
+            </motion.li>
           );
         })}
-      </div>
+      </ul>
     </div>
   );
 }

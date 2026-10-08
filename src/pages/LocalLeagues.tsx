@@ -8,9 +8,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Trophy, Zap, Layers } from 'lucide-react';
 import { useGameStore } from '@/game/store';
-import { cn } from '@/lib/utils';
 import { BackButton } from '@/components/BackButton';
-import { Hashtag } from '@/components/ui';
+import { SecaoRua } from '@/components/ui/Rua';
+import { AbasRua, CabecalhoRua, FaltaRua, FormaRua, LinhaRua, VazioRua, posRua } from '@/components/leagues/RuaTabela';
 import { L } from '@/i18n/L';
 import {
   emptyLocalLeagueStanding,
@@ -57,116 +57,80 @@ export default function LocalLeaguesPage() {
   }, [tab]);
 
   const meta = LEAGUE_META[tab];
+  const myIdx = leaderboard.findIndex((r) => !!r.clubName && r.clubName === myClubName);
+  const gapAbove = myIdx > 0 ? Math.max(0, leaderboard[myIdx - 1].points - leaderboard[myIdx].points) : null;
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 pb-10 px-3 sm:px-4">
+    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-8 overflow-x-hidden px-3 pb-10 sm:px-4">
       <BackButton to="/competicao" label={L('Competição', 'Competition')} />
 
-      {/* Header editorial */}
-      <header>
-        <Hashtag className="mb-3 text-neon-yellow">#ligaslocais</Hashtag>
-        <h1 className="leading-[1.1]">
-          <span
-            className="block font-impact uppercase text-white"
-            style={{ fontSize: 'clamp(2rem, 5.5vw, 3.25rem)', letterSpacing: '0.005em' }}
-          >
-            {L('Ligas locais', 'Local leagues')}
-          </span>
-          <span
-            className="ole-num block uppercase text-neon-yellow mt-1"
-            style={{ fontSize: 'clamp(1.1rem, 3.4vw, 1.6rem)' }}
-          >
-            {meta.label}
-          </span>
-        </h1>
-        <p className="mt-3 truncate font-mono text-[11.5px] text-cimento">{meta.subtitle}</p>
-      </header>
+      <CabecalhoRua rotulo="#ligaslocais" titulo={L('Ligas locais', 'Local leagues')} voz={meta.subtitle} aside={meta.label} />
 
-      {/* Tabs */}
-      <div className="grid grid-cols-2 gap-2">
-        {(['classic', 'fast'] as const).map((id) => {
+      <AbasRua
+        ariaLabel={L('Ligas locais', 'Local leagues')}
+        ativa={tab}
+        onChange={setTab}
+        abas={(['classic', 'fast'] as const).map((id) => {
           const m = LEAGUE_META[id];
           const TabIcon = m.icon;
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={cn(
-                'ole-num flex h-11 min-w-0 items-center justify-center gap-2 whitespace-nowrap border text-[12px] uppercase transition-colors',
-                tab === id
-                  ? 'bg-neon-yellow text-black border-neon-yellow'
-                  : 'border-white/16 text-cimento hover:border-white/30 hover:text-white',
-              )}
-            >
-              <TabIcon className="w-4 h-4" />
-              {m.label}
-            </button>
-          );
+          return {
+            id,
+            label: (
+              <span className="inline-flex items-center gap-2">
+                <TabIcon aria-hidden className="h-4 w-4" />
+                {m.label}
+              </span>
+            ),
+          };
         })}
-      </div>
+      />
 
-      <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-        {/* My stats */}
-        <div className="border border-neon-yellow/40 bg-panel p-4 space-y-3">
-          <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">{L('Meu placar acumulado', 'My cumulative record')}</h3>
-          <div className="grid grid-cols-4 gap-2 text-center">
+      <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+        {/* Meu placar acumulado */}
+        <div className="rua-grao flex flex-col gap-4 border-l-[5px] border-rua bg-concreto p-4 sm:p-5">
+          <SecaoRua label={L('Meu placar acumulado', 'My cumulative record')} />
+          <div className="grid grid-cols-4 gap-1.5">
             <Stat label={L('Jogos', 'Played')} value={myStanding.played} />
             <Stat label={L('Pontos', 'Points')} value={myStanding.points} highlight />
             <Stat label={L('V/E/D', 'W/D/L')} value={`${myStanding.wins}/${myStanding.draws}/${myStanding.losses}`} small />
             <Stat label={L('Saldo', 'GD')} value={myStanding.goalsFor - myStanding.goalsAgainst} />
           </div>
           {myStanding.recentForm.length > 0 && (
-            <div className="flex items-center gap-2 text-[10px]">
-              <span className="font-mono uppercase tracking-[0.14em] text-cimento">{L('Forma', 'Form')}</span>
-              <div className="flex gap-1">
-                {myStanding.recentForm.map((c, i) => (
-                  <span
-                    key={i}
-                    className={cn(
-                      'ole-num inline-block w-5 h-5 text-[9px] leading-5 text-center',
-                      c === 'W' && 'bg-alta text-black',
-                      c === 'D' && 'bg-card-hi text-white',
-                      c === 'L' && 'bg-baixa text-white',
-                    )}
-                  >
-                    {c === 'W' ? L('V', 'W') : c === 'D' ? L('E', 'D') : L('D', 'L')}
-                  </span>
-                ))}
-              </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">{L('Forma', 'Form')}</span>
+              <FormaRua form={myStanding.recentForm} />
             </div>
           )}
         </div>
 
+        {gapAbove != null && (
+          <FaltaRua
+            valor={gapAbove}
+            unidade={L('pts', 'pts')}
+            frase={L(`é o que separa tu do ${posRua(myIdx)}.`, `is all that's between you and ${posRua(myIdx)}.`)}
+          />
+        )}
+
         {/* Leaderboard */}
-        <div className="border border-white/10 bg-panel p-4">
-          <h3 className="mb-3 font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">Top 50 managers</h3>
-          {loading && <p className="text-xs text-cimento">{L('Carregando ranking…', 'Loading ranking…')}</p>}
+        <div className="flex flex-col gap-3">
+          <SecaoRua label="Top 50 managers" aside={leaderboard.length > 0 ? leaderboard.length : undefined} />
+          {loading && <p className="font-prova text-[12px] uppercase tracking-[0.14em] text-mudo">{L('Carregando ranking…', 'Loading ranking…')}</p>}
           {!loading && leaderboard.length === 0 && (
-            <p className="truncate text-xs text-cimento">{L('Ranking vazio. Jogue e estreie no top.', 'Empty ranking. Play and make your debut at the top.')}</p>
+            <VazioRua titulo={L('Ranking vazio', 'Empty ranking')} frase={L('Joga e estreia no topo.', 'Play and debut at the top.')} />
           )}
           {!loading && leaderboard.length > 0 && (
-            <div className="border border-white/10">
+            <div className="flex flex-col gap-1.5">
               {leaderboard.map((row, idx) => {
                 const isMe = !!row.clubName && row.clubName === myClubName;
                 return (
-                  <div
+                  <LinhaRua
                     key={row.userId}
-                    className={cn(
-                      'grid h-11 grid-cols-[2rem_1fr_3rem_3rem_3rem] items-center gap-2 px-3',
-                      isMe ? 'bg-neon-yellow text-black' : 'border-b border-white/[0.06]',
-                    )}
-                  >
-                    <span className={cn('ole-num text-[13px]', isMe ? 'text-black' : 'text-cimento')}>{idx + 1}</span>
-                    <span className={cn('truncate text-[13.5px]', isMe ? 'font-bold' : 'text-giz')}>
-                      {row.clubName ?? row.managerName ?? row.userId.slice(0, 8)}
-                    </span>
-                    <span className={cn('font-mono text-[10.5px] text-right', isMe ? 'text-black/70' : 'text-cimento')}>{row.played}{L('j', 'p')}</span>
-                    <span className={cn('font-mono text-[10.5px] text-right', isMe ? 'text-black/70' : 'text-cimento')}>
-                      {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
-                    </span>
-                    <span className={cn('ole-num text-[14px] text-right', isMe ? 'text-black' : 'text-white')}>{row.points}</span>
-                  </div>
+                    pos={idx + 1}
+                    tom={isMe ? 'eu' : idx === 0 ? 'lider' : myIdx >= 0 && idx > myIdx ? 'abaixo' : 'normal'}
+                    nome={row.clubName ?? row.managerName ?? row.userId.slice(0, 8)}
+                    sub={`${row.played}${L('j', 'p')} · ${L('SG', 'GD')} ${row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}`}
+                    valor={row.points}
+                  />
                 );
               })}
             </div>
@@ -179,9 +143,9 @@ export default function LocalLeaguesPage() {
 
 function Stat({ label, value, highlight, small }: { label: string; value: number | string; highlight?: boolean; small?: boolean }) {
   return (
-    <div className="border border-white/10 py-2">
-      <p className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-cimento">{label}</p>
-      <p className={cn('ole-num mt-1', small ? 'text-sm' : 'text-lg', highlight ? 'text-neon-yellow' : 'text-white')}>
+    <div className="flex min-w-0 flex-col gap-1 bg-asfalto-27 px-2 py-2.5">
+      <p className="truncate font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{label}</p>
+      <p className={`truncate font-spray font-black leading-[0.9] ${small ? 'text-[22px]' : 'text-[30px]'} ${highlight ? 'text-rua' : 'text-papel'}`}>
         {value}
       </p>
     </div>

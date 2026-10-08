@@ -1,14 +1,17 @@
 /**
  * LiveAuctionCard — Card de leilão ao vivo com countdown e lances
- * ATUALIZADO: Segue design system do PlayerCard (Transfer.tsx)
+ * DS 2027: a carta sobe a escada pelo OVR, pende torta como lambe e a
+ * contagem vem em blocos de spray; o balcão do lance fica embaixo, reto.
  */
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, Crown, AlertCircle, Trophy, Gavel } from 'lucide-react';
+import { Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { placeBid, useAuctionCountdown } from './liveAuctionEngine';
 import type { LiveAuction } from './socialTrade';
 import { formatPrice } from './socialTrade';
+import { BotaoRua, DEGRAU_CLASSES, MarcaRua, SeloRua } from '@/components/ui/Rua';
+import { CAMPO_RUA, ContagemSpray, degrauDeOvr } from '@/components/bolsa/Bolsa';
 import { L, LOCALE } from '@/i18n/L';
 
 interface LiveAuctionCardProps {
@@ -28,7 +31,6 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
   const isWinning = auction.currentBidder === userId;
   const isAIWinning = auction.currentBidder?.startsWith('ai_');
   const minBid = Math.ceil(auction.currentBid * 1.05);
-  const isGold = auction.playerOvr >= 90;
 
   const handlePlaceBid = () => {
     setBidError(null);
@@ -53,218 +55,189 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
     }
   };
 
-  const formatCountdown = (ms: number): string => {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  };
+  const degrau = degrauDeOvr(auction.playerOvr);
+  const ouroNaCarta = degrau === 'lenda' || degrau === 'respeito';
+  // Lambe colado: cada carta pende pra um lado, decidido pelo id (estável).
+  const torto = [...auction.id].reduce((n, c) => n + c.charCodeAt(0), 0) % 2 === 0 ? -1.5 : 1.5;
+  const iniciais = auction.playerName.split(' ').map((w) => w[0]).join('').slice(0, 2);
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className={cn(
-        'relative group flex h-full min-w-0 flex-col overflow-hidden border-2 bg-dark-gray transition-colors duration-300',
-        isEnding && 'animate-pulse',
-        // Estado pela borda chapada (VOLT2): elite = volt 2px; vencendo = alta;
-        // acabando = baixa. Sem brilho, sem degradê.
-        isGold && 'border-neon-yellow',
-        !isGold && isWinning && 'border-alta/60',
-        !isGold && isEnding && 'border-baixa/60',
-        !isGold && !isWinning && !isEnding && 'border-neon-yellow/40',
-      )}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex h-full min-w-0 flex-col"
     >
-      {/* Badge de status */}
-      {isGold && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[25] bg-neon-yellow text-black px-2 py-0.5 font-display font-black text-[8px] sm:text-[9px] tracking-[0.2em] uppercase">
-          Elite
-        </div>
-      )}
-
-      {/* Card Content */}
-      <div className="relative flex-1">
-        {/* Top Left: OVR & POS */}
-        <div className="absolute top-3 left-3 z-20 flex flex-col items-center bg-deep-black px-2 py-1.5">
-          <div className="font-impact text-3xl leading-none tabular-nums text-neon-yellow">
-            {auction.playerOvr}
-          </div>
-          <div className="text-[10px] font-bold uppercase tracking-widest text-white mt-1">
-            {auction.playerPos}
-          </div>
-        </div>
-
-        {/* Top Right: Countdown */}
-        <div className="absolute top-3 right-3 z-20">
-          <div
-            className={cn(
-              'flex items-center gap-1.5 rounded-full px-3 py-1.5 border',
-              isEnding
-                ? 'bg-deep-black border-baixa/60 text-baixa'
-                : 'bg-deep-black border-white/20 text-neon-yellow',
-            )}
-          >
-            <Clock className={cn('h-4 w-4', isEnding && 'animate-pulse')} />
-            <span className="text-sm font-bold tabular-nums">
-              {auction.status === 'ended' ? L('Fim', 'End') : formatCountdown(timeLeft)}
+      {/* ── A CARTA, na escada pelo OVR ─────────────────────────────────── */}
+      <div
+        className={cn(
+          'relative z-[1] flex min-w-0 flex-col gap-3 p-4 shadow-[6px_8px_0_rgba(0,0,0,0.55)] transition-transform duration-200 hover:!rotate-0',
+          DEGRAU_CLASSES[degrau],
+        )}
+        style={{ transform: `rotate(${auction.status === 'ended' ? 0 : torto}deg)` }}
+      >
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="flex flex-col">
+            <span
+              className={cn(
+                'font-impact text-[52px] leading-[0.85] tabular-nums',
+                degrau === 'respeito' && 'text-ouro-27',
+                degrau === 'chao' && 'text-transparent [-webkit-text-stroke:1.5px_var(--color-asfalto-27)]',
+              )}
+            >
+              {auction.playerOvr}
+            </span>
+            <span className={cn('mt-1 font-impact text-[15px] uppercase leading-none', degrau === 'respeito' && 'text-ouro-27')}>
+              {auction.playerPos}
             </span>
           </div>
+          {auction.status === 'ended' ? (
+            <span className="bg-asfalto-27 px-3 py-2 font-spray text-[26px] font-black uppercase leading-none text-papel">
+              {L('Fim', 'End')}
+            </span>
+          ) : (
+            <ContagemSpray
+              ms={timeLeft}
+              rotulos={false}
+              tamanho="text-[30px]"
+              bloco={cn(
+                'w-[50px] bg-asfalto-27',
+                isEnding ? 'animate-pulse text-papel' : ouroNaCarta ? 'text-ouro-27' : 'text-papel',
+              )}
+              className="shrink-0"
+            />
+          )}
         </div>
 
-        {/* Player Image Placeholder */}
-        <div className="aspect-[3/4] relative flex items-center justify-center bg-card">
-          <div className="text-center">
-            <Gavel className="mx-auto h-16 w-16 text-white/20 mb-2" />
-            <p
-              className="font-impact uppercase text-white/15"
-              style={{
-                fontSize: '3rem',
-                letterSpacing: '-0.01em',
-                lineHeight: 1.1,
-              }}
-            >
-              {auction.playerName.split(' ').map((w) => w[0]).join('').slice(0, 2)}
-            </p>
-          </div>
+        <div
+          className={cn(
+            'relative flex aspect-[5/3] w-full items-center justify-center overflow-hidden',
+            degrau === 'respeito' ? 'bg-concreto' : 'bg-asfalto-27/10',
+          )}
+        >
+          <span aria-hidden className="font-impact text-[64px] uppercase leading-none opacity-25">{iniciais}</span>
+          <MarcaRua tipo="escudo" className={cn('absolute bottom-2 right-2 h-7', degrau === 'respeito' ? 'bg-ouro-27' : 'bg-asfalto-27')} />
+          {isEnding && auction.status === 'active' && (
+            <span className="absolute left-0 top-2 bg-rua px-2 py-0.5 font-impact text-[13px] uppercase text-asfalto-27">
+              {L('Acabando', 'Ending')}
+            </span>
+          )}
         </div>
 
-        {/* Card Footer */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-white/10 bg-deep-black p-4">
-          {/* Nome do jogador */}
-          <div className="mb-2 min-w-0 px-0.5 text-center">
-            <div className="break-words font-display text-lg font-black uppercase leading-[1.1] tracking-wider text-white sm:text-xl md:text-2xl">
-              {auction.playerName}
-            </div>
-          </div>
+        <span className="block min-w-0 font-voz text-[clamp(26px,7vw,32px)] leading-none [overflow-wrap:anywhere]">{auction.playerName}</span>
 
-          {/* Divider */}
-          <div className="h-px w-2/3 mx-auto mb-3 opacity-50 bg-neon-yellow" />
-
-          {/* Lance atual — número em Archivo (ole-num), sem itálico */}
-          <div className="mb-3 text-center">
-            <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/55 mb-1">
-              {L('Lance atual', 'Current bid')}
-            </p>
-            <p
-              className="ole-num tabular-nums leading-none text-neon-yellow"
-              style={{
-                fontSize: 'clamp(28px, 5vw, 36px)',
-              }}
-            >
-              {formatPrice(auction.currentBid, 'EXP')}
-            </p>
-            {auction.currentBidderName && (
-              <p className="mt-1 flex items-center justify-center gap-1 text-xs text-white/60">
-                {isAIWinning && <Crown className="h-3 w-3 text-cimento" />}
-                {auction.currentBidderName}
-              </p>
-            )}
+        <div
+          className={cn(
+            'flex min-w-0 items-end justify-between gap-2 px-2 py-2',
+            degrau === 'chao' && 'border-t-2 border-dashed border-asfalto-27 px-0',
+            degrau === 'corre' && 'bg-asfalto-27 text-rua',
+            degrau === 'respeito' && 'border-2 border-ouro-27 text-ouro-27',
+            degrau === 'lenda' && 'bg-asfalto-27 text-ouro-27',
+          )}
+        >
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.16em] opacity-80">{L('Lance atual', 'Current bid')}</span>
+            <span className="block min-w-0 truncate font-impact text-[26px] leading-none tabular-nums">{formatPrice(auction.currentBid, 'EXP')}</span>
           </div>
+          {auction.currentBidderName && (
+            <span className="min-w-0 max-w-[45%] truncate text-right font-prova text-[11px] font-bold uppercase tracking-[0.08em]">
+              {isAIWinning && <Crown className="mr-1 inline h-3 w-3 align-[-1px]" aria-hidden />}
+              {auction.currentBidderName}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Action Area */}
+      {/* ── Balcão do lance ─────────────────────────────────────────────── */}
       {auction.status === 'active' && (
-        <div className="relative z-30 border-t border-white/10 bg-black/80 p-2.5 sm:p-3">
-          {/* Status do usuário */}
+        <div className="-mt-1 flex min-w-0 grow flex-col gap-3 bg-concreto px-4 pb-4 pt-5">
           <AnimatePresence mode="wait">
             {isWinning ? (
               <motion.div
                 key="winning"
-                initial={{ opacity: 0, y: -10 }}
+                initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="mb-2 flex items-center gap-2 border border-alta/40 bg-panel px-3 py-2"
+                exit={{ opacity: 0, y: 6 }}
+                className="self-start"
               >
-                <Trophy className="h-4 w-4 text-alta" />
-                <p className="text-xs font-bold text-alta">{L('Você está vencendo!', 'You are winning!')}</p>
+                <SeloRua tom="cal">{L('Teu lance manda', 'Your bid leads')}</SeloRua>
               </motion.div>
             ) : (
-              <motion.div
+              <motion.p
                 key="not-winning"
-                initial={{ opacity: 0, y: -10 }}
+                initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="mb-2 flex items-center gap-2 border border-atencao/40 bg-panel px-3 py-2"
+                exit={{ opacity: 0, y: 6 }}
+                className="font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-mudo"
               >
-                <AlertCircle className="h-4 w-4 text-atencao" />
-                <p className="text-xs font-bold text-atencao">
-                  {L('Mínimo', 'Minimum')}: {formatPrice(minBid, 'EXP')}
-                </p>
-              </motion.div>
+                {L('Mínimo', 'Minimum')} · <span className="text-papel">{formatPrice(minBid, 'EXP')}</span>
+              </motion.p>
             )}
           </AnimatePresence>
 
-          {/* Últimos 3 lances */}
           {auction.bids.length > 0 && (
-            <div className="mb-3 space-y-1">
-              <p className="text-[9px] uppercase tracking-wider text-white/40">{L('Últimos Lances', 'Latest Bids')}</p>
-              {auction.bids.slice(0, 3).map((bid, i) => (
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.2em] text-mudo">— {L('Últimos lances', 'Latest bids')}</span>
+              {auction.bids.slice(0, 3).map((bid) => (
                 <div
                   key={`${bid.bidderId}-${bid.timestamp.getTime()}`}
-                  className="flex items-center justify-between rounded bg-black/20 px-2 py-1.5"
+                  className="flex min-w-0 items-center justify-between gap-2 border-b border-linha py-1.5 last:border-b-0"
                 >
-                  <span className="flex items-center gap-1 text-xs text-white/70">
-                    {bid.isAI && <Crown className="h-3 w-3 text-cimento" />}
+                  <span className="flex min-w-0 items-center gap-1 truncate font-sans text-[13px] text-suave">
+                    {bid.isAI && <Crown className="h-3 w-3 shrink-0 text-mudo" aria-hidden />}
                     {bid.bidderName}
                   </span>
-                  <span className="text-xs font-bold text-white">{formatPrice(bid.amount, 'EXP')}</span>
+                  <span className="shrink-0 font-impact text-[15px] leading-none tabular-nums text-papel">{formatPrice(bid.amount, 'EXP')}</span>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Formulário de lance */}
           {!showBidForm ? (
-            <button
-              type="button"
+            <BotaoRua
+              variante={isWinning ? 'vazio' : degrau === 'lenda' ? 'ouro' : 'corre'}
               onClick={() => setShowBidForm(true)}
               disabled={isWinning}
-              className={cn(
-                'flex w-full min-h-11 items-center justify-center px-3 py-3 font-display text-[12px] font-black uppercase leading-tight tracking-[0.22em] transition-colors sm:text-[13px]',
-                isWinning
-                  ? 'cursor-not-allowed bg-white/5 text-white/30'
-                  : 'bg-neon-yellow text-black hover:bg-white',
-              )}
-              style={{ borderRadius: 'var(--radius-sm)' }}
+              className={cn('mt-auto w-full', isWinning && 'opacity-100')}
             >
-              {isWinning ? L('Você está vencendo', 'You are winning') : L('Dar Lance', 'Place Bid')}
-            </button>
+              {isWinning ? L('Tu tá na frente', "You're ahead") : <>{L('Dar lance', 'Place bid')} <span aria-hidden>→</span></>}
+            </BotaoRua>
           ) : (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="space-y-2"
+              className="mt-auto flex min-w-0 flex-col gap-2"
             >
               <input
                 type="text"
+                inputMode="numeric"
                 value={bidInput}
                 onChange={(e) => setBidInput(e.target.value)}
+                aria-label={L('Valor do lance', 'Bid amount')}
                 placeholder={L(`Mínimo: ${minBid.toLocaleString(LOCALE)}`, `Minimum: ${minBid.toLocaleString(LOCALE)}`)}
-                className="w-full border border-white/20 bg-deep-black px-4 py-3 text-white placeholder:text-white/40 focus:border-neon-yellow focus:outline-none"
+                className={CAMPO_RUA}
               />
-              {bidError && <p className="text-xs text-baixa">{bidError}</p>}
-              <div className="flex gap-2">
-                <button
-                  type="button"
+              {bidError && <p className="font-sans text-[13px] font-semibold text-baixa">{bidError}</p>}
+              <div className="flex min-w-0 gap-2">
+                <BotaoRua
+                  variante="contorno"
                   onClick={() => {
                     setShowBidForm(false);
                     setBidError(null);
                     setBidInput('');
                   }}
-                  className="flex-1 border border-white/30 bg-transparent py-2 text-sm font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-white"
+                  className="min-w-0 flex-1 px-3 text-[17px]"
                 >
                   {L('Cancelar', 'Cancel')}
-                </button>
-                <button
-                  type="button"
+                </BotaoRua>
+                <BotaoRua
+                  variante={degrau === 'lenda' ? 'ouro' : 'corre'}
                   onClick={handlePlaceBid}
-                  className="flex-1 bg-neon-yellow py-2 text-sm font-bold uppercase tracking-wider text-black transition-colors hover:bg-white"
+                  className="min-w-0 flex-1 px-3 text-[17px]"
                 >
-                  {L('Confirmar', 'Confirm')}
-                </button>
+                  {L('Confirmar', 'Confirm')} <span aria-hidden>→</span>
+                </BotaoRua>
               </div>
             </motion.div>
           )}
@@ -272,16 +245,15 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
       )}
 
       {auction.status === 'ended' && (
-        <div className="relative z-30 border-t border-white/10 bg-black/80 p-2.5 sm:p-3">
-          <div className="rounded-lg bg-black/40 px-4 py-3 text-center">
-            <p className="text-sm font-bold text-white/60">{L('Leilão Encerrado', 'Auction Ended')}</p>
-            {auction.currentBidderName && (
-              <p className="mt-1 text-xs text-white/40">{L('Vencedor', 'Winner')}: {auction.currentBidderName}</p>
-            )}
-          </div>
+        <div className="-mt-1 flex min-w-0 grow flex-col gap-1 border-2 border-dashed border-fio px-4 pb-4 pt-5">
+          <span className="font-voz text-[24px] leading-none text-papel">{L('Martelo batido.', 'Hammer down.')}</span>
+          {auction.currentBidderName && (
+            <span className="font-prova text-[11px] font-bold uppercase tracking-[0.14em] text-mudo">
+              {L('Levou', 'Won by')} · <span className="text-papel">{auction.currentBidderName}</span>
+            </span>
+          )}
         </div>
       )}
     </motion.div>
   );
 }
-

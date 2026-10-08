@@ -12,18 +12,19 @@ import { L } from '@/i18n/L';
  * atalhos logo abaixo. O fundador cortou em 2026-09-29: o lugar de cima é da
  * DEX, e Coleção fica só no atalho.
  *
- * VOLT2: segmento reto sobre asfalto — ativo em branco chapado, sem sombra.
+ * DS 2027: segmento reto; a conta ativa em rua chapada.
  */
+// DS 2027: segmento em Anton; a conta aberta é ação em rua chapada.
 const tabClass =
-  'shrink-0 px-5 py-2 text-center font-mono text-[11px] font-medium uppercase tracking-[0.2em] transition-colors min-[380px]:px-6 min-[380px]:text-[12px]';
+  'inline-flex min-h-[40px] shrink-0 items-center px-5 font-impact text-[18px] uppercase leading-none tracking-[0.02em] transition-colors';
 
 const estado = ({ isActive }: { isActive: boolean }) =>
-  cn(tabClass, isActive ? 'bg-white text-black' : 'text-cimento hover:text-white');
+  cn(tabClass, isActive ? 'bg-rua text-asfalto-27' : 'text-mudo hover:text-papel');
 
 export function WalletSpotToggle() {
   return (
     <div
-      className="inline-flex items-center gap-1 border border-white/16 bg-panel p-1"
+      className="inline-flex items-center border-2 border-linha p-0.5"
       role="tablist"
       aria-label={L('Conta SPOT ou DEX', 'SPOT or DEX account')}
     >

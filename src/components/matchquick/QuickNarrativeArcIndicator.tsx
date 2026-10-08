@@ -28,15 +28,15 @@ export function QuickNarrativeArcIndicator({ arc, intensity }: Props) {
   const getArcColor = () => {
     switch (arc) {
       case 'late_drama':
-        return 'bg-panel border-atencao';
+        return 'border-l-rua';
       case 'collapse':
-        return 'bg-panel border-baixa';
+        return 'border-l-baixa';
       case 'underdog_fight':
-        return 'bg-panel border-neon-yellow';
+        return 'border-l-rua';
       case 'dominant_control':
-        return 'bg-panel border-alta';
+        return 'border-l-alta';
       default:
-        return 'bg-panel border-white/30';
+        return 'border-l-fio';
     }
   };
 
@@ -61,27 +61,20 @@ export function QuickNarrativeArcIndicator({ arc, intensity }: Props) {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className={cn(
-          'px-3 py-2 border-2',
-          getArcColor(),
-        )}
+        className={cn('border-l-[4px] bg-concreto px-3 py-2', getArcColor())}
       >
-        <div className="flex items-center gap-2">
-          <motion.span
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ repeat: Infinity, duration: 1.5 }}
-            className="text-lg"
-          >
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span aria-hidden className="shrink-0 font-impact text-[18px] leading-none text-papel">
             {getArcIcon()}
-          </motion.span>
-          <span className="text-xs font-bold text-white uppercase tracking-wider">
+          </span>
+          <span className="min-w-0 truncate font-voz text-[19px] leading-none text-papel">
             {emIngles() ? ARC_EN[arc] : getArcDescription(arc)}
           </span>
-          <div className="flex-1 h-1 bg-black/30 rounded-full overflow-hidden">
+          <div className="h-1.5 min-w-[2.5rem] flex-1 overflow-hidden bg-linha">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${intensity * 100}%` }}
-              className="h-full bg-white/80 rounded-full"
+              className="h-full bg-papel"
             />
           </div>
         </div>

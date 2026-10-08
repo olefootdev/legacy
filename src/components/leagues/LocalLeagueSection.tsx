@@ -5,12 +5,10 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { Trophy } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
-import { Hashtag } from '@/components/ui';
+import { BotaoRua, SecaoRua } from '@/components/ui/Rua';
 import { L } from '@/i18n/L';
+import { FaltaRua, FormaRua, LinhaRua, VazioRua, posRua } from './RuaTabela';
 import {
   emptyLocalLeagueStanding,
   type LocalLeagueId,
@@ -64,125 +62,87 @@ export function LocalLeagueSection({ league }: Props) {
   const ctaHref = isClassicSoon ? '/match/quick' : '/match/quick';
   const ctaLabel = isClassicSoon ? L('Em breve', 'Coming soon') : meta.ctaLabel;
 
-  return (
-    <motion.section
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="border border-white/10 bg-panel overflow-hidden"
-    >
-      {/* Header */}
-      <div className="bg-deep-black p-6 md:p-7 border-b border-white/10">
-        <Hashtag className="mb-2 text-neon-yellow">{L('#ligalocal · cumulativa', '#localleague · cumulative')}</Hashtag>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="min-w-0 leading-[1.1]">
-            <span
-              className="block truncate font-impact uppercase text-white"
-              style={{
-                fontSize: 'clamp(1.75rem, 4.5vw, 2.75rem)',
-                letterSpacing: '0.005em',
-              }}
-            >
-              {meta.title}
-            </span>
-            <span
-              className="ole-num block uppercase text-neon-yellow mt-0.5"
-              style={{ fontSize: 'clamp(1.1rem, 3.2vw, 1.75rem)' }}
-            >
-              {myStanding.points} {myStanding.points === 1 ? L('ponto', 'point') : L('pontos', 'points')}
-            </span>
-          </h2>
-          {isClassicSoon ? (
-            <span
-              className="ole-num inline-flex h-11 items-center whitespace-nowrap border border-white/16 px-4 text-[12px] uppercase text-poeira cursor-not-allowed"
-              aria-disabled="true"
-            >
-              {ctaLabel}
-            </span>
-          ) : (
-            <Link
-              to={ctaHref}
-              className="ole-num inline-flex h-11 items-center whitespace-nowrap bg-neon-yellow px-4 text-[12px] uppercase text-black transition-colors hover:bg-white [--corte:10px] [clip-path:var(--clip-corte)]"
-            >
-              {ctaLabel}
-            </Link>
-          )}
-        </div>
-        <p className="mt-3 truncate font-mono text-[11.5px] text-cimento">
-          {meta.subtitle}
-        </p>
-      </div>
+  // DS 2027: "quanto falta" — distância real até a linha de cima no Top 50.
+  const myIdx = leaderboard.findIndex((r) => !!r.clubName && r.clubName === myClubName);
+  const gapAbove = myIdx > 0 ? Math.max(0, leaderboard[myIdx - 1].points - leaderboard[myIdx].points) : null;
 
-      {/* Meu placar */}
-      <div className="p-5 border-b border-white/10 space-y-3">
-        <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-          {L('Meu placar acumulado', 'My cumulative record')}
-        </h3>
-        <div className="grid grid-cols-4 gap-2 text-center">
+  return (
+    <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex min-w-0 flex-col gap-6">
+      {/* Cabeçalho + meu placar acumulado em concreto com grão */}
+      <div className="rua-grao flex min-w-0 flex-col gap-4 bg-concreto p-5 sm:p-7">
+        <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.2em] text-mudo">
+          {L('#ligalocal · cumulativa', '#localleague · cumulative')}
+        </span>
+        <h2 className="flex min-w-0 flex-col">
+          <span className="truncate font-impact uppercase leading-[0.86] text-papel" style={{ fontSize: 'clamp(40px, 11vw, 72px)' }}>
+            {meta.title}
+          </span>
+          <span className="font-spray font-black uppercase leading-[0.9] text-rua" style={{ fontSize: 'clamp(34px, 10vw, 60px)' }}>
+            {myStanding.points} {myStanding.points === 1 ? L('ponto', 'point') : L('pontos', 'points')}
+          </span>
+        </h2>
+        <p className="font-voz text-[22px] leading-[1.05] text-suave">{meta.subtitle}</p>
+
+        <div className="grid grid-cols-4 gap-1.5">
           <Stat label={L('Jogos', 'Played')} value={myStanding.played} />
           <Stat label={L('Pontos', 'Points')} value={myStanding.points} highlight />
           <Stat label={L('V/E/D', 'W/D/L')} value={`${myStanding.wins}/${myStanding.draws}/${myStanding.losses}`} small />
           <Stat label={L('Saldo', 'GD')} value={fmtDiff(myStanding.goalsFor - myStanding.goalsAgainst)} />
         </div>
+
         {myStanding.recentForm.length > 0 && (
-          <div className="flex items-center gap-2 text-[10px]">
-            <span className="font-mono uppercase tracking-[0.14em] text-cimento">{L('Forma', 'Form')}</span>
-            <div className="flex gap-1">
-              {myStanding.recentForm.map((c, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    'ole-num inline-block w-5 h-5 text-[9px] leading-5 text-center',
-                    c === 'W' && 'bg-alta text-black',
-                    c === 'D' && 'bg-card-hi text-white',
-                    c === 'L' && 'bg-baixa text-white',
-                  )}
-                >
-                  {c === 'W' ? L('V', 'W') : c === 'D' ? L('E', 'D') : L('D', 'L')}
-                </span>
-              ))}
-            </div>
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">{L('Forma', 'Form')}</span>
+            <FormaRua form={myStanding.recentForm} />
             {myStanding.bestStreak > 0 && (
-              <span className="ml-auto truncate font-mono text-cimento">{L('Melhor sequência', 'Best streak')}: {myStanding.bestStreak}{L('V', 'W')}</span>
+              <span className="ml-auto truncate font-prova text-[11px] font-bold uppercase tracking-[0.14em] text-mudo">
+                {L('Melhor sequência', 'Best streak')}: {myStanding.bestStreak}{L('V', 'W')}
+              </span>
             )}
           </div>
         )}
+
+        {isClassicSoon ? (
+          <BotaoRua variante="vazio" className="self-start" ariaLabel={ctaLabel}>
+            {ctaLabel}
+          </BotaoRua>
+        ) : (
+          <BotaoRua to={ctaHref} className="self-start">
+            {ctaLabel} <span aria-hidden>→</span>
+          </BotaoRua>
+        )}
       </div>
 
+      {gapAbove != null && (
+        <FaltaRua
+          valor={gapAbove}
+          unidade={L('pts', 'pts')}
+          frase={L(`é o que separa tu do ${posRua(myIdx)}.`, `is all that's between you and ${posRua(myIdx)}.`)}
+        />
+      )}
+
       {/* Top 50 leaderboard */}
-      <div className="p-5">
-        <h3 className="mb-3 flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-          <Trophy className="w-3 h-3 text-neon-yellow" /> Top 50 managers
-        </h3>
+      <div className="flex min-w-0 flex-col gap-3">
+        <SecaoRua label="Top 50 managers" aside={leaderboard.length > 0 ? leaderboard.length : undefined} />
         {loading && (
-          <p className="text-xs text-cimento">{L('Carregando ranking…', 'Loading ranking…')}</p>
+          <p className="font-prova text-[12px] uppercase tracking-[0.14em] text-mudo">{L('Carregando ranking…', 'Loading ranking…')}</p>
         )}
         {!loading && leaderboard.length === 0 && (
-          <p className="truncate text-xs text-cimento">{L('Ranking vazio. Jogue e estreie no top.', 'Empty ranking. Play and make your debut at the top.')}</p>
+          <VazioRua titulo={L('Ranking vazio', 'Empty ranking')} frase={L('Joga e estreia no topo.', 'Play and debut at the top.')} />
         )}
         {!loading && leaderboard.length > 0 && (
-          <div className="max-h-[420px] overflow-y-auto border border-white/10">
+          <div className="flex max-h-[520px] flex-col gap-1.5 overflow-y-auto overflow-x-hidden px-1 py-1">
             {leaderboard.map((row, idx) => {
               const isMe = !!row.clubName && row.clubName === myClubName;
               return (
-                <div
+                <LinhaRua
                   key={row.userId}
-                  className={cn(
-                    'grid h-11 grid-cols-[2rem_1fr_3rem_3rem_3rem] items-center gap-2 px-3',
-                    isMe ? 'bg-neon-yellow text-black' : 'border-b border-white/[0.06]',
-                  )}
-                >
-                  <span className={cn('ole-num text-[13px]', isMe ? 'text-black' : 'text-cimento')}>{idx + 1}</span>
-                  <span className={cn('truncate text-[13.5px]', isMe ? 'font-bold' : 'text-giz')}>
-                    {row.clubName ?? row.managerName ?? row.userId.slice(0, 8)}
-                  </span>
-                  <span className={cn('font-mono text-[10.5px] text-right', isMe ? 'text-black/70' : 'text-cimento')}>{row.played}{L('j', 'p')}</span>
-                  <span className={cn('font-mono text-[10.5px] text-right', isMe ? 'text-black/70' : 'text-cimento')}>
-                    {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
-                  </span>
-                  <span className={cn('ole-num text-[14px] text-right', isMe ? 'text-black' : 'text-white')}>
-                    {row.points}
-                  </span>
-                </div>
+                  pos={idx + 1}
+                  tom={isMe ? 'eu' : idx === 0 ? 'lider' : myIdx >= 0 && idx > myIdx ? 'abaixo' : 'normal'}
+                  nome={row.clubName ?? row.managerName ?? row.userId.slice(0, 8)}
+                  sub={`${row.played}${L('j', 'p')} · ${L('SG', 'GD')} ${row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}`}
+                  valor={row.points}
+                />
               );
             })}
           </div>
@@ -199,13 +159,9 @@ function fmtDiff(n: number): string {
 
 function Stat({ label, value, highlight, small }: { label: string; value: number | string; highlight?: boolean; small?: boolean }) {
   return (
-    <div className="border border-white/10 py-2">
-      <p className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-cimento">{label}</p>
-      <p className={cn(
-        'ole-num mt-1',
-        small ? 'text-sm' : 'text-lg',
-        highlight ? 'text-neon-yellow' : 'text-white',
-      )}>
+    <div className="flex min-w-0 flex-col gap-1 bg-asfalto-27 px-2 py-2.5">
+      <p className="truncate font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{label}</p>
+      <p className={`truncate font-spray font-black leading-[0.9] ${small ? 'text-[22px]' : 'text-[30px]'} ${highlight ? 'text-rua' : 'text-papel'}`}>
         {value}
       </p>
     </div>

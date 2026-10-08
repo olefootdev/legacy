@@ -4,12 +4,13 @@
  */
 
 import { useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
 import { motion } from 'motion/react';
 import { BackButton } from '@/components/BackButton';
-import { Hashtag } from '@/components/ui';
-import { ArrowLeft, Trophy, ArrowUp, ArrowDown } from 'lucide-react';
+import { SecaoRua } from '@/components/ui/Rua';
+import { CabecalhoRua, FaltaRua, LinhaRua, VazioRua, posRua } from '@/components/leagues/RuaTabela';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 import { L, emIngles } from '@/i18n/L';
 
 export default function GlobalLeagueAllTime() {
@@ -33,170 +34,63 @@ export default function GlobalLeagueAllTime() {
     });
   }, [globalLeagueMVP]);
 
+  const myIdx = myTeam ? ranked.findIndex((t) => t.id === myTeam.id) : -1;
+  const gapAbove = myIdx > 0 ? Math.max(0, ranked[myIdx - 1].allTimePoints - ranked[myIdx].allTimePoints) : null;
+
   return (
-    <div className="mx-auto min-w-0 w-full max-w-4xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 py-6 pb-12">
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-8 overflow-x-hidden px-3 py-6 pb-12 sm:px-4 lg:px-8">
+      <BackButton to="/match/global" label={L('Liga Global', 'Global League')} />
 
-      {/* Header editorial */}
-      <div>
-        <BackButton to="/match/global" label={L('Liga Global', 'Global League')} />
-        <Hashtag className="mt-4 text-neon-yellow">{L('#ligaglobal · todas as temporadas', '#globalleague · all seasons')}</Hashtag>
-        <h1
-          className="mt-1 font-impact uppercase leading-[1.1] text-white"
-          style={{ fontSize: 'clamp(2rem, 6vw, 3.25rem)', letterSpacing: '0.005em' }}
-        >
-          {emIngles() ? <>Hall of <span className="text-neon-yellow">Fame</span></> : <>Hall da <span className="text-neon-yellow">Fama</span></>}
-        </h1>
-      </div>
+      <CabecalhoRua
+        rotulo={L('#ligaglobal · todas as temporadas', '#globalleague · all seasons')}
+        titulo={emIngles() ? 'Hall of Fame' : 'Hall da Fama'}
+        voz={L('Quem fica no muro é quem durou.', 'The wall remembers who lasted.')}
+      />
 
-      {/* Tabela */}
       {ranked.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-cimento text-base">
-            {L('Nenhum time registrado ainda.', 'No teams registered yet.')}
-          </p>
-        </div>
+        <VazioRua titulo={L('Nenhum time registrado ainda', 'No teams registered yet')} frase={L('O muro tá em branco. Pinta o teu nome.', 'The wall is blank. Paint your name.')} />
       ) : (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="sports-panel overflow-hidden"
-        >
-          <div className="bg-deep-black px-4 py-3 border-b border-white/10 flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <Trophy className="w-4 h-4 shrink-0 text-neon-yellow" />
-              <span className="truncate font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-                {L('Classificação histórica', 'All-time standings')}
-              </span>
-            </div>
-            <span className="shrink-0 font-mono text-xs text-cimento">{ranked.length} {L('clubes', 'clubs')}</span>
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex min-w-0 flex-col gap-4">
+          {gapAbove != null && (
+            <FaltaRua
+              valor={gapAbove}
+              unidade={L('pts', 'pts')}
+              frase={L(`é o que separa tu do ${posRua(myIdx)} na história.`, `is all that's between you and ${posRua(myIdx)} all-time.`)}
+            />
+          )}
+
+          <SecaoRua label={L('Classificação histórica', 'All-time standings')} aside={`${ranked.length} ${L('clubes', 'clubs')}`} />
+
+          <div className="flex min-w-0 flex-col gap-1.5">
+            {ranked.map((team, index) => {
+              const isMe = team.id === myTeam?.id;
+              const sg = team.allTimeGoalsFor - team.allTimeGoalsAgainst;
+              const posChange = team.previousPosition ? team.previousPosition - (team.position ?? 0) : 0;
+              return (
+                <LinhaRua
+                  key={team.id}
+                  pos={index + 1}
+                  tom={isMe ? 'eu' : index === 0 ? 'lider' : index < 3 ? 'zona' : myIdx >= 0 && index > myIdx ? 'abaixo' : 'normal'}
+                  nome={team.clubName}
+                  sub={`${L('T', 'S')}${team.allTimeSeasonsPlayed ?? 0} · ${L('J', 'P')}${team.allTimeMatchesPlayed} ${L('V', 'W')}${team.allTimeWins} ${L('E', 'D')}${team.allTimeDraws} ${L('D', 'L')}${team.allTimeLosses} · ${team.allTimeGoalsFor}:${team.allTimeGoalsAgainst} (${sg > 0 ? `+${sg}` : sg})`}
+                  chip={
+                    posChange > 0 ? (
+                      <ArrowUp aria-label={L('Subiu', 'Up')} className={isMe ? 'h-4 w-4 shrink-0 text-asfalto-27' : 'h-4 w-4 shrink-0 text-alta'} strokeWidth={3} />
+                    ) : posChange < 0 ? (
+                      <ArrowDown aria-label={L('Caiu', 'Down')} className={isMe ? 'h-4 w-4 shrink-0 text-asfalto-27' : 'h-4 w-4 shrink-0 text-baixa'} strokeWidth={3} />
+                    ) : null
+                  }
+                  valor={team.allTimePoints}
+                  onClick={() => navigate(`/match/global/club/${team.id}`)}
+                  ariaLabel={L(`Ver perfil de ${team.clubName}`, `View ${team.clubName} profile`)}
+                />
+              );
+            })}
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px]">
-              <thead className="bg-deep-black">
-                <tr className="text-left">
-                  <th className="px-2 sm:px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento w-10">Pos</th>
-                  <th className="px-2 sm:px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Clube', 'Club')}</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('T', 'S')}</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('J', 'P')}</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('V', 'W')}</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('E', 'D')}</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('D', 'L')}</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('GP', 'GF')}</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('GC', 'GA')}</th>
-                  <th className="px-1 sm:px-3 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('SG', 'GD')}</th>
-                  <th className="px-2 sm:px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">PTS</th>
-                  <th className="px-2 sm:px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-right"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {ranked.map((team, index) => {
-                  const isMe = team.id === myTeam?.id;
-                  const sg = team.allTimeGoalsFor - team.allTimeGoalsAgainst;
-                  const posChange = team.previousPosition ? team.previousPosition - (team.position ?? 0) : 0;
-                  const tone = (normal: string) => (isMe ? 'text-black' : normal);
-
-                  return (
-                    <tr
-                      key={team.id}
-                      className={`border-t border-white/[0.06] transition-colors ${
-                        isMe ? 'bg-neon-yellow text-black' : 'hover:bg-card'
-                      }`}
-                    >
-                      {/* Pos */}
-                      <td className="px-2 sm:px-4 py-2 sm:py-3">
-                        <div className="flex items-center gap-1">
-                          <span className={`ole-num text-xs sm:text-sm ${tone('text-cimento')}`}>{index + 1}</span>
-                          {posChange > 0 && <ArrowUp className={`w-3 h-3 ${tone('text-alta')}`} strokeWidth={3} />}
-                          {posChange < 0 && <ArrowDown className={`w-3 h-3 ${tone('text-baixa')}`} strokeWidth={3} />}
-                        </div>
-                      </td>
-
-                      {/* Clube */}
-                      <td className="px-2 sm:px-4 py-2 sm:py-3 max-w-[120px] sm:max-w-none">
-                        <div>
-                          <p className={`text-xs sm:text-sm truncate ${isMe ? 'font-bold text-black' : 'text-giz'}`}>
-                            {team.clubName}
-                          </p>
-                          <p className={`font-mono text-[10px] ${tone('text-cimento')}`}>{team.clubShort}</p>
-                        </div>
-                      </td>
-
-                      {/* Temporadas */}
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
-                        <span className={`ole-num text-xs ${tone('text-cimento')}`}>{team.allTimeSeasonsPlayed ?? 0}</span>
-                      </td>
-
-                      {/* J */}
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
-                        <span className={`ole-num text-xs ${tone('text-giz')}`}>{team.allTimeMatchesPlayed}</span>
-                      </td>
-
-                      {/* V */}
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
-                        <span className={`ole-num text-xs ${tone('text-alta')}`}>{team.allTimeWins}</span>
-                      </td>
-
-                      {/* E */}
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
-                        <span className={`ole-num text-xs ${tone('text-cimento')}`}>{team.allTimeDraws}</span>
-                      </td>
-
-                      {/* D */}
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
-                        <span className={`ole-num text-xs ${tone('text-baixa')}`}>{team.allTimeLosses}</span>
-                      </td>
-
-                      {/* GP */}
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
-                        <span className={`ole-num text-xs ${tone('text-giz')}`}>{team.allTimeGoalsFor}</span>
-                      </td>
-
-                      {/* GC */}
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
-                        <span className={`ole-num text-xs ${tone('text-cimento')}`}>{team.allTimeGoalsAgainst}</span>
-                      </td>
-
-                      {/* SG */}
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
-                        <span className={`ole-num text-xs ${tone(sg > 0 ? 'text-alta' : sg < 0 ? 'text-baixa' : 'text-cimento')}`}>
-                          {sg > 0 ? `+${sg}` : sg}
-                        </span>
-                      </td>
-
-                      {/* PTS */}
-                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
-                        <span className={`ole-num text-base sm:text-lg ${tone('text-white')}`}>
-                          {team.allTimePoints}
-                        </span>
-                      </td>
-
-                      {/* Link perfil */}
-                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-right">
-                        <Link
-                          to={`/match/global/club/${team.id}`}
-                          className={`font-mono text-[10px] uppercase tracking-[0.12em] transition-colors whitespace-nowrap ${isMe ? 'text-black hover:underline' : 'text-cimento hover:text-neon-yellow'}`}
-                        >
-                          {L('Ver perfil', 'View profile')}
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Legenda */}
-          <div className="bg-deep-black px-4 py-3 border-t border-white/10">
-            <div className="flex flex-wrap gap-4 font-mono text-[10.5px]">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-neon-yellow" />
-                <span className="text-cimento">{L('Seu clube', 'Your club')}</span>
-              </div>
-              <span className="text-poeira">{L('T = temporadas · PTS = pontos acumulados', 'S = seasons · PTS = total points')}</span>
-            </div>
-          </div>
+          <p className="font-prova text-[10.5px] uppercase tracking-[0.12em] text-mudo">
+            {L('T = temporadas · PTS = pontos acumulados · toque pra ver o perfil', 'S = seasons · PTS = total points · tap for profile')}
+          </p>
         </motion.div>
       )}
     </div>

@@ -6,7 +6,12 @@ type SparklineProps = {
   className?: string;
 };
 
-/** Mini SVG line chart — sem eixos, sem grid. Trend-only. */
+/**
+ * Mini SVG line chart — sem eixos, sem grid. Trend-only.
+ *
+ * DS 2027: traço chapado, sem área pintada embaixo. Verde/vermelho é a única
+ * cor de delta de jogo que o DS deixa — aqui o traço É o delta.
+ */
 export function Sparkline({
   data,
   positive = true,
@@ -30,12 +35,6 @@ export function Sparkline({
     .join(' ');
 
   const stroke = positive ? 'var(--color-alta)' : 'var(--color-baixa)';
-  const fill = positive
-    ? 'rgba(34, 197, 94, 0.08)'
-    : 'rgba(255, 77, 77, 0.08)';
-
-  const areaPath = `M 0,${height} L ${points.split(' ').join(' L ')} L ${width},${height} Z`;
-
   return (
     <svg
       width={width}
@@ -44,14 +43,13 @@ export function Sparkline({
       className={className}
       aria-hidden
     >
-      <path d={areaPath} fill={fill} />
       <polyline
         points={points}
         fill="none"
         stroke={stroke}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        strokeWidth="2"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
       />
     </svg>
   );

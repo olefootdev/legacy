@@ -17,29 +17,24 @@ export function LegendStoreCTA({ legendName, storeHighlightId }: LegendStoreCTAP
     : `/mercado/loja?tab=legacies`;
 
   return (
-    <section
-      aria-label={L('Garanta sua lenda', 'Get your legend')}
-      className="relative overflow-hidden bg-neon-yellow"
-    >
-      <div className="relative mx-auto max-w-3xl px-5 sm:px-8 py-12 sm:py-16 text-center">
-        <Hashtag className="text-black/70">{L('#loja · legacy', '#store · legacy')}</Hashtag>
-        <h2
-          className="font-impact uppercase text-black mt-3 leading-[1.1]"
-          style={{ fontSize: 'clamp(36px, 6.5vw, 60px)' }}
-        >
-          {L('Garanta seu Legacy', 'Get your Legacy')}
-        </h2>
-        <p className="mt-3 truncate font-mono text-[12px] text-black/70">
-          {L(`Carta de ${legendName} · edição limitada`, `${legendName} card · limited edition`)}
-        </p>
-        <div className="mt-7 flex justify-center">
-          <Link
-            to={href}
-            className="ole-num inline-flex h-[52px] items-center whitespace-nowrap bg-black px-10 text-[14px] uppercase text-neon-yellow transition-colors hover:bg-deep-black [--corte:12px] [clip-path:var(--clip-corte)]"
-          >
-            {L('Ver na loja', 'View in store')}
-          </Link>
+    <section aria-label={L('Garanta sua lenda', 'Get your legend')} className="px-5 pb-12 sm:px-8 sm:pb-16">
+      {/* DS 2027 · drop de lenda: asfalto com fio de ouro; a ação é rua. */}
+      <div className="mx-auto flex max-w-3xl flex-col items-start gap-5 border-[3px] border-ouro-27 bg-asfalto-27 p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
+        <div className="flex min-w-0 flex-col gap-2">
+          <Hashtag className="font-bold uppercase tracking-[0.18em] text-ouro-27">{L('— Loja · legacy', '— Store · legacy')}</Hashtag>
+          <h2 className="font-impact uppercase leading-[0.9] text-papel" style={{ fontSize: 'clamp(40px, 9vw, 64px)' }}>
+            {L('Garanta teu legacy', 'Get your legacy')}
+          </h2>
+          <p className="truncate font-voz text-[clamp(24px,6vw,32px)] leading-none text-ouro-27">
+            {L(`A carta de ${legendName}.`, `The ${legendName} card.`)}
+          </p>
         </div>
+        <Link
+          to={href}
+          className="inline-flex min-h-[56px] shrink-0 items-center gap-2 whitespace-nowrap bg-rua px-7 font-impact text-[21px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)]"
+        >
+          {L('Ver na loja', 'View in store')} <span aria-hidden>→</span>
+        </Link>
       </div>
     </section>
   );

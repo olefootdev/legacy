@@ -34,29 +34,29 @@ export function HeaderOtzStrip() {
         'Official Olefoot time (UTC). Game state syncs when the app regains focus or in the background (settings).',
       )}
     >
-      <div className="flex items-center justify-end gap-1 text-neon-yellow sm:gap-1.5">
+      <div className="flex items-center justify-end gap-1 text-rua sm:gap-1.5">
         <Clock className="h-3 w-3 shrink-0 opacity-90 sm:h-3.5 sm:w-3.5" aria-hidden />
-        <span className="hidden font-display text-[9px] font-black uppercase tracking-widest text-gray-500 sm:inline">
+        <span className="hidden font-prova text-[9px] font-bold uppercase tracking-widest text-mudo sm:inline">
           {OTZ_SHORT_LABEL}
         </span>
-        <span className="font-display text-[11px] font-black tabular-nums tracking-tight text-white sm:text-xs md:text-sm">
+        <span className="font-display text-[11px] font-black tabular-nums tracking-tight text-papel sm:text-xs md:text-sm">
           {formatOtzTime(d)}
         </span>
       </div>
-      <div className="mt-0.5 text-[8px] font-medium tabular-nums text-gray-500 sm:text-[9px]">
+      <div className="mt-0.5 text-[8px] font-medium tabular-nums text-mudo sm:text-[9px]">
         {formatOtzDate(d)} · UTC
       </div>
       {/* Mobile: linhas curtas (sem ellipsis). Desktop: uma linha. */}
       <div
-        className="mt-1 flex flex-col items-end gap-0 text-[7px] font-medium leading-snug text-gray-400 sm:hidden"
+        className="mt-1 flex flex-col items-end gap-0 text-[7px] font-medium leading-snug text-mudo sm:hidden"
         aria-label={statsTitle}
       >
         <span className="tabular-nums">~{formatOnlineCompact(stats.online)} online</span>
         <span className="tabular-nums">{formatOnlineCompact(stats.inMatch)} {L('em jogo', 'in match')}</span>
         <span className="tabular-nums">{formatOnlineCompact(stats.scouting)} scouting</span>
       </div>
-      <div className="mt-1 hidden items-center justify-end gap-1 text-[9px] font-medium text-gray-400 sm:flex" title={statsTitle}>
-        <Users className="h-3 w-3 shrink-0 text-neon-yellow/80" aria-hidden />
+      <div className="mt-1 hidden items-center justify-end gap-1 text-[9px] font-medium text-mudo sm:flex" title={statsTitle}>
+        <Users className="h-3 w-3 shrink-0 text-rua" aria-hidden />
         <span className="max-w-[min(100%,20rem)] text-right leading-snug">{statsTitle}</span>
       </div>
     </div>

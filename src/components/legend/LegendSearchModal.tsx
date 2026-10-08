@@ -83,7 +83,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-[200] flex items-start justify-center bg-deep-black/95"
+          className="fixed inset-0 z-[200] flex items-start justify-center rua-grao bg-black/95"
           onClick={onClose}
           role="dialog"
           aria-label={L('Buscar lendas', 'Search legends')}
@@ -99,17 +99,17 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
           >
             {/* Header — input + close */}
             <div
-              className="flex items-stretch gap-2 border border-l-[3px] border-white/10 border-l-neon-yellow bg-panel p-2 sm:p-2.5"
+              className="flex items-stretch gap-2 border-l-[5px] border-ouro-27 bg-concreto p-2 sm:p-2.5"
             >
               <div className="flex items-center gap-3 flex-1 px-3">
-                <Search className="w-4 h-4 text-neon-yellow shrink-0" strokeWidth={2.5} />
+                <Search className="w-4 h-4 text-ouro-27 shrink-0" strokeWidth={2.5} />
                 <input
                   ref={inputRef}
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={L('Buscar lenda… (nome, epíteto, era)', 'Search legend… (name, epithet, era)')}
-                  className="min-w-0 flex-1 bg-transparent outline-none text-white placeholder:text-poeira"
+                  className="min-w-0 flex-1 bg-transparent font-impact text-[20px] uppercase outline-none text-papel placeholder:text-fio"
                   style={{
                     fontFamily: 'var(--font-sans)',
                     fontSize: '15px',
@@ -132,7 +132,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex items-center justify-center w-10 text-cimento hover:text-neon-yellow hover:bg-white/5 transition-colors"
+                className="inline-flex items-center justify-center w-10 text-cimento hover:text-ouro-27 transition-colors"
                 aria-label={L('Fechar busca', 'Close search')}
               >
                 <X className="w-5 h-5" />
@@ -141,7 +141,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
 
             {/* Eyebrow editorial */}
             <div className="flex items-center justify-between gap-2 px-1 mt-4 mb-2">
-              <Hashtag className="text-neon-yellow">{L('#halldafama', '#halloffame')}</Hashtag>
+              <Hashtag className="font-bold uppercase tracking-[0.16em] text-ouro-27">{L('#halldafama', '#halloffame')}</Hashtag>
               <span className="shrink-0 font-mono text-cimento" style={{ fontSize: '10.5px' }}>
                 {filtered.length} {filtered.length === 1 ? L('lenda', 'legend') : L('lendas', 'legends')}
               </span>
@@ -153,7 +153,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
               style={{ scrollbarGutter: 'stable' }}
             >
               {filtered.length === 0 ? (
-                <div className="border border-dashed border-white/16 px-5 py-10 text-center">
+                <div className="border-2 border-dashed border-fio px-5 py-10 text-center">
                   <p className="text-cimento" style={{ fontSize: '15px' }}>
                     {L(`Nenhuma lenda encontrada para "${query}".`, `No legend found for "${query}".`)}
                   </p>
@@ -167,8 +167,8 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                       type="button"
                       onClick={() => handleNavigate(l.slug)}
                       aria-current={isCurrent ? 'page' : undefined}
-                      className={`group w-full flex items-stretch gap-0 overflow-hidden border border-l-[3px] bg-panel text-left transition-colors hover:border-white/30 ${
-                        isCurrent ? 'border-neon-yellow/60 border-l-neon-yellow' : 'border-white/10 border-l-white/16'
+                      className={`group w-full flex items-stretch gap-0 overflow-hidden border-[3px] bg-concreto text-left transition-colors hover:border-ouro-27 ${
+                        isCurrent ? 'border-ouro-27' : 'border-transparent'
                       }`}
                     >
                       {/* Foto / fallback */}
@@ -184,7 +184,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                         ) : (
                           <div className="absolute inset-0 grid place-items-center bg-card">
                             <span
-                              className="font-impact uppercase text-neon-yellow/70 leading-none"
+                              className="font-voz text-ouro-27/60 leading-none"
                               style={{ fontSize: '40px' }}
                               aria-hidden
                             >
@@ -195,7 +195,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                         {/* OVR */}
                         <div className="absolute top-1.5 left-1.5 z-10 bg-black px-1 py-0.5">
                           <p
-                            className="ole-num text-neon-yellow leading-none"
+                            className="font-impact text-ouro-27 leading-none"
                             style={{ fontSize: 'clamp(15px, 2.4vw, 19px)' }}
                           >
                             {l.ovr}
@@ -211,7 +211,7 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                           {l.epithet}
                         </span>
                         <p
-                          className="truncate font-impact uppercase text-white mt-0.5 leading-[1.1]"
+                          className="truncate font-voz text-papel mt-0.5 leading-none"
                           style={{ fontSize: 'clamp(20px, 3vw, 26px)' }}
                         >
                           {l.name.charAt(0) + l.name.slice(1).toLowerCase()}
@@ -226,10 +226,10 @@ export function LegendSearchModal({ open, onClose, currentSlug }: LegendSearchMo
                       {/* Indicador current/seta */}
                       <div className="flex items-center pr-3 sm:pr-4">
                         <span
-                          className={`whitespace-nowrap font-mono uppercase ${
-                            isCurrent ? 'text-neon-yellow' : 'text-cimento group-hover:text-neon-yellow'
+                          className={`whitespace-nowrap font-impact uppercase ${
+                            isCurrent ? 'text-ouro-27' : 'text-mudo group-hover:text-ouro-27'
                           }`}
-                          style={{ fontSize: '10.5px', letterSpacing: '0.12em' }}
+                          style={{ fontSize: '16px' }}
                         >
                           {isCurrent ? L('Aqui', 'Here') : L('Ver →', 'View →')}
                         </span>

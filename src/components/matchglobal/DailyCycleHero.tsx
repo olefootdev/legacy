@@ -12,13 +12,26 @@
 import { L } from '@/i18n/L';
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Crown, Flag, Swords, Clock } from 'lucide-react';
+import { Crown, Flag, Swords } from 'lucide-react';
 import { useDailyCycle } from '@/hooks/useDailyCycle';
 import { useGameStore } from '@/game/store';
 import { DailyBracket } from './DailyBracket';
 import { GlobalChampionHonor } from './GlobalChampionHonor';
 import { resolveManagerName } from '@/lib/championManager';
-import { Hashtag } from '@/components/ui';
+import { SeloRua } from '@/components/ui/Rua';
+import { LinhaRua } from '@/components/leagues/RuaTabela';
+import { cn } from '@/lib/utils';
+
+/** Célula de painel: rótulo prova + valor + nota. */
+function Celula({ rotulo, children, nota, className }: { rotulo: string; children: React.ReactNode; nota?: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn('flex min-w-0 flex-col gap-1.5 bg-asfalto-27 p-3', className)}>
+      <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.16em] text-mudo">{rotulo}</span>
+      {children}
+      {nota != null && <span className="font-prova text-[11px] text-suave">{nota}</span>}
+    </div>
+  );
+}
 
 function fmt(ms: number): string {
   if (ms <= 0) return '00:00';
@@ -88,16 +101,16 @@ export function DailyCycleHero() {
   }
 
   return (
-    <section className="relative overflow-hidden rounded-lg border border-neon-yellow/30 bg-deep-black p-4 sm:p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          {daily.phase === 'qualifying' && <Flag className="w-6 h-6 text-neon-yellow" />}
-          {daily.phase === 'knockout' && <Swords className="w-6 h-6 text-neon-yellow animate-pulse" />}
-          {daily.phase === 'crowned' && <Crown className="w-6 h-6 text-neon-yellow" />}
-          <div>
-            <Hashtag>{L('#coroadodia', '#crownoftheday')}</Hashtag>
-            <h2 className="font-display text-lg sm:text-2xl font-bold uppercase text-white leading-tight">
+    <section className="rua-grao relative flex min-w-0 flex-col gap-4 overflow-hidden bg-concreto p-4 sm:p-6">
+      {/* Cabeçalho */}
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          {daily.phase === 'qualifying' && <Flag aria-hidden className="h-6 w-6 shrink-0 text-rua" />}
+          {daily.phase === 'knockout' && <Swords aria-hidden className="h-6 w-6 shrink-0 text-rua" />}
+          {daily.phase === 'crowned' && <Crown aria-hidden className="h-6 w-6 shrink-0 text-ouro-27" />}
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">— {L('#coroadodia', '#crownoftheday')}</span>
+            <h2 className="truncate font-impact text-[28px] uppercase leading-none text-papel sm:text-[34px]">
               {daily.phase === 'qualifying' && L('Corrida do Dia', 'Daily Race')}
               {daily.phase === 'knockout' && L('Mata-Mata ao Vivo', 'Live Knockout')}
               {daily.phase === 'crowned' && L('Campeão Coroado', 'Champion Crowned')}
@@ -105,107 +118,69 @@ export function DailyCycleHero() {
           </div>
         </div>
         {daily.phase === 'knockout' && liveRound && (
-          <span className="font-mono text-[10px] text-neon-green animate-pulse hidden sm:inline">
-            ● {phaseLabel(liveRound.size)} {L('agora', 'now')}
-          </span>
+          <SeloRua tom="corre" className="hidden sm:inline-flex">● {phaseLabel(liveRound.size)} {L('agora', 'now')}</SeloRua>
         )}
       </div>
 
       {/* ════ QUALIFYING ════ */}
       {daily.phase === 'qualifying' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Meu rank */}
-            <div className="sports-panel rounded-lg p-3 border border-white/10">
-              <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-1">
-                {L('Sua posição', 'Your position')}
-              </p>
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+            <Celula
+              rotulo={L('Tua posição', 'Your position')}
+              nota={
+                daily.myRank != null
+                  ? daily.inCut
+                    ? L(`Dentro do top ${daily.cutSize}. Segura.`, `Inside the top ${daily.cutSize}. Hold it.`)
+                    : daily.distanceToCut != null
+                      ? L(`Faltam ${daily.distanceToCut} posições pro top ${daily.cutSize}.`, `${daily.distanceToCut} places to the top ${daily.cutSize}.`)
+                      : L('Joga pra entrar.', 'Play to get in.')
+                  : undefined
+              }
+            >
               {daily.myRank != null ? (
-                <>
-                  <p className="font-mono text-3xl font-bold text-neon-yellow leading-none">
-                    {daily.myRank}º
-                  </p>
-                  <p className="text-xs text-text-soft mt-2">
-                    {daily.inCut
-                      ? L('✅ dentro do top ', '✅ inside the top ') + daily.cutSize
-                      : daily.distanceToCut != null
-                        ? L(`${daily.distanceToCut} a frente do top ${daily.cutSize}`, `${daily.distanceToCut} away from the top ${daily.cutSize}`)
-                        : L('jogue para entrar', 'play to get in')}
-                  </p>
-                </>
+                <span className={cn('font-spray text-[44px] font-black leading-none', daily.inCut ? 'text-rua' : 'text-papel')}>#{daily.myRank}</span>
               ) : (
-                <p className="text-xs text-text-soft">{L('Jogue 1 partida hoje pra entrar', 'Play 1 match today to get in')}</p>
+                <span className="font-voz text-[22px] leading-none text-suave">{L('Joga 1 partida hoje pra entrar.', 'Play 1 match today to get in.')}</span>
               )}
-            </div>
+            </Celula>
 
-            {/* Countdown */}
-            <div className="sports-panel rounded-lg p-3 border border-white/10">
-              <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-1">
-                {L('Corte do mata-mata', 'Knockout cut-off')}
-              </p>
-              <p className="font-mono text-3xl font-bold text-white leading-none">
-                {fmt(daily.msToCut)}
-              </p>
-              <p className="text-xs text-text-soft mt-2">
-                {L(`top ${daily.cutSize} avança às ${daily.qualifyHour}h`, `top ${daily.cutSize} advance at ${daily.qualifyHour}h`)}
-              </p>
-            </div>
+            <Celula rotulo={L('Corte do mata-mata', 'Knockout cut-off')} nota={L(`top ${daily.cutSize} avança às ${daily.qualifyHour}h`, `top ${daily.cutSize} advance at ${daily.qualifyHour}h`)}>
+              <span className="font-spray text-[44px] font-black leading-none text-rua">{fmt(daily.msToCut)}</span>
+            </Celula>
 
-            {/* Líder */}
-            <div className="sports-panel rounded-lg p-3 border border-white/10">
-              <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-1">
-                {L('Líder do dia', 'Leader of the day')}
-              </p>
+            <Celula
+              rotulo={L('Líder do dia', 'Leader of the day')}
+              className={daily.standings[0] ? 'border-2 border-ouro-27' : undefined}
+              nota={daily.standings[0] ? `${daily.standings[0].team.dailyPoints ?? 0} pts · ${L('SG', 'GD')} ${daily.standings[0].team.dailyGoalDifference ?? 0}` : undefined}
+            >
               {daily.standings[0] ? (
-                <>
-                  <p className="font-display text-base font-bold uppercase text-neon-yellow truncate">
-                    {daily.standings[0].team.clubName}
-                  </p>
-                  <p className="font-mono text-xs text-text-soft mt-2">
-                    {daily.standings[0].team.dailyPoints ?? 0} pts
-                    {' · '}
-                    {L('SG', 'GD')} {daily.standings[0].team.dailyGoalDifference ?? 0}
-                  </p>
-                </>
+                <span className="truncate font-impact text-[24px] uppercase leading-none text-ouro-27">{daily.standings[0].team.clubName}</span>
               ) : (
-                <p className="text-xs text-text-soft">{L('Sem partidas ainda', 'No matches yet')}</p>
+                <span className="font-prova text-[12px] text-mudo">{L('Sem partidas ainda', 'No matches yet')}</span>
               )}
-            </div>
+            </Celula>
           </div>
 
           {/* Top 5 */}
           {daily.standings.length > 0 && (
-            <div className="sports-panel rounded-lg p-3">
-              <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-2">
-                {L('Top 5 da Corrida', 'Race Top 5')}
-              </p>
-              <div className="space-y-1">
-                {daily.standings.slice(0, 5).map((row) => {
-                  const inCut = row.rank <= daily.cutSize;
-                  return (
-                    <div
-                      key={row.team.id}
-                      className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded ${
-                        row.isMe ? 'bg-neon-yellow/10 border-l-2 border-neon-yellow' : ''
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={`font-mono text-xs w-5 text-right ${inCut ? 'text-neon-green' : 'text-text-soft'}`}>
-                          {row.rank}
-                        </span>
-                        <span className="text-sm text-white truncate">
-                          {row.team.clubName}
-                          {row.isMe && <span className="text-[10px] text-neon-yellow ml-2">{L('(você)', '(you)')}</span>}
-                        </span>
-                      </div>
-                      <span className="font-mono text-xs text-text-soft shrink-0">
-                        {row.team.dailyPoints ?? 0}p
-                        <span className="text-white/30 ml-2">{row.team.dailyGoalDifference ?? 0 >= 0 ? '+' : ''}{row.team.dailyGoalDifference ?? 0}</span>
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">— {L('Top 5 da corrida', 'Race top 5')}</span>
+              {daily.standings.slice(0, 5).map((row) => {
+                const inCut = row.rank <= daily.cutSize;
+                const gd = row.team.dailyGoalDifference ?? 0;
+                return (
+                  <LinhaRua
+                    key={row.team.id}
+                    pos={row.rank}
+                    tom={row.isMe ? 'eu' : row.rank === 1 ? 'lider' : inCut ? 'zona' : 'normal'}
+                    nome={row.team.clubName}
+                    sub={`${L('SG', 'GD')} ${gd >= 0 ? '+' : ''}${gd}`}
+                    valor={row.team.dailyPoints ?? 0}
+                    className="bg-asfalto-27"
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -213,71 +188,49 @@ export function DailyCycleHero() {
 
       {/* ════ KNOCKOUT ════ */}
       {daily.phase === 'knockout' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Fase atual */}
-            <div className="sports-panel rounded-lg p-3 border border-white/10">
-              <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-1">
-                {L('Fase atual', 'Current round')}
-              </p>
-              <p className="font-display text-lg font-bold uppercase text-neon-yellow">
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+            <Celula
+              rotulo={L('Fase atual', 'Current round')}
+              nota={liveRound ? L('rolando agora', 'live now') : nextRound ? L('aguardando', 'waiting') : L('mata-mata encerrado', 'knockout finished')}
+            >
+              <span className="font-impact text-[26px] uppercase leading-none text-papel">
                 {liveRound ? phaseLabel(liveRound.size) : nextRound ? phaseLabel(nextRound.size) : '—'}
-              </p>
-              <p className="text-xs text-text-soft mt-2">
-                {liveRound ? L('rolando agora', 'live now') : nextRound ? L('aguardando', 'waiting') : L('mata-mata encerrado', 'knockout finished')}
-              </p>
-            </div>
+              </span>
+            </Celula>
 
-            {/* Countdown próxima rodada */}
-            <div className="sports-panel rounded-lg p-3 border border-white/10">
-              <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-1 flex items-center gap-1">
-                <Clock className="w-3 h-3" /> {L('Próxima rodada', 'Next round')}
-              </p>
+            <Celula rotulo={L('Próxima rodada', 'Next round')}>
               {nextRound && nextRound.status === 'scheduled' ? (
                 <>
-                  <p className="font-mono text-2xl font-bold text-white leading-none">
-                    {fmt(Math.max(0, nextRound.scheduledKickoffMs - now))}
-                  </p>
-                  <p className="text-xs text-text-soft mt-2">
-                    {phaseLabel(nextRound.size)}
-                  </p>
+                  <span className="font-spray text-[40px] font-black leading-none text-rua">{fmt(Math.max(0, nextRound.scheduledKickoffMs - now))}</span>
+                  <span className="font-prova text-[11px] text-suave">{phaseLabel(nextRound.size)}</span>
                 </>
               ) : liveRound ? (
                 <>
-                  <p className="font-mono text-2xl font-bold text-neon-green leading-none animate-pulse">
-                    {L('ao vivo', 'live')}
-                  </p>
-                  <p className="text-xs text-text-soft mt-2">{L('simulando agora', 'simulating now')}</p>
+                  <SeloRua tom="corre" className="self-start">● {L('Ao vivo', 'Live')}</SeloRua>
+                  <span className="font-prova text-[11px] text-suave">{L('simulando agora', 'simulating now')}</span>
                 </>
               ) : (
-                <p className="text-xs text-text-soft">—</p>
+                <span className="font-prova text-[12px] text-mudo">—</span>
               )}
-            </div>
+            </Celula>
 
-            {/* Status do meu time */}
-            <div className="sports-panel rounded-lg p-3 border border-white/10">
-              <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-1">
-                {L('Seu time', 'Your team')}
-              </p>
+            <Celula rotulo={L('Teu time', 'Your team')}>
               {myTeamId ? (
                 (() => {
                   const lastRound = [...daily.bracket].reverse().find((r) =>
                     r.fixtures.some((fx) => fx.homeTeamId === myTeamId || fx.awayTeamId === myTeamId),
                   );
                   if (!lastRound) {
-                    return <p className="text-sm text-text-soft">{L('Não classificou para o mata-mata', 'Did not qualify for the knockout')}</p>;
+                    return <span className="font-voz text-[20px] leading-none text-suave">{L('Ficou fora hoje. Volta amanhã.', 'Out today. Back tomorrow.')}</span>;
                   }
                   const fx = lastRound.fixtures.find((f) => f.homeTeamId === myTeamId || f.awayTeamId === myTeamId);
-                  if (!fx) return <p className="text-sm text-text-soft">—</p>;
+                  if (!fx) return <span className="font-prova text-[12px] text-mudo">—</span>;
                   if (fx.status !== 'finished') {
                     return (
                       <>
-                        <p className="font-display text-base font-bold uppercase text-neon-yellow">
-                          {L('Você está vivo', 'You are still alive')}
-                        </p>
-                        <p className="text-xs text-text-soft mt-2">
-                          {phaseLabel(lastRound.size)}
-                        </p>
+                        <span className="font-impact text-[24px] uppercase leading-none text-rua">{L('Tá vivo', 'Still alive')}</span>
+                        <span className="font-prova text-[11px] text-suave">{phaseLabel(lastRound.size)}</span>
                       </>
                     );
                   }
@@ -290,40 +243,31 @@ export function DailyCycleHero() {
                   if (myScore === theirScore && myPen != null && theirPen != null) won = myPen > theirPen;
                   return won ? (
                     <>
-                      <p className="font-display text-base font-bold uppercase text-neon-green">
-                        {L('Avançou', 'Advanced')}
-                      </p>
-                      <p className="font-mono text-xs text-text-soft mt-2">
-                        {myScore}–{theirScore}{fx.wentToPenalties ? ' (P)' : ''}
-                      </p>
+                      <span className="font-impact text-[24px] uppercase leading-none text-rua">{L('Avançou', 'Advanced')}</span>
+                      <span className="font-spray text-[22px] font-black leading-none text-papel">{myScore}×{theirScore}{fx.wentToPenalties ? ' (P)' : ''}</span>
                     </>
                   ) : (
                     <>
-                      <p className="font-display text-base font-bold uppercase text-white/60">
-                        {L('Eliminado', 'Eliminated')}
-                      </p>
-                      <p className="font-mono text-xs text-text-soft mt-2">
-                        {phaseLabel(lastRound.size)} · {myScore}–{theirScore}{fx.wentToPenalties ? ' (P)' : ''}
-                      </p>
+                      <span className="font-impact text-[24px] uppercase leading-none text-mudo">{L('Eliminado', 'Eliminated')}</span>
+                      <span className="font-prova text-[11px] text-suave">
+                        {phaseLabel(lastRound.size)} · {myScore}×{theirScore}{fx.wentToPenalties ? ' (P)' : ''}
+                      </span>
                     </>
                   );
                 })()
               ) : (
-                <p className="text-xs text-text-soft">—</p>
+                <span className="font-prova text-[12px] text-mudo">—</span>
               )}
-            </div>
+            </Celula>
           </div>
 
-          {/* Bracket inline */}
-          <div className="sports-panel rounded-lg p-3">
-            <DailyBracket bracket={daily.bracket} myTeamId={myTeamId} />
-          </div>
+          <DailyBracket bracket={daily.bracket} myTeamId={myTeamId} />
         </div>
       )}
 
       {/* ════ CROWNED ════ */}
       {daily.phase === 'crowned' && daily.todayCrown && (
-        <div className="space-y-4">
+        <div className="flex min-w-0 flex-col gap-4">
           <GlobalChampionHonor
             variant="hero"
             clubName={daily.todayCrown.clubName}
@@ -337,10 +281,8 @@ export function DailyCycleHero() {
           />
 
           {daily.bracket.length > 0 && (
-            <div className="sports-panel rounded-lg p-3">
-              <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-2">
-                {L('O caminho do campeão', 'The champion\'s path')}
-              </p>
+            <div className="flex min-w-0 flex-col gap-2">
+              <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">— {L('O caminho do campeão', "The champion's path")}</span>
               <DailyBracket bracket={daily.bracket} myTeamId={myTeamId} championName={daily.todayCrown.clubName} />
             </div>
           )}

@@ -7,10 +7,13 @@
  * top-100, de hora em hora) e o LEILÃO-RELÂMPAGO DO MVP — o artilheiro real
  * das últimas 24h, cópia única, 15 minutos, lance em OLEFOOT com escrow no
  * banco. Tudo lido do servidor; nada aqui decide preço.
+ *
+ * DS 2027 · "Respeito é ouro": o ticker corre numa faixa de papel colada torta
+ * (o momento rua), o leilão do MVP é o DROP — ouro chapado com a contagem em
+ * blocos de spray — e o OLE-100 é ranking de muro: o #01 com fio de ouro.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Crown, Gavel, TrendingDown, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameDispatch } from '@/game/store';
 import { useTrackScreen } from '@/progression/trackEvent';
@@ -25,6 +28,8 @@ import {
   type TickerItem,
 } from '@/market/marketLiveClient';
 import { retirarMvp } from '@/market/squadMarketClient';
+import { BotaoRua, MarcaRua, SecaoRua, SeloRua } from '@/components/ui/Rua';
+import { AvisoRua, ContagemSpray, OvrSelo, useRestante } from '@/components/bolsa/Bolsa';
 import { L, LOCALE, emIngles } from '@/i18n/L';
 
 const TOKENS_POR_CENTAVO = 80;
@@ -38,19 +43,7 @@ const FONTE: Record<string, string> = {
   sale: L('venda', 'sale'),
 };
 
-function Countdown({ ate }: { ate: string }) {
-  const [resta, setResta] = useState(() => new Date(ate).getTime() - Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setResta(new Date(ate).getTime() - Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [ate]);
-  if (resta <= 0) return <span className="text-rose-300">{L('ENCERRADO', 'ENDED')}</span>;
-  const m = Math.floor(resta / 60000);
-  const s = Math.floor((resta % 60000) / 1000);
-  return <span className="tabular-nums">{m}:{String(s).padStart(2, '0')}</span>;
-}
-
-/** Sparkline inline do índice — sem lib, só polyline. */
+/** Sparkline inline do índice — sem lib, só polyline. Cor = delta (alta/baixa). */
 function IndiceSparkline({ pontos }: { pontos: { indiceBroCents: number }[] }) {
   if (pontos.length < 2) return null;
   const vals = pontos.map((p) => p.indiceBroCents);
@@ -62,9 +55,24 @@ function IndiceSparkline({ pontos }: { pontos: { indiceBroCents: number }[] }) {
     .join(' ');
   const subiu = vals[vals.length - 1]! >= vals[0]!;
   return (
-    <svg viewBox="0 0 300 36" className="h-9 w-full" preserveAspectRatio="none" aria-hidden>
-      <polyline points={pts} fill="none" stroke={subiu ? '#34d399' : '#fb7185'} strokeWidth="2" />
+    <svg viewBox="0 0 300 36" className="h-12 w-full" preserveAspectRatio="none" aria-hidden>
+      <polyline
+        points={pts}
+        fill="none"
+        stroke={subiu ? 'var(--color-alta)' : 'var(--color-baixa)'}
+        strokeWidth="2.5"
+        strokeLinejoin="miter"
+      />
     </svg>
+  );
+}
+
+function Delta({ positivo, children, className }: { positivo: boolean; children: React.ReactNode; className?: string }) {
+  return (
+    <span className={cn('inline-flex items-center gap-1 tabular-nums', positivo ? 'text-alta' : 'text-baixa', className)}>
+      <span aria-hidden className="text-[0.7em]">{positivo ? '▲' : '▼'}</span>
+      {children}
+    </span>
   );
 }
 
@@ -148,172 +156,336 @@ export function MercadoVivo() {
     const b = indice[indice.length - 1]!.indiceBroCents;
     return a > 0 ? ((b - a) / a) * 100 : null;
   }, [indice]);
-  const encerrado = mvp != null && Date.now() >= new Date(mvp.endsAt).getTime();
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-8">
-      <section aria-label={L('Mercado ao vivo', 'Live Market')} className="ole-poster ole-rail px-5 py-5 sm:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <span className="ole-eyebrow-poster flex items-center gap-2" style={{ fontSize: '12px' }}>
-              <Activity className="h-4 w-4" /> {L('Mercado ao vivo · índice OLE-100', 'Live Market · OLE-100 index')}
+    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-10 overflow-x-hidden px-3 pb-10 sm:px-4">
+      {/* ── MOMENTO RUA: o ticker corre numa faixa de papel colada torta ── */}
+      {ticker.length > 0 && <FaixaTicker itens={ticker} />}
+
+      {/* ── ÍNDICE OLE-100 ─────────────────────────────────────────────── */}
+      <section aria-label={L('Mercado ao vivo', 'Live Market')} className="flex min-w-0 flex-col gap-3">
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <SecaoRua label={L('Mercado ao vivo · índice OLE-100', 'Live market · OLE-100 index')} />
+          <SeloRua tom="corre" className="shrink-0">● {L('Ao vivo', 'Live')}</SeloRua>
+        </div>
+        <h1 className="flex flex-col font-impact uppercase leading-[0.88]">
+          <span className="font-voz text-[clamp(44px,12vw,72px)] normal-case leading-[0.9] text-papel">{L('A bolsa', 'The market')}</span>
+          <span className="text-[clamp(30px,8.5vw,52px)] text-transparent [-webkit-text-stroke:1.5px_var(--color-papel)]">
+            {L('Preço é jogo.', 'Price is play.')}
+          </span>
+        </h1>
+
+        <div className="rua-grao mt-2 flex min-w-0 flex-col gap-3 bg-concreto p-5 sm:p-6">
+          <span className="font-prova text-[11px] font-bold uppercase tracking-[0.22em] text-mudo">
+            {L('Índice · soma dos 100 mais valiosos', 'Index · sum of the top 100')}
+          </span>
+          <p className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="font-spray text-[clamp(44px,13vw,84px)] font-black leading-[0.85] tabular-nums text-papel [overflow-wrap:anywhere]">
+              {indiceAtual == null ? '—' : olefootDeCents(indiceAtual)}
             </span>
-            <p className="mt-1 font-impact leading-none text-neon-yellow tabular-nums" style={{ fontSize: 'clamp(30px, 7vw, 52px)' }}>
-              {indiceAtual == null ? '—' : olefootDeCents(indiceAtual)} <span className="text-[0.45em] text-white/70">OLEFOOT</span>
-            </p>
-            <p className="mt-1 text-[12px] text-white/50">
-              {L('A soma dos 100 jogadores mais valiosos do mundo, de hora em hora', 'The sum of the 100 most valuable players in the world, hourly')}
-              {indiceDelta != null ? (
-                <span className={indiceDelta >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
-                  {' '}· {indiceDelta >= 0 ? '+' : ''}{indiceDelta.toFixed(2)}% {L('na janela', 'in window')}
-                </span>
-              ) : null}
-            </p>
-          </div>
-          <div className="w-full max-w-[300px]"><IndiceSparkline pontos={indice} /></div>
+            <span className="font-prova text-[12px] font-bold uppercase tracking-[0.18em] text-mudo">OLEFOOT</span>
+          </p>
+          {indiceDelta != null && (
+            <Delta positivo={indiceDelta >= 0} className="font-impact text-[22px] leading-none">
+              {indiceDelta >= 0 ? '+' : ''}
+              {indiceDelta.toFixed(2)}%
+              <span className="ml-1 font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-mudo">{L('na janela', 'in window')}</span>
+            </Delta>
+          )}
+          <IndiceSparkline pontos={indice} />
+          <span className="font-prova text-[11px] uppercase tracking-[0.14em] text-mudo">{L('Atualiza de hora em hora', 'Updates hourly')}</span>
         </div>
       </section>
 
-      {erro ? <p className="border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{erro}</p> : null}
-      {aviso ? <p className="border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">{aviso}</p> : null}
+      {erro ? <AvisoRua tipo="erro">{erro}</AvisoRua> : null}
+      {aviso ? <AvisoRua tipo="ok">{aviso}</AvisoRua> : null}
 
-      {/* ── LEILÃO DO MVP ────────────────────────────────────────────────── */}
-      <section>
-        <h2 className="ole-eyebrow-poster mb-3 flex items-center gap-2" style={{ fontSize: '13px' }}>
-          <Gavel className="h-4 w-4" /> {L('Leilão-relâmpago do MVP · todo dia às 20h', 'MVP flash auction · daily at 8 PM')}
-        </h2>
+      {/* ── LEILÃO DO MVP — o drop ──────────────────────────────────────── */}
+      <section aria-label={L('Leilão-relâmpago do MVP', 'MVP flash auction')} className="flex min-w-0 flex-col gap-3">
+        <SecaoRua label={L('Leilão-relâmpago · todo dia às 20h', 'Flash auction · daily at 8 PM')} />
         {mvp == null ? (
-          <p className="ole-poster p-6 text-sm text-white/45">
-            {L('Nenhum leilão ainda — o artilheiro do dia sobe ao martelo às 20h (precisa ter gol nas últimas 24h).', 'No auction yet — the top scorer of the day goes under the hammer at 8 PM (needs a goal in the last 24h).')}
-          </p>
-        ) : (
-          <div className="ole-poster ole-rail flex flex-wrap items-center justify-between gap-4 p-5">
-            <div>
-              <p className="font-impact text-[24px] uppercase text-white">
-                <Crown className="mr-2 inline h-5 w-5 text-neon-yellow" />
-                {mvp.playerName}
-                <span className="ml-2 text-[12px] font-normal normal-case text-white/45">{L('cópia única', 'unique copy')} · {mvp.dia}</span>
-              </p>
-              <p className="mt-1 text-[12px] text-white/55">
-                {mvp.status === 'open' && !encerrado ? (
-                  <>{L('Fecha em', 'Closes in')} <Countdown ate={mvp.endsAt} /> · {L('lance atual', 'current bid')}:{' '}
-                    <strong className="text-neon-yellow">{mvp.bidOlefoot ? tok(Number(mvp.bidOlefoot)) : L(`mínimo ${tok(Number(mvp.minBidOlefoot))}`, `minimum ${tok(Number(mvp.minBidOlefoot))}`)} OLEFOOT</strong>
-                    {mvp.souOMaior ? L(' · o maior é TEU', ' · highest is YOURS') : ''}</>
-                ) : mvp.status === 'settled' ? (
-                  <>{L(`Encerrado e retirado — por ${tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT.`, `Ended and claimed — for ${tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT.`)}</>
-                ) : encerrado && mvp.souOMaior ? (
-                  emIngles() ? (
-                  <>Hammer down — <strong className="text-emerald-300">you won for {tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT</strong>. Claim the card.</>
-                ) : (
-                  <>Martelo batido — <strong className="text-emerald-300">tu venceste por {tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT</strong>. Retira o card.</>
-                )
-                ) : (
-                  <>{L('Encerrado', 'Ended')}{mvp.bidOlefoot ? L(` — maior lance ${tok(Number(mvp.bidOlefoot))} OLEFOOT`, ` — top bid ${tok(Number(mvp.bidOlefoot))} OLEFOOT`) : L(' sem lances', ' with no bids')}.</>
-                )}
-                {' '}· {L('50% do martelo vai pro dono do MVP', '50% of the hammer price goes to the MVP owner')}
-              </p>
-            </div>
-            {mvp.status === 'open' && !encerrado ? (
-              <div className="flex gap-2">
-                <input
-                  className="w-36 border border-white/15 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30"
-                  value={lance} inputMode="numeric"
-                  onChange={(e) => setLance(e.target.value.replace(/[^\d]/g, ''))}
-                  placeholder={tok(mvp.bidOlefoot ? Math.ceil(Number(mvp.bidOlefoot) * 1.05) : Number(mvp.minBidOlefoot))}
-                />
-                <button type="button" onClick={() => void darLance()} disabled={agindo || !lance}
-                  className="bg-neon-yellow px-4 py-2 font-display text-[11px] font-black uppercase text-black hover:bg-white disabled:opacity-50">
-                  {L('Dar lance', 'Place bid')}
-                </button>
-              </div>
-            ) : encerrado && mvp.status === 'open' && mvp.souOMaior ? (
-              <button type="button" onClick={() => void retirar()} disabled={agindo}
-                className="bg-emerald-400 px-4 py-2 font-display text-[11px] font-black uppercase text-black hover:bg-white disabled:opacity-50">
-                {L('Retirar o card', 'Claim the card')}
-              </button>
-            ) : null}
+          <div className="flex min-w-0 -rotate-1 flex-col gap-2 border-[3px] border-dashed border-asfalto-27 bg-cal p-5 text-asfalto-27">
+            <span className="font-voz text-[clamp(30px,8vw,40px)] leading-[0.95]">{L('O martelo bate às 20h.', 'The hammer drops at 8 PM.')}</span>
+            <p className="font-sans text-[13px] leading-snug">
+              {L('Nenhum leilão ainda — o artilheiro do dia sobe ao martelo às 20h (precisa ter gol nas últimas 24h).', 'No auction yet — the top scorer of the day goes under the hammer at 8 PM (needs a goal in the last 24h).')}
+            </p>
           </div>
+        ) : (
+          <LeilaoMvp mvp={mvp} lance={lance} setLance={setLance} agindo={agindo} onLance={() => void darLance()} onRetirar={() => void retirar()} />
         )}
       </section>
 
-      {/* ── TICKER ───────────────────────────────────────────────────────── */}
-      <section>
-        <h2 className="ole-eyebrow-poster mb-3" style={{ fontSize: '13px' }}>{L('Ticker · últimas variações', 'Ticker · latest moves')}</h2>
-        <div className="ole-poster max-h-[380px] overflow-auto">
-          {ticker.length === 0 ? (
-            <p className="p-6 text-sm text-white/45">
-              {carregando ? L('Carregando…', 'Loading…') : L('Sem variações nas últimas 48h — joga uma partida e vê o preço andar.', 'No moves in the last 48h — play a match and watch the price move.')}
-            </p>
-          ) : (
-            <ul className="divide-y divide-white/5">
-              {ticker.map((t, i) => (
-                <li key={`${t.gamePlayerId}-${t.at}-${i}`} className="flex items-center justify-between gap-3 px-4 py-2 text-[12px]">
-                  <span className="min-w-0 truncate">
-                    <strong className="text-white">{t.name}</strong>
-                    <span className="ml-1.5 text-[10px] uppercase text-white/40">{t.pos} · OVR {t.ovr}{t.dono ? ` · ${t.dono}` : ''}</span>
+      {/* ── TICKER ─────────────────────────────────────────────────────── */}
+      <section className="flex min-w-0 flex-col gap-3">
+        <SecaoRua label={L('Ticker · últimas variações', 'Ticker · latest moves')} aside={ticker.length > 0 ? String(ticker.length) : undefined} />
+        {ticker.length === 0 ? (
+          <Vazio>
+            {carregando ? L('Carregando…', 'Loading…') : L('Sem variações nas últimas 48h — joga uma partida e vê o preço andar.', 'No moves in the last 48h — play a match and watch the price move.')}
+          </Vazio>
+        ) : (
+          <ul className="flex max-h-[420px] min-w-0 flex-col gap-1.5 overflow-y-auto">
+            {ticker.map((t, i) => (
+              <li key={`${t.gamePlayerId}-${t.at}-${i}`} className="flex min-h-[60px] min-w-0 items-center gap-3 bg-concreto px-3 py-2">
+                <OvrSelo ovr={t.ovr} />
+                <div className="flex min-w-0 grow flex-col gap-0.5">
+                  <span className="block min-w-0 truncate font-voz text-[21px] leading-none text-papel">{t.name}</span>
+                  <span className="block min-w-0 truncate font-prova text-[10.5px] font-bold uppercase tracking-[0.12em] text-mudo">
+                    {t.pos}
+                    {t.dono ? ` · ${t.dono}` : ''} · {FONTE[t.source] ?? t.source}
                   </span>
-                  <span className="flex shrink-0 items-center gap-3 font-mono tabular-nums">
-                    <span className="text-[10px] text-white/35">{FONTE[t.source] ?? t.source}</span>
-                    <span className="text-white/70">{olefootDeCents(t.marketBroCents)}</span>
-                    <span className={cn('flex w-20 items-center justify-end gap-1', t.deltaCents >= 0 ? 'text-emerald-300' : 'text-rose-300')}>
-                      {t.deltaCents >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                      {t.deltaPct != null ? `${t.deltaPct > 0 ? '+' : ''}${t.deltaPct.toFixed(1)}%` : '—'}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-0.5">
+                  <span className="font-impact text-[17px] leading-none tabular-nums text-papel">{olefootDeCents(t.marketBroCents)}</span>
+                  {t.deltaPct != null ? (
+                    <Delta positivo={t.deltaCents >= 0} className="font-impact text-[15px] leading-none">
+                      {t.deltaPct > 0 ? '+' : ''}
+                      {t.deltaPct.toFixed(1)}%
+                    </Delta>
+                  ) : (
+                    <span className="font-impact text-[15px] leading-none text-mudo">—</span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
-      {/* ── OLE-100 ──────────────────────────────────────────────────────── */}
-      <section>
-        <h2 className="ole-eyebrow-poster mb-3" style={{ fontSize: '13px' }}>{L('OLE-100 · os mais valiosos do mundo', 'OLE-100 · most valuable in the world')}</h2>
-        <div className="ole-poster max-h-[460px] overflow-auto">
-          {top.length === 0 ? (
-            <p className="p-6 text-sm text-white/45">
-              {carregando ? L('Carregando…', 'Loading…') : L('O ranking nasce com as primeiras partidas no ar.', 'The ranking starts with the first matches played.')}
-            </p>
-          ) : (
-            <table className="w-full min-w-[520px] text-left text-[12px]">
-              <thead className="sticky top-0 bg-black/90">
-                <tr className="border-b border-white/10 text-[9px] uppercase tracking-wider text-white/45">
-                  <th className="px-3 py-2">#</th>
-                  <th className="px-3 py-2">{L('Jogador', 'Player')}</th>
-                  <th className="px-3 py-2">{L('Clube', 'Club')}</th>
-                  <th className="px-3 py-2">OVR</th>
-                  <th className="px-3 py-2">{L('Valor (OLEFOOT)', 'Value (OLEFOOT)')}</th>
-                  <th className="px-3 py-2">Δ 24h</th>
-                </tr>
-              </thead>
-              <tbody>
-                {top.map((o, i) => (
-                  <tr key={o.gamePlayerId} className="border-b border-white/5">
-                    <td className="px-3 py-1.5 font-mono text-white/40">{i + 1}</td>
-                    <td className="px-3 py-1.5 font-bold text-white">{o.name} <span className="text-[10px] font-normal uppercase text-white/40">{o.pos}</span></td>
-                    <td className="px-3 py-1.5 text-white/55">{o.dono ?? '—'}</td>
-                    <td className="px-3 py-1.5 font-impact text-[14px] text-white tabular-nums">{o.ovr}</td>
-                    <td className="px-3 py-1.5 font-mono font-bold text-neon-yellow tabular-nums">{olefootDeCents(o.marketBroCents)}</td>
-                    <td className={cn('px-3 py-1.5 font-mono tabular-nums', o.delta24hCents >= 0 ? 'text-emerald-300' : 'text-rose-300')}>
-                      {o.delta24hCents === 0 ? '—' : `${o.delta24hCents > 0 ? '+' : ''}${olefootDeCents(o.delta24hCents)}`}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+      {/* ── OLE-100 ────────────────────────────────────────────────────── */}
+      <section className="flex min-w-0 flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <SecaoRua label={L('OLE-100 · os mais valiosos do mundo', 'OLE-100 · most valuable in the world')} />
+          <h2 className="font-impact text-[clamp(30px,8.5vw,48px)] uppercase leading-[0.9] text-papel">
+            {L('Os 100 do ', 'The top 100 ')}
+            <span className="text-ouro-27">{L('muro', 'wall')}</span>
+          </h2>
         </div>
-        <p className="mt-2 text-[11px] text-white/40">
-          {emIngles() ? (
-            <>Want to see yours here? The price lives in <Link to="/clube/valores" className="text-neon-yellow underline">Squad values</Link> —
-            every match and training session moves the number.</>
-          ) : (
-            <>Quer ver os teus aqui? O preço vive em <Link to="/clube/valores" className="text-neon-yellow underline">Valores do elenco</Link> —
-            cada partida e treino move o número.</>
-          )}
+        {top.length === 0 ? (
+          <Vazio>
+            {carregando ? L('Carregando…', 'Loading…') : L('O ranking nasce com as primeiras partidas no ar.', 'The ranking starts with the first matches played.')}
+          </Vazio>
+        ) : (
+          <ol className="flex max-h-[520px] min-w-0 flex-col gap-1.5 overflow-y-auto">
+            {top.map((o, i) => {
+              const lider = i === 0;
+              return (
+                <li
+                  key={o.gamePlayerId}
+                  className={cn(
+                    'flex min-h-[60px] min-w-0 items-center gap-3 px-3 py-2',
+                    lider ? 'border-[3px] border-ouro-27 bg-asfalto-27' : 'bg-concreto',
+                  )}
+                >
+                  <span className={cn('w-11 shrink-0 font-impact text-[20px] leading-none tabular-nums', lider ? 'text-ouro-27' : 'text-mudo')}>
+                    #{String(i + 1).padStart(2, '0')}
+                  </span>
+                  <div className="flex min-w-0 grow flex-col gap-0.5">
+                    <span className={cn('block min-w-0 truncate font-voz text-[21px] leading-none', lider ? 'text-ouro-27' : 'text-papel')}>{o.name}</span>
+                    <span className="block min-w-0 truncate font-prova text-[10.5px] font-bold uppercase tracking-[0.12em] text-mudo">
+                      {o.pos} · OVR {o.ovr} · {o.dono ?? '—'}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-0.5">
+                    <span className={cn('font-impact text-[17px] leading-none tabular-nums', lider ? 'text-ouro-27' : 'text-papel')}>
+                      {olefootDeCents(o.marketBroCents)}
+                    </span>
+                    {o.delta24hCents === 0 ? (
+                      <span className="font-prova text-[11px] font-bold text-mudo">Δ —</span>
+                    ) : (
+                      <Delta positivo={o.delta24hCents > 0} className="font-impact text-[14px] leading-none">
+                        {o.delta24hCents > 0 ? '+' : ''}
+                        {olefootDeCents(o.delta24hCents)}
+                      </Delta>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+        <p className="font-prova text-[11px] uppercase tracking-[0.12em] text-mudo">
+          {L('Valor em OLEFOOT · Δ em 24h', 'Value in OLEFOOT · Δ over 24h')}
         </p>
       </section>
+
+      <footer className="flex min-w-0 items-end justify-between gap-4 border-t-2 border-linha pt-6">
+        <div className="flex min-w-0 flex-col gap-2">
+          <span className="font-voz text-[clamp(28px,8vw,40px)] leading-none text-papel">
+            {L('Quer ver os teus aqui?', 'Want to see yours here?')}
+          </span>
+          <p className="font-sans text-[13px] leading-snug text-suave">
+            {emIngles() ? (
+              <>The price lives in Squad values — every match and training session moves the number.</>
+            ) : (
+              <>O preço vive em Valores do elenco — cada partida e treino move o número.</>
+            )}
+          </p>
+          <Link
+            to="/clube/valores"
+            className="inline-flex min-h-[44px] items-center gap-2 self-start font-impact text-[18px] uppercase text-rua hover:text-papel"
+          >
+            {L('Valores do elenco', 'Squad values')} <span aria-hidden>→</span>
+          </Link>
+        </div>
+        <MarcaRua tipo="escudo" className="h-14 bg-fio" />
+      </footer>
     </div>
+  );
+}
+
+/** Faixa de papel com o ticker andando — decorativa (a lista abaixo é a fonte acessível). */
+function FaixaTicker({ itens }: { itens: TickerItem[] }) {
+  const linha = itens.slice(0, 14);
+  const repetida = linha.length < 7 ? [...linha, ...linha, ...linha] : linha;
+  return (
+    <div aria-hidden className="pointer-events-none relative max-w-none overflow-hidden py-3">
+      <div className="-mx-8 flex h-12 w-[calc(100%+64px)] max-w-none items-center overflow-hidden bg-cal text-asfalto-27 shadow-[0_4px_0_var(--color-asfalto-27)]" style={{ transform: 'rotate(-1.5deg)' }}>
+        <div className="rua-fita-trilho flex max-w-none shrink-0 items-center gap-8 whitespace-nowrap pl-6">
+          {[...repetida, ...repetida].map((t, i) => (
+            <span key={i} className="inline-flex items-baseline gap-2">
+              <span className="font-voz text-[22px] leading-none">{t.name}</span>
+              <span className="font-impact text-[17px] leading-none tabular-nums">{olefootDeCents(t.marketBroCents)}</span>
+              {t.deltaPct != null && (
+                <span className="font-impact text-[15px] leading-none tabular-nums">
+                  <span className={t.deltaCents >= 0 ? 'text-alta' : 'text-baixa'}>{t.deltaCents >= 0 ? '▲' : '▼'}</span>
+                  {Math.abs(t.deltaPct).toFixed(1)}%
+                </span>
+              )}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * O DROP do dia: ouro chapado (degrau LENDA — cópia única), retícula no canto,
+ * nome na voz e a contagem em blocos de spray.
+ */
+function LeilaoMvp({
+  mvp,
+  lance,
+  setLance,
+  agindo,
+  onLance,
+  onRetirar,
+}: {
+  mvp: MvpAuction;
+  lance: string;
+  setLance: (v: string) => void;
+  agindo: boolean;
+  onLance: () => void;
+  onRetirar: () => void;
+}) {
+  const resta = useRestante(mvp.endsAt);
+  const encerrado = resta <= 0;
+  const aberto = mvp.status === 'open' && !encerrado;
+  const lanceAtual = mvp.bidOlefoot ? tok(Number(mvp.bidOlefoot)) : null;
+
+  return (
+    <div className="relative flex min-w-0 flex-col gap-5 overflow-hidden bg-ouro-27 p-5 text-asfalto-27 sm:p-7">
+      <span
+        aria-hidden
+        className="rua-reticula absolute -right-4 -top-4 h-48 w-56 [--reticula:rgba(13,13,12,0.45)]"
+        style={{
+          WebkitMaskImage: 'radial-gradient(circle at 100% 0%, #000 0%, transparent 70%)',
+          maskImage: 'radial-gradient(circle at 100% 0%, #000 0%, transparent 70%)',
+        }}
+      />
+
+      <div className="relative flex min-w-0 items-center justify-between gap-3 border-b-2 border-asfalto-27 pb-2 font-prova text-[11.5px] font-bold uppercase tracking-[0.2em]">
+        <span className="min-w-0 truncate">{L('Drop · MVP do dia', 'Drop · MVP of the day')} · {mvp.dia}</span>
+        <span className="shrink-0">{L('Cópia única', 'Unique copy')}</span>
+      </div>
+
+      <div className="relative flex min-w-0 items-end justify-between gap-3">
+        <div className="flex min-w-0 flex-col">
+          <span className="font-impact text-[clamp(30px,8.5vw,52px)] uppercase leading-[0.88]">{L('Martelo do MVP', 'MVP hammer')}</span>
+          <span className="block min-w-0 font-voz text-[clamp(38px,11vw,68px)] leading-[0.95] [overflow-wrap:anywhere]">{mvp.playerName}</span>
+        </div>
+        <MarcaRua tipo="nove" className="hidden h-24 bg-asfalto-27 sm:block" />
+      </div>
+
+      {aberto ? (
+        <>
+          <div className="relative flex min-w-0 flex-col gap-1.5">
+            <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em]">{L('Fecha em', 'Closes in')}</span>
+            <ContagemSpray ms={resta} bloco="bg-asfalto-27 text-ouro-27" />
+          </div>
+
+          <div className="relative flex min-w-0 flex-wrap items-end justify-between gap-x-4 gap-y-1 border-t-2 border-asfalto-27 pt-3">
+            <div className="flex min-w-0 flex-col">
+              <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em]">
+                {lanceAtual ? L('Lance atual', 'Current bid') : L('Lance mínimo', 'Minimum bid')}
+              </span>
+              <span className="font-impact text-[clamp(30px,9vw,44px)] leading-none tabular-nums [overflow-wrap:anywhere]">
+                {lanceAtual ?? tok(Number(mvp.minBidOlefoot))} <span className="font-prova text-[12px] font-bold tracking-[0.16em]">OLEFOOT</span>
+              </span>
+            </div>
+            {mvp.souOMaior && (
+              <SeloRua tom="corre" className="bg-asfalto-27 text-ouro-27">
+                {L('O maior é teu', 'Highest is yours')}
+              </SeloRua>
+            )}
+          </div>
+
+          <div className="relative flex min-w-0 gap-2">
+            <input
+              className="h-[52px] w-full min-w-0 grow border-2 border-asfalto-27 bg-cal px-3 font-impact text-[20px] tabular-nums text-asfalto-27 outline-none placeholder:text-asfalto-27/40 focus:bg-papel"
+              value={lance}
+              inputMode="numeric"
+              aria-label={L('Valor do lance em OLEFOOT', 'Bid amount in OLEFOOT')}
+              onChange={(e) => setLance(e.target.value.replace(/[^\d]/g, ''))}
+              placeholder={tok(mvp.bidOlefoot ? Math.ceil(Number(mvp.bidOlefoot) * 1.05) : Number(mvp.minBidOlefoot))}
+            />
+            <BotaoRua variante="asfalto" onClick={onLance} disabled={agindo || !lance} className="shrink-0 px-4 text-[18px] text-ouro-27">
+              {L('Dar lance', 'Bid')} <span aria-hidden>→</span>
+            </BotaoRua>
+          </div>
+        </>
+      ) : (
+        <div className="relative flex min-w-0 flex-col gap-3 border-t-2 border-asfalto-27 pt-3">
+          <span className="font-spray text-[clamp(40px,12vw,64px)] font-black uppercase leading-[0.85]">
+            {mvp.status === 'settled' ? L('Retirado', 'Claimed') : L('Martelo batido', 'Hammer down')}
+          </span>
+          <p className="font-sans text-[14px] font-medium leading-snug">
+            {mvp.status === 'settled' ? (
+              <>{L(`Encerrado e retirado — por ${tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT.`, `Ended and claimed — for ${tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT.`)}</>
+            ) : encerrado && mvp.souOMaior ? (
+              emIngles() ? (
+                <>
+                  <strong>You won for {tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT</strong>. Claim the card.
+                </>
+              ) : (
+                <>
+                  <strong>Tu venceste por {tok(Number(mvp.bidOlefoot ?? 0))} OLEFOOT</strong>. Retira o card.
+                </>
+              )
+            ) : (
+              <>
+                {L('Encerrado', 'Ended')}
+                {mvp.bidOlefoot ? L(` — maior lance ${tok(Number(mvp.bidOlefoot))} OLEFOOT`, ` — top bid ${tok(Number(mvp.bidOlefoot))} OLEFOOT`) : L(' sem lances', ' with no bids')}.
+              </>
+            )}
+          </p>
+          {encerrado && mvp.status === 'open' && mvp.souOMaior ? (
+            <BotaoRua variante="asfalto" onClick={onRetirar} disabled={agindo} className="self-start text-ouro-27">
+              {L('Retirar o card', 'Claim the card')} <span aria-hidden>→</span>
+            </BotaoRua>
+          ) : null}
+        </div>
+      )}
+
+      <span className="relative font-prova text-[11px] font-bold uppercase tracking-[0.16em]">
+        {L('50% do martelo vai pro dono do MVP', '50% of the hammer price goes to the MVP owner')}
+      </span>
+    </div>
+  );
+}
+
+function Vazio({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="border-2 border-dashed border-fio px-5 py-6 font-sans text-[14px] leading-snug text-suave">{children}</p>
   );
 }

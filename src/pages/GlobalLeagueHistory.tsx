@@ -10,8 +10,10 @@ import { useGameStore } from '@/game/store';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { BackButton } from '@/components/BackButton';
-import { Hashtag } from '@/components/ui';
-import { ArrowLeft, Trophy, Star } from 'lucide-react';
+import { FitaRua, SecaoRua, SeloRua } from '@/components/ui/Rua';
+import { CabecalhoRua, VazioRua } from '@/components/leagues/RuaTabela';
+import { PlacarRua } from '@/components/leagues/Convocacao';
+import { cn } from '@/lib/utils';
 import type { GlobalFixture } from '@/match/globalMatch';
 import type { LeagueRound } from '@/match/globalLeagueMVP';
 import { L, LOCALE } from '@/i18n/L';
@@ -28,49 +30,37 @@ function HistoryFixtureRow({ fixture, myTeamId }: { fixture: GlobalFixture; myTe
   const isMyAway = myTeamId && fixture.awayTeamId === myTeamId;
 
   let resultLabel = '';
-  let resultColor = 'text-cimento';
   if (isMyMatch) {
     const myGoals = isMyHome ? fixture.scoreHome : fixture.scoreAway;
     const theirGoals = isMyHome ? fixture.scoreAway : fixture.scoreHome;
-    if (myGoals > theirGoals) { resultLabel = L('V', 'W'); resultColor = 'text-alta'; }
-    else if (myGoals === theirGoals) { resultLabel = L('E', 'D'); resultColor = 'text-giz'; }
-    else { resultLabel = L('D', 'L'); resultColor = 'text-baixa'; }
+    if (myGoals > theirGoals) resultLabel = L('V', 'W');
+    else if (myGoals === theirGoals) resultLabel = L('E', 'D');
+    else resultLabel = L('D', 'L');
   }
 
   return (
-    <div className={`flex h-11 items-center gap-2 px-3 transition-colors ${
-      isMyMatch ? 'bg-neon-yellow text-black' : 'bg-deep-black border border-white/[0.06]'
-    }`}>
+    <div className={cn('flex min-h-[46px] min-w-0 items-center gap-2 px-3', isMyMatch ? 'bg-rua text-asfalto-27' : 'bg-concreto')}>
       {/* Resultado do manager */}
-      <div className="w-6 shrink-0 text-center">
-        {isMyMatch && (
-          <span className={`ole-num inline-block bg-black px-1 text-[12px] ${resultColor}`}>{resultLabel}</span>
-        )}
+      <div className="w-7 shrink-0 text-center">
+        {isMyMatch && <span className="inline-block bg-asfalto-27 px-1.5 font-impact text-[14px] text-rua">{resultLabel}</span>}
       </div>
 
       {/* Time casa */}
-      <div className="flex-1 text-right min-w-0">
-        <span className={`block truncate text-[13px] ${isMyMatch ? (isMyHome ? 'font-bold text-black' : 'text-black/70') : 'text-giz'}`}>
-          {fixture.homeTeamName}
-        </span>
-      </div>
+      <span className={cn('min-w-0 flex-1 truncate text-right font-impact text-[15px] uppercase leading-none', isMyMatch ? (isMyHome ? '' : 'text-asfalto-27/70') : 'text-suave')}>
+        {fixture.homeTeamName}
+      </span>
 
       {/* Placar */}
-      <div className="flex items-center gap-1 px-2 shrink-0">
-        <span className={`ole-num text-[16px] ${isMyMatch ? 'text-black' : 'text-white'}`}>{fixture.scoreHome}</span>
-        <span className={`text-xs ${isMyMatch ? 'text-black/60' : 'text-poeira'}`}>×</span>
-        <span className={`ole-num text-[16px] ${isMyMatch ? 'text-black' : 'text-white'}`}>{fixture.scoreAway}</span>
-      </div>
+      <span className={cn('shrink-0 px-1 font-spray text-[22px] font-black leading-none tabular-nums', isMyMatch ? '' : 'text-papel')}>
+        {fixture.scoreHome}×{fixture.scoreAway}
+      </span>
 
       {/* Time fora */}
-      <div className="flex-1 text-left min-w-0">
-        <span className={`block truncate text-[13px] ${isMyMatch ? (isMyAway ? 'font-bold text-black' : 'text-black/70') : 'text-giz'}`}>
-          {fixture.awayTeamName}
-        </span>
-      </div>
+      <span className={cn('min-w-0 flex-1 truncate font-impact text-[15px] uppercase leading-none', isMyMatch ? (isMyAway ? '' : 'text-asfalto-27/70') : 'text-suave')}>
+        {fixture.awayTeamName}
+      </span>
 
-      {/* Divisão */}
-      <span className={`text-[9.5px] font-mono shrink-0 ${isMyMatch ? 'text-black/70' : 'text-poeira'}`}>Div {fixture.division}</span>
+      <span className={cn('shrink-0 font-prova text-[10px] font-bold', isMyMatch ? 'text-asfalto-27/70' : 'text-mudo')}>D{fixture.division}</span>
     </div>
   );
 }
@@ -86,32 +76,19 @@ function RoundSection({ round, myTeamId, index }: { round: LeagueRound; myTeamId
   const myFixture = sorted.find(f => myTeamId && (f.homeTeamId === myTeamId || f.awayTeamId === myTeamId));
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.03 }}
-      className="sports-panel overflow-hidden"
-    >
-      {/* Header */}
-      <div className="bg-deep-black px-4 py-3 border-b border-white/10 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-neon-yellow" />
-          <span className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }} className="flex min-w-0 flex-col gap-1.5">
+      <div className="flex min-w-0 items-baseline justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <h3 className="font-impact text-[22px] uppercase leading-none text-papel">
             {L('Rodada', 'Round')} {round.roundNumber}
-          </span>
-          {myFixture && <Star className="w-3 h-3 text-neon-yellow fill-neon-yellow" />}
+          </h3>
+          {myFixture && <SeloRua tom="corre-contorno" className="py-0 text-[10px]">{L('Teu jogo', 'Your match')}</SeloRua>}
         </div>
-        <span className="text-[10.5px] text-cimento font-mono">
-          {formatKickoff(round.scheduledKickoffMs)}
-        </span>
+        <span className="shrink-0 font-prova text-[11px] font-bold text-mudo">{formatKickoff(round.scheduledKickoffMs)}</span>
       </div>
-
-      {/* Fixtures */}
-      <div className="p-3 space-y-1.5">
-        {sorted.map((fx) => (
-          <HistoryFixtureRow key={fx.id} fixture={fx} myTeamId={myTeamId} />
-        ))}
-      </div>
+      {sorted.map((fx) => (
+        <HistoryFixtureRow key={fx.id} fixture={fx} myTeamId={myTeamId} />
+      ))}
     </motion.div>
   );
 }
@@ -157,68 +134,83 @@ export default function GlobalLeagueHistory() {
     return { wins, draws, losses, goalsFor, goalsAgainst, matches: wins + draws + losses };
   }, [finishedRounds, myTeamId]);
 
+  // DS 2027: o último resultado do manager vira o placar pichado do topo.
+  const lastMine = useMemo(() => {
+    if (!myTeamId) return null;
+    for (const round of finishedRounds) {
+      const fx = round.fixtures.find((f) => f.homeTeamId === myTeamId || f.awayTeamId === myTeamId);
+      if (fx) return { fx, round: round.roundNumber };
+    }
+    return null;
+  }, [finishedRounds, myTeamId]);
+  const lastResult: 'W' | 'D' | 'L' | null = lastMine
+    ? (() => {
+        const home = lastMine.fx.homeTeamId === myTeamId;
+        const gf = home ? lastMine.fx.scoreHome : lastMine.fx.scoreAway;
+        const ga = home ? lastMine.fx.scoreAway : lastMine.fx.scoreHome;
+        return gf > ga ? 'W' : gf === ga ? 'D' : 'L';
+      })()
+    : null;
+
   return (
-    <div className="mx-auto min-w-0 w-full max-w-4xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 py-6 pb-12">
-      {/* Header editorial */}
-      <div>
-        <BackButton to="/match/global" label={L('Liga Global', 'Global League')} />
-        <Hashtag className="mt-4 text-neon-yellow">{L('#ligaglobal · arquivo', '#globalleague · archive')}</Hashtag>
-        <h1
-          className="mt-1 font-impact uppercase text-white leading-[1.1]"
-          style={{ fontSize: 'clamp(2rem, 5.5vw, 3rem)', letterSpacing: '0.005em' }}
-        >
-          {L('Rodadas Passadas', 'Past Rounds')}
-        </h1>
-      </div>
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-8 overflow-x-hidden px-3 py-6 pb-12 sm:px-4 lg:px-8">
+      <BackButton to="/match/global" label={L('Liga Global', 'Global League')} />
+
+      <CabecalhoRua rotulo={L('#ligaglobal · arquivo', '#globalleague · archive')} titulo={L('Rodadas passadas', 'Past rounds')} />
+
+      {/* Último resultado — placar pichado (PDF 2b) */}
+      {lastMine && (
+        <section className="rua-grao flex min-w-0 flex-col gap-3 overflow-hidden bg-concreto pt-5">
+          <div className="flex items-center justify-between gap-3 px-5 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+            <span>{L('Fim de jogo', 'Full time')}</span>
+            <span>{L('Rodada', 'Round')} {String(lastMine.round).padStart(2, '0')}</span>
+          </div>
+          <PlacarRua golsCasa={lastMine.fx.scoreHome} golsFora={lastMine.fx.scoreAway} resultado={lastResult} className="self-center" />
+          <div className="flex min-w-0 items-baseline justify-between gap-3 px-5">
+            <span className={cn('min-w-0 truncate font-impact text-[20px] uppercase leading-none', lastMine.fx.homeTeamId === myTeamId ? 'text-papel' : 'text-mudo')}>
+              {lastMine.fx.homeTeamName}
+            </span>
+            <span className={cn('min-w-0 truncate text-right font-impact text-[20px] uppercase leading-none', lastMine.fx.awayTeamId === myTeamId ? 'text-papel' : 'text-mudo')}>
+              {lastMine.fx.awayTeamName}
+            </span>
+          </div>
+          <p className="px-5 font-voz text-[clamp(34px,9vw,52px)] leading-[0.95] text-papel">
+            {lastResult === 'W' ? L('Vitória na moral.', 'A win with respect.') : lastResult === 'D' ? L('Empate. Ponto é ponto.', 'A draw. A point is a point.') : L('Perdeu essa. Volta amanhã.', 'Lost this one. Back tomorrow.')}
+          </p>
+          <FitaRua tags={['#correloko', '#persista']} inclinacao={-1.5} className="mt-2" />
+        </section>
+      )}
 
       {/* Stats do manager */}
       {myStats && myStats.matches > 0 && (
-        <div className="sports-panel p-4 border border-white/10">
-          <p className="truncate font-mono text-[10.5px] uppercase tracking-[0.14em] text-cimento mb-2">
-            {L('Meu desempenho', 'My record')} · {myTeam?.clubName}
-          </p>
-          <div className="flex items-center gap-6 flex-wrap">
-            <div className="text-center">
-              <span className="ole-num text-2xl text-neon-yellow">{myStats.matches}</span>
-              <p className="font-mono text-[9.5px] text-cimento uppercase">{L('Jogos', 'Played')}</p>
-            </div>
-            <div className="text-center">
-              <span className="ole-num text-2xl text-alta">{myStats.wins}</span>
-              <p className="font-mono text-[9.5px] text-cimento uppercase">{L('Vitórias', 'Wins')}</p>
-            </div>
-            <div className="text-center">
-              <span className="ole-num text-2xl text-giz">{myStats.draws}</span>
-              <p className="font-mono text-[9.5px] text-cimento uppercase">{L('Empates', 'Draws')}</p>
-            </div>
-            <div className="text-center">
-              <span className="ole-num text-2xl text-baixa">{myStats.losses}</span>
-              <p className="font-mono text-[9.5px] text-cimento uppercase">{L('Derrotas', 'Losses')}</p>
-            </div>
-            <div className="h-8 w-px bg-white/10" />
-            <div className="text-center">
-              <span className="ole-num text-2xl text-white">{myStats.goalsFor}</span>
-              <p className="font-mono text-[9.5px] text-cimento uppercase">{L('Gols pró', 'Goals for')}</p>
-            </div>
-            <div className="text-center">
-              <span className="ole-num text-2xl text-cimento">{myStats.goalsAgainst}</span>
-              <p className="font-mono text-[9.5px] text-cimento uppercase">{L('Gols contra', 'Goals against')}</p>
-            </div>
+        <div className="flex min-w-0 flex-col gap-3">
+          <SecaoRua label={`${L('Meu desempenho', 'My record')} · ${myTeam?.clubName ?? ''}`} />
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+            {([
+              [L('Jogos', 'Played'), myStats.matches, 'text-papel'],
+              [L('Vitórias', 'Wins'), myStats.wins, 'text-rua'],
+              [L('Empates', 'Draws'), myStats.draws, 'text-papel'],
+              [L('Derrotas', 'Losses'), myStats.losses, 'text-mudo'],
+              [L('Gols pró', 'Goals for'), myStats.goalsFor, 'text-papel'],
+              [L('Gols contra', 'Goals against'), myStats.goalsAgainst, 'text-mudo'],
+            ] as [string, number, string][]).map(([label, n, tone]) => (
+              <div key={label} className="flex min-w-0 flex-col gap-1 bg-concreto px-3 py-3">
+                <span className={cn('font-spray text-[34px] font-black leading-none', tone)}>{n}</span>
+                <span className="truncate font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-mudo">{label}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
       {/* Lista de rodadas */}
       {finishedRounds.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-cimento text-base">
-            {L('Nenhuma rodada finalizada ainda.', 'No finished rounds yet.')}
-          </p>
-          <p className="font-mono text-poeira text-[11.5px] mt-2">
-            {L('As rodadas são processadas nos slots: 05:30, 11:00, 15:00, 19:00, 21:30 UTC', 'Rounds are processed in slots: 05:30, 11:00, 15:00, 19:00, 21:30 UTC')}
-          </p>
-        </div>
+        <VazioRua
+          titulo={L('Nenhuma rodada finalizada ainda', 'No finished rounds yet')}
+          frase={L('Slots: 05:30, 11:00, 15:00, 19:00, 21:30 UTC.', 'Slots: 05:30, 11:00, 15:00, 19:00, 21:30 UTC.')}
+        />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-8">
           {finishedRounds.map((round, index) => (
             <RoundSection key={round.roundNumber + '-' + round.scheduledKickoffMs} round={round} myTeamId={myTeamId} index={index} />
           ))}

@@ -39,120 +39,90 @@ export function WalletShell({
   heroVariant?: 'cinematic' | 'compact';
   children: ReactNode;
 }) {
-  const heroMinH = heroVariant === 'compact' ? '' : 'min-h-[60vh]';
-  const titleSize =
-    heroVariant === 'compact'
-      ? 'clamp(44px, 10vw, 80px)'
-      : 'clamp(56px, 13vw, 112px)';
+  // DS 2027 · peça "Carteira": título na voz, régua de ouro, o saldo que
+  // manda em Anton ouro (degrau RESPEITO: valor que já existe), o resto em linha.
+  const principal = heroStats?.find((st) => st.highlight) ?? heroStats?.[0] ?? null;
+  const demais = (heroStats ?? []).filter((st) => st !== principal);
   return (
-    <div className="min-h-screen bg-deep-black">
-      {/* ── HERO — VOLT2: asfalto chapado, título em Anton, saldo em bloco ── */}
-      <section className={`relative w-full border-b border-white/10 bg-deep-black ${heroMinH}`}>
-        {/* Conteúdo */}
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-8 py-5 sm:py-7">
-          {voltar ? (
-            <div className="mb-8 sm:mb-10">
+    <div className="min-h-screen">
+      <section className="relative w-full">
+        <div className="relative mx-auto flex max-w-3xl flex-col gap-6 px-4 pb-2 pt-1 sm:px-8 sm:pt-3">
+          <div className="flex items-center justify-between gap-3">
+            {voltar ? (
               <Link
                 to="/wallet"
-                className="inline-flex items-center gap-2 font-mono text-[11.5px] font-medium uppercase tracking-[0.14em] text-cimento transition-colors hover:text-white"
+                className="inline-flex min-h-[44px] items-center gap-2 font-prova text-[12px] font-bold uppercase tracking-[0.16em] text-mudo transition-colors hover:text-papel"
               >
-                <ArrowLeft className="h-4 w-4" strokeWidth={2.2} /> {L('Carteira', 'Wallet')}
+                <ArrowLeft className="h-4 w-4" strokeWidth={2.4} /> {L('Carteira', 'Wallet')}
               </Link>
-            </div>
-          ) : (
-            <div className="mb-8 flex items-center justify-center sm:mb-10">
+            ) : (
               <WalletSpotToggle />
-            </div>
-          )}
-
-          {/* Grid: esquerda + direita */}
-          <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-12">
-            {/* ── ESQUERDA: Título ────────────────────────── */}
-            <div className="min-w-0 space-y-3">
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4, delay: 0.1 }}
-                className="text-center font-mono text-[11.5px] font-medium text-cimento lg:text-left"
-              >
-                {hashtag}
-              </motion.p>
-
-              <motion.h1
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4, delay: 0.15 }}
-                className="text-center font-impact uppercase leading-[0.95] text-white lg:text-left"
-                style={{ fontSize: titleSize }}
-              >
-                {title}
-              </motion.h1>
-
-              {/* Subtítulo */}
-              {subtitle && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.2 }}
-                  className="mx-auto max-w-md text-center text-sm leading-relaxed text-cimento lg:mx-0 lg:text-left"
-                >
-                  {subtitle}
-                </motion.p>
-              )}
-            </div>
-
-            {/* ── DIREITA: Stats grid ──────────────── */}
-            {heroStats && heroStats.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4, delay: 0.25 }}
-                className="grid grid-cols-2 gap-2 sm:gap-3"
-              >
-                {heroStats.map((stat, i) => (
-                  <div
-                    key={i}
-                    className="min-w-0 border border-white/10 bg-panel px-3 py-4 text-center"
-                  >
-                    <p className="truncate font-mono text-[10.5px] font-medium uppercase tracking-[0.2em] text-cimento">
-                      {stat.label}
-                    </p>
-                    <p
-                      className={`mt-2 font-mono font-medium tabular-nums leading-none [overflow-wrap:anywhere] ${
-                        stat.highlight ? 'text-white' : 'text-giz'
-                      }`}
-                      style={{ fontSize: 'clamp(18px, 5vw, 32px)' }}
-                    >
-                      {stat.value}
-                    </p>
-                    {stat.subValue ? (
-                      <p className="mt-1.5 truncate font-mono text-[10.5px] text-poeira tabular-nums">
-                        {stat.subValue}
-                      </p>
-                    ) : null}
-                    {stat.spark && stat.spark.length > 1 ? (
-                      <div className="mt-3 flex justify-center">
-                        <Sparkline
-                          data={stat.spark}
-                          positive={stat.sparkPositive ?? true}
-                          width={140}
-                          height={28}
-                          className="opacity-80"
-                        />
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              </motion.div>
             )}
+            <span className="inline-flex shrink-0 items-center gap-1.5 font-prova text-[11.5px] font-bold uppercase tracking-[0.2em] text-mudo">
+              Solana <span aria-hidden className="text-ouro-27">●</span>
+            </span>
           </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            className="flex min-w-0 flex-col gap-1.5 border-b-[3px] border-ouro-27 pb-5"
+          >
+            <p className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">— {hashtag}</p>
+            <h1
+              className="font-voz leading-[0.92] text-papel [overflow-wrap:anywhere]"
+              style={{ fontSize: heroVariant === 'compact' ? 'clamp(52px, 14vw, 92px)' : 'clamp(60px, 16vw, 112px)' }}
+            >
+              {title}
+            </h1>
+            {subtitle && <p className="max-w-md text-[14px] leading-relaxed text-suave">{subtitle}</p>}
+          </motion.div>
+
+          {principal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="flex flex-col gap-5 border-b-[3px] border-ouro-27 pb-6"
+            >
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <p className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">— {principal.label}</p>
+                <p
+                  // Ouro é valor que EXISTE: saldo zerado fica em papel.
+                  className={`font-impact leading-[0.88] tabular-nums [overflow-wrap:anywhere] ${
+                    /^[^1-9]*$/.test(principal.value) ? 'text-papel' : 'text-ouro-27'
+                  }`}
+                  style={{ fontSize: 'clamp(48px, 15vw, 96px)' }}
+                >
+                  {principal.value}
+                </p>
+                {principal.subValue && <p className="font-prova text-[12px] text-suave tabular-nums">{principal.subValue}</p>}
+                {principal.spark && principal.spark.length > 1 ? (
+                  <Sparkline data={principal.spark} positive={principal.sparkPositive ?? true} width={220} height={30} />
+                ) : null}
+              </div>
+              {demais.length > 0 && (
+                <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3">
+                  {demais.map((stat, i) => (
+                    <div key={i} className="flex min-w-0 flex-col gap-1 border-l-[3px] border-linha pl-3">
+                      <p className="truncate font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo">{stat.label}</p>
+                      <p className="font-impact text-[clamp(26px,7vw,34px)] leading-none text-papel tabular-nums [overflow-wrap:anywhere]">
+                        {stat.value}
+                      </p>
+                      {stat.subValue ? <p className="truncate font-prova text-[11px] text-mudo tabular-nums">{stat.subValue}</p> : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
         </div>
       </section>
 
       {/* ── CONTEÚDO PRINCIPAL ────────────────────────────────────── */}
-      <div id="wallet-content" className="mx-auto min-w-0 w-full max-w-3xl space-y-8 px-4 sm:px-8 py-8 sm:py-12 pb-28 md:pb-12">
+      <div id="wallet-content" className="mx-auto min-w-0 w-full max-w-3xl space-y-10 px-4 sm:px-8 py-6 sm:py-10 pb-28 md:pb-12">
         {children}
-
       </div>
     </div>
   );

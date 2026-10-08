@@ -30,6 +30,7 @@ import { ScoutsPlantelTab } from '@/components/olefoot-python-mode/ScoutsPlantel
 import { useClubConsequences } from '@/hooks/useConsequences';
 import { cn } from '@/lib/utils';
 import { L } from '@/i18n/L';
+import { SecaoRua } from '@/components/ui';
 import {
   buildClubSummary,
   explainConsequence,
@@ -48,90 +49,47 @@ interface StatCardProps {
   Icon: typeof Activity;
 }
 
+/**
+ * DS 2027: concreto, número em spray, rótulo em mono. Verde/vermelho só no
+ * número (delta de jogo), nunca como cor de bloco; o fio à esquerda marca o
+ * que pede olho (rua).
+ */
 function StatCard({ label, value, hint, tone = 'neutral', Icon }: StatCardProps) {
-  // VOLT2: número chapado, label em caixa alta.
-  const tones = {
-    neutral: 'text-white border-white/8 border-l-white/15',
-    positive: 'text-[var(--color-success)] border-[var(--color-success)]/30 border-l-[var(--color-success)]',
-    negative: 'text-[var(--color-warning)] border-[var(--color-warning)]/30 border-l-[var(--color-warning)]',
-    urgent: 'text-[var(--color-danger)] border-[var(--color-danger)]/30 border-l-[var(--color-danger)]',
+  const num = {
+    neutral: 'text-papel',
+    positive: 'text-alta',
+    negative: 'text-rua',
+    urgent: 'text-baixa',
   };
   return (
     <div
       className={cn(
-        'flex flex-col gap-2 p-4 border border-l-[3px] bg-[var(--color-card)]',
-        tones[tone],
+        'flex min-w-0 flex-col gap-2 bg-concreto p-3.5',
+        tone === 'neutral' ? 'border-l-[5px] border-linha' : 'border-l-[5px] border-rua',
       )}
-      style={{ borderRadius: 'var(--radius-md)' }}
     >
-      <div className="flex items-center gap-2">
-        <Icon size={12} className="opacity-65" />
-        <span
-          className="text-white/55"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '10px',
-            letterSpacing: '0.28em',
-            textTransform: 'uppercase',
-            fontWeight: 800,
-          }}
-        >
-          {label}
-        </span>
+      <div className="flex min-w-0 items-center gap-1.5">
+        <Icon size={13} className="shrink-0 text-mudo" aria-hidden />
+        <span className="truncate font-prova text-[10.5px] font-bold uppercase tracking-[0.18em] text-mudo">{label}</span>
       </div>
-      <div
-        className="leading-none tabular-nums"
-        style={{
-          fontFamily: 'var(--font-impact)',
-          fontSize: 'clamp(28px, 4.5vw, 36px)',
-          letterSpacing: '-0.03em',
-        }}
-      >
+      <div className={cn('font-spray font-black leading-none tabular-nums', num[tone])} style={{ fontSize: 'clamp(30px, 8vw, 40px)' }}>
         {value}
       </div>
-      {hint && (
-        <div
-          className="text-white/40"
-          style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}
-        >
-          {hint}
-        </div>
-      )}
+      {hint && <div className="text-[11.5px] leading-snug text-mudo">{hint}</div>}
     </div>
   );
 }
 
 // ─── Dimension section ─────────────────────────────────────────────
 //
-// Tokens em vez de cores hardcoded (DS §3): físico em danger (lesões),
-// psicológico em neon-yellow (acento principal), reputacional em
-// success (mercado em alta), financeiro em warning (atenção monetária).
+// DS 2027: sem cor por dimensão (nada de vermelho/verde/âmbar como bloco).
+// A dimensão se lê pelo ícone + rótulo; o sinal (bom/ruim) vai no ponto.
 
 const DIMENSION_META = {
-  physical: {
-    label: L('Físico', 'Physical'),
-    Icon: Activity,
-    rail: 'border-l-[var(--color-danger)]',
-    dot: 'bg-[var(--color-danger)]',
-  },
-  psychological: {
-    label: L('Psicológico', 'Psychological'),
-    Icon: Brain,
-    rail: 'border-l-neon-yellow',
-    dot: 'bg-neon-yellow',
-  },
-  reputational: {
-    label: L('Reputacional', 'Reputation'),
-    Icon: TrendingUp,
-    rail: 'border-l-[var(--color-success)]',
-    dot: 'bg-[var(--color-success)]',
-  },
-  financial: {
-    label: L('Financeiro', 'Financial'),
-    Icon: DollarSign,
-    rail: 'border-l-[var(--color-warning)]',
-    dot: 'bg-[var(--color-warning)]',
-  },
+  physical: { label: L('Físico', 'Physical'), Icon: Activity },
+  psychological: { label: L('Psicológico', 'Psychological'), Icon: Brain },
+  reputational: { label: L('Reputacional', 'Reputation'), Icon: TrendingUp },
+  financial: { label: L('Financeiro', 'Financial'), Icon: DollarSign },
 } as const;
 
 function formatTimeLeft(ms: number): string {
@@ -148,27 +106,12 @@ function ConsequenceRow({ entry }: { entry: EvaluatedConsequenceView }) {
   const ex = explainConsequence(c.kind, c.magnitude);
   const isNegative = ex.severity === 'alert';
   return (
-    <div className="flex items-center gap-2.5 py-1.5">
-      <span
-        className={cn(
-          'w-1.5 h-1.5 rounded-full shrink-0',
-          isNegative ? 'bg-[var(--color-danger)]' : 'bg-[var(--color-success)]',
-        )}
-      />
-      <span
-        className="flex-1 text-white/85 truncate"
-        style={{ fontFamily: 'var(--font-ui)', fontSize: '12.5px' }}
-      >
-        {ex.title}
+    <div className="flex min-w-0 items-center gap-2.5 py-2">
+      <span aria-hidden className={cn('font-impact text-[14px] leading-none', isNegative ? 'text-baixa' : 'text-alta')}>
+        {isNegative ? '−' : '+'}
       </span>
-      <span
-        className="text-white/45 tabular-nums shrink-0 leading-none"
-        style={{
-          fontFamily: 'var(--font-impact)',
-          fontSize: '12px',
-          letterSpacing: '-0.02em',
-        }}
-      >
+      <span className="min-w-0 flex-1 truncate text-[13px] text-papel">{ex.title}</span>
+      <span className="shrink-0 font-prova text-[11px] font-bold tabular-nums text-mudo">
         {formatTimeLeft(entry.ms_until_expiry)}
       </span>
     </div>
@@ -184,65 +127,23 @@ function DimensionCard({
 }) {
   const meta = DIMENSION_META[dimension];
   return (
-    <div
-      className={cn(
-        'border border-white/8 border-l-[3px] bg-[var(--color-card)] p-4',
-        meta.rail,
-      )}
-      style={{ borderRadius: 'var(--radius-md)' }}
-    >
-      {/* Header com eyebrow Agency tracking-wide */}
-      <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/5">
-        <div className="flex items-center gap-2">
-          <meta.Icon size={12} className="text-white/65" />
-          <span
-            className="text-white/70"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 800,
-              fontSize: '10px',
-              letterSpacing: '0.28em',
-              textTransform: 'uppercase',
-            }}
-          >
-            {meta.label}
-          </span>
+    <div className="min-w-0 bg-concreto p-4">
+      <div className="mb-2 flex items-center justify-between border-b-2 border-linha pb-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <meta.Icon size={14} className="shrink-0 text-mudo" aria-hidden />
+          <span className="truncate font-impact text-[19px] uppercase leading-none text-papel">{meta.label}</span>
         </div>
-        {/* Contador */}
-        <span
-          className="text-white/65 tabular-nums leading-none"
-          style={{
-            fontFamily: 'var(--font-impact)',
-            fontSize: '18px',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {entries.length}
-        </span>
+        <span className="font-spray text-[22px] font-black leading-none tabular-nums text-papel">{entries.length}</span>
       </div>
       {entries.length === 0 ? (
-        <div
-          className="text-white/35 py-2"
-          style={{ fontFamily: 'var(--font-ui)', fontSize: '11.5px' }}
-        >
-          {L('Nada ativo.', 'Nothing active.')}
-        </div>
+        <div className="py-2 font-prova text-[11.5px] text-mudo">{L('Nada ativo.', 'Nothing active.')}</div>
       ) : (
-        <div className="space-y-0">
+        <div className="divide-y divide-linha">
           {entries.slice(0, 8).map((e) => (
             <ConsequenceRow key={e.consequence.id} entry={e} />
           ))}
           {entries.length > 8 && (
-            <div
-              className="text-white/40 pt-2 mt-1 border-t border-white/5"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '9px',
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-                fontWeight: 700,
-              }}
-            >
+            <div className="pt-2 font-prova text-[10.5px] font-bold uppercase tracking-[0.18em] text-mudo">
               + {entries.length - 8} {L('mais', 'more')}
             </div>
           )}
@@ -280,69 +181,37 @@ export function ManagerScouts() {
 
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
-      <div className="w-full min-w-0 mx-auto space-y-5 max-w-5xl px-3 sm:px-4 py-4">
-        {/* ── Hero editorial Legacy Tech (DS §7.4) ───────────────── */}
+      <div className="mx-auto w-full min-w-0 max-w-5xl space-y-6 px-3 py-4 sm:px-4">
+        {/* ── Hero — o grito em Anton, o clube na voz ───────────── */}
         <motion.header
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="flex items-start justify-between gap-4"
+          className="flex min-w-0 items-end gap-3 border-b-2 border-papel pb-3"
         >
-          <div className="flex items-start gap-3 min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={() => navigate('/manager')}
-              className="shrink-0 w-9 h-9 mt-1 bg-deep-black/60 border border-white/12 hover:border-neon-yellow/40 hover:text-neon-yellow grid place-items-center text-white/70 transition-colors"
-              style={{ borderRadius: 'var(--radius-sm)' }}
-              aria-label={L('Voltar', 'Back')}
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <div className="min-w-0 flex-1 space-y-1.5">
-              {/* Eyebrow Agency tracking-wide */}
-              <div className="flex items-center gap-2">
-                <span aria-hidden className="block h-px w-8 bg-neon-yellow/55" />
-                <span
-                  className="text-neon-yellow"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 800,
-                    fontSize: '10px',
-                    letterSpacing: '0.32em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {L('Olefoot · Inteligência', 'Olefoot · Intelligence')}
-                </span>
-              </div>
-              {/* Headline */}
-              <h1
-                className="font-impact uppercase text-white leading-[1.1] truncate"
-                style={{ fontSize: 'clamp(36px, 6vw, 52px)' }}
-              >
+          <button
+            type="button"
+            onClick={() => navigate('/manager')}
+            className="mb-1 grid h-11 w-11 shrink-0 place-items-center border-2 border-linha text-mudo transition-colors hover:border-papel hover:text-papel"
+            aria-label={L('Voltar', 'Back')}
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.22em] text-mudo">
+              — {L('Olefoot · Inteligência', 'Olefoot · Intelligence')}
+            </span>
+            <div className="flex min-w-0 items-baseline justify-between gap-3">
+              <h1 className="font-impact uppercase leading-[0.9] text-papel" style={{ fontSize: 'clamp(48px, 14vw, 72px)' }}>
                 Scouts
               </h1>
-              {/* Régua amarela */}
-              <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow" />
-              {/* Metadata: nome do clube */}
-              <div
-                className="text-white/55 truncate pt-1"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 700,
-                  fontSize: '11px',
-                  letterSpacing: '0.22em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {club.name}
-              </div>
+              <span className="min-w-0 truncate font-voz text-[clamp(20px,6vw,28px)] leading-none text-suave">{club.name}</span>
             </div>
           </div>
         </motion.header>
 
         {/* ── Stats row ──────────────────────────────────────────── */}
-        <section aria-label={L('Resumo do clube', 'Club summary')} className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <section aria-label={L('Resumo do clube', 'Club summary')} className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <StatCard
             label={L('Ativas', 'Active')}
             value={stats.total_active}
@@ -373,13 +242,8 @@ export function ManagerScouts() {
           />
         </section>
 
-        {/* ── Tabs Legacy Tech (DS §7.6) ────────────────────────── */}
-        <div
-          role="tablist"
-          aria-label={L('Modo de visualização', 'View mode')}
-          className="flex items-center gap-1 p-1 bg-deep-black/60 border border-white/10 w-fit"
-          style={{ borderRadius: 'var(--radius-sm)' }}
-        >
+        {/* ── Abas ─────────────────────────────────────────────── */}
+        <div role="tablist" aria-label={L('Modo de visualização', 'View mode')} className="flex flex-wrap items-center gap-2">
           {(['plantel', 'impacto'] as const).map((t) => {
             const active = tab === t;
             const label = t === 'plantel' ? L('Plantel', 'Squad') : L('Mapa de Impacto', 'Impact Map');
@@ -391,19 +255,9 @@ export function ManagerScouts() {
                 type="button"
                 onClick={() => setTab(t)}
                 className={cn(
-                  'px-4 py-2 transition-colors',
-                  active
-                    ? 'bg-white text-black'
-                    : 'text-white/55 hover:text-white',
+                  'min-h-[42px] border-2 px-4 font-prova text-[12px] font-bold uppercase tracking-[0.14em] transition-colors',
+                  active ? 'border-rua bg-rua text-asfalto-27' : 'border-linha text-mudo hover:border-fio hover:text-papel',
                 )}
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: 500,
-                  fontSize: '11px',
-                  letterSpacing: '0.2em',
-                  textTransform: 'uppercase',
-                  borderRadius: 'var(--radius-sm)',
-                }}
               >
                 {label}
               </button>
@@ -415,37 +269,26 @@ export function ManagerScouts() {
         {tab === 'plantel' ? (
           <ScoutsPlantelTab />
         ) : (
-          <section aria-label={L('Mapa de consequências', 'Consequence map')}>
-            <div className="flex items-baseline justify-between mb-3">
-              <div>
-                <div
-                  className="text-[10px] uppercase tracking-[0.28em] text-white/55"
-                  style={{ fontFamily: 'var(--font-ui)' }}
-                >
-                  {L('Mapa de Impacto', 'Impact Map')}
-                </div>
-                <h2
-                  className="text-lg font-display font-black text-white"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
-                  {L('Consequências ativas', 'Active consequences')}
-                </h2>
-              </div>
-              <div className="text-[11px] text-white/40 tabular-nums">
-                {totalDimensionEntries} {L('total', 'total')}
-              </div>
-            </div>
+          <section aria-label={L('Mapa de consequências', 'Consequence map')} className="flex flex-col gap-3">
+            <SecaoRua label={L('Consequências ativas', 'Active consequences')} aside={totalDimensionEntries} />
 
             {totalDimensionEntries === 0 ? (
-              <div className="text-center py-10 px-4 rounded-sm bg-white/3 border border-dashed border-white/10">
-                <Sparkles size={24} className="text-white/30 mx-auto mb-2" />
-                <p className="text-sm text-white/55">{L('Nenhuma consequência ativa no momento.', 'No active consequences right now.')}</p>
-                <p className="text-[12px] text-white/35 mt-1">
+              <div className="flex flex-col items-start gap-3 border-2 border-dashed border-fio px-4 py-5">
+                <Sparkles size={22} className="text-fio" aria-hidden />
+                <p className="font-voz text-[23px] leading-[1.05] text-papel">{L('Nenhuma consequência ativa no momento.', 'No active consequences right now.')}</p>
+                <p className="text-[12.5px] leading-snug text-suave">
                   {L('Jogue partidas para gerar impactos que sobrevivem entre sessões.', 'Play matches to create impacts that carry over between sessions.')}
                 </p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/')}
+                  className="inline-flex min-h-[46px] items-center gap-2 border-2 border-papel px-4 font-impact text-[17px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
+                >
+                  {L('Jogar', 'Play')} <span aria-hidden>→</span>
+                </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <DimensionCard dimension="physical" entries={byDimension.physical} />
                 <DimensionCard dimension="psychological" entries={byDimension.psychological} />
                 <DimensionCard dimension="reputational" entries={byDimension.reputational} />

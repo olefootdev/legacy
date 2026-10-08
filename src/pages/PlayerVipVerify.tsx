@@ -13,9 +13,10 @@
  * pública /playervip/:handle, que é feita pra compartilhar.
  */
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { getSupabase } from '@/supabase/client';
+import { BotaoRua, MarcaRua } from '@/components/ui/Rua';
 import { L } from '@/i18n/L';
 
 export function PlayerVipVerify() {
@@ -51,31 +52,46 @@ export function PlayerVipVerify() {
   }, [params, navigate]);
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-5 bg-deep-black px-6 text-center text-white">
-      <div className="flex items-center gap-3">
-        <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="w-auto shrink-0" style={{ height: 22 }} />
-        <span className="font-impact text-[15px] uppercase tracking-wide text-cimento">PLAYERVIP</span>
-      </div>
+    <div className="rua-grao flex min-h-screen w-full flex-col bg-asfalto-27 text-papel">
+      <div className="mx-auto flex w-full max-w-md grow flex-col justify-center gap-6 px-6 py-10">
+        <MarcaPlayerVip />
 
-      {error ? (
-        <>
-          <h1 className="font-impact text-[32px] uppercase leading-[1.05]">{L('Link expirado', 'Link expired')}</h1>
-          <p className="text-sm leading-relaxed text-cimento">{error}</p>
-          <Link
-            to="/playervip"
-            className="btn-primary mt-1 flex h-12 items-center justify-center"
-          >
-            {L('Receber novo link', 'Get a new link')}
-          </Link>
-        </>
-      ) : (
-        <>
-          <Loader2 className="h-7 w-7 animate-spin text-neon-yellow" />
-          <p className="text-sm text-cimento">
-            {handle ? L('Entrando…', 'Signing in…') : L('Verificando seu acesso…', 'Verifying your access…')}
-          </p>
-        </>
-      )}
+        {error ? (
+          <div className="flex min-w-0 flex-col gap-4">
+            <span className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">— {L('Acesso', 'Access')}</span>
+            <h1 className="flex flex-col leading-[0.9]">
+              <span className="font-voz text-[clamp(44px,12vw,60px)] text-papel">{L('Link vencido.', 'Link expired.')}</span>
+              <span className="font-impact text-[clamp(26px,7vw,34px)] uppercase text-rua">{L('Pede outro.', 'Get another.')}</span>
+            </h1>
+            <p className="font-sans text-[15px] leading-relaxed text-suave">{error}</p>
+            <BotaoRua to="/playervip" className="mt-2 w-full">
+              {L('Receber novo link', 'Get a new link')} <span aria-hidden>→</span>
+            </BotaoRua>
+          </div>
+        ) : (
+          <div className="flex min-w-0 flex-col gap-4" role="status">
+            <span className="font-voz text-[clamp(40px,11vw,56px)] leading-[0.95] text-papel">
+              {handle ? L('Entrando…', 'Signing in…') : L('Conferindo…', 'Checking…')}
+            </span>
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-rua" />
+              <span className="font-prova text-[12px] font-bold uppercase tracking-[0.2em] text-mudo">
+                {handle ? L('Abrindo o cockpit da lenda', "Opening the legend's cockpit") : L('Verificando seu acesso', 'Verifying your access')}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Wordmark + PLAYERVIP em mono — a assinatura das telas da lenda. */
+function MarcaPlayerVip() {
+  return (
+    <div className="flex items-center gap-3">
+      <MarcaRua tipo="wordmark" label="Olefoot" className="h-[20px] bg-rua" />
+      <span className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">PlayerVip</span>
     </div>
   );
 }

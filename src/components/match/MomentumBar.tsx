@@ -1,7 +1,5 @@
-import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
-
 import { L } from '@/i18n/L';
+
 interface MomentumBarProps {
   /** Momentum value 0-1, where 0.5 is neutral, 0 is full away, 1 is full home */
   momentum: number;
@@ -11,166 +9,79 @@ interface MomentumBarProps {
   awayColor?: string;
 }
 
+/** Segmentos da barra — chapada, sem degradê (DS 2027 · BarraSegmentos). */
+const SEGMENTOS = 20;
+
+/**
+ * Barra de domínio — DS 2027 "RESPEITO É OURO": segmentos chapados, a casa em
+ * rua entrando pela esquerda, o visitante em papel entrando pela direita. Sem
+ * degradê, sem pulso infinito (performance + o DS proíbe brilho).
+ */
 export function MomentumBar({
   momentum,
   homeShort,
   awayShort,
-  homeColor = '#FDE047',
-  awayColor = '#FFFFFF',
+  homeColor = 'var(--color-rua)',
+  awayColor = 'var(--color-papel)',
 }: MomentumBarProps) {
-  // Convert 0-1 momentum to percentage for home team (0.5 = 50%)
-  const homePercent = Math.round(momentum * 100);
+  const homePercent = Math.round(Math.max(0, Math.min(1, momentum)) * 100);
   const awayPercent = 100 - homePercent;
 
-  // Determine dominance level
   const homeDominant = homePercent >= 65;
   const awayDominant = awayPercent >= 65;
   const balanced = !homeDominant && !awayDominant;
 
+  const homeSegs = Math.round((homePercent / 100) * SEGMENTOS);
+
   return (
-    <div className="w-full max-w-md mx-auto">
-      {/* Labels */}
-      <div className="flex justify-between items-center mb-2 px-1">
-        <div className="flex items-center gap-2">
-          <motion.div
-            animate={{
-              scale: homeDominant ? [1, 1.15, 1] : 1,
-              opacity: homeDominant ? 1 : 0.7,
-            }}
-            transition={{ duration: 0.6, repeat: homeDominant ? Infinity : 0 }}
-            className="text-xs font-bold uppercase tracking-wider"
-            style={{ color: homeColor }}
-          >
+    <div
+      className="mx-auto w-full max-w-md"
+      role="meter"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={homePercent}
+      aria-label={L(`Domínio: ${homeShort} ${homePercent}%, ${awayShort} ${awayPercent}%`, `Dominance: ${homeShort} ${homePercent}%, ${awayShort} ${awayPercent}%`)}
+    >
+      <div className="mb-1.5 flex min-w-0 items-baseline justify-between gap-2 px-0.5">
+        <span className="flex min-w-0 items-baseline gap-1.5">
+          <span className="truncate font-impact text-[14px] uppercase leading-none" style={{ color: homeColor, opacity: homeDominant || balanced ? 1 : 0.65 }}>
             {homeShort}
-          </motion.div>
-          {homeDominant && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="text-[10px]"
-            >
-              🔥
-            </motion.span>
-          )}
-        </div>
+          </span>
+          <span className="font-spray font-black text-[18px] leading-none tabular-nums" style={{ color: homeColor }}>
+            {homePercent}
+          </span>
+          {homeDominant && <span aria-hidden className="font-impact text-[12px] leading-none" style={{ color: homeColor }}>▲</span>}
+        </span>
 
-        <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
-          {L('Domínio', 'Dominance')}
-        </div>
+        <span className="shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.2em] text-mudo">
+          {balanced ? L('Equilibrado', 'Balanced') : L('Domínio', 'Dominance')}
+        </span>
 
-        <div className="flex items-center gap-2">
-          {awayDominant && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="text-[10px]"
-            >
-              🔥
-            </motion.span>
-          )}
-          <motion.div
-            animate={{
-              scale: awayDominant ? [1, 1.15, 1] : 1,
-              opacity: awayDominant ? 1 : 0.7,
-            }}
-            transition={{ duration: 0.6, repeat: awayDominant ? Infinity : 0 }}
-            className="text-xs font-bold uppercase tracking-wider"
-            style={{ color: awayColor }}
-          >
+        <span className="flex min-w-0 items-baseline justify-end gap-1.5">
+          {awayDominant && <span aria-hidden className="font-impact text-[12px] leading-none" style={{ color: awayColor }}>▲</span>}
+          <span className="font-spray font-black text-[18px] leading-none tabular-nums" style={{ color: awayColor }}>
+            {awayPercent}
+          </span>
+          <span className="truncate font-impact text-[14px] uppercase leading-none" style={{ color: awayColor, opacity: awayDominant || balanced ? 1 : 0.65 }}>
             {awayShort}
-          </motion.div>
-        </div>
+          </span>
+        </span>
       </div>
 
-      {/* Bar Container */}
-      <div className="relative h-8 bg-black/60 rounded-lg overflow-hidden border border-white/10 shadow-lg">
-        {/* Center Line */}
-        <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-white/20 z-10" />
-
-        {/* Home Side Fill */}
-        <motion.div
-          className="absolute left-0 top-0 bottom-0 transition-colors duration-300"
-          style={{
-            background: `linear-gradient(to right, ${homeColor}00, ${homeColor})`,
-          }}
-          animate={{
-            width: `${homePercent}%`,
-            opacity: homePercent > 50 ? 0.3 + (homePercent - 50) / 100 : 0.1,
-          }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-        />
-
-        {/* Away Side Fill */}
-        <motion.div
-          className="absolute right-0 top-0 bottom-0 transition-colors duration-300"
-          style={{
-            background: `linear-gradient(to left, ${awayColor}00, ${awayColor})`,
-          }}
-          animate={{
-            width: `${awayPercent}%`,
-            opacity: awayPercent > 50 ? 0.3 + (awayPercent - 50) / 100 : 0.1,
-          }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-        />
-
-        {/* Percentage Labels */}
-        <div className="absolute inset-0 flex items-center justify-between px-3 z-20">
-          <motion.span
-            animate={{
-              opacity: homePercent > 15 ? 1 : 0,
-              scale: homeDominant ? 1.1 : 1,
-            }}
-            className="text-xs font-black tabular-nums"
-            style={{ color: homeColor }}
-          >
-            {homePercent}%
-          </motion.span>
-
-          {balanced && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="text-[10px] text-white/60 font-bold uppercase tracking-wider"
-            >
-              {L('Equilibrado', 'Balanced')}
-            </motion.span>
-          )}
-
-          <motion.span
-            animate={{
-              opacity: awayPercent > 15 ? 1 : 0,
-              scale: awayDominant ? 1.1 : 1,
-            }}
-            className="text-xs font-black tabular-nums"
-            style={{ color: awayColor }}
-          >
-            {awayPercent}%
-          </motion.span>
-        </div>
-
-        {/* Pulse Effect on Dominance */}
-        {(homeDominant || awayDominant) && (
-          <motion.div
-            className={cn(
-              'absolute top-0 bottom-0 pointer-events-none',
-              homeDominant ? 'left-0' : 'right-0',
-            )}
-            style={{
-              width: `${homeDominant ? homePercent : awayPercent}%`,
-              background: homeDominant
-                ? `linear-gradient(to right, ${homeColor}00, ${homeColor}40)`
-                : `linear-gradient(to left, ${awayColor}00, ${awayColor}40)`,
-            }}
-            animate={{
-              opacity: [0.3, 0.6, 0.3],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
+      <div
+        aria-hidden
+        className="relative grid h-3.5 gap-[3px]"
+        style={{ gridTemplateColumns: `repeat(${SEGMENTOS}, minmax(0, 1fr))` }}
+      >
+        {Array.from({ length: SEGMENTOS }, (_, i) => (
+          <span
+            key={i}
+            className="transition-colors duration-500"
+            style={{ backgroundColor: i < homeSegs ? homeColor : awayColor, opacity: i < homeSegs ? 1 : 0.55 }}
           />
-        )}
+        ))}
+        {/* meio-campo */}
+        <span className="pointer-events-none absolute -bottom-1 -top-1 left-1/2 w-[2px] -translate-x-1/2 bg-asfalto-27" />
       </div>
     </div>
   );

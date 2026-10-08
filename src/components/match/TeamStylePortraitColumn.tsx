@@ -28,7 +28,7 @@ export function TeamStylePortraitColumn({
   return (
     <div
       className={cn(
-        'relative shrink-0 self-stretch overflow-hidden border-r border-white/10 bg-neutral-900',
+        'relative shrink-0 self-stretch overflow-hidden border-r border-linha bg-concreto',
         fullBleed
           ? 'w-[3.75rem] min-h-0 sm:w-[4.25rem] md:w-[4.5rem]'
           : 'flex min-h-[4.75rem] w-[4.25rem] flex-col items-center justify-end pt-2 sm:min-h-[5.25rem] sm:w-20 sm:pt-3 md:w-24 md:pt-4',
@@ -39,7 +39,7 @@ export function TeamStylePortraitColumn({
         className={cn(
           'pointer-events-none absolute inset-0',
           fullBleed ? 'opacity-[0.04]' : 'opacity-20',
-          playerStyle === 'neon-yellow' ? 'bg-neon-yellow' : 'bg-white',
+          playerStyle === 'neon-yellow' ? 'bg-rua' : 'bg-papel',
         )}
       />
       <img
@@ -57,10 +57,10 @@ export function TeamStylePortraitColumn({
       {badgeText != null && badgeText !== '' && (
         <div
           className={cn(
-            'absolute left-1 top-1 z-[1] rounded px-1 py-0.5 font-display text-[9px] font-black tabular-nums sm:left-1.5 sm:top-1.5 sm:px-1.5 sm:text-[10px]',
+            'absolute left-0 top-0 z-[1] px-1.5 py-0.5 font-impact text-[11px] leading-none tabular-nums',
             playerStyle === 'neon-yellow'
-              ? 'bg-neon-yellow text-black'
-              : 'bg-black/80 text-white border border-white/20',
+              ? 'bg-rua text-asfalto-27'
+              : 'bg-asfalto-27 text-papel',
           )}
         >
           {badgeText}

@@ -99,38 +99,41 @@ export function LiveSetPieceManager({
 
   return (
     <div
-      className="min-h-screen bg-neon-yellow flex flex-col items-center pt-6 pb-12 px-6 select-none"
+      className="relative min-h-screen w-full bg-rua text-asfalto-27 flex flex-col items-center pt-6 pb-12 px-4 sm:px-6 select-none"
       style={{ touchAction: 'none' }}
     >
+      {/* Alambrado no topo da peça amarela (DS 2027). */}
+      <span aria-hidden className="rua-alambrado pointer-events-none absolute inset-x-0 top-0 h-40 [--alambrado:rgba(13,13,12,0.22)]" />
+
       {/* Header editorial */}
-      <div className="w-full max-w-[920px] flex items-baseline justify-between mb-3">
-        <div className="text-[10px] uppercase tracking-[0.35em] font-medium text-black/70">
+      <div className="relative w-full max-w-[920px] flex items-baseline justify-between gap-3 mb-3">
+        <div className="min-w-0 truncate font-prova text-[11px] font-bold uppercase tracking-[0.18em]">
           {headerLabel ?? L('Olefoot · Bola Parada', 'Olefoot · Set Piece')}
         </div>
-        <div className="text-[10px] uppercase tracking-[0.35em] font-medium text-black/70 tabular-nums">
-          {timeLeft}s
+        <div className="shrink-0 font-spray font-black text-[34px] leading-none tabular-nums">
+          {timeLeft}<span className="font-prova text-[12px]">s</span>
         </div>
       </div>
 
       {/* Headline */}
       <h1
-        className="ole-headline text-black text-center mb-1"
-        style={{ fontSize: 'clamp(40px, 7vw, 80px)', lineHeight: 1.1 }}
+        className="relative font-impact uppercase text-center mb-1"
+        style={{ fontSize: 'clamp(40px, 11vw, 80px)', lineHeight: 0.95 }}
       >
         {headline}
       </h1>
-      <div className="text-[11px] uppercase tracking-[0.2em] text-black/70 mb-6">
+      <div className="relative font-voz text-[22px] leading-none mb-6">
         {lateralityLabel}
       </div>
 
       {/* Mini-pitch SVG mostrando posição da bola parada */}
-      <div className="w-full max-w-[920px] mb-6">
+      <div className="relative w-full max-w-[920px] mb-6">
         <SetPieceFieldSVG ctx={ctx} />
       </div>
 
       {/* SELETOR DE BATEDOR */}
-      <div className="w-full max-w-[920px] mb-5">
-        <div className="text-[10px] uppercase tracking-[0.35em] font-bold text-black/80 mb-2">
+      <div className="relative w-full max-w-[920px] mb-5">
+        <div className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-asfalto-27/80 mb-2">— 
           {L('Quem bate?', 'Who takes it?')}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -146,8 +149,8 @@ export function LiveSetPieceManager({
       </div>
 
       {/* SELETOR DE TIPO DE BATIDA */}
-      <div className="w-full max-w-[920px] mb-5">
-        <div className="text-[10px] uppercase tracking-[0.35em] font-bold text-black/80 mb-2">
+      <div className="relative w-full max-w-[920px] mb-5">
+        <div className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-asfalto-27/80 mb-2">— 
           {L('Como bate?', 'How to take it?')}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -165,8 +168,8 @@ export function LiveSetPieceManager({
 
       {/* CORREDOR DESIGNADO (apenas em corner ou cross) */}
       {ctx.mode === 'corner' || (ctx.mode === 'free_kick' && type === 'cross') ? (
-        <div className="w-full max-w-[920px] mb-5">
-          <div className="text-[10px] uppercase tracking-[0.35em] font-bold text-black/80 mb-2">
+        <div className="relative w-full max-w-[920px] mb-5">
+          <div className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-asfalto-27/80 mb-2">— 
             {L('Quem cabeceia?', 'Who heads it?')}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -187,9 +190,9 @@ export function LiveSetPieceManager({
         type="button"
         onClick={handleConfirm}
         disabled={!takerId || !type}
-        className="bg-black text-neon-yellow px-10 py-3 font-display font-black uppercase tracking-wider hover:bg-white hover:text-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        className="relative inline-flex min-h-[54px] items-center gap-2 bg-asfalto-27 px-8 font-impact text-[20px] uppercase leading-none text-rua shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow,opacity] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)] disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed"
       >
-        {L('Confirmar batida', 'Confirm kick')}
+        {L('Confirmar batida', 'Confirm kick')} <span aria-hidden>→</span>
       </button>
     </div>
   );
@@ -212,19 +215,19 @@ function TakerCard({
       onClick={onSelect}
       className={`flex items-center justify-between px-4 py-3 border-2 transition-all ${
         selected
-          ? 'bg-black text-neon-yellow border-black'
-          : 'bg-transparent text-black border-black/40 hover:border-black'
+          ? 'bg-asfalto-27 text-rua border-asfalto-27'
+          : 'bg-transparent text-asfalto-27 border-asfalto-27/40 hover:border-asfalto-27'
       }`}
     >
       <div className="text-left">
-        <div className="font-display font-bold uppercase tracking-wider text-sm">
+        <div className="font-voz text-[20px] leading-none">
           {taker.displayName}
         </div>
-        <div className="text-[10px] uppercase tracking-[0.2em] opacity-70">
+        <div className="mt-1 font-prova text-[10px] font-bold uppercase tracking-[0.14em] opacity-70">
           #{taker.shirtNumber}
         </div>
       </div>
-      <div className="font-display font-black text-2xl tabular-nums">{taker.skillRating}</div>
+      <div className="font-impact text-[26px] leading-none tabular-nums">{taker.skillRating}</div>
     </button>
   );
 }
@@ -247,12 +250,12 @@ function TypeCard({
       onClick={onSelect}
       className={`flex flex-col items-start text-left px-4 py-3 border-2 transition-all ${
         selected
-          ? 'bg-black text-neon-yellow border-black'
-          : 'bg-transparent text-black border-black/40 hover:border-black'
+          ? 'bg-asfalto-27 text-rua border-asfalto-27'
+          : 'bg-transparent text-asfalto-27 border-asfalto-27/40 hover:border-asfalto-27'
       }`}
     >
-      <div className="font-display font-bold uppercase tracking-wider text-sm mb-1">{label}</div>
-      <div className="text-[10px] leading-tight opacity-80">{desc}</div>
+      <div className="font-impact text-[18px] uppercase leading-none mb-1">{label}</div>
+      <div className="text-[12px] leading-tight opacity-80">{desc}</div>
     </button>
   );
 }
@@ -273,20 +276,20 @@ function TargetCard({
       onClick={onSelect}
       className={`flex items-center justify-between px-3 py-2 border-2 transition-all ${
         selected
-          ? 'bg-black text-neon-yellow border-black'
-          : 'bg-transparent text-black border-black/40 hover:border-black'
+          ? 'bg-asfalto-27 text-rua border-asfalto-27'
+          : 'bg-transparent text-asfalto-27 border-asfalto-27/40 hover:border-asfalto-27'
       }`}
     >
       <div className="text-left">
-        <div className="font-display font-bold uppercase tracking-wider text-xs">
+        <div className="font-voz text-[18px] leading-none">
           {target.displayName}
         </div>
-        <div className="text-[9px] uppercase tracking-[0.2em] opacity-70">
+        <div className="mt-1 font-prova text-[10px] font-bold uppercase tracking-[0.12em] opacity-70">
           #{target.shirtNumber} · {posLabel(target.position)}
         </div>
       </div>
-      <div className="text-[10px] uppercase tracking-[0.2em] font-bold opacity-70">{L('CAB', 'HDR')}</div>
-      <div className="font-display font-black text-xl tabular-nums">{target.skillRating}</div>
+      <div className="font-prova text-[10px] uppercase tracking-[0.14em] font-bold opacity-70">{L('CAB', 'HDR')}</div>
+      <div className="font-impact text-[22px] leading-none tabular-nums">{target.skillRating}</div>
     </button>
   );
 }
@@ -315,7 +318,7 @@ function SetPieceFieldSVG({ ctx }: { ctx: SetPieceContext }) {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
       {/* Campo grass background com retrô feel */}
-      <rect x="0" y="0" width={W} height={H} fill="#FDE100" />
+      <rect x="0" y="0" width={W} height={H} fill="#F2E61E" />
       {/* Linhas brancas / pretas no estilo Legacy */}
       {/* Trave do gol no topo */}
       <rect x={W / 2 - 70} y="20" width="140" height="3" fill="#000" />
@@ -347,7 +350,7 @@ function SetPieceFieldSVG({ ctx }: { ctx: SetPieceContext }) {
       <line x1="0" y1={H - 10} x2={W} y2={H - 10} stroke="#000" strokeWidth="1" opacity="0.5" />
 
       {/* Bola */}
-      <circle cx={ballX} cy={ballY} r="9" fill="#000" stroke="#FDE100" strokeWidth="2" />
+      <circle cx={ballX} cy={ballY} r="9" fill="#000" stroke="#F2E61E" strokeWidth="2" />
 
       {/* Linha pontilhada do trajeto provável */}
       <line

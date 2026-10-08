@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Share2, Copy, CheckCircle2, Plus, MessageCircle,
-  ShieldCheck, LogOut, ArrowUpRight, Sparkles, Loader2,
+  ShieldCheck, LogOut, Sparkles, Loader2,
 } from 'lucide-react';
 import { getSupabase } from '@/supabase/client';
 import { getMyLinkedCards, type LinkedCardRow } from '@/admin/playerLinking';
@@ -29,17 +29,16 @@ import {
   type CardSaleRow, type CardSalesSummary,
 } from '@/supabase/playerVip';
 import { formatExp } from '@/systems/economy';
-import { RailStat, ConfirmDialog, SecaoVolt } from '@/components/ui';
+import { ConfirmDialog } from '@/components/ui';
+import { BotaoRua, MarcaRua, SecaoRua, SeloRua } from '@/components/ui/Rua';
+import { CAMPO_RUA } from '@/components/bolsa/Bolsa';
 import { cn } from '@/lib/utils';
 import { L, LOCALE, emIngles } from '@/i18n/L';
 
-const YELLOW = 'var(--color-neon-yellow)';
-/** Verde de "entrou dinheiro" — token VOLT2 (alta), não hex solto. */
-const ALTA = 'var(--color-alta)';
-/** Campo de formulário VOLT2: asfalto chapado, canto vivo. */
-const INPUT = 'w-full border border-white/16 bg-deep-black px-3.5 py-3 text-base text-white outline-none placeholder:text-poeira focus:border-neon-yellow';
-/** Rótulo mono (dinheiro, seção, campo). */
-const ROTULO = 'font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-cimento';
+/** Campo de formulário DS 2027: asfalto chapado, canto vivo, foco em rua. */
+const INPUT = CAMPO_RUA;
+/** Rótulo "— PROVA" (dinheiro, seção, campo). */
+const ROTULO = 'font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo';
 
 const PHASE_LABEL: Record<string, string> = {
   revelacao: L('Revelação', 'Breakthrough'),
@@ -78,9 +77,9 @@ export function PlayerVip() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-deep-black text-white" style={{ fontFamily: 'var(--font-ui)' }}>
+    <div className="rua-grao min-h-screen w-full overflow-x-hidden bg-asfalto-27 font-sans text-papel">
       {session === 'loading' ? (
-        <div className="grid min-h-screen place-items-center text-cimento">
+        <div className="grid min-h-screen place-items-center text-rua">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
       ) : session === 'anon' ? (
@@ -115,42 +114,44 @@ function PlayerVipLogin() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-      <div className="mb-10 flex items-center gap-3">
-        <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="w-auto shrink-0" style={{ height: 22 }} />
-        <span className="font-impact text-[15px] uppercase tracking-wide text-cimento">PLAYERVIP</span>
-      </div>
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-8 px-6 py-10">
+      <MarcaPlayerVip />
 
       {state === 'sent' ? (
-        <div className="border border-white/10 bg-panel p-7 text-center">
-          <CheckCircle2 className="mx-auto mb-4 h-10 w-10 text-neon-yellow" />
-          <h1 className="font-impact text-[32px] uppercase leading-[1.05]">{L('Link enviado', 'Link sent')}</h1>
-          <p className="mt-3 text-sm leading-relaxed text-cimento">
+        // Lambe de cal colado torto: o recado ficou no muro.
+        <div className="flex min-w-0 -rotate-1 flex-col gap-3 bg-cal p-6 text-asfalto-27 shadow-[5px_5px_0_var(--color-rua)]">
+          <span className="font-prova text-[11px] font-bold uppercase tracking-[0.22em]">— {L('Confere teu e-mail', 'Check your email')}</span>
+          <h1 className="font-voz text-[clamp(40px,11vw,54px)] leading-[0.95]">{L('Link enviado.', 'Link sent.')}</h1>
+          <p className="font-sans text-[15px] leading-relaxed">
             {emIngles() ? (
-              <>We sent an access link to <b className="text-white">{email.trim()}</b>. Open your email and tap the
+              <>We sent an access link to <b>{email.trim()}</b>. Open your email and tap the
               link to sign in — no password.</>
             ) : (
-              <>Enviamos um link de acesso para <b className="text-white">{email.trim()}</b>. Abra seu e-mail e toque no
+              <>Enviamos um link de acesso para <b>{email.trim()}</b>. Abra seu e-mail e toque no
               link para entrar — sem senha.</>
             )}
           </p>
           <button
+            type="button"
             onClick={() => setState('idle')}
-            className="mt-5 text-xs font-bold uppercase tracking-wider text-cimento transition-colors hover:text-white"
+            className="inline-flex min-h-[44px] items-center gap-2 self-start font-impact text-[17px] uppercase underline-offset-4 hover:underline"
           >
             {L('Usar outro e-mail', 'Use another email')}
           </button>
         </div>
       ) : (
-        <>
-          <h1 className="font-impact uppercase leading-[1.02]" style={{ fontSize: 'clamp(40px,12vw,64px)' }}>
-            {L('Bem-vindo,', 'Welcome,')}<br /><span className="text-neon-yellow">{L('lenda.', 'legend.')}</span>
+        <div className="flex min-w-0 flex-col gap-6">
+          <h1 className="flex flex-col leading-[0.9]">
+            <span className="font-voz text-[clamp(48px,13vw,68px)] text-papel">{L('Bem-vindo,', 'Welcome,')}</span>
+            <span className="font-impact text-[clamp(52px,15vw,84px)] uppercase text-ouro-27">{L('lenda.', 'legend.')}</span>
           </h1>
-          <p className="mt-4 text-sm leading-relaxed text-cimento">
+          <p className="font-sans text-[15px] leading-relaxed text-suave">
             {L('Digite seu e-mail e enviamos um link de acesso.', "Enter your email and we'll send you an access link.")}
           </p>
-          <div className="mt-7 space-y-3">
+          <div className="flex min-w-0 flex-col gap-3">
+            <label className={ROTULO} htmlFor="playervip-email">E-mail</label>
             <input
+              id="playervip-email"
               type="email"
               inputMode="email"
               autoComplete="email"
@@ -158,21 +159,17 @@ function PlayerVipLogin() {
               onChange={(e) => { setEmail(e.target.value); if (state === 'error') setState('idle'); }}
               onKeyDown={(e) => { if (e.key === 'Enter') void send(); }}
               placeholder={L('seu@email.com', 'you@email.com')}
-              className="w-full border border-white/16 bg-panel px-4 py-4 text-base text-white outline-none placeholder:text-poeira focus:border-neon-yellow"
+              className={cn(INPUT, 'py-4')}
             />
-            {state === 'error' && <p className="text-xs text-baixa">{err}</p>}
-            <button
-              onClick={() => void send()}
-              disabled={state === 'sending'}
-              className="btn-primary flex h-14 w-full items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {state === 'sending' ? <Loader2 className="h-4 w-4 animate-spin" /> : L('Receber link de acesso', 'Get access link')}
-            </button>
+            {state === 'error' && <p className="font-sans text-[13px] font-semibold text-baixa">{err}</p>}
+            <BotaoRua onClick={() => void send()} disabled={state === 'sending'} className="mt-1 w-full">
+              {state === 'sending' ? <Loader2 className="h-5 w-5 animate-spin" /> : <>{L('Receber link de acesso', 'Get access link')} <span aria-hidden>→</span></>}
+            </BotaoRua>
           </div>
-          <p className="mt-6 text-center text-[11px] leading-relaxed text-poeira">
+          <p className="font-prova text-[11px] uppercase leading-relaxed tracking-[0.08em] text-mudo">
             {L('Prefere WhatsApp? Peça seu link direto ao seu contato na OLEFOOT.', 'Prefer WhatsApp? Ask your OLEFOOT contact for your link.')}
           </p>
-        </>
+        </div>
       )}
     </div>
   );
@@ -325,73 +322,68 @@ function PlayerVipDashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pb-24 pt-6">
+    <div className="mx-auto w-full min-w-0 max-w-2xl px-4 pb-24 pt-6">
       {/* Top bar */}
-      <header className="sticky top-0 z-20 -mx-4 mb-4 flex max-w-none items-center justify-between border-b border-white/10 bg-deep-black px-4 py-3">
-        <div className="flex items-center gap-2.5">
-          <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="w-auto shrink-0" style={{ height: 19 }} />
-          <span className="font-impact text-[13px] uppercase tracking-wide text-cimento">PLAYERVIP</span>
-        </div>
-        <button onClick={() => void logout()} className="flex items-center gap-1.5 text-xs text-cimento transition-colors hover:text-white" aria-label={L('Sair', 'Sign out')}>
-          <LogOut className="h-4 w-4" />
+      <header className="sticky top-0 z-20 -mx-4 mb-6 flex max-w-none items-center justify-between border-b-2 border-linha bg-asfalto-27 px-4 py-3">
+        <MarcaPlayerVip />
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className="inline-flex h-11 w-11 items-center justify-center text-mudo transition-colors hover:text-papel"
+          aria-label={L('Sair', 'Sign out')}
+        >
+          <LogOut className="h-5 w-5" />
         </button>
       </header>
 
-      {/* SALDO HERO */}
-      <section className="border border-white/10 bg-panel">
-        <div className="flex flex-wrap items-end justify-between gap-5 p-5 pb-4 sm:p-7 sm:pb-5">
-          <div className="min-w-0">
-            <div className={ROTULO}>{L('Disponível para saque', 'Available to withdraw')}</div>
-            <div className="ole-num mt-3 leading-none text-white [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(26px,8.5vw,52px)' }}>
+      {/* SALDO — degrau RESPEITO: asfalto + fio de ouro. O botão de rua manda. */}
+      <section aria-label={L('Disponível para saque', 'Available to withdraw')} className="flex min-w-0 flex-col gap-5 border-[3px] border-ouro-27 bg-asfalto-27 p-5 sm:p-7">
+        <div className="flex min-w-0 items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-2">
+            <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.22em] text-ouro-27">— {L('Disponível para saque', 'Available to withdraw')}</span>
+            <span className="block min-w-0 font-spray font-black leading-[0.85] tabular-nums text-papel [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(44px,13vw,80px)' }}>
               {loading ? '—' : brl(withdrawable)}
-            </div>
-          </div>
-          <div className="flex gap-2.5">
-            <button
-              onClick={() => setModal('withdraw')}
-              className="btn-primary flex h-14 items-center justify-center"
-            >
-              {L('Sacar', 'Withdraw')}
-            </button>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 px-5 pb-5 sm:px-7 sm:pb-6">
-          {withdrawals.some((w) => w.status === 'pending') && (
-            <span className="inline-flex items-center gap-2 border border-white/10 px-3 py-1.5 font-mono text-[11px] font-medium text-cimento">
-              <span className="h-1.5 w-1.5 rounded-full bg-atencao" />
-              {L('Saque em análise', 'Withdrawal under review')}
             </span>
+          </div>
+          <MarcaRua tipo="nove" className="hidden h-20 bg-ouro-27 sm:block" />
+        </div>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {withdrawals.some((w) => w.status === 'pending') && (
+            <SeloRua tom="cal">{L('Saque em análise', 'Withdrawal under review')}</SeloRua>
           )}
-          <span className="inline-flex items-center gap-2 border border-white/10 px-3 py-1.5 font-mono text-[11px] font-medium text-cimento">
+          <span className="font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-mudo">
             {emIngles()
-              ? <>Deposit within <b className="text-white">2 business days</b></>
-              : <>Depósito em até <b className="text-white">2 dias úteis</b></>}
+              ? <>Deposit within <span className="text-papel">2 business days</span></>
+              : <>Depósito em até <span className="text-papel">2 dias úteis</span></>}
           </span>
         </div>
+        <BotaoRua onClick={() => setModal('withdraw')} className="w-full sm:w-auto sm:self-start">
+          {L('Sacar', 'Withdraw')} <span aria-hidden>→</span>
+        </BotaoRua>
       </section>
 
-      {/* STAT STRIP */}
-      <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        <RailStat label={L('Coleções', 'Collections')} value={loading ? '—' : String(cards.length)} />
-        <RailStat label={L('Vendidos', 'Sold')} value={loading ? '—' : String(summary.totalSales)} rail={ALTA} />
-        <RailStat label={L('Curtidas', 'Likes')} value={loading ? '—' : likes.toLocaleString(LOCALE)} />
-        <RailStat label={L('Indicados', 'Referrals')} value={loading ? '—' : String(referrals.length)} />
+      {/* NÚMEROS */}
+      <div className="mt-3 grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-4">
+        <Numero label={L('Coleções', 'Collections')} value={loading ? '—' : String(cards.length)} />
+        <Numero label={L('Vendidos', 'Sold')} value={loading ? '—' : String(summary.totalSales)} />
+        <Numero label={L('Curtidas', 'Likes')} value={loading ? '—' : likes.toLocaleString(LOCALE)} />
+        <Numero label={L('Indicados', 'Referrals')} value={loading ? '—' : String(referrals.length)} />
       </div>
 
       {/* COMISSÃO DE FACILITADOR — só aparece se a lenda trouxe outras lendas */}
       {!loading && (summary.facilitatorBroCents > 0 || summary.facilitatorSales > 0) && (
-        <div className="mt-2.5 flex items-center justify-between gap-3 border border-white/10 bg-panel px-5 py-4">
+        <div className="mt-1.5 flex min-w-0 items-center justify-between gap-3 bg-concreto px-5 py-4">
           <div className="min-w-0">
             <div className={ROTULO}>
               {L('Comissão de facilitador', 'Facilitator commission')}
             </div>
-            <div className="mt-0.5 text-[11px] text-cimento">
+            <div className="mt-1 font-sans text-[13px] text-suave">
               {emIngles()
                 ? `${summary.facilitatorSales} sale${summary.facilitatorSales === 1 ? '' : 's'} by legends you brought in`
                 : `${summary.facilitatorSales} venda${summary.facilitatorSales === 1 ? '' : 's'} de lendas que você trouxe`}
             </div>
           </div>
-          <div className="ole-num shrink-0 text-[20px] text-white">
+          <div className="shrink-0 font-impact text-[24px] leading-none tabular-nums text-papel">
             {brl(summary.facilitatorBroCents)}
           </div>
         </div>
@@ -400,81 +392,77 @@ function PlayerVipDashboard() {
       {/* RECEITA DA PLATAFORMA — só aparece na conta OLEFOOT (fatias
           olefoot 25% + community 15%). Pro atleta isso é sempre zero. */}
       {!loading && summary.platformSales > 0 && (
-        <div className="mt-2.5 flex items-center justify-between gap-3 border border-neon-yellow/30 bg-panel px-5 py-4">
+        <div className="mt-1.5 flex min-w-0 items-center justify-between gap-3 border-2 border-ouro-27 bg-asfalto-27 px-5 py-4">
           <div className="min-w-0">
-            <div className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-neon-yellow">
+            <div className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-ouro-27">
               {L('Receita OLEFOOT', 'OLEFOOT revenue')}
             </div>
-            <div className="mt-0.5 text-[11px] text-cimento">
+            <div className="mt-1 font-sans text-[13px] text-suave">
               {emIngles()
                 ? `${summary.platformSales} card sale payout${summary.platformSales === 1 ? '' : 's'} (25% + 15%)`
                 : `${summary.platformSales} repasse${summary.platformSales === 1 ? '' : 's'} de venda de card (25% + 15%)`}
             </div>
           </div>
-          <div className="ole-num shrink-0 text-[20px] text-white">
+          <div className="shrink-0 font-impact text-[24px] leading-none tabular-nums text-ouro-27">
             {brl(summary.platformBroCents)}
           </div>
         </div>
       )}
 
       {/* COLEÇÕES */}
-      <SectionHeader title={L('Minhas Coleções', 'My Collections')} />
+      <SectionHeader title={L('Minhas coleções', 'My collections')} aside={!loading && cards.length > 0 ? String(cards.length) : undefined} />
       {loading ? (
         <SkeletonRows n={2} />
       ) : cards.length === 0 ? (
         <EmptyCard>{L('Assim que suas coleções forem publicadas, elas aparecem aqui.', 'Once your collections are published, they show up here.')}</EmptyCard>
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex min-w-0 flex-col gap-2">
           {cards.map((c) => {
             const cardStats = salesByCard.get(c.id) ?? { count: 0, broCents: 0, olefootCents: 0 };
             const phase = phaseFromId(c.id);
+            const ganhoBro = cardStats.broCents > 0 || cardStats.olefootCents === 0;
             return (
-              <div key={`${c.source}:${c.id}`} className="flex items-stretch overflow-hidden border border-white/10 bg-panel">
-                <div className="relative m-3.5 flex w-24 shrink-0 overflow-hidden border border-white/10 bg-card">
+              <div key={`${c.source}:${c.id}`} className="flex min-w-0 items-stretch gap-3.5 bg-concreto p-3">
+                {/* Retrato no degrau RESPEITO: a coleção já existe e tem valor. */}
+                <div className="relative w-[84px] shrink-0 overflow-hidden border-[3px] border-ouro-27 bg-asfalto-27 sm:w-24">
                   {c.portrait_public_url ? (
                     <img src={c.portrait_public_url} alt={c.name}
-                      className="object-cover opacity-90"
+                      className="absolute inset-0 object-cover"
                       // Inline de propósito: mobile-responsive.css tem `img { height: auto }`
                       // fora de camada, que vence o h-full do Tailwind.
-                      style={{ width: '100%', height: '100%', filter: 'grayscale(.15)' }} loading="lazy" />
+                      style={{ width: '100%', height: '100%', maxWidth: 'none', objectPosition: '50% 16%' }} loading="lazy" />
                   ) : (
-                    <span className="grid h-full w-full place-items-center font-impact text-[56px] uppercase text-white/10">
+                    <span className="grid h-full min-h-[104px] w-full place-items-center font-voz text-[52px] text-ouro-27/40">
                       {initialOf(c.name)}
                     </span>
                   )}
                 </div>
-                <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 py-4 pr-3">
+                <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 py-1">
                   <div className={cn(ROTULO, 'truncate')}>
                     {phase ? `${L('Fase', 'Phase')} · ${phase}` : (c.rarity_label || L('Coleção', 'Collection'))}
                   </div>
-                  <h3 className="truncate font-impact text-[20px] uppercase leading-[1.1] text-white">{c.name}</h3>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <Kv k={L('Vendidos', 'Sold')} v={String(cardStats.count)} />
+                  <h3 className="block min-w-0 truncate font-voz text-[26px] leading-none text-papel">{c.name}</h3>
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
                     {c.listed_on_market
-                      ? <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-neon-yellow">{L('À venda', 'For sale')}</span>
-                      : <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-poeira">{L('Pausada', 'Paused')}</span>}
+                      ? <SeloRua tom="cal" className="py-0.5 text-[10.5px]">{L('À venda', 'For sale')}</SeloRua>
+                      : <SeloRua tom="mudo" className="py-0 text-[10.5px]">{L('Pausada', 'Paused')}</SeloRua>}
+                    <Kv k={L('Vendidos', 'Sold')} v={String(cardStats.count)} />
+                    <Kv
+                      k={ganhoBro ? L('Ganhos', 'Earnings') : L('Ganhos OLE', 'OLE earnings')}
+                      v={ganhoBro ? brl(cardStats.broCents) : formatExp(cardStats.olefootCents)}
+                    />
                   </div>
                   {/* Só quem é dono do card chega aqui (get_my_linked_cards filtra por
                       beneficiary) — e o servidor recusa de novo no RPC. */}
-                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+                  <div className="mt-0.5 flex flex-wrap gap-x-4">
                     <button type="button" onClick={() => setContribution({ kind: 'correcao', card: c })}
-                      className="text-[11px] font-bold uppercase tracking-wider text-cimento underline-offset-2 transition-colors hover:text-white hover:underline">
+                      className="inline-flex min-h-[36px] items-center font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-suave underline-offset-4 transition-colors hover:text-rua hover:underline">
                       {L('Sugerir correção', 'Suggest a fix')}
                     </button>
                     <button type="button" onClick={() => setContribution({ kind: 'historia', card: c })}
-                      className="text-[11px] font-bold uppercase tracking-wider text-cimento underline-offset-2 transition-colors hover:text-white hover:underline">
+                      className="inline-flex min-h-[36px] items-center font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-suave underline-offset-4 transition-colors hover:text-rua hover:underline">
                       {L('Contar a história', 'Tell the story')}
                     </button>
-                  </div>
-                </div>
-                <div className="hidden w-36 shrink-0 flex-col items-end justify-center gap-0.5 border-l border-white/10 px-4 sm:flex">
-                  <div className="max-w-full truncate font-mono text-[14px] font-medium text-white">
-                    {cardStats.broCents > 0 || cardStats.olefootCents === 0
-                      ? brl(cardStats.broCents)
-                      : `${formatExp(cardStats.olefootCents)}`}
-                  </div>
-                  <div className="font-mono text-[9.5px] font-medium uppercase tracking-[0.14em] text-poeira">
-                    {cardStats.broCents > 0 || cardStats.olefootCents === 0 ? L('Ganhos (R$)', 'Earnings (R$)') : L('Ganhos (OLE)', 'Earnings (OLE)')}
                   </div>
                 </div>
               </div>
@@ -484,35 +472,38 @@ function PlayerVipDashboard() {
       )}
 
       {/* HISTÓRICO DE VENDAS */}
-      <SectionHeader title={L('Histórico de Vendas', 'Sales History')} />
+      <SectionHeader title={L('Histórico de vendas', 'Sales history')} aside={<span className="text-rua">● {L('Ao vivo', 'Live')}</span>} />
       {loading ? (
         <SkeletonRows n={3} />
       ) : sales.length === 0 ? (
         <EmptyCard>{L('Quando alguém comprar um card seu, a venda aparece aqui na hora.', 'When someone buys one of your cards, the sale shows up here instantly.')}</EmptyCard>
       ) : (
-        <div className="overflow-hidden border border-white/10 bg-panel">
-          {sales.map((s, i) => {
+        <div className="flex min-w-0 flex-col gap-1.5">
+          {sales.map((s) => {
             const name = cards.find((c) => c.id === s.legacy_player_id)?.name ?? s.legacy_player_id;
             const isBro = s.currency === 'BRO';
             const isFac = s.role === 'facilitator';
             const isPlatform = s.role === 'olefoot' || s.role === 'community';
             const tag = isFac ? L('Comissão', 'Commission') : s.role === 'olefoot' ? 'Olefoot 25%' : s.role === 'community' ? L('Comunidade 15%', 'Community 15%') : null;
-            const accent = isFac || isPlatform ? YELLOW : ALTA;
+            const nova = flashId === s.id;
             return (
               <div key={s.id}
-                className={cn('flex items-center gap-3.5 px-5 py-3.5 transition', i > 0 && 'border-t border-white/[0.07]',
-                  flashId === s.id && 'bg-alta/10')}>
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: accent }} />
+                className={cn(
+                  'flex min-w-0 items-center gap-3.5 px-4 py-3 transition',
+                  // Venda que acabou de cair: lambe de rua colado por cima.
+                  nova ? '-rotate-1 bg-rua text-asfalto-27 shadow-[4px_4px_0_var(--color-papel)]' : 'bg-concreto',
+                )}>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-bold">
-                    {tag && <span className="mr-1.5 bg-neon-yellow/15 px-1.5 py-0.5 font-mono text-[9.5px] font-medium uppercase tracking-wide text-neon-yellow">{tag}</span>}
-                    {name}
+                  <div className="flex min-w-0 items-center gap-2">
+                    {nova && <SeloRua tom="corre" className="bg-asfalto-27 py-0.5 text-[10px] text-rua">{L('Agora', 'Now')}</SeloRua>}
+                    {tag && !nova && <SeloRua tom="ouro-contorno" className="py-0 text-[10px]">{tag}</SeloRua>}
+                    <span className="block min-w-0 truncate font-voz text-[22px] leading-none">{name}</span>
                   </div>
-                  <div className="mt-0.5 truncate text-[11px] text-cimento">
+                  <div className={cn('mt-1 truncate font-prova text-[10.5px] font-bold uppercase tracking-[0.1em]', nova ? 'text-asfalto-27/75' : 'text-mudo')}>
                     {isFac ? L('Facilitador · ', 'Facilitator · ') : isPlatform ? L('Plataforma · ', 'Platform · ') : ''}{isBro ? 'PIX' : 'OLEFOOT'} · {new Date(s.created_at).toLocaleDateString(LOCALE, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
-                <div className={cn('ole-num shrink-0 text-[14px]', isFac ? 'text-neon-yellow' : 'text-alta')}>
+                <div className={cn('shrink-0 font-impact text-[19px] leading-none tabular-nums', nova ? 'text-asfalto-27' : isFac || isPlatform ? 'text-ouro-27' : 'text-alta')}>
                   +{isBro ? brl(s.owner_cents) : formatExp(s.owner_cents)}
                 </div>
               </div>
@@ -523,35 +514,35 @@ function PlayerVipDashboard() {
 
       {/* COMISSÕES */}
       <SectionHeader title={L('Comissões', 'Commissions')} />
-      <div className="grid gap-2.5 sm:grid-cols-[1fr_1.35fr]">
-        <div className="border border-white/10 bg-panel p-5">
+      <div className="grid min-w-0 gap-1.5 sm:grid-cols-[1fr_1.35fr]">
+        <div className="flex min-w-0 flex-col gap-2 bg-concreto p-5">
           <div className={ROTULO}>{L('Recebido por indicações', 'Earned from referrals')}</div>
-          <div className="ole-num mt-3 text-white [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(24px,7vw,32px)' }}>
+          <div className="font-spray font-black leading-[0.9] tabular-nums text-papel [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(34px,10vw,44px)' }}>
             {loading ? '—' : brl(commissionBroCents)}
           </div>
-          <p className="mt-3 text-xs leading-relaxed text-cimento">
+          <p className="font-sans text-[13px] leading-relaxed text-suave">
             {L('Você ganha sobre as vendas dos jogadores que trouxe para a OLEFOOT.', 'You earn on sales by the players you brought to OLEFOOT.')}
           </p>
         </div>
-        <div className="overflow-hidden border border-white/10 bg-panel">
+        <div className="min-w-0 overflow-hidden bg-concreto">
           {loading ? (
-            <div className="p-5 text-sm text-poeira">{L('Carregando…', 'Loading…')}</div>
+            <div className="p-5 font-sans text-sm text-mudo">{L('Carregando…', 'Loading…')}</div>
           ) : referrals.length === 0 ? (
-            <div className="p-5 text-sm text-cimento">{L('Você ainda não indicou ninguém. Compartilhe seu link abaixo.', "You haven't referred anyone yet. Share your link below.")}</div>
+            <div className="p-5 font-sans text-sm text-suave">{L('Você ainda não indicou ninguém. Compartilhe seu link abaixo.', "You haven't referred anyone yet. Share your link below.")}</div>
           ) : (
             referrals.slice(0, 6).map((r, i) => (
-              <div key={r.id} className={cn('flex items-center gap-3 px-4 py-3.5', i > 0 && 'border-t border-white/[0.07]')}>
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/16 bg-card font-impact text-[15px] uppercase text-giz">
+              <div key={r.id} className={cn('flex min-w-0 items-center gap-3 px-4 py-3', i > 0 && 'border-t-2 border-asfalto-27')}>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-cal font-voz text-[22px] leading-none text-asfalto-27">
                   {initialOf(r.displayName ?? r.clubName ?? '?')}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-bold">{r.displayName ?? r.clubName ?? 'Manager'}</div>
-                  <div className="mt-0.5 text-[11px] text-cimento">{L('Entrou pelo seu link', 'Joined via your link')}</div>
+                  <div className="truncate font-impact text-[17px] uppercase leading-tight text-papel">{r.displayName ?? r.clubName ?? 'Manager'}</div>
+                  <div className="mt-0.5 font-prova text-[10.5px] font-bold uppercase tracking-[0.1em] text-mudo">{L('Entrou pelo seu link', 'Joined via your link')}</div>
                 </div>
                 {/* Tamanho da equipe dele. A comissão sobre o EXP do indicado foi
                     removida em 2026-07-17 — agora o ganho vem por marco de rede. */}
                 {r.legSize > 0 ? (
-                  <span className="shrink-0 font-mono text-[11px] text-cimento">
+                  <span className="shrink-0 font-prova text-[11px] font-bold uppercase tracking-[0.08em] text-suave">
                     {L('equipe de', 'team of')} {r.legSize.toLocaleString(LOCALE)}
                   </span>
                 ) : null}
@@ -561,44 +552,56 @@ function PlayerVipDashboard() {
         </div>
       </div>
 
-      {/* INDICAÇÃO */}
-      <SectionHeader title={L('Indique uma Lenda', 'Refer a Legend')} />
-      <div className="flex flex-wrap items-center justify-between gap-4 border border-white/10 bg-panel p-5">
-        <div className="min-w-0">
-          <h4 className="font-impact text-[20px] uppercase leading-[1.1] text-white">{L('Traga outros craques', 'Bring in other stars')}</h4>
-          <p className="mt-1 text-xs text-cimento">{L('Compartilhe seu link e ganhe comissão sobre o que eles venderem.', 'Share your link and earn commission on what they sell.')}</p>
+      {/* INDICAÇÃO — momento rua: faixa amarela com alambrado (é ação: chamar). */}
+      <SectionHeader title={L('Indique uma lenda', 'Refer a legend')} />
+      <div className="relative flex min-w-0 flex-col gap-4 overflow-hidden bg-rua p-5 text-asfalto-27 sm:p-6">
+        <span aria-hidden className="rua-alambrado absolute inset-x-0 top-0 h-28 [--alambrado:rgba(13,13,12,0.28)]" />
+        <div className="relative flex min-w-0 items-center justify-between gap-3">
+          <h4 className="font-impact text-[clamp(32px,9vw,48px)] uppercase leading-[0.88]">
+            {L('Traga outros', 'Bring other')}
+            <br />
+            {L('craques', 'stars')}
+          </h4>
+          <MarcaRua tipo="nove" className="h-20 shrink-0 bg-asfalto-27" />
         </div>
-        <div className="flex items-center overflow-hidden border border-white/16 bg-deep-black">
-          <code className="max-w-[52vw] truncate px-3.5 font-mono text-xs font-medium text-giz sm:max-w-[220px]">
+        <p className="relative font-voz text-[clamp(20px,5.4vw,24px)] leading-[1.1]">
+          {L('Compartilhe seu link e ganhe comissão sobre o que eles venderem.', 'Share your link and earn commission on what they sell.')}
+        </p>
+        <div className="relative flex min-w-0 items-stretch border-2 border-asfalto-27 bg-asfalto-27">
+          <code className="flex min-w-0 grow items-center truncate px-3 font-prova text-[12px] font-medium text-papel">
             {shareUrl || '—'}
           </code>
-          <button onClick={copyLink} disabled={!shareUrl}
-            className="px-3 py-3.5 text-cimento transition-colors hover:text-white disabled:opacity-40" aria-label={L('Copiar link', 'Copy link')}>
-            {copied ? <CheckCircle2 className="h-4 w-4 text-alta" /> : <Copy className="h-4 w-4" />}
-          </button>
-          <button onClick={() => void shareLink()} disabled={!shareUrl}
-            className="bg-neon-yellow px-4 py-3.5 font-display text-xs font-black uppercase tracking-wider text-black transition-colors hover:bg-white disabled:opacity-40">
-            <Share2 className="h-4 w-4" />
+          <button type="button" onClick={copyLink} disabled={!shareUrl}
+            className="inline-flex h-12 w-12 shrink-0 items-center justify-center bg-cal text-asfalto-27 transition-colors hover:bg-papel disabled:opacity-40" aria-label={L('Copiar link', 'Copy link')}>
+            {copied ? <CheckCircle2 className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
           </button>
         </div>
+        <button type="button" onClick={() => void shareLink()} disabled={!shareUrl}
+          className="relative inline-flex min-h-[52px] items-center justify-center gap-2 self-start bg-asfalto-27 px-6 font-impact text-[20px] uppercase leading-none text-rua transition-transform hover:-translate-y-0.5 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-asfalto-27">
+          <Share2 className="h-5 w-5" /> {copied ? L('Link copiado', 'Link copied') : L('Compartilhar', 'Share')} <span aria-hidden>→</span>
+        </button>
       </div>
 
       {/* AÇÕES */}
-      <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
-        <ActionTile icon={<Plus className="h-5 w-5" />} accent={YELLOW}
+      <div className="mt-6 grid min-w-0 gap-1.5 sm:grid-cols-2">
+        <ActionTile icon={<Plus className="h-5 w-5" />} destaque
           title={L('Pedir um card meu', 'Request my own card')} desc={L('Conte o ano e o clube.', 'Tell us the year and the club.')}
           onClick={() => setContribution({ kind: 'novo_card', card: null })} />
-        <ActionTile icon={<Sparkles className="h-5 w-5" />} accent="var(--color-lenda)"
+        <ActionTile icon={<Sparkles className="h-5 w-5" />}
           title={L('Indicar um atleta', 'Refer an athlete')} desc={L('Quem merece uma coleção?', 'Who deserves a collection?')}
           onClick={() => setModal('collection')} />
-        <ActionTile icon={<MessageCircle className="h-5 w-5" />} accent="var(--color-giz)"
+        <ActionTile icon={<MessageCircle className="h-5 w-5" />}
           title={L('Falar com a OLEFOOT', 'Contact OLEFOOT')} desc={L('Dúvida, saque, contrato.', 'Questions, withdrawals, contracts.')}
           onClick={() => setModal('support')} />
       </div>
 
-      <p className="mt-10 text-center font-mono text-[11px] tracking-wide text-poeira">
-        OLEFOOT · <b className="font-medium text-cimento">PLAYERVIP</b>
-      </p>
+      <footer className="mt-12 flex min-w-0 items-end justify-between gap-4 border-t-2 border-linha pt-6">
+        <div className="flex min-w-0 flex-col gap-2">
+          <span className="font-voz text-[clamp(32px,9vw,44px)] leading-none text-ouro-27">{L('Respeito é ouro.', 'Respect is gold.')}</span>
+          <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">Olefoot · PlayerVip</span>
+        </div>
+        <MarcaRua tipo="escudo" className="h-12 bg-fio" />
+      </footer>
 
       {/* ── Modais ── */}
       <WithdrawModal
@@ -621,42 +624,57 @@ function PlayerVipDashboard() {
 }
 
 // ─── sub-componentes de layout ──────────────────────────────────────────────
-// Título de seção = SecaoVolt (risco volt + mono + linha que se apaga).
-function SectionHeader({ title }: { title: string }) {
-  return <SecaoVolt label={title} className="mb-4 mt-11" />;
+/** Wordmark + PLAYERVIP em mono — a assinatura das telas da lenda. */
+function MarcaPlayerVip() {
+  return (
+    <div className="flex items-center gap-3">
+      <MarcaRua tipo="wordmark" label="Olefoot" className="h-[19px] bg-rua" />
+      <span className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">PlayerVip</span>
+    </div>
+  );
+}
+// Título de seção = SecaoRua ("— RÓTULO" em mono).
+function SectionHeader({ title, aside }: { title: string; aside?: React.ReactNode }) {
+  return <SecaoRua label={title} aside={aside} className="mb-4 mt-12" />;
+}
+function Numero({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5 bg-concreto px-4 py-3.5">
+      <span className="truncate font-prova text-[10.5px] font-bold uppercase tracking-[0.18em] text-mudo">{label}</span>
+      <span className="font-impact text-[30px] leading-none tabular-nums text-papel">{value}</span>
+    </div>
+  );
 }
 function Kv({ k, v }: { k: string; v: string }) {
   return (
     <span className="flex items-baseline gap-1.5">
-      <span className="font-mono text-[9.5px] font-medium uppercase tracking-[0.12em] text-poeira">{k}</span>
-      <span className="ole-num text-[14px] text-white">{v}</span>
+      <span className="font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-mudo">{k}</span>
+      <span className="font-impact text-[16px] leading-none tabular-nums text-papel">{v}</span>
     </span>
   );
 }
 function EmptyCard({ children }: { children: React.ReactNode }) {
-  return <div className="border border-dashed border-white/10 bg-panel p-6 text-center text-sm text-cimento">{children}</div>;
+  return <div className="border-2 border-dashed border-fio px-5 py-6 font-sans text-[14px] leading-snug text-suave">{children}</div>;
 }
 function SkeletonRows({ n }: { n: number }) {
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2">
       {Array.from({ length: n }).map((_, i) => (
-        <div key={i} className="h-20 animate-pulse border border-white/10 bg-panel" />
+        <div key={i} className="h-24 animate-pulse bg-concreto" />
       ))}
     </div>
   );
 }
-function ActionTile({ icon, title, desc, accent, onClick }: {
-  icon: React.ReactNode; title: string; desc: string; accent: string; onClick: () => void;
+function ActionTile({ icon, title, desc, destaque, onClick }: {
+  icon: React.ReactNode; title: string; desc: string; destaque?: boolean; onClick: () => void;
 }) {
   return (
-    <button onClick={onClick}
-      className="relative border border-white/10 bg-panel p-5 text-left transition-colors hover:border-white/30">
-      <span className="absolute right-4 top-5" style={{ color: accent }}>
-        <ArrowUpRight className="h-4 w-4" />
-      </span>
-      <span className="mb-3 inline-block" style={{ color: accent }}>{icon}</span>
-      <h4 className="truncate pr-6 font-impact text-[20px] uppercase leading-[1.1] text-white">{title}</h4>
-      <p className="mt-1 truncate text-xs text-cimento">{desc}</p>
+    <button type="button" onClick={onClick}
+      className="group relative flex min-w-0 flex-col gap-2 border-2 border-linha bg-concreto p-5 text-left transition-colors hover:border-papel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rua">
+      <span className={destaque ? 'text-rua' : 'text-mudo'}>{icon}</span>
+      <h4 className="truncate pr-8 font-impact text-[22px] uppercase leading-[1.05] text-papel">{title}</h4>
+      <p className="truncate font-sans text-[13px] text-suave">{desc}</p>
+      <span aria-hidden className="absolute right-4 top-4 font-impact text-[22px] leading-none text-mudo transition-colors group-hover:text-rua">→</span>
     </button>
   );
 }
@@ -695,14 +713,14 @@ function WithdrawModal({ open, onClose, maxCents, kycApproved, onDone }: {
       confirmLabel={busy ? L('Enviando…', 'Sending…') : L('Confirmar saque', 'Confirm withdrawal')} confirmDisabled={!valid || busy || ok}
     >
       {ok ? (
-        <p className="mt-3 text-sm leading-relaxed text-giz">
+        <p className="mt-3 font-sans text-sm leading-relaxed text-papel">
           {emIngles()
-            ? <>Request received. The deposit reaches your account within <b className="text-white">2 business days</b> after review.</>
-            : <>Recebemos seu pedido. O depósito cai na conta em até <b className="text-white">2 dias úteis</b> após a conferência.</>}
+            ? <>Request received. The deposit reaches your account within <b>2 business days</b> after review.</>
+            : <>Recebemos seu pedido. O depósito cai na conta em até <b>2 dias úteis</b> após a conferência.</>}
         </p>
       ) : !kycApproved ? (
-        <div className="mt-3 border border-atencao/40 bg-atencao/10 p-3.5 text-[13px] leading-relaxed text-giz">
-          <ShieldCheck className="mb-1.5 h-4 w-4 text-atencao" />
+        <div className="mt-3 -rotate-1 bg-cal p-4 font-sans text-[13px] leading-relaxed text-asfalto-27">
+          <ShieldCheck className="mb-1.5 h-5 w-5" />
           {emIngles()
             ? <>To unlock withdrawals we need to verify your account. Tap <b>Contact OLEFOOT</b> and we'll sort it out fast.</>
             : <>Para liberar saques precisamos verificar sua conta. Toque em <b>Falar com a OLEFOOT</b> que a gente resolve rápido.</>}
@@ -713,14 +731,14 @@ function WithdrawModal({ open, onClose, maxCents, kycApproved, onDone }: {
             <label className={ROTULO}>{L('Valor (R$)', 'Amount (R$)')}</label>
             <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder={L('0,00', '0.00')}
               className={cn(INPUT, 'mt-1')} />
-            <div className="mt-1 text-[11px] text-cimento">{L('Disponível', 'Available')}: <b className="font-mono font-medium text-white">{brl(maxCents)}</b></div>
+            <div className="mt-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-mudo">{L('Disponível', 'Available')} · <span className="text-papel">{brl(maxCents)}</span></div>
           </div>
           <div>
             <label className={ROTULO}>{L('Chave PIX', 'PIX key')}</label>
             <input value={pixKey} onChange={(e) => setPixKey(e.target.value)} placeholder={L('CPF, e-mail ou telefone', 'CPF, email or phone')}
               className={cn(INPUT, 'mt-1')} />
           </div>
-          {err && <p className="text-xs text-baixa">{err}</p>}
+          {err && <p className="font-sans text-[13px] font-semibold text-baixa">{err}</p>}
         </div>
       )}
     </ConfirmDialog>
@@ -747,12 +765,12 @@ function SupportModal({ open, onClose }: { open: boolean; onClose: () => void })
       eyebrow={L('Suporte', 'Support')} title={ok ? L('Mensagem enviada', 'Message sent') : L('Falar com a OLEFOOT', 'Contact OLEFOOT')}
       confirmLabel={busy ? L('Enviando…', 'Sending…') : L('Enviar', 'Send')} confirmDisabled={busy || ok || body.trim().length < 3}>
       {ok ? (
-        <p className="mt-3 text-sm leading-relaxed text-giz">{L('Recebemos sua mensagem. Responderemos por e-mail em breve.', "We got your message. We'll reply by email soon.")}</p>
+        <p className="mt-3 font-sans text-sm leading-relaxed text-papel">{L('Recebemos sua mensagem. Responderemos por e-mail em breve.', "We got your message. We'll reply by email soon.")}</p>
       ) : (
         <div className="mt-4">
           <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder={L('Como podemos ajudar?', 'How can we help?')}
             className={cn(INPUT, 'resize-none')} />
-          {err && <p className="mt-2 text-xs text-baixa">{err}</p>}
+          {err && <p className="mt-2 font-sans text-[13px] font-semibold text-baixa">{err}</p>}
         </div>
       )}
     </ConfirmDialog>
@@ -781,8 +799,8 @@ function CollectionModal({ open, onClose }: { open: boolean; onClose: () => void
       eyebrow={L('Indicação', 'Referral')} title={ok ? L('Indicação enviada', 'Referral sent') : L('Indicar um atleta', 'Refer an athlete')}
       confirmLabel={busy ? L('Enviando…', 'Sending…') : L('Solicitar', 'Submit')} confirmDisabled={busy || ok || athlete.trim().length < 2}>
       {ok ? (
-        <p className="mt-3 text-sm leading-relaxed text-giz">
-          <Sparkles className="mb-1 mr-1 inline h-4 w-4 text-neon-yellow" />
+        <p className="mt-3 font-sans text-sm leading-relaxed text-papel">
+          <Sparkles className="mb-1 mr-1 inline h-4 w-4 text-rua" />
           {L('Recebemos! Nossa equipe monta a proposta e envia para sua aprovação.', 'Got it! Our team will put together the proposal and send it for your approval.')}
         </p>
       ) : (
@@ -793,7 +811,7 @@ function CollectionModal({ open, onClose }: { open: boolean; onClose: () => void
             className={cn(INPUT, 'resize-none')} />
           <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder={L('Como falar com ele? WhatsApp ou e-mail (opcional)', 'How do we reach him? WhatsApp or email (optional)')}
             className={INPUT} />
-          {err && <p className="text-xs text-baixa">{err}</p>}
+          {err && <p className="font-sans text-[13px] font-semibold text-baixa">{err}</p>}
         </div>
       )}
     </ConfirmDialog>

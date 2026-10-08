@@ -4,11 +4,12 @@
  */
 
 import { motion } from 'motion/react';
-import { Trophy, Calendar } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import { Fragment, useMemo } from 'react';
 import { BackButton } from '@/components/BackButton';
-import { Hashtag } from '@/components/ui';
+import { BarraSegmentos, FitaRua, SecaoRua, SeloRua } from '@/components/ui/Rua';
+import { FaltaRua, LinhaRua, VazioRua, ZonaRua } from '@/components/leagues/RuaTabela';
+import { cn } from '@/lib/utils';
 import { globalDivisionName } from '@/match/globalLeagueMVP';
 import { L } from '@/i18n/L';
 
@@ -39,240 +40,113 @@ export default function GlobalLeaguePlayoffs() {
 
   if (!globalLeagueMVP || globalLeagueMVP.status !== 'playoffs') {
     return (
-      <div className="mx-auto min-w-0 w-full max-w-4xl px-3 sm:px-4 lg:px-6 py-12 text-center">
-        <p className="text-cimento">{L('Playoffs ainda não iniciados', 'Playoffs not started yet')}</p>
+      <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6 px-3 py-12 sm:px-4 lg:px-6">
+        <BackButton to="/match/global" label={L('Liga Global', 'Global League')} />
+        <VazioRua titulo={L('Playoffs ainda não iniciados', 'Playoffs not started yet')} frase={L('Quando fechar o quórum, a bola rola.', 'Once the quorum closes, the ball rolls.')} />
       </div>
     );
   }
 
+  // DS 2027: quanto falta pra subir de divisão projetada (corte em #11 e #22).
+  const myIdx = myTeamId ? standings.findIndex((t) => t.id === myTeamId) : -1;
+  const targetIdx = myIdx >= 22 ? 21 : myIdx >= 11 ? 10 : -1;
+  const gapUp = myIdx >= 0 && targetIdx >= 0 && standings[targetIdx] ? Math.max(0, standings[targetIdx].playoffPoints - standings[myIdx].playoffPoints) : null;
+  const targetDiv = targetIdx === 10 ? 1 : 2;
+
   return (
-    <div className="mx-auto min-w-0 w-full max-w-6xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-6 pb-6 md:pb-8">
+    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-8 overflow-x-hidden px-3 pb-6 sm:px-4 md:pb-8 lg:px-6">
       <BackButton to="/match/global" label={L('Liga Global', 'Global League')} />
 
-      {/* Hero */}
-      <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-6">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-14 text-center"
-        >
-          <Hashtag className="mb-4 text-black/70 sm:mb-6">{L('#ligaglobal · playoffs', '#globalleague · playoffs')}</Hashtag>
+      <FitaRua tags={['#playoffs', '#ligaglobal']} className="-mx-3 sm:-mx-4 lg:-mx-6" />
 
-          <h1 className="leading-[1.1]">
-            <span
-              className="block font-impact uppercase text-black"
-              style={{
-                fontSize: 'clamp(2.75rem, 8vw, 6rem)',
-                letterSpacing: '0.005em',
-              }}
-            >
-              {L('Rodada', 'Round')} {currentRound}
-            </span>
-            <span
-              className="ole-num block uppercase text-black"
-              style={{ fontSize: 'clamp(1.5rem, 5vw, 3rem)' }}
-            >
-              {L('de', 'of')} {totalRounds}
-            </span>
-          </h1>
+      {/* Hero — a rodada em spray */}
+      <motion.header initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex min-w-0 flex-col gap-3">
+        <SecaoRua label={L('#ligaglobal · playoffs', '#globalleague · playoffs')} />
+        <h1 className="flex flex-wrap items-baseline gap-x-4">
+          <span className="font-impact uppercase leading-[0.86] text-papel" style={{ fontSize: 'clamp(48px, 13vw, 96px)' }}>
+            {L('Rodada', 'Round')}
+          </span>
+          <span className="font-spray font-black leading-[0.86] text-rua" style={{ fontSize: 'clamp(60px, 17vw, 120px)' }}>
+            {currentRound}<span className="text-fio">/{totalRounds}</span>
+          </span>
+        </h1>
+        <BarraSegmentos valor={currentRound} max={totalRounds} segmentos={totalRounds} className="max-w-md" />
+        <p className="font-voz text-[clamp(22px,6vw,30px)] leading-[1.05] text-suave">
+          {L(`Faltam ${totalRounds - currentRound} rodadas. Cada ponto decide a divisão.`, `${totalRounds - currentRound} rounds left. Every point decides the division.`)}
+        </p>
+      </motion.header>
 
-          {/* Progress */}
-          <div className="mt-8 max-w-md mx-auto">
-            <div className="h-2 bg-black/20 overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${(currentRound / totalRounds) * 100}%` }}
-                transition={{ duration: 0.5 }}
-                className="h-full bg-black"
-              />
-            </div>
-            <p className="mt-2 font-mono text-[11.5px] text-black/70">
-              {L(`${totalRounds - currentRound} rodadas restantes`, `${totalRounds - currentRound} rounds left`)}
-            </p>
-          </div>
-        </motion.div>
-      </section>
+      {gapUp != null && (
+        <FaltaRua
+          valor={gapUp}
+          unidade={L('pts', 'pts')}
+          frase={L(`é o que separa tu da ${globalDivisionName(targetDiv)}.`, `is all that's between you and ${globalDivisionName(targetDiv)}.`)}
+        />
+      )}
 
-      {/* Tabela de Classificação */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="bg-panel border border-white/10 overflow-hidden"
-      >
-        <div className="bg-deep-black px-6 py-4 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-neon-yellow" />
-            <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-              {L('Classificação dos playoffs', 'Playoff standings')}
-            </h2>
-          </div>
-          <p className="mt-1 font-mono text-[11px] text-cimento">
+      {/* Classificação dos playoffs */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="flex min-w-0 flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <SecaoRua label={L('Classificação dos playoffs', 'Playoff standings')} />
+          <p className="font-prova text-[11px] uppercase tracking-[0.1em] text-mudo">
             {L(`Top 11 → ${globalDivisionName(1)} · meio 11 → ${globalDivisionName(2)} · últimos 10 → ${globalDivisionName(3)}`, `Top 11 → ${globalDivisionName(1)} · middle 11 → ${globalDivisionName(2)} · bottom 10 → ${globalDivisionName(3)}`)}
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-deep-black">
-              <tr className="text-left">
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">#</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento">{L('Time', 'Team')}</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('J', 'P')}</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('V', 'W')}</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('E', 'D')}</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('D', 'L')}</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('SG', 'GD')}</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">PTS</th>
-                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-cimento text-center">{L('Divisão', 'Division')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {standings.map((team, index) => {
-                const position = index + 1;
-                const division = position <= 11 ? 1 : position <= 22 ? 2 : 3;
-                const divisionColor = division === 1 ? 'text-neon-yellow' : division === 2 ? 'text-giz' : 'text-cimento';
-                const saldoGols = team.playoffGoalsFor - team.playoffGoalsAgainst;
-                const isMe = !!myTeamId && team.id === myTeamId;
-                const isLeader = index === 0;
-                const cutAfter = position === 11 || position === 22;
-
-                const tone = (normal: string) => (isMe ? 'text-black' : normal);
-
-                return (
-                  <Fragment key={team.id}>
-                  <tr
-                    className={`border-t border-white/[0.06] transition-colors ${
-                      isMe ? 'bg-neon-yellow text-black' : 'hover:bg-card'
-                    }`}
-                  >
-                    <td className="px-4 py-3">
-                      <span className={`ole-num text-sm ${tone(isLeader ? 'text-white' : 'text-cimento')}`}>{position}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <div className="min-w-0">
-                          <p className={`truncate text-sm ${isMe ? 'font-bold text-black' : 'text-giz'}`}>{team.clubName}</p>
-                          <p className={`font-mono text-[10.5px] ${tone('text-cimento')}`}>{team.clubShort}</p>
-                        </div>
-                        {isMe && (
-                          <span className="shrink-0 bg-black px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-neon-yellow">{L('você', 'you')}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`ole-num text-sm ${tone('text-giz')}`}>{team.playoffMatchesPlayed}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`ole-num text-sm ${tone('text-alta')}`}>{team.playoffWins}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`ole-num text-sm ${tone('text-cimento')}`}>{team.playoffDraws}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`ole-num text-sm ${tone('text-baixa')}`}>{team.playoffLosses}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`ole-num text-sm ${tone(saldoGols > 0 ? 'text-alta' : saldoGols < 0 ? 'text-baixa' : 'text-cimento')}`}>
-                        {saldoGols > 0 ? '+' : ''}{saldoGols}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`ole-num text-base ${tone('text-white')}`}>{team.playoffPoints}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.12em] ${tone(divisionColor)}`}>
-                        {globalDivisionName(division)}
-                      </span>
-                    </td>
-                  </tr>
-                  {cutAfter && (
-                    <tr aria-hidden>
-                      <td colSpan={9} className="px-4 py-0">
-                        <div className="flex h-6 items-center gap-2">
-                          <span className="block h-0 grow border-t border-dashed border-alta" />
-                          <span className="whitespace-nowrap font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-alta">
-                            ↑ {globalDivisionName(division)}
-                          </span>
-                          <span className="block h-0 grow border-t border-dashed border-alta" />
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Legenda */}
-        <div className="bg-deep-black px-6 py-4 border-t border-white/10">
-          <div className="flex flex-wrap gap-4 font-mono text-[11px]">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-neon-yellow" />
-              <span className="text-cimento">{L('Seu clube', 'Your club')}</span>
-            </div>
-            <span className="text-neon-yellow">Div 1 · {globalDivisionName(1)} (top 11)</span>
-            <span className="text-giz">Div 2 · {globalDivisionName(2)} {L('(meio 11)', '(middle 11)')}</span>
-            <span className="text-cimento">Div 3 · {globalDivisionName(3)} {L('(últimos 10)', '(bottom 10)')}</span>
-          </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          {standings.map((team, index) => {
+            const position = index + 1;
+            const division = position <= 11 ? 1 : position <= 22 ? 2 : 3;
+            const saldoGols = team.playoffGoalsFor - team.playoffGoalsAgainst;
+            const isMe = !!myTeamId && team.id === myTeamId;
+            const isLeader = index === 0;
+            const cutAfter = position === 11 || position === 22;
+            return (
+              <Fragment key={team.id}>
+                <LinhaRua
+                  pos={position}
+                  tom={isMe ? 'eu' : isLeader ? 'lider' : division === 1 ? 'zona' : division === 3 ? 'abaixo' : 'normal'}
+                  nome={team.clubName}
+                  sub={`${team.clubShort} · ${L('J', 'P')}${team.playoffMatchesPlayed} ${L('V', 'W')}${team.playoffWins} ${L('E', 'D')}${team.playoffDraws} ${L('D', 'L')}${team.playoffLosses} · ${L('SG', 'GD')} ${saldoGols > 0 ? '+' : ''}${saldoGols}`}
+                  chip={
+                    <span className={cn('hidden shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.1em] min-[420px]:inline', isMe ? 'text-asfalto-27/70' : division === 1 ? 'text-ouro-27' : 'text-mudo')}>
+                      {globalDivisionName(division)}
+                    </span>
+                  }
+                  valor={team.playoffPoints}
+                />
+                {cutAfter && <ZonaRua label={`↑ ${globalDivisionName(division)}`} tom={division === 1 ? 'rua' : 'fio'} />}
+              </Fragment>
+            );
+          })}
         </div>
       </motion.div>
 
-      {/* Próximas Rodadas */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-panel border border-white/10 p-6"
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-4 h-4 text-neon-yellow" />
-          <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-giz">
-            {L('Calendário', 'Schedule')}
-          </h2>
-        </div>
-
-        <div className="space-y-2">
-          {globalLeagueMVP.playoffRounds.map((round) => (
-            <div
-              key={round.roundNumber}
-              className={`flex items-center justify-between px-4 py-3 ${
-                round.roundNumber === currentRound
-                  ? 'bg-card border border-neon-yellow/50'
-                  : 'bg-deep-black border border-white/[0.06]'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className={`ole-num text-sm uppercase ${
-                  round.roundNumber === currentRound ? 'text-neon-yellow' : 'text-cimento'
-                }`}>
-                  {L('Rodada', 'Round')} {round.roundNumber}
-                </span>
-                <span className="font-mono text-[11px] text-poeira">
-                  {round.isReturning ? L('Returno', 'Second leg') : L('Turno', 'First leg')}
-                </span>
+      {/* Calendário — canhotos de rodada */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="flex min-w-0 flex-col gap-3">
+        <SecaoRua label={L('Calendário', 'Schedule')} />
+        <div className="flex flex-col gap-1.5">
+          {globalLeagueMVP.playoffRounds.map((round) => {
+            const current = round.roundNumber === currentRound;
+            return (
+              <div
+                key={round.roundNumber}
+                className={cn('flex min-h-[52px] items-center justify-between gap-3 px-4 py-2', current ? 'border-l-[5px] border-rua bg-concreto' : 'bg-concreto')}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className={cn('font-impact text-[20px] uppercase leading-none', current ? 'text-rua' : 'text-papel')}>
+                    {L('Rodada', 'Round')} {round.roundNumber}
+                  </span>
+                  <span className="font-prova text-[11px] font-bold uppercase text-mudo">
+                    {round.isReturning ? L('Returno', 'Second leg') : L('Turno', 'First leg')}
+                  </span>
+                </div>
+                {round.status === 'finished' && <SeloRua tom="cal" className="py-0.5 text-[10px]">{L('Finalizada', 'Finished')}</SeloRua>}
+                {round.status === 'live' && <SeloRua tom="corre" className="py-0.5 text-[10px]">● {L('Ao vivo', 'Live')}</SeloRua>}
+                {round.status === 'scheduled' && <SeloRua tom="mudo" className="py-0.5 text-[10px]">{L('Agendada', 'Scheduled')}</SeloRua>}
               </div>
-              <div className="flex items-center gap-2">
-                {round.status === 'finished' && (
-                  <span className="font-mono text-[10.5px] text-alta uppercase tracking-[0.12em]">
-                    {L('Finalizada', 'Finished')}
-                  </span>
-                )}
-                {round.status === 'live' && (
-                  <span className="font-mono text-[10.5px] text-neon-yellow uppercase tracking-[0.12em] animate-pulse">
-                    {L('Ao vivo', 'Live')}
-                  </span>
-                )}
-                {round.status === 'scheduled' && (
-                  <span className="font-mono text-[10.5px] text-cimento uppercase tracking-[0.12em]">
-                    {L('Agendada', 'Scheduled')}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </motion.div>
     </div>

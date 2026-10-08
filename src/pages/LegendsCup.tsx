@@ -7,11 +7,15 @@
  *
  * A campanha mora no estado do jogo (não em localStorage): o resultado da
  * Partida Rápida volta pelo FINALIZE_QUICK_PLAN, igual à Liga Ole.
+ *
+ * DS 2027 "Respeito é ouro": o confronto é cartaz de convocação (rua em cima,
+ * asfalto embaixo, o "x" na voz), as lendas são cartas na escada pelo OVR,
+ * a chave é uma fila de ingressos e o campeão é LENDA — ouro chapado.
  */
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore, useGameDispatch } from '@/game/store';
-import { Loader2, Play, Trophy, RotateCcw, ArrowLeft, Info, Users, Check } from 'lucide-react';
+import { Loader2, Trophy, RotateCcw, ArrowLeft, Check } from 'lucide-react';
 import type { OpponentStub, PlayerEntity } from '@/entities/types';
 import { CinematicHero } from '@/components/CinematicHero';
 import { overallFromAttributes } from '@/entities/player';
@@ -27,10 +31,11 @@ import { coachPersonaFor, personaLine } from '@/match/ligaOle/coachPersona';
 import { MomentShareCard } from '@/components/moments/MomentShareCard';
 import { detectMoment, stageFromRoundName } from '@/systems/moments';
 import { fetchMyReferralCode } from '@/supabase/referrals';
-import { Hashtag } from '@/components/ui';
+import { BotaoRua, DEGRAU_CLASSES, FitaRua, MarcaRua, SecaoRua, SeloRua, type Degrau } from '@/components/ui/Rua';
+import { Convocacao } from '@/components/ligaole/Convocacao';
+import { posLabel } from '@/components/matchquick/posLabel';
+import { cn } from '@/lib/utils';
 import { L, LOCALE, emIngles } from '@/i18n/L';
-
-const YELLOW = 'var(--color-neon-yellow)';
 
 /** Rótulos de TELA — o valor PT (LEGENDS_CUP_ROUNDS / OPPONENT_NAME) segue sendo a chave. */
 const ROUND_EN: Record<string, string> = { 'Fase de Grupos': 'Group Stage', Playoff: 'Playoff', Oitavas: 'Round of 16', Quartas: 'Quarter-finals', Semifinal: 'Semi-final', Final: 'Final' };
@@ -193,40 +198,48 @@ export function LegendsCup() {
   }, [opp, dispatch, navigate]);
 
   const phaseExp = cup ? legendsCupPhaseExp(cup.roundIndex, cup.runNumber) : 0;
-
   return (
-    <div className="mx-auto min-w-0 max-w-4xl space-y-5 pb-16">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/16 bg-black text-cimento hover:border-white/30 hover:text-white"
-          aria-label={L('Voltar', 'Back')}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <Hashtag>{L('#torneio', '#tournament')}</Hashtag>
-        {titles > 0 && (
-          <div className="ml-auto flex items-center gap-1.5 border border-white/16 px-3 py-2">
-            <Trophy className="h-4 w-4" style={{ color: YELLOW }} />
-            <span className="ole-num text-sm">{titles}</span>
-          </div>
-        )}
+    <div className="mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-8 px-3 pb-16 sm:px-4">
+      <div className="flex flex-col gap-4">
+        {/* A fita do torneio — colada torta no topo, como na Home. */}
+        <FitaRua tags={['#legendscup', '#persista', '#correloko']} className="-mx-3 -mt-3 py-2 sm:-mx-4" />
+
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-linha bg-concreto text-papel transition-colors hover:border-papel focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rua"
+            aria-label={L('Voltar', 'Back')}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <span className="min-w-0 truncate font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
+            — {L('Mata-mata das lendas', 'The legends knockout')}
+          </span>
+          {titles > 0 && (
+            <SeloRua tom="ouro-contorno" className="ml-auto">
+              <Trophy className="h-3.5 w-3.5" aria-hidden strokeWidth={2.5} />
+              {titles} {titles === 1 ? L('título', 'title') : L('títulos', 'titles')}
+            </SeloRua>
+          )}
+        </div>
+
+        <CinematicHero
+          image="/hero-legacy-full.png"
+          objectPosition="center 22%"
+          badgeLabel="Legends Cup"
+          BadgeIcon={Trophy}
+          eyebrow="#legendscup"
+          title="Legends Cup"
+          caption={
+            titles > 0
+              ? L(`${titles} ${titles === 1 ? 'título' : 'títulos'} · todas as lendas na final`, `${titles} ${titles === 1 ? 'title' : 'titles'} · every legend in the final`)
+              : L('5 fases · todas as lendas na final', '5 rounds · every legend in the final')
+          }
+        />
       </div>
 
-      <CinematicHero
-        image="/hero-legacy-full.png"
-        objectPosition="center 22%"
-        badgeLabel="Legends Cup"
-        BadgeIcon={Trophy}
-        eyebrow="#legendscup"
-        title="Legends Cup"
-        caption={
-          titles > 0
-            ? L(`${titles} ${titles === 1 ? 'título' : 'títulos'} · todas as lendas na final`, `${titles} ${titles === 1 ? 'title' : 'titles'} · every legend in the final`)
-            : L('5 fases · todas as lendas na final', '5 rounds · every legend in the final')
-        }
-      />
+      {flash && <ResultFlash flash={flash} onClose={() => dispatch({ type: 'DISMISS_LEGENDS_CUP_RESULT' })} />}
 
       {cupMoment && (
         <div className="flex justify-center">
@@ -240,34 +253,10 @@ export function LegendsCup() {
         </div>
       )}
 
-      {flash && (
-        <div
-          className={`flex flex-wrap items-center gap-3 px-4 py-3 ${
-            flash.outcome === 'champion' ? 'bg-neon-yellow text-black' : 'border border-white/10 bg-panel'
-          }`}
-        >
-          <span className="inline-flex items-center gap-2 font-impact text-2xl uppercase leading-[1.1]">
-            {flash.outcome === 'champion' ? (
-              <>
-                <Trophy className="h-5 w-5" aria-hidden strokeWidth={2.4} />
-                {L('Campeão', 'Champion')}
-              </>
-            ) : (
-              L('Eliminado', 'Eliminated')
-            )}
-          </span>
-          <span className={`text-sm ${flash.outcome === 'champion' ? 'text-black/70' : 'text-cimento'}`}>{L('chegou até', 'reached the')} {roundLabel(flash.reachedRound)}.</span>
-          <button
-            onClick={() => dispatch({ type: 'DISMISS_LEGENDS_CUP_RESULT' })}
-            className={`ml-auto font-mono text-[11px] uppercase tracking-[0.12em] ${flash.outcome === 'champion' ? 'text-black/70 hover:text-black' : 'text-cimento hover:text-white'}`}
-          >
-            {L('Fechar', 'Close')}
-          </button>
-        </div>
-      )}
-
       {error && (
-        <p className="border border-baixa/50 bg-panel px-4 py-3 text-sm text-baixa">{error}</p>
+        <p role="alert" className="border-l-[3px] border-baixa bg-concreto px-4 py-3 text-[14px] leading-snug text-papel">
+          {error}
+        </p>
       )}
 
       {!cup ? (
@@ -277,11 +266,12 @@ export function LegendsCup() {
           <Trail roundIndex={cup.roundIndex} />
 
           {inGroup ? (
-            <GroupStage cup={cup} onPlay={playGroupMatch} loading={loading} phaseExp={phaseExp} />
+            <GroupStage cup={cup} clubName={club.name} onPlay={playGroupMatch} loading={loading} phaseExp={phaseExp} />
           ) : (
             <KnockoutStage
               round={round!}
               cup={cup}
+              clubName={club.name}
               opp={opp}
               loading={loading}
               phaseExp={phaseExp}
@@ -292,14 +282,149 @@ export function LegendsCup() {
           <Bracket roundIndex={cup.roundIndex} runNumber={cup.runNumber} />
 
           <button
+            type="button"
             onClick={() => dispatch({ type: 'RESET_LEGENDS_CUP' })}
-            className="mx-auto flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.12em] text-poeira hover:text-white"
+            className="mx-auto flex min-h-[44px] items-center gap-2 font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-mudo underline-offset-4 hover:text-papel hover:underline"
           >
-            <RotateCcw className="h-3 w-3" /> {L('Abandonar campanha', 'Abandon campaign')}
+            <RotateCcw className="h-3 w-3" aria-hidden /> {L('Abandonar campanha', 'Abandon campaign')}
           </button>
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * Resultado da campanha. Campeão é o topo da escada: LENDA, ouro chapado.
+ * Eliminado fica no concreto, de igual pra igual — sem deboche.
+ */
+function ResultFlash({
+  flash,
+  onClose,
+}: {
+  flash: { outcome: string; reachedRound: string };
+  onClose: () => void;
+}) {
+  const champ = flash.outcome === 'champion';
+  return (
+    <section
+      aria-label={champ ? L('Campeão da Legends Cup', 'Legends Cup champion') : L('Eliminado da Legends Cup', 'Out of the Legends Cup')}
+      className={cn(
+        'relative flex min-w-0 flex-col gap-3 overflow-hidden px-5 pb-6 pt-5 sm:px-7',
+        champ ? 'bg-ouro-27 text-asfalto-27' : 'rua-grao border-2 border-linha bg-concreto text-papel',
+      )}
+    >
+      {champ && (
+        <span
+          aria-hidden
+          className="rua-reticula absolute -bottom-4 -right-4 h-44 w-56 [--reticula:rgba(13,13,12,0.4)]"
+          style={{
+            WebkitMaskImage: 'radial-gradient(circle at 100% 100%, #000 0%, transparent 72%)',
+            maskImage: 'radial-gradient(circle at 100% 100%, #000 0%, transparent 72%)',
+          }}
+        />
+      )}
+      <div className="relative flex min-w-0 items-center justify-between gap-3 font-prova text-[11.5px] font-bold uppercase tracking-[0.2em]">
+        <span className={cn('min-w-0 truncate', !champ && 'text-mudo')}>
+          {L('Fim de campanha', 'Campaign over')} · {roundLabel(flash.reachedRound)}
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          className={cn('min-h-[36px] shrink-0 px-1 underline-offset-4 hover:underline', !champ && 'text-mudo hover:text-papel')}
+        >
+          {L('Fechar', 'Close')}
+        </button>
+      </div>
+      <div className="relative flex min-w-0 items-end justify-between gap-4">
+        <span className="font-impact uppercase leading-[0.86]" style={{ fontSize: 'clamp(54px, 16vw, 104px)' }}>
+          {champ ? L('Campeão', 'Champion') : L('Eliminado', 'Out')}
+        </span>
+        {champ && <MarcaRua tipo="nove" className="h-24 shrink-0 bg-asfalto-27 sm:h-28" />}
+      </div>
+      <p className="relative font-voz text-[clamp(26px,7vw,36px)] leading-[1]">
+        {champ ? L('Respeito é ouro.', 'Respect is gold.') : L('Perdeu hoje. Volta amanhã.', 'Lost today. Back tomorrow.')}
+      </p>
+      <p className={cn('relative font-prova text-[11.5px] font-bold uppercase tracking-[0.16em]', !champ && 'text-suave')}>
+        {L('Chegou até', 'Reached')} {roundLabel(flash.reachedRound)}
+      </p>
+    </section>
+  );
+}
+
+function degrauDe(ovr: number): Degrau {
+  if (ovr >= 90) return 'lenda';
+  if (ovr >= 80) return 'respeito';
+  if (ovr >= 70) return 'corre';
+  return 'chao';
+}
+
+/** Inclinações de lambe colado — alternam pra não parecer grade. */
+const TORTO = [-2.5, 2, -1.5, 2.5, -2, 1.5];
+
+/**
+ * Carta de lenda na ESCADA do DS (mesma régua do DropLenda da Home): o OVR
+ * escolhe o degrau. Colada torta, endireita no hover.
+ */
+function CartaLenda({ legend, i }: { legend: PlayerEntity; i: number }) {
+  const ovr = overallFromAttributes(legend.attrs, legend.pos);
+  const d = degrauDe(ovr);
+  const destaque = d === 'respeito' ? 'text-ouro-27' : '';
+  return (
+    <div
+      className={cn(
+        'flex w-[138px] flex-col gap-2 p-2.5 shadow-[5px_7px_0_rgba(0,0,0,0.55)] transition-transform duration-200 hover:!rotate-0',
+        DEGRAU_CLASSES[d],
+      )}
+      style={{ transform: `rotate(${TORTO[i % TORTO.length]}deg)` }}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-col">
+          <span
+            className={cn(
+              'font-impact text-[38px] leading-[0.85]',
+              destaque,
+              d === 'chao' && 'text-transparent [-webkit-text-stroke:1.5px_var(--color-asfalto-27)]',
+            )}
+          >
+            {ovr}
+          </span>
+          <span className={cn('mt-1 font-impact text-[12px] uppercase leading-none', destaque)}>{posLabel(legend.pos)}</span>
+        </div>
+        <MarcaRua tipo="escudo" className={cn('h-6', d === 'respeito' ? 'bg-ouro-27' : 'bg-asfalto-27')} />
+      </div>
+      <div className={cn('relative aspect-[4/5] w-full overflow-hidden', d === 'respeito' ? 'bg-concreto' : 'bg-asfalto-27/10')}>
+        {legend.portraitUrl ? (
+          <img
+            src={legend.portraitUrl}
+            alt={legend.name}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            className="absolute inset-0 object-cover"
+            style={{ width: '100%', height: '100%', maxWidth: 'none', objectPosition: '50% 20%' }}
+          />
+        ) : (
+          <MarcaRua tipo="escudo" className="absolute left-1/2 top-1/2 h-10 -translate-x-1/2 -translate-y-1/2 bg-current opacity-30" />
+        )}
+      </div>
+      <span className="block min-w-0 truncate font-voz text-[21px] leading-none">{legend.name}</span>
+    </div>
+  );
+}
+
+/** Trilho horizontal de cartas — folga vertical pra inclinação não cortar. */
+function TrilhoLendas({ legends, label }: { legends: PlayerEntity[]; label: string }) {
+  return (
+    <ul
+      aria-label={label}
+      className="flex min-w-0 snap-x snap-mandatory gap-4 overflow-x-auto px-2 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
+      {legends.map((l, i) => (
+        <li key={l.id} className="shrink-0 snap-start">
+          <CartaLenda legend={l} i={i} />
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -318,108 +443,99 @@ function StartCard({ onStart, drawing }: { onStart: () => void; drawing: boolean
   }, []);
 
   return (
-    <div className="border border-white/10 bg-panel p-7">
+    <div className="flex min-w-0 flex-col gap-8">
       {finalLegends.length > 0 && (
-        <div className="mb-7">
-          <p className="mb-3 text-center font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
-            {L('Quem espera na final', 'Waiting in the final')}
-          </p>
-          <div className="grid grid-cols-5 gap-2">
-            {finalLegends.map((l) => (
-              <div key={l.id} className="overflow-hidden border border-white/10 bg-deep-black">
-                <div className="relative aspect-[3/4] bg-black">
-                  {l.portraitUrl ? (
-                    <img
-                      src={l.portraitUrl}
-                      alt={l.name}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      className="h-full w-full object-cover object-[50%_34%] grayscale"
-                    />
-                  ) : (
-                    <div className="grid h-full place-items-center font-mono text-[9px] text-poeira">{L('sem foto', 'no photo')}</div>
-                  )}
-                  <span
-                    className="ole-num absolute left-1 top-1 px-1 py-0.5 text-[10px] text-black"
-                    style={{ background: YELLOW }}
-                  >
-                    {overallFromAttributes(l.attrs, l.pos)}
-                  </span>
-                </div>
-                <p className="truncate px-1.5 py-1 text-[10px] font-bold text-giz">{l.name}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        <section aria-label={L('Quem espera na final', 'Waiting in the final')} className="flex min-w-0 flex-col gap-1">
+          <SecaoRua label={L('Quem espera na final', 'Waiting in the final')} />
+          <h2 className="flex flex-col font-impact text-[clamp(38px,10.5vw,58px)] uppercase leading-[0.9]">
+            <span className="font-voz text-[1.2em] normal-case leading-[0.9] text-papel">{L('Enfrente', 'Face')}</span>
+            <span className="text-rua">{L('as lendas.', 'the legends.')}</span>
+          </h2>
+          <TrilhoLendas legends={finalLegends} label={L('Lendas da final', 'Final legends')} />
+        </section>
       )}
 
-      <h2 className="text-center font-impact text-3xl uppercase leading-[1.1]">{L('Enfrente as lendas', 'Face the legends')}</h2>
+      {finalLegends.length === 0 && (
+        <h2 className="flex flex-col font-impact text-[clamp(38px,10.5vw,58px)] uppercase leading-[0.9]">
+          <span className="font-voz text-[1.2em] normal-case leading-[0.9] text-papel">{L('Enfrente', 'Face')}</span>
+          <span className="text-rua">{L('as lendas.', 'the legends.')}</span>
+        </h2>
+      )}
 
-      <ol className="mx-auto mt-6 max-w-xl space-y-3.5">
-        <Rule n={1} title={L('Fase de grupos', 'Group stage')}>
-          {emIngles() ? <>
-          Your club is drawn into a group with <strong>{GROUP_SIZE - 1} real managers</strong>. Single round:{' '}
-          {GROUP_MATCHES} matches, everyone plays everyone. Win 3 points, draw 1.{' '}
-          <strong>The top {GROUP_QUALIFIERS} qualify.</strong>
-          </> : <>
-          Seu clube cai num grupo com <strong>{GROUP_SIZE - 1} managers reais</strong>. Turno único:{' '}
-          {GROUP_MATCHES} jogos, todos contra todos. Vitória 3 pontos, empate 1.{' '}
-          <strong>Os {GROUP_QUALIFIERS} primeiros classificam.</strong>
-          </>}
-        </Rule>
-        <Rule n={2} title={L('Mata-mata', 'Knockout')}>
-          {emIngles() ? <>
-          Five rounds, and the opponent changes: the <strong>real legend cards</strong> of
-          OLEFOOT. Lose and you're out — no way back.
-          </> : <>
-          Cinco fases, e aí o adversário muda: são os <strong>cards reais das lendas</strong> da
-          OLEFOOT. Perdeu, acabou — não tem volta.
-          </>}
-        </Rule>
-        <Rule n={3} title={L('A cada degrau, mais lenda', 'Every step, more legends')}>
-          {emIngles() ? <>
-          The Playoff has 4 legends on the pitch. The final has <strong>all of them</strong>, with Palhinha 95.
-          </> : <>
-          O Playoff tem 4 lendas em campo. A final tem <strong>todas</strong>, com o Palhinha 95.
-          </>}
-        </Rule>
-        <Rule n={4} title={L('Prêmio', 'Prize')}>
-          {emIngles() ? <>
-          EXP for every round won, from 2.5M for qualifying to <strong>100M for the title</strong>. Winning the
-          Cup doubles the prize of your next campaign (up to 4×).
-          </> : <>
-          EXP por fase vencida, de 2,5M na classificação a <strong>100M no título</strong>. Ganhar o
-          Cup dobra o prêmio da próxima campanha (até 4×).
-          </>}
-        </Rule>
-      </ol>
+      <section aria-label={L('Regulamento', 'Rules')} className="flex min-w-0 flex-col gap-4">
+        <SecaoRua label={L('Regulamento', 'Rules')} />
+        <ol className="flex flex-col gap-2">
+          <Rule n={1} title={L('Fase de grupos', 'Group stage')}>
+            {emIngles() ? <>
+            Your club is drawn into a group with <strong>{GROUP_SIZE - 1} real managers</strong>. Single round:{' '}
+            {GROUP_MATCHES} matches, everyone plays everyone. Win 3 points, draw 1.{' '}
+            <strong>The top {GROUP_QUALIFIERS} qualify.</strong>
+            </> : <>
+            Seu clube cai num grupo com <strong>{GROUP_SIZE - 1} managers reais</strong>. Turno único:{' '}
+            {GROUP_MATCHES} jogos, todos contra todos. Vitória 3 pontos, empate 1.{' '}
+            <strong>Os {GROUP_QUALIFIERS} primeiros classificam.</strong>
+            </>}
+          </Rule>
+          <Rule n={2} title={L('Mata-mata', 'Knockout')}>
+            {emIngles() ? <>
+            Five rounds, and the opponent changes: the <strong>real legend cards</strong> of
+            OLEFOOT. Lose and you're out — no way back.
+            </> : <>
+            Cinco fases, e aí o adversário muda: são os <strong>cards reais das lendas</strong> da
+            OLEFOOT. Perdeu, acabou — não tem volta.
+            </>}
+          </Rule>
+          <Rule n={3} title={L('A cada degrau, mais lenda', 'Every step, more legends')}>
+            {emIngles() ? <>
+            The Playoff has 4 legends on the pitch. The final has <strong>all of them</strong>, with Palhinha 95.
+            </> : <>
+            O Playoff tem 4 lendas em campo. A final tem <strong>todas</strong>, com o Palhinha 95.
+            </>}
+          </Rule>
+          <Rule n={4} title={L('Prêmio', 'Prize')} ouro>
+            {emIngles() ? <>
+            EXP for every round won, from 2.5M for qualifying to <strong>100M for the title</strong>. Winning the
+            Cup doubles the prize of your next campaign (up to 4×).
+            </> : <>
+            EXP por fase vencida, de 2,5M na classificação a <strong>100M no título</strong>. Ganhar o
+            Cup dobra o prêmio da próxima campanha (até 4×).
+            </>}
+          </Rule>
+        </ol>
+      </section>
 
-      <div className="mt-7 text-center">
-        <button
-          onClick={onStart}
-          disabled={drawing}
-          className="ole-num inline-flex h-[50px] items-center justify-center gap-2 whitespace-nowrap px-6 text-[13px] uppercase text-black transition-colors hover:bg-white disabled:opacity-60 [--corte:12px] [clip-path:var(--clip-corte)] bg-neon-yellow"
-        >
-          {drawing ? <><Loader2 className="h-4 w-4 animate-spin" /> {L('Sorteando grupo…', 'Drawing group…')}</> : <><Play className="h-4 w-4" /> {L('Sortear grupo e começar', 'Draw group and start')}</>}
-        </button>
+      <div className="flex min-w-0 flex-col items-start gap-3">
+        <p className="font-voz text-[clamp(24px,6vw,30px)] leading-[1.05] text-papel">
+          {L('Ninguém desce o morro de graça.', 'Nobody comes down the hill for free.')}
+        </p>
+        <BotaoRua onClick={onStart} disabled={drawing} className="w-full sm:w-auto">
+          {drawing ? (
+            <><Loader2 className="h-5 w-5 animate-spin" aria-hidden /> {L('Sorteando grupo…', 'Drawing group…')}</>
+          ) : (
+            <>{L('Sortear grupo', 'Draw group')} <span aria-hidden>→</span></>
+          )}
+        </BotaoRua>
       </div>
     </div>
   );
 }
 
-function Rule({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+/** Regra do regulamento: número vazado (degrau CHÃO — é promessa), título no grito. */
+function Rule({ n, title, ouro, children }: { n: number; title: string; ouro?: boolean; children: React.ReactNode }) {
   return (
-    <li className="flex gap-3">
+    <li className={cn('flex min-w-0 gap-4 bg-concreto p-4', ouro && 'border-[3px] border-ouro-27')}>
       <span
-        className="ole-num mt-0.5 grid h-6 w-6 shrink-0 place-items-center text-xs text-black"
-        style={{ background: YELLOW }}
+        aria-hidden
+        className={cn(
+          'w-10 shrink-0 font-impact text-[44px] leading-[0.85] text-transparent',
+          ouro ? '[-webkit-text-stroke:1.5px_var(--color-ouro-27)]' : '[-webkit-text-stroke:1.5px_var(--color-papel)]',
+        )}
       >
-        {n}
+        {String(n).padStart(2, '0')}
       </span>
-      <div className="min-w-0 text-sm leading-relaxed text-cimento">
-        <span className="font-mono text-[11.5px] font-medium uppercase tracking-[0.12em] text-white">{title}</span>
-        <span className="mx-1.5 text-poeira">·</span>
-        {children}
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <span className={cn('font-impact text-[20px] uppercase leading-none', ouro ? 'text-ouro-27' : 'text-papel')}>{title}</span>
+        <p className="text-[14px] leading-relaxed text-suave [&_strong]:font-semibold [&_strong]:text-papel">{children}</p>
       </div>
     </li>
   );
@@ -428,130 +544,159 @@ function Rule({ n, title, children }: { n: number; title: string; children: Reac
 /** Trilha das fases — onde o manager está e o que falta. */
 function Trail({ roundIndex }: { roundIndex: number }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {LEGENDS_CUP_ROUNDS.map((r, i) => {
-        const done = i < roundIndex;
-        const active = i === roundIndex;
-        return (
-          <div
-            key={r}
-            className={`border px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-[0.12em] ${
-              active ? 'text-black' : done ? 'border-white/16 text-cimento' : 'border-white/10 text-poeira'
-            }`}
-            style={active ? { background: YELLOW, borderColor: 'transparent' } : undefined}
-          >
-            {roundLabel(r)}
-          </div>
-        );
-      })}
-    </div>
+    <nav aria-label={L('Fases da Legends Cup', 'Legends Cup rounds')} className="flex min-w-0 flex-col gap-2.5">
+      <SecaoRua
+        label={L('Fases', 'Rounds')}
+        aside={`${String(roundIndex + 1).padStart(2, '0')}/${String(LEGENDS_CUP_ROUNDS.length).padStart(2, '0')}`}
+      />
+      <ol className="flex min-w-0 flex-wrap items-center gap-1.5">
+        {LEGENDS_CUP_ROUNDS.map((r, i) => {
+          const done = i < roundIndex;
+          const active = i === roundIndex;
+          return (
+            <li
+              key={r}
+              aria-current={active ? 'step' : undefined}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.1em]',
+                active && 'bg-rua text-asfalto-27',
+                done && 'border-2 border-linha text-suave',
+                !active && !done && 'border-2 border-dashed border-fio text-mudo',
+              )}
+            >
+              {done && <Check className="h-3 w-3" aria-hidden strokeWidth={3} />}
+              {roundLabel(r)}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }
 
 /** Fase de grupos: tabela, jogos e o próximo confronto. */
 function GroupStage({
-  cup, onPlay, loading, phaseExp,
-}: { cup: LegendsCupState; onPlay: () => void; loading: boolean; phaseExp: number }) {
+  cup, clubName, onPlay, loading, phaseExp,
+}: { cup: LegendsCupState; clubName: string; onPlay: () => void; loading: boolean; phaseExp: number }) {
   const sorted = sortStandings(Object.values(cup.standings));
   const nameOf = (id: string) => cup.groupTeams.find((t) => t.id === id)?.name ?? id;
   const shortOf = (id: string) => cup.groupTeams.find((t) => t.id === id)?.short ?? id;
   const rival = currentGroupOpponent(cup);
   const rodada = cup.groupRoundsPlayed;
+  const myTeam = cup.groupTeams.find((t) => t.id === MANAGER_TEAM_ID);
 
   return (
-    <div className="space-y-4">
-      <div className="border border-white/10 bg-panel p-5 sm:p-6">
-        <div className="flex flex-wrap items-baseline gap-x-3">
-          <Users className="h-4 w-4" style={{ color: YELLOW }} />
-          <h2 className="font-impact text-2xl uppercase leading-[1.1]">{L('Grupo A', 'Group A')}</h2>
-          <span className="ml-auto font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
-            {L(`Rodada ${Math.min(rodada + 1, GROUP_MATCHES)} de ${GROUP_MATCHES}`, `Matchday ${Math.min(rodada + 1, GROUP_MATCHES)} of ${GROUP_MATCHES}`)}
-          </span>
+    <div className="flex min-w-0 flex-col gap-8">
+      {/* Próxima partida do manager — cartaz de convocação */}
+      {rival && (
+        <div className="flex min-w-0 flex-col gap-4">
+          <Convocacao
+            ariaLabel={L(`Sua partida: ${clubName} contra ${rival.name}`, `Your match: ${clubName} vs ${rival.name}`)}
+            kicker={L(`Legends Cup · ${roundLabel(LEGENDS_CUP_ROUNDS[0])}`, `Legends Cup · ${roundLabel(LEGENDS_CUP_ROUNDS[0])}`)}
+            aside={L(`Rodada ${rodada + 1}`, `Matchday ${rodada + 1}`)}
+            home={clubName}
+            homeMeta={myTeam ? L(`Força ${myTeam.overall}`, `Strength ${myTeam.overall}`) : null}
+            away={rival.name}
+            awayMeta={L(`Força ${rival.overall}`, `Strength ${rival.overall}`)}
+          >
+            <p className="font-voz text-[clamp(22px,5.6vw,28px)] leading-[1.05] text-papel">
+              {L('Escala o time e entra.', 'Set your XI and walk in.')}
+            </p>
+          </Convocacao>
+          <PlayBar onPlay={onPlay} loading={loading} phaseExp={phaseExp} expLabel={L('EXP por classificar', 'EXP for qualifying')} />
+        </div>
+      )}
+
+      <section aria-label={L('Tabela do grupo', 'Group table')} className="flex min-w-0 flex-col gap-3">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <SecaoRua
+            label={L('Tabela · turno único', 'Table · single round')}
+            aside={L(`Rodada ${Math.min(rodada + 1, GROUP_MATCHES)}/${GROUP_MATCHES}`, `Matchday ${Math.min(rodada + 1, GROUP_MATCHES)}/${GROUP_MATCHES}`)}
+          />
+          <h2 className="font-voz text-[clamp(38px,10vw,54px)] leading-[0.95] text-papel">{L('Grupo A', 'Group A')}</h2>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[440px] border-collapse text-sm">
-            <thead>
-              <tr className="font-mono text-[10px] uppercase tracking-[0.12em] text-cimento">
-                <th className="px-2 py-2 text-left font-medium">#</th>
-                <th className="px-2 py-2 text-left font-medium">{L('Clube', 'Club')}</th>
-                {[L('J', 'P'), L('V', 'W'), L('E', 'D'), L('D', 'L'), L('SG', 'GD'), 'Pts'].map((h) => (
-                  <th key={h} className="px-2 py-2 text-right font-medium">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((r, i) => {
-                const isMe = r.teamId === MANAGER_TEAM_ID;
-                const qualifies = i < GROUP_QUALIFIERS;
-                const num = `ole-num px-2 py-2.5 text-right ${isMe ? 'text-black' : 'text-cimento'}`;
-                return (
-                  <Fragment key={r.teamId}>
-                  <tr
-                    className={isMe ? 'bg-neon-yellow text-black' : 'border-t border-white/[0.06]'}
-                  >
-                    <td className="px-2 py-2.5">
-                      <span className={`ole-num text-[14px] ${isMe ? 'text-black' : qualifies ? 'text-alta' : 'text-cimento'}`}>
-                        {i + 1}
-                      </span>
-                    </td>
-                    <td className={`max-w-[160px] truncate px-2 py-2.5 ${isMe ? 'font-bold text-black' : 'text-giz'}`}>
-                      {nameOf(r.teamId)}
-                    </td>
-                    <td className={num}>{r.played}</td>
-                    <td className={num}>{r.wins}</td>
-                    <td className={num}>{r.draws}</td>
-                    <td className={num}>{r.losses}</td>
-                    <td className={num}>
-                      {goalDiff(r) > 0 ? `+${goalDiff(r)}` : goalDiff(r)}
-                    </td>
-                    <td className={`ole-num px-2 py-2.5 text-right ${isMe ? 'text-black' : 'text-white'}`}>{r.points}</td>
-                  </tr>
-                  {i === GROUP_QUALIFIERS - 1 && i < sorted.length - 1 && (
-                    <tr aria-hidden>
-                      <td colSpan={8} className="px-2 py-0">
-                        <div className="flex h-6 items-center gap-2">
-                          <span className="block h-0 grow border-t border-dashed border-alta" />
-                          <span className="whitespace-nowrap font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-alta">{L('Zona de classificação', 'Qualification zone')}</span>
-                          <span className="block h-0 grow border-t border-dashed border-alta" />
-                        </div>
-                      </td>
-                    </tr>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          {sorted.map((r, i) => {
+            const isMe = r.teamId === MANAGER_TEAM_ID;
+            const leader = i === 0 && !isMe;
+            const qualifies = i < GROUP_QUALIFIERS;
+            const gd = goalDiff(r);
+            const meta = L(
+              `${r.played}J · ${r.wins}V ${r.draws}E ${r.losses}D · SG ${gd > 0 ? `+${gd}` : gd}`,
+              `${r.played}P · ${r.wins}W ${r.draws}D ${r.losses}L · GD ${gd > 0 ? `+${gd}` : gd}`,
+            );
+            return (
+              <Fragment key={r.teamId}>
+                <div
+                  className={cn(
+                    'flex min-w-0 items-center gap-3 px-4',
+                    isMe && 'relative z-[1] my-1 h-[64px] -rotate-1 bg-rua text-asfalto-27 shadow-[4px_4px_0_var(--color-papel)]',
+                    !isMe && 'h-[56px]',
+                    leader && 'border-2 border-ouro-27 text-ouro-27',
+                    !isMe && !leader && 'bg-concreto text-papel',
                   )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+                >
+                  <span className={cn('w-10 shrink-0 font-impact text-[22px] leading-none', !isMe && !leader && qualifies && 'text-rua')}>
+                    #{String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span className="flex min-w-0 grow flex-col gap-1">
+                    <span className="block min-w-0 truncate font-impact text-[20px] uppercase leading-none">{nameOf(r.teamId)}</span>
+                    <span className={cn('block truncate font-prova text-[10.5px] font-bold uppercase tracking-[0.1em]', isMe ? 'text-asfalto-27/75' : 'text-mudo')}>
+                      {meta}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-impact text-[26px] leading-none">{r.points}</span>
+                </div>
+                {i === GROUP_QUALIFIERS - 1 && i < sorted.length - 1 && (
+                  <div className="flex h-6 items-center gap-2" aria-label={L('Zona de classificação acima desta linha', 'Qualification zone above this line')}>
+                    <span className="block h-0 grow border-t-2 border-dashed border-rua" />
+                    <span className="font-prova text-[11px] font-bold tracking-[0.2em] text-rua">{L('CLASSIFICA', 'QUALIFY')}</span>
+                    <span className="block h-0 grow border-t-2 border-dashed border-rua" />
+                  </div>
+                )}
+              </Fragment>
+            );
+          })}
         </div>
 
-        <p className="mt-3 flex items-start gap-2 font-mono text-[11px] leading-snug text-cimento">
-          <Info className="mt-px h-3.5 w-3.5 shrink-0" />
+        <p className="font-prova text-[11px] font-bold uppercase leading-snug tracking-[0.1em] text-mudo">
           {L(`Os ${GROUP_QUALIFIERS} primeiros vão ao Playoff · a rodada inteira roda junto com o seu jogo`, `Top ${GROUP_QUALIFIERS} go to the Playoff · the whole matchday plays alongside your match`)}
         </p>
-      </div>
+      </section>
 
       {/* Jogos do grupo, rodada a rodada */}
-      <div className="border border-white/10 bg-panel p-5 sm:p-6">
-        <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">{L('Jogos', 'Matches')}</h3>
-        <div className="mt-3 space-y-1">
+      <section aria-label={L('Jogos do grupo', 'Group matches')} className="flex min-w-0 flex-col gap-3">
+        <SecaoRua label={L('Jogos', 'Matches')} />
+        <div className="flex min-w-0 flex-col gap-4">
           {Array.from({ length: GROUP_MATCHES }, (_, r) => (
-            <div key={r}>
-              <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-poeira">{L('Rodada', 'Matchday')} {r + 1}</div>
+            <div key={r} className="flex min-w-0 flex-col gap-1.5">
+              <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.2em] text-fio">
+                {L('Rodada', 'Matchday')} {String(r + 1).padStart(2, '0')}
+              </span>
               {cup.groupFixtures.filter((f) => f.round === r).map((f) => {
                 const played = f.scoreHome !== undefined;
+                const homeMe = f.homeId === MANAGER_TEAM_ID;
+                const awayMe = f.awayId === MANAGER_TEAM_ID;
                 return (
                   <div
                     key={`${f.round}-${f.homeId}-${f.awayId}`}
-                    className={`flex items-center gap-2 py-1.5 text-sm ${f.isManager ? 'text-giz' : 'text-cimento'}`}
+                    className={cn(
+                      'flex h-12 min-w-0 items-center gap-2 bg-concreto px-3',
+                      f.isManager && 'border-l-[3px] border-rua',
+                    )}
                   >
-                    <span className={`flex-1 truncate text-right ${f.isManager && f.homeId === MANAGER_TEAM_ID ? 'font-bold text-neon-yellow' : ''}`}>
+                    <span className={cn('min-w-0 flex-1 truncate text-right font-impact text-[17px] uppercase leading-none', homeMe ? 'text-rua' : 'text-suave')}>
                       {shortOf(f.homeId)}
                     </span>
-                    <span className="ole-num w-14 shrink-0 text-center">
-                      {played ? `${f.scoreHome}-${f.scoreAway}` : <span className="text-poeira">·</span>}
+                    <span className="w-16 shrink-0 text-center">
+                      {played ? (
+                        <span className="font-spray text-[24px] font-black leading-none text-papel">{f.scoreHome}×{f.scoreAway}</span>
+                      ) : (
+                        <span aria-label={L('a jogar', 'to play')} className="font-voz text-[22px] leading-none text-fio">x</span>
+                      )}
                     </span>
-                    <span className={`flex-1 truncate ${f.isManager && f.awayId === MANAGER_TEAM_ID ? 'font-bold text-neon-yellow' : ''}`}>
+                    <span className={cn('min-w-0 flex-1 truncate font-impact text-[17px] uppercase leading-none', awayMe ? 'text-rua' : 'text-suave')}>
                       {shortOf(f.awayId)}
                     </span>
                   </div>
@@ -560,78 +705,50 @@ function GroupStage({
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Próxima partida do manager */}
-      {rival && (
-        <div className="border border-white/10 bg-panel p-6">
-          <div className="flex flex-wrap items-baseline gap-x-3">
-            <span className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
-              {L('Sua partida — rodada', 'Your match — matchday')} {rodada + 1}
-            </span>
-            <h2 className="min-w-0 truncate font-impact text-2xl uppercase leading-[1.1]">{rival.name}</h2>
-            <span className="ole-num ml-auto text-sm" style={{ color: YELLOW }}>
-              {L('força', 'strength')} {rival.overall}
-            </span>
-          </div>
-          <PlayBar onPlay={onPlay} loading={loading} phaseExp={phaseExp} expLabel={L('EXP por classificar', 'EXP for qualifying')} />
-        </div>
-      )}
+      </section>
     </div>
   );
 }
 
-/** Mata-mata: os cards das lendas que entram em campo nesta fase. */
+/** Mata-mata: convocação contra o time de lendas + as cartas que entram em campo. */
 function KnockoutStage({
-  round, cup, opp, loading, phaseExp, onPlay,
+  round, cup, clubName, opp, loading, phaseExp, onPlay,
 }: {
-  round: string; cup: LegendsCupState; opp: LegendsCupOpponent | null;
+  round: string; cup: LegendsCupState; clubName: string; opp: LegendsCupOpponent | null;
   loading: boolean; phaseExp: number; onPlay: () => void;
 }) {
   const teamId = opp?.stub.id ?? 'legendscup';
   const persona = coachPersonaFor(teamId);
   const line = personaLine(teamId, 'pre', round);
+  const isFinal = cup.roundIndex === LEGENDS_CUP_ROUNDS.length - 1;
+  const oppName = oppNameLabel(LEGENDS_CUP_OPPONENT_NAME[round as never]) ?? '—';
 
   return (
-    <div className="border border-white/10 bg-panel p-6">
-      <div className="flex flex-wrap items-baseline gap-x-3">
-        <span className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
-          {cup.roundIndex === LEGENDS_CUP_ROUNDS.length - 1 ? L('A decisão', 'The decider') : L('Próximo desafio', 'Next challenge')}
-        </span>
-        <h2 className="min-w-0 truncate font-impact text-2xl uppercase leading-[1.1]">{oppNameLabel(LEGENDS_CUP_OPPONENT_NAME[round as never])}</h2>
-        {opp && (
-          <span className="ole-num ml-auto text-sm" style={{ color: YELLOW }}>
-            {L('força', 'strength')} {opp.stub.strength}
-          </span>
-        )}
-      </div>
-
-      <p className="mt-2 flex items-start gap-1.5 text-[13px] leading-snug text-cimento">
-        <Users className="mt-0.5 h-3.5 w-3.5 shrink-0 text-poeira" aria-hidden />
-        <span><span className="font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-giz">{persona.label}</span>: “{line}”</span>
-      </p>
+    <div className="flex min-w-0 flex-col gap-4">
+      <Convocacao
+        ariaLabel={L(`${roundLabel(round)}: ${clubName} contra ${oppName}`, `${roundLabel(round)}: ${clubName} vs ${oppName}`)}
+        kicker={`Legends Cup · ${roundLabel(round)}`}
+        aside={isFinal ? L('A decisão', 'The decider') : L('Mata-mata', 'Knockout')}
+        home={clubName}
+        away={oppName}
+        awayMeta={opp ? L(`Força ${opp.stub.strength}`, `Strength ${opp.stub.strength}`) : null}
+        tag={isFinal ? <SeloRua tom="ouro" className="-rotate-2">{L('Todas as lendas', 'Every legend')}</SeloRua> : undefined}
+      >
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.2em] text-mudo">— {persona.label}</span>
+          <p className="font-voz text-[clamp(22px,5.6vw,28px)] leading-[1.05] text-papel">“{line}”</p>
+        </div>
+      </Convocacao>
 
       {loading ? (
-        <div className="grid place-items-center py-10 text-cimento"><Loader2 className="h-6 w-6 animate-spin" /></div>
-      ) : opp && opp.legends.length > 0 ? (
-        <div className="mt-5 grid grid-cols-3 gap-2.5 sm:grid-cols-5">
-          {opp.legends.map((l) => (
-            <div key={l.id} className="overflow-hidden border border-white/10 bg-deep-black">
-              <div className="relative aspect-[3/4] bg-black">
-                {l.portraitUrl ? (
-                  <img src={l.portraitUrl} alt={l.name} loading="lazy" referrerPolicy="no-referrer"
-                    className="h-full w-full object-cover object-[50%_34%]" />
-                ) : (
-                  <div className="grid h-full place-items-center font-mono text-[10px] text-poeira">{L('sem foto', 'no photo')}</div>
-                )}
-                <span className="ole-num absolute left-1.5 top-1.5 px-1.5 py-0.5 text-xs text-black" style={{ background: YELLOW }}>
-                  {overallFromAttributes(l.attrs, l.pos)}
-                </span>
-              </div>
-              <p className="truncate px-2 py-1.5 text-[11.5px] font-bold text-giz">{l.name}</p>
-            </div>
-          ))}
+        <div className="grid place-items-center py-10 text-mudo">
+          <Loader2 className="h-6 w-6 animate-spin" aria-label={L('Carregando lendas', 'Loading legends')} />
         </div>
+      ) : opp && opp.legends.length > 0 ? (
+        <section aria-label={L('Lendas em campo', 'Legends on the pitch')} className="flex min-w-0 flex-col gap-1">
+          <SecaoRua label={L('Quem entra em campo', 'Who takes the pitch')} aside={opp.legends.length} />
+          <TrilhoLendas legends={opp.legends} label={L('Lendas da fase', 'Round legends')} />
+        </section>
       ) : null}
 
       <PlayBar onPlay={onPlay} loading={loading} phaseExp={phaseExp} expLabel={L('EXP por avançar', 'EXP for advancing')} />
@@ -643,61 +760,79 @@ function PlayBar({
   onPlay, loading, phaseExp, expLabel,
 }: { onPlay: () => void; loading: boolean; phaseExp: number; expLabel: string }) {
   return (
-    <div className="mt-6 flex flex-wrap items-center gap-3">
-      <button
-        onClick={onPlay}
-        disabled={loading}
-        className="ole-num inline-flex h-[50px] items-center justify-center gap-2 whitespace-nowrap px-6 text-[13px] uppercase text-black transition-colors hover:bg-white disabled:opacity-60 [--corte:12px] [clip-path:var(--clip-corte)] flex-1 bg-neon-yellow"
-      >
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />} {L('Jogar', 'Play')}
-      </button>
-      <div className="text-right">
-        <div className="ole-num text-base" style={{ color: YELLOW }}>
-          {phaseExp.toLocaleString(LOCALE)}
-        </div>
-        <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-cimento">{expLabel}</div>
+    <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3">
+      <BotaoRua onClick={onPlay} disabled={loading} className="grow">
+        {loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : null}
+        {L('Jogar', 'Play')} <span aria-hidden>→</span>
+      </BotaoRua>
+      <div className="flex shrink-0 flex-col items-end">
+        <span className="font-spray text-[30px] font-black leading-none text-papel">+{phaseExp.toLocaleString(LOCALE)}</span>
+        <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.14em] text-mudo">{expLabel}</span>
       </div>
     </div>
   );
 }
 
-/** Chaveamento: o caminho inteiro até a final, com o que espera em cada degrau. */
+/**
+ * O caminho até o título — cada fase é um ingresso: a que passou fica
+ * carimbada, a atual é rua colada torta, as que faltam são CHÃO (tracejado) e
+ * a final, onde moram todas as lendas, leva o fio de ouro.
+ */
 function Bracket({ roundIndex, runNumber }: { roundIndex: number; runNumber: number }) {
+  const last = LEGENDS_CUP_ROUNDS.length - 1;
   return (
-    <div className="border border-white/10 bg-panel p-5 sm:p-6">
-      <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-cimento">
-        {L('O caminho até o título', 'The road to the title')}
-      </h3>
-      <div className="mt-4 space-y-1.5">
+    <section aria-label={L('O caminho até o título', 'The road to the title')} className="flex min-w-0 flex-col gap-3">
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <SecaoRua label={L('Chave', 'Bracket')} />
+        <h2 className="font-voz text-[clamp(34px,9vw,48px)] leading-[0.95] text-papel">{L('O caminho até o título', 'The road to the title')}</h2>
+      </div>
+      <ol className="flex min-w-0 flex-col gap-2">
         {LEGENDS_CUP_ROUNDS.map((r, i) => {
           const legends = LEGENDS_CUP_SQUADS[r]?.length ?? 0;
           const done = i < roundIndex;
           const active = i === roundIndex;
+          const isFinal = i === last;
           return (
-            <div
+            <li
               key={r}
-              className={`flex flex-wrap items-center gap-x-3 gap-y-1 border px-3 py-2.5 ${
-                active ? 'border-neon-yellow bg-card' : 'border-white/[0.07]'
-              }`}
+              aria-current={active ? 'step' : undefined}
+              className={cn(
+                'flex min-w-0 items-stretch',
+                active && 'relative z-[1] my-1 -rotate-1 bg-rua text-asfalto-27 shadow-[4px_4px_0_var(--color-papel)]',
+                done && 'bg-concreto text-mudo',
+                !active && !done && isFinal && 'border-[3px] border-ouro-27 text-ouro-27',
+                !active && !done && !isFinal && 'border-2 border-dashed border-fio text-suave',
+              )}
             >
-              <span className={`ole-num text-xs uppercase ${
-                active ? 'text-neon-yellow' : done ? 'text-cimento' : 'text-giz'
-              }`}>
-                {roundLabel(r)}
-              </span>
-              <span className="text-[13px] text-cimento">{oppNameLabel(LEGENDS_CUP_OPPONENT_NAME[r])}</span>
-              <span className="font-mono text-[11px] text-poeira">
-                {legends > 0 ? L(`${legends} lendas + Jiva`, `${legends} legends + Jiva`) : L(`${GROUP_SIZE - 1} managers reais`, `${GROUP_SIZE - 1} real managers`)}
-              </span>
-              <span className="ole-num ml-auto text-[11px] text-cimento">
-                {legendsCupPhaseExp(i, runNumber).toLocaleString(LOCALE)} EXP
-              </span>
-              {done && <Check className="h-3.5 w-3.5 text-neon-yellow" aria-hidden strokeWidth={3} />}
-            </div>
+              <div className="flex min-w-0 grow flex-col gap-1 px-4 py-3">
+                <span className={cn('font-impact text-[22px] uppercase leading-none', done && 'line-through decoration-2')}>{roundLabel(r)}</span>
+                <span className="truncate font-prova text-[10.5px] font-bold uppercase tracking-[0.12em]">
+                  {oppNameLabel(LEGENDS_CUP_OPPONENT_NAME[r])} ·{' '}
+                  {legends > 0 ? L(`${legends} lendas + Jiva`, `${legends} legends + Jiva`) : L(`${GROUP_SIZE - 1} managers reais`, `${GROUP_SIZE - 1} real managers`)}
+                </span>
+              </div>
+              {/* Canhoto: o prêmio da fase, separado pelo picote. */}
+              <div
+                className={cn(
+                  'flex shrink-0 flex-col items-end justify-center border-l-2 border-dashed px-3 py-3',
+                  active && 'border-asfalto-27/40',
+                )}
+                style={!active ? { borderLeftColor: 'color-mix(in srgb, currentColor 30%, transparent)' } : undefined}
+              >
+                {done ? (
+                  <Check className="h-5 w-5 text-papel" aria-label={L('Passou', 'Cleared')} strokeWidth={3} />
+                ) : (
+                  <>
+                    <span className="font-spray text-[20px] font-black leading-none">{legendsCupPhaseExp(i, runNumber).toLocaleString(LOCALE)}</span>
+                    <span className="font-prova text-[9.5px] font-bold uppercase tracking-[0.14em]">EXP</span>
+                  </>
+                )}
+              </div>
+            </li>
           );
         })}
-      </div>
-    </div>
+      </ol>
+    </section>
   );
 }
 

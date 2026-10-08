@@ -49,6 +49,7 @@ import {
 } from '@/systems/consequenceViews';
 import { cn } from '@/lib/utils';
 import { L } from '@/i18n/L';
+import { DEGRAU_CLASSES, SeloRua, type Degrau } from '@/components/ui';
 import { rotuloPosicao } from '@/transfer/marketFilters';
 
 // ─── Helpers ───────────────────────────────────────────────────────
@@ -100,13 +101,23 @@ const ROTULO_DIMENSAO: Record<string, string> = {
 };
 
 // ─── Severity styling ──────────────────────────────────────────────
+// DS 2027: verde/vermelho só como sinal de jogo (ícone/delta), nunca bloco.
 
-const SEVERITY_STYLE: Record<Severity, { color: string; Icon: typeof Activity }> = {
-  alert: { color: 'text-[var(--color-danger)] border-l-red-400', Icon: AlertOctagon },
-  celebration: { color: 'text-[var(--color-success)] border-l-emerald-400', Icon: Sparkles },
-  neutral: { color: 'text-white/70 border-l-white/30', Icon: Activity },
-  info: { color: 'text-neon-yellow border-l-blue-300', Icon: Clock },
+const SEVERITY_STYLE: Record<Severity, { color: string; rail: string; Icon: typeof Activity }> = {
+  alert: { color: 'text-baixa', rail: 'border-l-baixa', Icon: AlertOctagon },
+  celebration: { color: 'text-alta', rail: 'border-l-alta', Icon: Sparkles },
+  neutral: { color: 'text-suave', rail: 'border-l-linha', Icon: Activity },
+  info: { color: 'text-rua', rail: 'border-l-rua', Icon: Clock },
 };
+
+const ROTULO_CLS = 'font-prova text-[10.5px] font-bold uppercase tracking-[0.18em] text-mudo';
+
+function degrauDoOvr(ovr: number): Degrau {
+  if (ovr >= 90) return 'lenda';
+  if (ovr >= 80) return 'respeito';
+  if (ovr >= 70) return 'corre';
+  return 'chao';
+}
 
 // ─── Sub-components ────────────────────────────────────────────────
 
@@ -125,117 +136,50 @@ function HeroCard({
   isUnavailable: boolean;
   outForMatches: number;
 }) {
-  // VOLT2: eyebrow + nome + OVR chapado (sem marca-d'água, sem brilho).
+  // DS 2027: a carta na escada (OVR decide o degrau) + nome na voz.
   return (
     <motion.section
       initial={{ scale: 0.97, opacity: 0, y: 8 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-      className={cn(
-        'relative border border-l-[3px] bg-[var(--color-card)] p-5 sm:p-6 overflow-hidden',
-        isUnavailable ? 'border-l-[var(--color-danger)]' : 'border-l-neon-yellow',
-      )}
-      style={{ borderRadius: 'var(--radius-md)' }}
+      className="rua-grao relative flex min-w-0 items-stretch gap-4 bg-concreto p-4 sm:gap-5 sm:p-6"
     >
-
-      {/* Badge "indisponível" no canto */}
-      {isUnavailable && (
-        <div
-          className="absolute top-4 right-4 inline-flex items-center gap-1.5 px-2 py-1 bg-[var(--color-danger)]/15 text-[var(--color-danger)] border border-[var(--color-danger)]/40"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 900,
-            fontSize: '9px',
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-            borderRadius: 'var(--radius-sm)',
-          }}
-        >
-          <ShieldOff size={10} />
-          {L('Indisponível', 'Unavailable')}{outForMatches > 0 ? ` · ${outForMatches}${L('P', 'M')}` : ''}
+      {/* OVR + POS — a carta no degrau dela */}
+      <div
+        className={cn(
+          'flex w-[88px] shrink-0 -rotate-2 flex-col items-center justify-center gap-1 py-3 shadow-[4px_4px_0_var(--color-papel)] sm:w-[104px]',
+          DEGRAU_CLASSES[degrauDoOvr(ovr)],
+        )}
+      >
+        <div className="font-impact leading-none tabular-nums" style={{ fontSize: 'clamp(44px, 12vw, 64px)' }}>
+          {ovr}
         </div>
-      )}
+        <div className="font-prova text-[11px] font-bold uppercase tracking-[0.18em]">{rotuloPosicao(pos)}</div>
+      </div>
 
-      <div className="relative flex items-start gap-5">
-        {/* OVR + POS */}
-        <div className="shrink-0 flex flex-col items-center gap-2">
-          <div
-            className="ole-num text-white leading-none tabular-nums"
-            style={{ fontSize: 'clamp(48px, 9vw, 76px)' }}
-          >
-            {ovr}
-          </div>
-          <div
-            className="px-2 py-1 bg-deep-black/60 border border-white/15 text-white/80"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 900,
-              fontSize: '10px',
-              letterSpacing: '0.24em',
-              borderRadius: 'var(--radius-sm)',
-            }}
-          >
-            {rotuloPosicao(pos)}
-          </div>
-        </div>
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+        <span className="font-prova text-[11px] font-bold uppercase tracking-[0.22em] text-mudo">
+          — {L('Painel de Transparência', 'Transparency Panel')}
+        </span>
+        <h1 className="min-w-0 break-words font-voz leading-[0.95] text-papel" style={{ fontSize: 'clamp(32px, 9vw, 52px)' }}>
+          {name}
+        </h1>
 
-        {/* Info: eyebrow + Nome Moret + régua + valor */}
-        <div className="flex-1 min-w-0 space-y-2">
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="block h-px w-6 bg-neon-yellow/55" />
-            <span
-              className="text-neon-yellow"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: '10px',
-                letterSpacing: '0.32em',
-                textTransform: 'uppercase',
-              }}
-            >
-              {L('Painel de Transparência', 'Transparency Panel')}
+        {isUnavailable && (
+          <SeloRua tom="cal" className="self-start">
+            <ShieldOff size={12} aria-hidden />
+            {L('Indisponível', 'Unavailable')}{outForMatches > 0 ? ` · ${outForMatches}${L('P', 'M')}` : ''}
+          </SeloRua>
+        )}
+
+        {marketCents > 0 && (
+          <div className="flex min-w-0 items-baseline gap-2 pt-1">
+            <span className="min-w-0 truncate font-spray font-black leading-none tabular-nums text-ouro-27" style={{ fontSize: 'clamp(24px, 7vw, 32px)' }}>
+              {formatBroFromCents(marketCents)}
             </span>
+            <span className={ROTULO_CLS}>{L('valor atual', 'current value')}</span>
           </div>
-          <h1
-            className="text-white leading-[0.95]"
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'clamp(32px, 5.5vw, 48px)',
-              letterSpacing: '-0.025em',
-            }}
-          >
-            {name}
-          </h1>
-          <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow" />
-
-          {marketCents > 0 && (
-            <div className="pt-1.5 flex items-baseline gap-2">
-              <DollarSign size={13} className="text-neon-yellow/80 self-center" />
-              <span
-                className="text-neon-yellow tabular-nums leading-none"
-                style={{
-                  fontFamily: 'var(--font-impact)',
-                  fontSize: 'clamp(22px, 3.5vw, 28px)',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                {formatBroFromCents(marketCents)}
-              </span>
-              <span
-                className="text-white/45"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 800,
-                  fontSize: '9px',
-                  letterSpacing: '0.28em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {L('valor atual', 'current value')}
-              </span>
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </motion.section>
   );
@@ -292,58 +236,31 @@ function StatusGrid({
     },
   ] as const;
 
-  const toneClass: Record<'urgent' | 'negative' | 'neutral' | 'positive', string> = {
-    urgent: 'text-[var(--color-danger)] border-[var(--color-danger)]/30 border-l-[var(--color-danger)]',
-    negative: 'text-[var(--color-warning)] border-[var(--color-warning)]/30 border-l-[var(--color-warning)]',
-    neutral: 'text-white border-white/8 border-l-white/15',
-    positive: 'text-[var(--color-success)] border-[var(--color-success)]/30 border-l-[var(--color-success)]',
+  const num: Record<'urgent' | 'negative' | 'neutral' | 'positive', string> = {
+    urgent: 'text-baixa',
+    negative: 'text-rua',
+    neutral: 'text-papel',
+    positive: 'text-alta',
   };
 
   return (
-    <section
-      aria-label={L('Status atual', 'Current status')}
-      className="grid grid-cols-2 sm:grid-cols-4 gap-2.5"
-    >
+    <section aria-label={L('Status atual', 'Current status')} className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
       {cells.map((c) => (
         <div
           key={c.key}
           className={cn(
-            'flex flex-col gap-2 p-4 border border-l-[3px] bg-[var(--color-card)]',
-            toneClass[c.tone],
+            'flex min-w-0 flex-col gap-2 border-l-[5px] bg-concreto p-3.5',
+            c.tone === 'urgent' || c.tone === 'negative' ? 'border-rua' : 'border-linha',
           )}
-          style={{ borderRadius: 'var(--radius-md)' }}
         >
-          <div className="flex items-center gap-1.5">
-            <c.Icon size={11} className="opacity-65" />
-            <span
-              className="text-white/55"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: '10px',
-                letterSpacing: '0.24em',
-                textTransform: 'uppercase',
-              }}
-            >
-              {c.label}
-            </span>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <c.Icon size={12} className="shrink-0 text-mudo" aria-hidden />
+            <span className={cn(ROTULO_CLS, 'truncate')}>{c.label}</span>
           </div>
-          <div
-            className="leading-none tabular-nums"
-            style={{
-              fontFamily: 'var(--font-impact)',
-              fontSize: 'clamp(24px, 4vw, 30px)',
-              letterSpacing: '-0.03em',
-            }}
-          >
+          <div className={cn('font-spray font-black leading-none tabular-nums', num[c.tone])} style={{ fontSize: 'clamp(28px, 8vw, 36px)' }}>
             {c.value}
           </div>
-          <div
-            className="text-white/45"
-            style={{ fontFamily: 'var(--font-ui)', fontSize: '10px' }}
-          >
-            {c.hint}
-          </div>
+          <div className="text-[11.5px] text-mudo">{c.hint}</div>
         </div>
       ))}
     </section>
@@ -365,55 +282,25 @@ function SeasonStats({
 }) {
   if (matches === 0) {
     return (
-      <div
-        className="text-white/45 p-4 bg-[var(--color-card)] border border-dashed border-white/12 text-center"
-        style={{
-          fontFamily: 'var(--font-ui)',
-          fontSize: '12px',
-          borderRadius: 'var(--radius-md)',
-        }}
-      >
+      <div className="border-2 border-dashed border-fio px-4 py-4 font-voz text-[21px] leading-[1.1] text-papel">
         {L('Sem partidas oficiais ainda nesta temporada.', 'No official matches yet this season.')}
       </div>
     );
   }
   const items = [
-    { key: 'matches', label: L('Partidas', 'Matches'), value: matches, Icon: Calendar, color: 'text-white' },
-    { key: 'goals', label: L('Gols', 'Goals'), value: goals, Icon: Target, color: 'text-[var(--color-success)]' },
-    { key: 'assists', label: L('Assists', 'Assists'), value: assists, Icon: Award, color: 'text-neon-yellow' },
-    { key: 'yellows', label: L('Amarelos', 'Yellows'), value: yellows, Icon: AlertTriangle, color: 'text-[var(--color-warning)]' },
-    { key: 'reds', label: L('Vermelhos', 'Reds'), value: reds, Icon: AlertOctagon, color: 'text-[var(--color-danger)]' },
+    { key: 'matches', label: L('Partidas', 'Matches'), value: matches, Icon: Calendar },
+    { key: 'goals', label: L('Gols', 'Goals'), value: goals, Icon: Target },
+    { key: 'assists', label: L('Assists', 'Assists'), value: assists, Icon: Award },
+    { key: 'yellows', label: L('Amarelos', 'Yellows'), value: yellows, Icon: AlertTriangle },
+    { key: 'reds', label: L('Vermelhos', 'Reds'), value: reds, Icon: AlertOctagon },
   ];
   return (
-    <section className="grid grid-cols-5 gap-2">
+    <section className="grid grid-cols-5 divide-x-2 divide-linha border-y-2 border-linha">
       {items.map((i) => (
-        <div
-          key={i.key}
-          className="flex flex-col items-center gap-1.5 p-3 bg-[var(--color-card)] border border-white/8"
-          style={{ borderRadius: 'var(--radius-md)' }}
-        >
-          <i.Icon size={12} className={cn('opacity-70', i.color)} />
-          <div
-            className={cn('leading-none tabular-nums', i.color)}
-            style={{
-              fontFamily: 'var(--font-impact)',
-              fontSize: 'clamp(18px, 3vw, 22px)',
-            }}
-          >
-            {i.value}
-          </div>
-          <div
-            className="text-white/40 text-center"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 800,
-              fontSize: '9px',
-              letterSpacing: '0.22em',
-              textTransform: 'uppercase',
-            }}
-          >
-            {i.label}
-          </div>
+        <div key={i.key} className="flex min-w-0 flex-col items-center gap-1.5 px-1 py-3">
+          <i.Icon size={12} className="text-mudo" aria-hidden />
+          <div className="font-spray text-[clamp(22px,6vw,28px)] font-black leading-none tabular-nums text-papel">{i.value}</div>
+          <div className="w-full truncate text-center font-prova text-[9.5px] font-bold uppercase tracking-[0.1em] text-mudo">{i.label}</div>
         </div>
       ))}
     </section>
@@ -427,44 +314,35 @@ function ActiveConsequences({
 }) {
   if (list.length === 0) {
     return (
-      <div className="text-center py-6 px-4 rounded-sm bg-white/3 border border-dashed border-white/10">
-        <Sparkles size={20} className="text-white/30 mx-auto mb-2" />
-        <p className="text-[12px] text-white/55">{L('Nenhuma consequência ativa.', 'No active consequences.')}</p>
-        <p className="text-[10px] text-white/35 mt-0.5">
+      <div className="flex flex-col items-start gap-1.5 border-2 border-dashed border-fio px-4 py-4">
+        <p className="font-voz text-[21px] leading-[1.1] text-papel">{L('Nenhuma consequência ativa.', 'No active consequences.')}</p>
+        <p className="font-prova text-[11px] text-mudo">
           {L('Jogador estável — sem efeitos pendentes.', 'Player stable — no pending effects.')}
         </p>
       </div>
     );
   }
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
       {list.map((e) => {
         const sty = SEVERITY_STYLE[e.severity];
         return (
-          <div
-            key={e.consequence.id}
-            className={cn(
-              'flex items-start gap-3 p-3 rounded-sm border border-white/8 border-l-4 bg-[var(--color-card)]',
-              sty.color.split(' ').filter((c) => c.startsWith('border-l-')).join(' '),
-            )}
-          >
-            <sty.Icon size={14} className={cn('shrink-0 mt-0.5', sty.color.split(' ')[0])} />
-            <div className="flex-1 min-w-0">
+          <div key={e.consequence.id} className={cn('flex min-w-0 items-start gap-3 border-l-[5px] bg-concreto p-3.5', sty.rail)}>
+            <sty.Icon size={15} className={cn('mt-0.5 shrink-0', sty.color)} aria-hidden />
+            <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">
-                <div className={cn('text-sm font-display font-bold truncate', sty.color.split(' ')[0])}>
-                  {e.title}
-                </div>
-                <div className="text-[10px] text-white/40 shrink-0 tabular-nums">
+                <div className="min-w-0 truncate font-impact text-[17px] uppercase leading-[1.1] text-papel">{e.title}</div>
+                <div className="shrink-0 font-prova text-[11px] font-bold tabular-nums text-mudo">
                   {formatTimeLeft(e.ms_until_expiry)}
                 </div>
               </div>
-              <div className="text-[11px] text-white/55 mt-0.5">{e.subtitle}</div>
-              <div className="mt-2 flex items-center gap-3 text-[10px] text-white/40">
-                <span className="uppercase tracking-wider">{ROTULO_DIMENSAO[e.consequence.dimension] ?? e.consequence.dimension}</span>
+              <div className="mt-0.5 text-[12.5px] text-suave">{e.subtitle}</div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-prova text-[10.5px] uppercase tracking-[0.08em] text-mudo">
+                <span>{ROTULO_DIMENSAO[e.consequence.dimension] ?? e.consequence.dimension}</span>
                 <span className="tabular-nums">
                   {L('intensidade', 'intensity')} {Math.round(Math.abs(e.current_value * 100))}%
                 </span>
-                <span>·</span>
+                <span aria-hidden>·</span>
                 <span>{Math.round(e.life_remaining * 100)}% {L('restante', 'remaining')}</span>
               </div>
             </div>
@@ -478,41 +356,41 @@ function ActiveConsequences({
 function Timeline({ events }: { events: PlayerTimelineEvent[] }) {
   if (events.length === 0) {
     return (
-      <div className="text-center py-4 text-[11px] text-white/40">
+      <div className="py-2 font-voz text-[20px] leading-[1.1] text-suave">
         {L('Sem eventos recentes nos últimos 7 dias.', 'No events in the last 7 days.')}
       </div>
     );
   }
   return (
     <ol className="relative pl-4">
-      <div className="absolute left-1 top-0 bottom-0 w-px bg-white/10" />
+      <div className="absolute bottom-0 left-1 top-0 w-0.5 bg-linha" />
       {events.map((e, i) => {
         const sty = SEVERITY_STYLE[e.severity];
         return (
-          <li key={`${e.consequence_id}-${e.kind}-${i}`} className="relative pl-3 pb-3 last:pb-0">
+          <li key={`${e.consequence_id}-${e.kind}-${i}`} className="relative pb-3.5 pl-3 last:pb-0">
             <div
               className={cn(
-                'absolute -left-[5px] top-1.5 w-2 h-2 rounded-full',
+                'absolute -left-[6px] top-1.5 h-2.5 w-2.5',
                 e.severity === 'alert'
-                  ? 'bg-[var(--color-danger)]'
+                  ? 'bg-baixa'
                   : e.severity === 'celebration'
-                  ? 'bg-[var(--color-success)]'
+                  ? 'bg-alta'
                   : e.severity === 'info'
-                  ? 'bg-neon-yellow'
-                  : 'bg-white/40',
+                  ? 'bg-rua'
+                  : 'bg-fio',
               )}
             />
             <div className="flex items-baseline justify-between gap-2">
-              <div className={cn('text-[12px] font-bold', sty.color.split(' ')[0])}>
+              <div className={cn('min-w-0 text-[13px] font-bold', sty.color === 'text-suave' ? 'text-papel' : sty.color)}>
                 {e.title}
               </div>
-              <div className="text-[10px] text-white/40 shrink-0 tabular-nums">
+              <div className="shrink-0 font-prova text-[10.5px] tabular-nums text-mudo">
                 {formatTimeAgo(e.at)}
               </div>
             </div>
-            <div className="text-[10px] text-white/50 mt-0.5">{e.subtitle}</div>
+            <div className="mt-0.5 text-[12px] text-suave">{e.subtitle}</div>
             {e.source_event_id && (
-              <div className="text-[9px] text-white/30 font-mono mt-0.5 truncate">
+              <div className="mt-0.5 truncate font-prova text-[10px] text-fio">
                 trace: {e.source_event_id}
               </div>
             )}
@@ -543,7 +421,7 @@ function AttrDeltaList({
     'fairPlay',
   ];
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
       {keys.map((k) => {
         const now = currentAttrs[k] ?? 0;
         const prev = weekAgoAttrs?.[k] ?? null;
@@ -551,54 +429,12 @@ function AttrDeltaList({
         const deltaSign = delta === null ? null : delta > 0 ? '+' : '';
         const hasDelta = delta !== null && delta !== 0;
         return (
-          <div
-            key={k}
-            className={cn(
-              'flex flex-col gap-1 p-3 bg-[var(--color-card)] border border-l-[3px]',
-              hasDelta && delta > 0
-                ? 'border-l-[var(--color-success)] border-white/8'
-                : hasDelta && delta < 0
-                ? 'border-l-[var(--color-danger)] border-white/8'
-                : 'border-l-white/12 border-white/8',
-            )}
-            style={{ borderRadius: 'var(--radius-md)' }}
-          >
-            <div
-              className="text-white/45"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: '9px',
-                letterSpacing: '0.24em',
-                textTransform: 'uppercase',
-              }}
-            >
-              {ROTULO_ATRIBUTO[k] ?? k}
-            </div>
+          <div key={k} className="flex min-w-0 flex-col gap-1 bg-concreto p-3">
+            <div className={cn(ROTULO_CLS, 'truncate')}>{ROTULO_ATRIBUTO[k] ?? k}</div>
             <div className="flex items-baseline gap-1.5">
-              <span
-                className="text-white leading-none tabular-nums"
-                style={{
-                  fontFamily: 'var(--font-impact)',
-                  fontSize: '22px',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                {now}
-              </span>
+              <span className="font-impact text-[24px] leading-none tabular-nums text-papel">{now}</span>
               {hasDelta && (
-                <span
-                  className={cn(
-                    'tabular-nums',
-                    delta > 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]',
-                  )}
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 900,
-                    fontSize: '10px',
-                    letterSpacing: '0.08em',
-                  }}
-                >
+                <span className={cn('font-prova text-[11px] font-bold tabular-nums', delta > 0 ? 'text-alta' : 'text-baixa')}>
                   {deltaSign}
                   {delta}
                 </span>
@@ -618,7 +454,7 @@ function MarketChart({
 }) {
   if (points.length < 2) {
     return (
-      <div className="text-[11px] text-white/40 text-center py-4">
+      <div className="font-prova text-[11.5px] leading-relaxed text-mudo">
         {L(
           'Histórico de mercado ainda construindo — precisa de mais snapshots após partidas pra exibir tendência.',
           'Market history still building — needs more post-match snapshots to show a trend.',
@@ -648,30 +484,18 @@ function MarketChart({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-baseline justify-between">
-        <div className="text-[10px] text-white/45 uppercase tracking-wider">
-          {points.length} snapshots
-        </div>
-        <div
-          className={cn(
-            'text-[11px] font-display font-bold tabular-nums',
-            positive ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]',
-          )}
-        >
+      <div className="flex items-baseline justify-between gap-2">
+        <div className={ROTULO_CLS}>{points.length} snapshots</div>
+        <div className={cn('font-prova text-[12px] font-bold tabular-nums', positive ? 'text-alta' : 'text-baixa')}>
           {positive ? '+' : ''}
           {formatBroFromCents(change)} ({changePct >= 0 ? '+' : ''}
           {changePct.toFixed(1)}%)
         </div>
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" preserveAspectRatio="none">
-        <path
-          d={path}
-          fill="none"
-          stroke={positive ? 'rgb(52 211 153)' : 'rgb(248 113 113)'}
-          strokeWidth={2}
-        />
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" preserveAspectRatio="none" aria-hidden>
+        <path d={path} fill="none" stroke="var(--color-rua)" strokeWidth={2.5} />
       </svg>
-      <div className="flex items-baseline justify-between text-[10px] text-white/40 font-mono tabular-nums">
+      <div className="flex items-baseline justify-between font-prova text-[10.5px] tabular-nums text-mudo">
         <span>{formatBroFromCents(first)}</span>
         <span>{formatBroFromCents(last)}</span>
       </div>
@@ -682,34 +506,11 @@ function MarketChart({
 // ─── Page ──────────────────────────────────────────────────────────
 
 function SectionHeader({ kicker, title }: { kicker: string; title: string }) {
-  // DS §7.5: rail amarelo 3px à esquerda + headline.
+  // DS 2027: rótulo "— " em mono + título em Anton.
   return (
-    <div className="flex items-stretch gap-3 py-1">
-      <span aria-hidden className="w-[3px] bg-neon-yellow self-stretch min-h-[36px]" />
-      <div className="flex-1 min-w-0 flex flex-col justify-center">
-        <span
-          className="text-neon-yellow leading-none"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 800,
-            fontSize: '10px',
-            letterSpacing: '0.32em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {kicker}
-        </span>
-        <h2
-          className="text-white leading-[0.95] mt-1"
-          style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: 'clamp(20px, 3vw, 26px)',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {title}
-        </h2>
-      </div>
+    <div className="flex min-w-0 flex-col gap-1 pt-2">
+      <span className={ROTULO_CLS}>— {kicker}</span>
+      <h2 className="min-w-0 font-impact text-[clamp(22px,6.4vw,28px)] uppercase leading-[1.05] text-papel">{title}</h2>
     </div>
   );
 }
@@ -777,20 +578,27 @@ export function ManagerScoutsPlayer() {
 
   if (!player) {
     return (
-      <div className="w-full max-w-5xl mx-auto px-4 py-6">
+      <div className="mx-auto w-full max-w-5xl px-4 py-6">
         <button
           type="button"
           onClick={() => navigate('/manager/scouts')}
-          className="inline-flex items-center gap-2 text-[12px] text-white/60 hover:text-white transition"
+          className="inline-flex min-h-[40px] items-center gap-2 font-prova text-[12px] font-bold uppercase tracking-[0.18em] text-mudo transition-colors hover:text-rua"
         >
           <ChevronLeft size={14} /> {L('Voltar pro plantel', 'Back to squad')}
         </button>
-        <div className="mt-8 text-center py-12 px-4 rounded-sm bg-white/3 border border-dashed border-white/10">
-          <ShieldOff size={28} className="text-white/30 mx-auto mb-3" />
-          <p className="text-sm text-white/70">{L('Jogador não encontrado no plantel.', 'Player not found in the squad.')}</p>
-          <p className="text-[12px] text-white/40 mt-1">
+        <div className="mt-6 flex flex-col items-start gap-3 border-2 border-dashed border-fio px-4 py-6">
+          <ShieldOff size={26} className="text-fio" aria-hidden />
+          <p className="font-voz text-[24px] leading-[1.05] text-papel">{L('Jogador não encontrado no plantel.', 'Player not found in the squad.')}</p>
+          <p className="text-[12.5px] text-suave">
             {L('Pode ter sido vendido ou liberado.', 'They may have been sold or released.')}
           </p>
+          <button
+            type="button"
+            onClick={() => navigate('/manager/scouts')}
+            className="inline-flex min-h-[46px] items-center gap-2 border-2 border-papel px-4 font-impact text-[17px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
+          >
+            {L('Ver o plantel', 'See the squad')} <span aria-hidden>→</span>
+          </button>
         </div>
       </div>
     );
@@ -814,19 +622,12 @@ export function ManagerScoutsPlayer() {
 
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
-      <div className="w-full min-w-0 mx-auto space-y-4 max-w-5xl px-3 sm:px-4 py-4">
+      <div className="mx-auto w-full min-w-0 max-w-5xl space-y-6 px-3 py-4 sm:px-4">
         {/* ── Voltar (DS §7.1 ghost link) ────────────────────────── */}
         <button
           type="button"
           onClick={() => navigate('/manager/scouts')}
-          className="inline-flex items-center gap-2 text-white/55 hover:text-neon-yellow transition-colors"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 800,
-            fontSize: '11px',
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-          }}
+          className="inline-flex min-h-[40px] items-center gap-2 font-prova text-[12px] font-bold uppercase tracking-[0.18em] text-mudo transition-colors hover:text-rua"
         >
           <ChevronLeft size={13} /> {L('Plantel', 'Squad')}
         </button>
@@ -876,7 +677,7 @@ export function ManagerScoutsPlayer() {
         {/* ── Timeline (aplicações das consequências ativas) ────── */}
         <section className="space-y-2">
           <SectionHeader kicker={L('Trace cronológico', 'Chronological trace')} title={L('Linha do tempo · 7 dias', 'Timeline · 7 days')} />
-          <div className="rounded-sm border border-white/8 bg-[var(--color-card)] p-4">
+          <div className="bg-concreto p-4">
             <Timeline events={transparency.timeline} />
           </div>
         </section>
@@ -886,7 +687,7 @@ export function ManagerScoutsPlayer() {
           <SectionHeader kicker={L('Evolução técnica', 'Technical progress')} title={L('Atributos · delta 7 dias', 'Attributes · 7-day delta')} />
           <AttrDeltaList currentAttrs={player.attrs} weekAgoAttrs={weekAgoAttrs} />
           {!weekAgoAttrs && (
-            <div className="text-[10px] text-white/35">
+            <div className="font-prova text-[11px] text-mudo">
               {L('Sem snapshot anterior a 7 dias — o delta aparecerá após a próxima partida.', 'No snapshot older than 7 days — the delta will show after the next match.')}
             </div>
           )}
@@ -895,7 +696,7 @@ export function ManagerScoutsPlayer() {
         {/* ── Mercado ───────────────────────────────────────────── */}
         <section className="space-y-2">
           <SectionHeader kicker={L('Avaliação', 'Valuation')} title={L('Histórico de valor de mercado', 'Market value history')} />
-          <div className="rounded-sm border border-white/8 bg-[var(--color-card)] p-4">
+          <div className="bg-concreto p-4">
             <MarketChart points={marketHistory} />
           </div>
         </section>

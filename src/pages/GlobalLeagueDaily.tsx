@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Crown, Flag, Swords, Clock, ArrowLeft, Scale, Check } from 'lucide-react';
+import { Crown, Flag, Swords, ArrowLeft, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDailyCycle } from '@/hooks/useDailyCycle';
 import { DailyBracket } from '@/components/matchglobal/DailyBracket';
@@ -16,7 +16,9 @@ import { CrownsGallery } from '@/components/matchglobal/CrownsGallery';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { decreeForWeek, isoWeekKey, type DecreeOption } from '@/systems/weeklyDecree';
 import { submitDecreeVote, fetchDecreeTally, type DecreeTally } from '@/supabase/weeklyDecree';
-import { Hashtag } from '@/components/ui';
+import { FitaRua, MarcaRua, SecaoRua, SeloRua } from '@/components/ui/Rua';
+import { FaltaRua, LinhaRua, VazioRua, ZonaRua, posRua } from '@/components/leagues/RuaTabela';
+import { cn } from '@/lib/utils';
 import { L, emIngles } from '@/i18n/L';
 
 function fmtCountdown(ms: number): string {
@@ -78,93 +80,172 @@ export default function GlobalLeagueDaily() {
   const liveRound = daily.bracket.find((r) => r.status === 'live');
   const nextRound = daily.bracket.find((r) => r.status !== 'finished');
 
+  // DS 2027: quanto falta pro corte — pontos reais até a última vaga do mata-mata.
+  const meRow = daily.standings.find((r) => r.isMe);
+  const cutRow = daily.cutSize >= 2 ? daily.standings.find((r) => r.rank === daily.cutSize) : undefined;
+  const gapToCut = meRow && cutRow && meRow.rank > daily.cutSize ? Math.max(0, (cutRow.team.dailyPoints ?? 0) - (meRow.team.dailyPoints ?? 0)) : null;
+
   return (
-    <div className="mx-auto min-w-0 w-full max-w-6xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 pb-10">
-      {/* Botão voltar (discreto, antes do hero) */}
+    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-8 overflow-x-hidden px-3 pb-10 sm:px-4 lg:px-8">
+      {/* Voltar */}
       <div className="pt-3">
         <button
           type="button"
           onClick={() => navigate('/match/global')}
-          className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-cimento hover:text-neon-yellow transition-colors"
+          className="inline-flex items-center gap-2 font-prova text-[12px] font-bold uppercase tracking-[0.16em] text-mudo transition-colors hover:text-rua"
         >
-          <ArrowLeft className="w-3.5 h-3.5" />
+          <ArrowLeft className="h-3.5 w-3.5" />
           {L('Liga Global', 'Global League')}
         </button>
       </div>
 
-      {/* HERO — volt chapado + manchete preta */}
-      <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 text-center"
-        >
-          <Hashtag className="mb-2 text-black/70">{L('#ligaglobal · ciclo diário', '#globalleague · daily cycle')}</Hashtag>
-          <h1 className="font-impact text-5xl sm:text-7xl uppercase text-black leading-[1.1]">
-            {L('Coroa do Dia', 'Crown of the Day')}
-          </h1>
-          <p className="mt-3 truncate font-impact text-xl sm:text-3xl uppercase leading-[1.1] text-black">
-            {daily.phase === 'qualifying' && L('A corrida está aberta', 'The race is open')}
-            {daily.phase === 'knockout' && L('Mata-Mata em andamento', 'Knockout in progress')}
-            {daily.phase === 'crowned' && daily.todayCrown
-              ? L(`${daily.todayCrown.clubName} é o campeão`, `${daily.todayCrown.clubName} are the champions`)
-              : daily.phase === 'crowned' && L('Campeão coroado', 'Champion crowned')}
-          </p>
-        </motion.div>
-      </section>
+      <FitaRua tags={['#coroadodia', '#persista']} className="-mx-3 sm:-mx-4 lg:-mx-8" />
 
-      {/* Indicador de fase + countdown */}
-      <div className="sports-panel p-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm flex-wrap">
-          <PhaseChip active={daily.phase === 'qualifying'} icon={<Flag className="w-3.5 h-3.5" />} label={L('Classificação', 'Qualifying')} />
-          <span className="text-poeira">›</span>
-          <PhaseChip active={daily.phase === 'knockout'} icon={<Swords className="w-3.5 h-3.5" />} label={L('Mata-Mata', 'Knockout')} />
-          <span className="text-poeira">›</span>
-          <PhaseChip active={daily.phase === 'crowned'} icon={<Crown className="w-3.5 h-3.5" />} label={L('Coroa', 'Crown')} />
+      {/* HERO */}
+      <motion.header initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex min-w-0 flex-col gap-2">
+        <SecaoRua label={L('#ligaglobal · ciclo diário', '#globalleague · daily cycle')} />
+        <h1 className="font-impact uppercase leading-[0.86] text-papel" style={{ fontSize: 'clamp(52px, 14vw, 104px)' }}>
+          {L('Coroa do Dia', 'Crown of the Day')}
+        </h1>
+        <p className="font-voz text-[clamp(24px,6.4vw,34px)] leading-[1.05] text-suave">
+          {daily.phase === 'qualifying' && L('A corrida tá aberta.', 'The race is open.')}
+          {daily.phase === 'knockout' && L('Mata-mata rolando.', 'Knockout under way.')}
+          {daily.phase === 'crowned' && daily.todayCrown
+            ? L(`${daily.todayCrown.clubName} levou a coroa.`, `${daily.todayCrown.clubName} took the crown.`)
+            : daily.phase === 'crowned' && L('Campeão coroado.', 'Champion crowned.')}
+        </p>
+      </motion.header>
+
+      {/* Fase + contagem */}
+      <div className="flex min-w-0 flex-col gap-4 bg-concreto p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <PhaseChip active={daily.phase === 'qualifying'} icon={<Flag className="h-3.5 w-3.5" />} label={L('Classificação', 'Qualifying')} />
+          <span aria-hidden className="font-impact text-mudo">→</span>
+          <PhaseChip active={daily.phase === 'knockout'} icon={<Swords className="h-3.5 w-3.5" />} label={L('Mata-Mata', 'Knockout')} />
+          <span aria-hidden className="font-impact text-mudo">→</span>
+          <PhaseChip active={daily.phase === 'crowned'} icon={<Crown className="h-3.5 w-3.5" />} label={L('Coroa', 'Crown')} />
         </div>
-        <div className="flex items-center gap-2">
-          {daily.phase === 'qualifying' && (
-            <div className="flex items-center gap-1.5 text-text-soft">
-              <Clock className="w-4 h-4" />
-              <span className="font-mono text-sm">
-                {L('corte em', 'cut in')} <span className="font-bold text-white">{fmtCountdown(daily.msToCut)}</span>
-              </span>
+        {daily.phase === 'qualifying' && (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.18em] text-mudo">{L('Corte em', 'Cut in')}</span>
+            <span className="font-spray text-[36px] font-black leading-none text-rua">{fmtCountdown(daily.msToCut)}</span>
+          </div>
+        )}
+        {daily.phase === 'knockout' && nextRound && (
+          liveRound ? (
+            <SeloRua tom="corre">● {L('Ao vivo', 'Live')}</SeloRua>
+          ) : (
+            <div className="flex flex-col gap-0.5">
+              <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.18em] text-mudo">{L('Próxima em', 'Next in')}</span>
+              <span className="font-spray text-[36px] font-black leading-none text-rua">{fmtCountdown(Math.max(0, nextRound.scheduledKickoffMs - now))}</span>
             </div>
-          )}
-          {daily.phase === 'knockout' && nextRound && (
-            <div className="flex items-center gap-1.5 text-text-soft">
-              <Clock className="w-4 h-4" />
-              <span className="font-mono text-sm">
-                {liveRound ? (
-                  <span className="text-alta font-bold animate-pulse">● {L('ao vivo', 'live')}</span>
-                ) : (
-                  <>{L('próxima em', 'next in')} <span className="font-bold text-white">{fmtCountdown(Math.max(0, nextRound.scheduledKickoffMs - now))}</span></>
-                )}
-              </span>
-            </div>
-          )}
-        </div>
+          )
+        )}
       </div>
+
+      {/* CAMPEÃO COROADO — LENDA: ouro chapado */}
+      {daily.phase === 'crowned' && daily.todayCrown && (
+        <motion.section
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="relative flex min-w-0 items-end justify-between gap-4 overflow-hidden bg-ouro-27 p-5 text-asfalto-27 sm:p-8"
+        >
+          <div className="flex min-w-0 flex-col gap-2">
+            <span className="flex items-center gap-2 font-prova text-[11.5px] font-bold uppercase tracking-[0.2em]">
+              <Crown aria-hidden className="h-4 w-4" /> {L('Campeão de', 'Champion of')} {daily.todayCrown.dailyDate}
+            </span>
+            <h2 className="font-impact uppercase leading-[0.86] [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(40px, 11vw, 76px)' }}>
+              {daily.todayCrown.clubName}
+            </h2>
+            <p className="font-prova text-[12px] font-bold uppercase tracking-[0.08em]">
+              {daily.todayCrown.runnerUpClubName && daily.todayCrown.finalScoreHome != null && daily.todayCrown.finalScoreAway != null
+                ? `final ${daily.todayCrown.finalScoreHome}×${daily.todayCrown.finalScoreAway} vs ${daily.todayCrown.runnerUpClubName}${daily.todayCrown.finalWentToPens ? L(' (pênaltis)', ' (penalties)') : ''}`
+                : L(`chave de ${daily.todayCrown.bracketSize} clubes`, `${daily.todayCrown.bracketSize}-club bracket`)}
+            </p>
+          </div>
+          <MarcaRua tipo="nove" className="h-24 shrink-0 bg-asfalto-27 sm:h-32" />
+        </motion.section>
+      )}
+
+      {/* QUALIFYING — corrida do dia */}
+      {daily.phase === 'qualifying' && (
+        <section className="flex min-w-0 flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <SecaoRua
+              label={L(`Corrida do dia · top ${daily.cutSize || '—'} avançam`, `Race of the day · top ${daily.cutSize || '—'} advance`)}
+              aside={`${daily.qualifyHour}h BRT`}
+            />
+            <h2 className="font-voz text-[clamp(34px,9vw,50px)] leading-[0.95] text-papel">
+              {meRow && daily.cutSize >= 2 && meRow.rank <= daily.cutSize ? L('Tá no corte. Segura.', "You're in. Hold it.") : L('Quanto falta pro mata-mata', 'How far to the knockout')}
+            </h2>
+          </div>
+
+          {daily.standings.length === 0 ? (
+            <VazioRua
+              titulo={L('Nenhuma partida hoje', 'No matches today')}
+              frase={L(`Partida de liga soma na corrida. Mata-mata às ${daily.qualifyHour}h.`, `League matches count toward the race. Knockout at ${daily.qualifyHour}h.`)}
+            />
+          ) : (
+            <>
+              {gapToCut != null && cutRow && (
+                <FaltaRua
+                  valor={gapToCut}
+                  unidade={L('pts', 'pts')}
+                  frase={L(`é o que separa tu do ${posRua(cutRow.rank)}.`, `is all that's between you and ${posRua(cutRow.rank)}.`)}
+                />
+              )}
+              <div className="flex min-w-0 flex-col gap-1.5">
+                {daily.standings.map((row) => {
+                  const isCut = daily.cutSize >= 2 && row.rank === daily.cutSize;
+                  const inZone = daily.cutSize >= 2 && row.rank <= daily.cutSize;
+                  const gd = row.team.dailyGoalDifference ?? 0;
+                  return (
+                    <div key={row.team.id} className="flex flex-col gap-1.5">
+                      <LinhaRua
+                        pos={row.rank}
+                        tom={row.isMe ? 'eu' : row.rank === 1 ? 'lider' : inZone ? 'zona' : meRow && row.rank > meRow.rank ? 'abaixo' : 'normal'}
+                        nome={row.team.clubName}
+                        sub={`${L('J', 'P')}${row.team.dailyMatchesPlayed ?? 0} ${L('V', 'W')}${row.team.dailyWins ?? 0} · ${L('SG', 'GD')} ${gd > 0 ? '+' : ''}${gd}`}
+                        chip={
+                          (row.team.seasonCrowns ?? 0) > 0 ? (
+                            <span className={cn('flex shrink-0 items-center gap-0.5 font-impact text-[14px]', row.isMe ? 'text-asfalto-27' : 'text-ouro-27')}>
+                              <Crown aria-label={L('Coroas', 'Crowns')} className="h-3.5 w-3.5" />{row.team.seasonCrowns}
+                            </span>
+                          ) : null
+                        }
+                        valor={row.team.dailyPoints ?? 0}
+                      />
+                      {isCut && <ZonaRua label={L(`Corte · top ${daily.cutSize} ao mata-mata`, `Cut · top ${daily.cutSize} to knockout`)} />}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
+      {/* KNOCKOUT / CROWNED — chave */}
+      {(daily.phase === 'knockout' || daily.phase === 'crowned') && (
+        <section className="flex min-w-0 flex-col gap-4">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <h2 className="min-w-0 truncate font-impact text-[30px] uppercase leading-none text-papel">
+              {L('Mata-Mata', 'Knockout')}{daily.phase === 'crowned' ? L(' · encerrado', ' · finished') : ''}
+            </h2>
+            {liveRound && <SeloRua tom="corre">● {L('Ao vivo', 'Live')} · {phaseSizeLabel(liveRound.size)}</SeloRua>}
+          </div>
+          <DailyBracket bracket={daily.bracket} myTeamId={myTeamId} />
+        </section>
+      )}
 
       {/* FABLE — DECRETO DA SEMANA: a decisão de reinado. O voto muda como o
           SEU mundo joga a semana (pisos em MatchContextModifiers). */}
-      <section className="sports-panel overflow-hidden">
-        <div className="px-4 py-3 bg-deep-black border-b border-white/10 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-neon-yellow">
-              {decree.title} · {weekKey}
-            </p>
-            <h2 className="mt-0.5 flex items-center gap-2 text-[15px] font-bold leading-snug text-white">
-              <Scale className="w-4 h-4 shrink-0 text-neon-yellow" /> {decree.question}
-            </h2>
-          </div>
-          {activeVote && (
-            <span className="shrink-0 bg-neon-yellow px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-black">
-              {L('Decretado', 'Decreed')}
-            </span>
-          )}
+      <section className="flex min-w-0 flex-col gap-4 border-t-2 border-linha pt-6">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <SecaoRua label={`${decree.title} · ${weekKey}`} aside={activeVote ? L('Decretado', 'Decreed') : undefined} />
+          <h2 className="font-voz text-[clamp(28px,7.5vw,40px)] leading-[1] text-papel">{decree.question}</h2>
         </div>
-        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {(Object.entries(decree.options) as [DecreeOption, { label: string; effectText: string }][]).map(([key, opt]) => {
             const chosen = activeVote === key;
             const reigning = globalWinner === key;
@@ -175,31 +256,34 @@ export default function GlobalLeagueDaily() {
                 type="button"
                 onClick={() => voteDecree(key)}
                 disabled={!!activeVote}
-                className={`text-left border p-3.5 transition-colors ${
-                  chosen || reigning
-                    ? 'border-neon-yellow bg-card'
-                    : activeVote
-                      ? 'border-white/10 opacity-40'
-                      : 'border-white/16 hover:border-white/30'
-                }`}
+                className={cn(
+                  'flex flex-col gap-1.5 p-4 text-left transition-colors',
+                  reigning
+                    ? 'border-[3px] border-ouro-27 bg-asfalto-27'
+                    : chosen
+                      ? 'border-2 border-rua bg-concreto'
+                      : activeVote
+                        ? 'bg-concreto opacity-40'
+                        : 'bg-concreto hover:bg-linha',
+                )}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className={`ole-num min-w-0 truncate text-[13px] uppercase ${chosen || reigning ? 'text-neon-yellow' : 'text-white'}`}>
+                  <p className={cn('min-w-0 truncate font-impact text-[20px] uppercase leading-none', reigning ? 'text-ouro-27' : chosen ? 'text-rua' : 'text-papel')}>
                     {opt.label}
                   </p>
                   {votes != null && (
-                    <span className="font-mono text-xs text-cimento shrink-0">{votes} {votes === 1 ? L('voto', 'vote') : L('votos', 'votes')}</span>
+                    <span className="shrink-0 font-prova text-[11px] font-bold text-mudo">{votes} {votes === 1 ? L('voto', 'vote') : L('votos', 'votes')}</span>
                   )}
                 </div>
-                <p className="text-xs text-cimento mt-1">{opt.effectText}</p>
+                <p className="text-[13px] leading-snug text-suave">{opt.effectText}</p>
                 {reigning && (
-                  <p className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.12em] text-neon-yellow mt-2">
+                  <p className="inline-flex items-center gap-1 font-prova text-[10.5px] font-bold uppercase tracking-[0.12em] text-ouro-27">
                     <Crown className="h-3 w-3" strokeWidth={2.2} /> {L('Decreto do reino · até domingo', 'Kingdom decree · until Sunday')}
                   </p>
                 )}
                 {chosen && !reigning && (
-                  <p className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.12em] text-cimento mt-2">
-                    <Check className="h-3 w-3" strokeWidth={2.2} /> {L('Seu voto', 'Your vote')}
+                  <p className="inline-flex items-center gap-1 font-prova text-[10.5px] font-bold uppercase tracking-[0.12em] text-rua">
+                    <Check className="h-3 w-3" strokeWidth={2.2} /> {L('Teu voto', 'Your vote')}
                   </p>
                 )}
               </button>
@@ -207,152 +291,13 @@ export default function GlobalLeagueDaily() {
           })}
         </div>
         {globalWinner && activeVote && globalWinner !== activeVote && (
-          <p className="px-4 pb-3 -mt-1 text-[12px] text-cimento">
+          <p className="font-prova text-[12px] text-suave">
             {emIngles()
-              ? <>The kingdom chose <span className="text-neon-yellow font-bold">{decree.options[globalWinner].label}</span> · applies to everyone.</>
-              : <>O reino escolheu <span className="text-neon-yellow font-bold">{decree.options[globalWinner].label}</span> · vale pra todos.</>}
+              ? <>The kingdom chose <span className="font-bold text-ouro-27">{decree.options[globalWinner].label}</span> · applies to everyone.</>
+              : <>O reino escolheu <span className="font-bold text-ouro-27">{decree.options[globalWinner].label}</span> · vale pra todos.</>}
           </p>
         )}
       </section>
-
-      {/* CAMPEÃO COROADO — faixa hero secundária */}
-      {daily.phase === 'crowned' && daily.todayCrown && (
-        <motion.section
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="relative overflow-hidden border-l-4 border-l-neon-yellow border border-white/10 bg-panel p-6 sm:p-8"
-        >
-          <div className="relative z-10 flex items-start gap-4 sm:gap-6">
-            <Crown className="w-12 h-12 sm:w-16 sm:h-16 text-neon-yellow shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-neon-yellow mb-2">
-                {L('Campeão de', 'Champion of')} {daily.todayCrown.dailyDate}
-              </p>
-              <h2 className="truncate font-impact text-4xl sm:text-6xl uppercase text-white leading-[1.1]">
-                {daily.todayCrown.clubName}
-              </h2>
-              <p className="mt-3 truncate font-mono text-[12px] text-giz">
-                {daily.todayCrown.runnerUpClubName && daily.todayCrown.finalScoreHome != null && daily.todayCrown.finalScoreAway != null
-                  ? `final ${daily.todayCrown.finalScoreHome}–${daily.todayCrown.finalScoreAway} vs ${daily.todayCrown.runnerUpClubName}${daily.todayCrown.finalWentToPens ? L(' (pênaltis)', ' (penalties)') : ''}`
-                  : L(`bracket de ${daily.todayCrown.bracketSize} clubes`, `${daily.todayCrown.bracketSize}-club bracket`)}
-              </p>
-            </div>
-          </div>
-        </motion.section>
-      )}
-
-      {/* QUALIFYING — corrida do dia */}
-      {daily.phase === 'qualifying' && (
-        <section className="sports-panel overflow-hidden">
-          <div className="px-4 py-3 bg-deep-black border-b border-white/10 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <Hashtag className="text-neon-yellow">{L('#classificação', '#qualifying')}</Hashtag>
-              <h2 className="truncate font-impact text-xl uppercase leading-[1.1] text-white">
-                {L('Corrida do Dia', 'Race of the Day')}
-              </h2>
-            </div>
-            <span className="shrink-0 font-mono text-xs text-cimento text-right">
-              {emIngles()
-                ? <>top <span className="text-alta font-bold">{daily.cutSize || '—'}</span> advance</>
-                : <>top <span className="text-alta font-bold">{daily.cutSize || '—'}</span> avançam</>}<br />
-              <span className="text-[10px] uppercase tracking-[0.12em] text-poeira">{L('às', 'at')} {daily.qualifyHour}h BRT</span>
-            </span>
-          </div>
-
-          {daily.standings.length === 0 ? (
-            <div className="text-center text-cimento py-12 px-4">
-              <Flag className="w-10 h-10 mx-auto mb-3 text-poeira" />
-              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-giz mb-1">{L('Nenhuma partida hoje', 'No matches today')}</p>
-              <p className="text-xs text-cimento max-w-md mx-auto">
-                {L(`Partidas de liga somam na corrida · mata-mata às ${daily.qualifyHour}h`, `League matches count toward the race · knockout at ${daily.qualifyHour}h`)}
-              </p>
-            </div>
-          ) : (
-            <div>
-              <div className="grid grid-cols-[44px_1fr_36px_36px_44px_56px] gap-2 px-3 py-2 bg-deep-black border-b border-white/10 font-mono text-[10px] uppercase tracking-[0.12em] text-cimento">
-                <div className="text-center">#</div>
-                <div>{L('Clube', 'Club')}</div>
-                <div className="text-center">{L('J', 'P')}</div>
-                <div className="text-center">{L('V', 'W')}</div>
-                <div className="text-center">{L('SG', 'GD')}</div>
-                <div className="text-center font-bold">PTS</div>
-              </div>
-              {daily.standings.map((row) => {
-                const isCut = daily.cutSize >= 2 && row.rank === daily.cutSize;
-                const inZone = daily.cutSize >= 2 && row.rank <= daily.cutSize;
-                return (
-                  <div key={row.team.id}>
-                    <motion.div
-                      initial={{ opacity: 0, x: -4 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: Math.min(row.rank * 0.01, 0.3) }}
-                      className={`grid h-11 grid-cols-[44px_1fr_36px_36px_44px_56px] gap-2 px-3 items-center transition-colors ${
-                        row.isMe
-                          ? 'bg-neon-yellow text-black'
-                          : 'border-b border-white/[0.06] hover:bg-card'
-                      }`}
-                    >
-                      <div className={`ole-num text-center text-[15px] ${row.isMe ? 'text-black' : inZone ? 'text-alta' : 'text-cimento'}`}>{row.rank}</div>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={`min-w-0 text-[14px] truncate ${row.isMe ? 'font-bold text-black' : 'text-giz'}`}>{row.team.clubName}</span>
-                        {row.isMe && (
-                          <span className="shrink-0 bg-black px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-neon-yellow">
-                            {L('você', 'you')}
-                          </span>
-                        )}
-                        {(row.team.seasonCrowns ?? 0) > 0 && (
-                          <span className={`ole-num flex items-center gap-0.5 text-[10px] shrink-0 ${row.isMe ? 'text-black' : 'text-neon-yellow'}`}>
-                            <Crown className="w-3 h-3" />{row.team.seasonCrowns}
-                          </span>
-                        )}
-                      </div>
-                      <div className={`ole-num text-center text-xs ${row.isMe ? 'text-black' : 'text-cimento'}`}>{row.team.dailyMatchesPlayed ?? 0}</div>
-                      <div className={`ole-num text-center text-xs ${row.isMe ? 'text-black' : 'text-alta'}`}>{row.team.dailyWins ?? 0}</div>
-                      <div className={`ole-num text-center text-xs ${row.isMe ? 'text-black' : (row.team.dailyGoalDifference ?? 0) >= 0 ? 'text-cimento' : 'text-baixa'}`}>
-                        {(row.team.dailyGoalDifference ?? 0) > 0 ? '+' : ''}{row.team.dailyGoalDifference ?? 0}
-                      </div>
-                      <div className={`ole-num text-center text-[15px] ${row.isMe ? 'text-black' : 'text-white'}`}>{row.team.dailyPoints ?? 0}</div>
-                    </motion.div>
-                    {isCut && (
-                      <div className="flex h-6 items-center gap-2 px-3" aria-label={L('Corte do mata-mata acima desta linha', 'Knockout cut above this line')}>
-                        <span className="block h-0 grow border-t border-dashed border-alta" />
-                        <span className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-alta">
-                          <Swords className="w-3 h-3" />
-                          {L(`Corte · top ${daily.cutSize} ao mata-mata`, `Cut · top ${daily.cutSize} to knockout`)}
-                        </span>
-                        <span className="block h-0 grow border-t border-dashed border-alta" />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* KNOCKOUT / CROWNED — bracket */}
-      {(daily.phase === 'knockout' || daily.phase === 'crowned') && (
-        <section className="sports-panel overflow-hidden">
-          <div className="px-4 py-3 bg-deep-black border-b border-white/10 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <Hashtag className="text-neon-yellow">{L('#chave', '#bracket')}</Hashtag>
-              <h2 className="truncate font-impact text-xl uppercase leading-[1.1] text-white">
-                {L('Mata-Mata', 'Knockout')}{daily.phase === 'crowned' ? L(' — encerrado', ' — finished') : ''}
-              </h2>
-            </div>
-            {liveRound && (
-              <span className="shrink-0 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-alta animate-pulse flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-alta inline-block" />
-                {L('ao vivo', 'live')} · {phaseSizeLabel(liveRound.size)}
-              </span>
-            )}
-          </div>
-          <div className="p-4">
-            <DailyBracket bracket={daily.bracket} myTeamId={myTeamId} />
-          </div>
-        </section>
-      )}
 
       {/* Galeria de coroas (rodapé) */}
       <CrownsGallery limit={12} />
@@ -363,11 +308,10 @@ export default function GlobalLeagueDaily() {
 function PhaseChip({ active, icon, label }: { active: boolean; icon: React.ReactNode; label: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] transition-colors ${
-        active
-          ? 'bg-neon-yellow text-black'
-          : 'text-cimento border border-white/10'
-      }`}
+      className={cn(
+        'inline-flex items-center gap-1.5 px-2.5 py-1.5 font-prova text-[10.5px] font-bold uppercase tracking-[0.12em] transition-colors',
+        active ? 'bg-rua text-asfalto-27' : 'border-2 border-linha text-mudo',
+      )}
     >
       {icon}
       {label}

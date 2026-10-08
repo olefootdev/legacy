@@ -54,7 +54,7 @@ export function HubSectionCard({
   const className = [
     // VOLT2: sem pular no hover e sem trilho lateral — o card chapado muda a borda.
     'group relative isolate block h-full overflow-hidden transition-colors duration-200',
-    destaque ? 'hover:bg-white' : 'ole-poster hover:border-white/30',
+    destaque ? '' : 'ole-poster hover:border-neon-yellow',
   ].join(' ');
 
   const style = destaque
@@ -64,23 +64,23 @@ export function HubSectionCard({
       } as const)
     : ({ borderRadius: 'var(--radius-poster)' } as const);
 
-  const tinta = destaque ? 'var(--color-deep-black)' : '#fff';
-  const tintaFraca = destaque ? 'rgba(13,13,13,0.62)' : 'rgba(237,235,228,0.55)';
-  const tintaEyebrow = destaque ? 'rgba(13,13,13,0.6)' : 'rgba(237,235,228,0.5)';
+  const tinta = destaque ? 'var(--color-deep-black)' : 'var(--color-giz)';
+  const tintaFraca = destaque ? 'rgba(13,13,12,0.72)' : 'var(--color-suave)';
+  const tintaEyebrow = destaque ? 'rgba(13,13,12,0.7)' : 'var(--color-mudo)';
 
   const inner = (
     <div className="relative flex h-full flex-col gap-4 p-5 pl-6">
       <div className="flex items-start justify-between gap-3">
-        <span className="min-w-0 truncate font-mono text-[11.5px] font-medium" style={{ color: tintaEyebrow }}>
-          {eyebrow}
+        <span className="min-w-0 truncate font-prova text-[11.5px] font-bold uppercase tracking-[0.16em]" style={{ color: tintaEyebrow }}>
+          — {eyebrow}
         </span>
         {badge ? (
           <span
-            className="inline-flex items-center rounded font-display font-black uppercase"
+            className="inline-flex items-center font-prova font-bold uppercase"
             style={{
               padding: '4px 8px',
-              fontSize: '9px',
-              letterSpacing: '0.14em',
+              fontSize: '10px',
+              letterSpacing: '0.12em',
               background: destaque ? 'var(--color-deep-black)' : 'var(--color-neon-yellow)',
               color: destaque ? '#fff' : 'var(--color-deep-black)',
             }}
@@ -103,25 +103,26 @@ export function HubSectionCard({
 
       {meta ? (
         <p
-          className="font-display font-bold uppercase"
-          style={{ fontSize: '10px', letterSpacing: '0.16em', color: tintaEyebrow }}
+          className="font-prova font-bold uppercase"
+          style={{ fontSize: '10.5px', letterSpacing: '0.14em', color: tintaEyebrow }}
         >
           {meta}
         </p>
       ) : null}
 
       <div className="mt-auto pt-1">
-        {/* VOLT2: CTA chapado com o corte do escudo — a sombra de adesivo saiu. */}
+        {/* DS 2027: CTA chapado; fora do amarelo ganha a sombra dura de papel. */}
         <span
-          className="ole-num inline-flex items-center whitespace-nowrap text-[12px] uppercase [--corte:12px] [clip-path:var(--clip-corte)]"
+          className="inline-flex items-center gap-2 whitespace-nowrap font-impact text-[17px] uppercase leading-none transition-[transform,box-shadow] group-hover:-translate-x-0.5 group-hover:-translate-y-0.5"
           style={{
-            minHeight: 42,
+            minHeight: 44,
             padding: '0 18px',
             background: destaque ? 'var(--color-deep-black)' : 'var(--color-neon-yellow)',
-            color: destaque ? '#fff' : 'var(--color-deep-black)',
+            color: destaque ? 'var(--color-neon-yellow)' : 'var(--color-deep-black)',
+            boxShadow: destaque ? 'none' : '4px 4px 0 var(--color-giz)',
           }}
         >
-          {cta}
+          {cta} <span aria-hidden>→</span>
         </span>
       </div>
     </div>

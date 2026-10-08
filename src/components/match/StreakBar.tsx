@@ -20,7 +20,7 @@ export function StreakBar({ streak }: StreakBarProps) {
       animate={{ opacity: 1, y: 0 }}
       className="fixed top-20 left-1/2 -translate-x-1/2 z-50"
     >
-      <div className="bg-panel border-2 border-neon-yellow rounded-lg px-6 py-3">
+      <div className="-rotate-1 bg-concreto border-[3px] border-rua px-5 py-3">
         <div className="flex items-center gap-4">
           {/* Fire Icon */}
           <motion.div
@@ -38,13 +38,13 @@ export function StreakBar({ streak }: StreakBarProps) {
             <div className="flex items-baseline gap-2">
               <motion.span
                 key={current}
-                initial={{ scale: 1.5, color: '#FDE100' }}
-                animate={{ scale: 1, color: '#FFFFFF' }}
-                className="text-3xl font-black"
+                initial={{ scale: 1.5, color: '#F2E61E' }}
+                animate={{ scale: 1, color: '#EEE9DF' }}
+                className="font-spray text-[40px] font-black leading-none tabular-nums"
               >
                 {current}
               </motion.span>
-              <span className="text-sm text-gray-400 uppercase tracking-wider">
+              <span className="font-voz text-[20px] leading-none text-suave">
                 {L('vitórias seguidas', 'wins in a row')}
               </span>
             </div>
@@ -54,7 +54,7 @@ export function StreakBar({ streak }: StreakBarProps) {
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="mt-1 bg-neon-yellow text-black px-2 py-0.5 rounded text-xs font-bold"
+                className="mt-1 self-start bg-rua px-2 py-0.5 font-prova text-[11px] font-bold text-asfalto-27"
               >
                 {multiplier}x {L('RECOMPENSAS', 'REWARDS')}
               </motion.div>
@@ -63,23 +63,23 @@ export function StreakBar({ streak }: StreakBarProps) {
 
           {/* Best Streak */}
           {streak.best > current && (
-            <div className="ml-4 pl-4 border-l border-gray-700 text-xs text-gray-500">
+            <div className="ml-4 border-l border-linha pl-4 font-prova text-[11px] text-mudo">
               <div>{L('Recorde', 'Best')}</div>
-              <div className="font-bold text-gray-400">{streak.best}</div>
+              <div className="font-impact text-[20px] leading-none text-ouro-27">{streak.best}</div>
             </div>
           )}
         </div>
 
         {/* Progress to Next Tier */}
         {current < 10 && (
-          <div className="mt-2 pt-2 border-t border-gray-800">
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
+          <div className="mt-2 border-t border-linha pt-2">
+            <div className="mb-1 flex justify-between font-prova text-[11px] text-mudo">
               <span>{L('Próximo nível', 'Next tier')}</span>
               <span>
                 {current >= 7 ? '10' : current >= 5 ? '7' : current >= 3 ? '5' : '3'} {L('vitórias', 'wins')}
               </span>
             </div>
-            <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+            <div className="h-1.5 overflow-hidden bg-linha">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{
@@ -93,7 +93,7 @@ export function StreakBar({ streak }: StreakBarProps) {
                           : (current / 3) * 100
                   }%`,
                 }}
-                className="h-full bg-neon-yellow"
+                className="h-full bg-rua"
               />
             </div>
           </div>

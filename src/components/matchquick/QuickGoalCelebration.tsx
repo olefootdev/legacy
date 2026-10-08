@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
 import { L } from '@/i18n/L';
+import { FitaRua } from '@/components/ui/Rua';
 
 interface QuickGoalCelebrationProps {
   /** Chave única do gol para triggerar remount */
@@ -89,110 +90,71 @@ export function QuickGoalCelebration({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.25 }}
         onClick={handleDismiss}
         role="button"
         tabIndex={0}
         aria-label={L('Fechar celebração de gol', 'Close goal celebration')}
-        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-deep-black cursor-pointer"
+        className="rua-grao fixed inset-0 z-[9999] flex cursor-pointer flex-col items-center justify-center overflow-hidden bg-asfalto-27"
       >
         {/* Hint discreto no topo */}
-        <p
-          className="absolute top-6 left-1/2 -translate-x-1/2 text-white/40 uppercase pointer-events-none"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '10px',
-            letterSpacing: '0.28em',
-            fontWeight: 700,
-          }}
-        >
+        <p className="pointer-events-none absolute left-1/2 top-6 -translate-x-1/2 whitespace-nowrap font-prova text-[11px] font-bold uppercase tracking-[0.24em] text-mudo">
           {L('Toque pra continuar · ESC', 'Tap to continue · ESC')}
         </p>
+
         <motion.div
-          initial={{ scale: 0.8, y: 30 }}
+          initial={{ scale: 0.86, y: 24 }}
           animate={{ scale: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          transition={{ type: 'spring', stiffness: 320, damping: 24 }}
           onClick={(e) => e.stopPropagation()}
-          className="flex flex-col items-center gap-6 px-4"
+          className="flex w-full max-w-md flex-col items-center gap-5 px-5"
         >
-          {/* GOL — Anton gigante em placa volt chapada */}
+          {/* GOL — spray amarelo gigante, como pichação no muro */}
           <h1
-            className="bg-neon-yellow px-6 pt-1 text-black font-impact uppercase leading-[1.05]"
-            style={{
-              fontSize: 'clamp(4rem, 18vw, 10rem)',
-              letterSpacing: '0.01em',
-            }}
+            className="font-spray font-black uppercase leading-[0.8] text-rua"
+            style={{ fontSize: 'clamp(7rem, 40vw, 13rem)', letterSpacing: '-0.01em' }}
           >
             {L('Gol', 'Goal')}
           </h1>
 
-          {/* Foto do jogador */}
-          {scorerPortrait ? (
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="relative"
-            >
-              <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-neon-yellow">
+          {/* Lambe do artilheiro: foto colada torta + fita adesiva */}
+          <motion.div
+            initial={{ scale: 0.92, opacity: 0, rotate: 0 }}
+            animate={{ scale: 1, opacity: 1, rotate: -3 }}
+            transition={{ delay: 0.15 }}
+            className="relative"
+          >
+            <span aria-hidden className="absolute -top-3 left-1/2 z-10 h-6 w-20 -translate-x-1/2 rotate-[5deg] bg-papel/70" />
+            <div className="h-32 w-32 overflow-hidden border-[5px] border-papel bg-concreto sm:h-40 sm:w-40">
+              {scorerPortrait ? (
                 <img
                   src={scorerPortrait}
                   alt={scorerName}
-                  className="w-full h-full object-cover object-top"
+                  className="h-full w-full object-cover object-top"
                   referrerPolicy="no-referrer"
                 />
-              </div>
-              {/* Nome do jogador */}
-              <p
-                className="mt-3 text-center text-white uppercase font-impact leading-[1.1]"
-                style={{
-                  fontSize: 'clamp(1.4rem, 5vw, 2.2rem)',
-                  letterSpacing: '0.02em',
-                }}
-              >
-                {scorerName}
-              </p>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="relative"
-            >
-              <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-neon-yellow bg-neon-yellow/10 flex items-center justify-center">
-                <span
-                  className="font-impact text-neon-yellow leading-none"
-                  style={{ fontSize: '4rem' }}
-                >
+              ) : (
+                <span className="flex h-full w-full items-center justify-center font-spray font-black text-[4.5rem] leading-none text-rua">
                   G
                 </span>
-              </div>
-              {/* Nome do jogador */}
-              <p
-                className="mt-3 text-center text-white uppercase font-impact leading-[1.1]"
-                style={{
-                  fontSize: 'clamp(1.4rem, 5vw, 2.2rem)',
-                  letterSpacing: '0.02em',
-                }}
-              >
-                {scorerName}
-              </p>
-            </motion.div>
-          )}
+              )}
+            </div>
+          </motion.div>
+
+          <p
+            className="text-center font-voz leading-[0.98] text-papel [overflow-wrap:anywhere]"
+            style={{ fontSize: 'clamp(2.1rem, 10vw, 3.2rem)' }}
+          >
+            {scorerName}
+          </p>
 
           {/* Narrativa da jogada */}
           {narrative && (
             <motion.p
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="max-w-md text-center text-white/80 leading-relaxed"
-              style={{
-                fontFamily: 'var(--font-sans)',
-                fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)',
-                fontWeight: 500,
-              }}
+              transition={{ delay: 0.35 }}
+              className="max-w-md text-center text-[15px] leading-snug text-suave"
             >
               {narrative}
             </motion.p>
@@ -203,25 +165,20 @@ export function QuickGoalCelebration({
         <AnimatePresence>
           {showCTA && (
             <motion.button
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.25 }}
               onClick={handleDismiss}
-              className="mt-8 inline-flex items-center gap-3 border-2 border-neon-yellow bg-neon-yellow px-8 py-4 text-black uppercase tracking-wider transition-colors hover:bg-white hover:border-white active:scale-95"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(1rem, 3vw, 1.3rem)',
-                fontWeight: 700,
-                letterSpacing: '0.2em',
-                borderRadius: 'var(--radius-sm)',
-              }}
+              className="mt-8 inline-flex min-h-[54px] items-center gap-3 bg-rua px-7 font-impact text-[20px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)]"
             >
-              {L('Voltar para a partida', 'Back to the match')}
-              <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6" />
+              {L('Voltar pro jogo', 'Back to the match')}
+              <ArrowRight className="h-5 w-5" strokeWidth={2.5} aria-hidden />
             </motion.button>
           )}
         </AnimatePresence>
+
+        <FitaRua tags={['#gol', '#correloko']} inclinacao={-3} className="absolute inset-x-0 bottom-10" />
       </motion.div>
     </AnimatePresence>
   );

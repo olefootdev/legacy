@@ -7,7 +7,7 @@ import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 
 /**
  * Dígito animado: quando o valor muda, o número novo "cai" de cima com bounce,
- * o placar pulsa com scale, e o fundo pisca verde por 1s.
+ * o placar pulsa com scale, e um bloco de rua pisca atrás por 1s (DS 2027: sem glow).
  */
 function AnimatedScore({ value, side }: { value: number; side: 'home' | 'away' }) {
   const prev = useRef(value);
@@ -36,8 +36,8 @@ function AnimatedScore({ value, side }: { value: number; side: 'home' | 'away' }
             exit={{ opacity: 0 }}
             transition={{ duration: 0.9, ease: 'easeOut' }}
             className={cn(
-              'pointer-events-none absolute inset-0 rounded-full',
-              side === 'home' ? 'bg-alta/60' : 'bg-alta/40',
+              'pointer-events-none absolute inset-0',
+              side === 'home' ? 'bg-rua/60' : 'bg-rua/40',
             )}
           />
         )}
@@ -53,26 +53,13 @@ function AnimatedScore({ value, side }: { value: number; side: 'home' | 'away' }
             : { y: 0, opacity: 1, scale: 1 }
         }
         transition={{ type: 'spring', stiffness: 420, damping: 18 }}
-        className="relative tabular-nums text-neon-yellow"
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontVariantNumeric: 'tabular-nums',
-          letterSpacing: '-0.02em',
-        }}
+        className="relative font-spray font-black tabular-nums text-rua"
+        style={{ fontVariantNumeric: 'tabular-nums' }}
       >
         {value}
       </motion.span>
     </span>
   );
-}
-
-function hueFromSeed(seed: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return Math.abs(h) % 360;
 }
 
 const crestSize = {
@@ -106,7 +93,6 @@ export function AwayCrestBadge({
   className?: string;
   size?: 'sm' | 'md' | 'lg' | 'quick' | 'banner';
 }) {
-  const hue = hueFromSeed(seed || 'away');
   const letter = (seed.trim().charAt(0) || '?').toUpperCase();
   const box =
     size === 'sm'
@@ -121,13 +107,11 @@ export function AwayCrestBadge({
   return (
     <span
       className={cn(
-        'inline-flex aspect-square items-center justify-center rounded-sm border border-white/35 font-display font-black leading-none text-white',
+        // DS 2027: escudo sintético é um adesivo de cal — sem matiz aleatório.
+        'inline-flex aspect-square items-center justify-center bg-cal font-impact leading-none text-asfalto-27',
         box,
         className,
       )}
-      style={{
-        background: `hsl(${hue}, 52%, 32%)`,
-      }}
       aria-hidden
     >
       {letter}
@@ -184,7 +168,7 @@ export function MatchdayVersusTitle({
   const seed = awaySeed ?? fallbackAway;
 
   const nameText =
-    'min-w-0 max-w-full whitespace-normal break-words text-pretty text-white [word-spacing:normal]';
+    'min-w-0 max-w-full whitespace-normal break-words text-pretty text-papel [word-spacing:normal]';
 
   return (
     <h2
@@ -213,16 +197,15 @@ export function MatchdayVersusTitle({
         <span
           aria-label="versus"
           className={cn(
-            'shrink-0 text-neon-yellow leading-none',
+            'shrink-0 font-voz normal-case leading-none text-rua',
             vsClassName,
           )}
           style={{
-            fontSize: '1.85em',
-            letterSpacing: '-0.04em',
+            fontSize: '1.6em',
             transform: 'translateY(-0.06em)',
           }}
         >
-          ×
+          x
         </span>
         {/* Metade direita: bloco [nome + brasão] colado ao “vs” */}
         <span className="flex min-w-0 min-h-0 flex-1 justify-start">
@@ -262,12 +245,12 @@ export function MatchdayVersusInline({
     >
       <span className="inline-flex min-w-0 max-w-[min(100%,14rem)] items-center gap-2">
         {crest ? <img src={crest} alt="" className={crestSize.sm} /> : null}
-        <span className="text-white [overflow-wrap:anywhere]">{homeShort}</span>
+        <span className="text-papel [overflow-wrap:anywhere]">{homeShort}</span>
       </span>
-      <span className="shrink-0 font-bold text-gray-500">x</span>
+      <span className="shrink-0 font-voz text-mudo">x</span>
       <span className="inline-flex min-w-0 max-w-[min(100%,14rem)] flex-row-reverse items-center gap-2">
         <AwayCrestOrPhoto seed={seed} imageUrl={awayCrestUrl} size="sm" />
-        <span className="text-right text-white [overflow-wrap:anywhere]">{awayShort}</span>
+        <span className="text-right text-papel [overflow-wrap:anywhere]">{awayShort}</span>
       </span>
     </span>
   );
@@ -323,7 +306,7 @@ export function MatchdayVersusWithClock({
       <div className="flex min-w-0 flex-1 basis-0 items-center justify-end gap-1 min-[360px]:gap-1.5 sm:gap-2 md:gap-3">
         {showTeamCrests && crest ? <img src={crest} alt="" className={crestSize.quick} /> : null}
         <span
-          className="min-w-0 truncate text-end font-impact leading-tight text-white uppercase"
+          className="min-w-0 truncate text-end font-impact leading-tight text-papel uppercase"
           style={{
             fontSize: 'clamp(11px, 2.2vw, 18px)',
             letterSpacing: '0.01em',
@@ -333,12 +316,12 @@ export function MatchdayVersusWithClock({
         </span>
       </div>
       <div className="flex shrink-0 flex-col items-center justify-center gap-0 leading-none">
-        <span className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] tabular-nums tracking-tight text-gray-300 min-[400px]:px-2 min-[400px]:py-1 min-[400px]:text-xs sm:text-sm">
+        <span className="bg-concreto px-1.5 py-0.5 font-spray text-[14px] font-black tabular-nums text-papel min-[400px]:px-2 min-[400px]:py-1 min-[400px]:text-[16px] sm:text-[18px]">
           {clock}
         </span>
         {showRibbonCountdown ? (
           <span
-            className="mt-0.5 font-display text-[10px] font-black tabular-nums tracking-tight text-neon-yellow min-[400px]:text-xs sm:text-sm"
+            className="mt-0.5 font-spray text-[12px] font-black tabular-nums text-rua min-[400px]:text-sm sm:text-base"
             aria-live="polite"
             aria-label={L(`Contagem regressiva: ${scoreboardCountdownSec} segundos`, `Countdown: ${scoreboardCountdownSec} seconds`)}
           >
@@ -348,7 +331,7 @@ export function MatchdayVersusWithClock({
       </div>
       <div className="flex min-w-0 flex-1 basis-0 items-center justify-start gap-1 min-[360px]:gap-1.5 sm:gap-2 md:gap-3">
         <span
-          className="min-w-0 truncate text-start font-impact leading-tight text-gray-200 uppercase"
+          className="min-w-0 truncate text-start font-impact leading-tight text-suave uppercase"
           style={{
             fontSize: 'clamp(11px, 2.2vw, 18px)',
             letterSpacing: '0.01em',
@@ -385,27 +368,27 @@ export function MatchdayLiveScoreRibbon({
 
   return (
     <div className="pointer-events-auto flex max-w-[min(100dvw-2rem,42rem)] min-w-0 items-stretch">
-      <div className="flex shrink-0 items-center justify-center bg-white px-3 py-2 font-display text-xl font-black text-black tabular-nums sm:px-4 sm:text-2xl">
+      <div className="flex shrink-0 items-center justify-center bg-rua px-3 py-2 font-spray text-xl font-black text-asfalto-27 tabular-nums sm:px-4 sm:text-2xl">
         {minuteDisplay}&apos;
       </div>
-      <div className="flex min-w-0 flex-1 items-center gap-3 border border-l-0 border-white/10 bg-panel px-3 py-2 sm:gap-6 sm:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-3 bg-concreto px-3 py-2 sm:gap-6 sm:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-2 text-lg sm:gap-3 sm:text-xl">
           <span className="inline-flex min-w-0 items-center gap-2">
             {crest ? <img src={crest} alt="" className={crestSize.md} /> : null}
-            <span className="truncate font-display font-bold tracking-wider">{homeShort}</span>
+            <span className="truncate font-impact uppercase text-papel">{homeShort}</span>
           </span>
-          <span className="shrink-0 font-display text-2xl font-black tabular-nums text-neon-yellow sm:text-3xl">
+          <span className="shrink-0 font-spray text-2xl font-black tabular-nums text-rua sm:text-3xl">
             {homeScore}
           </span>
         </div>
-        <div className="h-6 w-px shrink-0 bg-white/20" />
+        <div className="h-6 w-0.5 shrink-0 bg-linha" />
         <div className="flex min-w-0 flex-1 items-center gap-2 text-lg sm:gap-3 sm:text-xl">
-          <span className="shrink-0 font-display text-2xl font-black tabular-nums text-white sm:text-3xl">
+          <span className="shrink-0 font-spray text-2xl font-black tabular-nums text-papel sm:text-3xl">
             {awayScore}
           </span>
           <span className="inline-flex min-w-0 flex-row-reverse items-center gap-2">
             <AwayCrestOrPhoto seed={seed} imageUrl={awayCrestUrl} size="md" />
-            <span className="truncate font-display font-bold tracking-wider text-gray-400">{awayShort}</span>
+            <span className="truncate font-impact uppercase text-suave">{awayShort}</span>
           </span>
         </div>
       </div>
@@ -444,7 +427,7 @@ export function MatchdayResultScores({
   return (
     <p
       className={cn(
-        'flex flex-wrap items-center justify-center gap-x-2 gap-y-2 font-display font-black text-white sm:gap-x-3',
+        'flex flex-wrap items-center justify-center gap-x-2 gap-y-2 font-impact uppercase text-papel sm:gap-x-3',
         className,
       )}
     >
@@ -453,7 +436,7 @@ export function MatchdayResultScores({
         <span className="text-center leading-tight [overflow-wrap:anywhere]">{homeLabel}</span>
       </span>
       <AnimatedScore value={homeScore} side="home" />
-      <span className="shrink-0 ole-scoreboard__separator">–</span>
+      <span className="shrink-0 font-spray font-black text-mudo">×</span>
       <AnimatedScore value={awayScore} side="away" />
       <span className="inline-flex max-w-[min(100%,16rem)] flex-row-reverse items-center gap-2 sm:max-w-[min(100%,20rem)] sm:gap-2.5">
         {showTeamCrests ? <AwayCrestOrPhoto seed={seed} imageUrl={awayCrestUrl} size="md" /> : null}
@@ -505,7 +488,7 @@ export function MatchdayLineupColumnTitle({
           />
         )
       ) : null}
-      <span className="min-w-0 font-display font-bold leading-snug [overflow-wrap:anywhere]">{name}</span>
+      <span className="min-w-0 font-impact uppercase leading-snug [overflow-wrap:anywhere]">{name}</span>
     </span>
   );
 }

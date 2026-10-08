@@ -92,63 +92,69 @@ export function SociedadeSection() {
   };
 
   const vendidoBps = minhas.comoDono.reduce((s, x) => s + x.bps, 0);
-  const campo = 'w-full border border-white/15 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30';
+  const campo = 'w-full border-2 border-linha bg-concreto px-3 py-2.5 font-prova text-[14px] text-papel placeholder:text-mudo focus:border-rua focus:outline-none';
+  const rotuloCampo = 'font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo';
+  const rotulo = 'font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo';
 
+  // DS 2027: a fatia do clube é valor que já existe — o "meu clube" mora no
+  // degrau RESPEITO (fio de ouro); ofertas e extrato em concreto.
   return (
-    <section>
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="ole-eyebrow-poster flex items-center gap-2" style={{ fontSize: '13px' }}>
-          <PieChart className="h-4 w-4" /> {L('Sociedade · cotas do clube', 'Partnership · club shares')}
+    <section className="flex min-w-0 flex-col gap-3">
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <h2 className="flex min-w-0 items-center gap-2 font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
+          <PieChart className="h-4 w-4 shrink-0" /> <span className="min-w-0 truncate">— {L('Sociedade · cotas do clube', 'Partnership · club shares')}</span>
         </h2>
         <button type="button" onClick={() => void carregar()} disabled={carregando}
-          className="flex items-center gap-1.5 border border-white/15 px-3 py-1.5 font-display text-[10px] font-black uppercase tracking-wider text-white/70 hover:bg-white/10 disabled:opacity-50">
+          className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 border-2 border-linha px-3 font-prova text-[11px] font-bold uppercase tracking-[0.1em] text-suave hover:border-papel hover:text-papel disabled:opacity-50">
           <RotateCcw className={cn('h-3.5 w-3.5', carregando && 'animate-spin')} /> {L('Atualizar', 'Refresh')}
         </button>
       </div>
 
-      {erro ? <p className="mb-2 border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{erro}</p> : null}
-      {aviso ? <p className="mb-2 border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">{aviso}</p> : null}
+      {erro ? <p role="alert" className="border-l-[3px] border-baixa bg-concreto px-3 py-2.5 text-[13px] text-papel">{erro}</p> : null}
+      {aviso ? <p role="status" className="border-l-[3px] border-rua bg-concreto px-3 py-2.5 text-[13px] text-papel">{aviso}</p> : null}
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        <div className="ole-poster ole-rail p-4">
-          <div className="text-[9px] uppercase tracking-widest text-white/40">{L('Meu clube', 'My club')}</div>
-          <p className="mt-1 font-impact text-[22px] text-white">{pct(10000 - vendidoBps)} {L('meu', 'mine')}</p>
-          <p className="text-[11px] text-white/50">
-            {vendidoBps > 0 ? L(`${pct(vendidoBps)} com ${minhas.comoDono.length} sócio(s)`, `${pct(vendidoBps)} with ${minhas.comoDono.length} partner(s)`) : L('Sem sócios — 100% teu.', 'No partners — 100% yours.')}
+      <div className="grid min-w-0 gap-3 lg:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-2 border-[3px] border-ouro-27 bg-asfalto-27 p-4">
+          <div className={rotulo}>{L('Meu clube', 'My club')}</div>
+          <p className="font-spray text-[40px] font-black leading-none text-ouro-27">
+            {pct(10000 - vendidoBps)} <span className="font-prova text-[12px] font-bold uppercase text-papel">{L('meu', 'mine')}</span>
+          </p>
+          <p className="text-[13px] leading-relaxed text-suave">
+            {vendidoBps > 0 ? L(`${pct(vendidoBps)} com ${minhas.comoDono.length} sócio(s).`, `${pct(vendidoBps)} with ${minhas.comoDono.length} partner(s).`) : L('Sem sócios — 100% teu.', 'No partners — 100% yours.')}
             {' '}{L('Cotista recebe a fração de toda venda tua no mercado.', 'Shareholders get their cut of every market sale you make.')}
           </p>
           <button type="button" onClick={() => setAbrirOferta(true)}
-            className="mt-3 bg-neon-yellow px-3 py-1.5 font-display text-[11px] font-black uppercase text-black hover:bg-white">
-            {L('Vender cotas', 'Sell shares')}
+            className="mt-1 inline-flex min-h-[44px] items-center gap-1.5 self-start border-2 border-papel px-4 font-impact text-[16px] uppercase leading-none text-papel hover:bg-papel hover:text-asfalto-27">
+            {L('Vender cotas', 'Sell shares')} <span aria-hidden>→</span>
           </button>
         </div>
 
-        <div className="ole-poster p-4">
-          <div className="text-[9px] uppercase tracking-widest text-white/40">{L('Sou sócio de', 'Partner in')}</div>
+        <div className="flex min-w-0 flex-col gap-2 bg-concreto p-4">
+          <div className={rotulo}>{L('Sou sócio de', 'Partner in')}</div>
           {minhas.comoCotista.length === 0 ? (
-            <p className="mt-2 text-[12px] text-white/45">{L('Nenhum clube ainda — compra uma cota abaixo.', 'No clubs yet — buy a share below.')}</p>
+            <p className="border-2 border-dashed border-fio p-3 font-voz text-[19px] leading-tight text-suave">{L('Nenhum clube ainda — compra uma cota abaixo.', 'No clubs yet — buy a share below.')}</p>
           ) : (
-            <ul className="mt-2 space-y-1 text-[12px] text-white/75">
+            <ul className="flex flex-col">
               {minhas.comoCotista.map((c) => (
-                <li key={c.owner} className="flex justify-between">
-                  <span className="font-mono text-[10px] text-white/45">{c.owner.slice(0, 8)}…</span>
-                  <span className="font-bold text-neon-yellow">{pct(c.bps)}</span>
+                <li key={c.owner} className="flex justify-between border-b border-linha py-1.5 last:border-b-0">
+                  <span className="font-prova text-[11px] text-mudo">{c.owner.slice(0, 8)}…</span>
+                  <span className="font-impact text-[17px] text-papel">{pct(c.bps)}</span>
                 </li>
               ))}
             </ul>
           )}
         </div>
 
-        <div className="ole-poster p-4">
-          <div className="text-[9px] uppercase tracking-widest text-white/40">{L('Dividendos recebidos', 'Dividends received')}</div>
+        <div className="flex min-w-0 flex-col gap-2 bg-concreto p-4">
+          <div className={rotulo}>{L('Dividendos recebidos', 'Dividends received')}</div>
           {dividendos.length === 0 ? (
-            <p className="mt-2 text-[12px] text-white/45">{L('Nenhum ainda. Eles caem sozinhos quando o clube vende.', 'None yet. They land automatically when the club sells.')}</p>
+            <p className="border-2 border-dashed border-fio p-3 font-voz text-[19px] leading-tight text-suave">{L('Nenhum ainda. Eles caem sozinhos quando o clube vende.', 'None yet. They land automatically when the club sells.')}</p>
           ) : (
-            <ul className="mt-2 space-y-1 text-[12px]">
+            <ul className="flex flex-col">
               {dividendos.slice(0, 5).map((d, i) => (
-                <li key={i} className="flex justify-between text-emerald-200">
-                  <span>+{tok(d.olefoot)} OLEFOOT</span>
-                  <span className="text-white/40">{new Date(d.at).toLocaleDateString(LOCALE)}</span>
+                <li key={i} className="flex justify-between border-b border-linha py-1.5 last:border-b-0">
+                  <span className="font-impact text-[17px] text-alta">+{tok(d.olefoot)} <span className="font-prova text-[10px] text-mudo">OLEFOOT</span></span>
+                  <span className="font-prova text-[11px] text-mudo">{new Date(d.at).toLocaleDateString(LOCALE)}</span>
                 </li>
               ))}
             </ul>
@@ -157,20 +163,20 @@ export function SociedadeSection() {
       </div>
 
       {ofertas.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="flex min-w-0 flex-wrap gap-2">
           {ofertas.map((o) => (
-            <div key={o.id} className="ole-poster flex items-center gap-3 px-3 py-2">
-              <span className="font-impact text-[16px] text-neon-yellow">{pct(o.percentBps)}</span>
-              <span className="text-[11px] text-white/55">{L('de um clube', 'of a club')} · {tok(o.priceOlefoot)} OLEFOOT</span>
+            <div key={o.id} className="flex min-w-0 flex-wrap items-center gap-3 bg-concreto px-3 py-2">
+              <span className="font-impact text-[20px] leading-none text-papel">{pct(o.percentBps)}</span>
+              <span className="font-prova text-[11px] text-mudo">{L('de um clube', 'of a club')} · {tok(o.priceOlefoot)} OLEFOOT</span>
               {o.mine ? (
                 <button type="button" onClick={() => void cancelarOfertaDeCotas(o.id).then(() => carregar())}
-                  className="border border-rose-500/40 px-2 py-1 font-display text-[10px] font-black uppercase text-rose-200 hover:bg-rose-500/10">
+                  className="inline-flex min-h-[36px] items-center border-2 border-dashed border-fio px-2.5 font-prova text-[11px] font-bold uppercase text-suave hover:border-baixa hover:text-papel">
                   {L('Tirar', 'Remove')}
                 </button>
               ) : (
                 <button type="button" onClick={() => setComprarAlvo(o)}
-                  className="bg-neon-yellow px-2 py-1 font-display text-[10px] font-black uppercase text-black hover:bg-white">
-                  {L('Comprar', 'Buy')}
+                  className="inline-flex min-h-[36px] items-center gap-1 bg-rua px-3 font-impact text-[15px] uppercase leading-none text-asfalto-27 shadow-[3px_3px_0_var(--color-papel)]">
+                  {L('Comprar', 'Buy')} <span aria-hidden>→</span>
                 </button>
               )}
             </div>
@@ -186,27 +192,27 @@ export function SociedadeSection() {
         title={L('Vender cotas do clube?', 'Sell club shares?')}
         confirmLabel={agindo ? L('Anunciando…', 'Listing…') : L('Anunciar cotas', 'List shares')}
         confirmDisabled={agindo || !Number(pctCampo) || !Number(precoCampo.replace(/\./g, ''))}
-        accent="#fde100"
+        accent="var(--color-rua)"
       >
-        <div className="mt-3 space-y-2 text-sm text-white/75">
+        <div className="mt-3 space-y-3 text-[14px] leading-relaxed text-suave">
           {emIngles() ? (
             <p>
-              The buyer becomes a partner and automatically gets their cut of <strong>every sale you make</strong> on
+              The buyer becomes a partner and automatically gets their cut of <strong className="text-papel">every sale you make</strong> on
               the squad market. The majority is always yours (49% cap).
             </p>
           ) : (
             <p>
-              O comprador vira sócio e recebe a fração dele de <strong>toda venda tua</strong> no
+              O comprador vira sócio e recebe a fração dele de <strong className="text-papel">toda venda tua</strong> no
               mercado de elenco, automática. A maioria é sempre tua (teto 49%).
             </p>
           )}
-          <label className="block">
-            <span className="text-[10px] uppercase text-white/45">{L('Fatia (%)', 'Stake (%)')}</span>
+          <label className="flex flex-col gap-1">
+            <span className={rotuloCampo}>{L('Fatia (%)', 'Stake (%)')}</span>
             <input className={campo} value={pctCampo} inputMode="decimal"
               onChange={(e) => setPctCampo(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'))} placeholder="10" />
           </label>
-          <label className="block">
-            <span className="text-[10px] uppercase text-white/45">{L('Preço (OLEFOOT)', 'Price (OLEFOOT)')}</span>
+          <label className="flex flex-col gap-1">
+            <span className={rotuloCampo}>{L('Preço (OLEFOOT)', 'Price (OLEFOOT)')}</span>
             <input className={campo} value={precoCampo} inputMode="numeric"
               onChange={(e) => setPrecoCampo(e.target.value.replace(/[^\d]/g, ''))} placeholder={L('ex.: 50000', 'e.g. 50000')} />
           </label>
@@ -221,9 +227,9 @@ export function SociedadeSection() {
         title={L(`Comprar ${comprarAlvo ? pct(comprarAlvo.percentBps) : ''} de um clube?`, `Buy ${comprarAlvo ? pct(comprarAlvo.percentBps) : ''} of a club?`)}
         confirmLabel={agindo ? L('Comprando…', 'Buying…') : L(`Pagar ${tok(comprarAlvo?.priceOlefoot ?? 0)} OLEFOOT`, `Pay ${tok(comprarAlvo?.priceOlefoot ?? 0)} OLEFOOT`)}
         confirmDisabled={agindo}
-        accent="#fde100"
+        accent="var(--color-rua)"
       >
-        <p className="mt-3 text-sm text-white/75">
+        <p className="mt-3 text-[14px] leading-relaxed text-suave">
           {L(
             `Tu recebes ${comprarAlvo ? pct(comprarAlvo.percentBps) : ''} de toda venda que esse clube fizer no mercado de elenco — direto na tua carteira, sem depender de ninguém.`,
             `You get ${comprarAlvo ? pct(comprarAlvo.percentBps) : ''} of every sale this club makes on the squad market — straight to your wallet, no middleman.`,

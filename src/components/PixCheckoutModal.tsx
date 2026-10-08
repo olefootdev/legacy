@@ -11,6 +11,10 @@
  *
  * Polling: a cada 3s consulta status do intent. Quando vier "paid", para.
  * Webhook é o canal principal — polling é safety net.
+ *
+ * DS 2027: asfalto com fio de rua no topo; valor em spray; o QR vira um
+ * INGRESSO de papel (cal + picote + canhoto com a contagem). Sem gradiente,
+ * sem arredondado; ação = rua com sombra dura de papel.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -35,6 +39,7 @@ import {
   type CreatePixResult,
 } from '@/payments/pixClient';
 import { L, LOCALE, emIngles } from '@/i18n/L';
+import { ACAO_RUA, CAMPO_RUA, FECHAR_RUA, ROTULO_RUA } from '@/components/market/rua/escada';
 
 interface Props {
   open: boolean;
@@ -131,9 +136,9 @@ function writePixPrefill(v: PixPrefill): void {
 
 function Entrega({ valor }: { valor: string }) {
   return (
-    <div className="flex min-w-0 items-baseline justify-between gap-3 border border-white/10 bg-deep-black px-3 py-2.5">
-      <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-white/50">{L('Você recebe', 'You get')}</span>
-      <span className="ole-num min-w-0 truncate text-[15px] text-white tabular-nums">{valor}</span>
+    <div className="flex min-w-0 items-baseline justify-between gap-3 border-[3px] border-ouro-27 bg-asfalto-27 px-3 py-2.5">
+      <span className="shrink-0 font-prova text-[10.5px] font-bold uppercase tracking-[0.16em] text-mudo">{L('Você recebe', 'You get')}</span>
+      <span className="min-w-0 truncate font-spray text-[20px] font-black leading-none text-ouro-27 tabular-nums">{valor}</span>
     </div>
   );
 }
@@ -287,38 +292,36 @@ export function PixCheckoutModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[90] flex items-end justify-center bg-black/85 p-3 sm:items-center sm:p-4"
+          className="fixed inset-0 z-[90] flex items-end justify-center bg-asfalto-27/90 p-3 sm:items-center sm:p-4"
           onClick={handleClose}
         >
           <motion.div
-            initial={{ scale: 0.96, y: 12 }}
+            initial={{ scale: 0.97, y: 12 }}
             animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.96, y: 12 }}
+            exit={{ scale: 0.97, y: 12 }}
             onClick={(e) => e.stopPropagation()}
-            className="my-auto flex max-h-[min(90dvh,calc(100dvh-3rem))] w-full max-w-md flex-col overflow-hidden rounded-sm border border-white/16 bg-panel sm:max-h-[min(92dvh,800px)]"
+            className="my-auto flex max-h-[min(90dvh,calc(100dvh-3rem))] w-full max-w-md flex-col overflow-hidden border-2 border-linha border-t-[6px] border-t-rua bg-asfalto-27 sm:max-h-[min(92dvh,800px)]"
           >
             {/* Header */}
-            <div className="flex items-start justify-between gap-3 p-5 border-b border-white/10">
+            <div className="flex items-start justify-between gap-3 border-b-2 border-linha p-5">
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-neon-yellow uppercase tracking-[0.22em] font-display font-black mb-1">
-                  {L('Pagamento PIX', 'Pix payment')}
+                <p className="mb-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+                  — {L('Pagamento PIX', 'Pix payment')}
                 </p>
-                <h3 className="font-display text-lg font-black uppercase tracking-wide text-white truncate">
+                <h3 className="truncate font-impact text-[24px] uppercase leading-none text-papel">
                   {title}
                 </h3>
-                <p className="text-[11px] text-white/60 mt-0.5">{description}</p>
-                <p className="text-[10px] text-cimento mt-1 font-bold tabular-nums">
+                <p className="mt-1.5 text-[12px] leading-snug text-suave">{description}</p>
+                <p className="mt-3 flex flex-wrap items-baseline gap-x-2 font-prova text-[11px] font-bold uppercase tracking-[0.14em] text-mudo">
                   {/* Depois da cobrança criada, o valor que vale é o do servidor —
                       é ele que está no QR (card: preço USDT × cotação da hora). */}
-                  {L('Valor', 'Amount')}: <span className="text-white text-base">{fmtBrl(charge?.amountCents ?? amountCents)}</span>
+                  {L('Valor', 'Amount')}
+                  <span className="font-spray text-[32px] font-black leading-none tracking-normal text-papel tabular-nums">
+                    {fmtBrl(charge?.amountCents ?? amountCents)}
+                  </span>
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={handleClose}
-                className="rounded-sm p-2 text-gray-500 hover:bg-white/10 hover:text-white transition-colors"
-                aria-label={L('Fechar', 'Close')}
-              >
+              <button type="button" onClick={handleClose} className={FECHAR_RUA} aria-label={L('Fechar', 'Close')}>
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -326,93 +329,82 @@ export function PixCheckoutModal({
             {/* Body */}
             <div className="flex-1 overflow-y-auto p-5">
               {stage === 'form' && (
-                <div className="space-y-3">
-                  <p className="text-xs text-white/60">
+                <div className="space-y-4">
+                  <p className="text-[12px] text-suave">
                     {L('Dados de cobrança (necessários pela Receita Federal):', 'Billing details (required by Brazilian tax authorities):')}
                   </p>
 
                   <div>
-                    <label className="text-[10px] uppercase tracking-wider text-white/50 font-display font-bold block mb-1">
-                      {L('Nome completo', 'Full name')}
-                    </label>
+                    <label className={cn(ROTULO_RUA, 'mb-1.5')}>— {L('Nome completo', 'Full name')}</label>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full bg-deep-black border border-white/15 rounded-sm px-3 py-2.5 text-white focus:border-neon-yellow focus:outline-none"
+                      className={CAMPO_RUA}
                       placeholder={L('Como aparece no documento', 'As it appears on your ID')}
                     />
                   </div>
 
                   <div>
-                    <label className="text-[10px] uppercase tracking-wider text-white/50 font-display font-bold block mb-1">
-                      E-mail
-                    </label>
+                    <label className={cn(ROTULO_RUA, 'mb-1.5')}>— E-mail</label>
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-deep-black border border-white/15 rounded-sm px-3 py-2.5 text-white focus:border-neon-yellow focus:outline-none"
+                      className={CAMPO_RUA}
                       placeholder={L('seu@email.com', 'you@email.com')}
                     />
                   </div>
 
                   <div>
-                    <label className="text-[10px] uppercase tracking-wider text-white/50 font-display font-bold block mb-1">
-                      CPF
-                    </label>
+                    <label className={cn(ROTULO_RUA, 'mb-1.5')}>— CPF</label>
                     <input
                       type="text"
                       inputMode="numeric"
                       value={cpf}
                       onChange={(e) => setCpf(formatCpf(e.target.value))}
                       className={cn(
-                        'w-full bg-deep-black border rounded-sm px-3 py-2.5 text-white font-mono tabular-nums focus:outline-none',
-                        cpf.length === 0 ? 'border-white/15 focus:border-neon-yellow'
-                          : cpfValid ? 'border-alta/50' : 'border-baixa/50',
+                        CAMPO_RUA,
+                        'font-prova tabular-nums',
+                        cpf.length === 0 ? '' : cpfValid ? 'border-alta/60 focus:border-alta' : 'border-baixa/60 focus:border-baixa',
                       )}
                       placeholder="000.000.000-00"
                       maxLength={14}
                     />
                     {cpf.length > 0 && !cpfValid && (
-                      <p className="text-[10px] text-baixa mt-1">{L('CPF inválido', 'Invalid CPF')}</p>
+                      <p className="mt-1 font-prova text-[10.5px] uppercase tracking-[0.1em] text-baixa">{L('CPF inválido', 'Invalid CPF')}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="text-[10px] uppercase tracking-wider text-white/50 font-display font-bold block mb-1">
-                      {L('Telefone (opcional)', 'Phone (optional)')}
-                    </label>
+                    <label className={cn(ROTULO_RUA, 'mb-1.5')}>— {L('Telefone (opcional)', 'Phone (optional)')}</label>
                     <input
                       type="tel"
                       inputMode="tel"
                       value={cellphone}
                       onChange={(e) => setCellphone(e.target.value)}
-                      className="w-full bg-deep-black border border-white/15 rounded-sm px-3 py-2.5 text-white focus:border-neon-yellow focus:outline-none"
+                      className={CAMPO_RUA}
                       placeholder="(11) 99999-9999"
                     />
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={!formValid}
-                    className="w-full bg-neon-yellow hover:bg-white text-black py-3.5 mt-2 rounded-sm font-display text-sm font-black uppercase tracking-[0.18em] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {L('Gerar PIX', 'Generate Pix')}
-                  </button>
+                  <div className="pt-2">
+                    <button type="button" onClick={handleSubmit} disabled={!formValid} className={ACAO_RUA}>
+                      {L('Gerar PIX', 'Generate Pix')} <span aria-hidden>→</span>
+                    </button>
+                  </div>
 
-                  <p className="text-[10px] text-white/40 text-center mt-2 inline-flex items-center gap-1.5 justify-center w-full">
-                    <ShieldCheck className="w-3 h-3" />
+                  <p className="mt-2 inline-flex w-full items-center justify-center gap-1.5 text-center font-prova text-[10px] uppercase tracking-[0.1em] text-mudo">
+                    <ShieldCheck className="h-3 w-3" aria-hidden />
                     {L('Processado pelo Mercado Pago · pagamento seguro', 'Processed by Mercado Pago · secure payment')}
                   </p>
                 </div>
               )}
 
               {stage === 'loading' && (
-                <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <Loader2 className="w-8 h-8 text-neon-yellow animate-spin" />
-                  <p className="text-sm text-white/70 font-display uppercase tracking-wider">
+                <div className="flex flex-col items-center justify-center gap-3 py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-rua" aria-hidden />
+                  <p className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
                     {L('Gerando seu PIX…', 'Generating your Pix…')}
                   </p>
                 </div>
@@ -420,50 +412,64 @@ export function PixCheckoutModal({
 
               {stage === 'waiting' && charge && (
                 <div className="space-y-4">
-                  {/* QR Code */}
-                  {charge.brCodeBase64 && (
-                    <div className="bg-white p-3 rounded-sm flex items-center justify-center">
-                      <img
-                        src={
-                          charge.brCodeBase64.startsWith('data:')
-                            ? charge.brCodeBase64
-                            : `data:image/png;base64,${charge.brCodeBase64}`
-                        }
-                        alt={L('QR Code PIX', 'Pix QR code')}
-                        className="w-48 h-48"
-                      />
+                  {/* ── O INGRESSO: QR no papel, picote, canhoto com a contagem ── */}
+                  <div className="flex flex-col">
+                    <div className="flex flex-col items-center gap-2 bg-cal p-4 text-asfalto-27">
+                      <span className="self-start font-prova text-[10.5px] font-bold uppercase tracking-[0.2em]">
+                        {L('Olefoot · PIX', 'Olefoot · Pix')}
+                      </span>
+                      {charge.brCodeBase64 ? (
+                        <div className="bg-white p-2">
+                          <img
+                            src={
+                              charge.brCodeBase64.startsWith('data:')
+                                ? charge.brCodeBase64
+                                : `data:image/png;base64,${charge.brCodeBase64}`
+                            }
+                            alt={L('QR Code PIX', 'Pix QR code')}
+                            className="h-48 w-48"
+                          />
+                        </div>
+                      ) : (
+                        <div className="grid h-48 w-48 place-items-center border-2 border-dashed border-asfalto-27/40">
+                          <QrCode className="h-12 w-12 opacity-30" aria-hidden />
+                        </div>
+                      )}
+                      <span className="font-voz text-[22px] leading-none">{L('Aponta e paga.', 'Scan and pay.')}</span>
                     </div>
-                  )}
-
-                  {!charge.brCodeBase64 && (
-                    <div className="bg-panel border border-dashed border-white/15 p-8 rounded-sm flex items-center justify-center">
-                      <QrCode className="w-12 h-12 text-white/20" />
+                    <div aria-hidden className="relative h-3 bg-cal">
+                      <span className="rua-picote-h absolute inset-x-0 top-1/2 h-2 -translate-y-1/2" />
                     </div>
-                  )}
+                    <div className="flex items-center justify-between gap-3 bg-concreto px-4 py-3">
+                      <span className="inline-flex items-center gap-1.5 font-prova text-[10.5px] font-bold uppercase tracking-[0.16em] text-mudo">
+                        <Clock className="h-3 w-3" aria-hidden />
+                        {L('Expira em', 'Expires in')}
+                      </span>
+                      <span className="font-spray text-[28px] font-black leading-none text-papel tabular-nums">
+                        {countdown > 0 ? formatCountdown(countdown) : L('expirado', 'expired')}
+                      </span>
+                    </div>
+                  </div>
 
-                  {/* Copy-paste */}
+                  {/* Copia e cola */}
                   <div>
-                    <label className="text-[10px] uppercase tracking-wider text-white/50 font-display font-bold block mb-1">
-                      {L('Copia e cola PIX', 'Pix copy and paste')}
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0 bg-deep-black border border-white/15 rounded-sm px-3 py-2.5">
-                        <p className="font-mono text-[11px] text-white/70 truncate">
-                          {charge.brCode}
-                        </p>
+                    <label className={cn(ROTULO_RUA, 'mb-1.5')}>— {L('Copia e cola PIX', 'Pix copy and paste')}</label>
+                    <div className="flex items-stretch gap-2">
+                      <div className="min-w-0 flex-1 border-2 border-linha bg-concreto px-3 py-2.5">
+                        <p className="truncate font-prova text-[11px] text-suave">{charge.brCode}</p>
                       </div>
                       <button
                         type="button"
                         onClick={handleCopyBrCode}
-                        className="shrink-0 bg-neon-yellow hover:bg-white text-black px-3 py-2.5 rounded-sm transition-colors"
+                        className="grid w-12 shrink-0 place-items-center bg-rua text-asfalto-27 shadow-[3px_3px_0_var(--color-papel)] transition-transform hover:-translate-y-px"
                         aria-label={L('Copiar código PIX', 'Copy Pix code')}
                       >
-                        {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        {copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </button>
                     </div>
                     {copied && (
-                      <p className="text-[10px] text-alta mt-1 inline-flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> {L('Código copiado', 'Code copied')}
+                      <p className="mt-1.5 inline-flex items-center gap-1 font-prova text-[10.5px] uppercase tracking-[0.1em] text-alta">
+                        <CheckCircle2 className="h-3 w-3" aria-hidden /> {L('Código copiado', 'Code copied')}
                       </p>
                     )}
                   </div>
@@ -480,30 +486,19 @@ export function PixCheckoutModal({
                     <Entrega valor={L(`+ ${charge.entrega!.satelites} contas de $10 · 1 em cada time`, `+ ${charge.entrega!.satelites} $10 accounts · 1 in each team`)} />
                   )}
 
-                  {/* Countdown + polling status */}
-                  <div className="flex items-center justify-between bg-deep-black border border-white/10 rounded-sm px-3 py-2">
-                    <span className="text-[10px] text-white/50 uppercase tracking-wider inline-flex items-center gap-1.5">
-                      <Clock className="w-3 h-3" />
-                      {L('Expira em', 'Expires in')}
-                    </span>
-                    <span className="font-display text-sm font-black text-neon-yellow tabular-nums">
-                      {countdown > 0 ? formatCountdown(countdown) : L('expirado', 'expired')}
-                    </span>
-                  </div>
-
-                  <div className="bg-deep-black border border-white/10 rounded-sm p-3 flex items-start gap-2">
-                    <Loader2 className="w-4 h-4 text-giz animate-spin shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-giz leading-snug">
+                  <div className="flex items-start gap-2 border-l-[3px] border-rua bg-concreto p-3">
+                    <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-rua" aria-hidden />
+                    <p className="text-[12px] leading-snug text-papel">
                       {L('Aguardando confirmação do banco…', 'Waiting for bank confirmation…')}
                       <br />
-                      <span className="text-cimento text-[10px]">
+                      <span className="text-[11px] text-mudo">
                         {L('Detectamos automaticamente assim que o PIX cair.', 'We detect it automatically as soon as the Pix lands.')}
                       </span>
                     </p>
                   </div>
 
                   {charge.devMode && (
-                    <p className="text-[10px] text-atencao text-center">
+                    <p className="text-center font-prova text-[10.5px] uppercase tracking-[0.1em] text-atencao">
                       {L('Modo sandbox (devMode) — pagamento simulado', 'Sandbox mode (devMode) — simulated payment')}
                     </p>
                   )}
@@ -511,53 +506,44 @@ export function PixCheckoutModal({
               )}
 
               {stage === 'paid' && (
-                <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <div className="border border-alta/40 bg-deep-black p-3 rounded-full">
-                    <CheckCircle2 className="w-12 h-12 text-alta" />
-                  </div>
-                  <p className="font-display text-lg font-black uppercase tracking-wider text-alta">
+                <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+                  <span className="grid h-16 w-16 place-items-center rounded-full bg-rua text-asfalto-27">
+                    <CheckCircle2 className="h-9 w-9" aria-hidden />
+                  </span>
+                  <p className="font-voz text-[38px] leading-none text-papel">{L('Caiu.', 'Landed.')}</p>
+                  <p className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
                     {L('Pagamento confirmado', 'Payment confirmed')}
                   </p>
-                  <p className="text-xs text-white/60 text-center">{paidMessage}</p>
+                  <p className="text-[13px] text-suave">{paidMessage}</p>
                 </div>
               )}
 
               {stage === 'expired' && (
-                <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <div className="border border-baixa/40 bg-deep-black p-3 rounded-full">
-                    <Clock className="w-12 h-12 text-baixa" />
-                  </div>
-                  <p className="font-display text-base font-black uppercase tracking-wider text-baixa">
+                <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+                  <Clock className="h-10 w-10 text-baixa" aria-hidden />
+                  <p className="font-impact text-[22px] uppercase leading-none text-papel">
                     {L('QR Code expirado', 'QR code expired')}
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setStage('form')}
-                    className="mt-2 bg-neon-yellow hover:bg-white text-black px-5 py-2.5 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] transition-colors"
-                  >
-                    {L('Gerar novo PIX', 'Generate new Pix')}
-                  </button>
+                  <div className="mt-2 w-full max-w-xs">
+                    <button type="button" onClick={() => setStage('form')} className={ACAO_RUA}>
+                      {L('Gerar novo PIX', 'Generate new Pix')} <span aria-hidden>→</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
               {stage === 'error' && (
-                <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <div className="border border-baixa/40 bg-deep-black p-3 rounded-full">
-                    <AlertTriangle className="w-12 h-12 text-baixa" />
-                  </div>
-                  <p className="font-display text-base font-black uppercase tracking-wider text-baixa">
+                <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+                  <AlertTriangle className="h-10 w-10 text-baixa" aria-hidden />
+                  <p className="font-impact text-[22px] uppercase leading-none text-papel">
                     {L('Falha no checkout', 'Checkout failed')}
                   </p>
-                  {errorMsg && (
-                    <p className="text-[11px] text-white/50 text-center max-w-xs">{errorMsg}</p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setStage('form')}
-                    className="mt-2 bg-neon-yellow hover:bg-white text-black px-5 py-2.5 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] transition-colors"
-                  >
-                    {L('Tentar novamente', 'Try again')}
-                  </button>
+                  {errorMsg && <p className="max-w-xs text-[12px] text-suave">{errorMsg}</p>}
+                  <div className="mt-2 w-full max-w-xs">
+                    <button type="button" onClick={() => setStage('form')} className={ACAO_RUA}>
+                      {L('Tentar de novo', 'Try again')} <span aria-hidden>→</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

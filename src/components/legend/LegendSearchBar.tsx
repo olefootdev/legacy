@@ -19,29 +19,29 @@ export function LegendSearchBar({ onOpen, totalCount }: LegendSearchBarProps) {
       <button
         type="button"
         onClick={onOpen}
-        className="group inline-flex h-12 items-center gap-3 sm:gap-4 border-2 border-black px-5 sm:px-7 transition-colors hover:bg-black hover:text-neon-yellow"
+        className="group inline-flex h-12 items-center gap-3 sm:gap-4 border-2 border-asfalto-27 px-5 sm:px-7 transition-colors hover:bg-asfalto-27"
         aria-label={L('Buscar lenda', 'Search legend')}
       >
         <Search
-          className="w-4 h-4 sm:w-5 sm:h-5 text-black group-hover:text-neon-yellow transition-colors"
+          className="w-4 h-4 sm:w-5 sm:h-5 text-asfalto-27 group-hover:text-ouro-27 transition-colors"
           strokeWidth={2.5}
         />
         <span
-          className="ole-num whitespace-nowrap uppercase text-black group-hover:text-neon-yellow transition-colors"
+          className="ole-num whitespace-nowrap uppercase text-asfalto-27 group-hover:text-ouro-27 transition-colors"
           style={{ fontSize: '13px' }}
         >
           {L('Buscar lenda', 'Search legend')}
         </span>
         {totalCount && totalCount > 1 ? (
           <span
-            className="ole-num inline-flex items-center justify-center min-w-[26px] h-[22px] px-2 bg-black text-neon-yellow leading-none group-hover:bg-neon-yellow group-hover:text-black transition-colors"
+            className="ole-num inline-flex items-center justify-center min-w-[26px] h-[22px] px-2 bg-asfalto-27 text-ouro-27 leading-none group-hover:bg-ouro-27 group-hover:text-asfalto-27 transition-colors"
             style={{ fontSize: '11px' }}
           >
             {totalCount}
           </span>
         ) : null}
         <ChevronDown
-          className="w-4 h-4 text-black/65 group-hover:text-neon-yellow transition-colors"
+          className="w-4 h-4 text-asfalto-27 group-hover:text-ouro-27 transition-colors"
           strokeWidth={2.5}
         />
       </button>

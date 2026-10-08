@@ -16,11 +16,12 @@ type BadgeVariant = 'default' | 'rare' | 'epic' | 'legendary' | 'outline';
  * Agora a escada é de amarelo, e a hierarquia se lê pela intensidade.
  */
 const VARIANT_CLASSES: Record<BadgeVariant, string> = {
-  default: 'bg-white/10 text-white/75',
-  rare: 'bg-neon-yellow/15 text-neon-yellow',
-  epic: 'bg-neon-yellow/35 text-neon-yellow',
-  legendary: 'bg-neon-yellow text-black',
-  outline: 'bg-transparent border border-neon-yellow/60 text-neon-yellow',
+  // DS 2027 · a escada: chão → corre → respeito → lenda.
+  default: 'border-2 border-linha text-mudo',
+  rare: 'border-2 border-neon-yellow text-neon-yellow',
+  epic: 'bg-black border-2 border-ouro-27 text-ouro-27',
+  legendary: 'bg-ouro-27 text-black',
+  outline: 'bg-transparent border-2 border-neon-yellow text-neon-yellow',
 };
 
 /**
@@ -40,7 +41,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-block font-display font-black uppercase text-[12px] tracking-[0.2em] px-4 py-1.5 rounded-sm',
+        'inline-block font-prova font-bold uppercase text-[12px] tracking-[0.14em] px-3 py-1',
         VARIANT_CLASSES[variant],
         angular && 'clip-angular-badge',
         className,

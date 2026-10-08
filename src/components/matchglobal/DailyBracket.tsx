@@ -10,6 +10,7 @@ import { L } from '@/i18n/L';
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Crown, Trophy } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { DailyKnockoutRound } from '@/match/globalLeagueMVP';
 import type { GlobalFixture } from '@/match/globalMatch';
 
@@ -58,15 +59,17 @@ export function DailyBracket({ bracket, myTeamId, championName }: DailyBracketPr
 
   if (bracket.length === 0) {
     return (
-      <p className="text-center text-text-soft py-8">
-        {L('Bracket ainda não gerado. O mata-mata começa às 19h.', 'Bracket not generated yet. The knockout starts at 7pm.')}
-      </p>
+      <div className="border-2 border-dashed border-fio px-4 py-6">
+        <p className="font-voz text-[22px] leading-[1.05] text-suave">
+          {L('Chave ainda não saiu. O mata-mata começa às 19h.', 'Bracket not out yet. The knockout starts at 7pm.')}
+        </p>
+      </div>
     );
   }
 
   return (
     <div className="overflow-x-auto pb-2">
-      <div className="flex gap-4 min-w-max">
+      <div className="flex min-w-max gap-4">
         {bracket.map((round) => {
           const myAlive = !!myTeamId && round.fixtures.some(
             (fx) => fx.homeTeamId === myTeamId || fx.awayTeamId === myTeamId,
@@ -74,36 +77,36 @@ export function DailyBracket({ bracket, myTeamId, championName }: DailyBracketPr
           const msToKick = round.scheduledKickoffMs - now;
           const isFinal = round.size === 2;
           return (
-          <div key={round.id} className="flex flex-col gap-3 min-w-[224px]">
-            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+          <div key={round.id} className="flex min-w-[224px] flex-col gap-3">
+            <div className="flex items-end justify-between gap-2 border-b-2 border-linha pb-2">
               <div className="flex items-center gap-1.5">
-                {isFinal && <Trophy className="h-4 w-4 text-neon-yellow" strokeWidth={2.2} aria-hidden />}
-                <div>
-                  <h3 className="font-display text-sm font-bold uppercase tracking-wider text-neon-yellow">
+                {isFinal && <Trophy className="h-4 w-4 text-ouro-27" strokeWidth={2.2} aria-hidden />}
+                <div className="flex flex-col">
+                  <h3 className={cn('font-impact text-[20px] uppercase leading-none', isFinal ? 'text-ouro-27' : 'text-papel')}>
                     {roundLabel(round.size)}
                   </h3>
                   {myAlive && round.status !== 'finished' && (
-                    <span className="font-display text-[9px] font-bold uppercase tracking-wider text-neon-green">
-                      {L('você está aqui', 'you are here')}
+                    <span className="font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-rua">
+                      {L('tu tá aqui', 'you are here')}
                     </span>
                   )}
                 </div>
               </div>
               {round.status === 'live' && (
-                <span className="text-[10px] font-mono text-neon-green animate-pulse">● {L('ao vivo', 'live')}</span>
+                <span className="bg-rua px-1.5 py-0.5 font-prova text-[10px] font-bold uppercase text-asfalto-27">● {L('ao vivo', 'live')}</span>
               )}
               {round.status === 'scheduled' && msToKick > 0 && (
-                <span className="text-[10px] font-mono text-text-soft">{L('em', 'in')} {fmtMs(msToKick)}</span>
+                <span className="font-spray text-[16px] font-black text-suave">{L('em', 'in')} {fmtMs(msToKick)}</span>
               )}
               {round.status === 'scheduled' && msToKick <= 0 && (
-                <span className="text-[10px] font-mono text-neon-yellow">{L('iniciando…', 'starting…')}</span>
+                <span className="font-prova text-[10px] font-bold uppercase text-rua">{L('iniciando…', 'starting…')}</span>
               )}
               {round.status === 'finished' && (
-                <span className="text-[10px] font-mono text-text-soft">{L('encerrada', 'finished')}</span>
+                <span className="font-prova text-[10px] font-bold uppercase text-mudo">{L('encerrada', 'finished')}</span>
               )}
             </div>
 
-            <div className="flex flex-col justify-around gap-3 flex-1">
+            <div className="flex flex-1 flex-col justify-around gap-2">
               {round.fixtures.map((fx, i) => {
                 const winner = fixtureWinner(fx);
                 const rows: Array<{ side: 'home' | 'away'; name: string; id: string; score: number; pen?: number }> = [
@@ -116,7 +119,7 @@ export function DailyBracket({ bracket, myTeamId, championName }: DailyBracketPr
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.02 }}
-                    className="sports-panel rounded-md overflow-hidden text-sm"
+                    className="flex flex-col gap-0.5 overflow-hidden"
                   >
                     {rows.map((r) => {
                       const isWinner = winner === r.side;
@@ -125,25 +128,30 @@ export function DailyBracket({ bracket, myTeamId, championName }: DailyBracketPr
                       return (
                         <div
                           key={r.side}
-                          className={`flex items-center justify-between gap-2 px-3 py-2 transition-colors ${
-                            isChampion ? 'bg-neon-yellow/20' : isWinner ? 'bg-neon-yellow/[0.07]' : ''
-                          } ${
-                            isMe
-                              ? 'border-l-4 border-neon-yellow'
-                              : isWinner
-                                ? 'border-l-4 border-neon-yellow/50'
-                                : 'border-l-4 border-transparent'
-                          }`}
+                          className={cn(
+                            'flex min-h-[38px] items-center justify-between gap-2 px-3',
+                            isChampion ? 'bg-ouro-27 text-asfalto-27' : isMe ? 'bg-rua text-asfalto-27' : 'bg-asfalto-27',
+                          )}
                         >
-                          <span className={`flex items-center gap-1.5 truncate ${isWinner ? 'font-bold text-white' : 'text-text-soft'}`}>
-                            {isChampion && <Crown className="h-3.5 w-3.5 shrink-0 text-neon-yellow" strokeWidth={2.4} aria-hidden />}
+                          <span
+                            className={cn(
+                              'flex min-w-0 items-center gap-1.5 truncate font-impact text-[15px] uppercase leading-none',
+                              !isChampion && !isMe && (isWinner ? 'text-papel' : 'text-mudo'),
+                            )}
+                          >
+                            {isChampion && <Crown className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} aria-hidden />}
                             <span className="truncate">{r.name}</span>
                           </span>
-                          <span className="flex items-center gap-1.5 font-mono shrink-0">
+                          <span className="flex shrink-0 items-center gap-1.5">
                             {fx.wentToPenalties && r.pen != null && (
-                              <span className="text-[10px] text-text-soft">({r.pen})</span>
+                              <span className={cn('font-prova text-[10px]', isChampion || isMe ? '' : 'text-mudo')}>({r.pen})</span>
                             )}
-                            <span className={isWinner ? 'text-neon-yellow font-bold' : 'text-text-soft'}>
+                            <span
+                              className={cn(
+                                'font-spray text-[20px] font-black leading-none',
+                                !isChampion && !isMe && (isWinner ? 'text-rua' : 'text-mudo'),
+                              )}
+                            >
                               {fx.status === 'finished' ? r.score : '–'}
                             </span>
                           </span>

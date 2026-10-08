@@ -92,7 +92,7 @@ export function PenaltyKickModalV2(props: Props) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[200] bg-deep-black/95 flex items-start sm:items-center justify-center px-6 overflow-y-auto"
+          className="fixed inset-0 z-[200] bg-asfalto-27/95 flex items-start sm:items-center justify-center px-4 overflow-y-auto"
           style={{
             // svh evita "viewport empurrado" do iOS Safari em portrait inicial.
             // items-start no mobile garante que o conteúdo principal aparece
@@ -104,17 +104,18 @@ export function PenaltyKickModalV2(props: Props) {
         >
           <div className="max-w-xl w-full">
             <div className="text-center mb-6">
-              <div className="text-[10px] uppercase tracking-[0.35em] text-neon-yellow/80 mb-2">
-                {L('Pênalti pra nós', 'Penalty to us')} · {countdown}s
+              <div className="mb-2 flex items-baseline justify-center gap-2 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-rua">
+                — {L('Pênalti pra nós', 'Penalty to us')} ·
+                <span className="font-spray font-black text-[28px] leading-none tabular-nums">{countdown}</span>s
               </div>
               <h2
-                className="ole-headline text-white leading-[1.1]"
-                style={{ fontSize: 'clamp(36px, 6vw, 64px)' }}
+                className="font-impact uppercase leading-[0.95] text-papel"
+                style={{ fontSize: 'clamp(44px, 12vw, 72px)' }}
               >
                 {L('Quem bate?', 'Who takes it?')}
               </h2>
             </div>
-            <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto">
+            <div className="grid grid-cols-1 gap-2 max-h-[60svh] overflow-y-auto sm:grid-cols-2">
               {homePlayers
                 .slice()
                 .sort(
@@ -129,17 +130,17 @@ export function PenaltyKickModalV2(props: Props) {
                       key={p.playerId}
                       type="button"
                       onClick={() => onPickTaker(p.playerId, (p as any).name ?? p.playerId)}
-                      className="flex items-center justify-between bg-zinc-900 border-2 border-zinc-700 hover:border-neon-yellow px-4 py-3 transition-all"
+                      className="flex min-h-[58px] min-w-0 items-center justify-between gap-3 border-2 border-linha bg-concreto px-4 py-2.5 transition-colors hover:border-rua"
                     >
-                      <div className="text-left">
-                        <div className="font-display font-bold uppercase tracking-wider text-sm text-white">
+                      <div className="min-w-0 text-left">
+                        <div className="truncate font-voz text-[20px] leading-none text-papel">
                           {(p as any).name ?? p.playerId}
                         </div>
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-white/50">
+                        <div className="mt-1 font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">
                           {(p as any).role ?? '?'}
                         </div>
                       </div>
-                      <div className="font-display font-black text-2xl text-neon-yellow">
+                      <div className="shrink-0 font-impact text-[26px] leading-none tabular-nums text-rua">
                         {finalizacao}
                       </div>
                     </button>
@@ -208,7 +209,7 @@ export function PenaltyKickModalV2(props: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[200] bg-deep-black/95 flex items-start sm:items-center justify-center overflow-y-auto"
+      className="fixed inset-0 z-[200] bg-asfalto-27/95 flex items-start sm:items-center justify-center overflow-y-auto"
       style={{
         // 100svh evita o "viewport empurrado" do iOS Safari na primeira
         // carga em portrait (sintoma: modal abria mas conteúdo principal

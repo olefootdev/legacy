@@ -53,7 +53,7 @@ export function ReferralLanding() {
   }, [inviteCode, registered, sponsorId, navigate, dispatch]);
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-deep-black font-mono text-[12px] text-cimento">
+    <div className="flex min-h-svh items-center justify-center bg-asfalto-27 font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
       {L('Abrindo convite…', 'Opening invite…')}
     </div>
   );

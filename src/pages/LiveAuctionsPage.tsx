@@ -1,17 +1,17 @@
 /**
  * LiveAuctionsPage — Página de leilões ao vivo
  * Rota: /mercado/leiloes
- * ATUALIZADO: Usa jogadores reais do sistema + Design system do jogo
+ * Usa jogadores reais do sistema. DS 2027: cartas na escada por OVR, tortas
+ * como lambe, contagem em spray; saldo no degrau RESPEITO.
  */
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Gavel, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
 import { BackButton } from '@/components/BackButton';
 import { LiveAuctionCard } from '@/market/LiveAuctionCard';
-import { SecaoVolt } from '@/components/ui';
+import { SecaoRua, SeloRua } from '@/components/ui/Rua';
 import {
   useActiveAuctions,
   useAuctionMessages,
@@ -62,132 +62,86 @@ export function LiveAuctionsPage() {
   }, [availablePlayers, auctions.length]);
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 pb-10">
+    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8 overflow-x-hidden px-3 pb-10 sm:px-4">
       <BackButton to="/mercado" label={L('Mercado', 'Market')} />
 
-      {/* Header — Padrão editorial do jogo */}
-      <header className="text-center pt-2 pb-2">
-        <div className="ole-eyebrow !text-neon-yellow mb-4">
-          <span>{L('Leilões ao Vivo', 'Live Auctions')}</span>
-        </div>
-        <h1 className="leading-[0.95]">
-          <span
-            className="block font-bold uppercase text-white"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(2.25rem, 6vw, 3.5rem)',
-              letterSpacing: '0.005em',
-            }}
-          >
-            {L('Leilões', 'Auctions')}
-          </span>
+      {/* Cabeçalho — a voz em cima, o grito embaixo. */}
+      <header className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <SecaoRua label={L('Leilões ao vivo', 'Live auctions')} />
           {activeAuctions.length > 0 && (
-            <span
-              className="block font-impact uppercase leading-[1.1] text-neon-yellow mt-1"
-              style={{
-                fontSize: 'clamp(1.5rem, 4vw, 2.25rem)',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {activeAuctions.length} {activeAuctions.length === 1 ? L('ativo', 'active') : L('ativos', 'active')}
-            </span>
+            <SeloRua tom="corre">
+              ● {activeAuctions.length} {activeAuctions.length === 1 ? L('ativo', 'active') : L('ativos', 'active')}
+            </SeloRua>
           )}
+        </div>
+        <h1 className="flex flex-col font-impact uppercase leading-[0.88]">
+          <span className="font-voz text-[clamp(48px,13vw,84px)] normal-case leading-[0.9] text-papel">{L('Leilões', 'Auctions')}</span>
+          <span className="text-[clamp(30px,8.5vw,54px)] text-transparent [-webkit-text-stroke:1.5px_var(--color-papel)]">
+            {L('Quem dá mais?', 'Who bids more?')}
+          </span>
         </h1>
-        <span aria-hidden className="mx-auto mt-5 block w-12 h-[3px] bg-neon-yellow" />
       </header>
 
-      {/* Saldo + Mensagens — Grid padrão */}
-      <div
-        className="grid grid-cols-2 divide-x divide-[var(--color-border)] border border-[var(--color-border)] bg-dark-gray"
-        style={{ borderRadius: 'var(--radius-md)' }}
-      >
-        <div className="px-5 py-4">
-          <p
-            className="text-white/55 uppercase"
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontSize: '10px',
-              letterSpacing: '0.22em',
-              fontWeight: 600,
-            }}
-          >
-            {L('Seu Saldo', 'Your Balance')}
-          </p>
-          <p
-            className="ole-num mt-1.5 tabular-nums leading-none text-neon-yellow"
-            style={{
-              fontSize: 'clamp(1.6rem, 3.5vw, 2.25rem)',
-            }}
-          >
+      {/* Saldo (RESPEITO: fio de ouro) + avisos */}
+      <div className="grid min-w-0 grid-cols-2 gap-2">
+        <div className="flex min-w-0 flex-col gap-1 border-[3px] border-ouro-27 bg-asfalto-27 p-4">
+          <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">{L('Teu saldo', 'Your balance')}</span>
+          <span className="block min-w-0 truncate font-spray text-[clamp(28px,8vw,40px)] font-black leading-[0.9] tabular-nums text-ouro-27">
             {formatExp(ole)}
-          </p>
+          </span>
         </div>
 
         <button
           type="button"
           onClick={() => setShowMessages(!showMessages)}
-          className="relative px-5 py-4 transition-colors hover:bg-white/5"
+          aria-expanded={showMessages}
+          className="relative flex min-w-0 flex-col gap-1 bg-concreto p-4 text-left transition-colors hover:bg-linha focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rua"
         >
-          <p
-            className="text-white/55 uppercase"
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontSize: '10px',
-              letterSpacing: '0.22em',
-              fontWeight: 600,
-            }}
-          >
-            {L('Notificações', 'Notifications')}
-          </p>
-          <p
-            className="ole-num mt-1.5 tabular-nums leading-none text-white"
-            style={{
-              fontSize: 'clamp(1.6rem, 3.5vw, 2.25rem)',
-            }}
-          >
-            {unreadMessages}
-          </p>
+          <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">{L('Avisos', 'Notices')}</span>
+          <span className="flex items-baseline gap-2">
+            <span className="font-spray text-[clamp(28px,8vw,40px)] font-black leading-[0.9] tabular-nums text-papel">{unreadMessages}</span>
+            <span aria-hidden className="font-impact text-[18px] text-mudo">{showMessages ? '↑' : '↓'}</span>
+          </span>
           {unreadMessages > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-baixa text-[10px] font-bold text-white">
-              {unreadMessages}
-            </span>
+            <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-rua" aria-hidden />
           )}
         </button>
       </div>
 
-      {/* Mensagens (expansível) */}
+      {/* Avisos (expansível) */}
       <AnimatePresence>
         {showMessages && messages.length > 0 && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="space-y-2 overflow-hidden"
+            className="flex flex-col gap-1.5 overflow-hidden"
           >
             {messages.slice(0, 5).map((msg) => (
               <div
                 key={msg.id}
                 className={cn(
-                  'rounded-lg border px-4 py-3',
-                  msg.urgency === 'high'
-                    ? 'border-baixa/40 bg-panel'
-                    : 'border-white/10 bg-panel',
+                  'flex min-w-0 flex-col gap-1 bg-concreto px-4 py-3',
+                  msg.urgency === 'high' && 'border-l-4 border-rua',
                 )}
               >
-                <p className="text-sm font-bold text-white">{msg.title}</p>
-                <p className="mt-1 text-xs text-white/60">{msg.message}</p>
+                <p className="flex min-w-0 items-center gap-2 font-impact text-[17px] uppercase leading-tight text-papel">
+                  {msg.urgency === 'high' && <SeloRua tom="corre" className="py-0.5 text-[10px]">{L('Agora', 'Now')}</SeloRua>}
+                  <span className="min-w-0 truncate">{msg.title}</span>
+                </p>
+                <p className="font-sans text-[13px] leading-snug text-suave">{msg.message}</p>
               </div>
             ))}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Leilões Ativos — Header padrão editorial */}
+      {/* Leilões ativos */}
       {activeAuctions.length > 0 && (
-        <section className="space-y-4">
-          <SecaoVolt label={L(`Leilões ativos (${activeAuctions.length})`, `Active auctions (${activeAuctions.length})`)} className="px-0.5" />
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="flex min-w-0 flex-col gap-5">
+          <SecaoRua label={L('No martelo', 'Under the hammer')} aside={String(activeAuctions.length)} />
+          <div className="grid min-w-0 gap-x-5 gap-y-8 px-1 sm:grid-cols-2 lg:grid-cols-3">
             {activeAuctions.map((auction) => (
               <LiveAuctionCard
                 key={auction.id}
@@ -201,12 +155,11 @@ export function LiveAuctionsPage() {
         </section>
       )}
 
-      {/* Leilões Encerrados */}
+      {/* Leilões encerrados */}
       {endedAuctions.length > 0 && (
-        <section className="space-y-4">
-          <SecaoVolt label={L(`Encerrados (${endedAuctions.length})`, `Ended (${endedAuctions.length})`)} tone="neutro" className="px-0.5" />
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="flex min-w-0 flex-col gap-5">
+          <SecaoRua label={L('Encerrados', 'Ended')} aside={String(endedAuctions.length)} />
+          <div className="grid min-w-0 gap-x-5 gap-y-8 px-1 opacity-80 sm:grid-cols-2 lg:grid-cols-3">
             {endedAuctions.map((auction) => (
               <LiveAuctionCard
                 key={auction.id}
@@ -220,11 +173,13 @@ export function LiveAuctionsPage() {
         </section>
       )}
 
-      {/* Empty state */}
+      {/* Vazio — lambe de cal colado torto (degrau CHÃO: o que ainda vai acontecer). */}
       {auctions.length === 0 && (
-        <div className="py-12 text-center">
-          <Gavel className="mx-auto h-16 w-16 text-white/20 mb-4" />
-          <p className="text-sm text-white/40 mb-4">
+        <div className="flex min-w-0 -rotate-1 flex-col gap-2 border-[3px] border-dashed border-asfalto-27 bg-cal p-6 text-asfalto-27">
+          <span className="font-voz text-[clamp(32px,9vw,44px)] leading-[0.95]">
+            {availablePlayers.length === 0 ? L('Chamando os craques…', 'Calling the players…') : L('Martelo parado.', 'Hammer at rest.')}
+          </span>
+          <p className="font-sans text-[14px] leading-snug">
             {availablePlayers.length === 0
               ? L('Carregando jogadores...', 'Loading players...')
               : L('Nenhum leilão ativo no momento', 'No active auctions right now')}

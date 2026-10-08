@@ -74,6 +74,14 @@ const MODES: ReadonlyArray<ModeEntry> = [
   },
 ];
 
+/** Ordem de exibição: disponíveis primeiro (Rápida na frente), depois os "em breve". */
+const ORDEM: ReadonlyArray<ModeEntry> = [
+  ...MODES.filter((m) => m.id === 'quick'),
+  ...MODES.filter((m) => m.status === 'available' && m.id !== 'quick'),
+  ...MODES.filter((m) => m.status !== 'available'),
+];
+const PRIMEIRO_DISPONIVEL = ORDEM.find((m) => m.status === 'available');
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -121,7 +129,7 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
         {open ? (
           <motion.div
             key="backdrop"
-            className="fixed inset-0 z-[60] bg-black/75"
+            className="fixed inset-0 z-[60] bg-asfalto-27/80"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -141,7 +149,7 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="match-mode-sheet-title"
-            className="fixed bottom-0 left-0 right-0 z-[61] mx-auto w-full max-w-2xl border-t border-neon-yellow/25 bg-sheet pb-safe"
+            className="rua-grao fixed bottom-0 left-0 right-0 z-[61] mx-auto w-full max-w-2xl border-t-[3px] border-rua bg-asfalto-27 pb-safe"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -155,28 +163,31 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
           >
             {/* Drag handle */}
             <div className="flex justify-center pt-3 pb-1">
-              <span aria-hidden className="h-1 w-10 rounded-full bg-white/25" />
+              <span aria-hidden className="h-1 w-12 bg-fio" />
             </div>
 
             {/* Header */}
-            <div className="px-6 pt-2 pb-4">
-              <Hashtag>{L('#olefoot #modos', '#olefoot #modes')}</Hashtag>
-              <h2
-                id="match-mode-sheet-title"
-                className="mt-1 font-impact text-4xl uppercase text-neon-yellow leading-[1.1]"
-              >
-                {L('Jogar', 'Play')}
-              </h2>
+            <div className="flex min-w-0 items-end justify-between gap-4 px-5 pt-2 pb-5">
+              <div className="min-w-0">
+                <Hashtag className="font-prova text-mudo">{L('#olefoot #modos', '#olefoot #modes')}</Hashtag>
+                <h2
+                  id="match-mode-sheet-title"
+                  className="mt-1 font-impact text-[56px] uppercase leading-[0.9] text-papel"
+                >
+                  {L('Jogar', 'Play')}
+                </h2>
+              </div>
+              <p className="shrink-0 -rotate-3 pb-1 font-voz text-[26px] leading-none text-rua">
+                {L('Bola rolando.', 'Ball rolling.')}
+              </p>
             </div>
 
-            {/* Lista de modos */}
-            <ul className="px-3 pb-3 space-y-2">
-              {MODES.map((mode, idx) => {
+            {/* Lista de modos — os disponíveis primeiro; a Rápida manda (é a mais jogada). */}
+            <ul className="space-y-3 px-4 pb-4">
+              {ORDEM.map((mode) => {
                 const disabled = mode.status !== 'available';
-                const refProp =
-                  !disabled && idx === MODES.findIndex((m) => m.status === 'available')
-                    ? { ref: firstCtaRef }
-                    : {};
+                const refProp = mode === PRIMEIRO_DISPONIVEL ? { ref: firstCtaRef } : {};
+                const destaque = mode.id === 'quick';
                 return (
                   <li key={mode.id}>
                     <button
@@ -186,56 +197,50 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
                       onClick={() => handlePick(mode)}
                       aria-label={`${mode.label} — ${mode.description}`}
                       className={cn(
-                        'group w-full text-left rounded-2xl border px-4 py-3.5 transition-all duration-150 [-webkit-tap-highlight-color:transparent]',
-                        'flex items-center gap-4',
+                        'group relative flex w-full min-w-0 items-center gap-4 overflow-hidden text-left transition-[transform,box-shadow,background-color,border-color] duration-150 [-webkit-tap-highlight-color:transparent]',
                         disabled
-                          ? 'border-white/10 bg-white/[0.02] cursor-not-allowed opacity-55'
-                          : 'border-white/10 bg-white/[0.04] hover:border-neon-yellow/55 hover:bg-neon-yellow/[0.06] active:scale-[0.985]',
+                          ? 'min-h-[58px] cursor-not-allowed border-2 border-dashed border-fio px-4 py-2.5'
+                          : destaque
+                          ? 'min-h-[92px] bg-rua px-5 py-4 text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)]'
+                          : 'min-h-[72px] border-2 border-papel px-4 py-3 text-papel hover:bg-papel hover:text-asfalto-27',
                       )}
                     >
-                      <span
-                        aria-hidden
-                        className={cn(
-                          'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl transition-colors',
-                          disabled
-                            ? 'bg-white/[0.04] text-white/35'
-                            : 'bg-neon-yellow/[0.08] text-neon-yellow group-hover:bg-neon-yellow/15',
-                        )}
-                      >
-                        {mode.glyph}
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        <span className="flex items-baseline gap-2">
+                      {destaque && (
+                        <span aria-hidden className="rua-alambrado pointer-events-none absolute inset-x-0 top-0 h-14 [--alambrado:rgba(13,13,12,0.22)]" />
+                      )}
+                      <span className="relative min-w-0 flex-1">
+                        <span className="flex min-w-0 items-baseline gap-2">
                           <span
                             className={cn(
-                              'truncate text-base font-display font-black uppercase tracking-wider',
-                              disabled ? 'text-white/55' : 'text-white',
+                              'truncate font-impact uppercase leading-none',
+                              destaque ? 'text-[34px]' : disabled ? 'text-[20px] text-mudo' : 'text-[26px]',
                             )}
-                            style={{ letterSpacing: '0.08em' }}
                           >
                             {mode.label}
                           </span>
                           {mode.status === 'soon' ? (
-                            <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-white/65">
+                            <span className="shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.16em] text-fio">
                               {L('Em breve', 'Soon')}
                             </span>
                           ) : null}
                           {mode.status === 'wip' ? (
-                            <span className="shrink-0 rounded-full bg-neon-yellow/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-neon-yellow/85">
+                            <span className="shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.16em] text-rua">
                               {L('Em construção', 'In progress')}
                             </span>
                           ) : null}
                         </span>
-                        <span className="mt-0.5 block truncate text-xs text-white/55">
+                        <span
+                          className={cn(
+                            'mt-1.5 block truncate font-prova text-[11px]',
+                            destaque ? 'font-bold text-asfalto-27/80' : disabled ? 'text-fio' : 'text-suave group-hover:text-asfalto-27/75',
+                          )}
+                        >
                           {mode.description}
                         </span>
                       </span>
                       {!disabled ? (
-                        <span
-                          aria-hidden
-                          className="shrink-0 text-neon-yellow/85 text-lg transition-colors group-hover:text-neon-yellow"
-                        >
-                          ›
+                        <span aria-hidden className={cn('relative shrink-0 font-impact leading-none', destaque ? 'text-[34px]' : 'text-[24px]')}>
+                          →
                         </span>
                       ) : null}
                     </button>
@@ -244,12 +249,7 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
               })}
             </ul>
 
-            {/* Linha que se apaga (VOLT2 permite) no rodapé do sheet */}
-            <span
-              aria-hidden
-              className="block h-px w-full bg-gradient-to-r from-transparent via-neon-yellow/35 to-transparent"
-            />
-            <div className="px-6 py-3 text-center text-[10px] uppercase tracking-[0.28em] text-white/35 font-display font-bold">
+            <div className="border-t border-linha px-6 py-3 text-center font-prova text-[10px] font-bold uppercase tracking-[0.24em] text-mudo">
               {L('Arraste para baixo para fechar', 'Swipe down to close')}
             </div>
           </motion.div>

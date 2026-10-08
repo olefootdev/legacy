@@ -1,8 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Target,
-  CheckCircle2,
-  Clock,
   Trophy,
   Copy,
   CheckCircle,
@@ -23,7 +20,7 @@ import type { MissionDef, MissionEvent, MissionKind } from '@/progression/types'
 import { normalizeWalletState } from '@/wallet/initial';
 import { inviteLinkForCode } from '@/wallet/referralCode';
 import { computeCareerTier } from '@/systems/careerTiers';
-import { DashboardGrid, DashboardSection } from '@/components/dashboard';
+import { SecaoRua } from '@/components/ui';
 import { L } from '@/i18n/L';
 
 interface MissionStub {
@@ -74,20 +71,6 @@ const KIND_LABELS: Record<MissionKind, string> = {
   achievement: L('Conquista', 'Achievement'),
   special: L('Especial', 'Special'),
 };
-
-function statusColor(s: MissionStub['status']) {
-  if (s === 'completed') return 'text-alta';
-  if (s === 'in_progress') return 'text-neon-yellow';
-  if (s === 'locked') return 'text-white/35';
-  return 'text-white/45';
-}
-
-function statusIcon(s: MissionStub['status']) {
-  if (s === 'completed') return CheckCircle2;
-  if (s === 'in_progress') return Clock;
-  if (s === 'locked') return Lock;
-  return Target;
-}
 
 export function Missions() {
   const dispatch = useGameDispatch();
@@ -205,236 +188,90 @@ export function Missions() {
     { id: 'onboarding', label: L('Iniciante', 'Beginner') },
   ];
 
+  const pct = (m: MissionStub) =>
+    m.progress && m.progress.total > 0 ? Math.min(1, m.progress.current / m.progress.total) : 0;
+
   return (
-    <div className="min-h-screen bg-deep-black w-full max-w-[100vw] min-w-0 overflow-x-hidden">
-      <div className="mx-auto max-w-6xl px-3 sm:px-4 lg:px-8 pt-6">
+    <div className="w-full max-w-[100vw] min-w-0 overflow-x-hidden">
+      <div className="mx-auto w-full max-w-3xl px-3 pt-4 sm:px-4">
         <BackButton to="/manager" label="Manager" />
       </div>
-      {/* ── HERO CINEMATOGRÁFICO ──────────────────────────────────── */}
-      <section className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow">
-        {/* VOLT2: volt chapado — saiu a textura de listras. */}
 
-        {/* Conteúdo */}
-        <div className="relative z-10 mx-auto max-w-6xl min-w-0 w-full px-3 sm:px-4 lg:px-8 py-5 sm:py-7">
-
-          {/* Grid: esquerda (amarelo) + direita (preto) */}
-          <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-12 lg:min-h-[42vh]">
-            {/* ── ESQUERDA: Título + Stats ────────────────────────── */}
-            <div className="space-y-6 sm:space-y-8">
-              <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-                {L('Centro de missões', 'Mission center')}
-              </span>
-
-              {/* Manchete em Anton. */}
-              <h1
-                className="font-impact uppercase text-black leading-[0.84]"
-                style={{ fontSize: 'clamp(52px, 12vw, 104px)', letterSpacing: '-0.01em' }}
-              >
-                {L('Missões', 'Missions')}
-              </h1>
-
-              {/* Stats grid — 3 cards apenas */}
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div className="bg-black px-4 py-4 text-center">
-                  <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50">
-                    {L('Concluídas', 'Completed')}
-                  </p>
-                  <p
-                    className="font-impact text-neon-yellow mt-2 tabular-nums"
-                    style={{ fontSize: 'clamp(32px, 5vw, 48px)' }}
-                  >
-                    {stats.completed}
-                  </p>
-                </div>
-                <div className="bg-black px-4 py-4 text-center">
-                  <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50">
-                    {L('Em Progresso', 'In Progress')}
-                  </p>
-                  <p
-                    className="font-impact text-neon-yellow mt-2 tabular-nums"
-                    style={{ fontSize: 'clamp(32px, 5vw, 48px)' }}
-                  >
-                    {stats.inProgress}
-                  </p>
-                </div>
-                <div className="col-span-2 bg-deep-black border border-white/8 px-4 py-4 text-center">
-                  <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50">
-                    {L('EXP Total Ganho', 'Total EXP Earned')}
-                  </p>
-                  <p className="font-mono text-lg font-bold text-white mt-2 tabular-nums">
-                    {formatExp(stats.totalExp)}
-                  </p>
-                </div>
-              </div>
-
-              {/* CTA Ver Missões */}
-              <div className="flex justify-center lg:justify-start pt-2">
-                <a
-                  href="#missoes-content"
-                  className="inline-flex items-center gap-2 bg-black text-neon-yellow px-6 py-3 hover:bg-deep-black transition-colors"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    letterSpacing: '0.2em',
-                    textTransform: 'uppercase',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  {L('Ver Missões', 'View Missions')}
-                  <ChevronDown className="w-4 h-4" />
-                </a>
-              </div>
-            </div>
-
-            {/* ── DIREITA: Badge com número total de missões ──────────────── */}
-            <div className="relative flex items-center justify-center lg:justify-end">
-              {/* Total de missões — bloco chapado, sem número fantasma atrás. */}
-              <div className="bg-black px-6 py-3 text-center sm:px-8 sm:py-4">
-                <p className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-cimento">
-                  {L('Missões', 'Missions')}
-                </p>
-                <p className="ole-num mt-1 text-2xl text-white tabular-nums sm:text-3xl">
-                  {stats.total}
-                </p>
-              </div>
-            </div>
+      {/* ── HERO — missão é ação: peça amarela com alambrado (DS 2027) ── */}
+      <section className="rua-alambrado relative mt-2 w-full max-w-full min-w-0 overflow-hidden bg-rua text-asfalto-27 [--alambrado:rgba(13,13,12,.24)]">
+        <div className="relative z-10 mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-5 px-3 py-6 sm:px-4 sm:py-8">
+          <span className="ole-eyebrow-poster" data-on="yellow">
+            {L('Centro de missões', 'Mission center')}
+          </span>
+          <div className="flex min-w-0 items-end justify-between gap-3">
+            <h1
+              className="min-w-0 font-impact uppercase leading-[0.84]"
+              style={{ fontSize: 'clamp(60px, 18vw, 112px)' }}
+            >
+              {L('Missões', 'Missions')}
+            </h1>
+            <span className="shrink-0 pb-1 font-spray font-black leading-none" style={{ fontSize: 'clamp(30px, 9vw, 52px)' }}>
+              {stats.completed}
+              <span className="opacity-50">/{stats.total}</span>
+            </span>
           </div>
+
+          <div className="grid grid-cols-3 border-t-2 border-asfalto-27">
+            {[
+              { k: 'done', label: L('Concluídas', 'Completed'), v: String(stats.completed) },
+              { k: 'prog', label: L('Andando', 'Moving'), v: String(stats.inProgress) },
+              { k: 'exp', label: L('EXP ganho', 'EXP earned'), v: formatExp(stats.totalExp) },
+            ].map((x, i) => (
+              <div key={x.k} className={cn('flex min-w-0 flex-col gap-1 pt-3', i > 0 && 'border-l-2 border-asfalto-27 pl-3')}>
+                <span className="block min-w-0 truncate font-spray text-[clamp(24px,7vw,36px)] font-black leading-none">{x.v}</span>
+                <span className="block min-w-0 truncate font-prova text-[10.5px] font-bold uppercase tracking-[0.16em]">{x.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {stats.readyToClaim > 0 && (
+            <a
+              href="#missoes-content"
+              className="inline-flex min-h-[50px] items-center gap-2 self-start bg-asfalto-27 px-5 font-impact text-[19px] uppercase leading-none text-rua transition-colors hover:bg-concreto"
+            >
+              {L(`${stats.readyToClaim} pra resgatar`, `${stats.readyToClaim} to claim`)}
+              <ChevronDown aria-hidden className="h-5 w-5" />
+            </a>
+          )}
         </div>
       </section>
 
       {/* ── CONTEÚDO PRINCIPAL ────────────────────────────────────── */}
-      <div id="missoes-content" className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
-        <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 py-8 sm:py-12 space-y-6 sm:space-y-8">
-        {/* Feedback */}
+      <div id="missoes-content" className="mx-auto w-full min-w-0 max-w-3xl space-y-7 overflow-x-hidden px-3 py-7 sm:px-4">
+        {/* Feedback — lambe colado */}
         <AnimatePresence>
           {feedback && (
             <motion.div
+              role="status"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="border border-neon-yellow/40 bg-neon-yellow/10 px-4 py-3 text-sm text-neon-yellow font-semibold"
+              className="-rotate-1 bg-cal px-4 py-3 font-voz text-[22px] leading-[1.1] text-asfalto-27"
             >
               {feedback}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Link de indicação — padrão BVB */}
-        <section className="ole-card-accent w-full max-w-full min-w-0 overflow-hidden">
-          <div className="p-5 sm:p-6 space-y-4">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-neon-yellow/15 border-2 border-neon-yellow/40">
-                  <Link2 className="h-5 w-5 text-neon-yellow" strokeWidth={2.5} aria-hidden />
-                </div>
-                <div className="min-w-0">
-                  <h3
-                    className="text-neon-yellow uppercase leading-tight"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      letterSpacing: '0.18em',
-                    }}
-                  >
-                    {L('Link de Indicação', 'Referral Link')}
-                  </h3>
-                </div>
-              </div>
-              <Link
-                to="/wallet/network"
-                className="shrink-0 inline-flex items-center gap-1.5 bg-neon-yellow/10 border border-neon-yellow/40 px-3 py-2 hover:bg-neon-yellow/20 transition-colors"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  letterSpacing: '0.18em',
-                  textTransform: 'uppercase',
-                  color: 'var(--color-neon-yellow)',
-                  borderRadius: 'var(--radius-sm)',
-                }}
-              >
-                {L('Ver Indicações', 'View Referrals')}
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-
-            {/* URL display + botões */}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div
-                className="flex-1 min-w-0 bg-deep-black border border-white/10 px-3 py-2.5 font-mono text-xs text-white/90 break-all"
-                style={{ borderRadius: 'var(--radius-sm)' }}
-              >
-                {inviteUrl || '—'}
-              </div>
-              <div className="flex gap-2 shrink-0 flex-wrap">
-                <button
-                  type="button"
-                  onClick={copyInviteLink}
-                  disabled={!inviteUrl}
-                  className="flex items-center justify-center gap-2 bg-neon-yellow text-black px-4 py-2.5 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                    textTransform: 'uppercase',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  {copiedLink ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  <span className="hidden xs:inline">{L('Copiar link', 'Copy link')}</span>
-                  <span className="xs:hidden">Link</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={copyCode}
-                  disabled={!myReferralCode}
-                  className="flex items-center justify-center gap-2 bg-deep-black border border-white/20 text-white px-4 py-2.5 hover:border-neon-yellow/60 hover:text-neon-yellow disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                    textTransform: 'uppercase',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  {copiedCode ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  <span className="hidden xs:inline">{L('Só código', 'Code only')}</span>
-                  <span className="xs:hidden">{L('Código', 'Code')}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Código exibido */}
-            {myReferralCode && (
-              <p
-                className="text-white/35 font-mono"
-                style={{
-                  fontSize: '10px',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                {L('Código', 'Code')}: <span className="text-white/50">{myReferralCode}</span>
-              </p>
-            )}
-          </div>
-        </section>
-
         {/* Filtros de categoria */}
-        <div className="w-full max-w-full min-w-0 flex items-center gap-2 overflow-x-auto pb-2 hide-scrollbar">
+        <div className="flex w-full max-w-full min-w-0 items-center gap-2 overflow-x-auto pb-1 hide-scrollbar" role="tablist">
           {kinds.map((k) => (
             <button
               key={k.id}
+              type="button"
+              role="tab"
+              aria-selected={filterKind === k.id}
               onClick={() => setFilterKind(k.id)}
               className={cn(
-                'shrink-0 border px-4 py-2 font-display text-xs font-bold uppercase tracking-[0.18em] transition',
+                'min-h-[40px] shrink-0 border-2 px-3.5 font-prova text-[12px] font-bold uppercase tracking-[0.12em] transition-colors',
                 filterKind === k.id
-                  ? 'border-neon-yellow bg-neon-yellow text-black'
-                  : 'border-white/10 bg-black/40 text-white/50 hover:border-white/20 hover:bg-white/5 hover:text-white'
+                  ? 'border-rua bg-rua text-asfalto-27'
+                  : 'border-linha text-mudo hover:border-fio hover:text-papel',
               )}
             >
               {k.label}
@@ -442,123 +279,145 @@ export function Missions() {
           ))}
         </div>
 
-        {/* Lista de missões */}
-        <DashboardGrid>
-          {visibleMissions.map((m, i) => {
-            const Icon = statusIcon(m.status);
-            const isReady =
-              m.status !== 'completed' && m.status !== 'locked' && (m.progress?.current ?? 0) >= m.target;
-
-            return (
-              <DashboardSection size="md" className="w-full max-w-full min-w-0">
-                <motion.div
-                  key={m.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03 }}
-                  className={cn(
-                    'w-full max-w-full min-w-0 border bg-panel p-4 sm:p-5 transition-colors h-full flex flex-col',
-                    m.status === 'completed' && 'border-alta/50 bg-panel',
-                    m.status === 'in_progress' && 'border-neon-yellow/30 hover:border-neon-yellow/50',
-                    m.status === 'locked' && 'border-white/10 opacity-60',
-                    m.status === 'available' && 'border-white/10 hover:border-white/20',
-                    isReady && 'border-neon-yellow bg-card'
-                  )}
-                >
-                  {/* Header */}
-                  <div className="flex items-start gap-3 mb-3">
-                    <div
+        {/* Lista de missões — checkbox do DS: feita = cheio + risco; pronta = rua
+            com botão; andando = contorno; parada = tracejado; trancada = cadeado. */}
+        <section className="flex flex-col gap-2" aria-label={L('Lista de missões', 'Mission list')}>
+          <SecaoRua
+            label={filterKind === 'all' ? L('Todas as missões', 'All missions') : kinds.find((k) => k.id === filterKind)?.label ?? ''}
+            aside={`${visibleMissions.filter((m) => m.status === 'completed').length}/${visibleMissions.length}`}
+          />
+          <ul className="flex flex-col">
+            {visibleMissions.map((m) => {
+              const isReady =
+                m.status !== 'completed' && m.status !== 'locked' && (m.progress?.current ?? 0) >= m.target;
+              const done = m.status === 'completed';
+              const locked = m.status === 'locked';
+              const moving = m.status === 'in_progress' && !isReady;
+              return (
+                <li key={m.id} className={cn('flex min-w-0 items-center gap-3.5 border-b border-linha py-3.5 last:border-b-0', locked && 'opacity-60')}>
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'flex h-7 w-7 shrink-0 items-center justify-center font-impact text-[17px] leading-none',
+                      done && 'bg-rua text-asfalto-27',
+                      isReady && 'bg-rua',
+                      moving && 'border-2 border-rua',
+                      m.status === 'available' && !isReady && 'border-2 border-dashed border-fio',
+                      locked && 'text-fio',
+                    )}
+                  >
+                    {done ? '✓' : locked ? <Lock className="h-4 w-4" /> : ''}
+                  </span>
+                  <div className="flex min-w-0 grow flex-col gap-1">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="shrink-0 font-prova text-[10.5px] font-bold uppercase tracking-[0.16em] text-mudo">
+                        {KIND_LABELS[m.kind]}
+                        {locked && m.minTier ? ` · Tier ${m.minTier}+` : ''}
+                      </span>
+                    </span>
+                    <span
                       className={cn(
-                        'flex h-10 w-10 shrink-0 items-center justify-center border-2',
-                        m.status === 'completed' && 'border-alta bg-alta/20',
-                        m.status === 'in_progress' && 'border-neon-yellow bg-neon-yellow/20',
-                        m.status === 'locked' && 'border-white/10 bg-white/5',
-                        m.status === 'available' && 'border-white/15 bg-white/5'
+                        'block min-w-0 truncate font-voz text-[23px] leading-none',
+                        done ? 'text-mudo line-through decoration-2' : 'text-papel',
                       )}
                     >
-                      <Icon className={cn('h-5 w-5', statusColor(m.status))} strokeWidth={2.2} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/45">
-                          {KIND_LABELS[m.kind]}
-                        </span>
-                        {m.status === 'completed' && (
-                          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-alta">
-                            {L('Concluída', 'Completed')}
-                          </span>
-                        )}
-                        {m.status === 'locked' && m.minTier && (
-                          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/35">
-                            Tier {m.minTier}+
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="font-display text-sm font-bold uppercase tracking-wide text-white">
-                        {m.title}
-                      </h3>
-                    </div>
-                  </div>
-
-                  {/* Descrição */}
-                  <p className="text-xs text-white/50 mb-4">{m.desc}</p>
-
-                  {/* Progress bar */}
-                  {m.progress && m.status !== 'completed' && m.status !== 'locked' && (
-                    <div className="mb-4 flex items-center gap-2">
-                      <div className="h-1.5 flex-1 overflow-hidden border border-white/10 bg-black/60">
-                        <div
-                          className={cn(
-                            'h-full transition-all duration-500',
-                            isReady ? 'bg-neon-yellow' : 'bg-neon-yellow/60'
-                          )}
-                          style={{ width: `${Math.min(100, (m.progress.current / m.progress.total) * 100)}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-bold text-white/45 tabular-nums">
-                        {m.progress.current}/{m.progress.total}
+                      {m.title}
+                    </span>
+                    <span className="block min-w-0 truncate font-prova text-[12px] text-mudo">
+                      {m.desc}
+                      {!done && !locked && m.progress ? ` · ${Math.min(m.progress.current, m.progress.total)}/${m.progress.total}` : ''}
+                      {done ? ` · ${L('resgatada', 'claimed')}` : ''}
+                    </span>
+                    {moving && (
+                      <span aria-hidden className="mt-1 block h-1.5 w-full max-w-[220px] bg-linha">
+                        <span className="block h-full bg-rua" style={{ width: `${Math.max(4, pct(m) * 100)}%` }} />
                       </span>
-                    </div>
-                  )}
-
-                  {/* Footer */}
-                  <div className="mt-auto flex items-center justify-between gap-3 pt-3 border-t border-white/5">
-                    <div className="flex items-center gap-1.5">
-                      <Trophy className="h-4 w-4 text-neon-yellow" strokeWidth={2.5} />
-                      <span className="font-display text-sm font-bold text-neon-yellow">
-                        {formatExp(m.reward)}
-                      </span>
-                      <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">EXP</span>
-                    </div>
-
-                    {m.status !== 'completed' && m.status !== 'locked' && (
-                      <button
-                        onClick={() => completeMission(m)}
-                        disabled={!isReady}
-                        className={cn(
-                          'px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.18em] transition',
-                          isReady
-                            ? 'bg-neon-yellow text-black hover:bg-white'
-                            : 'bg-white/5 text-white/35 cursor-not-allowed'
-                        )}
-                      >
-                        {isReady ? L('Resgatar', 'Claim') : L('Em progresso', 'In progress')}
-                      </button>
                     )}
                   </div>
-                </motion.div>
-              </DashboardSection>
-            );
-          })}
-        </DashboardGrid>
+                  {isReady ? (
+                    <button
+                      type="button"
+                      onClick={() => completeMission(m)}
+                      className="inline-flex min-h-[44px] shrink-0 items-center bg-rua px-3.5 font-impact text-[17px] uppercase leading-none text-asfalto-27 shadow-[4px_4px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_var(--color-papel)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rua"
+                    >
+                      {L('Pegar', 'Claim')} +{formatExp(m.reward)}
+                    </button>
+                  ) : (
+                    <span
+                      className={cn(
+                        'shrink-0 text-right font-impact text-[22px] leading-none',
+                        done || locked ? 'text-mudo' : 'text-rua',
+                      )}
+                    >
+                      +{formatExp(m.reward)}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <span className="font-prova text-[11px] uppercase tracking-[0.18em] text-mudo">{L('Recompensa em EXP', 'Rewards in EXP')}</span>
 
-        {visibleMissions.length === 0 && (
-          <div className="border border-white/10 bg-black/30 p-8 text-center">
-            <Trophy className="mx-auto h-12 w-12 text-white/35 mb-3" strokeWidth={2} />
-            <p className="text-sm text-white/45">{L('Nenhuma missão nesta categoria', 'No missions in this category')}</p>
+          {visibleMissions.length === 0 && (
+            <div className="flex flex-col items-start gap-3 border-2 border-dashed border-fio px-4 py-5">
+              <Trophy aria-hidden className="h-6 w-6 text-fio" strokeWidth={2} />
+              <p className="font-voz text-[22px] leading-[1.05] text-papel">{L('Nenhuma missão nesta categoria.', 'No missions in this category.')}</p>
+              <button
+                type="button"
+                onClick={() => setFilterKind('all')}
+                className="inline-flex min-h-[44px] items-center gap-2 border-2 border-papel px-4 font-impact text-[17px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
+              >
+                {L('Ver todas', 'See all')} <span aria-hidden>→</span>
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* Link de indicação — convite também é missão */}
+        <section className="flex w-full min-w-0 flex-col gap-3.5 border-l-[5px] border-rua bg-concreto px-[18px] py-4">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <span className="flex min-w-0 items-center gap-2 font-prova text-[12px] font-bold uppercase tracking-[0.2em] text-papel">
+              <Link2 aria-hidden className="h-4 w-4 shrink-0 text-rua" strokeWidth={2.5} />
+              <span className="truncate">{L('Link de Indicação', 'Referral Link')}</span>
+            </span>
+            <Link
+              to="/wallet/network"
+              className="inline-flex min-h-[40px] shrink-0 items-center gap-1 font-impact text-[15px] uppercase text-rua hover:text-papel"
+            >
+              {L('Ver Indicações', 'View Referrals')}
+              <ChevronRight aria-hidden className="h-4 w-4" />
+            </Link>
           </div>
-        )}
-        </div>
+
+          <div className="min-w-0 break-all border-2 border-dashed border-linha px-3 py-2.5 font-prova text-[12px] text-papel">
+            {inviteUrl || '—'}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={copyInviteLink}
+              disabled={!inviteUrl}
+              className="inline-flex min-h-[46px] items-center justify-center gap-2 bg-rua px-4 font-impact text-[17px] uppercase leading-none text-asfalto-27 shadow-[4px_4px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              {copiedLink ? <CheckCircle className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+              {copiedLink ? L('Copiado', 'Copied') : L('Copiar link', 'Copy link')}
+            </button>
+            <button
+              type="button"
+              onClick={copyCode}
+              disabled={!myReferralCode}
+              className="inline-flex min-h-[46px] items-center justify-center gap-2 border-2 border-papel px-4 font-impact text-[17px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              {copiedCode ? <CheckCircle className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+              {L('Só código', 'Code only')}
+            </button>
+          </div>
+          {myReferralCode && (
+            <p className="font-prova text-[11px] uppercase tracking-[0.12em] text-mudo">
+              {L('Código', 'Code')}: <span className="text-papel">{myReferralCode}</span>
+            </p>
+          )}
+        </section>
       </div>
     </div>
   );

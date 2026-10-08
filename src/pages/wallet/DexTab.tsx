@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight } from 'lucide-react';
 import { WalletShell } from './WalletShell';
 import { WalletAtalhos } from './WalletAtalhos';
 import { SolanaWalletCard } from './SolanaWalletCard';
 import { GateDePin, PinCard } from './PinDaCarteira';
 import { Earnings } from './dex/Earnings';
 import { LinhaDeValor } from './dex/LinhaDeValor';
-import { SecaoVolt, Hashtag } from '@/components/ui';
+import { BotaoRua, SecaoRua } from '@/components/ui/Rua';
 import { ORIGEM_DA_CARTEIRA } from '@/wallet/seed/conexao';
 import { lerMinhaPosicao, POSICAO_VAZIA, type PosicaoOlefoot } from '@/supabase/presalePosicao';
 import { aoMudarAPosicao } from '@/wallet/eventosDaCarteira';
@@ -25,8 +24,10 @@ import { L, LOCALE } from '@/i18n/L';
  * Antes eram dois endereços disputando a mesma função: o fundador percorreu
  * "jogo → DEX → abrir carteira" e a DEX não estava lá. Agora a porta é uma só.
  *
- * VOLT2: sem ouro e sem SeloRede aqui. OLEFOOT comprado na pré-venda ainda é
- * posição em tabela — ouro é só pra ativo que já está na cadeia.
+ * DS 2027: a posição é valor que já existe — degrau RESPEITO (asfalto + fio de
+ * ouro). Ouro chapado (LENDA) NÃO entra: OLEFOOT da pré-venda ainda é posição
+ * em tabela, não ativo na cadeia. O texto de custódia vira lambe colado: é o
+ * momento "rua" da tela, e é o que a pessoa precisa ler.
  */
 
 const br = (v: bigint) => v.toLocaleString(LOCALE);
@@ -78,45 +79,43 @@ function DexConteudo() {
       <WalletAtalhos />
 
       {/* ── OLEWALLET: a chave é da pessoa, e fica fora do jogo ───── */}
-      <section className="space-y-3">
-        <SecaoVolt label="OLEWALLET">
-          <Hashtag>{L('#suachave #suacustodia', '#yourkey #yourcustody')}</Hashtag>
-        </SecaoVolt>
+      <section className="space-y-4">
+        <SecaoRua label="OLEWALLET" aside={L('#suachave #suacustodia', '#yourkey #yourcustody')} />
         <SolanaWalletCard />
         <a
           href={ORIGEM_DA_CARTEIRA}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex h-[50px] items-center justify-between gap-3 border border-white/30 px-4 text-white transition-colors hover:border-white"
+          className="flex min-h-[52px] items-center justify-between gap-3 border-2 border-papel px-4 font-impact text-[20px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
         >
-          <span className="ole-num min-w-0 truncate text-[13px] uppercase">{L('Abrir OLEWALLET', 'Open OLEWALLET')}</span>
-          <ArrowUpRight className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+          <span className="min-w-0 truncate">{L('Abrir OLEWALLET', 'Open OLEWALLET')}</span>
+          <span aria-hidden className="shrink-0">↗</span>
         </a>
         <PinCard />
       </section>
 
       {/* ── POSIÇÃO: o que foi comprado e o que ainda está travado ── */}
-      <section className="space-y-3">
-        <SecaoVolt label={L('Posição OLEFOOT', 'OLEFOOT position')} tone="neutro">
-          <Hashtag>{L('#prevenda', '#presale')}</Hashtag>
-        </SecaoVolt>
-        <div className="border border-white/10 bg-panel">
+      <section className="space-y-4">
+        <SecaoRua label={L('Posição OLEFOOT', 'OLEFOOT position')} aside={L('#prevenda', '#presale')} />
+        <div className="border-[3px] border-ouro-27 bg-asfalto-27">
           <LinhaDeValor rotulo={L('Comprado', 'Bought')} valor={carregando ? '…' : `${br(p.tokens)} OLEFOOT`} forte />
           <LinhaDeValor rotulo={L('Travado', 'Locked')} valor={carregando ? '…' : `${br(p.travado)} OLEFOOT`} />
           <LinhaDeValor rotulo={L('Liberado', 'Unlocked')} valor={carregando ? '…' : `${br(p.liberado)} OLEFOOT`} />
         </div>
-        <button
-          type="button"
-          onClick={() => navigate('/wallet/dex?adicionar=olefoot')}
-          className="ole-num inline-flex h-[50px] w-full items-center justify-center whitespace-nowrap bg-neon-yellow text-[13px] uppercase text-black transition-colors hover:bg-white [--corte:12px] [clip-path:var(--clip-corte)]"
-        >
-          {L('Comprar OLEFOOT no Pix', 'Buy OLEFOOT with Pix')}
-        </button>
+        <BotaoRua onClick={() => navigate('/wallet/dex?adicionar=olefoot')} className="w-full">
+          {L('Comprar OLEFOOT no Pix', 'Buy OLEFOOT with Pix')} <span aria-hidden>→</span>
+        </BotaoRua>
         {/* Texto de custódia: não é enfeite, é o que a pessoa precisa saber
-            antes de achar que tem token na carteira. */}
-        <p className="border-l-2 border-cimento bg-card px-3.5 py-3 text-[12px] leading-relaxed text-cimento">
-          {L('Este OLEFOOT é seu desde o Pix e está registrado na sua posição. Ele entra travado e libera com o tempo ou com uma nova compra; o que for liberado vai para a carteira Solana vinculada, e a partir dela a custódia é sua.', 'This OLEFOOT is yours from the moment the Pix clears and is recorded in your position. It starts locked and unlocks over time or with a new buy; what unlocks goes to your linked Solana wallet, and from there custody is yours.')}
-        </p>
+            antes de achar que tem token na carteira. Lambe de papel colado
+            torto — o momento "rua" da DEX. */}
+        <div className="pt-2">
+          <div className="-rotate-1 bg-cal px-4 py-3.5 text-asfalto-27 shadow-[5px_5px_0_rgba(0,0,0,0.55)]">
+            <p className="font-prova text-[11px] font-bold uppercase tracking-[0.2em]">— {L('Leia antes', 'Read first')}</p>
+            <p className="mt-1.5 text-[13px] font-medium leading-relaxed">
+              {L('Este OLEFOOT é seu desde o Pix e está registrado na sua posição. Ele entra travado e libera com o tempo ou com uma nova compra; o que for liberado vai para a carteira Solana vinculada, e a partir dela a custódia é sua.', 'This OLEFOOT is yours from the moment the Pix clears and is recorded in your position. It starts locked and unlocks over time or with a new buy; what unlocks goes to your linked Solana wallet, and from there custody is yours.')}
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* ── EARNINGS: Vault, Produção e Stake ────────────────────── */}

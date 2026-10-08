@@ -60,7 +60,7 @@ function notificationRowToInbox(row: NotificationRow): InboxItem {
     timeLabel: created.toLocaleString(LOCALE, { dateStyle: 'short', timeStyle: 'short' }),
     read: row.read,
     deepLink: row.link ?? undefined,
-    colorClass: 'text-neon-yellow',
+    colorClass: 'text-rua',
   };
 }
 
@@ -74,17 +74,17 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
   const getIcon = () => {
     switch (notification.category) {
       case 'COMPETIÇÃO':
-        return <Trophy className="h-5 w-5 text-neon-yellow" strokeWidth={2} />;
+        return <Trophy className="h-5 w-5 text-rua" strokeWidth={2} />;
       case 'PLANTEL':
-        return <Users className="h-5 w-5 text-blue-400" strokeWidth={2} />;
+        return <Users className="h-5 w-5 text-papel" strokeWidth={2} />;
       case 'TREINO':
-        return <TrendingUp className="h-5 w-5 text-green-400" strokeWidth={2} />;
+        return <TrendingUp className="h-5 w-5 text-alta" strokeWidth={2} />;
       case 'STAFF':
-        return <AlertCircle className="h-5 w-5 text-purple-400" strokeWidth={2} />;
+        return <AlertCircle className="h-5 w-5 text-rua" strokeWidth={2} />;
       case 'TORCIDA':
-        return <CheckCircle className="h-5 w-5 text-cyan-400" strokeWidth={2} />;
+        return <CheckCircle className="h-5 w-5 text-alta" strokeWidth={2} />;
       default:
-        return <Bell className="h-5 w-5 text-white/60" strokeWidth={2} />;
+        return <Bell className="h-5 w-5 text-suave" strokeWidth={2} />;
     }
   };
 
@@ -112,28 +112,28 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
       to={getLink()}
       onClick={onClose}
       className={cn(
-        'group relative flex items-start gap-3 p-4 transition-colors cursor-pointer border-b border-white/[0.07] hover:bg-white/5',
+        'group relative flex items-start gap-3 p-4 transition-colors cursor-pointer border-b border-linha hover:bg-linha',
         notification.read ? 'opacity-70' : '',
       )}
     >
       {/* Indicador de não lido */}
       {!notification.read && (
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-neon-yellow" aria-hidden />
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-rua" aria-hidden />
       )}
 
       {/* Conteúdo */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-white mb-1 leading-tight">
+        <p className="mb-1 font-voz text-[20px] leading-[1.05] text-papel">
           {notification.title}
         </p>
-        <p className="text-xs text-cimento leading-snug line-clamp-2 mb-1.5">
+        <p className="text-xs text-mudo leading-snug line-clamp-2 mb-1.5">
           {notification.body}
         </p>
-        <Hashtag className="text-poeira">#{CATEGORY_TAG[notification.category] ?? notification.category.toLowerCase()}</Hashtag>
+        <Hashtag className="text-mudo">#{CATEGORY_TAG[notification.category] ?? notification.category.toLowerCase()}</Hashtag>
       </div>
 
       {/* Seta */}
-      <ChevronRight className="h-5 w-5 text-poeira group-hover:text-white transition-colors shrink-0" />
+      <ChevronRight className="h-5 w-5 text-mudo group-hover:text-papel transition-colors shrink-0" />
     </Link>
   );
 }
@@ -192,8 +192,8 @@ export function NotificationsDropdown() {
         className={cn(
           'relative flex h-10 w-10 items-center justify-center border bg-nav transition-colors',
           isOpen
-            ? 'border-white text-white'
-            : 'border-white/16 text-white/80 hover:border-white hover:text-white',
+            ? 'border-papel text-papel'
+            : 'border-linha text-papel hover:border-papel hover:text-papel',
         )}
         aria-label={L('Notificações', 'Notifications')}
       >
@@ -201,7 +201,7 @@ export function NotificationsDropdown() {
 
         {/* Badge de não lidas */}
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 font-display text-[9px] font-black text-white">
+          <span className="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center bg-rua px-1 font-prova text-[10px] font-bold text-asfalto-27">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -227,17 +227,17 @@ export function NotificationsDropdown() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="fixed sm:absolute right-2 sm:right-0 left-2 sm:left-auto top-16 sm:top-full sm:mt-3 w-auto sm:w-[420px] sm:max-w-[calc(100vw-2rem)] flex flex-col border border-white/16 bg-panel z-[100] overflow-hidden"
+              className="fixed sm:absolute right-2 sm:right-0 left-2 sm:left-auto top-16 sm:top-full sm:mt-3 w-auto sm:w-[420px] sm:max-w-[calc(100vw-2rem)] flex flex-col border-t-[5px] border-rua bg-concreto z-[100] overflow-hidden"
             >
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/10 px-5 py-3 bg-nav">
-                <h3 className="font-impact text-[17px] uppercase leading-[1.1] text-white">
+              <div className="flex items-center justify-between border-b border-linha px-5 py-3 bg-nav">
+                <h3 className="font-impact text-[22px] uppercase leading-[1.1] text-papel">
                   {L('Notificações', 'Notifications')} {unreadCount > 0 && `(${unreadCount})`}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="text-cimento hover:text-white transition-colors"
+                  className="text-mudo hover:text-papel transition-colors"
                   aria-label={L('Fechar', 'Close')}
                 >
                   <X className="h-5 w-5" strokeWidth={2} />
@@ -248,8 +248,8 @@ export function NotificationsDropdown() {
               <div className="max-h-[360px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                 {notifications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-                    <Bell className="h-10 w-10 text-poeira mb-2" strokeWidth={1.5} />
-                    <p className="text-sm font-bold text-cimento">{L('Sem notificações', 'No notifications')}</p>
+                    <Bell className="h-10 w-10 text-mudo mb-2" strokeWidth={1.5} />
+                    <p className="font-voz text-[22px] leading-none text-papel">{L('Sem notificações', 'No notifications')}</p>
                   </div>
                 ) : (
                   notifications.slice(0, 5).map((notification, i) => (
@@ -264,11 +264,11 @@ export function NotificationsDropdown() {
 
               {/* Footer */}
               {notifications.length > 5 && (
-                <div className="border-t border-white/10 bg-nav">
+                <div className="border-t border-linha bg-nav">
                   <Link
                     to="/"
                     onClick={() => setIsOpen(false)}
-                    className="ole-num block w-full py-3 text-center text-[12px] uppercase text-cimento hover:text-white transition-colors"
+                    className="ole-num block w-full py-3 text-center text-[12px] uppercase text-mudo hover:text-papel transition-colors"
                   >
                     {L('Ver todas', 'View all')} ({notifications.length})
                   </Link>

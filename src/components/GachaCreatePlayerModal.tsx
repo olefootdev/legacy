@@ -15,6 +15,9 @@ import {
 import type { PlayerAttributes } from '@/entities/types';
 import { L, emIngles } from '@/i18n/L';
 import { posLabel } from '@/components/matchquick/posLabel';
+import { cn } from '@/lib/utils';
+import { DEGRAU_CLASSES, MarcaRua, SeloRua, type Degrau } from '@/components/ui/Rua';
+import { ovrNumeroClasses } from '@/components/clube/escada';
 
 /** Nome por extenso da posição, só pra TELA (o valor `pos` segue em PT). */
 const POS_NOME_EN: Record<string, string> = {
@@ -69,13 +72,19 @@ const ATTR_LABELS: Array<[keyof PlayerAttributes, string]> = [
   ['fairPlay', 'Fair Play'],
 ];
 
-const RARITY: Record<GachaRarity, { label: string; ring: string; text: string; chip: string }> = {
-  normal: { label: 'Normal', ring: 'border-white/25', text: 'text-white/70', chip: 'bg-white/10 text-white/70' },
-  premium: { label: 'Premium', ring: 'border-sky-400/50', text: 'text-sky-300', chip: 'bg-sky-500/15 text-sky-300' },
-  gold: { label: 'Gold', ring: 'border-amber-400/60', text: 'text-amber-300', chip: 'bg-amber-500/15 text-amber-300' },
-  rare: { label: 'Rare', ring: 'border-fuchsia-400/60', text: 'text-fuchsia-300', chip: 'bg-fuchsia-500/15 text-fuchsia-300' },
-  legend: { label: 'Legend', ring: 'border-neon-yellow', text: 'text-neon-yellow', chip: 'bg-neon-yellow/20 text-neon-yellow' },
+/** Raridade do sorteio na ESCADA do DS 2027 (chão → corre → respeito → lenda). */
+const RARITY: Record<GachaRarity, { label: string; degrau: Degrau }> = {
+  normal: { label: 'Normal', degrau: 'chao' },
+  premium: { label: 'Premium', degrau: 'corre' },
+  gold: { label: 'Gold', degrau: 'respeito' },
+  rare: { label: 'Rare', degrau: 'respeito' },
+  legend: { label: 'Legend', degrau: 'lenda' },
 };
+
+const CAMPO = 'w-full border-2 border-linha bg-concreto px-3 py-3 font-prova text-[14px] text-papel placeholder:text-mudo focus:border-rua focus:outline-none';
+const ROTULO = 'mb-1.5 block font-prova text-[10px] font-bold uppercase tracking-[0.16em] text-mudo';
+const BOTAO_CORRE =
+  'flex min-h-[52px] w-full items-center justify-center gap-2 bg-rua font-impact text-[20px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)]';
 
 type Step = 'setup' | 'drawing' | 'reveal' | 'done';
 
@@ -164,26 +173,28 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24 }}
-          className="relative mx-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden border border-white/16 bg-panel"
+          className="relative mx-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden border-2 border-linha bg-asfalto-27"
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-            <div className="flex items-center gap-2">
-              <Dices className="h-5 w-5 text-neon-yellow" />
-              <h2 className="font-impact text-xl uppercase leading-[1.1] text-white">
+          <div className="flex items-start justify-between gap-3 border-b-2 border-linha px-5 py-4">
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="flex items-center gap-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.22em] text-mudo">
+                <Dices className="h-3.5 w-3.5" /> — {L('Sorteio de época', 'Era draw')}
+              </span>
+              <h2 className="font-impact text-[28px] uppercase leading-none text-papel">
                 {L('Criar jogador', 'Create player')}
               </h2>
             </div>
-            <button type="button" onClick={close} aria-label={L('Fechar', 'Close')} className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white">
+            <button type="button" onClick={close} aria-label={L('Fechar', 'Close')} className="inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-linha text-mudo hover:border-papel hover:text-papel">
               <X className="h-5 w-5" />
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto px-5 py-5">
             {slotFull && step === 'setup' ? (
-              <div className="rounded-xl border border-white/10 bg-black/30 p-6 text-center">
-                <p className="font-display text-base font-black text-white">{L('Você já tem seu jogador', 'You already have your player')}</p>
-                <p className="mt-2 text-sm text-white/55">
+              <div className="border-2 border-dashed border-fio p-5">
+                <p className="font-voz text-[26px] leading-tight text-papel">{L('Você já tem seu jogador', 'You already have your player')}</p>
+                <p className="mt-2 text-[14px] text-suave">
                   {L('A criação é única: 1 jogador por manager.', 'Creation is one-time: 1 player per manager.')}
                 </p>
               </div>
@@ -192,97 +203,96 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
             {/* SETUP */}
             {!slotFull && step === 'setup' && (
               <div className="space-y-5">
-                <p className="text-sm text-white/60">
+                <p className="text-[14px] leading-relaxed text-suave">
                   {emIngles() ? (
                     <>
-                      Pick the position and the <strong className="text-white">playing year</strong>. The draw picks a
-                      real star from that era — from obscure to legendary — and applies their <strong className="text-white">attribute
+                      Pick the position and the <strong className="text-papel">playing year</strong>. The draw picks a
+                      real star from that era — from obscure to legendary — and applies their <strong className="text-papel">attribute
                       DNA</strong> to your player.
                     </>
                   ) : (
                     <>
-                      Escolhe a posição e o <strong className="text-white">ano de atuação</strong>. O sorteio puxa um
-                      craque real daquela época — do obscuro ao lendário — e aplica o <strong className="text-white">DNA
+                      Escolhe a posição e o <strong className="text-papel">ano de atuação</strong>. O sorteio puxa um
+                      craque real daquela época — do obscuro ao lendário — e aplica o <strong className="text-papel">DNA
                       de atributos</strong> dele no teu jogador.
                     </>
                   )}
                 </p>
 
                 <label className="block">
-                  <span className="mb-1.5 block text-xs font-medium text-white/65">{L('Nome do teu jogador', 'Your player\'s name')}</span>
+                  <span className={ROTULO}>{L('Nome do teu jogador', 'Your player\'s name')}</span>
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value.slice(0, 24))}
                     placeholder={L('ex. JOÃO SILVA', 'e.g. JOHN SMITH')}
                     maxLength={24}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-neon-yellow/50 focus:outline-none"
+                    className={CAMPO}
                   />
                 </label>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <label className="block">
-                    <span className="mb-1.5 block text-xs font-medium text-white/65">{L('Posição', 'Position')}</span>
+                  <label className="block min-w-0">
+                    <span className={ROTULO}>{L('Posição', 'Position')}</span>
                     <select
                       value={pos}
                       onChange={(e) => setPos(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                      className={CAMPO}
                     >
                       {GACHA_POSITIONS.map((p) => (
-                        <option key={p} value={p} className="bg-dark-gray">
+                        <option key={p} value={p} className="bg-concreto">
                           {posLabel(p)} — {nomePosicao(p)}
                         </option>
                       ))}
                     </select>
                   </label>
-                  <label className="block">
-                    <span className="mb-1.5 block text-xs font-medium text-white/65">{L('Ano de atuação', 'Playing year')}</span>
+                  <label className="block min-w-0">
+                    <span className={ROTULO}>{L('Ano de atuação', 'Playing year')}</span>
                     <input
                       type="number"
                       value={year}
                       min={1950}
                       max={CURRENT_YEAR}
                       onChange={(e) => setYear(Math.round(Number(e.target.value)))}
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                      className={CAMPO}
                     />
                   </label>
                 </div>
 
-                {/* Odds */}
+                {/* Odds — a escada inteira à vista */}
                 {odds.length > 0 && (
-                  <div className="rounded-xl border border-white/10 bg-black/30 p-4">
-                    <p className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-white/50">
-                      <Sparkles className="h-3.5 w-3.5 text-neon-yellow" /> {L('Chances do sorteio', 'Draw odds')}
+                  <div className="bg-concreto p-4">
+                    <p className="mb-3 flex items-center gap-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo">
+                      <Sparkles className="h-3.5 w-3.5 text-rua" /> — {L('Chances do sorteio', 'Draw odds')}
                     </p>
                     <div className="space-y-2">
                       {odds.map((o) => (
                         <div key={o.rarity_tier} className="flex items-center gap-3">
-                          <span className={`w-20 rounded px-2 py-0.5 text-[10px] font-bold uppercase ${RARITY[o.rarity_tier].chip}`}>
+                          <span className={cn('w-20 shrink-0 px-2 py-0.5 text-center font-prova text-[10px] font-bold uppercase', DEGRAU_CLASSES[RARITY[o.rarity_tier].degrau], 'border-2')}>
                             {RARITY[o.rarity_tier].label}
                           </span>
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-                            <div
-                              className="h-full rounded-full bg-current opacity-70"
-                              style={{ width: `${o.probability_pct}%` }}
-                            />
+                          <div className="h-2 flex-1 overflow-hidden bg-linha">
+                            <div className="h-full bg-papel" style={{ width: `${o.probability_pct}%` }} />
                           </div>
-                          <span className="w-10 text-right text-xs font-mono text-white/70">{o.probability_pct}%</span>
+                          <span className="w-10 text-right font-prova text-[12px] text-suave">{o.probability_pct}%</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-300">{error}</p>}
+                {error && <p role="alert" className="border-l-[3px] border-baixa bg-concreto px-3 py-2.5 text-[13px] text-papel">{error}</p>}
 
-                <button
-                  type="button"
-                  onClick={handleDraw}
-                  disabled={!canDraw}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3.5 font-display text-sm font-black uppercase tracking-wide text-black transition hover:brightness-110 disabled:bg-white/10 disabled:text-white/40"
-                >
-                  <Dices className="h-4 w-4" /> {L('Sortear meu craque', 'Draw my star')}
-                </button>
-                <p className="text-center text-[11px] text-white/35">{L('Sorteio único — sem repetição.', 'One-time draw — no repeats.')}</p>
+                <div className="pb-1 pr-1">
+                  <button
+                    type="button"
+                    onClick={handleDraw}
+                    disabled={!canDraw}
+                    className={cn(BOTAO_CORRE, 'disabled:pointer-events-none disabled:bg-linha disabled:text-mudo disabled:shadow-none')}
+                  >
+                    <Dices className="h-5 w-5" /> {L('Sortear meu craque', 'Draw my star')} <span aria-hidden>→</span>
+                  </button>
+                </div>
+                <p className="text-center font-prova text-[11px] uppercase tracking-[0.12em] text-mudo">{L('Sorteio único — sem repetição.', 'One-time draw — no repeats.')}</p>
               </div>
             )}
 
@@ -293,49 +303,57 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
                   animate={{ rotate: 360 }}
                   transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
                 >
-                  <Dices className="h-14 w-14 text-neon-yellow" />
+                  <Dices className="h-14 w-14 text-rua" />
                 </motion.div>
-                <p className="font-display text-base font-black uppercase tracking-wide text-white">{L('Sorteando…', 'Drawing…')}</p>
-                <p className="text-center text-xs text-white/50">
+                <p className="font-impact text-[26px] uppercase leading-none text-papel">{L('Sorteando…', 'Drawing…')}</p>
+                <p className="text-center font-prova text-[12px] text-mudo">
                   {L(`Pesquisando craques de ${year} na posição ${nomePosicao(pos)}.`, `Searching ${year} stars at ${nomePosicao(pos)}.`)}
                 </p>
               </div>
             )}
 
-            {/* REVEAL */}
-            {step === 'reveal' && result && (
+            {/* REVEAL — a carta cai colada torta, no degrau da raridade */}
+            {step === 'reveal' && result && (() => {
+              const d = RARITY[result.rarity].degrau;
+              return (
               <motion.div
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="space-y-5"
+                className="space-y-6"
               >
-                <div className={`rounded-2xl border-2 ${RARITY[result.rarity].ring} bg-black/40 p-5 text-center`}>
-                  <span className={`inline-block rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wider ${RARITY[result.rarity].chip}`}>
-                    {RARITY[result.rarity].label}
-                  </span>
-                  <p className="mt-3 text-xs uppercase tracking-wide text-white/45">{L('Você jogou como', 'You played as')}</p>
-                  <p className={`font-display text-2xl font-black ${RARITY[result.rarity].text}`}>
-                    {result.playerName}
-                  </p>
-                  <p className="text-sm text-white/55">{result.year}</p>
-                  <div className="mt-4 flex items-center justify-center gap-2">
-                    <span className="ole-num text-4xl text-white">{result.overall}</span>
-                    <span className="text-xs uppercase tracking-wide text-white/40">OVR</span>
+                <motion.div
+                  initial={{ rotate: -8, y: -20 }}
+                  animate={{ rotate: -2, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 220, damping: 16 }}
+                  className={cn('mx-auto flex w-full max-w-[280px] flex-col gap-3 p-4 shadow-[6px_8px_0_rgba(0,0,0,0.55)]', DEGRAU_CLASSES[d])}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-col">
+                      <span className={cn('font-impact text-[64px] leading-[0.85] tabular-nums', ovrNumeroClasses(d))}>{result.overall}</span>
+                      <span className="mt-1 font-impact text-[15px] uppercase leading-none">{posLabel(pos)} · OVR</span>
+                    </div>
+                    <MarcaRua tipo="escudo" className={cn('h-9', d === 'respeito' ? 'bg-ouro-27' : 'bg-asfalto-27')} />
                   </div>
-                  {result.bio && <p className="mt-2 text-xs text-white/45">{result.bio}</p>}
-                </div>
+                  <span className="font-prova text-[10px] font-bold uppercase tracking-[0.14em] opacity-75">{L('Você jogou como', 'You played as')}</span>
+                  <span className="-mt-2 block font-voz text-[32px] leading-none [overflow-wrap:anywhere]">{result.playerName}</span>
+                  <div className="flex items-center justify-between border-t-2 border-current/30 pt-2 font-prova text-[11px] font-bold uppercase tracking-[0.14em]">
+                    <span>{RARITY[result.rarity].label}</span>
+                    <span>{result.year}</span>
+                  </div>
+                </motion.div>
+                {result.bio && <p className="text-center text-[13px] leading-relaxed text-suave">{result.bio}</p>}
 
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <dl className="grid grid-cols-2 gap-x-5 gap-y-1">
                   {ATTR_LABELS.map(([key, label]) => (
-                    <div key={key} className="flex items-center justify-between border-b border-white/5 py-1">
-                      <span className="text-xs text-white/55">{label}</span>
-                      <span className="font-mono text-sm font-bold text-white">{result.attributes[key]}</span>
+                    <div key={key} className="flex items-center justify-between border-b border-linha py-1.5">
+                      <dt className="font-prova text-[11px] font-bold uppercase tracking-[0.06em] text-mudo">{label}</dt>
+                      <dd className="font-impact text-[18px] leading-none text-papel tabular-nums">{result.attributes[key]}</dd>
                     </div>
                   ))}
-                </div>
+                </dl>
 
                 {result.sources.length > 0 && (
-                  <p className="text-[10px] text-white/30">
+                  <p className="font-prova text-[10px] text-mudo">
                     {emIngles()
                       ? `Attributes derived by Olefoot's public research methodology (${result.sources.length} source${result.sources.length > 1 ? 's' : ''}).`
                       : <>Atributos derivados por metodologia Olefoot de pesquisa pública ({result.sources.length} fonte
@@ -343,57 +361,56 @@ export function GachaCreatePlayerModal({ open, onClose }: { open: boolean; onClo
                   </p>
                 )}
 
-                <button
-                  type="button"
-                  onClick={handleConfirm}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-neon-yellow py-3.5 font-display text-sm font-black uppercase tracking-wide text-black transition hover:brightness-110"
-                >
-                  {L('Confirmar e criar', 'Confirm and create')} <ArrowRight className="h-4 w-4" />
-                </button>
+                <div className="pb-1 pr-1">
+                  <button type="button" onClick={handleConfirm} className={BOTAO_CORRE}>
+                    {L('Confirmar e criar', 'Confirm and create')} <ArrowRight className="h-5 w-5" />
+                  </button>
+                </div>
               </motion.div>
-            )}
+              );
+            })()}
 
             {/* DONE */}
             {step === 'done' && result && (
-              <div className="space-y-5 py-4 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-neon-yellow/20">
-                  <Sparkles className="h-7 w-7 text-neon-yellow" />
-                </div>
-                <div>
-                  <p className="font-display text-lg font-black text-white">{L(`${trimmed} está no plantel!`, `${trimmed} joined the squad!`)}</p>
-                  <p className="mt-1 text-sm text-white/55">
+              <div className="space-y-5 py-2">
+                <div className="flex flex-col gap-2">
+                  <SeloRua tom="corre" className="self-start">{L('No plantel', 'In the squad')}</SeloRua>
+                  <p className="font-voz text-[34px] leading-none text-papel [overflow-wrap:anywhere]">{L(`${trimmed} chegou.`, `${trimmed} is in.`)}</p>
+                  <p className="font-prova text-[12px] text-mudo">
                     {L('Jogou como', 'Played as')} {result.playerName} ({result.year}) · {RARITY[result.rarity].label} · OVR {result.overall}
                   </p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-black/30 p-4 text-left">
-                  <p className="flex items-center gap-2 text-sm font-bold text-white">
-                    <Camera className="h-4 w-4 text-neon-yellow" /> {L('Último passo: sua foto', 'Last step: your photo')}
+                <div className="border-l-[3px] border-rua bg-concreto p-4">
+                  <p className="flex items-center gap-2 font-impact text-[18px] uppercase leading-none text-papel">
+                    <Camera className="h-4 w-4 text-rua" /> {L('Último passo: sua foto', 'Last step: your photo')}
                   </p>
-                  <p className="mt-1.5 text-xs text-white/55">
+                  <p className="mt-2 text-[13px] leading-relaxed text-suave">
                     {L(
                       'Mande sua foto no WhatsApp e o time monta seu card oficial à mão. A mensagem já vai preenchida com os dados do jogador — é só anexar a foto.',
                       'Send your photo on WhatsApp and the team builds your official card by hand. The message is pre-filled with your player details — just attach the photo.',
                     )}
                   </p>
                 </div>
-                <a
-                  href={buildPhotoWhatsappLink({
-                    playerName: trimmed,
-                    likePlayerName: result.playerName,
-                    year: result.year,
-                    rarity: result.rarity,
-                    overall: result.overall,
-                  })}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary flex w-full items-center justify-center gap-2 px-3 py-3.5 text-sm [--corte:12px]"
-                >
-                  <MessageCircle className="h-4 w-4" /> {L('Enviar minha foto no WhatsApp', 'Send my photo on WhatsApp')}
-                </a>
+                <div className="pb-1 pr-1">
+                  <a
+                    href={buildPhotoWhatsappLink({
+                      playerName: trimmed,
+                      likePlayerName: result.playerName,
+                      year: result.year,
+                      rarity: result.rarity,
+                      overall: result.overall,
+                    })}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={BOTAO_CORRE}
+                  >
+                    <MessageCircle className="h-5 w-5" /> {L('Enviar minha foto no WhatsApp', 'Send my photo on WhatsApp')}
+                  </a>
+                </div>
                 <button
                   type="button"
                   onClick={close}
-                  className="w-full rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10"
+                  className="inline-flex min-h-[48px] w-full items-center justify-center border-2 border-linha font-impact text-[17px] uppercase leading-none text-mudo hover:border-papel hover:text-papel"
                 >
                   {L('Fechar', 'Close')}
                 </button>

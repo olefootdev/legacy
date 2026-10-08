@@ -15,10 +15,11 @@ import {
   type ContributionKind,
 } from '@/supabase/legendContributions';
 import { useStoryRecorder } from '@/hooks/useStoryRecorder';
+import { BotaoRua } from '@/components/ui/Rua';
 import { L } from '@/i18n/L';
 
-/** Campo de formulário VOLT2: asfalto chapado, canto vivo, foco em volt. */
-const CAMPO = 'border border-white/16 bg-deep-black px-4 py-3.5 text-sm text-white outline-none placeholder:text-poeira focus:border-neon-yellow';
+/** Campo de formulário DS 2027: asfalto chapado, canto vivo, foco em rua. */
+const CAMPO = 'border-2 border-linha bg-asfalto-27 px-4 py-3.5 font-sans text-base text-papel outline-none placeholder:text-fio focus:border-rua';
 
 const TITLE: Record<ContributionKind, string> = {
   correcao: L('Sugerir correção', 'Suggest a fix'),
@@ -102,29 +103,35 @@ export function LegendContributionModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-6" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 sm:items-center sm:p-6" onClick={onClose}>
       <div
-        className="max-h-[92vh] w-full max-w-md overflow-y-auto border border-white/10 bg-panel p-6"
+        role="dialog"
+        aria-modal="true"
+        aria-label={TITLE[kind]}
+        className="rua-grao max-h-[92vh] w-full min-w-0 max-w-md overflow-y-auto border-2 border-linha bg-concreto p-6 text-papel"
         onClick={(e) => e.stopPropagation()}
       >
         {state === 'sent' ? (
-          <div className="text-center">
-            <CheckCircle2 className="mx-auto mb-4 h-10 w-10 text-neon-yellow" />
-            <h2 className="font-impact text-[28px] uppercase leading-[1.05]">{L('Recebemos', 'Received')}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-cimento">
+          <div className="flex flex-col gap-3">
+            <div className="-rotate-1 self-start bg-cal px-4 py-3 text-asfalto-27 shadow-[4px_4px_0_var(--color-rua)]">
+              <CheckCircle2 className="mb-1 h-6 w-6" />
+              <h2 className="font-voz text-[38px] leading-[0.95]">{L('Recebemos.', 'Received.')}</h2>
+            </div>
+            <p className="mt-2 font-sans text-[15px] leading-relaxed text-suave">
               {kind === 'historia'
                 ? L('Sua história vai ser ouvida por uma pessoa da OLEFOOT. Obrigado por contar.', 'Someone at OLEFOOT will listen to your story. Thanks for sharing.')
                 : L('Uma pessoa da OLEFOOT vai ler. Se fizer sentido, a gente ajusta.', "Someone at OLEFOOT will read it. If it makes sense, we'll fix it.")}
             </p>
-            <button onClick={onClose} className="btn-primary mt-5 flex h-12 w-full items-center justify-center">
+            <BotaoRua onClick={onClose} className="mt-3 w-full">
               {L('Fechar', 'Close')}
-            </button>
+            </BotaoRua>
           </div>
         ) : (
           <>
-            <h2 className="font-impact text-[28px] uppercase leading-[1.05]">{TITLE[kind]}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-cimento">{LEDE[kind]}</p>
-            {cardName && <p className="mt-3 truncate font-mono text-[11px] uppercase tracking-wider text-poeira">{cardName}</p>}
+            <span className="font-prova text-[11px] font-bold uppercase tracking-[0.22em] text-mudo">— {L('A lenda fala', 'The legend speaks')}</span>
+            <h2 className="mt-1 font-impact text-[clamp(28px,8vw,36px)] uppercase leading-[0.95]">{TITLE[kind]}</h2>
+            <p className="mt-2 font-sans text-[14px] leading-relaxed text-suave">{LEDE[kind]}</p>
+            {cardName && <p className="mt-3 block min-w-0 truncate font-voz text-[24px] leading-none text-ouro-27">{cardName}</p>}
 
             <div className="mt-5 space-y-3">
               {kind === 'correcao' && (
@@ -150,7 +157,7 @@ export function LegendContributionModal({
                   <div>
                     <input value={preco} onChange={(e) => setPreco(e.target.value)} inputMode="decimal" placeholder={L('Quanto você acha que vale (US$)', "What you think it's worth (US$)")}
                       className={`w-full ${CAMPO}`} />
-                    <p className="mt-1.5 text-[11px] leading-snug text-cimento">
+                    <p className="mt-1.5 font-sans text-[12px] leading-snug text-mudo">
                       {L('É a sua opinião, e ela conta. O preço final é definido pela OLEFOOT junto com o resto da coleção.', 'Your opinion counts. The final price is set by OLEFOOT along with the rest of the collection.')}
                     </p>
                   </div>
@@ -158,38 +165,38 @@ export function LegendContributionModal({
               )}
 
               {kind === 'historia' && (
-                <div className="border border-white/16 bg-deep-black p-4">
+                <div className="border-2 border-linha bg-asfalto-27 p-4">
                   {rec.state === 'unsupported' || rec.state === 'denied' ? (
-                    <p className="text-[12px] leading-relaxed text-cimento">
+                    <p className="font-sans text-[13px] leading-relaxed text-suave">
                       {rec.state === 'denied'
                         ? L('Precisamos do microfone para gravar. Libere o acesso e tente de novo — ou escreva abaixo.', 'We need the microphone to record. Allow access and try again — or write below.')
                         : L('Seu navegador não grava áudio. Sem problema: escreva sua história abaixo.', "Your browser can't record audio. No problem: write your story below.")}
                     </p>
                   ) : rec.state === 'recording' ? (
                     <div className="flex items-center gap-3">
-                      <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-baixa" />
-                      <span className="ole-num text-lg">{mmss(rec.seconds)}</span>
-                      <button onClick={rec.stop} className="ml-auto flex items-center gap-2 border border-white/30 px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors hover:border-white">
+                      <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-rua" aria-hidden />
+                      <span className="font-spray text-[30px] font-black leading-none tabular-nums text-papel">{mmss(rec.seconds)}</span>
+                      <button type="button" onClick={rec.stop} className="ml-auto flex min-h-[44px] items-center gap-2 border-2 border-papel px-3 font-impact text-[16px] uppercase text-papel transition-colors hover:bg-papel hover:text-asfalto-27">
                         <Square className="h-3.5 w-3.5" /> {L('Parar', 'Stop')}
                       </button>
                     </div>
                   ) : rec.blob ? (
                     <div className="flex items-center gap-3">
                       <audio controls src={URL.createObjectURL(rec.blob)} className="h-9 min-w-0 flex-1" />
-                      <button onClick={rec.reset} className="shrink-0 p-2 text-cimento transition-colors hover:text-white" aria-label={L('Descartar gravação', 'Discard recording')}>
+                      <button type="button" onClick={rec.reset} className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-mudo transition-colors hover:text-papel" aria-label={L('Descartar gravação', 'Discard recording')}>
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   ) : (
-                    <button onClick={() => void rec.start()} className="btn-primary flex h-12 w-full items-center justify-center gap-2">
-                      <Mic className="h-4 w-4" /> {L('Gravar', 'Record')}
-                    </button>
+                    <BotaoRua onClick={() => void rec.start()} className="w-full">
+                      <Mic className="h-5 w-5" /> {L('Gravar', 'Record')}
+                    </BotaoRua>
                   )}
                   {rec.state === 'recording' && rec.interim && (
-                    <p className="mt-3 text-[12px] leading-snug text-poeira">{rec.interim}</p>
+                    <p className="mt-3 font-sans text-[13px] leading-snug text-suave">{rec.interim}</p>
                   )}
                   {rec.state !== 'idle' && !rec.canTranscribe && (
-                    <p className="mt-3 text-[11px] leading-snug text-cimento">
+                    <p className="mt-3 font-sans text-[12px] leading-snug text-mudo">
                       {L('Seu navegador não transcreve automaticamente — mas o áudio é gravado e nós escutamos.', "Your browser doesn't auto-transcribe — but the audio is recorded and we listen to it.")}
                     </p>
                   )}
@@ -209,24 +216,24 @@ export function LegendContributionModal({
               />
 
               {kind === 'historia' && (
-                <p className="text-[11px] leading-snug text-cimento">
+                <p className="font-sans text-[12px] leading-snug text-mudo">
                   {L('Ao enviar, você autoriza a OLEFOOT a usar esta história na construção do seu card. Sua voz não é publicada sem falar com você antes.', "By sending, you authorize OLEFOOT to use this story to build your card. Your voice is never published without talking to you first.")}
                 </p>
               )}
 
-              {state === 'error' && <p className="text-xs text-baixa">{err}</p>}
+              {state === 'error' && <p className="font-sans text-[13px] font-semibold text-baixa">{err}</p>}
 
-              <div className="flex gap-2">
-                <button onClick={onClose} className="btn-secondary flex h-12 flex-1 items-center justify-center px-3">
+              <div className="flex min-w-0 gap-2 pt-1">
+                <BotaoRua variante="contorno" onClick={onClose} className="min-w-0 flex-1 px-3 text-[17px]">
                   {L('Cancelar', 'Cancel')}
-                </button>
-                <button
+                </BotaoRua>
+                <BotaoRua
                   onClick={() => void send()}
                   disabled={state === 'sending' || rec.state === 'recording'}
-                  className="btn-primary flex h-12 flex-1 items-center justify-center px-3 disabled:opacity-50"
+                  className="min-w-0 flex-1 px-3 text-[17px]"
                 >
-                  {state === 'sending' ? <Loader2 className="h-4 w-4 animate-spin" /> : L('Enviar', 'Send')}
-                </button>
+                  {state === 'sending' ? <Loader2 className="h-5 w-5 animate-spin" /> : <>{L('Enviar', 'Send')} <span aria-hidden>→</span></>}
+                </BotaoRua>
               </div>
             </div>
           </>

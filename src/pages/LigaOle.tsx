@@ -1,15 +1,16 @@
 /**
  * LigaOle — hub da Liga Ole (mata-mata de 32 times reais).
  *
- * VOLT2: superfícies chapadas, manchete Anton, números em Archivo (ole-num),
- * rótulos em mono. Section headers com rail amarelo e o confronto como peça
- * editorial — sem sombra, sem serifa itálica.
+ * DS 2027 "Respeito é ouro": o confronto é cartaz de convocação (rua em
+ * cima, asfalto embaixo, o "x" na voz), placar em spray, rótulos "— " em mono,
+ * Dinastia com fio de ouro (respeito que já existe), revanche em lambe de cal
+ * e a Liga da Semana na régua do "quanto falta" da Home.
  */
 
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Trophy, Swords, ChevronRight, ShieldX, Flame, Crown, CalendarDays, Skull, Medal } from 'lucide-react';
+import { Trophy, ShieldX, Flame, Crown, CalendarDays, Skull } from 'lucide-react';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { getEffectiveFatigue } from '@/systems/fatigue';
@@ -35,6 +36,9 @@ import { MomentShareCard } from '@/components/moments/MomentShareCard';
 import { detectMoment, stageFromRoundName } from '@/systems/moments';
 import { LigaOlePreviewModal } from '@/components/ligaole/LigaOlePreviewModal';
 import { CinematicHero } from '@/components/CinematicHero';
+import { Convocacao } from '@/components/ligaole/Convocacao';
+import { BotaoRua, SecaoRua, SeloRua } from '@/components/ui/Rua';
+import { cn } from '@/lib/utils';
 import {
   currentWeekKey,
   recordLigaOleWeeklyRun,
@@ -46,46 +50,43 @@ import {
 import type { OpponentStub } from '@/entities/types';
 import { L, LOCALE, emIngles } from '@/i18n/L';
 
-/** Fonte de manchete do layer final. (Era serifa itálica.) */
-const MANCHETE = 'var(--font-impact)';
+
 /** Rótulo de TELA das fases — o valor PT (LIGA_OLE_ROUNDS) segue sendo a chave. */
 const ROUND_LABEL_EN: Record<string, string> = { 'Fase de 32': 'Round of 32', Oitavas: 'Round of 16', Quartas: 'Quarter-finals', Semifinal: 'Semi-final', Final: 'Final' };
 const ROUND_ABBR_EN: Record<string, string> = { 'Fase de 32': 'R32', Oitavas: 'R16', Quartas: 'QF', Semifinal: 'Semi', Final: 'Final' };
 const roundLabel = (r: string) => (emIngles() ? ROUND_LABEL_EN[r] ?? r : r);
 const roundAbbr = (r: string) => (emIngles() ? ROUND_ABBR_EN[r] ?? r : r.replace('Fase de 32', '32-avos').replace('Semifinal', 'Semi'));
 
-/** Uma linha de confronto do chaveamento (compacto, mobile). */
+/** Uma linha de confronto do chaveamento: nomes no grito, placar em spray. */
 function BracketRow({ m }: { m: LigaOleRoundMatch }) {
   const resolved = !!m.result;
   const winner = m.result?.winner;
-  const nameStyle = (id: string) => {
+  const nameCls = (id: string) => {
     const isManager = id === 'manager' || m.a.isManager && id === m.a.id || m.b.isManager && id === m.b.id;
-    const won = resolved && winner === id;
     const lost = resolved && winner !== id;
-    return {
-      // Lista de confrontos = texto corrido: fonte padrão (Inter), legível e leve.
-      // A Moret editorial fica reservada pros heróis e pro confronto em destaque.
-      fontFamily: 'var(--font-sans)', fontWeight: 600,
-      fontSize: 'clamp(12px, 3.4vw, 15px)', letterSpacing: '0',
-      color: isManager ? 'var(--color-neon-yellow)' : lost ? 'rgba(255,255,255,0.35)' : '#fff',
-      opacity: lost ? 0.8 : 1,
-    };
+    return cn(
+      'min-w-0 flex-1 truncate font-impact text-[clamp(14px,4vw,17px)] uppercase leading-none',
+      isManager ? 'text-rua' : lost ? 'text-fio line-through decoration-1' : 'text-papel',
+    );
   };
   return (
-    <div
-      className="flex items-center gap-2 px-2.5 py-2 border-l-[3px]"
-      style={{ borderLeftColor: m.isManager ? 'var(--color-neon-yellow)' : 'var(--color-border)', backgroundColor: 'var(--color-deep-black)', borderRadius: 'var(--radius-sm)' }}
-    >
-      <span className="flex-1 text-right truncate leading-none" style={nameStyle(m.a.id)}>{m.a.name}</span>
-      {resolved ? (
-        <span className="ole-num text-[13px] text-giz shrink-0">
-          {m.result!.scoreA}<span className="text-poeira mx-0.5">-</span>{m.result!.scoreB}
+    <div className={cn('flex h-12 min-w-0 items-center gap-2 bg-concreto px-3', m.isManager && 'border-l-[3px] border-rua')}>
+      <span className={cn(nameCls(m.a.id), 'text-right')}>{m.a.name}</span>
+      <span className="w-14 shrink-0 text-center">
+        {resolved ? (
+          <span className="font-spray text-[22px] font-black leading-none text-papel">
+            {m.result!.scoreA}×{m.result!.scoreB}
+          </span>
+        ) : (
+          <span aria-label={L('contra', 'vs')} className="font-voz text-[22px] leading-none text-fio">x</span>
+        )}
+      </span>
+      <span className={cn(nameCls(m.b.id), 'text-left')}>{m.b.name}</span>
+      {m.result?.shootout && (
+        <span title={L('Decidido nos pênaltis', 'Decided on penalties')} className="inline-flex shrink-0">
+          <Flame className="h-3.5 w-3.5 text-rua" strokeWidth={2.5} aria-label={L('Pênaltis', 'Penalties')} />
         </span>
-      ) : (
-        <span className="font-mono uppercase tracking-[0.12em] text-[9.5px] text-poeira shrink-0">vs</span>
       )}
-      <span className="flex-1 text-left truncate leading-none" style={nameStyle(m.b.id)}>{m.b.name}</span>
-      {m.result?.shootout && <Flame className="w-3 h-3 text-neon-yellow shrink-0" strokeWidth={2.5} aria-hidden />}
     </div>
   );
 }
@@ -97,9 +98,9 @@ function BracketCompact({ liga }: { liga: LigaOleState }) {
   const matches = roundMatches(liga, round);
   const isCurrent = round === liga.roundIndex;
   return (
-    <div className="border border-white/10 bg-panel p-3">
+    <div className="flex min-w-0 flex-col gap-3">
       {/* Abas das fases já existentes (passadas + atual) */}
-      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-1" style={{ scrollbarWidth: 'none' }}>
+      <div className="flex min-w-0 gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {LIGA_OLE_ROUNDS.slice(0, total).map((r, i) => {
           const sel = i === round;
           return (
@@ -107,75 +108,71 @@ function BracketCompact({ liga }: { liga: LigaOleState }) {
               key={r}
               type="button"
               onClick={() => setRound(i)}
-              className="shrink-0 px-2.5 py-1 font-mono uppercase tracking-[0.1em] text-[10px] font-medium transition-colors"
-              style={{ borderRadius: 'var(--radius-sm)', backgroundColor: sel ? 'var(--color-neon-yellow)' : 'transparent', color: sel ? '#000' : 'rgba(255,255,255,0.5)', border: sel ? 'none' : '1px solid var(--color-border)' }}
+              aria-pressed={sel}
+              className={cn(
+                'min-h-[36px] shrink-0 px-3 font-prova text-[11px] font-bold uppercase tracking-[0.1em] transition-colors',
+                sel ? 'bg-rua text-asfalto-27' : 'border-2 border-linha text-mudo hover:border-papel hover:text-papel',
+              )}
             >
               {roundAbbr(r)}
             </button>
           );
         })}
       </div>
-      <p className="font-mono uppercase tracking-[0.14em] text-[10px] text-cimento mb-2 px-0.5">
+      <p className="font-prova text-[11px] font-bold uppercase tracking-[0.14em] text-mudo">
         {isCurrent
           ? L(`${matches.length * 2} clubes ainda na disputa`, `${matches.length * 2} clubs still in contention`)
           : L(`Resultados · ${matches.length} ${matches.length === 1 ? 'jogo' : 'jogos'}`, `Results · ${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`)}
       </p>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex min-w-0 flex-col gap-1.5">
         {matches.map((m) => <BracketRow key={m.pairIndex} m={m} />)}
       </div>
     </div>
   );
 }
 
-
 /**
- * Card de campeão VIRAL — pôster `banner-campeao` com texto sobreposto, craque
- * do time, CTA que É o link de indicação do manager, e botão de compartilhar
- * (Web Share API → imagem real + texto + link). Crescimento orgânico: quem
- * clica no texto/CTA cai no /cadastro/<código> e vira indicado.
+ * Leaderboard da Liga da Semana — quem chegou mais longe (Supabase real).
+ * Mesma régua do "quanto falta" da Home: campeão com fio de ouro, a linha do
+ * manager em rua colada torta, o resto no concreto.
  */
-function SectionHeader({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-3">
-      <span aria-hidden className="block w-[3px] h-7 bg-neon-yellow shrink-0" />
-      <h2 className="text-neon-yellow" style={{ fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: 'clamp(22px, 6vw, 30px)', letterSpacing: '-0.01em' }}>
-        {children}
-      </h2>
-    </div>
-  );
-}
-
-/** Leaderboard da Liga da Semana — quem chegou mais longe (Supabase real). */
 function WeeklyLeaderboard({ rows, myId, weekLabel }: { rows: LigaOleWeeklyRow[]; myId: string | null; weekLabel: string }) {
   if (!rows.length) return null;
   const reachedName = (i: number, champ: boolean) => (champ ? L('Campeão', 'Champion') : roundLabel(LIGA_OLE_ROUNDS[Math.max(0, Math.min(4, i))] ?? '—'));
   return (
-    <div className="border border-white/10 bg-panel p-3">
-      <div className="flex items-center gap-2 mb-2.5 px-0.5">
-        <CalendarDays className="w-3.5 h-3.5 text-neon-yellow shrink-0" strokeWidth={2.5} aria-hidden />
-        <span className="truncate font-mono uppercase tracking-[0.12em] text-[10px] text-cimento">{L('Liga da Semana', 'League of the Week')} · {weekLabel} · {L('quem chegou mais longe', 'who went furthest')}</span>
+    <section aria-label={L('Liga da Semana', 'League of the Week')} className="flex min-w-0 flex-col gap-3">
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <SecaoRua label={L(`Liga da Semana · ${weekLabel}`, `League of the Week · ${weekLabel}`)} />
+        <h2 className="font-voz text-[clamp(34px,9vw,48px)] leading-[0.95] text-papel">{L('Quem foi mais longe', 'Who went furthest')}</h2>
       </div>
-      <div className="flex flex-col gap-1">
+      <div className="flex min-w-0 flex-col gap-1.5">
         {rows.map((r) => {
           const mine = !!myId && r.managerId === myId;
           return (
             <div
               key={r.managerId}
-              className={`flex h-10 items-center gap-2.5 px-2.5 ${mine ? 'bg-neon-yellow text-black' : 'bg-deep-black'}`}
+              className={cn(
+                'flex min-w-0 items-center gap-3 px-4',
+                mine && 'relative z-[1] my-1 h-[56px] -rotate-1 bg-rua text-asfalto-27 shadow-[4px_4px_0_var(--color-papel)]',
+                !mine && 'h-[50px]',
+                !mine && r.isChampion && 'border-2 border-ouro-27 text-ouro-27',
+                !mine && !r.isChampion && 'bg-concreto text-papel',
+              )}
             >
-              <span className={`ole-num text-[12px] w-5 text-center shrink-0 ${mine ? 'text-black' : r.rank <= 3 ? 'text-white' : 'text-cimento'}`}>{r.rank}</span>
-              {r.isChampion
-                ? <Crown className={`w-3.5 h-3.5 shrink-0 ${mine ? 'text-black' : 'text-neon-yellow'}`} strokeWidth={2.5} aria-hidden />
-                : <Medal className={`w-3.5 h-3.5 shrink-0 ${mine ? 'text-black/60' : 'text-poeira'}`} strokeWidth={2} aria-hidden />}
-              <span className={`flex-1 truncate leading-none text-[14px] ${mine ? 'font-bold text-black' : 'font-semibold text-giz'}`}>{r.clubName}</span>
-              <span className={`font-mono uppercase tracking-[0.1em] text-[9.5px] shrink-0 ${mine ? 'text-black/70' : 'text-cimento'}`}>{reachedName(r.reachedRound, r.isChampion)}</span>
+              <span className="w-10 shrink-0 font-impact text-[20px] leading-none">#{String(r.rank).padStart(2, '0')}</span>
+              <span className="block min-w-0 grow truncate font-impact text-[19px] uppercase leading-none">{r.clubName}</span>
+              {r.isChampion && <Crown className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />}
+              <span className={cn('shrink-0 font-prova text-[10.5px] font-bold uppercase tracking-[0.1em]', !mine && !r.isChampion && 'text-mudo')}>
+                {reachedName(r.reachedRound, r.isChampion)}
+              </span>
             </div>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }
+
 
 export function LigaOle() {
   const navigate = useNavigate();
@@ -367,28 +364,31 @@ export function LigaOle() {
   const reset = () => dispatch({ type: 'RESET_LIGA_OLE' });
   const dismissFlash = () => dispatch({ type: 'DISMISS_LIGA_OLE_RESULT' });
   const opp = active ? managerOpponent(active) : null;
-  const pillCls = 'ole-num w-full h-[52px] whitespace-nowrap uppercase text-[13px] transition-colors enabled:hover:!bg-white disabled:opacity-50 flex items-center justify-center gap-2 [--corte:12px] [clip-path:var(--clip-corte)]';
-  const pillStyle = { backgroundColor: 'var(--color-neon-yellow)', color: '#000' } as const;
   // CTA "Avançar" — usado em DOIS lugares (acima e abaixo do chaveamento) pra
   // ficar sempre à mão no mobile, sem precisar rolar de volta.
   const advanceBtn = (
-    <button type="button" disabled={busy || !opp} onClick={() => setPreviewOpen(true)} className={pillCls} style={pillStyle}>
-      {busy ? L('Preparando a partida…', 'Preparing the match…') : <>{L('Avançar', 'Advance')} <ChevronRight className="w-4 h-4" strokeWidth={3} aria-hidden /></>}
-    </button>
+    <BotaoRua disabled={busy || !opp} onClick={() => setPreviewOpen(true)} className="w-full">
+      {busy ? L('Preparando a partida…', 'Preparing the match…') : <>{L('Avançar', 'Advance')} <span aria-hidden>→</span></>}
+    </BotaoRua>
   );
 
   return (
-    <main className="min-h-screen bg-black text-white px-5 py-6 max-w-xl mx-auto">
-      <div className="flex items-center justify-between mb-5">
-        <Link to="/" className="font-mono uppercase tracking-[0.14em] text-[11px] text-cimento hover:text-white">← Home</Link>
-        <span className="font-mono tracking-[0.04em] text-[11.5px] font-medium text-neon-yellow flex items-center gap-1.5">
-          <Trophy className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> #ligaole
+    <main className="mx-auto min-h-screen min-w-0 max-w-xl px-4 py-6 text-papel">
+      <div className="mb-6 flex min-w-0 items-center justify-between gap-3">
+        <Link
+          to="/"
+          className="inline-flex min-h-[44px] items-center font-prova text-[11.5px] font-bold uppercase tracking-[0.2em] text-mudo hover:text-papel"
+        >
+          ← Home
+        </Link>
+        <span className="flex items-center gap-1.5 font-prova text-[11.5px] font-bold uppercase tracking-[0.2em] text-mudo">
+          <Trophy className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> — {L('Mata-mata', 'Knockout')}
         </span>
       </div>
 
       {/* ─── LANDING (sem liga ativa) — flash de resultado é TRANSITÓRIO ────── */}
       {!active && (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-8">
           {/* Resultado da última campanha — só quando ACABOU de acontecer */}
           {ligaOleMoment && (
             <MomentShareCard
@@ -400,19 +400,32 @@ export function LigaOle() {
             />
           )}
           {flash?.outcome === 'eliminated' && (
-            <motion.div
+            <motion.section
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className="relative px-6 py-7 border border-baixa bg-panel"
+              aria-label={L('Fim da linha', 'End of the road')}
+              className="rua-grao relative flex flex-col gap-2 border-2 border-linha bg-concreto px-5 pb-6 pt-5"
             >
-              <button type="button" onClick={dismissFlash} aria-label={L('Fechar', 'Close')} className="absolute top-3 right-4 text-cimento hover:text-white text-lg leading-none">×</button>
-              <p className="font-mono uppercase tracking-[0.16em] text-[11px] font-medium text-baixa mb-2 flex items-center gap-2">
-                <ShieldX className="w-4 h-4" strokeWidth={2.5} aria-hidden /> {L('Fim da linha', 'End of the road')}
-              </p>
-              <p className="text-white leading-[1.1]" style={{ fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: 'clamp(34px, 10vw, 52px)', letterSpacing: '-0.01em' }}>
+              <div className="flex min-w-0 items-center justify-between gap-3">
+                <span className="flex items-center gap-2 font-prova text-[11.5px] font-bold uppercase tracking-[0.2em] text-mudo">
+                  <ShieldX className="h-4 w-4" strokeWidth={2.5} aria-hidden /> {L('Fim da linha', 'End of the road')}
+                </span>
+                <button
+                  type="button"
+                  onClick={dismissFlash}
+                  aria-label={L('Fechar', 'Close')}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center font-impact text-[22px] leading-none text-mudo hover:text-papel"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="font-impact uppercase leading-[0.86] text-papel" style={{ fontSize: 'clamp(46px, 13vw, 76px)' }}>
                 {roundLabel(flash.reachedRound)}
               </p>
-              <p className="mt-2 font-mono uppercase tracking-[0.14em] text-[11.5px] text-cimento">{L('Eliminado', 'Eliminated')}</p>
-            </motion.div>
+              <p className="font-voz text-[clamp(24px,6.5vw,32px)] leading-[1.05] text-papel">
+                {L('Caiu aqui. Volta mais forte.', 'Went out here. Come back stronger.')}
+              </p>
+              <p className="font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-suave">{L('Eliminado', 'Eliminated')}</p>
+            </motion.section>
           )}
 
           {/* Convite — sempre presente no landing. Hero cinematográfico (banner real). */}
@@ -427,57 +440,63 @@ export function LigaOle() {
             />
           )}
 
-          {/* DINASTIA — títulos acumulados multiplicam os prêmios das próximas campanhas */}
+          {/* DINASTIA — títulos acumulados (valor que já existe: RESPEITO, fio de ouro) */}
           {titles > 0 && (
-            <div className="flex items-center justify-between gap-3 px-4 py-3 border border-neon-yellow bg-panel">
-              <span className="flex items-center gap-2.5 min-w-0">
-                <Crown className="w-5 h-5 text-neon-yellow shrink-0" strokeWidth={2} aria-hidden />
-                <span className="min-w-0">
-                  <span className="block font-mono uppercase tracking-[0.14em] text-[10px] text-cimento">{L('Dinastia', 'Dynasty')}</span>
-                  <span className="block truncate text-neon-yellow leading-[1.1]" style={{ fontFamily: MANCHETE, textTransform: 'uppercase', fontSize: '20px' }}>{dinastiaLabel(titles)}</span>
+            <section
+              aria-label={L('Dinastia', 'Dynasty')}
+              className="flex min-w-0 items-center justify-between gap-4 border-[3px] border-ouro-27 bg-asfalto-27 px-4 py-4"
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <Crown className="h-6 w-6 shrink-0 text-ouro-27" strokeWidth={2} aria-hidden />
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.2em] text-mudo">— {L('Dinastia', 'Dynasty')}</span>
+                  <span className="block truncate font-voz text-[26px] leading-none text-ouro-27">{dinastiaLabel(titles)}</span>
                 </span>
               </span>
-              <span className="ole-num text-[13px] text-neon-yellow shrink-0">{L('prêmios', 'prizes')} ×{dinastiaMultiplier(titles).toFixed(2)}</span>
-            </div>
+              <span className="flex shrink-0 flex-col items-end">
+                <span className="font-spray text-[30px] font-black leading-none text-ouro-27">×{dinastiaMultiplier(titles).toFixed(2)}</span>
+                <span className="font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{L('prêmios', 'prizes')}</span>
+              </span>
+            </section>
           )}
 
-          {/* NÊMESIS — quem te eliminou entra na próxima clássica como revanche */}
+          {/* NÊMESIS — quem te eliminou entra na próxima clássica: lambe de cal colado torto */}
           {nemesis && (
-            <div className="flex items-center gap-2.5 px-4 py-3 border border-baixa bg-panel">
-              <Skull className="w-5 h-5 text-baixa shrink-0" strokeWidth={2} aria-hidden />
-              <p className="text-[12.5px] text-giz leading-snug">
+            <div className="flex min-w-0 rotate-[1deg] items-start gap-3 bg-cal px-4 py-3.5 text-asfalto-27 shadow-[4px_5px_0_rgba(0,0,0,0.55)]">
+              <Skull className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+              <p className="min-w-0 text-[14px] leading-snug">
+                <span className="mb-1 block font-impact text-[18px] uppercase leading-none">{L('Revanche', 'Revenge')}</span>
                 {emIngles()
-                  ? <>Revenge: <span className="text-white font-semibold">{nemesis.name}</span> knocked you out in the <span className="text-baixa">{roundLabel(nemesis.round)}</span> · back in the classic Liga Ole.</>
-                  : <>Revanche: <span className="text-white font-semibold">{nemesis.name}</span> te eliminou na <span className="text-baixa">{nemesis.round}</span> · volta na Liga Ole clássica.</>}
+                  ? <><span className="font-semibold">{nemesis.name}</span> knocked you out in the <span className="font-semibold">{roundLabel(nemesis.round)}</span> · back in the classic Liga Ole.</>
+                  : <><span className="font-semibold">{nemesis.name}</span> te eliminou na <span className="font-semibold">{nemesis.round}</span> · volta na Liga Ole clássica.</>}
               </p>
             </div>
           )}
 
-          <div>
-            <p className="font-mono text-cimento text-[11.5px] leading-snug mb-3 px-1">
-              {emIngles()
-                ? <><span className="text-white">31 real managers</span> + you · 5 rounds · draws go to <span className="text-neon-yellow">penalties</span> · lose and you're out</>
-                : <><span className="text-white">31 managers reais</span> + você · 5 fases · empate vai pros <span className="text-neon-yellow">pênaltis</span> · perdeu, acabou</>}
-            </p>
-            {error && <p className="text-baixa text-[12px] mb-2 px-1">{error}</p>}
-            <div className="flex flex-col gap-2.5">
-              <button type="button" disabled={busy} onClick={() => createLeague('classic')} className={pillCls} style={pillStyle}>
-                {busy ? L('Sorteando os 32…', 'Drawing the 32…') : flash ? L('Criar nova Liga Ole', 'Create new Liga Ole') : L('Criar Liga Ole', 'Create Liga Ole')}
-              </button>
-              {/* Liga da Semana — mesmo chaveamento pra todos os managers, ranking real */}
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => createLeague('weekly')}
-                className="ole-num w-full h-[50px] whitespace-nowrap uppercase text-[13px] transition-colors disabled:opacity-50 flex items-center justify-center gap-2 border border-neon-yellow bg-panel text-neon-yellow hover:bg-card"
-              >
-                <CalendarDays className="w-4 h-4" strokeWidth={2.5} aria-hidden /> {L('Liga da Semana', 'League of the Week')}
-              </button>
-              <p className="font-mono text-[10.5px] text-cimento text-center">
-                {L('Liga da Semana', 'League of the Week')} · {weekKey} · {L('mesmo chaveamento pra todo mundo', 'same bracket for everyone')}
+          <section aria-label={L('Entrar na Liga Ole', 'Join the Liga Ole')} className="flex min-w-0 flex-col gap-4">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <SecaoRua label={L('Regulamento', 'Rules')} />
+              <p className="font-voz text-[clamp(26px,7vw,34px)] leading-[1.05] text-papel">
+                {L('Perdeu, acabou. Empate vai pros pênaltis.', "Lose and you're out. Draws go to penalties.")}
+              </p>
+              <p className="font-prova text-[11px] font-bold uppercase leading-snug tracking-[0.12em] text-mudo">
+                {L('31 managers reais + você · 5 fases', '31 real managers + you · 5 rounds')}
               </p>
             </div>
-          </div>
+            {error && <p role="alert" className="border-l-[3px] border-baixa bg-concreto px-3 py-2.5 text-[13px] text-papel">{error}</p>}
+            <div className="flex flex-col gap-3">
+              <BotaoRua disabled={busy} onClick={() => createLeague('classic')} className="w-full">
+                {busy ? L('Sorteando os 32…', 'Drawing the 32…') : <>{flash ? L('Criar nova Liga Ole', 'Create new Liga Ole') : L('Criar Liga Ole', 'Create Liga Ole')} <span aria-hidden>→</span></>}
+              </BotaoRua>
+              {/* Liga da Semana — mesmo chaveamento pra todos os managers, ranking real */}
+              <BotaoRua variante="contorno" disabled={busy} onClick={() => createLeague('weekly')} className="w-full">
+                <CalendarDays className="h-5 w-5" strokeWidth={2.5} aria-hidden /> {L('Liga da Semana', 'League of the Week')}
+              </BotaoRua>
+              <p className="text-center font-prova text-[10.5px] font-bold uppercase tracking-[0.12em] text-mudo">
+                {weekKey} · {L('mesmo chaveamento pra todo mundo', 'same bracket for everyone')}
+              </p>
+            </div>
+          </section>
 
           {/* Leaderboard semanal — quem chegou mais longe (cross-user) */}
           <WeeklyLeaderboard rows={board} myId={myId} weekLabel={weekKey} />
@@ -486,61 +505,62 @@ export function LigaOle() {
 
       {/* ─── LIGA ATIVA → jornada ─────────────────────────────────────────── */}
       {active && (
-        <div className="flex flex-col gap-7">
+        <div className="flex flex-col gap-9">
           {/* A JORNADA: trilha + confronto + ÚNICO CTA */}
           <div className="flex flex-col gap-4">
-            <SectionHeader>{L('A Jornada', 'The Journey')}</SectionHeader>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <SecaoRua
+                label={active.mode === 'weekly' ? L('Liga da Semana · a jornada', 'League of the Week · the journey') : L('Liga Ole · a jornada', 'Liga Ole · the journey')}
+                aside={`${String(active.roundIndex + 1).padStart(2, '0')}/${String(LIGA_OLE_ROUNDS.length).padStart(2, '0')}`}
+              />
+            </div>
 
-            {/* Trilha das fases */}
-            <div className="flex items-stretch gap-1.5">
+            {/* Trilha das fases — segmentos: papel passou, rua é agora, linha falta */}
+            <ol aria-label={L('Fases da Liga Ole', 'Liga Ole rounds')} className="flex min-w-0 items-stretch gap-1">
               {LIGA_OLE_ROUNDS.map((r, i) => {
                 const done = i < active.roundIndex;
                 const current = i === active.roundIndex;
                 return (
-                  <div key={r} className="flex-1 text-center">
-                    <div className="h-1.5 mb-1.5 transition-colors" style={{ backgroundColor: done ? 'var(--color-alta)' : current ? 'var(--color-neon-yellow)' : 'var(--color-card-hi)' }} />
-                    <span className="font-mono uppercase tracking-[0.04em] text-[9px] font-medium leading-tight block" style={{ color: current ? 'var(--color-neon-yellow)' : done ? 'var(--color-giz)' : 'var(--color-poeira)' }}>
+                  <li key={r} aria-current={current ? 'step' : undefined} className="flex min-w-0 flex-1 flex-col gap-1.5 text-center">
+                    <span aria-hidden className={cn('block h-3.5', done ? 'bg-papel' : current ? 'bg-rua' : 'bg-linha')} />
+                    <span className={cn('block truncate font-prova text-[9.5px] font-bold uppercase leading-tight tracking-[0.04em]', current ? 'text-rua' : done ? 'text-suave' : 'text-fio')}>
                       {roundAbbr(r)}
                     </span>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ol>
 
-            {/* Confronto — peça editorial (Moret protagonista) */}
-            <div className="relative overflow-hidden border border-neon-yellow bg-panel px-5 py-6">
-              {opp && nemesis && opp.id === nemesis.id && (
-                <p className="flex items-center justify-center gap-1.5 font-mono uppercase tracking-[0.16em] text-[11px] font-medium text-baixa mb-2">
-                  <Skull className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> {L('Revanche', 'Revenge')}
-                </p>
-              )}
-              <p className="font-mono uppercase tracking-[0.16em] text-[11px] font-medium text-neon-yellow text-center mb-4">
-                {active.mode === 'weekly' ? L('Liga da Semana · ', 'League of the Week · ') : ''}{roundLabel(LIGA_OLE_ROUNDS[active.roundIndex])}
-              </p>
-              <div className="flex items-center justify-center gap-3">
-                <div className="flex-1 text-right min-w-0">
-                  <p className="text-neon-yellow truncate leading-[0.95]" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 'clamp(20px, 6vw, 30px)', letterSpacing: '-0.01em' }}>{club.name}</p>
-                  <p className="ole-num uppercase text-[10px] text-cimento mt-1">{L('Força', 'Strength')} {managerOverall}</p>
-                </div>
-                <Swords className="w-5 h-5 text-poeira shrink-0" strokeWidth={2} aria-hidden />
-                <div className="flex-1 text-left min-w-0">
-                  <p className="text-white truncate leading-[0.95]" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 'clamp(20px, 6vw, 30px)', letterSpacing: '-0.01em' }}>{opp?.name ?? '—'}</p>
-                  <p className="ole-num uppercase text-[10px] text-cimento mt-1">{L('Força', 'Strength')} {opp?.overall ?? '—'}</p>
-                </div>
-              </div>
+            {/* Confronto — cartaz de convocação */}
+            <Convocacao
+              ariaLabel={L(`${roundLabel(LIGA_OLE_ROUNDS[active.roundIndex])}: ${club.name} contra ${opp?.name ?? '—'}`, `${roundLabel(LIGA_OLE_ROUNDS[active.roundIndex])}: ${club.name} vs ${opp?.name ?? '—'}`)}
+              kicker={`${active.mode === 'weekly' ? L('Liga da Semana', 'League of the Week') : 'Liga Ole'} · ${roundLabel(LIGA_OLE_ROUNDS[active.roundIndex])}`}
+              aside={L('Mata-mata', 'Knockout')}
+              home={club.name}
+              homeMeta={L(`Força ${managerOverall}`, `Strength ${managerOverall}`)}
+              away={opp?.name ?? '—'}
+              awayMeta={L(`Força ${opp?.overall ?? '—'}`, `Strength ${opp?.overall ?? '—'}`)}
+              tag={opp && nemesis && opp.id === nemesis.id ? (
+                <SeloRua tom="cal" className="-rotate-2">
+                  <Skull className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> {L('Revanche', 'Revenge')}
+                </SeloRua>
+              ) : undefined}
+            >
               {/* FABLE — persona do treinador rival: rosto + provocação pré-jogo.
                   Determinística por teamId (mesmo rival, mesma cara sempre). */}
               {opp && (() => {
                 const persona = coachPersonaFor(opp.id);
                 const line = personaLine(opp.id, 'pre', LIGA_OLE_ROUNDS[active.roundIndex]);
                 return (
-                  <p className="text-center text-cimento text-[12px] mt-4">
-                    {persona.icon} <span className="font-mono uppercase tracking-[0.12em] text-[10px] text-giz">{persona.label}</span>{' '}
-                    — “{line}”
-                  </p>
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.2em] text-mudo">
+                      {persona.icon} — {persona.label}
+                    </span>
+                    <p className="font-voz text-[clamp(22px,5.6vw,28px)] leading-[1.05] text-papel">“{line}”</p>
+                  </div>
                 );
               })()}
-            </div>
+            </Convocacao>
 
             {/* Prêmio da fase + APOSTA (dobra na vitória) */}
             {(() => {
@@ -558,29 +578,33 @@ export function LigaOle() {
                     const mult = dinastiaMultiplier(titles);
                     const finalPrize = Math.round(prize.amount * mult);
                     return (
-                      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 border border-white/10 bg-deep-black">
-                        <div className="flex min-w-0 flex-col">
-                          <span className="font-mono uppercase tracking-[0.14em] text-[10px] text-cimento">
-                            {prize.isChampion ? L('Prêmio de título', 'Title prize') : L('Prêmio da fase', 'Round prize')}
+                      <div className="flex min-w-0 items-end justify-between gap-3 bg-concreto px-4 py-3.5">
+                        <div className="flex min-w-0 flex-col gap-1">
+                          <span className="font-prova text-[10.5px] font-bold uppercase tracking-[0.16em] text-mudo">
+                            — {prize.isChampion ? L('Prêmio de título', 'Title prize') : L('Prêmio da fase', 'Round prize')}
                           </span>
                           {mult > 1 && (
-                            <span className="truncate font-mono text-[10px] text-poeira mt-0.5">
+                            <span className="truncate font-prova text-[10px] font-bold uppercase tracking-[0.1em] text-ouro-27">
                               base {prize.amount.toLocaleString(LOCALE)} × {L('Dinastia', 'Dynasty')} {mult.toFixed(2)}
                             </span>
                           )}
                         </div>
-                        <span className="ole-num shrink-0 text-[14px] text-neon-yellow">
-                          +{finalPrize.toLocaleString(LOCALE)} EXP
+                        <span className="shrink-0 font-spray text-[clamp(26px,7.5vw,34px)] font-black leading-none text-papel">
+                          +{finalPrize.toLocaleString(LOCALE)} <span className="text-[0.6em]">EXP</span>
                         </span>
                       </div>
                     );
                   })()}
 
                   {/* Aposta */}
-                  <div className="px-3.5 py-3 border bg-panel" style={{ borderColor: staked > 0 ? 'var(--color-neon-yellow)' : 'var(--color-border)' }}>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="truncate font-mono uppercase tracking-[0.12em] text-[10px] text-giz">{L('Apostar EXP · paga 2× na vitória', 'Bet EXP · pays 2× on a win')}</span>
-                      <span className="shrink-0 font-mono text-[10px] text-cimento">{L('Saldo', 'Balance')} {formatCompactNumber(balance)}</span>
+                  <div className={cn('flex min-w-0 flex-col gap-3 bg-concreto px-4 py-3.5', staked > 0 && 'border-l-[3px] border-rua')}>
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                      <span className="truncate font-prova text-[10.5px] font-bold uppercase tracking-[0.14em] text-suave">
+                        — {L('Apostar EXP · paga 2× na vitória', 'Bet EXP · pays 2× on a win')}
+                      </span>
+                      <span className="shrink-0 font-prova text-[10.5px] font-bold uppercase tracking-[0.1em] text-mudo">
+                        {L('Saldo', 'Balance')} {formatCompactNumber(balance)}
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {chips.map((c) => {
@@ -591,8 +615,11 @@ export function LigaOle() {
                             type="button"
                             disabled={busy}
                             onClick={() => setWager(c.value)}
-                            className="ole-num px-2.5 py-1.5 uppercase text-[10.5px] transition-colors"
-                            style={{ borderRadius: 'var(--radius-sm)', backgroundColor: sel ? 'var(--color-neon-yellow)' : 'transparent', color: sel ? '#000' : 'rgba(255,255,255,0.6)', border: sel ? 'none' : '1px solid var(--color-border)' }}
+                            aria-pressed={sel}
+                            className={cn(
+                              'min-h-[40px] px-3 font-impact text-[16px] uppercase leading-none transition-colors',
+                              sel ? 'bg-rua text-asfalto-27' : 'border-2 border-linha text-suave hover:border-papel hover:text-papel',
+                            )}
                           >
                             {c.label}
                           </button>
@@ -600,14 +627,14 @@ export function LigaOle() {
                       })}
                     </div>
                     {staked > 0 && (
-                      <div className="grid grid-cols-2 gap-1.5 mt-2.5">
-                        <div className="px-2.5 py-2 text-center border border-alta/60 bg-deep-black">
-                          <p className="font-mono uppercase tracking-[0.12em] text-[9.5px] text-alta">{L('Vitória', 'Win')}</p>
-                          <p className="ole-num text-[13px] text-alta">+{(staked * 2).toLocaleString(LOCALE)}</p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <div className="flex flex-col items-center gap-1 border-2 border-linha px-2.5 py-2">
+                          <span className="font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{L('Vitória', 'Win')}</span>
+                          <span className="font-spray text-[22px] font-black leading-none text-alta">+{(staked * 2).toLocaleString(LOCALE)}</span>
                         </div>
-                        <div className="px-2.5 py-2 text-center border border-baixa/60 bg-deep-black">
-                          <p className="font-mono uppercase tracking-[0.12em] text-[9.5px] text-baixa">{L('Derrota', 'Loss')}</p>
-                          <p className="ole-num text-[13px] text-baixa">−{staked.toLocaleString(LOCALE)}</p>
+                        <div className="flex flex-col items-center gap-1 border-2 border-linha px-2.5 py-2">
+                          <span className="font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{L('Derrota', 'Loss')}</span>
+                          <span className="font-spray text-[22px] font-black leading-none text-baixa">−{staked.toLocaleString(LOCALE)}</span>
                         </div>
                       </div>
                     )}
@@ -616,20 +643,27 @@ export function LigaOle() {
               );
             })()}
 
-            {error && <p className="text-baixa text-[12px] text-center">{error}</p>}
+            {error && <p role="alert" className="border-l-[3px] border-baixa bg-concreto px-3 py-2.5 text-[13px] text-papel">{error}</p>}
 
             {advanceBtn}
           </div>
 
-          {/* CHAVEAMENTO — section header no design system (sem ícone) */}
-          <div className="flex flex-col gap-3">
-            <SectionHeader>{L('Chaveamento', 'Bracket')}</SectionHeader>
+          {/* CHAVEAMENTO */}
+          <section aria-label={L('Chaveamento', 'Bracket')} className="flex flex-col gap-3">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <SecaoRua label={L('Chaveamento · 32 clubes', 'Bracket · 32 clubs')} />
+              <h2 className="font-voz text-[clamp(34px,9vw,48px)] leading-[0.95] text-papel">{L('A chave', 'The bracket')}</h2>
+            </div>
             <BracketCompact key={active.roundIndex} liga={active} />
             {/* CTA duplicado embaixo (mobile: à mão sem rolar de volta) */}
-            {advanceBtn}
-          </div>
+            <div className="mt-2">{advanceBtn}</div>
+          </section>
 
-          <button type="button" onClick={reset} className="font-mono text-poeira text-[11px] underline self-center hover:text-white">
+          <button
+            type="button"
+            onClick={reset}
+            className="min-h-[44px] self-center font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-mudo underline underline-offset-4 hover:text-papel"
+          >
             {L('Desistir da liga', 'Quit the league')}
           </button>
         </div>

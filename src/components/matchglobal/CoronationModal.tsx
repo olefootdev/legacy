@@ -20,7 +20,7 @@ import { detectMoment } from '@/systems/moments';
 import { shareImageWithText } from '@/lib/shareImage';
 import { fetchMyReferralCode } from '@/supabase/referrals';
 import { track } from '@/analytics/track';
-import { Hashtag } from '@/components/ui';
+import { MarcaRua } from '@/components/ui/Rua';
 
 interface Props {
   crown: DailyCrown | null;
@@ -71,7 +71,8 @@ export function CoronationModal({ crown, onClose }: Props) {
     resize();
     window.addEventListener('resize', resize);
 
-    const colors = ['#FDE100', '#FFFFFF', '#22C55E', '#FF9F1C'];
+    // DS 2027: papel picado em rua, ouro e papel — sem verde/laranja de enfeite.
+    const colors = ['#F2E61E', '#C9A13B', '#EEE9DF'];
     interface Particle { x: number; y: number; vx: number; vy: number; size: number; color: string; rot: number; vr: number; }
     const particles: Particle[] = [];
     const W = window.innerWidth, H = window.innerHeight;
@@ -174,7 +175,7 @@ export function CoronationModal({ crown, onClose }: Props) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-asfalto-27/95"
           onClick={onClose}
         >
           <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
@@ -182,69 +183,60 @@ export function CoronationModal({ crown, onClose }: Props) {
           <motion.button
             type="button"
             onClick={(e) => { e.stopPropagation(); onClose(); }}
-            className="absolute top-6 right-6 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            aria-label={L('Fechar', 'Close')}
+            className="absolute right-4 top-4 z-10 grid h-11 w-11 place-items-center border-2 border-papel text-papel transition-colors hover:bg-papel hover:text-asfalto-27"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.5 }}
           >
-            <X className="w-5 h-5 text-white" />
+            <X className="h-5 w-5" />
           </motion.button>
 
           <motion.div
-            initial={{ scale: 0.4, opacity: 0, y: 40 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
+            initial={{ scale: 0.6, opacity: 0, y: 40, rotate: 0 }}
+            animate={{ scale: 1, opacity: 1, y: 0, rotate: -1.5 }}
             transition={{ type: 'spring', damping: 14, stiffness: 200 }}
-            className="relative z-10 text-center px-6"
+            className="relative z-10 mx-4 flex w-full max-w-md flex-col gap-4 overflow-hidden bg-ouro-27 p-6 text-asfalto-27 shadow-[6px_6px_0_var(--color-papel)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <motion.div
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-              className="inline-block mb-6"
-            >
-              <Crown className="w-32 h-32 text-neon-yellow" strokeWidth={1.5} />
-            </motion.div>
+            <span
+              aria-hidden
+              className="rua-reticula absolute -right-4 -top-4 h-40 w-48 [--reticula:rgba(13,13,12,0.4)]"
+              style={{
+                WebkitMaskImage: 'radial-gradient(circle at 100% 0%, #000 0%, transparent 72%)',
+                maskImage: 'radial-gradient(circle at 100% 0%, #000 0%, transparent 72%)',
+              }}
+            />
+            <div className="relative flex items-center justify-between gap-3">
+              <span className="flex items-center gap-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.2em]">
+                <Crown aria-hidden className="h-4 w-4" /> {L('#coroadodia', '#crownoftheday')} · {crown.dailyDate}
+              </span>
+            </div>
 
-            <motion.div
+            <motion.h1
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="mb-3"
+              className="relative font-voz leading-[0.9]"
+              style={{ fontSize: 'clamp(44px, 13vw, 72px)' }}
             >
-              <Hashtag className="text-neon-yellow/80">{L('#coroadodia', '#crownoftheday')} · {crown.dailyDate}</Hashtag>
-            </motion.div>
-
-            <motion.h1
-              initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="font-display text-4xl sm:text-6xl md:text-7xl font-black uppercase text-white leading-none"
-            >
-              {L('Você é o', 'You are the')}
-              <br />
-              <span className="text-neon-yellow">{L('Campeão', 'Champion')}</span>
+              {L('A coroa é tua.', 'The crown is yours.')}
             </motion.h1>
 
-            <motion.p
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.7 }}
-              className="font-impact text-2xl sm:text-3xl uppercase leading-[1.1] text-white/80 mt-6"
-            >
-              {crown.clubName}
-            </motion.p>
-
-            {crown.runnerUpClubName && crown.finalScoreHome != null && crown.finalScoreAway != null && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.9 }}
-                className="font-mono text-sm text-white/60 mt-4"
-              >
-                Final {crown.finalScoreHome}–{crown.finalScoreAway} vs {crown.runnerUpClubName}
-                {crown.finalWentToPens ? L(' (pênaltis)', ' (penalties)') : ''}
-              </motion.p>
-            )}
+            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.6 }} className="relative flex items-end justify-between gap-3">
+              <div className="flex min-w-0 flex-col gap-1">
+                <p className="font-impact uppercase leading-[0.88] [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(32px, 9vw, 48px)' }}>
+                  {crown.clubName}
+                </p>
+                {crown.runnerUpClubName && crown.finalScoreHome != null && crown.finalScoreAway != null && (
+                  <p className="font-prova text-[12px] font-bold uppercase tracking-[0.06em]">
+                    Final <span className="font-spray text-[22px] font-black">{crown.finalScoreHome}×{crown.finalScoreAway}</span> vs {crown.runnerUpClubName}
+                    {crown.finalWentToPens ? L(' (pênaltis)', ' (penalties)') : ''}
+                  </p>
+                )}
+              </div>
+              <MarcaRua tipo="nove" className="h-20 shrink-0 bg-asfalto-27" />
+            </motion.div>
 
             <motion.button
               type="button"
@@ -252,30 +244,20 @@ export function CoronationModal({ crown, onClose }: Props) {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.1 }}
-              className="mt-8 inline-flex items-center justify-center gap-2 border"
-              style={{
-                padding: '13px 26px',
-                borderRadius: 'var(--radius-sm)',
-                borderColor: 'var(--color-neon-yellow)',
-                backgroundColor: 'rgba(253,225,0,0.1)',
-                color: 'var(--color-neon-yellow)',
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: '13px',
-                letterSpacing: '0.12em',
-              }}
+              className="relative mt-2 inline-flex min-h-[54px] items-center justify-center gap-2 bg-asfalto-27 px-6 font-impact text-[20px] uppercase leading-none text-ouro-27 transition-transform hover:-translate-y-0.5"
             >
               <Share2 className="h-4 w-4" strokeWidth={2.5} aria-hidden />
-              {shared === 'done' ? L('COMPARTILHADO!', 'SHARED!') : shared === 'copied' ? L('LINK COPIADO!', 'LINK COPIED!') : L('COMPARTILHAR A COROA', 'SHARE THE CROWN')}
+              {shared === 'done' ? L('Compartilhado!', 'Shared!') : shared === 'copied' ? L('Link copiado!', 'Link copied!') : L('Compartilhar a coroa', 'Share the crown')}
+              {shared === 'idle' && <span aria-hidden>→</span>}
             </motion.button>
 
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1.4 }}
-              className="mt-5 text-xs uppercase tracking-wider text-white/40"
+              className="relative text-center font-prova text-[10.5px] font-bold uppercase tracking-[0.16em] opacity-70"
             >
-              {L('clique fora pra fechar', 'tap outside to close')}
+              {L('toca fora pra fechar', 'tap outside to close')}
             </motion.p>
           </motion.div>
         </motion.div>

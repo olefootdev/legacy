@@ -16,11 +16,11 @@ export function FaixaConvitePendente() {
   if (!username) return null;
 
   return (
-    <div className="flex items-center justify-center gap-2 bg-neon-yellow px-4 py-2.5 text-center">
-      <span className="font-mono text-[10px] uppercase tracking-wider text-deep-black/70">
+    <div className="flex min-w-0 items-center justify-center gap-2.5 bg-rua px-4 py-2.5 text-center text-asfalto-27">
+      <span className="shrink-0 bg-asfalto-27 px-2 py-0.5 font-prova text-[11px] font-bold uppercase tracking-[0.16em] text-rua">
         {L('Convite', 'Invite')}
       </span>
-      <span className="text-[12.5px] font-bold text-deep-black">
+      <span className="min-w-0 truncate font-voz text-[19px] leading-none">
         {emIngles() ? <>@{username} is waiting for you</> : <>@{username} está te esperando</>}
       </span>
     </div>

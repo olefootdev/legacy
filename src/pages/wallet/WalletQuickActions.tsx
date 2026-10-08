@@ -11,15 +11,10 @@ export type QuickAction = {
   badge?: string;
 };
 
-/** VOLT2: ícone branco chapado; verde = dinheiro entrando; vermelho = ação de risco. */
-const ACCENT_RING: Record<NonNullable<QuickAction['accent']>, string> = {
-  green: 'text-alta',
-  red: 'text-baixa',
-  amber: 'text-white',
-  cyan: 'text-white',
-  yellow: 'text-white',
-};
-
+/**
+ * DS 2027 · RECEBER / ENVIAR / COMPRAR: caixas de contorno em papel com rótulo
+ * em Anton; o atalho de dinheiro entrando ("green") é a AÇÃO — rua cheia.
+ */
 type WalletQuickActionsProps = {
   actions: QuickAction[];
 };
@@ -27,29 +22,31 @@ type WalletQuickActionsProps = {
 export function WalletQuickActions({ actions }: WalletQuickActionsProps) {
   return (
     <section>
-      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 gap-2.5 min-[420px]:grid-cols-4">
         {actions.map((a) => {
-          const ringCls = a.accent ? ACCENT_RING[a.accent] : 'text-white';
+          const acao = a.accent === 'green';
           return (
             <motion.button
               key={a.key}
               type="button"
               onClick={a.onClick}
               disabled={a.disabled}
-              whileTap={a.disabled ? undefined : { scale: 0.94 }}
-              className="group relative flex h-[64px] min-w-0 flex-col items-center justify-center gap-1.5 border border-white/14 bg-card px-1 transition-colors hover:border-white/30 disabled:opacity-40"
+              whileTap={a.disabled ? undefined : { scale: 0.96 }}
+              className={`group relative flex h-[60px] min-w-0 items-center justify-center gap-2 px-2 transition-colors disabled:opacity-40 ${
+                acao
+                  ? 'bg-rua text-asfalto-27 hover:bg-papel'
+                  : 'border-2 border-papel text-papel hover:bg-papel hover:text-asfalto-27'
+              } ${a.accent === 'red' ? '!border-baixa !text-baixa' : ''}`}
             >
-              <span className={`relative flex items-center justify-center ${ringCls}`}>
+              <span className="relative flex shrink-0 items-center justify-center">
                 {a.icon}
                 {a.badge ? (
-                  <span className="ole-num absolute -top-2 -right-3 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-neon-yellow px-1 text-[8px] text-deep-black tabular-nums">
+                  <span className="absolute -right-3 -top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rua px-1 font-prova text-[9px] font-bold text-asfalto-27 tabular-nums">
                     {a.badge}
                   </span>
                 ) : null}
               </span>
-              <span className="max-w-full truncate text-[11px] font-semibold text-white sm:text-[12px]">
-                {a.label}
-              </span>
+              <span className="max-w-full truncate font-impact text-[18px] uppercase leading-none">{a.label}</span>
             </motion.button>
           );
         })}

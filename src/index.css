@@ -6,34 +6,57 @@
 
 @theme {
   /* Cores — alinhadas ao olefoot.ai */
-  --color-neon-yellow: #FDE100;
-  --color-neon-yellow-dark: #C9B000;
+  /* DS 2027: os nomes antigos ficam, os valores viram "Respeito é ouro". */
+  --color-neon-yellow: #F2E61E;
+  --color-neon-yellow-dark: #C2B70F;
   --color-neon-green: #00FF66;
-  --color-deep-black: #0D0D0D;
+  --color-deep-black: #0D0D0C;
 
   /* VOLT2 (2026-09-19) — superfícies em escada, neutros com viés frio.
      Mesmos nomes de antes pra não mexer em componente: só o valor mudou,
      degrau por degrau (panel < card < card-hi continuam distintos). */
-  --color-dark-gray: #141516;
-  --color-panel: #141516;
-  --color-card: #1B1D1F;
-  --color-card-hi: #25282B;
-  --color-text-soft: #9A9C9F;   /* cimento */
-  --color-text-muted: #7E8185;  /* poeira — era #555, abaixo do contraste mínimo */
+  --color-dark-gray: #1C1C1A;
+  --color-panel: #1C1C1A;       /* DS 2027: concreto */
+  --color-card: #232320;
+  --color-card-hi: #2E2C28;     /* DS 2027: linha */
+  --color-text-soft: #9A958A;   /* DS 2027: mudo */
+  --color-text-muted: #8A857B;  /* poeira quente — contraste ≥ 4.5 sobre asfalto */
 
   /* Vocabulário do VOLT2. Ouro é SÓ da carteira e SÓ de ativo que está na
      rede: EXP e OLEFOOT do jogo são fictícios e nunca usam ouro. */
-  --color-asfalto: #0D0D0D;
-  --color-nav: #08090A;
-  --color-sheet: #25282B;
-  --color-giz: #ECECE7;
-  --color-cimento: #9A9C9F;
-  --color-poeira: #7E8185;
-  --color-ouro: #E8B331;
-  --color-lenda: #8B5CF6;
+  --color-asfalto: #0D0D0C;
+  --color-nav: #000000;
+  --color-sheet: #232320;
+  --color-giz: #EEE9DF;         /* DS 2027: papel */
+  --color-cimento: #9A958A;
+  --color-poeira: #8A857B;
+  --color-ouro: #C9A13B;        /* DS 2027: ouro chapado, sempre */
+  --color-lenda: #C9A13B;       /* DS 2027: LENDA é ouro chapado (era roxo) */
   --color-alta: #22C55E;
   --color-baixa: #FF4D4D;
   --color-atencao: #FF9F1C;
+
+  /* ── DS 2027 · "RESPEITO É OURO" (olefoot-design-27/) ───────────────────
+     A escada: CHÃO (cal, contorno) → CORRE (rua, ação) → RESPEITO (asfalto
+     com fio de ouro) → LENDA (ouro chapado). Ouro SEMPRE chapado — sem
+     degradê, sem brilho. Ouro e rua nunca disputam a mesma peça.
+     Proporção em tela: asfalto 62 · concreto 18 · cal 12 · rua 6 · ouro 2. */
+  --color-asfalto-27: #0D0D0C;
+  --color-concreto: #1C1C1A;
+  --color-cal: #E9E2D0;
+  --color-papel: #EEE9DF;
+  --color-rua: #F2E61E;
+  --color-ouro-27: #C9A13B;
+  --color-linha: #2E2C28;
+  --color-fio: #6B6860;
+  --color-mudo: #9A958A;
+  --color-suave: #BDB8AD;
+  /* A VOZ — frase, nome, assinatura. */
+  --font-voz: "Pirata One", "Anton", Georgia, serif;
+  /* O SPRAY — placar, data, muro. */
+  --font-spray: "Big Shoulders Stencil Display", "Anton", Impact, sans-serif;
+  /* A PROVA — interface, on-chain, rótulo. */
+  --font-prova: "Geist Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
 
   /* Tipografia. Todas as pilhas terminam em fonte de sistema, e a de título
      (--font-display) é EXATAMENTE a que produção mostrava até hoje — a classe
@@ -51,7 +74,7 @@
   /* Números e rótulo de botão do VOLT2 — usar com .ole-num (largura 125%). */
   --font-num: "Archivo Variable", "Arial Black", Impact, sans-serif;
   /* Dinheiro e #hashtag. */
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: "Geist Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* === Escala tipográfica (Brief v2) === */
   --text-xs:     11px;
@@ -69,22 +92,22 @@
   --color-success: #00C851;
   --color-warning: #FFB300;
   --color-danger:  #FF3D3D;
-  --color-info:    #2979FF;
+  --color-info:    #EEE9DF;
 
   /* === Tokens da brief de design (Fase 2 — refactor da home) === */
   --color-border: rgba(255,255,255,0.08);
   --color-text-on-accent: #000000;
-  --color-accent-rgb: 253,225,0;
-  /* VOLT2: canto vivo. Toda a escala do Tailwind cai pra 2px; só rounded-full
+  --color-accent-rgb: 242,230,30;
+  /* DS 2027: canto vivo de verdade (0). Toda a escala do Tailwind cai pra 0; só rounded-full
      (avatar, pílula, anel) continua redondo. */
-  --radius-xs: 2px;
-  --radius-sm: 2px;
-  --radius-md: 2px;
-  --radius-lg: 2px;
-  --radius-xl: 2px;
-  --radius-2xl: 2px;
-  --radius-3xl: 2px;
-  --radius-4xl: 2px;
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
 
   /* VOLT2: sem sombra. A escala inteira do Tailwind vira transparente. */
   --shadow-2xs: 0 0 #0000;
@@ -97,18 +120,18 @@
 
   /* === Threshold de atributos (Football Manager) === */
   --attr-elite: #00FF66;  /* 80+   */
-  --attr-good:  #FDE100;  /* 65–79 */
+  --attr-good:  #F2E61E;  /* 65–79 */
   --attr-avg:   #FFB300;  /* 50–64 */
   --attr-weak:  #FF3D3D;  /* <50   */
 
   /* === Sprint A — Legacy Tech tokens (Apr/2026) ===
    * Aditivos sobre a paleta atual; não substituem nada.
    * Usar em primitivos novos: LegacyHeader, DataCard, PlayerPortrait, StatTile. */
-  --color-panel-elevated: #1B1D1F;  /* VOLT2: elevado */
-  --color-panel-soft: #141516;      /* VOLT2: card */
-  --color-divider-soft: rgba(255, 255, 255, 0.06);
-  --color-divider-yellow: rgba(253, 225, 0, 0.12);
-  --color-divider-yellow-strong: rgba(253, 225, 0, 0.35);
+  --color-panel-elevated: #232320;
+  --color-panel-soft: #1C1C1A;
+  --color-divider-soft: rgba(238, 233, 223, 0.07);
+  --color-divider-yellow: rgba(242, 230, 30, 0.14);
+  --color-divider-yellow-strong: rgba(242, 230, 30, 0.38);
 
   /* VOLT2: sombra e brilho zerados (o nome fica, o efeito sai). */
   --shadow-card: none;
@@ -116,8 +139,8 @@
   --shadow-glow-yellow: none;
   --shadow-glow-yellow-strong: none;
 
-  --radius-card: 2px;
-  --radius-card-lg: 2px;
+  --radius-card: 0px;
+  --radius-card-lg: 0px;
   --radius-pill: 999px;
 
   /* === F1 — OLEFOOT BROADCAST: Live Match foundation (Apr/2026) ===
@@ -126,23 +149,23 @@
    * Uso exclusivo: /match/live e overlays de transmissão. */
 
   /* Cores de evento — exclusivas para feedback de momento da partida. */
-  --color-event-goal:        #FDE100;
+  --color-event-goal:        #F2E61E;
   --color-event-card-yellow: #F5C518;
   --color-event-card-red:    #E11D2A;
   --color-event-foul:        #C9700B;
-  --color-event-save:        #00C2FF;
+  --color-event-save:        #EEE9DF; /* DS 2027: defesa = papel (era ciano) */
   --color-event-substitution: #00C851;
 
   /* Cores de equipe (default — competição override por liga). */
-  --color-team-home:         #FDE100;
+  --color-team-home:         #F2E61E;
   --color-team-away:         #E11D2A;
 
   /* Momentum bar — escala bipolar. */
-  --color-momentum-fire:     #FF3D00;
-  --color-momentum-warm:     #FFB300;
+  --color-momentum-fire:     #F2E61E; /* DS 2027: rua */
+  --color-momentum-warm:     #C9A13B; /* DS 2027: ouro */
   --color-momentum-neutral:  rgba(255, 255, 255, 0.30);
-  --color-momentum-cool:     #4A90E2;
-  --color-momentum-cold:     #2979FF;
+  --color-momentum-cool:     #9A958A; /* DS 2027: mudo (era azul) */
+  --color-momentum-cold:     #6B6860; /* DS 2027: fio (era azul) */
 
   /* Glows tipados — uma cor por evento, não inventar. */
   /* VOLT2: o evento fala pela cor chapada, não pelo halo. */
@@ -166,7 +189,7 @@
 
   /* Lower-third — primitivo de broadcast. */
   --lt-height:      56px;
-  --lt-bg:          #0D0D0D;
+  --lt-bg:          #0D0D0C;
   --lt-accent-w:    4px;
   --lt-skew:        0deg;
 
@@ -189,12 +212,12 @@
 
   /* Superfícies do REVELA. `paper` é o creme da Torcida — o terceiro universo,
    * usado com parcimônia pra quebrar a alternância amarelo/preto. */
-  --color-poster-surface: #141516;
-  --color-poster-paper:   #ECECE7; /* VOLT2: o creme virou o giz da paleta */
+  --color-poster-surface: #1C1C1A;
+  --color-poster-paper:   #E9E2D0; /* VOLT2: o creme virou o giz da paleta */
   --color-poster-editorial: #15130C;
 
-  --radius-poster: 2px;
-  --radius-poster-lg: 2px;
+  --radius-poster: 0px;
+  --radius-poster-lg: 0px;
 
   /* Eyebrow: risco amarelo + rótulo. Abre toda seção no portal. */
   --eyebrow-rule-w: 18px;
@@ -213,9 +236,10 @@
    * Bloco de pôster: raio maior, sombra dura CLARA (ver a nota nos tokens) e
    * borda amarela discreta. Substitui o card cinza sem mexer no conteúdo.
    */
+  /* DS 2027: concreto chapado, sem fio — o fio é de ouro e só pra valor. */
   .ole-poster {
     background: var(--color-poster-surface);
-    border: 1px solid rgba(255, 255, 255, 0.10);
+    border: 2px solid transparent;
     border-radius: var(--radius-poster);
     box-shadow: none;
   }
@@ -246,20 +270,17 @@
   .ole-eyebrow-poster {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     font-family: var(--font-mono);
-    font-weight: 500;
+    font-weight: 700;
     text-transform: uppercase;
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    color: var(--color-giz);
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    color: var(--color-cimento);
   }
   .ole-eyebrow-poster::before {
-    content: '';
+    content: '—';
     flex: none;
-    width: var(--eyebrow-rule-w);
-    height: var(--eyebrow-rule-h);
-    background: var(--color-neon-yellow);
   }
   .ole-eyebrow-poster[data-on='yellow'] {
     color: #0d0d0d;
@@ -312,15 +333,21 @@
   /* VOLT2: volt chapado + corte do escudo. Sem sombra, sem inclinação, sem
      crescer no hover — o layout real não aceita enfeite que só vive no mockup.
      O foco é desenhado POR DENTRO porque o clip-path corta o outline de fora. */
+  /* DS 2027: rua chapada + Anton + sombra DURA em papel (deslocada, sem blur)
+     — o único relevo do DS. Sobe no hover, afunda no clique. */
   .btn-primary {
-    @apply bg-neon-yellow text-black font-display font-bold uppercase tracking-wider px-8 py-3 hover:bg-white transition-colors focus-visible:outline-2 focus-visible:outline-black focus-visible:-outline-offset-4;
-    clip-path: var(--clip-corte);
+    @apply bg-neon-yellow text-black font-impact uppercase tracking-[0.02em] px-8 py-3 transition-[transform,box-shadow] focus-visible:outline-2 focus-visible:outline-neon-yellow focus-visible:outline-offset-4;
+    font-weight: 400;
+    box-shadow: 4px 4px 0 var(--color-giz);
   }
+  .btn-primary:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--color-giz); }
+  .btn-primary:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--color-giz); }
   .btn-primary-inner {
     @apply block flex items-center justify-center gap-2;
   }
   .btn-secondary {
-    @apply bg-transparent text-white border border-white/30 font-display font-bold uppercase tracking-wider px-6 py-2 hover:border-white hover:bg-white/5 transition-colors focus-visible:outline-2 focus-visible:outline-neon-yellow focus-visible:outline-offset-2;
+    @apply bg-transparent text-giz border-2 border-giz font-impact uppercase tracking-[0.02em] px-6 py-2 hover:bg-giz hover:text-black transition-colors focus-visible:outline-2 focus-visible:outline-neon-yellow focus-visible:outline-offset-2;
+    font-weight: 400;
   }
   .btn-secondary-inner {
     @apply block flex items-center justify-center gap-2;
@@ -351,21 +378,20 @@
 
   /* === Olefoot identity utilities (Design Brief Fase 1) === */
   .ole-tag {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 border border-neon-yellow/60 text-neon-yellow uppercase tracking-[0.18em] text-[11px] font-medium;
-    font-family: var(--font-ui);
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 border-2 border-neon-yellow text-neon-yellow uppercase tracking-[0.1em] text-[11px] font-bold;
+    font-family: var(--font-mono);
   }
   .ole-tag-solid {
     @apply bg-neon-yellow text-black border-transparent;
   }
 
+  /* DS 2027: rótulo "— OLEFOOT 2027" em Geist Mono espaçado. */
   .ole-eyebrow {
-    @apply flex items-center justify-center gap-3 text-neon-yellow uppercase tracking-[0.35em] text-[10px] font-medium;
-    font-family: var(--font-ui);
+    @apply flex items-center justify-center gap-2 text-neon-yellow uppercase tracking-[0.24em] text-[11px] font-bold;
+    font-family: var(--font-mono);
   }
-  .ole-eyebrow::before,
-  .ole-eyebrow::after {
-    content: "";
-    @apply h-px w-8 bg-neon-yellow/40;
+  .ole-eyebrow::before {
+    content: "—";
   }
 
   /**
@@ -381,11 +407,13 @@
     letter-spacing: -0.01em;
     line-height: 0.95;
   }
+  /* DS 2027 — A VOZ: a segunda linha da manchete vira Pirata One. */
   .ole-headline-italic {
-    font-family: var(--font-serif-hero);
+    font-family: var(--font-voz);
     font-style: normal;
-    font-weight: 600;
-    letter-spacing: -0.005em;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
   }
 
   .ole-card {
@@ -399,17 +427,17 @@
   }
 
   /* Número do VOLT2: Archivo expandida. Placar, OVR, preço, rótulo de botão novo. */
+  /* DS 2027 — O GRITO: número e rótulo de botão em Anton (era Archivo 125%). */
   .ole-num {
-    font-family: var(--font-num);
-    font-stretch: 125%;
-    font-weight: 800;
+    font-family: var(--font-impact);
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
   }
 
   .btn-on-yellow {
-    @apply bg-black text-neon-yellow font-display font-bold uppercase tracking-wider px-6 py-2 hover:bg-deep-black transition-colors;
-    clip-path: var(--clip-corte);
+    @apply bg-black text-neon-yellow font-impact uppercase tracking-[0.02em] px-6 py-2 hover:bg-panel transition-colors;
+    font-weight: 400;
   }
 
   /* === Scoreboard (Brief v2 COMP-01) === */
@@ -601,9 +629,11 @@ html {
 }
 
 body {
-  @apply bg-deep-black text-white font-sans antialiased;
-  /* VOLT2: asfalto chapado — o degradê radial do fundo saiu. */
-  background-image: none;
+  @apply text-white font-sans antialiased;
+  /* DS 2027: preto com grão de muro em todo fundo — nunca chapado digital. */
+  background-color: #000;
+  background-image: url('/brand/2027/grao.svg');
+  background-size: 320px 320px;
   /* Sem negrito e itálico sintetizados: a Anton só tem um peso, e itálico não é
      VOLT2. Fonte variável (Inter Tight, Archivo) segue com todos os pesos. */
   font-synthesis-weight: none;
@@ -723,4 +753,61 @@ html[data-graphic-quality='low'] .sports-panel::after {
 }
 @media (prefers-reduced-motion: reduce) {
   [style*="home-hero-ticker"] { animation: none !important; }
+}
+
+/* ── DS 2027 · texturas do muro ────────────────────────────────────────────
+   Tudo aqui é textura de impressão/rua (grão, retícula, alambrado), não
+   acabamento: degradê de cor continua proibido. */
+@layer components {
+  /* MURO — grão em todo fundo. Nunca chapado digital. */
+  .rua-grao {
+    background-image: url('/brand/2027/grao.svg');
+    background-size: 320px 320px;
+  }
+  /* RETÍCULA — impressão barata de cartaz. Em cantos. Cor via --reticula. */
+  .rua-reticula {
+    background-image: radial-gradient(circle, var(--reticula, #0D0D0C) 1.6px, transparent 2px);
+    background-size: 9px 9px;
+  }
+  /* ALAMBRADO — na borda superior, sumindo pra baixo. Cor via --alambrado. */
+  .rua-alambrado {
+    background-image:
+      repeating-linear-gradient(45deg, transparent 0 18px, var(--alambrado, #6B6860) 18px 19.5px),
+      repeating-linear-gradient(-45deg, transparent 0 18px, var(--alambrado, #6B6860) 18px 19.5px);
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 85%);
+    mask-image: linear-gradient(180deg, #000 0%, transparent 85%);
+  }
+  /* Marca recolorível: a cor sai do background-color, o desenho da máscara. */
+  .rua-mascara {
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+  }
+  /* FITA — hashtags sempre em faixa inclinada, andando devagar. */
+  .rua-fita-trilho {
+    animation: rua-fita 38s linear infinite;
+  }
+  /* Picote do ingresso: furos de papel no fio entre corpo e canhoto. */
+  .rua-picote-v {
+    background-image: radial-gradient(circle, #000 2.5px, transparent 3px);
+    background-size: 8px 10px;
+    background-repeat: repeat-y;
+  }
+  .rua-picote-h {
+    background-image: radial-gradient(circle, #000 2.5px, transparent 3px);
+    background-size: 10px 8px;
+    background-repeat: repeat-x;
+  }
+}
+
+@keyframes rua-fita {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rua-fita-trilho { animation: none; }
 }

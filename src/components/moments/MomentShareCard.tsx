@@ -10,19 +10,19 @@
  * O link de indicação viaja DENTRO do texto (nunca no campo `url` separado):
  * assim ele acompanha o print mesmo quando o app de destino ignora o `url`.
  *
+ * DS 2027: pôster de rua — manchete Anton, clube na VOZ, placar em spray,
+ * craque num post-it de ouro chapado (peça 2b do DS), CTA rua com sombra dura.
+ *
  * Presentational puro.
  */
 
 import { L } from '@/i18n/L';
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Share2, Sparkles, Star } from 'lucide-react';
+import { Share2 } from 'lucide-react';
 import { shareImageWithText } from '@/lib/shareImage';
-import { Hashtag } from '@/components/ui';
 import { track } from '@/analytics/track';
 import { momentTierLabel, type Moment, type MomentCompetition } from '@/systems/moments/detectMoment';
-
-const MANCHETE = 'var(--font-impact)';
 
 /** Arte de fundo por competição — assets que já existem no repositório. */
 const BANNER: Record<MomentCompetition, string> = {
@@ -108,76 +108,55 @@ export function MomentShareCard({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center gap-3"
+      className="flex w-full flex-col items-center gap-4"
     >
-      <div
-        className="relative w-full max-w-[340px] overflow-hidden"
-        style={{
-          borderRadius: 'var(--radius-md)',
-          aspectRatio: '9 / 16',
-          border: '2px solid var(--color-neon-yellow)',
-        }}
-      >
+      {/* O pôster: foto escurecida, manchete no GRITO, craque em post-it de ouro. */}
+      <div className="relative w-full max-w-[340px] overflow-hidden bg-asfalto-27 shadow-[6px_6px_0_var(--color-papel)]" style={{ aspectRatio: '9 / 16' }}>
         <img
           src={banner}
           alt={`${clubName} — ${moment.headline}`}
           loading="eager"
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 object-cover"
+          style={{ width: '100%', height: '100%', maxWidth: 'none' }}
         />
-        {/* Scrim da foto: legibilidade do texto sobre o banner. */}
+        {/* Escurece a foto pra leitura — preto → transparente, sem cor. */}
         <div
           aria-hidden
           className="absolute inset-0"
-          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.1) 24%, rgba(0,0,0,0) 42%, rgba(0,0,0,0.4) 64%, rgba(0,0,0,0.94) 100%)' }}
+          style={{ background: 'linear-gradient(to bottom, rgba(13,13,12,0.9) 0%, rgba(13,13,12,0.35) 30%, rgba(13,13,12,0.1) 46%, rgba(13,13,12,0.6) 66%, rgba(13,13,12,0.97) 100%)' }}
         />
 
-        {/* Topo: selo de raridade + manchete do momento */}
-        <div className="absolute inset-x-4 top-8 z-10">
+        {/* Topo: competição + selo de raridade + manchete */}
+        <div className="absolute inset-x-4 top-5 z-10 flex flex-col gap-2">
+          <div className="flex min-w-0 items-center justify-between gap-2 font-prova text-[10.5px] font-bold uppercase tracking-[0.2em]">
+            <span className="min-w-0 truncate text-rua">{moment.competitionLabel}</span>
+            <span className="shrink-0 text-suave">{L('Fim de campanha', 'Campaign over')}</span>
+          </div>
           {moment.oneInX >= 10 && (
-            <div
-              className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1"
-              style={{ borderRadius: 'var(--radius-sm)', background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(253,225,0,0.5)' }}
-            >
-              <Sparkles className="h-3 w-3 text-neon-yellow" strokeWidth={2.5} aria-hidden />
-              <span style={{ color: 'var(--color-neon-yellow)', fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em' }}>
-                {momentTierLabel(moment.tier).toUpperCase()} · {L('1 EM', '1 IN')} {moment.oneInX}
-              </span>
-            </div>
+            <span className="inline-flex w-fit -rotate-2 items-center bg-cal px-2.5 py-1 font-prova text-[10.5px] font-bold uppercase tracking-[0.12em] text-asfalto-27">
+              {momentTierLabel(moment.tier)} · {L('1 em', '1 in')} {moment.oneInX}
+            </span>
           )}
-          <Hashtag className="mb-1 text-neon-yellow">{moment.competitionLabel}</Hashtag>
-          <p
-            className="uppercase"
-            style={{
-              color: 'var(--color-giz)',
-              fontFamily: MANCHETE,
-              fontSize: 'clamp(30px, 10vw, 46px)',
-              lineHeight: 1.05,
-            }}
-          >
+          <p className="font-impact uppercase text-papel [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(36px, 11vw, 50px)', lineHeight: 0.9 }}>
             {moment.headline}
           </p>
-          <p className="mt-1.5 text-white" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '15px' }}>
-            {clubName}
-            {scoreLine ? <span className="tabular-nums text-neon-yellow"> {scoreLine} </span> : ' '}
-            {opponentName ?? ''}
+          <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-papel">
+            <span className="font-voz text-[24px] leading-none">{clubName}</span>
+            {scoreLine && <span className="font-spray text-[30px] font-black leading-none text-rua">{scoreLine}</span>}
+            {opponentName && <span className="font-impact text-[18px] uppercase leading-none text-suave">{opponentName}</span>}
           </p>
-          <p className="mt-1 text-white/70" style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}>
-            {moment.tagline}
-          </p>
+          <p className="font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-suave">{moment.tagline}</p>
         </div>
 
-        {/* Base: destaque + CTA de indicação */}
-        <div className="absolute inset-x-4 bottom-4 z-10">
+        {/* Base: post-it de ouro do craque + CTA de indicação */}
+        <div className="absolute inset-x-4 bottom-4 z-10 flex flex-col gap-3">
           {highlight && (
-            <div
-              className="mb-2.5 inline-flex items-center gap-2 px-2.5 py-1.5"
-              style={{ borderRadius: 'var(--radius-sm)', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(253,225,0,0.4)' }}
-            >
-              <Star className="h-3.5 w-3.5 text-neon-yellow" strokeWidth={2.5} aria-hidden />
-              <span style={{ color: 'var(--color-giz)', fontSize: '11px', fontWeight: 600 }}>
-                {highlight.label}: <span className="text-white">{highlight.name}</span>
-                {highlight.detail ? ` · ${highlight.detail}` : ''}
-              </span>
+            <div className="relative ml-auto w-[150px] rotate-[3deg] bg-ouro-27 px-3 pb-2.5 pt-4 text-asfalto-27 shadow-[4px_6px_0_rgba(0,0,0,0.55)]">
+              {/* Fita crepe segurando o post-it. */}
+              <span aria-hidden className="absolute -top-2 left-4 h-4 w-16 -rotate-6 bg-cal/80" />
+              <span className="block font-prova text-[10px] font-bold uppercase tracking-[0.16em]">— {highlight.label}</span>
+              <span className="mt-1 block truncate font-voz text-[24px] leading-none">{highlight.name}</span>
+              {highlight.detail && <span className="mt-1 block font-impact text-[20px] uppercase leading-none">{highlight.detail}</span>}
             </div>
           )}
 
@@ -185,45 +164,21 @@ export function MomentShareCard({
             href={referralUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-2"
-            style={{
-              padding: '11px',
-              borderRadius: 'var(--radius-sm)',
-              background: 'var(--color-neon-yellow)',
-              color: 'var(--color-deep-black)',
-              fontWeight: 800,
-              fontSize: '13px',
-              letterSpacing: '0.04em',
-              textDecoration: 'none',
-              fontFamily: 'var(--font-display)',
-            }}
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 bg-rua px-3 font-impact text-[18px] uppercase leading-none text-asfalto-27 no-underline shadow-[4px_4px_0_var(--color-papel)]"
           >
-            {ctaLabel}
+            {ctaLabel} <span aria-hidden>→</span>
           </a>
-          <p className="mt-1.5 text-center" style={{ color: 'rgba(253,225,0,0.85)', fontSize: '10px' }}>
-            {displayUrl}
-          </p>
+          <p className="truncate text-center font-prova text-[10px] font-bold tracking-[0.1em] text-papel/80">{displayUrl}</p>
         </div>
       </div>
 
       <button
         type="button"
         onClick={onShare}
-        className="flex w-full max-w-[340px] items-center justify-center gap-2 border"
-        style={{
-          padding: '12px',
-          borderRadius: 'var(--radius-sm)',
-          borderColor: 'var(--color-neon-yellow)',
-          backgroundColor: 'rgba(253,225,0,0.08)',
-          color: 'var(--color-neon-yellow)',
-          fontFamily: 'var(--font-display)',
-          fontWeight: 800,
-          fontSize: '12px',
-          letterSpacing: '0.1em',
-        }}
+        className="flex min-h-[52px] w-full max-w-[340px] items-center justify-center gap-2 border-2 border-papel px-4 font-impact text-[19px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rua"
       >
         <Share2 className="h-4 w-4" strokeWidth={2.5} aria-hidden />
-        {shared === 'done' ? L('COMPARTILHADO!', 'SHARED!') : shared === 'copied' ? L('LINK COPIADO!', 'LINK COPIED!') : L('COMPARTILHAR MOMENTO', 'SHARE MOMENT')}
+        {shared === 'done' ? L('Compartilhado', 'Shared') : shared === 'copied' ? L('Link copiado', 'Link copied') : L('Compartilhar momento', 'Share moment')}
       </button>
     </motion.div>
   );

@@ -23,7 +23,8 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Hashtag } from '@/components/ui';
+import { BarraSegmentos, DEGRAU_CLASSES, SecaoRua } from '@/components/ui';
+import { DEGRAU_INFO, ModalTopoRua, OvrSelo, VazioRua, anelDegrau, degrauDe, ovrNumeroClasses } from '@/components/clube/escada';
 import { playerPortraitSrc, playerDisplayName } from '@/lib/playerPortrait';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { overallFromAttributes, playerToCardView, samePersonKey } from '@/entities/player';
@@ -343,9 +344,11 @@ export function Team() {
     });
   };
 
+  const xiDegrau = startersStrength.count === 0 ? null : degrauDe(Math.round(startersStrength.avg));
+
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-8">
-      <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-4 md:space-y-8">
+      <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-6 md:space-y-8">
       <BackButton to="/clube" label={L('Clube', 'Club')} />
       <div data-tutorial-anchor="team-hero">
       <TeamMeuTimeHeader
@@ -377,120 +380,83 @@ export function Team() {
         `items-stretch` (não `items-start`): em coluna, filhos ocupam 100% da largura útil — evita largura
         “auto” por conteúdo maior que o viewport e overflow cortado à direita no mobile.
       */}
-      <div className="flex w-full min-w-0 max-w-full flex-col gap-4 sm:gap-6 lg:flex-row lg:items-start lg:gap-8">
-        {/* Left: Football Pitch — Sprint B-3: campo maior, tokens mais visíveis */}
+      <div className="flex w-full min-w-0 max-w-full flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+        {/* Esquerda: o campo de giz — várzea riscada no concreto */}
         <div className="h-fit w-full min-w-0 max-w-full shrink-0 lg:sticky lg:top-24 lg:w-[55%]">
-          <div className="sports-panel relative box-border w-full min-w-0 max-w-full overflow-x-hidden border-white/10 bg-black/40 px-2 py-3 sm:px-3 sm:py-4 md:p-5">
-            {/* Largura do relvado bumped (Sprint B-3): mobile 22rem, md 32rem, lg 40rem */}
+          <div className="relative box-border w-full min-w-0 max-w-full overflow-x-hidden bg-asfalto-27 py-1">
             <div className="mx-auto w-full min-w-0 max-w-[min(100%,22rem)] sm:max-w-[28rem] md:max-w-[32rem] lg:max-w-[40rem]">
-              <div className="mb-2 flex w-full min-w-0 items-center justify-between gap-2 px-0.5 sm:mb-3 md:mb-4 md:px-0">
-                <h3 className="flex min-w-0 flex-1 items-center gap-2.5">
-                  <span aria-hidden className="shrink-0 w-[3px] h-5 sm:h-6 bg-neon-yellow" />
-                  <span
-                    className="min-w-0 truncate text-neon-yellow uppercase"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      letterSpacing: '0.18em',
-                    }}
-                  >
-                    {L('Titulares', 'Starters')}
-                  </span>
-                </h3>
-                <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSuggestLineup}
-                    title={L('Sugerir escalação (GameSpirit)', 'Suggest lineup (GameSpirit)')}
-                    aria-label={L('Sugerir escalação', 'Suggest lineup')}
-                    className="inline-flex h-9 shrink-0 touch-manipulation items-center justify-center rounded border border-neon-yellow/40 bg-neon-yellow/10 px-3 font-display text-[10px] font-black uppercase leading-none tracking-[0.2em] text-neon-yellow transition-colors [-webkit-tap-highlight-color:transparent] hover:bg-neon-yellow/20 sm:px-4 sm:text-[11px]"
-                    style={{ borderRadius: 'var(--radius-sm)' }}
-                  >
-                    {L('Sugerir', 'Suggest')}
-                  </button>
-                </div>
+              <div className="mb-3 flex w-full min-w-0 items-center justify-between gap-2">
+                <SecaoRua label={L('Titulares', 'Starters')} aside={`${startersStrength.count}/${pitchSlots.length}`} className="min-w-0 flex-1" />
+                <button
+                  type="button"
+                  onClick={handleSuggestLineup}
+                  title={L('Sugerir escalação (GameSpirit)', 'Suggest lineup (GameSpirit)')}
+                  aria-label={L('Sugerir escalação', 'Suggest lineup')}
+                  className="inline-flex min-h-[40px] shrink-0 touch-manipulation items-center justify-center gap-1.5 border-2 border-rua px-3 font-impact text-[15px] uppercase leading-none text-rua transition-colors [-webkit-tap-highlight-color:transparent] hover:bg-rua hover:text-asfalto-27"
+                >
+                  {L('Sugerir', 'Suggest')} <span aria-hidden>→</span>
+                </button>
               </div>
 
-              {/* Pitch: `min-w-0` + `max-w-full` garantem que a caixa de aspeto nunca força overflow horizontal. */}
-              <div className="relative aspect-[68/105] w-full min-w-0 max-w-full overflow-hidden rounded-md border border-white/25 bg-[#0a2e15] sm:rounded-lg sm:border-2 md:rounded-lg md:border-4 md:border-white/20">
-              {/* Força do XI: soma dos OVR dos titulares (canto superior esquerdo do gramado) */}
+              {/* Pitch: `min-w-0` + `max-w-full` garantem que a caixa de aspeto nunca força overflow horizontal.
+                  DS 2027: só mudou a COR — concreto com linhas de giz. Posições intactas. */}
+              <div className="rua-grao relative aspect-[68/105] w-full min-w-0 max-w-full overflow-hidden border-2 border-linha bg-concreto">
+              {/* Força do XI: soma dos OVR dos titulares (canto superior esquerdo) — a cor sai do degrau da média */}
               <div
-                className="pointer-events-none absolute left-1 top-1 z-20 border border-neon-yellow/30 bg-nav px-1.5 py-1 sm:left-1.5 sm:top-1.5 sm:px-2 sm:py-1.5 md:left-2 md:top-2 md:px-3 md:py-2"
-                style={{
-                  borderRadius: 'var(--radius-sm)',
-                  maxWidth: 'calc(100% - 0.5rem)',
-                }}
+                className={cn(
+                  'pointer-events-none absolute left-1 top-1 z-20 px-1.5 py-1 sm:left-1.5 sm:top-1.5 sm:px-2 sm:py-1.5 md:left-2 md:top-2 md:px-3 md:py-2',
+                  xiDegrau ? DEGRAU_CLASSES[xiDegrau] : 'border-2 border-dashed border-fio bg-asfalto-27 text-mudo',
+                )}
+                style={{ maxWidth: 'calc(100% - 0.5rem)' }}
                 title={
                   startersStrength.count === 0
                     ? L('Escala os titulares para ver a força combinada (soma dos OVR).', 'Pick your starters to see the combined strength (sum of OVR).')
                     : L(`Força do XI: soma dos OVR dos titulares = ${startersStrength.sum}. Média do XI = ${startersStrength.avg.toFixed(1)}. Escalados: ${startersStrength.count} de ${pitchSlots.length}.`, `XI strength: starters' OVR sum = ${startersStrength.sum}. XI average = ${startersStrength.avg.toFixed(1)}. Picked: ${startersStrength.count} of ${pitchSlots.length}.`)
                 }
               >
-                <p
-                  className="text-neon-yellow uppercase leading-none"
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: 'clamp(6px, 1.5vw, 9px)',
-                    fontWeight: 600,
-                    letterSpacing: '0.18em',
-                  }}
-                >
+                <p className="font-prova text-[clamp(7px,1.6vw,10px)] font-bold uppercase leading-none tracking-[0.18em] opacity-75">
                   Overall
                 </p>
                 <p
-                  className="text-neon-yellow tabular-nums leading-none mt-0.5"
-                  style={{
-                    fontFamily: 'var(--font-impact)',
-                    fontSize: 'clamp(20px, 6vw, 48px)',
-                    letterSpacing: '-0.02em',
-                  }}
+                  className={cn(
+                    'mt-0.5 font-impact text-[clamp(20px,6vw,48px)] leading-none tabular-nums',
+                    xiDegrau && ovrNumeroClasses(xiDegrau),
+                  )}
                 >
                   {startersStrength.count === 0 ? '—' : startersStrength.sum}
                 </p>
-                <p
-                  className="mt-0.5 text-white/50 uppercase tabular-nums leading-none"
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: 'clamp(5px, 1.2vw, 8px)',
-                    fontWeight: 600,
-                    letterSpacing: '0.12em',
-                  }}
-                >
+                <p className="mt-0.5 font-prova text-[clamp(6px,1.3vw,9px)] font-bold uppercase leading-none tracking-[0.12em] tabular-nums opacity-75">
                   {startersStrength.count === 0
                     ? `${pitchSlots.length} pos`
                     : `${L('méd', 'avg')} ${Math.round(startersStrength.avg)} · ${startersStrength.count}/${pitchSlots.length}`}
                 </p>
               </div>
-              {/* Pitch Lines */}
-              <div className="absolute inset-0 pointer-events-none opacity-40">
-                {/* Grass pattern */}
-                <div className="absolute inset-0" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 10%, rgba(0,0,0,0.15) 10%, rgba(0,0,0,0.15) 20%)' }} />
-                
+              {/* Linhas de giz */}
+              <div className="absolute inset-0 pointer-events-none opacity-50">
                 {/* Center Line */}
-                <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-white/60 -translate-y-1/2" />
+                <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-papel/70 -translate-y-1/2" />
                 {/* Center Circle */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[27.5%] aspect-square border-[2px] border-white/60 rounded-full" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[27.5%] aspect-square border-[2px] border-papel/70 rounded-full" />
                 {/* Center Dot */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-white/60 rounded-full" />
-                
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-papel/70 rounded-full" />
+
                 {/* Top Penalty Box */}
-                <div className="absolute top-0 left-[20.35%] right-[20.35%] h-[15.7%] border-[2px] border-t-0 border-white/60" />
+                <div className="absolute top-0 left-[20.35%] right-[20.35%] h-[15.7%] border-[2px] border-t-0 border-papel/70" />
                 {/* Top Goal Box */}
-                <div className="absolute top-0 left-[36.5%] right-[36.5%] h-[5.2%] border-[2px] border-t-0 border-white/60" />
+                <div className="absolute top-0 left-[36.5%] right-[36.5%] h-[5.2%] border-[2px] border-t-0 border-papel/70" />
                 {/* Top Penalty Arc */}
-                <div className="absolute top-[15.7%] left-1/2 -translate-x-1/2 w-[27.5%] aspect-square border-[2px] border-white/60 rounded-full -translate-y-1/2" style={{ clipPath: 'inset(50% 0 0 0)' }} />
+                <div className="absolute top-[15.7%] left-1/2 -translate-x-1/2 w-[27.5%] aspect-square border-[2px] border-papel/70 rounded-full -translate-y-1/2" style={{ clipPath: 'inset(50% 0 0 0)' }} />
                 {/* Top Penalty Dot */}
-                <div className="absolute top-[10.47%] left-1/2 -translate-x-1/2 w-1 h-1 md:w-1.5 md:h-1.5 bg-white/60 rounded-full" />
+                <div className="absolute top-[10.47%] left-1/2 -translate-x-1/2 w-1 h-1 md:w-1.5 md:h-1.5 bg-papel/70 rounded-full" />
 
                 {/* Bottom Penalty Box */}
-                <div className="absolute bottom-0 left-[20.35%] right-[20.35%] h-[15.7%] border-[2px] border-b-0 border-white/60" />
+                <div className="absolute bottom-0 left-[20.35%] right-[20.35%] h-[15.7%] border-[2px] border-b-0 border-papel/70" />
                 {/* Bottom Goal Box */}
-                <div className="absolute bottom-0 left-[36.5%] right-[36.5%] h-[5.2%] border-[2px] border-b-0 border-white/60" />
+                <div className="absolute bottom-0 left-[36.5%] right-[36.5%] h-[5.2%] border-[2px] border-b-0 border-papel/70" />
                 {/* Bottom Penalty Arc */}
-                <div className="absolute bottom-[15.7%] left-1/2 -translate-x-1/2 w-[27.5%] aspect-square border-[2px] border-white/60 rounded-full translate-y-1/2" style={{ clipPath: 'inset(0 0 50% 0)' }} />
+                <div className="absolute bottom-[15.7%] left-1/2 -translate-x-1/2 w-[27.5%] aspect-square border-[2px] border-papel/70 rounded-full translate-y-1/2" style={{ clipPath: 'inset(0 0 50% 0)' }} />
                 {/* Bottom Penalty Dot */}
-                <div className="absolute bottom-[10.47%] left-1/2 -translate-x-1/2 w-1 h-1 md:w-1.5 md:h-1.5 bg-white/60 rounded-full" />
+                <div className="absolute bottom-[10.47%] left-1/2 -translate-x-1/2 w-1 h-1 md:w-1.5 md:h-1.5 bg-papel/70 rounded-full" />
               </div>
 
               {/* Player Slots */}
@@ -505,13 +471,13 @@ export function Team() {
                     <div
                       onClick={() => setSelectedSlotId(slot.id)}
                       className={cn(
-                        'flex size-10 cursor-pointer items-center justify-center rounded-full border border-dashed transition-all sm:size-12 md:size-16 md:border-2',
+                        'flex size-10 cursor-pointer items-center justify-center rounded-full border-2 border-dashed transition-all sm:size-12 md:size-16',
                         selectedSlotId === slot.id
-                          ? 'border-neon-yellow bg-neon-yellow/20 text-neon-yellow sm:scale-110'
-                          : 'border-white/35 bg-black/30 text-white/55 hover:border-white/70 hover:text-white/90',
+                          ? 'border-rua bg-rua text-asfalto-27 sm:scale-110'
+                          : 'border-fio bg-asfalto-27/70 text-mudo hover:border-papel hover:text-papel',
                       )}
                     >
-                      <span className="font-black text-[10px] sm:text-[11px] md:text-sm">{rotuloPosicao(slot.label)}</span>
+                      <span className="font-impact text-[11px] sm:text-[12px] md:text-[15px]">{rotuloPosicao(slot.label)}</span>
                     </div>
                   )}
                 </div>
@@ -528,24 +494,24 @@ export function Team() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   className={cn(
-                    'mt-3 md:mt-4 flex items-start gap-3 rounded-lg border px-3 py-2.5 md:px-4 md:py-3',
+                    'mt-4 flex items-start gap-3 px-3 py-2.5 md:px-4 md:py-3',
                     saveBanner.kind === 'error'
-                      ? 'border-red-500/70 bg-red-950/80 text-red-100'
-                      : 'border-neon-yellow/50 bg-neon-yellow/10 text-neon-yellow',
+                      ? 'border-2 border-baixa bg-concreto text-papel'
+                      : 'border-2 border-rua bg-concreto text-papel',
                   )}
                 >
                   {saveBanner.kind === 'error' ? (
-                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-red-400" />
+                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-baixa" />
                   ) : (
-                    <Check className="w-5 h-5 shrink-0 mt-0.5 text-neon-yellow" strokeWidth={2.5} />
+                    <Check className="w-5 h-5 shrink-0 mt-0.5 text-rua" strokeWidth={2.5} />
                   )}
-                  <p className="min-w-0 flex-1 break-words text-xs font-display font-bold uppercase leading-snug tracking-wide md:text-sm">
+                  <p className="min-w-0 flex-1 break-words font-prova text-[12px] font-bold uppercase leading-snug tracking-[0.06em] md:text-[13px]">
                     {saveBanner.text}
                   </p>
                   <button
                     type="button"
                     onClick={() => setSaveBanner(null)}
-                    className="shrink-0 p-1 rounded hover:bg-white/10 text-current opacity-80 hover:opacity-100"
+                    className="shrink-0 p-1 text-mudo hover:text-papel"
                     aria-label={L('Fechar aviso', 'Close notice')}
                   >
                     <X className="w-4 h-4" />
@@ -554,57 +520,27 @@ export function Team() {
               )}
             </AnimatePresence>
 
-            {/* Save — primário VOLT2 (volt chapado, sem sombra) */}
+            {/* Salvar — a ação da tela: rua + sombra dura de papel */}
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="mt-3 box-border inline-flex w-full items-center justify-center gap-2 bg-neon-yellow py-3 text-black hover:bg-white active:scale-[0.995] transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-neon-yellow [-webkit-tap-highlight-color:transparent]"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '12px',
-                fontWeight: 700,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                borderRadius: 'var(--radius-sm)',
-              }}
+              className="mb-2 mr-2 mt-5 box-border inline-flex min-h-[56px] w-[calc(100%-0.5rem)] items-center justify-center gap-2 bg-rua font-impact text-[22px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)] disabled:cursor-not-allowed disabled:opacity-50 [-webkit-tap-highlight-color:transparent]"
             >
-              <Save className="h-4 w-4 shrink-0" />
+              <Save className="h-5 w-5 shrink-0" />
               {isSaving ? L('Salvando…', 'Saving…') : L('Salvar titulares', 'Save starters')}
+              {!isSaving && <span aria-hidden>→</span>}
             </button>
           </div>
         </div>
 
-        {/* Right: Available Players (Horizontal Cards) */}
+        {/* Direita: reservas — cartas na escada por OVR */}
         <div className="flex min-w-0 w-full max-w-full flex-col gap-4 lg:w-1/2">
-          <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <span aria-hidden className="shrink-0 w-[3px] h-7 bg-neon-yellow" />
-              <h3
-                className="min-w-0 truncate text-neon-yellow uppercase"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  letterSpacing: '0.18em',
-                }}
-              >
-                {L('Jogadores disponíveis', 'Available players')}
-              </h3>
-            </div>
-            <span
-              className="shrink-0 text-white/55 uppercase"
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: '10px',
-                letterSpacing: '0.22em',
-                fontWeight: 600,
-              }}
-            >
-              {availablePlayers.length} {availablePlayers.length === 1 ? L('reserva', 'sub') : L('reservas', 'subs')}
-            </span>
-          </div>
-          
-          <div className="space-y-3 lg:overflow-y-auto lg:pr-2 lg:max-h-[calc(100vh-16rem)] pb-[max(3rem,env(safe-area-inset-bottom,0px))]">
+          <SecaoRua
+            label={L('Jogadores disponíveis', 'Available players')}
+            aside={`${availablePlayers.length} ${availablePlayers.length === 1 ? L('reserva', 'sub') : L('reservas', 'subs')}`}
+          />
+
+          <div className="space-y-4 lg:overflow-y-auto lg:pr-3 lg:max-h-[calc(100vh-16rem)] pb-[max(3rem,env(safe-area-inset-bottom,0px))]">
             <AnimatePresence>
               {availablePlayers.map((player) => {
                 const stats = [
@@ -615,6 +551,7 @@ export function Team() {
                 ];
                 const entity = playersById[player.id];
                 const health = entity ? playerHealth[entity.id] : undefined;
+                const d = degrauDe(player.ovr);
                 return (
                 <motion.div
                   key={player.id}
@@ -622,56 +559,40 @@ export function Team() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className={cn(
-                    'flex bg-dark-gray border border-l-[3px] overflow-hidden transition-colors duration-200 hover:border-neon-yellow/40 group',
-                    player.style === 'neon-yellow'
-                      ? 'border-[var(--color-border)] border-l-neon-yellow'
-                      : 'border-[var(--color-border)] border-l-white/15',
-                  )}
-                  style={{ borderRadius: 'var(--radius-md)' }}
+                  className="group flex min-w-0 overflow-hidden bg-concreto"
                 >
-                  {/* Foto — clicável para abrir ficha */}
+                  {/* A carta — degrau pelo OVR. Clicável pra abrir a ficha. */}
                   <button
                     type="button"
-                    className="relative w-32 sm:w-36 md:w-40 flex-shrink-0 overflow-hidden bg-black border-r border-white/8 cursor-pointer [-webkit-tap-highlight-color:transparent]"
+                    className={cn(
+                      'relative flex w-28 flex-shrink-0 cursor-pointer flex-col gap-1.5 p-2 text-left sm:w-32 md:w-36 [-webkit-tap-highlight-color:transparent]',
+                      DEGRAU_CLASSES[d],
+                    )}
                     onClick={() => setSheetPlayerId(player.id)}
+                    aria-label={L(`Ficha de ${player.name}, OVR ${player.ovr}, ${DEGRAU_INFO[d].nome}`, `${player.name} sheet, OVR ${player.ovr}, ${DEGRAU_INFO[d].nome}`)}
                   >
-                    {/* Tonal background (sutil, atrás da foto) */}
-                    <div
-                      className={cn(
-                        'absolute inset-0',
-                        player.style === 'neon-yellow' ? 'bg-neon-yellow/10' : 'bg-white/5',
-                      )}
-                      aria-hidden
-                    />
-                    <img
-                      src={playerPortraitSrc({ id: player.id, name: player.name, portraitUrl: player.portraitUrl }, 200, 300)}
-                      alt={player.name}
-                      className="absolute inset-0 h-full w-full object-cover object-top grayscale group-hover:grayscale-0 transition-all duration-300"
-                      referrerPolicy="no-referrer"
-                    />
-                    {/* Gradient pra leitura do OVR sobre a foto */}
-                    <div
-                      aria-hidden
-                      className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent"
-                    />
-                    {/* OVR — Anton gigante (o scrim acima garante a leitura) */}
-                    <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10">
-                      <p
-                        className="text-neon-yellow tabular-nums leading-none"
-                        style={{
-                          fontFamily: 'var(--font-impact)',
-                          fontSize: 'clamp(38px, 5.5vw, 56px)',
-                          letterSpacing: '-0.04em',
-                        }}
-                      >
+                    <div className="flex items-start justify-between gap-1">
+                      <span className={cn('font-impact text-[clamp(36px,5.5vw,48px)] leading-[0.85] tabular-nums', ovrNumeroClasses(d))}>
                         {player.ovr}
-                      </p>
+                      </span>
+                      <span className="font-impact text-[13px] uppercase leading-none">{rotuloPosicao(player.pos)}</span>
                     </div>
+                    <div className={cn('relative aspect-[4/5] w-full overflow-hidden', d === 'respeito' ? 'bg-concreto' : 'bg-asfalto-27/10')}>
+                      <img
+                        src={playerPortraitSrc({ id: player.id, name: player.name, portraitUrl: player.portraitUrl }, 200, 300)}
+                        alt={player.name}
+                        className="absolute inset-0 object-cover object-top grayscale transition-all duration-300 group-hover:grayscale-0"
+                        style={{ width: '100%', height: '100%', maxWidth: 'none' }}
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                    <span className="font-prova text-[9px] font-bold uppercase tracking-[0.14em] opacity-80">
+                      {DEGRAU_INFO[d].n} · {DEGRAU_INFO[d].nome}
+                    </span>
                   </button>
 
                   {/* Info completa: header + atributos + botões (tudo em 1 coluna) */}
-                  <div className="flex-1 px-3 py-3 md:px-4 md:py-3.5 flex flex-col gap-3 relative min-w-0">
+                  <div className="relative flex min-w-0 flex-1 flex-col gap-3 px-3 py-3 md:px-4 md:py-3.5">
                     {/* Header: nome + posição + badges */}
                     <div className="flex items-start justify-between gap-2 min-w-0">
                       <button
@@ -679,27 +600,10 @@ export function Team() {
                         className="min-w-0 flex-1 text-left cursor-pointer [-webkit-tap-highlight-color:transparent]"
                         onClick={() => setSheetPlayerId(player.id)}
                       >
-                        <p
-                          className="text-white uppercase truncate"
-                          style={{
-                            fontFamily: 'var(--font-display)',
-                            fontWeight: 800,
-                            fontSize: 'clamp(17px, 2.2vw, 22px)',
-                            letterSpacing: '0.03em',
-                            lineHeight: 1.05,
-                          }}
-                        >
+                        <p className="block min-w-0 truncate font-voz text-[clamp(22px,2.6vw,27px)] leading-none text-papel">
                           {playerDisplayName(player)}
                         </p>
-                        <p
-                          className="text-white/50 uppercase mt-0.5"
-                          style={{
-                            fontFamily: 'var(--font-ui)',
-                            fontSize: '10px',
-                            letterSpacing: '0.22em',
-                            fontWeight: 600,
-                          }}
-                        >
+                        <p className="mt-1 font-prova text-[11px] font-bold uppercase tracking-[0.14em] text-mudo">
                           {player.countryFlagEmoji ? (
                             <span className="mr-1.5 not-italic" title={player.country ?? undefined} aria-hidden>
                               {player.countryFlagEmoji}
@@ -714,63 +618,27 @@ export function Team() {
                     {/* OLEFOOT PYTHON MODE — consequências persistentes do jogador */}
                     <PlayerConsequencesBadge playerId={player.id} compact={false} />
 
-                    {/* DNA do Campeão — grid 2x2 com mais espaço horizontal */}
-                    <div className="grid grid-cols-2 gap-x-5 gap-y-2.5 md:gap-x-8 md:gap-y-3">
-                      {stats.map((s) => {
-                        const v = Math.max(0, Math.min(100, s.val));
-                        return (
-                          <div key={s.label} className="min-w-0">
-                            <div className="flex items-baseline justify-between gap-2">
-                              <span
-                                className="text-white/55 uppercase"
-                                style={{
-                                  fontFamily: 'var(--font-display)',
-                                  fontSize: '11px',
-                                  fontWeight: 700,
-                                  letterSpacing: '0.22em',
-                                }}
-                              >
-                                {s.label}
-                              </span>
-                              <span
-                                className="text-neon-yellow tabular-nums leading-none"
-                                style={{
-                                  fontFamily: 'var(--font-impact)',
-                                  fontSize: 'clamp(18px, 2vw, 22px)',
-                                  letterSpacing: '-0.02em',
-                                }}
-                              >
-                                {s.val}
-                              </span>
-                            </div>
-                            <div className="mt-1.5 h-[3px] bg-white/8 overflow-hidden">
-                              <div
-                                className="h-full bg-neon-yellow transition-all duration-500"
-                                style={{ width: `${v}%` }}
-                                aria-hidden
-                              />
-                            </div>
+                    {/* Atributos em segmentos */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 md:gap-x-6 md:gap-y-3">
+                      {stats.map((s) => (
+                        <div key={s.label} className="min-w-0">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo">{s.label}</span>
+                            <span className="font-impact text-[20px] leading-none tabular-nums text-papel">{s.val}</span>
                           </div>
-                        );
-                      })}
+                          <BarraSegmentos valor={Math.max(0, Math.min(100, s.val))} max={100} className="mt-1.5 h-2 gap-[3px]" />
+                        </div>
+                      ))}
                     </div>
 
                     {/* Botões de ação — abaixo dos atributos, full width */}
-                    <div className="flex items-center gap-2 mt-auto pt-1">
+                    <div className="mt-auto flex items-center gap-2 pt-1 pr-1 pb-1">
                       <button
                         type="button"
                         onClick={() => handleEscalar(player)}
-                        className="flex-1 bg-neon-yellow py-2.5 text-black hover:bg-white transition-colors [-webkit-tap-highlight-color:transparent]"
-                        style={{
-                          fontFamily: 'var(--font-display)',
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          letterSpacing: '0.2em',
-                          textTransform: 'uppercase',
-                          borderRadius: 'var(--radius-sm)',
-                        }}
+                        className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 bg-rua font-impact text-[16px] uppercase leading-none text-asfalto-27 shadow-[3px_3px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-px hover:-translate-y-px hover:shadow-[4px_4px_0_var(--color-papel)] [-webkit-tap-highlight-color:transparent]"
                       >
-                        {L('Escalar', 'Pick')}
+                        {L('Escalar', 'Pick')} <span aria-hidden>→</span>
                       </button>
                       <button
                         type="button"
@@ -778,17 +646,9 @@ export function Team() {
                           setSaveBanner(null);
                           setAnnouncePlayer(player);
                         }}
-                        className="flex flex-1 items-center justify-center gap-1.5 border border-[var(--color-border)] bg-deep-black py-2.5 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors [-webkit-tap-highlight-color:transparent]"
-                        style={{
-                          fontFamily: 'var(--font-display)',
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          letterSpacing: '0.2em',
-                          textTransform: 'uppercase',
-                          borderRadius: 'var(--radius-sm)',
-                        }}
+                        className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 border-2 border-linha font-impact text-[16px] uppercase leading-none text-papel transition-colors hover:border-papel [-webkit-tap-highlight-color:transparent]"
                       >
-                        <Megaphone className="h-3 w-3 shrink-0" aria-hidden />
+                        <Megaphone className="h-3.5 w-3.5 shrink-0" aria-hidden />
                         <span>{L('Anunciar', 'List')}</span>
                       </button>
                     </div>
@@ -797,22 +657,13 @@ export function Team() {
                 );
               })}
             </AnimatePresence>
-            
+
             {availablePlayers.length === 0 && (
-              // Empty-state: era uma frase entre aspas em corpo grande, no tom
-              // de epígrafe. Vira o que um empty-state deve ser — o fato, e o
-              // caminho de saída.
-              <div className="ole-poster px-6 py-10 text-center">
-                <p className="font-impact uppercase text-white" style={{ fontSize: '16px' }}>
-                  {L('Sem reservas', 'No subs')}
-                </p>
-                <p
-                  className="mx-auto mt-1.5 max-w-md text-white/50"
-                  style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
-                >
-                  {L('Contrate no mercado.', 'Sign players in the Market.')}
-                </p>
-              </div>
+              <VazioRua
+                frase={L('Banco vazio. Todo mundo em campo.', 'Empty bench. Everyone is on the pitch.')}
+                detalhe={L('Contrate no mercado.', 'Sign players in the Market.')}
+                acao={{ label: L('Ir pro mercado', 'Go to the market'), to: '/mercado/transfer' }}
+              />
             )}
           </div>
         </div>
@@ -822,115 +673,92 @@ export function Team() {
       {/* Modal for Position Selection */}
       <AnimatePresence>
         {selectedSlotId && selectedSlot && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:p-4"
             onClick={() => setSelectedSlotId(null)}
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               onClick={e => e.stopPropagation()}
-              className="my-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-md border border-white/10 bg-dark-gray max-h-[min(85dvh,calc(100dvh-6rem))] sm:max-h-[80vh]"
+              className="my-auto flex w-full max-w-2xl flex-col overflow-hidden border-2 border-linha bg-asfalto-27 max-h-[min(85dvh,calc(100dvh-6rem))] sm:max-h-[80vh]"
             >
-              <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
-                <h3 className="font-display font-black uppercase tracking-wider text-xl text-white flex items-center gap-2">
-                  {L('Escalar', 'Pick')} <span className="text-neon-yellow bg-neon-yellow/10 px-2 py-1 rounded border border-neon-yellow/20">{rotuloPosicao(selectedSlot.label)}</span>
-                </h3>
-                <button onClick={() => setSelectedSlotId(null)} className="text-gray-400 hover:text-white transition-colors">
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              
-              <div className="p-4 overflow-y-auto space-y-3 bg-black/20">
+              <ModalTopoRua
+                rotulo={L('Escalar', 'Pick')}
+                titulo={rotuloPosicao(selectedSlot.label)}
+                onClose={() => setSelectedSlotId(null)}
+              />
+
+              <div className="space-y-2 overflow-y-auto p-4">
                 {modalPlayers.length > 0 ? (
-                  modalPlayers.map((player) => (
+                  modalPlayers.map((player) => {
+                    const d = degrauDe(player.ovr);
+                    return (
                     <div
                       key={player.id}
-                      className={cn(
-                        "flex bg-dark-gray border rounded-xl overflow-hidden h-20 md:h-24 transition-all hover:border-white/40 group cursor-pointer",
-                        player.style === 'neon-yellow' ? 'border-neon-yellow/50' : 'border-white/10'
-                      )}
+                      className="group flex h-20 min-w-0 cursor-pointer overflow-hidden bg-concreto transition-colors hover:bg-linha md:h-24"
                       onClick={() => handleEscalarToSlot(player, selectedSlot.id)}
                     >
                       {/* Left: Image & OVR */}
-                      <div className="w-20 sm:w-24 md:w-28 relative bg-black/60 flex-shrink-0 flex items-end justify-center pt-2 border-r border-white/5">
-                        <div className={cn(
-                          "absolute inset-0 opacity-20",
-                          player.style === 'neon-yellow' ? 'bg-neon-yellow' : 'bg-white'
-                        )} />
-                        <img 
+                      <div className={cn('relative w-20 flex-shrink-0 overflow-hidden sm:w-24 md:w-28', DEGRAU_CLASSES[d])}>
+                        <img
                           src={playerPortraitSrc({ id: player.id, name: player.name, portraitUrl: player.portraitUrl }, 200, 300)}
                           alt={player.name}
-                          className="w-[80%] h-[90%] object-cover object-top grayscale group-hover:grayscale-0 transition-all duration-300"
+                          className="absolute inset-0 object-cover object-top grayscale transition-all duration-300 group-hover:grayscale-0"
+                          style={{ width: '100%', height: '100%', maxWidth: 'none' }}
                           referrerPolicy="no-referrer"
-                          style={{ maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)' }}
                         />
-                        <div className={cn(
-                          "absolute top-1 left-1 px-1 md:px-1.5 py-0.5 rounded text-[9px] md:text-[10px] font-black",
-                          player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-black/80 text-white border border-white/20'
-                        )}>
-                          {player.ovr}
-                        </div>
+                        <OvrSelo ovr={player.ovr} className="absolute left-1 top-1 h-7 min-w-7 px-1 text-[16px]" />
                       </div>
 
                       {/* Middle: Info */}
-                      <div className="relative flex-1 p-2 md:p-3 flex flex-col justify-center min-w-0">
-                        <div className="flex items-center gap-1.5">
+                      <div className="relative flex min-w-0 flex-1 flex-col justify-center p-2 md:p-3">
+                        <div className="flex min-w-0 items-center gap-1.5">
                           {player.countryFlagEmoji ? (
                             <span className="shrink-0 text-base leading-none" title={player.country ?? undefined} aria-hidden>
                               {player.countryFlagEmoji}
                             </span>
                           ) : null}
-                          <div className="min-w-0 flex-1 font-display font-black text-lg sm:text-xl md:text-2xl uppercase tracking-wide text-white leading-none truncate">
+                          <div className="min-w-0 flex-1 truncate font-voz text-[22px] leading-none text-papel md:text-[26px]">
                             {playerDisplayName(player)}
                           </div>
                         </div>
-                        
+
                         {/* Stats */}
-                        <div className="flex gap-2 md:gap-4 mt-1 md:mt-2">
-                          <div className="flex flex-col">
-                            <span className="text-[7px] md:text-[8px] text-gray-500 font-bold uppercase">PAC</span>
-                            <span className="text-[10px] md:text-xs font-display font-bold text-white leading-none">{player.pac}</span>
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[7px] md:text-[8px] text-gray-500 font-bold uppercase">SHO</span>
-                            <span className="text-[10px] md:text-xs font-display font-bold text-white leading-none">{player.sho}</span>
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[7px] md:text-[8px] text-gray-500 font-bold uppercase">PAS</span>
-                            <span className="text-[10px] md:text-xs font-display font-bold text-white leading-none">{player.pas}</span>
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[7px] md:text-[8px] text-gray-500 font-bold uppercase">FAT</span>
-                            <span className="text-[10px] md:text-xs font-display font-bold text-white leading-none">{player.fatigue}</span>
-                          </div>
+                        <div className="mt-1.5 flex gap-3 md:mt-2 md:gap-4">
+                          {[
+                            ['PAC', player.pac],
+                            ['SHO', player.sho],
+                            ['PAS', player.pas],
+                            ['FAT', player.fatigue],
+                          ].map(([lbl, v]) => (
+                            <div key={lbl} className="flex flex-col">
+                              <span className="font-prova text-[9px] font-bold uppercase text-mudo">{lbl}</span>
+                              <span className="font-impact text-[14px] leading-none text-papel">{v}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
 
                       {/* Right: CTA */}
-                      <div className="w-16 md:w-28 flex items-center justify-center p-2 border-l border-white/5 bg-black/20 group-hover:bg-neon-yellow transition-colors">
-                        <span className="font-display font-bold uppercase tracking-wider text-[9px] md:text-xs text-white group-hover:text-black">
-                          {L('Escalar', 'Pick')}
+                      <div className="flex w-16 items-center justify-center border-l-2 border-linha p-2 transition-colors group-hover:bg-rua md:w-28">
+                        <span className="font-impact text-[14px] uppercase leading-none text-rua group-hover:text-asfalto-27 md:text-[17px]">
+                          {L('Escalar', 'Pick')} <span aria-hidden>→</span>
                         </span>
                       </div>
                     </div>
-                  ))
+                    );
+                  })
                 ) : (
-                  <div className="text-center py-12 flex flex-col items-center justify-center">
-                    <p className="text-gray-400 font-display font-bold text-lg mb-6">
-                      {L(`Nenhum jogador disponível para a posição ${rotuloPosicao(selectedSlot.label)}.`, `No players available for ${rotuloPosicao(selectedSlot.label)}.`)}
-                    </p>
-                    <button 
-                      onClick={() => navigate('/transfer')}
-                      className="px-8 py-3 bg-neon-yellow text-black font-display font-bold uppercase tracking-wider text-sm hover:bg-white transition-colors"
-                    >
-                      {L('Ir para Mercado', 'Go to Market')}
-                    </button>
-                  </div>
+                  <VazioRua
+                    frase={L(`Ninguém pra ${rotuloPosicao(selectedSlot.label)} no banco.`, `Nobody for ${rotuloPosicao(selectedSlot.label)} on the bench.`)}
+                    detalhe={L(`Nenhum jogador disponível para a posição ${rotuloPosicao(selectedSlot.label)}.`, `No players available for ${rotuloPosicao(selectedSlot.label)}.`)}
+                    acao={{ label: L('Ir para Mercado', 'Go to Market'), onClick: () => navigate('/transfer') }}
+                  />
                 )}
               </div>
             </motion.div>
@@ -953,28 +781,22 @@ export function Team() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 12 }}
               onClick={(e) => e.stopPropagation()}
-              className="my-auto flex w-full max-w-lg flex-col overflow-hidden rounded-md border border-white/10 bg-dark-gray max-h-[min(88dvh,calc(100dvh-6rem))] sm:max-h-[85vh]"
+              className="my-auto flex w-full max-w-lg flex-col overflow-hidden border-2 border-linha bg-asfalto-27 max-h-[min(88dvh,calc(100dvh-6rem))] sm:max-h-[85vh]"
             >
-              <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
-                <h3 className="font-display font-black uppercase tracking-wider text-sm md:text-base text-white flex items-center gap-2">
-                  <LayoutGrid className="w-5 h-5 text-neon-yellow shrink-0" />
-                  {L('Formação e Tática', 'Formation & Tactics')}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setFormationModalOpen(false)}
-                  className="text-gray-400 hover:text-white transition-colors p-1"
-                  aria-label={L('Fechar', 'Close')}
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="p-3 md:p-4 overflow-y-auto space-y-5">
-                <section>
-                  <h4 className="font-display font-black text-[10px] tracking-widest text-white/60 uppercase mb-2">
-                    {L('1. Formação', '1. Formation')}
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <ModalTopoRua
+                rotulo={L('Prancheta', 'Clipboard')}
+                titulo={
+                  <span className="inline-flex items-center gap-2">
+                    <LayoutGrid className="h-5 w-5 shrink-0 text-rua" aria-hidden />
+                    {L('Formação e Tática', 'Formation & Tactics')}
+                  </span>
+                }
+                onClose={() => setFormationModalOpen(false)}
+              />
+              <div className="space-y-6 overflow-y-auto p-4">
+                <section className="flex flex-col gap-3">
+                  <SecaoRua label={L('1. Formação', '1. Formation')} />
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {FORMATION_SCHEME_LIST.map((id) => {
                       const groups = SCHEME_LINE_GROUPS[id];
                       const linesLabel = `${groups.def.length}-${groups.mid.length}-${groups.att.length}`;
@@ -984,20 +806,21 @@ export function Team() {
                           key={id}
                           type="button"
                           onClick={() => setPendingFormation(id)}
+                          aria-pressed={selected}
                           className={cn(
-                            'relative text-left rounded-lg border px-3 py-2.5 transition-colors',
+                            'relative px-3 py-3 text-left transition-colors',
                             selected
-                              ? 'border-neon-yellow bg-neon-yellow/15 text-white'
-                              : 'border-white/10 bg-black/30 hover:border-white/25 hover:bg-white/5 text-white',
+                              ? 'bg-rua text-asfalto-27'
+                              : 'bg-concreto text-papel hover:bg-linha',
                           )}
                         >
                           {selected && (
-                            <span className="absolute top-1.5 right-1.5 text-neon-yellow">
-                              <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                            <span className="absolute right-2 top-2">
+                              <Check className="h-4 w-4" strokeWidth={3} />
                             </span>
                           )}
-                          <span className="font-display font-black text-sm tracking-tight block pr-5">{id}</span>
-                          <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5 block">
+                          <span className="block pr-5 font-spray text-[26px] font-black leading-none">{id}</span>
+                          <span className={cn('mt-1 block font-prova text-[10px] font-bold uppercase tracking-[0.12em]', selected ? 'text-asfalto-27/70' : 'text-mudo')}>
                             {L('Linhas', 'Lines')} {linesLabel}
                           </span>
                         </button>
@@ -1006,11 +829,9 @@ export function Team() {
                   </div>
                 </section>
 
-                <section>
-                  <h4 className="font-display font-black text-[10px] tracking-widest text-white/60 uppercase mb-2">
-                    {L('2. Tática', '2. Tactics')}
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <section className="flex flex-col gap-3">
+                  <SecaoRua label={L('2. Tática', '2. Tactics')} />
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {PRESET_IDS.map((id) => {
                       const Icon = PRESET_ICONS[id];
                       const selected = pendingPreset === id;
@@ -1018,25 +839,24 @@ export function Team() {
                         <div
                           key={id}
                           className={cn(
-                            'relative rounded-lg border transition-colors',
-                            selected
-                              ? 'border-neon-yellow bg-neon-yellow/15'
-                              : 'border-white/10 bg-black/30 hover:border-white/25 hover:bg-white/5',
+                            'relative transition-colors',
+                            selected ? 'bg-rua text-asfalto-27' : 'bg-concreto text-papel hover:bg-linha',
                           )}
                         >
                           <button
                             type="button"
                             onClick={() => setPendingPreset(id)}
-                            className="w-full flex items-start gap-2 px-3 py-2.5 text-left"
+                            aria-pressed={selected}
+                            className="flex w-full items-start gap-2 px-3 py-3 text-left"
                           >
-                            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-neon-yellow/90" aria-hidden />
+                            <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', selected ? 'text-asfalto-27' : 'text-rua')} aria-hidden />
                             <span className="min-w-0 pr-6">
-                              <span className="block font-display font-black text-[11px] uppercase tracking-wider text-white leading-tight">
+                              <span className="block font-impact text-[14px] uppercase leading-tight">
                                 {PRESET_LABEL_PT[id]}
                               </span>
                             </span>
                             {selected ? (
-                              <Check className="absolute top-1.5 right-7 w-3.5 h-3.5 text-neon-yellow" strokeWidth={3} />
+                              <Check className="absolute right-7 top-2 h-3.5 w-3.5" strokeWidth={3} />
                             ) : null}
                           </button>
                           <button
@@ -1046,42 +866,42 @@ export function Team() {
                               setPresetInfoId((cur) => (cur === id ? null : id));
                             }}
                             aria-label={`Info ${PRESET_LABEL_PT[id]}`}
-                            className="absolute top-1 right-1 p-1 text-white/40 hover:text-neon-yellow transition-colors"
+                            className={cn('absolute right-1 top-1 p-1 transition-colors', selected ? 'text-asfalto-27/70 hover:text-asfalto-27' : 'text-mudo hover:text-rua')}
                           >
-                            <Info className="w-3.5 h-3.5" />
+                            <Info className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       );
                     })}
                   </div>
                   {presetInfoId ? (
-                    <div className="mt-3 rounded-lg border border-neon-yellow/25 bg-neon-yellow/5 p-3">
+                    <div className="border-l-[3px] border-rua bg-concreto p-3">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 font-display font-black text-[11px] uppercase tracking-wider text-neon-yellow">
-                          <Info className="w-3.5 h-3.5" />
+                        <div className="flex items-center gap-2 font-impact text-[15px] uppercase text-papel">
+                          <Info className="h-3.5 w-3.5 text-rua" />
                           {PRESET_LABEL_PT[presetInfoId]}
                         </div>
                         <button
                           type="button"
                           onClick={() => setPresetInfoId(null)}
-                          className="text-white/40 hover:text-white"
+                          className="text-mudo hover:text-papel"
                           aria-label={L('Fechar info', 'Close info')}
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <X className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                      <p className="mt-2 text-[11px] text-white/80 leading-relaxed">
+                      <p className="mt-2 text-[13px] leading-relaxed text-suave">
                         {PRESET_DESCRIPTION_PT[presetInfoId]}
                       </p>
                     </div>
                   ) : null}
                 </section>
               </div>
-              <div className="border-t border-white/10 bg-black/40 p-3 md:p-4 flex items-center gap-2">
+              <div className="flex items-center gap-3 border-t-2 border-linha p-4 pr-5">
                 <button
                   type="button"
                   onClick={() => setFormationModalOpen(false)}
-                  className="rounded border border-white/15 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-300 hover:bg-white/5"
+                  className="inline-flex min-h-[48px] items-center border-2 border-linha px-4 font-impact text-[16px] uppercase leading-none text-mudo hover:border-papel hover:text-papel"
                 >
                   {L('Cancelar', 'Cancel')}
                 </button>
@@ -1099,9 +919,10 @@ export function Team() {
                     }
                     setFormationModalOpen(false);
                   }}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded bg-neon-yellow px-4 py-2 font-display text-xs font-black uppercase tracking-wider text-black hover:bg-white"
+                  className="inline-flex min-h-[48px] min-w-0 flex-1 items-center justify-center gap-2 bg-rua px-4 font-impact text-[16px] uppercase leading-none text-asfalto-27 shadow-[4px_4px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_var(--color-papel)]"
                 >
-                  <Check className="w-4 h-4" /> {L('Aplicar formação e tática', 'Apply formation & tactics')}
+                  <span className="min-w-0 truncate">{L('Aplicar formação e tática', 'Apply formation & tactics')}</span>
+                  <span aria-hidden>→</span>
                 </button>
               </div>
             </motion.div>
@@ -1128,64 +949,48 @@ export function Team() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 16 }}
               onClick={(e) => e.stopPropagation()}
-              className="my-auto w-full max-w-md overflow-hidden rounded-md border border-neon-yellow/25 bg-dark-gray"
+              className="my-auto w-full max-w-md overflow-hidden border-2 border-linha bg-asfalto-27"
               role="dialog"
               aria-modal="true"
               aria-labelledby="market-maker-title"
             >
-              {/* Header */}
-              <div className="flex items-start justify-between gap-3 border-b border-white/10 bg-black/40 px-4 py-3">
-                <div className="min-w-0">
-                  <Hashtag>{L('#marketmaker #proposta', '#marketmaker #offer')}</Hashtag>
-                  <h3
-                    id="market-maker-title"
-                    className="mt-0.5 font-display text-lg font-black uppercase tracking-wide text-white"
-                  >
-                    {announcePlayer.name}
-                  </h3>
-                  <p className="mt-0.5 text-xs text-white/50">
-                    {rotuloPosicao(announcePlayer.pos)} · OVR {ent ? overallFromAttributes(ent.attrs, ent.pos) : '—'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAnnouncePlayer(null)}
-                  className="shrink-0 rounded-full p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label={L('Fechar', 'Close')}
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+              <ModalTopoRua
+                rotulo={L('#marketmaker #proposta', '#marketmaker #offer')}
+                titulo={announcePlayer.name}
+                tituloId="market-maker-title"
+                voz
+                onClose={() => setAnnouncePlayer(null)}
+              />
 
-              {/* Oferta */}
-              <div className="p-4 space-y-4">
-                <div className="rounded-lg border border-neon-yellow/30 bg-neon-yellow/[0.06] px-4 py-3 text-center">
-                  <p className="text-[10px] uppercase tracking-[0.22em] text-white/50 font-display font-bold">
-                    {L('Oferta do Market Maker', 'Market Maker offer')}
+              {/* Oferta — valor que já existe: degrau RESPEITO (fio de ouro) */}
+              <div className="space-y-5 p-5">
+                <p className="font-prova text-[12px] font-bold uppercase tracking-[0.14em] text-mudo">
+                  {rotuloPosicao(announcePlayer.pos)} · OVR {ent ? overallFromAttributes(ent.attrs, ent.pos) : '—'}
+                </p>
+                <div className="border-[3px] border-ouro-27 bg-asfalto-27 px-4 py-4">
+                  <p className="font-prova text-[11px] font-bold uppercase tracking-[0.22em] text-mudo">
+                    — {L('Oferta do Market Maker', 'Market Maker offer')}
                   </p>
-                  <p
-                    className="mt-1 text-3xl font-black text-neon-yellow tabular-nums"
-                    style={{ fontFamily: 'var(--font-impact)', letterSpacing: '-0.02em' }}
-                  >
+                  <p className="mt-1 font-spray text-[clamp(38px,11vw,52px)] font-black leading-none text-ouro-27 tabular-nums">
                     {formatExp(offerExp)} EXP
                   </p>
-                  <p className="mt-1 text-[11px] text-white/40">{discountLabel}</p>
+                  <p className="mt-1.5 font-prova text-[11px] text-mudo">{discountLabel}</p>
                 </div>
 
-                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <div className="flex flex-col gap-3 pb-1 pr-1 sm:flex-row sm:justify-end">
                   <button
                     type="button"
                     onClick={() => setAnnouncePlayer(null)}
-                    className="rounded-lg border border-white/20 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-gray-300 hover:bg-white/5 sm:px-4"
+                    className="inline-flex min-h-[48px] items-center justify-center border-2 border-linha px-4 font-impact text-[16px] uppercase leading-none text-mudo hover:border-papel hover:text-papel"
                   >
                     {L('Recusar', 'Decline')}
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleMarketMakerAccept()}
-                    className="rounded-lg bg-neon-yellow py-2.5 font-display text-xs font-black uppercase tracking-wider text-black hover:bg-neon-yellow/85 active:scale-[0.98] sm:px-4"
+                    className="inline-flex min-h-[48px] items-center justify-center gap-2 bg-rua px-4 font-impact text-[17px] uppercase leading-none text-asfalto-27 shadow-[4px_4px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_var(--color-papel)]"
                   >
-                    {L('Aceitar', 'Accept')} +{formatExp(offerExp)} EXP
+                    {L('Aceitar', 'Accept')} +{formatExp(offerExp)} EXP <span aria-hidden>→</span>
                   </button>
                 </div>
               </div>
@@ -1273,6 +1078,12 @@ function PitchPlayerMenu({
   onVerSkill: () => void;
   onAnunciar: () => void;
 }) {
+  const d = degrauDe(player.ovr);
+  const acoes: Array<{ tag: string; titulo: string; sub: string; onClick: () => void }> = [
+    { tag: L('#tatica', '#tactics'), titulo: L('Substituir', 'Substitute'), sub: L('Libera o slot', 'Frees the slot'), onClick: onSubstituir },
+    { tag: L('#perfil', '#profile'), titulo: L('Ver skills & temporada', 'Skills & season'), sub: L('Atributos e histórico', 'Attributes & history'), onClick: onVerSkill },
+    { tag: L('#mercado', '#market'), titulo: L('Anunciar no mercado', 'List on Market'), sub: L('Venda em EXP', 'Sell for EXP'), onClick: onAnunciar },
+  ];
   return (
     <motion.div
       key="pitch-player-menu"
@@ -1289,63 +1100,35 @@ function PitchPlayerMenu({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
         transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-        className="relative w-full max-w-md overflow-hidden border border-white/[0.05]"
-        style={{
-          borderRadius: 'var(--radius-card)',
-          background: 'var(--color-panel-elevated)',
-        }}
+        className="relative w-full max-w-md overflow-hidden border-2 border-linha bg-asfalto-27"
         role="dialog"
         aria-modal="true"
         aria-labelledby="pitch-menu-title"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header com retrato + nome + OVR */}
-        <div className="flex items-center gap-4 border-b border-[var(--color-divider-yellow)] p-5">
-          <div
-            className={cn(
-              'relative size-16 shrink-0 overflow-hidden rounded-full border bg-dark-gray',
-              player.style === 'neon-yellow' ? 'border-neon-yellow' : 'border-white/40',
-            )}
-          >
+        <div className="flex min-w-0 items-center gap-4 border-b-2 border-linha p-5">
+          <div className={cn('relative size-16 shrink-0 overflow-hidden rounded-full bg-concreto', anelDegrau(d))}>
             <img
               src={playerPortraitSrc({ id: player.id, name: player.name, portraitUrl: player.portraitUrl }, 100, 100)}
               alt=""
               className="h-full w-full object-cover object-top"
               referrerPolicy="no-referrer"
             />
-            <span
-              className={cn(
-                'absolute -right-1 -top-1 flex size-7 items-center justify-center',
-                player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-white text-black',
-              )}
-              style={{ borderRadius: '9999px' }}
-            >
-              <span
-                className="tabular-nums leading-none"
-                style={{
-                  fontFamily: 'var(--font-impact)',
-                  fontSize: '13px',
-                }}
-              >
-                {player.ovr}
-              </span>
-            </span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
+            <p className="font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo">
               {L('Posição', 'Position')} · {rotuloPosicao(player.pos)}
             </p>
-            <h3
-              id="pitch-menu-title"
-              className="mt-1 truncate font-display text-[20px] font-black uppercase leading-tight tracking-tight text-white"
-            >
+            <h3 id="pitch-menu-title" className="mt-1 truncate font-voz text-[28px] leading-none text-papel">
               {playerDisplayName(player)}
             </h3>
           </div>
+          <OvrSelo ovr={player.ovr} className="h-12 min-w-12 px-1.5 text-[26px]" />
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-full p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
+            className="shrink-0 p-2 text-mudo transition hover:text-papel"
             aria-label={L('Fechar menu', 'Close menu')}
           >
             <X className="h-5 w-5" />
@@ -1353,69 +1136,24 @@ function PitchPlayerMenu({
         </div>
 
         {/* Ações — texto-claro, dominantes */}
-        <div className="flex flex-col gap-2 p-4">
-          <button
-            type="button"
-            onClick={onSubstituir}
-            className="group/act relative w-full overflow-hidden border border-white/[0.05] text-left transition-colors hover:border-white/30"
-            style={{
-              borderRadius: 'var(--radius-card)',
-              background: 'var(--color-panel-soft)',
-            }}
-          >
-            <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
-            <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
-              <div>
-                <Hashtag>{L('#tatica', '#tactics')}</Hashtag>
-                <p className="font-impact text-[18px] uppercase leading-tight text-white transition-colors group-hover/act:text-neon-yellow">
-                  {L('Substituir', 'Substitute')}
+        <div className="flex flex-col p-2">
+          {acoes.map((a) => (
+            <button
+              key={a.titulo}
+              type="button"
+              onClick={a.onClick}
+              className="group/act flex min-w-0 items-center justify-between gap-3 border-b border-linha px-3 py-4 text-left transition-colors last:border-b-0 hover:bg-concreto"
+            >
+              <div className="min-w-0">
+                <span className="font-prova text-[11px] font-bold text-mudo">{a.tag}</span>
+                <p className="font-impact text-[22px] uppercase leading-tight text-papel transition-colors group-hover/act:text-rua">
+                  {a.titulo}
                 </p>
-                <p className="mt-0.5 text-[11px] text-white/50">{L('Libera o slot', 'Frees the slot')}</p>
+                <p className="mt-0.5 text-[12px] text-suave">{a.sub}</p>
               </div>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={onVerSkill}
-            className="group/act relative w-full overflow-hidden border border-white/[0.05] text-left transition-colors hover:border-white/30"
-            style={{
-              borderRadius: 'var(--radius-card)',
-              background: 'var(--color-panel-soft)',
-            }}
-          >
-            <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
-            <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
-              <div>
-                <Hashtag>{L('#perfil', '#profile')}</Hashtag>
-                <p className="font-impact text-[18px] uppercase leading-tight text-white transition-colors group-hover/act:text-neon-yellow">
-                  {L('Ver skills & temporada', 'Skills & season')}
-                </p>
-                <p className="mt-0.5 text-[11px] text-white/50">{L('Atributos e histórico', 'Attributes & history')}</p>
-              </div>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={onAnunciar}
-            className="group/act relative w-full overflow-hidden border border-white/[0.05] text-left transition-colors hover:border-white/30"
-            style={{
-              borderRadius: 'var(--radius-card)',
-              background: 'var(--color-panel-soft)',
-            }}
-          >
-            <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
-            <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
-              <div>
-                <Hashtag>{L('#mercado', '#market')}</Hashtag>
-                <p className="font-impact text-[18px] uppercase leading-tight text-white transition-colors group-hover/act:text-neon-yellow">
-                  {L('Anunciar no mercado', 'List on Market')}
-                </p>
-                <p className="mt-0.5 text-[11px] text-white/50">{L('Venda em EXP', 'Sell for EXP')}</p>
-              </div>
-            </div>
-          </button>
+              <span aria-hidden className="shrink-0 font-impact text-[24px] text-rua transition-transform group-hover/act:translate-x-1">→</span>
+            </button>
+          ))}
         </div>
       </motion.div>
     </motion.div>
@@ -1423,8 +1161,10 @@ function PitchPlayerMenu({
 }
 
 /**
- * Hero do Plantel — Sprint B-3 Legacy Tech.
- * Bloco amarelo do layer final: eyebrow + manchete Anton + placar + ações.
+ * Hero do Plantel — DS 2027.
+ * Asfalto com o título no grito; a formação é um adesivo de cal colado torto
+ * (o momento "rua" da tela); o placar do plantel em grade de concreto; a ação
+ * principal (formação e tática) em rua com sombra dura de papel.
  */
 function PlantelHero({
   clubName,
@@ -1453,93 +1193,59 @@ function PlantelHero({
 }) {
   const academyFull = academyUsed >= academyCap;
   const xiAvgLabel = startersCount === 0 ? '—' : Math.round(xiAvgOverall).toString();
+  const xiD = startersCount === 0 ? null : degrauDe(Math.round(xiAvgOverall));
   return (
-    <section
-      aria-label={L('Plantel Principal', 'First Team')}
-      className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8"
-    >
-      {/* ── HERO no layer final ────────────────────────────────────────────
-          Saíram: watermark com a sigla do clube atrás do título, a formação em
-          serifa itálica do tamanho da manchete, régua decorativa e a frase
-          entre aspas que trocava conforme a escalação. Ficou o que o manager
-          precisa ler: quem é, qual a formação, e o placar do plantel. */}
+    <section aria-label={L('Plantel Principal', 'First Team')} className="relative w-full max-w-full min-w-0">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative z-10 px-4 sm:px-6 lg:px-8"
-        style={{ paddingBlock: 'clamp(26px, 5vw, 46px)' }}
+        className="relative flex min-w-0 flex-col gap-5"
       >
-        <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-          {clubName}
-        </span>
-
-        <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1
-            className="font-impact uppercase"
-            style={{
-              color: 'var(--color-deep-black)',
-              fontSize: 'clamp(40px, 11vw, 84px)',
-              lineHeight: 0.84,
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {L('Plantel', 'Squad')}
-          </h1>
-          {/* A formação é dado, não subtítulo decorativo: fica ao lado do
-              título, em chip preto, do jeito que se lê num placar. */}
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <span className="block min-w-0 truncate font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
+              — {clubName}
+            </span>
+            <h1 className="font-impact text-[clamp(52px,15vw,104px)] uppercase leading-[0.84] text-papel">
+              {L('Plantel', 'Squad')}
+            </h1>
+          </div>
+          {/* A formação colada como adesivo de cal — dado, não enfeite. */}
           <span
-            className="inline-flex items-center font-impact tabular-nums"
-            style={{
-              background: 'var(--color-deep-black)',
-              color: 'var(--color-neon-yellow)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '4px 10px',
-              fontSize: 'clamp(18px, 4.5vw, 28px)',
-              lineHeight: 1,
-            }}
+            className="mt-2 inline-flex shrink-0 rotate-[3deg] flex-col items-center bg-cal px-3 py-2 text-asfalto-27 shadow-[4px_4px_0_rgba(0,0,0,0.55)]"
+            aria-label={L(`Formação ${formation}`, `Formation ${formation}`)}
           >
-            {formation}
+            <span className="font-prova text-[9px] font-bold uppercase tracking-[0.2em]">{L('Formação', 'Formation')}</span>
+            <span className="font-spray text-[clamp(28px,8vw,44px)] font-black leading-none">{formation}</span>
           </span>
         </div>
 
-        {/* Placar do plantel — blocos pretos sobre o amarelo. */}
-        <div className="mt-6 grid max-w-lg grid-cols-3 gap-2 sm:gap-3">
+        {/* Placar do plantel */}
+        <dl className="grid max-w-lg grid-cols-3 gap-px bg-linha">
           {[
-            { v: String(squadSize), l: L('Plantel', 'Squad') },
-            { v: `${startersCount}/${startersCap}`, l: L('Titulares', 'Starters') },
-            { v: xiAvgLabel, l: 'OVR XI' },
+            { v: String(squadSize), l: L('Plantel', 'Squad'), d: null },
+            { v: `${startersCount}/${startersCap}`, l: L('Titulares', 'Starters'), d: null },
+            { v: xiAvgLabel, l: 'OVR XI', d: xiD },
           ].map((m) => (
             <div
               key={m.l}
-              className="min-w-0 bg-black px-3 py-3 sm:px-4 sm:py-4"
-              style={{ borderRadius: 'var(--radius-sm)' }}
+              className={cn('flex min-w-0 flex-col gap-1.5 px-3 py-3 sm:px-4 sm:py-4', m.d ? DEGRAU_CLASSES[m.d] : 'bg-concreto text-papel')}
             >
-              <p
-                className="font-impact tabular-nums leading-none text-neon-yellow"
-                style={{ fontSize: 'clamp(20px, 4.6vw, 36px)' }}
-              >
-                {m.v}
-              </p>
-              <p
-                className="mt-1.5 font-display font-bold uppercase text-white/65"
-                style={{ fontSize: '9px', letterSpacing: '0.18em' }}
-              >
-                {m.l}
-              </p>
+              <dd className={cn('font-impact text-[clamp(26px,7vw,40px)] leading-none tabular-nums', m.d && ovrNumeroClasses(m.d))}>{m.v}</dd>
+              <dt className="font-prova text-[10px] font-bold uppercase tracking-[0.18em] opacity-70">{m.l}</dt>
             </div>
           ))}
-        </div>
+        </dl>
 
-        {/* CTAs — primário preto sobre amarelo, secundários outline */}
-        <div className="mt-7 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        {/* CTAs — principal em rua com sombra dura; secundários em contorno */}
+        <div className="flex flex-col items-stretch gap-3 pr-2 sm:flex-row sm:items-center">
           <button
             type="button"
             onClick={onChooseFormation}
-            className="inline-flex items-center justify-center bg-deep-black px-5 sm:px-7 py-3 text-white font-display font-black uppercase tracking-[0.14em] text-[11px] transition-colors hover:text-neon-yellow active:scale-[0.98]"
-            style={{ borderRadius: 'var(--radius-sm)' }}
+            className="inline-flex min-h-[52px] items-center justify-center gap-2 bg-rua px-6 font-impact text-[20px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_var(--color-papel)]"
           >
-            {L('Escolher formação', 'Choose formation')}
+            {L('Escolher formação', 'Choose formation')} <span aria-hidden>→</span>
           </button>
           <button
             type="button"
@@ -1548,29 +1254,24 @@ function PlantelHero({
             title={academyFull
               ? L(`Academia cheia (${academyUsed}/${academyCap}). Vende um jogador ao Market Maker pra liberar slot.`, `Academy full (${academyUsed}/${academyCap}). Sell a player to the Market Maker to free a slot.`)
               : L(`Academia: ${academyUsed}/${academyCap} slots usados`, `Academy: ${academyUsed}/${academyCap} slots used`)}
-            className={`inline-flex items-center justify-center border border-black/70 bg-transparent px-5 sm:px-7 py-3 text-black font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-[11px] sm:text-[12px] transition-colors ${
+            className={cn(
+              'inline-flex min-h-[52px] items-center justify-center gap-2 border-2 px-5 font-impact text-[18px] uppercase leading-none transition-colors',
               academyFull
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-black/10'
-            }`}
-            style={{ fontFamily: 'var(--font-display)', borderRadius: 'var(--radius-sm)' }}
+                ? 'cursor-not-allowed border-dashed border-fio text-mudo'
+                : 'border-papel text-papel hover:bg-papel hover:text-asfalto-27',
+            )}
           >
             {L('Criar jogador', 'Create player')}
-            <span
-              className={`ml-2 inline-flex items-center justify-center px-2 py-[2px] text-[10px] font-mono rounded ${
-                academyFull ? 'bg-red-900/80 text-red-100' : 'bg-black/15 text-black/75'
-              }`}
-            >
+            <span className={cn('font-prova text-[12px] font-bold', academyFull ? 'text-baixa' : 'opacity-70')}>
               {academyUsed}/{academyCap}
             </span>
           </button>
           {favoriteRealTeamName ? (
             <Link
               to="/ranking?tab=nacional&heart=1"
-              className="inline-flex items-center justify-center border border-black/70 bg-transparent px-5 sm:px-7 py-3 text-black font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-[11px] sm:text-[12px] hover:bg-black/10 transition-colors"
-              style={{ fontFamily: 'var(--font-display)', borderRadius: 'var(--radius-sm)' }}
+              className="inline-flex min-h-[44px] min-w-0 items-center gap-2 font-impact text-[17px] uppercase leading-none text-rua hover:text-papel"
             >
-              Ranking · {favoriteRealTeamName}
+              <span className="min-w-0 truncate">Ranking · {favoriteRealTeamName}</span> <span aria-hidden>→</span>
             </Link>
           ) : null}
         </div>
@@ -1587,6 +1288,7 @@ function PitchPlayer({
   /** Sprint B-3: substitui onOpenSheet/onRemove. Abre menu (Substituir/Skill/Anunciar). */
   onOpenMenu: () => void;
 }) {
+  const d = degrauDe(player.ovr);
   return (
     <motion.div
       initial={{ scale: 0, opacity: 0 }}
@@ -1600,16 +1302,11 @@ function PitchPlayer({
         className="group/token relative flex cursor-pointer flex-col items-center [-webkit-tap-highlight-color:transparent]"
         aria-label={L(`Abrir ações para ${player.name}`, `Open actions for ${player.name}`)}
       >
-        {/* Sprint B-3: token ~40% maior */}
-        <div
-          className={cn(
-            'relative size-12 overflow-hidden rounded-full border bg-dark-gray sm:size-14 md:size-16 md:border-2',
-            player.style === 'neon-yellow' ? 'border-neon-yellow' : 'border-white',
-          )}
-        >
+        {/* Token redondo (avatar pode ser rounded-full) com anel do degrau */}
+        <div className={cn('relative size-12 overflow-hidden rounded-full bg-asfalto-27 sm:size-14 md:size-16', anelDegrau(d))}>
           {player.countryFlagEmoji ? (
             <span
-              className="absolute bottom-0 left-0 z-[5] rounded-sm bg-black/70 px-[2px] text-[9px] leading-none sm:text-[10px] md:text-[12px]"
+              className="absolute bottom-0 left-0 z-[5] bg-asfalto-27/80 px-[2px] text-[9px] leading-none sm:text-[10px] md:text-[12px]"
               title={player.country ?? undefined}
               aria-hidden
             >
@@ -1624,31 +1321,14 @@ function PitchPlayer({
           />
         </div>
 
-        <div
-          className="mt-1 max-w-[min(5.5rem,24vw)] truncate border border-white/25 bg-black/90 px-1 py-0.5 text-[9px] font-bold text-white sm:mt-1.5 sm:max-w-[6.5rem] sm:px-1.5 sm:text-[10px] md:max-w-[7.5rem] md:px-2 md:text-[11px]"
-          style={{ borderRadius: 'var(--radius-sm)' }}
-        >
+        <div className="mt-1 max-w-[min(5.5rem,24vw)] truncate bg-asfalto-27 px-1 py-0.5 font-voz text-[11px] leading-none text-papel sm:mt-1.5 sm:max-w-[6.5rem] sm:px-1.5 sm:text-[13px] md:max-w-[7.5rem] md:px-2 md:text-[15px]">
           {playerDisplayName(player)}
         </div>
 
-        <div
-          className={cn(
-            'pointer-events-none absolute -right-1 -top-1 flex size-5 items-center justify-center sm:-right-1.5 sm:-top-1.5 sm:size-6 md:-right-2 md:-top-2 md:size-7',
-            player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-white text-black',
-          )}
-          style={{ borderRadius: '9999px' }}
-        >
-          <span
-            className="tabular-nums leading-none"
-            style={{
-              fontFamily: 'var(--font-impact)',
-              fontSize: 'clamp(10px, 1.5vw, 13px)',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            {player.ovr}
-          </span>
-        </div>
+        <OvrSelo
+          ovr={player.ovr}
+          className="pointer-events-none absolute -right-1 -top-1 h-5 min-w-5 px-0.5 text-[11px] sm:-right-1.5 sm:-top-1.5 sm:h-6 sm:min-w-6 sm:text-[12px] md:-right-2 md:-top-2 md:h-7 md:min-w-7 md:text-[14px]"
+        />
       </button>
     </motion.div>
   );

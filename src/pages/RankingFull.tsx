@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ChevronLeft, ChevronRight, Search, Star, Trophy, TrendingUp, Award } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Star, Trophy, TrendingUp, Award, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
 import type { LeagueScopeRankingEntry } from '@/ranking/leagueScopeRanking';
@@ -10,7 +10,8 @@ import { getGlobalLeagueRankingEntries } from '@/ranking/globalLeagueRanking';
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
 import { LEAGUE_SCOPE_LABELS } from '@/match/adminLeagues';
 import { BackButton } from '@/components/BackButton';
-import { Hashtag } from '@/components/ui';
+import { BotaoRua, FitaRua, SecaoRua, SeloRua } from '@/components/ui/Rua';
+import { AbasRua, CabecalhoRua, FaltaRua, LinhaRua, VazioRua, posRua } from '@/components/leagues/RuaTabela';
 import { L, LOCALE } from '@/i18n/L';
 
 const PER_PAGE = 25;
@@ -187,192 +188,111 @@ export function RankingFull() {
 
   const meta = TAB_META[tab];
 
+  const fmtValor = (n: number) =>
+    tab === 'mundial' ? n.toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : formatExpSmart(n);
+
+  // DS 2027: "quanto falta" — distância real do meu time pra linha de cima.
+  const meIdx = withGlobalRank.findIndex((r) => r.isMe);
+  const meRow = meIdx >= 0 ? withGlobalRank[meIdx] : null;
+  const aboveRow = meIdx > 0 ? withGlobalRank[meIdx - 1] : null;
+  const gap = meRow && aboveRow ? Math.max(0, Math.round((aboveRow.points - meRow.points) * 10) / 10) : null;
+
   return (
-    <div className="mx-auto min-w-0 max-w-4xl space-y-6 pb-8">
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-8 overflow-x-hidden pb-8 px-3 sm:px-4">
       <BackButton to="/competicao" label={L('Competição', 'Competition')} />
 
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="border border-white/10 bg-panel overflow-hidden"
-      >
-        {/* Header */}
-        <div className="bg-deep-black p-6 md:p-8 border-b border-white/10">
-          <Hashtag className="mb-3 text-neon-yellow">#ranking</Hashtag>
-          <h1 className="leading-[1.1]">
-            <span
-              className="block font-impact uppercase text-white"
-              style={{
-                fontSize: 'clamp(2rem, 5.5vw, 3.5rem)',
-                letterSpacing: '0.005em',
-              }}
-            >
-              Ranking
-            </span>
-            <span
-              className="ole-num block uppercase text-neon-yellow mt-1"
-              style={{ fontSize: 'clamp(1.2rem, 3.6vw, 2rem)' }}
-            >
-              {meta.title}
-            </span>
-          </h1>
-          <p className="mt-4 max-w-md font-mono text-[11px] leading-snug text-cimento">
-            {meta.subtitle}
-          </p>
-        </div>
+      <FitaRua tags={['#ranking', '#respeitoéouro']} className="-mx-3 sm:-mx-4" />
 
-        {/* Tabs */}
-        <div className="p-4 border-b border-white/10 flex flex-wrap gap-2">
-          {TAB_OPTIONS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={cn(
-                'ole-num h-10 whitespace-nowrap px-3 border text-[12px] uppercase transition-colors',
-                tab === t.id
-                  ? 'border-neon-yellow bg-neon-yellow text-black'
-                  : 'border-white/16 text-cimento hover:border-white/30 hover:text-white',
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex min-w-0 flex-col gap-6">
+        <CabecalhoRua rotulo={`#ranking · ${meta.title}`} titulo={L('Quanto falta pra subir', 'How far to go up')}>
+          <p className="max-w-md font-prova text-[11px] uppercase leading-snug tracking-[0.12em] text-mudo">{meta.subtitle}</p>
+        </CabecalhoRua>
 
-        {/* Search */}
-        <div className="p-3 border-b border-white/10">
-          <div className="relative">
-            <Search className="w-4 h-4 text-poeira absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              value={search}
-              onChange={(e) => setSearchAndResetPage(e.target.value)}
-              placeholder={L('Buscar time', 'Search team')}
-              className="w-full bg-deep-black border border-white/10 text-white placeholder:text-poeira px-9 py-2.5 text-sm transition-colors focus:border-neon-yellow/50 focus:outline-none"
-              aria-label={L('Buscar time no ranking', 'Search team in ranking')}
+        <AbasRua ariaLabel="Ranking" ativa={tab} onChange={setTab} abas={TAB_OPTIONS} />
+
+        {meRow && (
+          gap != null && aboveRow ? (
+            <FaltaRua
+              valor={gap}
+              unidade={tab === 'mundial' ? L('de índice', 'index') : L('pts', 'pts')}
+              frase={L(`é o que separa tu do ${posRua(aboveRow.globalRank)}.`, `is all that's between you and ${posRua(aboveRow.globalRank)}.`)}
             />
-          </div>
+          ) : meIdx === 0 && withGlobalRank.length > 1 ? (
+            <div className="flex flex-col gap-1">
+              <span className="font-spray font-black uppercase leading-[0.85] text-ouro-27" style={{ fontSize: 'clamp(60px, 18vw, 104px)' }}>#01</span>
+              <span className="font-impact text-[clamp(17px,4.6vw,24px)] uppercase leading-tight text-papel">
+                {L('Ninguém na frente. Segura.', 'Nobody ahead. Hold it.')}
+              </span>
+            </div>
+          ) : null
+        )}
+
+        {/* Busca — input em concreto, foco em rua. */}
+        <div className="relative">
+          <Search aria-hidden className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mudo" />
+          <input
+            value={search}
+            onChange={(e) => setSearchAndResetPage(e.target.value)}
+            placeholder={L('Buscar time', 'Search team')}
+            className="h-12 w-full border-2 border-linha bg-concreto px-9 font-prova text-[13px] uppercase tracking-[0.08em] text-papel transition-colors placeholder:text-mudo focus:border-rua focus:outline-none"
+            aria-label={L('Buscar time no ranking', 'Search team in ranking')}
+          />
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="ole-table">
-            <thead>
-              <tr>
-                <th style={{ width: '3.5rem' }} className="text-center">#</th>
-                <th>{L('Equipe', 'Team')}</th>
-                <th style={{ width: '8rem' }} className="text-center">
-                  {tab === 'mundial' ? L('Índice', 'Index') : L('Pontos', 'Points')}
-                </th>
-                <th style={{ width: '3rem' }} className="text-center">★</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageSlice.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="text-center py-12">
-                    <p className="font-mono text-[12px] text-cimento">
-                      {tab === 'mundial'
-                        ? L('Carregando a Liga Global…', 'Loading the Global League…')
-                        : L('Nenhuma liga nesta aba.', 'No leagues in this tab.')}
-                    </p>
-                  </td>
-                </tr>
-              ) : (
-                pageSlice.map((row) => (
-                  <tr
-                    key={`${row.team}-${row.globalRank}`}
-                    data-is-user={row.isMe ? 'true' : undefined}
-                    className={row.isMe ? '!bg-neon-yellow text-black' : undefined}
-                  >
-                    <td className="text-center">
-                      <span
-                        className={cn(
-                          'ole-num text-[15px]',
-                          row.isMe ? 'text-black' : row.globalRank <= 3 ? 'text-white' : 'text-cimento',
-                        )}
-                      >
-                        {row.globalRank}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedTeam(row)}
-                        className="flex w-full min-w-0 items-center gap-2 text-left transition-opacity hover:opacity-80"
-                      >
-                        <span
-                          className={cn(
-                            'min-w-0 truncate text-[14px] sm:text-[15px]',
-                            row.isMe ? 'font-bold text-black' : 'text-giz',
-                          )}
-                        >
-                          {row.team}
-                        </span>
-                        {'division' in row && row.division && (
-                          <span
-                            className={cn(
-                              'shrink-0 border px-[5px] py-0.5 font-mono text-[9.5px] tracking-[0.12em]',
-                              row.isMe ? 'border-black/40 text-black' : 'border-white/16 text-cimento',
-                            )}
-                          >
+        {/* Tabela — linhas em concreto; líder no fio de ouro; meu time colado torto. */}
+        <div className="flex min-w-0 flex-col gap-3">
+          <SecaoRua
+            label={tab === 'mundial' ? L('Equipe · índice', 'Team · index') : L('Equipe · pontos', 'Team · points')}
+            aside={`${filtered.length}`}
+          />
+          {pageSlice.length === 0 ? (
+            <VazioRua
+              titulo={tab === 'mundial' ? L('Carregando a Liga Global…', 'Loading the Global League…') : L('Nenhuma liga nesta aba', 'No leagues in this tab')}
+            />
+          ) : (
+            <div className="flex min-w-0 flex-col gap-1.5">
+              {pageSlice.map((row) => {
+                const fav = favorites.has(row.team);
+                return (
+                  <div key={`${row.team}-${row.globalRank}`} className="flex min-w-0 items-center gap-1.5">
+                    <LinhaRua
+                      className="min-w-0 grow"
+                      pos={row.globalRank}
+                      tom={row.isMe ? 'eu' : row.globalRank === 1 ? 'lider' : row.globalRank <= 3 ? 'zona' : meIdx >= 0 && row.globalRank - 1 > meIdx ? 'abaixo' : 'normal'}
+                      nome={row.team}
+                      onClick={() => setSelectedTeam(row)}
+                      ariaLabel={L(`Detalhes de ${row.team}`, `Details for ${row.team}`)}
+                      chip={
+                        'division' in row && row.division ? (
+                          <span className={cn('shrink-0 font-prova text-[10px] font-bold tracking-[0.12em]', row.isMe ? 'text-asfalto-27/70' : 'text-mudo')}>
                             D{row.division}
                           </span>
-                        )}
-                        {row.isMe && (
-                          <span className="shrink-0 font-mono text-[9.5px] uppercase tracking-[0.12em] text-black/70">
-                            {L('você', 'you')}
-                          </span>
-                        )}
-                      </button>
-                    </td>
-                    <td className="text-center">
-                      <span
-                        className={cn(
-                          'ole-num text-[16px]',
-                          row.isMe ? 'text-black' : 'text-white',
-                        )}
-                      >
-                        {tab === 'mundial'
-                          ? row.points.toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-                          : formatExpSmart(row.points)}
-                      </span>
-                    </td>
-                    <td className="text-center">
-                      <button
-                        type="button"
-                        onClick={() => toggleFavorite(row.team)}
-                        className={cn(
-                          'p-1.5 border shrink-0 transition-colors',
-                          row.isMe
-                            ? favorites.has(row.team)
-                              ? 'border-black text-black'
-                              : 'border-black/30 text-black/60 hover:border-black'
-                            : favorites.has(row.team)
-                              ? 'border-neon-yellow text-neon-yellow'
-                              : 'border-white/16 text-poeira hover:border-white/30 hover:text-white',
-                        )}
-                        aria-label={favorites.has(row.team) ? L('Remover dos favoritos', 'Remove from favorites') : L('Marcar favorito', 'Add to favorites')}
-                      >
-                        <Star
-                          className={cn(
-                            'w-4 h-4',
-                            favorites.has(row.team) && (row.isMe ? 'fill-black' : 'fill-neon-yellow'),
-                          )}
-                        />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                        ) : null
+                      }
+                      valor={fmtValor(row.points)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleFavorite(row.team)}
+                      className={cn(
+                        'grid h-[50px] w-11 shrink-0 place-items-center border-2 transition-colors',
+                        fav ? 'border-ouro-27 text-ouro-27' : 'border-linha text-mudo hover:border-papel hover:text-papel',
+                      )}
+                      aria-label={fav ? L('Remover dos favoritos', 'Remove from favorites') : L('Marcar favorito', 'Add to favorites')}
+                    >
+                      <Star className={cn('h-4 w-4', fav && 'fill-ouro-27')} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Pagination */}
+        {/* Paginação */}
         {totalPages > 1 && (
-          <div className="p-4 border-t border-white/10 flex items-center justify-between gap-3 bg-deep-black">
-            <span className="ole-num text-[13px] text-cimento">
+          <div className="flex items-center justify-between gap-3 border-t-2 border-linha pt-4">
+            <span className="font-spray text-[26px] font-black leading-none text-papel">
               {safePage}/{totalPages}
             </span>
             <div className="flex items-center gap-2">
@@ -381,13 +301,11 @@ export function RankingFull() {
                 disabled={safePage <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 className={cn(
-                  'ole-num inline-flex h-10 items-center gap-1 whitespace-nowrap px-3 border text-[11px] uppercase transition-colors',
-                  safePage <= 1
-                    ? 'border-white/10 text-poeira cursor-not-allowed'
-                    : 'border-white/30 text-white hover:border-white hover:bg-white/5',
+                  'inline-flex h-11 items-center gap-1 whitespace-nowrap border-2 px-3 font-impact text-[15px] uppercase transition-colors',
+                  safePage <= 1 ? 'cursor-not-allowed border-linha text-fio' : 'border-papel text-papel hover:bg-papel hover:text-asfalto-27',
                 )}
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft aria-hidden className="h-4 w-4" />
                 {L('Anterior', 'Previous')}
               </button>
               <button
@@ -395,149 +313,117 @@ export function RankingFull() {
                 disabled={safePage >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 className={cn(
-                  'ole-num inline-flex h-10 items-center gap-1 whitespace-nowrap px-3 border text-[11px] uppercase transition-colors',
-                  safePage >= totalPages
-                    ? 'border-white/10 text-poeira cursor-not-allowed'
-                    : 'border-white/30 text-white hover:border-white hover:bg-white/5',
+                  'inline-flex h-11 items-center gap-1 whitespace-nowrap border-2 px-3 font-impact text-[15px] uppercase transition-colors',
+                  safePage >= totalPages ? 'cursor-not-allowed border-linha text-fio' : 'border-papel text-papel hover:bg-papel hover:text-asfalto-27',
                 )}
               >
                 {L('Próxima', 'Next')}
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight aria-hidden className="h-4 w-4" />
               </button>
             </div>
           </div>
         )}
       </motion.div>
 
-      {/* Modal de detalhes do time */}
+      {/* Modal de detalhes do time — ficha em concreto. */}
       {selectedTeam && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/85 p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/85 p-4 sm:items-center"
           onClick={() => setSelectedTeam(null)}
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md border border-white/10 bg-panel overflow-hidden"
+            className="rua-grao flex w-full max-w-md flex-col gap-5 bg-concreto p-5"
           >
-            {/* Header */}
-            <div className="bg-deep-black p-5 border-b border-white/10">
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="flex items-center gap-3">
-                  <span className="ole-num text-[18px] text-white">
-                    {L(`${selectedTeam.globalRank}º`, `#${selectedTeam.globalRank}`)}
-                  </span>
-                  {selectedTeam.isMe && (
-                    <span className="bg-neon-yellow px-[5px] py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-black">
-                      {L('Seu time', 'Your team')}
-                    </span>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedTeam(null)}
-                  className="text-cimento hover:text-white transition-colors"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className={cn('font-spray text-[40px] font-black leading-none', selectedTeam.globalRank === 1 ? 'text-ouro-27' : 'text-papel')}>
+                  {posRua(selectedTeam.globalRank)}
+                </span>
+                {selectedTeam.isMe && <SeloRua tom="corre">{L('Teu time', 'Your team')}</SeloRua>}
               </div>
-              <h2
-                className="truncate font-impact uppercase text-white leading-[1.1] mb-1"
-                style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)' }}
+              <button
+                type="button"
+                onClick={() => setSelectedTeam(null)}
+                className="grid h-10 w-10 place-items-center text-mudo transition-colors hover:text-papel"
+                aria-label={L('Fechar', 'Close')}
               >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex flex-col gap-1">
+              <h2 className="font-impact uppercase leading-[0.9] text-papel [overflow-wrap:anywhere]" style={{ fontSize: 'clamp(30px, 8vw, 42px)' }}>
                 {selectedTeam.team}
               </h2>
-              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-cimento">
-                {tab === 'mundial' ? L('Ranking Mundial', 'World Ranking') : tab === 'nacional' ? L('Ranking Nacional', 'National Ranking') : L('Ranking Estadual', 'State Ranking')}
-              </p>
+              <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+                — {tab === 'mundial' ? L('Ranking Mundial', 'World Ranking') : tab === 'nacional' ? L('Ranking Nacional', 'National Ranking') : L('Ranking Estadual', 'State Ranking')}
+              </span>
             </div>
 
-            {/* Stats */}
-            <div className="p-5 space-y-4">
-              {/* EXP/Pontos exato */}
-              <div className="bg-deep-black p-4 border border-white/10">
-                <div className="flex items-center gap-2 mb-2">
-                  <Trophy className="w-4 h-4 text-neon-yellow" />
-                  <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-cimento">
-                    {tab === 'mundial' ? L('Índice', 'Index') : L('Pontos', 'Points')}
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span
-                    className="ole-num text-neon-yellow"
-                    style={{ fontSize: 'clamp(1.8rem, 5.5vw, 2.6rem)' }}
-                  >
-                    {tab === 'mundial'
-                      ? selectedTeam.points.toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-                      : selectedTeam.points.toLocaleString(LOCALE)}
-                  </span>
-                  <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-cimento">
-                    {tab === 'mundial' ? '/ 100' : 'pts'}
-                  </span>
-                </div>
-                {/* Componentes do índice (só na aba Mundial). */}
-                {'breakdown' in selectedTeam && selectedTeam.breakdown && (
-                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/10">
-                    {([
-                      [L('Pontos', 'Points'), selectedTeam.breakdown.points],
-                      [L('Força', 'Strength'), selectedTeam.breakdown.overall],
-                      [L('Engaj.', 'Engag.'), selectedTeam.breakdown.engagement],
-                    ] as [string, number][]).map(([label, val]) => (
-                      <div key={label} className="flex flex-col">
-                        <span className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-cimento">{label}</span>
-                        <span className="ole-num text-[17px] text-white">{Math.round(val)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+            <div className="flex flex-col gap-3 border-2 border-ouro-27 bg-asfalto-27 p-4">
+              <span className="flex items-center gap-2 font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo">
+                <Trophy aria-hidden className="h-4 w-4 text-ouro-27" />
+                {tab === 'mundial' ? L('Índice', 'Index') : L('Pontos', 'Points')}
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="font-spray font-black leading-none text-ouro-27" style={{ fontSize: 'clamp(44px, 12vw, 60px)' }}>
+                  {tab === 'mundial'
+                    ? selectedTeam.points.toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                    : selectedTeam.points.toLocaleString(LOCALE)}
+                </span>
+                <span className="font-prova text-[12px] uppercase tracking-[0.14em] text-mudo">{tab === 'mundial' ? '/ 100' : 'pts'}</span>
               </div>
-
-              {/* Diferença para o líder (se não for #1) */}
-              {selectedTeam.globalRank > 1 && (
-                <div className="bg-deep-black p-4 border border-white/10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-4 h-4 text-cimento" />
-                    <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-cimento">
-                      {L('Diferença para o líder', 'Gap to leader')}
-                    </span>
-                  </div>
-                  <span className="ole-num text-[17px] text-giz">
-                    {(() => {
-                      const leader = withGlobalRank[0];
-                      if (!leader) return '—';
-                      const diff = leader.points - selectedTeam.points;
-                      return tab === 'mundial'
-                        ? L(`${diff.toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de índice`, `${diff.toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} index`)
-                        : `${diff.toLocaleString(LOCALE)} pts`;
-                    })()}
-                  </span>
+              {/* Componentes do índice (só na aba Mundial). */}
+              {'breakdown' in selectedTeam && selectedTeam.breakdown && (
+                <div className="grid grid-cols-3 gap-1.5 border-t-2 border-linha pt-3">
+                  {([
+                    [L('Pontos', 'Points'), selectedTeam.breakdown.points],
+                    [L('Força', 'Strength'), selectedTeam.breakdown.overall],
+                    [L('Engaj.', 'Engag.'), selectedTeam.breakdown.engagement],
+                  ] as [string, number][]).map(([label, val]) => (
+                    <div key={label} className="flex flex-col">
+                      <span className="font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{label}</span>
+                      <span className="font-impact text-[22px] leading-none text-papel">{Math.round(val)}</span>
+                    </div>
+                  ))}
                 </div>
               )}
-
-              {/* Ações */}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    toggleFavorite(selectedTeam.team);
-                  }}
-                  className={cn(
-                    'ole-num flex-1 flex h-[50px] items-center justify-center gap-2 border text-[13px] uppercase transition-colors',
-                    favorites.has(selectedTeam.team)
-                      ? 'border-neon-yellow text-neon-yellow'
-                      : 'border-white/30 text-white hover:border-white hover:bg-white/5',
-                  )}
-                >
-                  <Star className={cn('w-4 h-4', favorites.has(selectedTeam.team) && 'fill-neon-yellow')} />
-                  {favorites.has(selectedTeam.team) ? L('Favoritado', 'Favorited') : L('Favoritar', 'Favorite')}
-                </button>
-              </div>
             </div>
+
+            {/* Diferença para o líder (se não for #1) */}
+            {selectedTeam.globalRank > 1 && (
+              <div className="flex flex-col gap-1">
+                <span className="flex items-center gap-2 font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo">
+                  <TrendingUp aria-hidden className="h-4 w-4" />
+                  {L('Falta pro líder', 'Gap to leader')}
+                </span>
+                <span className="font-spray text-[34px] font-black leading-none text-rua">
+                  {(() => {
+                    const leader = withGlobalRank[0];
+                    if (!leader) return '—';
+                    const diff = leader.points - selectedTeam.points;
+                    return tab === 'mundial'
+                      ? L(`${diff.toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de índice`, `${diff.toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} index`)
+                      : `${diff.toLocaleString(LOCALE)} pts`;
+                  })()}
+                </span>
+              </div>
+            )}
+
+            <BotaoRua
+              variante={favorites.has(selectedTeam.team) ? 'ouro' : 'contorno'}
+              onClick={() => toggleFavorite(selectedTeam.team)}
+              className="w-full"
+            >
+              <Star aria-hidden className={cn('h-4 w-4', favorites.has(selectedTeam.team) && 'fill-asfalto-27')} />
+              {favorites.has(selectedTeam.team) ? L('Favoritado', 'Favorited') : L('Favoritar', 'Favorite')}
+            </BotaoRua>
           </motion.div>
         </motion.div>
       )}

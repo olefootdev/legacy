@@ -26,37 +26,37 @@ const NEAR_MISS_CONFIG = {
   close_shot: {
     icon: '😱',
     color: '#FF9F1C',
-    borderColor: 'border-amber-500/50',
+    borderColor: 'border-atencao',
     shake: true,
   },
   post_hit: {
     icon: '🎯',
     color: '#FF4D4D',
-    borderColor: 'border-red-500/50',
+    borderColor: 'border-baixa',
     shake: true,
   },
   great_save: {
     icon: '🧤',
-    color: '#00C2FF',
-    borderColor: 'border-blue-500/50',
+    color: '#EEE9DF',
+    borderColor: 'border-papel',
     shake: false,
   },
   almost_goal: {
     icon: '😤',
     color: '#FF4D4D',
-    borderColor: 'border-red-500/50',
+    borderColor: 'border-baixa',
     shake: true,
   },
   close_win: {
     icon: '😅',
-    color: '#22C55E',
-    borderColor: 'border-green-500/50',
+    color: '#F2E61E',
+    borderColor: 'border-rua',
     shake: false,
   },
   close_loss: {
     icon: '💔',
     color: '#FF4D4D',
-    borderColor: 'border-red-500/50',
+    borderColor: 'border-baixa',
     shake: true,
   },
 };
@@ -100,7 +100,7 @@ export function NearMissOverlay({ event, onDismiss }: NearMissOverlayProps) {
           className="fixed top-24 left-1/2 -translate-x-1/2 z-[90] pointer-events-none"
         >
           <div
-            className={`bg-panel border-2 ${config.borderColor} rounded-xl px-6 py-4 min-w-[280px] max-w-md`}
+            className={`bg-concreto border-2 ${config.borderColor}  px-6 py-4 min-w-[280px] max-w-md`}
           >
             <div className="flex items-center gap-4">
               {/* Icon */}
@@ -189,7 +189,7 @@ export function NearMissMotivation({ visible, scoreDiff, onClose }: NearMissMoti
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.8, opacity: 0, y: 50 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="relative bg-panel border-2 border-red-500/50 rounded-2xl p-8 max-w-md mx-4"
+          className="relative bg-concreto border-2 border-baixa  p-8 max-w-md mx-4"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Icon */}
@@ -208,7 +208,7 @@ export function NearMissMotivation({ visible, scoreDiff, onClose }: NearMissMoti
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-center text-red-400 uppercase mb-3"
+            className="text-center text-baixa uppercase mb-3"
             style={{
               fontFamily: 'var(--font-display)',
               fontSize: '24px',
@@ -246,7 +246,7 @@ export function NearMissMotivation({ visible, scoreDiff, onClose }: NearMissMoti
             whileTap={{ scale: 0.98 }}
             type="button"
             onClick={onClose}
-            className="w-full py-3 bg-red-600 hover:bg-red-500 transition-colors text-white rounded-lg font-bold uppercase"
+            className="w-full py-3 min-h-[52px] bg-rua font-impact text-[19px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)]"
             style={{
               fontFamily: 'var(--font-display)',
               fontSize: '14px',

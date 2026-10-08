@@ -1,14 +1,12 @@
 /**
  * Visualização em LISTA compacta para Store
  * Máximo de itens visíveis, mínima rolagem, informação densa.
- * Inspirado em marketplaces NFT (OpenSea list view, Blur.io).
+ * Inspirado em marketplaces NFT (OpenSea list view, Blur.io). DS 2027: escada no ícone.
  */
 
 import { motion } from 'motion/react';
-import { ShoppingBag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { shopItemIcon, type ShopCatalogItem, type ShopRarity } from '@/game/shopCatalog';
-import { LegendaryBadge } from '@/store/LegendaryBadge';
 import { L, LOCALE } from '@/i18n/L';
 
 interface StoreItemListProps {
@@ -17,23 +15,23 @@ interface StoreItemListProps {
   onSelect: (item: ShopCatalogItem) => void;
 }
 
-function rarityColor(r: ShopRarity): string {
+/** Escada do DS 2027 aplicada ao ícone da raridade (mesma régua da grade). */
+function rarityTile(r: ShopRarity): string {
   switch (r) {
-    case 'comum':  return 'text-white/45';
-    case 'raro':   return 'text-neon-yellow/60';
-    case 'epico':  return 'text-neon-yellow/85';
-    case 'mitico': return 'text-neon-yellow';
-    default:       return 'text-gray-400';
+    case 'comum':  return 'border-2 border-dashed border-fio bg-asfalto-27 text-mudo';
+    case 'raro':   return 'bg-cal text-asfalto-27';
+    case 'epico':  return 'border-[3px] border-ouro-27 bg-asfalto-27 text-ouro-27';
+    case 'mitico': return 'bg-ouro-27 text-asfalto-27';
+    default:       return 'bg-concreto text-mudo';
   }
 }
 
-function rarityBorder(r: ShopRarity): string {
+function raritySelo(r: ShopRarity): string {
   switch (r) {
-    case 'comum':  return 'border-white/12';
-    case 'raro':   return 'border-neon-yellow/25';
-    case 'epico':  return 'border-neon-yellow/45';
-    case 'mitico': return 'border-neon-yellow/75';
-    default:       return 'border-white/10';
+    case 'mitico': return 'bg-ouro-27 text-asfalto-27 px-2 py-0.5';
+    case 'epico':  return 'border-2 border-ouro-27 text-ouro-27 px-1.5 py-px';
+    case 'raro':   return 'bg-cal text-asfalto-27 px-2 py-0.5';
+    default:       return 'border-2 border-linha text-mudo px-1.5 py-px';
   }
 }
 
@@ -44,14 +42,14 @@ function formatBro(cents: number): string {
 export function StoreItemList({ items, inventory, onSelect }: StoreItemListProps) {
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-white/10 bg-panel p-8 text-center">
-        <p className="text-sm text-gray-500">{L('Nenhum item disponível nesta categoria.', 'No items available in this category.')}</p>
+      <div className="border-2 border-dashed border-fio p-8 text-center">
+        <p className="font-sans text-sm text-suave">{L('Nenhum item disponível nesta categoria.', 'No items available in this category.')}</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
+    <div className="flex min-w-0 flex-col gap-1.5">
       {items.map((item, index) => {
         const Icon = shopItemIcon(item.iconKey);
         const inv = inventory[item.id] ?? 0;
@@ -66,92 +64,67 @@ export function StoreItemList({ items, inventory, onSelect }: StoreItemListProps
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.015, duration: 0.2 }}
             className={cn(
-              'group relative w-full overflow-hidden rounded-lg border bg-panel text-left transition-colors hover:bg-card',
-              rarityBorder(item.rarity),
+              'group relative w-full min-w-0 bg-concreto text-left transition-colors hover:bg-linha focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rua',
+              item.rarity === 'mitico' && 'border-l-[6px] border-ouro-27',
             )}
           >
-            {/* Layout horizontal compacto */}
-            <div className="flex items-center gap-3 p-3">
-              {/* Ícone + Badge lendário */}
-              <div className="relative shrink-0">
-                <div className={cn(
-                  'flex h-14 w-14 items-center justify-center rounded-lg border bg-deep-black',
-                  rarityBorder(item.rarity)
-                )}>
-                  <Icon className={cn('h-7 w-7', rarityColor(item.rarity))} aria-hidden />
-                </div>
+            <div className="flex min-w-0 items-center gap-3 p-3">
+              <div className={cn('relative flex h-14 w-14 shrink-0 items-center justify-center', rarityTile(item.rarity))}>
+                <Icon className="h-7 w-7" aria-hidden />
                 {(item.rarity === 'mitico' || item.featured) && (
-                  <div className="absolute -right-1 -top-1">
-                    <div className="flex h-4 w-4 items-center justify-center rounded-full bg-neon-yellow">
-                      <span className="text-[8px]">★</span>
-                    </div>
-                  </div>
+                  <span aria-hidden className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-asfalto-27 text-[11px] text-ouro-27">
+                    ★
+                  </span>
                 )}
               </div>
 
-              {/* Info principal */}
               <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate font-display text-sm font-black uppercase tracking-tight text-white">
+                    <h3 className="truncate font-impact text-[19px] uppercase leading-[1.05] text-papel">
                       {item.title}
                     </h3>
-                    <p className="mt-0.5 line-clamp-1 text-[10px] leading-tight text-gray-500">
+                    <p className="mt-0.5 line-clamp-1 font-sans text-[12px] leading-tight text-suave">
                       {item.blurb}
                     </p>
                   </div>
-
-                  {/* Raridade badge */}
                   <span
                     className={cn(
-                      'shrink-0 rounded px-1.5 py-0.5 font-display text-[7px] font-black uppercase tracking-widest',
-                      item.rarity === 'mitico' && 'bg-neon-yellow text-black',
-                      item.rarity === 'epico' && 'bg-neon-yellow/30 text-neon-yellow',
-                      item.rarity === 'raro' && 'bg-neon-yellow/12 text-neon-yellow/85',
-                      item.rarity === 'comum' && 'bg-white/10 text-white/70'
+                      'shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.12em]',
+                      raritySelo(item.rarity),
                     )}
                   >
-                    {item.rarity === 'mitico' ? L('MÍTICO', 'MYTHIC') : item.rarity === 'epico' ? L('ÉPICO', 'EPIC') : item.rarity === 'raro' ? L('RARO', 'RARE') : L('COMUM', 'COMMON')}
+                    {item.rarity === 'mitico' ? L('Mítico', 'Mythic') : item.rarity === 'epico' ? L('Épico', 'Epic') : item.rarity === 'raro' ? L('Raro', 'Rare') : L('Comum', 'Common')}
                   </span>
                 </div>
 
-                {/* Preços + inventário + CTA */}
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {/* Preços */}
+                <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                   {item.priceBroCents != null && item.priceBroCents > 0 && (
-                    <span className="rounded border border-white/15 bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-bold text-white/80">
-                      {formatBro(item.priceBroCents)} BRO
+                    <span className="inline-flex items-baseline gap-1">
+                      <span className="font-impact text-[17px] leading-none tabular-nums text-papel">{formatBro(item.priceBroCents)}</span>
+                      <span className="font-prova text-[10px] font-bold tracking-[0.14em] text-mudo">BRO</span>
                     </span>
                   )}
                   {item.priceExp != null && item.priceExp > 0 && (
-                    <span className="rounded border border-neon-yellow/30 bg-neon-yellow/5 px-2 py-0.5 font-mono text-[9px] font-bold text-neon-yellow">
-                      {item.priceExp.toLocaleString(LOCALE)} EXP
+                    <span className="inline-flex items-baseline gap-1">
+                      <span className="font-impact text-[17px] leading-none tabular-nums text-papel">{item.priceExp.toLocaleString(LOCALE)}</span>
+                      <span className="font-prova text-[10px] font-bold tracking-[0.14em] text-mudo">EXP</span>
                     </span>
                   )}
-
-                  {/* Inventário */}
                   {item.consumable && inv > 0 && (
-                    <span className="rounded border border-[var(--color-success)]/30 bg-[var(--color-success)]/10 px-2 py-0.5 font-display text-[8px] font-bold uppercase text-[var(--color-success)]">
-                      {inv}× {L('estoque', 'in stock')}
+                    <span className="font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-suave">
+                      {inv}× {L('no estoque', 'in stock')}
                     </span>
                   )}
-
-                  {/* Premium badge */}
                   {isPremium && (
-                    <span className="ml-auto rounded border border-neon-yellow/30 bg-neon-yellow/10 px-2 py-0.5 font-display text-[8px] font-bold uppercase tracking-wider text-neon-yellow">
-                      Premium
-                    </span>
+                    <span className="font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-ouro-27">Premium</span>
                   )}
-
-                  {/* CTA hover */}
-                  <span className="ml-auto inline-flex items-center gap-1 text-[9px] text-white/40 transition-colors group-hover:text-neon-yellow">
-                    <ShoppingBag className="h-3 w-3" aria-hidden />
-                    {L('Comprar', 'Buy')}
+                  <span className="ml-auto inline-flex items-center gap-1 font-impact text-[15px] uppercase leading-none text-mudo transition-colors group-hover:text-rua">
+                    {L('Comprar', 'Buy')} <span aria-hidden>→</span>
                   </span>
                 </div>
               </div>
             </div>
-
           </motion.button>
         );
       })}

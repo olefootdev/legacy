@@ -1,64 +1,59 @@
-import { motion } from 'motion/react';
-import { TrendingUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
 import { useTrackScreen } from '@/progression/trackEvent';
-import { HubSectionCard } from '@/components/ui/HubSectionCard';
-import { StatTile } from '@/components/ui/StatTile';
 import { managerScoreToday } from '@/systems/managerScore/managerScore';
-import { Hashtag } from '@/components/ui';
+import { FitaRua, MarcaRua, SecaoRua, SeloRua } from '@/components/ui';
+import { cn } from '@/lib/utils';
 import { L, LOCALE, emIngles } from '@/i18n/L';
 
 /**
- * Ações do clube. O trilho amarelo é do HubSectionCard — nada de cor por categoria.
- * VOLT2: a categoria vira #hashtag e a descrição fica em 2–3 palavras.
+ * Hub do Clube — DS 2027 "Respeito é ouro".
+ *
+ * O nome do clube é o lambe do topo (Anton gigante + fita da casa). As portas do
+ * clube viram uma lista de muro: Elenco é a única em rua (é onde se age primeiro),
+ * o resto fica em concreto com "→". A pontuação do manager é valor que já existe:
+ * asfalto com fio de ouro (degrau RESPEITO).
  */
 const quickActions: Array<{
-  eyebrow: string;
+  tag: string;
   title: string;
   description: string;
-  cta: string;
   href: string;
 }> = [
   {
-    eyebrow: L('#plantel', '#squad'),
+    tag: L('#plantel', '#squad'),
     title: L('Elenco', 'Squad'),
     description: L('Escalação e formação', 'Lineup and formation'),
-    cta: L('Abrir elenco', 'Open squad'),
     href: '/clube/elenco',
   },
   {
-    eyebrow: L('#mercado', '#market'),
+    tag: L('#mercado', '#market'),
     title: L('Valores', 'Values'),
     description: L('Preço vivo e vendas', 'Live price and sales'),
-    cta: L('Ver valores', 'View values'),
     href: '/clube/valores',
   },
   {
-    eyebrow: L('#desenvolvimento', '#development'),
+    tag: L('#desenvolvimento', '#development'),
     title: L('Treino', 'Training'),
     description: L('Individual e coletivo', 'Individual and team'),
-    cta: L('Programar treino', 'Schedule training'),
     href: '/clube/treino',
   },
   {
-    eyebrow: L('#comissao', '#staff'),
+    tag: L('#comissao', '#staff'),
     title: 'Staff',
     description: L('Profissionais e coach', 'Professionals and coach'),
-    cta: L('Gerir staff', 'Manage staff'),
     href: '/clube/staff',
   },
   {
-    eyebrow: L('#base', '#youth'),
+    tag: L('#base', '#youth'),
     title: L('Academia', 'Academy'),
     description: L('Jovens promessas', 'Young prospects'),
-    cta: L('Ver promessas', 'View prospects'),
     href: '/clube/academia',
   },
   {
-    eyebrow: L('#infraestrutura', '#facilities'),
+    tag: L('#infraestrutura', '#facilities'),
     title: L('Estruturas', 'Facilities'),
     description: L('Instalações e upgrades', 'Facilities and upgrades'),
-    cta: L('Visitar estruturas', 'Visit facilities'),
     href: '/clube/estruturas',
   },
 ];
@@ -80,154 +75,151 @@ export function ClubHub() {
   // Pontuação do manager — liga o Clube ao core-engagement.
   const scoreTotal = managerScore?.total ?? 0;
   const scoreToday = managerScoreToday(managerScore, Date.now());
+  const sigla = club.shortName ?? club.name.slice(0, 3).toUpperCase();
+
+  const overview: Array<{ value: number; label: string; hint?: string }> = [
+    { value: playerCount, label: L('Jogadores', 'Players') },
+    { value: staffLevel, label: 'Staff', hint: L('nível somado', 'total level') },
+    { value: academyCount, label: L('Academia', 'Academy'), hint: L('crias reveladas', 'homegrown') },
+    { value: structuresLevel, label: L('Estruturas', 'Facilities'), hint: L('nível somado', 'total level') },
+  ];
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8 sm:space-y-10">
-      {/* ── HERO — bloco amarelo sangrado, no layer final ──────────────────
-          A versão anterior era centralizada, com um watermark gigante do nome
-          do clube atrás do título (que virava um fantasma cinza sobre o
-          amarelo) e uma frase de efeito em serifa itálica. Saíram os três:
-          serifa itálica aqui é assinatura de NOME DE LENDA, e o watermark
-          competia com a própria manchete. Agora é o que o layer final pede —
-          alinhado à esquerda, eyebrow com risco, nome do clube em Anton. */}
-      <section
-        aria-label={L('Clube', 'Club')}
-        className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8"
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative z-10 px-5 sm:px-8"
-          style={{ paddingBlock: 'clamp(28px, 6vw, 52px)' }}
-        >
-          <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-            {L('Teu clube', 'Your club')}
-          </span>
-          <h1
-            className="mt-2 font-impact uppercase"
-            style={{
-              color: 'var(--color-deep-black)',
-              fontSize: 'clamp(44px, 12vw, 92px)',
-              lineHeight: 0.84,
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {club.name}
-          </h1>
-          <p
-            className="mt-3"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'rgba(13,13,13,0.62)' }}
-          >
-            {playerCount} {L(`${playerCount === 1 ? 'jogador' : 'jogadores'} no plantel`, `${playerCount === 1 ? 'player' : 'players'} in the squad`)} ·{' '}
-            {club.shortName ?? club.name.slice(0, 3).toUpperCase()}
-          </p>
-        </motion.div>
+    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-10 overflow-x-hidden pb-8 px-3 sm:px-4">
+      {/* ── HERO — o nome do clube colado no muro ─────────────────────────── */}
+      <section aria-label={L('Clube', 'Club')} className="flex min-w-0 flex-col gap-4">
+        <FitaRua tags={[L('#teuclube', '#yourclub'), '#persista', '#correloko']} className="-mx-3 py-2 sm:-mx-4" />
+        <div className="flex min-w-0 items-end justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-2">
+            <SecaoRua label={L('Teu clube', 'Your club')} />
+            <h1 className="font-impact text-[clamp(46px,13vw,96px)] uppercase leading-[0.86] text-papel [overflow-wrap:anywhere]">
+              {club.name}
+            </h1>
+            <span className="font-prova text-[12px] font-bold uppercase tracking-[0.18em] text-mudo">
+              {sigla} ·{' '}
+              {L(
+                `${playerCount} ${playerCount === 1 ? 'jogador' : 'jogadores'} no plantel`,
+                `${playerCount} ${playerCount === 1 ? 'player' : 'players'} in the squad`,
+              )}
+            </span>
+          </div>
+          <MarcaRua tipo="escudo" className="h-14 bg-rua sm:h-20" />
+        </div>
       </section>
 
-      {/* Pontuação do Manager — destaque do core-engagement no topo do hub */}
-      <section aria-label={L('Pontuação do manager', 'Manager score')}>
-        <div
-          className="ole-poster ole-rail relative flex items-center justify-between gap-4 overflow-hidden px-5 py-4 sm:px-6 sm:py-5"
-        >
-          <div className="flex items-center gap-4 min-w-0">
-            <span
-              aria-hidden
-              className="grid h-11 w-11 flex-none place-items-center"
-              style={{ borderRadius: 'var(--radius-sm)', background: 'rgba(253,225,0,0.12)' }}
-            >
-              <TrendingUp className="h-5 w-5 text-neon-yellow" strokeWidth={2.4} />
-            </span>
-            <div className="min-w-0">
-              <p className="font-display text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">
-                {L('Pontuação do manager', 'Manager score')}
-              </p>
-              <p className="font-impact leading-none text-neon-yellow tabular-nums" style={{ fontSize: 'clamp(30px, 7vw, 46px)' }}>
-                {scoreTotal.toLocaleString(LOCALE)}
-              </p>
-            </div>
-          </div>
-          <div className="flex-none text-right">
-            {scoreToday > 0 ? (
-              <span
-                className="inline-flex items-center gap-1 border border-neon-yellow/40 bg-neon-yellow/10 px-3 py-1.5 font-display text-xs font-black uppercase tracking-wider text-neon-yellow tabular-nums"
-                style={{ borderRadius: 'var(--radius-sm)' }}
-              >
-                +{scoreToday.toLocaleString(LOCALE)} {L('hoje', 'today')}
-              </span>
-            ) : (
-              <span className="block max-w-[9rem] text-[11px] leading-snug text-white/45">
-                {L('Gerir o clube rende pontos hoje.', 'Managing the club earns points today.')}
-              </span>
-            )}
-          </div>
+      {/* ── Pontuação do manager — degrau RESPEITO (valor que já existe) ──── */}
+      <section
+        aria-label={L('Pontuação do manager', 'Manager score')}
+        className="flex min-w-0 items-center justify-between gap-4 border-[3px] border-ouro-27 bg-asfalto-27 px-5 py-4"
+      >
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="font-prova text-[11px] font-bold uppercase tracking-[0.22em] text-mudo">
+            — {L('Pontuação do manager', 'Manager score')}
+          </span>
+          <span className="font-spray text-[clamp(40px,11vw,60px)] font-black leading-[0.9] text-ouro-27 tabular-nums">
+            {scoreTotal.toLocaleString(LOCALE)}
+          </span>
         </div>
+        {scoreToday > 0 ? (
+          <SeloRua tom="ouro-contorno">+{scoreToday.toLocaleString(LOCALE)} {L('hoje', 'today')}</SeloRua>
+        ) : (
+          <span className="max-w-[9rem] text-right font-voz text-[18px] leading-tight text-suave">
+            {L('Gerir o clube rende ponto hoje.', 'Running the club scores today.')}
+          </span>
+        )}
       </section>
 
       {/* IPO DE CLUBE: manager sem time completo pode ESTREAR comprando um
           pronto — a vitrine de times inteiros do mercado de elenco. */}
       {playerCount < 11 ? (
-        <section aria-label={L('Comprar um time pronto', 'Buy a ready-made team')}>
+        <section
+          aria-label={L('Comprar um time pronto', 'Buy a ready-made team')}
+          className="flex min-w-0 flex-col gap-4 border-2 border-dashed border-fio p-5"
+        >
+          <SecaoRua label={L('Estreia de dono', 'Owner debut')} />
+          <p className="font-voz text-[24px] leading-tight text-papel">
+            {emIngles()
+              ? `${playerCount} player(s) in the squad. Start from scratch — or buy a ready team.`
+              : `${playerCount} jogador(es) no plantel. Começa do zero — ou compra um time pronto.`}
+          </p>
+          <p className="text-[14px] leading-relaxed text-suave">
+            {L(
+              'Times treinados por outro manager, na vitrine em OLEFOOT.',
+              'Teams trained by another manager, in the OLEFOOT showcase.',
+            )}
+          </p>
+          {/* Link nativo: mantém o comportamento original (<a href>). */}
           <a
             href="/clube/valores"
-            className="ole-poster ole-rail flex flex-wrap items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-white/[0.04]"
+            className="inline-flex min-h-[52px] items-center justify-center gap-2 self-start bg-rua px-6 font-impact text-[20px] uppercase leading-none text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] transition-[transform,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)]"
           >
-            <div>
-              <p className="font-display text-[10px] font-bold uppercase tracking-[0.24em] text-neon-yellow">
-                {L('Estreia de dono', 'Owner debut')}
-              </p>
-              <p className="mt-1 text-sm text-white/75">
-                {emIngles() ? (
-                  <>Your squad has {playerCount} player(s). You can start from scratch — or{' '}
-                  <strong className="text-white">buy a READY team</strong>, trained by another manager,
-                  in the OLEFOOT showcase.</>
-                ) : (
-                  <>Teu plantel tem {playerCount} jogador(es). Dá pra começar do zero — ou{' '}
-                  <strong className="text-white">comprar um time PRONTO</strong>, treinado por outro manager,
-                  na vitrine em OLEFOOT.</>
-                )}
-              </p>
-            </div>
-            <span className="bg-neon-yellow px-4 py-2 font-display text-[11px] font-black uppercase text-black">
-              {L('Ver times à venda', 'View teams for sale')}
-            </span>
+            {L('Ver times à venda', 'See teams for sale')} <span aria-hidden>→</span>
           </a>
         </section>
       ) : null}
 
-      {/* Ações do clube — o primeiro card vem em destaque amarelo. */}
-      <section>
-        <h2 className="ole-eyebrow-poster mb-4" style={{ fontSize: '13px' }}>
-          {L('Acesso rápido', 'Quick access')}
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {quickActions.map((action, i) => (
-            <HubSectionCard
-              key={action.href}
-              to={action.href}
-              eyebrow={<Hashtag className="normal-case tracking-normal text-current">{action.eyebrow}</Hashtag>}
-              title={action.title}
-              description={action.description}
-              cta={action.cta}
-              // Elenco é a porta de entrada do clube — é ele que fica amarelo.
-              destaque={i === 0}
-              delay={i * 0.08}
-            />
-          ))}
-        </div>
+      {/* ── As portas do clube — lista de muro ───────────────────────────── */}
+      <section className="flex min-w-0 flex-col gap-3">
+        <SecaoRua label={L('Acesso rápido', 'Quick access')} aside={quickActions.length} />
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {quickActions.map((action, i) => {
+            const destaque = i === 0;
+            return (
+              <li key={action.href} className="min-w-0">
+                <Link
+                  to={action.href}
+                  className={cn(
+                    'group relative flex min-h-[92px] min-w-0 items-center gap-4 overflow-hidden px-5 py-4 transition-[transform,box-shadow,background-color]',
+                    destaque
+                      ? 'bg-rua text-asfalto-27 shadow-[5px_5px_0_var(--color-papel)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_var(--color-papel)]'
+                      : 'bg-concreto text-papel hover:bg-linha',
+                  )}
+                >
+                  {destaque && (
+                    <span aria-hidden className="rua-alambrado pointer-events-none absolute inset-x-0 top-0 h-20 [--alambrado:rgba(13,13,12,0.22)]" />
+                  )}
+                  <div className="relative flex min-w-0 grow flex-col gap-1.5">
+                    <span
+                      className={cn(
+                        'font-prova text-[11px] font-bold tracking-[0.08em]',
+                        destaque ? 'text-asfalto-27/70' : 'text-mudo',
+                      )}
+                    >
+                      {action.tag}
+                    </span>
+                    <span className="block min-w-0 truncate font-impact text-[30px] uppercase leading-[0.9]">{action.title}</span>
+                    <span className={cn('block min-w-0 truncate text-[13px]', destaque ? 'text-asfalto-27/75' : 'text-suave')}>
+                      {action.description}
+                    </span>
+                  </div>
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'relative shrink-0 font-impact text-[30px] leading-none transition-transform group-hover:translate-x-1',
+                      destaque ? 'text-asfalto-27' : 'text-rua',
+                    )}
+                  >
+                    →
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
-      {/* Visão geral — StatTiles editoriais */}
-      <section>
-        <h2 className="ole-eyebrow-poster mb-4" style={{ fontSize: '13px' }}>
-          {L('Visão geral', 'Overview')}
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatTile value={playerCount} label={L('Jogadores', 'Players')} tone="accent" />
-          <StatTile value={staffLevel} label="Staff" hint={L('nível somado', 'total level')} />
-          <StatTile value={academyCount} label={L('Academia', 'Academy')} hint={L('crias reveladas', 'homegrown talents')} />
-          <StatTile value={structuresLevel} label={L('Estruturas', 'Facilities')} hint={L('nível somado', 'total level')} />
-        </div>
+      {/* ── Visão geral — números no grito ───────────────────────────────── */}
+      <section className="flex min-w-0 flex-col gap-3">
+        <SecaoRua label={L('Visão geral', 'Overview')} />
+        <dl className="grid grid-cols-2 gap-px bg-linha sm:grid-cols-4">
+          {overview.map((o) => (
+            <div key={o.label} className="flex min-w-0 flex-col gap-1 bg-asfalto-27 px-4 py-4">
+              <dt className="font-prova text-[11px] font-bold uppercase tracking-[0.18em] text-mudo">{o.label}</dt>
+              <dd className="font-impact text-[40px] leading-none text-papel tabular-nums">{o.value.toLocaleString(LOCALE)}</dd>
+              {o.hint && <dd className="font-prova text-[11px] text-mudo">{o.hint}</dd>}
+            </div>
+          ))}
+        </dl>
       </section>
     </div>
   );

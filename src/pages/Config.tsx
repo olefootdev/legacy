@@ -35,7 +35,7 @@ import {
 } from 'react';
 import { useGameDispatch, useGameStore, getGameState } from '@/game/store';
 import { cn } from '@/lib/utils';
-import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
+import { SecaoRua } from '@/components/ui';
 import { tryHydrateGameState } from '@/game/persistence';
 import type { GraphicQualityId, ReduceMotionPreference } from '@/game/types';
 import {
@@ -207,42 +207,29 @@ export function Config() {
     reader.readAsText(file);
   };
 
-  const rowClass = 'px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-white/5 last:border-0';
+  const rowClass = 'px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-linha last:border-0';
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 pb-8 overflow-x-hidden">
+    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 pb-8 overflow-x-hidden px-3 sm:px-4">
       <div className="px-3 sm:px-4 lg:px-8">
         <BackButton to="/manager" label="Manager" />
       </div>
-      {/* ── HERO — volt chapado + manchete em Anton ── */}
-      <section
+      {/* ── HERO — o grito em Anton, a frase na voz ── */}
+      <motion.section
         aria-label={L('Configurações', 'Settings')}
-        className="relative w-full overflow-hidden bg-neon-yellow -mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-2"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="flex flex-col gap-2 border-b-2 border-papel px-3 pb-4 sm:px-4 lg:px-8"
       >
-        {/* ── HERO no layer final: eyebrow + manchete + a linha que informa. ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative z-10 px-5 sm:px-8"
-          style={{ paddingBlock: 'clamp(26px, 5vw, 46px)' }}
-        >
-          <span className="ole-eyebrow-poster" data-on="yellow" style={{ fontSize: '12px' }}>
-            {L('Sua conta', 'Your account')}
-          </span>
-          <h1
-            className="mt-2 font-impact uppercase"
-            style={{
-              color: 'var(--color-deep-black)',
-              fontSize: 'clamp(38px, 10vw, 80px)',
-              lineHeight: 0.84,
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {L('Configurações', 'Settings')}
-          </h1>
-        </motion.div>
-      </section>
+        <span className="font-prova text-[11.5px] font-bold uppercase tracking-[0.22em] text-mudo">
+          — {L('Sua conta', 'Your account')}
+        </span>
+        <h1 className="font-impact uppercase leading-[0.86] text-papel" style={{ fontSize: 'clamp(44px, 13vw, 84px)' }}>
+          {L('Configurações', 'Settings')}
+        </h1>
+        <p className="font-voz text-[clamp(22px,6.4vw,28px)] leading-[1.05] text-suave">{L('Do teu jeito.', 'Your way.')}</p>
+      </motion.section>
 
       <VerificationSection />
 
@@ -253,17 +240,14 @@ export function Config() {
         transition={{ delay: 0.04 }}
         className="space-y-3"
       >
-        <StoreSectionHeadline
-          title={L('Geral', 'General')}
-          className="mb-3"
-        />
-        <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
+        <SecaoRua label={L('Geral', 'General')} className="mb-3" />
+        <div className="bg-concreto overflow-hidden divide-y divide-linha">
           <div className={rowClass}>
             <div className="flex items-center gap-3">
-              <Globe className="w-4 h-4 text-white/45" />
+              <Globe className="w-4 h-4 text-mudo" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Idioma', 'Language')}</span>
-                <p className="text-[10px] text-white/45">{L('Português ou inglês.', 'Portuguese or English.')}</p>
+                <span className="font-impact text-[17px] uppercase leading-[1.1] text-papel">{L('Idioma', 'Language')}</span>
+                <p className="text-[10px] text-mudo">{L('Português ou inglês.', 'Portuguese or English.')}</p>
               </div>
             </div>
             <SeletorDeIdioma />
@@ -272,13 +256,13 @@ export function Config() {
           <div className={rowClass}>
             <div className="flex items-center gap-3">
               {userSettings.soundEnabled ? (
-                <Volume2 className="w-4 h-4 text-white/45" />
+                <Volume2 className="w-4 h-4 text-mudo" />
               ) : (
-                <VolumeX className="w-4 h-4 text-white/45" />
+                <VolumeX className="w-4 h-4 text-mudo" />
               )}
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Sons', 'Sounds')}</span>
-                <p className="text-[10px] text-white/45">{L('Feedback sonoro na interface (ex.: confirmações).', 'Interface sound feedback (e.g. confirmations).')}</p>
+                <span className="font-impact text-[17px] uppercase leading-[1.1] text-papel">{L('Sons', 'Sounds')}</span>
+                <p className="text-[10px] text-mudo">{L('Feedback sonoro na interface (ex.: confirmações).', 'Interface sound feedback (e.g. confirmations).')}</p>
               </div>
             </div>
             <button
@@ -287,11 +271,11 @@ export function Config() {
               aria-checked={userSettings.soundEnabled}
               onClick={() => toggleSound(!userSettings.soundEnabled)}
               className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${
-                userSettings.soundEnabled ? 'bg-neon-yellow/80' : 'bg-white/15'
+                userSettings.soundEnabled ? 'bg-rua' : 'bg-linha'
               }`}
             >
               <span
-                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                className={`absolute top-0.5 w-5 h-5 bg-papel rounded-full transition-transform ${
                   userSettings.soundEnabled ? 'right-0.5' : 'left-0.5'
                 }`}
               />
@@ -300,16 +284,16 @@ export function Config() {
 
           <div className={rowClass}>
             <div className="flex items-center gap-3">
-              <Monitor className="w-4 h-4 text-white/45" />
+              <Monitor className="w-4 h-4 text-mudo" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Qualidade gráfica', 'Graphics quality')}</span>
-                <p className="text-[10px] text-white/45">{L('Efeitos do painel e densidade visual.', 'Panel effects and visual density.')}</p>
+                <span className="font-impact text-[17px] uppercase leading-[1.1] text-papel">{L('Qualidade gráfica', 'Graphics quality')}</span>
+                <p className="text-[10px] text-mudo">{L('Efeitos do painel e densidade visual.', 'Panel effects and visual density.')}</p>
               </div>
             </div>
             <select
               value={userSettings.graphicQuality}
               onChange={(e) => setQuality(e.target.value as GraphicQualityId)}
-              className="bg-black/60 border border-white/15 rounded-lg px-3 py-2 text-xs text-white uppercase font-bold shrink-0"
+              className="bg-black/60 border border-linha  px-3 py-2 text-xs text-papel uppercase font-bold shrink-0"
             >
               <option value="high">{L('Alta', 'High')}</option>
               <option value="medium">{L('Média', 'Medium')}</option>
@@ -319,16 +303,16 @@ export function Config() {
 
           <div className={rowClass}>
             <div className="flex items-center gap-3">
-              <Monitor className="w-4 h-4 text-white/45" />
+              <Monitor className="w-4 h-4 text-mudo" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Animações', 'Animations')}</span>
-                <p className="text-[10px] text-white/45">{L('Respeitar acessibilidade ou forçar movimento.', 'Follow accessibility or force motion.')}</p>
+                <span className="font-impact text-[17px] uppercase leading-[1.1] text-papel">{L('Animações', 'Animations')}</span>
+                <p className="text-[10px] text-mudo">{L('Respeitar acessibilidade ou forçar movimento.', 'Follow accessibility or force motion.')}</p>
               </div>
             </div>
             <select
               value={userSettings.reduceMotion}
               onChange={(e) => setReduceMotion(e.target.value as ReduceMotionPreference)}
-              className="bg-black/60 border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-bold shrink-0 max-w-[11rem]"
+              className="bg-black/60 border border-linha  px-3 py-2 text-xs text-papel font-bold shrink-0 max-w-[11rem]"
             >
               <option value="system">{L('Sistema', 'System')}</option>
               <option value="reduce">{L('Reduzir', 'Reduce')}</option>
@@ -338,10 +322,10 @@ export function Config() {
 
           <div className={rowClass}>
             <div className="flex items-center gap-3">
-              <Clock className="w-4 h-4 text-white/45" />
+              <Clock className="w-4 h-4 text-mudo" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Mundo em segundo plano', 'Background world')}</span>
-                <p className="text-[10px] text-white/45">
+                <span className="font-impact text-[17px] uppercase leading-[1.1] text-papel">{L('Mundo em segundo plano', 'Background world')}</span>
+                <p className="text-[10px] text-mudo">
                   {L('Com ativado, treinos e tempo do clube avançam ~1× por minuto mesmo com o separador em segundo plano.', 'When on, training and club time advance ~1× per minute even with the tab in the background.')}
                 </p>
               </div>
@@ -352,11 +336,11 @@ export function Config() {
               aria-checked={userSettings.worldSimulateInBackground}
               onClick={() => setBackgroundSim(!userSettings.worldSimulateInBackground)}
               className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${
-                userSettings.worldSimulateInBackground ? 'bg-neon-yellow/80' : 'bg-white/15'
+                userSettings.worldSimulateInBackground ? 'bg-rua' : 'bg-linha'
               }`}
             >
               <span
-                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                className={`absolute top-0.5 w-5 h-5 bg-papel rounded-full transition-transform ${
                   userSettings.worldSimulateInBackground ? 'right-0.5' : 'left-0.5'
                 }`}
               />
@@ -372,29 +356,26 @@ export function Config() {
         transition={{ delay: 0.06 }}
         className="space-y-3"
       >
-        <StoreSectionHeadline
-          title={L('Clube', 'Club')}
-          className="mb-3"
-        />
-        <div className="bg-panel border border-white/10 rounded-sm overflow-hidden">
+        <SecaoRua label={L('Clube', 'Club')} className="mb-3" />
+        <div className="bg-concreto overflow-hidden">
           <div className={rowClass}>
             <div className="flex items-start gap-3">
-              <Building2 className="w-4 h-4 text-white/45 mt-0.5 shrink-0" />
+              <Building2 className="w-4 h-4 text-mudo mt-0.5 shrink-0" />
               <div className="min-w-0 flex-1">
-                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Nome do clube', 'Club name')}</span>
-                <p className="text-[10px] text-white/45">{L('Aparece em jogos, ranking e telas principais.', 'Shown in matches, rankings and main screens.')}</p>
+                <span className="font-impact text-[17px] uppercase leading-[1.1] text-papel">{L('Nome do clube', 'Club name')}</span>
+                <p className="text-[10px] text-mudo">{L('Aparece em jogos, ranking e telas principais.', 'Shown in matches, rankings and main screens.')}</p>
                 <input
                   value={clubDraft}
                   onChange={(e) => setClubDraft(e.target.value)}
                   maxLength={48}
-                  className="mt-2 w-full max-w-md bg-black/50 border border-white/15 rounded-lg px-3 py-2 text-sm text-white focus:border-neon-yellow focus:outline-none"
+                  className="mt-2 w-full max-w-md bg-black/50 border border-linha  px-3 py-2 text-sm text-papel focus:border-rua focus:outline-none"
                 />
               </div>
             </div>
             <button
               type="button"
               onClick={saveClubName}
-              className="shrink-0 flex items-center gap-2 bg-neon-yellow text-black text-xs font-display font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg hover:bg-white transition-colors"
+              className="shrink-0 flex items-center gap-2 bg-rua text-asfalto-27 font-prova text-[11px] font-bold uppercase tracking-[0.12em] px-4 py-2.5  hover:bg-papel transition-colors"
             >
               <Save className="w-3.5 h-3.5" />
               {L('Guardar', 'Save')}
@@ -403,16 +384,16 @@ export function Config() {
           {clubSaved ? <p className="px-5 py-2 text-[10px] text-alta font-bold">{L('Nome atualizado.', 'Name updated.')}</p> : null}
           <div className={rowClass}>
             <div className="flex items-start gap-3">
-              <User className="mt-0.5 h-4 w-4 shrink-0 text-white/45" />
+              <User className="mt-0.5 h-4 w-4 shrink-0 text-mudo" />
               <div className="min-w-0 flex-1">
-                <span className="text-sm font-display font-bold tracking-wider text-white">
+                <span className="font-impact text-[17px] uppercase leading-[1.1] text-papel">
                   {L('Foto do treinador', 'Manager photo')}
                 </span>
-                <p className="text-[10px] text-white/45">
+                <p className="text-[10px] text-mudo">
                   {L('Círculo ao lado de «Bem-vindo» no topo. Incluída no backup JSON.', 'Circle next to «Welcome» at the top. Included in the JSON backup.')}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-black/40">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-linha bg-black/40">
                     {trainerAvatar ? (
                       <img
                         src={trainerAvatar}
@@ -420,14 +401,14 @@ export function Config() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <User className="h-7 w-7 text-white/35" />
+                      <User className="h-7 w-7 text-fio" />
                     )}
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <button
                       type="button"
                       onClick={() => trainerPhotoInputRef.current?.click()}
-                      className="shrink-0 rounded-lg bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/20"
+                      className="shrink-0  bg-concreto px-4 py-2 text-xs font-bold uppercase tracking-wider text-papel hover:bg-linha"
                     >
                       {L('Escolher imagem', 'Choose image')}
                     </button>
@@ -435,7 +416,7 @@ export function Config() {
                       <button
                         type="button"
                         onClick={clearAvatar}
-                        className="shrink-0 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-400/90 hover:bg-white/5"
+                        className="shrink-0  px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-400/90 hover:bg-linha"
                       >
                         {L('Remover', 'Remove')}
                       </button>
@@ -467,11 +448,8 @@ export function Config() {
         transition={{ delay: 0.08 }}
         className="space-y-3"
       >
-        <StoreSectionHeadline
-          title={L('Segurança local', 'Local security')}
-          className="mb-3"
-        />
-        <div className="bg-panel border border-white/10 rounded-sm overflow-hidden">
+        <SecaoRua label={L('Segurança local', 'Local security')} className="mb-3" />
+        <div className="bg-concreto overflow-hidden">
           <button
             type="button"
             onClick={() => {
@@ -481,37 +459,37 @@ export function Config() {
               }
               setSecurityExpanded((v) => !v);
             }}
-            className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left hover:bg-white/[0.02]"
+            className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left hover:bg-linha"
           >
             <div className="flex items-start gap-3 min-w-0 flex-1">
-              <Lock className="w-4 h-4 text-white/45 mt-0.5 shrink-0" />
+              <Lock className="w-4 h-4 text-mudo mt-0.5 shrink-0" />
               <div className="min-w-0">
-                <p className={cn('inline-flex items-center gap-1 font-display text-sm font-bold uppercase tracking-wider', hasPwd ? 'text-[var(--color-success)]' : 'text-white/70')}>
+                <p className={cn('inline-flex items-center gap-1 font-impact text-[17px] uppercase leading-[1.1]', hasPwd ? 'text-alta' : 'text-papel')}>
                   {hasPwd ? <><Check className="h-3.5 w-3.5" strokeWidth={2.4} /> {L('Senha local ativa', 'Local password on')}</> : L('Senha local não definida', 'Local password not set')}
                 </p>
-                <p className="mt-0.5 text-[11px] text-white/50">
+                <p className="mt-0.5 text-[11px] text-suave">
                   {L('PIN guardado só neste dispositivo (hash SHA-256). Não substitui login Supabase.', 'PIN stored only on this device (SHA-256 hash). Does not replace Supabase login.')}
                 </p>
               </div>
             </div>
-            <span className="shrink-0 rounded border border-white/15 bg-white/5 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider text-white/70">
+            <span className="shrink-0  border border-linha bg-concreto px-3 py-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-papel">
               {securityExpanded ? L('Fechar', 'Close') : hasPwd ? L('Gerenciar', 'Manage') : L('Definir', 'Set')}
             </span>
           </button>
 
           {securityExpanded ? (
-            <div className="border-t border-white/10 px-5 py-5 space-y-4">
+            <div className="border-t border-linha px-5 py-5 space-y-4">
               {/* Sem senha → form criar */}
               {!hasPwd ? (
                 <div className="max-w-md space-y-2">
-                  <label className="text-[10px] text-white/50 uppercase font-bold">{L('Definir senha local', 'Set local password')}</label>
+                  <label className="text-[10px] text-suave uppercase font-bold">{L('Definir senha local', 'Set local password')}</label>
                   <input
                     type="password"
                     autoComplete="new-password"
                     value={newPw}
                     onChange={(e) => setNewPw(e.target.value)}
                     placeholder={L('Nova senha (mín. 6)', 'New password (min. 6)')}
-                    className="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-2 text-sm"
+                    className="w-full bg-black/50 border border-linha  px-3 py-2 text-sm"
                   />
                   <input
                     type="password"
@@ -519,12 +497,12 @@ export function Config() {
                     value={confirmPw}
                     onChange={(e) => setConfirmPw(e.target.value)}
                     placeholder={L('Confirmar senha', 'Confirm password')}
-                    className="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-2 text-sm"
+                    className="w-full bg-black/50 border border-linha  px-3 py-2 text-sm"
                   />
                   <button
                     type="button"
                     onClick={() => void handleDefinePassword()}
-                    className="rounded-lg bg-neon-yellow px-4 py-2 text-xs font-bold uppercase text-black hover:bg-white"
+                    className="bg-rua px-4 py-2 text-xs font-bold uppercase text-asfalto-27 hover:bg-papel"
                   >
                     {L('Guardar senha', 'Save password')}
                   </button>
@@ -537,7 +515,7 @@ export function Config() {
                       resetSecurityFields();
                       setSecurityMode('change');
                     }}
-                    className="rounded-lg bg-neon-yellow px-4 py-2 text-xs font-bold uppercase text-black hover:bg-white"
+                    className="bg-rua px-4 py-2 text-xs font-bold uppercase text-asfalto-27 hover:bg-papel"
                   >
                     {L('Trocar senha', 'Change password')}
                   </button>
@@ -547,21 +525,21 @@ export function Config() {
                       resetSecurityFields();
                       setSecurityMode('forgot');
                     }}
-                    className="rounded-lg border border-[var(--color-danger)]/35 bg-[var(--color-danger)]/5 px-4 py-2 text-xs font-bold uppercase text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
+                    className="border border-[var(--color-danger)]/35 bg-[var(--color-danger)]/5 px-4 py-2 text-xs font-bold uppercase text-baixa hover:bg-[var(--color-danger)]/10"
                   >
                     {L('Esqueci a senha', 'Forgot password')}
                   </button>
                 </div>
               ) : securityMode === 'change' ? (
                 <div className="max-w-md space-y-2">
-                  <label className="text-[10px] text-white/50 uppercase font-bold">{L('Trocar senha local', 'Change local password')}</label>
+                  <label className="text-[10px] text-suave uppercase font-bold">{L('Trocar senha local', 'Change local password')}</label>
                   <input
                     type="password"
                     autoComplete="current-password"
                     value={currentPw}
                     onChange={(e) => setCurrentPw(e.target.value)}
                     placeholder={L('Senha atual', 'Current password')}
-                    className="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-2 text-sm"
+                    className="w-full bg-black/50 border border-linha  px-3 py-2 text-sm"
                   />
                   <input
                     type="password"
@@ -569,7 +547,7 @@ export function Config() {
                     value={newPw}
                     onChange={(e) => setNewPw(e.target.value)}
                     placeholder={L('Nova senha (mín. 6)', 'New password (min. 6)')}
-                    className="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-2 text-sm"
+                    className="w-full bg-black/50 border border-linha  px-3 py-2 text-sm"
                   />
                   <input
                     type="password"
@@ -577,58 +555,58 @@ export function Config() {
                     value={confirmPw}
                     onChange={(e) => setConfirmPw(e.target.value)}
                     placeholder={L('Confirmar nova senha', 'Confirm new password')}
-                    className="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-2 text-sm"
+                    className="w-full bg-black/50 border border-linha  px-3 py-2 text-sm"
                   />
                   <div className="flex flex-wrap gap-2 pt-1">
                     <button
                       type="button"
                       onClick={() => void handleChangePassword()}
-                      className="rounded-lg bg-neon-yellow px-4 py-2 text-xs font-bold uppercase text-black hover:bg-white"
+                      className="bg-rua px-4 py-2 text-xs font-bold uppercase text-asfalto-27 hover:bg-papel"
                     >
                       {L('Atualizar senha', 'Update password')}
                     </button>
                     <button
                       type="button"
                       onClick={cancelPasswordChangeFlow}
-                      className="rounded-lg bg-white/10 px-4 py-2 text-xs font-bold uppercase text-white hover:bg-white/20"
+                      className="bg-concreto px-4 py-2 text-xs font-bold uppercase text-papel hover:bg-linha"
                     >
                       {L('Voltar', 'Back')}
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="max-w-md space-y-3 rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/[0.06] p-4">
+                <div className="max-w-md space-y-3  border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/[0.06] p-4">
                   <div>
-                    <p className="font-display text-sm font-bold uppercase tracking-wider text-[var(--color-danger)]">
+                    <p className="font-impact text-[17px] uppercase leading-[1.1] text-baixa">
                       {L('Esqueci a senha', 'Forgot password')}
                     </p>
-                    <p className="mt-1 text-[11px] leading-snug text-[var(--color-danger)]/70">
+                    <p className="mt-1 text-[11px] leading-snug text-baixa/70">
                       {emIngles() ? <>This is just a PIN for this device — there is no e-mail recovery.
-                      You can <strong className="text-white">remove it</strong> and set a new one below. To confirm,
-                      type <strong className="text-white">{PALAVRA_REMOVER}</strong>.</> : <>Esta é apenas um PIN deste dispositivo — não há recuperação por e-mail.
-                      Podes <strong className="text-white">removê-la</strong> e definir uma nova abaixo. Para confirmar,
-                      digita <strong className="text-white">REMOVER</strong>.</>}
+                      You can <strong className="text-papel">remove it</strong> and set a new one below. To confirm,
+                      type <strong className="text-papel">{PALAVRA_REMOVER}</strong>.</> : <>Esta é apenas um PIN deste dispositivo — não há recuperação por e-mail.
+                      Podes <strong className="text-papel">removê-la</strong> e definir uma nova abaixo. Para confirmar,
+                      digita <strong className="text-papel">REMOVER</strong>.</>}
                     </p>
                   </div>
                   <input
                     value={forgotConfirm}
                     onChange={(e) => setForgotConfirm(e.target.value.toUpperCase())}
                     placeholder={L('Digite: REMOVER', 'Type: REMOVE')}
-                    className="w-full rounded-lg border border-[var(--color-danger)]/30 bg-black/40 px-3 py-2 text-sm"
+                    className="w-full  border border-[var(--color-danger)]/30 bg-black/40 px-3 py-2 text-sm"
                   />
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={handleForgotReset}
                       disabled={forgotConfirm.trim().toUpperCase() !== PALAVRA_REMOVER}
-                      className="rounded-lg bg-[var(--color-danger)] px-4 py-2 text-xs font-bold uppercase text-white hover:bg-[var(--color-danger)] disabled:opacity-40"
+                      className="bg-[var(--color-danger)] px-4 py-2 text-xs font-bold uppercase text-papel hover:bg-[var(--color-danger)] disabled:opacity-40"
                     >
                       {L('Remover senha', 'Remove password')}
                     </button>
                     <button
                       type="button"
                       onClick={cancelPasswordChangeFlow}
-                      className="rounded-lg bg-white/10 px-4 py-2 text-xs font-bold uppercase text-white hover:bg-white/20"
+                      className="bg-concreto px-4 py-2 text-xs font-bold uppercase text-papel hover:bg-linha"
                     >
                       {L('Voltar', 'Back')}
                     </button>
@@ -637,9 +615,9 @@ export function Config() {
               )}
 
               {pwdMsg ? (
-                <p className="flex items-center gap-1 text-xs text-white/70">
+                <p className="flex items-center gap-1 text-xs text-papel">
                   {pwdMsg.startsWith('✓') ? (
-                    <Check className="h-3.5 w-3.5 shrink-0 text-neon-yellow" strokeWidth={2.4} />
+                    <Check className="h-3.5 w-3.5 shrink-0 text-rua" strokeWidth={2.4} />
                   ) : null}
                   {pwdMsg.replace(/^✓\s*/, '')}
                 </p>
@@ -656,33 +634,30 @@ export function Config() {
         transition={{ delay: 0.1 }}
         className="space-y-3"
       >
-        <StoreSectionHeadline
-          title={L('Dados', 'Data')}
-          className="mb-3"
-        />
-        <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
+        <SecaoRua label={L('Dados', 'Data')} className="mb-3" />
+        <div className="bg-concreto overflow-hidden divide-y divide-linha">
           <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Download className="w-4 h-4 text-neon-yellow" />
+              <Download className="w-4 h-4 text-rua" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Exportar backup', 'Export backup')}</span>
-                <p className="text-[10px] text-white/45">{L('JSON com todo o progresso (inclui definições).', 'JSON with all progress (includes settings).')}</p>
+                <span className="font-impact text-[17px] uppercase leading-[1.1] text-papel">{L('Exportar backup', 'Export backup')}</span>
+                <p className="text-[10px] text-mudo">{L('JSON com todo o progresso (inclui definições).', 'JSON with all progress (includes settings).')}</p>
               </div>
             </div>
             <button
               type="button"
               onClick={downloadBackup}
-              className="text-xs font-display font-bold uppercase tracking-wider bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg shrink-0"
+              className="font-prova text-[11px] font-bold uppercase tracking-[0.12em] bg-concreto hover:bg-linha px-4 py-2  shrink-0"
             >
               {L('Baixar', 'Download')}
             </button>
           </div>
           <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Upload className="w-4 h-4 text-neon-yellow" />
+              <Upload className="w-4 h-4 text-rua" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Restaurar backup', 'Restore backup')}</span>
-                <p className="text-[10px] text-white/45">{L('Substitui o save atual. Recarrega a página em seguida.', 'Replaces the current save. Reloads the page afterwards.')}</p>
+                <span className="font-impact text-[17px] uppercase leading-[1.1] text-papel">{L('Restaurar backup', 'Restore backup')}</span>
+                <p className="text-[10px] text-mudo">{L('Substitui o save atual. Recarrega a página em seguida.', 'Replaces the current save. Reloads the page afterwards.')}</p>
               </div>
             </div>
             <div>
@@ -697,7 +672,7 @@ export function Config() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-xs font-display font-bold uppercase tracking-wider border border-white/20 hover:bg-white/10 px-4 py-2 rounded-lg shrink-0"
+                className="font-prova text-[11px] font-bold uppercase tracking-[0.12em] border border-linha hover:bg-linha px-4 py-2  shrink-0"
               >
                 {L('Escolher ficheiro', 'Choose file')}
               </button>
@@ -713,17 +688,14 @@ export function Config() {
         transition={{ delay: 0.12 }}
         className="space-y-3"
       >
-        <StoreSectionHeadline
-          title={L('Sobre', 'About')}
-          className="mb-3"
-        />
-        <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
+        <SecaoRua label={L('Sobre', 'About')} className="mb-3" />
+        <div className="bg-concreto overflow-hidden divide-y divide-linha">
           <div className="px-5 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Info className="w-4 h-4 text-white/45" />
+              <Info className="w-4 h-4 text-mudo" />
               <div>
-                <span className="text-sm font-display font-bold text-white tracking-wider">{L('Versão', 'Version')}</span>
-                <p className="text-[10px] text-white/45">OLEFOOT v0.11</p>
+                <span className="font-impact text-[17px] uppercase leading-[1.1] text-papel">{L('Versão', 'Version')}</span>
+                <p className="text-[10px] text-mudo">OLEFOOT v0.11</p>
               </div>
             </div>
           </div>
@@ -737,8 +709,8 @@ export function Config() {
               >
                 <Trash2 className="w-4 h-4" />
                 <div>
-                  <span className="text-sm font-display font-bold tracking-wider">{L('Resetar progresso', 'Reset progress')}</span>
-                  <p className="text-[10px] text-white/45 group-hover:text-white/50">{L('Apaga o save do jogo e recomeça do zero.', 'Deletes the game save and starts from scratch.')}</p>
+                  <span className="font-impact text-[17px] uppercase leading-[1.1]">{L('Resetar progresso', 'Reset progress')}</span>
+                  <p className="text-[10px] text-mudo group-hover:text-suave">{L('Apaga o save do jogo e recomeça do zero.', 'Deletes the game save and starts from scratch.')}</p>
                 </div>
               </button>
             ) : (
@@ -752,14 +724,14 @@ export function Config() {
                       setShowResetConfirm(false);
                       setClubDraft(getGameState().club.name);
                     }}
-                    className="bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider px-4 py-2"
+                    className="bg-red-600 hover:bg-red-500 text-papel text-xs font-bold uppercase tracking-wider px-4 py-2"
                   >
                     {L('Confirmar', 'Confirm')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowResetConfirm(false)}
-                    className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold uppercase tracking-wider px-4 py-2 flex items-center gap-1"
+                    className="bg-concreto hover:bg-linha text-papel text-xs font-bold uppercase tracking-wider px-4 py-2 flex items-center gap-1"
                   >
                     <RotateCcw className="w-3 h-3" />
                     {L('Cancelar', 'Cancel')}
@@ -813,32 +785,29 @@ function VerificationSection() {
 
   const toneClass =
     summary.tone === 'ok'
-      ? 'text-[var(--color-success)]'
+      ? 'text-alta'
       : summary.tone === 'pending'
-      ? 'text-neon-yellow'
+      ? 'text-rua'
       : summary.tone === 'bad'
-      ? 'text-[var(--color-danger)]'
-      : 'text-white/70';
+      ? 'text-baixa'
+      : 'text-papel';
 
   return (
     <section className="space-y-3">
-      <StoreSectionHeadline
-        title={L('Verificação da conta', 'Account verification')}
-        subtitle={L('Confirme seu e-mail e proteja seu save.', 'Confirm your e-mail and protect your save.')}
-        className="mb-3"
-      />
-      <div className="rounded-lg border border-white/10 bg-panel overflow-hidden">
+      <SecaoRua label={L('Verificação da conta', 'Account verification')} className="mb-1" />
+      <p className="mb-3 text-[12.5px] text-mudo">{L('Confirme seu e-mail e proteja seu save.', 'Confirm your e-mail and protect your save.')}</p>
+      <div className="border border-linha bg-concreto overflow-hidden">
         <button
           type="button"
           onClick={() => !loading && setExpanded((v) => !v)}
           disabled={loading}
-          className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left hover:bg-white/[0.02] disabled:cursor-default"
+          className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left hover:bg-linha disabled:cursor-default"
         >
           <div className="min-w-0 flex-1">
-            <p className={cn('font-display text-sm font-bold uppercase tracking-wider', toneClass)}>
+            <p className={cn('font-impact text-[17px] uppercase leading-[1.1]', toneClass)}>
               {summary.label}
             </p>
-            <p className="mt-0.5 text-[11px] text-white/50">
+            <p className="mt-0.5 text-[11px] text-suave">
               {status === 'approved'
                 ? L('O PRO pode sacar saldo normalmente.', 'PRO can withdraw balance normally.')
                 : status === 'pending'
@@ -849,16 +818,16 @@ function VerificationSection() {
             </p>
           </div>
           {!loading ? (
-            <span className="shrink-0 rounded border border-neon-yellow/35 bg-neon-yellow/10 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider text-neon-yellow">
+            <span className="shrink-0  border border-rua bg-concreto px-3 py-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-rua">
               {expanded ? L('Fechar', 'Close') : summary.ctaLabel}
             </span>
           ) : null}
         </button>
         {expanded && !loading ? (
-          <div className="border-t border-white/10">
+          <div className="border-t border-linha">
             {status === 'approved' ? (
               <div className="px-5 py-5">
-                <p className="text-[12px] text-white/70">
+                <p className="text-[12px] text-papel">
                   {L('Aprovado em', 'Approved on')}{' '}
                   {state?.verification_reviewed_at
                     ? new Date(state.verification_reviewed_at).toLocaleString(LOCALE)
@@ -866,7 +835,7 @@ function VerificationSection() {
                   .
                 </p>
                 {state?.verification_data?.address ? (
-                  <p className="mt-2 text-[11px] leading-snug text-white/55">
+                  <p className="mt-2 text-[11px] leading-snug text-suave">
                     {L('Endereço registrado:', 'Registered address:')}{' '}
                     {state.verification_data.address.street}, {state.verification_data.address.number} ·{' '}
                     {state.verification_data.address.city}
@@ -876,7 +845,7 @@ function VerificationSection() {
                 <button
                   type="button"
                   onClick={() => setExpanded(false)}
-                  className="mt-4 rounded border border-white/15 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider text-white/70 hover:bg-white/5"
+                  className="mt-4  border border-linha px-3 py-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-papel hover:bg-linha"
                 >
                   {L('Fechar', 'Close')}
                 </button>
@@ -993,26 +962,26 @@ function VerificationForm({
   };
 
   const inputCls =
-    'w-full rounded border border-white/15 bg-black/40 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none';
+    'w-full  border border-linha bg-black/40 px-3 py-2 text-sm text-papel focus:border-rua focus:outline-none';
 
   return (
     <div className="px-5 py-5 space-y-4">
       <div>
-        <p className="font-display text-sm font-bold uppercase tracking-wider text-white">
+        <p className="font-impact text-[17px] uppercase leading-[1.1] text-papel">
           {rejectedReason ? L('Reenviar verificação', 'Resubmit verification') : L('Preencha seus dados', 'Fill in your details')}
         </p>
-        <p className="mt-1 text-[11px] text-white/55">
-          {emIngles() ? <>Required to unlock the <strong className="text-white">PRO</strong> panel (sales withdrawals). Approved by Admin.</> : <>Necessário para liberar o painel <strong className="text-white">PRO</strong> (saque de vendas). Aprovação pelo Admin.</>}
+        <p className="mt-1 text-[11px] text-suave">
+          {emIngles() ? <>Required to unlock the <strong className="text-papel">PRO</strong> panel (sales withdrawals). Approved by Admin.</> : <>Necessário para liberar o painel <strong className="text-papel">PRO</strong> (saque de vendas). Aprovação pelo Admin.</>}
         </p>
         {rejectedReason ? (
-          <div className="mt-2 rounded border border-[var(--color-danger)]/35 bg-[var(--color-danger)]/[0.08] px-3 py-2 text-[11px] text-[var(--color-danger)]">
-            <strong className="uppercase text-[var(--color-danger)]">{L('Rejeitado:', 'Rejected:')}</strong> {rejectedReason}
+          <div className="mt-2  border border-[var(--color-danger)]/35 bg-[var(--color-danger)]/[0.08] px-3 py-2 text-[11px] text-baixa">
+            <strong className="uppercase text-baixa">{L('Rejeitado:', 'Rejected:')}</strong> {rejectedReason}
           </div>
         ) : null}
       </div>
 
       <label className="block">
-        <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">{L('Data de nascimento', 'Date of birth')}</span>
+        <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-suave">{L('Data de nascimento', 'Date of birth')}</span>
         <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className={inputCls} required />
       </label>
 
@@ -1022,16 +991,16 @@ function VerificationForm({
           type="checkbox"
           checked={addr.international}
           onChange={(e) => toggleInternational(e.target.checked)}
-          className="h-4 w-4 accent-neon-yellow"
+          className="h-4 w-4 accent-rua"
         />
-        <label htmlFor="addr-international" className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+        <label htmlFor="addr-international" className="text-[11px] font-bold uppercase tracking-wider text-papel">
           {L('Endereço internacional', 'International address')}
         </label>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-suave">
             {addr.international ? L('Código postal', 'Postal code') : L('CEP', 'ZIP (CEP)')}
           </span>
           <div className="flex gap-2">
@@ -1047,17 +1016,17 @@ function VerificationForm({
                 type="button"
                 onClick={lookupZip}
                 disabled={cepLoading}
-                className="shrink-0 rounded border border-neon-yellow/40 bg-neon-yellow/10 px-3 font-display text-[10px] font-bold uppercase tracking-wider text-neon-yellow hover:bg-neon-yellow/20 disabled:opacity-40"
+                className="shrink-0  border border-rua bg-concreto px-3 font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-rua hover:bg-concreto disabled:opacity-40"
               >
                 {cepLoading ? '…' : L('Buscar', 'Search')}
               </button>
             ) : null}
           </div>
-          {cepLookupErr ? <p className="mt-1 text-[10px] text-[var(--color-danger)]">{cepLookupErr}</p> : null}
+          {cepLookupErr ? <p className="mt-1 text-[10px] text-baixa">{cepLookupErr}</p> : null}
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">{L('País', 'Country')}</span>
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-suave">{L('País', 'Country')}</span>
           <input
             value={addr.country}
             onChange={(e) => setAddr((a) => ({ ...a, country: e.target.value.toUpperCase().slice(0, 3) }))}
@@ -1069,27 +1038,27 @@ function VerificationForm({
         </label>
 
         <label className="block sm:col-span-2">
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">{L('Rua / logradouro', 'Street')}</span>
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-suave">{L('Rua / logradouro', 'Street')}</span>
           <input value={addr.street} onChange={(e) => setAddr((a) => ({ ...a, street: e.target.value }))} className={inputCls} />
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">{L('Número', 'Number')}</span>
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-suave">{L('Número', 'Number')}</span>
           <input value={addr.number} onChange={(e) => setAddr((a) => ({ ...a, number: e.target.value }))} className={inputCls} />
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">{L('Complemento', 'Address line 2')}</span>
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-suave">{L('Complemento', 'Address line 2')}</span>
           <input value={addr.complement ?? ''} onChange={(e) => setAddr((a) => ({ ...a, complement: e.target.value }))} className={inputCls} />
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">{L('Cidade', 'City')}</span>
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-suave">{L('Cidade', 'City')}</span>
           <input value={addr.city} onChange={(e) => setAddr((a) => ({ ...a, city: e.target.value }))} className={inputCls} />
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-white/55">
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-suave">
             {addr.international ? L('Região / estado', 'Region / state') : L('UF', 'State')}
           </span>
           <input
@@ -1101,12 +1070,12 @@ function VerificationForm({
         </label>
       </div>
 
-      <div className="rounded border border-white/10 bg-black/30 p-3">
-        <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/70">{L('Contrato de venda', 'Sales contract')}</p>
-        <p className="mt-1 text-[11px] leading-snug text-white/60">
+      <div className="border border-linha bg-black/30 p-3">
+        <p className="font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-papel">{L('Contrato de venda', 'Sales contract')}</p>
+        <p className="mt-1 text-[11px] leading-snug text-suave">
           {emIngles() ? <>By signing, you confirm the details above are true and agree to the payment split clause
-          in the Olefoot terms. To accept, type the word <strong className="text-neon-yellow">{PALAVRA_CONTRATO}</strong> below.</> : <>Ao assinar, confirma que os dados acima são verdadeiros e concorda com a cláusula de splits de pagamento
-          descrita nos termos da Olefoot. Para aceitar, digita a palavra <strong className="text-neon-yellow">CONTRATO</strong> abaixo.</>}
+          in the Olefoot terms. To accept, type the word <strong className="text-rua">{PALAVRA_CONTRATO}</strong> below.</> : <>Ao assinar, confirma que os dados acima são verdadeiros e concorda com a cláusula de splits de pagamento
+          descrita nos termos da Olefoot. Para aceitar, digita a palavra <strong className="text-rua">CONTRATO</strong> abaixo.</>}
         </p>
         <input
           value={contractText}
@@ -1114,20 +1083,20 @@ function VerificationForm({
           className={`${inputCls} mt-2`}
           placeholder={L('Digite: CONTRATO', 'Type: CONTRACT')}
         />
-        <label className={`mt-3 flex items-center gap-2 text-[11px] ${contractValid ? 'text-white/80' : 'text-white/40 cursor-not-allowed'}`}>
+        <label className={`mt-3 flex items-center gap-2 text-[11px] ${contractValid ? 'text-papel' : 'text-mudo cursor-not-allowed'}`}>
           <input
             type="checkbox"
             checked={acceptTerms}
             disabled={!contractValid}
             onChange={(e) => setAcceptTerms(e.target.checked)}
-            className="h-4 w-4 accent-neon-yellow"
+            className="h-4 w-4 accent-rua"
           />
           <span>{L('Aceito os termos de venda da Olefoot.', 'I accept the Olefoot sales terms.')}</span>
         </label>
       </div>
 
       {submitErr ? (
-        <p className="rounded border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-[11px] text-[var(--color-danger)]">{submitErr}</p>
+        <p className="border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-[11px] text-baixa">{submitErr}</p>
       ) : null}
 
       <div className="flex gap-2">
@@ -1135,7 +1104,7 @@ function VerificationForm({
           type="button"
           disabled={!canSubmit}
           onClick={() => void submit()}
-          className="flex-1 rounded bg-neon-yellow px-4 py-2.5 font-display text-xs font-black uppercase tracking-wider text-black hover:bg-white disabled:opacity-40"
+          className="flex-1  bg-rua px-4 py-2.5 font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-asfalto-27 hover:bg-papel disabled:opacity-40"
         >
           {submitting ? L('Enviando…', 'Sending…') : L('Enviar para verificação', 'Submit for verification')}
         </button>
@@ -1143,7 +1112,7 @@ function VerificationForm({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded border border-white/15 px-4 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-white/70 hover:bg-white/5"
+            className="border border-linha px-4 py-2.5 font-prova text-[11px] font-bold uppercase tracking-[0.12em] text-papel hover:bg-linha"
           >
             {L('Cancelar', 'Cancel')}
           </button>

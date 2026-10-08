@@ -9,7 +9,7 @@ import { MatchdayHero } from '@/components/matchday/MatchdayHero';
 
 export function MatchdayPreview() {
   return (
-    <div className="min-h-screen bg-deep-black text-white">
+    <div className="min-h-screen w-full overflow-x-hidden bg-asfalto-27 text-papel">
       <MatchdayHero />
     </div>
   );

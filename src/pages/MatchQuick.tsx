@@ -131,7 +131,7 @@ function RedCardIcon({ className }: { className?: string }) {
       aria-label={L('Cartão vermelho', 'Red card')}
       title={L('Expulso', 'Sent off')}
       className={cn(
-        'inline-block shrink-0 rounded-sm bg-red-600 ring-1 ring-red-950/50',
+        'inline-block shrink-0 bg-[var(--color-event-card-red)]',
         'w-[11px] h-[14px] sm:w-3 sm:h-4',
         className,
       )}
@@ -155,7 +155,7 @@ function PlayerEventStrip({ badges }: { badges: QuickEventBadge[] }) {
             <span
               key={`y-${i}`}
               title={L('Amarelo', 'Yellow')}
-              className="inline-block w-2 h-2.5 rounded-xs bg-amber-400"
+              className="inline-block w-2 h-2.5 bg-[var(--color-event-card-yellow)]"
             />
           );
         if (b === 'red')
@@ -163,13 +163,13 @@ function PlayerEventStrip({ badges }: { badges: QuickEventBadge[] }) {
             <span
               key={`r-${i}`}
               title={L('Vermelho', 'Red')}
-              className="inline-block w-2 h-2.5 rounded-xs bg-red-500"
+              className="inline-block w-2 h-2.5 bg-[var(--color-event-card-red)]"
             />
           );
         return (
           <Plus
             key={`i-${i}`}
-            className="w-3 h-3 text-red-400 rotate-45 stroke-[3]"
+            className="w-3 h-3 text-baixa rotate-45 stroke-[3]"
             aria-label={L('Lesão', 'Injury')}
           />
         );
@@ -2361,7 +2361,7 @@ function MatchQuickLegacy() {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
         <p className="font-display text-sm font-bold uppercase tracking-wider text-neon-yellow">{L('Amistoso online', 'Online friendly')}</p>
-        <p className="max-w-sm text-sm text-gray-400">{L('A validar convite aceite…', 'Validating accepted invite…')}</p>
+        <p className="max-w-sm font-voz text-[24px] leading-none text-suave">{L('A validar convite aceite…', 'Validating accepted invite…')}</p>
       </div>
     );
   }
@@ -2544,14 +2544,14 @@ function MatchQuickLegacy() {
         <div
           className={`mb-3 border border-l-[3px] px-4 py-3 flex items-start gap-3 ${
             exhaustedAlert.tier === 'critical'
-              ? 'border-rose-500/40 border-l-rose-400 bg-rose-500/10'
-              : 'border-amber-500/40 border-l-amber-400 bg-amber-500/10'
+              ? 'border-linha border-l-baixa bg-concreto'
+              : 'border-linha border-l-atencao bg-concreto'
           }`}
           style={{ borderRadius: 'var(--radius-sm)' }}
         >
           <div
             className={`mt-0.5 text-lg ${
-              exhaustedAlert.tier === 'critical' ? 'text-rose-300' : 'text-amber-300'
+              exhaustedAlert.tier === 'critical' ? 'text-baixa' : 'text-atencao'
             }`}
             aria-hidden
           >
@@ -2560,7 +2560,7 @@ function MatchQuickLegacy() {
           <div className="flex-1 min-w-0">
             <p
               className={`font-display uppercase tracking-[0.2em] text-[10px] font-black ${
-                exhaustedAlert.tier === 'critical' ? 'text-rose-300' : 'text-amber-300'
+                exhaustedAlert.tier === 'critical' ? 'text-baixa' : 'text-atencao'
               }`}
             >
               {exhaustedAlert.tier === 'critical' ? L('Squad em risco', 'Squad at risk') : L('Squad cansado', 'Squad tired')}
@@ -2760,14 +2760,14 @@ function MatchQuickLegacy() {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="fixed top-20 left-1/2 -translate-x-1/2 z-[90] w-full max-w-md px-4"
           >
-            <div className="bg-amber-400 border-2 border-amber-300 p-3">
+            <div className="-rotate-1 bg-[var(--color-event-card-yellow)] p-3 text-asfalto-27 shadow-[4px_4px_0_var(--color-asfalto-27)]">
               <div className="flex items-center gap-3">
                 <div className="flex gap-1 shrink-0">
-                  <span className="inline-block w-3 h-4 rounded-sm bg-amber-600" />
-                  <span className="inline-block w-3 h-4 rounded-sm bg-amber-600" />
+                  <span className="inline-block w-3 h-4 bg-asfalto-27/80" />
+                  <span className="inline-block w-3 h-4 bg-asfalto-27/80" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                  <p className="font-prova text-[11px] font-bold uppercase tracking-[0.14em] text-asfalto-27">
                     {L('Segundo Amarelo', 'Second Yellow')}
                   </p>
                   <p className="text-sm font-black text-black truncate">
@@ -2776,7 +2776,7 @@ function MatchQuickLegacy() {
                 </div>
                 <button
                   onClick={handleYellowSubstituteNow}
-                  className="shrink-0 px-3 py-1.5 bg-black text-amber-400 text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-900 transition-colors"
+                  className="shrink-0 min-h-[40px] px-3 bg-asfalto-27 font-impact text-[15px] uppercase leading-none text-rua hover:bg-concreto transition-colors"
                 >
                   {L('Substituir', 'Substitute')}
                 </button>
@@ -2826,20 +2826,20 @@ function MatchQuickLegacy() {
       ) : null}
 
       {showBoard && live && (
-        <div data-tutorial-anchor="match-quick-board" className="glass-panel p-5 border border-white/10 space-y-4 relative overflow-visible">
+        <div data-tutorial-anchor="match-quick-board" className="rua-grao bg-concreto p-4 sm:p-5 space-y-4 relative overflow-visible">
           {quickPreStart === 'ready' || quickPreStart === 'c3' || quickPreStart === 'c2' || quickPreStart === 'c1' ? (
             <div
-              className="absolute inset-0 z-20 flex items-center justify-center bg-deep-black/85 pointer-events-none"
+              className="absolute inset-0 z-20 flex items-center justify-center bg-asfalto-27/90 pointer-events-none"
               aria-live="polite"
             >
               {quickPreStart === 'ready' ? (
                 <motion.span
                   key="ready"
-                  initial={{ scale: 0.9, opacity: 0, letterSpacing: '0.05em' }}
-                  animate={{ scale: 1, opacity: 1, letterSpacing: '0.25em' }}
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
                   exit={{ opacity: 0, scale: 1.05 }}
                   transition={{ duration: 0.35, ease: 'easeOut' }}
-                  className="font-display font-black text-[min(8vw,2.2rem)] uppercase text-white/90"
+                  className="font-voz text-[min(12vw,3.2rem)] leading-none text-papel"
                 >
                   {L('Preparados?', 'Ready?')}
                 </motion.span>
@@ -2850,7 +2850,7 @@ function MatchQuickLegacy() {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 520, damping: 28 }}
-                  className="font-display font-black text-[min(22vw,7rem)] text-neon-yellow tabular-nums"
+                  className="font-spray font-black text-[min(34vw,9rem)] leading-none text-rua tabular-nums"
                 >
                   {quickPreStart === 'c3' ? 3 : quickPreStart === 'c2' ? 2 : 1}
                 </motion.span>
@@ -2975,8 +2975,8 @@ function MatchQuickLegacy() {
                 momentum={momentumPressure}
                 homeShort={live.homeShort}
                 awayShort={live.awayShort}
-                homeColor="#FDE047"
-                awayColor="#FFFFFF"
+                homeColor="var(--color-rua)"
+                awayColor="var(--color-papel)"
               />
 
               {/* ─── Sprint 2: Controles de Intensidade Tática (logo abaixo do momentum) ─────────────────── */}
@@ -2996,14 +2996,14 @@ function MatchQuickLegacy() {
           ) : null}
           {quickPreStart === null ? (
             <div className="space-y-2 pt-1 hidden">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-center text-gray-500">
+              <p className="font-prova text-[10px] font-bold uppercase tracking-[0.2em] text-center text-mudo">
                 {L('Momento — pressão rumo ao gol adversário', 'Momentum — pressure towards the opponent goal')}
               </p>
               <div
                 key={momentumAnimKey ?? 'momentum-idle'}
                 className={cn(
                   'relative w-full px-0.5',
-                  momentumAnimKey && 'momentum-bar-goal-flash rounded-lg py-1',
+                  momentumAnimKey && 'momentum-bar-goal-flash py-1',
                 )}
               >
                 <div
@@ -3030,7 +3030,7 @@ function MatchQuickLegacy() {
                       }}
                     >
                       <div
-                        className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-neon-yellow/65 via-neon-yellow/25 to-transparent"
+                        className="absolute inset-y-0 left-0 bg-rua/70"
                         style={{
                           width: `${momentumPressure * 100}%`,
                           transitionProperty: 'width',
@@ -3040,7 +3040,7 @@ function MatchQuickLegacy() {
                         aria-hidden
                       />
                       <div
-                        className="absolute inset-y-0 right-0 rounded-full bg-gradient-to-l from-white/18 to-transparent"
+                        className="absolute inset-y-0 right-0 bg-papel/25"
                         style={{
                           left: `${momentumPressure * 100}%`,
                           transitionProperty: 'left',
@@ -3069,19 +3069,19 @@ function MatchQuickLegacy() {
                 </div>
               </div>
               <div className="flex justify-between items-start gap-2 text-[9px] font-bold uppercase tracking-wide px-0.5">
-                <span className={live.possession === 'home' ? 'text-neon-yellow' : 'text-gray-500'}>
+                <span className={live.possession === 'home' ? 'text-neon-yellow' : 'text-mudo'}>
                   {live.homeShort}{' '}
                   <span className="font-extrabold">{live.possession === 'home' ? L('ataca →', 'attacks →') : L('defende', 'defends')}</span>
                 </span>
-                <span className={live.possession === 'away' ? 'text-white' : 'text-gray-500'}>
+                <span className={live.possession === 'away' ? 'text-white' : 'text-mudo'}>
                   <span className="font-extrabold">{live.possession === 'away' ? L('← ataca', '← attacks') : L('defende', 'defends')}</span>{' '}
                   {live.awayShort}
                 </span>
               </div>
             </div>
           ) : (
-            <div className="min-h-[5.5rem] pt-1 flex items-center justify-center border border-white/8 rounded-lg bg-black/20">
-              <p className="text-[10px] font-medium text-gray-500 text-center px-4">
+            <div className="min-h-[5.5rem] pt-1 flex items-center justify-center border-2 border-dashed border-linha">
+              <p className="text-[10px] font-medium text-mudo text-center px-4">
                 {quickPreStart === 'kickoff'
                   ? L('Bola rolando em instantes…', 'Kick-off in a moment…')
                   : L('O apito soa em segundos.', 'The whistle blows in seconds.')}
@@ -3101,7 +3101,7 @@ function MatchQuickLegacy() {
                 </div>
               ) : quickPreStart === 'ready' || quickPreStart === 'c3' || quickPreStart === 'c2' || quickPreStart === 'c1' ? (
                 <div className="flex items-center justify-center min-h-[4.5rem]">
-                  <p className="text-[11px] text-gray-500 text-center font-medium">{L('Feed ao vivo após o apito…', 'Live feed after the whistle…')}</p>
+                  <p className="text-[11px] text-mudo text-center font-medium">{L('Feed ao vivo após o apito…', 'Live feed after the whistle…')}</p>
                 </div>
               ) : (
                 <AnimatePresence initial={false} mode="popLayout">
@@ -3115,7 +3115,7 @@ function MatchQuickLegacy() {
                         exit={{ opacity: 0, x: -10, transition: { duration: 0.18 } }}
                         transition={{ type: 'spring', stiffness: 380, damping: 28 }}
                         className={cn(
-                          'text-[11px] text-gray-300 leading-relaxed rounded-md px-2 py-1.5 border border-white/6',
+                          'text-[12px] text-suave leading-relaxed px-2 py-1.5 border-b border-linha',
                           quickFeedLineClass(e.kind),
                         )}
                       >
@@ -3125,7 +3125,7 @@ function MatchQuickLegacy() {
                           homeNames: feedHomeNames,
                           awayNames: feedAwayNames,
                           homeClassName: 'text-neon-yellow',
-                          awayClassName: 'text-gray-100',
+                          awayClassName: 'text-papel',
                         })}
                       </motion.div>
                     );
@@ -3176,7 +3176,7 @@ function MatchQuickLegacy() {
                   // C5 — empty-state da coluna CASA. Acontece quando o
                   // user ainda não tem plantel cadastrado. Evita coluna
                   // 100% vazia ao lado da AWAY cheia.
-                  <div className="rounded-md border border-dashed border-white/15 bg-deep-black/40 px-3 py-6 text-center">
+                  <div className="border-2 border-dashed border-fio px-3 py-6 text-center">
                     <p
                       className="text-white/55 mb-1 uppercase"
                       style={{
@@ -3238,7 +3238,7 @@ function MatchQuickLegacy() {
               className="flex flex-col items-center justify-center shrink-0 self-stretch w-5 sm:w-10 md:w-14 py-2 sm:py-6 select-none"
               aria-hidden
             >
-              <div className="hidden sm:block w-px flex-1 min-h-6 bg-gradient-to-b from-transparent via-neon-yellow/35 to-transparent" />
+              <div className="hidden sm:block w-px flex-1 min-h-6 bg-linha" />
               <span className="font-display font-black text-[8px] text-neon-yellow/90 tracking-tighter leading-none py-1 flex flex-col items-center sm:hidden">
                 <span>V</span>
                 <span>S</span>
@@ -3246,7 +3246,7 @@ function MatchQuickLegacy() {
               <span className="hidden sm:inline font-display font-black text-neon-yellow/90 tracking-tighter sm:[writing-mode:vertical-rl] sm:rotate-180 sm:text-xl md:text-2xl py-2">
                 VS
               </span>
-              <div className="hidden sm:block w-px flex-1 min-h-6 bg-gradient-to-b from-neon-yellow/25 via-transparent to-transparent" />
+              <div className="hidden sm:block w-px flex-1 min-h-6 bg-linha" />
             </div>
 
             <div className="space-y-3 min-w-0">
@@ -3332,14 +3332,14 @@ function MatchQuickLegacy() {
               const injuredEnt = playersById[live.quickInjurySub.outPlayerId];
               const isGrave = (playerHealth?.[live.quickInjurySub.outPlayerId]?.outForMatches ?? injuredEnt?.outForMatches ?? 1) >= 3;
               return (
-                <div className={cn('px-5 py-4 flex items-center justify-between gap-3 border-b', isGrave ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30')}>
+                <div className={cn('px-5 py-4 flex items-center justify-between gap-3 border-b', isGrave ? 'bg-concreto border-baixa' : 'bg-concreto border-atencao')}>
                   <div className="flex items-center gap-3">
-                    <div className={cn('flex h-12 w-12 items-center justify-center rounded-lg border', isGrave ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30')}>
-                      <span className={cn('text-2xl font-bold', isGrave ? 'text-red-400' : 'text-amber-400')}>!</span>
+                    <div className={cn('flex h-12 w-12 items-center justify-center rounded-lg border', isGrave ? 'bg-concreto border-baixa' : 'bg-concreto border-atencao')}>
+                      <span className={cn('text-2xl font-bold', isGrave ? 'text-baixa' : 'text-atencao')}>!</span>
                     </div>
                     <div>
                       <p
-                        className={cn('uppercase tracking-[0.18em]', isGrave ? 'text-red-400' : 'text-amber-400')}
+                        className={cn('uppercase tracking-[0.18em]', isGrave ? 'text-baixa' : 'text-atencao')}
                         style={{
                           fontFamily: 'var(--font-ui)',
                           fontSize: '10px',
@@ -3357,7 +3357,7 @@ function MatchQuickLegacy() {
                     </div>
                   </div>
                   <div
-                    className={cn('tabular-nums', isGrave ? 'text-red-400' : 'text-amber-400')}
+                    className={cn('tabular-nums', isGrave ? 'text-baixa' : 'text-atencao')}
                     style={{
                       fontFamily: 'var(--font-display)',
                       fontWeight: 900,
@@ -3370,7 +3370,7 @@ function MatchQuickLegacy() {
               );
             })() : (
               <div className="bg-neon-yellow/5 px-5 py-4 flex items-center gap-3 border-b border-neon-yellow/20">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-neon-yellow/10 border border-neon-yellow/30">
+                <div className="flex h-12 w-12 items-center justify-center bg-rua text-asfalto-27">
                   <span className="text-2xl font-bold text-neon-yellow">↔</span>
                 </div>
                 <div>
@@ -3445,7 +3445,7 @@ function MatchQuickLegacy() {
 
               {live?.quickInjurySub && benchCards.length === 0 ? (
                 <p
-                  className="text-red-400"
+                  className="text-baixa"
                   style={{
                     fontFamily: 'var(--font-sans)',
                     fontSize: '13px',
@@ -3483,7 +3483,7 @@ function MatchQuickLegacy() {
                   return (
                     <button
                       type="button"
-                      className="w-full py-3 bg-black/60 hover:bg-black/80 hover:border-amber-400 border border-amber-500/40 text-amber-400 uppercase tracking-[0.2em] transition-all active:scale-[0.98]"
+                      className="w-full min-h-[50px] border-2 border-atencao text-atencao uppercase tracking-[0.2em] transition-colors hover:bg-atencao hover:text-asfalto-27"
                       style={{
                         fontFamily: 'var(--font-display)',
                         fontSize: '11px',
@@ -4209,14 +4209,14 @@ function ShotProbabilityBar({
   const pct = (v: number) => Math.round(v * 100);
   const labels: Array<{ k: 'goal' | 'save' | 'out'; v: number; cls: string; txt: string }> = [
     { k: 'goal', v: goal, cls: 'bg-neon-yellow text-black', txt: `${pct(goal)}% ${L('GOL', 'GOAL')}` },
-    { k: 'save', v: save, cls: 'bg-cyan-500/80 text-black', txt: `${pct(save)}% ${L('DEF', 'SAVE')}` },
+    { k: 'save', v: save, cls: 'bg-papel/80 text-asfalto-27', txt: `${pct(save)}% ${L('DEF', 'SAVE')}` },
     { k: 'out',  v: out,  cls: 'bg-white/20 text-white',    txt: `${pct(out)}% ${L('FORA', 'OFF')}` },
   ];
   return (
     <div
       role="status"
       aria-label={L('Probabilidades do tiro', 'Shot probabilities')}
-      className="flex h-5 w-[min(260px,70vw)] overflow-hidden rounded-md border border-white/10 bg-black/40 font-display text-[9px] font-black uppercase tracking-wider"
+      className="flex h-5 w-[min(260px,70vw)] overflow-hidden border-2 border-linha bg-asfalto-27 font-display text-[9px] font-black uppercase tracking-wider"
     >
       {labels.map((l) => (
         <div

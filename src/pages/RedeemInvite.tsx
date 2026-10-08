@@ -32,11 +32,11 @@ export function RedeemInvite() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-deep-black px-4 text-white">
-      <div className="w-full max-w-sm border border-white/10 bg-panel p-6">
+    <div className="flex min-h-screen items-center justify-center bg-asfalto-27 px-4 text-papel">
+      <div className="w-full max-w-sm border-t-[5px] border-rua bg-concreto p-6">
         <div className="mb-5 flex items-center gap-2">
-          <KeyRound className="h-5 w-5 text-neon-yellow" />
-          <h1 className="font-impact text-[24px] uppercase leading-[1.1] text-white">
+          <KeyRound className="h-5 w-5 text-rua" />
+          <h1 className="font-impact text-[30px] uppercase leading-[1] text-papel">
             {L('Resgatar Convite', 'Redeem Invite')}
           </h1>
         </div>
@@ -44,12 +44,12 @@ export function RedeemInvite() {
         {state === 'success' ? (
           <div className="flex flex-col items-center py-6 text-center">
             <Check className="mb-3 h-10 w-10 text-alta" />
-            <p className="text-sm font-bold">{L('Acesso ativado.', 'Access activated.')}</p>
+            <p className="font-voz text-[26px] leading-none text-papel">{L('Acesso ativado.', 'Access activated.')}</p>
             <Hashtag className="text-center">#beta</Hashtag>
           </div>
         ) : (
           <>
-            <p className="mb-4 text-xs leading-relaxed text-cimento">
+            <p className="mb-4 text-[13px] leading-relaxed text-suave">
               {L('Cole o código de 8 caracteres que recebeu por email para entrar no beta.', 'Paste the 8-character code you got by email to join the beta.')}
             </p>
             <input
@@ -58,11 +58,11 @@ export function RedeemInvite() {
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               maxLength={16}
               placeholder="XXXXXXXX"
-              className="mb-3 w-full border border-white/16 bg-deep-black px-3 py-2.5 text-center font-mono text-lg tracking-widest text-white outline-none placeholder:text-poeira focus:border-neon-yellow"
+              className="mb-3 min-h-[54px] w-full border-2 border-linha bg-asfalto-27 px-3 py-2.5 text-center font-spray text-[26px] font-black tracking-[0.3em] text-papel outline-none placeholder:text-fio focus:border-rua"
               onKeyDown={(e) => e.key === 'Enter' && submit()}
             />
             {state === 'error' && (
-              <div className="mb-3 flex items-center gap-2 border border-baixa/50 bg-baixa/10 px-3 py-2 text-xs text-giz">
+              <div role="alert" className="mb-3 flex items-center gap-2 border-l-[5px] border-baixa bg-asfalto-27 px-3 py-2.5 text-[12.5px] text-papel">
                 <X className="h-4 w-4 shrink-0 text-baixa" />
                 {errorMessage}
               </div>
