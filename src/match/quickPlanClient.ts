@@ -95,6 +95,65 @@ export interface FetchQuickPlanInput {
   /** FABLE — DERBY/CLÁSSICO (revanche contra o nêmesis): o Python amplia
    *  finalização/xG/pênalti/cartão dos DOIS lados (~×1.12, simétrico). */
   isDerby?: boolean;
+  /**
+   * DNA do clube (fundação, `dnaDoClubeParaMotor`). Ausente = neutro: o Python
+   * gera exatamente o mesmo plano de antes. Presente, inclina posse, pressão,
+   * verticalidade, criação, solidez, faltas e fôlego do time da casa.
+   */
+  homeDna?: import('@/club/identidade').DnaDoClube | null;
+  /** Jogo da Fundação: rival é o fantasma de um time histórico — o DNA dele vai daqui. */
+  fantasma?: { dna: import('@/club/identidade').DnaDoClube };
+}
+
+/** Corpo do POST pro motor (quick-plan e análise de identidade usam o mesmo). */
+function corpoDoMotor(input: FetchQuickPlanInput): Record<string, unknown> {
+  return {
+    seed: input.seed,
+    home_short: input.homeShort,
+    away_short: input.awayShort,
+    home_team: {
+      strength: input.homeStrength,
+      intensity: input.intensity ?? 'balanced',
+      lineup: input.homeLineup,
+      ...(input.homeDna ? { dna: input.homeDna } : {}),
+    },
+    away_team: {
+      strength: input.awayStrength,
+      lineup: input.awayLineup,
+      ...(input.fantasma ? { dna: input.fantasma.dna } : {}),
+    },
+    mode: input.mode ?? 'full',
+    first_half: input.firstHalf,
+    decisions: input.decisions,
+    is_derby: input.isDerby === true,
+    ...(input.fantasma ? { fantasma: true } : {}),
+  };
+}
+
+async function cabecalhos(): Promise<Record<string, string>> {
+  const sb = getSupabase();
+  const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+  return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+}
+
+/**
+ * RELATÓRIO DE IDENTIDADE: o motor roda o mesmo confronto em ~150 seeds com e
+ * sem o DNA da casa (`POST /api/match/identidade`). Null = motor fora do ar.
+ */
+export async function fetchAnaliseDeIdentidade(
+  input: FetchQuickPlanInput,
+): Promise<import('@/onboarding/jogoDaFundacao').AnaliseDoMotor | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/match/identidade`, {
+      method: 'POST',
+      headers: await cabecalhos(),
+      body: JSON.stringify(corpoDoMotor(input)),
+    });
+    const body = await res.json().catch(() => null);
+    return res.ok && body?.ok && body.analise ? body.analise : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Nome curto pra narração/UI: apelido entre aspas ("Juca") ou corta " — fase".
@@ -183,29 +242,10 @@ export function applyLegacyBoostToLineup(
 export async function fetchQuickPlan(input: FetchQuickPlanInput): Promise<MatchPlan | null> {
   try {
     // Com sessão, o servidor guarda a custódia do plano (SMART-PROFILE 2B).
-    const sb = getSupabase();
-    const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
     const res = await fetch(`${API_BASE}/api/match/quick-plan`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({
-        seed: input.seed,
-        home_short: input.homeShort,
-        away_short: input.awayShort,
-        home_team: {
-          strength: input.homeStrength,
-          intensity: input.intensity ?? 'balanced',
-          lineup: input.homeLineup,
-        },
-        away_team: {
-          strength: input.awayStrength,
-          lineup: input.awayLineup,
-        },
-        mode: input.mode ?? 'full',
-        first_half: input.firstHalf,
-        decisions: input.decisions,
-        is_derby: input.isDerby === true,
-      }),
+      headers: await cabecalhos(),
+      body: JSON.stringify(corpoDoMotor(input)),
     });
     if (!res.ok) {
       console.warn('[quickPlan] backend returned', res.status);

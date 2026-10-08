@@ -30,12 +30,14 @@ const LEGACY_PHASE_SUFFIXES = ['revelacao', 'consolidacao', 'expansao'];
 /**
  * Chave de "MESMA PESSOA" — igual entre variações do mesmo jogador, pra impedir
  * escalar dois ao mesmo tempo (pode TER duas, mas só uma titular).
- *  - Legacy (legacy-<slug>-<fase>): a pessoa é o slug (fases têm nomes diferentes).
+ *  - Legacy (legacy-<slug>-<fase>) e Edição Fundação (fundacao-<slug>-<fase>):
+ *    a pessoa é o slug (fases têm nomes diferentes).
  *  - Genesis (genesis-...): as raridades compartilham o NOME (ids GEN-xxx diferem).
  *  - Resto (criados pelo manager, etc.): cada id é único.
  */
 export function samePersonKey(p: { id: string; name?: string }): string {
-  const id = p.id;
+  // Edição Fundação (fundacao-<slug>-<fase>) é a mesma pessoa da legacy-<slug>-<fase>.
+  const id = p.id.startsWith('fundacao-') ? `legacy-${p.id.slice('fundacao-'.length)}` : p.id;
   if (id.startsWith('legacy-')) {
     let base = id;
     for (const ph of LEGACY_PHASE_SUFFIXES) {

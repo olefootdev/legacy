@@ -41,7 +41,21 @@ export type ProductEvent =
   /** Um jogador pediu alguma coisa e o card foi mostrado. (Fase 4) */
   | 'request_shown'
   /** O manager respondeu ao pedido — e com qual das três. (Fase 4) */
-  | 'request_resolved';
+  | 'request_resolved'
+  /** Fundação do Clube: chegou num passo (mede onde o manager desiste). */
+  | 'fundacao_passo'
+  /** Fundação do Clube: identidade gravada (estilo, técnico, time histórico…). */
+  | 'fundacao_concluida'
+  /** Fundação do Clube: o manager tocou em "Monta pra mim". */
+  | 'fundacao_monta_pra_mim'
+  /** Fundação do Clube: elenco sorteado (lendas = quantos dos 3 premium viraram lenda). */
+  | 'fundacao_sorteio'
+  /** Fundação do Clube: venda pra várzea na Janela da Estreia. */
+  | 'fundacao_venda_varzea'
+  /** Fundação do Clube: XI confirmado (trocas = quantas o manager fez sobre a sugestão). */
+  | 'fundacao_escalacao'
+  /** Fundação do Clube: Jogo da Fundação contra o fantasma (placar + fidelidade do relatório). */
+  | 'fundacao_estreia';
 
 /** Só escalar e booleano. Ver a proibição de PII no cabeçalho. */
 export type EventProps = Record<string, string | number | boolean | null>;

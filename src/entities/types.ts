@@ -111,6 +111,12 @@ export interface PlayerEntity {
   marketValueBroCents?: number;
   /** Valor de mercado em EXP (ex.: catálogo Genesis); quando definido, UI e livro usam EXP em vez de BRO. */
   marketValueExp?: number;
+  /**
+   * EDIÇÃO FUNDAÇÃO: lenda que veio no sorteio da fundação do clube. Cópia
+   * jogável (id `fundacao-…`), não conta no supply, não se vende nem se
+   * empresta — o servidor recusa anúncio e ela fica na venda do time.
+   */
+  edicaoFundacao?: boolean;
   /** País (texto livre) */
   country?: string;
   /** Pé bom */
@@ -280,6 +286,12 @@ export interface ClubEntity {
   friendlyAvailability?: 'ONLINE' | 'OFFLINE';
   /** Aceita convites automaticamente quando ONLINE. */
   friendlyAutoAccept?: boolean;
+  /**
+   * Identidade da fundação (onboarding "Fundação do Clube"): 100 pontos,
+   * estilo, inspirações, treino, camisa, frase. O DNA que sai daqui vai ao
+   * motor da Partida Rápida. Ausente = clube fundado antes de 2026-10 (DNA neutro).
+   */
+  identidade?: import('@/club/identidade').IdentidadeDoClube;
 }
 
 export interface ClubLogisticsState {

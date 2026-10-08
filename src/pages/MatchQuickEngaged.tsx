@@ -23,6 +23,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { overallFromAttributes } from '@/entities/player';
 import { Hashtag } from '@/components/ui';
+import { BotaoRua, SeloRua, SecaoRua } from '@/components/ui/Rua';
+import { ConvocacaoRua } from '@/components/match/ResultadoRua';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore, useGameDispatch, getGameState } from '@/game/store';
 import { relatarPartidaSombra } from '@/smartProfile/sombra';
@@ -68,6 +70,7 @@ import { coachPersonaFor, personaLine } from '@/match/ligaOle/coachPersona';
 import type { AgentEchoTrait } from '@/match/quickAgentEcho';
 import { L, emIngles } from '@/i18n/L';
 import { posLabel } from '@/components/matchquick/posLabel';
+import { dnaDoClubeParaMotor } from '@/club/identidade';
 
 type Phase = 'loading' | 'kickoff' | 'playing' | 'finished' | 'error';
 
@@ -86,6 +89,8 @@ export default function MatchQuickEngaged() {
   const playerHealth = useGameStore((s) => s.playerHealth);
   const lineup = useGameStore((s) => s.lineup);
   const club = useGameStore((s) => s.club);
+  const managerFormation = useGameStore((s) => s.manager.formationScheme);
+  const clubIdentidade = club.identidade;
   const nextFixture = useGameStore((s) => s.nextFixture);
   const homeCrestUrl = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
   // Liga Ole: detecta no MOUNT se esta partida é da liga (pendingOpponentId),
@@ -138,7 +143,12 @@ export default function MatchQuickEngaged() {
   // Quick plan usa taxonomia própria (defensive/balanced/offensive), distinta
   // da quickMatchIntensity legada (counter/press/...). Começa equilibrado.
   const intensityRef = useRef<'defensive' | 'balanced' | 'offensive'>('balanced');
-  const formationRef = useRef<string>((lineup as { formation?: string })?.formation ?? '4-4-2');
+  // A formação do manager (fundação / tela de elenco). Antes lia
+  // `lineup.formation`, campo que a escalação não tem: toda Partida Rápida
+  // saía em 4-4-2, qualquer que fosse a escolha do manager.
+  const formationRef = useRef<string>(managerFormation ?? '4-4-2');
+  // DNA da fundação → motor. null (clube antigo) = plano neutro, igual ao de antes.
+  const homeDnaRef = useRef(dnaDoClubeParaMotor(clubIdentidade));
   const awayLineupRef = useRef<import('@/match/quickPlanClient').QuickPlanPlayerPayload[]>([]);
   const seedRef = useRef<string>('');
   /** Custódia (SMART-PROFILE 2B): ids dos planos emitidos pelo servidor nesta partida. */
@@ -301,6 +311,7 @@ export default function MatchQuickEngaged() {
         input.homeLineup = applyLegacyBoostToLineup(input.homeLineup, legacyBoosters);
         // FABLE — revanche contra o nêmesis = clássico MECÂNICO no Python.
         input.isDerby = isDerbyMatch;
+        input.homeDna = homeDnaRef.current;
         const fetched = await fetchQuickPlan(input);
         if (!fetched) {
           setError(L('Não foi possível gerar a partida (motor offline). Tente novamente.', 'Could not generate the match (engine offline). Try again.'));
@@ -465,6 +476,7 @@ export default function MatchQuickEngaged() {
           awayStrength: baseStrengthRef.current.away,
           intensity: ht.intensity,
           isDerby: isDerbyMatch, // clássico continua quente no 2º tempo
+          homeDna: homeDnaRef.current, // o DNA não muda no intervalo
 
           homeLineup,
           awayLineup: awayLineupRef.current, // mesmo adversário do 1º tempo
@@ -609,72 +621,68 @@ export default function MatchQuickEngaged() {
   // ── Render ────────────────────────────────────────────────────────────
   if (!hasOpponent) {
     return (
-      <main className="min-h-screen bg-black flex items-center justify-center px-6">
-        <div className="text-center">
+      <main className="min-h-screen bg-black flex items-center justify-center px-5">
+        <div className="flex w-full max-w-sm flex-col items-start gap-5">
+          <p className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">— {L('Partida rápida', 'Quick match')}</p>
           {buscandoAdversario ? (
-            <p className="text-white/70 mb-4 font-display uppercase tracking-[0.2em] text-[12px] animate-pulse">
+            <p className="font-voz text-[34px] leading-[1.02] text-papel animate-pulse">
               {L('Procurando adversário…', 'Finding an opponent…')}
             </p>
           ) : (
             <>
-              <p className="text-white/70 mb-4">
+              <p className="font-voz text-[30px] leading-[1.05] text-papel">
                 {buscaFalhou
                   ? L('Não deu pra procurar adversário agora — confira a conexão.', 'Could not search for an opponent right now — check your connection.')
                   : L('Nenhum adversário disponível para a partida rápida.', 'No opponent available for the quick match.')}
               </p>
               {buscaFalhou && (
-                <button
-                  type="button"
-                  onClick={buscarAdversarioDeNovo}
-                  className="mb-4 px-4 py-2 rounded-sm bg-neon-yellow text-black font-display uppercase tracking-[0.2em] text-[12px]"
-                >
-                  {L('Procurar de novo', 'Search again')}
-                </button>
+                <BotaoRua onClick={buscarAdversarioDeNovo}>
+                  {L('Procurar de novo', 'Search again')} <span aria-hidden>→</span>
+                </BotaoRua>
               )}
             </>
           )}
-          <div>
-            <Link to="/" className="text-neon-yellow font-display uppercase tracking-[0.2em] text-[12px]">
-              {L('← Voltar', '← Back')}
-            </Link>
-          </div>
+          <Link to="/" className="inline-flex min-h-[44px] items-center font-impact text-[18px] uppercase text-suave hover:text-papel">
+            {L('← Voltar', '← Back')}
+          </Link>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-black px-4 py-8 sm:px-6">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <span className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow/80">
-            {L('Partida Rápida', 'Quick Match')}
+    <main className="min-h-screen bg-black px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto w-full max-w-2xl">
+        <div className="flex min-w-0 items-center justify-between gap-3 mb-4">
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
+              — {L('Partida rápida', 'Quick match')}
+            </span>
             {isDerbyMatch && (
-              <span className="ml-2 px-1.5 py-0.5 rounded-sm bg-danger/20 text-danger tracking-[0.18em]">
-                {L('🔥 Clássico', '🔥 Derby')}
-              </span>
+              <SeloRua tom="corre" className="-rotate-2">{L('Clássico', 'Derby')}</SeloRua>
             )}
           </span>
           <button
             type="button"
             onClick={() => navigate('/')}
-            className="text-[11px] font-display uppercase tracking-[0.2em] text-white/40 hover:text-white"
+            className="min-h-[40px] shrink-0 px-1 font-prova text-[12px] font-bold uppercase tracking-[0.18em] text-mudo hover:text-papel"
           >
             {L('Sair', 'Exit')}
           </button>
         </div>
 
         {phase === 'loading' && (
-          <p className="text-center text-white/50 py-20 animate-pulse">{L('Preparando o time…', 'Preparing the team…')}</p>
+          <p className="py-20 text-center font-voz text-[30px] leading-none text-suave animate-pulse">{L('Preparando o time…', 'Preparing the team…')}</p>
         )}
 
         {phase === 'error' && (
-          <div className="border border-rose-500/40 border-l-[3px] border-l-rose-400 bg-rose-500/10 px-4 py-3">
-            <p className="text-[12px] text-white/80">{error}</p>
+          <div className="border-l-[3px] border-baixa bg-concreto px-4 py-4">
+            <p className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-baixa">{L('Motor fora do ar', 'Engine down')}</p>
+            <p className="mt-1.5 text-[13px] text-suave">{error}</p>
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="mt-3 text-neon-yellow font-display uppercase tracking-[0.2em] text-[11px]"
+              className="mt-3 min-h-[40px] font-impact text-[17px] uppercase text-rua hover:text-papel"
             >
               ← Home
             </button>
@@ -682,16 +690,25 @@ export default function MatchQuickEngaged() {
         )}
 
         {phase === 'kickoff' && (
-          <div className="flex items-center justify-center py-24">
-            <motion.span
-              key={countdown}
-              initial={{ scale: 0.4, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="font-impact text-neon-yellow leading-none"
-              style={{ fontSize: '8rem' }}
-            >
-              {countdown > 0 ? countdown : L('BOLA!', 'GO!')}
-            </motion.span>
+          <div className="flex flex-col gap-6 py-2">
+            <ConvocacaoRua
+              homeName={club.name}
+              awayName={opponent!.name}
+              rotuloEsq={L('Partida rápida', 'Quick match')}
+              rotuloDir={isDerbyMatch ? L('Clássico', 'Derby') : L('Agora', 'Now')}
+              frase={L('Quem chega com respeito, entra.', 'Walk in with respect.')}
+            />
+            <div className="flex items-center justify-center py-4" aria-live="polite">
+              <motion.span
+                key={countdown}
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="font-spray font-black leading-none text-rua"
+                style={{ fontSize: 'clamp(6rem, 34vw, 10rem)' }}
+              >
+                {countdown > 0 ? countdown : L('BOLA!', 'GO!')}
+              </motion.span>
+            </div>
           </div>
         )}
 
@@ -699,6 +716,7 @@ export default function MatchQuickEngaged() {
           <QuickPlanPlayer
             key={plan.seed}
             plan={plan}
+            resultadoExp={lastBonuses && lastBonuses.length > 0 ? calculateTotalBonusRewards(lastBonuses).exp : null}
             narration={narration ?? undefined}
             buildShootout={buildShootout}
             speedMultiplier={speedMultiplier}
@@ -755,17 +773,22 @@ export default function MatchQuickEngaged() {
         )}
 
         {phase === 'finished' && result && (
-          <div className="mt-5 flex flex-col gap-2">
+          <div className="mt-6 flex flex-col gap-5">
+            {/* O RESULTADO (spray + voz + MVP em post-it + fita de EXP) agora mora
+                no fim do QuickPlanPlayer — uma peça só, sem MVP duplicado. */}
+
             {/* Rival fantasma (#6) — recorde pessoal superado: dopamina + bragging. */}
             {newRecord && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="px-4 py-2.5 rounded-lg border text-center mb-1"
-                style={{ borderColor: 'var(--color-neon-yellow)', background: 'rgba(253,225,0,0.10)' }}
+                className="-rotate-1 self-start bg-ouro-27 px-4 py-2.5 text-asfalto-27"
               >
-                <p className="font-display uppercase tracking-[0.2em] text-[11px] font-black text-neon-yellow">
-                  {L('🏆 Novo recorde pessoal', '🏆 New personal record')} — {result.homeScore}–{result.awayScore}!
+                <p className="font-prova text-[11px] font-bold uppercase tracking-[0.18em]">
+                  {L('Novo recorde pessoal', 'New personal record')}
+                </p>
+                <p className="font-spray font-black text-[34px] leading-none tabular-nums">
+                  {result.homeScore}×{result.awayScore}
                 </p>
               </motion.div>
             )}
@@ -797,7 +820,8 @@ export default function MatchQuickEngaged() {
                 ? { name: plan.mvp_projection.name, goals: plan.mvp_projection.goals, rating: plan.mvp_projection.rating }
                 : null;
               return (
-                <div className="mb-2">
+                <div className="flex flex-col gap-3">
+                  <SecaoRua label={L('Pro print', 'For the feed')} />
                   <QuickShareCard
                     clubName={club.name}
                     opponentName={opponent!.name}
@@ -817,37 +841,40 @@ export default function MatchQuickEngaged() {
                 já rodava em silêncio: cartão vira suspensão + moral abalado + multa,
                 hat-trick vira moral em alta + valor de mercado. Aqui o manager
                 finalmente VÊ a corrente causal do jogo que acabou de jogar. */}
-            <div className="mb-1">
-              <MatchConsequences playerNames={playerNames} />
-            </div>
+            <MatchConsequences playerNames={playerNames} />
 
             {/* EVOLUÇÃO DO TIME — o manager VÊ que não perdeu tempo: o time melhorou. */}
             {lastEvolution && (lastEvolution.risers.length > 0 || lastEvolution.teamOvrAfter > 0) && (() => {
               const teamUp = lastEvolution.teamOvrAfter - lastEvolution.teamOvrBefore;
               const risers = lastEvolution.risers.slice(0, 4);
               return (
-                <div className="relative overflow-hidden border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">{L('Seu time evoluiu', 'Your team improved')}</p>
-                    <span className="font-display tabular-nums text-[12px] font-black" style={{ color: teamUp >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                      {L('Força', 'Strength')} {lastEvolution.teamOvrBefore.toFixed(1)} → {lastEvolution.teamOvrAfter.toFixed(1)}
-                    </span>
-                  </div>
+                <div className="bg-concreto px-5 py-4">
+                  <SecaoRua
+                    label={L('Seu time evoluiu', 'Your team improved')}
+                    aside={
+                      <span className={teamUp >= 0 ? 'text-alta' : 'text-baixa'}>
+                        {lastEvolution.teamOvrBefore.toFixed(1)} → {lastEvolution.teamOvrAfter.toFixed(1)}
+                      </span>
+                    }
+                    className="mb-3"
+                  />
                   {risers.length > 0 ? (
-                    <div className="flex flex-col gap-1.5">
+                    <ul className="flex flex-col">
                       {risers.map((r) => (
-                        <div key={r.id} className="flex items-center gap-2.5">
-                          {players[r.id] && (
-                            <img src={playerPortraitSrc(players[r.id]!, 32, 32)} alt="" className="w-7 h-7 rounded-full object-cover bg-deep-black shrink-0" />
+                        <li key={r.id} className="flex min-h-[48px] min-w-0 items-center gap-3 border-b border-linha last:border-b-0">
+                          {players[r.id] ? (
+                            <img src={playerPortraitSrc(players[r.id]!, 32, 32)} alt="" className="h-8 w-8 shrink-0 rounded-full bg-asfalto-27 object-cover" />
+                          ) : (
+                            <span className="h-8 w-8 shrink-0 rounded-full bg-asfalto-27" />
                           )}
-                          <span className="flex-1 truncate text-white" style={{ fontWeight: 700, fontSize: '15px' }}>{r.name}</span>
-                          <span className="font-display uppercase tracking-[0.1em] text-[9px] font-black text-white/35 shrink-0">{posLabel(r.pos)}</span>
-                          <span className="font-display tabular-nums text-[12px] font-black text-success shrink-0">{r.ovrBefore}→{r.ovrAfter}</span>
-                        </div>
+                          <span className="min-w-0 flex-1 truncate font-voz text-[20px] leading-none text-papel">{r.name}</span>
+                          <span className="shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.1em] text-mudo">{posLabel(r.pos)}</span>
+                          <span className="shrink-0 font-impact text-[17px] tabular-nums text-alta">{r.ovrBefore}→{r.ovrAfter}</span>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   ) : (
-                    <p className="text-white/50 text-[12px]">{L('O elenco segurou o nível. Vença pra acelerar a evolução.', 'The squad held its level. Win to speed up progress.')}</p>
+                    <p className="text-[13px] text-suave">{L('O elenco segurou o nível. Vença pra acelerar a evolução.', 'The squad held its level. Win to speed up progress.')}</p>
                   )}
                 </div>
               );
@@ -859,20 +886,23 @@ export default function MatchQuickEngaged() {
               const pct = Math.max(0, Math.min(100, (clubDna.axis + 100) / 2));
               const romantic = clubDna.lastShift > 0;
               return (
-                <div className="border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">{L('DNA do clube', 'Club DNA')}</p>
-                    <span className="font-display tabular-nums text-[12px] font-black" style={{ color: romantic ? 'var(--color-neon-yellow)' : 'rgb(148,163,184)' }}>
-                      {romantic ? '+' : ''}{clubDna.lastShift} {romantic ? L('Romântico', 'Romantic') : L('Pragmático', 'Pragmatic')}
-                    </span>
+                <div className="bg-concreto px-5 py-4">
+                  <SecaoRua
+                    label={L('DNA do clube', 'Club DNA')}
+                    aside={
+                      <span className={romantic ? 'text-rua' : 'text-suave'}>
+                        {romantic ? '+' : ''}{clubDna.lastShift} {romantic ? L('Romântico', 'Romantic') : L('Pragmático', 'Pragmatic')}
+                      </span>
+                    }
+                    className="mb-3"
+                  />
+                  <div className="relative h-2 bg-linha">
+                    <div className="absolute top-1/2 h-4 w-1.5 -translate-y-1/2 bg-rua" style={{ left: `calc(${pct}% - 3px)` }} />
                   </div>
-                  <div className="relative h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.10)' }}>
-                    <div className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-neon-yellow" style={{ left: `calc(${pct}% - 5px)` }} />
-                  </div>
-                  <div className="flex items-center justify-between mt-1.5">
-                    <span className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/35">{L('Pragmático', 'Pragmatic')}</span>
-                    <span className="text-white/80 text-[12px] font-bold">{dnaLabel(clubDna.axis)}</span>
-                    <span className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/35">{L('Romântico', 'Romantic')}</span>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className="font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{L('Pragmático', 'Pragmatic')}</span>
+                    <span className="truncate font-voz text-[18px] leading-none text-papel">{dnaLabel(clubDna.axis)}</span>
+                    <span className="font-prova text-[10px] font-bold uppercase tracking-[0.14em] text-mudo">{L('Romântico', 'Romantic')}</span>
                   </div>
                 </div>
               );
@@ -881,7 +911,7 @@ export default function MatchQuickEngaged() {
             {/* Ponte #1 — BÔNUS DE PERFORMANCE: o "efeito uau" que estava sendo
                 calculado e jogado no lixo agora aparece (revelação progressiva). */}
             {lastBonuses && lastBonuses.length > 0 && (
-              <div className="border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
+              <div className="bg-concreto px-5 py-4">
                 <QuickPerformanceBonusPanel
                   bonuses={lastBonuses}
                   totalOle={calculateTotalBonusRewards(lastBonuses).ole}
@@ -893,7 +923,7 @@ export default function MatchQuickEngaged() {
             {/* Ponte #2 — DESAFIOS SEMANAIS: o gancho de retorno ("volta amanhã")
                 agora progride e fica visível no modo mais jogado. */}
             {streakChallenges && streakChallenges.challenges.length > 0 && (
-              <div className="border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
+              <div className="bg-concreto px-5 py-4">
                 {/* #4 — celebra desafio recém-concluído (surpresa + endowed progress). */}
                 {(() => {
                   const justDone = streakChallenges.challenges.filter((c) => c.completed && !c.claimed);
@@ -902,13 +932,12 @@ export default function MatchQuickEngaged() {
                     <motion.div
                       initial={{ opacity: 0, scale: 0.96 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="mb-3 px-3 py-2 rounded-lg border"
-                      style={{ borderColor: 'var(--color-success)', background: 'rgba(34,197,94,0.12)' }}
+                      className="mb-4 -rotate-1 bg-rua px-3 py-2.5 text-asfalto-27"
                     >
-                      <p className="font-display uppercase tracking-[0.18em] text-[10px] font-black text-success">
-                        {L('✓ Desafio concluído!', '✓ Challenge complete!')}
+                      <p className="font-prova text-[10.5px] font-bold uppercase tracking-[0.18em]">
+                        {L('✓ Desafio concluído', '✓ Challenge complete')}
                       </p>
-                      <p className="text-white text-[12px] mt-0.5">
+                      <p className="mt-0.5 font-voz text-[19px] leading-[1.05]">
                         {justDone.map((c) => c.name).join(' · ')} — {L('resgate a recompensa.', 'claim your reward.')}
                       </p>
                     </motion.div>
@@ -924,10 +953,10 @@ export default function MatchQuickEngaged() {
               const xi = homePlayersRef.current.map((p) => players[p.id]).filter((p): p is NonNullable<typeof p> => !!p);
               if (!xi.length) return null;
               const shortNm = (n: string) => n.match(/"([^"]+)"/)?.[1] ?? n.split(/\s+/)[0] ?? n;
-              const cats: { icon: string; label: string; key: 'drible' | 'tatico' | 'mentalidade' }[] = [
-                { icon: '🎩', label: L('Driblador', 'Dribbler'), key: 'drible' },
-                { icon: '🧠', label: L('Cérebro', 'Brain'), key: 'tatico' },
-                { icon: '❄️', label: L('Frieza', 'Composure'), key: 'mentalidade' },
+              const cats: { label: string; key: 'drible' | 'tatico' | 'mentalidade' }[] = [
+                { label: L('Driblador', 'Dribbler'), key: 'drible' },
+                { label: L('Cérebro', 'Brain'), key: 'tatico' },
+                { label: L('Frieza', 'Composure'), key: 'mentalidade' },
               ];
               const picks = cats
                 .map((c) => {
@@ -937,25 +966,23 @@ export default function MatchQuickEngaged() {
                 .filter((x): x is NonNullable<typeof x> => !!x);
               if (!picks.length) return null;
               return (
-                <div className="border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
-                  <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow mb-3">{L('Destaques do elenco', 'Squad highlights')}</p>
-                  <div className="flex flex-col gap-2">
+                <div className="bg-concreto px-5 py-4">
+                  <SecaoRua label={L('Destaques do elenco', 'Squad highlights')} className="mb-2" />
+                  <ul className="flex flex-col">
                     {picks.map((p) => (
-                      <div key={p.key} className="flex items-center gap-2.5">
-                        <span className="text-base shrink-0">{p.icon}</span>
-                        <span className="font-display uppercase tracking-[0.1em] text-[9px] font-black text-white/40 w-20 shrink-0">{p.label}</span>
-                        <span className="flex-1 truncate text-white" style={{ fontWeight: 700, fontSize: '15px' }}>{p.name}</span>
-                        <span className="font-display tabular-nums text-[13px] font-black text-neon-yellow shrink-0">{p.val}</span>
-                      </div>
+                      <li key={p.key} className="flex min-h-[46px] min-w-0 items-center gap-3 border-b border-linha last:border-b-0">
+                        <span className="w-[5.5rem] shrink-0 font-prova text-[10px] font-bold uppercase tracking-[0.12em] text-mudo">{p.label}</span>
+                        <span className="min-w-0 flex-1 truncate font-voz text-[20px] leading-none text-papel">{p.name}</span>
+                        <span className="shrink-0 font-impact text-[20px] tabular-nums text-papel">{p.val}</span>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               );
             })()}
 
             {/* LIGA OLE — continuação da campanha (avançou / campeão / eliminado) */}
             {isLigaOleMatchRef.current && (() => {
-              const M = 'var(--font-impact)';
               // FABLE — a persona do treinador rival deixa o recado (NPC com
               // opinião): ele perdeu → 'lost'; ele te eliminou → 'eliminated_you'.
               const rivalId = ligaOpponentIdRef.current;
@@ -966,44 +993,50 @@ export default function MatchQuickEngaged() {
                     return { persona, line: personaLine(rivalId, situation, String(result.homeScore * 10 + result.awayScore)) };
                   })()
                 : null;
-              const rivalQuoteEl = rivalQuote ? (
-                <p className="text-[12px] mt-2" style={{ color: ligaFlash?.outcome === 'eliminated' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.65)' }}>
-                  {rivalQuote.persona.icon} {rivalQuote.persona.label}, {L('treinador rival', 'rival coach')} — “{rivalQuote.line}”
-                </p>
-              ) : null;
+              const rivalQuoteEl = (tom: 'escuro' | 'claro') =>
+                rivalQuote ? (
+                  <p className={tom === 'escuro' ? 'mt-3 text-[13px] text-asfalto-27/80' : 'mt-3 text-[13px] text-suave'}>
+                    {rivalQuote.persona.icon} {rivalQuote.persona.label}, {L('treinador rival', 'rival coach')} —{' '}
+                    <span className="font-voz text-[18px] leading-none">“{rivalQuote.line}”</span>
+                  </p>
+                ) : null;
               if (ligaFlash?.outcome === 'champion') {
                 return (
-                  <div className="relative overflow-hidden bg-neon-yellow px-5 py-5 text-black mb-1" style={{ borderRadius: 'var(--radius-md)' }}>
-                    <Hashtag className="mb-1 text-black/70">{L('#ligaole #campeão', '#ligaole #champion')}</Hashtag>
-                    <p className="uppercase" style={{ fontFamily: M, fontSize: 'clamp(30px, 9vw, 46px)', lineHeight: 1.05 }}>{club.name}</p>
-                    <p className="font-display uppercase tracking-[0.2em] text-[11px] font-black text-black/80 mt-1">{L('Levantou a taça!', 'Lifted the trophy!')}</p>
-                    {rivalQuoteEl}
-                    <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3 bg-black text-neon-yellow font-display uppercase tracking-[0.2em] text-[12px] font-black" style={{ borderRadius: 'var(--radius-sm)' }}>{L('Ver Liga Ole', 'View Liga Ole')}</button>
+                  <div className="relative overflow-hidden bg-ouro-27 px-5 py-5 text-asfalto-27">
+                    <Hashtag className="mb-1 font-prova text-asfalto-27/75">{L('#ligaole #campeão', '#ligaole #champion')}</Hashtag>
+                    <p className="font-impact uppercase leading-[0.95]" style={{ fontSize: 'clamp(32px, 10vw, 52px)' }}>{club.name}</p>
+                    <p className="mt-1 font-voz text-[28px] leading-none">{L('Levantou a taça.', 'Lifted the trophy.')}</p>
+                    {rivalQuoteEl('escuro')}
+                    <BotaoRua variante="asfalto" onClick={() => navigate('/liga-ole')} className="mt-4 w-full">
+                      {L('Ver Liga Ole', 'View Liga Ole')} <span aria-hidden>→</span>
+                    </BotaoRua>
                   </div>
                 );
               }
               if (ligaFlash?.outcome === 'eliminated') {
                 return (
-                  <div className="border px-5 py-5 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-danger)', backgroundColor: 'var(--color-dark-gray)' }}>
-                    <Hashtag className="mb-1 text-danger">{L('#ligaole #eliminado', '#ligaole #eliminated')}</Hashtag>
-                    <p className="text-white uppercase" style={{ fontFamily: M, fontSize: 'clamp(24px, 7vw, 36px)', lineHeight: 1.05 }}>{L('Caiu nas', 'Out in the')} {ligaFlash.reachedRound}</p>
-                    {rivalQuoteEl}
-                    <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3 border border-white/20 text-white/80 font-display uppercase tracking-[0.18em] text-[11px] font-black hover:border-white/50 transition-colors" style={{ borderRadius: 'var(--radius-sm)' }}>{L('Ver Liga Ole', 'View Liga Ole')}</button>
+                  <div className="border-l-[3px] border-baixa bg-concreto px-5 py-5">
+                    <Hashtag className="mb-1 font-prova text-baixa">{L('#ligaole #eliminado', '#ligaole #eliminated')}</Hashtag>
+                    <p className="font-impact uppercase leading-none text-papel" style={{ fontSize: 'clamp(26px, 7.5vw, 38px)' }}>{L('Caiu nas', 'Out in the')} {ligaFlash.reachedRound}</p>
+                    <p className="mt-1 font-voz text-[24px] leading-none text-suave">{L('Perdeu hoje. Volta amanhã.', 'Lost today. Back tomorrow.')}</p>
+                    {rivalQuoteEl('claro')}
+                    <BotaoRua variante="contorno" onClick={() => navigate('/liga-ole')} className="mt-4 w-full">
+                      {L('Ver Liga Ole', 'View Liga Ole')}
+                    </BotaoRua>
                   </div>
                 );
               }
               if (ligaOle?.status === 'active') {
                 return (
-                  <div className="relative overflow-hidden border px-5 py-5 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'var(--color-dark-gray)' }}>
-                    <Hashtag className="mb-1 text-neon-yellow">#ligaole</Hashtag>
-                    <p className="text-white uppercase" style={{ fontFamily: M, fontSize: 'clamp(22px, 6.5vw, 32px)', lineHeight: 1.05 }}>{emIngles() ? `${club.name} advanced!` : `${club.name} avançou de fase!`}</p>
-                    <p className="font-display uppercase tracking-[0.2em] text-[10px] font-black text-white/50 mt-1">{L('Próxima', 'Next')}: {LIGA_OLE_ROUNDS[ligaOle.roundIndex]}</p>
-                    {rivalQuote && (
-                      <p className="text-[12px] mt-2 text-white/60">
-                        {rivalQuote.persona.icon} {rivalQuote.persona.label}, {L('treinador rival', 'rival coach')} — “{rivalQuote.line}”
-                      </p>
-                    )}
-                    <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3.5 bg-neon-yellow hover:bg-white text-black font-display uppercase tracking-[0.2em] text-[13px] font-black transition-colors" style={{ borderRadius: 'var(--radius-sm)' }}>{L('Avançar ›', 'Continue ›')}</button>
+                  <div className="relative overflow-hidden bg-rua px-5 py-5 text-asfalto-27">
+                    <span aria-hidden className="rua-alambrado absolute inset-x-0 top-0 h-24 [--alambrado:rgba(13,13,12,0.22)]" />
+                    <Hashtag className="relative mb-1 font-prova text-asfalto-27/75">#ligaole</Hashtag>
+                    <p className="relative font-impact uppercase leading-[0.95]" style={{ fontSize: 'clamp(26px, 8vw, 40px)' }}>{emIngles() ? `${club.name} advanced!` : `${club.name} avançou de fase!`}</p>
+                    <p className="relative mt-1.5 font-prova text-[11px] font-bold uppercase tracking-[0.18em]">{L('Próxima', 'Next')}: {LIGA_OLE_ROUNDS[ligaOle.roundIndex]}</p>
+                    {rivalQuoteEl('escuro')}
+                    <BotaoRua variante="asfalto" onClick={() => navigate('/liga-ole')} className="relative mt-4 w-full">
+                      {L('Avançar', 'Continue')} <span aria-hidden>→</span>
+                    </BotaoRua>
                   </div>
                 );
               }
@@ -1022,68 +1055,61 @@ export default function MatchQuickEngaged() {
               const star = legends[0]!;
               const won = result.homeScore > result.awayScore;
               return (
-                <div
-                  className="mb-1 border p-4"
-                  style={{ borderColor: 'var(--color-neon-yellow)', borderRadius: 'var(--radius-md)', background: 'rgba(253,225,0,0.06)' }}
-                >
-                  <Hashtag className="text-neon-yellow">#legendscup</Hashtag>
-                  <p className="mt-2 text-[15px] font-bold leading-snug text-white">
+                <div className="border-[3px] border-ouro-27 bg-asfalto-27 p-4">
+                  <Hashtag className="font-prova text-ouro-27">#legendscup</Hashtag>
+                  <p className="mt-2 font-voz text-[24px] leading-[1.05] text-papel">
                     {won
                       ? L(`Você venceu ${star.name}. Agora imagine ele do seu lado.`, `You beat ${star.name}. Now imagine him on your side.`)
                       : L(`${star.name} decidiu contra você. Ele pode ser seu.`, `${star.name} decided it against you. He can be yours.`)}
                   </p>
 
-                  <div className="mt-3 flex gap-2 overflow-x-auto">
+                  <div className="mt-4 flex gap-2.5 overflow-x-auto pb-1">
                     {legends.slice(0, 5).map((l) => (
                       <Link
                         key={l.id}
                         to={`/mercado/transfer?legacy=${encodeURIComponent(l.id)}&from=legendscup`}
-                        className="w-[74px] shrink-0 overflow-hidden border border-white/10 bg-black transition-colors hover:border-white/30"
-                        style={{ borderRadius: 'var(--radius-sm)' }}
+                        className="w-[76px] shrink-0 overflow-hidden bg-ouro-27 text-asfalto-27 transition-transform hover:-translate-y-0.5"
                       >
-                        <div className="relative aspect-[3/4] bg-black">
+                        <div className="relative aspect-[3/4] bg-asfalto-27">
                           {l.portraitUrl ? (
                             <img src={l.portraitUrl} alt={l.name} loading="lazy" referrerPolicy="no-referrer"
                               className="h-full w-full object-cover object-[50%_18%]" />
                           ) : (
-                            <div className="grid h-full place-items-center text-[10px] text-white/20">{L('sem foto', 'no photo')}</div>
+                            <div className="grid h-full place-items-center font-prova text-[10px] text-mudo">{L('sem foto', 'no photo')}</div>
                           )}
-                          <span className="absolute left-1 top-1 rounded bg-neon-yellow px-1 font-display text-[10px] font-black text-black">
+                          <span className="absolute left-0 top-0 bg-ouro-27 px-1.5 py-0.5 font-impact text-[13px] leading-none text-asfalto-27">
                             {l.ovr}
                           </span>
                         </div>
-                        <p className="truncate px-1.5 py-1 font-display text-[9px] font-black">{l.name}</p>
+                        <p className="truncate px-1.5 py-1 font-impact text-[11px] uppercase leading-none">{l.name}</p>
                       </Link>
                     ))}
                   </div>
 
                   <Link
                     to="/mercado/transfer?from=legendscup"
-                    className="mt-3 block w-full bg-neon-yellow py-3 text-center font-display text-[12px] font-black uppercase tracking-[0.18em] text-black transition-colors hover:bg-white"
-                    style={{ borderRadius: 'var(--radius-sm)' }}
+                    className="mt-4 flex min-h-[50px] w-full items-center justify-center gap-2 bg-ouro-27 font-impact text-[19px] uppercase leading-none text-asfalto-27 transition-colors hover:bg-papel"
                   >
-                    {L('Contratar uma lenda', 'Sign a legend')}
+                    {L('Contratar uma lenda', 'Sign a legend')} <span aria-hidden>→</span>
                   </Link>
                 </div>
               );
             })()}
 
-            {!isLigaOleMatchRef.current && (
+            <div className="mt-1 flex flex-col gap-3 pb-4">
+              {!isLigaOleMatchRef.current && (
+                <BotaoRua onClick={() => navigate(0)} className="w-full">
+                  {L('Jogar de novo', 'Play again')} <span aria-hidden>→</span>
+                </BotaoRua>
+              )}
               <button
                 type="button"
-                onClick={() => navigate(0)}
-                className="w-full py-3 bg-neon-yellow hover:bg-white text-black font-display uppercase tracking-[0.18em] text-[12px] font-black transition-colors"
+                onClick={() => navigate('/')}
+                className="inline-flex min-h-[48px] w-full items-center justify-center font-impact text-[17px] uppercase text-suave transition-colors hover:text-papel"
               >
-                {L('Jogar de novo', 'Play again')}
+                {L('Voltar para a Home', 'Back to Home')}
               </button>
-            )}
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="w-full py-2.5 border border-zinc-700 text-white/70 font-display uppercase tracking-[0.18em] text-[11px] hover:border-white/50 transition-colors"
-            >
-              {L('Voltar para a Home', 'Back to Home')}
-            </button>
+            </div>
           </div>
         )}
       </div>

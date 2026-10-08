@@ -27,6 +27,8 @@ import {
   pickScorer,
   type LineupSnapshot,
 } from './_sectorModel.ts';
+// DNA da fundação do clube (Fase 0) — mesmas regras do match_simulator.py.
+import { readDna, dnaLambdaMults, dnaCardMult, type Dna } from './_dnaModel.ts';
 
 const ROUND_INTERVAL_MS = 5 * 60 * 1000;
 const SIM_DURATION_MS = 90_000;
@@ -344,10 +346,12 @@ interface KnockoutMatchResult {
   penHome: number | null; penAway: number | null;
   wentToPens: boolean; winner: 'home' | 'away';
 }
-function simulateKnockoutMatch(effHome: number, effAway: number): KnockoutMatchResult {
+function simulateKnockoutMatch(effHome: number, effAway: number, homeDna: Dna | null = null, awayDna: Dna | null = null): KnockoutMatchResult {
+  // DNA da fundação inclina o λ dos dois lados (sem DNA = ×1, placar de sempre).
+  const dm = dnaLambdaMults(homeDna, awayDna);
   const diff = (effHome + 3) - effAway;
-  const scoreHome = poissonGoals(Math.max(0.2, 1.4 + diff / 22));
-  const scoreAway = poissonGoals(Math.max(0.2, 1.4 - diff / 22));
+  const scoreHome = poissonGoals(Math.max(0.2, 1.4 + diff / 22) * dm.home);
+  const scoreAway = poissonGoals(Math.max(0.2, 1.4 - diff / 22) * dm.away);
   if (scoreHome !== scoreAway) {
     return { scoreHome, scoreAway, penHome: null, penAway: null, wentToPens: false, winner: scoreHome > scoreAway ? 'home' : 'away' };
   }
@@ -829,11 +833,16 @@ function applyCompetitionReset(teams: TeamRow[]): TeamRow[] {
   }));
 }
 
-function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kickoffMs: number, opts?: { isRivalry?: boolean; homeSnap?: LineupSnapshot | null; awaySnap?: LineupSnapshot | null }) {
+function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kickoffMs: number, opts?: { isRivalry?: boolean; homeSnap?: LineupSnapshot | null; awaySnap?: LineupSnapshot | null; homeDna?: Dna | null; awayDna?: Dna | null }) {
   const isRivalry = opts?.isRivalry ?? false;
   // Rivalidade: probabilidades aumentadas
   const yellowProb = isRivalry ? 0.25 : 0.15;
   const redProb = isRivalry ? 0.08 : 0.03;
+  // DNA da fundação: disciplina limpa, pressão derruba mais — por lado.
+  const homeDna = opts?.homeDna ?? null;
+  const awayDna = opts?.awayDna ?? null;
+  const cardH = dnaCardMult(homeDna);
+  const cardA = dnaCardMult(awayDna);
   const injuryProb = isRivalry ? 0.15 : 0.08;
 
   const homeAdvantage = 3;
@@ -867,6 +876,10 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
     homeExpected = Math.max(0.2, 1.4 + diff / OVR_GOAL_SENSITIVITY) * derbyGoalMult;
     awayExpected = Math.max(0.2, 1.4 - diff / OVR_GOAL_SENSITIVITY) * derbyGoalMult;
   }
+  // DNA da fundação inclina os dois λ (sem DNA = ×1, placar de sempre).
+  const dm = dnaLambdaMults(homeDna, awayDna);
+  homeExpected *= dm.home;
+  awayExpected *= dm.away;
   const homeGoals = poissonGoals(homeExpected);
   const awayGoals = poissonGoals(awayExpected);
   const events: any[] = [];
@@ -909,7 +922,7 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
   // Cartões amarelos
   let home_yellow = false;
   let away_yellow = false;
-  if (Math.random() < yellowProb) {
+  if (Math.random() < yellowProb * cardH.yellow) {
     home_yellow = true;
     const minute = Math.floor(10 + Math.random() * 80);
     events.push({
@@ -919,7 +932,7 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
       timestamp_ms: kickoffMs + minute * 1000,
     });
   }
-  if (Math.random() < yellowProb) {
+  if (Math.random() < yellowProb * cardA.yellow) {
     away_yellow = true;
     const minute = Math.floor(10 + Math.random() * 80);
     events.push({
@@ -933,7 +946,7 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
   // Cartões vermelhos
   let home_red = false;
   let away_red = false;
-  if (Math.random() < redProb) {
+  if (Math.random() < redProb * cardH.red) {
     home_red = true;
     const minute = Math.floor(20 + Math.random() * 70);
     events.push({
@@ -943,7 +956,7 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
       timestamp_ms: kickoffMs + minute * 1000,
     });
   }
-  if (Math.random() < redProb) {
+  if (Math.random() < redProb * cardA.red) {
     away_red = true;
     const minute = Math.floor(20 + Math.random() * 70);
     events.push({
@@ -1782,7 +1795,7 @@ Deno.serve(async (req: Request) => {
       const away = koTeamById.get(fx.away_team_id);
       const effH = home ? effectiveOverall(home) : fx.home_overall;
       const effA = away ? effectiveOverall(away) : fx.away_overall;
-      const m = simulateKnockoutMatch(effH, effA);
+      const m = simulateKnockoutMatch(effH, effA, readDna(home?.lineup_snapshot?.dna), readDna(away?.lineup_snapshot?.dna));
       koFxUpdated.push({
         ...fx, score_home: m.scoreHome, score_away: m.scoreAway,
         penalty_score_home: m.penHome, penalty_score_away: m.penAway, went_to_penalties: m.wentToPens,
@@ -1949,7 +1962,12 @@ Deno.serve(async (req: Request) => {
     const effA = away ? effectiveOverall(away) : fx.away_overall;
     const homeSnap = freshSnapshot(home);
     const awaySnap = freshSnapshot(away);
-    const sim = simulateFixture(fx, effH, effA, now, { isRivalry, homeSnap, awaySnap });
+    // DNA vale mesmo com snapshot velho: é a identidade do clube, não a escalação.
+    const sim = simulateFixture(fx, effH, effA, now, {
+      isRivalry, homeSnap, awaySnap,
+      homeDna: readDna(home?.lineup_snapshot?.dna),
+      awayDna: readDna(away?.lineup_snapshot?.dna),
+    });
     // Grava a artilharia: agrega gols por jogador REAL (UUID). Sem UUID (elenco
     // legado) o gol conta no placar mas não tem autor gravável.
     for (const sc of sim.scorers) {

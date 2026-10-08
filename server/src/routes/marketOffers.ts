@@ -139,6 +139,10 @@ marketOffersRoutes.post('/api/market/offer', rateLimit(30), async (c) => {
     .eq('listing_id', listingId).maybeSingle();
   if (!listing) return c.json({ ok: false, error: 'Listagem não encontrada.' }, 404);
   if (!listing.listed_on_market) return c.json({ ok: false, error: 'Listagem não está disponível.' }, 409);
+  // Edição Fundação (lenda do sorteio da fundação) nunca sai do clube.
+  if (String(listing.game_player_id).startsWith('fundacao-')) {
+    return c.json({ ok: false, error: 'Edição Fundação não sai do clube.' }, 409);
+  }
 
   const { data: sellerProfile } = await sb.from('profiles').select('id').eq('club_id', listing.club_id).maybeSingle();
   if (!sellerProfile?.id) return c.json({ ok: false, error: 'Vendedor não encontrado.' }, 404);

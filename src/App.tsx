@@ -28,6 +28,7 @@ import { GenesisCatalogPortraitsHydrate } from './game/GenesisCatalogPortraitsHy
 import { GenesisTestSquadsHydrate } from './game/GenesisTestSquadsHydrate';
 import { AnnouncementsHydrate } from './game/AnnouncementsHydrate';
 import { OnboardingCeremony } from './onboarding/OnboardingCeremony';
+import { FundacaoGate } from './onboarding/FundacaoGate';
 import { ManagerSquadHydrator } from './game/ManagerSquadHydrator';
 import { ManagerGameStateHydrator } from './game/ManagerGameStateHydrator';
 import { OlefootPythonModeHydrator } from './game/OlefootPythonModeHydrator';
@@ -111,6 +112,9 @@ function SessionGuard() {
 }
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
+const Fundacao = lazy(() => import('./pages/Fundacao'));
+const FundacaoElenco = lazy(() => import('./pages/FundacaoElenco'));
+const FundacaoEstreia = lazy(() => import('./pages/FundacaoEstreia'));
 const ClubHub = lazy(() => import('./pages/ClubHub').then((m) => ({ default: m.ClubHub })));
 const CompetitionHub = lazy(() => import('./pages/CompetitionHub').then((m) => ({ default: m.CompetitionHub })));
 const MarketHub = lazy(() => import('./pages/MarketHub').then((m) => ({ default: m.MarketHub })));
@@ -451,6 +455,7 @@ as a nice MVP. Let's Play Together! ⚽
         <GlobalLeagueHydrator />
         <GlobalSchedulerMount />
         <OnboardingCeremony />
+        <FundacaoGate />
         <ManagerSquadHydrator />
         <ManagerGameStateHydrator />
         <OlefootPythonModeHydrator />
@@ -576,6 +581,10 @@ as a nice MVP. Let's Play Together! ⚽
             {/* O painel de expansão entrou na carteira (NETWORK). O convite que
                 já circula e a OLEWALLET ainda apontam pra cá. */}
             <Route path="/expansao" element={<Navigate to="/wallet/network" replace />} />
+            {/* Fundação do Clube: tela cheia, fora do shell (sem nav). */}
+            <Route path="/fundacao" element={<Suspense fallback={<RouteFallback />}><Fundacao /></Suspense>} />
+            <Route path="/fundacao/elenco" element={<Suspense fallback={<RouteFallback />}><FundacaoElenco /></Suspense>} />
+            <Route path="/fundacao/estreia" element={<Suspense fallback={<RouteFallback />}><FundacaoEstreia /></Suspense>} />
             <Route element={<GameShell />}>
               <Route path="/" element={<Home />} />
 

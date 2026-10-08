@@ -787,6 +787,13 @@ export type GameAction =
     }
   | { type: 'APPLY_CASUAL_RESULT_TO_LEAGUE'; result: { scoreHome: number; scoreAway: number; result: 'win' | 'draw' | 'loss' } }
   | { type: 'ADMIN_PATCH_CLUB'; partial: Partial<import('@/entities/types').ClubEntity> }
+  /**
+   * Janela da Estreia: um clube da várzea (controlado pelo jogo) compra um
+   * jogador do pacote da fundação por 80% do valor de mercado. Travas no reducer.
+   */
+  | { type: 'VENDER_PARA_VARZEA'; playerId: string; agoraMs?: number }
+  /** Fundação do clube: grava a identidade e alinha a formação do manager a ela. */
+  | { type: 'SET_CLUB_IDENTIDADE'; identidade: import('@/club/identidade').IdentidadeDoClube }
   /** Simula depósito fiat→BRO no SPOT (ledger FIAT_DEPOSIT + crédito SPOT). */
   /** Match Global: Define o estado da liga global */
   | { type: 'SET_GLOBAL_LEAGUE_STATE'; payload: import('@/match/globalMatch').GlobalLeagueState }

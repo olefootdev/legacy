@@ -34,6 +34,9 @@ import { L, LOCALE } from '@/i18n/L';
  *     dia 1" no capítulo IV.
  */
 
+/** O Ato 4 da Fundação substituiu o sorteio daqui (ver o gatilho abaixo). */
+const CERIMONIA_SUBSTITUIDA_PELA_FUNDACAO = true;
+
 type Phase =
   | { kind: 'loading' }
   | { kind: 'error' }
@@ -111,6 +114,9 @@ export function OnboardingCeremony() {
   const clubName = useGameStore((s) => s.club?.name ?? 'Olefoot FC');
   const clubInitials = deriveInitials(clubName);
   const managerDay = useGameStore((s) => s.userSettings?.managerDay ?? 1);
+  // Fundação do Clube vem ANTES do elenco: sem identidade, a cerimônia espera
+  // (o `FundacaoGate` leva o manager novo pra /fundacao).
+  const temIdentidade = useGameStore((s) => !!s.club?.identidade);
   const hydrationDone = useSquadHydrationDone();
 
   const startedRef = useRef(false);
@@ -171,6 +177,11 @@ export function OnboardingCeremony() {
     if (!managerProfile) return;
     if (hasDoneOnboarding) return;
     if (playersCount > 0) return;
+    if (!temIdentidade) return;
+    // Fundação do Clube (Fase 2, 2026-10-07): o elenco sai do Ato 4
+    // (/fundacao/elenco — sorteio no servidor). A cerimônia não abre mais:
+    // dois caminhos de grant = elenco em dobro.
+    if (CERIMONIA_SUBSTITUIDA_PELA_FUNDACAO) return;
     startedRef.current = true;
     void (async () => {
       // Verificar novamente após async — jogadores podem ter chegado nesse intervalo
@@ -195,7 +206,7 @@ export function OnboardingCeremony() {
       }
       setActive(true);
     })();
-  }, [hydrationSettled, managerProfile, hasDoneOnboarding, playersCount]);
+  }, [hydrationSettled, managerProfile, hasDoneOnboarding, playersCount, temIdentidade]);
 
   const startBuild = useCallback(async () => {
     setPhase({ kind: 'loading' });

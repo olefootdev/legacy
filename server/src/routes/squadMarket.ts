@@ -305,6 +305,15 @@ squadMarketRoutes.post('/api/squad-market/ack-loan', async (c) => {
   return c.json({ ok: true });
 });
 
+/**
+ * EDIÇÃO FUNDAÇÃO (lenda do sorteio da fundação, 2026-10-07): é do clube pra
+ * sempre — não se anuncia, não se empresta, não vai junto na venda do time.
+ * Marca: id `fundacao-…` (ou a flag `edicaoFundacao`).
+ */
+export function ehEdicaoFundacao(p: { id?: unknown; edicaoFundacao?: unknown } | null | undefined): boolean {
+  return !!p && ((typeof p.id === 'string' && p.id.startsWith('fundacao-')) || p.edicaoFundacao === true);
+}
+
 /** POST /api/squad-market/list { playerId, priceOlefoot } — anuncia UM jogador. */
 squadMarketRoutes.post('/api/squad-market/list', async (c) => {
   const sb = getSupabaseAdmin();
@@ -322,6 +331,9 @@ squadMarketRoutes.post('/api/squad-market/list', async (c) => {
   const squad = await lerSquad(me);
   const player = squad.players.find((p) => p?.id === playerId);
   if (!player) return c.json({ ok: false, error: 'Este jogador não está no teu plantel.' }, 404);
+  if (ehEdicaoFundacao(player)) {
+    return c.json({ ok: false, error: 'Edição Fundação não sai do clube: não se vende nem se empresta.' }, 409);
+  }
   if (player.contractExpired) return c.json({ ok: false, error: 'Contrato esgotado — renova antes de vender.' }, 409);
   if ((await idsAlugadosPorMim(me)).has(playerId)) {
     return c.json({ ok: false, error: 'Este jogador está EMPRESTADO a ti — não é teu pra vender.' }, 409);
@@ -369,15 +381,17 @@ squadMarketRoutes.post('/api/squad-market/list-team', async (c) => {
     return c.json({ ok: false, error: 'Tens jogador EMPRESTADO no plantel — devolve (ou compra) antes de vender o time.' }, 409);
   }
 
-  const refTotal = squad.players.reduce((s, p) => s + (broCentsParaOlefoot(p.marketValueBroCents) ?? 0), 0);
+  // A Edição Fundação fica com o clube: não conta no time anunciado.
+  const vendaveis = squad.players.filter((p) => !ehEdicaoFundacao(p));
+  const refTotal = vendaveis.reduce((s, p) => s + (broCentsParaOlefoot(p.marketValueBroCents) ?? 0), 0);
   const { data, error } = await sb
     .from('squad_listings')
     .insert({
       kind: 'team',
       seller_user_id: me,
       team_snapshot: {
-        jogadores: squad.players.length,
-        destaques: squad.players.slice(0, 5).map((p) => ({ name: p.name ?? '', pos: p.pos ?? '' })),
+        jogadores: vendaveis.length,
+        destaques: vendaveis.slice(0, 5).map((p) => ({ name: p.name ?? '', pos: p.pos ?? '' })),
         refOlefoot: refTotal > 0 ? String(refTotal) : null,
       },
       price_olefoot: preco,
@@ -463,11 +477,13 @@ squadMarketRoutes.post('/api/squad-market/buy', async (c) => {
     sellerRestantes = sellerSquad.players.filter((p) => p?.id !== r.game_player_id);
   } else {
     // Jogador que o vendedor ALUGOU de terceiro não é dele — fica com ele.
+    // A Edição Fundação também fica: é do clube pra sempre.
     const alugadosDoVendedor = await idsAlugadosPorMim(sellerId);
-    const proprios = sellerSquad.players.filter((p) => !alugadosDoVendedor.has(p.id));
+    const ficam = (p: SquadPlayer) => alugadosDoVendedor.has(p.id) || ehEdicaoFundacao(p);
+    const proprios = sellerSquad.players.filter((p) => !ficam(p));
     if (proprios.length === 0) return desfazer('O plantel do vendedor está vazio — dinheiro devolvido.', 409);
     entregues = proprios.map((p) => ({ ...p, listedOnMarket: false }));
-    sellerRestantes = sellerSquad.players.filter((p) => alugadosDoVendedor.has(p.id));
+    sellerRestantes = sellerSquad.players.filter(ficam);
   }
 
   const meusIds = new Set(buyerSquad.players.map((p) => p?.id));
@@ -534,6 +550,9 @@ squadMarketRoutes.post('/api/squad-market/list-loan', async (c) => {
   const squad = await lerSquad(me);
   const player = squad.players.find((p) => p?.id === playerId);
   if (!player) return c.json({ ok: false, error: 'Este jogador não está no teu plantel.' }, 404);
+  if (ehEdicaoFundacao(player)) {
+    return c.json({ ok: false, error: 'Edição Fundação não sai do clube: não se vende nem se empresta.' }, 409);
+  }
   if (player.contractExpired) return c.json({ ok: false, error: 'Contrato esgotado — renova antes de emprestar.' }, 409);
   if ((await idsAlugadosPorMim(me)).has(playerId)) {
     return c.json({ ok: false, error: 'Este jogador já está EMPRESTADO a ti — não dá pra re-emprestar.' }, 409);

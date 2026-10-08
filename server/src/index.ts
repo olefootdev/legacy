@@ -14,6 +14,7 @@ import { paymentsRoutes } from './routes/payments.js';
 import { matchPlanRoutes } from './routes/matchPlan.js';
 import { quickNarrateRoutes } from './routes/quickNarrate.js';
 import { opponentRosterRoutes } from './routes/opponentRoster.js';
+import { onboardingRoutes } from './routes/onboarding.js';
 import { pinataMediaRoutes } from './routes/pinataMedia.js';
 import { positionCoachRoutes } from './routes/positionCoach.js';
 import { marketRoutes } from './routes/market.js';
@@ -144,6 +145,7 @@ app.route('/', presaleRoutes);   // leitura da pré-venda (compra é pelo Pix ac
 app.route('/', matchPlanRoutes);
 app.route('/', quickNarrateRoutes);
 app.route('/', opponentRosterRoutes);
+app.route('/', onboardingRoutes);  // sorteio da Fundação do Clube
 app.route('/', gameSpiritRoutes);
 app.route('/', pinataMediaRoutes);
 app.route('/', positionCoachRoutes);

@@ -39,6 +39,7 @@ import type { MatchResult } from '@/systems/playerMoral/types';
 import type { InjurySeverity } from '@/systems/injury';
 import type { PlayerEntity } from '@/entities/types';
 import { L, LOCALE } from '@/i18n/L';
+import { dnaDoClubeParaMotor } from '@/club/identidade';
 
 const LEAGUE_ID = 'global';
 
@@ -47,6 +48,7 @@ export function useGlobalConsequencesSync() {
   const club = useGameStore((s) => s.club);
   const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
   const lineup = useGameStore((s) => s.lineup);
+  const formationScheme = useGameStore((s) => s.manager.formationScheme);
   const players = useGameStore((s) => s.players);
   const playerHealth = useGameStore((s) => s.playerHealth);
   const lastProcessedRound = useGameStore((s) => s.lastProcessedGlobalRound);
@@ -62,11 +64,16 @@ export function useGlobalConsequencesSync() {
   useEffect(() => {
     if (!club || !players || Object.keys(players).length === 0) return;
     const timer = setTimeout(() => {
-      syncTeamStatus(players as Record<string, PlayerEntity>, playerHealth, engagementScore, lineup ?? {});
+      syncTeamStatus(players as Record<string, PlayerEntity>, playerHealth, engagementScore, lineup ?? {}, {
+        formation: formationScheme ?? '',
+        // DNA da fundação → Liga Global (λ e cartões) e Partida Rápida (servidor).
+        dna: dnaDoClubeParaMotor(club?.identidade),
+      });
     }, 2000);
     return () => clearTimeout(timer);
     // `lineup` nas deps: trocar a escalação (não só o elenco) re-sincroniza o snapshot.
-  }, [playerHealth, players, club, engagementScore, lineup]);
+    // `club` cobre a identidade: fundar o clube re-sincroniza o DNA na hora.
+  }, [playerHealth, players, club, engagementScore, lineup, formationScheme]);
 
   // ── Nudge in-app: contrato vencido / a vencer → item de inbox acionável ────
   useEffect(() => {
@@ -582,6 +589,7 @@ async function applyLanceEvolution(fixtureId: string) {
 function buildLineupSnapshot(
   lineup: Record<string, string>,
   players: Record<string, PlayerEntity>,
+  extra: { formation: string; dna: Record<string, number> | null } = { formation: '', dna: null },
 ): LineupSnapshot | null {
   const starters: SnapshotPlayer[] = [];
   for (const pid of Object.values(lineup)) {
@@ -605,7 +613,7 @@ function buildLineupSnapshot(
     });
   }
   if (starters.length === 0) return null;
-  return { v: 1, formation: '', players: starters };
+  return { v: 1, formation: extra.formation, players: starters, ...(extra.dna ? { dna: extra.dna } : {}) };
 }
 
 /**
@@ -617,6 +625,7 @@ async function syncTeamStatus(
   playerHealth: Record<string, PlayerHealth>,
   engagementScore: number,
   lineup: Record<string, string>,
+  extra: { formation: string; dna: Record<string, number> | null } = { formation: '', dna: null },
 ) {
   const sb = getSupabase();
   if (!sb) return;
@@ -650,10 +659,17 @@ async function syncTeamStatus(
   const userId = session?.session?.user?.id;
   if (!userId) return;
 
+  // O time da liga é registrado com o E-MAIL como manager_id (78 de 79 em
+  // 2026-10-07). Buscar só pelo uid não achava ninguém: o sync inteiro —
+  // jogadores disponíveis, OVR, engajamento, escalação, DNA — parou em
+  // 2026-09-14 sem erro nenhum. Mesmas identidades da RLS
+  // (`my_manager_identities()`: uid + e-mail em minúsculas).
+  const identidades = [userId, session?.session?.user?.email?.toLowerCase()].filter((v): v is string => !!v);
   const { data: team } = await sb
     .from('global_league_teams')
     .select('id')
-    .eq('manager_id', userId)
+    .in('manager_id', identidades)
+    .limit(1)
     .maybeSingle();
   if (!team) return;
 
@@ -671,7 +687,7 @@ async function syncTeamStatus(
   // (20260724160000) ainda não foi aplicada, a coluna não existe e este update
   // falha — mas NÃO pode derrubar o sync principal acima. Loga e segue.
   try {
-    const snapshot = buildLineupSnapshot(lineup, players);
+    const snapshot = buildLineupSnapshot(lineup, players, extra);
     if (snapshot) {
       const { error } = await sb
         .from('global_league_teams')

@@ -214,11 +214,26 @@ export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
       savedTactics: remote.savedTactics ?? local.manager.savedTactics,
       staff:        remote.staff        ?? local.manager.staff,
     },
+    // Fundação do clube: vence a mais recente (refazer o DNA num aparelho
+    // não pode ser desfeito pelo outro com a versão velha).
+    club: {
+      ...local.club,
+      identidade: maisRecente(local.club?.identidade, remote.onboardingFlags?.clubIdentidade),
+    },
   };
   saveGameState(state);
   // Hidratação completa — libera o gate de persist debounced.
   markGameStateHydrated();
   emit();
+}
+
+function maisRecente(
+  a: import('@/club/identidade').IdentidadeDoClube | null | undefined,
+  b: import('@/club/identidade').IdentidadeDoClube | null | undefined,
+): import('@/club/identidade').IdentidadeDoClube | undefined {
+  if (!a) return b ?? undefined;
+  if (!b) return a;
+  return Date.parse(b.fundadoEm) > Date.parse(a.fundadoEm) ? b : a;
 }
 
 /**
@@ -361,9 +376,20 @@ function scheduleGameStatePersist(): void {
   }, 2000);
 }
 
+const gameStateHydrationListeners = new Set<Listener>();
+
+/** Reativo: true quando o manager_game_state remoto já foi mesclado (ou não existe). */
+export function useGameStateHydrationDone(): boolean {
+  return useSyncExternalStore(
+    (cb) => { gameStateHydrationListeners.add(cb); return () => gameStateHydrationListeners.delete(cb); },
+    () => gameStateHydrated,
+  );
+}
+
 function markGameStateHydrated(): void {
   if (gameStateHydrated) return;
   gameStateHydrated = true;
+  for (const l of gameStateHydrationListeners) l();
   // Se houve mudanças durante a hidratação, persiste agora (após merge).
   if (gameStateHasPendingChanges) {
     gameStateHasPendingChanges = false;
@@ -379,6 +405,7 @@ export function markGameStateHydrationDone(): void {
 /** Útil pra testes / logout: força reset do gate (próxima sessão re-hidrata). */
 export function resetGameStateHydration(): void {
   gameStateHydrated = false;
+  for (const l of gameStateHydrationListeners) l();
   gameStateHasPendingChanges = false;
   if (gameStatePersistTimer) { clearTimeout(gameStatePersistTimer); gameStatePersistTimer = null; }
 }

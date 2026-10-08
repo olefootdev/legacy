@@ -48,6 +48,7 @@ import {
 } from '@/entities/playerEvolution';
 import { validateAcademyProspectName } from '@/entities/managerProspectReservedNames';
 import { addBroCents, addOle,  grantEarnedExp } from '@/systems/economy';
+import { JANELA_ELENCO_MINIMO, valorNaVarzea } from '@/onboarding/janelaEstreia';
 import { tripKmForFixture, applyTravelFatigueToSquad } from '@/systems/logistics';
 import { updateStreak } from './quickMatchStreak';
 import {
@@ -3987,6 +3988,39 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return {
         ...state,
         club: { ...state.club, ...action.partial },
+      };
+    }
+    case 'VENDER_PARA_VARZEA': {
+      const id = state.club.identidade;
+      const p = state.players[action.playerId];
+      const agora = action.agoraMs ?? Date.now();
+      // Travas: janela aberta, jogador do pacote, nunca a Edição Fundação,
+      // elenco não cai abaixo de 13. Qualquer falha = nada acontece.
+      if (!id?.janelaAte || agora > Date.parse(id.janelaAte)) return state;
+      if (!p || !id.pacote?.includes(p.id) || p.edicaoFundacao || p.id.startsWith('fundacao-')) return state;
+      if (Object.keys(state.players).length <= JANELA_ELENCO_MINIMO) return state;
+      const valor = valorNaVarzea(p);
+      if (valor <= 0) return state;
+      const players = { ...state.players };
+      delete players[p.id];
+      const lineup = Object.fromEntries(Object.entries(state.lineup ?? {}).filter(([, pid]) => pid !== p.id));
+      let finance = addOle(state.finance, valor);
+      finance = withExpHistory(finance, valor, L(`Venda pra várzea: ${p.name}`, `Sold to a local club: ${p.name}`));
+      return {
+        ...state,
+        players,
+        lineup,
+        finance,
+        club: { ...state.club, identidade: { ...id, pacote: id.pacote.filter((x) => x !== p.id) } },
+      };
+    }
+    case 'SET_CLUB_IDENTIDADE': {
+      // A formação escolhida na fundação é a do time: o manager não precisa
+      // escolher de novo, e a Partida Rápida passa a jogar com ela.
+      return {
+        ...state,
+        club: { ...state.club, identidade: action.identidade },
+        manager: { ...state.manager, formationScheme: action.identidade.formacao },
       };
     }
     case 'SET_GLOBAL_LEAGUE_STATE': {

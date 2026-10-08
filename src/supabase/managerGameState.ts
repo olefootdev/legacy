@@ -30,8 +30,12 @@ export interface ManagerGameStateSnapshot {
   inbox:                    OlefootGameState['inbox'] | null;
   globalLeagueMilestonesClaimed: string[] | null;
   localLeagues:             OlefootGameState['localLeagues'] | null;
-  /** Gate cross-browser pra OnboardingCeremony — evita reabrir após logout. */
-  onboardingFlags:          { hasDoneOnboarding?: boolean } | null;
+  /**
+   * Gate cross-browser pra OnboardingCeremony — evita reabrir após logout.
+   * `clubIdentidade`: a fundação do clube (DNA, camisa, frase) mora aqui — é o
+   * onboarding novo, e a coluna já é jsonb (sem migration).
+   */
+  onboardingFlags:          { hasDoneOnboarding?: boolean; clubIdentidade?: import('@/club/identidade').IdentidadeDoClube | null } | null;
   /** Saldo do manager (ole, broCents, expLifetimeEarned, etc) — sem isto, logout zera tudo. */
   finance:                  OlefootGameState['finance'] | null;
 }
@@ -65,7 +69,9 @@ export async function persistManagerGameState(s: OlefootGameState): Promise<void
   // Guard: nunca sobrescrever com state vazio (0 EXP + onboarding não feito)
   // se o user já completou onboarding. Protege contra persist debounced
   // que roda antes da hidratação completar.
-  if (exp === 0 && !hasDone && Object.keys(s.players ?? {}).length === 0) {
+  // A fundação (identidade do clube) acontece ANTES dos jogadores chegarem:
+  // um clube recém-fundado não é "state vazio".
+  if (exp === 0 && !hasDone && Object.keys(s.players ?? {}).length === 0 && !s.club?.identidade) {
     console.warn('[managerGameState] persist: skip — state vazio (proteção anti-overwrite)');
     return;
   }
@@ -94,6 +100,7 @@ export async function persistManagerGameState(s: OlefootGameState): Promise<void
       local_leagues:               s.localLeagues ?? null,
       onboarding_flags:            {
         hasDoneOnboarding: hasDone,
+        clubIdentidade: s.club?.identidade ?? null,
       },
       finance:                     s.finance ?? null,
     },

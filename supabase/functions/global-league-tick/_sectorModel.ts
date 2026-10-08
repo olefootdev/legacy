@@ -37,6 +37,12 @@ export interface LineupSnapshot {
   v: number;
   formation: string;
   players: SnapshotPlayer[];
+  /**
+   * DNA da fundação do clube (7 eixos 0–1, forma comprimida — ver
+   * `src/club/identidade.ts`). Ausente = time neutro. Lido pela Liga Global
+   * (`_dnaModel.ts`) e pela Partida Rápida (servidor → Python).
+   */
+  dna?: Record<string, number>;
 }
 
 export interface Sectors {

@@ -49,6 +49,65 @@ interface QuickPlanTeamInput {
   strength: number;
   intensity?: 'defensive' | 'balanced' | 'offensive';
   lineup: QuickPlanPlayerInput[];
+  /** DNA da fundação do clube (7 eixos 0–1). Ausente = neutro. Ver `limparDna`. */
+  dna?: Record<string, number>;
+}
+
+const EIXOS_DNA = ['posse', 'pressao', 'vertical', 'criatividade', 'solidez', 'disciplina', 'intensidade'] as const;
+
+/**
+ * O DNA vem do cliente: só passa eixo conhecido, número finito, preso em 0–1
+ * e com 3 casas. Qualquer outra coisa some — um pedido adulterado não injeta
+ * multiplicador no motor. Sem eixo válido nenhum, o time joga neutro.
+ */
+export function limparDna(raw: unknown): Record<string, number> | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const out: Record<string, number> = {};
+  for (const k of EIXOS_DNA) {
+    const v = Number((raw as Record<string, unknown>)[k]);
+    if (Number.isFinite(v)) out[k] = Math.round(Math.max(0, Math.min(1, v)) * 1000) / 1000;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/**
+ * DNA de um clube, lido do `lineup_snapshot` que ele sincroniza com a Liga
+ * Global — a mesma fonte do tick da liga. O time é achado pelas identidades
+ * da RLS (uid OU e-mail em minúsculas: a liga registra pelo e-mail). Cache
+ * curto: o DNA só muda quando o manager refaz a fundação.
+ */
+const dnaCache = new Map<string, { ts: number; dna: Record<string, number> | undefined }>();
+const DNA_CACHE_MS = 60_000;
+
+async function dnaDoUsuario(userId: string): Promise<Record<string, number> | undefined> {
+  const hit = dnaCache.get(userId);
+  if (hit && Date.now() - hit.ts < DNA_CACHE_MS) return hit.dna;
+  const sb = getSupabaseAdmin();
+  if (!sb) return undefined;
+  try {
+    const { data: u } = await sb.auth.admin.getUserById(userId);
+    const ids = [userId, u?.user?.email?.toLowerCase()].filter((v): v is string => !!v);
+    const { data } = await sb
+      .from('global_league_teams')
+      .select('lineup_snapshot')
+      .in('manager_id', ids)
+      .limit(1)
+      .maybeSingle();
+    const dna = limparDna((data as { lineup_snapshot?: { dna?: unknown } } | null)?.lineup_snapshot?.dna);
+    dnaCache.set(userId, { ts: Date.now(), dna });
+    return dna;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Dono do clube adversário pelo short (mesmo caminho do opponent-roster). */
+async function donoDoClube(clubShort: string | undefined): Promise<string | null> {
+  const short = clubShort?.trim();
+  const sb = getSupabaseAdmin();
+  if (!short || !sb) return null;
+  const { data } = await sb.from('profiles').select('id').ilike('club_short', short).limit(1);
+  return (data?.[0] as { id?: string } | undefined)?.id ?? null;
 }
 
 interface QuickPlanDecisionInput {
@@ -81,6 +140,13 @@ interface QuickPlanRequestBody {
   decisions?: QuickPlanDecisionInput[];
   /** FABLE — DERBY/CLÁSSICO: Python amplia agressividade dos 2 lados (~×1.12). */
   is_derby?: boolean;
+  /**
+   * JOGO DA FUNDAÇÃO: o rival é o FANTASMA de um time histórico (sem dono no
+   * banco), então o DNA dele vem do cliente — limpo por `limparDna`. Não abre
+   * brecha nova: o lado de fora (elenco e força) já vinha do cliente; a
+   * estreia não paga prêmio nem conta pra liga.
+   */
+  fantasma?: boolean;
 }
 
 const simpleCache = new Map<string, { ts: number; plan: unknown }>();
@@ -294,7 +360,63 @@ async function guardarCustodia(
   }
 }
 
+/** DNA do rival: do banco (dono do clube) ou, no Jogo da Fundação, o do fantasma (cliente, limpo). */
+async function resolverDnaDoRival(body: QuickPlanRequestBody, dono: string | null): Promise<void> {
+  if (body.fantasma === true) {
+    body.away_team.dna = limparDna(body.away_team.dna);
+    return;
+  }
+  const donoRival = await donoDoClube(body.away_short);
+  body.away_team.dna = donoRival && donoRival !== dono ? await dnaDoUsuario(donoRival) : undefined;
+}
+
 export const matchPlanRoutes = new Hono();
+
+/**
+ * RELATÓRIO DE IDENTIDADE (Fundação, Fase 3). Um jogo não prova identidade
+ * (o efeito do DNA some no ruído de uma partida), então o motor roda o MESMO
+ * confronto em N seeds com e sem o DNA da casa e devolve as médias — a
+ * diferença é o DNA. Mesmas regras do quick-plan: DNA da casa do banco,
+ * escalação conferida contra as fichas. ~1,2 s pra 150 pares.
+ */
+const ANALISE_PARES = 150;
+const analiseCache = new Map<string, { ts: number; analise: unknown }>();
+matchPlanRoutes.post('/api/match/identidade', rateLimit(6), async (c) => {
+  const body = await c.req.json<QuickPlanRequestBody>().catch(() => null);
+  if (!body?.seed || !body.home_team || !body.away_team) {
+    return c.json({ ok: false, error: 'campos obrigatórios: seed, home_team, away_team' }, 400);
+  }
+  const dono = await donoDaSessao(c.req.header('Authorization'));
+  body.home_team.dna = (dono ? await dnaDoUsuario(dono) : undefined) ?? limparDna(body.home_team.dna);
+  if (!body.home_team.dna) return c.json({ ok: false, error: 'clube sem identidade: nada a comparar' }, 400);
+  await resolverDnaDoRival(body, dono);
+  await conferirContraAsFichas(dono, body);
+  delete body.mode;
+  delete body.first_half;
+  delete body.decisions;
+
+  const chave = JSON.stringify({
+    s: body.seed,
+    dna: EIXOS_DNA.map((k) => body.home_team.dna?.[k] ?? '').join(','),
+    dnaA: body.away_team.dna ? EIXOS_DNA.map((k) => body.away_team.dna?.[k] ?? '').join(',') : '',
+    hs: body.home_team.strength,
+    as: body.away_team.strength,
+    af: impressaoDaEscalacao([body.home_team.lineup, body.away_team.lineup]),
+  });
+  const hit = analiseCache.get(chave);
+  if (hit && Date.now() - hit.ts < 10 * 60_000) return c.json({ ok: true, analise: hit.analise, cached: true });
+
+  const scriptPath = resolveScriptPath();
+  if (!existsSync(scriptPath)) return c.json({ ok: false, error: `script Python não encontrado: ${scriptPath}` }, 500);
+  try {
+    const stdout = await runPython(scriptPath, JSON.stringify({ ...body, analise_identidade: ANALISE_PARES }), 20_000);
+    const { analise } = JSON.parse(stdout) as { analise: unknown };
+    analiseCache.set(chave, { ts: Date.now(), analise });
+    return c.json({ ok: true, analise, cached: false });
+  } catch (e) {
+    return c.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 502);
+  }
+});
 
 matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
   const body = await c.req.json<QuickPlanRequestBody>().catch(() => null);
@@ -308,6 +430,14 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
   // FASE 3 — o motor para de receber atributo de fora. O dono sai do token uma
   // vez e serve à conferência e à custódia.
   const dono = await donoDaSessao(c.req.header('Authorization'));
+
+  // DNA dos DOIS lados vem do banco (lineup_snapshot da Liga Global), não do
+  // cliente. Sem sessão ou sem time inscrito, a casa usa o que o cliente
+  // mandou (limpo); o adversário só joga com DNA se o dono dele tiver um.
+  // Nunca o próprio DNA dos dois lados (amistoso contra si mesmo).
+  const dnaCasaBanco = dono ? await dnaDoUsuario(dono) : undefined;
+  body.home_team.dna = dnaCasaBanco ?? limparDna(body.home_team.dna);
+  await resolverDnaDoRival(body, dono);
   const conferencia = await conferirContraAsFichas(dono, body);
 
   const cacheKey = JSON.stringify({
@@ -328,6 +458,10 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
       .join('|'),
     // Derby entra na chave — mesmo seed com/sem clássico são planos distintos.
     dy: body.is_derby === true ? 1 : 0,
+    f: body.fantasma === true ? 1 : 0,
+    // DNA da fundação: mesmo seed com DNA diferente = plano diferente.
+    dna: body.home_team.dna ? EIXOS_DNA.map((k) => body.home_team.dna?.[k] ?? '').join(',') : '',
+    dnaA: body.away_team.dna ? EIXOS_DNA.map((k) => body.away_team.dna?.[k] ?? '').join(',') : '',
     // Os NÚMEROS que vão ao motor (já conferidos). Antes a chave olhava só os
     // ids: ativar a lenda não mudava o plano dentro da janela do cache, e um
     // pedido adulterado deixava o plano dele para o próximo. Ver

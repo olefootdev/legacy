@@ -127,15 +127,54 @@ def team_strength(team_lineup: List[Dict[str, Any]], base_strength: int) -> floa
     return 0.5 * avg + 0.5 * base_strength
 
 
-def pick_zone(rng: random.Random, possession: str) -> str:
+def pick_zone(rng: random.Random, possession: str, shift: float = 0.0) -> str:
     """Distribui posse em 3 zonas (def/mid/att). Mais presença no terço
-    ofensivo = mais lances de construção e chances (jogo com ritmo)."""
+    ofensivo = mais lances de construção e chances (jogo com ritmo).
+    `shift` (DNA) empurra a bola pro ataque (>0) ou segura atrás (<0); com 0
+    é exatamente a distribuição de sempre (mesmo sorteio, mesmos cortes)."""
     r = rng.random()
-    if r < 0.26:
+    if r < 0.26 - shift * 0.5:
         return "def"
-    if r < 0.66:
+    if r < 0.66 - shift:
         return "mid"
     return "att"
+
+
+# ── DNA DO CLUBE (fundação, 2026-10) ────────────────────────────────────────
+# 7 eixos 0–1, 0.5 = neutro. Vem do onboarding "Fundação do Clube" (100 pontos,
+# estilo, técnico, time histórico, treino) já resumido num vetor só. Cada eixo
+# vira um desvio dz ∈ [-0.5, +0.5]; sem DNA, dz = 0 e TODO multiplicador é 1 —
+# o plano sai idêntico ao de antes (mesmo seed, mesmo resultado).
+DNA_EIXOS = ("posse", "pressao", "vertical", "criatividade", "solidez", "disciplina", "intensidade")
+DNA_GANHO = 1.5
+
+
+def read_dna(team: Dict[str, Any]) -> Optional[Dict[str, float]]:
+    raw = team.get("dna")
+    if not isinstance(raw, dict):
+        return None
+    vals = {}
+    for k in DNA_EIXOS:
+        try:
+            v = float(raw.get(k, 0.5))
+        except (TypeError, ValueError):
+            v = 0.5
+        vals[k] = max(0.0, min(1.0, v))
+    # DNA é ORÇAMENTO (igual ao `centrarDna` do TS): média dos eixos = 0.5.
+    # Especializar custa em outro eixo; tudo em 0.9 vira neutro. Teto 0.12–0.88.
+    # DNA_GANHO: o cliente manda a FORMA do DNA comprimida (×0.5, `centrarDna`);
+    # aqui ela ganha o tamanho calibrado — o time mostra a cara dele (posse,
+    # empates, roubadas) e nenhum estilo vira atalho: em 500 partidas por
+    # perfil, os 8 perfis de técnico ficam entre −1 e +8pp de vitória de um time sem DNA.
+    media = sum(vals.values()) / len(DNA_EIXOS)
+    return {k: max(0.12, min(0.88, 0.5 + (v - media) * DNA_GANHO)) for k, v in vals.items()}
+
+
+def dz(dna: Optional[Dict[str, float]], eixo: str) -> float:
+    """Desvio do neutro: -0.5 … +0.5 (0 sem DNA)."""
+    if dna is None:
+        return 0.0
+    return dna[eixo] - 0.5
 
 
 def pick_actor(rng: random.Random, lineup: List[Dict[str, Any]], zone: str, prev_actor_id: Optional[str]) -> dict:
@@ -386,6 +425,11 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
 
     home_intensity = home_team.get("intensity", "balanced")
     away_intensity = away_team.get("intensity", "balanced")
+
+    # DNA da fundação (ausente = neutro). Lido uma vez; afeta posse, zona,
+    # finalização, xG, pênalti, faltas, fôlego, cerco e reação no fim.
+    home_dna = read_dna(home_team)
+    away_dna = read_dna(away_team)
     intensity_mul = {"defensive": 0.85, "balanced": 1.0, "offensive": 1.18}
     # Exposição defensiva (#3): quem defende "ofensivo" se abre e concede mais;
     # "defensivo" se fecha e concede menos. Torna o estilo um risco/recompensa real.
@@ -428,8 +472,13 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     def fatigue_rate(intensity_key: str, strength: float) -> float:
         # press/ataque cansam mais; time mais fraco corre mais atrás.
         return 0.5 * fat_im.get(intensity_key, 1.0) * (1 + max(0.0, (72 - strength)) / 160.0)
-    home_fat_rate = fatigue_rate(home_intensity, home_strength)
-    away_fat_rate = fatigue_rate(away_intensity, away_strength)
+    # DNA: intensidade e pressão cobram fôlego (pressionar o jogo todo cansa).
+    home_fat_rate = fatigue_rate(home_intensity, home_strength) * (1 + dz(home_dna, "intensidade") * 0.5 + dz(home_dna, "pressao") * 0.3)
+    away_fat_rate = fatigue_rate(away_intensity, away_strength) * (1 + dz(away_dna, "intensidade") * 0.5 + dz(away_dna, "pressao") * 0.3)
+
+    # Estatísticas de identidade (Relatório "pedido × entregue" da fundação).
+    id_stats = {side: {"recoveries": 0, "high_recoveries": 0, "shots": 0, "xg": 0.0,
+                    "fouls": 0, "chances_created": 0} for side in ("home", "away")}
 
     # Goal scorers tracking
     scorer_counts: Dict[str, Dict[str, Any]] = {}
@@ -441,12 +490,29 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         flip_prob = 0.42 - diff * 0.08 - (momentum_home - 50) / 250
         # Meio-campo (#5): quem controla o meio segura mais a bola (perde menos posse).
         flip_prob -= (mid_adv_home if possession == "home" else -mid_adv_home) / 400.0
+        # DNA: quem tem posse no DNA segura a bola; quem pressiona rouba mais;
+        # time vertical/criativo arrisca e devolve mais.
+        keeper_dna = home_dna if possession == "home" else away_dna
+        presser_dna = away_dna if possession == "home" else home_dna
+        flip_prob += (-dz(keeper_dna, "posse") * 0.16 + dz(presser_dna, "pressao") * 0.14
+                      + dz(keeper_dna, "vertical") * 0.06 + dz(keeper_dna, "criatividade") * 0.04)
         flip_prob = max(0.18, min(0.62, flip_prob))
+        recovered = False
         if rng.random() < flip_prob:
             possession = "away" if possession == "home" else "home"
+            recovered = True
+            id_stats[possession]["recoveries"] += 1
         possession_minutes[possession] += 1
 
-        zone = pick_zone(rng, possession)
+        # DNA: vertical leva a bola pro ataque; posse constrói mais atrás; roubada
+        # de quem pressiona alto já nasce no campo do adversário.
+        side_dna = home_dna if possession == "home" else away_dna
+        zone_shift = dz(side_dna, "vertical") * 0.16 - dz(side_dna, "posse") * 0.04
+        if recovered:
+            zone_shift += dz(side_dna, "pressao") * 0.30
+        zone = pick_zone(rng, possession, zone_shift)
+        if recovered and zone == "att":
+            id_stats[possession]["high_recoveries"] += 1
         lineup_active = home_lineup if possession == "home" else away_lineup
         prev_id = prev_actor_id if possession == "home" else prev_actor_id_away
         actor = pick_actor(rng, lineup_active, zone, prev_id)
@@ -474,6 +540,9 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         if zone == "att" and minute > start_minute and atk_pressure > 28:
             # Derby: caldeirão gera mais lance capital na área (×1.12).
             pen_chance = (0.020 + (atk_pressure - 28) / 60.0 * 0.05) * derby_mult  # ~2%→~6% conforme o cerco aperta
+            # DNA de quem defende: solidez fecha a área; indisciplina dá pênalti.
+            def_dna = away_dna if possession == "home" else home_dna
+            pen_chance *= max(0.4, 1 - dz(def_dna, "solidez") * 0.4 - dz(def_dna, "disciplina") * 0.4)
         penalty_awarded = pen_chance > 0 and rng.random() < pen_chance
 
         # Decide se houve TIRO (depende de zona, força ofensiva, momentum)
@@ -486,6 +555,13 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             shot_prob *= 1 + mom_factor / 200
             # Exposição do adversário (#3): defesa ofensiva concede mais chances.
             shot_prob *= DEF_EXPOSURE.get(def_intensity, 1.0)
+            # DNA: vertical finaliza mais (e pior); posse finaliza menos (e melhor);
+            # solidez de quem defende fecha; linha alta de quem pressiona expõe.
+            atk_dna = home_dna if possession == "home" else away_dna
+            dfn_dna = away_dna if possession == "home" else home_dna
+            shot_prob *= max(0.5, 1 + dz(atk_dna, "vertical") * 0.3 - dz(atk_dna, "posse") * 0.2
+                             - dz(atk_dna, "solidez") * 0.12)
+            shot_prob *= max(0.5, 1 - dz(dfn_dna, "solidez") * 0.4 + dz(dfn_dna, "pressao") * 0.12)
             # Urgência por placar (#4): no fim, quem perde empurra; quem ganha administra.
             if minute >= 65:
                 my_score = home_score if possession == "home" else away_score
@@ -495,6 +571,8 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 # Clutch (#1): mentalidade amplifica a reação de quem corre atrás.
                 my_ment = home_mentality if possession == "home" else away_mentality
                 ment_clutch = 1 + (my_ment - 60) / 160.0
+                # DNA: intensidade é o fôlego da virada.
+                ment_clutch *= 1 + dz(home_dna if possession == "home" else away_dna, "intensidade") * 0.6
                 if gd < 0:
                     shot_prob *= 1 + 0.35 * urgency * min(2, -gd) * ment_clutch
                 elif gd > 0:
@@ -557,6 +635,13 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 xg *= max(0.6, min(1.12, 1 - (gk_q - 62) / 240.0))
             # Drible (#1): driblador cria chance melhor (rompe a marcação).
             xg *= 1 + (actor["drible"] - 60) / 300.0
+            # DNA: posse e criação trabalham a chance (xG melhor); vertical chuta
+            # antes. Time sólido que abre mão da bola vive de CONTRA-ATAQUE: chega
+            # pouco, mas chega com espaço (xG melhor quando solidez > posse).
+            shot_dna = home_dna if possession == "home" else away_dna
+            contra = max(0.0, dz(shot_dna, "solidez") - dz(shot_dna, "posse"))
+            xg *= max(0.6, 1 + dz(shot_dna, "posse") * 0.32 + dz(shot_dna, "criatividade") * 0.2
+                      - dz(shot_dna, "vertical") * 0.1 + contra * 0.2)
             # Derby: chance em clássico carrega mais perigo (metade do mult, ~+6%).
             xg *= 1.0 + (derby_mult - 1.0) * 0.5
             xg = max(0.02, min(0.65, xg))
@@ -587,6 +672,8 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                     outcome = "save"
 
             is_goal = outcome == "goal"
+            id_stats[possession]["shots"] += 1
+            id_stats[possession]["xg"] += xg
 
             # Mapeia o desfecho do chute em um EVENTO RICO (constrói ambiente):
             #   goal → gol | save → defensaça do goleiro | block→ cara a cara
@@ -691,6 +778,7 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 else:
                     base = "buildup"
                 kind = f"{base}_{possession}"
+                id_stats[possession]["chances_created"] += 1
                 tier = classify_event_weight(kind, minute, home_score, away_score, 0.0)
                 events.append({
                     "minute": minute,
@@ -707,7 +795,11 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 })
 
         # Eventos disciplinares (raros) — derby esquenta a marcação (mais falta).
-        if rng.random() < 0.025 * derby_mult and zone != "att":
+        # DNA de quem pode cometer a falta (o lado SEM a bola): disciplina limpa,
+        # pressão alta derruba mais.
+        _foul_dna = away_dna if possession == "home" else home_dna
+        foul_mult = max(0.3, 1 - dz(_foul_dna, "disciplina") * 1.2 + dz(_foul_dna, "pressao") * 0.4)
+        if rng.random() < 0.025 * derby_mult * foul_mult and zone != "att":
             side = possession  # quem comete falta = quem está defendendo? simplificação
             # Inverte: quem perde a bola comete falta
             foul_side = "away" if possession == "home" else "home"
@@ -717,6 +809,8 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             _foul_pool = [p for p in foul_lineup if p["role"] != "gk"]
             foul_actor = min(rng.sample(_foul_pool, min(2, len(_foul_pool))), key=lambda p: p["fair_play"]) if _foul_pool else rng.choice(foul_lineup)
             red_prob = 0.18 * (1 + max(0, 60 - foul_actor["fair_play"]) / 45.0)
+            red_prob *= max(0.3, 1 - dz(_foul_dna, "disciplina") * 0.8)
+            id_stats[foul_side]["fouls"] += 1
             yellow_kind = "yellow_" + foul_side
             tier = classify_event_weight(yellow_kind, minute, home_score, away_score, 0.0)
             events.append({
@@ -785,6 +879,9 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         # Build-up do lado com a posse, conforme a zona (terço ofensivo = cerco).
         # Edge setorial + força + intensidade + BUFFER de decisão aceleram o cerco.
         side_imul = intensity_mul.get(side_intensity, 1.0)
+        # DNA: intensidade e verticalidade aceleram o cerco.
+        _press_dna = home_dna if possession == "home" else away_dna
+        side_imul *= 1 + dz(_press_dna, "intensidade") * 0.4 + dz(_press_dna, "vertical") * 0.2
         build = 8.5 if zone == "att" else 2.6 if zone == "mid" else 0.0
         if build > 0:
             if possession == "home":
@@ -872,8 +969,100 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         "mvp_projection": mvp,
         "possession_home_pct": possession_home_pct,
         "narrative_arc": arc,
+        # Relatório de identidade (fundação): o que o time ENTREGOU em campo.
+        "team_stats": {
+            side: {
+                "possession_pct": possession_home_pct if side == "home" else round(100.0 - possession_home_pct, 1),
+                "recoveries": id_stats[side]["recoveries"],
+                "high_recoveries": id_stats[side]["high_recoveries"],
+                "shots": id_stats[side]["shots"],
+                "xg": round(id_stats[side]["xg"], 2),
+                "fouls": id_stats[side]["fouls"],
+                "cards": cards_home if side == "home" else cards_away,
+                "chances_created": id_stats[side]["chances_created"],
+            }
+            for side in ("home", "away")
+        },
+        # Eco do DNA que o motor USOU (prova de que chegou; null = neutro).
+        "dna_applied": {"home": home_dna, "away": away_dna},
         "generated_at_ms": int(time.time() * 1000),
         "duration_ms": int((time.time() - started) * 1000),
+    }
+
+
+# ── Relatório de Identidade (Fundação do Clube, Fase 3) ──────────────────────
+# Um jogo só é amostra: o efeito típico do DNA (±2–4 pp de posse) some no ruído
+# de UMA partida (desvio ~7 pp). A análise roda o MESMO confronto em N seeds,
+# com e sem o DNA da casa (pareado: mesma seed, mesmos elencos, mesmo rival), e
+# devolve a média de cada métrica — o efeito do DNA, isolado.
+# Métrica de cada eixo = a mesma que o test_dna.py prova; sinal = pra onde o
+# eixo ALTO empurra (solidez → menos chute sofrido; disciplina → menos falta).
+EIXO_METRICA = {
+    "posse": ("possession_pct", 1),
+    "pressao": ("high_recoveries", 1),
+    "vertical": ("shots", 1),
+    "criatividade": ("xg_per_shot", 1),
+    "solidez": ("conceded_shots", -1),
+    "disciplina": ("fouls", -1),
+    # Intensidade no motor é RITMO: acelera o cerco (pressão → momento), gasta
+    # fôlego e empurra a virada. A prova direta é o momento médio da casa.
+    "intensidade": ("momentum", 1),
+}
+
+
+def _metricas(plan: Dict[str, Any]) -> Dict[str, float]:
+    h = plan["team_stats"]["home"]
+    a = plan["team_stats"]["away"]
+    return {
+        "possession_pct": float(h["possession_pct"]),
+        "high_recoveries": float(h["high_recoveries"]),
+        "shots": float(h["shots"]),
+        "xg_per_shot": (h["xg"] / h["shots"]) if h["shots"] else 0.0,
+        "conceded_shots": float(a["shots"]),
+        "fouls": float(h["fouls"] + h["cards"] * 3),
+        "chances_created": float(h["chances_created"]),
+        "momentum": (sum(plan["momentum_curve"]) / len(plan["momentum_curve"])) if plan.get("momentum_curve") else 50.0,
+    }
+
+
+def analisar_identidade(input_data: Dict[str, Any], n: int) -> Dict[str, Any]:
+    n = max(10, min(300, int(n)))
+    base = str(input_data.get("seed", "identidade"))
+    sem_dna = json.loads(json.dumps(input_data))
+    sem_dna["home_team"].pop("dna", None)
+    soma_com = {m: 0.0 for m, _ in EIXO_METRICA.values()}
+    soma_sem = dict(soma_com)
+    certo = {k: 0 for k in EIXO_METRICA}
+    vitorias = {"com": 0, "sem": 0}
+    for i in range(n):
+        seed = f"{base}#{i}"
+        p_com = simulate({**input_data, "seed": seed})
+        p_sem = simulate({**sem_dna, "seed": seed})
+        m_com, m_sem = _metricas(p_com), _metricas(p_sem)
+        for k, (m, sinal) in EIXO_METRICA.items():
+            soma_com[m] += m_com[m]
+            soma_sem[m] += m_sem[m]
+            if (m_com[m] - m_sem[m]) * sinal > 0:
+                certo[k] += 1
+        vitorias["com"] += 1 if p_com["home_score"] > p_com["away_score"] else 0
+        vitorias["sem"] += 1 if p_sem["home_score"] > p_sem["away_score"] else 0
+    return {
+        "analise": {
+            "n": n,
+            "dna_applied": read_dna(input_data["home_team"]),
+            "eixos": {
+                k: {
+                    "metrica": m,
+                    "sinal": sinal,
+                    "com": round(soma_com[m] / n, 3),
+                    "sem": round(soma_sem[m] / n, 3),
+                    # % das partidas pareadas em que o DNA empurrou pro lado do eixo alto.
+                    "pareadas_pro_alto": round(certo[k] / n, 3),
+                }
+                for k, (m, sinal) in EIXO_METRICA.items()
+            },
+            "vitorias_pct": {"com": round(vitorias["com"] / n, 3), "sem": round(vitorias["sem"] / n, 3)},
+        }
     }
 
 
@@ -884,6 +1073,9 @@ def main():
     except json.JSONDecodeError as e:
         print(json.dumps({"error": f"invalid_json: {e}"}), file=sys.stderr)
         sys.exit(1)
+    if input_data.get("analise_identidade"):
+        sys.stdout.write(json.dumps(analisar_identidade(input_data, input_data["analise_identidade"]), ensure_ascii=False))
+        return
     plan = simulate(input_data)
     sys.stdout.write(json.dumps(plan, ensure_ascii=False))
 

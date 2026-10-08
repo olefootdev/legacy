@@ -16,18 +16,20 @@ import { useClubPulse } from '@/hooks/useClubPulse';
 import { track } from '@/analytics/track';
 import { resolveRequest } from '@/systems/playerPersonality';
 import { resolveHomeMode } from './homeMode';
-import type { LegendMini } from '@/components/home/LegendsRail';
-import { HeroJogo, type HeroFixture } from '@/components/home/volt/HeroJogo';
-import { FaixaPontuacao } from '@/components/home/volt/FaixaPontuacao';
-import { DecisaoDoDia, type RespostaDada } from '@/components/home/volt/DecisaoDoDia';
-import { DivisaoTabela } from '@/components/home/volt/DivisaoTabela';
-import { Mosaico } from '@/components/home/volt/Mosaico';
-import { Resenha } from '@/components/home/volt/Resenha';
-import { Convite } from '@/components/home/volt/Convite';
-import { fetchListedLegacyPlayerRows, legacyPortraitImageUrl } from '@/supabase/legacyPlayers';
-import { overallFromAttributes } from '@/entities/player';
+import { useLegendDrops } from '@/components/home/rua/useLegendDrops';
+import { FitaRua, MarcaRua } from '@/components/ui/Rua';
+import { Ingresso, type IngressoFixture } from '@/components/home/rua/Ingresso';
+import { FaixaRespeito } from '@/components/home/rua/FaixaRespeito';
+import { Vestiario, type RespostaDada } from '@/components/home/rua/Vestiario';
+import { QuantoFalta } from '@/components/home/rua/QuantoFalta';
+import { MissoesRua } from '@/components/home/rua/MissoesRua';
+import { DropLenda } from '@/components/home/rua/DropLenda';
+import { LegendsCupRua } from '@/components/home/rua/LegendsCupRua';
+import { Carteirinha } from '@/components/home/rua/Carteirinha';
+import { ResenhaRua } from '@/components/home/rua/ResenhaRua';
+import { ConviteFaixa } from '@/components/home/rua/ConviteFaixa';
+import { ConviteFundacao } from '@/components/home/rua/ConviteFundacao';
 import { fetchMyOffers } from '@/supabase/marketOffers';
-import type { PlayerAttributes } from '@/entities/types';
 import { L, LOCALE } from '@/i18n/L';
 
 /** Rótulo de "agora" do countdown — também usado pra marcar o herói como ao vivo. */
@@ -36,23 +38,18 @@ const AGORA_LABEL = L('Agora', 'Now');
 /** Telemetria de abertura: 1× por carga da página, não por render. */
 let openingTracked = false;
 
-/** Hero — asset real do repositório (mesmo do antigo HomeHeroLegacy). */
-const HERO_IMAGE = '/hero-legacy-full.png';
-
 /**
- * Home VOLT2 (A VIRADA · V4, 2026-09-19).
+ * Home 2027 — DS "RESPEITO É OURO" (olefoot-design-27/, 2026-10-07).
  *
- * Um protagonista (o próximo jogo), uma faixa de pontuação, UMA decisão, a
- * divisão, o mosaico 2×2, a Resenha e o convite — nessa ordem, sempre. O slot
- * de decisão mostra o pedido do jogador ou, sem pedido, as pendências do
- * elenco. O `homeMode` continua calculado e medido (telemetria) e vai decidir a
- * variante Dia de Jogo do herói (V5); não reordena mais 13 blocos. Saldo NUNCA
- * aparece aqui.
+ * Preto de asfalto com grão, a fita #persista #correloko, a saudação na voz, o
+ * INGRESSO do próximo jogo (ou da Partida Rápida), a faixa de respeito, UMA
+ * decisão, as missões à vista, "quanto falta pra subir", o drop de lenda na
+ * escada, Legends Cup, a carteirinha de sócio, a Resenha, a faixa do convite
+ * e a assinatura. Saldo NUNCA aparece aqui (é da Carteira). Ouro é chapado e
+ * raro: posição no mundo, carta de respeito/lenda, sócio — nada de degradê.
  *
- * Saíram da Home (decisão aprovada com a proposta "até arrepiei"):
- * HomeImageSlider, ManagerOfDay, RankingTop10, LastGlobalChampion,
- * InheritanceModule, NextMatchCard (virou o herói) e ClubFeed (o inbox já tem
- * o sino do header).
+ * O `homeMode` continua calculado e medido (telemetria). Os blocos VOLT2 de
+ * `components/home/volt/` seguem vivos só no preview de dev.
  */
 export function Home() {
   useTrackScreen('screen_home');
@@ -150,8 +147,6 @@ export function Home() {
     }
   }, [dispatch, inbox]);
 
-  const [heroImgOk, setHeroImgOk] = useState(true);
-
   // Atividades reais do mercado — feed público do Supabase
   const [marketActivities, setMarketActivities] = useState<MarketActivity[]>([]);
   useEffect(() => {
@@ -168,29 +163,8 @@ export function Home() {
       .catch(() => {});
   }, [dispatch]);
 
-  // Lendas em destaque — drops reais do Supabase (legacy_players listadas),
-  // ordenadas por created_at desc. Selo "Novo" só nas realmente recentes.
-  const [legends, setLegends] = useState<LegendMini[]>([]);
-  useEffect(() => {
-    void fetchListedLegacyPlayerRows().then((rows) => {
-      const sorted = [...rows].sort((a, b) => {
-        const ta = a.created_at ? Date.parse(a.created_at) : 0;
-        const tb = b.created_at ? Date.parse(b.created_at) : 0;
-        return tb - ta;
-      });
-      const NEW_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
-      setLegends(
-        sorted.slice(0, 6).map((r) => ({
-          id: r.id,
-          name: r.name.trim(),
-          pos: r.pos,
-          ovr: overallFromAttributes(r.attributes as unknown as PlayerAttributes, r.pos),
-          portraitUrl: legacyPortraitImageUrl(r),
-          isNew: r.created_at ? Date.now() - Date.parse(r.created_at) < NEW_WINDOW_MS : false,
-        })),
-      );
-    });
-  }, []);
+  // Lendas em destaque — drops reais do Supabase (legacy_players listadas).
+  const legends = useLegendDrops(6);
 
   // Relógio da Home — alimenta countdown da próxima rodada + delta "hoje".
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -300,16 +274,13 @@ export function Home() {
     track('home_mode', { mode: homeMode, hasRequest: (playerRequests?.length ?? 0) > 0 });
   }, [pulse, homeMode, playerRequests]);
 
-  // ── O herói: o próximo jogo, ou a Partida Rápida quando não há jogo ──────
-  const heroFixture: HeroFixture | null =
+  // ── O herói: o ingresso do próximo jogo, ou da Partida Rápida ──────────
+  const heroFixture: IngressoFixture | null =
     nextGlobal && nextRoundLabel
       ? {
           opponentName: nextGlobal.opponentName,
           kickoffLabel: nextRoundLabel.replace(', ', ' · '),
           isLive: nextRoundLabel === AGORA_LABEL,
-          tag: divisionView
-            ? L(`#ligaglobal #div${divisionView.division}`, `#globalleague #div${divisionView.division}`)
-            : L('#ligaglobal', '#globalleague'),
         }
       : null;
   const nextOpponent = nextGlobal
@@ -324,21 +295,38 @@ export function Home() {
   const requestPlayer = pendingRequest ? players[pendingRequest.playerId] ?? null : null;
   const [answered, setAnswered] = useState<RespostaDada | null>(null);
 
+  const firstName = managerProfile?.firstName?.trim() || null;
+  const managerName = managerProfile ? [managerProfile.firstName, managerProfile.lastName].filter(Boolean).join(' ').trim() || null : null;
+  const hoje = new Date(nowMs);
+  const carimbo = `${hoje.toLocaleDateString(LOCALE, { weekday: 'short' }).replace('.', '')} ${String(hoje.getDate()).padStart(2, '0')}.${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
-      <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col gap-7 px-3 pb-6 sm:px-4">
-        <div className="flex flex-col gap-[18px]">
-          <HeroJogo
-            clubName={club.name}
-            fixture={heroFixture}
-            heroImage={HERO_IMAGE}
-            heroImgOk={heroImgOk}
-            onHeroError={() => setHeroImgOk(false)}
-          />
-          <FaixaPontuacao scoreTotal={scoreTotal} scoreToday={scoreToday} rank={myRank} pulse={pulse} />
+      <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col gap-10 px-3 pb-8 sm:px-4">
+        {/* A fita da casa — #persista #correloko, colada torta no topo. */}
+        <FitaRua className="-mx-3 -mt-3 py-2 sm:-mx-4" />
+
+        <div className="flex flex-col gap-5">
+          <header className="flex min-w-0 items-end justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <h1 className="block min-w-0 truncate font-voz text-[clamp(38px,10.5vw,56px)] leading-[0.95] text-papel">
+                {firstName ? L(`E aí, ${firstName}`, `Yo, ${firstName}`) : L('E aí, manager', 'Yo, manager')}
+              </h1>
+              <span className="block min-w-0 truncate font-prova text-[12px] font-bold uppercase tracking-[0.2em] text-mudo">
+                {club.name}
+                {myRank != null && <span className="text-ouro-27"> · #{myRank} {L('no mundo', 'worldwide')}</span>}
+              </span>
+            </div>
+            <span className="shrink-0 font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">{carimbo}</span>
+          </header>
+
+          <Ingresso clubName={club.name} fixture={heroFixture} division={divisionView?.division ?? null} rank={myRank} />
+          <FaixaRespeito scoreTotal={scoreTotal} scoreToday={scoreToday} rank={myRank} pulse={pulse} />
         </div>
 
-        <DecisaoDoDia
+        <ConviteFundacao />
+
+        <Vestiario
           request={pendingRequest}
           player={requestPlayer ? { pos: requestPlayer.pos, age: requestPlayer.age } : null}
           answered={answered}
@@ -356,21 +344,35 @@ export function Home() {
           offersCount={incomingCount}
         />
 
-        {divisionView && (
-          <DivisaoTabela view={divisionView} roundsLeft={roundsLeft} nextOpponent={nextOpponent} />
-        )}
-
-        <Mosaico
-          legend={legends[0] ?? null}
-          cupPhase={cupPhaseLabel}
+        <MissoesRua
           challenges={dailyChallenges?.challenges ?? []}
           streak={dailyChallenges?.streak}
           onClaim={(challengeId) => dispatch({ type: 'CLAIM_CHALLENGE_REWARD', challengeId })}
         />
 
-        <Resenha activities={marketActivities} nowMs={nowMs} />
+        {divisionView && <QuantoFalta view={divisionView} roundsLeft={roundsLeft} nextOpponent={nextOpponent} />}
 
-        <Convite />
+        <DropLenda legends={legends} />
+
+        <div className="grid grid-cols-1 gap-4">
+          <LegendsCupRua phase={cupPhaseLabel} />
+          <Carteirinha managerName={managerName} clubName={club.name} />
+        </div>
+
+        <ResenhaRua activities={marketActivities} nowMs={nowMs} />
+
+        <ConviteFaixa />
+
+        {/* Assinatura — o fecho de toda peça do DS 2027. */}
+        <footer className="flex min-w-0 items-end justify-between gap-4 border-t-2 border-linha pt-6">
+          <div className="flex min-w-0 flex-col gap-2">
+            <span className="font-voz text-[clamp(36px,10vw,52px)] leading-none text-ouro-27">{L('Respeito é ouro.', 'Respect is gold.')}</span>
+            <span className="font-prova text-[11px] font-bold uppercase tracking-[0.2em] text-mudo">
+              {L('Olefoot · T2027 · da rua pro mundo', 'Olefoot · S2027 · from the street to the world')}
+            </span>
+          </div>
+          <MarcaRua tipo="nove" className="h-20 bg-ouro-27" />
+        </footer>
       </div>
     </div>
   );
