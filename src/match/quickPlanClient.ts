@@ -9,6 +9,7 @@
  * Sem a flag, MatchQuick continua usando o loop tick-by-tick (compat).
  */
 
+import { CABECALHO_IDIOMA } from '@/i18n/cabecalho';
 import type { MatchPlan, QuickPlanDecision, QuickPlanFirstHalfState } from './quickPlanTypes';
 import type { PlayerEntity, PlayerBehavior } from '@/entities/types';
 import { getSupabase } from '@/supabase/client';
@@ -151,7 +152,8 @@ function corpoDoMotor(input: FetchQuickPlanInput): Record<string, unknown> {
 async function cabecalhos(): Promise<Record<string, string>> {
   const sb = getSupabase();
   const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
-  return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  // O idioma vai junto: o motor narra em inglês quando o jogo está em inglês.
+  return { 'Content-Type': 'application/json', ...CABECALHO_IDIOMA, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 }
 
 /**

@@ -370,5 +370,28 @@ confere(a.hist.some((v, i) => v !== outra.hist[i]), 'outra seed → outro filme'
   confere(kb < 120, `filme: cabe no aparelho (${kb.toFixed(1)} KB pra 40 minutos)`);
 }
 
+// ── Fase 10: skill com nome chega ao trilho na hora da ação ────────────────
+{
+  const c = new Coreografo(fichas, '4-3-3', '4-3-3', 'skill');
+  for (let i = 0; i < 60; i++) c.passo();
+  const cad = {
+    inicio: { x: 50, z: 34 }, finalizacao: 'chute' as const,
+    acoes: [
+      { t: 'passe' as const, de: 'home-6', para: 'home-10', x: 70, z: 14 },
+      { t: 'drible' as const, de: 'home-10', para: 'away-4', x: 84, z: 16, skill: 'elastico', skill_nota: 86 },
+      { t: 'chute' as const, de: 'home-10', para: null, x: 104.5, z: 34 },
+    ],
+  };
+  c.receber(quadro(20, { lance: { ...lance(20, 'save_home', 'home', 'att', 'corredor_esquerdo'), actor_id: 'home-10', cadeia: cad } }));
+  const vistas: string[] = [];
+  let antes = 0;
+  for (let i = 0; i < 60; i++) {
+    c.passo();
+    for (const sk of c.consumirSkills()) { vistas.push(`${sk.codigo}:${sk.jogador}:${sk.nota}`); if (!antes) antes = i; }
+  }
+  confere(vistas.length === 1 && vistas[0] === 'elastico:home10:86', `skill no trilho: ${vistas.join(', ') || 'nenhuma'}`);
+  confere(antes > 0, 'a skill aparece na hora da ação (não no começo do lance)');
+}
+
 if (falhas) { console.error(`\n${falhas} falha(s)`); process.exit(1); }
 console.log('\nPartida Viva: coreógrafo ok');

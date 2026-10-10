@@ -51,6 +51,7 @@ from matchup_matrix import (
     compute_matchup_matrix,
 )
 from cadeia_lances import anexar_cadeias
+import idioma
 from comandos_ao_vivo import aplicar_ordens, dna_no_minuto, impressao, limpar_comandos
 from analyst_beats import (
     BEAT_MINUTES_FULL,
@@ -268,7 +269,10 @@ def event_text(kind: str, actor_name: str, zone: str, minute: int, xg: float, ti
 
     Frases curtas, voz de quem está vendo o jogo. Cada tipo de evento constrói
     o ambiente: construção, chance clara, defensaça, trave, gol.
+    Em inglês (idioma.en()), o mesmo lance com a mesma escolha de variação.
     """
+    if idioma.en():
+        return event_text_en(kind, actor_name, minute, tier)
     n = actor_name
 
     if kind == "goal_home":
@@ -361,7 +365,91 @@ def event_text(kind: str, actor_name: str, zone: str, minute: int, xg: float, ti
     return f"{n} aparece na jogada."
 
 
+def event_text_en(kind: str, n: str, minute: int, tier: str) -> str:
+    """English commentary — same events, same seeded variant index as the PT path."""
+    if kind == "goal_home":
+        if tier == "epic":
+            return _seeded_pick([
+                f"WHAT A GOAL! {n} settles it with pure class!",
+                f"{n} into the top corner! What a strike!",
+                f"UNBELIEVABLE! {n} wins it at the death!",
+            ], minute, 1)
+        return _seeded_pick([
+            f"GOAL! {n} buries it, no mercy.",
+            f"{n} arrives at the perfect moment. Goal!",
+            f"Celebrate — {n} gets his name on the scoresheet.",
+        ], minute, 2)
+    if kind == "goal_away":
+        return _seeded_pick([
+            "Silence in the stands. They've scored.",
+            "Conceded. They found the gap.",
+            "Their goal, caught on the wrong foot. That hurts.",
+        ], minute, 3)
+    if kind == "chance_home":
+        return _seeded_pick([
+            f"ONE-ON-ONE! {n} blazes it over — that had to go in.",
+            f"{n} misses the unmissable! No composure.",
+            f"Right in front of goal, {n} skies it. What a waste.",
+        ], minute, 4)
+    if kind == "chance_away":
+        return "They miss one-on-one. Breathe, everyone."
+    if kind == "save_home":
+        return _seeded_pick([
+            f"WHAT A SAVE! {n} hits it hard and the keeper flies.",
+            f"{n} forces the keeper into a miracle.",
+            f"What a shot from {n}! The keeper just gets there.",
+        ], minute, 5)
+    if kind == "save_away":
+        return "They get through, but our keeper stands tall."
+    if kind == "woodwork_home":
+        return _seeded_pick([
+            f"OFF THE BAR! {n} rattles the woodwork, so unlucky!",
+            f"So close! {n} hits the post. Inches away.",
+        ], minute, 6)
+    if kind == "woodwork_away":
+        return "PHEW! They hit the post. We got away with it."
+    if kind == "counter_home":
+        return f"Counter-attack led by {n} — the team flies forward!"
+    if kind == "counter_away":
+        return "Careful! They break at pace on the counter."
+    if kind == "corner_home":
+        return f"Corner. {n} swings it in and the box is boiling."
+    if kind == "corner_away":
+        return "Corner to them. Watch the set piece."
+    if kind == "buildup_home":
+        return _seeded_pick([
+            f"{n} runs the midfield, the whole team passing it around.",
+            f"Patient possession, {n} asking for calm.",
+            f"{n} holds the ball and organises the build-up.",
+        ], minute, 7)
+    if kind == "buildup_away":
+        return "They have the ball, trying to build an attack."
+    if kind == "shot_home":
+        return _seeded_pick([
+            f"{n} tries from distance — just wide.",
+            f"Long-range effort from {n}, no real danger.",
+        ], minute, 8)
+    if kind == "shot_away":
+        return "They try from distance, the keeper is comfortable."
+    if kind == "yellow_home":
+        return f"Yellow for {n}. A rough challenge, needs to calm down."
+    if kind == "yellow_away":
+        return "Yellow for them. Fouled and booked."
+    if kind == "red_home":
+        return f"RED for {n}! Off early, we're down to ten."
+    if kind == "red_away":
+        return "SENT OFF! They're down to ten. Advantage us!"
+    if kind == "injury_home":
+        return f"{n} goes down hurt. The medical team is on."
+    if kind == "penalty_home":
+        return f"PENALTY TO US! {n} already has the ball to take it."
+    if kind == "penalty_away":
+        return "Penalty to them. Hold your breath."
+    return f"{n} gets involved."
+
+
 def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
+    idioma.definir(input_data.get("lang"))
     started = time.time()
     seed = str(input_data.get("seed", "default"))
     mode = input_data.get("mode", "full")
@@ -652,7 +740,7 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 "weight_tier": "epic",
                 "zone": "att",
                 "channel": "finalizacao_vs_gk",
-                "reason": "pênalti",
+                "reason": "penalty" if idioma.en() else "pênalti",
                 "text": event_text(kind, pen_actor["name"], zone, minute, 0, "epic"),
             })
             # O cerco culminou no pênalti — descarrega a pressão.

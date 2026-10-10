@@ -147,6 +147,8 @@ function encenarCadeia(co: Coreografo, cad: CadeiaDeLance, lado: 'home' | 'away'
     const passo = tempos[i]!.dur;
     co.depois(tempos[i]!.ini, () => {
       const de = por(ac.de), para = por(ac.para);
+      // Fase 10: a skill com nome aparece no trilho na hora da ação.
+      if (ac.skill && de) co.registrarSkill(ac.skill, ac.skill_nota ?? 0, de);
       switch (ac.t) {
         case 'passe': case 'lancamento': case 'cruzamento': case 'escanteio': {
           const alto = ac.t === 'lancamento' || ac.t === 'cruzamento' || ac.t === 'escanteio';

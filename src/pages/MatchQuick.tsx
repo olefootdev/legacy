@@ -647,7 +647,10 @@ export function MatchQuick() {
  * Só existe no motor do plano (Python): sem a flag, cai na rápida normal.
  */
 export function MatchAoVivo() {
-  if (QUICK_PLAN_ENABLED) return <MatchQuickEngaged aoVivoInicial />;
+  // LEGACY LEAGUE: ?liga=<id da partida> (aberta pelo servidor em /legacy-league).
+  const [params] = useSearchParams();
+  const liga = params.get('liga') ?? undefined;
+  if (QUICK_PLAN_ENABLED) return <MatchQuickEngaged aoVivoInicial ligaPartida={liga} />;
   return <MatchQuickLegacy />;
 }
 

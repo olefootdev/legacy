@@ -127,6 +127,10 @@ export interface AcaoDeLance {
   para: string | null;
   x: number;
   z: number;
+  /** Partida Viva, Fase 10: skill com nome (só quando o jogador tem atributo pra ela). */
+  skill?: string;
+  /** A nota do atributo que justifica a skill. */
+  skill_nota?: number;
 }
 
 export interface CadeiaDeLance {

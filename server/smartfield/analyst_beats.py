@@ -15,6 +15,7 @@ Convenção de peso:
   target_side="away", weight > 0  → REDUZ xG do away no canal (escolha defensiva)
 """
 
+import idioma
 import random
 from typing import Any, Dict, List
 
@@ -107,6 +108,54 @@ DEFEND_VERB_ALT = {
     "pressao": ["Segura o ímpeto deles", "Sai jogando com calma", "Tira a bola da pressão"],
 }
 
+# ── Inglês (idioma.py) — mesmo número de variações por canal, mesmo índice ──
+ATTACK_VERB_EN = {
+    "ataque_central": "Go through the middle",
+    "corredor_esquerdo": "Attack down the left",
+    "corredor_direito": "Attack down the right",
+    "criacao": "Slow it down and create",
+    "bola_parada": "Back the set pieces",
+    "pressao": "High press!",
+}
+DEFEND_VERB_EN = {
+    "ataque_central": "Shut their middle",
+    "corredor_esquerdo": "Close the left",
+    "corredor_direito": "Close the right",
+    "criacao": "Mark their playmaker",
+    "bola_parada": "Watch the set piece",
+    "pressao": "Ride out their pressure",
+}
+ATTACK_VERB_ALT_EN = {
+    "ataque_central": ["Go through the middle", "Push up the centre", "Attack centrally"],
+    "corredor_esquerdo": ["Attack down the left", "Overlap on the left", "Play it left"],
+    "corredor_direito": ["Attack down the right", "Overlap on the right", "Play it right"],
+    "criacao": ["Move it and create", "Pass and build", "Control the midfield"],
+    "bola_parada": ["Back the set pieces", "Load the box", "Whip it in"],
+    "pressao": ["Press their build-up", "Mark high", "Smother them"],
+}
+DEFEND_VERB_ALT_EN = {
+    "ataque_central": ["Shut the middle", "Lock the centre", "Double up in midfield"],
+    "corredor_esquerdo": ["Close the left", "Mark their winger", "Protect the left"],
+    "corredor_direito": ["Close the right", "Mark their winger", "Protect the right"],
+    "criacao": ["Mark their playmaker", "Shut down their number 10", "Stick to the playmaker"],
+    "bola_parada": ["Watch the set piece", "Careful with crosses", "Man-mark in the box"],
+    "pressao": ["Ride out their pressure", "Play out calmly", "Beat the press"],
+}
+SHORT_LOCAL_EN = {
+    "ataque_central": "in the middle",
+    "corredor_esquerdo": "down the left",
+    "corredor_direito": "down the right",
+    "criacao": "in midfield",
+    "bola_parada": "at set pieces",
+    "pressao": "in the press",
+}
+
+
+def _lingua(pt, en):
+    """Escolhe o banco do idioma da partida (as estruturas têm a mesma forma)."""
+    return en if idioma.en() else pt
+
+
 # Leitura humana do MOMENTO (faixa de momentum) — voz de narrador brasileiro.
 def _momentum_phrase(mom: float, home_short: str, away_short: str) -> str:
     if mom >= 70:
@@ -197,14 +246,14 @@ def _verb(bank_alt: Dict[str, List[str]], bank: Dict[str, str], ch: str, minute:
     """Rótulo do botão com variação estável (varia entre beats, fixo no seed)."""
     opts = bank_alt.get(ch)
     if not opts:
-        return bank.get(ch, "Ataca")
+        return bank.get(ch, _lingua("Ataca", "Attack"))
     return opts[(minute + len(tag)) % len(opts)]
 
 
 def _attack_choice(minute: int, ch: str, edge: float, tag: str) -> Dict[str, Any]:
     return {
         "id": f"beat-{minute}-{tag}",
-        "label": _verb(ATTACK_VERB_ALT, ATTACK_VERB, ch, minute, tag),
+        "label": _verb(_lingua(ATTACK_VERB_ALT, ATTACK_VERB_ALT_EN), _lingua(ATTACK_VERB, ATTACK_VERB_EN), ch, minute, tag),
         "channel": ch,
         "target_side": "home",
         # Canal forte → peso bom; canal fraco → armadilha (negativo).
@@ -215,7 +264,7 @@ def _attack_choice(minute: int, ch: str, edge: float, tag: str) -> Dict[str, Any
 def _defend_choice(minute: int, ch: str, threat_edge: float, tag: str) -> Dict[str, Any]:
     return {
         "id": f"beat-{minute}-{tag}",
-        "label": _verb(DEFEND_VERB_ALT, DEFEND_VERB, ch, minute, tag),
+        "label": _verb(_lingua(DEFEND_VERB_ALT, DEFEND_VERB_ALT_EN), _lingua(DEFEND_VERB, DEFEND_VERB_EN), ch, minute, tag),
         "channel": ch,
         "target_side": "away",
         # Travar uma ameaça real vale; travar o que não assusta vale pouco.
@@ -266,26 +315,29 @@ def build_beat(
     # Aponta ONDE está a chance (best) ou o perigo (threat). Resposta inferível.
     loc_atk = SHORT_LOCAL.get(best, "no jogo")
     loc_def = SHORT_LOCAL.get(threat, "no jogo")
+    la = SHORT_LOCAL_EN.get(best, "in the game")
+    ld = SHORT_LOCAL_EN.get(threat, "in the game")
+    # Pares (pt, en): o rng escolhe a POSIÇÃO — o mesmo sorteio nos dois idiomas.
     if intent == "attack":
-        text = rng.choice([
-            f"Espaço {loc_atk}.",
-            f"Brecha {loc_atk}, vai!",
-            f"Ataque {loc_atk}!",
+        par = rng.choice([
+            (f"Espaço {loc_atk}.", f"Space {la}."),
+            (f"Brecha {loc_atk}, vai!", f"Gap {la}, go!"),
+            (f"Ataque {loc_atk}!", f"Attack {la}!"),
         ])
     elif intent == "defend":
-        text = rng.choice([
-            f"Perigo {loc_def} deles.",
-            f"Cuidado {loc_def}.",
-            f"Eles vêm {loc_def}.",
+        par = rng.choice([
+            (f"Perigo {loc_def} deles.", f"Danger {ld} from them."),
+            (f"Cuidado {loc_def}.", f"Careful {ld}."),
+            (f"Eles vêm {loc_def}.", f"They're coming {ld}."),
         ])
     else:
         # Neutro NUNCA diz "equilibrado" (a barra já mostra isso): aponta a inclinação.
-        text = rng.choice([
-            f"Vai abrir {loc_atk}.",
-            "Quem marcar primeiro decide.",
-            f"Olho {loc_def} deles.",
+        par = rng.choice([
+            (f"Vai abrir {loc_atk}.", f"It'll open up {la}."),
+            ("Quem marcar primeiro decide.", "First goal decides it."),
+            (f"Olho {loc_def} deles.", f"Watch them {ld}."),
         ])
-    text = _max5(text)
+    text = par[1] if idioma.en() else _max5(par[0])
 
     # --- Opções moldadas pela intenção (ataca = fazer gol; defende = salvar) ---
     a_ch = atk_rank[0] if (minute // 20) % 2 == 0 else atk_rank[1]
@@ -299,7 +351,7 @@ def build_beat(
             _attack_choice(minute, c2, atk_edges[c2], "atk2"),
             {
                 "id": f"beat-{minute}-trap",
-                "label": ATTACK_VERB.get(worst, "Força mesmo assim"),
+                "label": _lingua(ATTACK_VERB, ATTACK_VERB_EN).get(worst, _lingua("Força mesmo assim", "Force it anyway")),
                 "channel": worst, "target_side": "home",
                 "weight": round(min(-0.04, atk_edges[worst] * 0.18), 3),
             },
@@ -310,7 +362,7 @@ def build_beat(
             _defend_choice(minute, threat, away_edges[threat], "def1"),
             _defend_choice(minute, threat2, away_edges[threat2], "def2"),
             {**_attack_choice(minute, best, atk_edges[best], "counter"),
-             "label": "Sai no contra-ataque"},
+             "label": _lingua("Sai no contra-ataque", "Hit them on the counter")},
         ]
     else:
         choices = [
@@ -322,13 +374,13 @@ def build_beat(
             choices.append(_attack_choice(minute, c_ch, atk_edges[c_ch], "push"))
         elif diff > 0:
             choices.append({
-                "id": f"beat-{minute}-park", "label": "Segura o resultado",
+                "id": f"beat-{minute}-park", "label": _lingua("Segura o resultado", "Hold the lead"),
                 "channel": threat, "target_side": "away",
                 "weight": round(max(0.03, 0.04 + away_edges[threat] * 0.10), 3),
             })
         else:
             choices.append({
-                "id": f"beat-{minute}-trap", "label": ATTACK_VERB.get(worst, "Força mesmo assim"),
+                "id": f"beat-{minute}-trap", "label": _lingua(ATTACK_VERB, ATTACK_VERB_EN).get(worst, _lingua("Força mesmo assim", "Force it anyway")),
                 "channel": worst, "target_side": "home",
                 "weight": round(min(-0.04, atk_edges[worst] * 0.18), 3),
             })

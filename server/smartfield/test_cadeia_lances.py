@@ -156,6 +156,64 @@ def main():
     if sum(1 for j in trapaca if j["fatigue"] < 2) > 5:
         falhas.append("mais de 5 'entraram do banco' foram aceitos")
 
+    # SKILLS COM NOME: só onde cabe, só com atributo, numa frequência que não vira enfeite.
+    TIPO_DA_SKILL = {
+        "drible": {"arrancada", "elastico", "caneta", "chapeu", "corte_seco"}, "conducao": {"disparada"},
+        "passe": {"passe_milimetrico", "enfiada"}, "lancamento": {"lancamento_longo", "passe_milimetrico", "enfiada"},
+        "cruzamento": {"cruzamento_medida"}, "chute": {"bomba", "cavadinha", "de_primeira", "chute_colocado"},
+        "cabeceio": {"cabecada_contrape", "testada"}, "desarme": {"desarme_limpo"},
+        "escanteio": {"cobranca_perfeita"}, "cobranca": {"cobranca_fria"},
+    }
+    n_acoes = n_skills = 0
+    for i in range(min(args.n, 150)):
+        for e in simulate(entrada(i))["events"]:
+            for ac in (e.get("cadeia") or {}).get("acoes", []):
+                n_acoes += 1
+                sk = ac.get("skill")
+                if not sk:
+                    continue
+                n_skills += 1
+                if sk not in TIPO_DA_SKILL.get(ac["t"], set()):
+                    falhas.append(f"seed {i}: skill '{sk}' numa ação '{ac['t']}'")
+                if int(ac.get("skill_nota", 0)) < 78:
+                    falhas.append(f"seed {i}: skill '{sk}' com nota {ac.get('skill_nota')} (sem atributo pra ela)")
+    taxa = 100 * n_skills / max(1, n_acoes)
+    if not 4 <= taxa <= 22:
+        falhas.append(f"skills em {taxa:.1f}% das ações (faixa 4–22%)")
+    fraco = entrada(7)
+    for t in ("home_team", "away_team"):
+        for p in fraco[t]["lineup"]:
+            for k in ("finalizacao", "passe", "marcacao", "velocidade", "fisico", "drible", "cabeceio", "bola_parada", "penalti"):
+                p[k] = 62
+    fracos = sum(1 for e in simulate(fraco)["events"] for ac in (e.get("cadeia") or {}).get("acoes", []) if ac.get("skill"))
+    if fracos:
+        falhas.append(f"time de atributos 62 fez {fracos} skill(s) — skill tem de exigir atributo")
+    print(f"skills com nome: {n_skills}/{n_acoes} ações ({taxa:.1f}%) · time fraco: {fracos}")
+
+    # NARRAÇÃO EM INGLÊS: a mesma partida, só o texto muda (e o português fica igual).
+    TEXTO = {"text", "reason", "label"}
+    def sem_texto(v):
+        if isinstance(v, dict):
+            return {k: sem_texto(x) for k, x in v.items() if k not in TEXTO and k not in VOLATEIS}
+        if isinstance(v, list):
+            return [sem_texto(x) for x in v]
+        return v
+    ingles_ok = 0
+    for i in range(min(args.n, 120)):
+        e = entrada(i)
+        pt, en = simulate(copy.deepcopy(e)), simulate({**copy.deepcopy(e), "lang": "en"})
+        b_pt = [{**b, "insight": {k: v for k, v in b["insight"].items() if k != "text"}} for b in pt.get("analyst_beats", [])]
+        b_en = [{**b, "insight": {k: v for k, v in b["insight"].items() if k != "text"}} for b in en.get("analyst_beats", [])]
+        mesmo = sem_texto({**pt, "analyst_beats": b_pt}) == sem_texto({**en, "analyst_beats": b_en})
+        textos_en = " ".join(ev.get("text", "") for ev in en["events"])
+        if not mesmo:
+            falhas.append(f"seed {i}: em inglês a partida mudou (não só o texto)")
+        elif any(w in textos_en for w in (" pra ", "Adversário", "goleiro", "GOL!")):
+            falhas.append(f"seed {i}: sobrou português na narração em inglês")
+        else:
+            ingles_ok += 1
+    print(f"narração em inglês: {ingles_ok}/{min(args.n, 120)} partidas idênticas, só o texto traduzido")
+
     print(f"{args.n} partidas · {total_cadeias} cadeias · {finalizacoes} finalizações · {gols} gols")
     print(f"gols contados como jogada de 3–6 ações: {gols_historia}/{gols} ({100 * gols_historia / max(1, gols):.1f}%)")
     print(f"gols com assistência e passe certo: {assist_ok}/{com_assist}")

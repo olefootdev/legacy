@@ -21,6 +21,7 @@ import { L as T } from '@/i18n/L';
 import { ajustarPorEstilo, ajustarPorGrito, alvoNaForma, CLASSES_QUE_PRESSIONAM, formaDe, intencaoDoTime, profundidade, type Forma } from './forma';
 import { encenarGol, encenarLance, entrarEmCampo } from './encenacao';
 import type { EventoDeSom } from './som';
+import type { SkillEmCampo } from './skills';
 import type { Ficha, QuadroAoVivo } from './tipos';
 
 export { DT } from './fisica';
@@ -66,6 +67,9 @@ export class Coreografo {
   gritoCasa: string | undefined;
   /** Passos dados desde o apito — o relógio do filme (Fase 6). */
   passos = 0;
+  /** Fase 10: skills com nome que acabaram de acontecer (o palco mostra no trilho). */
+  skills: SkillEmCampo[] = [];
+  private skillSeq = 0;
   ordens: Record<string, string> = {};
   rnd: () => number;
   t = 0;
@@ -203,6 +207,17 @@ export class Coreografo {
     this.moverCamera();
     this.registrarAssinaturas();
     if (this.gravando) this.filme.push({ t: this.t, pos: this.corpos.flatMap((c) => [c.x, c.z]), bola: { ...this.bola } });
+  }
+
+  /** Uma skill com nome aconteceu (só registro — não mexe no jogo). */
+  registrarSkill(codigo: string, nota: number, de: Corpo): void {
+    this.skills.push({ codigo, nota, jogador: de.f.nome, lado: de.f.lado, id: ++this.skillSeq });
+  }
+
+  consumirSkills(): SkillEmCampo[] {
+    const s = this.skills;
+    this.skills = [];
+    return s;
   }
 
   /** Sons e vibrações desde o último quadro. */

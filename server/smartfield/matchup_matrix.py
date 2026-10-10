@@ -20,6 +20,7 @@ edge ∈ [-1, +1]: positivo = vantagem do atacante naquele canal.
 Sem numpy — stdlib basta (mesma filosofia do match_simulator).
 """
 
+import idioma
 from typing import Any, Dict, List
 
 # Canais de onde um chute/gol pode nascer (origem da jogada)
@@ -42,6 +43,22 @@ CHANNEL_LABELS = {
     "finalizacao_vs_gk": "finalização",
     "pressao": "pressão alta",
 }
+
+CHANNEL_LABELS_EN = {
+    "ataque_central": "central attack",
+    "corredor_esquerdo": "left flank",
+    "corredor_direito": "right flank",
+    "criacao": "midfield build-up",
+    "bola_parada": "set pieces",
+    "finalizacao_vs_gk": "finishing",
+    "pressao": "high press",
+}
+
+
+def rotulo(channel: str) -> str:
+    """Rótulo do canal no idioma da partida (idioma.py)."""
+    return (CHANNEL_LABELS_EN if idioma.en() else CHANNEL_LABELS).get(channel, channel)
+
 
 EDGE_SCALE = 25.0  # divisor da diferença att-def → edge normalizado
 
@@ -210,14 +227,25 @@ def compute_matchup_matrix(
             "att": round(a, 1),
             "def": round(d, 1),
             "edge": round(edge, 3),
-            "label": CHANNEL_LABELS[ch],
+            "label": rotulo(ch),
         }
     return matrix
 
 
 def channel_reason(channel: str, edge: float, brilliance: bool) -> str:
     """Justificativa humana-pronta de por que a jogada nasceu nesse canal."""
-    label = CHANNEL_LABELS.get(channel, channel)
+    label = rotulo(channel)
+    if idioma.en():
+        # "individual" fica: o cliente (quickBeatDirector) reconhece o lance de craque por ela.
+        if brilliance:
+            return f"a moment of individual brilliance — the {label} was shut"
+        if edge > 0.25:
+            return f"{label} dominated — clear superiority in the matchup"
+        if edge > 0:
+            return f"edge on the {label}"
+        if edge > -0.15:
+            return f"{label} contested to the last detail"
+        return f"{label} controlled by the opponent"
     if brilliance:
         return f"momento de brilho individual — {label} estava fechado"
     if edge > 0.25:

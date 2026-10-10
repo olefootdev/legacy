@@ -80,6 +80,7 @@ import { msParaMostrar } from '@/partidaViva/cronograma';
 import { ligarSom } from '@/partidaViva/som';
 import { gravarEntrega, salvarFilme, type FilmeDaPartida as Filme, type Trecho } from '@/partidaViva/gravacao';
 import { enviarFilme } from '@/partidaViva/filmeServidor';
+import { fecharPartida, type FechamentoDaLiga } from '@/legacyLeague/cliente';
 import type { QuadroAoVivo } from '@/partidaViva/tipos';
 
 // PARTIDA VIVA (beta): o palco em campo só carrega o PixiJS quando é aberto.
@@ -89,7 +90,7 @@ const PartidaVivaPalco = lazy(() =>
 
 type Phase = 'loading' | 'kickoff' | 'playing' | 'finished' | 'error';
 
-export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoInicial?: boolean } = {}) {
+export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }: { aoVivoInicial?: boolean; ligaPartida?: string } = {}) {
   const navigate = useNavigate();
   const dispatch = useGameDispatch();
   const players = useGameStore((s) => s.players);
@@ -287,7 +288,8 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
     startedRef.current = true;
     (async () => {
       try {
-        const seed = `${club.shortName}-${opponent!.shortName}-${opponent!.id}-${Date.now()}`;
+        // LEGACY LEAGUE: a seed carrega o id da partida da liga (o servidor confere no fechamento).
+        const seed = `${club.shortName}-${opponent!.shortName}-${opponent!.id}-${Date.now()}${ligaPartida ? `-LL${ligaPartida}` : ''}`;
         seedRef.current = seed;
         // Elenco REAL do adversário. NUNCA inventa jogadores: usa o stub só se
         // for real (ids sintéticos `gl-syn-*`/`away-*` não contam); senão resolve
@@ -704,6 +706,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
     gravarEntrega(t, passo, q);
   }, []);
   const [filmeId, setFilmeId] = useState<string | null>(null);
+  const [ligaFechamento, setLigaFechamento] = useState<FechamentoDaLiga | null>(null);
 
   const creditedRef = useRef(false);
   const onComplete = useCallback((_p: MatchPlan, r: QuickPlanPlayResult) => {
@@ -765,7 +768,13 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
       // FASE 2C: quando o servidor responde, a conta dele vale.
       aoAplicar: (jogadores) => dispatch({ type: 'APLICAR_EVOLUCAO_DO_SERVIDOR', jogadores }),
     });
-  }, [dispatch, plan, opponent, fichasAoVivo, fichasDoBanco, club.name, club.shortName]);
+    // LEGACY LEAGUE: fecha a partida da liga (vale com custódia válida + filme;
+    // o servidor responde "aguardando" até os dois chegarem — o cliente insiste).
+    if (ligaPartida) {
+      setLigaFechamento({ status: 'aguardando' });
+      void fecharPartida(ligaPartida, _p.seed).then(setLigaFechamento);
+    }
+  }, [dispatch, plan, opponent, fichasAoVivo, fichasDoBanco, club.name, club.shortName, ligaPartida]);
 
   // ── Render ────────────────────────────────────────────────────────────
   if (!hasOpponent) {
@@ -965,6 +974,28 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
 
         {phase === 'finished' && result && (
           <div className="mt-6 flex flex-col gap-5">
+            {/* LEGACY LEAGUE — o que esta partida valeu na tabela da semana. */}
+            {ligaPartida && ligaFechamento && (
+              <Link to="/legacy-league" className="flex items-center justify-between border-l-[3px] border-rua bg-concreto px-4 py-3 text-left text-papel">
+                <span>
+                  <span className="block font-prova text-[11px] uppercase tracking-[0.18em] text-rua">— Legacy League</span>
+                  <span className="mt-1 block font-impact text-[22px] leading-none">
+                    {ligaFechamento.status === 'valida'
+                      ? L(`+${ligaFechamento.pontos ?? 0} ponto${ligaFechamento.pontos === 1 ? '' : 's'} na tabela`, `+${ligaFechamento.pontos ?? 0} point${ligaFechamento.pontos === 1 ? '' : 's'} on the table`)
+                      : ligaFechamento.status === 'aguardando'
+                        ? L('Conferindo a partida…', 'Checking the match…')
+                        : ligaFechamento.status === 'invalida'
+                          ? L('Partida não validada', 'Match not validated')
+                          : L('Partida não registrada', 'Match not recorded')}
+                  </span>
+                  {ligaFechamento.status === 'invalida' && ligaFechamento.motivo && (
+                    <span className="mt-1 block font-prova text-[11px] text-mudo">{ligaFechamento.motivo}</span>
+                  )}
+                </span>
+                <span aria-hidden className="font-impact text-[22px] text-rua">→</span>
+              </Link>
+            )}
+
             {/* FASE 6 — o filme da partida vista em campo, pra reassistir. */}
             {filmeId && (
               <button

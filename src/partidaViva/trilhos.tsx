@@ -11,6 +11,7 @@ import { nomeDaClasse, DESCRICAO_DA_CLASSE } from '@/smartProfile/rotulos';
 import { iniciais } from './escalacao';
 import type { DecisaoNoCampo, Ficha, QuadroAoVivo } from './tipos';
 import type { LeituraDaPrancheta } from './prancheta';
+import { nomeDaSkill, type SkillEmCampo } from './skills';
 
 const BOTAO = 'w-full border px-2 py-1.5 text-left font-prova text-[11px] leading-snug';
 
@@ -194,6 +195,27 @@ export function CartaoFicha({ f, onFechar, ordem, onOrdem, onSubstituir, seguind
         </div>
       ) : (
         <p className="text-[11px] leading-snug text-fio">{f.lado === 'home' ? '' : L('Adversário', 'Opponent')}</p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Fase 10 — a skill com nome, no trilho (nunca por cima do campo). Altura fixa:
+ * o trilho não pula quando ela aparece ou some. Mostra o nome, quem fez e a nota
+ * do atributo que justifica (a "inteligência" da skill).
+ */
+export function SkillNoTrilho({ skill }: { skill: SkillEmCampo | null }) {
+  const n = skill ? nomeDaSkill(skill.codigo) : null;
+  return (
+    <div className="h-[42px] shrink-0" aria-live="polite">
+      {skill && n && (
+        <div key={skill.id} className={`flex h-full flex-col justify-center border-l-[3px] px-1.5 ${skill.lado === 'home' ? 'border-rua' : 'border-cal'}`}>
+          <span className={`truncate font-voz text-[17px] leading-none ${skill.lado === 'home' ? 'text-rua' : 'text-cal'}`}>✦ {n.nome}</span>
+          <span className="mt-0.5 truncate text-[10px] leading-none text-mudo">
+            {skill.jogador}{skill.nota ? ` · ${n.atributo} ${skill.nota}` : ''}
+          </span>
+        </div>
       )}
     </div>
   );

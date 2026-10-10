@@ -22,6 +22,7 @@ import {
 } from '../lib/smartProfile/plano.js';
 import { sincronizarFichas } from '../lib/smartProfile/sincronizar.js';
 import { classesDaPartida } from '../lib/smartProfile/classesDaPartida.js';
+import { idiomaDoPedido } from '../lib/idioma.js';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -152,6 +153,8 @@ interface QuickPlanRequestBody {
   decisions?: QuickPlanDecisionInput[];
   /** FABLE — DERBY/CLÁSSICO: Python amplia agressividade dos 2 lados (~×1.12). */
   is_derby?: boolean;
+  /** Idioma da narração (o servidor preenche pelo header — o cliente não manda). */
+  lang?: 'pt' | 'en';
   /**
    * JOGO DA FUNDAÇÃO: o rival é o FANTASMA de um time histórico (sem dono no
    * banco), então o DNA dele vem do cliente — limpo por `limparDna`. Não abre
@@ -442,6 +445,10 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     return c.json({ ok: false, error: "mode 'from_minute' exige from_minute e estado" }, 400);
   }
 
+  // Narração no idioma do jogador (header X-Olefoot-Idioma). Só o TEXTO muda:
+  // a partida em inglês é a mesma do português (test_cadeia_lances confere).
+  body.lang = idiomaDoPedido(c);
+
   // FASE 3 — o motor para de receber atributo de fora. O dono sai do token uma
   // vez e serve à conferência e à custódia.
   const dono = await donoDaSessao(c.req.header('Authorization'));
@@ -456,6 +463,7 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
   const conferencia = await conferirContraAsFichas(dono, body);
 
   const cacheKey = JSON.stringify({
+    lg: body.lang,
     s: body.seed,
     h: body.home_short,
     a: body.away_short,

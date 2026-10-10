@@ -210,6 +210,91 @@ def montar_cadeia(ev: Dict[str, Any], time: List[Dict[str, Any]], rival: List[Di
     return {"inicio": {"x": inicio[0], "z": inicio[1]}, "acoes": acoes[:7], "finalizacao": fim}
 
 
+# ── SKILLS COM NOME (Partida Viva, Fase 10) ──────────────────────────────────
+# Depois da jogada montada, cada ação ganha (ou não) o NOME de uma skill — só
+# quando o jogador TEM o atributo pra ela. Drible de quem tem drible 85 pode ser
+# um elástico; o de quem tem 60 é só um drible. Sem rng: a escolha entre
+# variações usa o minuto e a posição da ação, então nenhuma cadeia e nenhum
+# placar mudam. O nome vai como CÓDIGO; o celular escreve no idioma do jogo.
+
+def _distancia_ao_gol(lado_casa: bool, x: float) -> float:
+    return (C - x) if lado_casa else x
+
+
+def _skill(ac: Dict[str, Any], i: int, acoes: List[Dict[str, Any]], ev: Dict[str, Any],
+           por_id: Dict[str, Dict[str, Any]]) -> Optional[Tuple[str, int]]:
+    """(código, nota do atributo que justifica) ou None."""
+    p = por_id.get(ac["de"])
+    if not p:
+        return None
+    t = ac["t"]
+    casa = ev.get("actor_side") == "home"
+    variar = (int(ev.get("minute", 0)) * 7 + i * 3)
+    anterior = acoes[i - 1] if i > 0 else None
+    seguinte = acoes[i + 1] if i + 1 < len(acoes) else None
+    at = lambda k, d=60: int(_attr(p, k, d))  # noqa: E731
+
+    if t == "drible":
+        if at("drible") >= 85 and at("velocidade") >= 80:
+            return "arrancada", at("drible")
+        if at("drible") >= 82:
+            return ("elastico", "caneta", "chapeu")[variar % 3], at("drible")
+        if at("drible") >= 78:
+            return "corte_seco", at("drible")
+    elif t == "conducao":
+        corrida = abs(ac["x"] - anterior["x"]) if anterior else 0.0
+        if at("velocidade") >= 85 and corrida >= 15:
+            return "disparada", at("velocidade")
+    elif t in ("passe", "lancamento"):
+        dentro = _distancia_ao_gol(casa, ac["x"]) <= 18
+        if seguinte and seguinte["t"] in ("chute", "cabeceio") and seguinte["de"] == ac["para"] and at("passe") >= 84:
+            return "passe_milimetrico", at("passe")
+        if t == "lancamento" and at("passe") >= 80:
+            return "lancamento_longo", at("passe")
+        if dentro and at("passe") >= 80:
+            return "enfiada", at("passe")
+    elif t == "cruzamento":
+        nota = max(at("passe") - 4, at("bola_parada", 55))
+        if nota >= 84:
+            return "cruzamento_medida", nota
+    elif t == "chute":
+        de_onde = _distancia_ao_gol(casa, anterior["x"]) if anterior else 12.0
+        de_fora = de_onde >= 20 or ev.get("zone") == "mid"
+        if de_fora and at("finalizacao") >= 78 and at("fisico") >= 70:
+            return "bomba", at("finalizacao")
+        if float(ev.get("xg") or 0) >= 0.38 and at("drible") >= 80 and at("finalizacao") >= 80:
+            return "cavadinha", at("finalizacao")
+        if anterior and anterior["t"] in ("cruzamento", "passe") and anterior.get("para") == ac["de"] and at("finalizacao") >= 80:
+            return "de_primeira", at("finalizacao")
+        if at("finalizacao") >= 86:
+            return "chute_colocado", at("finalizacao")
+    elif t == "cabeceio":
+        if at("cabeceio", 55) >= 82:
+            return "cabecada_contrape", at("cabeceio", 55)
+        if at("fisico") >= 85:
+            return "testada", at("fisico")
+    elif t == "desarme":
+        if at("marcacao") >= 82:
+            return "desarme_limpo", at("marcacao")
+    elif t == "escanteio":
+        if at("bola_parada", 55) >= 86:
+            return "cobranca_perfeita", at("bola_parada", 55)
+    elif t == "cobranca":
+        if at("penalti", 55) >= 82:
+            return "cobranca_fria", at("penalti", 55)
+    return None
+
+
+def nomear_skills(cadeia: Dict[str, Any], ev: Dict[str, Any], jogadores: List[Dict[str, Any]]) -> None:
+    """Escreve `skill` + `skill_nota` nas ações que merecem (in place)."""
+    por_id = {p["id"]: p for p in jogadores}
+    acoes = cadeia.get("acoes") or []
+    for i, ac in enumerate(acoes):
+        achou = _skill(ac, i, acoes, ev, por_id)
+        if achou:
+            ac["skill"], ac["skill_nota"] = achou
+
+
 def anexar_cadeias(events: List[Dict[str, Any]], home: List[Dict[str, Any]], away: List[Dict[str, Any]],
                    seed: str, mode: str) -> None:
     """Escreve `cadeia` nos eventos (in place). RNG próprio — não toca no resto do plano."""
@@ -227,4 +312,5 @@ def anexar_cadeias(events: List[Dict[str, Any]], home: List[Dict[str, Any]], awa
         rival = [p for p in (away if lado == "home" else home) if p["id"] not in fora["away" if lado == "home" else "home"]]
         cadeia = montar_cadeia(ev, time, rival, rng)
         if cadeia:
+            nomear_skills(cadeia, ev, time + rival)
             ev["cadeia"] = cadeia

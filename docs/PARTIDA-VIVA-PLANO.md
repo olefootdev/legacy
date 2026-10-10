@@ -576,6 +576,31 @@ Cada fase termina com **algo que o fundador vê rodando no celular, a partir do 
   - Portão: `npm run test:auxiliar-duelo` (13). Não visto rodando: o enquadramento do duelo no campo
     (nas 2 partidas de teste os gols vieram de decisão do Analista, que não vira momento decisivo).
 
+### Fase 10 — LEGACY LEAGUE + skills com nome + narração em inglês (10/10)
+Decisões do fundador (10/10): Liga Global e Liga Ole SEGUEM no motor delas; nasce a **LEGACY LEAGUE**,
+que só se joga na Partida Viva. 2.5D e Rive: ainda não (testar toda a lógica antes).
+- **Narração em inglês** — o motor narra no idioma do jogador (`idioma.py`; header `X-Olefoot-Idioma`
+  → `body.lang`; cache separado por idioma): lances, motivos, rótulos dos canais, leitura e botões do
+  Analista. Português sai idêntico ao de antes; o inglês usa as MESMAS escolhas determinísticas
+  (listas do mesmo tamanho, mesmo índice). Portão: em 120 partidas, a partida em inglês é a mesma do
+  português — só o texto muda (`test_cadeia_lances`). O motivo em inglês mantém "individual" (o cliente
+  reconhece o lance de craque por ela).
+- **Skills com nome** — `nomear_skills` (cadeia_lances.py) nomeia a ação SÓ quando o jogador tem atributo
+  pra ela (drible 85 + velocidade 80 = Arrancada; drible 82 = Elástico/Caneta/Chapéu; passe 84 antes do
+  chute = Passe milimétrico; chute de fora com finalização 78 + físico 70 = Bomba…; 18 skills) e manda a
+  nota que justifica. Sem rng: nenhuma cadeia e nenhum placar mudam. No campo LEGACY aparecem no TRILHO
+  esquerdo (nunca por cima do campo), na hora da ação: "✦ Elástico · Juca · drible 86". Portão: ~15% das
+  ações num elenco forte, 0 num time de atributos 62, skill sempre no tipo de ação certo.
+- **LEGACY LEAGUE** — `/legacy-league` (menu PLAY, embaixo do LEGACY). Temporada semanal ISO, tabela
+  3/1/0 (pontos, saldo, gols, menos jogos), campeão da semana passada. Até 3 partidas por dia; o SERVIDOR
+  abre a partida e sorteia o adversário (time de outro manager real, de preferência inédito na semana).
+  A partida abre direto no campo (`/match/ao-vivo?liga=<id>`), a seed carrega `-LL<id>`, e ela só VALE
+  com custódia válida (evolucao_sombra) + o filme (partidas_filme) — prova de que foi vista em campo.
+  Empate que foi aos pênaltis = 1 ponto. Partida aberta e não jogada expira em 3 h. Sem prêmio em moeda
+  (economia é decisão do fundador): a recompensa é a da partida + tabela + título da semana.
+  Tabela `legacy_league_partidas` (migration 20261011000000, RLS fechada). Portão: `test:legacy-league` (18).
+- Também: `stubDoElenco` (friendlyMatchmaking) virou a conversão única "elenco → adversário".
+
 ### Depois (se fizer sentido)
 - Three.js **2.5D** (visual de transmissão) — troca só o palco.
 - Clima e refletores por shader — **só depois** que o jogo estiver redondo (régua DS 2027: sem enfeite).

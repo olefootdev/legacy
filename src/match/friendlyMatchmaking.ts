@@ -234,6 +234,48 @@ async function findRealManagerOpponent(
   }
 }
 
+/** Linha de elenco de um manager real (RPC find_friendly_opponents ou /api/legacy-league/partida). */
+export type LinhaDeElenco = {
+  user_id: string;
+  players: unknown;
+  lineup: unknown;
+  formation_scheme: FormationSchemeId | null;
+  display_name: string | null;
+  club_name: string | null;
+  club_short: string | null;
+  onboarding_data: unknown;
+  player_count?: number;
+};
+
+/**
+ * Linha de elenco → time adversário (os 11 do lineup salvo, ou os 11 melhores).
+ * Null se o elenco não fecha 11. Usada pelo amistoso e pela LEGACY LEAGUE.
+ */
+export function stubDoElenco(row: LinhaDeElenco): OpponentStub | null {
+  const players = Array.isArray(row.players) ? (row.players as PlayerEntity[]) : [];
+  if (players.length < 11) return null;
+  const lineup = (row.lineup && typeof row.lineup === 'object' ? row.lineup : {}) as Record<string, string>;
+  let titulares = Object.values(lineup)
+    .map((id) => players.find((p) => p.id === id))
+    .filter((p): p is PlayerEntity => !!p)
+    .slice(0, 11);
+  if (titulares.length < 11) {
+    titulares = [...players]
+      .sort((a, b) => overallFromAttributes(b.attrs, b.pos) - overallFromAttributes(a.attrs, a.pos))
+      .slice(0, 11);
+  }
+  const forca = Math.round(titulares.reduce((s, p) => s + overallFromAttributes(p.attrs, p.pos), 0) / titulares.length);
+  return {
+    id: row.user_id,
+    name: row.club_name ?? row.display_name ?? 'Manager',
+    shortName: row.club_short ?? 'MNG',
+    strength: forca,
+    genesisAwayPlayers: titulares,
+    formationScheme: row.formation_scheme ?? '4-3-3',
+    supporterCrestUrl: favoriteTeamCrestFromOnboarding(row.onboarding_data),
+  };
+}
+
 /**
  * Busca automática de adversário para amistoso (Quick + Classic).
  *

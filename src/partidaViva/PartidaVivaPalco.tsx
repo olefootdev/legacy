@@ -27,7 +27,8 @@ import { L } from '@/i18n/L';
 import { chaveDoLance, Coreografo, DT } from './coreografo';
 import { PalcoPixi } from './palco';
 import { levantarTela, pontoLocal } from './orientacao';
-import { CartaoFicha, LambeDoGol, Narracao, PainelBanco, PainelCamera, PainelDecisao, PainelPrancheta, PainelTatica } from './trilhos';
+import { CartaoFicha, LambeDoGol, Narracao, PainelBanco, PainelCamera, PainelDecisao, PainelPrancheta, PainelTatica, SkillNoTrilho } from './trilhos';
+import type { SkillEmCampo } from './skills';
 import { corredorEmMetros, lerPrancheta } from './prancheta';
 import { iniciais } from './escalacao';
 import { entregarQuadro, type Entrega } from './gravacao';
@@ -125,6 +126,13 @@ export function PartidaVivaPalco(p: Props) {
   const raizRef = useRef<HTMLDivElement>(null);
   const [, setVersao] = useState(0);
   const [leitura, setLeitura] = useState<ReturnType<typeof lerPrancheta> | null>(null);
+  /** Fase 10: a última skill com nome (some sozinha depois de ~3 s). */
+  const [skill, setSkill] = useState<SkillEmCampo | null>(null);
+  useEffect(() => {
+    if (!skill) return undefined;
+    const t = window.setTimeout(() => setSkill(null), 3200);
+    return () => window.clearTimeout(t);
+  }, [skill]);
   const [selecionada, setSelecionada] = useState<string | null>(null);
   const coreoRef = useRef<Coreografo | null>(null);
   if (!coreoRef.current) coreoRef.current = new Coreografo(fichas, formacaoCasa, formacaoFora, seed, p.comEntrada);
@@ -280,6 +288,8 @@ export function PartidaVivaPalco(p: Props) {
             corredores: corr ? { nosso: corredorEmMetros(corr.nosso, 'nosso'), perigo: corredorEmMetros(corr.perigo, 'perigo') } : undefined,
           },
         );
+        const skills = co.consumirSkills();
+        if (skills.length) setSkill(skills[skills.length - 1]!);
         // Som: torcida sobe com o perigo, cala na câmera lenta; eventos viram som/vibração.
         for (const e of co.consumirSons()) tocar(e);
         const perto = Math.min(q.bola.x, 105 - q.bola.x);
@@ -444,6 +454,7 @@ export function PartidaVivaPalco(p: Props) {
           </div>
 
           {noFilme && <span className="self-start bg-cal px-1.5 py-0.5 font-prova text-[11px] text-asfalto-27">{L('Filme', 'Film')}</span>}
+          <SkillNoTrilho skill={skill} />
           {decisao && !noFilme ? (
             <PainelDecisao decisao={decisao} protagonista={protagonista} onResponder={canal.responder} />
           ) : gol ? (

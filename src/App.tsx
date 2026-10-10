@@ -154,6 +154,7 @@ const ExtractTab = lazy(() => import('./pages/wallet/ExtractTab').then((m) => ({
 const LiveMatch = lazy(() => import('./pages/LiveMatch').then((m) => ({ default: m.LiveMatch })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
 const FilmeDaPartida = lazy(() => import('./pages/FilmeDaPartida'));
+const LegacyLeague = lazy(() => import('./pages/LegacyLeague'));
 const FilmeDaLenda = lazy(() => import('./pages/FilmeDaPartida').then((m) => ({ default: m.FilmeDaLenda })));
 const MatchAoVivo = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchAoVivo })));
 const LegendsCup = lazy(() => import('./pages/LegendsCup').then((m) => ({ default: m.LegendsCup })));
@@ -729,6 +730,8 @@ as a nice MVP. Let's Play Together! ⚽
               }
             />
             {/* PARTIDA VIVA — Fase 6: o filme da partida (reassistir + Câmera do Craque) */}
+            {/* LEGACY LEAGUE — a liga da Partida Viva (só no modo LEGACY) */}
+            <Route path="/legacy-league" element={<LegacyLeague />} />
             <Route path="/match/filme" element={<FilmeDaPartida />} />
             <Route path="/match/filme/:id" element={<FilmeDaPartida />} />
             <Route path="/match/filme/s/:idNuvem" element={<FilmeDaPartida />} />

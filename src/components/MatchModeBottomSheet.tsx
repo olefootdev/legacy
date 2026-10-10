@@ -69,6 +69,15 @@ const MODES: ReadonlyArray<ModeEntry> = [
     to: '/match/ao-vivo',
     glyph: '✦',
   },
+  // LEGACY LEAGUE: a liga que só se joga na Partida Viva (tabela da semana).
+  {
+    id: 'legacy_league',
+    label: 'Legacy League',
+    description: L('A liga da Partida Viva · tabela da semana · 3 jogos por dia', 'The Live Match league · weekly table · 3 games a day'),
+    status: 'available',
+    to: '/legacy-league',
+    glyph: '♛',
+  },
   {
     id: 'cards',
     label: 'Cards',
@@ -81,8 +90,9 @@ const MODES: ReadonlyArray<ModeEntry> = [
 /** Ordem de exibição: Legacy e Rápida na frente, depois os outros disponíveis, depois os "em breve". */
 const ORDEM: ReadonlyArray<ModeEntry> = [
   ...MODES.filter((m) => m.id === 'legacy'),
+  ...MODES.filter((m) => m.id === 'legacy_league'),
   ...MODES.filter((m) => m.id === 'quick'),
-  ...MODES.filter((m) => m.status === 'available' && m.id !== 'quick' && m.id !== 'legacy'),
+  ...MODES.filter((m) => m.status === 'available' && m.id !== 'quick' && m.id !== 'legacy' && m.id !== 'legacy_league'),
   ...MODES.filter((m) => m.status !== 'available'),
 ];
 const PRIMEIRO_DISPONIVEL = ORDEM.find((m) => m.status === 'available');
