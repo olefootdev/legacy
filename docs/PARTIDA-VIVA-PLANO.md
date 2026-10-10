@@ -682,6 +682,26 @@ Pedido do fundador: os passos 1–4 do "mais realista" (o 5, narração jogada a
 
 ---
 
+### Fechamento da parte simples (10/10, noite) — trava, abertura, celular
+
+- ✅ **Trava do 16'** ("o Adriano tocando pro Savinho"): um lance novo zerava a fila do
+  coreógrafo e jogava fora as limpezas pendentes → jogadores PRESOS no alvo. Agora
+  `limparCena()`. Também: fôlego vazio virava NaN; cansado isolado parava com a bola;
+  driblador encarava a linha de fundo; sem pingue-pongue; laço do palco à prova de
+  exceção (telemetria `partida_viva_erro`). (b5f8e25)
+- ✅ **Abertura sem cerimônia**: times já na posição, contagem 3-2-1, apito. (b5f8e25)
+- ✅ **Escanteio sem cobrador**: o campo anda atrás do relógio da Rápida (câmera lenta,
+  celular perdendo quadro) e a posse do minuto seguinte atropelava a bola parada.
+  Agora `encenandoAte`: com lance em cena, a posse muda em silêncio. (7e373ad)
+- ✅ **Celular**: botão Tela cheia (Android), jogo instalável na tela de início (iPhone),
+  palco mede a área visível, margem do entalhe só do lado da câmera. (b24eef0, 12920bf, 7e373ad)
+- ✅ **Portão novo**: `npm run test:estresse-partida-viva` — partidas reais do motor tocadas
+  no campo, inclusive com o campo atrasado (HOLD=0.6); caça laço, NaN, jogador preso,
+  bola parada esquecida e escanteio sem cobrador.
+- **Regra nova**: nunca zerar a fila do coreógrafo sem `limparCena()`; nada do jogo
+  ambiente mexe na bola com um lance do plano em cena.
+- ⏳ **Próximo (pedido do fundador)**: revisão de TODOS os comandos da lógica do jogo.
+
 ## 10. Regras de ouro
 1. **Uma verdade só.** O placar sai do plano no servidor. O visual nunca decide.
 2. **Tela primeiro, profundidade depois.** Fatia feia de ponta a ponta > motor perfeito sem tela.
