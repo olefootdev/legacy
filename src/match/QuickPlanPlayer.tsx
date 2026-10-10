@@ -205,6 +205,8 @@ export type ComandoSemMinuto =
   | { tipo: 'incentivar' | 'cobrar' | 'acalmar' }
   | { tipo: 'ordem'; ordem: 'segurar' | 'atacar_espaco' | 'marcar'; jogador: string };
 const RECARGA_GRITO_MIN = 15;
+/** LEGACY: o momento decisivo tem prazo — sem resposta, o jogador decide sozinho (o jogo nunca fica parado). */
+const PRAZO_DECISIVO_MS = 15000;
 const DURACAO_GRITO_MIN = 10;
 
 /** Narração rica vinda do backend (Sonnet) — chaves por beat_id e por minuto. */
@@ -1132,6 +1134,26 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     }
   };
 
+  // LEGACY: prazo do momento decisivo. Sem resposta, o jogador escolhe sozinho —
+  // pela maior vantagem no duelo (a leitura dele, não a do técnico).
+  const resolverClutchRef = useRef(resolveClutchChoice);
+  resolverClutchRef.current = resolveClutchChoice;
+  const clutchChave = phase === 'clutch' && clutch ? clutch.idx : null;
+  useEffect(() => {
+    if (clutchChave === null || !pedirReplan) return undefined;
+    const t = window.setTimeout(() => {
+      const c = clutch;
+      if (!c) return;
+      const vantagem = (k: ClutchKey) => { const d = c.duelo?.porOpcao[k]; return d ? d.nosso - d.deles : 0; };
+      const escolha = [...c.moment.options].sort((a, b) => vantagem(b.key) - vantagem(a.key))[0];
+      if (!escolha) return;
+      pushFeed({ id: `clutch-auto-${c.idx}`, minute: c.moment.minute, kind: 'insight', text: L(`Sem ordem do técnico: ${c.moment.actorName} decidiu sozinho — ${escolha.label}.`, `No call from the bench: ${c.moment.actorName} decided alone — ${escolha.label}.`) });
+      resolverClutchRef.current(escolha.key);
+    }, PRAZO_DECISIVO_MS);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clutchChave, pedirReplan]);
+
   const dismissCelebration = () => {
     setCelebration(null);
     setHighlight(null);
@@ -1397,6 +1419,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
         tipo: 'decisivo', chave: `clutch-${clutch.idx}`,
         titulo: clutch.moment.intent === 'attack' ? L('Momento decisivo', 'Decisive moment') : L('Segura o gol', 'Save it'),
         texto: clutch.moment.context, protagonista: clutch.moment.actorName,
+        prazoMs: pedirReplan ? PRAZO_DECISIVO_MS : undefined,
         opcoes: clutch.moment.options.map((o) => {
           const c = clutch.duelo?.porOpcao[o.key];
           return { id: o.key, rotulo: o.label, detalhe: c ? `${c.rotuloNosso} ${c.nosso} × ${c.deles} ${c.rotuloDeles}` : undefined };

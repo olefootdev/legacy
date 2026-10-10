@@ -48,9 +48,17 @@ export function PainelDecisao({ decisao, protagonista, onResponder }: {
   const forte = decisao.tipo === 'decisivo' || decisao.tipo === 'lesao' || decisao.tipo === 'expulsao';
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto" role="group" aria-label={decisao.titulo}>
-      <span className={`self-start px-1.5 py-0.5 font-prova text-[11px] ${forte ? 'bg-rua text-asfalto-27' : 'bg-cal text-asfalto-27'}`}>
-        {decisao.titulo}
-      </span>
+      {decisao.tipo === 'decisivo' ? (
+        // O campo congela esperando a escolha: o título diz que é com você (não é trava).
+        <span className="-mx-0.5 bg-rua px-1.5 py-1 font-impact text-[20px] uppercase leading-none text-asfalto-27">
+          {L('Sua decisão', 'Your call')}
+          <span className="block font-prova text-[10px] normal-case">{decisao.titulo}</span>
+        </span>
+      ) : (
+        <span className={`self-start px-1.5 py-0.5 font-prova text-[11px] ${forte ? 'bg-rua text-asfalto-27' : 'bg-cal text-asfalto-27'}`}>
+          {decisao.titulo}
+        </span>
+      )}
       {protagonista && (
         <div className="flex items-center gap-1.5">
           <Rosto f={protagonista} tam={30} />

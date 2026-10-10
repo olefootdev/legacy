@@ -3,7 +3,8 @@
  * sem arquivo de áudio: torcida (ruído filtrado), chute seco, apito com
  * vibrato, explosão no gol, "uuuh" na trave.
  *
- * O cinematográfico é o SILÊNCIO: a torcida sobe com o perigo e cala no chute.
+ * O cinematográfico é o SILÊNCIO: a torcida só aparece no perigo e cala no chute.
+ * Sem murmúrio constante de fundo (parecia bug — feedback do fundador, 10/10).
  * O navegador só libera áudio depois de um toque — `ligarSom()` é chamado no
  * botão "Ver em campo", no LEGACY do menu ou no "Som" do trilho.
  *
@@ -13,7 +14,7 @@
  * Tudo aqui nunca lança.
  */
 
-export type EventoDeSom = 'chute' | 'gol' | 'trave' | 'defesa' | 'roubada' | 'apito' | 'passe';
+export type EventoDeSom = 'chute' | 'gol' | 'trave' | 'defesa' | 'roubada' | 'apito' | 'passe' | 'alerta';
 
 interface Motor {
   ctx: AudioContext;
@@ -119,7 +120,9 @@ export function tiqueDoSom(tensao: number, silencio: boolean, dt: number, mudo =
   if (mudo) { alvo = 0; tc = 0.15; }
   else if (explosao > 0) { alvo = 0.06 + 0.24 * explosao; tc = 0.06; }
   else if (silencio) { alvo = 0.006; tc = 0.06; }
-  else alvo = 0.025 + 0.075 * Math.max(0, Math.min(1, tensao));
+  // Sem "chiado" de fundo (feedback 10/10: o murmúrio constante parecia bug):
+  // a torcida só aparece quando a bola chega perto do gol — e some de novo.
+  else alvo = tensao > 0.55 ? 0.08 * ((Math.min(1, tensao) - 0.55) / 0.45) : 0;
   motor.torcida.gain.setTargetAtTime(alvo, t, tc);
   // No gol a arquibancada "abre" (mais agudo); no resto, murmúrio grave.
   motor.filtro.frequency.setTargetAtTime(explosao > 0 ? 900 : 520, t, 0.2);
@@ -151,6 +154,21 @@ function apito(longo: boolean): void {
   o.start(t); lfo.start(t); o.stop(t + d + 0.15); lfo.stop(t + d + 0.15);
 }
 
+/** Dois toques curtos e agudos: "é com você" (momento decisivo). */
+function alerta(): void {
+  if (!motor) return;
+  const { ctx, mestre } = motor, t0 = ctx.currentTime;
+  for (const d of [0, 0.16]) {
+    const o = ctx.createOscillator(), g = ctx.createGain(), t = t0 + d;
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.08, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    o.connect(g).connect(mestre);
+    o.start(t); o.stop(t + 0.13);
+  }
+}
+
 function vibrar(padrao: number[]): void {
   try { navigator.vibrate?.(padrao); } catch { /* iPhone não vibra pela web */ }
 }
@@ -160,6 +178,7 @@ export function tocar(e: EventoDeSom): void {
   if (e === 'gol') vibrar([60, 40, 140]);
   else if (e === 'trave') vibrar([40, 30, 40]);
   else if (e === 'roubada') vibrar([25]);
+  else if (e === 'alerta') vibrar([80, 60, 80]);
   if (!ligado || !motor) return;
   switch (e) {
     case 'chute': batida(true); break;
@@ -169,5 +188,6 @@ export function tocar(e: EventoDeSom): void {
     case 'defesa': explosao = Math.max(explosao, 0.35); break;
     case 'apito': apito(true); break;
     case 'roubada': break;
+    case 'alerta': alerta(); break;
   }
 }

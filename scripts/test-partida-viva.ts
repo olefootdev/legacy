@@ -213,16 +213,23 @@ confere(a.hist.some((v, i) => v !== outra.hist[i]), 'outra seed → outro filme'
   const e = new Coreografo(fichas, '4-3-3', '4-3-3', 'entrada', true);
   const noTunel = e.quadro(1).jogadores.every((j) => j.z < 0);
   const nomes = new Set<string>();
-  let apito = false;
-  for (let i = 0; i < 60; i++) {
+  let apito = false, passoDoApito = -1, bolaAntes = 0, naHoraDoApito: ReturnType<typeof e.quadro> | null = null;
+  for (let i = 0; i < 140 && !apito; i++) {
     e.passo();
     e.quadro(1).fitas.forEach((f) => nomes.add(f.texto));
-    if (e.consumirSons().includes('apito')) apito = true;
+    if (e.consumirApito()) { apito = true; passoDoApito = i; naHoraDoApito = e.quadro(1); }
+    else bolaAntes = Math.max(bolaAntes, Math.hypot(e.quadro(1).bola.x - 52.5, e.quadro(1).bola.z - 34));
   }
   const emCampo = e.quadro(1).jogadores.every((j) => j.z > 1 && j.z < 67);
   confere(noTunel && emCampo, 'entrada: os times saem do túnel e ocupam o campo');
   confere(nomes.size >= 10, `entrada: os jogadores da casa são apresentados (${nomes.size} nomes)`);
-  confere(apito, 'entrada: apito inicial');
+  confere(apito && passoDoApito > 44, `entrada: o apito só sai depois da apresentação (passo ${passoDoApito})`);
+  const posicoes = naHoraDoApito?.jogadores ?? [];
+  confere(posicoes.length === 22 && posicoes.every((j) => (j.f.lado === 'home' ? j.x <= 53 : j.x >= 52)), 'pré-apito: cada time no SEU campo na hora do apito');
+  const atacante = posicoes.find((j) => j.f.id === 'home-9');
+  confere(!!atacante && Math.hypot(atacante.x - 52.5, atacante.z - 34) < 2.5, 'pré-apito: o atacante da casa na bola, no centro');
+  confere(bolaAntes < 0.5, 'antes do apito a bola não rola');
+  confere(!e.consumirApito(), 'o apito avisa uma vez só');
 
   const cad = {
     inicio: { x: 50, z: 34 }, finalizacao: 'chute' as const,

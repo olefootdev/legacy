@@ -66,6 +66,8 @@ interface Props {
   onFimDoFilme?: () => void;
   /** Fase 7: de que lado está quem assiste (o adversário vê o time DELE em amarelo). */
   ladoDeQuemAssiste?: 'home' | 'away';
+  /** O apito inicial soou no campo (todos na posição de saída): a Rápida pode começar. */
+  onApito?: () => void;
   /** Fase 8: a Câmera do Craque já abre seguindo este jogador (a lenda do atleta). */
   seguirAoAbrir?: string;
 }
@@ -114,6 +116,8 @@ export function PartidaVivaPalco(p: Props) {
   const [painel, setPainel] = useState<'tatica' | 'banco' | 'camera' | null>(null);
   const noFilme = !!p.roteiro;
   const montagemRef = useRef<{ id: number; comEntrada: boolean } | null>(null);
+  const apitoRef = useRef(p.onApito);
+  apitoRef.current = p.onApito;
   if (!montagemRef.current) montagemRef.current = { id: ++montagens, comEntrada: !!p.comEntrada };
   /** Câmera do Craque: quem a câmera segue (null = câmera do jogo). */
   const [seguindo, setSeguindo] = useState<string | null>(p.seguirAoAbrir ?? null);
@@ -126,6 +130,16 @@ export function PartidaVivaPalco(p: Props) {
   const raizRef = useRef<HTMLDivElement>(null);
   const [, setVersao] = useState(0);
   const [leitura, setLeitura] = useState<ReturnType<typeof lerPrancheta> | null>(null);
+  /**
+   * CRONOLOGIA (feedback 10/10): o placar, o lambe do gol e a narração só
+   * aparecem quando o CAMPO mostra o lance — nada de "GOL" antes da bola entrar.
+   * `pendente` guarda o quadro mais novo; o laço libera quando a encenação acaba
+   * (ou, no gol, quando a bola entra).
+   */
+  type Mostrado = { placarCasa: number; placarFora: number; narracao: QuadroAoVivo['narracao']; golVisto: string | null };
+  const [mostrado, setMostrado] = useState<Mostrado>({ placarCasa: 0, placarFora: 0, narracao: [], golVisto: null });
+  const pendenteRef = useRef<{ q: QuadroAoVivo; desde: number } | null>(null);
+  const golVistoRef = useRef<string | null>(null);
   /** Fase 10: a última skill com nome (some sozinha depois de ~3 s). */
   const [skill, setSkill] = useState<SkillEmCampo | null>(null);
   useEffect(() => {
@@ -190,6 +204,7 @@ export function PartidaVivaPalco(p: Props) {
           const e = roteiro[proxima++]!;
           aplicarRef.current(e.q);
           canal.publicar(e.q);
+          pendenteRef.current = { q: e.q, desde: performance.now() };
         }
       };
       const passosAte = (achar: (e: Entrega) => boolean) => {
@@ -288,6 +303,19 @@ export function PartidaVivaPalco(p: Props) {
             corredores: corr ? { nosso: corredorEmMetros(corr.nosso, 'nosso'), perigo: corredorEmMetros(corr.perigo, 'perigo') } : undefined,
           },
         );
+        if (co.consumirApito()) apitoRef.current?.();
+        // Cronologia: libera placar/narração/lambe quando o campo mostrou o lance.
+        const pend = pendenteRef.current;
+        if (pend) {
+          const q = pend.q;
+          const golAinda = q.gol && q.gol.chave !== golVistoRef.current;
+          const pronto = golAinda ? !!co.festa : (co.fila.length === 0 && !co.voo);
+          if (pronto || agora - pend.desde > 9000) {
+            if (golAinda) golVistoRef.current = q.gol!.chave;
+            pendenteRef.current = null;
+            setMostrado({ placarCasa: q.placarCasa, placarFora: q.placarFora, narracao: q.narracao, golVisto: golVistoRef.current });
+          }
+        }
         const skills = co.consumirSkills();
         if (skills.length) setSkill(skills[skills.length - 1]!);
         // Som: torcida sobe com o perigo, cala na câmera lenta; eventos viram som/vibração.
@@ -320,6 +348,7 @@ export function PartidaVivaPalco(p: Props) {
     const co = coreoRef.current;
     if (co) p.gravar?.(montagemRef.current!, co.passos, quadro);
     aplicarRef.current(quadro);
+    pendenteRef.current = { q: quadro, desde: performance.now() };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quadro]);
 
@@ -392,7 +421,14 @@ export function PartidaVivaPalco(p: Props) {
   const autorDoGol = gol ? coreoRef.current?.corpos.find((c) => c.f.id === gol.actorId)?.f ?? fichas.find((f) => f.id === gol.actorId) : undefined;
   const segmentos = Math.round(((quadro?.momento ?? 50) / 100) * 10);
   const xgDoLance = quadro?.lance?.xg ?? gol?.xg;
-  const legenda = quadro?.narracao[0]?.texto.replace(/^\d+'\s*—\s*/, '') ?? '';
+  // Momento decisivo: a faixa de baixo chama a decisão (o campo congelado não é trava).
+  const narracaoMostrada = mostrado.narracao;
+  const legenda = decisao?.tipo === 'decisivo' && !noFilme
+    ? L('SUA DECISÃO ← escolha no painel', 'YOUR CALL ← choose on the left')
+    : narracaoMostrada[0]?.texto.replace(/^\d+'\s*—\s*/, '') ?? '';
+  // Toque + vibração quando a decisão chega.
+  const decisivoChave = decisao?.tipo === 'decisivo' ? decisao.chave : null;
+  useEffect(() => { if (decisivoChave && !noFilme) tocar('alerta'); }, [decisivoChave, noFilme]);
 
   // Celular em retrato: o palco é sempre horizontal e gira 90° por CSS.
   const larg = retrato ? h : w;
@@ -436,15 +472,23 @@ export function PartidaVivaPalco(p: Props) {
         {/* TRILHO ESQUERDO */}
         <aside className="flex min-h-0 flex-col gap-2 overflow-hidden border-r border-linha p-2 pl-[max(0.5rem,env(safe-area-inset-left))] font-prova text-[11px]">
           <div>
-            <div className="flex flex-wrap items-baseline gap-1.5">
+            {/* O RELÓGIO grande (feedback 10/10: tempo no futebol é muito importante). */}
+            <div className="flex items-end justify-between gap-1">
+              <span className="font-spray text-[40px] font-black leading-[0.85] text-rua tabular-nums" aria-label={L(`Minuto ${quadro?.minuto ?? 0}`, `Minute ${quadro?.minuto ?? 0}`)}>
+                {quadro?.minuto ?? 0}&prime;
+              </span>
+              <span className="pb-0.5 font-prova text-[10px] uppercase text-mudo">
+                {(quadro?.minuto ?? 0) <= 45 ? L('1º tempo', '1st half') : L('2º tempo', '2nd half')}
+              </span>
+            </div>
+            <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
               <span className="font-impact text-[15px] tracking-wide">{siglaCasa}</span>
-              <span className="font-spray text-[24px] font-black leading-none text-rua tabular-nums">
-                {quadro?.placarCasa ?? 0} × {quadro?.placarFora ?? 0}
+              <span className="font-spray text-[22px] font-black leading-none text-papel tabular-nums">
+                {mostrado.placarCasa} × {mostrado.placarFora}
               </span>
               <span className="font-impact text-[15px] tracking-wide text-suave">{siglaFora}</span>
             </div>
             <div className="mt-1 flex items-center gap-1.5">
-              <span className="bg-rua px-1.5 text-asfalto-27">{quadro?.minuto ?? 0}&prime;</span>
               <div className="flex gap-[2px]" aria-label={L('Momento da partida', 'Match momentum')}>
                 {Array.from({ length: 10 }, (_, i) => (
                   <span key={i} className={`h-1 w-[5px] ${i < segmentos ? 'bg-rua' : 'bg-cal'}`} />
@@ -457,8 +501,8 @@ export function PartidaVivaPalco(p: Props) {
           <SkillNoTrilho skill={skill} />
           {decisao && !noFilme ? (
             <PainelDecisao decisao={decisao} protagonista={protagonista} onResponder={canal.responder} />
-          ) : gol ? (
-            <LambeDoGol quadro={quadro} autor={autorDoGol} nome={gol.nome} />
+          ) : gol && mostrado.golVisto === gol.chave ? (
+            <LambeDoGol quadro={quadro ? { ...quadro, placarCasa: mostrado.placarCasa, placarFora: mostrado.placarFora } : quadro} autor={autorDoGol} nome={gol.nome} />
           ) : painel === 'camera' ? (
             <PainelCamera
               fichas={coreoRef.current?.corpos.map((c) => c.f) ?? fichas}
@@ -505,7 +549,7 @@ export function PartidaVivaPalco(p: Props) {
           ) : pausado && !noFilme ? (
             <PainelPrancheta leitura={leitura} onVoltar={() => canal.responder('retomar')} />
           ) : (
-            <Narracao quadro={quadro} />
+            <Narracao quadro={quadro ? { ...quadro, narracao: mostrado.narracao } : quadro} />
           )}
         </aside>
 

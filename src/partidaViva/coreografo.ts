@@ -88,6 +88,11 @@ export class Coreografo {
   gravando = false;
   /** Até quando a entrada em campo manda (lances esperam). */
   entradaAte = -1;
+  /** Posição de saída de cada um (o seu campo, na formação) — a foto antes do apito. */
+  saida = new Map<Corpo, { x: number; z: number }>();
+  /** Pré-apito: todos indo pra posição de saída; o apito sai quando chegam (ou no limite). */
+  preApito: { limite: number } | null = null;
+  private apitoPendente = false;
   filme: QuadroDoFilme[] = [];
   golGravado: { cadeia: import('@/match/quickPlanTypes').CadeiaDeLance; autorId?: string } | null = null;
 
@@ -116,14 +121,17 @@ export class Coreografo {
       const ax = f.lado === 'home' ? Math.min(nx * C * 0.92, C / 2 - 2) : Math.max(nx * C * 0.92 + C * 0.08, C / 2 + 2);
       const ancora = { x: nx * C, z: nz * L };
       const vmax = (5.4 + (f.velocidade / 100) * 3.4) * (1 - f.fadiga * 0.0025);
-      this.corpos.push({ f, x: ax, z: ancora.z, vx: 0, vz: 0, px: ax, pz: ancora.z, ancora, alvo: null, vmax });
+      const corpo: Corpo = { f, x: ax, z: ancora.z, vx: 0, vz: 0, px: ax, pz: ancora.z, ancora, alvo: null, vmax };
+      this.corpos.push(corpo);
+      this.saida.set(corpo, { x: ax, z: ancora.z });
     }
     this.dono = this.achar('home', 'mc1') ?? this.corpos.find((c) => c.f.lado === 'home') ?? null;
     for (const lado of ['home', 'away'] as const) {
       const linha = this.corpos.filter((c) => c.f.lado === lado && c.f.slot !== 'gol');
       if (linha.length) this.centroProf[lado] = linha.reduce((s, c) => s + profundidade(lado, c.ancora.x), 0) / linha.length;
     }
-    if (comEntrada) { entrarEmCampo(this); this.entradaAte = 4.8; }
+    // Com entrada: o jogo só começa no APITO (entradaAte = ∞ até lá — ver apitar()).
+    if (comEntrada) { entrarEmCampo(this); this.entradaAte = Infinity; }
   }
 
   /** Recebe o que a Partida Rápida está mostrando agora. */
@@ -194,13 +202,39 @@ export class Coreografo {
     this.ordens = { ...(q.ordens ?? {}) };
   }
 
+  /**
+   * O apito inicial: todos na posição de saída (ou estourou o limite). A bola
+   * no centro com o atacante da casa, e a partida começa (o palco avisa a Rápida).
+   */
+  apitar(): void {
+    this.preApito = null;
+    for (const c of this.corpos) c.alvo = null;
+    this.bola = { x: C / 2, z: L / 2, h: 0 };
+    this.dono = this.achar('home', 'ata') ?? this.achar('home', 'mc1');
+    this.sons.push('apito');
+    this.entradaAte = this.t;
+    this.apitoPendente = true;
+  }
+
+  /** O apito inicial acabou de soar (uma vez). */
+  consumirApito(): boolean {
+    const a = this.apitoPendente;
+    this.apitoPendente = false;
+    return a;
+  }
+
   passo(): void {
     this.passos++;
+    if (this.preApito) {
+      const todos = this.corpos.every((c) => { const s = this.saida.get(c); return !s || Math.hypot(c.x - s.x, c.z - s.z) < 1.2; });
+      if (todos || this.t >= this.preApito.limite) this.apitar();
+    }
     this.t += DT;
     while (this.fila.length && this.fila[0]!.em <= this.t) this.fila.shift()!.faz();
     for (const c of this.corpos) { c.px = c.x; c.pz = c.z; }
     this.pbola = { ...this.bola };
-    if (!this.voo && !this.festa && this.fila.length === 0 && this.t >= this.proxToque) this.toqueAmbiente();
+    // Antes do apito a bola não rola (entradaAte = ∞ durante a entrada).
+    if (!this.voo && !this.festa && this.fila.length === 0 && this.t >= this.proxToque && this.t >= this.entradaAte) this.toqueAmbiente();
     this.lerOJogo();
     for (const c of this.corpos) moverCorpo(c, this.alvoDaForma(c), this.corpos);
     this.moverBola();

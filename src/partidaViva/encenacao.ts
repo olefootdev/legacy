@@ -247,19 +247,31 @@ export function chutar(co: Coreografo, autor: Corpo, como: Desfecho, xg: number)
 export function entrarEmCampo(co: Coreografo): void {
   const casa = co.corpos.filter((c) => c.f.lado === 'home');
   const fora = co.corpos.filter((c) => c.f.lado === 'away');
+  // 1) Túnel: saem em fila do meio da lateral de cima.
   co.corpos.forEach((c, i) => {
     c.x = c.px = C / 2 + (c.f.lado === 'home' ? -1.4 : 1.4);
     c.z = c.pz = -2 - (i % 11) * 1.4;
   });
+  // 2) Perfilados no meio, cada time de um lado da linha — os da casa apresentados um a um.
   const fila = (time: Corpo[], z: number) => time.forEach((c, i) => { c.alvo = { x: C / 2 - 18 + i * 3.6, z }; });
   fila(casa, L / 2 - 4);
   fila(fora, L / 2 + 4);
   co.dono = null;
   co.bola = { x: C / 2, z: L / 2, h: 0 };
   casa.forEach((c, i) => co.depois(1.4 + i * 0.26, () => co.fita(`${c.f.nome}`, 0, 0, 0.3, false, c)));
-  co.depois(4.6, () => {
-    for (const c of co.corpos) c.alvo = null;
-    co.sons.push('apito');
-    co.dono = co.achar('home', 'ata') ?? co.achar('home', 'mc1');
+  // 3) Cada um pra sua posição de saída (o seu campo, na formação); o atacante da casa na bola.
+  //    O apito sai quando TODOS chegam (Coreografo.passo → apitar), no máximo em 6 s.
+  co.depois(4.4, () => {
+    for (const c of co.corpos) {
+      const s = co.saida.get(c);
+      if (s) c.alvo = { ...s };
+    }
+    const atacante = co.achar('home', 'ata') ?? co.achar('home', 'mc1');
+    if (atacante) {
+      const centro = { x: C / 2 - 0.8, z: L / 2 };
+      co.saida.set(atacante, centro);
+      atacante.alvo = { ...centro };
+    }
+    co.preApito = { limite: co.t + 6 };
   });
 }

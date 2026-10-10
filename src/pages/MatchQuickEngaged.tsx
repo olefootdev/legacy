@@ -351,17 +351,26 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasOpponent]);
 
-  // Kickoff 3-2-1
+  // Kickoff 3-2-1. Com o campo aberto (LEGACY), quem manda é o APITO do campo:
+  // a partida só começa quando os times saíram do túnel, foram pras posições
+  // de saída e o juiz apitou (trava de 16 s se o campo não responder).
+  const [apitoNoCampo, setApitoNoCampo] = useState(false);
   useEffect(() => {
     if (phase !== 'kickoff') return undefined;
+    if (aoVivo) {
+      if (apitoNoCampo) { setPhase('playing'); return undefined; }
+      const trava = window.setTimeout(() => setApitoNoCampo(true), 16000);
+      return () => window.clearTimeout(trava);
+    }
     if (countdown <= 0) {
       setPhase('playing');
       return undefined;
     }
-    // Com o campo aberto, a contagem espera a ENTRADA EM CAMPO (~5 s).
-    const t = window.setTimeout(() => setCountdown((c) => c - 1), aoVivo ? 1700 : 700);
+    const t = window.setTimeout(() => setCountdown((c) => c - 1), 700);
     return () => window.clearTimeout(t);
-  }, [phase, countdown]);
+    // aoVivo é declarado mais abaixo (ler aqui dentro é seguro; na lista de deps, não).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, countdown, apitoNoCampo]);
 
   // Ritmo fixo 1x: as durações por tier (quickPlanTypes) já miram ~30s de jogo.
   // Sem compressão dinâmica — previsível e calibrável num lugar só.
@@ -966,6 +975,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
               onPular={() => setPulando(true)}
               onSair={fecharCampo}
               comEntrada={phase === 'kickoff'}
+              onApito={() => setApitoNoCampo(true)}
               banco={fichasDoBanco}
               gravar={gravar}
             />

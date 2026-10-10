@@ -601,6 +601,25 @@ que só se joga na Partida Viva. 2.5D e Rive: ainda não (testar toda a lógica 
   Tabela `legacy_league_partidas` (migration 20261011000000, RLS fechada). Portão: `test:legacy-league` (18).
 - Também: `stubDoElenco` (friendlyMatchmaking) virou a conversão única "elenco → adversário".
 
+### Correções do 1º teste do fundador (10/10)
+O fundador jogou 2 partidas LEGACY no celular. O que ele viu → o que era → o que mudou:
+1. **"Os jogadores não fazem a formação antes do apito"** — a entrada durava ~5 s e o relógio da Rápida
+   já corria (1,7 s/tique): a partida começava com os times saindo do túnel. Agora: túnel → perfilados
+   (apresentação) → cada um corre pra **posição de saída no seu campo** (atacante da casa na bola) →
+   **apito quando todos chegam** (máx. 6 s) → só então a Rápida começa (`onApito`; trava de 16 s).
+   Antes do apito a bola não rola.
+2. **"O relógio está minúsculo"** — o minuto virou o maior número do trilho (40 px) + "1º/2º tempo".
+3. **"Travou no 16' / no 11'"** — as duas paradas foram no 1º gol NATURAL = momento decisivo: o campo
+   congela de propósito esperando a escolha no trilho, e não ficava claro que era com ele. Reproduzido
+   local (gol e falha): sem erro. Agora: título "SUA DECISÃO", faixa de baixo "SUA DECISÃO ← escolha no
+   painel", toque + vibração, **prazo de 15 s** com barra — sem resposta o jogador decide sozinho (maior
+   vantagem no duelo). O jogo nunca fica parado.
+4. **"Os eventos não condizem com a cronologia"** — a Rápida publica o lance ANTES do campo encená-lo:
+   placar, lambe "GOL" e narração apareciam antes da bola entrar. Agora o palco segura placar/lambe/
+   narração até o campo mostrar (gol: quando a bola entra; lance: quando a encenação acaba; teto 9 s).
+5. **"Barulho constante ao fundo parece bug"** — era o murmúrio da torcida (ruído marrom contínuo).
+   Agora a torcida é muda e só aparece no perigo (bola perto do gol), no chute e no gol.
+
 ### Depois (se fizer sentido)
 - Three.js **2.5D** (visual de transmissão) — troca só o palco.
 - Clima e refletores por shader — **só depois** que o jogo estiver redondo (régua DS 2027: sem enfeite).
