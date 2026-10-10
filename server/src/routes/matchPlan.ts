@@ -140,9 +140,15 @@ interface QuickPlanRequestBody {
   away_short: string;
   home_team: QuickPlanTeamInput;
   away_team: QuickPlanTeamInput;
-  /** Fase A (Quick 2.0): 'second_half' = replan dos minutos 46-90. */
-  mode?: 'full' | 'second_half';
+  /** Fase A (Quick 2.0): 'second_half' = replan dos minutos 46-90.
+   *  LEGACY (Fase 4b): 'from_minute' = replan a partir de `from_minute` depois de
+   *  um grito/ordem do manager, com o `estado` daquele minuto. */
+  mode?: 'full' | 'second_half' | 'from_minute';
   first_half?: QuickPlanFirstHalfInput;
+  from_minute?: number;
+  estado?: QuickPlanFirstHalfInput;
+  /** LEGACY (Fase 4b): gritos e ordens — validados no Python (`comandos_ao_vivo.py`). */
+  comandos?: unknown[];
   decisions?: QuickPlanDecisionInput[];
   /** FABLE — DERBY/CLÁSSICO: Python amplia agressividade dos 2 lados (~×1.12). */
   is_derby?: boolean;
@@ -432,6 +438,9 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
   if (body.mode === 'second_half' && !body.first_half) {
     return c.json({ ok: false, error: "mode 'second_half' exige first_half" }, 400);
   }
+  if (body.mode === 'from_minute' && (!body.estado || !Number.isFinite(Number(body.from_minute)))) {
+    return c.json({ ok: false, error: "mode 'from_minute' exige from_minute e estado" }, 400);
+  }
 
   // FASE 3 — o motor para de receber atributo de fora. O dono sai do token uma
   // vez e serve à conferência e à custódia.
@@ -456,6 +465,10 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     hl: body.home_team.lineup.map((p) => p.id).join(','),
     al: body.away_team.lineup.map((p) => p.id).join(','),
     m: body.mode ?? 'full',
+    // LEGACY (Fase 4b): replan do meio do jogo — minuto, estado e comandos entram na chave.
+    fm: body.mode === 'from_minute' ? Number(body.from_minute) : '',
+    est: body.estado ? `${body.estado.home_score}-${body.estado.away_score}-${body.estado.momentum_end ?? 50}-${body.estado.sent_off_home ?? 0}-${body.estado.sent_off_away ?? 0}` : '',
+    cmd: Array.isArray(body.comandos) ? JSON.stringify(body.comandos).slice(0, 4000) : '',
     fh: body.first_half
       ? `${body.first_half.home_score}-${body.first_half.away_score}-${body.first_half.momentum_end ?? 50}`
       : '',

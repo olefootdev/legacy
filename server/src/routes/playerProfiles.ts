@@ -126,7 +126,12 @@ playerProfilesRoutes.post('/api/player-profiles/sombra/partida', rateLimit(30), 
       .eq('owner_id', dono).in('id', relato.planos).is('usado_em', null)
       .select('id, resumo');
     if (!eUso) {
-      const resumos = (usados ?? []).map((u) => u.resumo as ResumoDoPlano);
+      // Ordem de EMISSÃO (a do relato): o banco não garante ordem, e a costura
+      // dos replans (intervalo + comandos do LEGACY) depende dela.
+      const ordem = new Map(relato.planos.map((id, i) => [id, i]));
+      const resumos = [...(usados ?? [])]
+        .sort((a, b) => (ordem.get(a.id as string) ?? 0) - (ordem.get(b.id as string) ?? 0))
+        .map((u) => u.resumo as ResumoDoPlano);
       const v = validarRelato({ placar: relato.placar, jogadores: relato.jogadores.map((j) => ({
         id: j.id, pos: j.pos, attrsAntes: j.antes.attrs, nota: j.linha.rating, gols: j.gols, chutes: j.chutes })) }, resumos);
       custodia_motivos = v.motivos;

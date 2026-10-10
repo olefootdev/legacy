@@ -39,6 +39,24 @@ console.log('\n⏱️  dois tempos\n');
   check('1º tempo do plano original + 2º tempo do replano', juntos.length === 7 && juntos.some((l) => l.a === 'pd' && l.m === 50) && !juntos.some((l) => l.m === 60));
 }
 
+console.log('\n📣 LEGACY: replans de comando (Fase 4b)\n');
+{
+  // inteira → comando no 20' (replan do 23') → intervalo (46') → comando no 64' (replan do 67')
+  const cmd1 = resumirPlano({ mode: 'from_minute', start_minute: 23, events: [ev('goal_home', 30, 'pd'), ev('shot_home', 60, 'ata')] }, escalacao);
+  const intervalo = resumirPlano({ mode: 'second_half', start_minute: 46, events: [ev('shot_home', 50, 'mc'), ev('goal_home', 75, 'mc')] }, escalacao);
+  const cmd2 = resumirPlano({ mode: 'from_minute', start_minute: 67, events: [ev('goal_home', 80, 'ata')] }, escalacao);
+  check('replan de comando é arquivado como from_minute', cmd1.modo === 'from_minute' && cmd1.minutoInicial === 23);
+  const costura = lancesDaPartida([resumo, cmd1, intervalo, cmd2]);
+  check('cada replan manda do minuto dele em diante',
+    !costura.some((l) => l.m >= 23 && l.m < 46 && !cmd1.lances.includes(l))
+    && !costura.some((l) => l.m === 60)              // o 60' do replan do 23' foi atropelado pelo intervalo
+    && !costura.some((l) => l.m === 75)              // o 75' do intervalo foi atropelado pelo replan do 67'
+    && costura.some((l) => l.m === 80 && l.a === 'ata'));
+  const v = validarRelato({ placar: [2, 0], jogadores: [honesto('pd', 1, 1, 'PD'), honesto('ata', 1, 1)] },
+    [resumo, cmd1, intervalo, cmd2]);
+  check('placar honesto costurado de 4 planos → válida', v.custodia === 'valida', v.motivos.join('; '));
+}
+
 console.log('\n✅ relato honesto\n');
 {
   const v = validarRelato({ placar: [3, 1], jogadores: [honesto('ata', 2, 3), honesto('mc', 1, 1, 'MC'), honesto('zag', 0, 0, 'ZAG')] }, [resumo]);

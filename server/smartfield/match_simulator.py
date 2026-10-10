@@ -51,6 +51,7 @@ from matchup_matrix import (
     compute_matchup_matrix,
 )
 from cadeia_lances import anexar_cadeias
+from comandos_ao_vivo import aplicar_ordens, dna_no_minuto, impressao, limpar_comandos
 from analyst_beats import (
     BEAT_MINUTES_FULL,
     BEAT_MINUTES_SECOND_HALF,
@@ -342,13 +343,24 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     started = time.time()
     seed = str(input_data.get("seed", "default"))
     mode = input_data.get("mode", "full")
-    if mode not in ("full", "second_half"):
+    if mode not in ("full", "second_half", "from_minute"):
         mode = "full"
     decisions = input_data.get("decisions") or []
+    # LEGACY (Fase 4b): gritos e ordens do manager. Só existem depois do apito,
+    # então o plano "full" nunca os lê. Vazio = motor idêntico ao de antes.
+    comandos = limpar_comandos(input_data.get("comandos")) if mode != "full" else []
+    marca_cmd = f"|c{impressao(comandos)}" if comandos else ""
+    try:
+        from_minute = max(2, min(90, int(input_data.get("from_minute", 2))))
+    except (TypeError, ValueError):
+        from_minute = 2
 
     if mode == "second_half":
         # Seed derivado: mesma partida + mesmas decisões = mesmo 2º tempo
-        rng = random.Random(f"{seed}|h2|{decisions_fingerprint(decisions)}")
+        rng = random.Random(f"{seed}|h2|{decisions_fingerprint(decisions)}{marca_cmd}")
+    elif mode == "from_minute":
+        # Replan no meio do jogo: mesma partida + mesmo minuto + mesmos comandos = mesmo futuro.
+        rng = random.Random(f"{seed}|m{from_minute}|{decisions_fingerprint(decisions)}{marca_cmd}")
     else:
         rng = random.Random(seed)
 
@@ -400,8 +412,11 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
 
     # Estado herdado do 1º tempo (replan)
     first_half = input_data.get("first_half") or {}
-    if mode == "second_half":
-        start_minute = 46
+    if mode == "from_minute":
+        # Estado no minuto do comando (mesmo formato do intervalo).
+        first_half = input_data.get("estado") or first_half
+    if mode in ("second_half", "from_minute"):
+        start_minute = 46 if mode == "second_half" else from_minute
         home_score = int(first_half.get("home_score", 0))
         away_score = int(first_half.get("away_score", 0))
         momentum_home = float(first_half.get("momentum_end", 50.0))
@@ -410,7 +425,8 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         cards_away = int(first_half.get("cards_away", 0))
         sent_off_home = int(first_half.get("sent_off_home", 0))
         sent_off_away = int(first_half.get("sent_off_away", 0))
-        beat_minutes = BEAT_MINUTES_SECOND_HALF
+        beat_minutes = BEAT_MINUTES_SECOND_HALF if mode == "second_half" else [
+            b for b in (BEAT_MINUTES_SECOND_HALF if from_minute >= 46 else BEAT_MINUTES_FULL) if b >= from_minute]
     else:
         start_minute = 1
         home_score = 0
@@ -436,6 +452,7 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     # DNA da fundação (ausente = neutro). Lido uma vez; afeta posse, zona,
     # finalização, xG, pênalti, faltas, fôlego, cerco e reação no fim.
     home_dna = read_dna(home_team)
+    home_dna_base = home_dna
     away_dna = read_dna(away_team)
     intensity_mul = {"defensive": 0.85, "balanced": 1.0, "offensive": 1.18}
     # Exposição defensiva (#3): quem defende "ofensivo" se abre e concede mais;
@@ -467,7 +484,7 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     form_tilt = (float(home_team.get("form", 0)) - float(away_team.get("form", 0))) * 1.5
     base_tilt = HOME_ADVANTAGE + diff * 9.0 + edge_tilt + hot_tilt + form_tilt
     base_tilt = max(-16.0, min(16.0, base_tilt))
-    if mode == "second_half":
+    if mode == "second_half" or (mode == "from_minute" and from_minute >= 46):
         base_tilt *= 0.85  # no 2º tempo o mando pesa um pouco menos
 
     # ── CHOQUES DE EVENTO (#2) ──────────────────────────────────────────────
@@ -492,7 +509,20 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     # Posse REAL: minutos de controle de bola por lado (não o proxy de momento).
     possession_minutes = {"home": 0, "away": 0}
 
+    # Replan no meio do tempo: o fôlego já gasto desde o apito (ou do intervalo).
+    if mode == "from_minute":
+        desde = 46 if start_minute >= 46 else 1
+        for p in home_lineup:
+            p["fatigue"] = min(100, p["fatigue"] + home_fat_rate * (start_minute - desde))
+        for p in away_lineup:
+            p["fatigue"] = min(100, p["fatigue"] + away_fat_rate * (start_minute - desde))
+
     for minute in range(start_minute, 91):
+        if comandos:
+            # Grito ativo = DNA da casa empurrado neste minuto; o fôlego acompanha.
+            home_dna = dna_no_minuto(home_dna_base, comandos, minute)
+            home_fat_rate = fatigue_rate(home_intensity, home_strength) * (1 + dz(home_dna, "intensidade") * 0.5 + dz(home_dna, "pressao") * 0.3)
+            aplicar_ordens(home_lineup, comandos, minute)
         # Possession flip (depende de força e momentum)
         flip_prob = 0.42 - diff * 0.08 - (momentum_home - 50) / 250
         # Meio-campo (#5): quem controla o meio segura mais a bola (perde menos posse).
@@ -998,7 +1028,8 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             for side in ("home", "away")
         },
         # Eco do DNA que o motor USOU (prova de que chegou; null = neutro).
-        "dna_applied": {"home": home_dna, "away": away_dna},
+        "dna_applied": {"home": home_dna_base, "away": away_dna},
+        "comandos_aplicados": len(comandos),
         "generated_at_ms": int(time.time() * 1000),
         "duration_ms": int((time.time() - started) * 1000),
     }

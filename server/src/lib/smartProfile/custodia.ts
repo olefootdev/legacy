@@ -20,7 +20,7 @@ const LANCE_DE_ATAQUE = new Set(['goal', 'shot', 'chance', 'save', 'woodwork', '
 
 export interface LanceResumido { k: string; lado: 'home' | 'away'; a: string | null; m: number; d: boolean }
 export interface ResumoDoPlano {
-  modo: 'full' | 'second_half';
+  modo: 'full' | 'second_half' | 'from_minute';
   minutoInicial: number;
   escalacao: string[];
   lances: LanceResumido[];
@@ -41,17 +41,24 @@ export function resumirPlano(plano: unknown, escalacaoCasa: string[]): ResumoDoP
     lances.push({ k: base, lado: m[2] as 'home' | 'away', a: typeof e.actor_id === 'string' ? e.actor_id : null,
       m: Number(e.minute) || 0, d: e.decision_influenced === true });
   }
-  return { modo: p.mode === 'second_half' ? 'second_half' : 'full', minutoInicial: Number(p.start_minute) || 0,
+  const modo = p.mode === 'second_half' || p.mode === 'from_minute' ? p.mode : 'full';
+  return { modo, minutoInicial: Number(p.start_minute) || 0,
     escalacao: escalacaoCasa.slice(0, 30), lances };
 }
 
-/** Junta 1º e 2º tempo: do primeiro plano, só o que veio antes do recomeço. */
+/**
+ * Costura a partida: o plano inteiro primeiro; cada plano seguinte (replan do
+ * intervalo ou de um comando do LEGACY) manda do minuto inicial dele em diante.
+ * `planos` vem na ORDEM DE EMISSÃO (a do relato do celular). O celular nunca
+ * pede, no 1º tempo, replan que comece depois do 45' — então emissão e minuto
+ * andam juntos e o replan do intervalo não é atropelado.
+ */
 export function lancesDaPartida(planos: ResumoDoPlano[]): LanceResumido[] {
   const full = planos.find((p) => p.modo === 'full');
-  const segundo = planos.find((p) => p.modo === 'second_half');
-  if (!full) return segundo?.lances ?? [];
-  if (!segundo) return full.lances;
-  return [...full.lances.filter((l) => l.m < segundo.minutoInicial), ...segundo.lances];
+  const depois = planos.filter((p) => p !== full);
+  let lances = full ? full.lances : [];
+  for (const p of depois) lances = [...lances.filter((l) => l.m < p.minutoInicial), ...p.lances];
+  return lances;
 }
 
 /** Nota da partida — cópia de `matchRating` sem contexto (src/match/QuickPlanPlayer.tsx). */
