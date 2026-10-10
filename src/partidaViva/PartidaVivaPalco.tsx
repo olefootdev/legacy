@@ -27,7 +27,7 @@ import { L } from '@/i18n/L';
 import { track } from '@/analytics/track';
 import { chaveDoLance, Coreografo, DT } from './coreografo';
 import { PalcoPixi } from './palco';
-import { deitarTela, ehIOS, levantarTela, podeTelaCheia, pontoLocal, semBarras } from './orientacao';
+import { deitarTela, ehIOS, ladoDoEntalhe, levantarTela, podeTelaCheia, pontoLocal, semBarras } from './orientacao';
 import { CartaoFicha, LambeDoGol, Narracao, PainelCamera, PainelSubstituicao, NumerosNoTrilho, PainelDecisao, PainelPrancheta, PainelTatica, SkillNoTrilho } from './trilhos';
 import type { SkillEmCampo } from './skills';
 import { corredorEmMetros, lerPrancheta } from './prancheta';
@@ -181,6 +181,10 @@ export function PartidaVivaPalco(p: Props) {
   const [som, setSom] = useState(somLigado());
   const { w, h } = useViewport();
   const retrato = h > w;
+  // Margem do entalhe SÓ do lado da câmera (o iPhone reserva dos dois): o outro lado vira campo.
+  const entalhe = useMemo(() => ladoDoEntalhe(), [w, h]); // eslint-disable-line react-hooks/exhaustive-deps
+  const margemEsq = entalhe === 'dir' ? 'min(env(safe-area-inset-left, 0px), 8px)' : 'env(safe-area-inset-left, 0px)';
+  const margemDir = entalhe === 'esq' ? 'min(env(safe-area-inset-right, 0px), 8px)' : 'env(safe-area-inset-right, 0px)';
 
   /** Entrega um quadro (ao vivo ou do filme) e troca o desenho de quem entrou. */
   const aplicarRef = useRef<(q: QuadroAoVivo) => void>(() => {});
@@ -471,10 +475,10 @@ export function PartidaVivaPalco(p: Props) {
 
       <div
         className="grid h-full w-full"
-        style={{ gridTemplateColumns: `calc(clamp(104px, 21%, 168px) + env(safe-area-inset-left, 0px)) minmax(0, 1fr) calc(clamp(76px, 10%, 104px) + env(safe-area-inset-right, 0px))` }}
+        style={{ gridTemplateColumns: `calc(clamp(100px, 18%, 156px) + ${margemEsq}) minmax(0, 1fr) calc(clamp(66px, 8.5%, 92px) + ${margemDir})` }}
       >
         {/* TRILHO ESQUERDO */}
-        <aside className="flex min-h-0 flex-col gap-2 overflow-hidden border-r border-linha p-2 pl-[max(0.5rem,env(safe-area-inset-left))] font-prova text-[11px]">
+        <aside className="flex min-h-0 flex-col gap-2 overflow-hidden border-r border-linha p-2 font-prova text-[11px]" style={{ paddingLeft: `max(0.5rem, ${margemEsq})` }}>
           <div>
             {/* O RELÓGIO grande (feedback 10/10: tempo no futebol é muito importante). */}
             <div className="flex items-end justify-between gap-1">
@@ -606,7 +610,7 @@ export function PartidaVivaPalco(p: Props) {
         </div>
 
         {/* TRILHO DIREITO — comandos de assistir */}
-        <aside className="flex min-h-0 flex-col items-stretch gap-1 overflow-y-auto border-l border-linha p-1.5 pr-[max(0.375rem,env(safe-area-inset-right))] [justify-content:safe_center]">
+        <aside className="flex min-h-0 flex-col items-stretch gap-1 overflow-y-auto border-l border-linha p-1 [justify-content:safe_center]" style={{ paddingRight: `max(0.25rem, ${margemDir})` }}>
           {!noFilme && (
             <Botao onClick={() => p.onModo(modo === 'lances' ? 'completa' : 'lances')} rotulo={L('Modo de assistir', 'Viewing mode')}>
               {modo === 'lances' ? L('Lances', 'Plays') : L('Completa', 'Full')}

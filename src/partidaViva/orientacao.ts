@@ -43,6 +43,20 @@ export function ehIOS(): boolean {
   return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1);
 }
 
+/**
+ * Deitado, o iPhone reserva a margem do entalhe dos DOIS lados (safe-area
+ * simétrica), mas a câmera fica só de um: 'esq' quando o aparelho girou pra
+ * esquerda (topo à esquerda), 'dir' no outro sentido. Fora do iPhone deitado: null.
+ */
+export function ladoDoEntalhe(): 'esq' | 'dir' | null {
+  if (typeof window === 'undefined' || !ehIOS() || window.innerHeight > window.innerWidth) return null;
+  const legado = (window as Window & { orientation?: number }).orientation;
+  const ang = typeof legado === 'number' ? legado : screen.orientation?.angle;
+  if (ang === 90) return 'esq';
+  if (ang === -90 || ang === 270) return 'dir';
+  return null;
+}
+
 export async function levantarTela(): Promise<void> {
   try {
     screen.orientation?.unlock?.();

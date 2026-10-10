@@ -249,8 +249,9 @@ function encenarCadeia(co: Coreografo, cad: CadeiaDeLance, lado: 'home' | 'away'
       }
     });
   });
+  co.encenandoAte = co.t + total + 1.4;
   // Pênalti marcado: segura os times posicionados até o lance da cobrança chegar.
-  if (ate !== undefined) return tempos[ate]?.ini ?? total;
+  if (ate !== undefined) { co.encenandoAte = Infinity; return tempos[ate]?.ini ?? total; }
   co.depois(total + 1.4, () => {
     for (const c of envolvidos) c.alvo = null;
     for (const [c, v] of vmaxOriginal) c.vmax = v;

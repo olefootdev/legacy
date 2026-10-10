@@ -15,7 +15,7 @@
 import { readFileSync } from 'node:fs';
 import { Coreografo, DT } from '../src/partidaViva/coreografo';
 import { montarFichas } from '../src/partidaViva/escalacao';
-import { msParaMostrar } from '../src/partidaViva/cronograma';
+import { cronogramaDaCadeia, msParaMostrar } from '../src/partidaViva/cronograma';
 import { entregarQuadro } from '../src/partidaViva/gravacao';
 import type { QuadroAoVivo } from '../src/partidaViva/tipos';
 import type { MatchPlan } from '../src/match/quickPlanTypes';
@@ -44,6 +44,7 @@ for (const [n, e] of partidas.entries()) {
   // Detectores
   const donos: string[] = [];
   let naoNumero = false, vooDesde = -1;
+  const cobrancas: { em: number; de: string; minuto: number }[] = [];
   const presos = new Map<unknown, { k: string; desde: number; avisado?: boolean }>();
   let posicionadosDesde = -1, filaDesde = -1, paradaDesde = -1, ultimaBola = { x: 0, z: 0 };
   const passo = () => {
@@ -65,6 +66,14 @@ for (const [n, e] of partidas.entries()) {
       if (paradaDesde < 0) paradaDesde = co.t; else if (co.t - paradaDesde > 10) { achados.push(`${minuto}': bola parada no lugar há 10 s (dono=${co.dono?.f.nome ?? '-'}, voo=${!!co.voo}, fila=${co.fila.length}, prox=${(co.proxToque - co.t).toFixed(1)}, reinício=${(co.reinicioAte - co.t).toFixed(1)}, posse=${co.posse})`); paradaDesde = co.t + 1e9; }
     } else paradaDesde = -1;
     ultimaBola = { x: b.x, z: b.z };
+    // Escanteio: na hora da cobrança (no tempo do CAMPO) o cobrador tem que estar na bola.
+    while (cobrancas.length && co.t >= cobrancas[0]!.em) {
+      const k = cobrancas.shift()!;
+      const c = co.corpos.find((x) => x.f.id === k.de);
+      const d = c ? Math.hypot(c.x - co.bola.x, c.z - co.bola.z) : Infinity;
+      const cantoOk = Math.abs(co.bola.z - 34) > 30 && (co.bola.x < 3 || co.bola.x > 102);
+      if (d > 2.5 || !cantoOk) achados.push(`${k.minuto}': escanteio SEM cobrador (cobrador a ${d.toFixed(1)} m; bola em ${co.bola.x.toFixed(0)},${co.bola.z.toFixed(0)})`);
+    }
     // NaN congela o campo pra sempre (a bola some, o passe nunca chega).
     if (!naoNumero && (!Number.isFinite(co.bola.x + co.bola.z) || co.corpos.some((c) => !Number.isFinite(c.x + c.z)) || !Number.isFinite(co.escalaDoTempo()))) { naoNumero = true; achados.push(`${minuto}': NaN no campo (bola ${co.bola.x}, ${co.bola.z}; escala ${co.escalaDoTempo()})`); }
     // Jogador PRESO num alvo velho (limpeza perdida): parado no mesmo ponto com alvo há 20 s.
@@ -77,6 +86,16 @@ for (const [n, e] of partidas.entries()) {
     }
     // Passe que nunca chega.
     if (co.voo) { if (vooDesde < 0) vooDesde = co.t; else if (co.t - vooDesde > 6) { achados.push(`${minuto}': bola no ar há 6 s`); vooDesde = co.t + 1e9; } } else vooDesde = -1;
+  };
+  // Tempo de RELÓGIO (como o palco): a câmera lenta do chute faz o campo andar menos
+  // que o relógio da Rápida — o próximo minuto chega com a jogada ainda em campo.
+  let acumulado = 0;
+  const esperar = (passosDeRelogio: number, aoPasso?: (i: number) => void) => {
+    let n = 0;
+    for (let i = 0; i < passosDeRelogio; i++) {
+      acumulado += DT * co.escalaDoTempo();
+      while (acumulado >= DT) { aoPasso?.(n++); passo(); acumulado -= DT; }
+    }
   };
   const quadro = (extra: Partial<QuadroAoVivo>): QuadroAoVivo => {
     const f = (e.plan.fluxo ?? []).find((x) => x[0] === minuto);
@@ -106,25 +125,29 @@ for (const [n, e] of partidas.entries()) {
     entregarQuadro(co, quadro({}), []);
     for (const ev of e.plan.events.filter((x) => x.minute === minuto).map(trocado)) {
       if (ev.kind.startsWith('goal_') && ev.cadeia) {
-        filaDesde = -1;
+        filaDesde = -1; cobrancas.length = 0;
         entregarQuadro(co, quadro({ gol: { chave: `g-${minuto}-${ev.actor_id}`, nome: 'x', lado: ev.actor_side, actorId: ev.actor_id, cadeia: ev.cadeia, xg: ev.xg } }), []);
         for (let i = 0; i < 160; i++) passo();
         entregarQuadro(co, quadro({}), []);
       } else if (ev.kind.startsWith('penalty_') && ev.cadeia) {
         // Como a Rápida: o pênalti marcado (falta + posicionamento), depois a cobrança.
-        entregarQuadro(co, quadro({ lance: ev }), []); filaDesde = -1; // lance novo: a encenação recomeça
+        cobrancas.length = 0; entregarQuadro(co, quadro({ lance: ev }), []); filaDesde = -1; // lance novo: a encenação recomeça
         for (let i = 0; i < 70; i++) passo();
         const cobranca = { inicio: { x: 94, z: 34 }, finalizacao: 'cobranca' as const, acoes: [{ t: 'cobranca' as const, de: ev.actor_id, para: null, x: ev.actor_side === 'home' ? 104.5 : 0.5, z: 34 }] };
         entregarQuadro(co, quadro({ lance: { ...ev, kind: ev.actor_side === 'home' ? 'save_home' : 'save_away', cadeia: cobranca } }), []);
         for (let i = 0; i < 60; i++) passo();
       } else if (ev.cadeia) {
-        entregarQuadro(co, quadro({ lance: ev }), []); filaDesde = -1; // lance novo: a encenação recomeça
-        const hold = Math.round(msParaMostrar(ev.cadeia) / 1000 / DT);
-        for (let i = 0; i < hold; i++) passo();
+        cobrancas.length = 0; entregarQuadro(co, quadro({ lance: ev }), []); filaDesde = -1; // lance novo: a encenação recomeça
+        const hold = Math.round(msParaMostrar(ev.cadeia) / 1000 / DT * Number(process.env.HOLD ?? 1));
+        // Escanteio: na hora da cobrança o cobrador TEM que estar na bola.
+        const ie = ev.cadeia.acoes.findIndex((x) => x.t === 'escanteio');
+        const passoDaCobranca = ie >= 0 ? Math.round(cronogramaDaCadeia(ev.cadeia).tempos[ie]!.ini / DT) - 1 : -1;
+        if (ie >= 0) cobrancas.push({ em: co.t + passoDaCobranca * DT - 0.15, de: ev.cadeia.acoes[ie]!.de!, minuto });
+        esperar(hold);
       }
     }
     entregarQuadro(co, quadro({}), []);
-    for (let i = 0; i < PASSOS_POR_MINUTO; i++) passo();
+    esperar(PASSOS_POR_MINUTO);
   }
   if (achados.length) {
     problemas += achados.length;

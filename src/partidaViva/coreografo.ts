@@ -105,6 +105,8 @@ export class Coreografo {
   carregadorDoMinuto: string | null = null;
   /** Lateral / tiro de meta / impedimento em curso: ninguém toca até o reinício. */
   reinicioAte = -1;
+  /** Até quando um LANCE do plano está em cena: a posse do minuto não atropela a jogada (escanteio montado, cruzamento no ar). */
+  encenandoAte = -1;
   private posseMinuto = -1;
   /** Bola parada: quem está posicionado (escanteio, barreira, pênalti) — o fim da jogada solta. */
   posicionados = new Set<Corpo>();
@@ -409,6 +411,7 @@ export class Coreografo {
     for (const c of this.corpos) { c.alvo = null; c.vmax = vmaxDe(c.f); }
     this.posicionados.clear();
     this.reinicioAte = -1;
+    this.encenandoAte = -1;
   }
 
   private recomecar(): void {
@@ -518,10 +521,12 @@ export class Coreografo {
       this.bola = this.dono ? { x: this.dono.x, z: this.dono.z, h: 0 } : { x: C / 2, z: L / 2, h: 0 };
     }
     if (this.lento && !Number.isFinite(this.lento.fator)) this.lento = null;
+    // Pênalti marcado cuja cobrança nunca veio: a cena não fica "em lance" pra sempre.
+    if (this.encenandoAte === Infinity && this.posicionados.size === 0) this.encenandoAte = -1;
     if (this.posicionados.size) {
       if (this.posicionadosDesde < 0) this.posicionadosDesde = this.t;
       // Pênalti esperando o batedor tem 10 s de prazo na Rápida; 25 s é esquecido.
-      else if (this.t - this.posicionadosDesde > 25 && !this.festa) { soltarBolaParada(this); this.posicionadosDesde = -1; }
+      else if (this.t - this.posicionadosDesde > 25 && !this.festa) { soltarBolaParada(this); this.posicionadosDesde = -1; this.encenandoAte = -1; }
     } else this.posicionadosDesde = -1;
   }
 

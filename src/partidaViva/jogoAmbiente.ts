@@ -37,6 +37,9 @@ export function aplicarPosse(co: Coreografo, p: PosseDoPlano): void {
   co.posseDoPlano = p;
   co.carregadorDoMinuto = p.ator;
   // Já tem um reinício acontecendo (no modo Lances os minutos voam): troca em silêncio.
+  // Lance do plano em cena (o campo pode estar atrás do relógio da Rápida — câmera lenta,
+  // celular perdendo quadro): a posse muda depois, sem roubar a bola do escanteio montado.
+  if (co.t < co.encenandoAte || co.posicionados.size) return;
   if (co.posse === p.lado || co.festa || co.t < co.reinicioAte) { co.posse = p.lado; return; }
   // A bola estava no ar: o passe é cortado onde ela está — e a troca acontece como regra.
   if (co.voo) { co.voo = null; co.dono = null; }
