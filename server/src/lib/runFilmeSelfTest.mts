@@ -2,7 +2,7 @@
  * PARTIDA VIVA — Fase 7: conferência do filme que vai pro servidor.
  * npm run test:filme
  */
-import { avisoDoAdversario, conferirFilme, elencoBate, TETO_DO_FILME } from './filme.js';
+import { avisoDaLenda, avisoDoAdversario, candidatosALenda, conferirFilme, elencoBate, golsNoFilme, TETO_DO_FILME } from './filme.js';
 
 let ok = 0, falhas = 0;
 function confere(cond: boolean, msg: string) {
@@ -50,6 +50,31 @@ console.log('\n🔔 Aviso pro adversário (o placar do ponto de vista DELE)');
 const a = avisoDoAdversario({ siglaCasa: 'OLE', siglaFora: 'RIV', nomeCasa: 'Ole FC', nomeFora: 'Rival FC', placarCasa: 2, placarFora: 1 });
 confere(a.titulo === 'Seu time jogou: RIV 1 × 2 OLE', `título: "${a.titulo}"`);
 confere(/perdeu/.test(a.mensagem), `mensagem: "${a.mensagem}"`);
+
+console.log('\n⭐ Fase 8: a lenda que jogou');
+const comLenda = filme({
+  fichas: [...fichas.slice(0, 10), { id: 'legacy-juca-revelacao', lado: 'home' }, ...fichas.slice(11)],
+  banco: [{ id: 'legacy-tita-expansao' }, { id: 'reserva-que-nao-entrou' }, { id: 'legacy-que-ficou-no-banco' }],
+  trechos: [{ comEntrada: true, roteiro: [
+    { p: 0, q: { minuto: 1, emCampo: ['meu-0'] } },
+    { p: 50, q: { minuto: 20, gol: { chave: 'goal-3', actorId: 'legacy-juca-revelacao' } } },
+    { p: 51, q: { minuto: 20, gol: { chave: 'goal-3', actorId: 'legacy-juca-revelacao' } } },
+    { p: 300, q: { minuto: 70, emCampo: ['meu-0', 'legacy-tita-expansao'] } },
+    { p: 400, q: { minuto: 80, gol: { chave: 'goal-9', actorId: 'legacy-tita-expansao' } } },
+    { p: 500, q: { minuto: 88, gol: { chave: 'clutch-12', actorId: 'legacy-juca-revelacao' } } },
+  ] }],
+});
+const cands = candidatosALenda(comLenda);
+confere(cands.includes('legacy-juca-revelacao'), 'lenda titular é candidata');
+confere(cands.includes('legacy-tita-expansao'), 'lenda que ENTROU do banco é candidata');
+confere(!cands.includes('legacy-que-ficou-no-banco'), 'lenda que ficou no banco não conta (não jogou)');
+const g = golsNoFilme(comLenda);
+confere(g.get('legacy-juca-revelacao') === 2, `gols da lenda: o mesmo gol em 2 quadros conta 1 vez (${g.get('legacy-juca-revelacao')} gols)`);
+confere(g.get('legacy-tita-expansao') === 1, 'gol de quem entrou do banco conta');
+const r = { siglaCasa: 'OLE', siglaFora: 'RIV', nomeCasa: 'Ole FC', nomeFora: 'Rival FC', placarCasa: 3, placarFora: 1 };
+confere(avisoDaLenda('Juca', r, 2).titulo === 'Juca marcou 2 gols! OLE 3 × 1 RIV', `aviso com gol: "${avisoDaLenda('Juca', r, 2).titulo}"`);
+confere(avisoDaLenda('Juca', r, 0).titulo === 'Juca entrou em campo: OLE 3 × 1 RIV', 'aviso sem gol: "entrou em campo"');
+confere(!/Ole FC|Rival FC/.test(avisoDaLenda('Juca', r, 1).mensagem), 'o aviso da lenda não expõe o clube de quem escalou');
 
 console.log(`\n${falhas ? '🔴' : '🟢'} ${ok} passaram, ${falhas} falharam`);
 if (falhas) process.exit(1);

@@ -95,3 +95,50 @@ export function elencoBate(filme: Record<string, unknown>, idsDoElenco: readonly
 /** Teto de avisos: por dono por dia, e por par (dono → adversário) por dia. */
 export const AVISOS_POR_DIA = 10;
 export const AVISOS_POR_ADVERSARIO_POR_DIA = 3;
+
+// ── Fase 8: "sua lenda jogou" ───────────────────────────────────────────────
+
+type Entrega = { q?: { emCampo?: unknown; gol?: { chave?: unknown; actorId?: unknown } | null } };
+
+/**
+ * Quem pode ser lenda neste filme: os 22 do apito + quem entrou do banco
+ * (aparece no `emCampo` de algum quadro). A rota filtra pelos ids que existem
+ * em `legacy_players` — aqui só os candidatos.
+ */
+export function candidatosALenda(filme: Record<string, unknown>): string[] {
+  const ids = new Set<string>();
+  for (const f of Array.isArray(filme.fichas) ? (filme.fichas as Array<{ id?: unknown }>) : []) {
+    if (typeof f?.id === 'string') ids.add(f.id);
+  }
+  const banco = new Set((Array.isArray(filme.banco) ? (filme.banco as Array<{ id?: unknown }>) : []).flatMap((b) => (typeof b?.id === 'string' ? [b.id] : [])));
+  for (const t of Array.isArray(filme.trechos) ? (filme.trechos as Array<{ roteiro?: unknown }>) : []) {
+    for (const e of Array.isArray(t?.roteiro) ? (t.roteiro as Entrega[]) : []) {
+      const emCampo = e?.q?.emCampo;
+      if (Array.isArray(emCampo)) for (const id of emCampo) if (typeof id === 'string' && banco.has(id)) ids.add(id);
+    }
+  }
+  return [...ids].slice(0, 60);
+}
+
+/** Gols de cada jogador no filme (gols distintos pela chave da comemoração). */
+export function golsNoFilme(filme: Record<string, unknown>): Map<string, number> {
+  const porGol = new Map<string, string>();
+  for (const t of Array.isArray(filme.trechos) ? (filme.trechos as Array<{ roteiro?: unknown }>) : []) {
+    for (const e of Array.isArray(t?.roteiro) ? (t.roteiro as Entrega[]) : []) {
+      const g = e?.q?.gol;
+      if (g && typeof g.chave === 'string' && typeof g.actorId === 'string') porGol.set(g.chave, g.actorId);
+    }
+  }
+  const gols = new Map<string, number>();
+  for (const autor of porGol.values()) gols.set(autor, (gols.get(autor) ?? 0) + 1);
+  return gols;
+}
+
+/** A notificação do atleta: a lenda dele jogou (e fez gol, quando fez). */
+export function avisoDaLenda(nome: string, r: ResumoDoFilme, gols: number): { titulo: string; mensagem: string } {
+  const placar = `${r.siglaCasa} ${r.placarCasa} × ${r.placarFora} ${r.siglaFora}`;
+  return {
+    titulo: gols > 0 ? `${nome} marcou ${gols === 1 ? 'um gol' : `${gols} gols`}! ${placar}` : `${nome} entrou em campo: ${placar}`,
+    mensagem: 'Um manager escalou a sua lenda numa partida. Assista com a câmera seguindo você.',
+  };
+}

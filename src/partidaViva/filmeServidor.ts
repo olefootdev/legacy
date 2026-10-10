@@ -59,13 +59,35 @@ export async function listarFilmesDaNuvem(): Promise<FilmeNaNuvem[]> {
   }
 }
 
-export async function abrirFilmeDaNuvem(id: string): Promise<{ filme: FilmeDaPartida; papel: 'dono' | 'adversario' } | null> {
+export interface PartidaDaLenda {
+  id: string; quando: string; lenda: string; nome: string; gols: number;
+  placar: { siglaCasa: string; siglaFora: string; placarCasa: number; placarFora: number };
+}
+
+/** PLAYERVIP (Fase 8): as partidas das lendas do atleta da sessão. */
+export async function listarFilmesDaLenda(): Promise<PartidaDaLenda[]> {
+  const t = await token();
+  if (!t) return [];
+  try {
+    const r = await fetch(`${olefootApiBase()}/api/filmes/lenda`, { headers: { Authorization: `Bearer ${t}` } });
+    const corpo = (await r.json().catch(() => null)) as { filmes?: PartidaDaLenda[] } | null;
+    return Array.isArray(corpo?.filmes) ? corpo!.filmes : [];
+  } catch {
+    return [];
+  }
+}
+
+export type PapelNoFilme = 'dono' | 'adversario' | 'lenda';
+
+export async function abrirFilmeDaNuvem(id: string): Promise<{ filme: FilmeDaPartida; papel: PapelNoFilme; seguir: string | null } | null> {
   const t = await token();
   if (!t) return null;
   try {
     const r = await fetch(`${olefootApiBase()}/api/filme/${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${t}` } });
-    const corpo = (await r.json().catch(() => null)) as { ok?: boolean; filme?: FilmeDaPartida; papel?: 'dono' | 'adversario' } | null;
-    return corpo?.ok && corpo.filme && Array.isArray(corpo.filme.trechos) ? { filme: corpo.filme, papel: corpo.papel ?? 'dono' } : null;
+    const corpo = (await r.json().catch(() => null)) as { ok?: boolean; filme?: FilmeDaPartida; papel?: PapelNoFilme; seguir?: string | null } | null;
+    return corpo?.ok && corpo.filme && Array.isArray(corpo.filme.trechos)
+      ? { filme: corpo.filme, papel: corpo.papel ?? 'dono', seguir: corpo.seguir ?? null }
+      : null;
   } catch {
     return null;
   }

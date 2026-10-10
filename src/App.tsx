@@ -154,6 +154,7 @@ const ExtractTab = lazy(() => import('./pages/wallet/ExtractTab').then((m) => ({
 const LiveMatch = lazy(() => import('./pages/LiveMatch').then((m) => ({ default: m.LiveMatch })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
 const FilmeDaPartida = lazy(() => import('./pages/FilmeDaPartida'));
+const FilmeDaLenda = lazy(() => import('./pages/FilmeDaPartida').then((m) => ({ default: m.FilmeDaLenda })));
 const MatchAoVivo = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchAoVivo })));
 const LegendsCup = lazy(() => import('./pages/LegendsCup').then((m) => ({ default: m.LegendsCup })));
 const QuickPlanPreview = lazy(() => import('./pages/QuickPlanPreview').then((m) => ({ default: m.default })));
@@ -549,6 +550,17 @@ as a nice MVP. Let's Play Together! ⚽
             element={
               <Suspense fallback={<RouteFallback />}>
                 <PlayerVip />
+              </Suspense>
+            }
+          />
+          {/* PLAYERVIP — o filme da lenda (Partida Viva, Fase 8): o atleta pode não ter
+              clube no jogo, então fica fora do RequireRegistration. Antes da vitrine
+              (/playervip/filme não pode ser lido como handle). */}
+          <Route
+            path="/playervip/filme/:idNuvem"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <FilmeDaLenda />
               </Suspense>
             }
           />

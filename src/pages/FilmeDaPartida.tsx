@@ -15,7 +15,7 @@ import { L } from '@/i18n/L';
 import { PartidaVivaPalco } from '@/partidaViva/PartidaVivaPalco';
 import { criarCanalAoVivo } from '@/partidaViva/canal';
 import { abrirFilme, listarFilmes, type FilmeDaPartida as Filme } from '@/partidaViva/gravacao';
-import { abrirFilmeDaNuvem, listarFilmesDaNuvem, type FilmeNaNuvem } from '@/partidaViva/filmeServidor';
+import { abrirFilmeDaNuvem, listarFilmesDaNuvem, type FilmeNaNuvem, type PapelNoFilme } from '@/partidaViva/filmeServidor';
 import { ligarSom } from '@/partidaViva/som';
 
 function ListaDeFilmes() {
@@ -86,13 +86,15 @@ function ListaDeFilmes() {
   );
 }
 
-function TocarFilme({ id, daNuvem }: { id: string; daNuvem?: boolean }) {
+/** `aoSair`: pra onde volta (PLAYERVIP volta pro cockpit). */
+export function TocarFilme({ id, daNuvem, aoSair }: { id: string; daNuvem?: boolean; aoSair?: string }) {
   const navigate = useNavigate();
   const local = useMemo(() => (daNuvem ? null : abrirFilme(id)), [id, daNuvem]);
-  const [nuvem, setNuvem] = useState<{ filme: Filme; papel: 'dono' | 'adversario' } | null | 'carregando'>(daNuvem ? 'carregando' : null);
+  const [nuvem, setNuvem] = useState<{ filme: Filme; papel: PapelNoFilme; seguir: string | null } | null | 'carregando'>(daNuvem ? 'carregando' : null);
   useEffect(() => { if (daNuvem) void abrirFilmeDaNuvem(id).then(setNuvem); }, [id, daNuvem]);
   const filme = local ?? (nuvem && nuvem !== 'carregando' ? nuvem.filme : null);
   const papel = nuvem && nuvem !== 'carregando' ? nuvem.papel : 'dono';
+  const seguir = nuvem && nuvem !== 'carregando' ? nuvem.seguir : null;
   const [trecho, setTrecho] = useState(0);
   const [velocidade, setVelocidade] = useState<1 | 2 | 4>(1);
   const canal = useMemo(() => criarCanalAoVivo(), [trecho]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -103,12 +105,12 @@ function TocarFilme({ id, daNuvem }: { id: string; daNuvem?: boolean }) {
     return (
       <div className="mx-auto max-w-xl px-4 py-6 font-prova text-[12px] text-papel">
         <p>{daNuvem ? L('Não foi possível abrir este filme (entre na sua conta).', 'Could not open this film (sign in).') : L('Este filme não está neste aparelho.', 'This film is not on this device.')}</p>
-        <Link to="/match/filme" className="mt-3 inline-block underline">{L('Ver os filmes', 'See the films')}</Link>
+        <Link to={aoSair ?? '/match/filme'} className="mt-3 inline-block underline">{aoSair ? L('Voltar', 'Back') : L('Ver os filmes', 'See the films')}</Link>
       </div>
     );
   }
   const t = filme.trechos[trecho];
-  const sair = () => navigate('/match/filme');
+  const sair = () => navigate(aoSair ?? '/match/filme');
   if (!t) return <ListaDeFilmes />;
   return (
     <PartidaVivaPalco
@@ -130,10 +132,17 @@ function TocarFilme({ id, daNuvem }: { id: string; daNuvem?: boolean }) {
       onSair={sair}
       comEntrada={t.comEntrada}
       roteiro={t.roteiro}
-      ladoDeQuemAssiste={papel === 'adversario' ? 'away' : 'home'}
+      ladoDeQuemAssiste={papel === 'adversario' ? 'away' : papel === 'lenda' ? (filme.fichas.find((f) => f.id === seguir)?.lado ?? 'home') : 'home'}
+      seguirAoAbrir={seguir ?? undefined}
       onFimDoFilme={() => (trecho + 1 < filme.trechos.length ? setTrecho(trecho + 1) : sair())}
     />
   );
+}
+
+/** PLAYERVIP (Fase 8): o filme da lenda pro atleta — sem clube no jogo, volta pro cockpit. */
+export function FilmeDaLenda() {
+  const { idNuvem } = useParams<{ idNuvem?: string }>();
+  return idNuvem ? <TocarFilme id={idNuvem} daNuvem aoSair="/playervip" /> : null;
 }
 
 export default function FilmeDaPartida() {

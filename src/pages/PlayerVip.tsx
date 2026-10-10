@@ -16,6 +16,7 @@ import {
 import { getSupabase } from '@/supabase/client';
 import { getMyLinkedCards, type LinkedCardRow } from '@/admin/playerLinking';
 import { LegendContributionModal } from '@/components/playervip/LegendContributionModal';
+import { PartidasDaLenda } from '@/components/playervip/PartidasDaLenda';
 import type { ContributionKind } from '@/supabase/legendContributions';
 import { fetchMyAffiliateCommissions, totalPendingByCurrency } from '@/wallet/affiliateCommissions';
 import { fetchMyReferrals, fetchMyReferralCode, type ReferredProfile } from '@/supabase/referrals';
@@ -470,6 +471,10 @@ function PlayerVipDashboard() {
           })}
         </div>
       )}
+
+      {/* PARTIDAS DA LENDA — Partida Viva, Fase 8: assistir com a câmera nela. */}
+      <SectionHeader title={L('Partidas da sua lenda', 'Your legend’s matches')} />
+      <PartidasDaLenda />
 
       {/* HISTÓRICO DE VENDAS */}
       <SectionHeader title={L('Histórico de vendas', 'Sales history')} aside={<span className="text-rua">● {L('Ao vivo', 'Live')}</span>} />

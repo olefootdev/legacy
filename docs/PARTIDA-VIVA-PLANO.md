@@ -539,6 +539,23 @@ Cada fase termina com **algo que o fundador vê rodando no celular, a partir do 
     abre pro dono ou pro adversário (outro id recebe 404). Um filme por (dono, seed); ≤ 400 KB.
   - Portão: `npm run test:filme` (17 checagens da conferência).
 
+### Fase 8 — "Sua lenda jogou" (§8, item 2: Câmera do Craque pra lenda/PLAYERVIP)
+- ✅ **Código feito em 10/10** — depende das colunas `lendas`/`lendas_gols` (migration 20261010180000).
+  - **Ligação:** o id do jogador-lenda no elenco É o `legacy_players.id` (`legacy-<slug>-<fase>`), e a
+    carta aponta pro atleta (`beneficiary_user_id` — as 26 cartas já têm). Nada novo no cadastro.
+  - **Ao gravar o filme** (`POST /api/filme`), o servidor marca as lendas que JOGARAM — titulares e quem
+    entrou do banco; quem ficou no banco não conta — e os gols de cada uma (gol contado pela chave da
+    comemoração, sem duplicar). O atleta recebe 1 aviso por dia no máximo ("Juca marcou 2 gols! OLE 3 × 1
+    RIV"), sem o nome do clube de quem escalou.
+  - **PLAYERVIP:** o cockpit ganha "Partidas da sua lenda" (placar, data, selo GOL). Abre
+    `/playervip/filme/:id` — fora do cadastro do jogo (o atleta pode não ter clube) — com a Câmera do Craque
+    JÁ na lenda e o time dela em amarelo.
+  - **Acesso:** `GET /api/filme/:id` agora abre também pro atleta de uma lenda que jogou (papel `lenda`,
+    com `seguir`); pra qualquer outro, 404.
+  - Portão: `npm run test:filme` (25 checagens).
+  - Fora: quem COMPRA a carta assistir a lenda nos jogos de outros managers (precisa de regra de
+    privacidade entre managers — decisão do fundador).
+
 ### Depois (se fizer sentido)
 - Three.js **2.5D** (visual de transmissão) — troca só o palco.
 - Clima e refletores por shader — **só depois** que o jogo estiver redondo (régua DS 2027: sem enfeite).

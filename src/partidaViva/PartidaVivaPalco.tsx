@@ -65,6 +65,8 @@ interface Props {
   onFimDoFilme?: () => void;
   /** Fase 7: de que lado está quem assiste (o adversário vê o time DELE em amarelo). */
   ladoDeQuemAssiste?: 'home' | 'away';
+  /** Fase 8: a Câmera do Craque já abre seguindo este jogador (a lenda do atleta). */
+  seguirAoAbrir?: string;
 }
 
 let montagens = 0;
@@ -113,7 +115,7 @@ export function PartidaVivaPalco(p: Props) {
   const montagemRef = useRef<{ id: number; comEntrada: boolean } | null>(null);
   if (!montagemRef.current) montagemRef.current = { id: ++montagens, comEntrada: !!p.comEntrada };
   /** Câmera do Craque: quem a câmera segue (null = câmera do jogo). */
-  const [seguindo, setSeguindo] = useState<string | null>(null);
+  const [seguindo, setSeguindo] = useState<string | null>(p.seguirAoAbrir ?? null);
   const seguindoRef = useRef<string | null>(null);
   seguindoRef.current = seguindo;
   /** Banco: reserva escolhido (toque) e quem sai (escolhido no cartão). */
