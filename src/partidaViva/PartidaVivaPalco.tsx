@@ -22,7 +22,7 @@ import { levantarTela, pontoLocal } from './orientacao';
 import { CartaoFicha, LambeDoGol, Narracao, PainelDecisao, PainelTatica } from './trilhos';
 import type { CanalAoVivo } from './canal';
 import { FASES_FORA_DO_CAMPO, type Ficha } from './tipos';
-import { desligarSom, ligarSom, somLigado, tiqueDoSom, tocar } from './som';
+import { desligarSom, ligarSom, pararSom, somLigado, tiqueDoSom, tocar } from './som';
 import { ESPERA_ANTES_MS, GIZ_MS, pontosDoGiz, quadroDoReplay, REPLAY_MS, type PontoDoGiz } from './filme';
 import type { QuadroDoFilme } from './coreografo';
 
@@ -154,7 +154,9 @@ export function PartidaVivaPalco(p: Props) {
         // Som: torcida sobe com o perigo, cala na câmera lenta; eventos viram som/vibração.
         for (const e of co.consumirSons()) tocar(e);
         const perto = Math.min(q.bola.x, 105 - q.bola.x);
-        tiqueDoSom(q.cinema ? 0.8 : 1 - Math.min(perto, 40) / 40, co.escalaDoTempo() < 0.9, real);
+        // Telas da Rápida (intervalo, pênaltis, fim) por cima: a torcida cala.
+        const fora = FASES_FORA_DO_CAMPO.has(canal.ultimo()?.fase ?? 'playing');
+        tiqueDoSom(q.cinema ? 0.8 : 1 - Math.min(perto, 40) / 40, co.escalaDoTempo() < 0.9, real, fora);
         const cinema = !!filme && filme.fase !== 'semCadeia' || q.cinema || ['decisivo', 'lesao', 'expulsao'].includes(canal.ultimo()?.decisao?.tipo ?? '');
         if (cinema !== cinemaAntes) {
           cinemaAntes = cinema;
@@ -166,7 +168,8 @@ export function PartidaVivaPalco(p: Props) {
       };
       raf = requestAnimationFrame(laco);
     });
-    return () => { parado = true; cancelAnimationFrame(raf); palco.destruir(); };
+    // Saiu do campo (fim de jogo, "Sair", troca de página): o som PARA junto.
+    return () => { parado = true; cancelAnimationFrame(raf); palco.destruir(); pararSom(); };
     // fichas/seed fixos durante a partida (o palco remonta numa partida nova)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
