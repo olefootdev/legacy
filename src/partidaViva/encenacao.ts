@@ -12,7 +12,8 @@
  *   faixas de cinema nos lances grandes, linha do passe, assinaturas por classe.
  */
 import type { CadeiaDeLance, MatchPlanEvent } from '@/match/quickPlanTypes';
-import { cronogramaDaCadeia, VEL_CONDUCAO } from './cronograma';
+import { bolaParadaDe, cronogramaDaCadeia, VEL_CONDUCAO } from './cronograma';
+import { montarBolaParada, soltarBolaParada } from './bolaParada';
 import { C, L, lim, type Corpo } from './fisica';
 import type { Coreografo } from './coreografo';
 import { L as T } from '@/i18n/L';
@@ -29,8 +30,19 @@ const grande = (ev: MatchPlanEvent) => ev.weight_tier === 'big' || ev.weight_tie
 
 export function encenarLance(co: Coreografo, ev: MatchPlanEvent): void {
   if (ev.cadeia?.acoes.length) {
-    const total = encenarCadeia(co, ev.cadeia, ev.actor_side, desfechoDe(ev), ev.xg ?? 0.1);
-    if (grande(ev) || ev.cadeia.finalizacao) co.cinemaAte = co.t + total + 1.2;
+    const base = ev.kind.replace(/_(home|away)$/, '');
+    // PÊNALTI MARCADO: a falta na área e os times se posicionando — a cobrança
+    // vem depois, no lance do resultado (gol/defesa), com o batedor escolhido.
+    const cobranca = base === 'penalty' ? ev.cadeia.acoes.findIndex((a) => a.t === 'cobranca') : -1;
+    const total = encenarCadeia(co, ev.cadeia, ev.actor_side, desfechoDe(ev), ev.xg ?? 0.1, Infinity, cobranca >= 0 ? cobranca : undefined);
+    if (grande(ev) || ev.cadeia.finalizacao || base === 'penalty') co.cinemaAte = co.t + total + 1.2;
+    // CARTÃO: a falta acontece no campo e o cartão aparece em quem derrubou.
+    if (base === 'yellow' || base === 'red') {
+      const i = ev.cadeia.acoes.findIndex((a) => a.t === 'falta');
+      const t = i >= 0 ? cronogramaDaCadeia(ev.cadeia).tempos[i]! : null;
+      const quem = co.corpos.find((c) => c.f.id === ev.actor_id);
+      if (t && quem) co.depois(t.ini + t.dur + 0.5, () => co.fita(base === 'red' ? T('VERMELHO!', 'RED CARD!') : T('AMARELO', 'YELLOW'), 0, 0, 2, base === 'red', quem));
+    }
     return;
   }
   // ── Fase 1: aproximação por zona + canal ──────────────────────────────────
@@ -64,7 +76,9 @@ export function encenarGol(co: Coreografo, lado: 'home' | 'away', actorId?: stri
     co.gravando = true;
     co.filme = [];
     co.golGravado = { cadeia, autorId: actorId };
-    const fim = encenarCadeia(co, cadeia, lado, 'gol', xg, GOL_MAX_S);
+    // Bola parada no gol (escanteio, falta, pênalti): a preparação não entra no teto.
+    const prep = cronogramaDaCadeia(cadeia).tempos.reduce((s, t) => s + t.prep, 0);
+    const fim = encenarCadeia(co, cadeia, lado, 'gol', xg, GOL_MAX_S + prep);
     const autor = co.corpos.find((c) => c.f.id === actorId);
     if (autor) co.depois(fim + 0.7, () => comemorar(co, autor, lado));
     return;
@@ -95,17 +109,21 @@ function comemorar(co: Coreografo, autor: Corpo, lado: 'home' | 'away'): void {
   colegas.slice(0, 6).forEach((c, i) => { c.alvo = { x: (autor.alvo!.x) - (lado === 'home' ? 2 + i * 0.6 : -(2 + i * 0.6)), z: autor.alvo!.z + (i % 2 ? 1.2 : -1.2) * (1 + i * 0.3) }; });
 }
 
-/** Jogada contada pelo servidor, toque a toque. Devolve a duração (s). */
-function encenarCadeia(co: Coreografo, cad: CadeiaDeLance, lado: 'home' | 'away', desfecho: Desfecho, xg: number, maxDur = Infinity): number {
+/**
+ * Jogada contada pelo servidor, toque a toque. Devolve a duração (s).
+ * `ate`: encena só até essa ação (exclusive) e PREPARA a bola parada dela,
+ * segurando os times posicionados (pênalti marcado esperando o batedor).
+ */
+function encenarCadeia(co: Coreografo, cad: CadeiaDeLance, lado: 'home' | 'away', desfecho: Desfecho, xg: number, maxDur = Infinity, ate?: number): number {
   co.fila = [];
   co.voo = null;
   co.posse = lado;
   co.passesAgendados = [];
   const por = (id: string | null) => (id ? co.corpos.find((c) => c.f.id === id) ?? null : null);
-  const acoes = cad.acoes;
-  const crono = cronogramaDaCadeia(cad);
+  const acoes = ate !== undefined ? cad.acoes.slice(0, ate) : cad.acoes;
+  const crono = cronogramaDaCadeia({ ...cad, acoes: cad.acoes });
   const escala = Math.min(1, maxDur / crono.total);
-  const tempos = crono.tempos.map((t) => ({ ini: t.ini * escala, dur: t.dur * escala }));
+  const tempos = crono.tempos.map((t) => ({ ini: t.ini * escala, dur: t.dur * escala, prep: t.prep }));
   const total = crono.total * escala;
   const envolvidos = new Set<Corpo>();
   const goleiro = co.achar(lado === 'home' ? 'away' : 'home', 'gol');
@@ -142,6 +160,21 @@ function encenarCadeia(co: Coreografo, cad: CadeiaDeLance, lado: 'home' | 'away'
     if (de && ['passe', 'lancamento', 'cruzamento'].includes(ac.t)) co.passesAgendados.push({ em: co.t + tempos[i]!.ini, de, x: ac.x, z: ac.z });
   });
 
+  // BOLA PARADA: na janela de preparação, o jogo para e os times se posicionam.
+  const nomeDaBolaParada = { escanteio: T('ESCANTEIO', 'CORNER'), falta: T('FALTA', 'FREE KICK'), penalti: T('PÊNALTI', 'PENALTY') } as const;
+  const prepararEm = (i: number) => {
+    const tipo = bolaParadaDe(cad.acoes, i);
+    const t = tempos[i];
+    if (!tipo || !t) return;
+    co.depois(Math.max(0, t.ini - t.prep * escala), () => {
+      const ponto = montarBolaParada(co, tipo, cad.acoes, i, lado, por);
+      for (const c of co.posicionados) envolvidos.add(c);
+      co.fita(nomeDaBolaParada[tipo], ponto.x, ponto.z, 1.6, true);
+    });
+  };
+  acoes.forEach((_, i) => prepararEm(i));
+  if (ate !== undefined) prepararEm(ate); // pênalti marcado: posiciona e espera
+
   const vmaxOriginal = new Map<Corpo, number>();
   acoes.forEach((ac, i) => {
     const passo = tempos[i]!.dur;
@@ -152,7 +185,9 @@ function encenarCadeia(co: Coreografo, cad: CadeiaDeLance, lado: 'home' | 'away'
       switch (ac.t) {
         case 'passe': case 'lancamento': case 'cruzamento': case 'escanteio': {
           const alto = ac.t === 'lancamento' || ac.t === 'cruzamento' || ac.t === 'escanteio';
-          if (ac.t === 'escanteio' && de) { de.x = de.px = ac.x > C / 2 ? C - 0.5 : 0.5; co.bola = { x: de.x, z: co.bola.z, h: 0 }; }
+          // Escanteio: o cobrador já correu até a bandeirinha na preparação
+          // (só se ele não chegou — preparação curta demais — vai direto pra lá).
+          if (ac.t === 'escanteio' && de && Math.hypot(de.x - co.bola.x, de.z - co.bola.z) > 3) { de.x = de.px = co.bola.x; de.z = de.pz = co.bola.z; }
           // Assinatura do regista/maestro: o lançamento deixa um arco de giz.
           if (de && ac.t === 'lancamento' && (de.f.classe === 'regista' || de.f.classe === 'maestro')) {
             co.arcos.push({ x0: co.bola.x, z0: co.bola.z, x1: ac.x, z1: ac.z, em: co.t });
@@ -195,12 +230,23 @@ function encenarCadeia(co: Coreografo, cad: CadeiaDeLance, lado: 'home' | 'away'
             chutar(co, de, desfecho, xg);
           }
           break;
+        case 'cobranca_falta':
+          if (de) {
+            // O cobrador chega na bola parada e bate por cima da barreira.
+            de.x = de.px = co.bola.x; de.z = de.pz = co.bola.z;
+            chutar(co, de, desfecho, xg);
+            if (co.voo) { co.voo.altura = 2.6; co.voo.dur = 0.75; }
+          }
+          break;
       }
     });
   });
+  // Pênalti marcado: segura os times posicionados até o lance da cobrança chegar.
+  if (ate !== undefined) return tempos[ate]?.ini ?? total;
   co.depois(total + 1.4, () => {
     for (const c of envolvidos) c.alvo = null;
     for (const [c, v] of vmaxOriginal) c.vmax = v;
+    soltarBolaParada(co);
     if (!co.festa) co.envolvidos = null;
   });
   return total;

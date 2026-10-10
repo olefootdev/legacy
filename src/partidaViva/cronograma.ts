@@ -15,20 +15,44 @@ export const RESPIRO_INICIAL = 0.35;
 /** Velocidade de quem conduz no lance (m/s) — o coreógrafo garante esse passo. */
 export const VEL_CONDUCAO = 8;
 
-export interface TempoDaAcao { ini: number; dur: number }
+export interface TempoDaAcao { ini: number; dur: number; /** Preparação de bola parada antes da ação (s). */ prep: number }
+
+/**
+ * BOLA PARADA (feedback do fundador 10/10): antes do escanteio, da falta e do
+ * pênalti, o jogo PARA e os times se posicionam — cobrador vai até a bola,
+ * barreira, gente na área, goleiro na linha. Segundos de preparação por tipo.
+ */
+export const PREP_ESCANTEIO = 2.8;
+export const PREP_FALTA = 3.0;
+export const PREP_PENALTI = 2.6;
+
+/** Tipo de bola parada que a ação `i` cobra (ou null). */
+export function bolaParadaDe(acoes: readonly AcaoDeLance[], i: number): 'escanteio' | 'falta' | 'penalti' | null {
+  const ac = acoes[i]!;
+  if (ac.t === 'escanteio') return 'escanteio';
+  if (ac.t === 'cobranca') return 'penalti';
+  if (ac.t === 'cobranca_falta') return 'falta';
+  if (ac.t === 'cruzamento' && acoes[i - 1]?.t === 'falta') return 'falta';
+  return null;
+}
+const PREP = { escanteio: PREP_ESCANTEIO, falta: PREP_FALTA, penalti: PREP_PENALTI } as const;
 
 export function cronogramaDaCadeia(cad: CadeiaDeLance): { tempos: TempoDaAcao[]; total: number } {
   let t = RESPIRO_INICIAL;
   let ant = cad.inicio;
-  const tempos = cad.acoes.map((ac) => {
+  const tempos = cad.acoes.map((ac, i) => {
+    const bp = bolaParadaDe(cad.acoes, i);
+    const prep = bp ? PREP[bp] : 0;
+    t += prep;
     const dist = Math.hypot(ac.x - ant.x, ac.z - ant.z);
     let dur: number;
     if (VOA.has(ac.t)) dur = Math.min(1.1, Math.max(0.35, dist / 24));
     else if (CORRE.has(ac.t)) dur = Math.min(2.8, Math.max(0.45, dist / VEL_CONDUCAO));
     else if (ac.t === 'desarme') dur = 0.6;
     else if (ac.t === 'falta') dur = 0.55;
+    else if (ac.t === 'cobranca_falta') dur = 0.8; // a bola por cima da barreira
     else dur = 0.5; // chute / cabeceio / cobrança
-    const tempo = { ini: t, dur };
+    const tempo = { ini: t, dur, prep };
     t += dur;
     ant = ac;
     return tempo;

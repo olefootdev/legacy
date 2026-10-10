@@ -49,7 +49,7 @@ export interface QuadroAoVivo {
  * — a verdade não muda de lugar.
  */
 export interface DecisaoNoCampo {
-  tipo: 'analista' | 'reacao' | 'decisivo' | 'lesao' | 'expulsao';
+  tipo: 'analista' | 'reacao' | 'decisivo' | 'lesao' | 'expulsao' | 'penalti';
   /** Chave única da decisão (o palco reinicia o prazo quando muda). */
   chave: string;
   titulo: string;
@@ -89,6 +89,7 @@ export interface Ficha {
  * substituição manual, disputa de pênaltis, fim): o palco sai da frente.
  * Analista, reação, momento decisivo e lesão são decididos NOS TRILHOS (Fase 4).
  */
+/** O pênalti (Fase 11) é decidido NO CAMPO: o batedor sai no trilho e a cobrança é encenada. */
 export const FASES_FORA_DO_CAMPO: ReadonlySet<FaseDoPlayer> = new Set([
-  'halftime', 'penalty', 'sub', 'shootout', 'done',
+  'halftime', 'sub', 'shootout', 'done',
 ]);

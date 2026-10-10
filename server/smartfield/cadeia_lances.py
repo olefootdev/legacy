@@ -28,7 +28,9 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 C = 105.0
 L = 68.0
 # Lances que ganham cadeia (o resto é narrativa, cartão, lesão…).
-COM_CADEIA = {"goal", "shot", "chance", "save", "woodwork", "counter", "corner", "buildup", "penalty"}
+COM_CADEIA = {"goal", "shot", "chance", "save", "woodwork", "counter", "corner", "buildup", "penalty", "yellow", "red"}
+# Cartão: quem leva o cartão (autor do lance) COMETE a falta em quem é do outro time.
+CARTAO = {"yellow", "red"}
 FINALIZA = {"goal", "shot", "chance", "save", "woodwork", "penalty"}
 
 
@@ -113,6 +115,19 @@ def montar_cadeia(ev: Dict[str, Any], time: List[Dict[str, Any]], rival: List[Di
     prof_fim = 0.86 + rng.random() * 0.05 if zona == "att" else (0.70 + rng.random() * 0.06 if zona == "mid" else 0.55)
     z_fim = 0.40 + rng.random() * 0.20
 
+    # ── CARTÃO: a falta que gerou o cartão (feedback do fundador 10/10: "faltas
+    #    não existem") — quem sofre vem conduzindo, quem leva o cartão derruba.
+    if base in CARTAO:
+        vitima = _sorteia(rng, [p for p in rival if p.get("role") in ("attack", "mid")] or rival, lambda p: _attr(p, "drible"))
+        if vitima is None:
+            return None
+        prof_f = 0.22 + rng.random() * 0.33 if zona != "att" else 0.40 + rng.random() * 0.2
+        zr_f = 0.2 + rng.random() * 0.6
+        inicio = lado.ponto(prof_f + 0.08, zr_f)
+        a("conducao", vitima, None, prof_f + 0.02, zr_f)
+        a("falta", autor, vitima, prof_f, zr_f)
+        return {"inicio": {"x": inicio[0], "z": inicio[1]}, "acoes": acoes, "finalizacao": None}
+
     # ── PÊNALTI: alguém sofre a falta na área, o autor cobra ───────────────────
     if base == "penalty":
         sofre = autor if rng.random() < 0.5 else colega(("attack", "mid"), "drible")
@@ -123,6 +138,28 @@ def montar_cadeia(ev: Dict[str, Any], time: List[Dict[str, Any]], rival: List[Di
             a("falta", zag, sofre, 0.87, z_fim)
         a("cobranca", autor, None, 1.0, 0.5)
         return {"inicio": {"x": inicio[0], "z": inicio[1]}, "acoes": acoes, "finalizacao": "cobranca"}
+
+    # ── FALTA PERTO DA ÁREA (metade das bolas paradas que terminam em finalização):
+    #    derrubam o atacante na entrada da área → barreira → cobrança direta (o
+    #    autor bate) ou cruzada na área pra cabeçada (quem cobra é a assistência).
+    if canal == "bola_parada" and base != "corner" and finaliza and rng.random() < 0.5:
+        zag = marcador()
+        if zag:
+            prof_f = 0.73 + rng.random() * 0.07
+            zr_f = 0.28 + rng.random() * 0.44
+            direta = assist is None and max(_attr(autor, "bola_parada", 55), _attr(autor, "finalizacao")) >= 62
+            vitima = autor if direta and rng.random() < 0.4 else colega(("attack", "mid"), "drible")
+            inicio = lado.ponto(prof_f - 0.08, zr_f)
+            a("conducao", vitima, None, prof_f, zr_f)
+            a("falta", zag, vitima, prof_f + 0.005, zr_f)
+            if direta:
+                a("cobranca_falta", autor, None, 1.0, 0.5)
+                return {"inicio": {"x": inicio[0], "z": inicio[1]}, "acoes": acoes, "finalizacao": "cobranca_falta"}
+            cobrador = assist or _sorteia(rng, [p for p in time if p["id"] != autor["id"] and p.get("role") != "gk"],
+                                          lambda p: _attr(p, "bola_parada", 55) ** 3) or autor
+            a("cruzamento", cobrador, autor, prof_fim + 0.02, z_fim)
+            a("cabeceio", autor, None, 1.0, 0.5)
+            return {"inicio": {"x": inicio[0], "z": inicio[1]}, "acoes": acoes, "finalizacao": "cabeceio"}
 
     # ── BOLA PARADA: escanteio do especialista, cabeceio de quem sobe melhor ──
     if canal == "bola_parada" or base == "corner":
@@ -282,6 +319,9 @@ def _skill(ac: Dict[str, Any], i: int, acoes: List[Dict[str, Any]], ev: Dict[str
     elif t == "cobranca":
         if at("penalti", 55) >= 82:
             return "cobranca_fria", at("penalti", 55)
+    elif t == "cobranca_falta":
+        if at("bola_parada", 55) >= 82:
+            return "falta_no_angulo", at("bola_parada", 55)
     return None
 
 

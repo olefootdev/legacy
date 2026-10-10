@@ -620,6 +620,25 @@ O fundador jogou 2 partidas LEGACY no celular. O que ele viu → o que era → o
 5. **"Barulho constante ao fundo parece bug"** — era o murmúrio da torcida (ruído marrom contínuo).
    Agora a torcida é muda e só aparece no perigo (bola perto do gol), no chute e no gol.
 
+### Fase 11 — Bola parada de verdade (2º teste do fundador, 10/10)
+1ª partida LEGACY completa validada de ponta a ponta (custódia válida, 2×0, filme, aviso pro FCH).
+O fundador apontou: escanteio sem ninguém ir à bola, sem defensores na área; faltas e pênaltis "não existem".
+- **Medido (300 partidas):** escanteio 2,6/jogo (existia, mal encenado: cobrador TELETRANSPORTADO); falta
+  cobrada 0/jogo (não existia); cartão 1,4/jogo (sem jogada); pênalti 0,17/jogo e escondido pela tela da Rápida.
+- **Motor** (`cadeia_lances.py`, só a jogada — nenhum placar muda): cartão ganha a falta (quem sofre conduz,
+  quem leva o cartão derruba); metade das bolas paradas com finalização vira FALTA perto da área (direta
+  pelo autor, ou cruzada pra cabeçada — quem cobra é a assistência). Nova ação `cobranca_falta` + skill
+  "Falta no ângulo". Por jogo: ~1,7 falta cobrada + ~1,3 falta de cartão.
+- **Campo** (`bolaParada.ts`): antes de cada bola parada o jogo PARA (preparação no cronograma: escanteio
+  2,8 s, falta 3 s, pênalti 2,6 s) e os times se posicionam — cobrador CORRE até a bola (corte de TV a 12 m,
+  o resto à vista); escanteio com 1º pau, 2º pau, marca do pênalti e rebote, cada atacante com marcador,
+  goleiro e zagueiro no 1º pau; falta com barreira de 3–4 a 9,15 m na linha do gol; pênalti com todos fora
+  da área (linha + meia-lua). Cartão: "AMARELO"/"VERMELHO" em quem derrubou.
+- **Pênalti no LEGACY:** sai da tela da Rápida — "Pênalti! Quem bate?" no trilho (finalização de cada um,
+  prazo 15 s, sem escolha bate o melhor); o campo mostra a falta, o posicionamento e a cobrança do batedor
+  ESCOLHIDO (gol ou defesa). O do adversário defendido também vira cena.
+- Portões: `test:partida-viva` (escanteio, barreira, pênalti, cartão) e `test_cadeia_lances` (placar intacto).
+
 ### Depois (se fizer sentido)
 - Three.js **2.5D** (visual de transmissão) — troca só o palco.
 - Clima e refletores por shader — **só depois** que o jogo estiver redondo (régua DS 2027: sem enfeite).

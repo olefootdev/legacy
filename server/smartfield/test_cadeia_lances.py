@@ -121,11 +121,13 @@ def main():
                 if not (0 <= ac["x"] <= 105 and 0 <= ac["z"] <= 68):
                     falhas.append(f"seed {i} {ev['minute']}' {k}: ponto fora do campo {ac}")
                 quem = ac["de"]
-                lado_de = outro if ac["t"] in ("falta", "desvio") else lado
+                cartao = k.split("_")[0] in ("yellow", "red")
+                # No cartão, quem leva o cartão (o autor) comete a falta; quem sofre é do outro time.
+                lado_de = (lado if ac["t"] == "falta" else outro) if cartao else (outro if ac["t"] in ("falta", "desvio") else lado)
                 if quem not in ids[lado_de] or quem in fora[lado_de]:
                     falhas.append(f"seed {i} {ev['minute']}' {k}: '{ac['t']}' por quem não está em campo ({quem})")
                 if ac.get("para"):
-                    lado_para = outro if ac["t"] in ("drible", "desarme") else lado
+                    lado_para = (outro if cartao else (outro if ac["t"] in ("drible", "desarme") else lado))
                     if ac["para"] not in ids[lado_para] or ac["para"] in fora[lado_para]:
                         falhas.append(f"seed {i} {ev['minute']}' {k}: '{ac['t']}' pra quem não está em campo ({ac['para']})")
             if cad["finalizacao"]:
@@ -162,7 +164,7 @@ def main():
         "passe": {"passe_milimetrico", "enfiada"}, "lancamento": {"lancamento_longo", "passe_milimetrico", "enfiada"},
         "cruzamento": {"cruzamento_medida"}, "chute": {"bomba", "cavadinha", "de_primeira", "chute_colocado"},
         "cabeceio": {"cabecada_contrape", "testada"}, "desarme": {"desarme_limpo"},
-        "escanteio": {"cobranca_perfeita"}, "cobranca": {"cobranca_fria"},
+        "escanteio": {"cobranca_perfeita"}, "cobranca": {"cobranca_fria"}, "cobranca_falta": {"falta_no_angulo"},
     }
     n_acoes = n_skills = 0
     for i in range(min(args.n, 150)):

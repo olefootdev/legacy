@@ -400,5 +400,95 @@ confere(a.hist.some((v, i) => v !== outra.hist[i]), 'outra seed → outro filme'
   confere(antes > 0, 'a skill aparece na hora da ação (não no começo do lance)');
 }
 
+// ── Fase 11: bola parada (feedback do fundador 10/10) ──────────────────────
+{
+  const rodarAte = (c: Coreografo, seg: number, cada?: (c: Coreografo) => void) => { for (let i = 0; i < seg / DT; i++) { c.passo(); cada?.(c); } };
+  const pronto = () => { const c = new Coreografo(fichas, '4-3-3', '4-3-3', 'bola-parada'); rodarAte(c, 6); return c; };
+  const naArea = (c: Coreografo, lado: 'home' | 'away') => c.corpos.filter((k) => k.f.lado === lado && k.f.slot !== 'gol' && k.x > 105 - 16.5 && Math.abs(k.z - 34) < 20.16);
+
+  // ESCANTEIO: o cobrador CORRE até a bandeirinha; a área enche, com marcação.
+  {
+    const c = pronto();
+    const cad = { inicio: { x: 80, z: 60 }, finalizacao: 'cabeceio' as const, acoes: [
+      { t: 'conducao' as const, de: 'home-10', para: null, x: 90, z: 60 },
+      { t: 'cruzamento' as const, de: 'home-10', para: null, x: 98, z: 50 },
+      { t: 'desvio' as const, de: 'away-3', para: null, x: 104.5, z: 67.5 },
+      { t: 'escanteio' as const, de: 'home-8', para: 'home-1', x: 97, z: 33 },
+      { t: 'cabeceio' as const, de: 'home-1', para: null, x: 104.5, z: 34 },
+    ] };
+    c.receber(quadro(30, { lance: { ...lance(30, 'save_home', 'home', 'att', 'bola_parada'), actor_id: 'home-1', cadeia: cad } }));
+    const cobrador = c.corpos.find((k) => k.f.id === 'home-8')!;
+    // Pode haver UM corte (ele aparece a ~12 m), mas a chegada é correndo: os últimos 8 m à vista.
+    let menorDist = Infinity, maxNaArea = 0, maxMarcados = 0, saltos = 0, corridaFinal = 0, ant = { x: cobrador.x, z: cobrador.z };
+    rodarAte(c, 6, (k) => {
+      const d = Math.hypot(cobrador.x - 104.5, cobrador.z - 67.4);
+      const passo = Math.hypot(cobrador.x - ant.x, cobrador.z - ant.z);
+      if (passo > 3) saltos++;
+      else if (d < 12) corridaFinal += passo;
+      ant = { x: cobrador.x, z: cobrador.z };
+      menorDist = Math.min(menorDist, d);
+      const ataque = naArea(k, 'home');
+      maxNaArea = Math.max(maxNaArea, ataque.length);
+      maxMarcados = Math.max(maxMarcados, ataque.filter((a) => k.corpos.some((dd) => dd.f.lado === 'away' && Math.hypot(dd.x - a.x, dd.z - a.z) < 2.5)).length);
+    });
+    confere(menorDist < 2.5 && saltos <= 1 && corridaFinal > 8, `escanteio: o cobrador corre até a bandeirinha (chegou a ${menorDist.toFixed(1)} m, ${corridaFinal.toFixed(0)} m correndo, ${saltos} corte)`);
+    confere(maxNaArea >= 4, `escanteio: ${maxNaArea} atacantes na área pro cabeceio`);
+    confere(maxMarcados >= 3, `escanteio: ${maxMarcados} deles com marcador colado`);
+  }
+
+  // FALTA: barreira a 9,15 m, entre a bola e o gol; o cobrador bate da bola.
+  {
+    const c = pronto();
+    const cad = { inicio: { x: 70, z: 30 }, finalizacao: 'cobranca_falta' as const, acoes: [
+      { t: 'conducao' as const, de: 'home-9', para: null, x: 78, z: 30 },
+      { t: 'falta' as const, de: 'away-2', para: 'home-9', x: 78.5, z: 30 },
+      { t: 'cobranca_falta' as const, de: 'home-7', para: null, x: 104.5, z: 34 },
+    ] };
+    c.receber(quadro(40, { lance: { ...lance(40, 'save_home', 'home', 'att', 'bola_parada'), actor_id: 'home-7', cadeia: cad } }));
+    let barreiraMax = 0;
+    rodarAte(c, 5.2, (k) => {
+      const bola = { x: 78.5, z: 30 };
+      const naBarreira = k.corpos.filter((d) => d.f.lado === 'away' && d.f.slot !== 'gol' && Math.abs(Math.hypot(d.x - bola.x, d.z - bola.z) - 9.15) < 1.4 && d.x > bola.x);
+      barreiraMax = Math.max(barreiraMax, naBarreira.length);
+    });
+    confere(barreiraMax >= 3, `falta: barreira de ${barreiraMax} a 9,15 m da bola`);
+  }
+
+  // PÊNALTI MARCADO: falta na área, todo mundo fora da área, esperando o batedor (ninguém toca na bola).
+  {
+    const c = pronto();
+    const cad = { inicio: { x: 82, z: 34 }, finalizacao: 'cobranca' as const, acoes: [
+      { t: 'conducao' as const, de: 'home-9', para: null, x: 92, z: 34 },
+      { t: 'falta' as const, de: 'away-1', para: 'home-9', x: 93, z: 34 },
+      { t: 'cobranca' as const, de: 'home-9', para: null, x: 104.5, z: 34 },
+    ] };
+    c.receber(quadro(50, { lance: { ...lance(50, 'penalty_home', 'home', 'att', 'ataque_central'), actor_id: 'home-9', cadeia: cad } }));
+    rodarAte(c, 8);
+    const dentro = c.corpos.filter((k) => k.f.slot !== 'gol' && k.f.id !== 'home-9' && k.x > 105 - 16.5 && Math.abs(k.z - 34) < 20.16);
+    const bola = c.quadro(1).bola;
+    confere(dentro.length === 0, `pênalti: todos fora da área (${dentro.length} dentro)`);
+    confere(Math.hypot(bola.x - 94, bola.z - 34) < 1, 'pênalti: a bola na marca, esperando o batedor (ninguém toca)');
+    // O resultado chega com o batedor escolhido: a cobrança sai.
+    const cobranca = { inicio: { x: 94, z: 34 }, finalizacao: 'cobranca' as const, acoes: [{ t: 'cobranca' as const, de: 'home-6', para: null, x: 104.5, z: 34 }] };
+    c.receber(quadro(50, { gol: { chave: 'pen-9', nome: 'Seis', lado: 'home', actorId: 'home-6', cadeia: cobranca, xg: 0.76 } }));
+    let gol = false;
+    rodarAte(c, 6, (k) => { if (k.consumirSons().includes('gol')) gol = true; });
+    confere(gol, 'pênalti: o batedor escolhido cobra e é gol');
+  }
+
+  // CARTÃO: a falta acontece e o amarelo aparece em quem derrubou.
+  {
+    const c = pronto();
+    const cad = { inicio: { x: 40, z: 20 }, finalizacao: null, acoes: [
+      { t: 'conducao' as const, de: 'away-9', para: null, x: 45, z: 22 },
+      { t: 'falta' as const, de: 'home-5', para: 'away-9', x: 45, z: 22 },
+    ] };
+    c.receber(quadro(20, { lance: { ...lance(20, 'yellow_home', 'home', 'mid', 'ataque_central'), actor_id: 'home-5', cadeia: cad } }));
+    const fitas = new Set<string>();
+    rodarAte(c, 4, (k) => k.quadro(1).fitas.forEach((f) => fitas.add(f.texto)));
+    confere((fitas.has('FALTA') || fitas.has('FOUL')) && (fitas.has('AMARELO') || fitas.has('YELLOW')), `cartão: falta + amarelo no campo (${[...fitas].join(', ')})`);
+  }
+}
+
 if (falhas) { console.error(`\n${falhas} falha(s)`); process.exit(1); }
 console.log('\nPartida Viva: coreógrafo ok');

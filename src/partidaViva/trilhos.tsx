@@ -45,7 +45,7 @@ function Prazo({ chave, ms }: { chave: string; ms: number }) {
 export function PainelDecisao({ decisao, protagonista, onResponder }: {
   decisao: DecisaoNoCampo; protagonista?: Ficha; onResponder: (id: string) => void;
 }) {
-  const forte = decisao.tipo === 'decisivo' || decisao.tipo === 'lesao' || decisao.tipo === 'expulsao';
+  const forte = decisao.tipo === 'decisivo' || decisao.tipo === 'lesao' || decisao.tipo === 'expulsao' || decisao.tipo === 'penalti';
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto" role="group" aria-label={decisao.titulo}>
       {decisao.tipo === 'decisivo' ? (

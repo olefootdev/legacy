@@ -33,6 +33,7 @@ export const SKILLS: Record<string, Nome> = {
   desarme_limpo: { nome: L('Desarme limpo', 'Clean tackle'), atributo: L('marcação', 'marking') },
   cobranca_perfeita: { nome: L('Cobrança na medida', 'Perfect delivery'), atributo: BOLA },
   cobranca_fria: { nome: L('Frieza na cobrança', 'Ice-cold penalty'), atributo: L('pênalti', 'penalties') },
+  falta_no_angulo: { nome: L('Falta no ângulo', 'Free kick into the top corner'), atributo: BOLA },
 };
 
 /** Skill que acabou de acontecer (o trilho mostra por alguns segundos). */

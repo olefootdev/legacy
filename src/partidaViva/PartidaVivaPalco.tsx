@@ -324,7 +324,7 @@ export function PartidaVivaPalco(p: Props) {
         // Telas da Rápida (intervalo, pênaltis, fim) por cima: a torcida cala.
         const fora = FASES_FORA_DO_CAMPO.has(canal.ultimo()?.fase ?? 'playing');
         tiqueDoSom(q.cinema ? 0.8 : 1 - Math.min(perto, 40) / 40, co.escalaDoTempo() < 0.9, real, fora);
-        const cinema = !!filme && filme.fase !== 'semCadeia' || q.cinema || ['decisivo', 'lesao', 'expulsao'].includes(canal.ultimo()?.decisao?.tipo ?? '');
+        const cinema = !!filme && filme.fase !== 'semCadeia' || q.cinema || ['decisivo', 'lesao', 'expulsao', 'penalti'].includes(canal.ultimo()?.decisao?.tipo ?? '');
         if (cinema !== cinemaAntes) {
           cinemaAntes = cinema;
           const alt = cinema ? '11%' : '0';

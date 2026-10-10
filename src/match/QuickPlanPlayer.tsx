@@ -910,6 +910,8 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     if (next.kind === 'penalty_home') {
       pushFeed({ id: `pen-${idx}`, minute: next.minute, kind: 'penalty', text: L('Pênalti pra gente!', 'Penalty to us!'), side: 'home' });
       setPenalty({ idx, minute: next.minute });
+      // LEGACY: o campo mostra a falta na área e os times se posicionando; o batedor sai no trilho.
+      if (pedirReplan) setHighlight(next);
       setPhase('penalty');
       return;
     }
@@ -925,7 +927,10 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       } else {
         momentumRef.current = nudgeMomentumCurve(momentumRef.current, next.minute, 16); // paredão! a torcida vira o jogo
         pushFeed({ id: `pen-${idx}`, minute: next.minute, kind: 'save', text: L('PEGOU! Pênalti defendido — que paredão!', 'SAVED! Penalty stopped — what a wall!'), side: 'home' });
-        scheduleNext(HOLD_MS.big);
+        // LEGACY: a cobrança defendida aparece no campo (falta, posicionamento, cobrança, defesa).
+        const defendido = { ...next, kind: 'save_away' as const };
+        if (pedirReplan) setHighlight(defendido);
+        scheduleNext(Math.max(HOLD_MS.big, pedirReplan ? segurarLance?.(defendido) ?? 0 : 0));
       }
       return;
     }
@@ -1234,6 +1239,13 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     const pen = penalty;
     setPenalty(null);
     if (!pen) return;
+    // LEGACY: a cobrança no campo é do batedor ESCOLHIDO — o lance passa a ser só a cobrança dele.
+    const evPen = eventsRef.current[pen.idx];
+    const cobrancaDoBatedor = evPen ? {
+      ...evPen, actor_id: taker.id, actor_name: taker.name,
+      cadeia: { inicio: { x: 94, z: 34 }, acoes: [{ t: 'cobranca' as const, de: taker.id, para: null, x: 104.5, z: 34 }], finalizacao: 'cobranca' as const },
+    } : null;
+    if (cobrancaDoBatedor) eventsRef.current = eventsRef.current.map((e, i) => (i === pen.idx ? cobrancaDoBatedor : e));
     const rng = new SpiritRng(hashSeed(`${plan.seed}:penH:${pen.minute}:${taker.id}`));
     // Chance de gol cresce com a finalização do batedor (0.55–0.92).
     const goalProb = Math.max(0.5, Math.min(0.92, 0.55 + (taker.finalizacao - 50) / 100 * 0.5));
@@ -1257,9 +1269,28 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       momentumRef.current = nudgeMomentumCurve(momentumRef.current, pen.minute, -16);
       pushFeed({ id: `penm-${pen.idx}`, minute: pen.minute, kind: 'chance', text: L(`${taker.name} bateu o pênalti e o goleiro pegou! Que azar.`, `${taker.name} took the penalty and the keeper saved it! Unlucky.`), side: 'home', actorId: taker.id });
       setPhase('playing');
-      scheduleNext(900);
+      // LEGACY: o goleiro pegando aparece no campo antes do jogo seguir.
+      if (pedirReplan && cobrancaDoBatedor) {
+        const defesa = { ...cobrancaDoBatedor, kind: 'save_home' as const };
+        setHighlight(defesa);
+        scheduleNext(Math.max(900, segurarLance?.(defesa) ?? 0));
+      } else scheduleNext(900);
     }
   };
+
+  // LEGACY: prazo do pênalti — sem escolha, bate quem tem mais finalização.
+  const takePenaltyRef = useRef(takePenalty);
+  takePenaltyRef.current = takePenalty;
+  const penChave = phase === 'penalty' && penalty ? penalty.idx : null;
+  useEffect(() => {
+    if (penChave === null || !pedirReplan || !penaltyTakers?.length) return undefined;
+    const t = window.setTimeout(() => {
+      const melhor = [...penaltyTakers].sort((a, b) => b.finalizacao - a.finalizacao)[0];
+      if (melhor) takePenaltyRef.current(melhor);
+    }, PRAZO_DECISIVO_MS);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [penChave, pedirReplan]);
 
   // Inicia o relógio corrido no mount; limpa o timer ao desmontar.
   useEffect(() => {
@@ -1431,6 +1462,13 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
         ? { tipo: 'expulsao', chave: `red-${forced.idx}`, titulo: L('Expulso', 'Sent off'), texto: L(`${forced.outName} foi expulso.`, `${forced.outName} was sent off.`), protagonista: forced.outName, opcoes: [{ id: 'ok', rotulo: L('Seguir com 10', 'Play on with 10') }] }
         : { tipo: 'lesao', chave: `inj-${forced.idx}`, titulo: L('Lesão', 'Injury'), texto: L(`${forced.outName} sentiu. Quem entra?`, `${forced.outName} is hurt. Who comes on?`), protagonista: forced.outName,
             opcoes: benchPool.slice(0, 6).map((b) => ({ id: b.id, rotulo: b.name, detalhe: `${b.pos} · ${b.ovr}` })) };
+    } else if (phase === 'penalty' && penalty && pedirReplan && penaltyTakers?.length) {
+      // LEGACY: o batedor sai no trilho; o campo mostra os times posicionados esperando.
+      decisao = {
+        tipo: 'penalti', chave: `pen-${penalty.idx}`, titulo: L('Pênalti! Quem bate?', 'Penalty! Who takes it?'),
+        texto: L('Quanto mais finalização, mais chance de gol.', 'More finishing, better odds.'), prazoMs: PRAZO_DECISIVO_MS,
+        opcoes: penaltyTakers.map((t) => ({ id: t.id, rotulo: t.name, detalhe: `${L('finalização', 'finishing')} ${t.finalizacao}` })),
+      };
     }
     emitir({
       minuto: minute,
@@ -1497,6 +1535,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     if (phase === 'beat' && activeBeat) { const c = activeBeat.choices.find((x) => x.id === id); if (c) handleBeatChoice(c); return; }
     if (phase === 'leadin' && leadIn && leadInReactable) { const r = leadIn.reactions[Number(id)]; if (r) reactToLeadIn(r); return; }
     if (phase === 'clutch' && clutch) { const o = clutch.moment.options.find((x) => x.key === id); if (o) resolveClutchChoice(o.key); return; }
+    if (phase === 'penalty' && penalty) { const t = penaltyTakers?.find((x) => x.id === id); if (t) takePenalty(t); return; }
     if (phase === 'forced' && forced) {
       if (forced.kind === 'red') { resolveRedCard(); return; }
       const b = benchPool.find((x) => x.id === id);

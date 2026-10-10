@@ -117,7 +117,9 @@ export interface QuickPlanFirstHalfState {
  */
 export type TipoAcaoDeLance =
   | 'passe' | 'lancamento' | 'cruzamento' | 'conducao' | 'drible' | 'desarme'
-  | 'falta' | 'desvio' | 'escanteio' | 'cobranca' | 'chute' | 'cabeceio';
+  | 'falta' | 'desvio' | 'escanteio' | 'cobranca' | 'chute' | 'cabeceio'
+  /** Falta direta (bola parada perto da área): quem cobra é o autor. */
+  | 'cobranca_falta';
 
 export interface AcaoDeLance {
   t: TipoAcaoDeLance;

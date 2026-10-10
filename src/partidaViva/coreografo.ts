@@ -90,6 +90,8 @@ export class Coreografo {
   entradaAte = -1;
   /** Posição de saída de cada um (o seu campo, na formação) — a foto antes do apito. */
   saida = new Map<Corpo, { x: number; z: number }>();
+  /** Bola parada: quem está posicionado (escanteio, barreira, pênalti) — o fim da jogada solta. */
+  posicionados = new Set<Corpo>();
   /** Pré-apito: todos indo pra posição de saída; o apito sai quando chegam (ou no limite). */
   preApito: { limite: number } | null = null;
   private apitoPendente = false;
@@ -234,7 +236,8 @@ export class Coreografo {
     for (const c of this.corpos) { c.px = c.x; c.pz = c.z; }
     this.pbola = { ...this.bola };
     // Antes do apito a bola não rola (entradaAte = ∞ durante a entrada).
-    if (!this.voo && !this.festa && this.fila.length === 0 && this.t >= this.proxToque && this.t >= this.entradaAte) this.toqueAmbiente();
+    // Bola parada montada (pênalti esperando o batedor): ninguém toca na bola.
+    if (!this.voo && !this.festa && this.fila.length === 0 && this.t >= this.proxToque && this.t >= this.entradaAte && this.posicionados.size === 0) this.toqueAmbiente();
     this.lerOJogo();
     for (const c of this.corpos) moverCorpo(c, this.alvoDaForma(c), this.corpos);
     this.moverBola();
@@ -372,6 +375,7 @@ export class Coreografo {
     this.envolvidos = null;
     this.passesAgendados = [];
     for (const c of this.corpos) c.alvo = null;
+    this.posicionados.clear();
     this.bola = { x: C / 2, z: L / 2, h: 0 };
     this.posse = sofreu;
     this.dono = this.achar(sofreu, 'ata') ?? this.achar(sofreu, 'mc1');
