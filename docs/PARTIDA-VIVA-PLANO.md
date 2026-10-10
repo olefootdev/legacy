@@ -351,12 +351,41 @@ Cada fase termina com **algo que o fundador vê rodando no celular, a partir do 
 - Placar, relógio e comemoração reaproveitados do Quick.
 - Coreógrafo determinístico desde já (§8).
 - ✅ Pronto quando: o fundador deita o celular, vê os 22 rostos, vê o gol acontecer onde o placar diz.
+- 🟡 **Implementada em 09/10 (beta, sem commit) — falta o fundador ver no celular.**
+  - Entrada: botão **"Ver em campo"** no topo da Partida Rápida (contagem e jogo) + rota `/match/ao-vivo`.
+  - Mesma partida, mesma verdade: o `QuickPlanPlayer` publica o lance JÁ resolvido (`onAoVivo` → canal);
+    o palco só desenha. Placar, decisões, intervalo, pênaltis e crédito seguem da Rápida.
+  - Código em `src/partidaViva/` (tipos, escalação, coreógrafo 10 Hz, palco PixiJS 8.20.1, orientação, canal).
+    PixiJS em chunk próprio (94 KB gz) — o pacote principal não cresceu.
+  - Self-test `npm run test:partida-viva` (9 conferências; validado contra o bug do "escorrimento" reproduzido).
+  - **Limitações conhecidas da Fase 1:** (1) nas decisões (Analista, momento decisivo, lesão, intervalo,
+    pênaltis) o palco sai da frente e volta sozinho — levar pros trilhos é a Fase 4; (2) substituições não
+    trocam a ficha em campo; (3) a jogada é aproximada por zona + canal (a cadeia real é a Fase 2); (4) o
+    determinismo vale por seed + sequência de quadros (o "filme" completo depende da Fase 2).
 
 ### Fase 2 — A cadeia de lances (~1,5 semana) · servidor
 - `match_simulator.py` emite `lances[]` com RNG separado.
 - Regressão de 1.000 seeds + portão de consistência.
 - Especialistas entram: `cabeceio`, `bolaParada`, `penalti`, `strongFoot` escolhem quem faz o quê.
 - ✅ Pronto quando: cada gol é uma jogada de 3–6 toques com nomes reais, e nenhum placar mudou.
+- 🟡 **Implementada em 09/10 (sem commit) — falta deploy do servidor e ver no celular.**
+  - `server/smartfield/cadeia_lances.py`: RNG próprio (`seed:cadeia:mode`), roda DEPOIS de tudo decidido.
+    O simulador ganhou só 3 toques: especialistas no elenco (lidos só pela cadeia), `assist_id` no gol e a
+    chamada final (desligável com `sem_cadeia`, usada no teste).
+  - **Desvio do plano:** em vez da grade de 18 zonas, a cadeia sai com o ponto da bola em **metros** no
+    referencial do campo (x 0–105, z 0–68, casa ataca +x). A grade do jogo (`tacticalField18`) é rotulada
+    por função, não é uma grade limpa — metros são exatos e o cliente desenha direto.
+  - **Portão (`python3 server/smartfield/test_cadeia_lances.py`):** 1.000 partidas idênticas ao simulador
+    anterior do git em tudo menos a cadeia (placar, autor, xG, texto, momento, MVP); 2.474/2.474 gols viram
+    jogada de 3–6 ações; 2.308/2.308 assistências batem com o último passe; ninguém fora de campo age.
+    Mutação de prova (cadeia mexendo no xG) é pega na hora.
+  - Escanteio deixou de ser "cobrança → cabeceio": nasce de uma jogada (ponta conduz, cruza, zaga desvia).
+  - Especialistas: `cabeceio`, `bola_parada`, `penalti` e `pe` (pé bom) chegam do cliente e decidem quem
+    cobra, quem cabeceia e se o ponta corta pra dentro. Não mexem no placar → não abrem brecha de trapaça.
+  - Cliente: o coreógrafo encena toque a toque (corte inicial, receptor atacando o espaço, drible deixa o
+    marcador pra trás, desarme rouba de verdade). O desfecho visual segue o lance MOSTRADO pela Rápida.
+    Com o campo aberto, a Rápida segura cada lance o tempo da jogada (`segurarLance`, só apresentação);
+    no gol, a jogada cabe em ~4,2 s (a comemoração da Rápida dura 5 s).
 
 ### Fase 3 — O jogo se mexe de verdade (~2 semanas)
 - Forma do time portada (funções de `teamShape`/`tacticalPositioning`).
@@ -365,17 +394,71 @@ Cada fase termina com **algo que o fundador vê rodando no celular, a partir do 
 - SMART-PROFILE vira comportamento (regista recua, velocista ataca as costas, matador ronda a área).
 - Modos Lances / Completa, 1×/2×/4×, pular.
 - ✅ Pronto quando: dá pra apontar "esse é o meu 10, olha ele achando o passe".
+- 🟡 **Implementada em 09/10 (sem commit) — falta deploy e ver no celular.**
+  - **Forma do time** (`src/partidaViva/forma.ts`, portada do `teamShape` doador): 9 intenções (construção,
+    progressão, ataque pelos lados/centro, pressão alta, blocos médio/baixo, transições) → altura da linha,
+    largura, compactação e gatilho de pressão, com viés por esquema. Quem está perto sai pra pressionar.
+  - **SMART-PROFILE vira comportamento:** o servidor devolve a classe oficial dos 22 com o plano
+    (`classesDaPartida`, mesmo classificador `classeDe`) e o campo aplica: regista recua, falso 9 sai da área,
+    velocista ataca as costas, matador ronda a área, pivô fixa no centro, ponta driblador abre, lateral
+    apoiador passa por fora, meia de chegada entra na área, box-to-box acompanha a bola, volante destruidor
+    pressiona.
+  - **Direção (§5.1, itens 1–4 e 7):** faixas de cinema com selo de xG e narração como legenda; câmera lenta
+    proporcional ao xG no chute; gol congela em P&B (1,1 s) com o lambe no trilho; linha do passe pontilhada;
+    assinaturas — linhas de velocidade (velocista/ponta), arco de giz no lançamento do regista/maestro,
+    rastro pontilhado do matador.
+  - **Modos:** Lances (ritmo da Rápida) e Completa (~4 min de relógio + lances), 1×/2×/4× e Pular (corre
+    até o próximo lance, gol ou decisão). Só ritmo de exibição — o desfecho nunca muda.
+  - Testes: `npm run test:partida-viva` com 21 conferências (forma, classes, câmera lenta, congelamento,
+    cinema, linha do passe). Movimento ainda não visto em celular de verdade.
+  - Fora desta fase: silêncio da torcida (som é Fase 5); replay e jogada a giz (Fase 5); duelo como cena (Fase 4).
 
 ### Fase 4 — O manager comanda (~2 semanas)
 - Replan `from_minute` no servidor (+ processo Python residente se a latência pedir).
 - Comando em **duas camadas** (§5): mentalidade, gritos, instruções, toque na ficha, substituição, prancheta.
 - Auxiliar e momentos decisivos desenhados no campo.
 - ✅ Pronto quando: um comando muda o que se vê **na hora** e o resultado nos minutos seguintes.
+- 🟡 **Implementada em parte em 09/10 (sem commit) — Fase 4a.**
+  - **Decisões nos trilhos:** Leitura do Analista, reação ("olha o contra-ataque"), momento decisivo e
+    lesão/expulsão aparecem no trilho esquerdo; o campo fica à vista (no momento decisivo, congela com
+    faixas de cinema). A resposta volta pelo canal (`responder`) e cai na MESMA função do botão da Rápida
+    (`handleBeatChoice`, `reactToLeadIn`, `resolveClutchChoice`, `resolveInjury`, `resolveRedCard`).
+    Só intervalo, batedor de pênalti, substituição manual, disputa e fim ainda tiram o palco da frente.
+  - **Comando em duas camadas — estilo de jogo:** botão "Tática" no trilho direito abre os 5 estilos no
+    trilho esquerdo. Camada 1: a forma da casa muda NA HORA (`ajustarPorEstilo`: pressão sobe o bloco e
+    liga o gatilho; retranca baixa e fecha; ataque sobe e abre…). Camada 2: o mesmo `changeStyle` da Rápida,
+    que já molda os lances seguintes (`resolveStyleOnEvent`) — verificado: o toque no campo trocou o estilo
+    na Rápida e ela registrou "Estilo: Pressão — 1,6× fadiga".
+  - **Toque na ficha:** cartão do jogador no trilho (rosto, classe do SMART-PROFILE com descrição, fôlego)
+    e anel de seleção no campo. Mapeamento do toque no palco girado testado ponto a ponto (`pontoLocal`).
+  - **Desvio consciente — `from_minute` NÃO foi feito.** A Rápida já aplica as decisões ao resultado no
+    próprio aparelho, de forma determinística pela seed (estilo, Analista no replan do intervalo, momento
+    decisivo, lenda, formação). Um replan no servidor a cada comando mudaria a Partida Rápida de TODO mundo
+    (não só quem assiste em campo) e pede estudo de balanceamento. Fica pra **Fase 4b**, junto com o que
+    depende dele: gritos (moral/intensidade), ordens individuais ("segura", "ataca o espaço"), substituição
+    arrastando do banco e a prancheta com pausa.
 
 ### Fase 5 — Vivo e bonito (~2 semanas)
 - **Som reativo** (Web Audio), **Rive** nas celebrações, ícones de emoção, skills com nome no campo.
 - **O filme** (§8): reassistir partida, "seu time jogou enquanto você dormia", Câmera do Craque.
 - Narração por lance PT/EN; LLM opcional no gol e no intervalo.
+- 🟡 **Implementada em 09/10 (sem commit) — falta ver no celular.**
+  - **Som** (`som.ts`, Web Audio, tudo sintetizado — sem arquivo): torcida que sobe com o perigo e CALA na
+    câmera lenta do chute, explosão no gol, "uuuh" na trave, chute seco, toque no passe, apito com vibrato.
+    Liga no toque de "Ver em campo" (o navegador só libera áudio num toque); botão Som no trilho.
+  - **Vibração** (Android): gol, trave, roubada. iPhone não vibra pela web.
+  - **Fitas no campo:** DRIBLE, ROUBOU!, FALTA, ESCANTEIO, NA TRAVE, DEFESA — lambe inclinado, cor chapada.
+  - **O filme do gol** (`filme.ts`): comemoração → REPLAY (últimos 2,2 s da jogada, lento, câmera no
+    autor, selo na faixa de cinema) → **jogada a giz** (campo escurece, caminho tracejado, toques
+    numerados com nome, "GOL" no fim). A Rápida espera o campo terminar (`golEsperaCampo`, trava de 20 s);
+    "Pular" encurta.
+  - **Entrada em campo:** abrindo o campo antes do apito, os times saem do túnel, alinham, os seus
+    jogadores são apresentados um a um e o apito manda cada um pra posição (~5 s; a contagem da Rápida
+    espera).
+  - **Não feito:** Rive (exige animações `.riv` desenhadas num editor por designer — o lambe do gol segue
+    em HTML); "seu time jogou enquanto você dormia" e Câmera do Craque (precisam guardar e reabrir o plano
+    da partida de outro manager — ideia do §8, fica pra depois do deploy); LLM no gol/intervalo (a narração
+    da Rápida já vem do Sonnet quando disponível); skills com nome (a cadeia ainda não diz qual skill disparou).
 
 ### Depois (se fizer sentido)
 - Three.js **2.5D** (visual de transmissão) — troca só o palco.
