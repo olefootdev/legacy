@@ -211,25 +211,32 @@ confere(a.hist.some((v, i) => v !== outra.hist[i]), 'outra seed → outro filme'
 
 // ── Fase 5: entrada em campo, som, filme do gol, jogada a giz ───────────────
 {
+  // Sem cerimônia (fundador 10/10): já na posição de saída, contagem 3-2-1, apito.
   const e = new Coreografo(fichas, '4-3-3', '4-3-3', 'entrada', true);
-  const noTunel = e.quadro(1).jogadores.every((j) => j.z < 0);
-  const nomes = new Set<string>();
-  let apito = false, passoDoApito = -1, bolaAntes = 0, naHoraDoApito: ReturnType<typeof e.quadro> | null = null;
+  const abertura = e.quadro(1).jogadores;
+  const jaPosicionados = abertura.length === 22 && abertura.every((j) => j.z > 1 && j.z < 67 && (j.f.lado === 'home' ? j.x <= 53 : j.x >= 52));
+  const contagens = new Set<number>();
+  let apito = false, passoDoApito = -1, bolaAntes = 0, mexeu = 0, naHoraDoApito: ReturnType<typeof e.quadro> | null = null;
   for (let i = 0; i < 140 && !apito; i++) {
+    const c = e.contagem();
+    if (c != null) contagens.add(c);
     e.passo();
-    e.quadro(1).fitas.forEach((f) => nomes.add(f.texto));
     if (e.consumirApito()) { apito = true; passoDoApito = i; naHoraDoApito = e.quadro(1); }
-    else bolaAntes = Math.max(bolaAntes, Math.hypot(e.quadro(1).bola.x - 52.5, e.quadro(1).bola.z - 34));
+    else {
+      bolaAntes = Math.max(bolaAntes, Math.hypot(e.quadro(1).bola.x - 52.5, e.quadro(1).bola.z - 34));
+      e.quadro(1).jogadores.forEach((j, k) => { mexeu = Math.max(mexeu, Math.hypot(j.x - abertura[k]!.x, j.z - abertura[k]!.z)); });
+    }
   }
-  const emCampo = e.quadro(1).jogadores.every((j) => j.z > 1 && j.z < 67);
-  confere(noTunel && emCampo, 'entrada: os times saem do túnel e ocupam o campo');
-  confere(nomes.size >= 10, `entrada: os jogadores da casa são apresentados (${nomes.size} nomes)`);
-  confere(apito && passoDoApito > 44, `entrada: o apito só sai depois da apresentação (passo ${passoDoApito})`);
+  confere(jaPosicionados, 'abertura: os times JÁ estão na posição de saída (sem túnel, sem perfilar)');
+  confere(mexeu < 1, `abertura: ninguém corre antes do apito (máx ${mexeu.toFixed(2)} m)`);
+  confere([3, 2, 1].every((n) => contagens.has(n)) && contagens.size === 3, `abertura: contagem 3, 2, 1 (${[...contagens].join(', ')})`);
+  confere(apito && Math.abs(passoDoApito * 0.1 - 3) < 0.25, `abertura: o apito sai no fim da contagem (${(passoDoApito * 0.1).toFixed(1)} s)`);
+  confere(e.contagem() === null, 'depois do apito não há contagem');
   const posicoes = naHoraDoApito?.jogadores ?? [];
   confere(posicoes.length === 22 && posicoes.every((j) => (j.f.lado === 'home' ? j.x <= 53 : j.x >= 52)), 'pré-apito: cada time no SEU campo na hora do apito');
   const atacante = posicoes.find((j) => j.f.id === 'home-9');
   confere(!!atacante && Math.hypot(atacante.x - 52.5, atacante.z - 34) < 2.5, 'pré-apito: o atacante da casa na bola, no centro');
-  confere(bolaAntes < 0.5, 'antes do apito a bola não rola');
+  confere(bolaAntes < 0.9, 'antes do apito a bola não rola');
   confere(!e.consumirApito(), 'o apito avisa uma vez só');
 
   const cad = {
@@ -556,6 +563,42 @@ confere(a.hist.some((v, i) => v !== outra.hist[i]), 'outra seed → outro filme'
   };
   const h1 = roteiroVivo(), h2 = roteiroVivo();
   confere(h1.length === h2.length && h1.every((v, i) => v === h2[i]), 'filme: com fluxo e regras, reassistido == ao vivo');
+}
+
+// ── Trava do 16' (fundador 10/10): ninguém fica preso, nada vira NaN ──────
+{
+  // 1) Reserva sem número de fôlego: entrava NaN e contaminava o campo.
+  const co = new Coreografo(fichas, '4-3-3', '4-3-3', 'nan');
+  for (let i = 0; i < 50; i++) co.passo();
+  const nova = co.trocar('home-6', { id: 'res-1', nome: 'Reserva', iniciais: 'RE', lado: 'home', slot: '', rosto: null, fadiga: undefined as unknown as number, velocidade: Number.NaN });
+  confere(!!nova && Number.isFinite(nova.fadiga) && Number.isFinite(nova.velocidade), 'reserva sem fôlego entra com números de verdade');
+  for (let i = 0; i < 400; i++) co.passo();
+  const q = co.quadro(1);
+  confere(q.jogadores.every((j) => Number.isFinite(j.x) && Number.isFinite(j.z)) && Number.isFinite(q.bola.x), 'nenhum NaN no campo depois da troca');
+  const bancoNaN = montarFichas('home', [{ id: 'b', nome: 'B', pos: 'MC', fadiga: undefined as unknown as number }]);
+  confere(bancoNaN[0]!.fadiga === 0, 'montarFichas: fôlego vazio = descansado (0), não NaN');
+
+  // 2) Lance novo no meio de um drible: a limpeza do drible se perdia e os dois ficavam PRESOS.
+  const c2 = new Coreografo(fichas, '4-3-3', '4-3-3', 'preso');
+  for (let i = 0; i < 30; i++) c2.passo();
+  const drib = c2.corpos.find((c) => c.f.id === 'home-10')!, marc = c2.corpos.find((c) => c.f.id === 'away-4')!;
+  drib.alvo = { x: 80, z: 20 }; marc.alvo = { x: 80, z: 20 }; drib.vmax = 30;
+  c2.depois(1.3, () => { drib.alvo = null; marc.alvo = null; }); // a limpeza do drible
+  const lance = { minute: 5, kind: 'shot_home', actor_id: 'home-9', actor_side: 'home', text: 'x', weight_tier: 'mid', xg: 0.1,
+    cadeia: { inicio: { x: 40, z: 34 }, finalizacao: 'chute', acoes: [{ t: 'passe', de: 'home-6', para: 'home-9', x: 60, z: 34 }, { t: 'chute', de: 'home-9', para: null, x: 104, z: 34 }] } } as unknown as MatchPlanEvent;
+  c2.receber({ minuto: 5, fase: 'playing', placarCasa: 0, placarFora: 0, momento: 50, lance, gol: null, narracao: [] });
+  for (let i = 0; i < 120; i++) c2.passo();
+  confere(!drib.alvo && !marc.alvo, 'lance novo no meio do drible: driblador e marcador SOLTOS (não presos no alvo)');
+  confere(drib.vmax < 10, `lance novo no meio do drible: velocidade de volta ao normal (${drib.vmax.toFixed(1)} m/s)`);
+
+  // 3) Cansado isolado (ninguém a 16 m): a bola não fica parada no pé dele.
+  const c3 = new Coreografo(fichas.map((f) => ({ ...f, fadiga: 90 })), '4-3-3', '4-3-3', 'isolado');
+  for (let i = 0; i < 30; i++) c3.passo();
+  const so = c3.corpos.find((c) => c.f.id === 'home-2')!;
+  so.x = so.px = 3; so.z = so.pz = 3;
+  for (const c of c3.corpos) if (c !== so && c.f.lado === 'home') { c.x = c.px = 60; }
+  c3.dono = so; c3.posse = 'home';
+  confere(decidirToque(c3, so), 'cansado isolado: toca no mais perto (não trava)');
 }
 
 if (falhas) { console.error(`\n${falhas} falha(s)`); process.exit(1); }

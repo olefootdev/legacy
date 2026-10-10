@@ -48,7 +48,7 @@ export function encenarLance(co: Coreografo, ev: MatchPlanEvent): void {
   // ── Fase 1: aproximação por zona + canal ──────────────────────────────────
   const lado = ev.actor_side;
   co.posse = lado;
-  co.fila = [];
+  co.limparCena();
   const dir = lado === 'home' ? 1 : -1;
   const ataque = ev.zone === 'att' ? 0.82 : ev.zone === 'mid' ? 0.55 : 0.28;
   const x = lado === 'home' ? ataque * C : (1 - ataque) * C;
@@ -83,7 +83,7 @@ export function encenarGol(co: Coreografo, lado: 'home' | 'away', actorId?: stri
     if (autor) co.depois(fim + 0.7, () => comemorar(co, autor, lado));
     return;
   }
-  co.fila = [];
+  co.limparCena();
   co.posse = lado;
   const autor = co.corpos.find((c) => c.f.id === actorId)
     ?? co.maisPerto(lado, lado === 'home' ? C * 0.85 : C * 0.15, L / 2, true);
@@ -115,8 +115,7 @@ function comemorar(co: Coreografo, autor: Corpo, lado: 'home' | 'away'): void {
  * segurando os times posicionados (pênalti marcado esperando o batedor).
  */
 function encenarCadeia(co: Coreografo, cad: CadeiaDeLance, lado: 'home' | 'away', desfecho: Desfecho, xg: number, maxDur = Infinity, ate?: number): number {
-  co.fila = [];
-  co.voo = null;
+  co.limparCena();
   co.posse = lado;
   co.passesAgendados = [];
   const por = (id: string | null) => (id ? co.corpos.find((c) => c.f.id === id) ?? null : null);
@@ -295,38 +294,22 @@ export function chutar(co: Coreografo, autor: Corpo, como: Desfecho, xg: number)
 }
 
 /**
- * ENTRADA EM CAMPO (Fase 5): os times saem do túnel, se alinham no meio, os
- * seus jogadores são apresentados um a um e, no apito, cada um vai pra sua
- * posição. ~5 s — a Partida Rápida segura a contagem enquanto isso.
+ * Pré-apito SEM cerimônia (pedido do fundador 10/10): o jogo abre com os dois
+ * times já nas posições de saída, o atacante da casa na bola — contagem 3, 2, 1
+ * (o palco mostra) e o apito. Nada de túnel nem de perfilar.
  */
+export const CONTAGEM_S = 3;
 export function entrarEmCampo(co: Coreografo): void {
-  const casa = co.corpos.filter((c) => c.f.lado === 'home');
-  const fora = co.corpos.filter((c) => c.f.lado === 'away');
-  // 1) Túnel: saem em fila do meio da lateral de cima.
-  co.corpos.forEach((c, i) => {
-    c.x = c.px = C / 2 + (c.f.lado === 'home' ? -1.4 : 1.4);
-    c.z = c.pz = -2 - (i % 11) * 1.4;
-  });
-  // 2) Perfilados no meio, cada time de um lado da linha — os da casa apresentados um a um.
-  const fila = (time: Corpo[], z: number) => time.forEach((c, i) => { c.alvo = { x: C / 2 - 18 + i * 3.6, z }; });
-  fila(casa, L / 2 - 4);
-  fila(fora, L / 2 + 4);
-  co.dono = null;
+  const atacante = co.achar('home', 'ata') ?? co.achar('home', 'mc1');
+  if (atacante) co.saida.set(atacante, { x: C / 2 - 0.8, z: L / 2 });
+  for (const c of co.corpos) {
+    const s = co.saida.get(c);
+    if (!s) continue;
+    c.x = c.px = s.x; c.z = c.pz = s.z;
+    c.vx = c.vz = 0;
+    c.alvo = { ...s };
+  }
   co.bola = { x: C / 2, z: L / 2, h: 0 };
-  casa.forEach((c, i) => co.depois(1.4 + i * 0.26, () => co.fita(`${c.f.nome}`, 0, 0, 0.3, false, c)));
-  // 3) Cada um pra sua posição de saída (o seu campo, na formação); o atacante da casa na bola.
-  //    O apito sai quando TODOS chegam (Coreografo.passo → apitar), no máximo em 6 s.
-  co.depois(4.4, () => {
-    for (const c of co.corpos) {
-      const s = co.saida.get(c);
-      if (s) c.alvo = { ...s };
-    }
-    const atacante = co.achar('home', 'ata') ?? co.achar('home', 'mc1');
-    if (atacante) {
-      const centro = { x: C / 2 - 0.8, z: L / 2 };
-      co.saida.set(atacante, centro);
-      atacante.alvo = { ...centro };
-    }
-    co.preApito = { limite: co.t + 6 };
-  });
+  co.dono = atacante;
+  co.preApito = { limite: co.t + CONTAGEM_S };
 }

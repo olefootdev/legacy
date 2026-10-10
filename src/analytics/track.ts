@@ -55,7 +55,9 @@ export type ProductEvent =
   /** Fundação do Clube: XI confirmado (trocas = quantas o manager fez sobre a sugestão). */
   | 'fundacao_escalacao'
   /** Fundação do Clube: Jogo da Fundação contra o fantasma (placar + fidelidade do relatório). */
-  | 'fundacao_estreia';
+  | 'fundacao_estreia'
+  /** Partida Viva: erro no quadro do campo (o laço segue; isto diz onde quebrou). */
+  | 'partida_viva_erro';
 
 /** Só escalar e booleano. Ver a proibição de PII no cabeçalho. */
 export type EventProps = Record<string, string | number | boolean | null>;

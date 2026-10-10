@@ -21,6 +21,7 @@ import { L as T } from '@/i18n/L';
 import { ajustarPorEstilo, ajustarPorGrito, alvoNaForma, CLASSES_QUE_PRESSIONAM, formaDe, intencaoDoTime, profundidade, type Forma } from './forma';
 import { encenarGol, encenarLance, entrarEmCampo } from './encenacao';
 import { aplicarPosse, decidirToque, xDaZona, type PosseDoPlano } from './jogoAmbiente';
+import { soltarBolaParada } from './bolaParada';
 import type { EventoDeSom } from './som';
 import type { SkillEmCampo } from './skills';
 import type { Ficha, QuadroAoVivo } from './tipos';
@@ -52,6 +53,13 @@ export interface QuadroDoFilme { t: number; pos: number[]; bola: { x: number; z:
 
 /** Identidade de um lance (minuto, tipo, autor, texto) — sobrevive a JSON. */
 export const chaveDoLance = (l: MatchPlanEvent) => `${l.minute}|${l.kind}|${l.actor_id ?? ''}|${l.text ?? ''}`;
+
+/** Número de verdade ou o padrão (NaN/undefined no fôlego congelava o campo inteiro). */
+const num = (v: unknown, padrao: number) => (typeof v === 'number' && Number.isFinite(v) ? v : padrao);
+/** Ficha com fôlego e velocidade sempre numéricos. */
+const fichaSegura = (f: Ficha): Ficha => ({ ...f, fadiga: lim(num(f.fadiga, 0), 0, 100), velocidade: lim(num(f.velocidade, 65), 1, 100) });
+/** Passo máximo de cada um (m/s): velocidade da ficha, menos o cansaço. */
+const vmaxDe = (f: Ficha) => (5.4 + (f.velocidade / 100) * 3.4) * (1 - f.fadiga * 0.0025);
 
 export class Coreografo {
   corpos: Corpo[] = [];
@@ -100,7 +108,7 @@ export class Coreografo {
   private posseMinuto = -1;
   /** Bola parada: quem está posicionado (escanteio, barreira, pênalti) — o fim da jogada solta. */
   posicionados = new Set<Corpo>();
-  /** Pré-apito: todos indo pra posição de saída; o apito sai quando chegam (ou no limite). */
+  /** Pré-apito: todos já na posição de saída; o apito sai no fim da contagem (3, 2, 1). */
   preApito: { limite: number } | null = null;
   private apitoPendente = false;
   filme: QuadroDoFilme[] = [];
@@ -113,6 +121,10 @@ export class Coreografo {
   private transicaoAte = -1;
   private pressionando = new Set<Corpo>();
   proxToque = 2;
+  /** Quem deu o último passe (o jogo ambiente não devolve pra ele — sem pingue-pongue). */
+  ultimoPassador: Corpo | null = null;
+  /** Desde quando há bola parada montada (válvula: ninguém fica posicionado pra sempre). */
+  private posicionadosDesde = -1;
   private ultimoLance: MatchPlanEvent | null = null;
   private ultimoGol: string | null = null;
   private rastro: { x: number; z: number; h: number }[] = [];
@@ -123,14 +135,15 @@ export class Coreografo {
     this.rnd = semente(seed || 'olefoot');
     this.esquemas = { home: esquema(formacaoCasa), away: esquema(formacaoFora) };
     const bases = { home: FORMATION_BASES[this.esquemas.home], away: FORMATION_BASES[this.esquemas.away] };
-    for (const f of fichas) {
+    for (const f0 of fichas) {
+      const f = fichaSegura(f0);
       const b = bases[f.lado][f.slot] ?? bases[f.lado].mc1!;
       const nx = f.lado === 'home' ? b.nx : 1 - b.nx;
       const nz = f.lado === 'home' ? b.nz : 1 - b.nz;
       // Antes do apito, cada time no seu campo.
       const ax = f.lado === 'home' ? Math.min(nx * C * 0.92, C / 2 - 2) : Math.max(nx * C * 0.92 + C * 0.08, C / 2 + 2);
       const ancora = { x: nx * C, z: nz * L };
-      const vmax = (5.4 + (f.velocidade / 100) * 3.4) * (1 - f.fadiga * 0.0025);
+      const vmax = vmaxDe(f);
       const corpo: Corpo = { f, x: ax, z: ancora.z, vx: 0, vz: 0, px: ax, pz: ancora.z, ancora, alvo: null, vmax };
       this.corpos.push(corpo);
       this.saida.set(corpo, { x: ax, z: ancora.z });
@@ -184,13 +197,13 @@ export class Coreografo {
   trocar(saiId: string, entra: Ficha): Ficha | null {
     const c = this.corpos.find((k) => k.f.id === saiId);
     if (!c) return null;
-    const nova: Ficha = { ...entra, lado: c.f.lado, slot: c.f.slot };
+    const nova: Ficha = fichaSegura({ ...entra, lado: c.f.lado, slot: c.f.slot });
     c.f = nova;
     c.x = c.px = C / 2 - 4;
     c.z = c.pz = L + 0.5;
     c.vx = c.vz = 0;
     c.alvo = null;
-    c.vmax = (5.4 + (nova.velocidade / 100) * 3.4) * (1 - nova.fadiga * 0.0025);
+    c.vmax = vmaxDe(nova);
     if (this.dono === c) this.dono = this.maisPerto(c.f.lado, this.bola.x, this.bola.z, false);
     this.fita(T(`ENTRA ${nova.nome}`, `ON ${nova.nome}`), c.x, c.z, 2.4, true, c);
     return nova;
@@ -229,6 +242,11 @@ export class Coreografo {
     this.apitoPendente = true;
   }
 
+  /** Contagem antes do apito (3, 2, 1) — null quando a bola já rola. */
+  contagem(): number | null {
+    return this.preApito ? Math.max(1, Math.ceil(this.preApito.limite - this.t - 1e-6)) : null;
+  }
+
   /** O apito inicial acabou de soar (uma vez). */
   consumirApito(): boolean {
     const a = this.apitoPendente;
@@ -238,10 +256,8 @@ export class Coreografo {
 
   passo(): void {
     this.passos++;
-    if (this.preApito) {
-      const todos = this.corpos.every((c) => { const s = this.saida.get(c); return !s || Math.hypot(c.x - s.x, c.z - s.z) < 1.2; });
-      if (todos || this.t >= this.preApito.limite) this.apitar();
-    }
+    // Todos já estão na posição: o apito sai quando a contagem (3, 2, 1) acaba.
+    if (this.preApito && this.t >= this.preApito.limite) this.apitar();
     this.t += DT;
     while (this.fila.length && this.fila[0]!.em <= this.t) this.fila.shift()!.faz();
     for (const c of this.corpos) { c.px = c.x; c.pz = c.z; }
@@ -254,6 +270,7 @@ export class Coreografo {
     this.moverBola();
     this.moverCamera();
     this.registrarAssinaturas();
+    this.sanear();
     if (this.gravando) this.filme.push({ t: this.t, pos: this.corpos.flatMap((c) => [c.x, c.z]), bola: { ...this.bola } });
   }
 
@@ -378,10 +395,26 @@ export class Coreografo {
 
   // ── jogo ambiente (sem lance) ────────────────────────────────────────────
 
+  /**
+   * CENA LIMPA antes de um lance novo (bug do fundador 10/10: o campo "travou
+   * no loop de uma jogada"). Zerar a fila jogava fora as limpezas pendentes —
+   * do lance anterior E do jogo ambiente (drible, lateral, tiro de meta,
+   * impedimento) — e quem estava nelas ficava PRESO no alvo pra sempre, com a
+   * velocidade do lance. Agora ninguém fica preso: alvos soltos, velocidade
+   * de volta, bola parada desmontada, e só então a fila zera.
+   */
+  limparCena(): void {
+    this.fila = [];
+    this.voo = null;
+    for (const c of this.corpos) { c.alvo = null; c.vmax = vmaxDe(c.f); }
+    this.posicionados.clear();
+    this.reinicioAte = -1;
+  }
+
   private recomecar(): void {
     const sofreu = this.festa?.f.lado === 'home' ? 'away' : 'home';
     this.festa = null;
-    this.fila = [];
+    this.limparCena();
     this.voo = null;
     this.envolvidos = null;
     this.passesAgendados = [];
@@ -423,6 +456,7 @@ export class Coreografo {
   // ── bola, câmera, assinaturas ────────────────────────────────────────────
 
   passar(para: Corpo, dur: number, altura: number): void {
+    this.ultimoPassador = this.dono;
     this.voo = { x0: this.bola.x, z0: this.bola.z, x1: para.x, z1: para.z, t: 0, dur, altura, para };
     this.dono = null;
   }
@@ -460,6 +494,35 @@ export class Coreografo {
     const matador = this.envolvidos ? [...this.envolvidos].find((c) => c.f.classe === 'matador' && Math.hypot(c.vx, c.vz) > 2.5) : undefined;
     if (matador && Math.round(this.t * 10) % 2 === 0) { this.trilha.push({ x: matador.x, z: matador.z }); if (this.trilha.length > 24) this.trilha.shift(); }
     else if (!this.envolvidos && this.trilha.length) this.trilha.shift();
+  }
+
+  /**
+   * VÁLVULAS (bug do fundador 10/10: "no 16' travou no loop de uma jogada").
+   * Nada pode deixar o campo preso: número que não é número volta pro lugar,
+   * passe que não chega termina, bola parada esquecida solta.
+   */
+  private sanear(): void {
+    for (const c of this.corpos) {
+      if (Number.isFinite(c.x) && Number.isFinite(c.z) && Number.isFinite(c.vx) && Number.isFinite(c.vz)) continue;
+      c.x = c.px = num(c.ancora.x, C / 2); c.z = c.pz = num(c.ancora.z, L / 2);
+      c.vx = c.vz = 0;
+      c.alvo = null;
+      if (!Number.isFinite(c.vmax)) c.vmax = 6;
+    }
+    const v = this.voo;
+    if (v && (!Number.isFinite(v.x0 + v.z0 + v.x1 + v.z1 + v.dur + v.t) || v.t > v.dur + 2)) {
+      this.voo = null;
+      this.dono = v.para ?? this.maisPerto(this.posse, this.bola.x, this.bola.z, false);
+    }
+    if (!Number.isFinite(this.bola.x + this.bola.z + this.bola.h)) {
+      this.bola = this.dono ? { x: this.dono.x, z: this.dono.z, h: 0 } : { x: C / 2, z: L / 2, h: 0 };
+    }
+    if (this.lento && !Number.isFinite(this.lento.fator)) this.lento = null;
+    if (this.posicionados.size) {
+      if (this.posicionadosDesde < 0) this.posicionadosDesde = this.t;
+      // Pênalti esperando o batedor tem 10 s de prazo na Rápida; 25 s é esquecido.
+      else if (this.t - this.posicionadosDesde > 25 && !this.festa) { soltarBolaParada(this); this.posicionadosDesde = -1; }
+    } else this.posicionadosDesde = -1;
   }
 
   // ── utilidades (usadas também pela encenação) ────────────────────────────

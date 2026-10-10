@@ -219,7 +219,7 @@ export class PalcoPixi {
       const dono = q.dono ? q.jogadores.find((j) => j.f.id === q.dono!.id) : undefined;
       caixa.visible = !!dono;
       if (dono) {
-        this.rotulo.text = dono.f.nome;
+        this.rotulo.text = dono.f.nome ?? '';
         const fundo = caixa.children[0] as Graphics;
         const w = this.rotulo.width + 10;
         fundo.clear().rect(-w / 2, -9, w, 17).fill(COR.asfalto);
@@ -303,7 +303,7 @@ export class PalcoPixi {
     }
     const e = this.etiquetas[this.usadas++]!;
     e.raiz.visible = true;
-    e.texto.text = texto;
+    e.texto.text = texto ?? '';
     e.texto.style.fontSize = tamanho;
     e.texto.style.fill = tom === 'asfalto' ? COR.cal : COR.asfalto;
     const w = e.texto.width + 12, h = tamanho + 7;

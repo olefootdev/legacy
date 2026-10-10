@@ -24,6 +24,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { L } from '@/i18n/L';
+import { track } from '@/analytics/track';
 import { chaveDoLance, Coreografo, DT } from './coreografo';
 import { PalcoPixi } from './palco';
 import { levantarTela, pontoLocal } from './orientacao';
@@ -150,6 +151,8 @@ export function PartidaVivaPalco(p: Props) {
   const coreoRef = useRef<Coreografo | null>(null);
   if (!coreoRef.current) coreoRef.current = new Coreografo(fichas, formacaoCasa, formacaoFora, seed, p.comEntrada);
   const replayRef = useRef<HTMLSpanElement>(null);
+  /** Contagem antes do apito (3, 2, 1) — os times já estão na posição. */
+  const [contagem, setContagem] = useState<number | null>(null);
   const pularFilmeRef = useRef(false);
   const [som, setSom] = useState(somLigado());
   const { w, h } = useViewport();
@@ -221,8 +224,22 @@ export function PartidaVivaPalco(p: Props) {
         if (replayRef.current) replayRef.current.style.opacity = '0';
         canal.responder('seguir');
       };
+      // O laço NUNCA morre (bug do fundador 10/10: o campo travou no 16' e o
+      // relógio seguiu): o próximo quadro é pedido antes, e um erro vira registro.
+      let errosNoLaco = 0;
+      let contagemVista: number | null = null;
       const laco = (agora: number) => {
-        const real = Math.min(0.25, (agora - antes) / 1000);
+        raf = requestAnimationFrame(laco);
+        try { umQuadro(agora); } catch (e) {
+          if (errosNoLaco++ < 3) {
+            console.error('[partida viva] erro no quadro', e);
+            track('partida_viva_erro', { msg: String((e as Error)?.message ?? e).slice(0, 120), passo: co.passos });
+          }
+          acumulado = 0;
+        }
+      };
+      const umQuadro = (agora: number) => {
+        const real = Math.min(0.25, Math.max(0, (agora - antes) / 1000));
         antes = agora;
         if (co.festa && co.festa !== golAtendido && !filme) {
           golAtendido = co.festa;
@@ -259,6 +276,7 @@ export function PartidaVivaPalco(p: Props) {
           const ult0 = canal.ultimo();
           const fator = ult0?.pausado ? 0 : ult0?.decisao?.tipo === 'decisivo' ? 0.18 : 1;
           acumulado += real * velRef.current * co.escalaDoTempo() * fator;
+          if (!Number.isFinite(acumulado)) acumulado = 0; // NaN aqui parava o campo pra sempre
           let guarda = 0;
           while (acumulado >= DT && guarda++ < 4000) {
             entregarPendentes();
@@ -304,6 +322,8 @@ export function PartidaVivaPalco(p: Props) {
             corredores: corr ? { nosso: corredorEmMetros(corr.nosso, 'nosso'), perigo: corredorEmMetros(corr.perigo, 'perigo') } : undefined,
           },
         );
+        const cont = co.contagem();
+        if (cont !== contagemVista) { contagemVista = cont; setContagem(cont); if (cont != null) tocar('passe'); }
         if (co.consumirApito()) apitoRef.current?.();
         // Cronologia: libera placar/narração/lambe quando o campo mostrou o lance.
         const pend = pendenteRef.current;
@@ -332,7 +352,6 @@ export function PartidaVivaPalco(p: Props) {
           if (faixaCimaRef.current) faixaCimaRef.current.style.height = alt;
           if (faixaBaixoRef.current) faixaBaixoRef.current.style.height = alt;
         }
-        raf = requestAnimationFrame(laco);
       };
       raf = requestAnimationFrame(laco);
     });
@@ -519,6 +538,18 @@ export function PartidaVivaPalco(p: Props) {
         {/* CENTRO — só o campo (+ faixas de cinema nos lances grandes) */}
         <div className="relative min-w-0 overflow-hidden">
           <div ref={campoRef} onPointerDown={tocarNoCampo} className="absolute inset-0 cursor-pointer transition-[filter] duration-200" />
+          {contagem != null && !noFilme && (
+            <div className="pointer-events-none absolute inset-0 z-[3] flex flex-col items-center justify-center gap-2">
+              <span
+                key={contagem}
+                className="bg-rua px-6 font-impact text-[clamp(72px,18vh,160px)] leading-none text-asfalto-27 shadow-[6px_6px_0_var(--color-asfalto-27)]"
+                style={{ animation: 'pv-contagem 1s ease-out forwards' }}
+              >
+                {contagem}
+              </span>
+              <span className="-rotate-2 bg-asfalto-27 px-2 font-prova text-[11px] uppercase tracking-[0.2em] text-cal">{L('Bola no centro', 'Kick-off')}</span>
+            </div>
+          )}
           {seguindo && (
             <button
               type="button"

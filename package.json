@@ -97,6 +97,7 @@
     "test:moments": "tsx scripts/test-moments.ts",
     "test:auxiliar-duelo": "tsx scripts/test-auxiliar-duelo.ts",
     "test:partida-viva": "tsx scripts/test-partida-viva.ts",
+    "test:estresse-partida-viva": "python3 scripts/gerar-planos-estresse.py /tmp/olefoot-estresse.json && tsx scripts/estresse-partida-viva.ts /tmp/olefoot-estresse.json",
     "test:cadeia-lances": "python3 server/smartfield/test_cadeia_lances.py --n 300",
     "test:match-consequences": "tsx scripts/test-match-consequences.ts",
     "test:player-personality": "tsx scripts/test-player-personality.ts",

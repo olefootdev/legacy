@@ -153,8 +153,11 @@ export function decidirToque(co: Coreografo, daVez: Corpo): boolean {
   const cansado = daVez.f.fadiga > 70;
 
   // 1) O DRIBLADOR ENCARA: conduz pra cima do marcador no campo de ataque.
-  if (!cansado && avanco > 0.45 && (daVez.f.classe === 'ponta_driblador' || (daVez.f.drible ?? 0) >= 78) && co.rnd() < 0.45) {
-    const alvo = { x: lim(daVez.x + dir * 9, 4, C - 4), z: lim(daVez.z + (L / 2 - daVez.z) * 0.2, 4, L - 4) };
+  //    Só com campo pela frente: colado na linha de fundo ele não encara o nada (ficava parado).
+  const alvoDoDrible = { x: lim(daVez.x + dir * 9, 4, C - 4), z: lim(daVez.z + (L / 2 - daVez.z) * 0.2, 4, L - 4) };
+  const temCampo = Math.abs(alvoDoDrible.x - daVez.x) > 5;
+  if (!cansado && temCampo && avanco > 0.45 && (daVez.f.classe === 'ponta_driblador' || (daVez.f.drible ?? 0) >= 78) && co.rnd() < 0.45) {
+    const alvo = alvoDoDrible;
     daVez.alvo = alvo;
     const marcador = co.maisPerto(lado === 'home' ? 'away' : 'home', alvo.x, alvo.z, true);
     if (marcador) marcador.alvo = { x: alvo.x, z: alvo.z };
@@ -190,7 +193,7 @@ export function decidirToque(co: Coreografo, daVez: Corpo): boolean {
   }
   // 4) A bola chega em quem o plano diz que a carregou neste minuto.
   const carregador = co.carregadorDoMinuto ? colegas.find((c) => c.f.id === co.carregadorDoMinuto) : undefined;
-  if (carregador && Math.hypot(carregador.x - daVez.x, carregador.z - daVez.z) < 40) {
+  if (carregador && carregador !== co.ultimoPassador && Math.hypot(carregador.x - daVez.x, carregador.z - daVez.z) < 40) {
     co.carregadorDoMinuto = null;
     const longe = Math.hypot(carregador.x - daVez.x, carregador.z - daVez.z) > 22;
     co.passar(carregador, longe ? 1.1 : 0.7, longe ? 2.4 : 0.3);
@@ -201,7 +204,13 @@ export function decidirToque(co: Coreografo, daVez: Corpo): boolean {
   // 5) O resto: passe pra quem está mais perto da zona de jogo — o cansado toca curto.
   const xAlvo = xDaZona(co, lado);
   const alcance = cansado ? 16 : 34;
-  const opcoes = colegas.filter((c) => Math.hypot(c.x - daVez.x, c.z - daVez.z) < alcance);
+  // Ninguém no alcance (o cansado isolado): toca no mais perto, onde estiver — senão a bola parava no pé dele pra sempre.
+  const noAlcance = colegas.filter((c) => Math.hypot(c.x - daVez.x, c.z - daVez.z) < alcance);
+  const maisPerto = [...colegas].sort((a, b) => Math.hypot(a.x - daVez.x, a.z - daVez.z) - Math.hypot(b.x - daVez.x, b.z - daVez.z)).slice(0, 2);
+  const perto = noAlcance.length ? noAlcance : maisPerto;
+  // Sem pingue-pongue: não devolve pra quem acabou de passar (só se não houver mais ninguém).
+  const semVolta = perto.filter((c) => c !== co.ultimoPassador);
+  const opcoes = semVolta.length ? semVolta : perto;
   if (!opcoes.length) return false;
   let alvo = opcoes[0]!, melhor = Infinity;
   for (const c of opcoes) {

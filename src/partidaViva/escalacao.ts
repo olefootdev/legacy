@@ -91,7 +91,8 @@ export function montarFichas(
       lado,
       slot: slotDe.get(j.id)!,
       rosto: rostoReal(j.entidade),
-      fadiga: Math.max(0, Math.min(100, j.fadiga)),
+      // Sem número de fôlego (reserva sem ficha de saúde) = descansado — NaN congelava o campo.
+      fadiga: Number.isFinite(j.fadiga) ? Math.max(0, Math.min(100, j.fadiga)) : 0,
       velocidade: j.velocidade ?? j.entidade?.attrs.velocidade ?? 65,
       classe: j.classe,
       passe: j.entidade?.attrs.passe,
