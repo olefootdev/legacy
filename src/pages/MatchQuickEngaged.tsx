@@ -19,7 +19,7 @@
  * só roda com a flag desligada.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { overallFromAttributes } from '@/entities/player';
 import { Hashtag } from '@/components/ui';
@@ -71,10 +71,20 @@ import type { AgentEchoTrait } from '@/match/quickAgentEcho';
 import { L, emIngles } from '@/i18n/L';
 import { posLabel } from '@/components/matchquick/posLabel';
 import { dnaDoClubeParaMotor } from '@/club/identidade';
+import { criarCanalAoVivo } from '@/partidaViva/canal';
+import { montarFichas } from '@/partidaViva/escalacao';
+import { deitarTela, levantarTela } from '@/partidaViva/orientacao';
+import { msParaMostrar } from '@/partidaViva/cronograma';
+import { ligarSom } from '@/partidaViva/som';
+
+// PARTIDA VIVA (beta): o palco em campo só carrega o PixiJS quando é aberto.
+const PartidaVivaPalco = lazy(() =>
+  import('@/partidaViva/PartidaVivaPalco').then((m) => ({ default: m.PartidaVivaPalco })),
+);
 
 type Phase = 'loading' | 'kickoff' | 'playing' | 'finished' | 'error';
 
-export default function MatchQuickEngaged() {
+export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoInicial?: boolean } = {}) {
   const navigate = useNavigate();
   const dispatch = useGameDispatch();
   const players = useGameStore((s) => s.players);
@@ -341,13 +351,61 @@ export default function MatchQuickEngaged() {
       setPhase('playing');
       return undefined;
     }
-    const t = window.setTimeout(() => setCountdown((c) => c - 1), 700);
+    // Com o campo aberto, a contagem espera a ENTRADA EM CAMPO (~5 s).
+    const t = window.setTimeout(() => setCountdown((c) => c - 1), aoVivo ? 1700 : 700);
     return () => window.clearTimeout(t);
   }, [phase, countdown]);
 
   // Ritmo fixo 1x: as durações por tier (quickPlanTypes) já miram ~30s de jogo.
   // Sem compressão dinâmica — previsível e calibrável num lugar só.
   const speedMultiplier = 1.0;
+
+  // ── PARTIDA VIVA (docs/PARTIDA-VIVA-PLANO.md, Fase 1) ──────────────────────
+  // A mesma partida, vista em campo. O QuickPlanPlayer publica o que mostra no
+  // canal; o palco só desenha — placar, decisões e crédito seguem daqui.
+  const canalRef = useRef(criarCanalAoVivo());
+  const [aoVivo, setAoVivo] = useState(aoVivoInicial);
+  const abrirCampo = useCallback(() => {
+    void deitarTela(); // dentro do toque: tela cheia + deitada no Android
+    ligarSom(); // o navegador só libera áudio dentro de um toque
+    setAoVivo(true);
+  }, []);
+  const fecharCampo = useCallback(() => setAoVivo(false), []);
+  // Modo de assistir (Fase 3): só muda o RITMO de exibição — nunca o desfecho.
+  const [modoVivo, setModoVivo] = useState<'lances' | 'completa'>('lances');
+  const [velVivo, setVelVivo] = useState<1 | 2 | 4>(1);
+  const [pulando, setPulando] = useState(false);
+  // "Pular" corre o relógio até o próximo lance (ou gol, ou decisão) e para.
+  useEffect(() => {
+    if (!pulando) return undefined;
+    return canalRef.current.assinar(() => {
+      const q = canalRef.current.ultimo();
+      if (q && (q.lance || q.gol || q.fase !== 'playing')) setPulando(false);
+    });
+  }, [pulando]);
+  const relogioVivo = !aoVivo ? undefined : pulando ? 50 : Math.round((modoVivo === 'completa' ? 2600 : 240) / velVivo);
+  useEffect(() => {
+    if (phase === 'finished' || phase === 'error') void levantarTela();
+  }, [phase]);
+  useEffect(() => () => { void levantarTela(); }, []);
+  const fichasAoVivo = useMemo(() => {
+    if (!plan) return [];
+    const awayEnt = new Map((opponent?.genesisAwayPlayers ?? []).map((p) => [String(p.id), p]));
+    const classe = (id: string) => plan.classes?.[id];
+    return [
+      ...montarFichas(
+        'home',
+        homePlayersRef.current.map((v) => ({ id: v.id, nome: v.name, pos: v.pos, fadiga: v.fatigue, entidade: players[v.id], classe: classe(v.id) })),
+        lineup as Record<string, string>,
+      ),
+      ...montarFichas(
+        'away',
+        awayLineupRef.current.map((p) => ({ id: p.id, nome: p.name, pos: p.pos, fadiga: p.fatigue ?? 0, velocidade: p.velocidade, entidade: awayEnt.get(p.id), classe: classe(p.id) })),
+      ),
+    ];
+    // Fichas fixadas quando o plano chega (subs ao vivo entram na Fase 4).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan?.seed]);
 
   // Batedores de pênalti: top finalizadores em campo (recalcula após subs/replan).
   const penaltyTakers = useMemo<PenaltyTaker[]>(() => {
@@ -662,13 +720,24 @@ export default function MatchQuickEngaged() {
               <SeloRua tom="corre" className="-rotate-2">{L('Clássico', 'Derby')}</SeloRua>
             )}
           </span>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="min-h-[40px] shrink-0 px-1 font-prova text-[12px] font-bold uppercase tracking-[0.18em] text-mudo hover:text-papel"
-          >
-            {L('Sair', 'Exit')}
-          </button>
+          <span className="flex shrink-0 items-center gap-2">
+            {(phase === 'kickoff' || phase === 'playing') && !aoVivo && (
+              <button
+                type="button"
+                onClick={abrirCampo}
+                className="min-h-[40px] bg-rua px-3 font-impact text-[15px] uppercase leading-none text-asfalto-27 shadow-[3px_3px_0_var(--color-papel)]"
+              >
+                {L('Ver em campo', 'Watch on pitch')}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="min-h-[40px] shrink-0 px-1 font-prova text-[12px] font-bold uppercase tracking-[0.18em] text-mudo hover:text-papel"
+            >
+              {L('Sair', 'Exit')}
+            </button>
+          </span>
         </div>
 
         {phase === 'loading' && (
@@ -731,6 +800,11 @@ export default function MatchQuickEngaged() {
             legacyBoosters={legacyBoosters}
             legacyLookup={legacyLookup}
             agentTraits={agentTraits}
+            onAoVivo={canalRef.current.publicar}
+            registrarResposta={canalRef.current.registrarResponder}
+            golEsperaCampo={aoVivo}
+            segurarLance={aoVivo ? (ev) => Math.round(msParaMostrar(ev.cadeia) / velVivo) : undefined}
+            relogioMs={relogioVivo}
             initialFormation={formationRef.current}
             fieldCards={homePlayersRef.current.map(toSquadCard)}
             awayCards={awayLineupRef.current.map((p) => ({
@@ -770,6 +844,28 @@ export default function MatchQuickEngaged() {
               return { field: fieldCards, bench: benchCards };
             }}
           />
+        )}
+
+        {aoVivo && (phase === 'playing' || phase === 'kickoff') && plan && fichasAoVivo.length >= 14 && (
+          <Suspense fallback={null}>
+            <PartidaVivaPalco
+              canal={canalRef.current}
+              fichas={fichasAoVivo}
+              formacaoCasa={formationRef.current}
+              formacaoFora="4-3-3"
+              seed={plan.seed}
+              siglaCasa={club.shortName}
+              siglaFora={opponent!.shortName}
+              modo={modoVivo}
+              velocidade={velVivo}
+              pulando={pulando}
+              onModo={setModoVivo}
+              onVelocidade={setVelVivo}
+              onPular={() => setPulando(true)}
+              onSair={fecharCampo}
+              comEntrada={phase === 'kickoff'}
+            />
+          </Suspense>
         )}
 
         {phase === 'finished' && result && (

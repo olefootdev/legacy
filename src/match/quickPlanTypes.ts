@@ -109,6 +109,32 @@ export interface QuickPlanFirstHalfState {
   sent_off_away?: number;
 }
 
+/**
+ * PARTIDA VIVA (Fase 2) — como o lance aconteceu, contado pelo servidor
+ * (`server/smartfield/cadeia_lances.py`). Pontos em METROS no referencial do
+ * campo: x 0–105 (gol da casa → gol visitante), z 0–68; a casa ataca para +x.
+ * A cadeia NUNCA muda o resultado: o desfecho visual sai do `kind` do evento.
+ */
+export type TipoAcaoDeLance =
+  | 'passe' | 'lancamento' | 'cruzamento' | 'conducao' | 'drible' | 'desarme'
+  | 'falta' | 'desvio' | 'escanteio' | 'cobranca' | 'chute' | 'cabeceio';
+
+export interface AcaoDeLance {
+  t: TipoAcaoDeLance;
+  /** Quem faz (em `falta`/`desvio`, alguém do time que defende). */
+  de: string;
+  /** Receptor (passe) ou rival (drible/desarme/falta). */
+  para: string | null;
+  x: number;
+  z: number;
+}
+
+export interface CadeiaDeLance {
+  inicio: { x: number; z: number };
+  acoes: AcaoDeLance[];
+  finalizacao: 'chute' | 'cabeceio' | 'cobranca' | null;
+}
+
 export interface MatchPlanEvent {
   minute: number;
   kind: MatchEventKind;
@@ -125,6 +151,10 @@ export interface MatchPlanEvent {
   reason?: string;
   /** Marcado client-side quando uma decisão do manager alterou o desfecho. */
   decision_influenced?: boolean;
+  /** Gol: quem o simulador conta como assistência (Partida Viva). */
+  assist_id?: string;
+  /** Partida Viva (Fase 2): a jogada, toque a toque. */
+  cadeia?: CadeiaDeLance;
   text: string;
 }
 
@@ -156,6 +186,8 @@ export interface MatchPlan {
   /** Leituras do Analista com decisões pesadas (v1.1+). */
   analyst_beats?: AnalystBeat[];
   mvp_projection: MatchPlanMvp | null;
+  /** Partida Viva (Fase 3): classe do SMART-PROFILE de cada jogador em campo (id → classe). */
+  classes?: Record<string, string>;
   /** Posse REAL da casa (% de minutos com a bola) — substitui o proxy de momento. */
   possession_home_pct?: number;
   narrative_arc: NarrativeArc;

@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { DecisaoNoCampo, QuadroAoVivo } from '@/partidaViva/tipos';
 import { motion, AnimatePresence } from 'motion/react';
 import { Crosshair, ShieldAlert, Target, Cross, AlertTriangle, ArrowRightLeft } from 'lucide-react';
 import type {
@@ -174,6 +175,21 @@ interface Props {
   /** FABLE — Eco do agente: traços (agentProfile) por playerId. Ao trocar o
    *  estilo, UM jogador do XI reage no feed coerente com a personalidade. */
   agentTraits?: Record<string, AgentEchoTrait>;
+  /** PARTIDA VIVA — o palco em campo assina o que esta tela MOSTRA (lance já
+   *  resolvido). Só leitura: o palco nunca devolve nada pro jogo. */
+  onAoVivo?: (quadro: QuadroAoVivo) => void;
+  /** PARTIDA VIVA — tempo mínimo (ms) que um lance fica na tela, pro campo
+   *  conseguir mostrar a jogada inteira. Só apresentação: não muda desfecho. */
+  segurarLance?: (ev: MatchPlanEvent) => number;
+  /** PARTIDA VIVA — ms de tela por minuto sem lance (modo Completa, velocidade,
+   *  pular). Ausente = ritmo normal da Rápida. Só apresentação. */
+  relogioMs?: number;
+  /** PARTIDA VIVA (Fase 4) — o campo responde decisões/comandos por aqui; as
+   *  respostas caem nas MESMAS funções dos botões desta tela. */
+  registrarResposta?: (fn: ((id: string) => void) | null) => void;
+  /** PARTIDA VIVA (Fase 5) — no gol, espera o campo terminar replay + giz
+   *  (resposta 'seguir'); trava de segurança de 20 s. Só ritmo de exibição. */
+  golEsperaCampo?: boolean;
 }
 
 /** Narração rica vinda do backend (Sonnet) — chaves por beat_id e por minuto. */
@@ -407,7 +423,7 @@ const LEADIN_REACT_MS = 2800;
 /** Quanto o relógio "segura" num lance pra dar tempo de ler. */
 const HOLD_MS: Record<MatchEventTier, number> = { epic: 2400, big: 1700, normal: 950, minor: 600 };
 
-export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, secondHalfLineup, narration, buildShootout, agentTraits }: Props) {
+export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, secondHalfLineup, narration, buildShootout, agentTraits, onAoVivo, segurarLance, relogioMs, registrarResposta, golEsperaCampo }: Props) {
   void speedMultiplier;
   const [phase, setPhase] = useState<PlayerPhase>('playing');
   const [minute, setMinute] = useState(0);
@@ -907,7 +923,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
 
     // Lance comum: destaca no palco e segura o relógio um instante.
     setHighlight(next);
-    scheduleNext(HOLD_MS[next.weight_tier]);
+    scheduleNext(Math.max(HOLD_MS[next.weight_tier], segurarLance?.(next) ?? 0));
   };
 
   /** Sobrepõe a leitura do beat pela narração rica (Sonnet), se houver. */
@@ -1019,7 +1035,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     minuteRef.current = nm;
     setMinute(nm);
     setHighlight(null);
-    scheduleNext(CLOCK_MS);
+    scheduleNext(relogioMs ?? CLOCK_MS);
   };
   tickRef.current = tick;
 
@@ -1170,7 +1186,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
 
   // Inicia o relógio corrido no mount; limpa o timer ao desmontar.
   useEffect(() => {
-    scheduleNext(CLOCK_MS);
+    scheduleNext(relogioMs ?? CLOCK_MS);
     return () => { if (timerRef.current != null) window.clearTimeout(timerRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1230,6 +1246,89 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     setPhase('playing');
     scheduleNext(350);
   };
+
+  // PARTIDA VIVA — emite o quadro pro palco em campo (só quando alguém assina).
+  const onAoVivoRef = useRef(onAoVivo);
+  onAoVivoRef.current = onAoVivo;
+  useEffect(() => {
+    const emitir = onAoVivoRef.current;
+    if (!emitir) return;
+    const golDoFeed = celebration ? [...feed].reverse().find((f) => f.kind === 'goal_home' || f.kind === 'goal_away') : undefined;
+    // A chave da comemoração termina no índice do evento (goal-7, clutch-7…): a jogada vem dele.
+    const idxDoGol = celebration ? Number(/-(\d+)$/.exec(celebration.key)?.[1]) : NaN;
+    const eventoDoGol = Number.isFinite(idxDoGol) ? eventsRef.current[idxDoGol] : undefined;
+    const cadeiaDoGol = eventoDoGol?.cadeia;
+    // Decisão em aberto, pros trilhos do campo (Fase 4).
+    let decisao: DecisaoNoCampo | null = null;
+    if (phase === 'beat' && activeBeat) {
+      decisao = {
+        tipo: 'analista', chave: `beat-${activeBeat.id}`, titulo: L('Leitura do Analista', 'Analyst read'),
+        texto: activeBeat.insight.text, opcoes: activeBeat.choices.map((c) => ({ id: c.id, rotulo: c.label })),
+      };
+    } else if (phase === 'leadin' && leadIn && leadInReactable) {
+      decisao = {
+        tipo: 'reacao', chave: `leadin-${minute}-${leadIn.kind}`, titulo: L('Reação', 'React'), texto: leadIn.text,
+        opcoes: leadIn.reactions.map((r, i) => ({ id: String(i), rotulo: r.label })), prazoMs: LEADIN_REACT_MS,
+      };
+    } else if (phase === 'clutch' && clutch) {
+      decisao = {
+        tipo: 'decisivo', chave: `clutch-${clutch.idx}`,
+        titulo: clutch.moment.intent === 'attack' ? L('Momento decisivo', 'Decisive moment') : L('Segura o gol', 'Save it'),
+        texto: clutch.moment.context, protagonista: clutch.moment.actorName,
+        opcoes: clutch.moment.options.map((o) => ({ id: o.key, rotulo: o.label })),
+      };
+    } else if (phase === 'forced' && forced) {
+      decisao = forced.kind === 'red'
+        ? { tipo: 'expulsao', chave: `red-${forced.idx}`, titulo: L('Expulso', 'Sent off'), texto: L(`${forced.outName} foi expulso.`, `${forced.outName} was sent off.`), protagonista: forced.outName, opcoes: [{ id: 'ok', rotulo: L('Seguir com 10', 'Play on with 10') }] }
+        : { tipo: 'lesao', chave: `inj-${forced.idx}`, titulo: L('Lesão', 'Injury'), texto: L(`${forced.outName} sentiu. Quem entra?`, `${forced.outName} is hurt. Who comes on?`), protagonista: forced.outName,
+            opcoes: benchPool.slice(0, 6).map((b) => ({ id: b.id, rotulo: b.name, detalhe: `${b.pos} · ${b.ovr}` })) };
+    }
+    emitir({
+      minuto: minute,
+      estilo: style,
+      decisao,
+      fase: phase,
+      placarCasa: homeScore,
+      placarFora: awayScore,
+      momento: momentumRef.current[Math.max(0, Math.min(momentumRef.current.length - 1, minute - 1))] ?? 50,
+      lance: highlight,
+      gol: celebration ? { chave: celebration.key, nome: celebration.name, lado: celebration.side, actorId: golDoFeed?.actorId, cadeia: cadeiaDoGol, xg: eventoDoGol?.xg } : null,
+      narracao: [...feed].reverse().slice(0, 6).map((f) => ({ id: f.id, minuto: f.minute, texto: f.text })),
+    });
+  }, [minute, phase, homeScore, awayScore, highlight, celebration, feed, style, activeBeat, leadIn, leadInReactable, clutch, forced, benchPool]);
+
+  // PARTIDA VIVA (Fase 4) — respostas vindas do campo caem nas mesmas funções dos botões.
+  const responderRef = useRef<(id: string) => void>(() => {});
+  responderRef.current = (id: string) => {
+    if (id === 'seguir') { if (phase === 'celebration') dismissCelebration(); return; }
+    if (id.startsWith('estilo:')) {
+      const nivel = id.slice('estilo:'.length) as TacticalIntensityLevel;
+      if (nivel in TACTICAL_INTENSITY_PRESETS) changeStyle(nivel);
+      return;
+    }
+    if (phase === 'beat' && activeBeat) { const c = activeBeat.choices.find((x) => x.id === id); if (c) handleBeatChoice(c); return; }
+    if (phase === 'leadin' && leadIn && leadInReactable) { const r = leadIn.reactions[Number(id)]; if (r) reactToLeadIn(r); return; }
+    if (phase === 'clutch' && clutch) { const o = clutch.moment.options.find((x) => x.key === id); if (o) resolveClutchChoice(o.key); return; }
+    if (phase === 'forced' && forced) {
+      if (forced.kind === 'red') { resolveRedCard(); return; }
+      const b = benchPool.find((x) => x.id === id);
+      if (b) resolveInjury(b);
+    }
+  };
+  // Trava de segurança: com o campo segurando o gol, nunca mais que 20 s.
+  const celebracaoChave = celebration?.key;
+  useEffect(() => {
+    if (!golEsperaCampo || !celebracaoChave) return undefined;
+    const t = window.setTimeout(() => dismissCelebration(), 20000);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [golEsperaCampo, celebracaoChave]);
+
+  useEffect(() => {
+    if (!registrarResposta) return undefined;
+    registrarResposta((id) => responderRef.current(id));
+    return () => registrarResposta(null);
+  }, [registrarResposta]);
 
   const currentEvent = highlight;
   const currentMinute = minute;
@@ -2079,7 +2178,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
         scorerName={shortName(celebration?.name)}
         scorerPortrait={celebration?.portrait ?? null}
         narrative={celebration?.narrative}
-        onDismiss={dismissCelebration}
+        onDismiss={golEsperaCampo ? () => { /* o campo manda seguir */ } : dismissCelebration}
       />
     </div>
   );

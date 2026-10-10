@@ -38,6 +38,11 @@ export interface QuickPlanPlayerPayload {
   // defaults) pra não quebrar construtores sintéticos antigos.
   drible?: number;
   tatico?: number;
+  /** Partida Viva (Fase 2): especialistas — só a cadeia de lances lê; o placar não. */
+  cabeceio?: number;
+  bola_parada?: number;
+  penalti?: number;
+  pe?: 'left' | 'right' | 'both';
   mentalidade?: number;
   fair_play?: number;
   fatigue: number;
@@ -192,6 +197,10 @@ export function playerToQuickPlanPayload(
     mentalidade: clamp(p.attrs.mentalidade + mt.men),
     fair_play: p.attrs.fairPlay,
     fatigue,
+    cabeceio: p.attrs.cabeceio,
+    bola_parada: p.attrs.bolaParada,
+    penalti: p.attrs.penalti,
+    pe: p.strongFoot,
   };
 }
 

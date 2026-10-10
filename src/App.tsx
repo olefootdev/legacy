@@ -153,6 +153,7 @@ const CollectionTab = lazy(() => import('./pages/wallet/CollectionTab').then((m)
 const ExtractTab = lazy(() => import('./pages/wallet/ExtractTab').then((m) => ({ default: m.ExtractTab })));
 const LiveMatch = lazy(() => import('./pages/LiveMatch').then((m) => ({ default: m.LiveMatch })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
+const MatchAoVivo = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchAoVivo })));
 const LegendsCup = lazy(() => import('./pages/LegendsCup').then((m) => ({ default: m.LegendsCup })));
 const QuickPlanPreview = lazy(() => import('./pages/QuickPlanPreview').then((m) => ({ default: m.default })));
 const MatchPenaltyV2 = lazy(() => import('./pages/MatchPenaltyV2').then((m) => ({ default: m.MatchPenaltyV2 })));
@@ -699,6 +700,18 @@ as a nice MVP. Let's Play Together! ⚽
                   onReset={() => window.location.href = '/match/quick'}
                 >
                   <MatchQuick />
+                </ErrorBoundary>
+              }
+            />
+            {/* PARTIDA VIVA (beta): a Partida Rápida vista em campo — docs/PARTIDA-VIVA-PLANO.md */}
+            <Route
+              path="/match/ao-vivo"
+              element={
+                <ErrorBoundary
+                  FallbackComponent={MatchQuickErrorFallback}
+                  onReset={() => window.location.href = '/match/quick'}
+                >
+                  <MatchAoVivo />
                 </ErrorBoundary>
               }
             />

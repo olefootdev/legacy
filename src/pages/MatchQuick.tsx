@@ -643,6 +643,15 @@ export function MatchQuick() {
 }
 
 /**
+ * PARTIDA VIVA (beta) — a mesma Partida Rápida, já aberta em campo.
+ * Só existe no motor do plano (Python): sem a flag, cai na rápida normal.
+ */
+export function MatchAoVivo() {
+  if (QUICK_PLAN_ENABLED) return <MatchQuickEngaged aoVivoInicial />;
+  return <MatchQuickLegacy />;
+}
+
+/**
  * Partida rápida (legado): 25s + intervalo 5s + 25s; feed ao vivo; substituição altera `matchLineupBySlot` (mesmo reducer).
  */
 function MatchQuickLegacy() {
