@@ -206,7 +206,7 @@ export type ComandoSemMinuto =
   | { tipo: 'ordem'; ordem: 'segurar' | 'atacar_espaco' | 'marcar'; jogador: string };
 const RECARGA_GRITO_MIN = 15;
 /** LEGACY: o momento decisivo tem prazo — sem resposta, o jogador decide sozinho (o jogo nunca fica parado). */
-const PRAZO_DECISIVO_MS = 15000;
+const PRAZO_DECISIVO_MS = 10000;
 const DURACAO_GRITO_MIN = 10;
 
 /** Narração rica vinda do backend (Sonnet) — chaves por beat_id e por minuto. */
@@ -1074,6 +1074,9 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       offeredBeatsRef.current[offeredBeatsRef.current.length - 1] = liveBeat;
       pushFeed({ id: `i-${beat.id}`, minute: beat.minute, kind: 'insight', text: liveBeat.insight.text });
       setActiveBeat(liveBeat);
+      // LEGACY CONTÍNUO (feedback 10/10): a leitura fica no trilho com prazo e o
+      // jogo SEGUE — a escolha vale pros lances que ainda não aconteceram.
+      if (pedirReplan) { scheduleNext(relogioMs ?? CLOCK_MS); return; }
       setPhase('beat');
       return;
     }
@@ -1421,9 +1424,21 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       }
     }
     setActiveBeat(null);
-    setPhase('playing');
-    scheduleNext(350);
+    // Só quem PAROU o relógio (Rápida) retoma ele; no LEGACY contínuo o jogo nunca parou.
+    if (phase === 'beat') {
+      setPhase('playing');
+      scheduleNext(350);
+    }
   };
+  // LEGACY contínuo: a leitura some sozinha no fim do prazo (sem escolha = plano mantido).
+  const beatAbertoId = activeBeat && phase !== 'beat' ? activeBeat.id : null;
+  useEffect(() => {
+    if (!beatAbertoId || !pedirReplan) return undefined;
+    const ms = (activeBeat?.window_ms ?? 8000) + 4000;
+    const t = window.setTimeout(() => setActiveBeat((b) => (b && b.id === beatAbertoId ? null : b)), ms);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [beatAbertoId, pedirReplan]);
 
   // LEGACY (Fase 4b) — gritos e ordens do manager no campo.
   const [gritoAtivo, setGritoAtivo] = useState<{ tipo: string; ate: number } | null>(null);
@@ -1466,7 +1481,9 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   };
   /** LEGACY (Fase 4c): substituição arrastada do banco — sem sair do campo, sem pausar. */
   const trocarNoCampo = (outId: string, inId: string) => {
-    if (phase !== 'playing' || subsUsedRef.current >= MAX_SUBS) return;
+    // Qualquer momento de jogo corrido (jogando, reação a um lance, leitura do Analista);
+    // só não troca com a bola parada numa decisão (pênalti, momento decisivo, lesão) ou fora do campo.
+    if (!['playing', 'leadin', 'beat'].includes(phase) || subsUsedRef.current >= MAX_SUBS) return;
     const inCard = benchPool.find((b) => b.id === inId);
     if (!inCard || !field.some((p) => p.id === outId)) return;
     efetivarTroca(outId, inCard);
@@ -1536,9 +1553,11 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     const cadeiaDoGol = eventoDoGol?.cadeia;
     // Decisão em aberto, pros trilhos do campo (Fase 4).
     let decisao: DecisaoNoCampo | null = null;
-    if (phase === 'beat' && activeBeat) {
+    const beatNoTrilho = activeBeat && (phase === 'beat' || (pedirReplan && phase === 'playing'));
+    if (beatNoTrilho && activeBeat) {
       decisao = {
         tipo: 'analista', chave: `beat-${activeBeat.id}`, titulo: L('Leitura do Analista', 'Analyst read'),
+        prazoMs: pedirReplan ? (activeBeat.window_ms ?? 8000) + 4000 : undefined,
         texto: activeBeat.insight.text, opcoes: activeBeat.choices.map((c) => ({ id: c.id, rotulo: c.label })),
         corredores: { nosso: activeBeat.insight.primary_channel, perigo: activeBeat.insight.threat_channel },
       };
@@ -1637,7 +1656,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       if (nivel in TACTICAL_INTENSITY_PRESETS) changeStyle(nivel);
       return;
     }
-    if (phase === 'beat' && activeBeat) { const c = activeBeat.choices.find((x) => x.id === id); if (c) handleBeatChoice(c); return; }
+    if (activeBeat && (phase === 'beat' || (pedirReplan && phase === 'playing'))) { const c = activeBeat.choices.find((x) => x.id === id); if (c) handleBeatChoice(c); return; }
     if (phase === 'leadin' && leadIn && leadInReactable) { const r = leadIn.reactions[Number(id)]; if (r) reactToLeadIn(r); return; }
     if (phase === 'clutch' && clutch) { const o = clutch.moment.options.find((x) => x.key === id); if (o) resolveClutchChoice(o.key); return; }
     if (phase === 'penalty' && penalty) { const t = penaltyTakers?.find((x) => x.id === id); if (t) takePenalty(t); return; }

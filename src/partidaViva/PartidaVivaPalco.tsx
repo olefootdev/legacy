@@ -27,7 +27,7 @@ import { L } from '@/i18n/L';
 import { chaveDoLance, Coreografo, DT } from './coreografo';
 import { PalcoPixi } from './palco';
 import { levantarTela, pontoLocal } from './orientacao';
-import { CartaoFicha, LambeDoGol, Narracao, PainelBanco, PainelCamera, NumerosNoTrilho, PainelDecisao, PainelPrancheta, PainelTatica, SkillNoTrilho } from './trilhos';
+import { CartaoFicha, LambeDoGol, Narracao, PainelCamera, PainelSubstituicao, NumerosNoTrilho, PainelDecisao, PainelPrancheta, PainelTatica, SkillNoTrilho } from './trilhos';
 import type { SkillEmCampo } from './skills';
 import { corredorEmMetros, lerPrancheta } from './prancheta';
 import { iniciais } from './escalacao';
@@ -126,7 +126,6 @@ export function PartidaVivaPalco(p: Props) {
   /** Banco: reserva escolhido (toque) e quem sai (escolhido no cartão). */
   const [entraEscolhido, setEntraEscolhido] = useState<string | null>(null);
   const [saiEscolhido, setSaiEscolhido] = useState<string | null>(null);
-  const [arrasto, setArrasto] = useState<{ id: string; x: number; y: number; moveu: boolean } | null>(null);
   const raizRef = useRef<HTMLDivElement>(null);
   const [, setVersao] = useState(0);
   const [leitura, setLeitura] = useState<ReturnType<typeof lerPrancheta> | null>(null);
@@ -255,9 +254,11 @@ export function PartidaVivaPalco(p: Props) {
         if (rodando && agora >= congeladoAte) {
           if (onde.style.filter) onde.style.filter = '';
           // No momento decisivo o campo congela até o manager escolher.
-          // Na prancheta (pausa) também: o quadro fica parado pra ser lido.
-          const congelaDecisivo = canal.ultimo()?.decisao?.tipo === 'decisivo' || !!canal.ultimo()?.pausado;
-          acumulado += congelaDecisivo ? 0 : real * velRef.current * co.escalaDoTempo();
+          // Contínuo (feedback 10/10): o momento decisivo é CÂMERA LENTA, não congelado;
+          // só a prancheta (pausa pedida pelo manager) para o quadro.
+          const ult0 = canal.ultimo();
+          const fator = ult0?.pausado ? 0 : ult0?.decisao?.tipo === 'decisivo' ? 0.18 : 1;
+          acumulado += real * velRef.current * co.escalaDoTempo() * fator;
           let guarda = 0;
           while (acumulado >= DT && guarda++ < 4000) {
             entregarPendentes();
@@ -367,53 +368,24 @@ export function PartidaVivaPalco(p: Props) {
     // As fichas se mexem: o alvo é o da casa mais perto do dedo (até ~44 px).
     return palcoRef.current?.fichaDoLadoEm(x, y, 'home', 44) ?? null;
   };
-  /** Arrastar do banco: a ficha fantasma segue o dedo; soltou em cima de quem sai → troca. */
-  const comecarArrasto = (id: string, e: React.PointerEvent) => {
-    const raiz = raizRef.current;
-    if (!raiz) return;
-    const caixa = raiz.getBoundingClientRect();
-    const ini = pontoLocal(e.clientX, e.clientY, caixa, retrato);
-    let moveu = false;
-    setArrasto({ id, ...ini, moveu });
-    const mover = (ev: PointerEvent) => {
-      const pt = pontoLocal(ev.clientX, ev.clientY, caixa, retrato);
-      moveu = moveu || Math.hypot(pt.x - ini.x, pt.y - ini.y) > 10;
-      setArrasto({ id, ...pt, moveu });
-      palcoRef.current?.marcarAlvoDaTroca(moveu ? fichaDaCasaEm(ev.clientX, ev.clientY) : null);
-    };
-    const soltar = (ev: PointerEvent) => {
-      window.removeEventListener('pointermove', mover);
-      window.removeEventListener('pointerup', soltar);
-      window.removeEventListener('pointercancel', soltar);
-      setArrasto(null);
-      palcoRef.current?.marcarAlvoDaTroca(null);
-      if (moveu && ev.type === 'pointerup') {
-        const sai = fichaDaCasaEm(ev.clientX, ev.clientY);
-        if (sai) trocar(sai, id);
-      }
-    };
-    window.addEventListener('pointermove', mover);
-    window.addEventListener('pointerup', soltar);
-    window.addEventListener('pointercancel', soltar);
-  };
-
   const foraDoCampo = !noFilme && !!quadro && FASES_FORA_DO_CAMPO.has(quadro.fase);
   const decisao = quadro?.decisao ?? null;
   const gol = quadro?.gol ?? null;
   // As fichas vivas vêm do coreógrafo (quem entrou do banco já está lá).
   const fichaSel = selecionada ? coreoRef.current?.corpos.find((c) => c.f.id === selecionada)?.f : undefined;
-  const saiFicha = saiEscolhido ? coreoRef.current?.corpos.find((c) => c.f.id === saiEscolhido)?.f : undefined;
   const protagonista = decisao?.protagonista ? coreoRef.current?.corpos.map((c) => c.f).find((f) => f.nome === decisao.protagonista || decisao.protagonista!.startsWith(f.nome)) : undefined;
   useEffect(() => { palcoRef.current?.selecionar(selecionada); }, [selecionada]);
+  // Quem vai sair fica marcado no campo enquanto a substituição está aberta.
+  useEffect(() => { palcoRef.current?.marcarAlvoDaTroca(painel === 'banco' ? saiEscolhido : null); }, [painel, saiEscolhido]);
 
   /** Toque no campo → ficha (o palco pode estar girado 90° por CSS). */
   const tocarNoCampo = (e: React.PointerEvent<HTMLDivElement>) => {
     const { x, y } = pontoLocal(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect(), retrato);
     const id = palcoRef.current?.fichaEm(x, y) ?? null;
-    // Banco aberto com um reserva escolhido: tocar em alguém da casa = ele sai.
-    if (painel === 'banco' && entraEscolhido) {
+    // Substituição aberta: tocar em alguém da casa no campo = escolher quem SAI.
+    if (painel === 'banco') {
       const sai = fichaDaCasaEm(e.clientX, e.clientY);
-      if (sai) { trocar(sai, entraEscolhido); return; }
+      if (sai) { setSaiEscolhido(saiEscolhido === sai ? null : sai); return; }
     }
     setSelecionada(id && id !== selecionada ? id : null);
     if (id) setPainel(null);
@@ -423,6 +395,7 @@ export function PartidaVivaPalco(p: Props) {
   const xgDoLance = quadro?.lance?.xg ?? gol?.xg;
   // Momento decisivo: a faixa de baixo chama a decisão (o campo congelado não é trava).
   const narracaoMostrada = mostrado.narracao;
+  const golNaTela = !!gol && mostrado.golVisto === gol.chave && !(decisao && !noFilme);
   const legenda = decisao?.tipo === 'decisivo' && !noFilme
     ? L('SUA DECISÃO ← escolha no painel', 'YOUR CALL ← choose on the left')
     : narracaoMostrada[0]?.texto.replace(/^\d+'\s*—\s*/, '') ?? '';
@@ -452,19 +425,7 @@ export function PartidaVivaPalco(p: Props) {
       className="fixed left-0 top-0 z-[10000] overflow-hidden bg-asfalto-27 text-papel"
       style={{ ...estiloPalco, visibility: foraDoCampo ? 'hidden' : 'visible' }}
     >
-      {arrasto?.moveu && (() => {
-        const f = rostosDoBanco.get(arrasto.id);
-        const nome = quadro?.banco?.find((b) => b.id === arrasto.id)?.nome ?? '';
-        return (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute z-[3] flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full border-2 border-papel bg-rua"
-            style={{ left: arrasto.x, top: arrasto.y }}
-          >
-            {f?.rosto ? <img src={f.rosto} alt="" className="h-full w-full object-cover" /> : <span className="font-impact text-[12px] text-asfalto-27">{iniciais(nome)}</span>}
-          </div>
-        );
-      })()}
+
       <div
         className="grid h-full w-full"
         style={{ gridTemplateColumns: `clamp(104px, 21%, 168px) minmax(0, 1fr) clamp(76px, 10%, 104px)` }}
@@ -496,11 +457,12 @@ export function PartidaVivaPalco(p: Props) {
               </div>
             </div>
             {/* Fase 12 — os números ao vivo (dos lances mostrados + posse do fluxo). */}
-            {mostrado.numeros && <NumerosNoTrilho n={mostrado.numeros} />}
+            {/* No gol o cabeçalho recolhe: o lambe ocupa o trilho. */}
+            {mostrado.numeros && !golNaTela && !painel && <NumerosNoTrilho n={mostrado.numeros} />}
           </div>
 
           {noFilme && <span className="self-start bg-cal px-1.5 py-0.5 font-prova text-[11px] text-asfalto-27">{L('Filme', 'Film')}</span>}
-          <SkillNoTrilho skill={skill} />
+          {!golNaTela && !painel && <SkillNoTrilho skill={skill} />}
           {decisao && !noFilme ? (
             <PainelDecisao decisao={decisao} protagonista={protagonista} onResponder={canal.responder} />
           ) : gol && mostrado.golVisto === gol.chave ? (
@@ -523,17 +485,16 @@ export function PartidaVivaPalco(p: Props) {
               onGritar={quadro?.gritoLivreEm !== undefined ? (id) => canal.responder(`grito:${id}`) : undefined}
             />
           ) : painel === 'banco' && quadro?.banco ? (
-            <PainelBanco
+            <PainelSubstituicao
+              emCampo={coreoRef.current?.corpos.filter((c) => c.f.lado === 'home').map((c) => c.f) ?? []}
               banco={quadro.banco}
               rostos={rostosDoBanco}
               restantes={quadro.subsRestantes ?? 0}
-              sai={saiFicha}
-              escolhido={entraEscolhido}
-              onEscolher={(id) => {
-                if (saiEscolhido) trocar(saiEscolhido, id);
-                else setEntraEscolhido(entraEscolhido === id ? null : id);
-              }}
-              onArrastar={comecarArrasto}
+              sai={saiEscolhido}
+              entra={entraEscolhido}
+              onSai={(id) => setSaiEscolhido(saiEscolhido === id ? null : id)}
+              onEntra={(id) => setEntraEscolhido(entraEscolhido === id ? null : id)}
+              onTrocar={() => { if (saiEscolhido && entraEscolhido) trocar(saiEscolhido, entraEscolhido); }}
               onFechar={() => { setPainel(null); setEntraEscolhido(null); setSaiEscolhido(null); }}
             />
           ) : fichaSel ? (
@@ -598,7 +559,7 @@ export function PartidaVivaPalco(p: Props) {
           )}
           {quadro?.banco && !noFilme && (
             <Botao ativo={painel === 'banco'} onClick={() => { setPainel(painel === 'banco' ? null : 'banco'); setSelecionada(null); setSaiEscolhido(null); setEntraEscolhido(null); }}>
-              {L('Banco', 'Bench')} {quadro.subsRestantes ?? 0}
+              {L('Trocas', 'Subs')} {quadro.subsRestantes ?? 0}
             </Botao>
           )}
           {quadro?.pausado !== undefined && !noFilme && (

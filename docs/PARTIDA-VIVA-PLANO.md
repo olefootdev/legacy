@@ -658,6 +658,21 @@ Pedido do fundador: os passos 1–4 do "mais realista" (o 5, narração jogada a
    cansado (fôlego < 30%) só toca curto; o goleiro sai nos cruzamentos na pequena área.
 - Portões: `test:partida-viva` (posse do plano, regras, perfil, filme idêntico com fluxo) e `test_cadeia_lances`.
 
+### Fase 13 — Contínuo, lambe do gol e substituição em lista (10/10)
+- **Lambe do GOL** voltou ao DS 2027: o cabeçalho do trilho (relógio grande + números + skill) tinha
+  crescido e espremia/cortava o lambe. Agora, no gol, o cabeçalho recolhe e o lambe ocupa o trilho: papel
+  cal torto, sombra DURA deslocada (rua), selo redondo com a foto em P&B, GOL/GOAL em Anton (tamanho
+  pela largura), nome na voz, fita amarela com minuto e placar.
+- **Contínuo** (o fundador: "quero que seja contínuo durante toda a partida"): no LEGACY o minuto sem lance
+  dura ~1,1 s (era 0,24 s — o jogo "voava e parava"), com o campo jogando a posse do plano; a Leitura do
+  Analista NÃO para mais o relógio (fica no trilho com prazo; escolher vale pros próximos lances); o
+  momento decisivo é câmera lenta (0,18×) com prazo de 10 s, não congelamento. Pausa só na prancheta
+  (pedida pelo manager) e no intervalo.
+- **Substituição em lista** (pedido do fundador): "Trocas" no trilho direito → EM CAMPO (por posição: GOL,
+  LD, ZAG, ZAG, LE, VOL, MC, MC, PE, PD, ATA, com fôlego) e NO BANCO (posição, nota, fôlego). Toca em quem
+  sai (ou na ficha no campo) e em quem entra → "⇄ Trocar: A → B" → muda no campo e o servidor refaz o
+  futuro. O arrastar saiu. A troca vale em qualquer momento de bola rolando (antes: só fora de janela de reação).
+
 ### Depois (se fizer sentido)
 - Three.js **2.5D** (visual de transmissão) — troca só o palco.
 - Clima e refletores por shader — **só depois** que o jogo estiver redondo (régua DS 2027: sem enfeite).

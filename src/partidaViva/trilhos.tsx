@@ -155,11 +155,12 @@ function Rosto({ f, tam }: { f: Ficha; tam: number }) {
   );
 }
 
+// (fôlego sempre inteiro na tela — a fadiga do elenco vem com casas decimais)
 export function CartaoFicha({ f, onFechar, ordem, onOrdem, onSubstituir, seguindo, onSeguir }: {
   f: Ficha; onFechar: () => void; ordem?: string; onOrdem?: (id: string) => void; onSubstituir?: () => void;
   seguindo?: boolean; onSeguir?: () => void;
 }) {
-  const folego = Math.max(0, 100 - f.fadiga);
+  const folego = Math.round(Math.max(0, 100 - f.fadiga));
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-1.5">
       <div className="flex items-center gap-1.5">
@@ -249,51 +250,73 @@ export function NumerosNoTrilho({ n }: { n: NumerosAoVivo }) {
 
 export type Reserva = { id: string; nome: string; pos: string; ovr: number; fadiga: number };
 
+const ORDEM_DAS_POSICOES = ['gol', 'ld', 'zag1', 'zag2', 'le', 'vol', 'mc1', 'mc2', 'pe', 'pd', 'ata'];
+const SIGLA_DO_SLOT: Record<string, string> = {
+  gol: 'GOL', ld: 'LD', zag1: 'ZAG', zag2: 'ZAG', le: 'LE', vol: 'VOL', mc1: 'MC', mc2: 'MC', pe: 'PE', pd: 'PD', ata: 'ATA',
+};
+
 /**
- * Banco (Fase 4c). Arraste o reserva até a ficha de quem sai — ou toque nele
- * e depois em quem sai. Com alguém já escolhido pra sair, um toque troca.
+ * SUBSTITUIÇÃO (pedido do fundador 10/10): duas listas no trilho —
+ * EM CAMPO (por posição, com fôlego) e NO BANCO. Toca em quem sai e em quem
+ * entra (qualquer ordem; quem sai também pode ser tocado no campo) → "Trocar".
+ * A troca vale na hora no campo e o servidor refaz o futuro com quem entrou.
  */
-export function PainelBanco({ banco, rostos, restantes, sai, escolhido, onEscolher, onArrastar, onFechar }: {
-  banco: Reserva[]; rostos: Map<string, Ficha>; restantes: number; sai?: Ficha; escolhido: string | null;
-  onEscolher: (id: string) => void; onArrastar: (id: string, e: React.PointerEvent) => void; onFechar: () => void;
+export function PainelSubstituicao({ emCampo, banco, rostos, restantes, sai, entra, onSai, onEntra, onTrocar, onFechar }: {
+  emCampo: Ficha[]; banco: Reserva[]; rostos: Map<string, Ficha>; restantes: number;
+  sai: string | null; entra: string | null;
+  onSai: (id: string) => void; onEntra: (id: string) => void; onTrocar: () => void; onFechar: () => void;
 }) {
+  const ordenados = [...emCampo].sort((a, b) => ORDEM_DAS_POSICOES.indexOf(a.slot) - ORDEM_DAS_POSICOES.indexOf(b.slot));
+  const quemSai = emCampo.find((f) => f.id === sai);
+  const quemEntra = banco.find((b) => b.id === entra);
+  const linha = 'flex w-full items-center gap-1.5 border px-1.5 py-1 text-left';
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-1.5" role="group" aria-label={L('Banco', 'Bench')}>
+    <div className="flex min-h-0 flex-1 flex-col gap-1.5" role="group" aria-label={L('Substituição', 'Substitution')}>
       <div className="flex items-center justify-between">
-        <span className="bg-cal px-1.5 py-0.5 font-prova text-[11px] text-asfalto-27">{L('Banco', 'Bench')} · {restantes}</span>
+        <span className="bg-cal px-1.5 py-0.5 font-prova text-[11px] text-asfalto-27">{L('Trocas', 'Subs')} · {restantes}</span>
         <button type="button" onClick={onFechar} aria-label={L('Fechar', 'Close')} className="px-1 text-mudo">✕</button>
       </div>
-      <p className="text-[11px] leading-snug text-mudo">
-        {restantes <= 0 ? L('Sem trocas.', 'No subs left.')
-          : sai ? L(`Quem entra no lugar de ${sai.nome}?`, `Who replaces ${sai.nome}?`)
-          : escolhido ? L('Toque em quem sai, no campo.', 'Tap who comes off, on the pitch.')
-          : L('Arraste até quem sai.', 'Drag onto who comes off.')}
-      </p>
-      <ol className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
-        {banco.map((b) => {
-          const f = rostos.get(b.id);
-          const folego = Math.max(0, 100 - b.fadiga);
+      {quemSai && quemEntra ? (
+        <button type="button" onClick={onTrocar} className="border border-papel bg-rua px-1.5 py-1.5 text-left font-prova text-[11px] leading-tight text-asfalto-27 shadow-[3px_3px_0_var(--color-papel)]">
+          <span className="block font-impact text-[15px] uppercase">⇄ {L('Trocar', 'Swap')}</span>
+          <span className="block truncate">{quemSai.nome} → {quemEntra.nome}</span>
+        </button>
+      ) : (
+        <p className="text-[11px] leading-snug text-mudo">
+          {restantes <= 0 ? L('Sem trocas.', 'No subs left.') : L('Toque em quem sai e em quem entra.', 'Tap who comes off and who goes on.')}
+        </p>
+      )}
+      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden">
+        <span className="font-prova text-[10px] uppercase tracking-wider text-mudo">{L('Em campo', 'On field')}</span>
+        {ordenados.map((f) => {
+          const folego = Math.round(Math.max(0, 100 - f.fadiga));
+          const marcado = sai === f.id;
           return (
-            <li key={b.id}>
-              <button
-                type="button"
-                disabled={restantes <= 0}
-                aria-pressed={escolhido === b.id}
-                onPointerDown={(e) => { if (restantes > 0 && !sai) onArrastar(b.id, e); }}
-                onClick={() => onEscolher(b.id)}
-                className={`flex w-full touch-none items-center gap-1.5 border px-1.5 py-1 text-left ${escolhido === b.id ? 'border-papel bg-rua text-asfalto-27' : 'border-linha bg-concreto text-papel'}`}
-              >
-                {f ? <Rosto f={f} tam={24} /> : <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rua font-impact text-[10px] text-asfalto-27">{iniciais(b.nome)}</span>}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[11px] leading-tight">{b.nome}</span>
-                  <span className={`block text-[10px] leading-tight ${escolhido === b.id ? '' : 'text-mudo'}`}>{b.pos} · {b.ovr} · {folego}%</span>
-                </span>
-              </button>
-            </li>
+            <button key={f.id} type="button" disabled={restantes <= 0} aria-pressed={marcado} onClick={() => onSai(f.id)}
+              className={`${linha} ${marcado ? 'border-papel bg-cal text-asfalto-27' : 'border-linha bg-concreto text-papel'}`}>
+              <span className={`w-7 shrink-0 font-prova text-[10px] ${marcado ? '' : 'text-mudo'}`}>{SIGLA_DO_SLOT[f.slot] ?? f.slot}</span>
+              <span className="min-w-0 flex-1 truncate text-[11px]">{f.nome}</span>
+              <span className={`shrink-0 text-[10px] tabular-nums ${folego < 50 ? 'text-[#E0703A]' : marcado ? '' : 'text-mudo'}`}>{folego}%</span>
+            </button>
           );
         })}
-        {!banco.length && <li className="text-mudo">{L('Ninguém no banco.', 'Bench is empty.')}</li>}
-      </ol>
+        <span className="mt-1 font-prova text-[10px] uppercase tracking-wider text-mudo">{L('No banco', 'On bench')}</span>
+        {banco.map((b) => {
+          const f = rostos.get(b.id);
+          const marcado = entra === b.id;
+          return (
+            <button key={b.id} type="button" disabled={restantes <= 0} aria-pressed={marcado} onClick={() => onEntra(b.id)}
+              className={`${linha} ${marcado ? 'border-papel bg-rua text-asfalto-27' : 'border-linha bg-concreto text-papel'}`}>
+              {f ? <Rosto f={f} tam={20} /> : <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rua font-impact text-[9px] text-asfalto-27">{iniciais(b.nome)}</span>}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[11px] leading-tight">{b.nome}</span>
+                <span className={`block text-[10px] leading-tight ${marcado ? '' : 'text-mudo'}`}>{b.pos} · {Math.round(b.ovr)} · {Math.round(Math.max(0, 100 - b.fadiga))}%</span>
+              </span>
+            </button>
+          );
+        })}
+        {!banco.length && <span className="text-[11px] text-mudo">{L('Ninguém no banco.', 'Bench is empty.')}</span>}
+      </div>
     </div>
   );
 }
@@ -368,19 +391,27 @@ export function Narracao({ quadro }: { quadro: QuadroAoVivo | null }) {
   );
 }
 
+/**
+ * O LAMBE DO GOL (DS 2027 "rua"): papel cal colado torto no muro, sombra DURA
+ * deslocada (sem blur), foto do autor no selo redondo, GOL em Anton, nome na voz,
+ * fita amarela com minuto e placar. Ocupa o trilho inteiro enquanto o gol é
+ * celebrado (o cabeçalho recolhe) — nunca espremido nem cortado.
+ */
 export function LambeDoGol({ quadro, autor, nome }: { quadro: QuadroAoVivo | null; autor?: Ficha; nome: string }) {
   return (
-    <div className="mt-1 flex -rotate-3 flex-col items-center bg-cal p-2 text-asfalto-27">
-      <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-rua">
-        {autor?.rosto
-          ? <img src={autor.rosto} alt="" className="h-[86%] w-[86%] rounded-full object-cover" />
-          : <span className="font-impact text-[22px]">{autor?.iniciais ?? iniciais(nome)}</span>}
+    <div className="flex min-h-0 flex-1 items-start justify-center pt-1">
+      <div className="relative flex w-[94%] -rotate-3 flex-col items-center bg-cal px-2 pb-3 pt-2.5 text-asfalto-27 shadow-[4px_4px_0_var(--color-rua)]">
+        <div className="flex aspect-square w-[62%] max-w-[88px] items-center justify-center overflow-hidden rounded-full border-[3px] border-asfalto-27 bg-rua">
+          {autor?.rosto
+            ? <img src={autor.rosto} alt="" className="h-full w-full object-cover grayscale" />
+            : <span className="font-impact text-[26px]">{autor?.iniciais ?? iniciais(nome)}</span>}
+        </div>
+        <span className="mt-1 font-impact leading-[0.9]" style={{ fontSize: 'clamp(28px, 2.6vw, 44px)' }}>{L('GOL', 'GOAL')}</span>
+        <span className="max-w-full truncate font-voz text-[19px] leading-none">{autor?.nome ?? nome}</span>
+        <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 rotate-3 whitespace-nowrap bg-rua px-2 py-0.5 font-prova text-[11px] font-bold">
+          {quadro?.minuto}&prime; · {quadro?.placarCasa} × {quadro?.placarFora}
+        </span>
       </div>
-      <span className="mt-1 font-impact text-[38px] leading-[0.95]">{L('GOL', 'GOAL')}</span>
-      <span className="font-voz text-[20px] leading-none">{autor?.nome ?? nome}</span>
-      <span className="mt-1.5 rotate-3 bg-rua px-1.5 py-0.5 text-[11px]">
-        {quadro?.minuto}&prime; · {quadro?.placarCasa} × {quadro?.placarFora}
-      </span>
     </div>
   );
 }

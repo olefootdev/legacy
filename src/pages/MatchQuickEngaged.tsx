@@ -399,7 +399,9 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
       if (q && (q.lance || q.gol || q.fase !== 'playing')) setPulando(false);
     });
   }, [pulando]);
-  const relogioVivo = !aoVivo ? undefined : pulando ? 50 : Math.round((modoVivo === 'completa' ? 2600 : 240) / velVivo);
+  // LEGACY CONTÍNUO (feedback 10/10): o minuto sem lance não "voa" (era 0,24 s) —
+  // ~1,1 s por minuto, com o campo jogando a posse do plano. Completa: 2,6 s.
+  const relogioVivo = !aoVivo ? undefined : pulando ? 50 : Math.round((modoVivo === 'completa' ? 2600 : 1100) / velVivo);
   useEffect(() => {
     if (phase === 'finished' || phase === 'error') void levantarTela();
   }, [phase]);
