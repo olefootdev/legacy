@@ -18,6 +18,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Hashtag } from '@/components/ui';
 import { L } from '@/i18n/L';
+import { deitarTela } from '@/partidaViva/orientacao';
+import { ligarSom } from '@/partidaViva/som';
 
 type ModeStatus = 'available' | 'soon' | 'wip';
 
@@ -56,13 +58,14 @@ const MODES: ReadonlyArray<ModeEntry> = [
     to: '/match/quick',
     glyph: '⏱',
   },
-  // 'Ao Vivo' (/match/live) — oculto do menu. Lógica preservada na rota e
-  // toda a engine ao vivo está integrada ao Legacy Mode (/dev/field-view).
+  // LEGACY = a Partida Viva (docs/PARTIDA-VIVA-PLANO.md): a Partida Rápida
+  // vista em campo — os 22 com rosto, celular deitado, comando nos trilhos.
   {
     id: 'legacy',
     label: 'Legacy',
-    description: L('Em breve · partida ao vivo · simulação tática 2D', 'Coming soon · live match · 2D tactical sim'),
-    status: 'soon',
+    description: L('Ao vivo em campo · os 22 com rosto · deite o celular', 'Live on the pitch · all 22 with faces · turn your phone'),
+    status: 'available',
+    to: '/match/ao-vivo',
     glyph: '✦',
   },
   {
@@ -74,10 +77,11 @@ const MODES: ReadonlyArray<ModeEntry> = [
   },
 ];
 
-/** Ordem de exibição: disponíveis primeiro (Rápida na frente), depois os "em breve". */
+/** Ordem de exibição: Legacy e Rápida na frente, depois os outros disponíveis, depois os "em breve". */
 const ORDEM: ReadonlyArray<ModeEntry> = [
+  ...MODES.filter((m) => m.id === 'legacy'),
   ...MODES.filter((m) => m.id === 'quick'),
-  ...MODES.filter((m) => m.status === 'available' && m.id !== 'quick'),
+  ...MODES.filter((m) => m.status === 'available' && m.id !== 'quick' && m.id !== 'legacy'),
   ...MODES.filter((m) => m.status !== 'available'),
 ];
 const PRIMEIRO_DISPONIVEL = ORDEM.find((m) => m.status === 'available');
@@ -116,6 +120,9 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
 
   const handlePick = (mode: ModeEntry) => {
     if (mode.status !== 'available' || !mode.to) return;
+    // Legacy: o toque é o gesto que o navegador exige — deita a tela (Android)
+    // e libera o som já aqui, antes de navegar.
+    if (mode.id === 'legacy') { void deitarTela(); ligarSom(); }
     onClose();
     // pequeno atraso só pra animação fechar suave antes de navegar
     setTimeout(() => navigate(mode.to as string), 180);
@@ -187,7 +194,7 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
               {ORDEM.map((mode) => {
                 const disabled = mode.status !== 'available';
                 const refProp = mode === PRIMEIRO_DISPONIVEL ? { ref: firstCtaRef } : {};
-                const destaque = mode.id === 'quick';
+                const destaque = mode.id === 'legacy';
                 return (
                   <li key={mode.id}>
                     <button

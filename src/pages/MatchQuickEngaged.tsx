@@ -681,7 +681,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
     return (
       <main className="min-h-screen bg-black flex items-center justify-center px-5">
         <div className="flex w-full max-w-sm flex-col items-start gap-5">
-          <p className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">— {L('Partida rápida', 'Quick match')}</p>
+          <p className="font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">— {aoVivo ? 'Legacy' : L('Partida rápida', 'Quick match')}</p>
           {buscandoAdversario ? (
             <p className="font-voz text-[34px] leading-[1.02] text-papel animate-pulse">
               {L('Procurando adversário…', 'Finding an opponent…')}
@@ -714,7 +714,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
         <div className="flex min-w-0 items-center justify-between gap-3 mb-4">
           <span className="flex min-w-0 items-center gap-2">
             <span className="truncate font-prova text-[12px] font-bold uppercase tracking-[0.22em] text-mudo">
-              — {L('Partida rápida', 'Quick match')}
+              — {aoVivo ? 'Legacy' : L('Partida rápida', 'Quick match')}
             </span>
             {isDerbyMatch && (
               <SeloRua tom="corre" className="-rotate-2">{L('Clássico', 'Derby')}</SeloRua>
@@ -763,7 +763,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
             <ConvocacaoRua
               homeName={club.name}
               awayName={opponent!.name}
-              rotuloEsq={L('Partida rápida', 'Quick match')}
+              rotuloEsq={aoVivo ? 'Legacy' : L('Partida rápida', 'Quick match')}
               rotuloDir={isDerbyMatch ? L('Clássico', 'Derby') : L('Agora', 'Now')}
               frase={L('Quem chega com respeito, entra.', 'Walk in with respect.')}
             />
