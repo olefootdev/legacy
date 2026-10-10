@@ -27,7 +27,7 @@ import { L } from '@/i18n/L';
 import { track } from '@/analytics/track';
 import { chaveDoLance, Coreografo, DT } from './coreografo';
 import { PalcoPixi } from './palco';
-import { levantarTela, pontoLocal } from './orientacao';
+import { deitarTela, ehIOS, levantarTela, podeTelaCheia, pontoLocal, semBarras } from './orientacao';
 import { CartaoFicha, LambeDoGol, Narracao, PainelCamera, PainelSubstituicao, NumerosNoTrilho, PainelDecisao, PainelPrancheta, PainelTatica, SkillNoTrilho } from './trilhos';
 import type { SkillEmCampo } from './skills';
 import { corredorEmMetros, lerPrancheta } from './prancheta';
@@ -78,12 +78,24 @@ let montagens = 0;
 const CONGELA_MS = 1100;
 
 function useViewport() {
-  const [v, setV] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  // A área VISÍVEL (visualViewport): com as barras do navegador aparecendo e
+  // sumindo, innerHeight mente e o palco ficava cortado embaixo.
+  const medir = () => ({ w: Math.round(window.visualViewport?.width ?? window.innerWidth), h: Math.round(window.visualViewport?.height ?? window.innerHeight) });
+  const [v, setV] = useState(medir);
   useEffect(() => {
-    const on = () => setV({ w: window.innerWidth, h: window.innerHeight });
+    const on = () => setV(medir());
+    const tarde = () => { on(); window.setTimeout(on, 350); }; // a rotação termina depois do evento
     window.addEventListener('resize', on);
-    window.addEventListener('orientationchange', on);
-    return () => { window.removeEventListener('resize', on); window.removeEventListener('orientationchange', on); };
+    window.addEventListener('orientationchange', tarde);
+    document.addEventListener('fullscreenchange', tarde);
+    window.visualViewport?.addEventListener('resize', on);
+    return () => {
+      window.removeEventListener('resize', on);
+      window.removeEventListener('orientationchange', tarde);
+      document.removeEventListener('fullscreenchange', tarde);
+      window.visualViewport?.removeEventListener('resize', on);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return v;
 }
@@ -98,7 +110,7 @@ function Botao({ ativo, onClick, children, rotulo }: { ativo?: boolean; onClick:
       onClick={onClick}
       aria-pressed={ativo}
       aria-label={rotulo}
-      className={`flex min-h-[34px] flex-col items-center justify-center border px-1 py-1 font-prova text-[11px] leading-tight ${ativo ? 'border-papel bg-rua text-asfalto-27' : 'border-linha bg-concreto text-papel'}`}
+      className={`flex min-h-[34px] min-w-0 flex-col items-center justify-center overflow-hidden border px-0.5 py-1 font-prova text-[clamp(9px,2.6vh,11px)] leading-tight [overflow-wrap:anywhere] ${ativo ? 'border-papel bg-rua text-asfalto-27' : 'border-linha bg-concreto text-papel'}`}
     >
       {children}
     </button>
@@ -114,7 +126,19 @@ export function PartidaVivaPalco(p: Props) {
   const velRef = useRef(velocidade);
   velRef.current = velocidade;
   const palcoRef = useRef<PalcoPixi | null>(null);
-  const [painel, setPainel] = useState<'tatica' | 'banco' | 'camera' | null>(null);
+  const [painel, setPainel] = useState<'tatica' | 'banco' | 'camera' | 'telaCheia' | null>(null);
+  // TELA CHEIA (pedido do fundador 10/10: deitado, as barras do navegador achatavam o campo).
+  const [telaCheia, setTelaCheia] = useState(semBarras);
+  useEffect(() => {
+    const on = () => setTelaCheia(semBarras());
+    document.addEventListener('fullscreenchange', on);
+    return () => document.removeEventListener('fullscreenchange', on);
+  }, []);
+  const ofereceTelaCheia = !telaCheia && (podeTelaCheia() || ehIOS());
+  const pedirTelaCheia = () => {
+    if (podeTelaCheia()) { void deitarTela(); return; }
+    setPainel(painel === 'telaCheia' ? null : 'telaCheia'); // iPhone: só instalando na tela de início
+  };
   const noFilme = !!p.roteiro;
   const montagemRef = useRef<{ id: number; comEntrada: boolean } | null>(null);
   const apitoRef = useRef(p.onApito);
@@ -486,6 +510,17 @@ export function PartidaVivaPalco(p: Props) {
             <PainelDecisao decisao={decisao} protagonista={protagonista} onResponder={canal.responder} />
           ) : gol && mostrado.golVisto === gol.chave ? (
             <LambeDoGol quadro={quadro ? { ...quadro, placarCasa: mostrado.placarCasa, placarFora: mostrado.placarFora } : quadro} autor={autorDoGol} nome={gol.nome} />
+          ) : painel === 'telaCheia' ? (
+            <div className="flex min-h-0 flex-col gap-2 overflow-y-auto border-t border-linha pt-2 font-prova text-[11px] leading-snug text-papel">
+              <span className="self-start -rotate-2 bg-rua px-1.5 font-impact text-[14px] text-asfalto-27">{L('Tela cheia', 'Full screen')}</span>
+              <p>{L('No iPhone, o Safari não deixa site nenhum esconder as barras. O jogo instalado abre sem elas:', 'On iPhone, Safari never hides its bars for websites. The installed game opens without them:')}</p>
+              <ol className="flex flex-col gap-1">
+                <li><b className="text-rua">1</b> {L('Toque em Compartilhar', 'Tap Share')} <span aria-hidden>⎙</span></li>
+                <li><b className="text-rua">2</b> {L('Adicionar à Tela de Início', 'Add to Home Screen')}</li>
+                <li><b className="text-rua">3</b> {L('Abra o OLEFOOT pelo ícone', 'Open OLEFOOT from the icon')}</li>
+              </ol>
+              <button type="button" onClick={() => setPainel(null)} className="self-start border border-linha bg-concreto px-2 py-1 text-papel">{L('Entendi', 'Got it')}</button>
+            </div>
           ) : painel === 'camera' ? (
             <PainelCamera
               fichas={coreoRef.current?.corpos.map((c) => c.f) ?? fichas}
@@ -571,7 +606,7 @@ export function PartidaVivaPalco(p: Props) {
         </div>
 
         {/* TRILHO DIREITO — comandos de assistir */}
-        <aside className="flex flex-col items-stretch justify-center gap-1 border-l border-linha p-1.5 pr-[max(0.375rem,env(safe-area-inset-right))]">
+        <aside className="flex min-h-0 flex-col items-stretch gap-1 overflow-y-auto border-l border-linha p-1.5 pr-[max(0.375rem,env(safe-area-inset-right))] [justify-content:safe_center]">
           {!noFilme && (
             <Botao onClick={() => p.onModo(modo === 'lances' ? 'completa' : 'lances')} rotulo={L('Modo de assistir', 'Viewing mode')}>
               {modo === 'lances' ? L('Lances', 'Plays') : L('Completa', 'Full')}
@@ -596,6 +631,12 @@ export function PartidaVivaPalco(p: Props) {
           {quadro?.pausado !== undefined && !noFilme && (
             <Botao ativo={pausado} onClick={() => canal.responder(pausado ? 'retomar' : 'pausar')} rotulo={L('Prancheta', 'Tactics board')}>
               {pausado ? L('▶ Jogo', '▶ Play') : L('Prancheta', 'Board')}
+            </Botao>
+          )}
+          {ofereceTelaCheia && (
+            <Botao ativo={painel === 'telaCheia'} onClick={pedirTelaCheia} rotulo={L('Tela cheia', 'Full screen')}>
+              <span aria-hidden className="text-[14px] leading-none">⛶</span>
+              {L('Tela', 'Full')}
             </Botao>
           )}
           <Botao ativo={som} onClick={() => { if (som) { desligarSom(); setSom(false); } else setSom(ligarSom()); }} rotulo={L('Som', 'Sound')}>

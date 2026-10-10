@@ -24,6 +24,25 @@ export async function deitarTela(): Promise<void> {
   }
 }
 
+/** Já sem barras do navegador: tela cheia (Android) ou aberto da tela de início (app instalado). */
+export function semBarras(): boolean {
+  if (typeof window === 'undefined') return false;
+  const nav = navigator as Navigator & { standalone?: boolean };
+  return !!document.fullscreenElement || nav.standalone === true
+    || window.matchMedia?.('(display-mode: fullscreen)').matches || window.matchMedia?.('(display-mode: standalone)').matches;
+}
+
+/** O navegador deixa a página entrar em tela cheia (Android/desktop sim; iPhone não). */
+export function podeTelaCheia(): boolean {
+  return typeof document !== 'undefined' && !!document.fullscreenEnabled && !!document.documentElement.requestFullscreen;
+}
+
+/** iPhone/iPad: tela cheia só instalando na tela de início. */
+export function ehIOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1);
+}
+
 export async function levantarTela(): Promise<void> {
   try {
     screen.orientation?.unlock?.();
