@@ -17,7 +17,8 @@ import { FORMATION_BASES } from '@/match-engine/formations/catalog';
 import type { FormationSchemeId } from '@/match-engine/types';
 import type { MatchPlanEvent } from '@/match/quickPlanTypes';
 import { C, DT, L, esquema, lim, moverCorpo, semente, type Corpo, type Voo } from './fisica';
-import { ajustarPorEstilo, alvoNaForma, CLASSES_QUE_PRESSIONAM, formaDe, intencaoDoTime, profundidade, type Forma } from './forma';
+import { L as T } from '@/i18n/L';
+import { ajustarPorEstilo, ajustarPorGrito, alvoNaForma, CLASSES_QUE_PRESSIONAM, formaDe, intencaoDoTime, profundidade, type Forma } from './forma';
 import { encenarGol, encenarLance, entrarEmCampo } from './encenacao';
 import type { EventoDeSom } from './som';
 import type { Ficha, QuadroAoVivo } from './tipos';
@@ -58,6 +59,9 @@ export class Coreografo {
   momento = 50;
   /** Estilo do dock da Rápida (casa) — a forma reage na hora. */
   estiloCasa: string | undefined;
+  /** LEGACY (Fase 4b): grito valendo e ordens individuais da casa. */
+  gritoCasa: string | undefined;
+  ordens: Record<string, string> = {};
   rnd: () => number;
   t = 0;
   fila: Array<{ em: number; faz: () => void }> = [];
@@ -117,6 +121,7 @@ export class Coreografo {
   receber(q: QuadroAoVivo): void {
     this.momento = q.momento;
     this.estiloCasa = q.estilo;
+    this.ouvirComandos(q);
     if (this.t < this.entradaAte) return; // a entrada em campo termina primeiro
     if (q.gol && q.gol.chave !== this.ultimoGol) {
       this.ultimoGol = q.gol.chave;
@@ -133,6 +138,25 @@ export class Coreografo {
       if (q.momento >= 54) this.posse = 'home';
       else if (q.momento <= 46) this.posse = 'away';
     }
+  }
+
+  /** Grito novo → fita no meio do time; ordem nova → fita presa no jogador. */
+  private ouvirComandos(q: QuadroAoVivo): void {
+    const grito = q.grito?.tipo;
+    if (grito && grito !== this.gritoCasa) {
+      const casa = this.corpos.filter((c) => c.f.lado === 'home');
+      const cx = casa.reduce((s, c) => s + c.x, 0) / Math.max(1, casa.length);
+      const texto = { incentivar: T('VAMO!', 'COME ON!'), cobrar: T('APERTA!', 'PRESS!'), acalmar: T('CALMA!', 'EASY!') }[grito] ?? '';
+      if (texto) this.fita(texto, cx, L / 2, 2.2, true);
+    }
+    this.gritoCasa = grito;
+    for (const [id, ordem] of Object.entries(q.ordens ?? {})) {
+      if (this.ordens[id] === ordem) continue;
+      const c = this.corpos.find((k) => k.f.id === id);
+      const texto = { segurar: T('SEGURA', 'HOLD'), atacar_espaco: T('ESPAÇO', 'SPACE'), marcar: T('MARCA', 'MARK') }[ordem] ?? '';
+      if (c && texto) this.fita(texto, c.x, c.z, 1.8, false, c);
+    }
+    this.ordens = { ...(q.ordens ?? {}) };
   }
 
   passo(): void {
@@ -216,7 +240,7 @@ export class Coreografo {
         dominio: lado === 'home' ? this.momento : 100 - this.momento,
       });
       const base = formaDe(intencao, this.esquemas[lado]);
-      this.forma[lado] = lado === 'home' ? ajustarPorEstilo(base, this.estiloCasa, this.posse === lado) : base;
+      this.forma[lado] = lado === 'home' ? ajustarPorGrito(ajustarPorEstilo(base, this.estiloCasa, this.posse === lado), this.gritoCasa, this.posse === lado) : base;
     }
     // Pressão no portador: o mais perto sai (se a forma pede, ou se é de classe que pressiona).
     this.pressionando.clear();
@@ -252,6 +276,7 @@ export class Coreografo {
       bola: this.bola,
       comBola: this.posse === c.f.lado,
       classe: c.f.classe,
+      ordem: c.f.lado === 'home' ? this.ordens[c.f.id] : undefined,
       oscilacao: { x: Math.sin(this.t * 0.7 + c.ancora.z) * 0.6, z: Math.cos(this.t * 0.5 + c.ancora.x) * 0.5 },
     });
   }

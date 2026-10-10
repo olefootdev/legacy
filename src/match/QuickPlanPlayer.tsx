@@ -190,7 +190,16 @@ interface Props {
   /** PARTIDA VIVA (Fase 5) — no gol, espera o campo terminar replay + giz
    *  (resposta 'seguir'); trava de segurança de 20 s. Só ritmo de exibição. */
   golEsperaCampo?: boolean;
+  /** LEGACY (Fase 4b) — grito/ordem dado no campo: o pai refaz o plano a partir
+   *  de minuto+3 no servidor; o player emenda o futuro (o passado não muda). */
+  pedirReplan?: (cmd: ComandoSemMinuto, ctx: QuickPlanHalftimeContext & { minuto: number }) => Promise<MatchPlan | null>;
 }
+
+export type ComandoSemMinuto =
+  | { tipo: 'incentivar' | 'cobrar' | 'acalmar' }
+  | { tipo: 'ordem'; ordem: 'segurar' | 'atacar_espaco' | 'marcar'; jogador: string };
+const RECARGA_GRITO_MIN = 15;
+const DURACAO_GRITO_MIN = 10;
 
 /** Narração rica vinda do backend (Sonnet) — chaves por beat_id e por minuto. */
 export interface QuickNarrationOverride {
@@ -423,7 +432,7 @@ const LEADIN_REACT_MS = 2800;
 /** Quanto o relógio "segura" num lance pra dar tempo de ler. */
 const HOLD_MS: Record<MatchEventTier, number> = { epic: 2400, big: 1700, normal: 950, minor: 600 };
 
-export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, secondHalfLineup, narration, buildShootout, agentTraits, onAoVivo, segurarLance, relogioMs, registrarResposta, golEsperaCampo }: Props) {
+export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, secondHalfLineup, narration, buildShootout, agentTraits, onAoVivo, segurarLance, relogioMs, registrarResposta, golEsperaCampo, pedirReplan }: Props) {
   void speedMultiplier;
   const [phase, setPhase] = useState<PlayerPhase>('playing');
   const [minute, setMinute] = useState(0);
@@ -1247,6 +1256,56 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     scheduleNext(350);
   };
 
+  // LEGACY (Fase 4b) — gritos e ordens do manager no campo.
+  const [gritoAtivo, setGritoAtivo] = useState<{ tipo: string; ate: number } | null>(null);
+  const gritoLivreEmRef = useRef(0);
+  const [ordens, setOrdens] = useState<Record<string, string>>({});
+  /** Emenda o futuro de um replan de comando: o que já passou (e o que falta até
+   *  o minuto inicial dele) fica; daí em diante vale o plano novo. */
+  const replanSeqRef = useRef(0);
+  const emendarReplan = (novo: MatchPlan) => {
+    // Replan do 1º tempo que chegou depois do intervalo: o do intervalo já manda.
+    if ((novo.start_minute ?? 0) <= 45 && minuteRef.current >= 45) return;
+    const inicio = Math.max(novo.start_minute ?? 0, minuteRef.current + 1);
+    const jaVistos = eventsRef.current.slice(0, eventIdxRef.current);
+    const ateInicio = eventsRef.current.slice(eventIdxRef.current).filter((e) => e.minute < inicio);
+    eventsRef.current = [...jaVistos, ...ateInicio, ...novo.events.filter((e) => e.minute >= inicio)];
+    eventIdxRef.current = jaVistos.length;
+    beatsQueueRef.current = [
+      ...beatsQueueRef.current.filter((b) => b.minute < inicio),
+      ...(novo.analyst_beats ?? []).filter((b) => b.minute >= inicio),
+    ];
+    const ini = novo.start_minute ?? inicio;
+    momentumRef.current = [...momentumRef.current.slice(0, ini - 1), ...novo.momentum_curve];
+  };
+  const comandar = (cmd: ComandoSemMinuto) => {
+    const m = minuteRef.current;
+    if (cmd.tipo !== 'ordem') {
+      if (m < gritoLivreEmRef.current) return; // recarga (o servidor também confere)
+      gritoLivreEmRef.current = m + RECARGA_GRITO_MIN;
+      setGritoAtivo({ tipo: cmd.tipo, ate: m + DURACAO_GRITO_MIN });
+      const frase = { incentivar: L('incentiva o time — "VAMO!"', 'fires the team up — "COME ON!"'),
+        cobrar: L('cobra o time — "APERTA A SAÍDA DELES!"', 'demands more — "PRESS THEM!"'),
+        acalmar: L('acalma o time — "CALMA, TOCA A BOLA!"', 'calms the team — "EASY, KEEP IT!"') }[cmd.tipo];
+      pushFeed({ id: `grito-${m}`, minute: m, kind: 'decision', text: L(`📣 O técnico ${frase}`, `📣 The coach ${frase}`) });
+    } else {
+      setOrdens((o) => ({ ...o, [cmd.jogador]: cmd.ordem }));
+      const nome = [...field, ...benchPool].find((c) => c.id === cmd.jogador)?.name ?? '';
+      const o = { segurar: L('segura a posição', 'holds position'), atacar_espaco: L('ataca o espaço', 'attacks the space'), marcar: L('marca de perto', 'marks tight') }[cmd.ordem];
+      pushFeed({ id: `ordem-${m}-${cmd.jogador}`, minute: m, kind: 'decision', text: L(`🗣️ Ordem: ${nome} ${o}.`, `🗣️ Order: ${nome} ${o}.`) });
+    }
+    if (!pedirReplan) return;
+    const ctx = {
+      ledger: [...ledgerRef.current], homeScore: scoreRef.current.home, awayScore: scoreRef.current.away,
+      momentumEnd: momentumRef.current[Math.max(0, m - 1)] ?? 50, ...cardsRef.current, subsUsed: subsUsedRef.current, minuto: m,
+    };
+    const seq = ++replanSeqRef.current; // só vale a resposta do comando mais recente
+    void pedirReplan(cmd, ctx)
+      .then((novo) => { if (novo && Array.isArray(novo.events) && seq === replanSeqRef.current) emendarReplan(novo); })
+      .catch(() => undefined);
+  };
+  useEffect(() => { if (gritoAtivo && minute >= gritoAtivo.ate) setGritoAtivo(null); }, [minute, gritoAtivo]);
+
   // PARTIDA VIVA — emite o quadro pro palco em campo (só quando alguém assina).
   const onAoVivoRef = useRef(onAoVivo);
   onAoVivoRef.current = onAoVivo;
@@ -1286,6 +1345,9 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     emitir({
       minuto: minute,
       estilo: style,
+      grito: gritoAtivo,
+      gritoLivreEm: pedirReplan ? gritoLivreEmRef.current : undefined,
+      ordens: pedirReplan ? ordens : undefined,
       decisao,
       fase: phase,
       placarCasa: homeScore,
@@ -1295,12 +1357,24 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       gol: celebration ? { chave: celebration.key, nome: celebration.name, lado: celebration.side, actorId: golDoFeed?.actorId, cadeia: cadeiaDoGol, xg: eventoDoGol?.xg } : null,
       narracao: [...feed].reverse().slice(0, 6).map((f) => ({ id: f.id, minuto: f.minute, texto: f.text })),
     });
-  }, [minute, phase, homeScore, awayScore, highlight, celebration, feed, style, activeBeat, leadIn, leadInReactable, clutch, forced, benchPool]);
+  }, [minute, phase, homeScore, awayScore, highlight, celebration, feed, style, activeBeat, leadIn, leadInReactable, clutch, forced, benchPool, gritoAtivo, ordens]);
 
   // PARTIDA VIVA (Fase 4) — respostas vindas do campo caem nas mesmas funções dos botões.
   const responderRef = useRef<(id: string) => void>(() => {});
   responderRef.current = (id: string) => {
     if (id === 'seguir') { if (phase === 'celebration') dismissCelebration(); return; }
+    // LEGACY (Fase 4b): 'grito:cobrar' · 'ordem:<jogador>:<ordem>'
+    if (id.startsWith('grito:')) {
+      const g = id.slice('grito:'.length);
+      if (g === 'incentivar' || g === 'cobrar' || g === 'acalmar') comandar({ tipo: g });
+      return;
+    }
+    if (id.startsWith('ordem:')) {
+      const resto = id.slice('ordem:'.length), k = resto.lastIndexOf(':');
+      const jogador = resto.slice(0, k), ordem = resto.slice(k + 1);
+      if (jogador && (ordem === 'segurar' || ordem === 'atacar_espaco' || ordem === 'marcar')) comandar({ tipo: 'ordem', ordem, jogador });
+      return;
+    }
     if (id.startsWith('estilo:')) {
       const nivel = id.slice('estilo:'.length) as TacticalIntensityLevel;
       if (nivel in TACTICAL_INTENSITY_PRESETS) changeStyle(nivel);

@@ -82,6 +82,11 @@ export function moralTilt(moral: number | undefined): { conf: number; men: numbe
   return { conf: Math.round(delta * 5), men: Math.round(delta * 2) };
 }
 
+/** LEGACY (Fase 4b): um grito (10', recarga 15') ou uma ordem individual (até nova ordem). */
+export type ComandoAoVivo =
+  | { minuto: number; tipo: 'incentivar' | 'cobrar' | 'acalmar' }
+  | { minuto: number; tipo: 'ordem'; ordem: 'segurar' | 'atacar_espaco' | 'marcar'; jogador: string };
+
 export interface FetchQuickPlanInput {
   seed: string;
   homeShort: string;
@@ -91,8 +96,14 @@ export interface FetchQuickPlanInput {
   intensity?: 'defensive' | 'balanced' | 'offensive';
   homeLineup: QuickPlanPlayerPayload[];
   awayLineup: QuickPlanPlayerPayload[];
-  /** 'second_half' = replan dos minutos 46-90 com o ledger de decisões (Fase A). */
-  mode?: 'full' | 'second_half';
+  /** 'second_half' = replan dos minutos 46-90 com o ledger de decisões (Fase A).
+   *  'from_minute' = replan do LEGACY depois de um grito/ordem (Fase 4b). */
+  mode?: 'full' | 'second_half' | 'from_minute';
+  /** LEGACY: minuto em que o replan começa + estado naquele minuto. */
+  fromMinute?: number;
+  estado?: QuickPlanFirstHalfState;
+  /** LEGACY: todos os gritos e ordens até agora (o Python valida e aplica). */
+  comandos?: ComandoAoVivo[];
   /** Obrigatório quando mode='second_half': estado real do 1º tempo. */
   firstHalf?: QuickPlanFirstHalfState;
   /** Ledger de decisões dos analyst beats — pesos calculados pelo Python, ecoados de volta. */
@@ -129,6 +140,8 @@ function corpoDoMotor(input: FetchQuickPlanInput): Record<string, unknown> {
     },
     mode: input.mode ?? 'full',
     first_half: input.firstHalf,
+    ...(input.mode === 'from_minute' ? { from_minute: input.fromMinute, estado: input.estado } : {}),
+    ...(input.comandos?.length ? { comandos: input.comandos } : {}),
     decisions: input.decisions,
     is_derby: input.isDerby === true,
     ...(input.fantasma ? { fantasma: true } : {}),

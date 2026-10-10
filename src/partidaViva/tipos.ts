@@ -30,6 +30,10 @@ export interface QuadroAoVivo {
   estilo?: string;
   /** Decisão em aberto que o manager resolve SEM sair do campo (Fase 4). */
   decisao?: DecisaoNoCampo | null;
+  /** LEGACY (Fase 4b): grito valendo (até o minuto `ate`), quando pode gritar de novo, ordens vigentes. */
+  grito?: { tipo: string; ate: number } | null;
+  gritoLivreEm?: number;
+  ordens?: Record<string, string>;
 }
 
 /**

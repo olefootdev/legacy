@@ -437,6 +437,25 @@ Cada fase termina com **algo que o fundador vê rodando no celular, a partir do 
     (não só quem assiste em campo) e pede estudo de balanceamento. Fica pra **Fase 4b**, junto com o que
     depende dele: gritos (moral/intensidade), ordens individuais ("segura", "ataca o espaço"), substituição
     arrastando do banco e a prancheta com pausa.
+- ✅ **Fase 4b feita em 09/10 — comandos que mudam o RESULTADO (só no LEGACY).**
+  - **Gritos** (Tática → Grito): *Incentivar* (+ímpeto, cansa), *Cobrar* (aperta a saída, mais falta),
+    *Acalmar* (toca a bola, acelera menos). Valem 10', um a cada 15' (recarga também no servidor).
+    Viram ajuste TEMPORÁRIO nos eixos do DNA da casa que o motor já usa (teto ±0,15) —
+    `server/smartfield/comandos_ao_vivo.py`. Nada de mecânica nova.
+  - **Ordens individuais** (toque na ficha da casa): *Segurar posição*, *Atacar o espaço*, *Marcar de perto* —
+    ±4 em atributos, sempre a partir da base do jogador (trocar de ordem não acumula).
+  - **Camada 1 (na hora):** fita no campo ("APERTA!", "ESPAÇO" presa no jogador), `ajustarPorGrito`
+    na forma e a ordem por cima da classe em `alvoNaForma`.
+  - **Camada 2 (resultado):** `mode: 'from_minute'` no servidor, começando em **minuto+3** (o passado
+    e o que já estava a caminho não mudam). No 1º tempo nenhum replan começa depois do 45' — o do
+    intervalo leva os comandos. Só vale a resposta do comando mais recente. A Partida Rápida comum
+    não muda: `comandos` só existem quando o LEGACY pede.
+  - **Custódia:** cada replan entra em `planos` na ordem de emissão; `lancesDaPartida` costura do
+    `minutoInicial` de cada um em diante (15 testes em `runCustodiaSelfTest`).
+  - **Estudo de balanceamento** (`estudo_comandos.py --n 600`, portão: nada passa de +6 pp, replan vazio ≈ 0,
+    cobrar custa cartão) — vitória sem comando 45,8%: replan vazio +0,3 · incentivar −0,3 · cobrar −0,2
+    (cartões 0,71→0,84) · acalmar −1,8 · esperto +2,0 · atacar o espaço −4,2 · segurar −3,2 · tudo +0,7.
+    Comando é ESCOLHA com custo, não atalho. Ficam pra depois: substituição arrastando do banco e prancheta.
 
 ### Fase 5 — Vivo e bonito (~2 semanas)
 - **Som reativo** (Web Audio), **Rive** nas celebrações, ícones de emoção, skills com nome no campo.

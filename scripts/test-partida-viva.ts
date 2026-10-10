@@ -15,7 +15,7 @@ import { Coreografo, DT } from '../src/partidaViva/coreografo';
 import { montarFichas } from '../src/partidaViva/escalacao';
 import type { QuadroAoVivo } from '../src/partidaViva/tipos';
 import type { MatchPlanEvent } from '../src/match/quickPlanTypes';
-import { ajustarPorEstilo, alvoNaForma, formaDe, intencaoDoTime } from '../src/partidaViva/forma';
+import { ajustarPorEstilo, ajustarPorGrito, alvoNaForma, formaDe, intencaoDoTime } from '../src/partidaViva/forma';
 import { pontosDoGiz, quadroDoReplay } from '../src/partidaViva/filme';
 
 let falhas = 0;
@@ -244,6 +244,35 @@ confere(a.hist.some((v, i) => v !== outra.hist[i]), 'outra seed → outro filme'
   const giz = pontosDoGiz(cad, fichas);
   confere(giz[0]!.numero === 1 && giz[giz.length - 1]!.gol && giz.filter((p) => p.numero != null).length === 4,
     `jogada a giz: ${giz.filter((p) => p.numero != null).length} toques numerados e termina no GOL`);
+}
+
+// ── Fase 4b: gritos e ordens — o time reage NA HORA ────────────────────────
+{
+  const base = formaDe(intencaoDoTime({ comBola: false, profBola: 0.5, emTransicao: false, ultimoLanceChute: false, dominio: 50 }), '4-3-3');
+  const cobra = ajustarPorGrito(base, 'cobrar', false);
+  const calma = ajustarPorGrito(base, 'acalmar', false);
+  confere(cobra.pressao > base.pressao + 0.2 && cobra.alturaLinha > base.alturaLinha, 'grito "cobrar": o time sobe e aperta');
+  confere(calma.compactacao > base.compactacao && calma.alturaLinha < base.alturaLinha, 'grito "acalmar": o time recua e fecha');
+  const args = { lado: 'home' as const, ancoraProf: 0.62, ancoraZ: 34, centroProf: 0.45, forma: base, bola: { x: 80, z: 34 }, comBola: true, oscilacao: { x: 0, z: 0 } };
+  const livre = alvoNaForma(args), espaco = alvoNaForma({ ...args, ordem: 'atacar_espaco' }), segura = alvoNaForma({ ...args, ordem: 'segurar' });
+  confere(espaco.x > livre.x + 4, `ordem "atacar o espaço": avança (${livre.x.toFixed(1)} → ${espaco.x.toFixed(1)} m)`);
+  confere(segura.x <= livre.x && segura.x <= 0.62 * 105 + 1, `ordem "segurar": não passa da posição (${segura.x.toFixed(1)} m)`);
+
+  const c = new Coreografo(fichas, '4-3-3', '4-3-3', 'grito');
+  for (let i = 0; i < 60; i++) c.passo(); // entrada
+  c.receber(quadro(30));
+  for (let i = 0; i < 10; i++) c.passo();
+  c.receber(quadro(31, { grito: { tipo: 'cobrar', ate: 41 }, gritoLivreEm: 46, ordens: { 'home-9': 'atacar_espaco' } }));
+  const fitas = new Set<string>();
+  for (let i = 0; i < 6; i++) { c.passo(); c.quadro(1).fitas.forEach((f) => fitas.add(f.texto)); }
+  confere(fitas.has('APERTA!') || fitas.has('PRESS!'), `grito vira fita no campo (${[...fitas].join(', ')})`);
+  confere(fitas.has('ESPAÇO') || fitas.has('SPACE'), 'ordem vira fita presa no jogador');
+  const fitas2 = new Set<string>();
+  c.receber(quadro(32, { grito: { tipo: 'cobrar', ate: 41 }, gritoLivreEm: 46, ordens: { 'home-9': 'atacar_espaco' } }));
+  for (let i = 0; i < 30; i++) { c.passo(); }
+  c.receber(quadro(33, { grito: { tipo: 'cobrar', ate: 41 }, gritoLivreEm: 46, ordens: { 'home-9': 'atacar_espaco' } }));
+  for (let i = 0; i < 3; i++) { c.passo(); c.quadro(1).fitas.forEach((f) => fitas2.add(f.texto)); }
+  confere(!fitas2.has('APERTA!') && !fitas2.has('PRESS!'), 'o mesmo grito não repete a fita a cada quadro');
 }
 
 if (falhas) { console.error(`\n${falhas} falha(s)`); process.exit(1); }

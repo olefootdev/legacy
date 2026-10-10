@@ -72,9 +72,25 @@ export function PainelDecisao({ decisao, protagonista, onResponder }: {
   );
 }
 
-export function PainelTatica({ atual, onEscolher, onFechar }: { atual?: string; onEscolher: (id: string) => void; onFechar: () => void }) {
+export const GRITOS: { id: string; rotulo: string; efeito: string }[] = [
+  { id: 'incentivar', rotulo: L('Incentivar', 'Fire up'), efeito: L('mais ímpeto · cansa', 'more drive · tires') },
+  { id: 'cobrar', rotulo: L('Cobrar', 'Demand'), efeito: L('aperta a saída · mais falta', 'presses · more fouls') },
+  { id: 'acalmar', rotulo: L('Acalmar', 'Calm down'), efeito: L('toca a bola · acelera menos', 'keeps the ball · slower') },
+];
+
+export const ORDENS: { id: string; rotulo: string }[] = [
+  { id: 'segurar', rotulo: L('Segurar posição', 'Hold position') },
+  { id: 'atacar_espaco', rotulo: L('Atacar o espaço', 'Attack the space') },
+  { id: 'marcar', rotulo: L('Marcar de perto', 'Mark tight') },
+];
+
+export function PainelTatica({ atual, onEscolher, onFechar, minuto = 0, grito, gritoLivreEm = 0, onGritar }: {
+  atual?: string; onEscolher: (id: string) => void; onFechar: () => void;
+  minuto?: number; grito?: { tipo: string; ate: number } | null; gritoLivreEm?: number; onGritar?: (id: string) => void;
+}) {
+  const falta = Math.max(0, gritoLivreEm - minuto);
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-1.5" role="group" aria-label={L('Estilo de jogo', 'Playing style')}>
+    <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto" role="group" aria-label={L('Estilo de jogo', 'Playing style')}>
       <div className="flex items-center justify-between">
         <span className="bg-cal px-1.5 py-0.5 font-prova text-[11px] text-asfalto-27">{L('Estilo', 'Style')}</span>
         <button type="button" onClick={onFechar} aria-label={L('Fechar', 'Close')} className="px-1 text-mudo">✕</button>
@@ -91,6 +107,27 @@ export function PainelTatica({ atual, onEscolher, onFechar }: { atual?: string; 
         </button>
       ))}
       <p className="text-[11px] leading-snug text-mudo">{L('O time muda de forma na hora; o resultado sente nos próximos lances.', 'The team reshapes instantly; the result feels it in the next plays.')}</p>
+      {onGritar && (
+        <>
+          <span className="mt-1 self-start bg-cal px-1.5 py-0.5 font-prova text-[11px] text-asfalto-27">
+            {L('Grito', 'Shout')}{falta > 0 ? ` · ${falta}′` : ''}
+          </span>
+          {GRITOS.map((g) => (
+            <button
+              key={g.id}
+              type="button"
+              disabled={falta > 0}
+              aria-pressed={grito?.tipo === g.id}
+              onClick={() => onGritar(g.id)}
+              className={`${BOTAO} ${grito?.tipo === g.id ? 'border-papel bg-rua text-asfalto-27' : falta > 0 ? 'border-linha bg-concreto text-fio' : 'border-linha bg-concreto text-papel hover:border-papel'}`}
+            >
+              {g.rotulo}
+              <span className={`block ${grito?.tipo === g.id ? '' : 'text-mudo'}`}>{g.efeito}</span>
+            </button>
+          ))}
+          <p className="text-[11px] leading-snug text-mudo">{L('Vale 10 minutos. Um grito a cada 15.', 'Lasts 10 minutes. One shout every 15.')}</p>
+        </>
+      )}
     </div>
   );
 }
@@ -108,7 +145,7 @@ function Rosto({ f, tam }: { f: Ficha; tam: number }) {
   );
 }
 
-export function CartaoFicha({ f, onFechar }: { f: Ficha; onFechar: () => void }) {
+export function CartaoFicha({ f, onFechar, ordem, onOrdem }: { f: Ficha; onFechar: () => void; ordem?: string; onOrdem?: (id: string) => void }) {
   const folego = Math.max(0, 100 - f.fadiga);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-1.5">
@@ -127,7 +164,23 @@ export function CartaoFicha({ f, onFechar }: { f: Ficha; onFechar: () => void })
         <div className="mb-1 text-suave">{L('Fôlego', 'Stamina')} {folego}%</div>
         <div className="h-1 bg-linha"><div className={`h-1 ${folego > 50 ? 'bg-papel' : 'bg-[#E0703A]'}`} style={{ width: `${folego}%` }} /></div>
       </div>
-      <p className="text-[11px] leading-snug text-fio">{f.lado === 'home' ? L('Ordens individuais chegam numa próxima fase.', 'Individual orders come in a later phase.') : L('Adversário', 'Opponent')}</p>
+      {f.lado === 'home' && onOrdem ? (
+        <div className="flex flex-col gap-1" role="group" aria-label={L('Ordem individual', 'Individual order')}>
+          {ORDENS.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              aria-pressed={ordem === o.id}
+              onClick={() => onOrdem(o.id)}
+              className={`${BOTAO} ${ordem === o.id ? 'border-papel bg-rua text-asfalto-27' : 'border-linha bg-concreto text-papel hover:border-papel'}`}
+            >
+              {o.rotulo}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[11px] leading-snug text-fio">{f.lado === 'home' ? '' : L('Adversário', 'Opponent')}</p>
+      )}
     </div>
   );
 }

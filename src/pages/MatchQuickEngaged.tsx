@@ -31,7 +31,7 @@ import { relatarPartidaSombra } from '@/smartProfile/sombra';
 import { getEffectiveFatigue } from '@/systems/fatigue';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
-import { fetchQuickPlan, applyLegacyBoostToLineup } from '@/match/quickPlanClient';
+import { fetchQuickPlan, applyLegacyBoostToLineup, type ComandoAoVivo } from '@/match/quickPlanClient';
 import { fetchQuickNarration, type QuickNarration } from '@/match/quickNarrateClient';
 import { fetchOpponentRoster } from '@/match/opponentRosterClient';
 import { LIGA_OLE_ROUNDS } from '@/match/ligaOle/ligaOleModel';
@@ -41,6 +41,7 @@ import type { MatchPlan } from '@/match/quickPlanTypes';
 import {
   QuickPlanPlayer,
   type QuickPlanHalftimeContext,
+  type ComandoSemMinuto,
   type QuickPlanPlayResult,
   matchRating,
   type PenaltyTaker,
@@ -504,6 +505,48 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
     });
   }, []);
 
+  // LEGACY (Fase 4b): grito/ordem no campo → o servidor refaz o plano a partir
+  // de minuto+3 (o passado não muda). Mesma entrada do replan do intervalo.
+  const comandosRef = useRef<ComandoAoVivo[]>([]);
+  const pedirReplan = useCallback(
+    async (
+      cmd: ComandoSemMinuto,
+      ctx: QuickPlanHalftimeContext & { minuto: number },
+    ): Promise<MatchPlan | null> => {
+      comandosRef.current = [...comandosRef.current, { ...cmd, minuto: ctx.minuto } as ComandoAoVivo];
+      const inicio = ctx.minuto + 3;
+      // 1º tempo: replan nunca começa depois do 45' — o do intervalo leva o comando.
+      if ((ctx.minuto <= 45 && inicio > 45) || inicio > 90) return null;
+      const homeLineup = applyLegacyBoostToLineup(
+        applyFormationToPayloads(homePlayersRef.current.map((p) => p.payload), formationRef.current),
+        homePlayersRef.current.map((p) => legacyLookup[p.id]).filter((b): b is { name: string; label: string; pct: number } => !!b),
+      );
+      const novo = await fetchQuickPlan({
+        seed: seedRef.current,
+        homeShort: club.shortName,
+        awayShort: opponent!.shortName,
+        homeStrength: baseStrengthRef.current.home,
+        awayStrength: baseStrengthRef.current.away,
+        intensity: intensityRef.current,
+        isDerby: isDerbyMatch,
+        homeDna: homeDnaRef.current,
+        homeLineup,
+        awayLineup: awayLineupRef.current,
+        mode: 'from_minute',
+        fromMinute: inicio,
+        estado: {
+          home_score: ctx.homeScore, away_score: ctx.awayScore, momentum_end: ctx.momentumEnd,
+          cards_home: ctx.cardsHome, cards_away: ctx.cardsAway, sent_off_home: ctx.sentOffHome, sent_off_away: ctx.sentOffAway,
+        },
+        decisions: ctx.ledger.map((d) => ({ beat_id: d.beat_id, choice_id: d.choice_id, channel: d.channel, target_side: d.target_side, weight: d.weight })),
+        comandos: comandosRef.current,
+      }).catch(() => null);
+      if (novo) planIdsRef.current = [...planIdsRef.current, novo.plano_id];
+      return novo;
+    },
+    [club.shortName, opponent, legacyLookup, isDerbyMatch],
+  );
+
   const resumeFromHalftime = useCallback(
     async (ht: HalftimeResult) => {
       const ctx = halftimeCtx;
@@ -539,6 +582,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
           homeLineup,
           awayLineup: awayLineupRef.current, // mesmo adversário do 1º tempo
           mode: 'second_half',
+          comandos: comandosRef.current, // gritos/ordens do Legacy seguem valendo no 2º tempo
           firstHalf: {
             home_score: ctx.homeScore,
             away_score: ctx.awayScore,
@@ -803,6 +847,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
             onAoVivo={canalRef.current.publicar}
             registrarResposta={canalRef.current.registrarResponder}
             golEsperaCampo={aoVivo}
+            pedirReplan={aoVivo ? pedirReplan : undefined}
             segurarLance={aoVivo ? (ev) => Math.round(msParaMostrar(ev.cadeia) / velVivo) : undefined}
             relogioMs={relogioVivo}
             initialFormation={formationRef.current}

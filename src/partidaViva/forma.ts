@@ -82,9 +82,11 @@ export function alvoNaForma(args: {
   bola: { x: number; z: number };
   comBola: boolean;
   classe?: string;
+  /** Ordem individual do manager (LEGACY, Fase 4b): segurar · atacar_espaco · marcar. */
+  ordem?: string;
   oscilacao: { x: number; z: number };
 }): { x: number; z: number } {
-  const { lado, ancoraProf, ancoraZ, centroProf, forma, bola, comBola, classe, oscilacao } = args;
+  const { lado, ancoraProf, ancoraZ, centroProf, forma, bola, comBola, classe, ordem, oscilacao } = args;
   const profBola = profundidade(lado, bola.x);
   // Altura do bloco: a linha do time + um empurrão da bola.
   const base = 0.12 + forma.alturaLinha * 0.62 + (profBola - 0.5) * 0.15;
@@ -104,6 +106,13 @@ export function alvoNaForma(args: {
     case 'meia_chegada':       if (comBola && profBola > 0.6) prof += 0.08; break;           // chega na área
     case 'box_to_box':         prof += (profBola - prof) * 0.25; break;                      // vai e volta com a bola
     case 'goleiro_libero':     break;
+  }
+
+  // ── A ORDEM do manager vale por cima da classe ───────────────────────────
+  switch (ordem) {
+    case 'segurar':       prof = Math.min(prof, ancoraProf + (comBola ? 0 : -0.04)); break;   // não passa da posição
+    case 'atacar_espaco': if (comBola && profBola > 0.3) prof += 0.12; break;                 // dispara nas costas
+    case 'marcar':        if (!comBola) { prof += (profBola - prof) * 0.3; z += (bola.z - z) * 0.35; } break; // cola na bola
   }
 
   // Ninguém se planta na pequena área sem lance: no máximo na altura do pênalti.
@@ -126,6 +135,20 @@ export function ajustarPorEstilo(f: Forma, estilo: string | undefined, comBola: 
     case 'counter': if (comBola) d.compactacao = -0.15; else d.alturaLinha = -0.1; break;
     case 'press': if (!comBola) { d.alturaLinha = 0.15; d.pressao = 0.35; } break;
     case 'attack': d.alturaLinha = 0.12; d.largura = 0.1; d.pressao = 0.1; break;
+  }
+  return { alturaLinha: u(f.alturaLinha + d.alturaLinha), largura: u(f.largura + d.largura), compactacao: u(f.compactacao + d.compactacao), pressao: u(f.pressao + d.pressao) };
+}
+
+/**
+ * Grito do manager, camada 1: o time reage NA HORA (a camada 2 — o resultado —
+ * vem do replan no servidor, `comandos_ao_vivo.py`).
+ */
+export function ajustarPorGrito(f: Forma, grito: string | undefined, comBola: boolean): Forma {
+  const d = { alturaLinha: 0, largura: 0, compactacao: 0, pressao: 0 };
+  switch (grito) {
+    case 'incentivar': d.alturaLinha = 0.07; if (comBola) d.largura = 0.05; break;
+    case 'cobrar': if (!comBola) { d.alturaLinha = 0.1; d.pressao = 0.3; } break;
+    case 'acalmar': d.compactacao = 0.1; d.alturaLinha = -0.05; d.pressao = -0.1; break;
   }
   return { alturaLinha: u(f.alturaLinha + d.alturaLinha), largura: u(f.largura + d.largura), compactacao: u(f.compactacao + d.compactacao), pressao: u(f.pressao + d.pressao) };
 }

@@ -245,9 +245,22 @@ export function PartidaVivaPalco(p: Props) {
           ) : gol ? (
             <LambeDoGol quadro={quadro} autor={autorDoGol} nome={gol.nome} />
           ) : painel === 'tatica' ? (
-            <PainelTatica atual={quadro?.estilo} onEscolher={(id) => canal.responder(`estilo:${id}`)} onFechar={() => setPainel(null)} />
+            <PainelTatica
+              atual={quadro?.estilo}
+              onEscolher={(id) => canal.responder(`estilo:${id}`)}
+              onFechar={() => setPainel(null)}
+              minuto={quadro?.minuto}
+              grito={quadro?.grito}
+              gritoLivreEm={quadro?.gritoLivreEm}
+              onGritar={quadro?.gritoLivreEm !== undefined ? (id) => canal.responder(`grito:${id}`) : undefined}
+            />
           ) : fichaSel ? (
-            <CartaoFicha f={fichaSel} onFechar={() => setSelecionada(null)} />
+            <CartaoFicha
+              f={fichaSel}
+              onFechar={() => setSelecionada(null)}
+              ordem={quadro?.ordens?.[fichaSel.id]}
+              onOrdem={quadro?.ordens ? (id) => canal.responder(`ordem:${fichaSel.id}:${id}`) : undefined}
+            />
           ) : (
             <Narracao quadro={quadro} />
           )}
