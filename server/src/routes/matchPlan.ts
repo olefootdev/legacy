@@ -21,6 +21,7 @@ import {
   type Conferencia, type FichaDoMotor,
 } from '../lib/smartProfile/plano.js';
 import { sincronizarFichas } from '../lib/smartProfile/sincronizar.js';
+import { classesDaPartida } from '../lib/smartProfile/classesDaPartida.js';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -43,6 +44,11 @@ interface QuickPlanPlayerInput {
   mentalidade?: number;
   fair_play?: number;
   fatigue?: number;
+  /** Partida Viva: especialistas — só a cadeia de lances lê (não mexem no placar). */
+  cabeceio?: number;
+  bola_parada?: number;
+  penalti?: number;
+  pe?: 'left' | 'right' | 'both';
 }
 
 interface QuickPlanTeamInput {
@@ -468,9 +474,11 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     // `impressaoDaEscalacao`.
     af: impressaoDaEscalacao([body.home_team.lineup, body.away_team.lineup]),
   });
+  // PARTIDA VIVA: a classe de cada jogador em campo viaja com o plano (só apresentação).
+  const classes = classesDaPartida([body.home_team.lineup, body.away_team.lineup]);
   const cached = simpleCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
-    return c.json({ ok: true, plan: cached.plan, cached: true, plano_id: await guardarCustodia(dono, body, cached.plan, conferencia) });
+    return c.json({ ok: true, plan: { ...(cached.plan as object), classes }, cached: true, plano_id: await guardarCustodia(dono, body, cached.plan, conferencia) });
   }
 
   const scriptPath = resolveScriptPath();
@@ -482,7 +490,7 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     const stdout = await runPython(scriptPath, JSON.stringify(body));
     const plan = JSON.parse(stdout);
     simpleCache.set(cacheKey, { ts: Date.now(), plan });
-    return c.json({ ok: true, plan, cached: false, plano_id: await guardarCustodia(dono, body, plan, conferencia) });
+    return c.json({ ok: true, plan: { ...plan, classes }, cached: false, plano_id: await guardarCustodia(dono, body, plan, conferencia) });
   } catch (e) {
     return c.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 502);
   }

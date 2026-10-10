@@ -50,6 +50,7 @@ from matchup_matrix import (
     channel_reason,
     compute_matchup_matrix,
 )
+from cadeia_lances import anexar_cadeias
 from analyst_beats import (
     BEAT_MINUTES_FULL,
     BEAT_MINUTES_SECOND_HALF,
@@ -91,6 +92,12 @@ def normalize_lineup(team: Dict[str, Any]) -> List[Dict[str, Any]]:
             "mentalidade": int(p.get("mentalidade", 60)),
             "fair_play": int(p.get("fair_play", 70)),
             "fatigue": float(p.get("fatigue", 0)),
+            # PARTIDA VIVA (Fase 2): especialistas — só a cadeia de lances lê
+            # (quem cobra, quem cabeceia, pra que lado corta). O placar não.
+            "cabeceio": int(p.get("cabeceio", 55)),
+            "bola_parada": int(p.get("bola_parada", 55)),
+            "penalti": int(p.get("penalti", 55)),
+            "pe": p.get("pe") if p.get("pe") in ("left", "right", "both") else None,
         })
     while len(out) < 11:
         out.append({
@@ -737,6 +744,8 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                     if assister:
                         ast = scorer_counts.setdefault(prev_id, {"goals": 0, "assists": 0, "name": assister["name"]})
                         ast["assists"] += 1
+                        # PARTIDA VIVA: a cadeia do gol termina com o passe de quem levou a assistência.
+                        events[-1]["assist_id"] = prev_id
             elif base in ("chance", "save", "woodwork"):
                 # Quase-gol INTENSIFICA o cerco — a pressão sobe de verdade.
                 if possession == "home":
@@ -947,6 +956,11 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         momentum_curve=momentum_curve,
         events=events,
     )
+
+    # PARTIDA VIVA (Fase 2): conta COMO cada lance aconteceu. RNG próprio, depois
+    # de tudo decidido — não mexe em placar, autor, xG nem texto.
+    if not input_data.get("sem_cadeia"):
+        anexar_cadeias(events, home_lineup, away_lineup, str(seed), mode)
 
     total_poss = possession_minutes["home"] + possession_minutes["away"]
     possession_home_pct = (
