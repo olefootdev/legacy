@@ -144,6 +144,18 @@ def main():
                     else:
                         falhas.append(f"seed {i} {ev['minute']}' gol: o passe pro autor não veio da assistência")
 
+    # LEGACY (Fase 4c): quem entrou do banco não paga o fôlego dos minutos sentado.
+    from match_simulator import fadiga_ate_o_replan
+    xi = [{"id": f"j{k}", "fatigue": 10.0, "entrou_em": None} for k in range(11)]
+    xi[9]["entrou_em"] = 70
+    fadiga_ate_o_replan(xi, 0.5, 46, 80)
+    if not (xi[0]["fatigue"] == 10 + 0.5 * 34 and xi[9]["fatigue"] == 10 + 0.5 * 10):
+        falhas.append(f"fôlego de quem entrou do banco errado: {xi[0]['fatigue']} / {xi[9]['fatigue']}")
+    trapaca = [{"id": f"t{k}", "fatigue": 0.0, "entrou_em": 79} for k in range(11)]
+    fadiga_ate_o_replan(trapaca, 1.0, 46, 80)
+    if sum(1 for j in trapaca if j["fatigue"] < 2) > 5:
+        falhas.append("mais de 5 'entraram do banco' foram aceitos")
+
     print(f"{args.n} partidas · {total_cadeias} cadeias · {finalizacoes} finalizações · {gols} gols")
     print(f"gols contados como jogada de 3–6 ações: {gols_historia}/{gols} ({100 * gols_historia / max(1, gols):.1f}%)")
     print(f"gols com assistência e passe certo: {assist_ok}/{com_assist}")

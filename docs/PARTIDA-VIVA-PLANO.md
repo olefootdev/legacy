@@ -456,6 +456,25 @@ Cada fase termina com **algo que o fundador vê rodando no celular, a partir do 
     cobrar custa cartão) — vitória sem comando 45,8%: replan vazio +0,3 · incentivar −0,3 · cobrar −0,2
     (cartões 0,71→0,84) · acalmar −1,8 · esperto +2,0 · atacar o espaço −4,2 · segurar −3,2 · tudo +0,7.
     Comando é ESCOLHA com custo, não atalho. Ficam pra depois: substituição arrastando do banco e prancheta.
+- ✅ **Fase 4c feita em 09/10 — banco, prancheta e o Analista desenhado (só no LEGACY).** Fecha a Fase 4.
+  - **Banco** (trilho direito, "Banco N"): arrastar o reserva até quem sai — o alvo é o jogador da casa
+    mais perto do dedo (as fichas se mexem) e acende enquanto arrasta. Também: tocar no reserva e depois
+    em quem sai, ou "Substituir ⇄" no cartão do jogador. Sem pausar e sem sair do campo. Quem entra chega
+    correndo da lateral, perto do banco, com a fita "ENTRA". Lesão e intervalo trocam a ficha do mesmo
+    jeito (o palco compara quem está em campo).
+  - **Verdade:** a troca vale na hora no aparelho (o mesmo empurrão da Rápida) e o replan `from_minute`
+    (minuto+3) refaz o futuro COM quem entrou. O reserva chega com o fôlego dele: `entrou_em` no payload,
+    e o servidor só cobra o cansaço desde a entrada (no máximo 5 valem — `fadiga_ate_o_replan`).
+  - **Prancheta** ("Prancheta" → "▶ Jogo"): o relógio da Rápida para, o campo escurece e mostra a leitura do
+    quadro congelado (`prancheta.ts`): linhas de defesa e ataque dos dois blocos + comprimento, os passes do
+    portador (livre = linha cheia; fechado = tracejado), as entrelinhas deles e o buraco na linha de defesa.
+    O painel diz o mesmo em palavras — lido UMA vez quando o jogo para. Tática, banco e ordens funcionam com
+    o jogo parado.
+  - **Analista desenhado:** na Leitura do Analista, o campo ganha a faixa "A CHANCE" (canal da nossa
+    oportunidade, no ataque) e "O PERIGO" (canal deles, na nossa defesa) — `corredorEmMetros`.
+  - Trilho direito: "Lances/Completa" virou um botão só, pra caber Banco e Prancheta no celular.
+  - Visto no navegador (paisagem e retrato girado): troca arrastada com o jogo andando e parado, troca por
+    lesão, prancheta, corredores. Fora: momento decisivo com cards frente a frente (§5.1 #8) — segue no trilho.
 
 ### Fase 5 — Vivo e bonito (~2 semanas)
 - **Som reativo** (Web Audio), **Rive** nas celebrações, ícones de emoção, skills com nome no campo.

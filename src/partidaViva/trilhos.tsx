@@ -10,6 +10,7 @@ import { L } from '@/i18n/L';
 import { nomeDaClasse, DESCRICAO_DA_CLASSE } from '@/smartProfile/rotulos';
 import { iniciais } from './escalacao';
 import type { DecisaoNoCampo, Ficha, QuadroAoVivo } from './tipos';
+import type { LeituraDaPrancheta } from './prancheta';
 
 const BOTAO = 'w-full border px-2 py-1.5 text-left font-prova text-[11px] leading-snug';
 
@@ -145,7 +146,9 @@ function Rosto({ f, tam }: { f: Ficha; tam: number }) {
   );
 }
 
-export function CartaoFicha({ f, onFechar, ordem, onOrdem }: { f: Ficha; onFechar: () => void; ordem?: string; onOrdem?: (id: string) => void }) {
+export function CartaoFicha({ f, onFechar, ordem, onOrdem, onSubstituir }: {
+  f: Ficha; onFechar: () => void; ordem?: string; onOrdem?: (id: string) => void; onSubstituir?: () => void;
+}) {
   const folego = Math.max(0, 100 - f.fadiga);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-1.5">
@@ -177,10 +180,90 @@ export function CartaoFicha({ f, onFechar, ordem, onOrdem }: { f: Ficha; onFecha
               {o.rotulo}
             </button>
           ))}
+          {onSubstituir && (
+            <button type="button" onClick={onSubstituir} className={`${BOTAO} mt-1 border-papel bg-concreto text-papel`}>
+              {L('Substituir ⇄', 'Substitute ⇄')}
+            </button>
+          )}
         </div>
       ) : (
         <p className="text-[11px] leading-snug text-fio">{f.lado === 'home' ? '' : L('Adversário', 'Opponent')}</p>
       )}
+    </div>
+  );
+}
+
+export type Reserva = { id: string; nome: string; pos: string; ovr: number; fadiga: number };
+
+/**
+ * Banco (Fase 4c). Arraste o reserva até a ficha de quem sai — ou toque nele
+ * e depois em quem sai. Com alguém já escolhido pra sair, um toque troca.
+ */
+export function PainelBanco({ banco, rostos, restantes, sai, escolhido, onEscolher, onArrastar, onFechar }: {
+  banco: Reserva[]; rostos: Map<string, Ficha>; restantes: number; sai?: Ficha; escolhido: string | null;
+  onEscolher: (id: string) => void; onArrastar: (id: string, e: React.PointerEvent) => void; onFechar: () => void;
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-1.5" role="group" aria-label={L('Banco', 'Bench')}>
+      <div className="flex items-center justify-between">
+        <span className="bg-cal px-1.5 py-0.5 font-prova text-[11px] text-asfalto-27">{L('Banco', 'Bench')} · {restantes}</span>
+        <button type="button" onClick={onFechar} aria-label={L('Fechar', 'Close')} className="px-1 text-mudo">✕</button>
+      </div>
+      <p className="text-[11px] leading-snug text-mudo">
+        {restantes <= 0 ? L('Sem trocas.', 'No subs left.')
+          : sai ? L(`Quem entra no lugar de ${sai.nome}?`, `Who replaces ${sai.nome}?`)
+          : escolhido ? L('Toque em quem sai, no campo.', 'Tap who comes off, on the pitch.')
+          : L('Arraste até quem sai.', 'Drag onto who comes off.')}
+      </p>
+      <ol className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+        {banco.map((b) => {
+          const f = rostos.get(b.id);
+          const folego = Math.max(0, 100 - b.fadiga);
+          return (
+            <li key={b.id}>
+              <button
+                type="button"
+                disabled={restantes <= 0}
+                aria-pressed={escolhido === b.id}
+                onPointerDown={(e) => { if (restantes > 0 && !sai) onArrastar(b.id, e); }}
+                onClick={() => onEscolher(b.id)}
+                className={`flex w-full touch-none items-center gap-1.5 border px-1.5 py-1 text-left ${escolhido === b.id ? 'border-papel bg-rua text-asfalto-27' : 'border-linha bg-concreto text-papel'}`}
+              >
+                {f ? <Rosto f={f} tam={24} /> : <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rua font-impact text-[10px] text-asfalto-27">{iniciais(b.nome)}</span>}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[11px] leading-tight">{b.nome}</span>
+                  <span className={`block text-[10px] leading-tight ${escolhido === b.id ? '' : 'text-mudo'}`}>{b.pos} · {b.ovr} · {folego}%</span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+        {!banco.length && <li className="text-mudo">{L('Ninguém no banco.', 'Bench is empty.')}</li>}
+      </ol>
+    </div>
+  );
+}
+
+/** Prancheta (Fase 4c): o jogo parado, a leitura em palavras, e a volta. */
+export function PainelPrancheta({ leitura, onVoltar }: { leitura: LeituraDaPrancheta | null; onVoltar: () => void }) {
+  const livres = leitura?.passes.filter((p) => p.livre).length ?? 0;
+  const total = leitura?.passes.length ?? 0;
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-1.5" role="group" aria-label={L('Prancheta', 'Tactics board')}>
+      <span className="self-start bg-rua px-1.5 py-0.5 font-prova text-[11px] text-asfalto-27">{L('Prancheta · jogo parado', 'Board · paused')}</span>
+      {leitura && (
+        <ul className="flex flex-col gap-1 text-[11px] leading-snug">
+          <li>{L(`Nosso bloco: ${leitura.bloco.home} m`, `Our block: ${leitura.bloco.home} m`)}</li>
+          <li>{L(`Bloco deles: ${leitura.bloco.away} m`, `Their block: ${leitura.bloco.away} m`)}</li>
+          {total > 0 && <li>{L(`Passes livres: ${livres} de ${total}`, `Open passes: ${livres} of ${total}`)}</li>}
+          {leitura.entrelinhas && <li className="text-rua">{L(`Entrelinhas deles: ${Math.round(leitura.entrelinhas.x1 - leitura.entrelinhas.x0)} m`, `Their gap between lines: ${Math.round(leitura.entrelinhas.x1 - leitura.entrelinhas.x0)} m`)}</li>}
+          {leitura.buraco && <li className="text-rua">{L('Buraco na linha de defesa deles', 'Gap in their back line')}</li>}
+        </ul>
+      )}
+      <p className="text-[11px] leading-snug text-mudo">{L('Mexa na Tática, no Banco ou toque num jogador. O jogo espera.', 'Use Tactics, Bench or tap a player. The game waits.')}</p>
+      <button type="button" onClick={onVoltar} className={`${BOTAO} mt-auto border-rua bg-rua text-center text-asfalto-27`}>
+        {L('Voltar ao jogo ▶', 'Back to the game ▶')}
+      </button>
     </div>
   );
 }

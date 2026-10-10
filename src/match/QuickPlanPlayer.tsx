@@ -192,8 +192,11 @@ interface Props {
   golEsperaCampo?: boolean;
   /** LEGACY (Fase 4b) — grito/ordem dado no campo: o pai refaz o plano a partir
    *  de minuto+3 no servidor; o player emenda o futuro (o passado não muda). */
-  pedirReplan?: (cmd: ComandoSemMinuto, ctx: QuickPlanHalftimeContext & { minuto: number }) => Promise<MatchPlan | null>;
+  pedirReplan?: (cmd: ComandoSemMinuto | null, ctx: ContextoDoReplan) => Promise<MatchPlan | null>;
 }
+
+/** Contexto de um replan do LEGACY: o do intervalo + o minuto + quando cada reserva entrou. */
+export type ContextoDoReplan = QuickPlanHalftimeContext & { minuto: number; entradas: Record<string, number> };
 
 export type ComandoSemMinuto =
   | { tipo: 'incentivar' | 'cobrar' | 'acalmar' }
@@ -446,6 +449,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   const MAX_SUBS = 5;
   const [subsUsed, setSubsUsed] = useState(0);
   const subsUsedRef = useRef(0);
+  const pausadoRef = useRef(false);
   const bumpSubs = (n: number) => { if (n <= 0) return; subsUsedRef.current += n; setSubsUsed(subsUsedRef.current); };
   const [subOut, setSubOut] = useState<string | null>(null); // id do titular escolhido pra sair
   const [homeScore, setHomeScore] = useState(0);
@@ -608,6 +612,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   /** Agenda o próximo passo do relógio (pausa quando uma decisão está aberta). */
   const scheduleNext = (delay: number) => {
     if (timerRef.current != null) window.clearTimeout(timerRef.current);
+    if (pausadoRef.current) return; // prancheta do LEGACY: o relógio espera o manager voltar ao jogo
     timerRef.current = window.setTimeout(() => { tickRef.current(); }, delay);
   };
   const tickRef = useRef<() => void>(() => {});
@@ -1130,7 +1135,14 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   const applyAnytimeSub = (inCard: SquadCard) => {
     const outId = subOut;
     setSubOut(null);
-    if (outId) {
+    if (outId) efetivarTroca(outId, inCard);
+    setPhase('playing');
+    scheduleNext(450);
+  };
+
+  /** A troca em si (botão da Rápida ou arrastando do banco no LEGACY). */
+  const efetivarTroca = (outId: string, inCard: SquadCard) => {
+    {
       const outCard = field.find((p) => p.id === outId);
       pushFeed({ id: `sub-${minute}-${outId}`, minute, kind: 'insight', text: L(`Substituição: entra ${inCard.name}${outCard ? `, sai ${outCard.name}` : ''}.`, `Substitution: ${inCard.name} on${outCard ? `, ${outCard.name} off` : ''}.`) });
       swapInField(outId, inCard);
@@ -1144,9 +1156,8 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
         freshnessDelta: (outCard?.fatigue ?? 0) - inCard.fatigue,
         posMatch: outCard?.pos === inCard.pos,
       });
+      entradasRef.current[inCard.id] = minuteRef.current;
     }
-    setPhase('playing');
-    scheduleNext(450);
   };
 
   /** Vermelho: segue com 10 — aplica o peso do desfalque no resto do jogo. */
@@ -1260,6 +1271,9 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   const [gritoAtivo, setGritoAtivo] = useState<{ tipo: string; ate: number } | null>(null);
   const gritoLivreEmRef = useRef(0);
   const [ordens, setOrdens] = useState<Record<string, string>>({});
+  /** LEGACY (Fase 4c): minuto em que cada reserva entrou (o servidor não cobra fôlego de quem estava no banco). */
+  const entradasRef = useRef<Record<string, number>>({});
+  const [pausado, setPausado] = useState(false);
   /** Emenda o futuro de um replan de comando: o que já passou (e o que falta até
    *  o minuto inicial dele) fica; daí em diante vale o plano novo. */
   const replanSeqRef = useRef(0);
@@ -1278,6 +1292,27 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     const ini = novo.start_minute ?? inicio;
     momentumRef.current = [...momentumRef.current.slice(0, ini - 1), ...novo.momentum_curve];
   };
+  const replanAoVivo = (cmd: ComandoSemMinuto | null) => {
+    if (!pedirReplan) return;
+    const m = minuteRef.current;
+    const ctx: ContextoDoReplan = {
+      ledger: [...ledgerRef.current], homeScore: scoreRef.current.home, awayScore: scoreRef.current.away,
+      momentumEnd: momentumRef.current[Math.max(0, m - 1)] ?? 50, ...cardsRef.current, subsUsed: subsUsedRef.current,
+      minuto: m, entradas: { ...entradasRef.current },
+    };
+    const seq = ++replanSeqRef.current; // só vale a resposta do comando mais recente
+    void pedirReplan(cmd, ctx)
+      .then((novo) => { if (novo && Array.isArray(novo.events) && seq === replanSeqRef.current) emendarReplan(novo); })
+      .catch(() => undefined);
+  };
+  /** LEGACY (Fase 4c): substituição arrastada do banco — sem sair do campo, sem pausar. */
+  const trocarNoCampo = (outId: string, inId: string) => {
+    if (phase !== 'playing' || subsUsedRef.current >= MAX_SUBS) return;
+    const inCard = benchPool.find((b) => b.id === inId);
+    if (!inCard || !field.some((p) => p.id === outId)) return;
+    efetivarTroca(outId, inCard);
+    replanAoVivo(null); // a verdade refaz o futuro com quem entrou
+  };
   const comandar = (cmd: ComandoSemMinuto) => {
     const m = minuteRef.current;
     if (cmd.tipo !== 'ordem') {
@@ -1294,15 +1329,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       const o = { segurar: L('segura a posição', 'holds position'), atacar_espaco: L('ataca o espaço', 'attacks the space'), marcar: L('marca de perto', 'marks tight') }[cmd.ordem];
       pushFeed({ id: `ordem-${m}-${cmd.jogador}`, minute: m, kind: 'decision', text: L(`🗣️ Ordem: ${nome} ${o}.`, `🗣️ Order: ${nome} ${o}.`) });
     }
-    if (!pedirReplan) return;
-    const ctx = {
-      ledger: [...ledgerRef.current], homeScore: scoreRef.current.home, awayScore: scoreRef.current.away,
-      momentumEnd: momentumRef.current[Math.max(0, m - 1)] ?? 50, ...cardsRef.current, subsUsed: subsUsedRef.current, minuto: m,
-    };
-    const seq = ++replanSeqRef.current; // só vale a resposta do comando mais recente
-    void pedirReplan(cmd, ctx)
-      .then((novo) => { if (novo && Array.isArray(novo.events) && seq === replanSeqRef.current) emendarReplan(novo); })
-      .catch(() => undefined);
+    replanAoVivo(cmd);
   };
   useEffect(() => { if (gritoAtivo && minute >= gritoAtivo.ate) setGritoAtivo(null); }, [minute, gritoAtivo]);
 
@@ -1323,6 +1350,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       decisao = {
         tipo: 'analista', chave: `beat-${activeBeat.id}`, titulo: L('Leitura do Analista', 'Analyst read'),
         texto: activeBeat.insight.text, opcoes: activeBeat.choices.map((c) => ({ id: c.id, rotulo: c.label })),
+        corredores: { nosso: activeBeat.insight.primary_channel, perigo: activeBeat.insight.threat_channel },
       };
     } else if (phase === 'leadin' && leadIn && leadInReactable) {
       decisao = {
@@ -1348,6 +1376,10 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       grito: gritoAtivo,
       gritoLivreEm: pedirReplan ? gritoLivreEmRef.current : undefined,
       ordens: pedirReplan ? ordens : undefined,
+      emCampo: field.map((c) => c.id),
+      banco: pedirReplan ? benchPool.map((b) => ({ id: b.id, nome: b.name, pos: b.pos, ovr: b.ovr, fadiga: b.fatigue })) : undefined,
+      subsRestantes: pedirReplan ? Math.max(0, MAX_SUBS - subsUsed) : undefined,
+      pausado: pedirReplan ? pausado : undefined,
       decisao,
       fase: phase,
       placarCasa: homeScore,
@@ -1357,7 +1389,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       gol: celebration ? { chave: celebration.key, nome: celebration.name, lado: celebration.side, actorId: golDoFeed?.actorId, cadeia: cadeiaDoGol, xg: eventoDoGol?.xg } : null,
       narracao: [...feed].reverse().slice(0, 6).map((f) => ({ id: f.id, minuto: f.minute, texto: f.text })),
     });
-  }, [minute, phase, homeScore, awayScore, highlight, celebration, feed, style, activeBeat, leadIn, leadInReactable, clutch, forced, benchPool, gritoAtivo, ordens]);
+  }, [minute, phase, homeScore, awayScore, highlight, celebration, feed, style, activeBeat, leadIn, leadInReactable, clutch, forced, benchPool, gritoAtivo, ordens, field, subsUsed, pausado]);
 
   // PARTIDA VIVA (Fase 4) — respostas vindas do campo caem nas mesmas funções dos botões.
   const responderRef = useRef<(id: string) => void>(() => {});
@@ -1373,6 +1405,26 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       const resto = id.slice('ordem:'.length), k = resto.lastIndexOf(':');
       const jogador = resto.slice(0, k), ordem = resto.slice(k + 1);
       if (jogador && (ordem === 'segurar' || ordem === 'atacar_espaco' || ordem === 'marcar')) comandar({ tipo: 'ordem', ordem, jogador });
+      return;
+    }
+    // LEGACY (Fase 4c): prancheta (pausa) e troca arrastada do banco ('sub:<sai>|<entra>').
+    if (id === 'pausar') {
+      if (phase !== 'playing' || !pedirReplan) return;
+      pausadoRef.current = true;
+      if (timerRef.current != null) window.clearTimeout(timerRef.current);
+      setPausado(true);
+      return;
+    }
+    if (id === 'retomar') {
+      if (!pausadoRef.current) return;
+      pausadoRef.current = false;
+      setPausado(false);
+      scheduleNext(250);
+      return;
+    }
+    if (id.startsWith('sub:')) {
+      const [sai, entra] = id.slice('sub:'.length).split('|');
+      if (sai && entra) trocarNoCampo(sai, entra);
       return;
     }
     if (id.startsWith('estilo:')) {

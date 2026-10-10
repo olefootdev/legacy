@@ -34,6 +34,13 @@ export interface QuadroAoVivo {
   grito?: { tipo: string; ate: number } | null;
   gritoLivreEm?: number;
   ordens?: Record<string, string>;
+  /** Fase 4c: quem está em campo pela casa (o palco troca a ficha quando muda). */
+  emCampo?: string[];
+  /** Fase 4c: reservas disponíveis (só no LEGACY) e trocas que ainda cabem. */
+  banco?: { id: string; nome: string; pos: string; ovr: number; fadiga: number }[];
+  subsRestantes?: number;
+  /** Fase 4c: prancheta aberta — o relógio da Rápida está parado. */
+  pausado?: boolean;
 }
 
 /**
@@ -50,6 +57,8 @@ export interface DecisaoNoCampo {
   opcoes: { id: string; rotulo: string; detalhe?: string }[];
   /** Prazo em ms (só a reação tem; as outras esperam o manager). */
   prazoMs?: number;
+  /** Auxiliar desenhado no campo (Fase 4c): onde está a nossa chance e o perigo deles. */
+  corredores?: { nosso: string; perigo: string };
   /** Quem protagoniza (momento decisivo / lesão). */
   protagonista?: string;
 }

@@ -12,6 +12,14 @@ import { Application, Container, Graphics, Sprite, Text, Texture } from 'pixi.js
 import type { Ficha } from './tipos';
 import type { QuadroDoPalco } from './coreografo';
 import type { PontoDoGiz } from './filme';
+import type { Espaco, LeituraDaPrancheta } from './prancheta';
+
+/** Camadas de leitura por cima do gramado (Fase 4c). */
+export interface Leituras {
+  prancheta?: LeituraDaPrancheta;
+  /** Auxiliar desenhado: corredor da nossa chance e do perigo deles. */
+  corredores?: { nosso: Espaco | null; perigo: Espaco | null };
+}
 import { L as T } from '@/i18n/L';
 
 const C = 105;
@@ -37,7 +45,9 @@ export class PalcoPixi {
   private fichas = new Map<string, FichaVisual>();
   private vivo = false;
   /** Onde cada ficha foi desenhada (pra achar quem foi tocado). */
-  private naTela = new Map<string, { x: number; y: number; r: number }>();
+  private naTela = new Map<string, { x: number; y: number; r: number; lado: 'home' | 'away' }>();
+  /** Fase 4c: ficha de quem vai sair, sob o dedo durante o arrasto do banco. */
+  private alvoDaTroca: string | null = null;
   private selecionada: string | null = null;
   /** Etiquetas reaproveitadas (fitas no campo, números e nomes do giz). */
   private camadaEtiquetas = new Container();
@@ -75,31 +85,41 @@ export class PalcoPixi {
 
   montarFichas(fichas: Ficha[]): void {
     if (!this.vivo) return;
-    for (const f of fichas) {
-      const raiz = new Container();
-      const sombra = new Graphics().ellipse(2, 8, 9, 3.5).fill({ color: 0x000000, alpha: 0.32 });
-      const trilho = new Graphics().circle(0, 0, 15).stroke({ width: 2, color: COR.papel, alpha: 0.18 });
-      const folego = new Graphics();
-      // Identidade forte dos times: casa = anel amarelo; adversário = anel escuro
-      // com contorno creme (os retratos do Genesis têm fundo amarelo).
-      const anel = f.lado === 'home'
-        ? new Graphics().circle(0, 0, 13).fill(COR.rua).stroke({ width: 1, color: COR.asfalto })
-        : new Graphics().circle(0, 0, 13).fill(COR.asfalto).stroke({ width: 1.5, color: COR.cal });
-      const miolo = new Graphics().circle(0, 0, 10).fill(f.lado === 'home' ? COR.cal : COR.concreto);
-      const ini = new Text({
-        text: f.iniciais,
-        style: { fontFamily: 'Anton, Impact, sans-serif', fontSize: 11, fill: f.lado === 'home' ? COR.asfalto : COR.papel },
-      });
-      ini.anchor.set(0.5);
-      raiz.addChild(sombra, trilho, folego, anel, miolo, ini);
-      this.camadaFichas.addChild(raiz);
-      const vis: FichaVisual = { raiz, folego, ultimaFadiga: -1 };
-      this.fichas.set(f.id, vis);
-      if (f.rosto) this.carregarRosto(f.rosto, raiz, ini);
-    }
+    for (const f of fichas) this.criarFicha(f);
   }
 
-  desenhar(q: QuadroDoPalco, giz?: { pontos: PontoDoGiz[]; progresso: number }): void {
+  /** Substituição (Fase 4c): some a ficha de quem sai, nasce a de quem entra. */
+  trocarFicha(saiId: string, entra: Ficha): void {
+    if (!this.vivo) return;
+    const velha = this.fichas.get(saiId);
+    if (velha) { velha.raiz.destroy({ children: true }); this.fichas.delete(saiId); this.naTela.delete(saiId); }
+    if (!this.fichas.has(entra.id)) this.criarFicha(entra);
+  }
+
+  private criarFicha(f: Ficha): void {
+    const raiz = new Container();
+    const sombra = new Graphics().ellipse(2, 8, 9, 3.5).fill({ color: 0x000000, alpha: 0.32 });
+    const trilho = new Graphics().circle(0, 0, 15).stroke({ width: 2, color: COR.papel, alpha: 0.18 });
+    const folego = new Graphics();
+    // Identidade forte dos times: casa = anel amarelo; adversário = anel escuro
+    // com contorno creme (os retratos do Genesis têm fundo amarelo).
+    const anel = f.lado === 'home'
+      ? new Graphics().circle(0, 0, 13).fill(COR.rua).stroke({ width: 1, color: COR.asfalto })
+      : new Graphics().circle(0, 0, 13).fill(COR.asfalto).stroke({ width: 1.5, color: COR.cal });
+    const miolo = new Graphics().circle(0, 0, 10).fill(f.lado === 'home' ? COR.cal : COR.concreto);
+    const ini = new Text({
+      text: f.iniciais,
+      style: { fontFamily: 'Anton, Impact, sans-serif', fontSize: 11, fill: f.lado === 'home' ? COR.asfalto : COR.papel },
+    });
+    ini.anchor.set(0.5);
+    raiz.addChild(sombra, trilho, folego, anel, miolo, ini);
+    this.camadaFichas.addChild(raiz);
+    const vis: FichaVisual = { raiz, folego, ultimaFadiga: -1 };
+    this.fichas.set(f.id, vis);
+    if (f.rosto) this.carregarRosto(f.rosto, raiz, ini);
+  }
+
+  desenhar(q: QuadroDoPalco, giz?: { pontos: PontoDoGiz[]; progresso: number }, leituras?: Leituras): void {
     if (!this.vivo) return;
     this.usadas = 0;
     const W = this.app.screen.width, H = this.app.screen.height;
@@ -117,7 +137,7 @@ export class PalcoPixi {
       const vis = this.fichas.get(j.f.id);
       if (!vis) return;
       const p = tela(j.x, j.z);
-      this.naTela.set(j.f.id, { x: p.x, y: p.y, r: 15 * escala });
+      this.naTela.set(j.f.id, { x: p.x, y: p.y, r: 15 * escala, lado: j.f.lado });
       vis.raiz.position.set(p.x, p.y);
       vis.raiz.scale.set(escala);
       vis.raiz.alpha = j.apagado ? 0.3 : 1;
@@ -151,6 +171,8 @@ export class PalcoPixi {
       }
       d.stroke({ width: 1.6, color: COR.rua });
     }
+    const alvo = this.alvoDaTroca ? this.naTela.get(this.alvoDaTroca) : undefined;
+    if (alvo) d.circle(alvo.x, alvo.y, alvo.r + 7).stroke({ width: 3, color: COR.rua }); // quem sai
     if (q.passe) tracejar(tela(q.passe.x0, q.passe.z0), tela(q.passe.x1, q.passe.z1), COR.papel, 0.65, 3, 5);
     for (const arco of q.arcos) {
       const a = tela(arco.x0, arco.z0), b = tela(arco.x1, arco.z1);
@@ -203,12 +225,68 @@ export class PalcoPixi {
         caixa.position.set(p.x, p.y - 26 * escala);
       }
     }
+    if (leituras) this.desenharLeituras(leituras, tela, s);
     if (giz) {
       // a jogada a giz: campo escurece, só o caminho da bola fica
       this.camadaFichas.alpha = 0.35;
       d.rect(0, 0, W, H).fill({ color: COR.asfalto, alpha: 0.45 });
     } else this.camadaFichas.alpha = 1;
     this.desenharFitasEGiz(q, tela, escala, giz);
+  }
+
+  /**
+   * Prancheta e auxiliar (Fase 4c). Traço chapado, sem brilho: faixa
+   * translúcida pro corredor, linha cheia pro bloco, tracejado pro passe fechado.
+   */
+  private desenharLeituras(l: Leituras, tela: (x: number, z: number) => { x: number; y: number }, s: number): void {
+    const d = this.desenhoG;
+    const faixa = (e: Espaco, cor: number, alpha: number) => {
+      const a = tela(e.x0, e.z0);
+      d.rect(a.x, a.y, (e.x1 - e.x0) * s, (e.z1 - e.z0) * s).fill({ color: cor, alpha });
+    };
+    if (l.corredores?.nosso) {
+      faixa(l.corredores.nosso, COR.rua, 0.2);
+      const c = tela((l.corredores.nosso.x0 + l.corredores.nosso.x1) / 2, (l.corredores.nosso.z0 + l.corredores.nosso.z1) / 2);
+      this.etiqueta(T('A CHANCE', 'THE CHANCE'), c.x, c.y, 'rua', true);
+    }
+    if (l.corredores?.perigo) {
+      faixa(l.corredores.perigo, COR.alerta, 0.18);
+      const c = tela((l.corredores.perigo.x0 + l.corredores.perigo.x1) / 2, (l.corredores.perigo.z0 + l.corredores.perigo.z1) / 2);
+      this.etiqueta(T('O PERIGO', 'THE DANGER'), c.x, c.y, 'asfalto', true);
+    }
+    const p = l.prancheta;
+    if (!p) return;
+    const W = this.app.screen.width, H = this.app.screen.height;
+    d.rect(0, 0, W, H).fill({ color: COR.asfalto, alpha: 0.42 });
+    if (p.entrelinhas) {
+      faixa(p.entrelinhas, COR.rua, 0.16);
+      const c = tela((p.entrelinhas.x0 + p.entrelinhas.x1) / 2, p.entrelinhas.z0 + 2);
+      this.etiqueta(T(`ENTRELINHAS ${Math.round(p.entrelinhas.x1 - p.entrelinhas.x0)} m`, `BETWEEN LINES ${Math.round(p.entrelinhas.x1 - p.entrelinhas.x0)} m`), c.x, c.y, 'rua', false);
+    }
+    if (p.buraco) {
+      faixa(p.buraco, COR.rua, 0.32);
+      const c = tela((p.buraco.x0 + p.buraco.x1) / 2, (p.buraco.z0 + p.buraco.z1) / 2);
+      this.etiqueta(T('BURACO', 'GAP'), c.x, c.y, 'rua', true);
+    }
+    for (const ln of p.linhas) {
+      const a = tela(ln.x, ln.z0), b = tela(ln.x, ln.z1);
+      d.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: ln.tipo === 'defesa' ? 2.5 : 1.5, color: ln.lado === 'home' ? COR.rua : COR.cal, alpha: 0.9 });
+    }
+    for (const t of ['home', 'away'] as const) {
+      const def = p.linhas.find((ln) => ln.lado === t && ln.tipo === 'defesa');
+      if (!def || !p.bloco[t]) continue;
+      const c = tela(def.x, def.z1 + 2.5);
+      this.etiqueta(T(`bloco ${p.bloco[t]} m`, `block ${p.bloco[t]} m`), c.x, c.y, t === 'home' ? 'rua' : 'cal', false, 10);
+    }
+    for (const ps of p.passes) {
+      const a = tela(ps.x0, ps.z0), b = tela(ps.x1, ps.z1);
+      if (ps.livre) d.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: 2, color: COR.papel, alpha: 0.9 });
+      else {
+        const L2 = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / L2, uy = (b.y - a.y) / L2;
+        for (let k = 0; k < L2; k += 9) d.moveTo(a.x + ux * k, a.y + uy * k).lineTo(a.x + ux * Math.min(L2, k + 4), a.y + uy * Math.min(L2, k + 4));
+        d.stroke({ width: 1.2, color: COR.alerta, alpha: 0.7 });
+      }
+    }
   }
 
   /** Uma etiqueta do pool, posicionada (fita: inclinada como lambe). */
@@ -270,6 +348,21 @@ export class PalcoPixi {
     return melhor;
   }
 
+  /** Ficha do lado pedido mais perto do ponto, até `raio` px (arrasto do banco: alvo largo). */
+  fichaDoLadoEm(x: number, y: number, lado: 'home' | 'away', raio: number): string | null {
+    let melhor: string | null = null, md = raio;
+    for (const [id, p] of this.naTela) {
+      if (p.lado !== lado) continue;
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (d < md) { md = d; melhor = id; }
+    }
+    return melhor;
+  }
+
+  marcarAlvoDaTroca(id: string | null): void {
+    this.alvoDaTroca = id;
+  }
+
   selecionar(id: string | null): void {
     this.selecionada = id;
   }
@@ -300,7 +393,7 @@ export class PalcoPixi {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      if (!this.vivo) return;
+      if (!this.vivo || raiz.destroyed) return;
       try {
         const tex = Texture.from(img);
         const sp = new Sprite(tex);

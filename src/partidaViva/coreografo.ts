@@ -140,6 +140,26 @@ export class Coreografo {
     }
   }
 
+  /**
+   * Substituição (Fase 4c): quem entra assume o slot de quem sai e chega
+   * correndo da linha lateral, perto do banco. Devolve a ficha nova (o palco
+   * troca o desenho) ou null se quem sai não está em campo.
+   */
+  trocar(saiId: string, entra: Ficha): Ficha | null {
+    const c = this.corpos.find((k) => k.f.id === saiId);
+    if (!c) return null;
+    const nova: Ficha = { ...entra, lado: c.f.lado, slot: c.f.slot };
+    c.f = nova;
+    c.x = c.px = C / 2 - 4;
+    c.z = c.pz = L + 0.5;
+    c.vx = c.vz = 0;
+    c.alvo = null;
+    c.vmax = (5.4 + (nova.velocidade / 100) * 3.4) * (1 - nova.fadiga * 0.0025);
+    if (this.dono === c) this.dono = this.maisPerto(c.f.lado, this.bola.x, this.bola.z, false);
+    this.fita(T(`ENTRA ${nova.nome}`, `ON ${nova.nome}`), c.x, c.z, 2.4, true, c);
+    return nova;
+  }
+
   /** Grito novo → fita no meio do time; ordem nova → fita presa no jogador. */
   private ouvirComandos(q: QuadroAoVivo): void {
     const grito = q.grito?.tipo;

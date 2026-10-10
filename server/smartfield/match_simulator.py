@@ -72,6 +72,26 @@ SENT_OFF_STRENGTH_PENALTY = 6.0
 HOME_ACTIVE_XG = 1.18
 
 
+def fadiga_ate_o_replan(lineup: List[Dict[str, Any]], taxa: float, desde: int, inicio: int) -> None:
+    """Fôlego gasto até o replan. Quem entrou do banco (LEGACY, Fase 4c) só gasta
+    desde que entrou — no máximo 5 trocas valem (o teto da Rápida)."""
+    entraram = 0
+    for p in lineup:
+        ini = desde
+        e = p.get("entrou_em")
+        if e is not None and entraram < 5 and desde <= e <= inicio:
+            ini = e
+            entraram += 1
+        p["fatigue"] = min(100, p["fatigue"] + taxa * (inicio - ini))
+
+def _minuto_ou_none(v: Any) -> Optional[int]:
+    try:
+        m = int(v)
+    except (TypeError, ValueError):
+        return None
+    return m if 1 <= m <= 90 else None
+
+
 def normalize_lineup(team: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Garante 11 jogadores com campos mínimos."""
     out = []
@@ -93,6 +113,8 @@ def normalize_lineup(team: Dict[str, Any]) -> List[Dict[str, Any]]:
             "mentalidade": int(p.get("mentalidade", 60)),
             "fair_play": int(p.get("fair_play", 70)),
             "fatigue": float(p.get("fatigue", 0)),
+            # LEGACY (Fase 4c): minuto em que entrou do banco (só o replan from_minute lê).
+            "entrou_em": _minuto_ou_none(p.get("entrou_em")),
             # PARTIDA VIVA (Fase 2): especialistas — só a cadeia de lances lê
             # (quem cobra, quem cabeceia, pra que lado corta). O placar não.
             "cabeceio": int(p.get("cabeceio", 55)),
@@ -512,8 +534,7 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     # Replan no meio do tempo: o fôlego já gasto desde o apito (ou do intervalo).
     if mode == "from_minute":
         desde = 46 if start_minute >= 46 else 1
-        for p in home_lineup:
-            p["fatigue"] = min(100, p["fatigue"] + home_fat_rate * (start_minute - desde))
+        fadiga_ate_o_replan(home_lineup, home_fat_rate, desde, start_minute)
         for p in away_lineup:
             p["fatigue"] = min(100, p["fatigue"] + away_fat_rate * (start_minute - desde))
 

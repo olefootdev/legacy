@@ -42,6 +42,7 @@ import {
   QuickPlanPlayer,
   type QuickPlanHalftimeContext,
   type ComandoSemMinuto,
+  type ContextoDoReplan,
   type QuickPlanPlayResult,
   matchRating,
   type PenaltyTaker,
@@ -408,6 +409,14 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan?.seed]);
 
+  // LEGACY (Fase 4c): fichas dos reservas — o rosto de quem entra arrastado do banco.
+  const fichasDoBanco = useMemo(() => {
+    if (!plan) return [];
+    const classe = (id: string) => plan.classes?.[id];
+    return montarFichas('home', bench.slice(0, 11).map((v) => ({ id: v.id, nome: v.name, pos: v.pos, fadiga: v.fatigue, entidade: players[v.id], classe: classe(v.id) })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan?.seed, bench.length]);
+
   // Batedores de pênalti: top finalizadores em campo (recalcula após subs/replan).
   const penaltyTakers = useMemo<PenaltyTaker[]>(() => {
     return [...homePlayersRef.current]
@@ -510,15 +519,20 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
   const comandosRef = useRef<ComandoAoVivo[]>([]);
   const pedirReplan = useCallback(
     async (
-      cmd: ComandoSemMinuto,
-      ctx: QuickPlanHalftimeContext & { minuto: number },
+      cmd: ComandoSemMinuto | null,
+      ctx: ContextoDoReplan,
     ): Promise<MatchPlan | null> => {
-      comandosRef.current = [...comandosRef.current, { ...cmd, minuto: ctx.minuto } as ComandoAoVivo];
+      // cmd null = substituição no campo (Fase 4c): o replan só leva o elenco novo.
+      if (cmd) comandosRef.current = [...comandosRef.current, { ...cmd, minuto: ctx.minuto } as ComandoAoVivo];
       const inicio = ctx.minuto + 3;
       // 1º tempo: replan nunca começa depois do 45' — o do intervalo leva o comando.
       if ((ctx.minuto <= 45 && inicio > 45) || inicio > 90) return null;
       const homeLineup = applyLegacyBoostToLineup(
-        applyFormationToPayloads(homePlayersRef.current.map((p) => p.payload), formationRef.current),
+        applyFormationToPayloads(
+          // Quem entrou do banco chega com o fôlego dele (o servidor não cobra os minutos no banco).
+          homePlayersRef.current.map((p) => (ctx.entradas[p.id] != null ? { ...p.payload, entrou_em: ctx.entradas[p.id] } : p.payload)),
+          formationRef.current,
+        ),
         homePlayersRef.current.map((p) => legacyLookup[p.id]).filter((b): b is { name: string; label: string; pct: number } => !!b),
       );
       const novo = await fetchQuickPlan({
@@ -909,6 +923,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
               onPular={() => setPulando(true)}
               onSair={fecharCampo}
               comEntrada={phase === 'kickoff'}
+              banco={fichasDoBanco}
             />
           </Suspense>
         )}

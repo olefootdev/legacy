@@ -17,6 +17,7 @@ import type { QuadroAoVivo } from '../src/partidaViva/tipos';
 import type { MatchPlanEvent } from '../src/match/quickPlanTypes';
 import { ajustarPorEstilo, ajustarPorGrito, alvoNaForma, formaDe, intencaoDoTime } from '../src/partidaViva/forma';
 import { pontosDoGiz, quadroDoReplay } from '../src/partidaViva/filme';
+import { corredorEmMetros, lerPrancheta } from '../src/partidaViva/prancheta';
 
 let falhas = 0;
 function confere(cond: boolean, msg: string) {
@@ -273,6 +274,44 @@ confere(a.hist.some((v, i) => v !== outra.hist[i]), 'outra seed → outro filme'
   c.receber(quadro(33, { grito: { tipo: 'cobrar', ate: 41 }, gritoLivreEm: 46, ordens: { 'home-9': 'atacar_espaco' } }));
   for (let i = 0; i < 3; i++) { c.passo(); c.quadro(1).fitas.forEach((f) => fitas2.add(f.texto)); }
   confere(!fitas2.has('APERTA!') && !fitas2.has('PRESS!'), 'o mesmo grito não repete a fita a cada quadro');
+}
+
+// ── Fase 4c: banco, prancheta e o analista desenhado ───────────────────────
+{
+  const c = new Coreografo(fichas, '4-3-3', '4-3-3', 'banco');
+  for (let i = 0; i < 80; i++) c.passo();
+  const slot = c.corpos.find((k) => k.f.id === 'home-9')!.f.slot;
+  const reserva = { id: 'reserva-1', nome: 'Reserva', iniciais: 'RE', lado: 'home' as const, slot: '', rosto: null, fadiga: 0, velocidade: 80 };
+  const nova = c.trocar('home-9', reserva);
+  confere(!!nova && nova.slot === slot && !c.corpos.some((k) => k.f.id === 'home-9'), `troca: quem entra assume o slot de quem sai (${slot})`);
+  const corpo = c.corpos.find((k) => k.f.id === 'reserva-1')!;
+  const z0 = corpo.z;
+  c.receber(quadro(60));
+  for (let i = 0; i < 60; i++) c.passo();
+  confere(z0 > 67 && corpo.z < 64, `troca: entra pela lateral e corre pro lugar (z ${z0.toFixed(1)} → ${corpo.z.toFixed(1)})`);
+  confere(c.trocar('nao-existe', reserva) === null, 'troca: quem não está em campo não sai');
+
+  // Prancheta: posições congeladas → leitura.
+  const pos = (lado: 'home' | 'away', x: number, z: number, i: number, slot = 'mc1') =>
+    ({ f: { ...fichas[0]!, id: `${lado}-${i}`, lado, slot }, x, z });
+  // Eles (atacam −x): defesa em x 70 com um buraco no meio; meio em x 50 → entrelinhas de 20 m.
+  const deles = [pos('away', 103, 34, 0, 'gol'), pos('away', 70, 8, 1), pos('away', 70, 20, 2), pos('away', 70, 48, 3), pos('away', 70, 60, 4),
+    pos('away', 50, 20, 5), pos('away', 50, 34, 6), pos('away', 50, 48, 7), pos('away', 30, 15, 8), pos('away', 30, 34, 9), pos('away', 30, 53, 10)];
+  const nossos = [pos('home', 2, 34, 0, 'gol'), pos('home', 25, 10, 1), pos('home', 25, 26, 2), pos('home', 25, 42, 3), pos('home', 25, 58, 4),
+    pos('home', 45, 22, 5), pos('home', 45, 46, 6), pos('home', 55, 34, 7), pos('home', 65, 12, 8), pos('home', 75, 34, 9), pos('home', 65, 56, 10)];
+  const lido = lerPrancheta([...nossos, ...deles], 'home-7');
+  confere(lido.bloco.away === 40 && lido.bloco.home > 30, `prancheta: comprimento dos blocos (nós ${lido.bloco.home} m, eles ${lido.bloco.away} m)`);
+  confere(!!lido.entrelinhas && Math.round(lido.entrelinhas.x1 - lido.entrelinhas.x0) === 20, 'prancheta: entrelinhas deles = 20 m');
+  confere(!!lido.buraco && lido.buraco.z0 > 20 && lido.buraco.z1 < 48, 'prancheta: acha o buraco no meio da defesa deles');
+  const fechado = lido.passes.find((p) => p.para === 'home-9');
+  const livre = lido.passes.find((p) => p.para === 'home-6');
+  confere(!!livre?.livre, 'prancheta: passe sem ninguém no caminho é livre');
+  confere(lido.passes.length >= 4 && lido.passes.some((p) => !p.livre) === !!fechado && fechado !== undefined, `prancheta: ${lido.passes.filter((p) => p.livre).length} de ${lido.passes.length} passes livres`);
+
+  const nosso = corredorEmMetros('corredor_esquerdo', 'nosso')!, perigo = corredorEmMetros('corredor_esquerdo', 'perigo')!;
+  confere(nosso.x0 > 52.5 && nosso.z1 < 34, 'analista: nossa chance pela esquerda = campo de ataque, faixa de cima');
+  confere(perigo.x1 < 52.5 && perigo.z0 > 34, 'analista: o perigo pela esquerda DELES = nosso campo, faixa de baixo');
+  confere(corredorEmMetros('qualquer', 'nosso') === null, 'analista: canal desconhecido não desenha nada');
 }
 
 if (falhas) { console.error(`\n${falhas} falha(s)`); process.exit(1); }
