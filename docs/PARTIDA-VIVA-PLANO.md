@@ -524,6 +524,21 @@ Cada fase termina com **algo que o fundador vê rodando no celular, a partir do 
     seed, resumo, filme jsonb ≤ 200 KB, RLS só servidor) + `POST /api/filme` (placar do filme tem de bater
     com o relato da custódia) + aviso no inbox do adversário.
 
+### Fase 7 — "Seu time jogou enquanto você dormia" (§8, item 1)
+- ✅ **Código feito em 10/10** — depende da tabela `partidas_filme` (migration 20261010120000).
+  - **Fluxo:** no fim de uma partida vista em campo, o filme (Fase 6) sobe pro servidor
+    (`POST /api/filme`). Se o adversário era o time de OUTRO manager (o id do adversário da Rápida já é
+    a conta dele), ele recebe uma notificação ("Seu time jogou: RIV 1 × 2 OLE") que abre
+    `/match/filme/s/:id` — a partida em campo, com o time DELE em amarelo.
+  - **Lista de filmes:** ganha "Jogaram contra o seu time" (com selo NOVO até assistir).
+  - **Trava contra notificação falsa:** o adversário tem de estar DENTRO da seed da partida, tem de
+    existir plano emitido pelo motor pra (dono, seed), e o time de fora do filme tem de ser o elenco dele
+    (8 de 11 ids no `manager_squad`). Teto: 10 avisos por dia por manager, 3 pro mesmo adversário.
+    Bot e time da Liga Global (sem conta) não recebem aviso; o filme sobe mesmo assim (backup).
+  - **Tabela fechada ao cliente** (RLS, revoke): só as 3 rotas do servidor leem e escrevem; o filme só
+    abre pro dono ou pro adversário (outro id recebe 404). Um filme por (dono, seed); ≤ 400 KB.
+  - Portão: `npm run test:filme` (17 checagens da conferência).
+
 ### Depois (se fizer sentido)
 - Three.js **2.5D** (visual de transmissão) — troca só o palco.
 - Clima e refletores por shader — **só depois** que o jogo estiver redondo (régua DS 2027: sem enfeite).

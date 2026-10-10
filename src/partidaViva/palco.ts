@@ -48,6 +48,8 @@ export class PalcoPixi {
   private naTela = new Map<string, { x: number; y: number; r: number; lado: 'home' | 'away' }>();
   /** Fase 4c: ficha de quem vai sair, sob o dedo durante o arrasto do banco. */
   private alvoDaTroca: string | null = null;
+  /** Fase 7: o time de quem assiste (anel amarelo). No filme do adversário é o de fora. */
+  destaque: 'home' | 'away' = 'home';
   private selecionada: string | null = null;
   /** Etiquetas reaproveitadas (fitas no campo, números e nomes do giz). */
   private camadaEtiquetas = new Container();
@@ -103,13 +105,14 @@ export class PalcoPixi {
     const folego = new Graphics();
     // Identidade forte dos times: casa = anel amarelo; adversário = anel escuro
     // com contorno creme (os retratos do Genesis têm fundo amarelo).
-    const anel = f.lado === 'home'
+    const nosso = f.lado === this.destaque;
+    const anel = nosso
       ? new Graphics().circle(0, 0, 13).fill(COR.rua).stroke({ width: 1, color: COR.asfalto })
       : new Graphics().circle(0, 0, 13).fill(COR.asfalto).stroke({ width: 1.5, color: COR.cal });
-    const miolo = new Graphics().circle(0, 0, 10).fill(f.lado === 'home' ? COR.cal : COR.concreto);
+    const miolo = new Graphics().circle(0, 0, 10).fill(nosso ? COR.cal : COR.concreto);
     const ini = new Text({
       text: f.iniciais,
-      style: { fontFamily: 'Anton, Impact, sans-serif', fontSize: 11, fill: f.lado === 'home' ? COR.asfalto : COR.papel },
+      style: { fontFamily: 'Anton, Impact, sans-serif', fontSize: 11, fill: nosso ? COR.asfalto : COR.papel },
     });
     ini.anchor.set(0.5);
     raiz.addChild(sombra, trilho, folego, anel, miolo, ini);

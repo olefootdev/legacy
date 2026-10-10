@@ -63,6 +63,8 @@ interface Props {
   /** Fase 6: toca um filme — entrega estes quadros nos passos gravados. */
   roteiro?: Entrega[];
   onFimDoFilme?: () => void;
+  /** Fase 7: de que lado está quem assiste (o adversário vê o time DELE em amarelo). */
+  ladoDeQuemAssiste?: 'home' | 'away';
 }
 
 let montagens = 0;
@@ -167,6 +169,7 @@ export function PartidaVivaPalco(p: Props) {
       if (parado) { palco.destruir(); return; }
       const co = coreoRef.current!;
       // Quem está em campo AGORA (alguém pode ter entrado antes do PixiJS ficar pronto).
+      palco.destaque = p.ladoDeQuemAssiste ?? 'home';
       palco.montarFichas(co.corpos.map((c) => c.f));
       // FILME: entrega o roteiro nos passos gravados; trechos parados (intervalo,
       // pênaltis) passam direto; "Pular" vai ao próximo lance.

@@ -78,7 +78,8 @@ import { montarFichas } from '@/partidaViva/escalacao';
 import { deitarTela, levantarTela } from '@/partidaViva/orientacao';
 import { msParaMostrar } from '@/partidaViva/cronograma';
 import { ligarSom } from '@/partidaViva/som';
-import { gravarEntrega, salvarFilme, type Trecho } from '@/partidaViva/gravacao';
+import { gravarEntrega, salvarFilme, type FilmeDaPartida as Filme, type Trecho } from '@/partidaViva/gravacao';
+import { enviarFilme } from '@/partidaViva/filmeServidor';
 import type { QuadroAoVivo } from '@/partidaViva/tipos';
 
 // PARTIDA VIVA (beta): o palco em campo só carrega o PixiJS quando é aberto.
@@ -710,15 +711,17 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
     const trechos = trechosRef.current.filter((t) => t.roteiro.length > 3);
     if (trechos.length && plan && opponent) {
       const id = `${plan.seed}-${Date.now().toString(36)}`;
-      const ok = salvarFilme({
+      const filme: Filme = {
         v: 1, id, quando: new Date().toISOString(), seed: plan.seed,
         siglaCasa: club.shortName, siglaFora: opponent.shortName, nomeCasa: club.name, nomeFora: opponent.name,
         placarCasa: r.homeScore, placarFora: r.awayScore,
         formacaoCasa: trechos[0]!.formacaoCasa, formacaoFora: '4-3-3',
         fichas: fichasAoVivo, banco: fichasDoBanco,
         trechos: trechos.map(({ comEntrada, roteiro, formacaoCasa }) => ({ comEntrada, roteiro, formacaoCasa })),
-      });
-      if (ok) setFilmeId(id);
+      };
+      if (salvarFilme(filme)) setFilmeId(id);
+      // FASE 7 — sobe pro servidor; se o adversário é o time de outro manager, ele é avisado.
+      void enviarFilme(filme, opponent.id);
     }
     // CRÉDITO DE PROGRESSÃO (Fase D): credita XP/economia/evolução/fadiga +
     // Manager IQ uma única vez por partida.

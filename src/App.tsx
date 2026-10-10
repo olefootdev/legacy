@@ -719,6 +719,7 @@ as a nice MVP. Let's Play Together! ⚽
             {/* PARTIDA VIVA — Fase 6: o filme da partida (reassistir + Câmera do Craque) */}
             <Route path="/match/filme" element={<FilmeDaPartida />} />
             <Route path="/match/filme/:id" element={<FilmeDaPartida />} />
+            <Route path="/match/filme/s/:idNuvem" element={<FilmeDaPartida />} />
             <Route path="/match/quick-plan-preview" element={<QuickPlanPreview />} />
             <Route path="/liga-ole" element={<LigaOle />} />
             <Route path="/match/penalty" element={<MatchPenaltyV2 />} />

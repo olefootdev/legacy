@@ -68,6 +68,7 @@
     "test:ovr-weights": "tsx scripts/test-ovr-weights.ts",
     "test:smart-profile": "tsx server/src/lib/smartProfile/runSmartProfileSelfTest.mts",
     "test:evolucao": "tsx server/src/lib/smartProfile/runEvolucaoSelfTest.mts",
+    "test:filme": "tsx server/src/lib/runFilmeSelfTest.mts",
     "test:custodia": "tsx server/src/lib/smartProfile/runCustodiaSelfTest.mts",
     "smart-profile:conferir": "tsx --env-file=server/.env scripts/smart-profile-conferir.mts",
     "smart-profile:backfill": "tsx --env-file=server/.env scripts/smart-profile-backfill.mts",

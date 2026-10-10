@@ -20,6 +20,7 @@ import { positionCoachRoutes } from './routes/positionCoach.js';
 import { marketRoutes } from './routes/market.js';
 import { marketOffersRoutes } from './routes/marketOffers.js';
 import { squadMarketRoutes } from './routes/squadMarket.js';
+import { filmesRoutes } from './routes/filmes.js';
 import { playerProfilesRoutes } from './routes/playerProfiles.js';
 import { academyRoutes } from './routes/academy.js';
 import { academyAdminRoutes } from './routes/academyAdmin.js';
@@ -129,6 +130,7 @@ app.use('/api/academy/upload-admin-image', bodyLimit(10 * 1024 * 1024)); // arte
 // às vezes sem Origin, e a rota só agrega diretiva/origem/caminho (ver
 // routes/cspReport.ts). Registrada antes, o handler responde e o guard não roda.
 app.use('/api/csp-report', bodyLimit(32 * 1024));
+app.use('/api/filme', bodyLimit(400 * 1024)); // filme da partida (Fase 7): roteiro de quadros
 app.route('/', cspReportRoutes);
 
 // Webhook do Telegram também ANTES do csrfGuard: quem chama é o servidor do
@@ -153,6 +155,7 @@ app.route('/', marketRoutes);
 app.route('/', marketOffersRoutes);
 app.route('/', squadMarketRoutes);  // mercado de elenco em OLEFOOT (sessão do jogador)
 app.route('/', playerProfilesRoutes); // SMART-PROFILE: fichas e memória do jogador (sessão do jogador)
+app.route('/', filmesRoutes); // PARTIDA VIVA Fase 7 — o filme pro adversário
 app.route('/', solanaWalletRoutes);
 app.route('/', earningsRoutes);    // regras de Vault, Produção e Stake (públicas)
 app.route('/', vaultRoutes);       // leitura do Vault (sessão do jogador)
