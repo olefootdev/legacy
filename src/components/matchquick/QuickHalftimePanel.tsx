@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import type { LeituraDoIntervalo } from '@/match/auxiliarDoIntervalo';
 import { motion } from 'motion/react';
 import { ArrowRightLeft } from 'lucide-react';
 import {
@@ -43,6 +44,8 @@ interface Props {
   windowMs?: number;
   /** Substituições ainda disponíveis no teto de 5 (já desconta as do 1º tempo). */
   maxSubs?: number;
+  /** Partida Viva, Fase 9: o auxiliar aponta um problema e sugere a estratégia. */
+  auxiliar?: LeituraDoIntervalo;
   onResume: (result: HalftimeResult) => void;
 }
 
@@ -97,6 +100,7 @@ export function QuickHalftimePanel({
   formation: formationProp = '4-4-2',
   windowMs = 15_000,
   maxSubs = 5,
+  auxiliar,
   onResume,
 }: Props) {
   const [working, setWorking] = useState<QuickHomePlayerView[]>(homePlayers);
@@ -176,6 +180,24 @@ export function QuickHalftimePanel({
         </div>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
+          {/* O auxiliar: UM problema do 1º tempo + a estratégia sugerida (o manager decide). */}
+          {picking === null && auxiliar && (
+            <div className="border-l-[3px] border-rua bg-concreto px-3 py-2.5">
+              <p className={`${ROTULO} text-rua`}>— {L('Auxiliar', 'Assistant')}</p>
+              <p className="mt-1 font-sans text-[15px] font-bold leading-snug text-papel">{auxiliar.texto}</p>
+              <p className="mt-0.5 font-sans text-[13px] leading-snug text-suave">{auxiliar.porque}</p>
+              {auxiliar.sugestao && auxiliar.sugestao !== intensity && (
+                <button
+                  type="button"
+                  onClick={() => setIntensity(auxiliar.sugestao!)}
+                  className="mt-2 min-h-[40px] bg-rua px-3 font-impact text-[14px] uppercase leading-none text-asfalto-27"
+                >
+                  {L('Seguir', 'Follow')}: {INTENSITIES.find((i) => i.id === auxiliar.sugestao)?.label}
+                </button>
+              )}
+            </div>
+          )}
+
           {/* 5 cards */}
           {picking === null ? (
             <div className="space-y-2">

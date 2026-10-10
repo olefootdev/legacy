@@ -48,7 +48,8 @@ import {
   type ReactionChoice,
 } from './quickBeatDirector';
 import { SpiritRng } from '../../shared/gamespirit/SpiritRng';
-import { buildClutch, resolveClutch, type ClutchMoment, type ClutchKey } from './quickClutch';
+import { buildClutch, resolveClutch, duelo, forcaNoDuelo, type AtributoDoDuelo, type ClutchMoment, type ClutchKey, type Duelo, type Lutador } from './quickClutch';
+import { leituraDoIntervalo, type LeituraDoIntervalo } from './auxiliarDoIntervalo';
 import { AnalystBeatCard } from '@/components/matchquick/AnalystBeatCard';
 import { MomentumBar } from '@/components/match/MomentumBar';
 import { QuickGoalCelebration } from '@/components/matchquick/QuickGoalCelebration';
@@ -97,6 +98,8 @@ export interface QuickPlanHalftimeContext {
   sentOffAway: number;
   /** Substituições já gastas (1º tempo) — pra o intervalo respeitar o teto de 5. */
   subsUsed: number;
+  /** Partida Viva, Fase 9: o auxiliar aponta UM problema do 1º tempo (só no intervalo). */
+  auxiliar?: LeituraDoIntervalo;
 }
 
 export interface QuickPlanPlayResult {
@@ -221,6 +224,36 @@ export interface SquadCard {
   portrait: string | null;
   /** Ponte #2: fair play do jogador (risco de cartão). */
   fairPlay?: number;
+  /** Partida Viva, Fase 9: atributos do duelo no momento decisivo. */
+  attrs?: Partial<Record<AtributoDoDuelo, number>>;
+}
+
+/** Posição em família (o duelo escolhe goleiro / zagueiro / meio). */
+function familia(pos: string): 'goleiro' | 'zagueiro' | 'meio' | 'ataque' {
+  const p = pos.toUpperCase();
+  if (p.includes('GOL') || p === 'GK') return 'goleiro';
+  if (p.includes('ZAG') || p === 'CB' || p === 'LE' || p === 'LD' || p === 'LB' || p === 'RB') return 'zagueiro';
+  if (/(VOL|MC|MEI|CM|DM|AM)/.test(p)) return 'meio';
+  return 'ataque';
+}
+const lutador = (c: SquadCard): Lutador => ({ id: c.id, nome: c.name, attrs: c.attrs ?? {} });
+
+/**
+ * Os dois do duelo. Atacando: o nosso autor × quem tenta parar (goleiro ou
+ * zagueiro deles). Defendendo: o autor deles × quem dos nossos enfrenta.
+ * Sem cartas (visitante sintético), cai no time pelo nome — 60 nos atributos.
+ */
+function montarDuelo(m: ClutchMoment, autorId: string | undefined, nossos: SquadCard[], deles: SquadCard[]): Duelo | null {
+  const porFamilia = (cartas: SquadCard[], f: string) =>
+    [...cartas].filter((c) => familia(c.pos) === f).sort((a, b) => b.ovr - a.ovr)[0];
+  if (m.intent === 'attack') {
+    const n = nossos.find((c) => c.id === autorId) ?? porFamilia(nossos, 'ataque');
+    const d = porFamilia(deles, m.rival === 'goleiro' ? 'goleiro' : 'zagueiro') ?? deles[0];
+    return n && d ? duelo(m, lutador(n), lutador(d)) : null;
+  }
+  const d = deles.find((c) => c.id === autorId) ?? porFamilia(deles, 'ataque');
+  const n = porFamilia(nossos, m.rival) ?? nossos[0];
+  return n && d ? duelo(m, lutador(n), lutador(d)) : null;
 }
 
 /** Rótulo curto do lance pro eyebrow do banner amarelo. */
@@ -477,7 +510,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   const [celebration, setCelebration] = useState<GoalCelebration | null>(null);
   const [penalty, setPenalty] = useState<{ idx: number; minute: number } | null>(null);
   const [forced, setForced] = useState<ForcedMoment | null>(null);
-  const [clutch, setClutch] = useState<{ moment: ClutchMoment; idx: number } | null>(null);
+  const [clutch, setClutch] = useState<{ moment: ClutchMoment; idx: number; duelo: Duelo | null } | null>(null);
   const [shootoutSetup, setShootoutSetup] = useState<ShootoutSetup | null>(null);
   const [shootoutResult, setShootoutResult] = useState<ShootoutResult | null>(null);
   const [doneInfo, setDoneInfo] = useState<{
@@ -739,6 +772,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       momentumEnd: momentumRef.current[44] ?? 50,
       ...cardsRef.current,
       subsUsed: subsUsedRef.current,
+      auxiliar: leituraDoIntervalo(eventsRef.current.slice(0, eventIdxRef.current), { casa: scoreRef.current.home, fora: scoreRef.current.away }),
     };
     pushFeed({
       id: 'ht',
@@ -895,7 +929,9 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     }
     if (next.kind === 'injury_home') {
       pushFeed({ id: `inj-${idx}`, minute: next.minute, kind: 'chance', text: next.text, side: 'home', actorId: next.actor_id });
-      setForced({ kind: 'injury', idx, minute: next.minute, outName: next.actor_name ?? L('titular', 'starter'), outId: next.actor_id });
+      // O lance de lesão pode vir sem nome: busca no elenco (antes saía "starter is hurt").
+      const lesionado = next.actor_name ?? field.find((c) => c.id === next.actor_id)?.name ?? L('um titular', 'a starter');
+      setForced({ kind: 'injury', idx, minute: next.minute, outName: lesionado, outId: next.actor_id });
       setPhase('forced');
       return;
     }
@@ -909,10 +945,8 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     // MOMENTO DECISIVO: gol natural vira escolha de última fração (faz/salva).
     if ((next.kind === 'goal_home' || next.kind === 'goal_away') && !next.decision_influenced) {
       const intent = next.kind === 'goal_home' ? 'attack' : 'defend';
-      setClutch({
-        idx,
-        moment: buildClutch({ intent, minute: next.minute, seed: plan.seed, actorName: next.actor_name ?? (intent === 'attack' ? plan.home_short : plan.away_short) }),
-      });
+      const moment = buildClutch({ intent, minute: next.minute, seed: plan.seed, actorName: next.actor_name ?? (intent === 'attack' ? plan.home_short : plan.away_short) });
+      setClutch({ idx, moment, duelo: montarDuelo(moment, next.actor_id, field, awayCards ?? []) });
       setPhase('clutch');
       return;
     }
@@ -1059,7 +1093,8 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     setClutch(null);
     if (!c) return;
     const ev = eventsRef.current[c.idx];
-    const res = resolveClutch(c.moment, key, plan.seed);
+    // Fase 9: o duelo pesa de verdade — a vantagem de atributo entra no resultado.
+    const res = resolveClutch(c.moment, key, plan.seed, forcaNoDuelo(c.duelo, key));
     // O gol planejado foi "consumido" pelo momento decisivo: neutraliza o evento
     // original pra ele não reaparecer como card de gol ao retomar o jogo.
     eventsRef.current = eventsRef.current.map((e, i) =>
@@ -1362,7 +1397,11 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
         tipo: 'decisivo', chave: `clutch-${clutch.idx}`,
         titulo: clutch.moment.intent === 'attack' ? L('Momento decisivo', 'Decisive moment') : L('Segura o gol', 'Save it'),
         texto: clutch.moment.context, protagonista: clutch.moment.actorName,
-        opcoes: clutch.moment.options.map((o) => ({ id: o.key, rotulo: o.label })),
+        opcoes: clutch.moment.options.map((o) => {
+          const c = clutch.duelo?.porOpcao[o.key];
+          return { id: o.key, rotulo: o.label, detalhe: c ? `${c.rotuloNosso} ${c.nosso} × ${c.deles} ${c.rotuloDeles}` : undefined };
+        }),
+        duelo: clutch.duelo ? { nosso: { id: clutch.duelo.nosso.id, nome: clutch.duelo.nosso.nome }, deles: { id: clutch.duelo.deles.id, nome: clutch.duelo.deles.nome } } : undefined,
       };
     } else if (phase === 'forced' && forced) {
       decisao = forced.kind === 'red'
@@ -1929,9 +1968,20 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
                           className="min-h-[54px] min-w-0 border-2 border-papel px-1 font-impact text-[15px] uppercase leading-[1.05] text-papel transition-[transform,box-shadow,background-color,color,border-color] [overflow-wrap:anywhere] hover:border-rua hover:bg-rua hover:text-asfalto-27 hover:shadow-[4px_4px_0_var(--color-papel)] active:translate-x-0.5 active:translate-y-0.5 active:bg-rua active:text-asfalto-27 active:shadow-[2px_2px_0_var(--color-papel)]"
                         >
                           {o.label}
+                          {/* Fase 9: o duelo — o número é o que o resultado sente. */}
+                          {clutch.duelo?.porOpcao[o.key] && (
+                            <span className="mt-1 block font-prova text-[10px] normal-case tracking-normal opacity-75">
+                              {clutch.duelo.porOpcao[o.key]!.nosso} × {clutch.duelo.porOpcao[o.key]!.deles}
+                            </span>
+                          )}
                         </button>
                       ))}
                     </div>
+                    {clutch.duelo && (
+                      <p className="px-4 pb-3 -mt-2 font-prova text-[11px] text-mudo">
+                        {clutch.duelo.nosso.nome} × {clutch.duelo.deles.nome}
+                      </p>
+                    )}
                   </>
                 );
               })()}

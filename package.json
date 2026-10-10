@@ -94,6 +94,7 @@
     "test:club-pulse": "tsx scripts/test-club-pulse.ts",
     "test:absence-penalty": "tsx scripts/test-absence-penalty.ts",
     "test:moments": "tsx scripts/test-moments.ts",
+    "test:auxiliar-duelo": "tsx scripts/test-auxiliar-duelo.ts",
     "test:partida-viva": "tsx scripts/test-partida-viva.ts",
     "test:cadeia-lances": "python3 server/smartfield/test_cadeia_lances.py --n 300",
     "test:match-consequences": "tsx scripts/test-match-consequences.ts",

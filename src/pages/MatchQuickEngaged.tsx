@@ -495,6 +495,8 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
       fatigue: p.fatigue,
       portrait: players[p.id] ? playerPortraitSrc(players[p.id]!, 48, 48) : null,
       fairPlay: players[p.id]?.attrs.fairPlay ?? 70,
+      // Fase 9: o duelo do momento decisivo usa os atributos que vão ao motor.
+      attrs: { finalizacao: p.payload.finalizacao, drible: p.payload.drible, passe: p.payload.passe, marcacao: p.payload.marcacao, fisico: p.payload.fisico, velocidade: p.payload.velocidade },
     }),
     [players],
   );
@@ -905,6 +907,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
               fatigue: p.fatigue ?? 0,
               portrait: null,
               fairPlay: p.fair_play ?? 70,
+              attrs: { finalizacao: p.finalizacao, drible: p.drible, passe: p.passe, marcacao: p.marcacao, fisico: p.fisico, velocidade: p.velocidade },
             }))}
             benchCards={bench.map(toSquadCard)}
             onSubstitution={(outId, inId) => {
@@ -1328,6 +1331,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
             intensity={intensityRef.current}
             formation={formationRef.current}
             maxSubs={Math.max(0, 5 - halftimeCtx.subsUsed)}
+            auxiliar={halftimeCtx.auxiliar}
             onResume={resumeFromHalftime}
           />
         )}

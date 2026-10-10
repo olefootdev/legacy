@@ -247,7 +247,26 @@ export function PartidaVivaPalco(p: Props) {
         let q = replay ?? co.quadro(acumulado / DT);
         // Câmera do Craque: só o enquadramento muda (o jogo não sabe que é seguido).
         const alvo = !replay && seguindoRef.current ? q.jogadores.find((j) => j.f.id === seguindoRef.current) : undefined;
-        if (alvo) {
+        // Fase 9 — o duelo do momento decisivo: a câmera enquadra os dois, o resto apaga.
+        const duelo = canal.ultimo()?.decisao?.tipo === 'decisivo' ? canal.ultimo()?.decisao?.duelo : undefined;
+        const nosso = duelo ? q.jogadores.find((j) => j.f.id === duelo.nosso.id) : undefined;
+        const deles = duelo ? q.jogadores.find((j) => j.f.id === duelo.deles.id) : undefined;
+        if (!replay && nosso && deles) {
+          const mx = (nosso.x + deles.x) / 2, mz = (nosso.z + deles.z) / 2;
+          const zoom = Math.max(1.2, Math.min(2.3, 62 / Math.max(12, Math.hypot(nosso.x - deles.x, nosso.z - deles.z))));
+          cam.x += (mx - cam.x) * 0.15; cam.z += (mz - cam.z) * 0.15; cam.zoom += (zoom - cam.zoom) * 0.1;
+          q = {
+            ...q,
+            camera: { ...cam },
+            jogadores: q.jogadores.map((j) => ({ ...j, apagado: j !== nosso && j !== deles })),
+            fitas: [
+              ...q.fitas,
+              { x: nosso.x, z: nosso.z, texto: duelo!.nosso.nome, forte: true },
+              { x: deles.x, z: deles.z, texto: duelo!.deles.nome, forte: false },
+              { x: mx, z: mz - 3, texto: '×', forte: true },
+            ],
+          };
+        } else if (alvo) {
           cam.x += (alvo.x - cam.x) * 0.12; cam.z += (alvo.z - cam.z) * 0.12; cam.zoom += (1.75 - cam.zoom) * 0.08;
           q = { ...q, camera: { ...cam } };
         } else cam = { ...q.camera };

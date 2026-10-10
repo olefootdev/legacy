@@ -556,6 +556,26 @@ Cada fase termina com **algo que o fundador vê rodando no celular, a partir do 
   - Fora: quem COMPRA a carta assistir a lenda nos jogos de outros managers (precisa de regra de
     privacidade entre managers — decisão do fundador).
 
+### Fase 9 — O jogo explica (§5.1 #8 + §7)
+- ✅ **Feita em 10/10.** Escolha consciente: com 0 filmes no banco (nenhuma partida LEGACY terminou desde a
+  Fase 7), nada de 2.5D/clima (regra: enfeite só com o jogo redondo) — e sim o que deixa a partida mais
+  inteligente.
+  - **O duelo como cena:** no momento decisivo, o duelo é atributo × atributo, por escolha (atacando:
+    Finalização/Drible/Passe do nosso × Goleiro/Marcação deles; defendendo: Marcação × Drible, Velocidade
+    × Velocidade, Físico × Físico). O rival vem do contexto ("cara a cara" = goleiro; "zagueiro fechando" =
+    zagueiro…). No campo (LEGACY) a câmera enquadra os dois, o resto apaga, nomes em fita; no trilho e na
+    Rápida, cada botão mostra "84 × 64".
+  - **🔴 Achado: o atributo NÃO pesava.** `resolveClutch` aceitava o atributo do protagonista mas era
+    chamado sem ele (todo mundo = 70). Agora entra `forcaNoDuelo` = 70 + (nosso − deles) × 0,8: duelo
+    empatado = jogo de antes; +20 de vantagem ≈ +3 pp; teto ±7 pp. A escolha certa segue mandando.
+    Vale pra Rápida também (é o mesmo momento decisivo).
+  - **O auxiliar no intervalo:** aponta UM problema do 1º tempo pelos lances mostrados ("Eles chegaram 3
+    vezes pela esquerda") e sugere a estratégia ("Seguir: Defensiva"), que vai pro replan do 2º tempo.
+    Regra + modelo de texto, sem LLM (`auxiliarDoIntervalo.ts`). Visto no navegador.
+  - Fix: a lesão sem nome no lance mostrava "starter is hurt" — agora busca o nome no elenco.
+  - Portão: `npm run test:auxiliar-duelo` (13). Não visto rodando: o enquadramento do duelo no campo
+    (nas 2 partidas de teste os gols vieram de decisão do Analista, que não vira momento decisivo).
+
 ### Depois (se fizer sentido)
 - Three.js **2.5D** (visual de transmissão) — troca só o palco.
 - Clima e refletores por shader — **só depois** que o jogo estiver redondo (régua DS 2027: sem enfeite).

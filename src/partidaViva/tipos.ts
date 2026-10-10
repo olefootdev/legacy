@@ -57,6 +57,8 @@ export interface DecisaoNoCampo {
   opcoes: { id: string; rotulo: string; detalhe?: string }[];
   /** Prazo em ms (só a reação tem; as outras esperam o manager). */
   prazoMs?: number;
+  /** Fase 9: o duelo do momento decisivo — o campo enquadra os dois. */
+  duelo?: { nosso: { id: string; nome: string }; deles: { id: string; nome: string } };
   /** Auxiliar desenhado no campo (Fase 4c): onde está a nossa chance e o perigo deles. */
   corredores?: { nosso: string; perigo: string };
   /** Quem protagoniza (momento decisivo / lesão). */

@@ -36,6 +36,62 @@ export interface ClutchMoment {
   options: ClutchOption[];
   best: ClutchKey;
   actorName: string;
+  /**
+   * Partida Viva, Fase 9 — com quem é o duelo. Atacando: quem tenta parar o
+   * nosso (goleiro ou zagueiro). Defendendo: quem dos nossos enfrenta o atacante.
+   */
+  rival: Rival;
+}
+
+export type Rival = 'goleiro' | 'zagueiro' | 'meio';
+export type AtributoDoDuelo = 'finalizacao' | 'drible' | 'passe' | 'marcacao' | 'fisico' | 'velocidade';
+
+/** Um lado do duelo: o jogador e os atributos que importam. */
+export interface Lutador { id: string; nome: string; attrs: Partial<Record<AtributoDoDuelo, number>> }
+
+/** O duelo: atributo contra atributo, por escolha. É o que o resultado sente. */
+export interface Duelo {
+  nosso: Lutador;
+  deles: Lutador;
+  porOpcao: Partial<Record<ClutchKey, { nosso: number; deles: number; rotuloNosso: string; rotuloDeles: string }>>;
+}
+
+/** Que atributo nosso enfrenta que atributo deles, em cada escolha. */
+const CONFRONTO: Record<ClutchKey, [AtributoDoDuelo, AtributoDoDuelo]> = {
+  chutar: ['finalizacao', 'marcacao'],
+  driblar: ['drible', 'marcacao'],
+  tocar: ['passe', 'marcacao'],
+  cercar: ['marcacao', 'drible'],
+  carrinho: ['velocidade', 'velocidade'],
+  combate: ['fisico', 'fisico'],
+};
+const ROTULO_ATTR: Record<AtributoDoDuelo, string> = {
+  finalizacao: L('Finalização', 'Finishing'), drible: L('Drible', 'Dribbling'), passe: L('Passe', 'Passing'),
+  marcacao: L('Marcação', 'Marking'), fisico: L('Físico', 'Physical'), velocidade: L('Velocidade', 'Pace'),
+};
+
+/** Monta o duelo (atributo × atributo por escolha). Sem atributo, 60. */
+export function duelo(moment: ClutchMoment, nosso: Lutador, deles: Lutador): Duelo {
+  const porOpcao: Duelo['porOpcao'] = {};
+  for (const o of moment.options) {
+    const [an, ad] = CONFRONTO[o.key];
+    porOpcao[o.key] = {
+      nosso: Math.round(nosso.attrs[an] ?? 60), deles: Math.round(deles.attrs[ad] ?? 60),
+      rotuloNosso: ROTULO_ATTR[an],
+      rotuloDeles: moment.intent === 'attack' && moment.rival === 'goleiro' && ad === 'marcacao' ? L('Goleiro', 'Keeper') : ROTULO_ATTR[ad],
+    };
+  }
+  return { nosso, deles, porOpcao };
+}
+
+/**
+ * O atributo que entra no `resolveClutch`: 70 (o de sempre) + a vantagem no
+ * duelo. Empate = o jogo de antes; +20 de vantagem ≈ +3 pp; teto ±7 pp.
+ */
+export function forcaNoDuelo(d: Duelo | null | undefined, key: ClutchKey): number {
+  const c = d?.porOpcao[key];
+  if (!c) return 70;
+  return Math.max(30, Math.min(100, 70 + (c.nosso - c.deles) * 0.8));
 }
 
 export interface ClutchResult {
@@ -55,22 +111,22 @@ const DEFEND_OPTIONS: ClutchOption[] = [
   { key: 'combate', label: L('Combate', 'Challenge') },
 ];
 
-interface CtxDef { context: string; best: ClutchKey }
+interface CtxDef { context: string; best: ClutchKey; rival: Rival }
 
 const ATTACK_CONTEXTS: CtxDef[] = [
-  { context: L('Cara a cara com o goleiro', 'One-on-one with the keeper'), best: 'driblar' },
-  { context: L('Zagueiro fechando o ângulo', 'Defender closing the angle'), best: 'tocar' },
-  { context: L('Sobrou limpa na pequena área', 'Loose ball in the six-yard box'), best: 'chutar' },
-  { context: L('Dois marcadores em cima', 'Two markers closing in'), best: 'tocar' },
-  { context: L('Espaço na entrada da área', 'Space at the edge of the box'), best: 'chutar' },
-  { context: L('Companheiro livre na segunda trave', 'Teammate free at the back post'), best: 'tocar' },
+  { context: L('Cara a cara com o goleiro', 'One-on-one with the keeper'), best: 'driblar', rival: 'goleiro' },
+  { context: L('Zagueiro fechando o ângulo', 'Defender closing the angle'), best: 'tocar', rival: 'zagueiro' },
+  { context: L('Sobrou limpa na pequena área', 'Loose ball in the six-yard box'), best: 'chutar', rival: 'goleiro' },
+  { context: L('Dois marcadores em cima', 'Two markers closing in'), best: 'tocar', rival: 'zagueiro' },
+  { context: L('Espaço na entrada da área', 'Space at the edge of the box'), best: 'chutar', rival: 'goleiro' },
+  { context: L('Companheiro livre na segunda trave', 'Teammate free at the back post'), best: 'tocar', rival: 'zagueiro' },
 ];
 const DEFEND_CONTEXTS: CtxDef[] = [
-  { context: L('Atacante dispara em velocidade', 'Forward bursting through at pace'), best: 'carrinho' },
-  { context: L('Atacante protege a bola na área', 'Forward shielding the ball in the box'), best: 'cercar' },
-  { context: L('Duelo de corpo, ombro a ombro', 'Physical duel, shoulder to shoulder'), best: 'combate' },
-  { context: L('Atacante isolado na pequena área', 'Forward alone in the six-yard box'), best: 'carrinho' },
-  { context: L('Eles tabelam na entrada', 'They play a one-two at the edge'), best: 'cercar' },
+  { context: L('Atacante dispara em velocidade', 'Forward bursting through at pace'), best: 'carrinho', rival: 'zagueiro' },
+  { context: L('Atacante protege a bola na área', 'Forward shielding the ball in the box'), best: 'cercar', rival: 'zagueiro' },
+  { context: L('Duelo de corpo, ombro a ombro', 'Physical duel, shoulder to shoulder'), best: 'combate', rival: 'zagueiro' },
+  { context: L('Atacante isolado na pequena área', 'Forward alone in the six-yard box'), best: 'carrinho', rival: 'goleiro' },
+  { context: L('Eles tabelam na entrada', 'They play a one-two at the edge'), best: 'cercar', rival: 'meio' },
 ];
 
 const ATTACK_PAST: Record<AttackKey, string> = { chutar: L('Chutou', 'Shot'), driblar: L('Tentou o drible', 'Tried the dribble'), tocar: L('Tocou', 'Passed') };
@@ -96,6 +152,7 @@ export function buildClutch(opts: {
     options: intent === 'attack' ? ATTACK_OPTIONS : DEFEND_OPTIONS,
     best: def.best,
     actorName,
+    rival: def.rival,
   };
 }
 
