@@ -78,6 +78,8 @@ import { montarFichas } from '@/partidaViva/escalacao';
 import { deitarTela, levantarTela } from '@/partidaViva/orientacao';
 import { msParaMostrar } from '@/partidaViva/cronograma';
 import { ligarSom } from '@/partidaViva/som';
+import { gravarEntrega, salvarFilme, type Trecho } from '@/partidaViva/gravacao';
+import type { QuadroAoVivo } from '@/partidaViva/tipos';
 
 // PARTIDA VIVA (beta): o palco em campo só carrega o PixiJS quando é aberto.
 const PartidaVivaPalco = lazy(() =>
@@ -688,10 +690,36 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
     return out;
   }, [players]);
 
+  // FASE 6 — o filme: cada montagem do palco é um trecho; cada entrega, uma linha do roteiro.
+  const trechosRef = useRef<(Trecho & { montagem: number; formacaoCasa: string })[]>([]);
+  const gravar = useCallback((m: { id: number; comEntrada: boolean }, passo: number, q: QuadroAoVivo) => {
+    let t = trechosRef.current[trechosRef.current.length - 1];
+    if (!t || t.montagem !== m.id) {
+      t = { montagem: m.id, comEntrada: m.comEntrada, formacaoCasa: formationRef.current, roteiro: [] };
+      trechosRef.current.push(t);
+    }
+    gravarEntrega(t, passo, q);
+  }, []);
+  const [filmeId, setFilmeId] = useState<string | null>(null);
+
   const creditedRef = useRef(false);
   const onComplete = useCallback((_p: MatchPlan, r: QuickPlanPlayResult) => {
     setResult(r);
     setPhase('finished');
+    // FASE 6 — guarda o filme no aparelho (só se a partida foi vista em campo).
+    const trechos = trechosRef.current.filter((t) => t.roteiro.length > 3);
+    if (trechos.length && plan && opponent) {
+      const id = `${plan.seed}-${Date.now().toString(36)}`;
+      const ok = salvarFilme({
+        v: 1, id, quando: new Date().toISOString(), seed: plan.seed,
+        siglaCasa: club.shortName, siglaFora: opponent.shortName, nomeCasa: club.name, nomeFora: opponent.name,
+        placarCasa: r.homeScore, placarFora: r.awayScore,
+        formacaoCasa: trechos[0]!.formacaoCasa, formacaoFora: '4-3-3',
+        fichas: fichasAoVivo, banco: fichasDoBanco,
+        trechos: trechos.map(({ comEntrada, roteiro, formacaoCasa }) => ({ comEntrada, roteiro, formacaoCasa })),
+      });
+      if (ok) setFilmeId(id);
+    }
     // CRÉDITO DE PROGRESSÃO (Fase D): credita XP/economia/evolução/fadiga +
     // Manager IQ uma única vez por partida.
     if (creditedRef.current) return;
@@ -732,7 +760,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
       // FASE 2C: quando o servidor responde, a conta dele vale.
       aoAplicar: (jogadores) => dispatch({ type: 'APLICAR_EVOLUCAO_DO_SERVIDOR', jogadores }),
     });
-  }, [dispatch]);
+  }, [dispatch, plan, opponent, fichasAoVivo, fichasDoBanco, club.name, club.shortName]);
 
   // ── Render ────────────────────────────────────────────────────────────
   if (!hasOpponent) {
@@ -924,12 +952,27 @@ export default function MatchQuickEngaged({ aoVivoInicial = false }: { aoVivoIni
               onSair={fecharCampo}
               comEntrada={phase === 'kickoff'}
               banco={fichasDoBanco}
+              gravar={gravar}
             />
           </Suspense>
         )}
 
         {phase === 'finished' && result && (
           <div className="mt-6 flex flex-col gap-5">
+            {/* FASE 6 — o filme da partida vista em campo, pra reassistir. */}
+            {filmeId && (
+              <button
+                type="button"
+                onClick={() => { ligarSom(); navigate(`/match/filme/${encodeURIComponent(filmeId)}`); }}
+                className="flex items-center justify-between border border-papel bg-rua px-4 py-3 text-left text-asfalto-27"
+              >
+                <span>
+                  <span className="block font-impact text-[22px] leading-none">{L('Reassistir em campo', 'Rewatch on the pitch')}</span>
+                  <span className="mt-1 block font-prova text-[11px]">{L('O filme da partida · Câmera do Craque', 'The match film · Star Cam')}</span>
+                </span>
+                <span aria-hidden className="font-impact text-[26px]">▶</span>
+              </button>
+            )}
             {/* O RESULTADO (spray + voz + MVP em post-it + fita de EXP) agora mora
                 no fim do QuickPlanPlayer — uma peça só, sem MVP duplicado. */}
 

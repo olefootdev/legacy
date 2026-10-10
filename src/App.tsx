@@ -153,6 +153,7 @@ const CollectionTab = lazy(() => import('./pages/wallet/CollectionTab').then((m)
 const ExtractTab = lazy(() => import('./pages/wallet/ExtractTab').then((m) => ({ default: m.ExtractTab })));
 const LiveMatch = lazy(() => import('./pages/LiveMatch').then((m) => ({ default: m.LiveMatch })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
+const FilmeDaPartida = lazy(() => import('./pages/FilmeDaPartida'));
 const MatchAoVivo = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchAoVivo })));
 const LegendsCup = lazy(() => import('./pages/LegendsCup').then((m) => ({ default: m.LegendsCup })));
 const QuickPlanPreview = lazy(() => import('./pages/QuickPlanPreview').then((m) => ({ default: m.default })));
@@ -715,6 +716,9 @@ as a nice MVP. Let's Play Together! ⚽
                 </ErrorBoundary>
               }
             />
+            {/* PARTIDA VIVA — Fase 6: o filme da partida (reassistir + Câmera do Craque) */}
+            <Route path="/match/filme" element={<FilmeDaPartida />} />
+            <Route path="/match/filme/:id" element={<FilmeDaPartida />} />
             <Route path="/match/quick-plan-preview" element={<QuickPlanPreview />} />
             <Route path="/liga-ole" element={<LigaOle />} />
             <Route path="/match/penalty" element={<MatchPenaltyV2 />} />

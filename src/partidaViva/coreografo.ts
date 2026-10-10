@@ -48,6 +48,9 @@ export interface QuadroDoPalco {
 /** Um quadro do filme do gol (pro replay). */
 export interface QuadroDoFilme { t: number; pos: number[]; bola: { x: number; z: number; h: number } }
 
+/** Identidade de um lance (minuto, tipo, autor, texto) — sobrevive a JSON. */
+export const chaveDoLance = (l: MatchPlanEvent) => `${l.minute}|${l.kind}|${l.actor_id ?? ''}|${l.text ?? ''}`;
+
 export class Coreografo {
   corpos: Corpo[] = [];
   bola = { x: C / 2, z: L / 2, h: 0 };
@@ -61,6 +64,8 @@ export class Coreografo {
   estiloCasa: string | undefined;
   /** LEGACY (Fase 4b): grito valendo e ordens individuais da casa. */
   gritoCasa: string | undefined;
+  /** Passos dados desde o apito — o relógio do filme (Fase 6). */
+  passos = 0;
   ordens: Record<string, string> = {};
   rnd: () => number;
   t = 0;
@@ -123,13 +128,19 @@ export class Coreografo {
     this.estiloCasa = q.estilo;
     this.ouvirComandos(q);
     if (this.t < this.entradaAte) return; // a entrada em campo termina primeiro
-    if (q.gol && q.gol.chave !== this.ultimoGol) {
-      this.ultimoGol = q.gol.chave;
-      encenarGol(this, q.gol.lado, q.gol.actorId, q.gol.cadeia, q.gol.xg ?? 0.4);
+    // Gol em cena: o quadro não encena mais nada (repetido ou não) — senão
+    // o mesmo quadro entregue duas vezes encenaria o lance na 2ª (e o filme diverge).
+    if (q.gol) {
+      if (q.gol.chave !== this.ultimoGol) {
+        this.ultimoGol = q.gol.chave;
+        encenarGol(this, q.gol.lado, q.gol.actorId, q.gol.cadeia, q.gol.xg ?? 0.4);
+      }
       return;
     }
     if (!q.gol && this.festa) this.recomecar();
-    if (q.lance && q.lance !== this.ultimoLance) {
+    // Pela CHAVE, não pela referência: o filme (Fase 6) relê os quadros do disco
+    // e cada um traz um objeto novo — o mesmo lance não pode ser encenado de novo.
+    if (q.lance && chaveDoLance(q.lance) !== (this.ultimoLance && chaveDoLance(this.ultimoLance))) {
       this.ultimoLance = q.lance;
       encenarLance(this, q.lance);
     } else if (!q.lance) {
@@ -180,6 +191,7 @@ export class Coreografo {
   }
 
   passo(): void {
+    this.passos++;
     this.t += DT;
     while (this.fila.length && this.fila[0]!.em <= this.t) this.fila.shift()!.faz();
     for (const c of this.corpos) { c.px = c.x; c.pz = c.z; }

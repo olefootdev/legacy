@@ -18,6 +18,7 @@ import type { MatchPlanEvent } from '../src/match/quickPlanTypes';
 import { ajustarPorEstilo, ajustarPorGrito, alvoNaForma, formaDe, intencaoDoTime } from '../src/partidaViva/forma';
 import { pontosDoGiz, quadroDoReplay } from '../src/partidaViva/filme';
 import { corredorEmMetros, lerPrancheta } from '../src/partidaViva/prancheta';
+import { entregarQuadro, gravarEntrega, type Trecho } from '../src/partidaViva/gravacao';
 
 let falhas = 0;
 function confere(cond: boolean, msg: string) {
@@ -312,6 +313,61 @@ confere(a.hist.some((v, i) => v !== outra.hist[i]), 'outra seed → outro filme'
   confere(nosso.x0 > 52.5 && nosso.z1 < 34, 'analista: nossa chance pela esquerda = campo de ataque, faixa de cima');
   confere(perigo.x1 < 52.5 && perigo.z0 > 34, 'analista: o perigo pela esquerda DELES = nosso campo, faixa de baixo');
   confere(corredorEmMetros('qualquer', 'nosso') === null, 'analista: canal desconhecido não desenha nada');
+}
+
+// ── Fase 6: o filme — ao vivo e reassistido têm de ser IDÊNTICOS ──────────
+{
+  const reserva = { id: 'reserva-9', nome: 'Reserva Nove', iniciais: 'RN', lado: 'home' as const, slot: '', rosto: null, fadiga: 0, velocidade: 78 };
+  const banco = [reserva];
+  const emCampo = fichas.filter((f) => f.lado === 'home').map((f) => f.id);
+  const comTroca = emCampo.map((id) => (id === 'home-9' ? 'reserva-9' : id));
+  const gol = { chave: 'goal-x', nome: 'Dez', lado: 'home' as const, actorId: 'home-10', xg: 0.3 };
+  // Roteiro "ao vivo": quadros chegando em passos irregulares (como o React entrega), repetidos às vezes.
+  const chegadas: { p: number; q: QuadroAoVivo }[] = [];
+  let p = 3;
+  for (let m = 1; m <= 40; m++) {
+    const extra: Partial<QuadroAoVivo> = { emCampo: m >= 22 ? comTroca : emCampo, estilo: m >= 15 ? 'press' : 'possession' };
+    if (m % 6 === 0) extra.lance = lance(m, m % 12 === 0 ? 'shot_away' : 'chance_home', m % 12 === 0 ? 'away' : 'home', 'att', 'ataque_central');
+    if (m === 30) extra.gol = gol;
+    if (m >= 25 && m < 35) extra.grito = { tipo: 'cobrar', ate: 35 };
+    chegadas.push({ p, q: quadro(m, { ...extra, placarCasa: m >= 30 ? 1 : 0 }) });
+    if (m % 5 === 0) chegadas.push({ p: p + 1, q: quadro(m, { ...extra, placarCasa: m >= 30 ? 1 : 0 }) }); // quadro repetido
+    p += 7 + ((m * 13) % 11);
+  }
+  const total = p + 120;
+  const rodarAoVivo = () => {
+    const c = new Coreografo(fichas, '4-3-3', '4-3-3', 'filme-seed', true);
+    const t: Trecho = { comEntrada: true, roteiro: [] };
+    const hist: number[] = [];
+    let k = 0;
+    for (let passo = 0; passo < total; passo++) {
+      while (k < chegadas.length && chegadas[k]!.p <= c.passos) {
+        const e = chegadas[k++]!;
+        gravarEntrega(t, c.passos, e.q);
+        entregarQuadro(c, e.q, banco);
+      }
+      c.passo();
+      for (const j of c.quadro(1).jogadores) hist.push(Math.round(j.x * 100), Math.round(j.z * 100));
+    }
+    return { hist, t, ids: c.corpos.map((k2) => k2.f.id) };
+  };
+  const vivo = rodarAoVivo();
+  const roteiro = (JSON.parse(JSON.stringify(vivo.t)) as Trecho).roteiro; // como sai do localStorage
+  const c2 = new Coreografo(fichas, '4-3-3', '4-3-3', 'filme-seed', true);
+  const hist2: number[] = [];
+  let k = 0;
+  for (let passo = 0; passo < total; passo++) {
+    while (k < roteiro.length && roteiro[k]!.p <= c2.passos) entregarQuadro(c2, roteiro[k++]!.q, banco);
+    c2.passo();
+    for (const j of c2.quadro(1).jogadores) hist2.push(Math.round(j.x * 100), Math.round(j.z * 100));
+  }
+  const iguais = vivo.hist.length === hist2.length && vivo.hist.every((v, i) => v === hist2[i]);
+  const primeira = vivo.hist.findIndex((v, i) => v !== hist2[i]);
+  confere(iguais, `filme: reassistido == ao vivo, posição a posição (${total} passos${iguais ? '' : `, diverge no passo ${Math.floor(primeira / 44)}`})`);
+  confere(vivo.ids.includes('reserva-9') && c2.corpos.some((c) => c.f.id === 'reserva-9'), 'filme: a troca entra no filme');
+  confere(roteiro.length < chegadas.length, `filme: quadros repetidos não são gravados (${roteiro.length} de ${chegadas.length})`);
+  const kb = JSON.stringify(vivo.t).length / 1024;
+  confere(kb < 120, `filme: cabe no aparelho (${kb.toFixed(1)} KB pra 40 minutos)`);
 }
 
 if (falhas) { console.error(`\n${falhas} falha(s)`); process.exit(1); }

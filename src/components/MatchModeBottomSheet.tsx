@@ -12,7 +12,7 @@
  *   • Escape fecha
  *   • focus-trap minimalista (loop entre primeiro/último focusable)
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,7 @@ import { Hashtag } from '@/components/ui';
 import { L } from '@/i18n/L';
 import { deitarTela } from '@/partidaViva/orientacao';
 import { ligarSom } from '@/partidaViva/som';
+import { listarFilmes } from '@/partidaViva/gravacao';
 
 type ModeStatus = 'available' | 'soon' | 'wip';
 
@@ -117,6 +118,9 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
       document.body.style.overflow = prev;
     };
   }, [open]);
+
+  // FASE 6 — os filmes do LEGACY guardados neste aparelho (reassistir + Câmera do Craque).
+  const filmes = useMemo(() => (open ? listarFilmes().length : 0), [open]);
 
   const handlePick = (mode: ModeEntry) => {
     if (mode.status !== 'available' || !mode.to) return;
@@ -251,6 +255,16 @@ export function MatchModeBottomSheet({ open, onClose }: Props) {
                         </span>
                       ) : null}
                     </button>
+                    {destaque && filmes > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => { ligarSom(); onClose(); setTimeout(() => navigate('/match/filme'), 180); }}
+                        className="mt-2 flex w-full items-center justify-between border border-linha px-4 py-2 text-left font-prova text-[11px] text-papel hover:border-papel"
+                      >
+                        <span>{L(`Seus filmes · ${filmes}`, `Your films · ${filmes}`)}</span>
+                        <span aria-hidden>▶</span>
+                      </button>
+                    )}
                   </li>
                 );
               })}

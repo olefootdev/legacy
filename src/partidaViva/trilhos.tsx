@@ -146,8 +146,9 @@ function Rosto({ f, tam }: { f: Ficha; tam: number }) {
   );
 }
 
-export function CartaoFicha({ f, onFechar, ordem, onOrdem, onSubstituir }: {
+export function CartaoFicha({ f, onFechar, ordem, onOrdem, onSubstituir, seguindo, onSeguir }: {
   f: Ficha; onFechar: () => void; ordem?: string; onOrdem?: (id: string) => void; onSubstituir?: () => void;
+  seguindo?: boolean; onSeguir?: () => void;
 }) {
   const folego = Math.max(0, 100 - f.fadiga);
   return (
@@ -167,6 +168,11 @@ export function CartaoFicha({ f, onFechar, ordem, onOrdem, onSubstituir }: {
         <div className="mb-1 text-suave">{L('Fôlego', 'Stamina')} {folego}%</div>
         <div className="h-1 bg-linha"><div className={`h-1 ${folego > 50 ? 'bg-papel' : 'bg-[#E0703A]'}`} style={{ width: `${folego}%` }} /></div>
       </div>
+      {onSeguir && (
+        <button type="button" onClick={onSeguir} aria-pressed={seguindo} className={`${BOTAO} ${seguindo ? 'border-papel bg-rua text-asfalto-27' : 'border-linha bg-concreto text-papel'}`}>
+          {seguindo ? L('Câmera do jogo', 'Match camera') : L('Câmera do Craque 🎥', 'Star Cam 🎥')}
+        </button>
+      )}
       {f.lado === 'home' && onOrdem ? (
         <div className="flex flex-col gap-1" role="group" aria-label={L('Ordem individual', 'Individual order')}>
           {ORDENS.map((o) => (
@@ -239,6 +245,39 @@ export function PainelBanco({ banco, rostos, restantes, sai, escolhido, onEscolh
           );
         })}
         {!banco.length && <li className="text-mudo">{L('Ninguém no banco.', 'Bench is empty.')}</li>}
+      </ol>
+    </div>
+  );
+}
+
+/** Câmera do Craque (Fase 6): escolha quem a câmera segue a partida inteira. */
+export function PainelCamera({ fichas, seguindo, onSeguir, onFechar }: {
+  fichas: Ficha[]; seguindo: string | null; onSeguir: (id: string | null) => void; onFechar: () => void;
+}) {
+  const ordem = [...fichas].sort((a, b) => (a.lado === b.lado ? 0 : a.lado === 'home' ? -1 : 1));
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-1.5" role="group" aria-label={L('Câmera do Craque', 'Star Cam')}>
+      <div className="flex items-center justify-between">
+        <span className="bg-cal px-1.5 py-0.5 font-prova text-[11px] text-asfalto-27">{L('Câmera do Craque', 'Star Cam')}</span>
+        <button type="button" onClick={onFechar} aria-label={L('Fechar', 'Close')} className="px-1 text-mudo">✕</button>
+      </div>
+      <button type="button" onClick={() => onSeguir(null)} aria-pressed={!seguindo} className={`${BOTAO} ${!seguindo ? 'border-papel bg-rua text-asfalto-27' : 'border-linha bg-concreto text-papel'}`}>
+        {L('Câmera do jogo', 'Match camera')}
+      </button>
+      <ol className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+        {ordem.map((f) => (
+          <li key={f.id}>
+            <button
+              type="button"
+              aria-pressed={seguindo === f.id}
+              onClick={() => onSeguir(f.id)}
+              className={`flex w-full items-center gap-1.5 border px-1.5 py-1 text-left ${seguindo === f.id ? 'border-papel bg-rua text-asfalto-27' : 'border-linha bg-concreto text-papel'}`}
+            >
+              <Rosto f={f} tam={22} />
+              <span className="min-w-0 flex-1 truncate text-[11px]">{f.nome}</span>
+            </button>
+          </li>
+        ))}
       </ol>
     </div>
   );

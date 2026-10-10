@@ -185,7 +185,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
   const coachGreetingName = remoteManagerFirst ?? (localManagerFirst || null);
   const coachGreetingLine = coachGreetingName ? L(`Olá, ${coachGreetingName}`, `Hi, ${coachGreetingName}`) : L('Olá, Treinador', 'Hi, Coach');
-  const isQuickMatchRoute = location.pathname === '/match/quick' || location.pathname === '/match/ao-vivo';
+  const isQuickMatchRoute = location.pathname === '/match/quick' || location.pathname === '/match/ao-vivo' || location.pathname.startsWith('/match/filme/');
   const isPenaltyRoute =
     location.pathname === '/match/penalty' ||
     location.pathname === '/match/penalty-legacy';

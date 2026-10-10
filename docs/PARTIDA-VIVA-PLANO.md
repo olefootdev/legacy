@@ -498,6 +498,32 @@ Cada fase termina com **algo que o fundador vê rodando no celular, a partir do 
     da partida de outro manager — ideia do §8, fica pra depois do deploy); LLM no gol/intervalo (a narração
     da Rápida já vem do Sonnet quando disponível); skills com nome (a cadeia ainda não diz qual skill disparou).
 
+### Fase 6 — O filme (§8)
+- ✅ **Feita em 10/10 — reassistir no campo + Câmera do Craque (no aparelho).**
+  - **Como:** o coreógrafo é determinístico, então o filme não grava vídeo nem posição: grava EM QUE PASSO
+    cada quadro chegou (`gravacao.ts`). Reassistir = entregar os mesmos quadros nos mesmos passos a um
+    coreógrafo novo. Toda mudança no coreógrafo causada por quadro passa por `entregarQuadro` (ao vivo e no
+    filme); as trocas de jogador saíram do efeito do React pra dentro dela.
+  - **Portão:** `test:partida-viva` grava uma partida sintética (lances, gol, troca, grito, quadros
+    repetidos, entregas em passos irregulares), passa por JSON como no aparelho e reassiste: 602 passos
+    idênticos posição a posição. O teste achou dois defeitos: lance comparado por referência (relido do
+    disco, todo quadro parecia lance novo → `chaveDoLance`) e quadro repetido durante o gol encenando o
+    lance (agora gol em cena não encena mais nada — também valia ao vivo).
+  - **Onde:** no fim da partida vista em campo, "Reassistir em campo"; no menu PLAY, "Seus filmes · N"
+    embaixo do LEGACY; rota `/match/filme` (lista) e `/match/filme/:id`. Guardados em `localStorage`
+    (6 filmes, ~90 KB cada; sem espaço, descarta os mais velhos). Sair e voltar ao campo no meio da
+    partida vira outro TRECHO (o filme toca os trechos em sequência).
+  - **No filme:** intervalo e pênaltis passam direto; "Pular" vai ao próximo lance; o replay e a jogada a
+    giz do gol tocam de novo; decisões viram só narração (o Analista continua desenhado).
+  - **Câmera do Craque:** botão "Câmera" no filme (lista dos 22) e "Câmera do Craque 🎥" no cartão do
+    jogador (ao vivo também). Só o enquadramento muda — o jogo não sabe que é seguido.
+  - **Limite conhecido:** com a aba em segundo plano o navegador para de desenhar (rAF) mas o relógio da
+    Rápida segue; o filme reproduz fielmente isso (os minutos sem campo chegam juntos).
+  - **Não feito — precisa de tabela no servidor:** "seu time jogou enquanto você dormia" (mandar o filme
+    pro dono do time adversário) e assistir em outro aparelho. Desenho: `partidas_filme` (dono, adversário,
+    seed, resumo, filme jsonb ≤ 200 KB, RLS só servidor) + `POST /api/filme` (placar do filme tem de bater
+    com o relato da custódia) + aviso no inbox do adversário.
+
 ### Depois (se fizer sentido)
 - Three.js **2.5D** (visual de transmissão) — troca só o palco.
 - Clima e refletores por shader — **só depois** que o jogo estiver redondo (régua DS 2027: sem enfeite).
