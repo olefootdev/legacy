@@ -8,6 +8,7 @@
  *   - fetchOnboarding — hidrata Zustand após signIn.
  */
 
+import { L } from '@/i18n/L';
 import { getSupabase } from '@/supabase/client';
 import type { UserSettings } from '@/game/types';
 import type { FormationSchemeId } from '@/match-engine/types';
@@ -152,7 +153,12 @@ export async function saveOnboardingProfile(input: {
     p_onboarding_data: input.onboarding,
     p_referred_by_code: input.referredByCode ?? null,
   });
-  return error ? error.message : null;
+  if (!error) return null;
+  // Erro do banco não vai pra tela crua (um manager viu "duplicate key value violates unique constraint").
+  if (error.message.includes('profiles_club_short_unique')) {
+    return L('Essa sigla de clube já é de outro manager. Escolha outra.', 'That club tag already belongs to another manager. Pick another one.');
+  }
+  return error.message;
 }
 
 export interface LoadedOnboarding {

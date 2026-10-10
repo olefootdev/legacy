@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { FitaRua, Hashtag, MarcaRua, SeletorDeIdioma } from '@/components/ui';
 import { useGameDispatch, getGameState } from '@/game/store';
 import { signInWithEmail, fetchOnboardingProfile, sendPasswordResetEmail, saveOnboardingProfile } from '@/supabase/auth';
+import { siglaLivre } from '@/supabase/managerUsername';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { fetchMyReferralCode, syncMyExpLifetime } from '@/supabase/referrals';
 import { FORMATION_TACTICAL_DEFAULTS } from '@/tactics/formationDefaults';
@@ -188,9 +189,9 @@ export function Login() {
     setError(null);
     setBusy(true);
     try {
-      const clubShort = compClubName.trim().split(/\s+/).filter(Boolean).length >= 2
-        ? (compClubName.trim().split(/\s+/)[0]![0]! + compClubName.trim().split(/\s+/)[1]![0]!).toUpperCase()
-        : compClubName.trim().slice(0, 3).toUpperCase();
+      // Sigla livre (a gerada pelas iniciais podia já ser de outro clube — "EC", "SC"…
+      // e o banco recusava com "duplicate key … profiles_club_short_unique").
+      const clubShort = await siglaLivre(compClubName.trim());
 
       const managerProfile = {
         firstName: compFirstName.trim(),

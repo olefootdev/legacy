@@ -37,6 +37,25 @@ export async function checkClubShortAvailable(clubShort: string): Promise<boolea
 }
 
 /**
+ * Sigla LIVRE pro nome do clube (o banco não aceita duas iguais —
+ * `profiles_club_short_unique`). Tenta as iniciais, as 3 primeiras letras,
+ * 3 letras de dentro do nome e, por fim, a sigla com um número.
+ */
+export async function siglaLivre(nomeDoClube: string): Promise<string> {
+  const palavras = nomeDoClube.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+  const junto = palavras.join('');
+  const iniciais = palavras.length >= 2 ? palavras.map((w) => w[0]).join('').slice(0, 4) : junto.slice(0, 3);
+  const base = (iniciais.length >= 2 ? iniciais : (junto + 'FC').slice(0, 3));
+  const candidatos = new Set<string>([base, junto.slice(0, 3), palavras.length >= 2 ? (palavras[0]!.slice(0, 2) + palavras[1]![0]) : junto.slice(0, 2) + junto.slice(-1)]);
+  for (const c of candidatos) if (c.length >= 2 && (await checkClubShortAvailable(c))) return c;
+  for (let n = 1; n <= 99; n++) {
+    const c = `${base.slice(0, 3)}${n}`;
+    if (await checkClubShortAvailable(c)) return c;
+  }
+  return `${base.slice(0, 2)}${Date.now() % 1000}`;
+}
+
+/**
  * Busca um perfil pelo username (para adicionar amigo).
  * Retorna o perfil ou null se não existir.
  */
