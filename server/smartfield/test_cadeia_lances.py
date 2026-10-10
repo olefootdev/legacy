@@ -28,7 +28,7 @@ from match_simulator import simulate  # noqa: E402
 POS = [("GOL", "gk"), ("ZAG", "def"), ("ZAG", "def"), ("LE", "def"), ("LD", "def"),
        ("VOL", "mid"), ("MC", "mid"), ("MC", "mid"), ("PE", "attack"), ("ATA", "attack"), ("PD", "attack")]
 # Voláteis + metadado novo (Fase 4b) que o simulador antigo não tem.
-VOLATEIS = ("generated_at_ms", "duration_ms", "comandos_aplicados")
+VOLATEIS = ("generated_at_ms", "duration_ms", "comandos_aplicados", "fluxo")
 
 
 def time_aleatorio(r: random.Random, lado: str):

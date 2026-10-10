@@ -639,6 +639,25 @@ O fundador apontou: escanteio sem ninguém ir à bola, sem defensores na área; 
   ESCOLHIDO (gol ou defesa). O do adversário defendido também vira cena.
 - Portões: `test:partida-viva` (escanteio, barreira, pênalti, cartão) e `test_cadeia_lances` (placar intacto).
 
+### Fase 12 — O jogo entre os lances, números ao vivo, regras e perfil (10/10)
+Pedido do fundador: os passos 1–4 do "mais realista" (o 5, narração jogada a jogada, ficou de fora: informação demais).
+1. **Posse minuto a minuto** — o motor já decidia, a cada minuto, quem tem a bola, em que terço, se roubou
+   e QUEM carrega; agora expõe isso (`plan.fluxo`, ~2,8 KB, só registro: nenhum sorteio a mais, placar
+   intacto). O campo joga a posse do plano: o time fica no terço certo (def 30 m · meio 50 m · ataque 70 m
+   do próprio gol) e a bola chega em quem o plano diz que a carregou. Replans emendam o fluxo.
+2. **Números ao vivo + consequência** — posse, chutes, xG e escanteios no trilho (dos lances JÁ mostrados,
+   com a mesma regra de cronologia do placar). 10' depois de um grito/ordem/troca/estilo, a narração conta o
+   efeito NAQUELA janela: "📊 Depois do grito Cobrar (31'–41'): posse 58%, 3 roubadas, chutes 2×1".
+3. **Regras** — a troca de posse vira regra no campo: roubada; LATERAL (meio); TIRO DE META ou IMPEDIMENTO
+   (quando quem perdeu estava no ataque: o atacante passa da linha do último zagueiro, bandeira, falta pra
+   defesa). Uma regra por vez (no modo Lances os minutos voam: a próxima troca é silenciosa).
+   **Acréscimos** no 45' e no 90' (relógio "45+2′"), somando gols, cartões, lesões, pênaltis e trocas.
+   Fora: substituição do adversário (o time adversário chega só com os 11 — sem banco pra trocar).
+4. **Decisão pelo perfil** (`jogoAmbiente.ts`) — o driblador (classe ou drible ≥ 78) encara no ataque; o
+   armador (regista/maestro ou passe ≥ 80) inverte com lançamento; o velocista recebe em profundidade; o
+   cansado (fôlego < 30%) só toca curto; o goleiro sai nos cruzamentos na pequena área.
+- Portões: `test:partida-viva` (posse do plano, regras, perfil, filme idêntico com fluxo) e `test_cadeia_lances`.
+
 ### Depois (se fizer sentido)
 - Three.js **2.5D** (visual de transmissão) — troca só o palco.
 - Clima e refletores por shader — **só depois** que o jogo estiver redondo (régua DS 2027: sem enfeite).

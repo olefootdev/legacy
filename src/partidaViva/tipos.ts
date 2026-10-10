@@ -7,6 +7,9 @@
  */
 import type { CadeiaDeLance, MatchPlanEvent } from '@/match/quickPlanTypes';
 
+/** Números da partida até agora (casa × fora). */
+export interface NumerosAoVivo { posse: number; chutes: [number, number]; noGol: [number, number]; xg: [number, number]; escanteios: [number, number]; faltas: [number, number] }
+
 /** Fases do `QuickPlanPlayer` (espelho de `PlayerPhase`). */
 export type FaseDoPlayer =
   | 'playing' | 'beat' | 'halftime' | 'celebration' | 'penalty' | 'forced'
@@ -39,6 +42,12 @@ export interface QuadroAoVivo {
   /** Fase 4c: reservas disponíveis (só no LEGACY) e trocas que ainda cabem. */
   banco?: { id: string; nome: string; pos: string; ovr: number; fadiga: number }[];
   subsRestantes?: number;
+  /** Fase 12: a posse DESTE minuto, do plano (quem tem a bola, em que terço, quem carrega). */
+  posse?: { lado: 'home' | 'away'; zona: 'def' | 'mid' | 'att'; roubou: boolean; ator: string } | null;
+  /** Fase 12: os números ao vivo (até este minuto). */
+  numeros?: NumerosAoVivo;
+  /** Fase 12: acréscimos — minutos além do 45/90 que estão correndo (0 = sem). */
+  acrescimo?: number;
   /** Fase 4c: prancheta aberta — o relógio da Rápida está parado. */
   pausado?: boolean;
 }
@@ -82,6 +91,9 @@ export interface Ficha {
   velocidade: number;
   /** Classe do SMART-PROFILE (regista, velocista, matador…) — vem do servidor com o plano. */
   classe?: string;
+  /** Fase 12: o que o jogador decide fora dos lances (passe longo, encarar, correr). 0–100. */
+  passe?: number;
+  drible?: number;
 }
 
 /**

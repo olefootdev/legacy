@@ -19,6 +19,7 @@ import { ajustarPorEstilo, ajustarPorGrito, alvoNaForma, formaDe, intencaoDoTime
 import { pontosDoGiz, quadroDoReplay } from '../src/partidaViva/filme';
 import { corredorEmMetros, lerPrancheta } from '../src/partidaViva/prancheta';
 import { entregarQuadro, gravarEntrega, type Trecho } from '../src/partidaViva/gravacao';
+import { decidirToque } from '../src/partidaViva/jogoAmbiente';
 
 let falhas = 0;
 function confere(cond: boolean, msg: string) {
@@ -488,6 +489,73 @@ confere(a.hist.some((v, i) => v !== outra.hist[i]), 'outra seed → outro filme'
     rodarAte(c, 4, (k) => k.quadro(1).fitas.forEach((f) => fitas.add(f.texto)));
     confere((fitas.has('FALTA') || fitas.has('FOUL')) && (fitas.has('AMARELO') || fitas.has('YELLOW')), `cartão: falta + amarelo no campo (${[...fitas].join(', ')})`);
   }
+}
+
+// ── Fase 12: o jogo entre os lances (posse do plano, regras, perfil) ───────
+{
+  const posse = (m: number, lado: 'home' | 'away', zona: 'def' | 'mid' | 'att', ator: string) => ({ lado, zona, roubou: false, ator });
+  // 1) A posse do plano manda: 10' da casa no ataque → a bola mora no campo de ataque.
+  const c = new Coreografo(fichas, '4-3-3', '4-3-3', 'fluxo');
+  for (let i = 0; i < 60; i++) c.passo();
+  let somaX = 0, n = 0, ladoCerto = 0;
+  for (let m = 1; m <= 10; m++) {
+    c.receber(quadro(m, { momento: 50, posse: posse(m, 'home', 'att', 'home-9') }));
+    for (let i = 0; i < 40; i++) { c.passo(); somaX += c.quadro(1).bola.x; n++; if (c.posse === 'home') ladoCerto++; }
+  }
+  confere(somaX / n > 62, `posse do plano: casa no ataque → a bola no campo de ataque (x médio ${(somaX / n).toFixed(0)} m)`);
+  confere(ladoCerto / n > 0.85, `posse do plano: a casa fica com a bola (${Math.round((100 * ladoCerto) / n)}% do tempo)`);
+
+  // 2) Quando a posse muda, a mudança vira regra: lateral, tiro de meta ou impedimento aparecem.
+  const r = new Coreografo(fichas, '4-3-3', '4-3-3', 'regras');
+  for (let i = 0; i < 60; i++) r.passo();
+  const regras = new Set<string>();
+  for (let m = 1; m <= 40; m++) {
+    const lado = m % 2 ? 'home' : 'away';
+    r.receber(quadro(m, { momento: 50, posse: posse(m, lado, m % 4 < 2 ? 'att' : 'mid', `${lado}-9`) }));
+    for (let i = 0; i < 45; i++) { r.passo(); r.quadro(1).fitas.forEach((f) => regras.add(f.texto)); }
+  }
+  const viu = ['LATERAL', 'THROW-IN', 'TIRO DE META', 'GOAL KICK', 'IMPEDIMENTO', 'OFFSIDE'].filter((t) => regras.has(t));
+  confere(viu.length >= 3, `troca de posse vira regra no campo (${viu.join(', ')})`);
+
+  // 3) Perfil: o driblador ENCARA (conduz pra frente) no campo de ataque; o cansado toca curto.
+  const fichasDribl = fichas.map((f) => (f.id === 'home-10' ? { ...f, classe: 'ponta_driblador', drible: 88 } : f));
+  const d = new Coreografo(fichasDribl, '4-3-3', '4-3-3', 'perfil');
+  const ponta = d.corpos.find((k) => k.f.id === 'home-10')!;
+  let encarou = 0;
+  for (let k = 0; k < 30; k++) {
+    ponta.x = ponta.px = 80; ponta.z = ponta.pz = 15; ponta.alvo = null; d.voo = null;
+    d.bola = { x: 80, z: 15, h: 0 }; d.dono = ponta;
+    decidirToque(d, ponta);
+    if (ponta.alvo && ponta.alvo.x > 85 && !d.voo) encarou++;
+  }
+  confere(encarou >= 6, `perfil: o driblador encara ${encarou} de 30 vezes no ataque (em vez de só tocar)`);
+  const fichasCansado = fichas.map((f) => (f.id === 'home-6' ? { ...f, fadiga: 90 } : f));
+  const t = new Coreografo(fichasCansado, '4-3-3', '4-3-3', 'cansado');
+  const cansado = t.corpos.find((k) => k.f.id === 'home-6')!;
+  let longe = 0;
+  for (let k = 0; k < 30; k++) {
+    cansado.x = cansado.px = 50; cansado.z = cansado.pz = 34; t.voo = null; t.bola = { x: 50, z: 34, h: 0 }; t.dono = cansado; t.carregadorDoMinuto = null;
+    decidirToque(t, cansado);
+    if (t.voo && Math.hypot(t.voo.x1 - 50, t.voo.z1 - 34) > 18) longe++;
+  }
+  confere(longe === 0, `perfil: o cansado (fôlego 10%) só toca curto (${longe} passes longos em 30)`);
+
+  // 4) O filme continua idêntico com o fluxo do plano (posse + regras + perfil).
+  const roteiroVivo = () => {
+    const co = new Coreografo(fichasDribl, '4-3-3', '4-3-3', 'filme-fluxo', true);
+    const hist: number[] = [];
+    let k = 0;
+    const entregas = Array.from({ length: 30 }, (_, i) => ({ p: 120 + i * 23, q: quadro(i + 1, { momento: 50, posse: posse(i + 1, i % 3 ? 'home' : 'away', (['def', 'mid', 'att'] as const)[i % 3]!, i % 3 ? 'home-9' : 'away-9') }) }));
+    const json = JSON.parse(JSON.stringify(entregas)) as typeof entregas;
+    for (let passo = 0; passo < 120 + 30 * 23 + 50; passo++) {
+      while (k < json.length && json[k]!.p <= co.passos) entregarQuadro(co, json[k++]!.q, []);
+      co.passo();
+      for (const j of co.quadro(1).jogadores) hist.push(Math.round(j.x * 100));
+    }
+    return hist;
+  };
+  const h1 = roteiroVivo(), h2 = roteiroVivo();
+  confere(h1.length === h2.length && h1.every((v, i) => v === h2[i]), 'filme: com fluxo e regras, reassistido == ao vivo');
 }
 
 if (falhas) { console.error(`\n${falhas} falha(s)`); process.exit(1); }

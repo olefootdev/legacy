@@ -618,6 +618,10 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     scorer_counts: Dict[str, Dict[str, Any]] = {}
     # Posse REAL: minutos de controle de bola por lado (não o proxy de momento).
     possession_minutes = {"home": 0, "away": 0}
+    # PARTIDA VIVA (Fase 12): o FLUXO do jogo minuto a minuto — quem tem a bola,
+    # em que terço, se acabou de roubar e QUEM carrega. Só registro (nenhum
+    # sorteio a mais): o campo joga a posse de verdade entre os lances.
+    fluxo: List[List[Any]] = []
 
     # Replan no meio do tempo: o fôlego já gasto desde o apito (ou do intervalo).
     if mode == "from_minute":
@@ -666,6 +670,7 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             prev_actor_id = actor["id"]
         else:
             prev_actor_id_away = actor["id"]
+        fluxo.append([minute, "h" if possession == "home" else "a", zone, 1 if recovered else 0, actor["id"]])
 
         # Força EFETIVA do minuto (#1): recalcula com a fadiga ACUMULADA — time
         # fundo/fresco atropela no fim; quem não rodou o elenco murcha. Inclui a
@@ -1121,6 +1126,7 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         "analyst_beats": analyst_beats,
         "mvp_projection": mvp,
         "possession_home_pct": possession_home_pct,
+        "fluxo": fluxo,
         "narrative_arc": arc,
         # Relatório de identidade (fundação): o que o time ENTREGOU em campo.
         "team_stats": {

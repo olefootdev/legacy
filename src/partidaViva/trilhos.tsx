@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { L } from '@/i18n/L';
 import { nomeDaClasse, DESCRICAO_DA_CLASSE } from '@/smartProfile/rotulos';
 import { iniciais } from './escalacao';
-import type { DecisaoNoCampo, Ficha, QuadroAoVivo } from './tipos';
+import type { DecisaoNoCampo, Ficha, NumerosAoVivo, QuadroAoVivo } from './tipos';
 import type { LeituraDaPrancheta } from './prancheta';
 import { nomeDaSkill, type SkillEmCampo } from './skills';
 
@@ -225,6 +225,24 @@ export function SkillNoTrilho({ skill }: { skill: SkillEmCampo | null }) {
           </span>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Fase 12 — os números da partida no trilho: compactos, casa × fora. */
+export function NumerosNoTrilho({ n }: { n: NumerosAoVivo }) {
+  const linha = (rotulo: string, casa: string | number, fora: string | number) => (
+    <div className="flex items-baseline justify-between gap-1">
+      <span className="text-mudo">{rotulo}</span>
+      <span className="tabular-nums text-papel">{casa}<span className="text-mudo"> × </span>{fora}</span>
+    </div>
+  );
+  return (
+    <div className="mt-1.5 flex flex-col gap-[1px] font-prova text-[10px] leading-tight" aria-label={L('Números da partida', 'Match stats')}>
+      {linha(L('Posse', 'Poss.'), `${n.posse}%`, `${100 - n.posse}%`)}
+      {linha(L('Chutes', 'Shots'), n.chutes[0], n.chutes[1])}
+      {linha('xG', n.xg[0].toFixed(1), n.xg[1].toFixed(1))}
+      {linha(L('Escant.', 'Corners'), n.escanteios[0], n.escanteios[1])}
     </div>
   );
 }

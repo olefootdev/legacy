@@ -27,7 +27,7 @@ import { L } from '@/i18n/L';
 import { chaveDoLance, Coreografo, DT } from './coreografo';
 import { PalcoPixi } from './palco';
 import { levantarTela, pontoLocal } from './orientacao';
-import { CartaoFicha, LambeDoGol, Narracao, PainelBanco, PainelCamera, PainelDecisao, PainelPrancheta, PainelTatica, SkillNoTrilho } from './trilhos';
+import { CartaoFicha, LambeDoGol, Narracao, PainelBanco, PainelCamera, NumerosNoTrilho, PainelDecisao, PainelPrancheta, PainelTatica, SkillNoTrilho } from './trilhos';
 import type { SkillEmCampo } from './skills';
 import { corredorEmMetros, lerPrancheta } from './prancheta';
 import { iniciais } from './escalacao';
@@ -136,7 +136,7 @@ export function PartidaVivaPalco(p: Props) {
    * `pendente` guarda o quadro mais novo; o laço libera quando a encenação acaba
    * (ou, no gol, quando a bola entra).
    */
-  type Mostrado = { placarCasa: number; placarFora: number; narracao: QuadroAoVivo['narracao']; golVisto: string | null };
+  type Mostrado = { placarCasa: number; placarFora: number; narracao: QuadroAoVivo['narracao']; golVisto: string | null; numeros?: QuadroAoVivo['numeros'] };
   const [mostrado, setMostrado] = useState<Mostrado>({ placarCasa: 0, placarFora: 0, narracao: [], golVisto: null });
   const pendenteRef = useRef<{ q: QuadroAoVivo; desde: number } | null>(null);
   const golVistoRef = useRef<string | null>(null);
@@ -313,7 +313,7 @@ export function PartidaVivaPalco(p: Props) {
           if (pronto || agora - pend.desde > 9000) {
             if (golAinda) golVistoRef.current = q.gol!.chave;
             pendenteRef.current = null;
-            setMostrado({ placarCasa: q.placarCasa, placarFora: q.placarFora, narracao: q.narracao, golVisto: golVistoRef.current });
+            setMostrado({ placarCasa: q.placarCasa, placarFora: q.placarFora, narracao: q.narracao, golVisto: golVistoRef.current, numeros: q.numeros });
           }
         }
         const skills = co.consumirSkills();
@@ -474,8 +474,8 @@ export function PartidaVivaPalco(p: Props) {
           <div>
             {/* O RELÓGIO grande (feedback 10/10: tempo no futebol é muito importante). */}
             <div className="flex items-end justify-between gap-1">
-              <span className="font-spray text-[40px] font-black leading-[0.85] text-rua tabular-nums" aria-label={L(`Minuto ${quadro?.minuto ?? 0}`, `Minute ${quadro?.minuto ?? 0}`)}>
-                {quadro?.minuto ?? 0}&prime;
+              <span className={`font-spray font-black leading-[0.85] text-rua tabular-nums ${quadro?.acrescimo ? 'text-[32px]' : 'text-[40px]'}`} aria-label={L(`Minuto ${quadro?.minuto ?? 0}`, `Minute ${quadro?.minuto ?? 0}`)}>
+                {quadro?.minuto ?? 0}{quadro?.acrescimo ? `+${quadro.acrescimo}` : ''}&prime;
               </span>
               <span className="pb-0.5 font-prova text-[10px] uppercase text-mudo">
                 {(quadro?.minuto ?? 0) <= 45 ? L('1º tempo', '1st half') : L('2º tempo', '2nd half')}
@@ -495,6 +495,8 @@ export function PartidaVivaPalco(p: Props) {
                 ))}
               </div>
             </div>
+            {/* Fase 12 — os números ao vivo (dos lances mostrados + posse do fluxo). */}
+            {mostrado.numeros && <NumerosNoTrilho n={mostrado.numeros} />}
           </div>
 
           {noFilme && <span className="self-start bg-cal px-1.5 py-0.5 font-prova text-[11px] text-asfalto-27">{L('Filme', 'Film')}</span>}

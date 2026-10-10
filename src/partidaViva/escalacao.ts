@@ -94,5 +94,7 @@ export function montarFichas(
       fadiga: Math.max(0, Math.min(100, j.fadiga)),
       velocidade: j.velocidade ?? j.entidade?.attrs.velocidade ?? 65,
       classe: j.classe,
+      passe: j.entidade?.attrs.passe,
+      drible: j.entidade?.attrs.drible,
     }));
 }

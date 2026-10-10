@@ -196,6 +196,11 @@ export interface MatchPlan {
   classes?: Record<string, string>;
   /** Posse REAL da casa (% de minutos com a bola) — substitui o proxy de momento. */
   possession_home_pct?: number;
+  /**
+   * Partida Viva (Fase 12): o fluxo minuto a minuto — [minuto, 'h'|'a' (quem
+   * tem a bola), terço ('def'|'mid'|'att'), 1 se acabou de roubar, id de quem carrega].
+   */
+  fluxo?: [number, 'h' | 'a', 'def' | 'mid' | 'att', 0 | 1, string][];
   narrative_arc: NarrativeArc;
   generated_at_ms: number;
   duration_ms: number;

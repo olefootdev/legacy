@@ -20,6 +20,7 @@ import { C, DT, L, esquema, lim, moverCorpo, semente, type Corpo, type Voo } fro
 import { L as T } from '@/i18n/L';
 import { ajustarPorEstilo, ajustarPorGrito, alvoNaForma, CLASSES_QUE_PRESSIONAM, formaDe, intencaoDoTime, profundidade, type Forma } from './forma';
 import { encenarGol, encenarLance, entrarEmCampo } from './encenacao';
+import { aplicarPosse, decidirToque, xDaZona, type PosseDoPlano } from './jogoAmbiente';
 import type { EventoDeSom } from './som';
 import type { SkillEmCampo } from './skills';
 import type { Ficha, QuadroAoVivo } from './tipos';
@@ -90,6 +91,13 @@ export class Coreografo {
   entradaAte = -1;
   /** Posição de saída de cada um (o seu campo, na formação) — a foto antes do apito. */
   saida = new Map<Corpo, { x: number; z: number }>();
+  /** Fase 12: a posse do minuto, do plano (o jogo entre os lances joga ela). */
+  posseDoPlano: PosseDoPlano | null = null;
+  /** Quem o plano diz que carregou a bola neste minuto (ainda não recebeu). */
+  carregadorDoMinuto: string | null = null;
+  /** Lateral / tiro de meta / impedimento em curso: ninguém toca até o reinício. */
+  reinicioAte = -1;
+  private posseMinuto = -1;
   /** Bola parada: quem está posicionado (escanteio, barreira, pênalti) — o fim da jogada solta. */
   posicionados = new Set<Corpo>();
   /** Pré-apito: todos indo pra posição de saída; o apito sai quando chegam (ou no limite). */
@@ -104,7 +112,7 @@ export class Coreografo {
   private possePrev: 'home' | 'away' = 'home';
   private transicaoAte = -1;
   private pressionando = new Set<Corpo>();
-  private proxToque = 2;
+  proxToque = 2;
   private ultimoLance: MatchPlanEvent | null = null;
   private ultimoGol: string | null = null;
   private rastro: { x: number; z: number; h: number }[] = [];
@@ -160,7 +168,10 @@ export class Coreografo {
     } else if (!q.lance) {
       this.ultimoLance = null;
       if (this.fila.length === 0) this.envolvidos = null;
-      if (q.momento >= 54) this.posse = 'home';
+      // Fase 12: a posse vem do plano, minuto a minuto (plano antigo: pelo momento).
+      if (q.posse) {
+        if (q.minuto !== this.posseMinuto) { this.posseMinuto = q.minuto; aplicarPosse(this, q.posse); }
+      } else if (q.momento >= 54) this.posse = 'home';
       else if (q.momento <= 46) this.posse = 'away';
     }
   }
@@ -237,7 +248,7 @@ export class Coreografo {
     this.pbola = { ...this.bola };
     // Antes do apito a bola não rola (entradaAte = ∞ durante a entrada).
     // Bola parada montada (pênalti esperando o batedor): ninguém toca na bola.
-    if (!this.voo && !this.festa && this.fila.length === 0 && this.t >= this.proxToque && this.t >= this.entradaAte && this.posicionados.size === 0) this.toqueAmbiente();
+    if (!this.voo && !this.festa && this.fila.length === 0 && this.t >= this.proxToque && this.t >= this.entradaAte && this.posicionados.size === 0 && this.t >= this.reinicioAte) this.toqueAmbiente();
     this.lerOJogo();
     for (const c of this.corpos) moverCorpo(c, this.alvoDaForma(c), this.corpos);
     this.moverBola();
@@ -386,9 +397,7 @@ export class Coreografo {
 
   /** Faixa do campo onde o time com a bola joga agora (o momento do plano empurra). */
   private zonaDeJogo(lado: 'home' | 'away'): number {
-    const dominio = lado === 'home' ? this.momento : 100 - this.momento;
-    const avanco = 30 + dominio * 0.5; // 30 m (acuado) … 80 m (sufocando)
-    return lado === 'home' ? avanco : C - avanco;
+    return xDaZona(this, lado);
   }
 
   private toqueAmbiente(): void {
@@ -396,9 +405,9 @@ export class Coreografo {
     const outro = lado === 'home' ? 'away' : 'home';
     const daVez = this.dono && this.dono.f.lado === lado ? this.dono : this.maisPerto(lado, this.bola.x, this.bola.z, false);
     if (!daVez) return;
-    // Roubada ambiente: quem domina perde menos a bola.
+    // Roubada ambiente (só plano antigo, sem fluxo): quem domina perde menos a bola.
     const dominio = lado === 'home' ? this.momento : 100 - this.momento;
-    if (this.rnd() < 0.2 - dominio * 0.0012) {
+    if (!this.posseDoPlano && this.rnd() < 0.2 - dominio * 0.0012) {
       const ladrao = this.maisPerto(outro, this.bola.x, this.bola.z, true);
       if (ladrao) {
         ladrao.alvo = { x: this.bola.x, z: this.bola.z };
@@ -407,20 +416,8 @@ export class Coreografo {
         return;
       }
     }
-    // Passe pra quem está mais perto da zona de jogo (pra trás também vale).
-    const xAlvo = this.zonaDeJogo(lado);
-    const opcoes = this.corpos.filter((c) => c.f.lado === lado && c !== daVez && c.f.slot !== 'gol'
-      && Math.hypot(c.x - daVez.x, c.z - daVez.z) < 34);
-    if (!opcoes.length) { this.proxToque = this.t + 1; return; }
-    let alvo = opcoes[0]!, melhor = Infinity;
-    for (const c of opcoes) {
-      const nota = Math.abs(c.x - xAlvo) * 0.6 + Math.hypot(c.x - daVez.x, c.z - daVez.z) * 0.3 + this.rnd() * 14;
-      if (nota < melhor) { melhor = nota; alvo = c; }
-    }
-    const longe = Math.hypot(alvo.x - daVez.x, alvo.z - daVez.z) > 22;
-    this.passar(alvo, longe ? 1.1 : 0.7, longe ? 2.4 : 0.3);
-    this.sons.push('passe');
-    this.proxToque = this.t + 1.6 + this.rnd() * 1.6;
+    // Fase 12: o portador DECIDE pelo perfil (encarar, inverter, profundidade, tocar curto).
+    if (!decidirToque(this, daVez)) this.proxToque = this.t + 1;
   }
 
   // ── bola, câmera, assinaturas ────────────────────────────────────────────

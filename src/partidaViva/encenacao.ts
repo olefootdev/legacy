@@ -193,6 +193,15 @@ function encenarCadeia(co: Coreografo, cad: CadeiaDeLance, lado: 'home' | 'away'
             co.arcos.push({ x0: co.bola.x, z0: co.bola.z, x1: ac.x, z1: ac.z, em: co.t });
           }
           co.voo = { x0: co.bola.x, z0: co.bola.z, x1: ac.x, z1: ac.z, t: 0, dur: passo * 0.9, altura: alto ? 2.6 : 0.3, para, fixo: true };
+          // Fase 12: bola alçada na pequena área → o goleiro sai pra cortar (e volta no fim da jogada).
+          if (alto && ac.t !== 'lancamento') {
+            const gx = lado === 'home' ? C : 0;
+            const g = co.achar(lado === 'home' ? 'away' : 'home', 'gol');
+            if (g && Math.abs(ac.x - gx) < 11 && Math.abs(ac.z - L / 2) < 13) {
+              g.alvo = { x: gx + (ac.x - gx) * 0.55, z: L / 2 + (ac.z - L / 2) * 0.55 };
+              envolvidos.add(g);
+            }
+          }
           co.dono = null;
           co.sons.push('passe');
           if (ac.t === 'escanteio') co.fita(T('ESCANTEIO', 'CORNER'), ac.x, ac.z, 1.2);

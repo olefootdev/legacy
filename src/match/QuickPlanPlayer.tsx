@@ -532,6 +532,60 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   );
   const beatsQueueRef = useRef<AnalystBeat[]>([...(plan.analyst_beats ?? [])]);
   const momentumRef = useRef<number[]>([...plan.momentum_curve]);
+  /** Fase 12: o fluxo do plano por minuto (o replan reescreve do minuto dele em diante). */
+  const fluxoRef = useRef(new Map((plan.fluxo ?? []).map((f) => [f[0], f] as const)));
+  const emendarFluxo = (novo: MatchPlan, desde: number) => {
+    for (const f of novo.fluxo ?? []) if (f[0] >= desde) fluxoRef.current.set(f[0], f);
+  };
+  /**
+   * Fase 12 — CONSEQUÊNCIA VISÍVEL: 10' depois de um comando (grito, ordem, troca,
+   * estilo), a narração conta o que mudou — posse, roubadas e chutes NAQUELA janela,
+   * medidos do fluxo e dos lances mostrados. Só o que aconteceu, sem inventar.
+   */
+  const efeitosRef = useRef<{ id: string; rotulo: string; desde: number }[]>([]);
+  const registrarEfeito = (rotulo: string) => {
+    if (!pedirReplan) return;
+    const m = minuteRef.current;
+    efeitosRef.current = [...efeitosRef.current.filter((e) => e.rotulo !== rotulo), { id: `${rotulo}-${m}`, rotulo, desde: m }];
+  };
+  /** Acréscimos: o juiz soma o tempo parado do tempo (gols, cartões, lesões, trocas). */
+  const acrescimoRef = useRef(0);
+  const [acrescimo, setAcrescimo] = useState(0);
+  const acrescimoDe = (tempo: 1 | 2) => {
+    const [de, ate] = tempo === 1 ? [1, 45] : [46, 90];
+    let paradas = 0;
+    for (const e of eventsRef.current.slice(0, eventIdxRef.current)) {
+      if (e.minute < de || e.minute > ate) continue;
+      const k = e.kind.replace(/_(home|away)$/, '');
+      paradas += k === 'goal' ? 0.6 : k === 'injury' ? 1.2 : k === 'yellow' || k === 'red' ? 0.35 : k === 'penalty' ? 0.8 : 0;
+    }
+    if (tempo === 2) paradas += subsUsedRef.current * 0.3;
+    return Math.max(tempo === 1 ? 1 : 2, Math.min(tempo === 1 ? 4 : 6, Math.round(1 + paradas)));
+  };
+  const posseDoMinuto = (m: number) => {
+    const f = fluxoRef.current.get(m);
+    return f ? { lado: f[1] === 'h' ? 'home' as const : 'away' as const, zona: f[2], roubou: f[3] === 1, ator: f[4] } : null;
+  };
+  /** Números ao vivo: dos lances JÁ mostrados (com estilo/decisões aplicados) + posse do fluxo. */
+  const numerosAte = (m: number) => {
+    const vistos = eventsRef.current.slice(0, eventIdxRef.current);
+    const n = { chutes: [0, 0] as [number, number], noGol: [0, 0] as [number, number], xg: [0, 0] as [number, number], escanteios: [0, 0] as [number, number], faltas: [0, 0] as [number, number] };
+    for (const e of vistos) {
+      const i = e.actor_side === 'home' ? 0 : 1;
+      const k = e.kind.replace(/_(home|away)$/, '');
+      // 'narrative' com xG = o gol que virou momento decisivo (resolvido): continua sendo um chute.
+      if (['shot', 'save', 'chance', 'woodwork', 'goal'].includes(k) || (k === 'narrative' && (e.xg ?? 0) > 0)) { n.chutes[i]++; n.xg[i] += e.xg ?? 0; }
+      if (k === 'save' || k === 'goal') n.noGol[i]++;
+      const acoes = e.cadeia?.acoes ?? [];
+      if (k === 'corner' || acoes.some((a) => a.t === 'escanteio')) n.escanteios[i]++;
+      // Falta: quem COMETE (no cartão é o autor; nas jogadas, o time que defende).
+      if (k === 'yellow' || k === 'red') n.faltas[i]++;
+      else if (acoes.some((a) => a.t === 'falta')) n.faltas[1 - i]++;
+    }
+    let casa = 0, total = 0;
+    for (const [min, f] of fluxoRef.current) if (min <= m) { total++; if (f[1] === 'h') casa++; }
+    return { posse: total ? Math.round((100 * casa) / total) : 50, ...n, xg: [Math.round(n.xg[0] * 10) / 10, Math.round(n.xg[1] * 10) / 10] as [number, number] };
+  };
   const styleRef = useRef<TacticalIntensityLevel>('possession'); // lido no tick (closure sempre fresca)
   // FABLE/DNA — log dos estilos ativados ao vivo (alimenta o eixo do clube).
   const styleLogRef = useRef<TacticalIntensityLevel[]>([]);
@@ -580,6 +634,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     styleRef.current = next;
     setStyle(next);
     styleLogRef.current.push(next); // FABLE/DNA — cada escolha marca o eixo do clube
+    registrarEfeito(L(`o estilo ${STYLE_LABEL[next]}`, `the ${STYLE_LABEL[next]} style`));
     const m = minuteRef.current;
     momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, styleMomentumBias(next));
     pushFeed({ id: `style-${m}`, minute: m, kind: 'decision', text: L(`Estilo: ${STYLE_LABEL[next]} — ${TACTICAL_INTENSITY_PRESETS[next].description}`, `Style: ${STYLE_LABEL[next]} — ${TACTICAL_INTENSITY_PRESETS[next].description}`) });
@@ -791,6 +846,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
         eventIdxRef.current = played.length; // aponta pro 1º evento do 2º tempo
         beatsQueueRef.current = (h2.analyst_beats ?? []).filter((b) => b.minute > 45);
         momentumRef.current = [...momentumRef.current.slice(0, 45), ...h2.momentum_curve];
+        emendarFluxo(h2, 46);
       }
     } catch {
       // Replan falhou: segue o 2º tempo baseline do plano original
@@ -1079,6 +1135,20 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     }
 
     // 2) Nada mais neste minuto → o relógio anda.
+    // LEGACY (Fase 12): ACRÉSCIMOS no 45' e no 90' — o relógio mostra 45+1, 45+2…
+    // (sem lances novos: o plano termina no minuto cheio; é o tempo que o juiz dá).
+    if (pedirReplan && (m === 45 || m === 90) && !(m === 45 && htDoneRef.current)) {
+      const total = acrescimoDe(m === 45 ? 1 : 2);
+      if (acrescimoRef.current < total) {
+        acrescimoRef.current += 1;
+        setAcrescimo(acrescimoRef.current);
+        if (acrescimoRef.current === 1) pushFeed({ id: `acr-${m}`, minute: m, kind: 'insight', text: L(`+${total} de acréscimo.`, `+${total} minutes of added time.`) });
+        scheduleNext(relogioMs ?? CLOCK_MS);
+        return;
+      }
+      acrescimoRef.current = 0;
+      setAcrescimo(0);
+    }
     if (m >= 90) { finalize(); return; }
     const nm = m + 1;
     // INTERVALO ao cruzar o 45'.
@@ -1379,6 +1449,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     ];
     const ini = novo.start_minute ?? inicio;
     momentumRef.current = [...momentumRef.current.slice(0, ini - 1), ...novo.momentum_curve];
+    emendarFluxo(novo, inicio);
   };
   const replanAoVivo = (cmd: ComandoSemMinuto | null) => {
     if (!pedirReplan) return;
@@ -1399,6 +1470,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     const inCard = benchPool.find((b) => b.id === inId);
     if (!inCard || !field.some((p) => p.id === outId)) return;
     efetivarTroca(outId, inCard);
+    registrarEfeito(L(`a entrada de ${inCard.name}`, `${inCard.name} coming on`));
     replanAoVivo(null); // a verdade refaz o futuro com quem entrou
   };
   const comandar = (cmd: ComandoSemMinuto) => {
@@ -1411,15 +1483,45 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
         cobrar: L('cobra o time — "APERTA A SAÍDA DELES!"', 'demands more — "PRESS THEM!"'),
         acalmar: L('acalma o time — "CALMA, TOCA A BOLA!"', 'calms the team — "EASY, KEEP IT!"') }[cmd.tipo];
       pushFeed({ id: `grito-${m}`, minute: m, kind: 'decision', text: L(`📣 O técnico ${frase}`, `📣 The coach ${frase}`) });
+      registrarEfeito({ incentivar: L('o grito "Incentivar"', 'the "Fire up" shout'), cobrar: L('o grito "Cobrar"', 'the "Demand" shout'), acalmar: L('o grito "Acalmar"', 'the "Calm down" shout') }[cmd.tipo]);
     } else {
       setOrdens((o) => ({ ...o, [cmd.jogador]: cmd.ordem }));
       const nome = [...field, ...benchPool].find((c) => c.id === cmd.jogador)?.name ?? '';
       const o = { segurar: L('segura a posição', 'holds position'), atacar_espaco: L('ataca o espaço', 'attacks the space'), marcar: L('marca de perto', 'marks tight') }[cmd.ordem];
       pushFeed({ id: `ordem-${m}-${cmd.jogador}`, minute: m, kind: 'decision', text: L(`🗣️ Ordem: ${nome} ${o}.`, `🗣️ Order: ${nome} ${o}.`) });
+      registrarEfeito(L(`a ordem pra ${nome}`, `the order to ${nome}`));
     }
     replanAoVivo(cmd);
   };
   useEffect(() => { if (gritoAtivo && minute >= gritoAtivo.ate) setGritoAtivo(null); }, [minute, gritoAtivo]);
+  useEffect(() => {
+    const prontos = efeitosRef.current.filter((e) => minute >= e.desde + 10);
+    if (!prontos.length) return;
+    efeitosRef.current = efeitosRef.current.filter((e) => minute < e.desde + 10);
+    const vistos = eventsRef.current.slice(0, eventIdxRef.current);
+    for (const e of prontos) {
+      const de = e.desde + 1, ate = e.desde + 10;
+      let casa = 0, total = 0, roubadas = 0;
+      for (let mm = de; mm <= ate; mm++) {
+        const f = fluxoRef.current.get(mm);
+        if (!f) continue;
+        total++;
+        if (f[1] === 'h') { casa++; if (f[3] === 1) roubadas++; }
+      }
+      const chutes = [0, 0];
+      for (const ev of vistos) {
+        if (ev.minute < de || ev.minute > ate) continue;
+        if (/^(shot|save|chance|woodwork|goal)_/.test(ev.kind)) chutes[ev.actor_side === 'home' ? 0 : 1]++;
+      }
+      const posse = total ? Math.round((100 * casa) / total) : 50;
+      pushFeed({
+        id: `efeito-${e.id}`, minute, kind: 'insight',
+        text: L(`📊 Depois de ${e.rotulo} (${e.desde}'–${ate}'): posse ${posse}%, ${roubadas} roubada${roubadas === 1 ? '' : 's'}, chutes ${chutes[0]}×${chutes[1]}.`,
+          `📊 After ${e.rotulo} (${e.desde}'–${ate}'): ${posse}% possession, ${roubadas} ball${roubadas === 1 ? '' : 's'} won, shots ${chutes[0]}–${chutes[1]}.`),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minute]);
 
   // PARTIDA VIVA — emite o quadro pro palco em campo (só quando alguém assina).
   const onAoVivoRef = useRef(onAoVivo);
@@ -1488,8 +1590,11 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       lance: highlight,
       gol: celebration ? { chave: celebration.key, nome: celebration.name, lado: celebration.side, actorId: golDoFeed?.actorId, cadeia: cadeiaDoGol, xg: eventoDoGol?.xg } : null,
       narracao: [...feed].reverse().slice(0, 6).map((f) => ({ id: f.id, minuto: f.minute, texto: f.text })),
+      posse: posseDoMinuto(minute),
+      acrescimo: pedirReplan ? acrescimo : undefined,
+      numeros: pedirReplan ? numerosAte(minute) : undefined,
     });
-  }, [minute, phase, homeScore, awayScore, highlight, celebration, feed, style, activeBeat, leadIn, leadInReactable, clutch, forced, benchPool, gritoAtivo, ordens, field, subsUsed, pausado]);
+  }, [minute, phase, homeScore, awayScore, highlight, celebration, feed, style, activeBeat, leadIn, leadInReactable, clutch, forced, benchPool, gritoAtivo, ordens, field, subsUsed, pausado, acrescimo]);
 
   // PARTIDA VIVA (Fase 4) — respostas vindas do campo caem nas mesmas funções dos botões.
   const responderRef = useRef<(id: string) => void>(() => {});
