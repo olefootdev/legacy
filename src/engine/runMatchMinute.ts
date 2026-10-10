@@ -38,12 +38,7 @@ import {
   tickBuildupGk,
 } from '@/gamespirit/spiritStateMachine';
 import { applyScoutEvent, type ScoutTally } from '@/gamespirit/scoutScoring';
-import { computeTacticalPositions, buildAwayPitchPlayers } from './test2d/tacticalPositioning';
 import { synthesizeAwayPitchPlayers, deriveAwayMentality } from '@/match/syntheticAwayAttrs';
-import { computeBallTrajectory, type BallTrajectoryState } from './test2d/ballTrajectory';
-import { visualBeatGeometryFromCausalBatch } from './test2d/visualBeatFromCausal';
-import { isLive2dPitchMode } from './ultralive2d/live2dMode';
-import { teamMovementKnobsFromHomePitch } from './ultralive2d/applyAttrsToMovement';
 import { L } from '@/i18n/L';
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -101,7 +96,7 @@ export interface RunMinuteInput {
   /** Intensidade tática escolhida pelo jogador (Quick Match). */
   tacticalIntensity?: import('@/match/quickTacticalIntensity').TacticalIntensityLevel;
   /**
-   * Probabilidade por minuto de correr um tick GameSpirit (fora de live2d).
+   * Probabilidade por minuto de correr um tick GameSpirit.
    * Predefinido 0.62; modo automático usa valor mais baixo via matchBulk.
    */
   spiritTickProb?: number;
@@ -167,10 +162,6 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
 
   /** Partida automática: corta cartões/lesões sintéticos por minuto (GameSpirit mantém-se). */
   const autoSimSlim = s.mode === 'auto';
-
-  /** Partida ao vivo 2D: feed sem narrativa minuto-a-minuto; desfechos ancorados ao causal antes do texto. */
-  const live2dSilentSpiritFeed = s.mode === 'test2d';
-  const live2dPitchEarly = isLive2dPitchMode(s.mode);
 
   const minute = Math.min(90, s.minute + 1);
   const footballElapsedSec = Math.min(5400, (s.footballElapsedSec ?? 0) + 60);
@@ -244,29 +235,6 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
 
   let awayRoster = s.awayRoster ?? input.awayRoster;
 
-  const test2dTickModifiers =
-    s.mode === 'test2d'
-      ? (() => {
-          // pressIntensity médio dos jogadores em campo com positionKnowledge treinado.
-          // Neutro = 1.0; acima de 1 = time mais agressivo no pressing.
-          const pitchIds = new Set(s.homePlayers.map((p) => p.playerId));
-          let pressSum = 0, pressCount = 0;
-          for (const e of input.homeRoster) {
-            if (!pitchIds.has(e.id) || !e.positionKnowledge?.sessionsCompleted) continue;
-            pressSum += e.positionKnowledge.traits.pressIntensity;
-            pressCount++;
-          }
-          const avgPressIntensity = pressCount > 0 ? pressSum / pressCount : 1.0;
-          // Mapeia 0–2 → multiplicador 0.85–1.15 sobre o base awayPressMult.
-          const pressMod = 0.85 + (avgPressIntensity / 2) * 0.30;
-          return {
-            homeInPossession: possessionAtStart === 'home',
-            progressLossMult: possessionAtStart === 'home' ? 0.91 : 1,
-            shotInAttThirdBias: possessionAtStart === 'home' ? 0.04 : 0,
-            awayPressMult: (possessionAtStart === 'away' ? 1.07 : 0.94) * pressMod,
-          };
-        })()
-      : undefined;
 
   const canRunSpirit = shouldRunSpiritPlayTick({
     spiritOverlay,
@@ -275,18 +243,10 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     spiritBuildupGkTicksRemaining,
   });
 
-  let spiritActionKind: string | undefined;
-  /** Coreografia live2d: persistir até COMMIT no viewer (ticks extra não apagam). */
-  let test2dVisualBeat: LiveMatchSnapshot['test2dVisualBeat'] = s.test2dVisualBeat;
-  let ultralive2dStagedPlay: LiveMatchSnapshot['ultralive2dStagedPlay'] = s.ultralive2dStagedPlay;
-
-  let live2dDecisionStagnationTicks = s.live2dDecisionStagnationTicks ?? 0;
-
   // FANTASY V2 (2026-05-27): 0.88 → 0.94. Quase todo minuto tem ação. Combinado
   // com goal weight 0.24, alvo 8-12 gols por partida.
-  const spiritTickP = live2dPitchEarly ? 1 : (input.spiritTickProb ?? 0.94);
-  /** live2d: sempre resolve uma ação por minuto (evita “congelado” no portador). */
-  const shouldTick = !input.skipEvent && (live2dPitchEarly || Math.random() < spiritTickP);
+  const spiritTickP = input.spiritTickProb ?? 0.94;
+  const shouldTick = !input.skipEvent && Math.random() < spiritTickP;
   const autoSimBoost =
     s.mode === 'auto' && input.spiritTickProb != null && input.spiritTickProb > 0 && input.spiritTickProb < 0.62
       ? 0.62 / input.spiritTickProb
@@ -325,15 +285,11 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       lastGoalMinute,
     };
 
-    // FANTASY V6 (2026-06-02): visitante com atributos individuais sintéticos.
-    // Em live2D já temos `awayPitchPlayers` (com attrs reais quando há entities);
-    // em quick/auto montamos um pitch sintético derivado de (OVR clube × posição)
-    // para habilitar awareness: defensor adversário bloqueia, GK individualizado,
-    // artilheiro pesa em pGoalAway. Custo: ~0.1ms por tick (≤11 jogadores).
-    const synthAwayPitch =
-      s.awayPitchPlayers && s.awayPitchPlayers.length > 0 && s.awayPitchPlayers.some((p) => p.attributes)
-        ? s.awayPitchPlayers
-        : synthesizeAwayPitchPlayers(awayRoster, input.opponentStrength);
+    // FANTASY V6 (2026-06-02): visitante com atributos individuais sintéticos,
+    // derivados de (OVR clube × posição), para habilitar awareness: defensor
+    // adversário bloqueia, GK individualizado, artilheiro pesa em pGoalAway.
+    // Custo: ~0.1ms por tick (≤11 jogadores).
+    const synthAwayPitch = synthesizeAwayPitchPlayers(awayRoster, input.opponentStrength);
     // Mentalidade do visitante (0-100) — base por OVR + ajuste situacional.
     const awayMentality = deriveAwayMentality({
       opponentStrength: input.opponentStrength,
@@ -361,8 +317,6 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
         s.mode === 'auto' ? [] : s.events.slice(0, 10).map((e) => e.text),
       awayRoster,
       awayPlayers: synthAwayPitch,
-      test2dTickModifiers,
-      live2dStagnationTicks: live2dPitchEarly ? (s.live2dDecisionStagnationTicks ?? 0) : undefined,
       penaltyCooldownTicks: s.spiritPenaltyCooldownTicks ?? 0,
       momentum: s.spiritMomentum ?? { home: 0, away: 0 },
       pendingCornerForSide: s.pendingCornerForSide ?? null,
@@ -375,7 +329,6 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     });
     const startSeq = s.causalLog?.nextSeq ?? 1;
     const out = gameSpiritTick(ctx, input.awayShort, startSeq, Date.now());
-    spiritActionKind = out.action;
     const delta = scoreDeltaFromEvents(out.causalEvents);
     homeScore = s.homeScore + delta.home;
     awayScore = s.awayScore + delta.away;
@@ -431,71 +384,8 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       threatBar01: (goalHome || goalAway) ? out.threatBar01 : undefined,
     };
 
-    if (live2dSilentSpiritFeed) {
-      const beatGeom = visualBeatGeometryFromCausalBatch(
-        out.causalEvents,
-        s.ball,
-        s.homePlayers,
-        s.awayPitchPlayers,
-      );
-      if (beatGeom) {
-        const shooterFromCausal = out.causalEvents.find(
-          (e): e is Extract<typeof e, { type: 'shot_attempt' }> =>
-            e.type === 'shot_attempt' && e.seq === beatGeom.causalSeqAnchor,
-        );
-        const shooterId = shooterFromCausal?.payload.shooterId;
-
-        if (beatGeom.kind === 'goal_home') {
-          const nm = goalScorerHomeId
-            ? input.homeRoster.find((p) => p.id === goalScorerHomeId)?.name
-            : undefined;
-          ev.text = nm ? L(`${minute}' — Gol: ${nm}.`, `${minute}' — Goal: ${nm}.`) : L(`${minute}' — Gol (casa).`, `${minute}' — Goal (home).`);
-          ev.kind = 'goal_home';
-          ev.playerId = goalScorerHomeId;
-        } else if (beatGeom.kind === 'goal_away') {
-          const aid = out.goalScorerPlayerId;
-          const nm = aid ? awayRoster?.find((p) => p.id === aid)?.name : undefined;
-          ev.text = nm ? L(`${minute}' — Gol: ${nm} (visitante).`, `${minute}' — Goal: ${nm} (away).`) : L(`${minute}' — Gol (visitante).`, `${minute}' — Goal (away).`);
-          ev.kind = 'goal_away';
-          ev.playerId = aid;
-        } else if (beatGeom.kind === 'shot_save') {
-          ev.kind = 'narrative';
-          ev.text = `${minute}' — Remate defendido.`;
-          ev.playerId = shooterId;
-          ev.momentumFlash = undefined;
-        } else if (beatGeom.kind === 'shot_block') {
-          ev.kind = 'narrative';
-          ev.text = `${minute}' — Remate bloqueado.`;
-          ev.playerId = shooterId;
-        } else {
-          ev.kind = 'narrative';
-          ev.text = `${minute}' — Remate ao lado.`;
-          ev.playerId = shooterId;
-        }
-
-        // MVP Partida ao vivo: feed imediato (sem coreografia ultralive2d / COMMIT no cliente).
-        events.unshift(ev);
-        if (events.length > 40) events.pop();
-        ultralive2dStagedPlay = undefined;
-        test2dVisualBeat = undefined;
-      } else if (goalHome) {
-        const nm = goalScorerHomeId
-          ? input.homeRoster.find((p) => p.id === goalScorerHomeId)?.name
-          : undefined;
-        ev.text = nm ? L(`${minute}' — Gol: ${nm}.`, `${minute}' — Goal: ${nm}.`) : L(`${minute}' — Gol (casa).`, `${minute}' — Goal (home).`);
-        events.unshift(ev);
-        if (events.length > 40) events.pop();
-      } else if (goalAway) {
-        const aid = out.goalScorerPlayerId;
-        const nm = aid ? awayRoster?.find((p) => p.id === aid)?.name : undefined;
-        ev.text = nm ? L(`${minute}' — Gol: ${nm} (visitante).`, `${minute}' — Goal: ${nm} (away).`) : L(`${minute}' — Gol (visitante).`, `${minute}' — Goal (away).`);
-        events.unshift(ev);
-        if (events.length > 40) events.pop();
-      }
-    } else {
-      events.unshift(ev);
-      if (events.length > 40) events.pop();
-    }
+    events.unshift(ev);
+    if (events.length > 40) events.pop();
 
     if (out.statDeltas) {
       const sid = out.statDeltas.playerId;
@@ -619,14 +509,6 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       if (sm.lastShotPreview !== undefined) lastShotPreview = sm.lastShotPreview;
       if (sm.preGoalHint !== undefined) preGoalHint = sm.preGoalHint;
     }
-
-    if (live2dPitchEarly) {
-      if (possessionAtStart === 'home' && out.nextPossession === 'home' && out.action === 'recycle') {
-        live2dDecisionStagnationTicks = Math.min(14, live2dDecisionStagnationTicks + 1);
-      } else {
-        live2dDecisionStagnationTicks = 0;
-      }
-    }
   } else if (shouldTick) {
     ball = {
       x: Math.min(92, Math.max(8, ball.x + (Math.random() * 4 - 2))),
@@ -642,105 +524,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
   let matchLineupBySlot = { ...s.matchLineupBySlot };
   let substitutionsUsed = s.substitutionsUsed;
 
-  // ── live2d pitch (`test2d`): tática + bola; resto: jitter ──
-  const isLive2dPitch = isLive2dPitchMode(s.mode);
-  const possessionChanged = possession !== possessionAtStart;
-
-  let awayPitchPlayers: PitchPlayerState[] | undefined = isLive2dPitch ? (s.awayPitchPlayers ?? undefined) : undefined;
-  let ballTrajectory: LiveMatchSnapshot['ballTrajectory'] | undefined = isLive2dPitch ? (s.ballTrajectory ?? undefined) : undefined;
-
-  const homeMovementKnobsRaw = isLive2dPitch ? teamMovementKnobsFromHomePitch(s.homePlayers) : undefined;
-  const homeMovementKnobs = homeMovementKnobsRaw
-    ? {
-        ...homeMovementKnobsRaw,
-        moveLerpMult: Math.min(1.52, homeMovementKnobsRaw.moveLerpMult * 1.12),
-        carrierLerpBoostAdd: Math.min(0.14, homeMovementKnobsRaw.carrierLerpBoostAdd + 0.045),
-      }
-    : undefined;
-  const live2dSpeedMult = s.mode === 'test2d' ? 1.22 : undefined;
-
-  // Initialize away pitch players on first tick for live2d
-  if (isLive2dPitch && !awayPitchPlayers && awayRoster?.length) {
-    const awayScheme = s.awayFormationScheme ?? s.homeFormationScheme ?? '4-3-3';
-    awayPitchPlayers = buildAwayPitchPlayers(awayRoster, awayScheme);
-  }
-
-  let homePlayers: PitchPlayerState[];
-
-  if (isLive2dPitch) {
-    const formation = s.homeFormationScheme ?? '4-3-3';
-    const awayFormation = s.awayFormationScheme ?? '4-3-3';
-    const mgr = {
-      tacticalMentality: input.tacticalMentality,
-      defensiveLine: 50,
-      tempo: 50,
-    };
-    const kickoffShapeRelax01 = Math.min(1, s.minute / 7);
-    const matchHalf = liveMatchHalfFromClock(s.clockPeriod, s.minute);
-
-    // Away opponent positions for pressure calculation
-    const oppPositions = awayPitchPlayers?.map((p) => ({ x: p.x, y: p.y }));
-
-    homePlayers = computeTacticalPositions({
-      players: s.homePlayers,
-      ball,
-      possession,
-      side: 'home',
-      formation,
-      spiritPhase,
-      actionKind: spiritActionKind,
-      manager: mgr,
-      onBallPlayerId: possession === 'home' ? onBall?.playerId : undefined,
-      opponentPositions: oppPositions,
-      movementKnobs: homeMovementKnobs,
-      live2dSpeedMult,
-      pressTowardBall01: possession === 'away' ? 0.4 : undefined,
-      kickoffShapeRelax01,
-      matchHalf,
-      voiceCommands: s.voiceCommands,
-      nowMs: Date.now(),
-    });
-
-    // Compute away team tactical positions
-    if (awayPitchPlayers) {
-      const homePositions = homePlayers.map((p) => ({ x: p.x, y: p.y }));
-      awayPitchPlayers = computeTacticalPositions({
-        players: awayPitchPlayers,
-        ball,
-        possession,
-        side: 'away',
-        formation: awayFormation,
-        spiritPhase,
-        actionKind: spiritActionKind,
-        manager: { tacticalMentality: 55, defensiveLine: 50, tempo: 50 },
-        onBallPlayerId:
-          possession === 'away'
-            ? pickBallCarrier({
-                players: awayPitchPlayers,
-                ball,
-                side: 'away',
-                prevCarrierId: prevOnBallId,
-              })?.playerId
-            : undefined,
-        opponentPositions: homePositions,
-        live2dSpeedMult,
-        pressTowardBall01: possession === 'home' ? 0.42 : undefined,
-        kickoffShapeRelax01,
-        matchHalf,
-      });
-    }
-
-    // Ball trajectory
-    ballTrajectory = computeBallTrajectory(
-      s.ballTrajectory as BallTrajectoryState | undefined,
-      s.ball,
-      ball,
-      spiritActionKind,
-      possessionChanged,
-    );
-  } else {
-    homePlayers = jitterPlayers(s.homePlayers, ball, possession);
-  }
+  let homePlayers: PitchPlayerState[] = jitterPlayers(s.homePlayers, ball, possession);
   const staffFx = input.staffMatchEffects;
   const fatigueGainMul = staffFx?.fatigueGainMul ?? 1;
   const injStressMul = staffFx?.injuryStressMul ?? 1;
@@ -912,18 +696,6 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
           preGoalHint,
           awayRoster,
           quickInjurySub,
-          ...(isLive2dPitch
-            ? {
-                awayPitchPlayers,
-                spiritActionKind,
-                ballTrajectory,
-                test2dVisualBeat,
-                ultralive2dStagedPlay,
-                test2dHomePossessionPhase:
-                  possession === 'home' ? 'in_possession' : 'out_of_possession',
-                live2dDecisionStagnationTicks,
-              }
-            : {}),
         },
         updatedPlayers,
       };
@@ -1049,7 +821,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
           events.push(...sub.snapshot.events);
           if (events.length > 40) events.length = 40;
         }
-        if ((s.mode === 'quick' || s.mode === 'test2d') && disc.outcome === 'red' && !spiritOverlay) {
+        if (s.mode === 'quick' && disc.outcome === 'red' && !spiritOverlay) {
           spiritOverlay = redCardBannerOverlay({
             minute,
             side: 'home',
@@ -1079,7 +851,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       playerId: pick.id,
     });
     if (events.length > 40) events.pop();
-    if (isRed && (s.mode === 'quick' || s.mode === 'test2d')) {
+    if (isRed && s.mode === 'quick') {
       awayRoster = awayRoster.filter((p) => p.id !== pick.id);
       if (!spiritOverlay) {
         spiritOverlay = redCardBannerOverlay({
@@ -1130,19 +902,6 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     preGoalHint,
     awayRoster,
     quickInjurySub,
-    // live2d pitch fields
-    ...(isLive2dPitch
-      ? {
-          awayPitchPlayers,
-          spiritActionKind,
-          ballTrajectory,
-          test2dVisualBeat,
-          ultralive2dStagedPlay,
-          test2dHomePossessionPhase:
-            possession === 'home' ? 'in_possession' : 'out_of_possession',
-          live2dDecisionStagnationTicks,
-        }
-      : {}),
   };
 
   return { snapshot: nextSnap, updatedPlayers, newInboxItems: injuryInboxItems.length > 0 ? injuryInboxItems : undefined };

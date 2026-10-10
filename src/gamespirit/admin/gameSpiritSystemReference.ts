@@ -259,7 +259,7 @@ export const GAME_SPIRIT_SECTIONS: GameSpiritSection[] = [
     id: 'pipeline',
     title: 'Integração causal & partida ao vivo',
     lead:
-      'Eventos append-only em match/causal; partida ao vivo MVP em `Live2dMatchShell` (test2d + SIM_SYNC + coreografia). Modo Supabase pode não usar GameSpirit para placar — ver SUPABASE.md.',
+      'Eventos append-only em match/causal. A partida visual (Partida Viva) está em planejamento — ver docs/PARTIDA-VIVA-PLANO.md. Modo Supabase pode não usar GameSpirit para placar — ver SUPABASE.md.',
     modules: [
       {
         file: 'src/match/causal/matchCausalTypes.ts',
@@ -267,9 +267,9 @@ export const GAME_SPIRIT_SECTIONS: GameSpiritSection[] = [
         blurb: 'Importa BallZone do GameSpirit.',
       },
       {
-        file: 'src/pages/Live2dMatchShell.tsx',
-        title: 'Partida ao vivo 2D',
-        blurb: 'Campo 2D, TacticalSimLoop e commits de coreografia causal.',
+        file: 'docs/PARTIDA-VIVA-PLANO.md',
+        title: 'Partida Viva (plano)',
+        blurb: 'Modo visual: plano Python decide, coreógrafo anima, campo em PixiJS.',
       },
       {
         file: 'docs/SUPABASE.md',

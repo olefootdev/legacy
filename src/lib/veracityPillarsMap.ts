@@ -45,11 +45,6 @@ export const VERACITY_PILLARS: readonly VeracityPillarDef[] = [
         symbol: 'matchAttributesFromPlayerEntity',
         note: 'Preenche `PitchPlayerState.attributes` ao montar o XI.',
       },
-      {
-        module: '@/engine/ultralive2d/applyAttrsToMovement.ts',
-        symbol: 'attrsOf / teamMovementKnobsFromHomePitch',
-        note: 'Lê `PitchPlayerState.attributes` para modular movimento ultralive2d.',
-      },
     ],
   },
   {

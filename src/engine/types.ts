@@ -12,8 +12,8 @@ import type { PenaltyState, SpiritOverlay, SpiritPhase } from '@/gamespirit/spir
 
 export type { PenaltyState, SpiritOverlay, SpiritPhase } from '@/gamespirit/spiritSnapshotTypes';
 
-/** `test2d` = partida ao vivo MVP (campo 2D + motor tático + coreografia causal). */
-export type MatchMode = 'quick' | 'auto' | 'test2d';
+/** `quick` = Partida Rápida (com decisões do manager); `auto` = simulação sem tela (liga em segundo plano). */
+export type MatchMode = 'quick' | 'auto';
 
 export type MatchPhase = 'pregame' | 'playing' | 'postgame';
 
@@ -61,10 +61,7 @@ export interface MatchEventEntry {
   minute: number;
   text: string;
   kind: 'narrative' | 'goal_home' | 'goal_away' | 'whistle' | 'sub' | 'yellow_home' | 'red_home' | 'yellow_away' | 'red_away' | 'injury_home' | 'penalty_start' | 'penalty_result' | 'shot_home' | 'shot_away';
-  /**
-   * Ao vivo 2D (`test2d`): destaque no feed de “aprendizagem” / feedback tático (acerto vs erro).
-   * Só o motor táctico preenche; restantes modos ignoram na UI.
-   */
+  /** Tom do lance no feed (acerto vs erro) — preenchido pelas decisões do manager no reducer. */
   live2dMoment?: 'good' | 'bad' | 'info';
   /** Jogador da casa (golo, cartões, lesão) ou metadado de golo visitante quando aplicável */
   playerId?: string;
@@ -268,56 +265,5 @@ export interface LiveMatchSnapshot {
     /** Outcome após resolução: 'goal' | 'shot_saved' | 'cleared' | 'recycled' */
     outcome?: 'goal' | 'shot_saved' | 'cleared' | 'recycled';
   } | null;
-
-  /* ── Partida ao vivo 2D (`test2d`) ─────────────────────────────────── */
-
-  /** Jogadores visitantes simulados com posicionamento tático. */
-  awayPitchPlayers?: PitchPlayerState[];
-  /** Tipo da última ação Spirit (progress, shot, recycle…) — para posicionamento tático. */
-  spiritActionKind?: string;
-  /** Trajeto da bola para interpolação visual contínua entre ticks. */
-  ballTrajectory?: {
-    from: PitchPoint;
-    to: PitchPoint;
-    kind: string;
-    progress01: number;
-  };
-
-  /**
-   * Legado: coreografia simples (só persistência antiga). O MVP usa `ultralive2dStagedPlay`.
-   */
-  test2dVisualBeat?: {
-    causalSeqAnchor: number;
-    kind: string;
-    ballFrom: PitchPoint;
-    ballTo: PitchPoint;
-    durationMs: number;
-    deferredFeedEvent: MatchEventEntry;
-  };
-
-  /** Fase tática simples (casa): com bola vs sem — espelho in/out of possession. */
-  test2dHomePossessionPhase?: 'in_possession' | 'out_of_possession';
-
-  /**
-   * Campo 2D: minutos seguidos em que a casa manteve posse com ação só `recycle`.
-   */
-  live2dDecisionStagnationTicks?: number;
-
-  /**
-   * Legado: coreografia diferida; no MVP o feed entra logo em `runMatchMinute` (campo 2D segue o truth).
-   */
-  ultralive2dStagedPlay?: Ultralive2dStagedPlay;
 }
 
-/** Payload de coreografia no snapshot (motor → viewer → reducer). */
-export interface Ultralive2dStagedPlay {
-  causalSeqAnchor: number;
-  kind: string;
-  ballFrom: PitchPoint;
-  ballTo: PitchPoint;
-  durationMs: number;
-  substeps: number;
-  deferredFeedEvent: MatchEventEntry;
-  heroPlayerIds: string[];
-  heroBurstOffsets: { playerId: string; ox: number; oy: number }[];
-}

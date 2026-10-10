@@ -148,7 +148,7 @@ export function defaultLiveMatchShell(
   competitiveMetadata?: { isCompetitive: boolean; opponentType: 'bot' | 'human' },
 ): LiveMatchSnapshot {
   return {
-    mode: 'test2d',
+    mode: 'quick',
     phase: 'pregame',
     minute: 0,
     homeScore: 0,

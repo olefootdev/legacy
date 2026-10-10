@@ -18,13 +18,12 @@ npm run deploy:cloudflare   # build + wrangler deploy
 
 # Self-tests (run with tsx, no test runner)
 npm run test:causal
-npm run test:spirit-machine
-npm run test:structural
 npm run test:field-zones
-npm run test:shot-resolve
-npm run test:shoot-pipeline
-npm run test:tactical-live-moments
-npm run test:deliberation
+npm run test:quick-engaged
+npm run test:quick-clutch
+npm run test:plano          # SMART-PROFILE: plano custodiado no servidor
+npm run test:smart-profile
+# (test:spirit-machine, test:awareness e test:analytics já falham na base — 09/10)
 # ... see package.json for full list
 
 # SmartField snapshot (Python)
@@ -36,7 +35,7 @@ python smartfield/smartfield_debug.py --snapshot
 ### Frontend (React + Zustand)
 - **`src/game/`** — central game state: `OlefootGameState` (Zustand store via `GameProvider`). All match/team/economy mutations go through `reducer.ts` dispatched via `useGameStore`.
 - **`src/App.tsx`** — route tree. All pages are lazy-loaded. The `RequireRegistration` guard wraps authenticated routes.
-- **`src/pages/`** — route-level pages (LiveMatch, MatchLive, MatchAuto, MatchQuick, Postgame, etc.).
+- **`src/pages/`** — route-level pages (MatchQuick, MatchQuickEngaged, MatchPenaltyV2, MatchGlobal, Postgame, etc.). `/match` só redireciona para `/match/quick`.
 - **`src/admin/`** — admin dashboard, panels, GameSpirit teach/reference tools.
 
 ### Backend (Hono on Node)
@@ -48,14 +47,12 @@ python smartfield/smartfield_debug.py --snapshot
 
 | Layer | Location | Role |
 |---|---|---|
-| Simulation truth | `src/gamespirit/GameSpirit.ts` | Minute-by-minute shot/goal resolution, narrative |
+| Quick truth (production) | `server/smartfield/match_simulator.py` via `POST /api/match/quick-plan` | Deterministic per-seed match plan (events, xG, momentum, analyst beats); replayed by `src/match/QuickPlanPlayer.tsx` |
+| Background truth | `src/engine/runMatchMinute.ts` → `src/gamespirit/GameSpirit.ts` | Minute-by-minute resolution for `auto` (league catch-up, CPU matches) |
 | Engine types | `src/engine/types.ts` | `PitchPlayerState`, `MatchEventEntry`, `MatchMode` |
-| Tactical positioning | `src/engine/test2d/tacticalPositioning.ts` | Formation-anchored, role-aware, spacing-enforced movement |
-| Team shape | `src/engine/test2d/teamShape.ts` | Phase/intention → shape modifiers |
-| Ball trajectory | `src/engine/test2d/ballTrajectory.ts` | Physical ball movement |
-| Anti-chaos | `src/engine/test2d/antiChaosEngine.ts` | Prevents bunching/chaotic movement |
-| UltraLive2D | `src/engine/ultralive2d/` | Event choreography, attrs→movement knobs |
 | SmartField | `src/smartfield/smartfieldBridge.ts` | Loads Python-generated `smartfield_snapshot.json`; exposes zone anchors, tactical geometry |
+
+**No visual (moving-players) match exists today.** All earlier attempts (Babylon, Yuka/TacticalSimLoop, test2d, classic) were removed — see `docs/PARTIDA-VIVA-PLANO.md` for the approved plan (one truth on the server, action chains, TS choreographer, PixiJS stage). Donor code (`teamShape`, `tacticalPositioning`, `ballTrajectory`, `applyAttrsToMovement`) lives in git history at commit `12e57c7` (e.g. `git show 12e57c7:src/engine/test2d/teamShape.ts`).
 
 ### Coordinate Systems (critical to understand)
 - **Engine coordinates**: 0–100 (percentage of field). Used in `PitchPlayerState.x/y`.
@@ -64,9 +61,8 @@ python smartfield/smartfield_debug.py --snapshot
 - Home attacks toward +X. Away attacks toward -X (mirrored).
 
 ### Match Modes
-- `quick` — instant result, no pitch.
-- `auto` — simulated with events, no live pitch.
-- `test2d` — full live 2D pitch with Yuka agents, tactical sim loop, choreography. This is the main live mode.
+- `quick` — Partida Rápida (official mode; with `VITE_QUICK_PLAN_ENABLED=1` it runs the Python plan via `MatchQuickEngaged`).
+- `auto` — simulated with events, no pitch (background league / catch-up).
 
 ### Key Domain Types
 - `PitchPlayerState` (`src/engine/types.ts`) — player on pitch: `x/y` (engine %), `slotId`, `role`, `heading`, `fatigue`, `attributes`, `cognitiveArchetype`.
@@ -77,8 +73,6 @@ python smartfield/smartfield_debug.py --snapshot
 ### GameSpirit (AI Narrator/Coach)
 - `src/gamespirit/GameSpirit.ts` — core: resolves shots, goals, narrative from `SpiritContext`.
 - `src/gamespirit/admin/` — admin tools: teach client, create player from prompt, runtime truth.
-- `src/gamespirit/gameSpiritDecisionClient.ts` — calls backend OpenAI routes for tactical decisions.
-- The `liveStoryEngine.ts` + `storyMotor.ts` produce narrative arcs per match.
 
 ### SmartField (Python + TS Bridge)
 - `smartfield/smartfield_engine.py` + `smartfield_schema.py` — authoritative Python tactical geometry engine.

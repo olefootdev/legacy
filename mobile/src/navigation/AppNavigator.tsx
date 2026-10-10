@@ -6,7 +6,6 @@ import { WalletScreen } from '@/screens/WalletScreen';
 import { TransferScreen } from '@/screens/TransferScreen';
 import { StoreScreen } from '@/screens/StoreScreen';
 import { MissionsScreen } from '@/screens/MissionsScreen';
-import { LiveMatchScreen } from '@/screens/LiveMatchScreen';
 
 export type RootTabParamList = {
   Home: undefined;
@@ -16,7 +15,6 @@ export type RootTabParamList = {
   Transfer: undefined;
   Store: undefined;
   Missions: undefined;
-  Live: undefined;
 };
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -40,7 +38,6 @@ export function AppNavigator() {
       <Tab.Screen name="Transfer" component={TransferScreen} options={{ title: 'Mercado', tabBarLabel: 'Merc.' }} />
       <Tab.Screen name="Store" component={StoreScreen} options={{ title: 'Loja', tabBarLabel: 'Loja' }} />
       <Tab.Screen name="Missions" component={MissionsScreen} options={{ title: 'Missões', tabBarLabel: 'Missões' }} />
-      <Tab.Screen name="Live" component={LiveMatchScreen} options={{ title: 'Ao vivo', tabBarLabel: 'Ao vivo' }} />
     </Tab.Navigator>
   );
 }

@@ -260,7 +260,7 @@ export interface OlefootGameState {
   players: Record<string, PlayerEntity>;
   /**
    * Single Source of Truth para fadiga / lesão / suspensão / risco.
-   * Lido por TODOS os modos (quick, auto, test2d, global, penalty, friendly).
+   * Lido por TODOS os modos (quick, auto, global, penalty, friendly).
    * Migrado a partir de `players[id].fatigue/injuryRisk/outForMatches` em persistence.
    */
   playerHealth: Record<string, PlayerHealth>;
@@ -501,7 +501,7 @@ export type GameAction =
   | {
       /**
        * Aplica eventos de UMA partida ao mapa SSOT `playerHealth`.
-       * Despachado por todos os modos (quick/auto/test2d/global/penalty/friendly).
+       * Despachado por todos os modos (quick/auto/global/penalty/friendly).
        * É o ÚNICO ponto que muta playerHealth a partir de partidas.
        */
       type: 'APPLY_MATCH_CONSEQUENCES';
@@ -543,8 +543,6 @@ export type GameAction =
       simulationSeed?: number;
     }
   | { type: 'TICK_MATCH_MINUTE' }
-  /** TESTE 2D: após coreografia bola (causal→visual), revela `deferredFeedEvent` no feed. */
-  /** ultralive2d: idem com `ultralive2dStagedPlay`. */
   | { type: 'DISMISS_SPIRIT_OVERLAY' }
   | {
       type: 'APPLY_SPIRIT_OUTCOME';
@@ -565,7 +563,7 @@ export type GameAction =
   | { type: 'PENALTY_SET_TAKER'; playerId: string; name: string }
   | { type: 'END_MATCH_TO_POST' }
   /** Desistência em partida rápida/automática: 0–5 para o visitante e fase pós-jogo. */
-  | { type: 'FORFEIT_MATCH'; mode: 'quick' | 'auto' | 'test2d' }
+  | { type: 'FORFEIT_MATCH'; mode: 'quick' | 'auto' }
   /** Sprint L3 — escanteio/falta interativo: dispara overlay no manager. */
   | {
       type: 'AWARD_SET_PIECE';

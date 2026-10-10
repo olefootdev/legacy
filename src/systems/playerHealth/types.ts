@@ -2,7 +2,7 @@ import type { InjurySeverity } from '@/systems/injury';
 
 /**
  * Single Source of Truth para saúde/disponibilidade de um jogador.
- * Lido por TODOS os modos (quick, auto, test2d, global, penalty, friendly).
+ * Lido por TODOS os modos (quick, auto, global, penalty, friendly).
  * Substitui os campos `fatigue/injuryRisk/outForMatches` espalhados em PlayerEntity.
  */
 export interface PlayerHealth {
@@ -36,7 +36,6 @@ export interface PlayerHealth {
 export type MatchModeForHealth =
   | 'quick'
   | 'auto'
-  | 'test2d'
   | 'global'
   | 'penalty'
   | 'friendly';

@@ -1,3 +1,5 @@
+> **⚠️ SUPERADO (09/10/2026).** Este documento descreve uma tentativa de partida visual que nunca chegou ao manager e cujo código foi removido. A referência atual é [PARTIDA-VIVA-PLANO.md](PARTIDA-VIVA-PLANO.md). Mantido só como histórico — não implementar a partir daqui.
+
 # Prompt completo — Cole no Cursor (OLEFOOT: campo profissional + melhorias visuais no projeto)
 
 **Instrução:** copie **tudo** a partir da seção “INÍCIO DO PROMPT” até “FIM DO PROMPT” e cole num chat do Cursor com o **workspace na raiz do repositório OLEFOOT** (onde está o `package.json` do Expo e, se existir, `app/` ou `src/`).

@@ -6,7 +6,7 @@ import type {
 
 /**
  * Converte um `LiveMatchSnapshot` finalizado em `MatchOutcomeEvent[]` para o SSOT.
- * Cobre os modos `quick`, `auto`, `test2d` (e amistosos rodando como quick/auto).
+ * Cobre os modos `quick` e `auto` (e amistosos rodando como quick/auto).
  */
 export function liveMatchToHealthEvents(opts: {
   lm: LiveMatchSnapshot;

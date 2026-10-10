@@ -35,7 +35,7 @@ export function SetPieceModal({ pickTimeSeconds = 10 }: Props) {
   // (consome a flag pra evitar dupla resolução pelo Spirit no próximo tick)
   useEffect(() => {
     if (pendingSetPiece) return; // já tem um aberto
-    const isInteractive = liveMode === 'quick' || liveMode === 'test2d';
+    const isInteractive = liveMode === 'quick';
     if (!isInteractive) return;
     if (pendingCorner === 'home') {
       dispatch({

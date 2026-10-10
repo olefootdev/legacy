@@ -217,7 +217,6 @@ import {
   npcProspectPriceAfterScoutDiscount,
   staffRunMatchMinuteEffects,
 } from '@/systems/staffBenefits';
-import { buildAwayPitchPlayersFromEntities } from '@/engine/test2d/tacticalPositioning';
 import { hashStringSeed } from '@/match/seededRng';
 import { FORMATION_BASES } from '@/match-engine/formations/catalog';
 import { appendMemorableTrophyUnlocks } from '@/trophies/memorableCatalog';
@@ -637,7 +636,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
       const squadCheck = evaluateOfficialSquad(st.lineup, st.players);
       const skipSquadGateForQuickTest =
-        (action.mode === 'quick' || action.mode === 'test2d');
+        action.mode === 'quick';
       if (!squadCheck.ok && !skipSquadGateForQuickTest) {
         const inboxWithoutDup = st.inbox.filter((i) => i.id !== 'lineup-requirement-live-match');
         const lineupNote = makeInboxItem(
@@ -718,8 +717,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
            (liveMatch as any).useLegacyTicker = true;
         }
       } 
-      else if (action.mode === 'quick' || action.mode === 'test2d') {
-        const kickLabel = action.mode === 'test2d' ? L('(ao vivo 2D)', '(live 2D)') : L('(partida rápida)', '(quick match)');
+      else if (action.mode === 'quick') {
+        const kickLabel = L('(partida rápida)', '(quick match)');
         const kick: MatchEventEntry = {
           id: uid(),
           minute: 0,
@@ -729,14 +728,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         const opp = st.nextFixture.opponent;
         const genesisAway = opp.genesisAwayPlayers;
         let awayRoster: NonNullable<import('@/engine/types').LiveMatchSnapshot['awayRoster']>;
-        let awayPitchPlayers: import('@/engine/types').PitchPlayerState[] | undefined;
 
         if (genesisAway?.length) {
           const starters = awayStartingElevenFromSquad(genesisAway);
           awayRoster = starters.map((p) => ({ id: p.id, num: p.num, name: p.name, pos: p.pos }));
-          if (action.mode === 'test2d') {
-            awayPitchPlayers = buildAwayPitchPlayersFromEntities(starters, fs);
-          }
         } else {
           const awaySlots: { pos: string; num: number }[] = [
             { pos: 'GOL', num: 1 }, { pos: 'ZAG', num: 4 }, { pos: 'ZAG', num: 5 },
@@ -766,7 +761,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           events: [kick],
           awayRoster,
           awayRosterAtKickoff: awayRoster.map((p) => ({ ...p })),
-          ...(awayPitchPlayers ? { awayPitchPlayers } : {}),
         };
       }
 
@@ -1233,8 +1227,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     case 'QUICK_ENFORCE_CARD_RULES': {
       if (!state.liveMatch) return state;
       const lm = state.liveMatch;
-      // only enforce in quick/test2d mode
-      if (lm.mode !== 'quick' && lm.mode !== 'test2d') return state;
+      // only enforce in quick mode
+      if (lm.mode !== 'quick') return state;
       const playerId = (action as any).playerId as string;
       if (!playerId) return state;
       if ((lm.sentOffPlayerIds ?? []).includes(playerId)) return state;
@@ -1618,7 +1612,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const isFriendly =
         /amist/i.test(state.nextFixture.competition) ||
         /^FRIENDLY/i.test(state.nextFixture.competition);
-      const matchModeForHealth = isFriendly ? 'friendly' : (lm.mode as 'quick' | 'auto' | 'test2d');
+      const matchModeForHealth = isFriendly ? 'friendly' : (lm.mode as 'quick' | 'auto');
       const healthEvents = liveMatchToHealthEvents({
         lm,
         matchId: state.nextFixture.id ?? `match-${Date.now()}`,

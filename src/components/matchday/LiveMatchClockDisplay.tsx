@@ -1,10 +1,8 @@
-import { memo, useEffect, useRef, useState, type RefObject } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { SECONDS_PER_TICK } from '@/engine/types';
-import type { TacticalSimLoop } from '@/simulation/TacticalSimLoop';
 
 /**
  * Relógio MM:SS isolado do resto da árvore — evita re-renderizar o campo2D a 60 Hz só por causa do cronómetro.
- * Modo tático: lê o tempo diretamente do `TacticalSimLoop` (alinhado ao sim).
  *
  * Estratégia anti-time-travel (v3 — 2026-05-30 noite):
  *   1. **Guarda de monotonicidade** (linha de defesa principal): rastreamos
@@ -31,7 +29,6 @@ export const LiveMatchClockDisplay = memo(function LiveMatchClockDisplay({
   frozen,
   phase,
   msPerMinute,
-  tacticalLoopRef,
   freezeUntilMs,
 }: {
   elapsedSec: number;
@@ -39,7 +36,6 @@ export const LiveMatchClockDisplay = memo(function LiveMatchClockDisplay({
   phase: string | undefined;
   /** Duração real (ms) de um “minuto de jogo” na UI — difere entre partida rápida e ao vivo 2D. */
   msPerMinute: number;
-  tacticalLoopRef?: RefObject<TacticalSimLoop | null>;
   /** Opcional: wall-clock (ms) até quando o motor está congelado por timer.
    *  Permite ao RAF respeitar o congelamento sem depender de re-render do pai. */
   freezeUntilMs?: number;
@@ -103,16 +99,10 @@ export const LiveMatchClockDisplay = memo(function LiveMatchClockDisplay({
         raf = requestAnimationFrame(step);
         return;
       }
-      const loop = tacticalLoopRef?.current;
-      let secCandidate: number;
-      if (loop) {
-        secCandidate = Math.min(5400, loop.getFootballElapsedSecApprox());
-      } else {
-        const { wallMs, baseSec } = baseRef.current;
-        const realElapsed = Math.max(0, Date.now() - wallMs - frozenAccumMsRef.current);
-        const linearSec = baseSec + (realElapsed / msPerMinute) * SECONDS_PER_TICK;
-        secCandidate = Math.min(linearSec, 5400);
-      }
+      const { wallMs, baseSec } = baseRef.current;
+      const realElapsed = Math.max(0, Date.now() - wallMs - frozenAccumMsRef.current);
+      const linearSec = baseSec + (realElapsed / msPerMinute) * SECONDS_PER_TICK;
+      let secCandidate = Math.min(linearSec, 5400);
       // ───── Guarda de monotonicidade (linha de defesa principal) ─────
       // Não importa o que `secCandidate` calcule, o display nunca regride.
       // Resolve TODOS os casos de "voltou alguns segundos":
@@ -132,7 +122,7 @@ export const LiveMatchClockDisplay = memo(function LiveMatchClockDisplay({
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [frozen, phase, msPerMinute, tacticalLoopRef, freezeUntilMs]);
+  }, [frozen, phase, msPerMinute, freezeUntilMs]);
 
   return <>{display}</>;
 });

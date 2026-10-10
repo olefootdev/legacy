@@ -1,3 +1,5 @@
+> **⚠️ SUPERADO (09/10/2026).** Este documento descreve uma tentativa de partida visual que nunca chegou ao manager e cujo código foi removido. A referência atual é [PARTIDA-VIVA-PLANO.md](PARTIDA-VIVA-PLANO.md). Mantido só como histórico — não implementar a partir daqui.
+
 # Integração do viewer Babylon (`web/match-pitch`) no app Expo (OLEFOOT)
 
 O campo 3D roda no **navegador** (Vite + Babylon). No **React Native / Expo**, a forma mais estável de integrar é **`react-native-webview`** carregando essa página — o motor gráfico continua no WebView; o app nativo envia estado via `postMessage` quando precisar.

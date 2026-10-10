@@ -1,3 +1,5 @@
+> **⚠️ SUPERADO (09/10/2026).** Este documento descreve uma tentativa de partida visual que nunca chegou ao manager e cujo código foi removido. A referência atual é [PARTIDA-VIVA-PLANO.md](PARTIDA-VIVA-PLANO.md). Mantido só como histórico — não implementar a partir daqui.
+
 # Prompt de especificação — OLEFOOT: simulação tática + Yuka + Babylon (visual 2D)
 
 Use este documento como **briefing único** para implementação (humano ou IA). Ele assume **reuso do que já existe** no projeto OLEFOOT (Expo / React Native, rotas, UI, estado de partida, GameSpirit ou motor mock) e adiciona **movimento inteligente com Yuka** e **camada visual com Babylon.js**, priorizando **experiência 2D** (câmera, profundidade leve, pós-processamento), sem obrigar modelo 3D pesado no MVP.

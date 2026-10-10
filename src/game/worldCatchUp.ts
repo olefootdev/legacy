@@ -108,8 +108,7 @@ export function applyWorldCatchUp(state: OlefootGameState, nowMs: number): Olefo
   if (
     liveMatch &&
     liveMatch.phase === 'playing' &&
-    liveMatch.minute < 90 &&
-    liveMatch.mode !== 'test2d'
+    liveMatch.minute < 90
   ) {
     let roster = homeRosterFromLineupState({ ...state, players });
     const maxSim = Math.min(40, Math.floor(gm), 90 - liveMatch.minute);

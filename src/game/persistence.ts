@@ -389,9 +389,9 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
       mode: (() => {
         const m = (liveMatch as { mode?: string }).mode;
         if (m === 'fast') return 'quick' as const;
-        if (m === 'live' || m === 'ultralive2d') return 'test2d' as const;
-        if (m === 'quick' || m === 'auto' || m === 'test2d') return m;
-        return 'test2d' as const;
+        if (m === 'quick' || m === 'auto') return m;
+        // Saves antigos do campo 2D ('live', 'ultralive2d', 'test2d') seguem como partida rápida.
+        return 'quick' as const;
       })(),
       homeImpactLedger: liveMatch.homeImpactLedger ?? [],
       homeCaptainPlayerId:

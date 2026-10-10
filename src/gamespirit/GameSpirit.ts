@@ -38,7 +38,6 @@ import {
   createTeamPressingState,
   detectPressingTrigger,
   activatePressingTrap,
-  tickPressingTrap,
   isPressingTrapActive,
   type TeamPressingState,
 } from '@/behaviorAI/pressingTrap';
@@ -75,7 +74,7 @@ function zoneFromBallX(x: number): BallZone {
   return 'att';
 }
 
-/** Alvo UI (0–100) junto à boca real da baliza — coerente com coreografia test2d. */
+/** Alvo UI (0–100) junto à boca real da baliza. */
 function spiritShotTargetUI(side: 'home' | 'away', shooter?: PitchPlayerState, ctx?: SpiritContext): PitchPoint {
   const halfUy = (GOAL_MOUTH_HALF_WIDTH_M / FIELD_WIDTH) * 100;
   // ângulo proxy: 0 = central, 1 = lateral extremo. Reduz janela e viesa pro canto curto.
@@ -247,8 +246,6 @@ function pickAction(ctx: SpiritContext): ProposedAction {
   const deepDefense = ctx.ballZone === 'def';
   const isolated = ctx.nearestTeammateDist > 22;
   const crowded = ctx.homeDensityNearBall >= 3;
-  const m = ctx.test2dTickModifiers;
-  const st = ctx.live2dStagnationTicks ?? 0;
 
   // URGÊNCIA POR PLACAR/TEMPO: times perdendo nos minutos finais atacam mais
   const scoreDiff = ctx.homeScore - ctx.awayScore;
@@ -281,25 +278,7 @@ function pickAction(ctx: SpiritContext): ProposedAction {
   const underPressure = ctx.awayPlayers ? oppsNear >= 2 : false;
   const freeFwd = findFreeForwardTeammate(ctx.onBall, ctx.homePlayers, ctx.awayPlayers, 'home');
 
-  /** live2d: após N recycles seguidos, obrigar avanço (condução/passe longo). */
-  if (ctx.possession === 'home' && st >= 2) {
-    return 'progress';
-  }
-  if (ctx.possession === 'home' && st >= 1 && ctx.onBall?.role === 'def' && ctx.ballZone === 'def') {
-    // Zagueiro: só recicla se realmente pressionado E sem colega livre adiantado.
-    if (underPressure && !freeFwd) return 'recycle';
-    return 'progress';
-  }
-
-  if (ctx.possession === 'away' && deepDefense && highPress) {
-    if (!m) return 'press';
-    // Pressing trap: se armadilha ativa, pressão é garantida (ignora gate aleatório).
-    const simTime = ctx.minute * 60;
-    tickPressingTrap(_homePressing, simTime);
-    const trapBonus = isPressingTrapActive(_homePressing, simTime) ? 0.12 : 0;
-    const carrierPressResist = ctx.onBallKnowledge ? (ctx.onBallKnowledge.traits.pressIntensity - 1) * 0.06 : 0;
-    if (rngNext(ctx) < Math.min(0.96, 0.88 * m.awayPressMult + trapBonus - carrierPressResist)) return 'press';
-  }
+  if (ctx.possession === 'away' && deepDefense && highPress) return 'press';
   if (ctx.possession === 'home' && ctx.ballZone === 'att' && (ctx.onBall?.role === 'attack' || ctx.onBall?.role === 'mid')) {
     if (isolated && ctx.crowdPressure.longPassStress > 1.05) return 'recycle';
     const momentumBias = (ctx.momentum?.home ?? 0) * 0.10;
@@ -324,7 +303,6 @@ function pickAction(ctx: SpiritContext): ProposedAction {
     const shotBias =
       style.shootingProfile * 0.25 +
       style.riskTaking * 0.18 +
-      (m?.shotInAttThirdBias ?? 0) +
       momentumBias +
       zoneShotBias +
       awarenessShotBias +
@@ -595,14 +573,11 @@ export function buildSpiritContext(input: {
   recentFeedLines?: string[];
   awayRoster?: { id: string; num: number; name: string; pos: string }[];
   /**
-   * Visitante sintético com atributos individuais. Em Quick Mode é montado
-   * por `synthesizeAwayPitchPlayers` (atributos derivados de OVR+pos); em
-   * Live2D vem do `awayPitchPlayers` real. Habilita awareness de marcação
+   * Visitante sintético com atributos individuais, montado por
+   * `synthesizeAwayPitchPlayers` (atributos derivados de OVR+pos). Habilita awareness de marcação
    * adversária, GK individualizado e pGoalAway baseado no artilheiro.
    */
   awayPlayers?: PitchPlayerState[];
-  test2dTickModifiers?: SpiritContext['test2dTickModifiers'];
-  live2dStagnationTicks?: number;
   motorTelemetryTail?: SpiritContext['motorTelemetryTail'];
   penaltyCooldownTicks?: number;
   momentum?: SpiritContext['momentum'];
@@ -729,8 +704,6 @@ export function buildSpiritContext(input: {
     homeShort: input.homeShort,
     homePlayers: input.homePlayers,
     awayRoster: input.awayRoster,
-    test2dTickModifiers: input.test2dTickModifiers,
-    live2dStagnationTicks: input.live2dStagnationTicks,
     motorTelemetryTail: input.motorTelemetryTail,
     onBallKnowledge,
     onBallAgentProfile,
@@ -971,12 +944,10 @@ function commitGoal(input: CommitGoalInput): {
 }
 
 // Estado de pressing compartilhado entre ticks (módulo-nível, reset por partida via resetPressingState).
-const _homePressing: TeamPressingState = createTeamPressingState('home');
 const _awayPressing: TeamPressingState = createTeamPressingState('away');
 
 /** Reseta o estado de pressing (chamar no início de cada partida). */
 export function resetPressingState(): void {
-  Object.assign(_homePressing, createTeamPressingState('home'));
   Object.assign(_awayPressing, createTeamPressingState('away'));
 }
 
@@ -1535,9 +1506,6 @@ export function gameSpiritTick(
       // FANTASY V3 (2026-05-27): lossChance era 0.14 + tax → bola perdia
       // 50% das vezes e voltava pra zona mid. Reduzido pra 0.07 + tax (cap 0.25).
       let lossChance = Math.min(0.25, 0.07 + errorTax * 0.30 + (ctx.crowdPressure.longPassStress - 1) * 0.05);
-      if (ctx.test2dTickModifiers && ctx.possession === 'home') {
-        lossChance *= ctx.test2dTickModifiers.progressLossMult;
-      }
       // FANTASY V3: pushX em mid aumentado pra GARANTIR chegada à zona att.
       // Mid antes 8-22 → 14-28 (média 21, chega à zona att em ~2 progress)
       const pushX =

@@ -1,5 +1,4 @@
 import type { PlayerEntity } from './types';
-import { AWAY_SLOT_ORDER } from '@/engine/test2d/tacticalPositioning';
 
 export const PITCH_SLOT_ORDER: Array<{ id: string; label: string }> = [
   { id: 'pe', label: 'PE' },
@@ -124,7 +123,10 @@ export function mergeLineupWithDefaults(
   return { ...base, ...saved };
 }
 
-/** Ordem dos titulares visitantes alinhada a `buildAwayPitchPlayers` / `AWAY_SLOT_ORDER`. */
+/** Ordem dos slots do time visitante (goleiro → ataque). */
+export const AWAY_SLOT_ORDER = ['gol', 'zag1', 'zag2', 'le', 'ld', 'vol', 'mc1', 'mc2', 'pe', 'ata', 'pd'] as const;
+
+/** Ordem dos titulares visitantes alinhada a `AWAY_SLOT_ORDER`. */
 export function awayStartingElevenFromSquad(
   squad: PlayerEntity[],
   opts?: LineupBuildOptions,

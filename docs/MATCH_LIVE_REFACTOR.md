@@ -1,3 +1,5 @@
+> **⚠️ SUPERADO (09/10/2026).** Este documento descreve uma tentativa de partida visual que nunca chegou ao manager e cujo código foi removido. A referência atual é [PARTIDA-VIVA-PLANO.md](PARTIDA-VIVA-PLANO.md). Mantido só como histórico — não implementar a partir daqui.
+
 # REFATORAÇÃO MATCH LIVE - EXPERIÊNCIA IMERSIVA
 
 ## 🎯 OBJETIVO
