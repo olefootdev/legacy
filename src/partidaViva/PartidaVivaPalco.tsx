@@ -110,7 +110,7 @@ function Botao({ ativo, onClick, children, rotulo }: { ativo?: boolean; onClick:
       onClick={onClick}
       aria-pressed={ativo}
       aria-label={rotulo}
-      className={`flex min-h-[34px] min-w-0 flex-col items-center justify-center overflow-hidden border px-0.5 py-1 font-prova text-[clamp(9px,2.6vh,11px)] leading-tight [overflow-wrap:anywhere] ${ativo ? 'border-papel bg-rua text-asfalto-27' : 'border-linha bg-concreto text-papel'}`}
+      className={`flex min-h-[34px] min-w-0 flex-col items-center justify-center overflow-hidden border px-0.5 py-1 font-prova text-[clamp(9px,2.6vh,11px)] leading-tight whitespace-nowrap ${ativo ? 'border-papel bg-rua text-asfalto-27' : 'border-linha bg-concreto text-papel'}`}
     >
       {children}
     </button>
@@ -471,7 +471,7 @@ export function PartidaVivaPalco(p: Props) {
 
       <div
         className="grid h-full w-full"
-        style={{ gridTemplateColumns: `clamp(104px, 21%, 168px) minmax(0, 1fr) clamp(76px, 10%, 104px)` }}
+        style={{ gridTemplateColumns: `calc(clamp(104px, 21%, 168px) + env(safe-area-inset-left, 0px)) minmax(0, 1fr) calc(clamp(76px, 10%, 104px) + env(safe-area-inset-right, 0px))` }}
       >
         {/* TRILHO ESQUERDO */}
         <aside className="flex min-h-0 flex-col gap-2 overflow-hidden border-r border-linha p-2 pl-[max(0.5rem,env(safe-area-inset-left))] font-prova text-[11px]">
