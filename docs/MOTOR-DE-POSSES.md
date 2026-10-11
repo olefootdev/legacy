@@ -302,3 +302,47 @@ a calibração da Fase 1 tem de mirar os 2,4–3,0 **depois** do momento decisiv
 Risco de produto (não técnico): a Fase 1 muda o jogo que os managers sentem mais do que a
 Fase 0 mudou. Por isso a bateria compara também com `scripts/fase0/equilibrio.json`, e o
 fundador vê os números antes de subir — como na Fase 0.
+
+---
+
+## 8. Implementado em 11/10 (Fase 1) — o que o código fez do desenho
+
+`server/smartfield/motor_posses.py` (padrão do `match_simulator.simulate`; `motor: "minutos"` no
+pedido ou `OLEFOOT_MOTOR=minutos` no ambiente volta ao motor por minutos sem redeploy). Bateria:
+`npm run test:motor-posses` (= `test_motor_posses.py --n 1000`), **portão de merge**.
+
+### Desvios conscientes do desenho
+| no papel (§) | no código | por quê |
+|---|---|---|
+| ~95 posses de duração variável (§1.1) | **uma posse por minuto** (90), cada uma com até 7 ações e ~55 s de bola em jogo | mantém `fluxo` 1:1 com o minuto, os dados por minuto da Fase 0 (`seed|minuto`) e o replan emendando no minuto; 90 cabe no intervalo 88–104 |
+| classe do SMART-PROFILE desloca a ocupação (§1.3) | ocupação só por posição/função (`pos`/`role`) e DNA | a classe não chega ao Python hoje (é calculada na rota TS); entra na Fase 1b |
+| `goleiro` atributo próprio (§2.5) | derivado: 0,55·marcação + 0,25·velocidade + 0,20·confiança | a ficha ainda não tem o atributo |
+| falta só no duelo perdido pelo defensor (§2.3) | falta em todo duelo físico (condução/drible), ganho ou perdido (×0,7), e no passe interceptado sob pressão (0,20) | com a regra do papel saíam 4 faltas por jogo; o real é 18–30 |
+| mando = +2 confiança + 0,04 nos pesos (§2.5) | + **+4,5 em todo duelo** da casa e **+9% no xG** | o papel dava 35% de vitória no confronto igual; o alvo é 42–48% |
+| lesão sai do mapa (§6) | lesão como no motor antigo (rara, só a casa, sem efeito no motor) | o aparelho resolve a troca; Fase 1b |
+| `replan sem comando == plano inteiro da posse em diante` (§5) | não vale: o replan parte do estado resumido (placar, momento, cartões) | pressão, fadiga e célula não viajam no estado; o `estudo_comandos` confere que o replan vazio fica perto de 0 |
+
+### Como as cadeias saem (o aparelho não mudou uma linha)
+- A cadeia é a posse: as últimas ≤ 5 ações + a finalização (gol em 3–6 ações em 83–87% dos casos).
+- Escanteio: a posse seguinte, com a cobrança de verdade; a cadeia traz as ações da jogada **perto da área**,
+  o `desvio` na bandeirinha (quem afastou/bloqueou) e a cobrança — a mesma forma do motor antigo, que é
+  o que o campo lê (`bolaParada.ts` acha o canto pelo desvio). Escanteio em cima de escanteio começa no
+  desvio (achado do estresse: repetir o cruzamento levava o time pra longe e o cobrador não chegava).
+- Falta perto da área: `conducao` (quem sofre), `falta` (quem derruba) e `cobranca_falta` direta ou
+  `cruzamento` + `cabeceio`. Pênalti: `conducao`, `falta`, `cobranca` (como antes).
+- Cartão: a cadeia da falta vai no amarelo; o vermelho sai sem cadeia e DEPOIS dos lances do minuto
+  (ninguém age em cadeia depois de expulso — regra do `test_cadeia_lances`).
+- Bloqueio de chute é `shot`/`chance` (a cadeia acaba no chute); o escanteio que ele dá é a posse seguinte.
+
+### Calibração final (CAL em `motor_posses.py`)
+decisão: temperatura 0,55 · w_passe 1,00 · w_conducao 0,40 · w_drible 0,25 · w_lancamento 0,20 ·
+w_cruzamento 0,30 · w_chute 0,20 (+0,50 no centro) · w_recuo 0,15 · chute do meio só com finalização ≥ 78.
+duelos: passe 0,88 · condução 0,82 · lançamento 0,62 · cruzamento 0,55 · drible 0,46 · cabeceio 0,38;
+ganho 0,38·σ(d/0,12). faltas: base 0,28 + 0,22·(100−fair play)/100 (×0,7 se o duelo foi perdido),
+0,20 no passe sob pressão; amarelo 0,07 + 0,16·(100−fp)/100 (+0,05 no terço, +0,08 no drible);
+vermelho direto 0,010; pênalti 0,05 por falta em A-C. xG: centro 0,16 · corredor 0,08 · meio 0,035 ·
+cabeceio 0,11 · falta direta 0,06; pressão −45% · goleiro −25%/40 pts · livre ×1,25. fadiga: 0,30/min +
+agir 0,12 + marcar 0,08 + conduzir 0,20; abate acima de 55 (÷300).
+
+### Bateria (1.000 sintéticas + 333 reais + 500 iguais + 500 com 10 pontos)
+Ver `docs/PARTIDA-VIVA-PLANO.md` (Fase 1) — todos os intervalos travados dentro; p95 de CPU ~19 ms.

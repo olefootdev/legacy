@@ -81,6 +81,61 @@ def carregar(caminho):
     return mod.simulate
 
 
+
+def conferir_cadeias(inp, com, falhas, i, contagem):
+    """Confere as cadeias de UM plano: ninguém fora de campo age, pontos no campo,
+    finalização do autor, assistência = último passe, gols em 3–6 ações. `contagem`
+    acumula os totais. Reutilizado pela bateria da Fase 1 (test_motor_posses.py)."""
+    gols = gols_historia = finalizacoes = com_assist = assist_ok = total_cadeias = 0
+    ids = {"home": {p["id"] for p in inp["home_team"]["lineup"]}, "away": {p["id"] for p in inp["away_team"]["lineup"]}}
+    fora = {"home": set(), "away": set()}
+    for ev in com["events"]:
+        k = ev["kind"]
+        if k.startswith("red_"):
+            fora["home" if k.endswith("_home") else "away"].add(ev.get("actor_id"))
+        cad = ev.get("cadeia")
+        if not cad:
+            continue
+        total_cadeias += 1
+        lado = ev["actor_side"]
+        outro = "away" if lado == "home" else "home"
+        acoes = cad["acoes"]
+        if not acoes:
+            falhas.append(f"seed {i} {ev['minute']}' {k}: cadeia vazia")
+            continue
+        for ac in acoes:
+            if not (0 <= ac["x"] <= 105 and 0 <= ac["z"] <= 68):
+                falhas.append(f"seed {i} {ev['minute']}' {k}: ponto fora do campo {ac}")
+            quem = ac["de"]
+            cartao = k.split("_")[0] in ("yellow", "red")
+            # No cartão, quem leva o cartão (o autor) comete a falta; quem sofre é do outro time.
+            lado_de = (lado if ac["t"] == "falta" else outro) if cartao else (outro if ac["t"] in ("falta", "desvio") else lado)
+            if quem not in ids[lado_de] or quem in fora[lado_de]:
+                falhas.append(f"seed {i} {ev['minute']}' {k}: '{ac['t']}' por quem não está em campo ({quem})")
+            if ac.get("para"):
+                lado_para = (outro if cartao else (outro if ac["t"] in ("drible", "desarme") else lado))
+                if ac["para"] not in ids[lado_para] or ac["para"] in fora[lado_para]:
+                    falhas.append(f"seed {i} {ev['minute']}' {k}: '{ac['t']}' pra quem não está em campo ({ac['para']})")
+        if cad["finalizacao"]:
+            finalizacoes += 1
+            if acoes[-1]["de"] != ev["actor_id"]:
+                falhas.append(f"seed {i} {ev['minute']}' {k}: finalização não é do autor")
+        if k.startswith("goal_"):
+            gols += 1
+            if 3 <= len(acoes) <= 6:
+                gols_historia += 1
+            if ev.get("assist_id"):
+                com_assist += 1
+                passe = next((ac for ac in reversed(acoes) if ac.get("para") == ev["actor_id"]), None)
+                if passe and passe["de"] == ev["assist_id"]:
+                    assist_ok += 1
+                else:
+                    falhas.append(f"seed {i} {ev['minute']}' gol: o passe pro autor não veio da assistência")
+    for k, v in (("gols", gols), ("gols_historia", gols_historia), ("finalizacoes", finalizacoes),
+                 ("com_assist", com_assist), ("assist_ok", assist_ok), ("total_cadeias", total_cadeias)):
+        contagem[k] = contagem.get(k, 0) + v
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=1000)
@@ -89,7 +144,7 @@ def main():
     simular_base = carregar(args.base) if args.base else None
 
     falhas = []
-    gols = gols_historia = finalizacoes = com_assist = assist_ok = total_cadeias = 0
+    contagem = {}
     for i in range(args.n):
         inp = entrada(i)
         com = simulate(copy.deepcopy(inp))
@@ -101,50 +156,10 @@ def main():
             if sem(com, ("cadeia", "assist_id")) != sem(antigo, ("cadeia", "assist_id")):
                 falhas.append(f"seed {i}: plano difere do simulador base")
 
-        ids = {"home": {p["id"] for p in inp["home_team"]["lineup"]}, "away": {p["id"] for p in inp["away_team"]["lineup"]}}
-        fora = {"home": set(), "away": set()}
-        for ev in com["events"]:
-            k = ev["kind"]
-            if k.startswith("red_"):
-                fora["home" if k.endswith("_home") else "away"].add(ev.get("actor_id"))
-            cad = ev.get("cadeia")
-            if not cad:
-                continue
-            total_cadeias += 1
-            lado = ev["actor_side"]
-            outro = "away" if lado == "home" else "home"
-            acoes = cad["acoes"]
-            if not acoes:
-                falhas.append(f"seed {i} {ev['minute']}' {k}: cadeia vazia")
-                continue
-            for ac in acoes:
-                if not (0 <= ac["x"] <= 105 and 0 <= ac["z"] <= 68):
-                    falhas.append(f"seed {i} {ev['minute']}' {k}: ponto fora do campo {ac}")
-                quem = ac["de"]
-                cartao = k.split("_")[0] in ("yellow", "red")
-                # No cartão, quem leva o cartão (o autor) comete a falta; quem sofre é do outro time.
-                lado_de = (lado if ac["t"] == "falta" else outro) if cartao else (outro if ac["t"] in ("falta", "desvio") else lado)
-                if quem not in ids[lado_de] or quem in fora[lado_de]:
-                    falhas.append(f"seed {i} {ev['minute']}' {k}: '{ac['t']}' por quem não está em campo ({quem})")
-                if ac.get("para"):
-                    lado_para = (outro if cartao else (outro if ac["t"] in ("drible", "desarme") else lado))
-                    if ac["para"] not in ids[lado_para] or ac["para"] in fora[lado_para]:
-                        falhas.append(f"seed {i} {ev['minute']}' {k}: '{ac['t']}' pra quem não está em campo ({ac['para']})")
-            if cad["finalizacao"]:
-                finalizacoes += 1
-                if acoes[-1]["de"] != ev["actor_id"]:
-                    falhas.append(f"seed {i} {ev['minute']}' {k}: finalização não é do autor")
-            if k.startswith("goal_"):
-                gols += 1
-                if 3 <= len(acoes) <= 6:
-                    gols_historia += 1
-                if ev.get("assist_id"):
-                    com_assist += 1
-                    passe = next((ac for ac in reversed(acoes) if ac.get("para") == ev["actor_id"]), None)
-                    if passe and passe["de"] == ev["assist_id"]:
-                        assist_ok += 1
-                    else:
-                        falhas.append(f"seed {i} {ev['minute']}' gol: o passe pro autor não veio da assistência")
+        conferir_cadeias(inp, com, falhas, i, contagem)
+
+    gols, gols_historia, finalizacoes = contagem.get('gols', 0), contagem.get('gols_historia', 0), contagem.get('finalizacoes', 0)
+    com_assist, assist_ok, total_cadeias = contagem.get('com_assist', 0), contagem.get('assist_ok', 0), contagem.get('total_cadeias', 0)
 
     # LEGACY (Fase 4c): quem entrou do banco não paga o fôlego dos minutos sentado.
     from match_simulator import fadiga_ate_o_replan
@@ -180,8 +195,10 @@ def main():
                 if int(ac.get("skill_nota", 0)) < 78:
                     falhas.append(f"seed {i}: skill '{sk}' com nota {ac.get('skill_nota')} (sem atributo pra ela)")
     taxa = 100 * n_skills / max(1, n_acoes)
-    if not 4 <= taxa <= 22:
-        falhas.append(f"skills em {taxa:.1f}% das ações (faixa 4–22%)")
+    # Faixa de sanidade contra enfeite (a regra é "só com atributo"): o Motor de
+    # Posses conta a jogada inteira (mais passes de quem sabe passar), por isso 25%.
+    if not 4 <= taxa <= 25:
+        falhas.append(f"skills em {taxa:.1f}% das ações (faixa 4–25%)")
     fraco = entrada(7)
     for t in ("home_team", "away_team"):
         for p in fraco[t]["lineup"]:

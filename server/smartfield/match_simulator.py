@@ -42,6 +42,7 @@ Use:
 
 import json
 import math
+import os
 import random
 import sys
 import time
@@ -466,6 +467,17 @@ def event_text_en(kind: str, n: str, minute: int, tier: str) -> str:
 
 
 def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
+    """O plano da partida. MOTOR DE POSSES (Fase 1, motor_posses.py) por padrão;
+    `motor: "minutos"` no pedido ou OLEFOOT_MOTOR=minutos no ambiente volta ao
+    motor por minutos (abaixo) — a chave de retorno sem redeploy."""
+    motor = input_data.get("motor") or os.environ.get("OLEFOOT_MOTOR", "posses")
+    if motor != "minutos":
+        from motor_posses import simular
+        return simular(input_data)
+    return simulate_minutos(input_data)
+
+
+def simulate_minutos(input_data: Dict[str, Any]) -> Dict[str, Any]:
     idioma.definir(input_data.get("lang"))
     started = time.time()
     seed = str(input_data.get("seed", "default"))

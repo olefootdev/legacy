@@ -1,0 +1,55 @@
+{
+  "n": 1000,
+  "commitAntes": "100fd32",
+  "quando": "2026-10-11T06:47:56.888Z",
+  "decisivo": {
+    "certa": "0.82",
+    "errada": "0.30"
+  },
+  "linhas": {
+    "DEPOIS · aleatório": {
+      "golsCasa": 0.716,
+      "golsFora": 0.622,
+      "golsTotal": 1.338,
+      "vitoria": 34.6,
+      "empate": 38.5,
+      "derrota": 26.9,
+      "cartoes": 4.016,
+      "zeroAZero": 25.7,
+      "goleada": 0.3
+    },
+    "DEPOIS · esperto": {
+      "golsCasa": 1.16,
+      "golsFora": 0.264,
+      "golsTotal": 1.424,
+      "vitoria": 60.2,
+      "empate": 32.4,
+      "derrota": 7.4,
+      "cartoes": 4.021,
+      "zeroAZero": 24.2,
+      "goleada": 2.5
+    },
+    "DEPOIS · errado": {
+      "golsCasa": 0.503,
+      "golsFora": 0.799,
+      "golsTotal": 1.302,
+      "vitoria": 21.4,
+      "empate": 39,
+      "derrota": 39.6,
+      "cartoes": 4.052,
+      "zeroAZero": 27.2,
+      "goleada": 0.5
+    },
+    "DEPOIS · motor cru (sem momento decisivo)": {
+      "golsCasa": 1.386,
+      "golsFora": 1.117,
+      "golsTotal": 2.503,
+      "vitoria": 43.8,
+      "empate": 26.3,
+      "derrota": 29.9,
+      "cartoes": 4.031,
+      "zeroAZero": 8.6,
+      "goleada": 2.8
+    }
+  }
+}

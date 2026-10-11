@@ -73,6 +73,7 @@ for (const [n, e] of partidas.entries()) {
       const c = co.corpos.find((x) => x.f.id === (emCampo && k.de === sai ? entra : k.de));
       const d = c ? Math.hypot(c.x - co.bola.x, c.z - co.bola.z) : Infinity;
       const cantoOk = Math.abs(co.bola.z - 34) > 30 && (co.bola.x < 3 || co.bola.x > 102);
+      if (process.env.DEBUG_ESC && c) console.log(`[esc ${k.minuto}'] cobrador ${k.de} em (${c.x.toFixed(1)},${c.z.toFixed(1)}) alvo=${c.alvo ? `(${c.alvo.x.toFixed(1)},${c.alvo.z.toFixed(1)})` : '-'} vmax=${c.vmax.toFixed(1)} bola=(${co.bola.x.toFixed(1)},${co.bola.z.toFixed(1)}) d=${d.toFixed(1)} posicionado=${co.posicionados.has(c)} fila=${co.fila.length} festa=${!!co.festa} escala=${co.escalaDoTempo().toFixed(2)} t=${co.t.toFixed(1)} em=${k.em.toFixed(1)}`);
       if (d > 2.5 || !cantoOk) achados.push(`${k.minuto}': escanteio SEM cobrador (cobrador a ${d.toFixed(1)} m; bola em ${co.bola.x.toFixed(0)},${co.bola.z.toFixed(0)})`);
     }
     // NaN congela o campo pra sempre (a bola some, o passe nunca chega).
@@ -144,6 +145,7 @@ for (const [n, e] of partidas.entries()) {
         const ie = ev.cadeia.acoes.findIndex((x) => x.t === 'escanteio');
         const passoDaCobranca = ie >= 0 ? Math.round(cronogramaDaCadeia(ev.cadeia).tempos[ie]!.ini / DT) - 1 : -1;
         if (ie >= 0) cobrancas.push({ em: co.t + passoDaCobranca * DT - 0.15, de: ev.cadeia.acoes[ie]!.de!, minuto });
+        if (process.env.DEBUG_ESC && ie >= 0) { const c0 = co.corpos.find((x) => x.f.id === ev.cadeia!.acoes[ie]!.de); console.log(`[esc ${minuto}' agendado] t=${co.t.toFixed(1)} em=${(co.t + passoDaCobranca * DT - 0.15).toFixed(1)} hold=${hold} cobrador em (${c0?.x.toFixed(1)},${c0?.z.toFixed(1)}) cadeia=${ev.cadeia.acoes.map((a) => `${a.t}@${a.x},${a.z}`).join(' ')}`); }
         esperar(hold);
       }
     }

@@ -771,6 +771,59 @@ lesões semeados no aparelho) e a custódia só conferia um teto. Agora:
   do motor (menos cartões; "toda falta vira amarelo" é da Fase 1); replan tarde demais (>8 s)
   deixa a partida divergir da custódia (sai `suspeita`, sem crédito); a Rápida agora pede
   replan a cada comando (custo de servidor; rate limit 20/min por IP); nenhuma migration.
+- Commit `805eed1` (11/10, sem push).
+
+### Fase 1 — MOTOR DE POSSES v1 (11/10, servidor; sem push)
+O coração do motor trocado sem mexer na tela: `server/smartfield/motor_posses.py` é o padrão do
+`match_simulator.simulate`; `motor: "minutos"` no pedido ou `OLEFOOT_MOTOR=minutos` no ambiente
+volta ao motor por minutos (chave de retorno sem redeploy). Desenho e desvios: `docs/MOTOR-DE-POSSES.md`.
+- **O modelo**: uma posse por minuto (90), cada uma até 7 ações numa grade 3×3 (terço × corredor);
+  a formação ocupa as células (quem marca é o ocupante, não um sorteio); o portador decide por
+  pesos (atributos, célula, DNA, intensidade, comandos, urgência) e cada ação é um duelo:
+  drible × marcação, passe × linha de passe, lançamento × leitura, cruzamento × físico e cabeceio ×
+  marcação, chute × goleiro (atributo próprio derivado). Perdeu, a bola muda de lado ali. Falta em
+  duelo físico com cartão PESSOAL (segundo amarelo é vermelho; o expulso sai do mapa e não age em
+  cadeia nenhuma); pênalti por falta na célula central do ataque; escanteio e falta perto da área
+  viram a posse seguinte, com a cobrança de verdade. Cansaço por ação abate o atributo.
+  Sem o ×1,18 fixo da casa: mando = confiança + duelo + xG, calibrado no confronto igual.
+- **A cadeia É a posse**: as últimas ≤ 5 ações + a finalização; 83% dos gols em 3–6 ações; a
+  assistência é o último passe de verdade; skills com nome nas ações reais (21% das ações).
+- **Saída idêntica** (MatchPlan v1.1 + `decisivo`/`penalti` da Fase 0): o aparelho, o campo, a
+  custódia e os portões da Fase 0 não mudaram uma linha. O estresse do campo achou duas formas de
+  cadeia que o coreógrafo não esperava (cruzamento terminando no corredor; escanteio em cima de
+  escanteio repetindo o cruzamento e levando o cobrador pra longe): corrigidas no motor.
+- **Bateria** (`npm run test:motor-posses`: 1.000 sintéticas + 333 reais + 500 iguais + 500 com 10
+  pontos de diferença; portão de merge) — todos os intervalos travados dentro:
+
+  | métrica | medido | travado |
+  |---|---|---|
+  | gols por jogo | 2,72 | 2,4–3,0 |
+  | posse da casa em 38–62% · média no confronto igual | 99% das partidas · 51,0% | ≥ 90% · 48–52% |
+  | chutes por time | 9,97 | 9–16 |
+  | cartões por jogo | 3,66 | 2–5 |
+  | gols de expulso | 0 | 0 |
+  | time 10 pontos pior vence | 18,8% | 15–25% |
+  | casa vence no confronto igual | 44,0% | 42–48% |
+  | 0×0 · goleada (≥ 4) | 7,9% · 3,4% | ≤ 10% · ≤ 6% |
+  | pênaltis · faltas por jogo | 0,24 · 18,8 | 0,15–0,30 · 18–30 |
+  | ações por posse | 2,55 | 2,5–5 |
+  | p95 (CPU) | 18,5 ms | ≤ 40 ms |
+  | determinismo · cadeias consistentes | 100% · 0 falhas | — |
+
+- **Portões**: `test_cadeia_lances.py` (300: nenhum placar muda com/sem cadeia; cadeias
+  consistentes; inglês idêntico), `test:estresse-partida-viva` (40 partidas do motor novo, dois
+  ritmos), `test:uma-verdade` (200/200, 600/600 replans), `test:partida-viva`, `lint`,
+  `estudo_comandos.py --n 300` no motor novo: replan vazio +1,0 pp, nenhum comando passa de
+  +2,7 pp, cobrar custa cartão (2,02 → 2,36) — comando segue sendo escolha com custo, não atalho.
+- **Equilíbrio com o motor novo** (`scripts/fase0/variantes/fase1-motor-posses.json`, 1.000
+  partidas, manager passivo exceto no momento decisivo): motor cru **1,39 × 1,12 (2,50 gols), 44%
+  de vitória da casa, 9% de 0×0, 4,0 cartões**; com o filtro do momento decisivo em todo gol
+  (régua 82/30): aleatório 0,72 × 0,62, 35%; esperto 1,16 × 0,26, 60%; errado 0,50 × 0,80, 21%.
+  **A decisão da régua do momento decisivo (Fase 0) continua sua** — o motor cru está na faixa
+  realista; o filtro corta pela metade.
+- **Fora desta fase (Fase 1b)**: classe do SMART-PROFILE na ocupação (a classe não chega ao
+  Python), lesão que sai do mapa, atributo `goleiro` na ficha, Prova de Causa e Mundo Paralelo
+  (Fase 3 do desenho), o campo encenando as posses sem chute (Fase 2). Mobile não visto.
 
 ## 10. Regras de ouro
 1. **Uma verdade só.** O placar sai do plano no servidor. O visual nunca decide.
