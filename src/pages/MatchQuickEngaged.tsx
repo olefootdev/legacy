@@ -31,7 +31,7 @@ import { relatarPartidaSombra } from '@/smartProfile/sombra';
 import { getEffectiveFatigue } from '@/systems/fatigue';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
-import { fetchQuickPlan, applyLegacyBoostToLineup, type ComandoAoVivo } from '@/match/quickPlanClient';
+import { fetchQuickPlan, applyLegacyBoostToLineup, type QuickPlanPlayerPayload } from '@/match/quickPlanClient';
 import { fetchQuickNarration, type QuickNarration } from '@/match/quickNarrateClient';
 import { fetchOpponentRoster } from '@/match/opponentRosterClient';
 import { LIGA_OLE_ROUNDS } from '@/match/ligaOle/ligaOleModel';
@@ -41,11 +41,9 @@ import type { MatchPlan } from '@/match/quickPlanTypes';
 import {
   QuickPlanPlayer,
   type QuickPlanHalftimeContext,
-  type ComandoSemMinuto,
   type ContextoDoReplan,
   type QuickPlanPlayResult,
   matchRating,
-  type PenaltyTaker,
   type SquadCard,
 } from '@/match/QuickPlanPlayer';
 import {
@@ -329,6 +327,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
         // FABLE — revanche contra o nêmesis = clássico MECÂNICO no Python.
         input.isDerby = isDerbyMatch;
         input.homeDna = homeDnaRef.current;
+        input.banco = bancoParaOMotor(homePlayers);
         const fetched = await fetchQuickPlan(input);
         if (!fetched) {
           setError(L('Não foi possível gerar a partida (motor offline). Tente novamente.', 'Could not generate the match (engine offline). Try again.'));
@@ -433,19 +432,26 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan?.seed, bench.length]);
 
-  // Batedores de pênalti: top finalizadores em campo (recalcula após subs/replan).
-  const penaltyTakers = useMemo<PenaltyTaker[]>(() => {
-    return [...homePlayersRef.current]
-      .sort((a, b) => b.payload.finalizacao - a.payload.finalizacao)
-      .slice(0, 4)
-      .map((p) => ({
-        id: p.id,
-        name: p.name,
-        finalizacao: p.payload.finalizacao,
-        portrait: players[p.id] ? playerPortraitSrc(players[p.id]!, 48, 48) : null,
-      }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan, players]);
+  /**
+   * UMA VERDADE SÓ: o banco que vai ao motor (até 12, os mais inteiros). O motor
+   * decide o pênalti por batedor também pra quem está no banco — assim quem
+   * entra pode bater sem o aparelho sortear nada. Conferido no servidor como
+   * a escalação.
+   */
+  const bancoParaOMotor = useCallback((titulares: readonly { id: string }[]): QuickPlanPlayerPayload[] => {
+    const emCampo = new Set(titulares.map((p) => p.id));
+    return Object.values(players)
+      .filter((p) => {
+        if (emCampo.has(p.id)) return false;
+        const h = playerHealth?.[p.id];
+        if (h) return (h.outForMatches ?? 0) <= 0 && (h.suspendedMatches ?? 0) <= 0;
+        return (p.outForMatches ?? 0) <= 0;
+      })
+      .map((p) => playerToHomeView(p, getEffectiveFatigue(p.id, p, playerHealth), playerMoral?.[p.id]?.moral))
+      .sort((a, b) => b.effective - a.effective)
+      .slice(0, 12)
+      .map((v) => v.payload);
+  }, [players, playerHealth, playerMoral]);
 
   // LEGACY: lendas (isLegacy) titulares dão um buff de time ativável na partida.
   // Deriva o destaque (label + %) do legacyTeamBooster de cada uma.
@@ -532,17 +538,14 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
     });
   }, []);
 
-  // LEGACY (Fase 4b): grito/ordem no campo → o servidor refaz o plano a partir
-  // de minuto+3 (o passado não muda). Mesma entrada do replan do intervalo.
-  const comandosRef = useRef<ComandoAoVivo[]>([]);
+  // UMA VERDADE SÓ: qualquer comando (estilo, formação, leitura, reação, troca,
+  // grito, ordem, lenda) → o servidor refaz o plano a partir de `ctx.inicio`
+  // (minuto+3; o passado não muda). Mesma entrada do replan do intervalo. Os
+  // comandos e as escolhas viajam inteiros no contexto; o servidor deriva o
+  // estado da custódia e ignora o placar que o celular diz.
   const pedirReplan = useCallback(
-    async (
-      cmd: ComandoSemMinuto | null,
-      ctx: ContextoDoReplan,
-    ): Promise<MatchPlan | null> => {
-      // cmd null = substituição no campo (Fase 4c): o replan só leva o elenco novo.
-      if (cmd) comandosRef.current = [...comandosRef.current, { ...cmd, minuto: ctx.minuto } as ComandoAoVivo];
-      const inicio = ctx.minuto + 3;
+    async (ctx: ContextoDoReplan): Promise<MatchPlan | null> => {
+      const inicio = ctx.inicio;
       // 1º tempo: replan nunca começa depois do 45' — o do intervalo leva o comando.
       if ((ctx.minuto <= 45 && inicio > 45) || inicio > 90) return null;
       const homeLineup = applyLegacyBoostToLineup(
@@ -564,6 +567,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
         homeDna: homeDnaRef.current,
         homeLineup,
         awayLineup: awayLineupRef.current,
+        banco: bancoParaOMotor(homePlayersRef.current),
         mode: 'from_minute',
         fromMinute: inicio,
         estado: {
@@ -571,12 +575,13 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
           cards_home: ctx.cardsHome, cards_away: ctx.cardsAway, sent_off_home: ctx.sentOffHome, sent_off_away: ctx.sentOffAway,
         },
         decisions: ctx.ledger.map((d) => ({ beat_id: d.beat_id, choice_id: d.choice_id, channel: d.channel, target_side: d.target_side, weight: d.weight })),
-        comandos: comandosRef.current,
+        comandos: ctx.comandos,
+        escolhas: ctx.escolhas,
       }).catch(() => null);
       if (novo) planIdsRef.current = [...planIdsRef.current, novo.plano_id];
       return novo;
     },
-    [club.shortName, opponent, legacyLookup, isDerbyMatch],
+    [club.shortName, opponent, legacyLookup, isDerbyMatch, bancoParaOMotor],
   );
 
   const resumeFromHalftime = useCallback(
@@ -613,8 +618,10 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
 
           homeLineup,
           awayLineup: awayLineupRef.current, // mesmo adversário do 1º tempo
+          banco: bancoParaOMotor(ht.homePlayers),
           mode: 'second_half',
-          comandos: comandosRef.current, // gritos/ordens do Legacy seguem valendo no 2º tempo
+          comandos: ctx.comandos, // os comandos do 1º tempo seguem valendo no 2º
+          escolhas: ctx.escolhas,
           firstHalf: {
             home_score: ctx.homeScore,
             away_score: ctx.awayScore,
@@ -649,7 +656,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
         resolve(null);
       }
     },
-    [halftimeCtx, club.shortName, opponent, legacyLookup, isDerbyMatch],
+    [halftimeCtx, club.shortName, opponent, legacyLookup, isDerbyMatch, bancoParaOMotor],
   );
 
   // DISPUTA DE PÊNALTIS: monta os dados (elenco vivo + goleiros) a partir dos
@@ -774,6 +781,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
       readingGood: r.reading.good,
       homeStats,
       planos: planIdsRef.current,
+      escolhas: r.escolhas,
       antes: antesDoCredito,
       depois: getGameState(),
       // FASE 2C: quando o servidor responde, a conta dele vale.
@@ -907,17 +915,18 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
             awayCrestUrl={opponent!.supporterCrestUrl ?? null}
             homeName={club.name}
             awayName={opponent!.name}
-            penaltyTakers={penaltyTakers}
             legacyBoosters={legacyBoosters}
             legacyLookup={legacyLookup}
             agentTraits={agentTraits}
             onAoVivo={canalRef.current.publicar}
             registrarResposta={canalRef.current.registrarResponder}
             golEsperaCampo={aoVivo}
-            pedirReplan={aoVivo ? pedirReplan : undefined}
+            pedirReplan={pedirReplan}
+            modoCampo={aoVivo}
             segurarLance={aoVivo ? (ev) => Math.round(msParaMostrar(ev.cadeia) / velVivo) : undefined}
             relogioMs={relogioVivo}
             initialFormation={formationRef.current}
+            onFormationChange={(f) => { formationRef.current = f; }}
             fieldCards={homePlayersRef.current.map(toSquadCard)}
             awayCards={awayLineupRef.current.map((p) => ({
               id: p.id,

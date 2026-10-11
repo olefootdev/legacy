@@ -11,6 +11,7 @@
 
 import { CABECALHO_IDIOMA } from '@/i18n/cabecalho';
 import type { MatchPlan, QuickPlanDecision, QuickPlanFirstHalfState } from './quickPlanTypes';
+import type { Escolhas } from '../../server/src/lib/partida/placar';
 import type { PlayerEntity, PlayerBehavior } from '@/entities/types';
 import { getSupabase } from '@/supabase/client';
 
@@ -83,10 +84,17 @@ export function moralTilt(moral: number | undefined): { conf: number; men: numbe
   return { conf: Math.round(delta * 5), men: Math.round(delta * 2) };
 }
 
-/** LEGACY (Fase 4b): um grito (10', recarga 15') ou uma ordem individual (até nova ordem). */
+/**
+ * Um comando do manager que o motor aplica (server/smartfield/comandos_ao_vivo.py):
+ * grito (10', recarga 15'), ordem individual (até nova ordem), estilo do dock
+ * (vale até o próximo) e lenda ativada (15', uma por lenda, até 3). UMA VERDADE
+ * SÓ: nenhum deles mexe no placar no aparelho — só pelo replan no servidor.
+ */
 export type ComandoAoVivo =
   | { minuto: number; tipo: 'incentivar' | 'cobrar' | 'acalmar' }
-  | { minuto: number; tipo: 'ordem'; ordem: 'segurar' | 'atacar_espaco' | 'marcar'; jogador: string };
+  | { minuto: number; tipo: 'ordem'; ordem: 'segurar' | 'atacar_espaco' | 'marcar'; jogador: string }
+  | { minuto: number; tipo: 'estilo'; estilo: 'defend' | 'counter' | 'possession' | 'press' | 'attack' }
+  | { minuto: number; tipo: 'lenda'; jogador: string };
 
 export interface FetchQuickPlanInput {
   seed: string;
@@ -97,6 +105,10 @@ export interface FetchQuickPlanInput {
   intensity?: 'defensive' | 'balanced' | 'offensive';
   homeLineup: QuickPlanPlayerPayload[];
   awayLineup: QuickPlanPlayerPayload[];
+  /** UMA VERDADE SÓ: o banco da casa — o motor decide o pênalti também pra quem entra. */
+  banco?: QuickPlanPlayerPayload[];
+  /** UMA VERDADE SÓ: as escolhas feitas até aqui (o servidor deriva o estado do replan delas). */
+  escolhas?: Escolhas;
   /** 'second_half' = replan dos minutos 46-90 com o ledger de decisões (Fase A).
    *  'from_minute' = replan do LEGACY depois de um grito/ordem (Fase 4b). */
   mode?: 'full' | 'second_half' | 'from_minute';
@@ -132,8 +144,10 @@ function corpoDoMotor(input: FetchQuickPlanInput): Record<string, unknown> {
       strength: input.homeStrength,
       intensity: input.intensity ?? 'balanced',
       lineup: input.homeLineup,
+      ...(input.banco?.length ? { banco: input.banco } : {}),
       ...(input.homeDna ? { dna: input.homeDna } : {}),
     },
+    ...(input.escolhas ? { escolhas: input.escolhas } : {}),
     away_team: {
       strength: input.awayStrength,
       lineup: input.awayLineup,

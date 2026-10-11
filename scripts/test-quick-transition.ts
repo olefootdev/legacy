@@ -4,17 +4,16 @@
  * Certifica:
  *   1. As 10 situações classificam no kind/intent/reaction corretos
  *   2. Gatilhos: momento (contra-ataque), canal, reason, xG, rebote (prevKind)
- *   3. Guardas: decisão influenciada e lances de baixo sinal → sem chamada
+ *   3. Guardas: lances de baixo sinal → sem chamada
  *   4. Fallback: todo gol natural tem contexto (nunca "do nada")
  *   5. Determinismo (classificador é puro)
- *   6. Buff de acerto: applyDecisionToRemainingEvents por atMinute/half (sem beat)
- *      converte a chance (ataque) e neutraliza a ameaça (defesa)
+ *   6. UMA VERDADE SÓ: a reação não muda lance nenhum aqui — vira decisão no replan
  *
  * Uso: npm run test:quick-transition
  */
 
-import { classifyTransition, applyDecisionToRemainingEvents } from '../src/match/quickBeatDirector';
-import type { MatchPlanEvent, MatchupChannel } from '../src/match/quickPlanTypes';
+import { classifyTransition } from '../src/match/quickBeatDirector';
+import type { MatchPlanEvent } from '../src/match/quickPlanTypes';
 
 let failures = 0;
 function check(label: string, ok: boolean, detail?: string) {
@@ -34,7 +33,7 @@ function ev(partial: Partial<MatchPlanEvent> & Pick<MatchPlanEvent, 'kind'>): Ma
   } as MatchPlanEvent;
 }
 
-function main() {
+async function main() {
   console.log('— Chamadas de transição + buff de acerto —\n');
 
   console.log('[1] As 10 situações');
@@ -62,8 +61,6 @@ function main() {
   }
 
   console.log('\n[2] Guardas');
-  check('decisão influenciada → sem chamada',
-    classifyTransition({ event: ev({ kind: 'goal_home', decision_influenced: true }), momentumHome: 30 }) === null);
   check('lance de baixo sinal (shot normal) → sem chamada',
     classifyTransition({ event: ev({ kind: 'shot_home', weight_tier: 'normal' }), momentumHome: 30 }) === null);
   check('chance pequena (minor) → sem chamada',
@@ -82,45 +79,11 @@ function main() {
   const b = classifyTransition({ event: ev({ kind: 'goal_home', channel: 'pressao' }), momentumHome: 50 });
   check('mesma entrada → mesma chamada', JSON.stringify(a) === JSON.stringify(b));
 
-  console.log('\n[5] Buff de acerto (sem beat: atMinute/half)');
-  const ch: MatchupChannel = 'corredor_direito';
-  // Ataque: a reação CERTA converte a chance iminente em gol em parte dos seeds.
-  let converted = 0;
-  for (let i = 0; i < 60; i += 1) {
-    const events: MatchPlanEvent[] = [ev({ kind: 'chance_home', minute: 50, channel: ch, xg: 0.3 })];
-    const res = applyDecisionToRemainingEvents({
-      events, fromIndex: 0, atMinute: 50, half: 2,
-      choice: { id: 'reac', label: 'ACELERAR!', channel: ch, target_side: 'home', weight: 0.8 },
-      seed: `atk-${i}`, windowMinutes: 12,
-    });
-    if (res.events[0]!.kind === 'goal_home') converted += 1;
-  }
-  check(`acerto de ataque converte a chance (${converted}/60)`, converted > 0);
+  console.log('\n[5] A reação não é mais um sorteio local');
+  check('o módulo não exporta applyDecisionToRemainingEvents', !('applyDecisionToRemainingEvents' in (await import('../src/match/quickBeatDirector'))));
 
-  // Defesa: a reação CERTA neutraliza a ameaça iminente em parte dos seeds.
-  let neutralized = 0;
-  for (let i = 0; i < 60; i += 1) {
-    const events: MatchPlanEvent[] = [ev({ kind: 'chance_away', minute: 50, channel: ch, xg: 0.3 })];
-    const res = applyDecisionToRemainingEvents({
-      events, fromIndex: 0, atMinute: 50, half: 2,
-      choice: { id: 'reac', label: 'RECUAR!', channel: ch, target_side: 'away', weight: 0.8 },
-      seed: `def-${i}`, windowMinutes: 12,
-    });
-    if (res.events[0]!.kind === 'shot_away') neutralized += 1;
-  }
-  check(`acerto de defesa neutraliza a ameaça (${neutralized}/60)`, neutralized > 0);
-
-  // Fora da janela do buff: lance posterior à janela não é tocado.
-  const far: MatchPlanEvent[] = [ev({ kind: 'chance_home', minute: 80, channel: ch, xg: 0.5 })];
-  const resFar = applyDecisionToRemainingEvents({
-    events: far, fromIndex: 0, atMinute: 50, half: 2,
-    choice: { id: 'reac', label: 'x', channel: ch, target_side: 'home', weight: 0.8 },
-    seed: 'far', windowMinutes: 12,
-  });
-  check('lance fora da janela (≈10s) fica intacto', resFar.events[0] === far[0]);
-
-  console.log(failures === 0 ? '\n✅ Transição + buff de acerto OK — todos os checks passaram' : `\n❌ ${failures} check(s) falharam`);
+  console.log(failures === 0 ? '\n✅ Transição OK — todos os checks passaram' : `\n❌ ${failures} check(s) falharam`);
   process.exit(failures === 0 ? 0 : 1);
 }
 
-main();
+void main();

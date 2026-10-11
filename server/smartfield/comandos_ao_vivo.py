@@ -31,6 +31,25 @@ GRITOS: Dict[str, Dict[str, float]] = {
     "acalmar": {"disciplina": 0.12, "posse": 0.08, "intensidade": -0.08},
 }
 
+# UMA VERDADE SÓ (Fase 0): o ESTILO do dock da Partida Rápida deixa de virar
+# gol por sorteio no aparelho e vira um empurrão PERSISTENTE nos eixos do DNA
+# (vale até o próximo estilo). Cada estilo tem custo: fechar segura e cria
+# menos; abrir cria e expõe. Teto por eixo: o mesmo ±0,15 dos gritos.
+ESTILOS: Dict[str, Dict[str, float]] = {
+    "defend": {"solidez": 0.12, "posse": -0.06, "vertical": -0.06, "intensidade": -0.04},
+    "counter": {"solidez": 0.08, "vertical": 0.10, "posse": -0.10},
+    "possession": {"posse": 0.12, "criatividade": 0.04, "vertical": -0.06},
+    "press": {"pressao": 0.12, "intensidade": 0.06},
+    "attack": {"vertical": 0.12, "intensidade": 0.06, "solidez": -0.10},
+}
+
+# A LENDA ativada (buff do LEGACY): por 15 minutos o time joga com mais ímpeto
+# e criação. Uma ativação por lenda, no máximo 3 por partida, e só jogador
+# com id de lenda (`legacy-…`). Antes isto virava gol por sorteio no aparelho.
+LENDA: Dict[str, float] = {"intensidade": 0.08, "criatividade": 0.06, "vertical": 0.04}
+DURACAO_LENDA = 15
+MAX_LENDAS = 3
+
 ORDENS: Dict[str, Dict[str, int]] = {
     # Segura a posição: lê melhor o jogo, marca mais, aparece menos na frente.
     "segurar": {"tatico": 4, "marcacao": 3, "finalizacao": -4},
@@ -66,6 +85,13 @@ def limpar_comandos(raw: Any) -> List[Dict[str, Any]]:
             out.append({"minuto": minuto, "tipo": tipo})
         elif tipo == "ordem" and c.get("ordem") in ORDENS and isinstance(c.get("jogador"), str):
             out.append({"minuto": minuto, "tipo": "ordem", "ordem": c["ordem"], "jogador": c["jogador"][:80]})
+        elif tipo == "estilo" and c.get("estilo") in ESTILOS:
+            out.append({"minuto": minuto, "tipo": "estilo", "estilo": c["estilo"]})
+        elif tipo == "lenda" and isinstance(c.get("jogador"), str) and c["jogador"].startswith("legacy-"):
+            lendas = [l for l in out if l["tipo"] == "lenda"]
+            if len(lendas) >= MAX_LENDAS or any(l["jogador"] == c["jogador"][:80] for l in lendas):
+                continue
+            out.append({"minuto": minuto, "tipo": "lenda", "jogador": c["jogador"][:80]})
     out.sort(key=lambda c: c["minuto"])
     return out
 
@@ -78,13 +104,21 @@ def impressao(cmds: List[Dict[str, Any]]) -> str:
 
 
 def dna_no_minuto(base: Optional[Dict[str, float]], cmds: List[Dict[str, Any]], minuto: int) -> Optional[Dict[str, float]]:
-    """DNA da casa neste minuto: a base + os gritos ativos (cada eixo com teto)."""
+    """DNA da casa neste minuto: a base + gritos ativos + o estilo vigente + lendas ativas (cada eixo com teto)."""
     ativos = [c for c in cmds if c["tipo"] in GRITOS and c["minuto"] <= minuto < c["minuto"] + DURACAO_GRITO]
-    if not ativos:
+    estilo = next((c for c in reversed(cmds) if c["tipo"] == "estilo" and c["minuto"] <= minuto), None)
+    lendas = [c for c in cmds if c["tipo"] == "lenda" and c["minuto"] <= minuto < c["minuto"] + DURACAO_LENDA]
+    if not ativos and not estilo and not lendas:
         return base
     delta: Dict[str, float] = {}
     for c in ativos:
         for eixo, v in GRITOS[c["tipo"]].items():
+            delta[eixo] = delta.get(eixo, 0.0) + v
+    if estilo:
+        for eixo, v in ESTILOS[estilo["estilo"]].items():
+            delta[eixo] = delta.get(eixo, 0.0) + v
+    for _ in lendas:
+        for eixo, v in LENDA.items():
             delta[eixo] = delta.get(eixo, 0.0) + v
     neutro = base or {k: 0.5 for k in ("posse", "pressao", "vertical", "criatividade", "solidez", "disciplina", "intensidade")}
     return {

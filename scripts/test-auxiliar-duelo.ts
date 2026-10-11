@@ -3,7 +3,8 @@
  * npm run test:auxiliar-duelo
  */
 import { leituraDoIntervalo } from '../src/match/auxiliarDoIntervalo';
-import { buildClutch, duelo, forcaNoDuelo, resolveClutch, type ClutchMoment } from '../src/match/quickClutch';
+import { dueloDoDecisivo, montarDecisivo } from '../src/match/quickClutch';
+import { escolhaAutomatica, golDoLance, lanceDe } from '../src/match/placarAoVivo';
 import type { MatchPlanEvent } from '../src/match/quickPlanTypes';
 
 let falhas = 0;
@@ -31,28 +32,27 @@ const ev = (minute: number, kind: string, side: 'home' | 'away', channel: MatchP
   confere(tranquilo.sugestao === null, 'ganhando sem sufoco: mantém (sem sugestão)');
 }
 
-// ── O duelo ─────────────────────────────────────────────────────────────────
+// ── O duelo (UMA VERDADE SÓ: números e desfechos vêm do motor) ──────────────
 {
-  const ataque: ClutchMoment = { ...buildClutch({ intent: 'attack', minute: 30, seed: 's', actorName: 'Nove' }), rival: 'goleiro' };
-  const d = duelo(ataque, { id: 'n', nome: 'Nove', attrs: { finalizacao: 84, drible: 70, passe: 60 } }, { id: 'g', nome: 'Goleiro', attrs: { marcacao: 64 } });
-  confere(d.porOpcao.chutar?.nosso === 84 && d.porOpcao.chutar?.deles === 64 && d.porOpcao.chutar?.rotuloDeles !== 'Marcação', 'chutar: finalização × goleiro');
-  confere(forcaNoDuelo(null, 'chutar') === 70, 'sem duelo: o mesmo 70 de antes (nada muda pra quem não tem atributo)');
-  const empate = duelo(ataque, { id: 'n', nome: 'N', attrs: { finalizacao: 70 } }, { id: 'g', nome: 'G', attrs: { marcacao: 70 } });
-  confere(forcaNoDuelo(empate, 'chutar') === 70, 'duelo empatado = jogo de antes');
-  confere(forcaNoDuelo(d, 'chutar') === 86, 'vantagem de 20 → 86 (≈ +3 pp)');
-  const defesa: ClutchMoment = { ...buildClutch({ intent: 'defend', minute: 60, seed: 's', actorName: 'Dez' }), rival: 'zagueiro' };
-  const dd = duelo(defesa, { id: 'z', nome: 'Zaga', attrs: { marcacao: 80, velocidade: 50, fisico: 75 } }, { id: 'a', nome: 'Dez', attrs: { drible: 70, velocidade: 88, fisico: 60 } });
+  const ataque: MatchPlanEvent = { minute: 30, kind: 'goal_home', actor_side: 'home', actor_id: 'n', actor_name: 'Nove', weight_tier: 'big', zone: 'att', text: '',
+    decisivo: { intent: 'attack', contexto: 'cara_a_cara', melhor: 'driblar', rival: 'goleiro',
+      duelo: { nosso: { id: 'n', nome: 'Nove' }, deles: { id: 'g', nome: 'Goleiro' }, por_opcao: { chutar: [84, 64], driblar: [70, 64], tocar: [60, 64] } },
+      opcoes: { chutar: true, driblar: true, tocar: false } } };
+  const m = montarDecisivo(ataque, 'CAS')!;
+  const d = dueloDoDecisivo(ataque, m)!;
+  confere(d.porOpcao.chutar?.nosso === 84 && d.porOpcao.chutar?.deles === 64 && d.porOpcao.chutar?.rotuloDeles !== 'Marcação', 'chutar: finalização × goleiro (números do motor)');
+  confere(escolhaAutomatica(ataque.decisivo!) === 'chutar', 'sem ordem do técnico: a maior vantagem (84 × 64) decide');
+  const defesa: MatchPlanEvent = { minute: 60, kind: 'goal_away', actor_side: 'away', actor_id: 'a', actor_name: 'Dez', weight_tier: 'big', zone: 'att', text: '',
+    decisivo: { intent: 'defend', contexto: 'dispara_em_velocidade', melhor: 'carrinho', rival: 'zagueiro',
+      duelo: { nosso: { id: 'z', nome: 'Zaga' }, deles: { id: 'a', nome: 'Dez' }, por_opcao: { cercar: [80, 70], carrinho: [50, 88], combate: [75, 60] } },
+      opcoes: { cercar: true, carrinho: false, combate: false } } };
+  const dm = montarDecisivo(defesa, 'VIS')!;
+  const dd = dueloDoDecisivo(defesa, dm)!;
   confere(dd.porOpcao.carrinho?.nosso === 50 && dd.porOpcao.carrinho?.deles === 88, 'defendendo: carrinho é velocidade × velocidade');
-  confere(forcaNoDuelo(dd, 'carrinho') < 70 && forcaNoDuelo(dd, 'combate') > 70, 'contra atacante rápido, o carrinho piora e o combate melhora');
-  // O peso é real e limitado: em 4.000 momentos, a vantagem move o sucesso, mas pouco.
-  let comVantagem = 0, semVantagem = 0;
-  for (let i = 0; i < 4000; i++) {
-    const m = { ...ataque, minute: i };
-    if (resolveClutch(m, m.best, `seed-${i}`, 86).success) comVantagem++;
-    if (resolveClutch(m, m.best, `seed-${i}`, 70).success) semVantagem++;
-  }
-  const dpp = (comVantagem - semVantagem) / 40;
-  confere(dpp > 0 && dpp < 7, `a vantagem no duelo pesa de verdade e com teto: +${dpp.toFixed(1)} pp de sucesso`);
+  confere(escolhaAutomatica(defesa.decisivo!) === 'combate', 'contra atacante rápido, o combate (75 × 60) é a escolha automática');
+  const l = lanceDe(defesa)!;
+  confere(golDoLance(l, { decisivos: { '60': 'carrinho' }, penaltis: {} }) === false && golDoLance(l, { decisivos: { '60': 'cercar' }, penaltis: {} }) === true,
+    'o desfecho é o do motor por opção: carrinho segura, cercar sofre — nada é sorteado no aparelho');
 }
 
 if (falhas) { console.error(`\n${falhas} falha(s)`); process.exit(1); }

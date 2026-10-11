@@ -141,6 +141,24 @@ export interface CadeiaDeLance {
   finalizacao: 'chute' | 'cabeceio' | 'cobranca' | null;
 }
 
+/** O momento decisivo como o motor o emite (server/smartfield/decisivo.py). */
+export interface DecisivoDoMotor {
+  intent: 'attack' | 'defend';
+  /** Chave do contexto (o texto PT/EN fica em quickClutch.ts). */
+  contexto: string;
+  /** A opção certa pra este contexto. */
+  melhor: string;
+  rival: 'goleiro' | 'zagueiro' | 'meio';
+  duelo: {
+    nosso: { id: string; nome: string };
+    deles: { id: string; nome: string };
+    /** opção → [atributo nosso, atributo deles]. */
+    por_opcao: Record<string, [number, number]>;
+  };
+  /** opção → o gol acontece? */
+  opcoes: Record<string, boolean>;
+}
+
 export interface MatchPlanEvent {
   minute: number;
   kind: MatchEventKind;
@@ -155,8 +173,15 @@ export interface MatchPlanEvent {
   channel?: MatchupChannel;
   /** Justificativa setorial humana-pronta ("corredor esquerdo dominado"). */
   reason?: string;
-  /** Marcado client-side quando uma decisão do manager alterou o desfecho. */
-  decision_influenced?: boolean;
+  /**
+   * UMA VERDADE SÓ (Fase 0): todo gol natural é um momento decisivo, e o motor
+   * manda os desfechos JÁ decididos de cada opção (`opcoes[opção] = o gol
+   * acontece?`). O aparelho só escolhe o que mostrar; o placar é recalculado
+   * das escolhas (server/src/lib/partida/placar.ts).
+   */
+  decisivo?: DecisivoDoMotor;
+  /** UMA VERDADE SÓ: pênalti com o desfecho por batedor (casa) ou já decidido (fora). */
+  penalti?: { batedor?: string; por_batedor?: Record<string, boolean>; gol?: boolean };
   /** Gol: quem o simulador conta como assistência (Partida Viva). */
   assist_id?: string;
   /** Partida Viva (Fase 2): a jogada, toque a toque. */

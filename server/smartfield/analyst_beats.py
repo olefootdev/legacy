@@ -457,6 +457,10 @@ def build_decision_modifiers(decisions: List[Dict[str, Any]]):
             away_mult[ch] = away_mult.get(ch, 1.0) * (1 - max(0.0, w))
             if w > 0:
                 away_suppress *= 1 - w * 0.38  # boa defesa segura o time todo (buffer reforçado)
+            elif w < 0:
+                # Leitura defensiva ERRADA abre o time: o adversário ganha fôlego
+                # (antes o aparelho virava quase-gol deles em gol por sorteio).
+                away_global *= 1 + abs(w) * 0.5
         else:
             home_mult[ch] = home_mult.get(ch, 1.0) * (1 + w)
             if w > 0:

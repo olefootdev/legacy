@@ -10,6 +10,7 @@ import type { OlefootGameState } from '@/game/types';
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import { getSupabase } from '@/supabase/client';
 import { styleAttrWeights } from '@/tactics/styleAttrWeights';
+import type { Escolhas } from '@/match/placarAoVivo';
 
 type Linha = { passesOk: number; passesAttempt: number; tackles: number; km: number; rating: number; shotsOn?: number; goals?: number };
 
@@ -20,8 +21,10 @@ export function relatarPartidaSombra(args: {
   shootoutWin: 'home' | 'away' | null | undefined;
   readingGood: number;
   homeStats: Record<string, Linha>;
-  /** Ids da custódia: plano do 1º tempo e, se houve, o replano do 2º (Fase 2B). */
+  /** Ids da custódia: o plano inteiro, o do intervalo e cada replan de comando, na ordem (Fase 2B). */
   planos: (string | null | undefined)[];
+  /** UMA VERDADE SÓ: as escolhas do manager — o servidor recalcula o placar delas. */
+  escolhas: Escolhas;
   antes: OlefootGameState;
   depois: OlefootGameState;
   /** Fase 2C: os números que o servidor decidiu. Chamado só quando ele responde. */
@@ -57,6 +60,7 @@ export function relatarPartidaSombra(args: {
           leitura: args.readingGood,
           estilo: styleAttrWeights(args.antes.manager?.tacticalStyle),
           planos: args.planos.filter((x): x is string => typeof x === 'string'),
+          escolhas: args.escolhas,
           jogadores,
         }),
         keepalive: true,

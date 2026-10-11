@@ -99,6 +99,8 @@
     "test:partida-viva": "tsx scripts/test-partida-viva.ts",
     "test:estresse-partida-viva": "python3 scripts/gerar-planos-estresse.py /tmp/olefoot-estresse.json && tsx scripts/estresse-partida-viva.ts /tmp/olefoot-estresse.json && HOLD=0.6 tsx scripts/estresse-partida-viva.ts /tmp/olefoot-estresse.json",
     "test:cadeia-lances": "python3 server/smartfield/test_cadeia_lances.py --n 300",
+    "test:uma-verdade": "tsx scripts/test-uma-verdade.ts",
+    "estudo:fase0": "tsx scripts/estudo-fase0-equilibrio.ts",
     "test:match-consequences": "tsx scripts/test-match-consequences.ts",
     "test:player-personality": "tsx scripts/test-player-personality.ts",
     "test:analytics": "tsx scripts/test-analytics.ts",

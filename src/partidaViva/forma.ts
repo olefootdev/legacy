@@ -125,7 +125,7 @@ export function alvoNaForma(args: {
 /**
  * Comando do manager, camada 1 (reação na hora): o estilo do dock da Rápida
  * mexe na forma da casa no mesmo instante. A camada 2 (o resultado) já é da
- * Rápida — `resolveStyleOnEvent` molda os lances seguintes pelo estilo.
+ * Rápida — o estilo vira comando e o motor refaz os lances seguintes (UMA VERDADE SÓ).
  */
 export function ajustarPorEstilo(f: Forma, estilo: string | undefined, comBola: boolean): Forma {
   const d = { alturaLinha: 0, largura: 0, compactacao: 0, pressao: 0 };

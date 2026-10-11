@@ -132,7 +132,9 @@ playerProfilesRoutes.post('/api/player-profiles/sombra/partida', rateLimit(30), 
       const resumos = [...(usados ?? [])]
         .sort((a, b) => (ordem.get(a.id as string) ?? 0) - (ordem.get(b.id as string) ?? 0))
         .map((u) => u.resumo as ResumoDoPlano);
-      const v = validarRelato({ placar: relato.placar, jogadores: relato.jogadores.map((j) => ({
+      // UMA VERDADE SÓ: o placar e os números de cada titular têm de ser EXATAMENTE
+      // o que os planos emitidos decidiram dadas as escolhas relatadas.
+      const v = validarRelato({ placar: relato.placar, escolhas: relato.escolhas, jogadores: relato.jogadores.map((j) => ({
         id: j.id, pos: j.pos, attrsAntes: j.antes.attrs, nota: j.linha.rating, gols: j.gols, chutes: j.chutes })) }, resumos);
       custodia_motivos = v.motivos;
       if ((usados ?? []).length < relato.planos.length) custodia_motivos.unshift('plano já usado, inexistente ou de outro manager');

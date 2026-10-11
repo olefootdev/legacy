@@ -25,7 +25,11 @@ src/match/quickPlanTypes.ts, versão 1.1).
 
 Filosofia:
 - Resultado determinístico por seed (mesmo input → mesma simulação)
-- 2º tempo re-seedado por seed + fingerprint das decisões (replay coerente)
+- Dados POR MINUTO (`seed|minuto`): o replan do intervalo ou de um comando
+  reusa os mesmos dados e só muda os pesos — comando é causa, não sorteio
+- UMA VERDADE SÓ (Fase 0): o momento decisivo e o pênalti vêm decididos daqui
+  (`decisivo` por opção, `penalti` por batedor); o aparelho só escolhe o que
+  mostrar e o servidor recalcula o placar das escolhas (ver decisivo.py)
 - 90 minutos simulados em <200ms
 - MATCHUP MATRIX: gol não nasce de canal dominado pelo adversário — canais
   com edge muito negativo exigem momento de brilho (confiança >= 80, raro)
@@ -52,13 +56,13 @@ from matchup_matrix import (
 )
 from cadeia_lances import anexar_cadeias
 import idioma
-from comandos_ao_vivo import aplicar_ordens, dna_no_minuto, impressao, limpar_comandos
+from comandos_ao_vivo import aplicar_ordens, dna_no_minuto, limpar_comandos
+from decisivo import momento_decisivo, penalti_da_casa, penalti_de_fora
 from analyst_beats import (
     BEAT_MINUTES_FULL,
     BEAT_MINUTES_SECOND_HALF,
     build_beat,
     build_decision_modifiers,
-    decisions_fingerprint,
 )
 
 BRILLIANCE_MIN_CONFIDENCE = 80
@@ -93,36 +97,41 @@ def _minuto_ou_none(v: Any) -> Optional[int]:
     return m if 1 <= m <= 90 else None
 
 
+def _jogador(p: Dict[str, Any], indice: int) -> Dict[str, Any]:
+    """Um jogador com os campos mínimos que o motor lê."""
+    return {
+        "id": p.get("id", f"unk-{indice}"),
+        "name": p.get("name", "Jogador"),
+        "pos": p.get("pos", "MC"),
+        "role": p.get("role", "mid"),
+        "finalizacao": int(p.get("finalizacao", 60)),
+        "passe": int(p.get("passe", 60)),
+        "marcacao": int(p.get("marcacao", 60)),
+        "velocidade": int(p.get("velocidade", 60)),
+        "fisico": int(p.get("fisico", 60)),
+        "confianca": int(p.get("confianca", 60)),
+        # Ponte #1: atributos antes ignorados pelo motor.
+        "drible": int(p.get("drible", 60)),
+        "tatico": int(p.get("tatico", 60)),
+        "mentalidade": int(p.get("mentalidade", 60)),
+        "fair_play": int(p.get("fair_play", 70)),
+        "fatigue": float(p.get("fatigue", 0)),
+        # LEGACY (Fase 4c): minuto em que entrou do banco (só o replan from_minute lê).
+        "entrou_em": _minuto_ou_none(p.get("entrou_em")),
+        # PARTIDA VIVA (Fase 2): especialistas — só a cadeia de lances lê
+        # (quem cobra, quem cabeceia, pra que lado corta). O placar não.
+        "cabeceio": int(p.get("cabeceio", 55)),
+        "bola_parada": int(p.get("bola_parada", 55)),
+        "penalti": int(p.get("penalti", 55)),
+        "pe": p.get("pe") if p.get("pe") in ("left", "right", "both") else None,
+    }
+
+
 def normalize_lineup(team: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Garante 11 jogadores com campos mínimos."""
     out = []
     for p in team.get("lineup", [])[:11]:
-        out.append({
-            "id": p.get("id", f"unk-{len(out)}"),
-            "name": p.get("name", "Jogador"),
-            "pos": p.get("pos", "MC"),
-            "role": p.get("role", "mid"),
-            "finalizacao": int(p.get("finalizacao", 60)),
-            "passe": int(p.get("passe", 60)),
-            "marcacao": int(p.get("marcacao", 60)),
-            "velocidade": int(p.get("velocidade", 60)),
-            "fisico": int(p.get("fisico", 60)),
-            "confianca": int(p.get("confianca", 60)),
-            # Ponte #1: atributos antes ignorados pelo motor.
-            "drible": int(p.get("drible", 60)),
-            "tatico": int(p.get("tatico", 60)),
-            "mentalidade": int(p.get("mentalidade", 60)),
-            "fair_play": int(p.get("fair_play", 70)),
-            "fatigue": float(p.get("fatigue", 0)),
-            # LEGACY (Fase 4c): minuto em que entrou do banco (só o replan from_minute lê).
-            "entrou_em": _minuto_ou_none(p.get("entrou_em")),
-            # PARTIDA VIVA (Fase 2): especialistas — só a cadeia de lances lê
-            # (quem cobra, quem cabeceia, pra que lado corta). O placar não.
-            "cabeceio": int(p.get("cabeceio", 55)),
-            "bola_parada": int(p.get("bola_parada", 55)),
-            "penalti": int(p.get("penalti", 55)),
-            "pe": p.get("pe") if p.get("pe") in ("left", "right", "both") else None,
-        })
+        out.append(_jogador(p, len(out)))
     while len(out) < 11:
         out.append({
             "id": f"filler-{len(out)}",
@@ -133,6 +142,14 @@ def normalize_lineup(team: Dict[str, Any]) -> List[Dict[str, Any]]:
             "drible": 55, "tatico": 55, "mentalidade": 55, "fair_play": 70, "fatigue": 0,
         })
     return out
+
+
+def normalize_banco(team: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """O banco (até 12), só pros desfechos de pênalti por batedor. Não joga."""
+    raw = team.get("banco")
+    if not isinstance(raw, list):
+        return []
+    return [_jogador(p, 100 + i) for i, p in enumerate(raw[:12]) if isinstance(p, dict)]
 
 
 def team_strength(team_lineup: List[Dict[str, Any]], base_strength: int) -> float:
@@ -456,28 +473,29 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     if mode not in ("full", "second_half", "from_minute"):
         mode = "full"
     decisions = input_data.get("decisions") or []
-    # LEGACY (Fase 4b): gritos e ordens do manager. Só existem depois do apito,
-    # então o plano "full" nunca os lê. Vazio = motor idêntico ao de antes.
+    # Comandos do manager (gritos, ordens, estilo, lenda). Só existem depois do
+    # apito, então o plano "full" nunca os lê. Vazio = motor idêntico ao de antes.
     comandos = limpar_comandos(input_data.get("comandos")) if mode != "full" else []
-    marca_cmd = f"|c{impressao(comandos)}" if comandos else ""
     try:
         from_minute = max(2, min(90, int(input_data.get("from_minute", 2))))
     except (TypeError, ValueError):
         from_minute = 2
 
-    if mode == "second_half":
-        # Seed derivado: mesma partida + mesmas decisões = mesmo 2º tempo
-        rng = random.Random(f"{seed}|h2|{decisions_fingerprint(decisions)}{marca_cmd}")
-    elif mode == "from_minute":
-        # Replan no meio do jogo: mesma partida + mesmo minuto + mesmos comandos = mesmo futuro.
-        rng = random.Random(f"{seed}|m{from_minute}|{decisions_fingerprint(decisions)}{marca_cmd}")
-    else:
-        rng = random.Random(seed)
+    # UMA VERDADE SÓ (Fase 0): os DADOS são por minuto — `seed|minuto` — nos três
+    # modos. Um replan (intervalo ou comando) não sorteia o futuro de novo: ele
+    # reusa os mesmos dados de cada minuto e só os PESOS mudam (decisões,
+    # comandos, escalação, estado). É o que deixa o comando ser causa, não
+    # sorteio — e o que a Prova de Causa (docs/MOTOR-DE-POSSES.md) vai explorar.
+    def dados_do_minuto(minute: int) -> random.Random:
+        return random.Random(f"{seed}|{minute}")
 
     home_team = input_data.get("home_team", {})
     away_team = input_data.get("away_team", {})
     home_lineup = normalize_lineup(home_team)
     away_lineup = normalize_lineup(away_team)
+    # O banco da casa: só pros desfechos de pênalti por batedor (quem entra do
+    # banco também pode bater). Não entra em força, posse nem chute.
+    home_banco = normalize_banco(home_team)
     home_base = int(home_team.get("strength", 70))
     away_base = int(away_team.get("strength", 70))
     home_strength = team_strength(home_lineup, home_base)
@@ -631,6 +649,7 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             p["fatigue"] = min(100, p["fatigue"] + away_fat_rate * (start_minute - desde))
 
     for minute in range(start_minute, 91):
+        rng = dados_do_minuto(minute)
         if comandos:
             # Grito ativo = DNA da casa empurrado neste minuto; o fôlego acompanha.
             home_dna = dna_no_minuto(home_dna_base, comandos, minute)
@@ -735,6 +754,16 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             kind = "penalty_" + possession
             # Pênalti (#1): mentalidade do batedor calibra a conversão (frieza).
             pen_xg = max(0.58, min(0.90, 0.76 + (pen_actor["mentalidade"] - 60) / 380.0))
+            # UMA VERDADE SÓ: o desfecho já vem decidido do motor. Casa: um
+            # desfecho por batedor possível (o manager escolhe quem bate e vê o
+            # resultado dele). Fora: o motor decide. O placar do motor CONTA o
+            # pênalti (pelo batedor sugerido, na casa).
+            if possession == "home":
+                penalti = penalti_da_casa(seed, minute, pen_actor, home_lineup + home_banco)
+                pen_gol = penalti["por_batedor"][pen_actor["id"]]
+            else:
+                penalti = penalti_de_fora(seed, minute, pen_actor)
+                pen_gol = penalti["gol"]
             events.append({
                 "minute": minute,
                 "kind": kind,
@@ -747,12 +776,30 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 "channel": "finalizacao_vs_gk",
                 "reason": "penalty" if idioma.en() else "pênalti",
                 "text": event_text(kind, pen_actor["name"], zone, minute, 0, "epic"),
+                "penalti": penalti,
             })
-            # O cerco culminou no pênalti — descarrega a pressão.
-            if possession == "home":
-                pressure_home *= 0.55
+            if pen_gol:
+                # Gol de pênalti: o mesmo choque de um gol (placar, pressão, momento).
+                if possession == "home":
+                    home_score += 1
+                    pressure_home *= 0.6
+                    pressure_away *= 0.72
+                    momentum_home = min(95, momentum_home + 16)
+                    momentum_shock += 14
+                else:
+                    away_score += 1
+                    pressure_away *= 0.6
+                    pressure_home *= 0.72
+                    momentum_home = max(5, momentum_home - 16)
+                    momentum_shock -= 14
+                stats = scorer_counts.setdefault(pen_actor["id"], {"goals": 0, "assists": 0, "name": pen_actor["name"]})
+                stats["goals"] += 1
             else:
-                pressure_away *= 0.55
+                # Perdeu: o cerco culminou no pênalti e descarrega a pressão.
+                if possession == "home":
+                    pressure_home *= 0.55
+                else:
+                    pressure_away *= 0.55
         elif rng.random() < shot_prob:
             # Canal de origem da jogada — vem da matchup matrix
             matrix_side = home_matrix if possession == "home" else away_matrix
@@ -868,6 +915,11 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 "text": text,
             })
             if is_goal:
+                # UMA VERDADE SÓ: todo gol natural é um momento decisivo, e os
+                # desfechos de cada opção já vêm decididos daqui. O motor segue
+                # como se o gol tivesse saído (urgência, momento); o placar que
+                # vale é recalculado das escolhas (server/src/lib/partida/placar.ts).
+                events[-1]["decisivo"] = momento_decisivo(seed, minute, kind, actor, home_lineup, away_lineup)
                 if possession == "home":
                     home_score += 1
                     pressure_home *= 0.6     # descarregou, mas a confiança fica

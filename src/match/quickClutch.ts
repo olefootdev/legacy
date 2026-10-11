@@ -1,21 +1,18 @@
 /**
  * quickClutch — o MOMENTO DECISIVO antes de cada gol (alma do Quick Match).
  *
- * Quando o plano do Python aponta um gol, o jogo PAUSA e entrega uma escolha
- * de última fração de segundo, com CONTEXTO da jogada:
+ * Quando o plano aponta um gol natural, o jogo PAUSA e entrega uma escolha de
+ * última fração de segundo, com CONTEXTO da jogada:
  *   • Atacando (chance clara): Chutar / Driblar / Tocar
  *   • Defendendo (perigo): Cercar / Carrinho / Combate
  *
- * Cada contexto tem uma escolha CERTA (ler a jogada é a skill). Acertou →
- * faz/salva o gol; errou → perde/sofre — e o feedback diz o que era melhor.
- * "Chutou, foi pra fora — com o zagueiro fechando, tocar era a saída."
- *
- * Determinístico: SpiritRng(seed + minuto + escolha). Pesa também o atributo
- * relevante do protagonista quando disponível (finalização/drible/passe etc).
+ * UMA VERDADE SÓ (Partida Viva, Fase 0): o desfecho de CADA opção já vem
+ * decidido do motor (`event.decisivo.opcoes`, server/smartfield/decisivo.py).
+ * Este módulo não sorteia nada: traduz a chave do contexto em texto PT/EN,
+ * monta o duelo pra tela e escreve a manchete do desfecho escolhido.
  */
 
-import { SpiritRng } from '../../shared/gamespirit/SpiritRng';
-import { hashSeed } from './quickBeatDirector';
+import type { MatchPlanEvent } from './quickPlanTypes';
 import { L } from '@/i18n/L';
 
 export type ClutchIntent = 'attack' | 'defend';
@@ -36,11 +33,10 @@ export interface ClutchMoment {
   options: ClutchOption[];
   best: ClutchKey;
   actorName: string;
-  /**
-   * Partida Viva, Fase 9 — com quem é o duelo. Atacando: quem tenta parar o
-   * nosso (goleiro ou zagueiro). Defendendo: quem dos nossos enfrenta o atacante.
-   */
+  /** Com quem é o duelo: atacando, quem tenta parar o nosso; defendendo, quem dos nossos enfrenta. */
   rival: Rival;
+  /** opção → o gol acontece? (do motor). */
+  opcoes: Record<string, boolean>;
 }
 
 export type Rival = 'goleiro' | 'zagueiro' | 'meio';
@@ -49,14 +45,14 @@ export type AtributoDoDuelo = 'finalizacao' | 'drible' | 'passe' | 'marcacao' | 
 /** Um lado do duelo: o jogador e os atributos que importam. */
 export interface Lutador { id: string; nome: string; attrs: Partial<Record<AtributoDoDuelo, number>> }
 
-/** O duelo: atributo contra atributo, por escolha. É o que o resultado sente. */
+/** O duelo: atributo contra atributo, por escolha — só pra tela (o desfecho já veio decidido). */
 export interface Duelo {
   nosso: Lutador;
   deles: Lutador;
   porOpcao: Partial<Record<ClutchKey, { nosso: number; deles: number; rotuloNosso: string; rotuloDeles: string }>>;
 }
 
-/** Que atributo nosso enfrenta que atributo deles, em cada escolha. */
+/** Que atributo nosso enfrenta que atributo deles, em cada escolha (espelho de decisivo.py). */
 const CONFRONTO: Record<ClutchKey, [AtributoDoDuelo, AtributoDoDuelo]> = {
   chutar: ['finalizacao', 'marcacao'],
   driblar: ['drible', 'marcacao'],
@@ -70,36 +66,6 @@ const ROTULO_ATTR: Record<AtributoDoDuelo, string> = {
   marcacao: L('Marcação', 'Marking'), fisico: L('Físico', 'Physical'), velocidade: L('Velocidade', 'Pace'),
 };
 
-/** Monta o duelo (atributo × atributo por escolha). Sem atributo, 60. */
-export function duelo(moment: ClutchMoment, nosso: Lutador, deles: Lutador): Duelo {
-  const porOpcao: Duelo['porOpcao'] = {};
-  for (const o of moment.options) {
-    const [an, ad] = CONFRONTO[o.key];
-    porOpcao[o.key] = {
-      nosso: Math.round(nosso.attrs[an] ?? 60), deles: Math.round(deles.attrs[ad] ?? 60),
-      rotuloNosso: ROTULO_ATTR[an],
-      rotuloDeles: moment.intent === 'attack' && moment.rival === 'goleiro' && ad === 'marcacao' ? L('Goleiro', 'Keeper') : ROTULO_ATTR[ad],
-    };
-  }
-  return { nosso, deles, porOpcao };
-}
-
-/**
- * O atributo que entra no `resolveClutch`: 70 (o de sempre) + a vantagem no
- * duelo. Empate = o jogo de antes; +20 de vantagem ≈ +3 pp; teto ±7 pp.
- */
-export function forcaNoDuelo(d: Duelo | null | undefined, key: ClutchKey): number {
-  const c = d?.porOpcao[key];
-  if (!c) return 70;
-  return Math.max(30, Math.min(100, 70 + (c.nosso - c.deles) * 0.8));
-}
-
-export interface ClutchResult {
-  success: boolean;
-  headline: string;
-  feedback: string;
-}
-
 const ATTACK_OPTIONS: ClutchOption[] = [
   { key: 'chutar', label: L('Chutar', 'Shoot') },
   { key: 'driblar', label: L('Driblar', 'Dribble') },
@@ -111,67 +77,86 @@ const DEFEND_OPTIONS: ClutchOption[] = [
   { key: 'combate', label: L('Combate', 'Challenge') },
 ];
 
-interface CtxDef { context: string; best: ClutchKey; rival: Rival }
+/** Chave do contexto (decisivo.py) → texto. A opção certa e o rival vêm do motor. */
+const CONTEXTO_TEXTO: Record<string, string> = {
+  cara_a_cara: L('Cara a cara com o goleiro', 'One-on-one with the keeper'),
+  zagueiro_fechando: L('Zagueiro fechando o ângulo', 'Defender closing the angle'),
+  sobrou_limpa: L('Sobrou limpa na pequena área', 'Loose ball in the six-yard box'),
+  dois_marcadores: L('Dois marcadores em cima', 'Two markers closing in'),
+  espaco_na_entrada: L('Espaço na entrada da área', 'Space at the edge of the box'),
+  companheiro_livre: L('Companheiro livre na segunda trave', 'Teammate free at the back post'),
+  dispara_em_velocidade: L('Atacante dispara em velocidade', 'Forward bursting through at pace'),
+  protege_a_bola: L('Atacante protege a bola na área', 'Forward shielding the ball in the box'),
+  ombro_a_ombro: L('Duelo de corpo, ombro a ombro', 'Physical duel, shoulder to shoulder'),
+  isolado_na_pequena_area: L('Atacante isolado na pequena área', 'Forward alone in the six-yard box'),
+  tabelam_na_entrada: L('Eles tabelam na entrada', 'They play a one-two at the edge'),
+};
 
-const ATTACK_CONTEXTS: CtxDef[] = [
-  { context: L('Cara a cara com o goleiro', 'One-on-one with the keeper'), best: 'driblar', rival: 'goleiro' },
-  { context: L('Zagueiro fechando o ângulo', 'Defender closing the angle'), best: 'tocar', rival: 'zagueiro' },
-  { context: L('Sobrou limpa na pequena área', 'Loose ball in the six-yard box'), best: 'chutar', rival: 'goleiro' },
-  { context: L('Dois marcadores em cima', 'Two markers closing in'), best: 'tocar', rival: 'zagueiro' },
-  { context: L('Espaço na entrada da área', 'Space at the edge of the box'), best: 'chutar', rival: 'goleiro' },
-  { context: L('Companheiro livre na segunda trave', 'Teammate free at the back post'), best: 'tocar', rival: 'zagueiro' },
-];
-const DEFEND_CONTEXTS: CtxDef[] = [
-  { context: L('Atacante dispara em velocidade', 'Forward bursting through at pace'), best: 'carrinho', rival: 'zagueiro' },
-  { context: L('Atacante protege a bola na área', 'Forward shielding the ball in the box'), best: 'cercar', rival: 'zagueiro' },
-  { context: L('Duelo de corpo, ombro a ombro', 'Physical duel, shoulder to shoulder'), best: 'combate', rival: 'zagueiro' },
-  { context: L('Atacante isolado na pequena área', 'Forward alone in the six-yard box'), best: 'carrinho', rival: 'goleiro' },
-  { context: L('Eles tabelam na entrada', 'They play a one-two at the edge'), best: 'cercar', rival: 'meio' },
-];
+const ATTACK_KEYS = new Set<string>(['chutar', 'driblar', 'tocar']);
+const DEFEND_KEYS = new Set<string>(['cercar', 'carrinho', 'combate']);
+
+/**
+ * Monta o momento decisivo a partir do que o motor emitiu no gol. Null quando
+ * o lance não traz `decisivo` (plano de antes da Fase 0): o gol vale direto.
+ */
+export function montarDecisivo(ev: MatchPlanEvent, fallbackName: string): ClutchMoment | null {
+  const d = ev.decisivo;
+  if (!d || !d.opcoes || !Object.keys(d.opcoes).length) return null;
+  const intent: ClutchIntent = d.intent === 'defend' ? 'defend' : 'attack';
+  const keys = intent === 'attack' ? ATTACK_KEYS : DEFEND_KEYS;
+  const options = (intent === 'attack' ? ATTACK_OPTIONS : DEFEND_OPTIONS).filter((o) => o.key in d.opcoes);
+  if (!options.length) return null;
+  const best = (keys.has(d.melhor) ? d.melhor : options[0]!.key) as ClutchKey;
+  const rival: Rival = d.rival === 'goleiro' || d.rival === 'meio' ? d.rival : 'zagueiro';
+  return {
+    intent, minute: ev.minute, options, best, rival,
+    context: CONTEXTO_TEXTO[d.contexto] ?? (intent === 'attack' ? L('Chance clara', 'Clear chance') : L('Perigo na área', 'Danger in the box')),
+    actorName: ev.actor_name ?? fallbackName,
+    opcoes: { ...d.opcoes },
+  };
+}
+
+/** O duelo pra tela, com os números que o motor usou (nosso × deles por opção). */
+export function dueloDoDecisivo(ev: MatchPlanEvent, moment: ClutchMoment): Duelo | null {
+  const d = ev.decisivo;
+  if (!d?.duelo) return null;
+  const porOpcao: Duelo['porOpcao'] = {};
+  const nosso: Lutador = { id: d.duelo.nosso?.id ?? '', nome: d.duelo.nosso?.nome ?? '', attrs: {} };
+  const deles: Lutador = { id: d.duelo.deles?.id ?? '', nome: d.duelo.deles?.nome ?? '', attrs: {} };
+  for (const o of moment.options) {
+    const par = d.duelo.por_opcao?.[o.key];
+    if (!par) continue;
+    const [an, ad] = CONFRONTO[o.key];
+    nosso.attrs[an] = par[0];
+    deles.attrs[ad] = par[1];
+    porOpcao[o.key] = {
+      nosso: Math.round(par[0]), deles: Math.round(par[1]),
+      rotuloNosso: ROTULO_ATTR[an],
+      rotuloDeles: moment.intent === 'attack' && moment.rival === 'goleiro' && ad === 'marcacao' ? L('Goleiro', 'Keeper') : ROTULO_ATTR[ad],
+    };
+  }
+  return { nosso, deles, porOpcao };
+}
+
+export interface ClutchResult {
+  success: boolean;
+  headline: string;
+  feedback: string;
+}
 
 const ATTACK_PAST: Record<AttackKey, string> = { chutar: L('Chutou', 'Shot'), driblar: L('Tentou o drible', 'Tried the dribble'), tocar: L('Tocou', 'Passed') };
 const DEFEND_PAST: Record<DefendKey, string> = { cercar: L('Cercou', 'Closed down'), carrinho: L('Foi de carrinho', 'Went to ground'), combate: L('Foi pro combate', 'Went into the challenge') };
 const ATTACK_NOUN: Record<AttackKey, string> = { chutar: L('chutar', 'shooting'), driblar: L('driblar', 'dribbling'), tocar: L('tocar', 'passing') };
 const DEFEND_NOUN: Record<DefendKey, string> = { cercar: L('cercar', 'closing down'), carrinho: L('o carrinho', 'the slide tackle'), combate: L('o combate', 'the challenge') };
 
-/** Monta o momento decisivo a partir do lado e do minuto (determinístico). */
-export function buildClutch(opts: {
-  intent: ClutchIntent;
-  minute: number;
-  seed: string;
-  actorName: string;
-}): ClutchMoment {
-  const { intent, minute, seed, actorName } = opts;
-  const rng = new SpiritRng(hashSeed(`${seed}:clutchctx:${minute}`));
-  const pool = intent === 'attack' ? ATTACK_CONTEXTS : DEFEND_CONTEXTS;
-  const def = pool[Math.floor(rng.next() * pool.length)]!;
-  return {
-    intent,
-    minute,
-    context: def.context,
-    options: intent === 'attack' ? ATTACK_OPTIONS : DEFEND_OPTIONS,
-    best: def.best,
-    actorName,
-    rival: def.rival,
-  };
-}
-
 /**
- * Resolve o momento. Acertar o contexto é o que mais pesa; o atributo relevante
- * do protagonista (0-100) dá um empurrão. Retorna sucesso + manchete + feedback.
+ * A manchete e o feedback do desfecho ESCOLHIDO. `golAconteceu` é o que o
+ * motor decidiu pra esta opção; atacando, sucesso = gol; defendendo, sucesso =
+ * gol evitado. O feedback sempre cita a melhor escolha quando erra.
  */
-export function resolveClutch(
-  moment: ClutchMoment,
-  picked: ClutchKey,
-  seed: string,
-  actorAttr = 70,
-): ClutchResult {
-  const rng = new SpiritRng(hashSeed(`${seed}:clutch:${moment.minute}:${picked}`));
+export function textoDoDesfecho(moment: ClutchMoment, picked: ClutchKey, golAconteceu: boolean): ClutchResult {
   const right = picked === moment.best;
-  const attrBonus = (actorAttr - 60) / 100 * 0.18; // ±~0.07
-  const baseProb = right ? 0.82 : 0.30;
-  const prob = Math.max(0.12, Math.min(0.95, baseProb + attrBonus));
-  const success = rng.next() < prob;
+  const success = moment.intent === 'attack' ? golAconteceu : !golAconteceu;
 
   if (moment.intent === 'attack') {
     const pastTxt = ATTACK_PAST[picked as AttackKey];

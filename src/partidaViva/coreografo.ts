@@ -201,10 +201,15 @@ export class Coreografo {
     if (!c) return null;
     const nova: Ficha = fichaSegura({ ...entra, lado: c.f.lado, slot: c.f.slot });
     c.f = nova;
-    c.x = c.px = C / 2 - 4;
-    c.z = c.pz = L + 0.5;
-    c.vx = c.vz = 0;
-    c.alvo = null;
+    // Quem sai estava posicionado numa bola parada (cobrador, barreira, área)?
+    // Então quem entra ASSUME o lugar dele — senão a cobrança fica sem cobrador
+    // (o reserva entrando pela lateral a 50 m da bandeirinha; achado do estresse).
+    if (!this.posicionados.has(c)) {
+      c.x = c.px = C / 2 - 4;
+      c.z = c.pz = L + 0.5;
+      c.vx = c.vz = 0;
+      c.alvo = null;
+    }
     c.vmax = vmaxDe(nova);
     if (this.dono === c) this.dono = this.maisPerto(c.f.lado, this.bola.x, this.bola.z, false);
     this.fita(T(`ENTRA ${nova.nome}`, `ON ${nova.nome}`), c.x, c.z, 2.4, true, c);

@@ -5,9 +5,17 @@
  * absolutos. O jogo roda em dois planos:
  *   • Plano físico — barra de momento + eventos com timing por weight_tier
  *     (epic 3.5s / big 1.8s / normal 0.5s / minor 0.15s)
- *   • Plano mental — analyst beats pausam o relógio, o manager decide, e a
- *     decisão altera deterministicamente os eventos restantes do tempo
- *     (quickBeatDirector). Pesos nunca aparecem na UI.
+ *   • Plano mental — analyst beats pausam o relógio e o manager decide.
+ *
+ * UMA VERDADE SÓ (Partida Viva, Fase 0): esta tela NÃO decide lance nenhum.
+ *   • Todo gol natural é um momento decisivo cujos desfechos por opção já vêm
+ *     do motor (`event.decisivo`); o pênalti vem com o desfecho por batedor
+ *     (`event.penalti`). Aqui só se ESCOLHE e se lê o desfecho (placarAoVivo).
+ *   • Estilo, formação, leitura do Analista, reação, substituição, grito,
+ *     ordem e lenda só chegam ao resultado pelo REPLAN no servidor, a partir
+ *     de 3 minutos depois; o relógio espera o replan emendar no minuto certo.
+ *   • As escolhas vão no relato do fim da partida; o servidor recalcula o
+ *     placar com a mesma função (server/src/lib/partida/placar.ts).
  *
  * No 45', se `onSecondHalf` for fornecido, o player pausa e pede o replan
  * (Python re-simula 46-90' com o ledger). Sem o hook, segue o plano baseline.
@@ -26,18 +34,12 @@ import type {
   MatchPlanEvent,
 } from './quickPlanTypes';
 import {
-  applyDecisionToRemainingEvents,
   computeBeatVerdicts,
   computeReadingScore,
   toDecisionRecord,
   hashSeed,
-  applyManDownPenalty,
-  applySubNudge,
-  sprinkleDisciplineEvents,
   buildLiveAnalystBeat,
-  rollDecisionCrit,
   EFFECT_BUFF_PCT,
-  BUFF_WINDOW_MINUTES,
   buffPctToWeight,
   classifyTransition,
   QUICK_PLAN_FEED_MAX,
@@ -48,7 +50,9 @@ import {
   type ReactionChoice,
 } from './quickBeatDirector';
 import { SpiritRng } from '../../shared/gamespirit/SpiritRng';
-import { buildClutch, resolveClutch, duelo, forcaNoDuelo, type AtributoDoDuelo, type ClutchMoment, type ClutchKey, type Duelo, type Lutador } from './quickClutch';
+import { montarDecisivo, dueloDoDecisivo, textoDoDesfecho, type AtributoDoDuelo, type ClutchMoment, type ClutchKey, type Duelo } from './quickClutch';
+import { emendarEventos, escolhaAutomatica, escolhasVazias, estadoAte, golDoLance, lanceDe, type Escolhas } from './placarAoVivo';
+import type { ComandoAoVivo } from './quickPlanClient';
 import { leituraDoIntervalo, type LeituraDoIntervalo } from './auxiliarDoIntervalo';
 import { AnalystBeatCard } from '@/components/matchquick/AnalystBeatCard';
 import { MomentumBar } from '@/components/match/MomentumBar';
@@ -56,14 +60,7 @@ import { QuickGoalCelebration } from '@/components/matchquick/QuickGoalCelebrati
 import { PenaltyShootout, type ShootoutSetup } from '@/components/matchquick/PenaltyShootout';
 import type { ShootoutResult } from '@/match/quickEngaged/penaltyShootout';
 import { renderQuickFeedRichText } from '@/match/quickMatchFeed';
-import {
-  resolveStyleOnEvent,
-  resolveLegacyBoost,
-  resolveFormationOnEvent,
-  styleMomentumBias,
-  nudgeMomentumCurve,
-  STYLE_LABEL,
-} from '@/match/quickTacticalLive';
+import { styleMomentumBias, nudgeMomentumCurve, STYLE_LABEL } from '@/match/quickTacticalLive';
 import { TACTICAL_INTENSITY_PRESETS, type TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
 import { detectLiveArc, getArcDescription } from '@/match/quickNarrativeArcs';
 import { QuickNarrativeArcIndicator } from '@/components/matchquick/QuickNarrativeArcIndicator';
@@ -80,11 +77,9 @@ const posLabel = (pos: string): string => L(pos, POS_EN[pos] ?? pos);
 const LEGACY_LABEL_EN: Record<string, string> = { MORAL: 'MORALE', POSSE: 'POSSESSION', ATAQUE: 'ATTACK', DEFESA: 'DEFENCE' };
 const legacyLabel = (label: string): string => L(label, LEGACY_LABEL_EN[label] ?? label);
 
-/** Lance importante ganha o palco central; construção só alimenta o momento.
- *  Fruto de decisão SEMPRE aparece — o manager precisa ver a consequência. */
+/** Lance importante ganha o palco central; construção só alimenta o momento. */
 function isHighSignal(e: MatchPlanEvent): boolean {
-  return e.weight_tier === 'epic' || e.weight_tier === 'big'
-    || e.kind.startsWith('goal_') || e.decision_influenced === true;
+  return e.weight_tier === 'epic' || e.weight_tier === 'big' || e.kind.startsWith('goal_');
 }
 
 export interface QuickPlanHalftimeContext {
@@ -100,6 +95,10 @@ export interface QuickPlanHalftimeContext {
   subsUsed: number;
   /** Partida Viva, Fase 9: o auxiliar aponta UM problema do 1º tempo (só no intervalo). */
   auxiliar?: LeituraDoIntervalo;
+  /** UMA VERDADE SÓ: todos os comandos dados até aqui (estilo, grito, ordem, lenda) — o motor aplica. */
+  comandos: ComandoAoVivo[];
+  /** UMA VERDADE SÓ: as escolhas feitas até aqui — o servidor deriva o estado do replan delas. */
+  escolhas: Escolhas;
 }
 
 export interface QuickPlanPlayResult {
@@ -127,6 +126,8 @@ export interface QuickPlanPlayResult {
   styleLog: TacticalIntensityLevel[];
   /** FABLE/Cicatrizes — autores de gol da casa aos 85'+ (herói do fim). */
   lateHeroIds: string[];
+  /** UMA VERDADE SÓ: as escolhas do manager — vão no relato; o servidor recalcula o placar delas. */
+  escolhas: Escolhas;
 }
 
 interface Props {
@@ -149,8 +150,6 @@ interface Props {
   awayCrestUrl?: string | null;
   homeName?: string;
   awayName?: string;
-  /** Batedores de pênalti da casa — o manager escolhe quem bate (Elifoot-style). */
-  penaltyTakers?: PenaltyTaker[];
   /** Lendas (isLegacy) titulares — ativam um BUFF de time por ~15' (1 uso/jogo). */
   legacyBoosters?: { id: string; name: string; label: string; pct: number }[];
   /** Mapa id→buff de TODAS as lendas do elenco (titular ou banco). Usado pra
@@ -193,18 +192,28 @@ interface Props {
   /** PARTIDA VIVA (Fase 5) — no gol, espera o campo terminar replay + giz
    *  (resposta 'seguir'); trava de segurança de 20 s. Só ritmo de exibição. */
   golEsperaCampo?: boolean;
-  /** LEGACY (Fase 4b) — grito/ordem dado no campo: o pai refaz o plano a partir
-   *  de minuto+3 no servidor; o player emenda o futuro (o passado não muda). */
-  pedirReplan?: (cmd: ComandoSemMinuto | null, ctx: ContextoDoReplan) => Promise<MatchPlan | null>;
+  /** UMA VERDADE SÓ — todo comando (estilo, formação, leitura, reação, troca,
+   *  grito, ordem, lenda) chega ao resultado por aqui: o pai refaz o plano no
+   *  servidor a partir de `ctx.inicio` (minuto+3); o player emenda o futuro
+   *  exatamente ali (o passado não muda) e o relógio espera a resposta. */
+  pedirReplan?: (ctx: ContextoDoReplan) => Promise<MatchPlan | null>;
+  /** LEGACY (Partida Viva): o campo está aberto — trilhos, prazos, acréscimos, números ao vivo. */
+  modoCampo?: boolean;
+  /** A formação trocada no dock vai ao pai (é ele que monta a escalação do replan). */
+  onFormationChange?: (formation: string) => void;
 }
 
-/** Contexto de um replan do LEGACY: o do intervalo + o minuto + quando cada reserva entrou. */
-export type ContextoDoReplan = QuickPlanHalftimeContext & { minuto: number; entradas: Record<string, number> };
+/** Contexto de um replan: o do intervalo + o minuto do comando, o minuto em que o plano novo começa e quando cada reserva entrou. */
+export type ContextoDoReplan = QuickPlanHalftimeContext & { minuto: number; inicio: number; entradas: Record<string, number> };
 
 export type ComandoSemMinuto =
   | { tipo: 'incentivar' | 'cobrar' | 'acalmar' }
-  | { tipo: 'ordem'; ordem: 'segurar' | 'atacar_espaco' | 'marcar'; jogador: string };
+  | { tipo: 'ordem'; ordem: 'segurar' | 'atacar_espaco' | 'marcar'; jogador: string }
+  | { tipo: 'estilo'; estilo: TacticalIntensityLevel }
+  | { tipo: 'lenda'; jogador: string };
 const RECARGA_GRITO_MIN = 15;
+/** Quanto o relógio espera um replan antes de abandonar o pedido (o plano na tela segue). */
+const ESPERA_REPLAN_MS = 8000;
 /** LEGACY: o momento decisivo tem prazo — sem resposta, o jogador decide sozinho (o jogo nunca fica parado). */
 const PRAZO_DECISIVO_MS = 10000;
 const DURACAO_GRITO_MIN = 10;
@@ -228,34 +237,6 @@ export interface SquadCard {
   fairPlay?: number;
   /** Partida Viva, Fase 9: atributos do duelo no momento decisivo. */
   attrs?: Partial<Record<AtributoDoDuelo, number>>;
-}
-
-/** Posição em família (o duelo escolhe goleiro / zagueiro / meio). */
-function familia(pos: string): 'goleiro' | 'zagueiro' | 'meio' | 'ataque' {
-  const p = pos.toUpperCase();
-  if (p.includes('GOL') || p === 'GK') return 'goleiro';
-  if (p.includes('ZAG') || p === 'CB' || p === 'LE' || p === 'LD' || p === 'LB' || p === 'RB') return 'zagueiro';
-  if (/(VOL|MC|MEI|CM|DM|AM)/.test(p)) return 'meio';
-  return 'ataque';
-}
-const lutador = (c: SquadCard): Lutador => ({ id: c.id, nome: c.name, attrs: c.attrs ?? {} });
-
-/**
- * Os dois do duelo. Atacando: o nosso autor × quem tenta parar (goleiro ou
- * zagueiro deles). Defendendo: o autor deles × quem dos nossos enfrenta.
- * Sem cartas (visitante sintético), cai no time pelo nome — 60 nos atributos.
- */
-function montarDuelo(m: ClutchMoment, autorId: string | undefined, nossos: SquadCard[], deles: SquadCard[]): Duelo | null {
-  const porFamilia = (cartas: SquadCard[], f: string) =>
-    [...cartas].filter((c) => familia(c.pos) === f).sort((a, b) => b.ovr - a.ovr)[0];
-  if (m.intent === 'attack') {
-    const n = nossos.find((c) => c.id === autorId) ?? porFamilia(nossos, 'ataque');
-    const d = porFamilia(deles, m.rival === 'goleiro' ? 'goleiro' : 'zagueiro') ?? deles[0];
-    return n && d ? duelo(m, lutador(n), lutador(d)) : null;
-  }
-  const d = deles.find((c) => c.id === autorId) ?? porFamilia(deles, 'ataque');
-  const n = porFamilia(nossos, m.rival) ?? nossos[0];
-  return n && d ? duelo(m, lutador(n), lutador(d)) : null;
 }
 
 /** Rótulo curto do lance pro eyebrow do banner amarelo. */
@@ -470,7 +451,7 @@ const LEADIN_REACT_MS = 2800;
 /** Quanto o relógio "segura" num lance pra dar tempo de ler. */
 const HOLD_MS: Record<MatchEventTier, number> = { epic: 2400, big: 1700, normal: 950, minor: 600 };
 
-export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, secondHalfLineup, narration, buildShootout, agentTraits, onAoVivo, segurarLance, relogioMs, registrarResposta, golEsperaCampo, pedirReplan }: Props) {
+export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, secondHalfLineup, narration, buildShootout, agentTraits, onAoVivo, segurarLance, relogioMs, registrarResposta, golEsperaCampo, pedirReplan, modoCampo = false, onFormationChange }: Props) {
   void speedMultiplier;
   const [phase, setPhase] = useState<PlayerPhase>('playing');
   const [minute, setMinute] = useState(0);
@@ -494,10 +475,8 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   const [floatFx, setFloatFx] = useState<{ key: number; text: string; tier: 'pos' | 'neg' | 'neutral' | 'crit' } | null>(null);
   // Chamada de transição ("Olha o contra-ataque!") antes de um lance de alto sinal.
   const [leadIn, setLeadIn] = useState<TransitionLeadIn | null>(null);
-  // Buff de ACERTO: a chamada vira reação opcional (1 toque). Acertar = buff.
+  // A chamada vira reação opcional (1 toque): a leitura certa vira peso no replan.
   const [leadInReactable, setLeadInReactable] = useState(false);
-  // Buff ATIVO (#3): janela de ~10s mostrada como chip com contagem regressiva.
-  const [activeBuff, setActiveBuff] = useState<{ pct: number; tier: 'pos' | 'neg' | 'crit'; untilMinute: number } | null>(null);
   const [feed, setFeed] = useState<QuickPlanFeedItem[]>([]);
   // Estilo de jogo AO VIVO — escolha certa converte gol, errada custa caro.
   const [style, setStyle] = useState<TacticalIntensityLevel>('possession');
@@ -506,7 +485,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   const [legacyActive, setLegacyActive] = useState(false);
   const [legacyUsedIds, setLegacyUsedIds] = useState<Set<string>>(() => new Set());
   const [legacyPickerOpen, setLegacyPickerOpen] = useState(false);
-  // Formação ao vivo — cicla a partir da inicial. Afeta o momento E o jogo (resolveFormationOnEvent).
+  // Formação ao vivo — cicla a partir da inicial. Mexe na barra de momento; no jogo, só pelo replan (papéis novos no motor).
   const [formation, setFormation] = useState<string>(initialFormation ?? '4-3-3');
   const formationRef = useRef<string>(initialFormation ?? '4-3-3'); // lido no tick
   const [celebration, setCelebration] = useState<GoalCelebration | null>(null);
@@ -522,14 +501,11 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     stats: { homeShots: number; awayShots: number; homeSaves: number; awaySaves: number; possessionHome: number };
   } | null>(null);
 
-  const eventsRef = useRef<MatchPlanEvent[]>(
-    sprinkleDisciplineEvents({
-      events: plan.events,
-      home: (fieldCards ?? []).map((c) => ({ id: c.id, name: c.name, fatigue: c.fatigue, fairPlay: c.fairPlay })),
-      away: (awayCards ?? []).map((c) => ({ id: c.id, name: c.name, fatigue: c.fatigue, fairPlay: c.fairPlay })),
-      seed: plan.seed,
-    }),
-  );
+  // UMA VERDADE SÓ: os lances são os do plano do servidor, e só eles (cartão,
+  // lesão e expulsão também — o aparelho não semeia nada).
+  const eventsRef = useRef<MatchPlanEvent[]>([...plan.events]);
+  /** As escolhas do manager (momento decisivo por minuto, batedor por minuto) — vão no relato. */
+  const escolhasRef = useRef<Escolhas>(escolhasVazias());
   const beatsQueueRef = useRef<AnalystBeat[]>([...(plan.analyst_beats ?? [])]);
   const momentumRef = useRef<number[]>([...plan.momentum_curve]);
   /** Fase 12: o fluxo do plano por minuto (o replan reescreve do minuto dele em diante). */
@@ -544,7 +520,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
    */
   const efeitosRef = useRef<{ id: string; rotulo: string; desde: number }[]>([]);
   const registrarEfeito = (rotulo: string) => {
-    if (!pedirReplan) return;
+    if (!modoCampo) return;
     const m = minuteRef.current;
     efeitosRef.current = [...efeitosRef.current.filter((e) => e.rotulo !== rotulo), { id: `${rotulo}-${m}`, rotulo, desde: m }];
   };
@@ -591,7 +567,6 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   const styleLogRef = useRef<TacticalIntensityLevel[]>([]);
   const legacyActiveRef = useRef(false);
   const legacyUntilRef = useRef(0);
-  const legacyPctRef = useRef(0);
   const legacyNameRef = useRef('');
   const ledgerRef = useRef<BeatDecisionRecord[]>([]);
   const minuteRef = useRef(0);          // relógio corrido
@@ -627,14 +602,16 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     setFeed((prev) => [...prev, unique].slice(-QUICK_PLAN_FEED_MAX));
   };
 
-  /** Troca de estilo AO VIVO: empurra o momento (viés territorial) e anuncia. O
-   *  efeito no PLACAR vem evento a evento via resolveStyleOnEvent (no tick). */
+  /** Troca de estilo AO VIVO: empurra a barra de momento (sensação na hora) e
+   *  anuncia. UMA VERDADE SÓ: o efeito no PLACAR vem só pelo servidor — o estilo
+   *  vira um comando e o motor refaz o futuro a partir de 3 minutos depois. */
   const changeStyle = (next: TacticalIntensityLevel) => {
     if (next === styleRef.current) return;
     styleRef.current = next;
     setStyle(next);
     styleLogRef.current.push(next); // FABLE/DNA — cada escolha marca o eixo do clube
     registrarEfeito(L(`o estilo ${STYLE_LABEL[next]}`, `the ${STYLE_LABEL[next]} style`));
+    comandar({ tipo: 'estilo', estilo: next });
     const m = minuteRef.current;
     momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, styleMomentumBias(next));
     pushFeed({ id: `style-${m}`, minute: m, kind: 'decision', text: L(`Estilo: ${STYLE_LABEL[next]} — ${TACTICAL_INTENSITY_PRESETS[next].description}`, `Style: ${STYLE_LABEL[next]} — ${TACTICAL_INTENSITY_PRESETS[next].description}`) });
@@ -671,12 +648,12 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   }, [field, legacyLookup, legacyBoosters]);
   const availableBoosters = liveBoosters.filter((b) => !legacyUsedIds.has(b.id));
 
-  /** LEGACY: ativa UM buff escolhido (1 uso por lenda, ~15'). Empurra o momento
-   *  na hora e dá chance extra de gol enquanto a janela está aberta (no tick). */
+  /** LEGACY: ativa UM buff escolhido (1 uso por lenda, ~15'). Empurra a barra de
+   *  momento na hora; UMA VERDADE SÓ: o efeito no jogo é um comando `lenda` que
+   *  o motor aplica por 15' no replan (nada de gol extra sorteado aqui). */
   const activateLegacy = (buff: { id: string; name: string; label: string; pct: number }) => {
     if (legacyActiveRef.current || legacyUsedIds.has(buff.id)) return;
     const m = minuteRef.current;
-    legacyPctRef.current = buff.pct;
     legacyNameRef.current = buff.name;
     legacyActiveRef.current = true;
     legacyUntilRef.current = m + 15;
@@ -685,18 +662,23 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     setLegacyPickerOpen(false);
     momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, Math.min(18, buff.pct * 2 + 4));
     pushFeed({ id: `legacy-${buff.id}-${m}`, minute: m, kind: 'decision', text: `Legacy: @${buff.name} +${buff.pct}% ${legacyLabel(buff.label)}` });
+    comandar({ tipo: 'lenda', jogador: buff.id });
   };
 
-  /** Cicla a formação ao vivo: muda a forma do time e empurra o momento conforme
-   *  o quão ofensiva ela é (3-4-3 sobe, 5-3-2 recua). Não re-planeja o jogo. */
+  /** Cicla a formação ao vivo: muda a forma do time e empurra a barra de momento
+   *  conforme o quão ofensiva ela é. UMA VERDADE SÓ: a formação nova vai ao pai e
+   *  o motor refaz o futuro com os papéis novos (matchup matrix nova). */
   const cycleFormation = () => {
     const idx = FORMATIONS.indexOf(formation);
     const next = FORMATIONS[(idx + 1) % FORMATIONS.length] ?? '4-3-3';
     formationRef.current = next;
     setFormation(next);
+    onFormationChange?.(next);
     const m = minuteRef.current;
     momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, FORMATION_TILT[next] ?? 0);
     pushFeed({ id: `form-${m}-${next}`, minute: m, kind: 'decision', text: L(`Formação: ${next}`, `Formation: ${next}`) });
+    registrarEfeito(L(`a formação ${next}`, `the ${next} formation`));
+    replanAoVivo();
   };
 
   /** Agenda o próximo passo do relógio (pausa quando uma decisão está aberta). */
@@ -707,20 +689,34 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   };
   const tickRef = useRef<() => void>(() => {});
 
-  const processEvent = (e: MatchPlanEvent, idx: number) => {
-    const base = e.kind.replace(/_(home|away)$/, '');
-    // Tally por jogador (nota): gol/chute do autor; defesa creditada ao GK adversário.
-    if (base === 'goal') { tally(e.actor_id, e.actor_side, 'goals'); tally(e.actor_id, e.actor_side, 'shots'); }
-    else if (base === 'shot' || base === 'chance' || base === 'woodwork') tally(e.actor_id, e.actor_side, 'shots');
-    if (e.kind === 'goal_home') {
+  /**
+   * UMA VERDADE SÓ: a ÚNICA função que soma gol no placar desta tela. Só é
+   * chamada depois que `golDoLance` (a mesma função da custódia) disse que o
+   * gol deste lance acontece — pela escolha do manager ou pelo que o motor
+   * decidiu. `feedId` null = quem chamou já escreveu no feed.
+   */
+  const marcarGol = (side: 'home' | 'away', autorId: string | undefined, minute: number, feedId: string | null, text: string) => {
+    if (side === 'home') {
       scoreRef.current.home += 1;
       setHomeScore((v) => v + 1);
-      pushFeed({ id: `g-${idx}`, minute: e.minute, kind: 'goal_home', text: e.text, side: 'home', actorId: e.actor_id });
-    } else if (e.kind === 'goal_away') {
+    } else {
       scoreRef.current.away += 1;
       setAwayScore((v) => v + 1);
       if (scoreRef.current.away > scoreRef.current.home) wasLosingRef.current = true;
-      pushFeed({ id: `g-${idx}`, minute: e.minute, kind: 'goal_away', text: e.text, side: 'away', actorId: e.actor_id });
+    }
+    tally(autorId, side, 'goals');
+    tally(autorId, side, 'shots');
+    if (feedId) pushFeed({ id: feedId, minute, kind: side === 'home' ? 'goal_home' : 'goal_away', text, side, actorId: autorId });
+  };
+
+  const processEvent = (e: MatchPlanEvent, idx: number) => {
+    const base = e.kind.replace(/_(home|away)$/, '');
+    // Tally por jogador (nota): chute do autor (o gol tabula em `marcarGol`).
+    if (base === 'shot' || base === 'chance' || base === 'woodwork') tally(e.actor_id, e.actor_side, 'shots');
+    if (base === 'goal') {
+      // Gol SEM momento decisivo (plano de antes da Fase 0): vale o que o motor decidiu.
+      const lance = lanceDe(e);
+      if (lance && golDoLance(lance, escolhasRef.current)) marcarGol(e.actor_side, e.actor_id, e.minute, `g-${idx}`, e.text);
     } else if (e.kind === 'yellow_home') {
       cardsRef.current.cardsHome += 1;
       pushFeed({ id: `y-${idx}`, minute: e.minute, kind: 'yellow', text: e.text, side: 'home', actorId: e.actor_id });
@@ -738,11 +734,6 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     } else if (base === 'save' || base === 'chance' || base === 'woodwork' || base === 'counter') {
       // Momentos dramáticos de construção entram no feed (contam a história).
       pushFeed({ id: `m-${idx}`, minute: e.minute, kind: base as 'save' | 'chance' | 'woodwork' | 'counter', text: e.text, side: e.actor_side, actorId: e.actor_id });
-    }
-    // FEEDBACK DO NARRADOR: quando o lance é fruto de uma decisão sua, o Analista
-    // comenta a consequência (fecha o loop decisão → efeito).
-    if (e.decision_influenced && e.reason) {
-      pushFeed({ id: `nf-${idx}`, minute: e.minute, kind: 'insight', text: L(`Analista — ${e.reason}.`, `Analyst — ${e.reason}.`) });
     }
     // buildup/corner/shot ficam só no palco principal (ritmo, sem poluir o feed)
   };
@@ -802,6 +793,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
           : undefined,
         styleLog: [...styleLogRef.current],
         lateHeroIds,
+        escolhas: { decisivos: { ...escolhasRef.current.decisivos }, penaltis: { ...escolhasRef.current.penaltis } },
       });
     };
     completeMatchRef.current = emitComplete;
@@ -830,6 +822,8 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       ...cardsRef.current,
       subsUsed: subsUsedRef.current,
       auxiliar: leituraDoIntervalo(eventsRef.current.slice(0, eventIdxRef.current), { casa: scoreRef.current.home, fora: scoreRef.current.away }),
+      comandos: [...comandosRef.current],
+      escolhas: { decisivos: { ...escolhasRef.current.decisivos }, penaltis: { ...escolhasRef.current.penaltis } },
     };
     pushFeed({
       id: 'ht',
@@ -839,14 +833,14 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     });
     try {
       const h2 = await onSecondHalf?.(ctx);
-      if (h2 && Array.isArray(h2.events)) {
+      // UMA VERDADE SÓ: o 2º tempo emenda exatamente no 46' (a mesma regra da custódia).
+      const emenda = h2 && Array.isArray(h2.events) ? emendarEventos(eventsRef.current, eventIdxRef.current, minuteRef.current, h2) : null;
+      if (h2 && emenda) {
         replannedRef.current = true;
-        const played = eventsRef.current.slice(0, eventIdxRef.current); // já exibidos
-        eventsRef.current = [...played, ...h2.events];
-        eventIdxRef.current = played.length; // aponta pro 1º evento do 2º tempo
-        beatsQueueRef.current = (h2.analyst_beats ?? []).filter((b) => b.minute > 45);
-        momentumRef.current = [...momentumRef.current.slice(0, 45), ...h2.momentum_curve];
-        emendarFluxo(h2, 46);
+        eventsRef.current = emenda.events;
+        beatsQueueRef.current = (h2.analyst_beats ?? []).filter((b) => b.minute >= emenda.inicio);
+        momentumRef.current = [...momentumRef.current.slice(0, emenda.inicio - 1), ...h2.momentum_curve];
+        emendarFluxo(h2, emenda.inicio);
       }
     } catch {
       // Replan falhou: segue o 2º tempo baseline do plano original
@@ -901,9 +895,10 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     processSignalEvent(next, idx);
   };
 
-  /** REAÇÃO À CHAMADA: 3 opções (neg/neutro/pos). A certa (positiva) dá buff ao
-   *  lance iminente + janela (~10s); a errada (negativa) PUNE; neutra não mexe.
-   *  Crítico ×2/×3 vale nos dois sentidos. Não escolher = neutro (sem punição). */
+  /** REAÇÃO À CHAMADA: 3 opções (neg/neutro/pos). UMA VERDADE SÓ: a reação não
+   *  vira gol aqui — a certa (positiva) entra como decisão a favor e a errada
+   *  (negativa) contra, com o canal do lance, e o motor aplica no replan a
+   *  partir de 3 minutos depois. Não escolher = neutro (sem efeito). */
   const reactToLeadIn = (choice: ReactionChoice) => {
     const pend = leadInPendingRef.current;
     const lead = leadIn;
@@ -916,38 +911,28 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     const effect = choice.effect;
 
     if (effect !== 'neutral') {
-      const crit = rollDecisionCrit(plan.seed, `reac-${ev.minute}-${ev.kind}`);
-      const pct = EFFECT_BUFF_PCT[effect] * crit.mult; // +2.5%/−2.5% × crit
-      const decisionChoice = {
-        id: `reac-${ev.minute}-${ev.kind}-${effect}`,
+      const pct = EFFECT_BUFF_PCT[effect]; // +2.5% / −2.5%
+      reacoesRef.current.push({
+        beat_id: `reac-${ev.minute}-${ev.kind}`,
+        choice_id: `reac-${ev.minute}-${ev.kind}-${effect}`,
+        minute: ev.minute,
+        half: ev.minute <= 45 ? 1 : 2,
         label: choice.label,
         channel: ev.channel ?? 'ataque_central',
-        target_side: (attack ? 'home' : 'away') as 'home' | 'away',
-        weight: buffPctToWeight(EFFECT_BUFF_PCT[effect]) * crit.mult, // sinal embutido
-        effect,
-      };
-      eventsRef.current = applyDecisionToRemainingEvents({
-        events: eventsRef.current,
-        fromIndex: idx, // inclui o lance iminente
-        atMinute: ev.minute,
-        half: ev.minute <= 45 ? 1 : 2,
-        choice: decisionChoice,
-        seed: plan.seed,
-        windowMinutes: BUFF_WINDOW_MINUTES,
-      }).events;
+        target_side: attack ? 'home' : 'away',
+        weight: buffPctToWeight(pct), // sinal embutido
+      });
       const side = attack ? L('ATAQUE', 'ATTACK') : L('DEFESA', 'DEFENCE');
       const positive = effect === 'positive';
       const fxKey = (fxSeqRef.current += 1);
       setFloatFx({
         key: fxKey,
-        text: crit.isCrit
-          ? L(`⚡ ${positive ? 'ACERTO' : 'ERRO'} CRÍTICO ×${crit.mult} · ${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`, `⚡ CRITICAL ${positive ? 'HIT' : 'MISS'} ×${crit.mult} · ${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`)
-          : `${positive ? L('ACERTO!', 'NAILED IT!') : L('ERROU!', 'MISSED!')} ${pct > 0 ? '+' : ''}${pct.toFixed(1)}% ${side}`,
-        tier: crit.isCrit ? 'crit' : positive ? 'pos' : 'neg',
+        text: `${positive ? L('ACERTO!', 'NAILED IT!') : L('ERROU!', 'MISSED!')} ${pct > 0 ? '+' : ''}${pct.toFixed(1)}% ${side}`,
+        tier: positive ? 'pos' : 'neg',
       });
       window.setTimeout(() => setFloatFx((f) => (f && f.key === fxKey ? null : f)), 1500);
-      setActiveBuff({ pct, tier: crit.isCrit ? 'crit' : positive ? 'pos' : 'neg', untilMinute: ev.minute + BUFF_WINDOW_MINUTES });
       pushFeed({ id: `reac-${ev.minute}`, minute: ev.minute, kind: 'decision', text: `${positive ? L('Leu bem', 'Good read') : L('Leu errado', 'Wrong read')}: ${choice.label}` });
+      replanAoVivo();
     } else {
       const fxKey = (fxSeqRef.current += 1);
       setFloatFx({ key: fxKey, text: L('Plano mantido', 'Plan kept'), tier: 'neutral' });
@@ -957,7 +942,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
 
     setLeadIn(null);
     setLeadInReactable(false);
-    processSignalEvent(eventsRef.current[idx] ?? ev, idx);
+    processSignalEvent(ev, idx);
   };
 
   /** Processa UM evento que caiu no minuto atual. Decisões pausam; lances
@@ -967,16 +952,15 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       pushFeed({ id: `pen-${idx}`, minute: next.minute, kind: 'penalty', text: L('Pênalti pra gente!', 'Penalty to us!'), side: 'home' });
       setPenalty({ idx, minute: next.minute });
       // LEGACY: o campo mostra a falta na área e os times se posicionando; o batedor sai no trilho.
-      if (pedirReplan) setHighlight(next);
+      if (modoCampo) setHighlight(next);
       setPhase('penalty');
       return;
     }
     if (next.kind === 'penalty_away') {
-      const rng = new SpiritRng(hashSeed(`${plan.seed}:penA:${next.minute}`));
-      if (rng.next() < 0.74) {
-        scoreRef.current.away += 1;
-        setAwayScore((v) => v + 1);
-        if (scoreRef.current.away > scoreRef.current.home) wasLosingRef.current = true;
+      // UMA VERDADE SÓ: a cobrança deles já veio decidida do motor (`penalti.gol`).
+      const lance = lanceDe(next);
+      if (lance && golDoLance(lance, escolhasRef.current)) {
+        marcarGol('away', next.actor_id, next.minute, `pen-${idx}`, L('Pênalti convertido pelo adversário. Dói, mas segue.', 'Penalty converted by the opponent. It hurts, but we go on.'));
         momentumRef.current = nudgeMomentumCurve(momentumRef.current, next.minute, -15); // gol deles puxa o momento
         setCelebration({ key: `pen-away-${idx}`, name: plan.away_short, portrait: null, narrative: goalLine(next.minute, L('Pênalti convertido pelo adversário. Dói, mas segue.', 'Penalty converted by the opponent. It hurts, but we go on.')), side: 'away' });
         setPhase('celebration');
@@ -985,8 +969,8 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
         pushFeed({ id: `pen-${idx}`, minute: next.minute, kind: 'save', text: L('PEGOU! Pênalti defendido — que paredão!', 'SAVED! Penalty stopped — what a wall!'), side: 'home' });
         // LEGACY: a cobrança defendida aparece no campo (falta, posicionamento, cobrança, defesa).
         const defendido = { ...next, kind: 'save_away' as const };
-        if (pedirReplan) setHighlight(defendido);
-        scheduleNext(Math.max(HOLD_MS.big, pedirReplan ? segurarLance?.(defendido) ?? 0 : 0));
+        if (modoCampo) setHighlight(defendido);
+        scheduleNext(Math.max(HOLD_MS.big, modoCampo ? segurarLance?.(defendido) ?? 0 : 0));
       }
       return;
     }
@@ -1006,17 +990,20 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       return;
     }
     // MOMENTO DECISIVO: gol natural vira escolha de última fração (faz/salva).
-    if ((next.kind === 'goal_home' || next.kind === 'goal_away') && !next.decision_influenced) {
+    // UMA VERDADE SÓ: os desfechos por opção já vêm do motor (`decisivo`).
+    if (next.kind === 'goal_home' || next.kind === 'goal_away') {
       const intent = next.kind === 'goal_home' ? 'attack' : 'defend';
-      const moment = buildClutch({ intent, minute: next.minute, seed: plan.seed, actorName: next.actor_name ?? (intent === 'attack' ? plan.home_short : plan.away_short) });
-      setClutch({ idx, moment, duelo: montarDuelo(moment, next.actor_id, field, awayCards ?? []) });
-      setPhase('clutch');
-      return;
+      const moment = montarDecisivo(next, intent === 'attack' ? plan.home_short : plan.away_short);
+      if (moment) {
+        setClutch({ idx, moment, duelo: dueloDoDecisivo(next, moment) });
+        setPhase('clutch');
+        return;
+      }
     }
 
     processEvent(next, idx);
 
-    // Gol fruto de DECISÃO tática → comemora direto.
+    // Gol sem momento decisivo (plano de antes da Fase 0) → já contado; comemora direto.
     if (next.kind === 'goal_home' || next.kind === 'goal_away') {
       const side = next.actor_side;
       // Gol sacode o momento (a barra reage ao placar).
@@ -1059,7 +1046,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       offeredBeatsRef.current.push(beat);
       // Analista REAL ≤5 palavras: gera o beat com o estado vivo da partida
       // (3 tipos rotativos: @setor cansado / @teu destaque / @time), a escolha
-      // "fazer" favorece o próximo lance via applyDecisionToRemainingEvents.
+      // "fazer" vira peso no motor pelo replan (nunca muda lance no aparelho).
       const liveBeat = buildLiveAnalystBeat({
         beatId: beat.id,
         minute: beat.minute,
@@ -1076,7 +1063,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       setActiveBeat(liveBeat);
       // LEGACY CONTÍNUO (feedback 10/10): a leitura fica no trilho com prazo e o
       // jogo SEGUE — a escolha vale pros lances que ainda não aconteceram.
-      if (pedirReplan) { scheduleNext(relogioMs ?? CLOCK_MS); return; }
+      if (modoCampo) { scheduleNext(relogioMs ?? CLOCK_MS); return; }
       setPhase('beat');
       return;
     }
@@ -1084,63 +1071,24 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     if (m > 0 && ev && ev.minute === m) {
       const idx = eventIdxRef.current;
       eventIdxRef.current = idx + 1;
-      // ESTILO AO VIVO: o estilo certo pro momento CONVERTE (gol/blindagem); o
-      // errado CUSTA (gol perdido / leva gol). Não re-mexe em lances já moldados
-      // por uma decisão (beat/clutch), pra não contar duas vezes.
-      let shown = ev;
-      if (!ev.decision_influenced) {
-        const res = resolveStyleOnEvent({
-          event: ev,
-          chosen: styleRef.current,
-          state: {
-            scoreDiff: scoreRef.current.home - scoreRef.current.away,
-            minute: m,
-            momentum: momentumRef.current[Math.max(0, Math.min(89, m - 1))] ?? 50,
-          },
-          seed: plan.seed,
-          index: idx,
-        });
-        if (res.flip) {
-          shown = res.event;
-          eventsRef.current = eventsRef.current.map((e, i) => (i === idx ? res.event : e));
-          // FABLE — SELO DE CONSEQUÊNCIA: o flip era invisível; agora o jogo
-          // CONFESSA que a sua escolha causou o lance ("SUA LEITURA") ou o
-          // castigo ("O PREÇO"). Fecha o loop escolha → efeito, ao vivo.
-          const good = res.flip === 'home_goal' || res.flip === 'shield';
-          const fxKey = (fxSeqRef.current += 1);
-          setFloatFx({
-            key: fxKey,
-            text: good ? L(`✓ SUA LEITURA — ${STYLE_LABEL[styleRef.current]}`, `✓ YOUR READ — ${STYLE_LABEL[styleRef.current]}`) : L(`✕ O PREÇO — ${STYLE_LABEL[styleRef.current]}`, `✕ THE PRICE — ${STYLE_LABEL[styleRef.current]}`),
-            tier: good ? 'pos' : 'neg',
-          });
-          window.setTimeout(() => setFloatFx((f) => (f && f.key === fxKey ? null : f)), 1600);
-        }
-      }
-      // LEGACY ATIVO: a lenda puxa o time — chance extra de converter quase-gol.
-      if (legacyActiveRef.current && m <= legacyUntilRef.current && !shown.decision_influenced) {
-        const boosted = resolveLegacyBoost({ event: shown, totalPct: legacyPctRef.current, seed: plan.seed, index: idx, legendName: legacyNameRef.current });
-        if (boosted) {
-          shown = boosted;
-          eventsRef.current = eventsRef.current.map((e, i) => (i === idx ? boosted : e));
-        }
-      }
-      // FORMAÇÃO: a forma do time muda o jogo de verdade (ofensiva = mais gol e
-      // mais risco; defensiva = blinda). Só se o lance ainda não foi moldado.
-      if (!shown.decision_influenced) {
-        const ff = resolveFormationOnEvent({ event: shown, formation: formationRef.current, seed: plan.seed, index: idx });
-        if (ff) {
-          shown = ff;
-          eventsRef.current = eventsRef.current.map((e, i) => (i === idx ? ff : e));
-        }
-      }
-      handleEvent(shown, idx);
+      // UMA VERDADE SÓ: o lance é mostrado como o servidor o emitiu. Nenhum
+      // sorteio local (estilo, lenda, formação) muda o que acontece.
+      handleEvent(ev, idx);
       return;
     }
 
     // 2) Nada mais neste minuto → o relógio anda.
+    // UMA VERDADE SÓ: com um replan pendente, o relógio não passa do minuto
+    // anterior ao início dele — o plano novo emenda exatamente ali, como a
+    // custódia costura. Trava de segurança: depois de 8 s o pedido é abandonado.
+    const pendente = replanPendenteRef.current;
+    if (pendente && m + 1 >= pendente.inicio && !(m === 45 && !htDoneRef.current && onSecondHalf)) {
+      if (Date.now() - pendente.desde < ESPERA_REPLAN_MS) { scheduleNext(120); return; }
+      replanPendenteRef.current = null;
+    }
     // LEGACY (Fase 12): ACRÉSCIMOS no 45' e no 90' — o relógio mostra 45+1, 45+2…
     // (sem lances novos: o plano termina no minuto cheio; é o tempo que o juiz dá).
-    if (pedirReplan && (m === 45 || m === 90) && !(m === 45 && htDoneRef.current)) {
+    if (modoCampo && (m === 45 || m === 90) && !(m === 45 && htDoneRef.current)) {
       const total = acrescimoDe(m === 45 ? 1 : 2);
       if (acrescimoRef.current < total) {
         acrescimoRef.current += 1;
@@ -1167,18 +1115,21 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   };
   tickRef.current = tick;
 
-  /** Resolve o momento decisivo: faz/salva o gol conforme a leitura + feedback. */
+  /** Resolve o momento decisivo: registra a escolha e lê o desfecho que o motor
+   *  já decidiu pra ela (UMA VERDADE SÓ) — e escreve o feedback da leitura. */
   const resolveClutchChoice = (key: ClutchKey) => {
     const c = clutch;
     setClutch(null);
     if (!c) return;
     const ev = eventsRef.current[c.idx];
-    // Fase 9: o duelo pesa de verdade — a vantagem de atributo entra no resultado.
-    const res = resolveClutch(c.moment, key, plan.seed, forcaNoDuelo(c.duelo, key));
+    const lance = ev ? lanceDe(ev) : null;
+    escolhasRef.current.decisivos[String(c.moment.minute)] = key;
+    const gol = !!lance && golDoLance(lance, escolhasRef.current);
+    const res = textoDoDesfecho(c.moment, key, gol);
     // O gol planejado foi "consumido" pelo momento decisivo: neutraliza o evento
     // original pra ele não reaparecer como card de gol ao retomar o jogo.
     eventsRef.current = eventsRef.current.map((e, i) =>
-      i === c.idx ? { ...e, kind: 'narrative', weight_tier: 'minor', text: res.headline, decision_influenced: false } : e,
+      i === c.idx ? { ...e, kind: 'narrative', weight_tier: 'minor', text: res.headline } : e,
     );
     pushFeed({
       id: `clutch-${c.idx}`,
@@ -1189,12 +1140,11 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       actorId: ev?.actor_id,
     });
 
-    const homeScores = c.moment.intent === 'attack' ? res.success : false;
-    const awayScores = c.moment.intent === 'defend' ? !res.success : false;
+    const homeScores = c.moment.intent === 'attack' && gol;
+    const awayScores = c.moment.intent === 'defend' && gol;
 
     if (homeScores || awayScores) {
-      if (homeScores) { scoreRef.current.home += 1; setHomeScore((v) => v + 1); tally(ev?.actor_id, 'home', 'goals'); tally(ev?.actor_id, 'home', 'shots'); }
-      else { scoreRef.current.away += 1; setAwayScore((v) => v + 1); if (scoreRef.current.away > scoreRef.current.home) wasLosingRef.current = true; }
+      marcarGol(homeScores ? 'home' : 'away', ev?.actor_id, c.moment.minute, null, res.headline);
       // O gol SACODE o momento: a barra reage ao placar (o % deixa de parecer ilusório).
       momentumRef.current = nudgeMomentumCurve(momentumRef.current, c.moment.minute, homeScores ? 14 : -14);
       setCelebration({
@@ -1213,24 +1163,26 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   };
 
   // LEGACY: prazo do momento decisivo. Sem resposta, o jogador escolhe sozinho —
-  // pela maior vantagem no duelo (a leitura dele, não a do técnico).
+  // pela maior vantagem no duelo (a leitura dele, não a do técnico). A regra é
+  // a mesma da custódia (`escolhaAutomatica`), então o servidor confere igual.
   const resolverClutchRef = useRef(resolveClutchChoice);
   resolverClutchRef.current = resolveClutchChoice;
   const clutchChave = phase === 'clutch' && clutch ? clutch.idx : null;
   useEffect(() => {
-    if (clutchChave === null || !pedirReplan) return undefined;
+    if (clutchChave === null || !modoCampo) return undefined;
     const t = window.setTimeout(() => {
       const c = clutch;
       if (!c) return;
-      const vantagem = (k: ClutchKey) => { const d = c.duelo?.porOpcao[k]; return d ? d.nosso - d.deles : 0; };
-      const escolha = [...c.moment.options].sort((a, b) => vantagem(b.key) - vantagem(a.key))[0];
+      const d = eventsRef.current[c.idx]?.decisivo;
+      const key = d ? escolhaAutomatica(d) : c.moment.options[0]?.key;
+      const escolha = c.moment.options.find((o) => o.key === key) ?? c.moment.options[0];
       if (!escolha) return;
       pushFeed({ id: `clutch-auto-${c.idx}`, minute: c.moment.minute, kind: 'insight', text: L(`Sem ordem do técnico: ${c.moment.actorName} decidiu sozinho — ${escolha.label}.`, `No call from the bench: ${c.moment.actorName} decided alone — ${escolha.label}.`) });
       resolverClutchRef.current(escolha.key);
     }, PRAZO_DECISIVO_MS);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clutchChave, pedirReplan]);
+  }, [clutchChave, modoCampo]);
 
   const dismissCelebration = () => {
     setCelebration(null);
@@ -1246,13 +1198,15 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     if (outId) onSubstitution?.(outId, inCard.id);
   };
 
-  /** Lesão: o reserva escolhido entra; o jogo segue. */
+  /** Lesão: o reserva escolhido entra; o jogo segue (e o motor refaz o futuro com quem entrou). */
   const resolveInjury = (inCard: SquadCard) => {
     const f = forced;
     setForced(null);
     if (f) {
       pushFeed({ id: `subin-${f.idx}`, minute: f.minute, kind: 'insight', text: L(`Entra ${inCard.name} no lugar de ${f.outName}.`, `${inCard.name} comes on for ${f.outName}.`) });
       swapInField(f.outId, inCard);
+      entradasRef.current[inCard.id] = minuteRef.current;
+      replanAoVivo();
     }
     setPhase('playing');
     scheduleNext(500);
@@ -1266,48 +1220,51 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     setPhase('sub');
   };
 
-  /** Confirma a troca no meio do jogo: mexe no elenco + pesa no resto. */
+  /** Confirma a troca no meio do jogo: mexe no elenco e o motor refaz o futuro com quem entrou. */
   const applyAnytimeSub = (inCard: SquadCard) => {
     const outId = subOut;
     setSubOut(null);
-    if (outId) efetivarTroca(outId, inCard);
+    if (outId) { efetivarTroca(outId, inCard); replanAoVivo(); }
     setPhase('playing');
     scheduleNext(450);
   };
 
-  /** A troca em si (botão da Rápida ou arrastando do banco no LEGACY). */
+  /** A troca em si (botão da Rápida ou arrastando do banco no LEGACY). UMA
+   *  VERDADE SÓ: o efeito no jogo é o replan com a escalação nova — nada é
+   *  sorteado aqui (o antigo "empurrão da troca" saiu). */
   const efetivarTroca = (outId: string, inCard: SquadCard) => {
-    {
-      const outCard = field.find((p) => p.id === outId);
-      pushFeed({ id: `sub-${minute}-${outId}`, minute, kind: 'insight', text: L(`Substituição: entra ${inCard.name}${outCard ? `, sai ${outCard.name}` : ''}.`, `Substitution: ${inCard.name} on${outCard ? `, ${outCard.name} off` : ''}.`) });
-      swapInField(outId, inCard);
-      bumpSubs(1); // conta no teto de 5
-      // Efeito real no resto do jogo (sem replan): OVR + pernas frescas + encaixe.
-      // posMatch=false (ex.: atacante no gol) já entra como "não encaixou" no
-      // applySubNudge — o peso do fora-de-posição é embutido aqui.
-      const delta = inCard.ovr - (outCard?.ovr ?? inCard.ovr);
-      eventsRef.current = applySubNudge({
-        events: eventsRef.current, fromIndex: eventIdxRef.current, ovrDelta: delta, seed: plan.seed, outId,
-        freshnessDelta: (outCard?.fatigue ?? 0) - inCard.fatigue,
-        posMatch: outCard?.pos === inCard.pos,
-      });
-      entradasRef.current[inCard.id] = minuteRef.current;
-    }
+    const outCard = field.find((p) => p.id === outId);
+    pushFeed({ id: `sub-${minute}-${outId}`, minute, kind: 'insight', text: L(`Substituição: entra ${inCard.name}${outCard ? `, sai ${outCard.name}` : ''}.`, `Substitution: ${inCard.name} on${outCard ? `, ${outCard.name} off` : ''}.`) });
+    swapInField(outId, inCard);
+    bumpSubs(1); // conta no teto de 5
+    entradasRef.current[inCard.id] = minuteRef.current;
   };
 
-  /** Vermelho: segue com 10 — aplica o peso do desfalque no resto do jogo. */
+  /** Vermelho: segue com 10. O motor já joga o resto do plano com um a menos
+   *  (força e momento) — o aparelho não aplica castigo nenhum por cima. */
   const resolveRedCard = () => {
     const f = forced;
     setForced(null);
-    if (f) {
-      eventsRef.current = applyManDownPenalty({ events: eventsRef.current, fromIndex: f.idx + 1, seed: plan.seed });
-      pushFeed({ id: `red10-${f.idx}`, minute: f.minute, kind: 'insight', text: L('Analista — com um a menos, vai ser na raça.', 'Analyst — a man down, it\'s all heart now.') });
-    }
+    if (f) pushFeed({ id: `red10-${f.idx}`, minute: f.minute, kind: 'insight', text: L('Analista — com um a menos, vai ser na raça.', 'Analyst — a man down, it\'s all heart now.') });
     setPhase('playing');
     scheduleNext(500);
   };
 
-  /** Resolve o pênalti da casa com o batedor escolhido (determinístico). */
+  /** Batedores possíveis AGORA: quem está em campo e tem desfecho na tabela do
+   *  motor (`penalti.por_batedor` — 11 + banco), os 4 de mais finalização. */
+  const batedores = useMemo<PenaltyTaker[]>(() => {
+    const ev = penalty ? eventsRef.current[penalty.idx] : undefined;
+    const tabela = ev?.penalti?.por_batedor;
+    return field
+      .filter((c) => !tabela || c.id in tabela)
+      .map((c) => ({ id: c.id, name: c.name, finalizacao: Math.round(c.attrs?.finalizacao ?? c.ovr), portrait: c.portrait }))
+      .sort((a, b) => b.finalizacao - a.finalizacao)
+      .slice(0, 4);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [penalty, field]);
+
+  /** Resolve o pênalti da casa com o batedor escolhido: o desfecho DESTE batedor
+   *  já veio do motor (`penalti.por_batedor`) — UMA VERDADE SÓ. */
   const takePenalty = (taker: PenaltyTaker) => {
     const pen = penalty;
     setPenalty(null);
@@ -1319,15 +1276,11 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       cadeia: { inicio: { x: 94, z: 34 }, acoes: [{ t: 'cobranca' as const, de: taker.id, para: null, x: 104.5, z: 34 }], finalizacao: 'cobranca' as const },
     } : null;
     if (cobrancaDoBatedor) eventsRef.current = eventsRef.current.map((e, i) => (i === pen.idx ? cobrancaDoBatedor : e));
-    const rng = new SpiritRng(hashSeed(`${plan.seed}:penH:${pen.minute}:${taker.id}`));
-    // Chance de gol cresce com a finalização do batedor (0.55–0.92).
-    const goalProb = Math.max(0.5, Math.min(0.92, 0.55 + (taker.finalizacao - 50) / 100 * 0.5));
-    const scored = rng.next() < goalProb;
+    escolhasRef.current.penaltis[String(pen.minute)] = taker.id;
+    const lance = evPen ? lanceDe(evPen) : null;
+    const scored = !!lance && golDoLance(lance, escolhasRef.current);
     if (scored) {
-      scoreRef.current.home += 1;
-      setHomeScore((v) => v + 1);
-      tally(taker.id, 'home', 'goals');
-      tally(taker.id, 'home', 'shots');
+      marcarGol('home', taker.id, pen.minute, null, L(`Pênalti! ${taker.name} bate com categoria e marca!`, `Penalty! ${taker.name} strikes with class and scores!`));
       momentumRef.current = nudgeMomentumCurve(momentumRef.current, pen.minute, 15); // pênalti convertido empurra o momento
       setCelebration({
         key: `pen-${pen.idx}`,
@@ -1343,7 +1296,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       pushFeed({ id: `penm-${pen.idx}`, minute: pen.minute, kind: 'chance', text: L(`${taker.name} bateu o pênalti e o goleiro pegou! Que azar.`, `${taker.name} took the penalty and the keeper saved it! Unlucky.`), side: 'home', actorId: taker.id });
       setPhase('playing');
       // LEGACY: o goleiro pegando aparece no campo antes do jogo seguir.
-      if (pedirReplan && cobrancaDoBatedor) {
+      if (modoCampo && cobrancaDoBatedor) {
         const defesa = { ...cobrancaDoBatedor, kind: 'save_home' as const };
         setHighlight(defesa);
         scheduleNext(Math.max(900, segurarLance?.(defesa) ?? 0));
@@ -1356,14 +1309,14 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   takePenaltyRef.current = takePenalty;
   const penChave = phase === 'penalty' && penalty ? penalty.idx : null;
   useEffect(() => {
-    if (penChave === null || !pedirReplan || !penaltyTakers?.length) return undefined;
+    if (penChave === null || !modoCampo || !batedores.length) return undefined;
     const t = window.setTimeout(() => {
-      const melhor = [...penaltyTakers].sort((a, b) => b.finalizacao - a.finalizacao)[0];
+      const melhor = batedores[0];
       if (melhor) takePenaltyRef.current(melhor);
     }, PRAZO_DECISIVO_MS);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [penChave, pedirReplan]);
+  }, [penChave, modoCampo]);
 
   // Inicia o relógio corrido no mount; limpa o timer ao desmontar.
   useEffect(() => {
@@ -1378,50 +1331,26 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       legacyActiveRef.current = false;
       setLegacyActive(false);
     }
-    // Encerra o buff de decisão quando a janela (~10s) expira.
-    setActiveBuff((b) => (b && minute > b.untilMinute ? null : b));
   }, [minute]);
 
   const handleBeatChoice = (choice: AnalystBeatChoice | null) => {
     const beat = activeBeat;
     if (beat && choice) {
       const effect = choice.effect ?? (choice.weight > 0 ? 'positive' : choice.weight < 0 ? 'negative' : 'neutral');
-      // CRÍTICO: 5% de chance → multiplica o buff por 2× ou 3× (determinístico).
-      const crit = rollDecisionCrit(plan.seed, beat.id);
-      const effectivePct = EFFECT_BUFF_PCT[effect] * crit.mult; // ex.: +2.5% × 2 = +5%
-      const buffedChoice = { ...choice, weight: choice.weight * crit.mult };
-      ledgerRef.current.push(toDecisionRecord(beat, buffedChoice));
-      const res = applyDecisionToRemainingEvents({
-        events: eventsRef.current,
-        fromIndex: eventIdxRef.current, // afeta os eventos ainda não exibidos
-        beat,
-        choice: buffedChoice,
-        seed: plan.seed,
-        windowMinutes: BUFF_WINDOW_MINUTES, // buff dura ~10s (janela de minutos)
-      });
-      eventsRef.current = res.events;
+      const pct = EFFECT_BUFF_PCT[effect];
+      ledgerRef.current.push(toDecisionRecord(beat, choice));
       pushFeed({ id: `d-${beat.id}`, minute: beat.minute, kind: 'decision', text: L(`Você: ${choice.label}`, `You: ${choice.label}`) });
 
-      // FX flutuante do impacto (sobe da barra de momento e some) + chip de buff ativo.
+      // FX flutuante do impacto (sobe da barra de momento e some).
       const side = choice.target_side === 'away' ? L('DEFESA', 'DEFENCE') : L('ATAQUE', 'ATTACK');
-      const sign = effectivePct > 0 ? '+' : '';
-      const fxTier: 'pos' | 'neg' | 'neutral' | 'crit' =
-        crit.isCrit ? 'crit' : effect === 'positive' ? 'pos' : effect === 'negative' ? 'neg' : 'neutral';
-      const fxText = effect === 'neutral'
-        ? L('Plano mantido', 'Plan kept')
-        : crit.isCrit
-          ? `⚡ ${L('CRÍTICO', 'CRITICAL')} ×${crit.mult} · ${sign}${effectivePct.toFixed(1)}% ${side}`
-          : `${sign}${effectivePct.toFixed(1)}% ${side}`;
+      const sign = pct > 0 ? '+' : '';
+      const fxTier: 'pos' | 'neg' | 'neutral' | 'crit' = effect === 'positive' ? 'pos' : effect === 'negative' ? 'neg' : 'neutral';
+      const fxText = effect === 'neutral' ? L('Plano mantido', 'Plan kept') : `${sign}${pct.toFixed(1)}% ${side}`;
       const key = (fxSeqRef.current += 1);
       setFloatFx({ key, text: fxText, tier: fxTier });
       window.setTimeout(() => setFloatFx((f) => (f && f.key === key ? null : f)), 1500);
-      if (effect !== 'neutral') {
-        setActiveBuff({
-          pct: effectivePct,
-          tier: crit.isCrit ? 'crit' : effect === 'positive' ? 'pos' : 'neg',
-          untilMinute: beat.minute + BUFF_WINDOW_MINUTES,
-        });
-      }
+      // UMA VERDADE SÓ: a leitura vira peso no motor pelo replan (minuto+3); nada muda aqui.
+      if (effect !== 'neutral') replanAoVivo();
     }
     setActiveBeat(null);
     // Só quem PAROU o relógio (Rápida) retoma ele; no LEGACY contínuo o jogo nunca parou.
@@ -1433,51 +1362,81 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   // LEGACY contínuo: a leitura some sozinha no fim do prazo (sem escolha = plano mantido).
   const beatAbertoId = activeBeat && phase !== 'beat' ? activeBeat.id : null;
   useEffect(() => {
-    if (!beatAbertoId || !pedirReplan) return undefined;
+    if (!beatAbertoId || !modoCampo) return undefined;
     const ms = (activeBeat?.window_ms ?? 8000) + 4000;
     const t = window.setTimeout(() => setActiveBeat((b) => (b && b.id === beatAbertoId ? null : b)), ms);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [beatAbertoId, pedirReplan]);
+  }, [beatAbertoId, modoCampo]);
 
-  // LEGACY (Fase 4b) — gritos e ordens do manager no campo.
+  // Gritos, ordens, estilo e lenda — os comandos do manager que o motor aplica.
   const [gritoAtivo, setGritoAtivo] = useState<{ tipo: string; ate: number } | null>(null);
   const gritoLivreEmRef = useRef(0);
   const [ordens, setOrdens] = useState<Record<string, string>>({});
-  /** LEGACY (Fase 4c): minuto em que cada reserva entrou (o servidor não cobra fôlego de quem estava no banco). */
+  /** Todos os comandos dados até aqui, com o minuto: vão inteiros em cada replan (o motor valida). */
+  const comandosRef = useRef<ComandoAoVivo[]>([]);
+  /** Reações às chamadas: decisões a favor/contra que vão ao motor junto com o ledger (sem contar na Leitura). */
+  const reacoesRef = useRef<BeatDecisionRecord[]>([]);
+  /** Minuto em que cada reserva entrou (o servidor não cobra fôlego de quem estava no banco). */
   const entradasRef = useRef<Record<string, number>>({});
   const [pausado, setPausado] = useState(false);
-  /** Emenda o futuro de um replan de comando: o que já passou (e o que falta até
-   *  o minuto inicial dele) fica; daí em diante vale o plano novo. */
-  const replanSeqRef = useRef(0);
+  /** UMA VERDADE SÓ — o replan pendente: o relógio não passa de `inicio − 1` até ele chegar. */
+  const replanPendenteRef = useRef<{ inicio: number; desde: number } | null>(null);
+  const replanEmVooRef = useRef(false);
+  /** Comando dado com um replan em voo: refaz assim que o atual pousar. */
+  const replanSujoRef = useRef(false);
+  const ultimoInicioRef = useRef(0);
+  /** Emenda o futuro de um replan: exatamente no `start_minute` dele (o relógio
+   *  esperou ali). O que já passou e o que falta até lá ficam do plano antigo. */
   const emendarReplan = (novo: MatchPlan) => {
-    // Replan do 1º tempo que chegou depois do intervalo: o do intervalo já manda.
-    if ((novo.start_minute ?? 0) <= 45 && minuteRef.current >= 45) return;
-    const inicio = Math.max(novo.start_minute ?? 0, minuteRef.current + 1);
-    const jaVistos = eventsRef.current.slice(0, eventIdxRef.current);
-    const ateInicio = eventsRef.current.slice(eventIdxRef.current).filter((e) => e.minute < inicio);
-    eventsRef.current = [...jaVistos, ...ateInicio, ...novo.events.filter((e) => e.minute >= inicio)];
-    eventIdxRef.current = jaVistos.length;
+    const emenda = emendarEventos(eventsRef.current, eventIdxRef.current, minuteRef.current, novo);
+    if (!emenda) return; // chegou tarde (o pedido já tinha sido abandonado): o plano na tela segue
+    eventsRef.current = emenda.events;
+    const inicio = emenda.inicio;
     beatsQueueRef.current = [
       ...beatsQueueRef.current.filter((b) => b.minute < inicio),
       ...(novo.analyst_beats ?? []).filter((b) => b.minute >= inicio),
     ];
-    const ini = novo.start_minute ?? inicio;
-    momentumRef.current = [...momentumRef.current.slice(0, ini - 1), ...novo.momentum_curve];
+    momentumRef.current = [...momentumRef.current.slice(0, inicio - 1), ...novo.momentum_curve];
     emendarFluxo(novo, inicio);
+    replannedRef.current = true;
   };
-  const replanAoVivo = (cmd: ComandoSemMinuto | null) => {
+  /**
+   * Pede ao servidor que refaça o futuro com TUDO que o manager fez até agora
+   * (ledger, reações, comandos, escalação, escolhas). Começa em minuto+3 (ou
+   * um minuto depois do último replan — o servidor exige ordem crescente). No
+   * 1º tempo nenhum replan começa depois do 45': o do intervalo leva tudo.
+   * Um pedido por vez; comando durante o voo refaz quando o atual pousa.
+   */
+  const replanAoVivo = () => {
     if (!pedirReplan) return;
+    if (replanEmVooRef.current) { replanSujoRef.current = true; return; }
     const m = minuteRef.current;
+    const inicio = Math.max(m + 3, ultimoInicioRef.current + 1);
+    if ((m <= 45 && inicio > 45) || inicio > 90) return;
+    // O estado no COMEÇO do plano novo (os lances entre agora e lá ainda vão
+    // acontecer, do plano antigo) — a mesma conta que o servidor faz da custódia.
+    const est = estadoAte(eventsRef.current, escolhasRef.current, inicio);
     const ctx: ContextoDoReplan = {
-      ledger: [...ledgerRef.current], homeScore: scoreRef.current.home, awayScore: scoreRef.current.away,
-      momentumEnd: momentumRef.current[Math.max(0, m - 1)] ?? 50, ...cardsRef.current, subsUsed: subsUsedRef.current,
-      minuto: m, entradas: { ...entradasRef.current },
+      ledger: [...ledgerRef.current, ...reacoesRef.current], homeScore: est.home_score, awayScore: est.away_score,
+      momentumEnd: momentumRef.current[Math.max(0, m - 1)] ?? 50,
+      cardsHome: est.cards_home, cardsAway: est.cards_away, sentOffHome: est.sent_off_home, sentOffAway: est.sent_off_away,
+      subsUsed: subsUsedRef.current,
+      comandos: [...comandosRef.current],
+      escolhas: { decisivos: { ...escolhasRef.current.decisivos }, penaltis: { ...escolhasRef.current.penaltis } },
+      minuto: m, inicio, entradas: { ...entradasRef.current },
     };
-    const seq = ++replanSeqRef.current; // só vale a resposta do comando mais recente
-    void pedirReplan(cmd, ctx)
-      .then((novo) => { if (novo && Array.isArray(novo.events) && seq === replanSeqRef.current) emendarReplan(novo); })
-      .catch(() => undefined);
+    replanEmVooRef.current = true;
+    ultimoInicioRef.current = inicio;
+    replanPendenteRef.current = { inicio, desde: Date.now() };
+    void pedirReplan(ctx)
+      .then((novo) => { if (novo && Array.isArray(novo.events) && replanPendenteRef.current?.inicio === inicio) emendarReplan(novo); })
+      .catch(() => undefined)
+      .finally(() => {
+        replanEmVooRef.current = false;
+        if (replanPendenteRef.current?.inicio === inicio) replanPendenteRef.current = null;
+        if (replanSujoRef.current) { replanSujoRef.current = false; replanAoVivo(); }
+      });
   };
   /** LEGACY (Fase 4c): substituição arrastada do banco — sem sair do campo, sem pausar. */
   const trocarNoCampo = (outId: string, inId: string) => {
@@ -1488,11 +1447,17 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     if (!inCard || !field.some((p) => p.id === outId)) return;
     efetivarTroca(outId, inCard);
     registrarEfeito(L(`a entrada de ${inCard.name}`, `${inCard.name} coming on`));
-    replanAoVivo(null); // a verdade refaz o futuro com quem entrou
+    replanAoVivo(); // a verdade refaz o futuro com quem entrou
   };
   const comandar = (cmd: ComandoSemMinuto) => {
     const m = minuteRef.current;
-    if (cmd.tipo !== 'ordem') {
+    if (cmd.tipo === 'ordem') {
+      setOrdens((o) => ({ ...o, [cmd.jogador]: cmd.ordem }));
+      const nome = [...field, ...benchPool].find((c) => c.id === cmd.jogador)?.name ?? '';
+      const o = { segurar: L('segura a posição', 'holds position'), atacar_espaco: L('ataca o espaço', 'attacks the space'), marcar: L('marca de perto', 'marks tight') }[cmd.ordem];
+      pushFeed({ id: `ordem-${m}-${cmd.jogador}`, minute: m, kind: 'decision', text: L(`🗣️ Ordem: ${nome} ${o}.`, `🗣️ Order: ${nome} ${o}.`) });
+      registrarEfeito(L(`a ordem pra ${nome}`, `the order to ${nome}`));
+    } else if (cmd.tipo === 'incentivar' || cmd.tipo === 'cobrar' || cmd.tipo === 'acalmar') {
       if (m < gritoLivreEmRef.current) return; // recarga (o servidor também confere)
       gritoLivreEmRef.current = m + RECARGA_GRITO_MIN;
       setGritoAtivo({ tipo: cmd.tipo, ate: m + DURACAO_GRITO_MIN });
@@ -1501,14 +1466,10 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
         acalmar: L('acalma o time — "CALMA, TOCA A BOLA!"', 'calms the team — "EASY, KEEP IT!"') }[cmd.tipo];
       pushFeed({ id: `grito-${m}`, minute: m, kind: 'decision', text: L(`📣 O técnico ${frase}`, `📣 The coach ${frase}`) });
       registrarEfeito({ incentivar: L('o grito "Incentivar"', 'the "Fire up" shout'), cobrar: L('o grito "Cobrar"', 'the "Demand" shout'), acalmar: L('o grito "Acalmar"', 'the "Calm down" shout') }[cmd.tipo]);
-    } else {
-      setOrdens((o) => ({ ...o, [cmd.jogador]: cmd.ordem }));
-      const nome = [...field, ...benchPool].find((c) => c.id === cmd.jogador)?.name ?? '';
-      const o = { segurar: L('segura a posição', 'holds position'), atacar_espaco: L('ataca o espaço', 'attacks the space'), marcar: L('marca de perto', 'marks tight') }[cmd.ordem];
-      pushFeed({ id: `ordem-${m}-${cmd.jogador}`, minute: m, kind: 'decision', text: L(`🗣️ Ordem: ${nome} ${o}.`, `🗣️ Order: ${nome} ${o}.`) });
-      registrarEfeito(L(`a ordem pra ${nome}`, `the order to ${nome}`));
     }
-    replanAoVivo(cmd);
+    // estilo e lenda: quem chamou já anunciou no feed.
+    comandosRef.current = [...comandosRef.current, { ...cmd, minuto: Math.max(1, m) } as ComandoAoVivo];
+    replanAoVivo();
   };
   useEffect(() => { if (gritoAtivo && minute >= gritoAtivo.ate) setGritoAtivo(null); }, [minute, gritoAtivo]);
   useEffect(() => {
@@ -1553,11 +1514,11 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     const cadeiaDoGol = eventoDoGol?.cadeia;
     // Decisão em aberto, pros trilhos do campo (Fase 4).
     let decisao: DecisaoNoCampo | null = null;
-    const beatNoTrilho = activeBeat && (phase === 'beat' || (pedirReplan && phase === 'playing'));
+    const beatNoTrilho = activeBeat && (phase === 'beat' || (modoCampo && phase === 'playing'));
     if (beatNoTrilho && activeBeat) {
       decisao = {
         tipo: 'analista', chave: `beat-${activeBeat.id}`, titulo: L('Leitura do Analista', 'Analyst read'),
-        prazoMs: pedirReplan ? (activeBeat.window_ms ?? 8000) + 4000 : undefined,
+        prazoMs: modoCampo ? (activeBeat.window_ms ?? 8000) + 4000 : undefined,
         texto: activeBeat.insight.text, opcoes: activeBeat.choices.map((c) => ({ id: c.id, rotulo: c.label })),
         corredores: { nosso: activeBeat.insight.primary_channel, perigo: activeBeat.insight.threat_channel },
       };
@@ -1571,7 +1532,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
         tipo: 'decisivo', chave: `clutch-${clutch.idx}`,
         titulo: clutch.moment.intent === 'attack' ? L('Momento decisivo', 'Decisive moment') : L('Segura o gol', 'Save it'),
         texto: clutch.moment.context, protagonista: clutch.moment.actorName,
-        prazoMs: pedirReplan ? PRAZO_DECISIVO_MS : undefined,
+        prazoMs: modoCampo ? PRAZO_DECISIVO_MS : undefined,
         opcoes: clutch.moment.options.map((o) => {
           const c = clutch.duelo?.porOpcao[o.key];
           return { id: o.key, rotulo: o.label, detalhe: c ? `${c.rotuloNosso} ${c.nosso} × ${c.deles} ${c.rotuloDeles}` : undefined };
@@ -1583,24 +1544,24 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
         ? { tipo: 'expulsao', chave: `red-${forced.idx}`, titulo: L('Expulso', 'Sent off'), texto: L(`${forced.outName} foi expulso.`, `${forced.outName} was sent off.`), protagonista: forced.outName, opcoes: [{ id: 'ok', rotulo: L('Seguir com 10', 'Play on with 10') }] }
         : { tipo: 'lesao', chave: `inj-${forced.idx}`, titulo: L('Lesão', 'Injury'), texto: L(`${forced.outName} sentiu. Quem entra?`, `${forced.outName} is hurt. Who comes on?`), protagonista: forced.outName,
             opcoes: benchPool.slice(0, 6).map((b) => ({ id: b.id, rotulo: b.name, detalhe: `${b.pos} · ${b.ovr}` })) };
-    } else if (phase === 'penalty' && penalty && pedirReplan && penaltyTakers?.length) {
+    } else if (phase === 'penalty' && penalty && modoCampo && batedores.length) {
       // LEGACY: o batedor sai no trilho; o campo mostra os times posicionados esperando.
       decisao = {
         tipo: 'penalti', chave: `pen-${penalty.idx}`, titulo: L('Pênalti! Quem bate?', 'Penalty! Who takes it?'),
         texto: L('Quanto mais finalização, mais chance de gol.', 'More finishing, better odds.'), prazoMs: PRAZO_DECISIVO_MS,
-        opcoes: penaltyTakers.map((t) => ({ id: t.id, rotulo: t.name, detalhe: `${L('finalização', 'finishing')} ${t.finalizacao}` })),
+        opcoes: batedores.map((t) => ({ id: t.id, rotulo: t.name, detalhe: `${L('finalização', 'finishing')} ${t.finalizacao}` })),
       };
     }
     emitir({
       minuto: minute,
       estilo: style,
       grito: gritoAtivo,
-      gritoLivreEm: pedirReplan ? gritoLivreEmRef.current : undefined,
-      ordens: pedirReplan ? ordens : undefined,
+      gritoLivreEm: modoCampo ? gritoLivreEmRef.current : undefined,
+      ordens: modoCampo ? ordens : undefined,
       emCampo: field.map((c) => c.id),
-      banco: pedirReplan ? benchPool.map((b) => ({ id: b.id, nome: b.name, pos: b.pos, ovr: b.ovr, fadiga: b.fatigue })) : undefined,
-      subsRestantes: pedirReplan ? Math.max(0, MAX_SUBS - subsUsed) : undefined,
-      pausado: pedirReplan ? pausado : undefined,
+      banco: modoCampo ? benchPool.map((b) => ({ id: b.id, nome: b.name, pos: b.pos, ovr: b.ovr, fadiga: b.fatigue })) : undefined,
+      subsRestantes: modoCampo ? Math.max(0, MAX_SUBS - subsUsed) : undefined,
+      pausado: modoCampo ? pausado : undefined,
       decisao,
       fase: phase,
       placarCasa: homeScore,
@@ -1610,10 +1571,10 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       gol: celebration ? { chave: celebration.key, nome: celebration.name, lado: celebration.side, actorId: golDoFeed?.actorId, cadeia: cadeiaDoGol, xg: eventoDoGol?.xg } : null,
       narracao: [...feed].reverse().slice(0, 6).map((f) => ({ id: f.id, minuto: f.minute, texto: f.text })),
       posse: posseDoMinuto(minute),
-      acrescimo: pedirReplan ? acrescimo : undefined,
-      numeros: pedirReplan ? numerosAte(minute) : undefined,
+      acrescimo: modoCampo ? acrescimo : undefined,
+      numeros: modoCampo ? numerosAte(minute) : undefined,
     });
-  }, [minute, phase, homeScore, awayScore, highlight, celebration, feed, style, activeBeat, leadIn, leadInReactable, clutch, forced, benchPool, gritoAtivo, ordens, field, subsUsed, pausado, acrescimo]);
+  }, [minute, phase, homeScore, awayScore, highlight, celebration, feed, style, activeBeat, leadIn, leadInReactable, clutch, forced, benchPool, gritoAtivo, ordens, field, subsUsed, pausado, acrescimo, batedores, modoCampo]);
 
   // PARTIDA VIVA (Fase 4) — respostas vindas do campo caem nas mesmas funções dos botões.
   const responderRef = useRef<(id: string) => void>(() => {});
@@ -1633,7 +1594,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     }
     // LEGACY (Fase 4c): prancheta (pausa) e troca arrastada do banco ('sub:<sai>|<entra>').
     if (id === 'pausar') {
-      if (phase !== 'playing' || !pedirReplan) return;
+      if (phase !== 'playing' || !modoCampo) return;
       pausadoRef.current = true;
       if (timerRef.current != null) window.clearTimeout(timerRef.current);
       setPausado(true);
@@ -1656,10 +1617,10 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       if (nivel in TACTICAL_INTENSITY_PRESETS) changeStyle(nivel);
       return;
     }
-    if (activeBeat && (phase === 'beat' || (pedirReplan && phase === 'playing'))) { const c = activeBeat.choices.find((x) => x.id === id); if (c) handleBeatChoice(c); return; }
+    if (activeBeat && (phase === 'beat' || (modoCampo && phase === 'playing'))) { const c = activeBeat.choices.find((x) => x.id === id); if (c) handleBeatChoice(c); return; }
     if (phase === 'leadin' && leadIn && leadInReactable) { const r = leadIn.reactions[Number(id)]; if (r) reactToLeadIn(r); return; }
     if (phase === 'clutch' && clutch) { const o = clutch.moment.options.find((x) => x.key === id); if (o) resolveClutchChoice(o.key); return; }
-    if (phase === 'penalty' && penalty) { const t = penaltyTakers?.find((x) => x.id === id); if (t) takePenalty(t); return; }
+    if (phase === 'penalty' && penalty) { const t = batedores.find((x) => x.id === id); if (t) takePenalty(t); return; }
     if (phase === 'forced' && forced) {
       if (forced.kind === 'red') { resolveRedCard(); return; }
       const b = benchPool.find((x) => x.id === id);
@@ -1863,16 +1824,6 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
           )}
         </AnimatePresence>
 
-        {/* Chip de BUFF ATIVO (#3): mostra o buff vigente + contagem da janela. */}
-        {activeBuff && (
-          <div
-            className={`absolute -bottom-1 right-5 z-10 inline-flex items-center gap-1 bg-asfalto-27 px-2 py-0.5 font-prova text-[10px] font-bold tabular-nums border-2 ${
-              activeBuff.tier === 'crit' ? 'border-ouro-27 text-ouro-27' : activeBuff.tier === 'pos' ? 'border-alta text-alta' : 'border-baixa text-baixa'
-            }`}
-          >
-            {activeBuff.tier === 'crit' ? '⚡' : '●'} {activeBuff.pct > 0 ? '+' : ''}{activeBuff.pct.toFixed(1)}% · {Math.max(0, activeBuff.untilMinute - currentMinute)}&prime;
-          </div>
-        )}
       </div>
 
       {/* Ponte #3 — ARCO NARRATIVO ao vivo: lê o drama do jogo (virada, domínio,
@@ -2095,9 +2046,9 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
               </p>
               <p className="relative px-4 pb-3 pt-1 font-impact text-[30px] uppercase leading-none">{L('Quem vai bater?', 'Who takes it?')}</p>
               <div className="relative flex flex-col gap-2 px-4 pb-4">
-                {(penaltyTakers && penaltyTakers.length > 0
-                  ? penaltyTakers
-                  : [{ id: 'def', name: eventsRef.current[penalty.idx]?.actor_name ?? L('Capitão', 'Captain'), finalizacao: 75, portrait: null }]
+                {(batedores.length > 0
+                  ? batedores
+                  : [{ id: eventsRef.current[penalty.idx]?.actor_id ?? 'def', name: eventsRef.current[penalty.idx]?.actor_name ?? L('Capitão', 'Captain'), finalizacao: 75, portrait: null }]
                 ).slice(0, 4).map((t) => (
                   <button
                     key={t.id}

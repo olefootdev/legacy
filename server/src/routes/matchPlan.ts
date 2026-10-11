@@ -15,7 +15,8 @@ import { Hono } from 'hono';
 import { rateLimit } from '../lib/rateLimit.js';
 import { donoDaSessao } from '../lib/sessao.js';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
-import { resumirPlano } from '../lib/smartProfile/custodia.js';
+import { estadoNoMinuto, resumirPlano, type ResumoDoPlano } from '../lib/smartProfile/custodia.js';
+import { lerEscolhas, type Escolhas } from '../lib/partida/placar.js';
 import {
   aplicarTracos, conferenciaVazia, conferirEscalacao, conferirFadiga, forcaDaEscalacao, impressaoDaEscalacao,
   type Conferencia, type FichaDoMotor,
@@ -56,6 +57,8 @@ interface QuickPlanTeamInput {
   strength: number;
   intensity?: 'defensive' | 'balanced' | 'offensive';
   lineup: QuickPlanPlayerInput[];
+  /** UMA VERDADE SÓ: o banco da casa (até 12) — o motor decide o pênalti também pra quem entra. Conferido como a escalação. */
+  banco?: QuickPlanPlayerInput[];
   /** DNA da fundação do clube (7 eixos 0–1). Ausente = neutro. Ver `limparDna`. */
   dna?: Record<string, number>;
 }
@@ -148,8 +151,10 @@ interface QuickPlanRequestBody {
   first_half?: QuickPlanFirstHalfInput;
   from_minute?: number;
   estado?: QuickPlanFirstHalfInput;
-  /** LEGACY (Fase 4b): gritos e ordens — validados no Python (`comandos_ao_vivo.py`). */
+  /** Comandos do manager (grito, ordem, estilo, lenda) — validados no Python (`comandos_ao_vivo.py`). */
   comandos?: unknown[];
+  /** UMA VERDADE SÓ: as escolhas feitas até aqui — o servidor deriva o estado do replan delas, não do celular. */
+  escolhas?: unknown;
   decisions?: QuickPlanDecisionInput[];
   /** FABLE — DERBY/CLÁSSICO: Python amplia agressividade dos 2 lados (~×1.12). */
   is_derby?: boolean;
@@ -244,6 +249,11 @@ async function conferirContraAsFichas(dono: string | null, body: QuickPlanReques
       atualizadas.map((f) => [f.player_id, { atributos: f.atributos, ovr: f.ovr, tracos: f.tracos, cerebro: f.cerebro }]),
     );
     body.home_team.lineup = conferirEscalacao(body.home_team.lineup, fichas, conferencia).escalacao;
+    // UMA VERDADE SÓ: o banco também é conferido — a finalização de quem está
+    // no banco decide o pênalti se ele entrar (e inflar reserva seria o atalho).
+    if (Array.isArray(body.home_team.banco) && body.home_team.banco.length) {
+      body.home_team.banco = conferirEscalacao(body.home_team.banco.slice(0, 12), fichas, conferencia).escalacao;
+    }
 
     // FASE 3B — FORÇA DO TIME. `strength` escala a probabilidade de gol no
     // Python: mandar 95 é cheat mais barato que inflar atributo. O servidor
@@ -282,6 +292,9 @@ async function conferirContraAsFichas(dono: string | null, body: QuickPlanReques
     } as const;
     const comTracos = aplicarTracos(body.home_team.lineup, fichas, contexto);
     body.home_team.lineup = comTracos.escalacao;
+    if (Array.isArray(body.home_team.banco) && body.home_team.banco.length) {
+      body.home_team.banco = aplicarTracos(body.home_team.banco, fichas, contexto).escalacao;
+    }
     if (comTracos.aplicados.jogadores > 0) {
       conferencia.tracos = comTracos.aplicados;
       const acionadas = Object.values(comTracos.aplicados.ideias ?? {}).flat();
@@ -351,6 +364,61 @@ async function fadigaConhecida(
   return out;
 }
 
+/** Teto de replans de comando por partida (o inteiro e o do intervalo não contam). */
+const MAX_REPLANS_DE_COMANDO = 32;
+
+/**
+ * UMA VERDADE SÓ — o ESTADO de um replan vem da custódia, não do celular.
+ *
+ * Até 10/10 o celular mandava `estado` (placar, momento, cartões) e o motor
+ * partia dali — qualquer número. Agora o servidor lê a cadeia de planos que
+ * ELE emitiu para esta seed, costura-os (cada um vale do seu minuto inicial)
+ * e recalcula o estado no minuto do replan com as escolhas que o celular
+ * declara (`escolhas`): placar, cartões, expulsos e o momento do plano.
+ *
+ * Também impõe a ORDEM: um replan de comando começa sempre depois do início
+ * do anterior (nunca reescreve um trecho já emitido), há um só replan de
+ * intervalo e um teto por partida. Sem cadeia (visitante, banco fora do ar,
+ * plano emitido antes da Fase 0) vale o estado do celular, registrado como tal.
+ */
+async function estadoDaCustodia(
+  dono: string | null, body: QuickPlanRequestBody,
+): Promise<{ fonte: 'custodia' | 'celular'; escolhas: Escolhas; recusa?: string }> {
+  const escolhas = lerEscolhas(body.escolhas);
+  if (!dono || (body.mode !== 'second_half' && body.mode !== 'from_minute')) return { fonte: 'celular', escolhas };
+  try {
+    const sb = getSupabaseAdmin();
+    if (!sb) return { fonte: 'celular', escolhas };
+    const { data, error } = await sb.from('quick_plans_emitidos')
+      .select('modo, resumo').eq('owner_id', dono).eq('seed', String(body.seed).slice(0, 200)).is('usado_em', null)
+      .order('criado_em', { ascending: true }).limit(64);
+    if (error || !data?.length) return { fonte: 'celular', escolhas };
+    const planos = data.map((d) => d.resumo as ResumoDoPlano).filter((r) => r && Array.isArray(r.lances));
+    if (!planos.some((p) => p.modo === 'full')) return { fonte: 'celular', escolhas };
+
+    const deComando = planos.filter((p) => p.modo === 'from_minute');
+    const ultimoInicio = Math.max(0, ...planos.filter((p) => p.modo !== 'full').map((p) => p.minutoInicial));
+    if (body.mode === 'second_half') {
+      if (planos.some((p) => p.modo === 'second_half')) return { fonte: 'custodia', escolhas, recusa: 'o 2º tempo desta partida já foi planejado' };
+    } else {
+      const inicio = Number(body.from_minute);
+      if (deComando.length >= MAX_REPLANS_DE_COMANDO) return { fonte: 'custodia', escolhas, recusa: 'teto de replans de comando nesta partida' };
+      if (!(inicio > ultimoInicio)) return { fonte: 'custodia', escolhas, recusa: `replan fora de ordem: começa no ${inicio}' e o anterior já começou no ${ultimoInicio}'` };
+    }
+
+    const estado = estadoNoMinuto(planos, escolhas, body.mode, Number(body.from_minute) || 46);
+    const enviado = body.mode === 'second_half' ? body.first_half : body.estado;
+    if (enviado && (enviado.home_score !== estado.home_score || enviado.away_score !== estado.away_score)) {
+      console.warn(`[custodia] estado do replan difere do celular: celular ${enviado.home_score}×${enviado.away_score}, custódia ${estado.home_score}×${estado.away_score} (seed ${String(body.seed).slice(0, 40)})`);
+    }
+    if (body.mode === 'second_half') body.first_half = estado; else body.estado = estado;
+    return { fonte: 'custodia', escolhas };
+  } catch (e) {
+    console.error('[custodia] derivar estado falhou', e instanceof Error ? e.message : e);
+    return { fonte: 'celular', escolhas };
+  }
+}
+
 /**
  * CUSTÓDIA (SMART-PROFILE, Fase 2B): com manager logado, o plano emitido fica
  * registrado em `quick_plans_emitidos` e o id volta ao celular, que o cita no
@@ -360,11 +428,18 @@ async function fadigaConhecida(
  */
 async function guardarCustodia(
   dono: string | null, body: QuickPlanRequestBody, plan: unknown, conferencia: Conferencia,
+  estado: { fonte: 'custodia' | 'celular'; escolhas: Escolhas },
 ): Promise<string | null> {
   try {
     const sb = getSupabaseAdmin();
     if (!dono || !sb) return null;
-    const resumo = { ...resumirPlano(plan, body.home_team.lineup.map((p) => p.id)), conferencia };
+    const resumo = {
+      ...resumirPlano(plan, body.home_team.lineup.map((p) => p.id), {
+        banco: (body.home_team.banco ?? []).map((p) => p.id),
+        ...(body.mode === 'second_half' || body.mode === 'from_minute' ? { escolhasDeclaradas: estado.escolhas, estadoFonte: estado.fonte } : {}),
+      }),
+      conferencia,
+    };
     const { data, error } = await sb.from('quick_plans_emitidos')
       .insert({ owner_id: dono, seed: String(body.seed).slice(0, 200), modo: resumo.modo, resumo })
       .select('id').single();
@@ -461,6 +536,9 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
   body.home_team.dna = dnaCasaBanco ?? limparDna(body.home_team.dna);
   await resolverDnaDoRival(body, dono);
   const conferencia = await conferirContraAsFichas(dono, body);
+  // UMA VERDADE SÓ: o estado do replan vem da cadeia de planos + escolhas (não do celular).
+  const estado = await estadoDaCustodia(dono, body);
+  if (estado.recusa) return c.json({ ok: false, error: estado.recusa }, 409);
 
   const cacheKey = JSON.stringify({
     lg: body.lang,
@@ -471,6 +549,7 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     hs: body.home_team.strength,
     as: body.away_team.strength,
     hl: body.home_team.lineup.map((p) => p.id).join(','),
+    hb: (body.home_team.banco ?? []).map((p) => p.id).join(','),
     al: body.away_team.lineup.map((p) => p.id).join(','),
     m: body.mode ?? 'full',
     // LEGACY (Fase 4b): replan do meio do jogo — minuto, estado e comandos entram na chave.
@@ -493,13 +572,13 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     // ids: ativar a lenda não mudava o plano dentro da janela do cache, e um
     // pedido adulterado deixava o plano dele para o próximo. Ver
     // `impressaoDaEscalacao`.
-    af: impressaoDaEscalacao([body.home_team.lineup, body.away_team.lineup]),
+    af: impressaoDaEscalacao([body.home_team.lineup, body.away_team.lineup, body.home_team.banco ?? []]),
   });
   // PARTIDA VIVA: a classe de cada jogador em campo viaja com o plano (só apresentação).
   const classes = classesDaPartida([body.home_team.lineup, body.away_team.lineup]);
   const cached = simpleCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
-    return c.json({ ok: true, plan: { ...(cached.plan as object), classes }, cached: true, plano_id: await guardarCustodia(dono, body, cached.plan, conferencia) });
+    return c.json({ ok: true, plan: { ...(cached.plan as object), classes }, cached: true, plano_id: await guardarCustodia(dono, body, cached.plan, conferencia, estado) });
   }
 
   const scriptPath = resolveScriptPath();
@@ -511,7 +590,7 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     const stdout = await runPython(scriptPath, JSON.stringify(body));
     const plan = JSON.parse(stdout);
     simpleCache.set(cacheKey, { ts: Date.now(), plan });
-    return c.json({ ok: true, plan: { ...plan, classes }, cached: false, plano_id: await guardarCustodia(dono, body, plan, conferencia) });
+    return c.json({ ok: true, plan: { ...plan, classes }, cached: false, plano_id: await guardarCustodia(dono, body, plan, conferencia, estado) });
   } catch (e) {
     return c.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 502);
   }

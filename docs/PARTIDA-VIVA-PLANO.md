@@ -700,7 +700,77 @@ Pedido do fundador: os passos 1–4 do "mais realista" (o 5, narração jogada a
   bola parada esquecida e escanteio sem cobrador.
 - **Regra nova**: nunca zerar a fila do coreógrafo sem `limparCena()`; nada do jogo
   ambiente mexe na bola com um lance do plano em cena.
-- ⏳ **Próximo (pedido do fundador)**: revisão de TODOS os comandos da lógica do jogo.
+- ✅ **Revisão dos comandos (11/10)**: `docs/raio-x-partida-viva.html` (nota geral 4,8) →
+  proposta do Motor de Posses (`docs/MOTOR-DE-POSSES.md`) e a Fase 0 abaixo.
+
+### Fase 0 — UMA VERDADE SÓ (11/10, sem push: o fundador decide pelos números)
+O placar oficial nascia de sorteios no celular (estilo ~40% de quase-gol virava gol com o
+estilo padrão; lenda, formação, reações, leitura, substituição e expulsão viravam gol
+ou tiravam gol; momento decisivo 82/30 e pênalti resolvidos no aparelho; cartões e
+lesões semeados no aparelho) e a custódia só conferia um teto. Agora:
+- **O motor emite o desfecho de cada escolha** (`server/smartfield/decisivo.py`): todo gol
+  natural traz `decisivo.opcoes[opção] = o gol acontece?` (contexto, melhor opção, duelo
+  nosso × deles — a mesma régua 82/30 ± duelo de antes, agora no servidor); o pênalti da
+  casa traz `penalti.por_batedor` (11 + banco), o do adversário vem decidido (`penalti.gol`)
+  e **o placar do motor passa a contar o pênalti**.
+- **O aparelho só escolhe** (`src/match/placarAoVivo.ts` → `server/src/lib/partida/placar.ts`,
+  o MESMO arquivo da custódia): `golDoLance(lance, escolhas)` é a única porta de gol
+  (`marcarGol` no `QuickPlanPlayer`). Saíram `resolveStyleOnEvent`, `resolveLegacyBoost`,
+  `resolveFormationOnEvent`, `applyManDownPenalty`, `applySubNudge`,
+  `applyDecisionToRemainingEvents`, `resolveClutch`, `sprinkleDisciplineEvents`, crítico ×2/×3
+  e os dois sorteios de pênalti. O expulso não leva castigo extra no aparelho (o motor já
+  joga com 10).
+- **Comando = causa, pelo servidor**: estilo (`{tipo:'estilo'}` → eixos do DNA, persistente),
+  lenda (`{tipo:'lenda'}` → 15', até 3, só id `legacy-…`), formação (papéis novos), leitura
+  do Analista, reação (a favor/contra, com o canal do lance), substituição, lesão, gritos e
+  ordens pedem um replan `from_minute` (minuto+3) — **na Rápida também**, não só no LEGACY.
+  O relógio **espera** o replan e emenda exatamente no início dele (`emendarEventos`, a mesma
+  costura da custódia); 8 s sem resposta → o pedido é abandonado. Um pedido por vez.
+- **Dados por minuto** (`seed|minuto`, os 3 modos): o replan não sorteia o futuro de novo,
+  só os pesos mudam (semente da Prova de Causa).
+- **Custódia exata** (`custodia.ts`): placar, gols e finalizações de cada titular têm de ser
+  EXATAMENTE os recalculados dos planos emitidos + escolhas relatadas (`escolhas` no relato);
+  o estado de cada replan é **derivado da cadeia de planos** no servidor (placar, cartões,
+  expulsos, momento do plano) e o `estado` do celular só vale sem custódia; replans em ordem
+  crescente, um só de intervalo, teto de 32 por partida; o banco é conferido como a escalação.
+- **Portões**: `npm run test:uma-verdade` (varredura de `src/` + 200 partidas com escolhas
+  aleatórias, intervalo e 2 replans de comando: placar e números por jogador do aparelho ==
+  custódia em 200/200; estado derivado == aparelho em 600/600 replans; placar forjado
+  suspeito em 200/200), `test:custodia` (31), `test_cadeia_lances.py` (300, nenhum placar
+  muda com/sem cadeia), `test:partida-viva`, `test:estresse-partida-viva` (achou e corrigiu:
+  reserva que entra no lugar de quem estava posicionado numa bola parada assume a posição —
+  `coreografo.trocar`), `lint`.
+- **Equilíbrio — 1.000 partidas por linha, mesmos confrontos, manager passivo exceto no
+  momento decisivo** (`npm run estudo:fase0`; `scripts/fase0/equilibrio.json`; ANTES = motor
+  e aparelho de `100fd32`, código real congelado em `scripts/fase0/antigo/`):
+
+  | linha | gols casa | gols fora | total | vitória casa | empate | derrota | 0×0 | cartões |
+  |---|---|---|---|---|---|---|---|---|
+  | ANTES · momento decisivo aleatório · 4-4-2 | 2,00 | 0,64 | 2,64 | 74% | 16% | 10% | 7% | 3,26 |
+  | ANTES · aleatório · 4-3-3 | 2,16 | 0,78 | 2,94 | 73% | 15% | 12% | 5% | 3,26 |
+  | ANTES · esperto (sempre a certa) · 4-3-3 | 2,65 | 0,36 | 3,01 | 88% | 8% | 3% | 4% | 3,27 |
+  | ANTES · errado · 4-3-3 | 1,91 | 0,99 | 2,90 | 63% | 20% | 18% | 6% | 3,26 |
+  | DEPOIS · aleatório | 0,88 | 0,66 | 1,54 | 39% | 36% | 26% | 23% | 1,51 |
+  | DEPOIS · esperto | 1,41 | 0,23 | 1,64 | 65% | 29% | 6% | 23% | 1,51 |
+  | DEPOIS · errado | 0,59 | 0,90 | 1,49 | 25% | 34% | 41% | 23% | 1,51 |
+  | DEPOIS · motor cru (sem o filtro do momento decisivo) | 1,70 | 1,30 | 3,00 | 46% | 24% | 30% | 7% | 1,51 |
+  | *variante não aplicada* · bases 0,92/0,60 · aleatório | 1,24 | 0,36 | 1,60 | 57% | 32% | 12% | 22% | 1,51 |
+  | *variante não aplicada* · bases 0,92/0,60 · esperto / errado | 1,54 / 1,08 | 0,13 / 0,53 | — | 70% / 48% | — | 3% / 20% | — | — |
+  | *variante não aplicada* · bases 0,95/0,75 · aleatório | 1,40 | 0,24 | 1,64 | 64% | 28% | 7% | 22% | 1,51 |
+
+  Leitura: a casa fazia ~2,2 gols e ganhava ~73% por sorteios do aparelho; sem eles, o motor
+  cru dá 3,0 gols e 46% de vitória da casa, e o **momento decisivo em todo gol (82/30) corta
+  pela metade** (1,5 gols, 23% de 0×0). Subir as bases devolve a vantagem da casa (o
+  adversário não escolhe: cada acerto nosso é gol sofrido evitado) mas não os gols nem os
+  0×0 — o filtro em todo gol é o problema, não a régua. Os cartões caem de 3,3 pra 1,5 porque
+  o aparelho semeava 2 por jogo. O que mudar — a base do momento decisivo
+  (`OLEFOOT_DECISIVO_CERTA`/`_ERRADA`, variantes em `scripts/fase0/variantes/`), o momento
+  decisivo só em duelo equilibrado (Fase 2 do Motor de Posses) ou nada — é decisão do fundador.
+- **Não feito / fora**: disputa de pênaltis (90' empatado) segue sorteada no aparelho
+  (próximo candidato pra mesma receita: tabela por batedor); cartões e lesões agora são só os
+  do motor (menos cartões; "toda falta vira amarelo" é da Fase 1); replan tarde demais (>8 s)
+  deixa a partida divergir da custódia (sai `suspeita`, sem crédito); a Rápida agora pede
+  replan a cada comando (custo de servidor; rate limit 20/min por IP); nenhuma migration.
 
 ## 10. Regras de ouro
 1. **Uma verdade só.** O placar sai do plano no servidor. O visual nunca decide.

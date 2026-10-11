@@ -23,6 +23,9 @@ npm run test:quick-engaged
 npm run test:quick-clutch
 npm run test:plano          # SMART-PROFILE: plano custodiado no servidor
 npm run test:smart-profile
+npm run test:uma-verdade    # Fase 0: 0 gols no aparelho + 200 partidas placar == custódia
+npm run test:custodia       # custódia exata (placar/gols/finalizações = planos + escolhas)
+npm run estudo:fase0        # equilíbrio antes × depois (1.000 partidas; N=200 pra rápido)
 # (test:spirit-machine, test:awareness e test:analytics já falham na base — 09/10)
 # ... see package.json for full list
 
@@ -47,7 +50,8 @@ python smartfield/smartfield_debug.py --snapshot
 
 | Layer | Location | Role |
 |---|---|---|
-| Quick truth (production) | `server/smartfield/match_simulator.py` via `POST /api/match/quick-plan` | Deterministic per-seed match plan (events, xG, momentum, analyst beats); replayed by `src/match/QuickPlanPlayer.tsx` |
+| Quick truth (production) | `server/smartfield/match_simulator.py` via `POST /api/match/quick-plan` | Deterministic per-seed match plan (events, xG, momentum, analyst beats; dice per minute `seed|minuto`); replayed by `src/match/QuickPlanPlayer.tsx` |
+| **Uma verdade só (Fase 0)** | `server/src/lib/partida/placar.ts` (shared by client and custody) | Every goal is a `decisivo` with outcomes per option, penalties come with outcomes per taker (`decisivo.py`). The client only **chooses**; the score is `golDoLance(lance, escolhas)`; the server recomputes it exactly (`custodia.ts`). Style/formation/analyst/reaction/sub/shout/order/legend only reach the result via `from_minute` replans. |
 | Background truth | `src/engine/runMatchMinute.ts` → `src/gamespirit/GameSpirit.ts` | Minute-by-minute resolution for `auto` (league catch-up, CPU matches) |
 | Engine types | `src/engine/types.ts` | `PitchPlayerState`, `MatchEventEntry`, `MatchMode` |
 | SmartField | `src/smartfield/smartfieldBridge.ts` | Loads Python-generated `smartfield_snapshot.json`; exposes zone anchors, tactical geometry |

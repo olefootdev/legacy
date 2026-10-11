@@ -7,6 +7,7 @@ import { atributosCompletos } from './derivar.js';
 import { evoluirPorPartida, pesosValidos, type LinhaDaPartida, type Resultado } from './evolucao.js';
 import { diferencaDeAtributos } from './ficha.js';
 import type { Atributos, Ficha } from './tipos.js';
+import { lerEscolhas, type Escolhas } from '../partida/placar.js';
 
 export interface RelatoJogador {
   id: string;
@@ -23,8 +24,10 @@ export interface RelatoPartida {
   penaltis: 'home' | 'away' | null;
   leitura: number;
   estilo: unknown;
-  /** Ids dos planos emitidos (1º tempo e, se houve, 2º tempo) — Fase 2B. */
+  /** Ids dos planos emitidos (inteiro, intervalo e cada replan de comando), na ordem de emissão — Fase 2B. */
   planos: string[];
+  /** UMA VERDADE SÓ: as escolhas do manager (momento decisivo por minuto, batedor por minuto). */
+  escolhas: Escolhas;
   jogadores: RelatoJogador[];
 }
 
@@ -59,8 +62,9 @@ export function lerRelato(b: unknown): RelatoPartida | null {
     });
   }
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const planos = Array.isArray(b.planos) ? [...new Set(b.planos.filter((x): x is string => typeof x === 'string' && UUID.test(x)))].slice(0, 2) : [];
-  return { seed, placar: placar as [number, number], penaltis, leitura: Number.isFinite(leitura) ? leitura : 0, estilo: b.estilo, planos, jogadores };
+  // Até 40 planos: o inteiro, o do intervalo e um por comando (estilo, formação, leitura, reação, troca).
+  const planos = Array.isArray(b.planos) ? [...new Set(b.planos.filter((x): x is string => typeof x === 'string' && UUID.test(x)))].slice(0, 40) : [];
+  return { seed, placar: placar as [number, number], penaltis, leitura: Number.isFinite(leitura) ? leitura : 0, estilo: b.estilo, planos, escolhas: lerEscolhas(b.escolhas), jogadores };
 }
 
 /** Mesma regra do celular (computeQuickPlanCredit): empate no tempo normal vai aos pênaltis. */

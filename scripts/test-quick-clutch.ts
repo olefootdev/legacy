@@ -1,16 +1,20 @@
 /**
  * Self-test do momento decisivo (quickClutch) — a alma do Quick Match.
  *
- * Cobre:
- *   1. buildClutch determinístico + opções certas por intenção (ataque/defesa)
- *   2. Acertar o contexto (best) tem MUITO mais sucesso que errar (estatístico)
- *   3. Feedback sempre cita a melhor escolha quando erra
- *   4. Atributo alto do protagonista ajuda na conversão
+ * UMA VERDADE SÓ (Fase 0): o desfecho de cada opção vem do motor
+ * (`event.decisivo`). Aqui se cobre o que o aparelho faz com isso:
+ *   1. montarDecisivo lê o bloco do motor (opções, contexto, melhor, rival)
+ *   2. sem bloco (plano antigo) → null: o gol vale direto
+ *   3. o duelo pra tela usa os números do motor
+ *   4. o texto do desfecho segue o que o motor decidiu (nunca sorteia)
+ *   5. a escolha automática é a mesma regra da custódia
  *
  * Uso: npm run test:quick-clutch
  */
 
-import { buildClutch, resolveClutch, type ClutchKey } from '../src/match/quickClutch';
+import { montarDecisivo, dueloDoDecisivo, textoDoDesfecho } from '../src/match/quickClutch';
+import { escolhaAutomatica, golDoLance, lanceDe } from '../src/match/placarAoVivo';
+import type { MatchPlanEvent } from '../src/match/quickPlanTypes';
 
 let failures = 0;
 function check(label: string, ok: boolean, detail?: string) {
@@ -18,51 +22,64 @@ function check(label: string, ok: boolean, detail?: string) {
   else { failures += 1; console.error(`  ✗ ${label}${detail ? ` — ${detail}` : ''}`); }
 }
 
+const golCasa = (opcoes: Record<string, boolean>): MatchPlanEvent => ({
+  minute: 23, kind: 'goal_home', actor_side: 'home', actor_id: 'h9', actor_name: 'Pedro', weight_tier: 'big', zone: 'att', text: 'gol',
+  decisivo: {
+    intent: 'attack', contexto: 'cara_a_cara', melhor: 'driblar', rival: 'goleiro',
+    duelo: { nosso: { id: 'h9', nome: 'Pedro' }, deles: { id: 'a1', nome: 'Goleiro' }, por_opcao: { chutar: [84, 64], driblar: [70, 64], tocar: [60, 64] } },
+    opcoes,
+  },
+});
+const golFora = (opcoes: Record<string, boolean>): MatchPlanEvent => ({
+  minute: 70, kind: 'goal_away', actor_side: 'away', actor_id: 'a10', actor_name: 'Dez', weight_tier: 'big', zone: 'att', text: 'gol deles',
+  decisivo: {
+    intent: 'defend', contexto: 'dispara_em_velocidade', melhor: 'carrinho', rival: 'zagueiro',
+    duelo: { nosso: { id: 'h4', nome: 'Zaga' }, deles: { id: 'a10', nome: 'Dez' }, por_opcao: { cercar: [80, 70], carrinho: [50, 88], combate: [75, 60] } },
+    opcoes,
+  },
+});
+
 function main() {
   console.log('— Momento decisivo (clutch) —\n');
 
-  console.log('[1] buildClutch');
-  const atk = buildClutch({ intent: 'attack', minute: 23, seed: 's1', actorName: 'Pedro' });
-  const def = buildClutch({ intent: 'defend', minute: 23, seed: 's1', actorName: 'Zaga' });
+  console.log('[1] montarDecisivo lê o motor');
+  const atk = montarDecisivo(golCasa({ chutar: false, driblar: true, tocar: false }), 'CAS')!;
+  const def = montarDecisivo(golFora({ cercar: true, carrinho: false, combate: true }), 'VIS')!;
   check('ataque tem chutar/driblar/tocar', JSON.stringify(atk.options.map((o) => o.key)) === JSON.stringify(['chutar', 'driblar', 'tocar']));
   check('defesa tem cercar/carrinho/combate', JSON.stringify(def.options.map((o) => o.key)) === JSON.stringify(['cercar', 'carrinho', 'combate']));
-  check('best do ataque é uma das opções', atk.options.some((o) => o.key === atk.best));
-  check('best da defesa é uma das opções', def.options.some((o) => o.key === def.best));
-  check('contexto não-vazio', atk.context.length > 3 && def.context.length > 3);
-  check('determinístico (mesmo seed+min → mesmo contexto)',
-    buildClutch({ intent: 'attack', minute: 23, seed: 's1', actorName: 'X' }).context === atk.context);
+  check('a melhor e o rival vêm do motor', atk.best === 'driblar' && atk.rival === 'goleiro' && def.best === 'carrinho');
+  check('o contexto vira texto', /goleiro|keeper/i.test(atk.context) && def.context.length > 3);
+  check('o nome do protagonista é o do lance', atk.actorName === 'Pedro' && def.actorName === 'Dez');
 
-  console.log('\n[2] Acertar o contexto compensa (60 seeds)');
-  let rightGoals = 0;
-  let wrongGoals = 0;
-  for (let i = 0; i < 60; i += 1) {
-    const m = buildClutch({ intent: 'attack', minute: 20, seed: `atk-${i}`, actorName: 'P' });
-    const wrongKey = m.options.find((o) => o.key !== m.best)!.key as ClutchKey;
-    if (resolveClutch(m, m.best, `atk-${i}`).success) rightGoals += 1;
-    if (resolveClutch(m, wrongKey, `atk-${i}`).success) wrongGoals += 1;
-  }
-  check(`escolha certa converte muito mais (${rightGoals} vs ${wrongGoals})`, rightGoals > wrongGoals + 15);
+  console.log('\n[2] plano antigo (sem bloco) → o gol vale direto');
+  const antigo: MatchPlanEvent = { minute: 5, kind: 'goal_home', actor_side: 'home', actor_id: 'h9', weight_tier: 'big', zone: 'att', text: '' };
+  check('montarDecisivo devolve null', montarDecisivo(antigo, 'CAS') === null);
+  check('golDoLance conta o gol', golDoLance(lanceDe(antigo)!, { decisivos: {}, penaltis: {} }) === true);
 
-  console.log('\n[3] Feedback ensina');
-  const m = buildClutch({ intent: 'attack', minute: 10, seed: 'fb', actorName: 'P' });
-  const wrong = m.options.find((o) => o.key !== m.best)!.key as ClutchKey;
-  const rWrong = resolveClutch(m, wrong, 'fb');
-  check('feedback do erro cita o contexto', rWrong.feedback.toLowerCase().includes(m.context.slice(0, 6).toLowerCase()) || rWrong.feedback.length > 10);
-  const dm = buildClutch({ intent: 'defend', minute: 10, seed: 'fb2', actorName: 'Z' });
-  check('defesa: headline fala de salvar ou sofrer', (() => {
-    const r = resolveClutch(dm, dm.best, 'fb2');
-    return /salvou|sofreu/.test(r.headline.toLowerCase());
-  })());
+  console.log('\n[3] o duelo pra tela');
+  const d = dueloDoDecisivo(golCasa({ chutar: true, driblar: true, tocar: true }), atk)!;
+  check('chutar: finalização 84 × goleiro 64', d.porOpcao.chutar?.nosso === 84 && d.porOpcao.chutar?.deles === 64 && d.porOpcao.chutar?.rotuloDeles !== d.porOpcao.driblar?.rotuloNosso);
+  check('os dois lados têm nome', d.nosso.nome === 'Pedro' && d.deles.nome === 'Goleiro');
 
-  console.log('\n[4] Atributo ajuda');
-  let lowHits = 0;
-  let highHits = 0;
-  for (let i = 0; i < 80; i += 1) {
-    const cm = buildClutch({ intent: 'attack', minute: 30, seed: `attr-${i}`, actorName: 'P' });
-    if (resolveClutch(cm, cm.best, `attr-${i}`, 40).success) lowHits += 1;
-    if (resolveClutch(cm, cm.best, `attr-${i}`, 95).success) highHits += 1;
-  }
-  check(`craque (95) converte >= perna-de-pau (40): ${highHits} vs ${lowHits}`, highHits >= lowHits);
+  console.log('\n[4] o texto segue o motor');
+  const ev = golCasa({ chutar: false, driblar: true, tocar: false });
+  const l = lanceDe(ev)!;
+  check('driblar (certa, motor diz gol) → GOL', golDoLance(l, { decisivos: { '23': 'driblar' }, penaltis: {} }) === true
+    && /GOL|GOAL/.test(textoDoDesfecho(atk, 'driblar', true).headline));
+  check('chutar (errada, motor diz não) → perdeu, e o feedback cita driblar',
+    golDoLance(l, { decisivos: { '23': 'chutar' }, penaltis: {} }) === false
+    && /perdeu|lost/.test(textoDoDesfecho(atk, 'chutar', false).headline)
+    && /dribl/i.test(textoDoDesfecho(atk, 'chutar', false).feedback));
+  const lf = lanceDe(golFora({ cercar: true, carrinho: false, combate: true }))!;
+  check('defendendo: carrinho (motor diz sem gol) → salvou', golDoLance(lf, { decisivos: { '70': 'carrinho' }, penaltis: {} }) === false
+    && /salvou|saved/.test(textoDoDesfecho(def, 'carrinho', false).headline));
+  check('defendendo: cercar (motor diz gol) → sofreu', golDoLance(lf, { decisivos: { '70': 'cercar' }, penaltis: {} }) === true
+    && /sofreu|conceded/.test(textoDoDesfecho(def, 'cercar', true).headline));
+  check('opção inexistente cai na automática (nunca inventa gol)', golDoLance(l, { decisivos: { '23': 'voadora' }, penaltis: {} }) === golDoLance(l, { decisivos: {}, penaltis: {} }));
+
+  console.log('\n[5] escolha automática = maior vantagem no duelo (a mesma regra da custódia)');
+  check('ataque: chutar (84 × 64 é a maior vantagem)', escolhaAutomatica(ev.decisivo!) === 'chutar');
+  check('defesa: combate (75 × 60)', escolhaAutomatica(golFora({ cercar: true, carrinho: false, combate: true }).decisivo!) === 'combate');
 
   console.log(failures === 0 ? '\n✅ Clutch OK — todos os checks passaram' : `\n❌ ${failures} check(s) falharam`);
   process.exit(failures === 0 ? 0 : 1);

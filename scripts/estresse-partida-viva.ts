@@ -69,7 +69,8 @@ for (const [n, e] of partidas.entries()) {
     // Escanteio: na hora da cobrança (no tempo do CAMPO) o cobrador tem que estar na bola.
     while (cobrancas.length && co.t >= cobrancas[0]!.em) {
       const k = cobrancas.shift()!;
-      const c = co.corpos.find((x) => x.f.id === k.de);
+      // O cobrador pode ter sido o titular trocado no 12' (o corpo continua; a ficha é a do reserva).
+      const c = co.corpos.find((x) => x.f.id === (emCampo && k.de === sai ? entra : k.de));
       const d = c ? Math.hypot(c.x - co.bola.x, c.z - co.bola.z) : Infinity;
       const cantoOk = Math.abs(co.bola.z - 34) > 30 && (co.bola.x < 3 || co.bola.x > 102);
       if (d > 2.5 || !cantoOk) achados.push(`${k.minuto}': escanteio SEM cobrador (cobrador a ${d.toFixed(1)} m; bola em ${co.bola.x.toFixed(0)},${co.bola.z.toFixed(0)})`);

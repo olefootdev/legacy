@@ -94,3 +94,4 @@ vendor/solana-docs/
 dex/.vite
 dex/dist
 .seed-plano.json
+scripts/fase0/.motor-antes/
