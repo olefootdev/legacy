@@ -1,0 +1,232 @@
+<title>Raio-X da Partida Viva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: uma coluna de leitura (68ch) com tabelas largas que rolam sozinhas; DS 2027 do OLEFOOT — cor chapada, tipo grande, sombra dura, sem brilho. */
+:root {
+  --papel: #f3efe6;      /* fundo claro (cal) */
+  --tinta: #121211;      /* texto */
+  --mudo: #5d5a52;       /* texto secundário */
+  --linha: #d6cfbf;      /* divisórias */
+  --rua: #f2e61e;        /* amarelo OLEFOOT (acento) */
+  --asfalto: #0d0d0c;    /* preto do jogo */
+  --bom: #1f7a3a; --medio: #a86a00; --ruim: #b3261e;
+  --chip-bg: #ffffff;
+  --display: 'Anton', Impact, 'Arial Narrow', sans-serif;
+  --texto: 'Inter', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --papel: #121211; --tinta: #ece7dc; --mudo: #a39e92; --linha: #34322d; --asfalto: #000000;
+  --bom: #5ccf7d; --medio: #f0b34a; --ruim: #ff7a6e; --chip-bg: #1d1c19; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --papel: #121211; --tinta: #ece7dc; --mudo: #a39e92; --linha: #34322d; --asfalto: #000000;
+  --bom: #5ccf7d; --medio: #f0b34a; --ruim: #ff7a6e; --chip-bg: #1d1c19; color-scheme: dark }
+
+body { background: var(--papel); color: var(--tinta); font: 400 16px/1.6 var(--texto); }
+.folha { max-width: 860px; margin: 0 auto; padding-inline: 18px; padding-block: 28px 80px; display: flex; flex-direction: column; gap: 40px; }
+.texto { max-width: 68ch; }
+h1, h2 { font-family: var(--display); font-weight: 400; letter-spacing: .01em; line-height: 1.02; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(44px, 9vw, 86px); text-transform: uppercase; }
+h2 { font-size: clamp(28px, 5vw, 40px); text-transform: uppercase; }
+h3 { font: 700 18px/1.3 var(--texto); margin: 0; }
+p { margin: 0; }
+.rotulo { font: 600 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--mudo); }
+.selo { display: inline-block; background: var(--rua); color: #0d0d0c; padding: 2px 10px; transform: rotate(-2deg); font-family: var(--display); font-size: 20px; box-shadow: 4px 4px 0 var(--asfalto); }
+.capa { display: flex; flex-direction: column; gap: 16px; border-bottom: 3px solid var(--tinta); padding-bottom: 28px; }
+.capa .linha-fina { color: var(--mudo); max-width: 62ch; }
+.nota-geral { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.nota-geral b { font-family: var(--display); font-weight: 400; font-size: clamp(72px, 14vw, 120px); line-height: .9; }
+.nota-geral span { color: var(--mudo); max-width: 40ch; }
+section { display: flex; flex-direction: column; gap: 16px; }
+.camadas { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.camada { border: 2px solid var(--tinta); padding: 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; background: var(--chip-bg); }
+.camada .rotulo { color: var(--tinta); }
+.tabela { overflow-x: auto; border-top: 2px solid var(--tinta); }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 14.5px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 8px; border-bottom: 1px solid var(--linha); }
+th { font: 600 12px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--mudo); }
+td.n { font: 600 18px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.n.b { color: var(--bom); } .n.m { color: var(--medio); } .n.r { color: var(--ruim); }
+.barra { display: block; height: 6px; background: var(--linha); margin-top: 6px; width: 70px; }
+.barra i { display: block; height: 100%; background: currentColor; }
+dl.itens { display: flex; flex-direction: column; gap: 18px; margin: 0; }
+dl.itens > div { display: grid; grid-template-columns: 34px 1fr; gap: 4px 14px; }
+dl.itens dt { grid-row: span 2; font: 400 28px/1 var(--display); }
+dl.itens dd { margin: 0; min-width: 0; }
+dl.itens dd.t { font-weight: 700; }
+dl.itens dd.d { color: var(--tinta); }
+.real { color: var(--bom); font-weight: 600; } .enfeite { color: var(--ruim); font-weight: 600; }
+.alerta { border: 3px solid var(--tinta); background: var(--rua); color: #0d0d0c; padding: 20px; box-shadow: 6px 6px 0 var(--asfalto); display: flex; flex-direction: column; gap: 10px; }
+.alerta h2 { color: #0d0d0c; }
+.alerta p { max-width: 64ch; }
+ol.prioridades { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 14px; counter-reset: p; }
+ol.prioridades li { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: start; }
+ol.prioridades .p { font: 700 12px/1 var(--mono); letter-spacing: .08em; padding: 6px 0; text-align: center; border: 2px solid var(--tinta); }
+ol.prioridades .p0 { background: var(--tinta); color: var(--papel); }
+ol.prioridades div { min-width: 0; }
+.fable { border-left: 6px solid var(--rua); padding-left: 18px; display: flex; flex-direction: column; gap: 14px; }
+.fable h3 { font-size: 20px; }
+ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+code { font: 500 13.5px var(--mono); background: var(--chip-bg); border: 1px solid var(--linha); padding: 0 4px; overflow-wrap: anywhere; }
+.rodape { color: var(--mudo); font-size: 13px; border-top: 1px solid var(--linha); padding-top: 14px; }
+@media (max-width: 520px) { dl.itens > div { grid-template-columns: 26px 1fr; } ol.prioridades li { grid-template-columns: 1fr; } }
+</style>
+
+<main class="folha">
+
+<header class="capa">
+  <span class="rotulo">OLEFOOT · LEGACY · varredura de 11/10/2026</span>
+  <h1>Raio-X da Partida Viva</h1>
+  <p class="linha-fina">Toda a lógica que influencia a partida, lida no código das três camadas: o motor no servidor, o campo no aparelho e os comandos do manager. Cada ponto diz o que existe, o que muda o resultado de verdade, e leva uma nota de 0 a 10.</p>
+  <div class="nota-geral"><b>4,8</b><span>nota geral do motor da partida. O espetáculo está muito acima da inteligência que ele mostra.</span></div>
+</header>
+
+<section>
+  <span class="rotulo">Como a partida funciona hoje</span>
+  <h2>Três camadas</h2>
+  <div class="camadas">
+    <div class="camada"><span class="rotulo">1 · Motor (servidor, Python)</span><p>Decide a partida minuto a minuto, antes do apito: quem tem a bola, em que terço, quem age, se chuta, o xG, o gol. Depois desenha a jogada toque a toque (a "cadeia") só pra ilustrar o que já foi decidido.</p></div>
+    <div class="camada"><span class="rotulo">2 · Comandos (aparelho)</span><p>O aparelho recebe o plano e o mostra minuto a minuto. Estilo, leitura do analista, reações, momento decisivo, formação e substituição <b>reescrevem lances no próprio aparelho</b> por sorteio. Gritos, ordens e trocas pedem um novo plano ao servidor.</p></div>
+    <div class="camada"><span class="rotulo">3 · Campo (aparelho, PixiJS)</span><p>Encena fielmente cada lance do plano (atores, posições, desfecho). Entre os lances, inventa o jogo: passes, lateral, tiro de meta, pressão. Esse jogo inventado não decide nada.</p></div>
+  </div>
+</section>
+
+<section>
+  <span class="rotulo">Os 9 pontos pedidos</span>
+  <h2>O que existe em cada um</h2>
+  <dl class="itens">
+    <div><dt>1</dt><dd class="t">Tomada de decisão</dd><dd class="d">
+      <span class="enfeite">Moeda, não escolha.</span> A cada minuto o motor sorteia a posse (chance de virar entre 18% e 62%), sorteia o terço do campo de novo (sem progressão do minuto anterior), sorteia quem age (pesos por função e atributo) e, no ataque, joga uma moeda pra decidir se sai chute. Não existe "passar ou chutar", "abrir ou centralizar" decididos por quem tem a bola. O corredor do ataque é sorteado à parte do jogador (o centroavante pode "vir pela esquerda"). No campo, entre lances, o portador escolhe pelo perfil (driblador encara, armador inverte, velocista recebe nas costas), mas isso é encenação: <b>todo passe acerta</b> e ninguém olha o adversário.</dd></div>
+    <div><dt>2</dt><dd class="t">Comportamento</dd><dd class="d">
+      <span class="real">O mais sólido do motor.</span> Intensidade (defensiva/equilibrada/ofensiva) mexe em 5 lugares: volume de chute, xG, exposição atrás, cansaço e pressão. O DNA de 7 eixos (posse, pressão, vertical, solidez, disciplina, intensidade, criatividade) tem orçamento (média 0,5) e cada eixo mexe numa métrica medível. O ciclo pressão → momento → chute é coerente, e o pênalti só sai com cerco de verdade. No campo, a forma do time responde ao momento, ao estilo e ao grito (bloco alto/médio/baixo, largura, compactação), mas só no time da casa: o adversário não reage ao próprio estilo.</dd></div>
+    <div><dt>3</dt><dd class="t">Técnica</dd><dd class="d">
+      Finalização e confiança mandam no xG. Drible mexe no máximo ±13% no xG e nunca é comparado com o defensor. <span class="enfeite">Cabeceio, bola parada e pênalti não decidem nada</span>: só escolhem quem aparece na jogada desenhada e o nome da skill. O pênalti nem é resolvido no motor: o aparelho resolve. No campo, a única técnica visível é a velocidade; passe, drible e chute têm a mesma cara para qualquer jogador.</dd></div>
+    <div><dt>4</dt><dd class="t">Atributos</dd><dd class="d">
+      De 14 atributos, 10 entram no resultado (finalização, passe, marcação, velocidade, físico, confiança, drible, tático, mentalidade, fair play, cansaço). <span class="enfeite">Cabeceio, bola parada, pênalti e pé bom são só ilustração.</span> O "tático" e a matriz de confronto são calculados uma vez, no apito: o cansaço e as ordens individuais nunca chegam neles (a ordem "segurar" dá +4 de tático que não faz nada). A finalização é contada em ~5 lugares diferentes e a qualidade do goleiro em 3; ele não tem atributo próprio (sai de marcação e confiança).</dd></div>
+    <div><dt>5</dt><dd class="t">Arquétipos</dd><dd class="d">
+      As 16 classes (regista, maestro, ponta driblador, velocista, matador, box-to-box…) são anexadas ao plano <b>depois</b> da simulação: o motor não sabe que elas existem. No campo elas mexem de verdade no posicionamento (regista recua, matador fica na área, ponta abre) e em quem pressiona (volante destruidor, box-to-box, xerife), mas <span class="enfeite">não mudam um único resultado</span>. Arcos de giz, rastro do matador e linhas de velocidade são decoração.</dd></div>
+    <div><dt>6</dt><dd class="t">Marcação</dd><dd class="d">
+      O motor compara médias por setor (ataque pela esquerda × defesa pela direita, centroavantes × zagueiros, criação × meio). Não há marcação individual nem zona. Na jogada desenhada, o marcador é sorteado com peso de marcação, sem ligação com o lado ou com o atacante. No campo, a marcação de bola parada é boa (cada atacante com seu marcador, barreira a 9,15 m); no jogo corrido, ninguém marca ninguém, e a ordem "marcar" só aproxima o jogador da zona da bola.</dd></div>
+    <div><dt>7</dt><dd class="t">Noção de proximidade</dd><dd class="d">
+      <span class="enfeite">O motor não tem espaço</span>: só conhece 3 terços e 5 corredores. As coordenadas em metros da jogada são pintadas depois, e as distâncias só servem pra dar nome às skills. No campo existe o básico: quem está mais perto, repulsão a 2,2 m, alcance de passe de 34 m (16 m cansado), pressão até 18 m. Mas nenhuma decisão olha linha de passe, adversário no caminho ou espaço livre.</dd></div>
+    <div><dt>8</dt><dd class="t">Pressão</dd><dd class="d">
+      No motor, o eixo "pressão" do DNA é real: mais bola recuperada, recuperação mais alta, mais falta, mais cansaço e mais exposição atrás. O corredor "pressão" da matriz é calculado e mostrado ao analista, mas nenhum número o usa. No campo, um ou dois pressionam (gatilho por momento, estilo e grito, e pelas classes que pressionam), mas <span class="enfeite">a pressão nunca desarma</span>: a posse só muda quando o plano manda.</dd></div>
+    <div><dt>9</dt><dd class="t">Todo o resto ligado ao motor</dd><dd class="d">
+      <ul>
+        <li><b>Mando de campo:</b> o xG da casa é multiplicado por 1,18 sempre (o comentário diz "manager ativo contra automático", o código não confere).</li>
+        <li><b>Cartões:</b> toda falta vira amarelo; vermelho só depois do 5º amarelo do time; o expulso continua podendo chutar e fazer gol no plano.</li>
+        <li><b>Lesão:</b> só acontece com a casa e não muda nada no motor.</li>
+        <li><b>Acréscimos:</b> o motor não tem (o aparelho mostra 45+N).</li>
+        <li><b>Cansaço:</b> zera no intervalo nos dois tipos de replanejamento; no campo, nunca muda durante o jogo (o anel de fôlego é estático).</li>
+        <li><b>Comandos que chegam ao motor:</b> gritos (empurram o DNA ±0,15 por 10 min), ordens (±4 num atributo) e substituições. Todos agem pedindo um plano novo a partir de 3 minutos depois, com uma semente nova, então parte do "efeito" é só sortear o futuro de novo.</li>
+        <li><b>O placar oficial sai do aparelho.</b> O estilo, o momento decisivo, a leitura do analista, a formação e a substituição viram gol em chute e chute em gol por sorteio local. O servidor só confere um teto (gols ≤ lances de ataque).</li>
+      </ul></dd></div>
+  </dl>
+</section>
+
+<section>
+  <span class="rotulo">Item 10</span>
+  <h2>O que funciona, com nota</h2>
+  <div class="tabela"><table>
+    <thead><tr><th>Ponto</th><th>Nota</th><th>Por quê</th></tr></thead>
+    <tbody>
+      <tr><td>Determinismo, semente e filme</td><td class="n b">9<span class="barra"><i style="width:90%"></i></span></td><td>Mesma semente, mesmo jogo. O filme reassiste toque a toque, vai pro adversário e pra lenda. Base de tudo o que é inédito.</td></tr>
+      <tr><td>Encenação dos lances do plano</td><td class="n b">8<span class="barra"><i style="width:80%"></i></span></td><td>Atores, posições, ordem e desfecho batem com o plano. Câmera lenta pelo xG, gol congelado, replay e jogada a giz.</td></tr>
+      <tr><td>Bola parada no campo</td><td class="n b">8<span class="barra"><i style="width:80%"></i></span></td><td>Escanteio com papéis, barreira a 9,15 m, pênalti com todos fora da área. No motor ela quase não pesa (nota 3).</td></tr>
+      <tr><td>Estabilidade (depois de 10/10)</td><td class="n b">8<span class="barra"><i style="width:80%"></i></span></td><td>Válvulas contra travar, NaN e bola parada esquecida; estresse com partidas reais no portão de testes.</td></tr>
+      <tr><td>Momento e cerco</td><td class="n b">8<span class="barra"><i style="width:80%"></i></span></td><td>Pressão acumula, vira momento, vira chute. Pênalti só com cerco. Gol e expulsão chacoalham.</td></tr>
+      <tr><td>Comportamento: DNA e intensidade</td><td class="n b">7<span class="barra"><i style="width:70%"></i></span></td><td>Coerente e com orçamento. Perde ponto por não ter um "plano de jogo" que dure mais de um minuto.</td></tr>
+      <tr><td>Gritos e ordens individuais</td><td class="n m">6<span class="barra"><i style="width:60%"></i></span></td><td>Validados e limitados no servidor. Mas valem ~7 min, não os 10 mostrados, e ordens não têm recarga (viram botão de sortear de novo).</td></tr>
+      <tr><td>Substituição</td><td class="n m">6<span class="barra"><i style="width:60%"></i></span></td><td>A escalação nova chega ao motor e o cansaço de quem entra é contado do minuto da entrada. Na lesão não pede plano novo; o expulso continua escalado.</td></tr>
+      <tr><td>Leitura do analista</td><td class="n m">5<span class="barra"><i style="width:50%"></i></span></td><td>Fala a língua da matriz de corredores. Mas conta duas vezes (aparelho 12 min + servidor o resto do jogo), defender pesa ~4× mais que atacar, e o servidor não confere se a decisão foi oferecida.</td></tr>
+      <tr><td>Atributos</td><td class="n m">5<span class="barra"><i style="width:50%"></i></span></td><td>10 de 14 contam; 4 são ilustração; tático e matriz congelados no apito.</td></tr>
+      <tr><td>Pressão</td><td class="n m">5<span class="barra"><i style="width:50%"></i></span></td><td>Real no motor (DNA). No campo é sombra: ninguém desarma.</td></tr>
+      <tr><td>Técnica</td><td class="n m">4<span class="barra"><i style="width:40%"></i></span></td><td>Finalização decide; drible, cabeceio, bola parada e pênalti quase nada. No campo, todos têm a mesma técnica.</td></tr>
+      <tr><td>Momento decisivo</td><td class="n m">4<span class="barra"><i style="width:40%"></i></span></td><td>Emoção forte, mas acontece em todo gol, decide no aparelho e a escolha certa dá pra adivinhar pelo texto (~82% salva o gol sofrido).</td></tr>
+      <tr><td>Arquétipos</td><td class="n r">3<span class="barra"><i style="width:30%"></i></span></td><td>Mexem no posicionamento do campo; o motor não sabe que existem.</td></tr>
+      <tr><td>Tomada de decisão</td><td class="n r">3<span class="barra"><i style="width:30%"></i></span></td><td>Moedas por minuto, sem escolha de quem tem a bola e sem progressão.</td></tr>
+      <tr><td>Jogo entre os lances</td><td class="n r">3<span class="barra"><i style="width:30%"></i></span></td><td>Bonito de ver, mas ninguém perde a bola, a pressão não desarma e o tipo de reinício é sorteado.</td></tr>
+      <tr><td>Marcação</td><td class="n r">2<span class="barra"><i style="width:20%"></i></span></td><td>Médias por setor; marcador sorteado; sem marcação no jogo corrido.</td></tr>
+      <tr><td>Cartões e lesões</td><td class="n r">2<span class="barra"><i style="width:20%"></i></span></td><td>Toda falta é amarelo; vermelho depois de 5 amarelos; expulso marca; lesão não muda nada.</td></tr>
+      <tr><td>Estilo ao vivo (dock de 5)</td><td class="n r">2<span class="barra"><i style="width:20%"></i></span></td><td>O padrão "Posse" num 0×0 equilibrado é o ideal: cada quase-gol da casa vira gol com ~40% de chance, no aparelho, sem passar pelo motor.</td></tr>
+      <tr><td>Uma verdade só (custódia)</td><td class="n r">2<span class="barra"><i style="width:20%"></i></span></td><td>O placar oficial nasce dos sorteios no aparelho; o servidor só confere um teto.</td></tr>
+      <tr><td>Noção de espaço</td><td class="n r">1<span class="barra"><i style="width:10%"></i></span></td><td>O motor não tem espaço; o campo tem o mínimo.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <span class="rotulo">Item 11 · olhar de product manager</span>
+  <h2>Um jogo menor que entrega mais</h2>
+  <p class="texto">Se eu fosse o PM de uma versão enxuta de um FIFA, sem gráfico pra vender, o produto inteiro seria a sensação de que <b>o seu time pensa e você muda o jogo</b>. A ordem de trabalho:</p>
+  <ol class="prioridades">
+    <li><span class="p p0">P0</span><div><h3>Uma verdade só</h3><p>Todo gol nasce no servidor, por causa de algo que aconteceu no jogo. Nenhum sorteio no aparelho mexe no placar. Sem isso, nada do que vem depois é confiável, e a LEGACY LEAGUE não pode valer prêmio.</p></div></li>
+    <li><span class="p p0">P0</span><div><h3>Causa visível</h3><p>Cada comando do manager muda um peso de decisão dos jogadores, e o jogo mostra a prova: "você mandou marcar o 10 → ele tocou 2 vezes na área". Hoje o jogo carimba "SUA LEITURA" num gol que foi sorteado.</p></div></li>
+    <li><span class="p">P1</span><div><h3>Duelos de atributo</h3><p>Cada lance vira uma sequência de duelos: portador × marcador, passe × linha de passe, cruzamento × cabeceio, chute × goleiro com atributo próprio. É aí que cabeceio, bola parada e pênalti passam a valer, e que o arquétipo vira comportamento.</p></div></li>
+    <li><span class="p">P1</span><div><h3>O campo joga a verdade</h3><p>Entre os lances, o campo mostra a posse que o motor simulou, inclusive a bola perdida, o desarme da pressão e o lateral que aconteceu de fato. Nada inventado.</p></div></li>
+    <li><span class="p">P1</span><div><h3>O jogo cansa e pune</h3><p>Fôlego que cai durante o jogo e aparece no anel. Amarelo por falta dura, segundo amarelo, expulso sai de campo. Lesão tira o jogador.</p></div></li>
+    <li><span class="p">P2</span><div><h3>Emoção rara e merecida</h3><p>O momento decisivo deixa de aparecer em todo gol e vira o lance em que um duelo ficou equilibrado. Escolher errado custa, escolher certo vira história.</p></div></li>
+    <li><span class="p">P2</span><div><h3>O filme como produto</h3><p>A partida determinística é o ativo. Reassistir, mandar pro adversário, a lenda vendo o próprio jogo, desafiar o filme de outro manager.</p></div></li>
+    <li><span class="p">CORTAR</span><div><h3>O que sai</h3><p>Viradas de resultado no aparelho pelo estilo, formação ao vivo, reações de transição e o bônus fixo do Legacy; a leitura do analista contando duas vezes; o ×1,18 do mando sem condição.</p></div></li>
+  </ol>
+</section>
+
+<section class="alerta">
+  <span class="rotulo" style="color:#0d0d0c">Item 12 · o maior problema</span>
+  <h2>A Partida Viva não é uma partida</h2>
+  <p>Ela é um roteiro escrito antes do apito, reescrito no aparelho por sorteios e encenado por jogadores que não jogam. <b>O que acontece no campo não decide nada, e o que decide não acontece no campo.</b> Por isso a inteligência, a marcação, a pressão e o arquétipo, que estão lindos na tela, não mudam o resultado. E o placar que vale prêmio nasce de um sorteio no celular.</p>
+</section>
+
+<section class="fable" id="fable">
+  <span class="rotulo">Pedido ao Fable</span>
+  <h2>A resposta do Fable</h2>
+  <p class="texto">O pedido: resolver o maior problema e entregar algo que nenhum jogo de futebol tem (nem FM, nem EA FC, nem eFootball, nem Top Eleven). Ele conferiu o diagnóstico no código e propôs o que segue, em resumo fiel.</p>
+
+  <h3>A tese</h3>
+  <p class="texto">A partida vira <b>uma sequência de posses de bola</b>. Cada posse é uma cadeia de duelos de atributo com lugar no campo, decidida uma vez só, no servidor, com dados próprios por posse. O campo deixa de inventar e passa a reproduzir o que o motor decidiu, toque a toque.</p>
+
+  <h3>O Motor de Posses</h3>
+  <ul class="texto">
+    <li><b>Unidade = posse</b> (~90 a 110 por jogo), não minuto. A bola anda numa grade 3×3: terço (defesa, meio, ataque) × corredor (esquerda, centro, direita). As duas dimensões já existem no motor.</li>
+    <li><b>Quem marca é quem está lá:</b> a formação ocupa as células, e o marcador do duelo é o ocupante da célula, não um sorteio.</li>
+    <li><b>O portador escolhe por pesos:</b> passe curto, condução, drible, lançamento, cruzamento ou chute. Pesos vêm dos atributos, da célula, do DNA, do arquétipo (a lógica do campo sobe pro servidor) e das ordens do manager.</li>
+    <li><b>Cada ação é um duelo:</b> drible × marcação; passe × linha de passe; cruzamento × físico do zagueiro e depois cabeceio × marcação; chute × goleiro com atributo próprio. Perdeu o duelo, a bola muda de lado ali (contra-ataque nasce onde roubou). Ganhou, a bola avança.</li>
+    <li><b>Fim da posse:</b> gol, defesa, fora, escanteio, falta (cartão por fair play, segundo amarelo pessoal, expulso sai do mapa) ou perda.</li>
+    <li><b>Custo:</b> ~1.500 operações por jogo, 20 a 40 ms no Railway.</li>
+    <li><b>Reaproveita:</b> DNA, gritos e ordens (viram pesos), matriz de confronto (recalculada por posse), modelo de xG, nomes de skill e formato da cadeia, o analista, o idioma, e todo o coreógrafo, a encenação e a bola parada do campo.</li>
+    <li><b>Morre:</b> o laço por minuto e seus sorteios independentes, o ×1,18 da casa, a cadeia desenhada depois do resultado, o jogo ambiente inventado e todas as viradas de resultado no aparelho.</li>
+  </ul>
+
+  <h3>Comandos viram causa</h3>
+  <p class="texto">Hoje um comando sorteia o futuro de novo. No Motor de Posses cada posse tem sua própria semente, então o comando muda só os pesos e os dados ficam os mesmos. "Marcar o 10" faz o seu jogador ser o ocupante prioritário da célula do 10: todo duelo do 10 passa a ser contra ele. Retranca ocupa a defesa com mais dois. "Cobrar" sobe a linha e aumenta a chance de falta no duelo perdido.</p>
+  <p class="texto"><b>A prova:</b> quando chega um comando, o servidor simula as próximas ~10 posses duas vezes, com os mesmos dados, com e sem o comando. A diferença vira um card: "Sua ordem de marcar o 10 → 3 desarmes do Caio nele, 0 passes dele pra área. Sem ela, ele cruzava no 61' e no 67'." Custa cerca de 1 ms.</p>
+
+  <h3>O inédito</h3>
+  <ul class="texto">
+    <li><b>O Mundo Paralelo (carro-chefe).</b> Usar os mesmos números aleatórios em dois cenários pra isolar o efeito de uma decisão é técnica clássica de simulação, e nenhum jogo de futebol a mostra ao jogador. Depois de um lance, o botão "e se eu não tivesse mandado?" mostra a mesma posse sem a ordem: o zagueiro fantasma que não estava lá, o cruzamento que teria saído. O FM dá o resultado; aqui o jogo mostra a diferença que você fez, e ela é verificável.</li>
+    <li><b>Assumir o lance.</b> Com o filme determinístico e posses com semente própria, qualquer manager pega o filme de outro (ou da própria lenda), escolhe uma posse e joga dali com as suas ordens e os mesmos dados. O servidor compara: "você fez 2×1 onde ele fez 1×1". Vira desafio assíncrono e ranking semanal, sem precisar do adversário online.</li>
+  </ul>
+
+  <h3>Fases propostas</h3>
+  <ol class="prioridades">
+    <li><span class="p p0">FASE 0</span><div><p><b>Uma verdade só (2 a 3 dias).</b> O placar passa a ser só o plano do servidor. Saem as viradas no aparelho (estilo, Legacy, formação, um a menos); momento decisivo e pênalti leem desfechos já calculados pelo servidor por opção e por batedor. A custódia passa de "até o teto" pra "placar igual".</p></div></li>
+    <li><span class="p">FASE 1</span><div><p><b>Motor de Posses v1 (1 semana, servidor).</b> Mesmo formato de saída, então o aparelho não muda. Grade, ocupação, duelos, goleiro com atributo, cartões pessoais, expulso fora. Bateria de 1.000 partidas travando os intervalos realistas antes de qualquer merge.</p></div></li>
+    <li><span class="p">FASE 2</span><div><p><b>O campo encena a verdade (1 semana).</b> O jogo ambiente sai; o campo toca todas as posses, comprimindo as de baixa tensão; reinícios só quando aconteceram; fôlego vem do servidor.</p></div></li>
+    <li><span class="p">FASE 3</span><div><p><b>Causa e prova (1,5 semana).</b> Comandos viram pesos, card de Prova de Causa, Mundo Paralelo, analista lendo as diferenças.</p></div></li>
+    <li><span class="p">FASE 4</span><div><p><b>O filme como arena (2 semanas).</b> Assumir o lance, desafio assíncrono, lenda como agente, adversário ausente jogando pelo plano salvo.</p></div></li>
+  </ol>
+
+  <h3>Como saber que deu certo</h3>
+  <ul class="texto">
+    <li>Placar realista em 1.000 partidas: média de 2,4 a 3,0 gols; posse entre 38% e 62%; 0 gols de expulso; o time 10 pontos pior ainda vence ~20%.</li>
+    <li>35% a 50% dos gols com um comando do manager ativo nas 10 posses anteriores (nem zero, nem tudo).</li>
+    <li>Partida no modo Lances em até 4 min de tela; replanejamento abaixo de 150 ms.</li>
+    <li>Retorno no dia seguinte e na semana de quem usou o Mundo Paralelo, comparado com quem não usou.</li>
+  </ul>
+  <p class="texto"><b>Onde é difícil:</b> a Fase 1 é reescrever o coração sem quebrar a tela, e a calibração é o risco. Sem a bateria de 1.000 partidas, os primeiros placares sairão 7×5 ou 0×0 em série. A Fase 0 é a mais valiosa por dia de trabalho: o placar deixa de nascer de um sorteio no celular.</p>
+</section>
+
+<p class="rodape">Fontes: varredura de leitura do código em server/smartfield (match_simulator.py, cadeia_lances.py, analyst_beats.py, matchup_matrix.py, comandos_ao_vivo.py), src/partidaViva e src/match (QuickPlanPlayer.tsx, quickTacticalLive.ts, quickBeatDirector.ts), server/src/lib/custodia.ts. As três afirmações mais graves (estilo vira gol a ~40%, ×1,18 da casa sempre, toda falta é amarelo) foram conferidas linha a linha.</p>
+
+</main>
