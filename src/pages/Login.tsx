@@ -543,7 +543,7 @@ export function Login() {
                 {L('Entrar', 'Sign in')} <span aria-hidden>→</span>
               </button>
               <Link
-                to="/cadastro"
+                to="/register"
                 className="inline-flex min-h-[54px] w-full items-center justify-center border-2 border-papel font-impact text-[21px] uppercase leading-none text-papel transition-colors hover:bg-papel hover:text-asfalto-27 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rua"
               >
                 {L('Cadastrar', 'Sign up')}

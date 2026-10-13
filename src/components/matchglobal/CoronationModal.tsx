@@ -142,7 +142,7 @@ export function CoronationModal({ crown, onClose }: Props) {
     if (!crown || !moment) return;
     setHoldOpen(true);
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.ai';
-    const referralUrl = referralCode ? `${origin}/cadastro/${referralCode}` : `${origin}/cadastro`;
+    const referralUrl = referralCode ? `${origin}/register/${referralCode}` : `${origin}/register`;
     const scoreLine =
       crown.finalScoreHome != null && crown.finalScoreAway != null && crown.runnerUpClubName
         ? L(` Final ${crown.finalScoreHome}–${crown.finalScoreAway} contra ${crown.runnerUpClubName}${crown.finalWentToPens ? ' nos pênaltis' : ''}.`, ` Final ${crown.finalScoreHome}–${crown.finalScoreAway} vs ${crown.runnerUpClubName}${crown.finalWentToPens ? ' on penalties' : ''}.`)

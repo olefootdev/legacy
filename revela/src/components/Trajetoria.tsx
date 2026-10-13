@@ -275,7 +275,7 @@ function OndeVoceEsta({ dados }: { dados: TrajetoriaData }) {
             minutos e é grátis.
           </p>
           <a
-            href={`${GAME_URL}/cadastro`}
+            href={`${GAME_URL}/register`}
             className="rev-btn rev-focus mt-4 inline-flex"
             data-variant="yellow"
             data-on="dark"

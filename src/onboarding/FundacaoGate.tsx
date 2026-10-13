@@ -12,7 +12,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useGameStateHydrationDone, useGameStore, useSquadHydrationDone } from '@/game/store';
 import { isSupabaseConfigured } from '@/supabase/client';
 
-const FORA_DA_PORTA = ['/fundacao', '/login', '/cadastro', '/reset-password', '/admin', '/playervip', '/token', '/legend'];
+const FORA_DA_PORTA = ['/fundacao', '/login', '/register', '/invite', '/cadastro', '/reset-password', '/admin', '/playervip', '/token', '/legend'];
 
 export function FundacaoGate() {
   const navigate = useNavigate();

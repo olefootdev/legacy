@@ -67,7 +67,7 @@ export function PlayerVipLanding() {
 
   const cadastroHref = useMemo(() => {
     const code = data?.referralCode?.trim();
-    return code ? `/cadastro/${code}` : '/cadastro';
+    return code ? `/register/${code}` : '/register';
   }, [data?.referralCode]);
 
   if (state === 'loading') {

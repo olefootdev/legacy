@@ -9,7 +9,7 @@ import {
 import { L } from '@/i18n/L';
 
 /**
- * /convite-expansao/:username — a porta de entrada na expansão.
+ * /invite/:username — a porta de entrada na expansão.
  *
  * 🔒 Por que existe uma tela em vez de um link que já coloca na árvore: a
  * posição no binário é PERMANENTE e mexe em dinheiro. Ninguém entra sem ver de
@@ -128,18 +128,19 @@ export default function ConviteExpansao() {
             <p className="mb-5 font-prova text-[11px] leading-relaxed text-mudo">
               {L('Se você já tem conta na OLEFOOT, use o mesmo e-mail — o login é o mesmo de sempre.', 'If you already have an OLEFOOT account, use the same email — same sign-in as always.')}
             </p>
-            <BotaoVolt onClick={() => { guardaDestino(); navigate('/login'); }}>
-              {L('JÁ TENHO CONTA', 'I HAVE AN ACCOUNT')}
-            </BotaoVolt>
-            <div className="h-4" />
-            {/* Cadastro novo pelo convite grava quem indicou: vai pra
-                /cadastro/<código de quem convidou>, não pra /cadastro solto. */}
-            <BotaoLinha onClick={() => {
+            {/* Quem recebe o convite quase sempre é novo: criar conta é o botão
+                principal. Cadastro novo pelo convite grava quem indicou: vai pra
+                /register/<código de quem convidou>, não pra /register solto. */}
+            <BotaoVolt onClick={() => {
               guardaDestino();
               void codigoDeIndicacaoDe(estado.info.username).then((c) =>
-                navigate(c ? `/cadastro/${encodeURIComponent(c)}` : '/cadastro'));
+                navigate(c ? `/register/${encodeURIComponent(c)}` : '/register'));
             }}>
               {L('CRIAR CONTA', 'CREATE ACCOUNT')}
+            </BotaoVolt>
+            <div className="h-4" />
+            <BotaoLinha onClick={() => { guardaDestino(); navigate('/login'); }}>
+              {L('JÁ TENHO CONTA', 'I HAVE AN ACCOUNT')}
             </BotaoLinha>
           </Bloco>
         )}

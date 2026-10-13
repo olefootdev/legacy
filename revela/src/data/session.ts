@@ -147,7 +147,7 @@ export function readReferral(): string | null {
 /** Link de cadastro no jogo, já creditando a rede quando houver código. */
 export function signupUrl(): string {
   const code = readReferral();
-  return code ? `${GAME_URL}/cadastro/${code}` : `${GAME_URL}/cadastro`;
+  return code ? `${GAME_URL}/register/${code}` : `${GAME_URL}/register`;
 }
 
 /* ══ Cadastro pendente de claim ═══════════════════════════════════════════════

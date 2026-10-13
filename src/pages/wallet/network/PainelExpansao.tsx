@@ -72,7 +72,7 @@ export function PainelExpansao({ dados }: { dados: MinhaExpansao }) {
   const { carregando, naArvore, padrinho, ativacao, pernas, carreira, mapa, username, convida, bonus, ciclos, reler } = dados;
   const [copiado, setCopiado] = useState(false);
 
-  const link = username ? `${ORIGEM_DO_CONVITE}/convite-expansao/${username}` : null;
+  const link = username ? `${ORIGEM_DO_CONVITE}/invite/${username}` : null;
   const copiar = async () => {
     if (!link) return;
     try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000); }

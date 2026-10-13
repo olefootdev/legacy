@@ -56,7 +56,7 @@ export function QuickShareCard({
 }: Props) {
   const [shared, setShared] = useState<'idle' | 'done' | 'copied'>('idle');
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.ai';
-  const referralUrl = referralCode ? `${origin}/cadastro/${referralCode}` : `${origin}/cadastro`;
+  const referralUrl = referralCode ? `${origin}/register/${referralCode}` : `${origin}/register`;
   const displayUrl = referralUrl.replace(/^https?:\/\//, '');
 
   const resWord = result === 'win' ? L('venci', 'won') : result === 'draw' ? L('empatei', 'drew') : L('perdi', 'lost');

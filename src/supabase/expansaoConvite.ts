@@ -99,7 +99,7 @@ export function destinoAposEntrar(): string {
     u = sessionStorage.getItem(CHAVE_DESTINO);
     if (u) sessionStorage.removeItem(CHAVE_DESTINO);
   } catch { /* idem */ }
-  return u ? `/convite-expansao/${encodeURIComponent(u)}` : '/';
+  return u ? `/invite/${encodeURIComponent(u)}` : '/';
 }
 
 // ─────────────────────────────────────────────── quem te indicou ───────────
@@ -148,7 +148,7 @@ export async function meuIndicador(): Promise<{ sugerido: string | null; fonte: 
   return { sugerido: l.sugerido ?? null, fonte, naArvore: l.na_arvore === true };
 }
 
-/** Código de cadastro de quem convida — pro link /cadastro/<código>. */
+/** Código de cadastro de quem convida — pro link /register/<código>. */
 export async function codigoDeIndicacaoDe(username: string): Promise<string | null> {
   const sb = getSupabase();
   if (!sb) return null;

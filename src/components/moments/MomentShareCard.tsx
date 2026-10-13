@@ -58,7 +58,7 @@ export function MomentShareCard({
 }: MomentShareCardProps) {
   const [shared, setShared] = useState<'idle' | 'done' | 'copied'>('idle');
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.ai';
-  const referralUrl = referralCode ? `${origin}/cadastro/${referralCode}` : `${origin}/cadastro`;
+  const referralUrl = referralCode ? `${origin}/register/${referralCode}` : `${origin}/register`;
   const displayUrl = referralUrl.replace(/^https?:\/\//, '');
 
   const hasScore = typeof homeScore === 'number' && typeof awayScore === 'number';

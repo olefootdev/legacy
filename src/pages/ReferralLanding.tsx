@@ -42,7 +42,7 @@ export function ReferralLanding() {
       // redirect de confirmação Supabase, etc). Mantemos o sessionStorage como cinto
       // duplo caso o usuário, por qualquer motivo, volte pra /cadastro sem o param.
       setPendingReferrerCode(norm);
-      navigate(`/cadastro/${norm}`, { replace: true });
+      navigate(`/register/${norm}`, { replace: true });
       return;
     }
     if (!sponsorId && !sponsorDispatchAttempted.current) {

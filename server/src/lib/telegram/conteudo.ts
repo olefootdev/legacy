@@ -12,7 +12,7 @@
 
 export const LINKS = {
   jogo: 'https://game.olefoot.ai',
-  cadastro: 'https://game.olefoot.ai/cadastro',
+  cadastro: 'https://game.olefoot.ai/register',
   site: 'https://olefoot.ai',
   carteira: 'https://dex.olefoot.ai',
   mercado: 'https://game.olefoot.ai/mercado/vivo',

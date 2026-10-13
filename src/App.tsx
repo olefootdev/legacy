@@ -4,7 +4,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { lazyRetry } from '@/lib/lazyRetry';
 import { loadAdminPanelSession, isGameSessionAdmin } from '@/supabase/adminPanelAuth';
 const lazy = lazyRetry; // Bug fix: tela preta na 1ª carga (chunk failure após deploy)
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 
 /** Sobe ao topo a cada troca de rota — a página abre sempre no hero, nunca no meio.
  *  useLayoutEffect = reset antes do paint (sem flash). Só observa o pathname, então
@@ -74,6 +74,9 @@ function SessionGuard() {
     const path = window.location.pathname;
     if (
       path === '/login' ||
+      path === '/register' ||
+      path.startsWith('/register/') ||
+      // Endereços antigos (PT) — só redirecionam, mas já foram enviados.
       path === '/cadastro' ||
       path.startsWith('/cadastro/') ||
       path.startsWith('/admin') ||
@@ -81,6 +84,7 @@ function SessionGuard() {
       // O convite de expansão é público: quem clica pode nem ter sessão, e o
       // guard apagaria o save e mandaria pro /login — perdendo o convite no
       // caminho. A própria tela trata o "precisa entrar".
+      path.startsWith('/invite/') ||
       path.startsWith('/convite-expansao/') ||
       path.startsWith('/playervip') ||
       // Prévias de desenvolvimento (rotas que só existem em DEV).
@@ -205,6 +209,13 @@ const RedeemInvite = lazy(() =>
 );
 const Login = lazy(() => import('./pages/Login').then((m) => ({ default: m.Login })));
 const Cadastro = lazy(() => import('./pages/Cadastro').then((m) => ({ default: m.Cadastro })));
+
+/** Endereço antigo em PT → o novo em EN, levando o código/@ e a query junto. */
+function EnderecoAntigo({ para }: { para: string }) {
+  const { param } = useParams<{ param?: string }>();
+  const { search } = useLocation();
+  return <Navigate to={`${para}${param ? `/${encodeURIComponent(param)}` : ''}${search}`} replace />;
+}
 const ResetPassword = lazy(() => import('./pages/ResetPassword').then((m) => ({ default: m.ResetPassword })));
 const AdminLogin = lazy(() => import('./pages/AdminLogin').then((m) => ({ default: m.AdminLogin })));
 const ReferralLanding = lazy(() => import('./pages/ReferralLanding').then((m) => ({ default: m.ReferralLanding })));
@@ -524,18 +535,22 @@ as a nice MVP. Let's Play Together! ⚽
           />
           <Route element={<RedirectIfRegistered />}>
             <Route path="/login" element={<Login />} />
-            <Route path="/cadastro" element={<Cadastro />} />
+            <Route path="/register" element={<Cadastro />} />
             {/* Página PÚBLICA do $OLEFOOT — contrato, baldes, pré-venda. */}
             <Route path="/token" element={<TokenPage />} />
-            <Route path="/cadastro/:inviteCode" element={<Cadastro />} />
+            <Route path="/register/:inviteCode" element={<Cadastro />} />
           </Route>
+          {/* Endereços antigos em PT: links já enviados continuam valendo. */}
+          <Route path="/cadastro" element={<EnderecoAntigo para="/register" />} />
+          <Route path="/cadastro/:param" element={<EnderecoAntigo para="/register" />} />
+          <Route path="/convite-expansao/:param" element={<EnderecoAntigo para="/invite" />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           {/* CONVITE DE EXPANSÃO — público de propósito: quem clica ainda não
               logou e precisa ver de quem é o convite ANTES de criar conta.
               Fora do RedirectIfRegistered, porque quem JÁ tem conta é
               justamente o caso principal: o login é o mesmo de sempre. */}
           <Route
-            path="/convite-expansao/:username"
+            path="/invite/:username"
             element={
               <Suspense fallback={<RouteFallback />}>
                 <ConviteExpansao />
