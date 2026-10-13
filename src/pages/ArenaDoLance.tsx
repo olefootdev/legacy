@@ -55,16 +55,14 @@ function placarNoFilme(f: FilmeDaPartida, minuto: number): Placar {
   return p;
 }
 
-/** Os lances do filme pra escolher onde assumir: gols, chances e pênaltis, uma vez cada. */
+/** Os lances do filme pra escolher onde assumir: só gols e pênaltis, um por minuto (chance era repetida demais). */
 function lancesDoFilme(f: FilmeDaPartida): { m: number; texto: string }[] {
   const vistos = new Map<number, string>();
   for (const t of f.trechos) {
     for (const e of t.roteiro) {
       const q = e.q;
       if (q.gol && !vistos.has(q.minuto)) vistos.set(q.minuto, L(`Gol — ${q.gol.nome}`, `Goal — ${q.gol.nome}`));
-      else if (q.lance && /^(chance|shot|save|woodwork|penalty)_/.test(q.lance.kind) && !vistos.has(q.lance.minute)) {
-        vistos.set(q.lance.minute, q.lance.kind.startsWith('penalty') ? L('Pênalti', 'Penalty') : L('Chance', 'Chance'));
-      }
+      else if (q.lance?.kind.startsWith('penalty') && !vistos.has(q.lance.minute)) vistos.set(q.lance.minute, L('Pênalti', 'Penalty'));
     }
   }
   return [...vistos].map(([m, texto]) => ({ m, texto })).filter((x) => x.m >= 2 && x.m <= MINUTO_MAX).sort((a, b) => a.m - b.m);
@@ -381,7 +379,6 @@ function Assumir({ id, voltar }: { id: string; voltar: string }) {
               </div>
             );
           })}
-          <p className="font-prova text-[11px] text-mudo">{L(`Ordens: ${rotuloDasOrdens()}`, `Orders: ${rotuloDasOrdens()}`)}</p>
           <div className="flex gap-2">
             <button type="button" onClick={() => setEtapa('prancheta')} className="min-h-[56px] border border-linha px-4 font-prova text-[12px]">{L('Ordens', 'Orders')}</button>
             <button type="button" disabled={ocupado} onClick={() => { void fechar(); }} className="min-h-[56px] flex-1 bg-rua px-4 text-left font-impact text-[22px] uppercase text-asfalto-27 disabled:opacity-50">
@@ -440,7 +437,8 @@ function Assumir({ id, voltar }: { id: string; voltar: string }) {
       })()}
 
       {erro && <p className="font-prova text-[12px] text-baixa">{erro}</p>}
-      <Link to={voltar} className="self-start font-prova text-[12px] text-suave underline">{L('Voltar', 'Back')}</Link>
+      {/* No veredito o botão "Voltar" já está nas ações: o link aqui seria repetido. */}
+      {etapa !== 'veredito' && <Link to={voltar} className="self-start font-prova text-[12px] text-suave underline">{L('Voltar', 'Back')}</Link>}
     </div>
   );
 }
