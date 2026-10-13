@@ -219,7 +219,7 @@ const RECARGA_GRITO_MIN = 15;
 /** Quanto o relógio espera um replan antes de abandonar o pedido (o plano na tela segue). */
 const ESPERA_REPLAN_MS = 8000;
 /** LEGACY: o momento decisivo tem prazo — sem resposta, o jogador decide sozinho (o jogo nunca fica parado). */
-const PRAZO_DECISIVO_MS = 10000;
+export const PRAZO_DECISIVO_MS = 10000;
 const DURACAO_GRITO_MIN = 10;
 
 /** Narração rica vinda do backend (Sonnet) — chaves por beat_id e por minuto. */
@@ -449,11 +449,28 @@ const FEED_STYLE: Record<QuickPlanFeedItem['kind'], string> = {
 /** Tempo real por minuto de jogo CORRIDO (relógio 1,2,3…). 90 min ≈ 22s. */
 const CLOCK_MS = 240;
 /** Duração da CHAMADA de transição antes de um lance de alto sinal (contexto). */
-const LEADIN_MS = 1300;
+export const LEADIN_MS = 1300;
 /** Janela maior quando a chamada tem 3 opções de reação (ler + escolher). */
-const LEADIN_REACT_MS = 2800;
+export const LEADIN_REACT_MS = 2800;
 /** Quanto o relógio "segura" num lance pra dar tempo de ler. */
-const HOLD_MS: Record<MatchEventTier, number> = { epic: 2400, big: 1700, normal: 950, minor: 600 };
+export const HOLD_MS: Record<MatchEventTier, number> = { epic: 2400, big: 1700, normal: 950, minor: 600 };
+
+/**
+ * ACRÉSCIMOS (LEGACY, Fase 12): minutos que o juiz dá no fim de cada tempo, pelas
+ * paradas que já aconteceram (gol, lesão, cartão, pênalti; trocas no 2º tempo).
+ * Pura: o relógio e o estudo de tempo de tela (scripts/estudo-tempo-de-tela.ts) usam a mesma.
+ */
+export function acrescimoDaEtapa(vistos: readonly MatchPlanEvent[], tempo: 1 | 2, trocas = 0): number {
+  const [de, ate] = tempo === 1 ? [1, 45] : [46, 90];
+  let paradas = 0;
+  for (const e of vistos) {
+    if (e.minute < de || e.minute > ate) continue;
+    const k = e.kind.replace(/_(home|away)$/, '');
+    paradas += k === 'goal' ? 0.6 : k === 'injury' ? 1.2 : k === 'yellow' || k === 'red' ? 0.35 : k === 'penalty' ? 0.8 : 0;
+  }
+  if (tempo === 2) paradas += trocas * 0.3;
+  return Math.max(tempo === 1 ? 1 : 2, Math.min(tempo === 1 ? 4 : 6, Math.round(1 + paradas)));
+}
 
 export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, secondHalfLineup, narration, buildShootout, agentTraits, onAoVivo, segurarLance, relogioMs, registrarResposta, golEsperaCampo, pedirReplan, modoCampo = false, onFormationChange }: Props) {
   void speedMultiplier;
@@ -536,17 +553,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   /** Acréscimos: o juiz soma o tempo parado do tempo (gols, cartões, lesões, trocas). */
   const acrescimoRef = useRef(0);
   const [acrescimo, setAcrescimo] = useState(0);
-  const acrescimoDe = (tempo: 1 | 2) => {
-    const [de, ate] = tempo === 1 ? [1, 45] : [46, 90];
-    let paradas = 0;
-    for (const e of eventsRef.current.slice(0, eventIdxRef.current)) {
-      if (e.minute < de || e.minute > ate) continue;
-      const k = e.kind.replace(/_(home|away)$/, '');
-      paradas += k === 'goal' ? 0.6 : k === 'injury' ? 1.2 : k === 'yellow' || k === 'red' ? 0.35 : k === 'penalty' ? 0.8 : 0;
-    }
-    if (tempo === 2) paradas += subsUsedRef.current * 0.3;
-    return Math.max(tempo === 1 ? 1 : 2, Math.min(tempo === 1 ? 4 : 6, Math.round(1 + paradas)));
-  };
+  const acrescimoDe = (tempo: 1 | 2) => acrescimoDaEtapa(eventsRef.current.slice(0, eventIdxRef.current), tempo, subsUsedRef.current);
   const posseDoMinuto = (m: number) => {
     const f = fluxoRef.current.get(m);
     return f ? { lado: f[1] === 'h' ? 'home' as const : 'away' as const, zona: f[2], roubou: f[3] === 1, ator: f[4] } : null;

@@ -57,7 +57,17 @@ export type ProductEvent =
   /** Fundação do Clube: Jogo da Fundação contra o fantasma (placar + fidelidade do relatório). */
   | 'fundacao_estreia'
   /** Partida Viva: erro no quadro do campo (o laço segue; isto diz onde quebrou). */
-  | 'partida_viva_erro';
+  | 'partida_viva_erro'
+  /** Motor de Posses, Fase 3: o campo OFERECEU o Mundo Paralelo (a prova achou um lance que só existiu sem o comando). */
+  | 'mundo_paralelo_oferecido'
+  /** O manager tocou em "E se eu não tivesse mandado?" — quem volta mais: quem viu ou quem só recebeu a oferta? */
+  | 'mundo_paralelo_visto'
+  /** Fase 4 (arena): pegou um filme e jogou dali (a prancheta voltou com os momentos). */
+  | 'arena_assumiu'
+  /** Fase 4 (arena): fechou o lance — saldo contra o dono do filme e contra ficar parado. */
+  | 'arena_fechou'
+  /** Fase 4 (arena): o dono abriu o filme como desafio. */
+  | 'arena_desafio_aberto';
 
 /** Só escalar e booleano. Ver a proibição de PII no cabeçalho. */
 export type EventProps = Record<string, string | number | boolean | null>;

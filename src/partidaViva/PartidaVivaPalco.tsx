@@ -472,6 +472,12 @@ export function PartidaVivaPalco(p: Props) {
   // Toque + vibração quando a decisão chega.
   const decisivoChave = decisao?.tipo === 'decisivo' ? decisao.chave : null;
   useEffect(() => { if (decisivoChave && !noFilme) tocar('alerta'); }, [decisivoChave, noFilme]);
+  // Telemetria (Fase 3): a oferta do Mundo Paralelo, uma vez por prova — a base pra comparar quem viu com quem não viu.
+  const paraleloOferecido = !noFilme ? quadro?.paralelo?.chave ?? null : null;
+  useEffect(() => {
+    if (paraleloOferecido) track('mundo_paralelo_oferecido', { minuto: quadro?.minuto ?? 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paraleloOferecido]);
 
   // Celular em retrato: o palco é sempre horizontal e gira 90° por CSS.
   const larg = retrato ? h : w;
@@ -602,6 +608,7 @@ export function PartidaVivaPalco(p: Props) {
                     const pedido = quadro.paralelo;
                     if (!co || !pedido) return;
                     setParalelosVistos((v) => new Set(v).add(pedido.chave));
+                    track('mundo_paralelo_visto', { minuto: quadro.minuto, causa: pedido.prova.causa.tipo });
                     const par = encenarParalelo(co.corpos.map((c) => c.f), formacaoCasa, formacaoFora, seed, pedido.prova);
                     if (!par) return;
                     canal.responder('pausar');

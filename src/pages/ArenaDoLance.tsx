@@ -26,6 +26,7 @@ import {
   type DesafioAberto, type Fechamento, type LinhaDoRanking, type OrdemDaArena, type Placar, type Prancheta,
 } from '@/partidaViva/arena';
 import { ligarSom } from '@/partidaViva/som';
+import { track } from '@/analytics/track';
 
 const ROTULO = 'font-prova text-[11px] font-bold uppercase tracking-[0.18em]';
 const ESTILOS: TacticalIntensityLevel[] = ['defend', 'counter', 'possession', 'press', 'attack'];
@@ -198,6 +199,7 @@ function Assumir({ id, voltar }: { id: string; voltar: string }) {
     setOcupado(false);
     if ('erro' in r) { setErro(erroDaArena(r.erro)); return; }
     setPrancheta(r.dado);
+    track('arena_assumiu', { minuto: r.dado.minuto, papel: r.dado.papel, ordens: r.dado.ordens.length, momentos: r.dado.momentos.length });
     setEscolhas(escolhasVazias());
     setEtapa('momentos');
   };
@@ -208,12 +210,14 @@ function Assumir({ id, voltar }: { id: string; voltar: string }) {
     setOcupado(false);
     if ('erro' in r) { setErro(erroDaArena(r.erro)); return; }
     ligarSom();
+    track('arena_fechou', { minuto: r.dado.veredito.minuto, papel: r.dado.papel, saldo: r.dado.veredito.saldo, contra_parado: r.dado.veredito.contraParado, registrado: r.dado.registrado });
     setFechado(r.dado);
     setEtapa('filme');
   };
   const abrir = async () => {
     setDesafioAberto('abrindo');
     const r = await abrirDesafio(id);
+    if (!('erro' in r)) track('arena_desafio_aberto', {});
     setDesafioAberto('erro' in r ? erroDaArena(r.erro) : 'sim');
   };
 

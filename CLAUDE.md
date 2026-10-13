@@ -28,6 +28,8 @@ npm run test:motor-posses   # Fase 1: bateria de 1.000 partidas com os intervalo
 npm run test:prova-de-causa # Fase 3: causa nula é nula, marcar tira o alvo do jogo, determinística
 npm run test:arena          # Fase 4: assumir o lance (Python + conta + filme da arena no campo)
 npm run test:plano-salvo    # Fase 4: o adversário ausente joga pelo plano salvo (1.000 partidas)
+npm run estudo:gol-com-comando  # critério do plano: % dos gols com comando ativo (meta 35–50%)
+npm run estudo:tempo-de-tela    # critério do plano: tempo de tela da partida no modo Lances (meta ≤ 4 min)
 npm run estudo:comandos     # nenhum comando vira atalho (rodar com 1.000; 300 é ruído de ±4 pp)
 npm run test:custodia       # custódia exata (placar/gols/finalizações = planos + escolhas)
 npm run estudo:fase0        # equilíbrio antes × depois (1.000 partidas; N=200 pra rápido)

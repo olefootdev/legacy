@@ -943,6 +943,20 @@ tiro de meta e impedimento eram sorteados no aparelho. Agora:
   desktop e no celular (375 px). **Não visto**: a prancheta, os momentos e o veredito com uma conta
   logada (precisa de filme na nuvem gravado com este código e da sessão).
 
+### Os critérios do plano — medição de 13/10 (docs/raio-x-partida-viva.html, "Como saber que deu certo")
+| Critério | Meta | Medido | Situação |
+|---|---|---|---|
+| Placar realista (1.000 partidas) | 2,4–3,0 gols; posse 38–62%; 0 gol de expulso; o 10 pts pior vence ~20% | bateria travada da Fase 1 (`npm run test:motor-posses`) | ✅ dentro |
+| Gols com comando ativo nas 10 posses anteriores | 35%–50% | **22,4%** (1.000 partidas no ritmo REAL dos managers: 3,4 comandos/partida; 8 comandos → 39,8%; 1 comando → 13,1%) — `npm run estudo:gol-com-comando` | ❌ fora — o comando pesa, mas os managers comandam pouco |
+| Replanejamento | < 150 ms | p95 ~35 ms de CPU com a prova (Fase 3) | ✅ dentro |
+| Partida no modo Lances | ≤ 4 min de tela | **6min13s** (mediana, manager típico, 1×; p90 7min01s). Em 2×: 3min38s, 81% até 4 min. O peso são os ~39 lances encenados (~5,1 s cada = 3min19s) — `npm run estudo:tempo-de-tela` | ❌ fora em 1×; ✅ em 2× |
+| Retorno D1 e semana de quem usou o Mundo Paralelo × quem não usou | maior em quem usou | eventos `mundo_paralelo_oferecido`/`_visto` (+ `arena_*`) ligados em 13/10; consulta em `scripts/estudo-retorno-mundo-paralelo.sql` (só leitura) | ⏳ precisa de ≥ 1 semana de dados depois do deploy |
+
+- Os dois "fora" são decisões de produto, não defeitos: (1) mais gols com comando = o jogo puxar o
+  manager a comandar mais (ex.: o Analista oferecer a ordem certa no momento) ou rever a meta; (2) caber
+  em 4 min em 1× = encenar só os lances de alta tensão por inteiro e comprimir os demais (a Fase 2 do
+  raio-x já previa "comprimindo as de baixa tensão"), ou fazer 2× o padrão.
+
 ## 10. Regras de ouro
 1. **Uma verdade só.** O placar sai do plano no servidor. O visual nunca decide.
 2. **Tela primeiro, profundidade depois.** Fatia feia de ponta a ponta > motor perfeito sem tela.
