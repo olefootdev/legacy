@@ -125,6 +125,8 @@ def _jogador(p: Dict[str, Any], indice: int) -> Dict[str, Any]:
         "bola_parada": int(p.get("bola_parada", 55)),
         "penalti": int(p.get("penalti", 55)),
         "pe": p.get("pe") if p.get("pe") in ("left", "right", "both") else None,
+        # FASE 1b: atributo próprio do goleiro, quando a ficha tiver (senão o motor deriva).
+        **({"goleiro": int(p["goleiro"])} if isinstance(p.get("goleiro"), (int, float)) else {}),
     }
 
 

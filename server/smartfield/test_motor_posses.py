@@ -47,6 +47,8 @@ INTERVALOS = {
     "determinismo_pct": (100.0, 100.0),
     "cadeias_falhas": (0, 0),
     "gols_historia_pct": (80.0, 100.0),
+    # Fase 1b: com a classe, o jogador faz MAIS a ação dela (o menor aumento entre 4 classes, em %).
+    "classe_vira_comportamento": (10.0, 400.0),
 }
 
 
@@ -169,6 +171,19 @@ def main():
             plano = simulate(copy.deepcopy(inp))
             if plano["away_score"] > plano["home_score"]:
                 pior_vence += 1
+    # F) a CLASSE vira comportamento (Fase 1b): o mesmo jogo, o mesmo jogador, com e sem classe.
+    def acoes_de(plano, pid, tipo):
+        return sum(1 for j in plano.get("jogadas", []) for a in j["acoes"] if a["de"] == pid and a["t"] == tipo)
+    classe_efeito = {}
+    for classe, pid, tipo in (("regista", "home-6", "lancamento"), ("matador", "home-9", "chute"),
+                              ("ponta_driblador", "home-8", "drible"), ("velocista", "home-10", "conducao")):
+        com = sem = 0
+        for i in range(120):
+            inp = entrada(i)
+            sem += acoes_de(simulate(copy.deepcopy(inp)), pid, tipo)
+            com += acoes_de(simulate({**copy.deepcopy(inp), "classes": {pid: classe}}), pid, tipo)
+        classe_efeito[classe] = (sem, com)
+
     # E) determinismo
     iguais = 0
     for i in range(50):
@@ -201,6 +216,7 @@ def main():
         "cadeias_falhas": len(falhas),
         "gols_historia_pct": 100.0 * contagem.get("gols_historia", 0) / max(1, contagem.get("gols", 1)),
     }
+    medidas["classe_vira_comportamento"] = min(100.0 * (com - sem) / max(1, sem) for sem, com in classe_efeito.values())
     fora = []
     print(f"\nMOTOR DE POSSES — bateria ({jogos} partidas + {n_igual} iguais + {n_pior} com 10 pontos de diferença · {time.time() - t0:.0f} s)\n")
     print(f"{'métrica':<24} {'medido':>9}   intervalo")
@@ -210,6 +226,8 @@ def main():
         if not ok:
             fora.append(k)
         print(f"{'✓' if ok else '✗'} {k:<22} {v:>9.2f}   {lo}–{hi}")
+    for classe, (sem, com) in classe_efeito.items():
+        print(f"    {classe:<16} {sem:>5} → {com:<5} ações da classe (120 partidas)")
     for f in falhas[:12]:
         print("  -", f)
     if fora:

@@ -69,6 +69,9 @@ CAL: Dict[str, float] = {
     "fad_limiar": 55.0, "fad_escala": 300.0,
     # atmosfera (eventos de construção, como no motor antigo)
     "p_buildup": 0.35, "p_counter": 0.60, "max_acoes": 7,
+    # reinícios de verdade (Fase 2): bola errada no corredor sai pela lateral; lançamento
+    # errado pro terço de ataque às vezes é impedimento.
+    "p_lateral": 0.40, "p_impedimento": 0.35,
 }
 
 C, L = 105.0, 68.0
@@ -121,9 +124,47 @@ def fator_do_minuto(p: Jogador) -> None:
 
 
 def _goleiro_attr(gk: Optional[Jogador]) -> float:
+    """Atributo próprio (`goleiro` na ficha) quando existir; senão derivado (§2.5)."""
     if not gk:
         return 60.0
+    proprio = gk.get("goleiro")
+    if isinstance(proprio, (int, float)) and 1 <= proprio <= 99:
+        return float(proprio) * gk.get("_fx", 1.0)
     return 0.55 * _efetivo(gk, "marcacao") + 0.25 * _efetivo(gk, "velocidade") + 0.20 * _efetivo(gk, "confianca")
+
+
+# FASE 1b — a classe do SMART-PROFILE muda ONDE o jogador pesa (§1.3) e O QUE ele
+# prefere fazer com a bola (§2.2). Vem da rota (classesDaPartida, o classificador oficial).
+CLASSES_CONHECIDAS = {
+    "paredao", "goleiro_libero", "xerife", "zagueiro_construtor", "lateral_apoiador", "lateral_marcador",
+    "volante_destruidor", "regista", "box_to_box", "maestro", "meia_chegada",
+    "ponta_driblador", "velocista", "pivo", "falso_9", "matador",
+}
+# (fase, Δterço, Δcorredor relativo: 0 = mesmo, "centro" = c=1) → peso extra
+CLASSE_OCUPA: Dict[str, List[Tuple[str, int, str, float]]] = {
+    "regista": [("of", -1, "mesmo", 0.55)],
+    "falso_9": [("of", -1, "centro", 0.6)],
+    "ponta_driblador": [("of", 0, "mesmo", 0.2)],
+    "velocista": [("of", 0, "mesmo", 0.2)],
+    "matador": [("of", 0, "centro", 0.3)],
+    "pivo": [("of", 0, "centro", 0.2)],
+    "meia_chegada": [("of", 1, "centro", 0.3)],
+    "box_to_box": [("of", 1, "centro", 0.3), ("def", -1, "centro", 0.3)],
+    "lateral_apoiador": [("of", 2, "mesmo", 0.25)],
+    "volante_destruidor": [("def", 0, "mesmo", 0.3)],
+    "xerife": [("def", 0, "mesmo", 0.2)],
+}
+CLASSE_DECIDE: Dict[str, Dict[str, float]] = {
+    "velocista": {"conducao": 0.30},
+    "ponta_driblador": {"drible": 0.50},
+    "regista": {"lancamento": 0.40},
+    "maestro": {"lancamento": 0.25, "passe": 0.15},
+    "matador": {"chute": 0.40},
+    "meia_chegada": {"chute": 0.20},
+    "falso_9": {"passe": 0.20},
+    "zagueiro_construtor": {"passe": 0.15, "recuo": -0.10},
+    "lateral_apoiador": {"cruzamento": 0.20, "conducao": 0.15},
+}
 
 
 def _espalhar(p: Jogador, fase: str, ajuste: float) -> List[Tuple[Celula, float]]:
@@ -171,6 +212,9 @@ def _espalhar(p: Jogador, fase: str, ajuste: float) -> List[Tuple[Celula, float]
         else:
             add(t0, c0, 0.55 + ajuste)
             add(t0 - 1, c0, 0.5 - ajuste)
+    for f, dt, onde, w in CLASSE_OCUPA.get(p.get("classe") or "", []):
+        if f == fase:
+            add(t0 + dt, 1 if onde == "centro" else c0, w)
     return out
 
 
@@ -217,6 +261,26 @@ def _duelo(rng: random.Random, base: float, a: float, d: float, mando: float = 0
     return rng.random() < max(0.03, min(0.97, p))
 
 
+def _em_metros(acs: List[Dict[str, Any]], geo: "_Lado", rng_c: random.Random) -> List[Dict[str, Any]]:
+    """Ações da posse (célula da grade) → pontos em metros no referencial do campo."""
+    saida: List[Dict[str, Any]] = []
+    for a in acs:
+        t, c = a["cell"]
+        if a["t"] in ("chute", "cabeceio", "cobranca", "cobranca_falta"):
+            prof, zr = 1.0, 0.5
+        elif a["t"] == "desvio":
+            prof, zr = 1.0, a["zr"] if a["zr"] is not None else (0.0 if rng_c.random() < 0.5 else 1.0)
+        elif a["t"] == "escanteio":
+            prof, zr = 0.91, 0.45 + rng_c.random() * 0.1
+        else:
+            prof = (a["prof"] if a["prof"] is not None else PROF[t]) + (rng_c.random() - 0.5) * 0.08
+            zr = (a["zr"] if a["zr"] is not None else ZREL[c]) + (rng_c.random() - 0.5) * 0.12
+        x, z = geo.ponto(prof, zr)
+        saida.append({"t": a["t"], "de": a["de"]["id"], "para": a["para"]["id"] if a["para"] else None, "x": x, "z": z,
+                      **({} if a["ok"] else {"ok": 0})})
+    return saida
+
+
 class _Lado:
     def __init__(self, lado: str):
         self.casa = lado == "home"
@@ -251,6 +315,10 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
     away_lineup = normalize_lineup(away_team)
     home_banco = normalize_banco(home_team)
     lineups = {"home": home_lineup, "away": away_lineup}
+    classes = input_data.get("classes") if isinstance(input_data.get("classes"), dict) else {}
+    for p in home_lineup + away_lineup + home_banco:
+        c = classes.get(p["id"])
+        p["classe"] = c if c in CLASSES_CONHECIDAS else None
     home_base = int(home_team.get("strength", 70))
     away_base = int(away_team.get("strength", 70))
     is_derby = bool(input_data.get("is_derby", False))
@@ -313,6 +381,8 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
     momentum_curve: List[float] = []
     analyst_beats: List[Dict[str, Any]] = []
     fluxo: List[List[Any]] = []
+    jogadas_brutas: List[Dict[str, Any]] = []
+    folego: List[List[Any]] = []
     pressure = {"home": max(0.0, momentum_home - 50.0) * 1.1, "away": max(0.0, 50.0 - momentum_home) * 1.1}
     momentum_shock = 0.0
     id_stats = {s: {"recoveries": 0, "high_recoveries": 0, "shots": 0, "xg": 0.0, "fouls": 0, "chances_created": 0} for s in ("home", "away")}
@@ -447,6 +517,9 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
             if rec["id"] not in fora[lado] and vit["id"] not in fora[outro] and rec.get("role") != "gk":
                 registrar("desarme", rec, vit, cell)
                 portador = rec
+        segue = proximo.get("com") if tipo_inicio == "normal" else None
+        if portador is None and segue is not None and segue["id"] not in fora[lado]:
+            portador = segue
         if portador is None:
             portador = _pick(rng, of_tab[cell], 1.5) or _pick(rng, [(p, 1.0) for p in meu if p["id"] not in fora[lado] and p.get("role") != "gk"]) or meu[0]
         if tipo_inicio == "tiro_meta":
@@ -746,10 +819,10 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 pesos["recuo"] = CAL["w_recuo"] + 0.40 * P + 0.20 * dz(dna_a, "solidez") - 0.20 * dz(dna_a, "vertical") + (0.2 if urg < 0 else 0.0)
                 if int_a == "defensive":
                     pesos["recuo"] += 0.15
-            # DNA de posse: toca mais; vertical: chuta/lança mais.
-            if comandos and casa:
-                # Comandos: 'acalmar' empurra posse, 'incentivar' drible, 'cobrar' lançamento — via DNA já ajustado.
-                pass
+            # Classe do SMART-PROFILE: o jeito de jogar vira preferência na decisão (Fase 1b).
+            for k, extra in CLASSE_DECIDE.get(portador.get("classe") or "", {}).items():
+                if k in pesos:
+                    pesos[k] += extra
             # softmax
             chaves = list(pesos.keys())
             exps = [math.exp(max(0.0, pesos[k]) / CAL["temperatura"]) for k in chaves]
@@ -962,16 +1035,40 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
         elif fim == "perda":
             onde = tuple(fim_info.get("cell", cell))
             rec = fim_info.get("recuperador")
-            proximo = {"lado": outro, "cell": _espelho(onde), "tipo": "roubada", "roubou": True, "origem": [], "recuperador": rec, "vitima": fim_info.get("vitima")}
-            id_stats[outro]["recoveries"] += 1
-            if _espelho(onde)[0] >= 2:
-                id_stats[outro]["high_recoveries"] += 1
-        else:  # continua
-            proximo = {"lado": lado, "cell": cell, "tipo": "normal", "roubou": False, "origem": [], "recuperador": None}
+            ultima = acoes[-1] if acoes else None
+            errou_bola = ultima is not None and not ultima["ok"] and ultima["t"] in ("passe", "lancamento")
+            # FASE 2 — o reinício que aconteceu: o lançamento que pega o atacante adiantado
+            # é IMPEDIMENTO (falta pra defesa, lá atrás); a bola errada pela lateral é LATERAL.
+            if errou_bola and ultima["t"] == "lancamento" and onde[0] == 2 and rng.random() < CAL["p_impedimento"]:
+                proximo = {"lado": outro, "cell": (0, 2 - onde[1]), "tipo": "impedimento", "roubou": False, "origem": [], "recuperador": None}
+                fim = "impedimento"
+            elif errou_bola and onde[1] != 1 and rng.random() < CAL["p_lateral"]:
+                proximo = {"lado": outro, "cell": _espelho(onde), "tipo": "lateral", "roubou": False, "origem": [], "recuperador": None}
+                fim = "lateral"
+            else:
+                proximo = {"lado": outro, "cell": _espelho(onde), "tipo": "roubada", "roubou": True, "origem": [], "recuperador": rec, "vitima": fim_info.get("vitima")}
+                id_stats[outro]["recoveries"] += 1
+                if _espelho(onde)[0] >= 2:
+                    id_stats[outro]["high_recoveries"] += 1
+        else:  # continua: a mesma bola, nos mesmos pés, no minuto seguinte
+            proximo = {"lado": lado, "cell": cell, "tipo": "normal", "roubou": False, "origem": [], "recuperador": None, "com": portador}
 
-        # Lesão (rara, só a casa — o adversário não tem banco), como no motor antigo.
-        if rng.random() < 0.012 and lado == "home":
-            inj_actor = rng.choice([p for p in home_lineup if p["fatigue"] > 55 and p["id"] not in fora["home"]] or [p for p in home_lineup if p["id"] not in fora["home"]] or home_lineup)
+        # LESÃO (Fase 1b): rara, só a casa (o adversário não tem banco), mais provável
+        # em quem está cansado — e o lesionado SAI DO MAPA: o time joga com um a menos
+        # até o replan da substituição trazer quem entra. Goleiro não se machuca aqui.
+        linha = [p for p in home_lineup if p["id"] not in fora["home"] and p.get("role") != "gk"]
+        cansados = [p for p in linha if p["fatigue"] > 55]
+        if rng.random() < 0.012 and lado == "home" and linha:
+            inj_actor = rng.choice(cansados or linha)
+            fora["home"].add(inj_actor["id"])
+            # A próxima posse já estava montada: o lesionado sai dela também.
+            fora_id = inj_actor["id"]
+            for chave in ("com", "recuperador", "vitima"):
+                if (proximo.get(chave) or {}).get("id") == fora_id:
+                    proximo[chave] = None
+            if proximo.get("origem"):
+                proximo["origem"] = [a for a in proximo["origem"]
+                                     if a["de"]["id"] != fora_id and (a["para"] is None or a["para"]["id"] != fora_id)]
             tier = classify_event_weight("injury_home", minute, home_score, away_score, 0.0)
             events.append({
                 "minute": minute, "kind": "injury_home", "actor_id": inj_actor["id"], "actor_side": "home", "xg": 0,
@@ -992,6 +1089,11 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
 
         # Fluxo do minuto: quem teve a bola, em que terço, se roubou, quem carregou.
         fluxo.append([minute, "h" if lado == "home" else "a", ("def", "mid", "att")[terco_max], 1 if roubou else 0, (acoes[0]["de"] if acoes else portador)["id"]])
+        # FASE 2 — a posse inteira deste minuto, pro campo encenar o que aconteceu de verdade.
+        jogadas_brutas.append({"m": minute, "lado": lado, "acoes": list(acoes), "fim": fim, "inicio": tipo_inicio,
+                               "portador": portador, "cell": cell, "reinicio": proximo["tipo"]})
+        if minute % 5 == 0 or minute == 90:
+            folego.append([minute, {p["id"]: int(round(p["fatigue"])) for p in home_lineup + away_lineup}])
 
         # ── pressão e momento (mesma mecânica do motor antigo) ──────────────
         pressure["home"] *= 0.90
@@ -1041,20 +1143,7 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
             acs = acs[-6:]
         elif len(acs) > 7:
             acs = acs[-7:]
-        saida: List[Dict[str, Any]] = []
-        for a in acs:
-            t, c = a["cell"]
-            if a["t"] in ("chute", "cabeceio", "cobranca", "cobranca_falta"):
-                prof, zr = 1.0, 0.5
-            elif a["t"] == "desvio":
-                prof, zr = 1.0, a["zr"] if a["zr"] is not None else (0.0 if rng_c.random() < 0.5 else 1.0)
-            elif a["t"] == "escanteio":
-                prof, zr = 0.91, 0.45 + rng_c.random() * 0.1
-            else:
-                prof = (a["prof"] if a["prof"] is not None else PROF[t]) + (rng_c.random() - 0.5) * 0.08
-                zr = (a["zr"] if a["zr"] is not None else ZREL[c]) + (rng_c.random() - 0.5) * 0.12
-            x, z = geo.ponto(prof, zr)
-            saida.append({"t": a["t"], "de": a["de"]["id"], "para": a["para"]["id"] if a["para"] else None, "x": x, "z": z})
+        saida = _em_metros(acs, geo, rng_c)
         if not saida:
             continue
         if corner_sem and saida[-1]["t"] != "escanteio":
@@ -1064,6 +1153,22 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
         fim_t = saida[-1]["t"] if finaliza and saida[-1]["t"] in ("chute", "cabeceio", "cobranca", "cobranca_falta") else None
         ev["cadeia"] = {"inicio": {"x": round(max(0.5, min(C - 0.5, inicio[0])), 1), "z": round(inicio[1], 1)}, "acoes": saida, "finalizacao": fim_t}
         nomear_skills(ev["cadeia"], ev, home_lineup + away_lineup)
+
+    # FASE 2 — as jogadas de cada minuto (o campo encena as posses sem lance também).
+    # Formato: {m, lado: 'h'|'a', inicio: como a posse começou, acoes: [{t,de,para,x,z,ok?}],
+    # fim: como acabou, reinicio: como a próxima começa}. `ok: 0` = a ação falhou ali.
+    jogadas: List[Dict[str, Any]] = []
+    if not sem_cadeia:
+        for j in jogadas_brutas:
+            geo = _Lado(j["lado"])
+            acs = j["acoes"][-8:]
+            rng_j = _rng(f"{seed}|jogada|{j['m']}")
+            item: Dict[str, Any] = {"m": j["m"], "lado": "h" if j["lado"] == "home" else "a", "inicio": j["inicio"],
+                                    "acoes": _em_metros(acs, geo, rng_j), "fim": j["fim"], "reinicio": j["reinicio"]}
+            if not acs:
+                x, z = geo.ponto(PROF[j["cell"][0]], ZREL[j["cell"][1]])
+                item["portador"] = {"id": j["portador"]["id"], "x": x, "z": z}
+            jogadas.append(item)
 
     mvp = None
     if scorer_counts:
@@ -1093,6 +1198,8 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
         "mvp_projection": mvp,
         "possession_home_pct": possession_home_pct,
         "fluxo": fluxo,
+        "jogadas": jogadas,
+        "folego": folego,
         "narrative_arc": arc,
         "team_stats": {
             side: {

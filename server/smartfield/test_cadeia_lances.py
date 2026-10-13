@@ -28,7 +28,7 @@ from match_simulator import simulate  # noqa: E402
 POS = [("GOL", "gk"), ("ZAG", "def"), ("ZAG", "def"), ("LE", "def"), ("LD", "def"),
        ("VOL", "mid"), ("MC", "mid"), ("MC", "mid"), ("PE", "attack"), ("ATA", "attack"), ("PD", "attack")]
 # Voláteis + metadado novo (Fase 4b) que o simulador antigo não tem.
-VOLATEIS = ("generated_at_ms", "duration_ms", "comandos_aplicados", "fluxo")
+VOLATEIS = ("generated_at_ms", "duration_ms", "comandos_aplicados", "fluxo", "jogadas", "folego")
 
 
 def time_aleatorio(r: random.Random, lado: str):
@@ -91,7 +91,8 @@ def conferir_cadeias(inp, com, falhas, i, contagem):
     fora = {"home": set(), "away": set()}
     for ev in com["events"]:
         k = ev["kind"]
-        if k.startswith("red_"):
+        if k.startswith("red_") or k.startswith("injury_"):
+            # Expulso ou lesionado (Fase 1b do Motor de Posses): sai do mapa.
             fora["home" if k.endswith("_home") else "away"].add(ev.get("actor_id"))
         cad = ev.get("cadeia")
         if not cad:

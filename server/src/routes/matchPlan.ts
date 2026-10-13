@@ -574,8 +574,10 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     // `impressaoDaEscalacao`.
     af: impressaoDaEscalacao([body.home_team.lineup, body.away_team.lineup, body.home_team.banco ?? []]),
   });
-  // PARTIDA VIVA: a classe de cada jogador em campo viaja com o plano (só apresentação).
-  const classes = classesDaPartida([body.home_team.lineup, body.away_team.lineup]);
+  // PARTIDA VIVA: a classe de cada jogador viaja com o plano (o campo desenha) e,
+  // desde a Fase 1b do Motor de Posses, vai ao motor (ocupação e preferência de jogada).
+  const classes = classesDaPartida([body.home_team.lineup, body.away_team.lineup, body.home_team.banco ?? []]);
+  (body as QuickPlanRequestBody & { classes?: Record<string, string> }).classes = classes;
   const cached = simpleCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
     return c.json({ ok: true, plan: { ...(cached.plan as object), classes }, cached: true, plano_id: await guardarCustodia(dono, body, cached.plan, conferencia, estado) });
