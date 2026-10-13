@@ -22,6 +22,9 @@ import { fileURLToPath } from 'node:url';
 import { emendarEventos, estadoAte, golDoLance, lanceDe, escolhasVazias, type Escolhas } from '../src/match/placarAoVivo';
 import type { MatchPlan, MatchPlanEvent } from '../src/match/quickPlanTypes';
 import { estadoNoMinuto, notaDaPartida, resumirPlano, validarRelato, type ResumoDoPlano } from '../server/src/lib/smartProfile/custodia';
+import { fraseDaProva } from '../src/match/provaDeCausa';
+import { encenarParalelo } from '../src/partidaViva/mundoParalelo';
+import { montarFichas } from '../src/partidaViva/escalacao';
 import { ovrDe } from '../server/src/lib/smartProfile/ovr';
 import { atributosCompletos } from '../server/src/lib/smartProfile/derivar';
 
@@ -122,6 +125,10 @@ interface Jogo {
   escolhas: Escolhas;
   resumos: ResumoDoPlano[];
   replans: number;
+  provas: number;
+  provasOk: number;
+  paralelos: number;
+  paralelosOk: number;
   estadosConferidos: number;
   estadosDivergentes: string[];
 }
@@ -136,7 +143,7 @@ async function jogar(motor: Motor, i: number): Promise<Jogo> {
   const banco = entrada.home_team.banco.map((p) => p.id);
 
   const full = await motor.pedir<MatchPlan>(entrada);
-  const jogo: Jogo = { placar: [0, 0], stats: {}, cartoes: { home: 0, away: 0 }, expulsos: { home: 0, away: 0 }, escolhas: escolhasVazias(), resumos: [], replans: 0, estadosConferidos: 0, estadosDivergentes: [] };
+  const jogo: Jogo = { placar: [0, 0], stats: {}, cartoes: { home: 0, away: 0 }, expulsos: { home: 0, away: 0 }, escolhas: escolhasVazias(), resumos: [], replans: 0, provas: 0, provasOk: 0, paralelos: 0, paralelosOk: 0, estadosConferidos: 0, estadosDivergentes: [] };
   jogo.resumos.push(resumirPlano(full, titulares, { banco }));
 
   let events: MatchPlanEvent[] = [...full.events];
@@ -152,7 +159,8 @@ async function jogar(motor: Motor, i: number): Promise<Jogo> {
   const estadoDoAparelho = (m: number, inicio: number) => {
     const e = estadoAte(events, jogo.escolhas, inicio);
     return { home_score: e.home_score, away_score: e.away_score, momentum_end: momentum[Math.max(0, m - 1)] ?? 50,
-      cards_home: e.cards_home, cards_away: e.cards_away, sent_off_home: e.sent_off_home, sent_off_away: e.sent_off_away };
+      cards_home: e.cards_home, cards_away: e.cards_away, sent_off_home: e.sent_off_home, sent_off_away: e.sent_off_away,
+      expulsos: e.expulsos, amarelados: e.amarelados };
   };
   const escolhasAgora = (): Escolhas => ({ decisivos: { ...jogo.escolhas.decisivos }, penaltis: { ...jogo.escolhas.penaltis } });
 
@@ -189,14 +197,30 @@ async function jogar(motor: Motor, i: number): Promise<Jogo> {
     if (minutosDeComando.has(m)) {
       const inicio = m + 3;
       if (!((m <= 45 && inicio > 45) || inicio > 90)) {
-        comandos.push({ minuto: m, tipo: 'estilo', estilo: ESTILOS[Math.floor(sorteio() * ESTILOS.length)] });
+        const estilo = ESTILOS[Math.floor(sorteio() * ESTILOS.length)];
+        comandos.push({ minuto: m, tipo: 'estilo', estilo });
         const declaradas = escolhasAgora();
         // O servidor deriva o estado da custódia e confere com o do aparelho.
         const doServidor = estadoNoMinuto(jogo.resumos, declaradas, 'from_minute', inicio);
         const doAparelho = estadoDoAparelho(m, inicio);
         jogo.estadosConferidos++;
         if (JSON.stringify(doServidor) !== JSON.stringify(doAparelho)) jogo.estadosDivergentes.push(`${m}': servidor ${JSON.stringify(doServidor)} ≠ aparelho ${JSON.stringify(doAparelho)}`);
-        const novo = await motor.pedir<MatchPlan>({ ...entrada, mode: 'from_minute', from_minute: inicio, estado: doServidor, comandos });
+        const novo = await motor.pedir<MatchPlan>({ ...entrada, mode: 'from_minute', from_minute: inicio, estado: doServidor, comandos,
+          prova_de_causa: { tipo: 'comando', estilo } });
+        jogo.provas++;
+        if (novo.prova && novo.prova.janela[0] === inicio && fraseDaProva(novo.prova, 'o estilo', (id) => id).length > 20) jogo.provasOk++;
+        // Mundo Paralelo: com um lance que só existiu sem o comando, o campo encena o outro jogo — sempre igual.
+        if (novo.prova?.so_sem.length) {
+          const fichas = [
+            ...montarFichas('home', entrada.home_team.lineup.map((p) => ({ id: p.id, nome: p.id, pos: p.pos, fadiga: 10 }))),
+            ...montarFichas('away', entrada.away_team.lineup.map((p) => ({ id: p.id, nome: p.id, pos: p.pos, fadiga: 10 }))),
+          ];
+          const a = encenarParalelo(fichas, '4-3-3', '4-3-3', entrada.seed, novo.prova);
+          const b = encenarParalelo(fichas, '4-3-3', '4-3-3', entrada.seed, novo.prova);
+          jogo.paralelos++;
+          if (a && b && a.frames.length >= 10 && a.duracao >= 1 && JSON.stringify(a.frames) === JSON.stringify(b.frames)
+            && a.frames.every((f) => f.pos.every(Number.isFinite) && Number.isFinite(f.bola.x + f.bola.z))) jogo.paralelosOk++;
+        }
         jogo.resumos.push(resumirPlano(novo, titulares, { banco, escolhasDeclaradas: declaradas, estadoFonte: 'custodia' }));
         const emenda = emendarEventos(events, idx, m, novo);
         if (!emenda) throw new Error(`replan do ${inicio}' não emendou`);
@@ -227,11 +251,11 @@ async function jogar(motor: Motor, i: number): Promise<Jogo> {
 async function main() {
   const motor = new Motor();
   const N = Number(process.env.N ?? 200);
-  let validas = 0, suspeitasForjadas = 0, estados = 0, divergentes: string[] = [], replans = 0, gols = 0, decisivos = 0, penaltis = 0;
+  let validas = 0, suspeitasForjadas = 0, estados = 0, divergentes: string[] = [], replans = 0, gols = 0, decisivos = 0, penaltis = 0, provas = 0, provasOk = 0, paralelos = 0, paralelosOk = 0;
   const t0 = Date.now();
   for (let i = 0; i < N; i++) {
     const j = await jogar(motor, i);
-    replans += j.replans; estados += j.estadosConferidos; divergentes.push(...j.estadosDivergentes.map((d) => `partida ${i} ${d}`));
+    replans += j.replans; estados += j.estadosConferidos; provas += j.provas; provasOk += j.provasOk; paralelos += j.paralelos; paralelosOk += j.paralelosOk; divergentes.push(...j.estadosDivergentes.map((d) => `partida ${i} ${d}`));
     gols += j.placar[0] + j.placar[1]; decisivos += Object.keys(j.escolhas.decisivos).length; penaltis += Object.keys(j.escolhas.penaltis).length;
     const ovr = ovrDe(atributosCompletos(ATTRS, 'ATA'), 'ATA');
     const jogadores = Object.entries(j.stats).filter(([id]) => !id.startsWith('away-')).map(([id, s]) => ({ id, pos: 'ATA', attrsAntes: ATTRS, gols: s.goals, chutes: s.shots, nota: notaDaPartida(ovr, s.goals, s.shots) }));
@@ -246,6 +270,8 @@ async function main() {
   console.log(`\n${N} partidas em ${((Date.now() - t0) / 1000).toFixed(1)} s · ${gols} gols · ${decisivos} momentos decisivos escolhidos · ${penaltis} batedores escolhidos · ${replans} replans`);
   confere(validas === N, `placar e números por jogador do aparelho == recalculados pela custódia em ${validas}/${N} partidas`);
   confere(divergentes.length === 0, `estado derivado pelo servidor == estado do aparelho em ${estados - divergentes.length}/${estados} replans${divergentes.length ? '\n    ' + divergentes.slice(0, 3).join('\n    ') : ''}`);
+  confere(provas > 0 && provasOk === provas, `Fase 3: a prova de causa volta em todo replan de comando e vira frase (${provasOk}/${provas})`);
+  confere(paralelos > 0 && paralelosOk === paralelos, `Fase 3: o Mundo Paralelo encena o jogo sem o comando, determinístico e sem NaN (${paralelosOk}/${paralelos})`);
   confere(suspeitasForjadas === N, `placar forjado (um gol a mais) cai em suspeita em ${suspeitasForjadas}/${N}`);
   console.log(`\n${falhas ? '🔴' : '🟢'} ${oks} passaram, ${falhas} falharam`);
   process.exit(falhas ? 1 : 0);

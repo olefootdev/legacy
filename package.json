@@ -101,6 +101,8 @@
     "test:cadeia-lances": "python3 server/smartfield/test_cadeia_lances.py --n 300",
     "test:uma-verdade": "tsx scripts/test-uma-verdade.ts",
     "test:motor-posses": "python3 server/smartfield/test_motor_posses.py --n 1000",
+    "test:prova-de-causa": "python3 server/smartfield/test_prova_de_causa.py --n 300",
+    "estudo:comandos": "python3 server/smartfield/estudo_comandos.py --n 1000",
     "estudo:fase0": "tsx scripts/estudo-fase0-equilibrio.ts",
     "test:match-consequences": "tsx scripts/test-match-consequences.ts",
     "test:player-personality": "tsx scripts/test-player-personality.ts",

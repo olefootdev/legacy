@@ -100,6 +100,7 @@ export function estadoNoMinuto(planos: readonly PlanoDaVerdade[], escolhas: Esco
     momentum_end: momentum[minutoDoComando - 1] ?? 50,
     cards_home: conta.cartoes.home, cards_away: conta.cartoes.away,
     sent_off_home: conta.expulsos.home, sent_off_away: conta.expulsos.away,
+    expulsos: conta.expulsosIds, amarelados: conta.amareladosIds.filter((id) => !conta.expulsosIds.includes(id)),
   };
 }
 

@@ -44,6 +44,8 @@ export interface QuadroAoVivo {
   subsRestantes?: number;
   /** Fase 12: a posse DESTE minuto, do plano (quem tem a bola, em que terço, quem carrega). */
   posse?: { lado: 'home' | 'away'; zona: 'def' | 'mid' | 'att'; roubou: boolean; ator: string } | null;
+  /** Fase 3: a última PROVA DE CAUSA com um momento que só existiu sem o comando — o campo oferece o Mundo Paralelo. */
+  paralelo?: { chave: string; rotulo: string; prova: import('@/match/provaDeCausa').ProvaDeCausa } | null;
   /** Fase 2 do Motor de Posses: a posse deste minuto, toque a toque — o campo encena ela (nada inventado). */
   jogada?: JogadaDoPlano | null;
   /** Fôlego do servidor (só nos minutos em que muda): id → fadiga 0–100. O anel e o passo seguem isto. */

@@ -37,7 +37,8 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import idioma
 from analyst_beats import BEAT_MINUTES_FULL, BEAT_MINUTES_SECOND_HALF, build_beat, build_decision_modifiers
 from cadeia_lances import nomear_skills
-from comandos_ao_vivo import aplicar_ordens, dna_no_minuto, limpar_comandos
+from comandos_ao_vivo import aplicar_ordens, dna_no_minuto, limpar_comandos, marcacoes
+from prova_de_causa import comparar, sem_a_causa
 from decisivo import momento_decisivo, penalti_da_casa, penalti_de_fora
 from matchup_matrix import ATTACK_CHANNELS, channel_reason, compute_matchup_matrix
 from narrative_weighter import classify_event_weight, detect_narrative_arc
@@ -292,6 +293,20 @@ class _Lado:
 
 
 def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
+    """O plano. Com `prova_de_causa` num replan de comando/decisão, também a PROVA:
+    as próximas 10 posses com e sem a causa, com os mesmos dados (prova_de_causa.py)."""
+    plano = _simular(input_data)
+    causa = input_data.get("prova_de_causa")
+    if isinstance(causa, dict) and plano.get("mode") == "from_minute" and not input_data.get("sem_cadeia"):
+        pedido_sem = sem_a_causa(input_data, causa)
+        if pedido_sem is not None:
+            sem = _simular({**pedido_sem, "prova_de_causa": None})
+            casa_ids = [p.get("id") for p in (input_data.get("home_team") or {}).get("lineup", []) if isinstance(p, dict)]
+            plano["prova"] = comparar(plano, sem, int(plano["start_minute"]), causa, [i for i in casa_ids if isinstance(i, str)])
+    return plano
+
+
+def _simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
     # Importa aqui pra não criar ciclo (match_simulator despacha pra cá).
     from match_simulator import event_text, fadiga_ate_o_replan, normalize_banco, normalize_lineup, read_dna, dz, team_strength
 
@@ -376,6 +391,15 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
     # Expulsos herdados de um replan não têm id: o time joga com um a menos pela força e pela ocupação (peso).
     fora: Dict[str, Set[str]] = {"home": set(), "away": set()}
     amarelos: Dict[str, int] = {}
+    # Replan (Fase 3): quem foi expulso continua fora do mapa; quem tem amarelo, o 2º é vermelho.
+    if mode in ("second_half", "from_minute"):
+        ids_casa = {p["id"] for p in home_lineup}
+        for pid in (first_half.get("expulsos") or [])[:22]:
+            if isinstance(pid, str):
+                fora["home" if pid in ids_casa else "away"].add(pid)
+        for pid in (first_half.get("amarelados") or [])[:22]:
+            if isinstance(pid, str):
+                amarelos[pid] = 1
 
     events: List[Dict[str, Any]] = []
     momentum_curve: List[float] = []
@@ -445,11 +469,28 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
         def_atk: Dict[Celula, List[Tuple[Jogador, float]]] = {}
         pressao_cel: Dict[Celula, float] = {}
         linha_cel: Dict[Celula, float] = {}
+        # FASE 3 — "marcar o 10": quem recebeu a ordem é o ocupante PRIORITÁRIO das células
+        # onde o alvo joga (todo duelo do alvo passa a ser contra ele).
+        marca: Dict[Celula, List[Jogador]] = {}
+        marcados: Set[str] = set()
+        if comandos and lado == "away":
+            por_id_casa = {p["id"]: p for p in home_lineup if p["id"] not in fora["home"]}
+            por_id_fora = {p["id"]: p for p in away_lineup if p["id"] not in fora["away"]}
+            for jid, aid in marcacoes(comandos, minute).items():
+                marcador, alvo_m = por_id_casa.get(jid), por_id_fora.get(aid)
+                if not marcador or not alvo_m or marcador.get("role") == "gk":
+                    continue
+                marcados.add(aid)
+                for cell_a, w_a in _espalhar(alvo_m, "of", round(ajuste_of, 2)):
+                    if w_a >= 0.2:
+                        marca.setdefault(cell_a, []).append(marcador)
         for t in range(3):
             for c in range(3):
                 cell = (t, c)
                 of_tab[cell] = [(p, w * p["_wf"]) for p, w in of_est[cell] if p["id"] not in fora_a]
                 ds = [(p, w * p["_wf"] * exposicao * (0.85 if amarelos.get(p["id"], 0) >= 1 else 1.0)) for p, w in def_est[_espelho(cell)] if p["id"] not in fora_d]
+                for mk in marca.get(cell, []):
+                    ds = [(p, w) for p, w in ds if p is not mk] + [(mk, 1.6 * mk["_wf"] * exposicao)]
                 def_atk[cell] = ds
                 tot = 0.0
                 soma = 0.0
@@ -472,7 +513,8 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
             return _pick(rng, def_atk[cell])
 
         def receptor_em(cell: Celula, excluir: str) -> Optional[Jogador]:
-            cands = [(p, w) for p, w in of_tab[cell] if p["id"] != excluir]
+            # Marcado de perto, o colega procura menos (a linha de passe dele está fechada).
+            cands = [(p, w * (0.45 if p["id"] in marcados else 1.0)) for p, w in of_tab[cell] if p["id"] != excluir]
             return _pick(rng, cands, 1.5)
 
         def goleiro(side: str) -> Optional[Jogador]:

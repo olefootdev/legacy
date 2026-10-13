@@ -573,10 +573,12 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
         estado: {
           home_score: ctx.homeScore, away_score: ctx.awayScore, momentum_end: ctx.momentumEnd,
           cards_home: ctx.cardsHome, cards_away: ctx.cardsAway, sent_off_home: ctx.sentOffHome, sent_off_away: ctx.sentOffAway,
+          expulsos: ctx.expulsos, amarelados: ctx.amarelados,
         },
         decisions: ctx.ledger.map((d) => ({ beat_id: d.beat_id, choice_id: d.choice_id, channel: d.channel, target_side: d.target_side, weight: d.weight })),
         comandos: ctx.comandos,
         escolhas: ctx.escolhas,
+        provaDeCausa: ctx.causa,
       }).catch(() => null);
       if (novo) planIdsRef.current = [...planIdsRef.current, novo.plano_id];
       return novo;
@@ -630,6 +632,8 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
             cards_away: ctx.cardsAway,
             sent_off_home: ctx.sentOffHome,
             sent_off_away: ctx.sentOffAway,
+            expulsos: ctx.expulsos,
+            amarelados: ctx.amarelados,
           },
           decisions: ctx.ledger.map((d) => ({
             beat_id: d.beat_id,

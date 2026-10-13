@@ -92,7 +92,7 @@ export function moralTilt(moral: number | undefined): { conf: number; men: numbe
  */
 export type ComandoAoVivo =
   | { minuto: number; tipo: 'incentivar' | 'cobrar' | 'acalmar' }
-  | { minuto: number; tipo: 'ordem'; ordem: 'segurar' | 'atacar_espaco' | 'marcar'; jogador: string }
+  | { minuto: number; tipo: 'ordem'; ordem: 'segurar' | 'atacar_espaco' | 'marcar'; jogador: string; alvo?: string }
   | { minuto: number; tipo: 'estilo'; estilo: 'defend' | 'counter' | 'possession' | 'press' | 'attack' }
   | { minuto: number; tipo: 'lenda'; jogador: string };
 
@@ -109,6 +109,8 @@ export interface FetchQuickPlanInput {
   banco?: QuickPlanPlayerPayload[];
   /** UMA VERDADE SÓ: as escolhas feitas até aqui (o servidor deriva o estado do replan delas). */
   escolhas?: Escolhas;
+  /** Fase 3: a causa do replan — o motor devolve a PROVA DE CAUSA (10 posses com × sem, mesmos dados). */
+  provaDeCausa?: import('./provaDeCausa').CausaDoReplan;
   /** 'second_half' = replan dos minutos 46-90 com o ledger de decisões (Fase A).
    *  'from_minute' = replan do LEGACY depois de um grito/ordem (Fase 4b). */
   mode?: 'full' | 'second_half' | 'from_minute';
@@ -148,6 +150,7 @@ function corpoDoMotor(input: FetchQuickPlanInput): Record<string, unknown> {
       ...(input.homeDna ? { dna: input.homeDna } : {}),
     },
     ...(input.escolhas ? { escolhas: input.escolhas } : {}),
+    ...(input.provaDeCausa ? { prova_de_causa: input.provaDeCausa } : {}),
     away_team: {
       strength: input.awayStrength,
       lineup: input.awayLineup,

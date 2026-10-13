@@ -25,6 +25,8 @@ npm run test:plano          # SMART-PROFILE: plano custodiado no servidor
 npm run test:smart-profile
 npm run test:uma-verdade    # Fase 0: 0 gols no aparelho + 200 partidas placar == custódia
 npm run test:motor-posses   # Fase 1: bateria de 1.000 partidas com os intervalos travados (motor de posses)
+npm run test:prova-de-causa # Fase 3: causa nula é nula, marcar tira o alvo do jogo, determinística
+npm run estudo:comandos     # nenhum comando vira atalho (rodar com 1.000; 300 é ruído de ±4 pp)
 npm run test:custodia       # custódia exata (placar/gols/finalizações = planos + escolhas)
 npm run estudo:fase0        # equilíbrio antes × depois (1.000 partidas; N=200 pra rápido)
 # (test:spirit-machine, test:awareness e test:analytics já falham na base — 09/10)

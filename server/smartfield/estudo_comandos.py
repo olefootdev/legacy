@@ -40,6 +40,9 @@ def estado_em(eventos, curva, inicio_curva, minuto):
         "home_score": h, "away_score": a, "momentum_end": curva[idx] if curva else 50,
         "cards_home": conta("yellow_home") + conta("red_home"), "cards_away": conta("yellow_away") + conta("red_away"),
         "sent_off_home": conta("red_home"), "sent_off_away": conta("red_away"),
+        # Fase 3: o expulso não volta no replan; quem tem amarelo, o 2º é vermelho.
+        "expulsos": [e["actor_id"] for e in eventos if e["kind"].startswith("red_") and e["minute"] < minuto],
+        "amarelados": [e["actor_id"] for e in eventos if e["kind"].startswith("yellow_") and e["minute"] < minuto],
     }
 
 
@@ -48,6 +51,9 @@ def jogar(inp, politica):
     plano = simulate(copy.deepcopy(inp))
     eventos, curva, ini = list(plano["events"]), list(plano["momentum_curve"]), 1
     comandos = []
+
+    inp = copy.deepcopy(inp)
+    trocas = 0
 
     def replan(mode, minuto_inicio, extra):
         nonlocal eventos, curva, ini
@@ -67,6 +73,18 @@ def jogar(inp, politica):
         if m == 46 and not intervalo_feito:
             replan("second_half", 46, {})
             intervalo_feito = True
+        # Como o aparelho (Fase 0): LESÃO → entra um reserva no lugar e o motor refaz o
+        # futuro a partir de m+3 (Fase 1b: o lesionado saiu do mapa até lá).
+        lesao = next((e for e in eventos if e["minute"] == m and e["kind"] == "injury_home"), None)
+        if lesao and trocas < 5:
+            trocas += 1
+            for k, p in enumerate(inp["home_team"]["lineup"]):
+                if p["id"] == lesao.get("actor_id"):
+                    inp["home_team"]["lineup"][k] = {**p, "id": f"reserva-{trocas}", "name": f"Reserva {trocas}",
+                                                     **{a: max(35, p[a] - 6) for a in ("finalizacao", "passe", "marcacao", "velocidade", "fisico", "drible")},
+                                                     "fatigue": 0, "entrou_em": m}
+            if not (m <= 45 and m + 3 > 45) and m + 3 <= 90:
+                replan("from_minute", m + 3, {})
         h, a = placar_ate(eventos, m)
         novos = politica(m, h, a)
         if not novos:
@@ -96,6 +114,9 @@ POLITICAS = {
     "esperto (cobra perdendo, acalma ganhando)": lambda m, h, a: (
         [{"tipo": "cobrar"}] if h < a and m % 15 == 5 else [{"tipo": "acalmar"}] if h > a and m % 15 == 5 else []),
     "ordem: atacar o espaço (ATA, 10')": lambda m, h, a: [{"tipo": "ordem", "ordem": "atacar_espaco", "jogador": "home-9"}] if m == 10 else [],
+    # Fase 3: "marcar o 10" — o zagueiro vira o ocupante prioritário das células do melhor atacante deles.
+    "ordem: marcar o 10 (ZAG no ATA deles, 10')": lambda m, h, a: [
+        {"tipo": "ordem", "ordem": "marcar", "jogador": "home-1", "alvo": "away-9"}] if m == 10 else [],
     "ordem: segurar (2 ZAG, 10')": lambda m, h, a: [
         {"tipo": "ordem", "ordem": "segurar", "jogador": "home-1"}, {"tipo": "ordem", "ordem": "segurar", "jogador": "home-2"}] if m == 10 else [],
     "tudo (cobrar 15' + atacar espaço)": lambda m, h, a: (

@@ -859,6 +859,38 @@ tiro de meta e impedimento eram sorteados no aparelho. Agora:
   tocado no palco de verdade): a construção, o chute com faixas de cinema, a reposição do goleiro, a
   falta cruzada na área que virou o gol do 7' e a saída do meio-campo. Celular não visto.
 
+### Fase 3 — Causa e prova (13/10; sem push)
+- **"Marcar o 10" de verdade**: a ordem "marcar de perto" tem ALVO (o rival mais perigoso, maior
+  finalização). Quem recebe a ordem vira o ocupante PRIORITÁRIO das células onde o alvo joga — todo
+  duelo do alvo passa a ser contra ele — e os colegas do alvo o procuram menos (linha de passe
+  fechada). Em 200 replans: o alvo toca 23% menos na bola e o marcador desarma 3,5× mais.
+- **Prova de Causa** (`server/smartfield/prova_de_causa.py`): todo replan pedido por um comando
+  (grito, ordem, estilo, lenda) ou decisão (leitura do Analista, reação) volta com a PROVA — as 10
+  posses seguintes simuladas com e sem a causa, a partir do mesmo estado e com os mesmos dados.
+  Fechada a janela, o feed mostra a frase (`src/match/provaDeCausa.ts`): "🔬 Prova — a ordem pra
+  Caio (23'–32'): Freitas tocou 1× na bola (sem a marcação: 4) · Caio desarmou 3 (sem: 0) · chutes
+  1×0 (sem: 1×2). Sem o comando: Freitas tinha a chance clara no 27'." Na Rápida e no LEGACY.
+  Substitui a medição simples da Fase 12 pra esse comando. Comando sem efeito: "nada mudou".
+- **Mundo Paralelo** (`src/partidaViva/mundoParalelo.ts`, só no campo): quando a prova tem um lance
+  que só existiu SEM o comando, o trilho oferece "E se eu não tivesse mandado?". O jogo pausa, um
+  coreógrafo novo encena as jogadas do servidor sem o comando, do minuto antes daquele lance até ele,
+  e o palco toca os quadros em tom apagado com a fita "MUNDO PARALELO" (até 14 s); depois o jogo
+  volta de onde parou. Determinístico.
+- **O analista lê as diferenças**: no intervalo, o auxiliar diz qual comando do 1º tempo mais mudou
+  o jogo, com os números contra o mesmo jogo sem ele.
+- **Correção achada no caminho**: o estado do replan levava só contagens — o EXPULSO voltava ao
+  campo no plano novo e o amarelo zerava. Agora o estado leva quem foi expulso e quem tem amarelo
+  (cliente e custódia derivam igual; o motor tira do mapa e o 2º amarelo é vermelho).
+- **Portões**: `npm run test:prova-de-causa` (causa nula idêntica em 300/300; marcar tira 23% dos
+  toques do alvo; nenhuma divergência antes do replan; determinística; p95 35 ms de CPU com as duas
+  simulações), `test:uma-verdade` (prova em 400/400 replans de comando, Mundo Paralelo em 104/104
+  sem NaN e determinístico), `test:auxiliar-duelo` (frase e leitura), bateria, cadeias, estresse,
+  custódia, lint. `estudo_comandos.py --n 1000` (o estudo tem de rodar com 1.000 — com 300 o erro é
+  de ±4 pp): replan vazio +0,9 pp, nenhum comando passa de +3,4 pp, cobrar custa cartão (2,05 → 2,37);
+  estudo agora faz a troca e o replan na lesão, como o aparelho.
+- **Não visto rodando**: o Mundo Paralelo e o card da prova numa partida real (sem login no navegador
+  local não há elenco pra montar o campo). Celular não visto.
+
 ## 10. Regras de ouro
 1. **Uma verdade só.** O placar sai do plano no servidor. O visual nunca decide.
 2. **Tela primeiro, profundidade depois.** Fatia feia de ponta a ponta > motor perfeito sem tela.

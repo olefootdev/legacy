@@ -186,6 +186,7 @@ export function QuickHalftimePanel({
               <p className={`${ROTULO} text-rua`}>— {L('Auxiliar', 'Assistant')}</p>
               <p className="mt-1 font-sans text-[15px] font-bold leading-snug text-papel">{auxiliar.texto}</p>
               <p className="mt-0.5 font-sans text-[13px] leading-snug text-suave">{auxiliar.porque}</p>
+              {auxiliar.causa && <p className="mt-1.5 font-sans text-[13px] leading-snug text-papel">🔬 {auxiliar.causa}</p>}
               {auxiliar.sugestao && auxiliar.sugestao !== intensity && (
                 <button
                   type="button"

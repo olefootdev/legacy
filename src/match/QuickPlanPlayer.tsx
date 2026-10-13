@@ -53,6 +53,7 @@ import { SpiritRng } from '../../shared/gamespirit/SpiritRng';
 import { montarDecisivo, dueloDoDecisivo, textoDoDesfecho, type AtributoDoDuelo, type ClutchMoment, type ClutchKey, type Duelo } from './quickClutch';
 import { emendarEventos, escolhaAutomatica, escolhasVazias, estadoAte, golDoLance, lanceDe, type Escolhas } from './placarAoVivo';
 import type { ComandoAoVivo } from './quickPlanClient';
+import { fraseDaProva, leituraDasProvas, type CausaDoReplan, type ProvaDeCausa } from './provaDeCausa';
 import { leituraDoIntervalo, type LeituraDoIntervalo } from './auxiliarDoIntervalo';
 import { AnalystBeatCard } from '@/components/matchquick/AnalystBeatCard';
 import { MomentumBar } from '@/components/match/MomentumBar';
@@ -99,6 +100,9 @@ export interface QuickPlanHalftimeContext {
   comandos: ComandoAoVivo[];
   /** UMA VERDADE SÓ: as escolhas feitas até aqui — o servidor deriva o estado do replan delas. */
   escolhas: Escolhas;
+  /** Quem foi expulso e quem tem amarelo no início do plano novo (o motor não devolve o expulso ao campo). */
+  expulsos: string[];
+  amarelados: string[];
 }
 
 export interface QuickPlanPlayResult {
@@ -204,11 +208,11 @@ interface Props {
 }
 
 /** Contexto de um replan: o do intervalo + o minuto do comando, o minuto em que o plano novo começa e quando cada reserva entrou. */
-export type ContextoDoReplan = QuickPlanHalftimeContext & { minuto: number; inicio: number; entradas: Record<string, number> };
+export type ContextoDoReplan = QuickPlanHalftimeContext & { minuto: number; inicio: number; entradas: Record<string, number>; causa?: CausaDoReplan };
 
 export type ComandoSemMinuto =
   | { tipo: 'incentivar' | 'cobrar' | 'acalmar' }
-  | { tipo: 'ordem'; ordem: 'segurar' | 'atacar_espaco' | 'marcar'; jogador: string }
+  | { tipo: 'ordem'; ordem: 'segurar' | 'atacar_espaco' | 'marcar'; jogador: string; alvo?: string }
   | { tipo: 'estilo'; estilo: TacticalIntensityLevel }
   | { tipo: 'lenda'; jogador: string };
 const RECARGA_GRITO_MIN = 15;
@@ -826,9 +830,14 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       momentumEnd: momentumRef.current[44] ?? 50,
       ...cardsRef.current,
       subsUsed: subsUsedRef.current,
-      auxiliar: leituraDoIntervalo(eventsRef.current.slice(0, eventIdxRef.current), { casa: scoreRef.current.home, fora: scoreRef.current.away }),
+      auxiliar: (() => {
+        const a = leituraDoIntervalo(eventsRef.current.slice(0, eventIdxRef.current), { casa: scoreRef.current.home, fora: scoreRef.current.away });
+        const causa = leituraDasProvas(provasFechadasRef.current);
+        return causa ? { ...a, causa } : a;
+      })(),
       comandos: [...comandosRef.current],
       escolhas: { decisivos: { ...escolhasRef.current.decisivos }, penaltis: { ...escolhasRef.current.penaltis } },
+      ...(() => { const e = estadoAte(eventsRef.current, escolhasRef.current, 46); return { expulsos: e.expulsos, amarelados: e.amarelados }; })(),
     };
     pushFeed({
       id: 'ht',
@@ -937,7 +946,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       });
       window.setTimeout(() => setFloatFx((f) => (f && f.key === fxKey ? null : f)), 1500);
       pushFeed({ id: `reac-${ev.minute}`, minute: ev.minute, kind: 'decision', text: `${positive ? L('Leu bem', 'Good read') : L('Leu errado', 'Wrong read')}: ${choice.label}` });
-      replanAoVivo();
+      replanAoVivo({ causa: { tipo: 'decisao' }, rotulo: L(`a reação "${choice.label}"`, `the "${choice.label}" reaction`) });
     } else {
       const fxKey = (fxSeqRef.current += 1);
       setFloatFx({ key: fxKey, text: L('Plano mantido', 'Plan kept'), tier: 'neutral' });
@@ -1355,7 +1364,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       setFloatFx({ key, text: fxText, tier: fxTier });
       window.setTimeout(() => setFloatFx((f) => (f && f.key === key ? null : f)), 1500);
       // UMA VERDADE SÓ: a leitura vira peso no motor pelo replan (minuto+3); nada muda aqui.
-      if (effect !== 'neutral') replanAoVivo();
+      if (effect !== 'neutral') replanAoVivo({ causa: { tipo: 'decisao' }, rotulo: L(`a leitura "${choice.label}"`, `the "${choice.label}" read`) });
     }
     setActiveBeat(null);
     // Só quem PAROU o relógio (Rápida) retoma ele; no LEGACY contínuo o jogo nunca parou.
@@ -1413,9 +1422,14 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
    * 1º tempo nenhum replan começa depois do 45': o do intervalo leva tudo.
    * Um pedido por vez; comando durante o voo refaz quando o atual pousa.
    */
-  const replanAoVivo = () => {
+  /** Fase 3 — as provas que voltaram com os replans, esperando a janela de 10 posses fechar. */
+  const provasRef = useRef<{ rotulo: string; prova: ProvaDeCausa }[]>([]);
+  /** As provas já fechadas (o analista do intervalo lê qual comando mais mudou o jogo). */
+  const provasFechadasRef = useRef<{ rotulo: string; prova: ProvaDeCausa }[]>([]);
+  const motivoPendenteRef = useRef<{ causa: CausaDoReplan; rotulo: string } | undefined>(undefined);
+  const replanAoVivo = (motivo?: { causa: CausaDoReplan; rotulo: string }) => {
     if (!pedirReplan) return;
-    if (replanEmVooRef.current) { replanSujoRef.current = true; return; }
+    if (replanEmVooRef.current) { replanSujoRef.current = true; if (motivo) motivoPendenteRef.current = motivo; return; }
     const m = minuteRef.current;
     const inicio = Math.max(m + 3, ultimoInicioRef.current + 1);
     if ((m <= 45 && inicio > 45) || inicio > 90) return;
@@ -1423,24 +1437,40 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     // acontecer, do plano antigo) — a mesma conta que o servidor faz da custódia.
     const est = estadoAte(eventsRef.current, escolhasRef.current, inicio);
     const ctx: ContextoDoReplan = {
-      ledger: [...ledgerRef.current, ...reacoesRef.current], homeScore: est.home_score, awayScore: est.away_score,
+      // Em ordem de minuto: a decisão que pediu ESTE replan é a última (a prova tira a última).
+      ledger: [...ledgerRef.current, ...reacoesRef.current].sort((a, b) => a.minute - b.minute), homeScore: est.home_score, awayScore: est.away_score,
       momentumEnd: momentumRef.current[Math.max(0, m - 1)] ?? 50,
       cardsHome: est.cards_home, cardsAway: est.cards_away, sentOffHome: est.sent_off_home, sentOffAway: est.sent_off_away,
       subsUsed: subsUsedRef.current,
       comandos: [...comandosRef.current],
       escolhas: { decisivos: { ...escolhasRef.current.decisivos }, penaltis: { ...escolhasRef.current.penaltis } },
+      expulsos: est.expulsos, amarelados: est.amarelados,
       minuto: m, inicio, entradas: { ...entradasRef.current },
+      causa: motivo?.causa,
     };
     replanEmVooRef.current = true;
     ultimoInicioRef.current = inicio;
     replanPendenteRef.current = { inicio, desde: Date.now() };
     void pedirReplan(ctx)
-      .then((novo) => { if (novo && Array.isArray(novo.events) && replanPendenteRef.current?.inicio === inicio) emendarReplan(novo); })
+      .then((novo) => {
+        if (!novo || !Array.isArray(novo.events) || replanPendenteRef.current?.inicio !== inicio) return;
+        emendarReplan(novo);
+        // A PROVA chegou: ela substitui a medição simples desse comando (Fase 12).
+        if (novo.prova && motivo) {
+          provasRef.current = [...provasRef.current, { rotulo: motivo.rotulo, prova: novo.prova }];
+          efeitosRef.current = efeitosRef.current.filter((e) => e.rotulo !== motivo.rotulo);
+        }
+      })
       .catch(() => undefined)
       .finally(() => {
         replanEmVooRef.current = false;
         if (replanPendenteRef.current?.inicio === inicio) replanPendenteRef.current = null;
-        if (replanSujoRef.current) { replanSujoRef.current = false; replanAoVivo(); }
+        if (replanSujoRef.current) {
+          replanSujoRef.current = false;
+          const pendente = motivoPendenteRef.current;
+          motivoPendenteRef.current = undefined;
+          replanAoVivo(pendente);
+        }
       });
   };
   /** LEGACY (Fase 4c): substituição arrastada do banco — sem sair do campo, sem pausar. */
@@ -1454,14 +1484,32 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     registrarEfeito(L(`a entrada de ${inCard.name}`, `${inCard.name} coming on`));
     replanAoVivo(); // a verdade refaz o futuro com quem entrou
   };
+  /** O nome curto de qualquer um dos 22 (ou do banco) — pra frase da prova. */
+  const nomeDe = (id: string) => shortName([...field, ...benchPool, ...(awayCards ?? [])].find((c) => c.id === id)?.name ?? id);
+  /** Fase 3: o rival mais perigoso (maior finalização, fora o goleiro) — o alvo padrão de "marcar de perto". */
+  const alvoPadrao = (): string | undefined => [...(awayCards ?? [])]
+    .filter((c) => !/GOL|GK/i.test(c.pos))
+    .sort((a, b) => (b.attrs?.finalizacao ?? b.ovr) - (a.attrs?.finalizacao ?? a.ovr))[0]?.id;
   const comandar = (cmd: ComandoSemMinuto) => {
     const m = minuteRef.current;
+    let motivo: { causa: CausaDoReplan; rotulo: string } | undefined;
+    let enviado: ComandoSemMinuto = cmd;
     if (cmd.tipo === 'ordem') {
-      setOrdens((o) => ({ ...o, [cmd.jogador]: cmd.ordem }));
-      const nome = [...field, ...benchPool].find((c) => c.id === cmd.jogador)?.name ?? '';
-      const o = { segurar: L('segura a posição', 'holds position'), atacar_espaco: L('ataca o espaço', 'attacks the space'), marcar: L('marca de perto', 'marks tight') }[cmd.ordem];
-      pushFeed({ id: `ordem-${m}-${cmd.jogador}`, minute: m, kind: 'decision', text: L(`🗣️ Ordem: ${nome} ${o}.`, `🗣️ Order: ${nome} ${o}.`) });
-      registrarEfeito(L(`a ordem pra ${nome}`, `the order to ${nome}`));
+      const ordem = cmd.ordem === 'marcar' && !cmd.alvo ? { ...cmd, alvo: alvoPadrao() } : cmd;
+      enviado = ordem;
+      setOrdens((o) => ({ ...o, [ordem.jogador]: ordem.ordem }));
+      const nome = [...field, ...benchPool].find((c) => c.id === ordem.jogador)?.name ?? '';
+      const alvo = ordem.alvo ? nomeDe(ordem.alvo) : '';
+      const o = { segurar: L('segura a posição', 'holds position'), atacar_espaco: L('ataca o espaço', 'attacks the space'),
+        marcar: alvo ? L(`marca de perto ${alvo}`, `marks ${alvo} tight`) : L('marca de perto', 'marks tight') }[ordem.ordem];
+      pushFeed({ id: `ordem-${m}-${ordem.jogador}`, minute: m, kind: 'decision', text: L(`🗣️ Ordem: ${nome} ${o}.`, `🗣️ Order: ${nome} ${o}.`) });
+      const rotulo = L(`a ordem pra ${shortName(nome)}`, `the order to ${shortName(nome)}`);
+      registrarEfeito(rotulo);
+      motivo = { rotulo, causa: { tipo: 'comando', jogador: ordem.jogador, ordem: ordem.ordem, ...(ordem.alvo ? { alvo: ordem.alvo } : {}) } };
+    } else if (cmd.tipo === 'estilo') {
+      motivo = { rotulo: L(`o estilo ${STYLE_LABEL[cmd.estilo]}`, `the ${STYLE_LABEL[cmd.estilo]} style`), causa: { tipo: 'comando', estilo: cmd.estilo } };
+    } else if (cmd.tipo === 'lenda') {
+      motivo = { rotulo: L(`o Legacy de ${shortName(legacyNameRef.current)}`, `${shortName(legacyNameRef.current)}'s Legacy`), causa: { tipo: 'comando', jogador: cmd.jogador } };
     } else if (cmd.tipo === 'incentivar' || cmd.tipo === 'cobrar' || cmd.tipo === 'acalmar') {
       if (m < gritoLivreEmRef.current) return; // recarga (o servidor também confere)
       gritoLivreEmRef.current = m + RECARGA_GRITO_MIN;
@@ -1470,13 +1518,32 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
         cobrar: L('cobra o time — "APERTA A SAÍDA DELES!"', 'demands more — "PRESS THEM!"'),
         acalmar: L('acalma o time — "CALMA, TOCA A BOLA!"', 'calms the team — "EASY, KEEP IT!"') }[cmd.tipo];
       pushFeed({ id: `grito-${m}`, minute: m, kind: 'decision', text: L(`📣 O técnico ${frase}`, `📣 The coach ${frase}`) });
-      registrarEfeito({ incentivar: L('o grito "Incentivar"', 'the "Fire up" shout'), cobrar: L('o grito "Cobrar"', 'the "Demand" shout'), acalmar: L('o grito "Acalmar"', 'the "Calm down" shout') }[cmd.tipo]);
+      const rotulo = { incentivar: L('o grito "Incentivar"', 'the "Fire up" shout'), cobrar: L('o grito "Cobrar"', 'the "Demand" shout'), acalmar: L('o grito "Acalmar"', 'the "Calm down" shout') }[cmd.tipo];
+      registrarEfeito(rotulo);
+      motivo = { rotulo, causa: { tipo: 'comando', grito: cmd.tipo } };
     }
     // estilo e lenda: quem chamou já anunciou no feed.
-    comandosRef.current = [...comandosRef.current, { ...cmd, minuto: Math.max(1, m) } as ComandoAoVivo];
-    replanAoVivo();
+    comandosRef.current = [...comandosRef.current, { ...enviado, minuto: Math.max(1, m) } as ComandoAoVivo];
+    replanAoVivo(motivo);
   };
   useEffect(() => { if (gritoAtivo && minute >= gritoAtivo.ate) setGritoAtivo(null); }, [minute, gritoAtivo]);
+  // Fase 3 — a PROVA DE CAUSA: fechada a janela de 10 posses, a frase com × sem.
+  // No campo (LEGACY), se houve um lance que só existiu SEM o comando, o Mundo Paralelo fica à mão.
+  const [paralelo, setParalelo] = useState<{ chave: string; rotulo: string; prova: ProvaDeCausa; ate: number } | null>(null);
+  useEffect(() => {
+    if (paralelo && minute > paralelo.ate) setParalelo(null);
+    const prontas = provasRef.current.filter((p) => minute > p.prova.janela[1]);
+    if (!prontas.length) return;
+    provasRef.current = provasRef.current.filter((p) => minute <= p.prova.janela[1]);
+    for (const p of prontas) {
+      provasFechadasRef.current = [...provasFechadasRef.current, p];
+      pushFeed({ id: `prova-${p.prova.janela[0]}-${p.rotulo}`, minute, kind: 'insight', text: fraseDaProva(p.prova, p.rotulo, nomeDe) });
+      if (modoCampo && p.prova.so_sem.length && p.prova.jogadas_sem?.length) {
+        setParalelo({ chave: `${p.prova.janela[0]}-${p.rotulo}`, rotulo: p.rotulo, prova: p.prova, ate: minute + 12 });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minute]);
   useEffect(() => {
     const prontos = efeitosRef.current.filter((e) => minute >= e.desde + 10);
     if (!prontos.length) return;
@@ -1577,11 +1644,12 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       narracao: [...feed].reverse().slice(0, 6).map((f) => ({ id: f.id, minuto: f.minute, texto: f.text })),
       posse: posseDoMinuto(minute),
       jogada: jogadasRef.current.get(minute) ?? null,
+      paralelo: paralelo ? { chave: paralelo.chave, rotulo: paralelo.rotulo, prova: paralelo.prova } : null,
       folego: folegoRef.current.get(minute),
       acrescimo: modoCampo ? acrescimo : undefined,
       numeros: modoCampo ? numerosAte(minute) : undefined,
     });
-  }, [minute, phase, homeScore, awayScore, highlight, celebration, feed, style, activeBeat, leadIn, leadInReactable, clutch, forced, benchPool, gritoAtivo, ordens, field, subsUsed, pausado, acrescimo, batedores, modoCampo]);
+  }, [minute, phase, homeScore, awayScore, highlight, celebration, feed, style, activeBeat, leadIn, leadInReactable, clutch, forced, benchPool, gritoAtivo, ordens, field, subsUsed, pausado, acrescimo, batedores, modoCampo, paralelo]);
 
   // PARTIDA VIVA (Fase 4) — respostas vindas do campo caem nas mesmas funções dos botões.
   const responderRef = useRef<(id: string) => void>(() => {});

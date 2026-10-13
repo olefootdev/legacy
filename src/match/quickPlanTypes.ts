@@ -107,6 +107,9 @@ export interface QuickPlanFirstHalfState {
   cards_away?: number;
   sent_off_home?: number;
   sent_off_away?: number;
+  /** Quem foi expulso (o motor tira do mapa) e quem já tem amarelo (o 2º é vermelho) — Fase 3. */
+  expulsos?: string[];
+  amarelados?: string[];
 }
 
 /**
@@ -245,6 +248,8 @@ export interface MatchPlan {
    * tem a bola), terço ('def'|'mid'|'att'), 1 se acabou de roubar, id de quem carrega].
    */
   fluxo?: [number, 'h' | 'a', 'def' | 'mid' | 'att', 0 | 1, string][];
+  /** Fase 3: a PROVA DE CAUSA do comando/decisão que pediu este replan (com × sem, mesmos dados). */
+  prova?: import('./provaDeCausa').ProvaDeCausa;
   /** Partida Viva (Fase 2 do Motor de Posses): a posse de cada minuto, toque a toque. */
   jogadas?: JogadaDoPlano[];
   /** Fôlego dos 22 a cada 5 minutos: [minuto, {id: fadiga 0–100}]. */

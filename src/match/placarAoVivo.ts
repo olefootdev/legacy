@@ -37,6 +37,7 @@ export function estadoAte(events: readonly MatchPlanEvent[], escolhas: Escolhas,
     home_score: c.placar[0], away_score: c.placar[1],
     cards_home: c.cartoes.home, cards_away: c.cartoes.away,
     sent_off_home: c.expulsos.home, sent_off_away: c.expulsos.away,
+    expulsos: c.expulsosIds, amarelados: c.amareladosIds.filter((id) => !c.expulsosIds.includes(id)),
   };
 }
 

@@ -20,6 +20,8 @@ export interface LeituraDoIntervalo {
   sugestao: Estrategia | null;
   /** Por quê da sugestão, curto. */
   porque: string;
+  /** Fase 3: o analista lê as provas — o comando que mais mudou o 1º tempo (com × sem, mesmos dados). */
+  causa?: string;
 }
 
 const PERIGO = new Set(['goal', 'shot', 'save', 'chance', 'woodwork', 'penalty']);

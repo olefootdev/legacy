@@ -131,6 +131,9 @@ interface QuickPlanDecisionInput {
 interface QuickPlanFirstHalfInput {
   home_score: number;
   away_score: number;
+  /** Fase 3: quem foi expulso e quem tem amarelo (derivados da custódia quando há cadeia). */
+  expulsos?: string[];
+  amarelados?: string[];
   momentum_end?: number;
   cards_home?: number;
   cards_away?: number;
@@ -155,6 +158,8 @@ interface QuickPlanRequestBody {
   comandos?: unknown[];
   /** UMA VERDADE SÓ: as escolhas feitas até aqui — o servidor deriva o estado do replan delas, não do celular. */
   escolhas?: unknown;
+  /** Fase 3: a causa do replan (o comando ou a decisão) — o motor devolve a PROVA (com × sem, mesmos dados). */
+  prova_de_causa?: { tipo: 'comando' | 'decisao'; jogador?: string; alvo?: string; ordem?: string; grito?: string; estilo?: string };
   decisions?: QuickPlanDecisionInput[];
   /** FABLE — DERBY/CLÁSSICO: Python amplia agressividade dos 2 lados (~×1.12). */
   is_derby?: boolean;
@@ -554,7 +559,8 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     m: body.mode ?? 'full',
     // LEGACY (Fase 4b): replan do meio do jogo — minuto, estado e comandos entram na chave.
     fm: body.mode === 'from_minute' ? Number(body.from_minute) : '',
-    est: body.estado ? `${body.estado.home_score}-${body.estado.away_score}-${body.estado.momentum_end ?? 50}-${body.estado.sent_off_home ?? 0}-${body.estado.sent_off_away ?? 0}` : '',
+    est: body.estado ? `${body.estado.home_score}-${body.estado.away_score}-${body.estado.momentum_end ?? 50}-${body.estado.sent_off_home ?? 0}-${body.estado.sent_off_away ?? 0}-${(body.estado.expulsos ?? []).join('.')}-${(body.estado.amarelados ?? []).join('.')}` : '',
+    pc: body.prova_de_causa ? JSON.stringify(body.prova_de_causa).slice(0, 200) : '',
     cmd: Array.isArray(body.comandos) ? JSON.stringify(body.comandos).slice(0, 4000) : '',
     fh: body.first_half
       ? `${body.first_half.home_score}-${body.first_half.away_score}-${body.first_half.momentum_end ?? 50}`

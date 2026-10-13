@@ -157,6 +157,9 @@ export interface ContaDaPartida {
   cartoes: { home: number; away: number };
   /** Expulsos por lado. */
   expulsos: { home: number; away: number };
+  /** Quem foi expulso (o replan não pode devolvê-lo ao campo) e quem já tem amarelo (o 2º é vermelho). */
+  expulsosIds: string[];
+  amareladosIds: string[];
 }
 
 /**
@@ -165,7 +168,7 @@ export interface ContaDaPartida {
  * aparelho tabula lance a lance (`QuickPlanPlayer`: tally).
  */
 export function contarPartida(lances: readonly LanceDaVerdade[], escolhas: Escolhas, ateMinuto?: number): ContaDaPartida {
-  const out: ContaDaPartida = { placar: [0, 0], gols: {}, chutes: {}, cartoes: { home: 0, away: 0 }, expulsos: { home: 0, away: 0 } };
+  const out: ContaDaPartida = { placar: [0, 0], gols: {}, chutes: {}, cartoes: { home: 0, away: 0 }, expulsos: { home: 0, away: 0 }, expulsosIds: [], amareladosIds: [] };
   const mais = (r: Record<string, number>, id: string | null) => { if (id) r[id] = (r[id] ?? 0) + 1; };
   for (const l of lances) {
     if (ateMinuto !== undefined && l.m >= ateMinuto) continue;
@@ -179,8 +182,10 @@ export function contarPartida(lances: readonly LanceDaVerdade[], escolhas: Escol
       mais(out.chutes, l.a);
     } else if (l.k === 'yellow') {
       out.cartoes[l.lado] += 1;
+      if (l.a && !out.amareladosIds.includes(l.a)) out.amareladosIds.push(l.a);
     } else if (l.k === 'red') {
       out.expulsos[l.lado] += 1;
+      if (l.a && !out.expulsosIds.includes(l.a)) out.expulsosIds.push(l.a);
     }
   }
   return out;

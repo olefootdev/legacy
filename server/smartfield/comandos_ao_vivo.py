@@ -84,7 +84,11 @@ def limpar_comandos(raw: Any) -> List[Dict[str, Any]]:
                 continue
             out.append({"minuto": minuto, "tipo": tipo})
         elif tipo == "ordem" and c.get("ordem") in ORDENS and isinstance(c.get("jogador"), str):
-            out.append({"minuto": minuto, "tipo": "ordem", "ordem": c["ordem"], "jogador": c["jogador"][:80]})
+            ordem = {"minuto": minuto, "tipo": "ordem", "ordem": c["ordem"], "jogador": c["jogador"][:80]}
+            # FASE 3: "marcar" tem ALVO — o rival que o jogador passa a marcar (ocupante prioritário das células dele).
+            if c["ordem"] == "marcar" and isinstance(c.get("alvo"), str) and c["alvo"]:
+                ordem["alvo"] = c["alvo"][:80]
+            out.append(ordem)
         elif tipo == "estilo" and c.get("estilo") in ESTILOS:
             out.append({"minuto": minuto, "tipo": "estilo", "estilo": c["estilo"]})
         elif tipo == "lenda" and isinstance(c.get("jogador"), str) and c["jogador"].startswith("legacy-"):
@@ -96,9 +100,18 @@ def limpar_comandos(raw: Any) -> List[Dict[str, Any]]:
     return out
 
 
+def marcacoes(cmds: List[Dict[str, Any]], minuto: int) -> Dict[str, str]:
+    """Marcação individual vigente: jogador da casa → rival que ele marca (a última ordem de cada um vale)."""
+    vigente: Dict[str, Optional[str]] = {}
+    for c in cmds:
+        if c["tipo"] == "ordem" and c["minuto"] <= minuto:
+            vigente[c["jogador"]] = c.get("alvo") if c["ordem"] == "marcar" else None
+    return {j: a for j, a in vigente.items() if a}
+
+
 def impressao(cmds: List[Dict[str, Any]]) -> str:
     return ";".join(
-        f"{c['minuto']}:{c['tipo']}" + (f":{c['jogador']}:{c['ordem']}" if c["tipo"] == "ordem" else "")
+        f"{c['minuto']}:{c['tipo']}" + (f":{c['jogador']}:{c['ordem']}:{c.get('alvo', '')}" if c["tipo"] == "ordem" else "")
         for c in cmds
     )
 

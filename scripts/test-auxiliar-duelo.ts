@@ -3,6 +3,7 @@
  * npm run test:auxiliar-duelo
  */
 import { leituraDoIntervalo } from '../src/match/auxiliarDoIntervalo';
+import { fraseDaProva, leituraDasProvas, type ProvaDeCausa } from '../src/match/provaDeCausa';
 import { dueloDoDecisivo, montarDecisivo } from '../src/match/quickClutch';
 import { escolhaAutomatica, golDoLance, lanceDe } from '../src/match/placarAoVivo';
 import type { MatchPlanEvent } from '../src/match/quickPlanTypes';
@@ -53,6 +54,26 @@ const ev = (minute: number, kind: string, side: 'home' | 'away', channel: MatchP
   const l = lanceDe(defesa)!;
   confere(golDoLance(l, { decisivos: { '60': 'carrinho' }, penaltis: {} }) === false && golDoLance(l, { decisivos: { '60': 'cercar' }, penaltis: {} }) === true,
     'o desfecho é o do motor por opção: carrinho segura, cercar sofre — nada é sorteado no aparelho');
+}
+
+// ── Fase 3: a Prova de Causa vira frase; o analista lê as diferenças ─────────
+{
+  const num = (o: Partial<ProvaDeCausa['com']> = {}): ProvaDeCausa['com'] => ({ posses_casa: 5, posses: 10, chutes_casa: 1, chutes_fora: 1, xg_casa: 0.1, xg_fora: 0.1, roubadas_casa: 2, faltas_casa: 1, cartoes_casa: 0, por_jogador: {}, ...o });
+  const marcar: ProvaDeCausa = {
+    janela: [23, 32], causa: { tipo: 'comando', jogador: 'z1', alvo: 'a9', ordem: 'marcar' }, divergiu_em: 24,
+    com: num({ roubadas_casa: 4, chutes_fora: 0, por_jogador: { a9: { toques: 1 }, z1: { desarme: 3 } } }),
+    sem: num({ roubadas_casa: 2, chutes_fora: 2, por_jogador: { a9: { toques: 4 }, z1: { desarme: 0 } } }),
+    so_com: [], so_sem: [{ m: 27, k: 'chance', lado: 'away', a: 'a9' }, { m: 30, k: 'shot', lado: 'away', a: 'a9' }],
+  };
+  const nomes: Record<string, string> = { z1: 'Caio', a9: 'Freitas' };
+  const f = fraseDaProva(marcar, 'a ordem pra Caio', (id) => nomes[id] ?? id);
+  confere(/Freitas tocou 1× na bola \(sem a marcação: 4\)|Freitas touched the ball 1×/.test(f) && /Caio desarmou 3|Caio won it back 3/.test(f) && /27'/.test(f),
+    `marcar o 10 vira frase com o alvo, o marcador e o lance que não houve: "${f}"`);
+  const nada: ProvaDeCausa = { ...marcar, causa: { tipo: 'comando', grito: 'acalmar' }, com: num(), sem: num(), so_com: [], so_sem: [] };
+  confere(/nada mudou|nothing changed/.test(fraseDaProva(nada, 'o grito', (id) => id)), 'comando sem efeito: a prova diz que nada mudou (não inventa)');
+  const leitura = leituraDasProvas([{ rotulo: 'o grito', prova: nada }, { rotulo: 'a ordem pra Caio', prova: marcar }]);
+  confere(!!leitura && /a ordem pra Caio/.test(leitura) && /-2|−2/.test(leitura), `o analista aponta o comando que mais mudou o jogo: "${leitura}"`);
+  confere(leituraDasProvas([]) === null, 'sem prova, o analista não fala de comando');
 }
 
 if (falhas) { console.error(`\n${falhas} falha(s)`); process.exit(1); }

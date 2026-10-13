@@ -38,6 +38,7 @@ import { FASES_FORA_DO_CAMPO, type Ficha, type QuadroAoVivo } from './tipos';
 import { desligarSom, ligarSom, pararSom, somLigado, tiqueDoSom, tocar } from './som';
 import { ESPERA_ANTES_MS, GIZ_MS, pontosDoGiz, quadroDoReplay, REPLAY_MS, type PontoDoGiz } from './filme';
 import type { QuadroDoFilme } from './coreografo';
+import { encenarParalelo, quadroDoParalelo, type Paralelo } from './mundoParalelo';
 
 export type ModoDeAssistir = 'lances' | 'completa';
 
@@ -175,6 +176,10 @@ export function PartidaVivaPalco(p: Props) {
   const coreoRef = useRef<Coreografo | null>(null);
   if (!coreoRef.current) coreoRef.current = new Coreografo(fichas, formacaoCasa, formacaoFora, seed, p.comEntrada);
   const replayRef = useRef<HTMLSpanElement>(null);
+  /** Fase 3 — Mundo Paralelo pedido no trilho (o laço toca quando o campo estiver livre). */
+  const paraleloPedidoRef = useRef<Paralelo | null>(null);
+  const [paralelosVistos, setParalelosVistos] = useState<ReadonlySet<string>>(() => new Set());
+  const [paraleloNaTela, setParaleloNaTela] = useState<string | null>(null);
   /** Contagem antes do apito (3, 2, 1) — os times já estão na posição. */
   const [contagem, setContagem] = useState<number | null>(null);
   const pularFilmeRef = useRef(false);
@@ -243,13 +248,21 @@ export function PartidaVivaPalco(p: Props) {
         return alvo ? Math.max(0, alvo.p - co.passos) : 0;
       };
       // Roteiro do gol (Fase 5): comemoração → REPLAY → jogada a giz → a Rápida segue.
-      type Filme = { fase: 'espera' | 'replay' | 'giz' | 'semCadeia'; ini: number; frames: QuadroDoFilme[]; autorId?: string; pontos: PontoDoGiz[] };
+      type Filme = { fase: 'espera' | 'replay' | 'giz' | 'semCadeia' | 'paralelo'; ini: number; frames: QuadroDoFilme[]; autorId?: string; pontos: PontoDoGiz[]; par?: Paralelo };
       let filme: Filme | null = null;
       let golAtendido: unknown = null;
       const terminarFilme = () => {
+        const eraParalelo = filme?.fase === 'paralelo';
         filme = null;
+        if (replayRef.current) { replayRef.current.style.opacity = '0'; replayRef.current.textContent = 'REPLAY'; }
+        if (eraParalelo) {
+          // Fim do Mundo Paralelo: o jogo de verdade volta de onde parou.
+          onde.style.filter = '';
+          setParaleloNaTela(null);
+          canal.responder('retomar');
+          return;
+        }
         co.golGravado = null;
-        if (replayRef.current) replayRef.current.style.opacity = '0';
         canal.responder('seguir');
       };
       // O laço NUNCA morre (bug do fundador 10/10: o campo travou no 16' e o
@@ -269,6 +282,14 @@ export function PartidaVivaPalco(p: Props) {
       const umQuadro = (agora: number) => {
         const real = Math.min(0.25, Math.max(0, (agora - antes) / 1000));
         antes = agora;
+        // Fase 3 — o MUNDO PARALELO pedido no trilho: o jogo está pausado; tocam os quadros sem o comando.
+        if (paraleloPedidoRef.current && !filme && !co.festa) {
+          const par = paraleloPedidoRef.current;
+          paraleloPedidoRef.current = null;
+          filme = { fase: 'paralelo', ini: agora, frames: par.frames, pontos: [], par };
+          if (replayRef.current) { replayRef.current.textContent = L('MUNDO PARALELO', 'PARALLEL WORLD'); replayRef.current.style.opacity = '1'; }
+          onde.style.filter = 'grayscale(0.75) sepia(0.3)';
+        }
         if (co.festa && co.festa !== golAtendido && !filme) {
           golAtendido = co.festa;
           filme = co.golGravado && co.filme.length
@@ -295,6 +316,7 @@ export function PartidaVivaPalco(p: Props) {
         if (filme?.fase === 'espera' && agora - filme.ini > ESPERA_ANTES_MS) { filme = { ...filme, fase: 'replay', ini: agora }; if (replayRef.current) replayRef.current.style.opacity = '1'; }
         else if (filme?.fase === 'replay' && agora - filme.ini > REPLAY_MS) { filme = { ...filme, fase: 'giz', ini: agora }; if (replayRef.current) replayRef.current.style.opacity = '0'; }
         else if ((filme?.fase === 'giz' && agora - filme.ini > GIZ_MS) || (filme?.fase === 'semCadeia' && agora - filme.ini > 2600)) terminarFilme();
+        else if (filme?.fase === 'paralelo' && agora - filme.ini > (filme.par?.duracao ?? 0) * 1000 + 600) terminarFilme();
         const rodando = !filme || filme.fase === 'espera' || filme.fase === 'semCadeia';
         if (rodando && agora >= congeladoAte) {
           if (onde.style.filter) onde.style.filter = '';
@@ -313,7 +335,8 @@ export function PartidaVivaPalco(p: Props) {
             if (co.consumirCongelamento()) { congeladoAte = agora + CONGELA_MS; onde.style.filter = 'grayscale(1) contrast(1.15)'; acumulado = 0; break; }
           }
         }
-        const replay = filme?.fase === 'replay' ? quadroDoReplay(filme.frames, fichas, filme.autorId, (agora - filme.ini) / REPLAY_MS) : null;
+        const replay = filme?.fase === 'replay' ? quadroDoReplay(filme.frames, fichas, filme.autorId, (agora - filme.ini) / REPLAY_MS)
+          : filme?.fase === 'paralelo' && filme.par ? quadroDoParalelo(filme.par, co.corpos.map((c) => c.f), (agora - filme.ini) / 1000) : null;
         let q = replay ?? co.quadro(acumulado / DT);
         // Câmera do Craque: só o enquadramento muda (o jogo não sabe que é seguido).
         const alvo = !replay && seguindoRef.current ? q.jogadores.find((j) => j.f.id === seguindoRef.current) : undefined;
@@ -567,10 +590,37 @@ export function PartidaVivaPalco(p: Props) {
                 ? () => { setSaiEscolhido(fichaSel.id); setEntraEscolhido(null); setPainel('banco'); }
                 : undefined}
             />
-          ) : pausado && !noFilme ? (
+          ) : pausado && !noFilme && !paraleloNaTela ? (
             <PainelPrancheta leitura={leitura} onVoltar={() => canal.responder('retomar')} />
           ) : (
-            <Narracao quadro={quadro ? { ...quadro, narracao: mostrado.narracao } : quadro} />
+            <>
+              {quadro?.paralelo && !noFilme && !paralelosVistos.has(quadro.paralelo.chave) && !paraleloNaTela && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const co = coreoRef.current;
+                    const pedido = quadro.paralelo;
+                    if (!co || !pedido) return;
+                    setParalelosVistos((v) => new Set(v).add(pedido.chave));
+                    const par = encenarParalelo(co.corpos.map((c) => c.f), formacaoCasa, formacaoFora, seed, pedido.prova);
+                    if (!par) return;
+                    canal.responder('pausar');
+                    paraleloPedidoRef.current = par;
+                    setParaleloNaTela(pedido.chave);
+                  }}
+                  className="self-stretch border-l-[3px] border-rua bg-concreto px-2 py-1.5 text-left font-prova text-[11px] leading-snug text-papel"
+                >
+                  <span className="block font-impact text-[14px] uppercase leading-tight text-rua">{L('E se eu não tivesse mandado?', 'What if I hadn’t called it?')}</span>
+                  <span className="block text-mudo">{L(`Mundo paralelo · sem ${quadro.paralelo.rotulo}`, `Parallel world · without ${quadro.paralelo.rotulo}`)}</span>
+                </button>
+              )}
+              {paraleloNaTela && (
+                <p className="font-prova text-[11px] leading-snug text-cal">
+                  {L('O mesmo jogo, os mesmos dados — sem o seu comando. O jogo de verdade espera.', 'Same match, same dice — without your call. The real match is waiting.')}
+                </p>
+              )}
+              <Narracao quadro={quadro ? { ...quadro, narracao: mostrado.narracao } : quadro} />
+            </>
           )}
         </aside>
 
