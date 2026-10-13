@@ -58,46 +58,46 @@ revoke all on public.arena_tentativas from anon, authenticated;
 -- ════════════════════════════════════════════════════════════════════════════
 do $$
 declare
-  dono uuid := (select id from auth.users order by created_at limit 1);
-  outro uuid := (select id from auth.users order by created_at offset 1 limit 1);
-  filme uuid;
-  tent uuid;
+  v_dono uuid := (select id from auth.users order by created_at limit 1);
+  v_outro uuid := (select id from auth.users order by created_at offset 1 limit 1);
+  v_filme uuid;
+  v_tent uuid;
 begin
   if has_table_privilege('authenticated', 'public.arena_tentativas', 'select')
      or has_table_privilege('anon', 'public.arena_tentativas', 'select') then
     raise exception 'arena_tentativas ficou aberta ao cliente';
   end if;
-  if dono is null or outro is null then
+  if v_dono is null or v_outro is null then
     raise notice 'verificação: sem dois usuários pra testar (ambiente vazio)';
     return;
   end if;
   -- o caminho novo: um filme aberto como desafio, uma tentativa, a busca do ranking e a da lenda
   insert into public.partidas_filme (dono, seed, resumo, filme, arena_aberta)
-    values (dono, 'zz-verifica-arena', '{}'::jsonb, '{"v":1}'::jsonb, true)
-    returning id into filme;
+    values (v_dono, 'zz-verifica-arena', '{}'::jsonb, '{"v":1}'::jsonb, true)
+    returning id into v_filme;
   insert into public.arena_tentativas (filme, desafiante, minuto, no_minuto, placar_ele, placar_voce, placar_parado, saldo, contra_parado, semana, lendas, escolhas_da_lenda)
-    values (filme, outro, 60, '{1,1}', '{1,2}', '{2,1}', '{1,1}', 2, 1, 'zz-W00', array['legacy-zz'], '{"legacy-zz":{"driblar":2}}'::jsonb)
-    returning id into tent;
-  if not exists (select 1 from public.partidas_filme where arena_aberta and id = filme) then
+    values (v_filme, v_outro, 60, '{1,1}', '{1,2}', '{2,1}', '{1,1}', 2, 1, 'zz-W00', array['legacy-zz'], '{"legacy-zz":{"driblar":2}}'::jsonb)
+    returning id into v_tent;
+  if not exists (select 1 from public.partidas_filme where arena_aberta and id = v_filme) then
     raise exception 'o filme aberto como desafio não foi achado';
   end if;
-  if not exists (select 1 from public.arena_tentativas where semana = 'zz-W00' and lendas && array['legacy-zz'] and id = tent) then
+  if not exists (select 1 from public.arena_tentativas where semana = 'zz-W00' and lendas && array['legacy-zz'] and id = v_tent) then
     raise exception 'a tentativa não foi achada pelo ranking ou pela lenda';
   end if;
   begin
     insert into public.arena_tentativas (filme, desafiante, minuto, no_minuto, placar_ele, placar_voce, placar_parado, saldo, contra_parado, semana)
-      values (filme, outro, 70, '{0,0}', '{0,0}', '{0,0}', '{0,0}', 0, 0, 'zz-W00');
+      values (v_filme, v_outro, 70, '{0,0}', '{0,0}', '{0,0}', '{0,0}', 0, 0, 'zz-W00');
     raise exception 'o mesmo desafiante tentou o mesmo filme duas vezes';
   exception when unique_violation then null;
   end;
   begin
     insert into public.arena_tentativas (filme, desafiante, minuto, no_minuto, placar_ele, placar_voce, placar_parado, saldo, contra_parado, semana)
-      values (filme, dono, 88, '{0,0}', '{0,0}', '{0,0}', '{0,0}', 0, 0, 'zz-W00');
+      values (v_filme, v_dono, 88, '{0,0}', '{0,0}', '{0,0}', '{0,0}', 0, 0, 'zz-W00');
     raise exception 'aceitou assumir no 88''';
   exception when check_violation then null;
   end;
-  delete from public.partidas_filme where id = filme; -- cascata leva a tentativa
-  if exists (select 1 from public.arena_tentativas where id = tent) then
+  delete from public.partidas_filme where id = v_filme; -- cascata leva a tentativa
+  if exists (select 1 from public.arena_tentativas where id = v_tent) then
     raise exception 'a tentativa sobreviveu ao filme apagado';
   end if;
   raise notice 'verificação: ok';

@@ -891,7 +891,7 @@ tiro de meta e impedimento eram sorteados no aparelho. Agora:
 - **Não visto rodando**: o Mundo Paralelo e o card da prova numa partida real (sem login no navegador
   local não há elenco pra montar o campo). Celular não visto.
 
-### Fase 4 — O filme como arena (13/10; sem push; migration ESCRITA, não aplicada)
+### Fase 4 — O filme como arena (13/10; sem push; migration aplicada em 13/10)
 - **Assumir o lance** (`server/smartfield/arena.py` + `server/src/lib/arena.ts` +
   `server/src/routes/arena.ts` + `src/pages/ArenaDoLance.tsx`, rota `/match/arena/:id`): você pega o
   filme de outro manager (ou o seu), escolhe o minuto, dá ordens (estilo, grito, marcação individual)
@@ -924,7 +924,7 @@ tiro de meta e impedimento eram sorteados no aparelho. Agora:
   plano salvo são as decisões que ELE tomou na última partida LEGACY com comando (custódia), presas à
   situação do placar ("perdendo, depois dos 60', foi pro ataque e cobrou"); até 4 regras, cada uma
   dispara uma vez, com a régua dos comandos da casa. A narração avisa quando o plano dispara.
-- **Sem migration aplicada**: `supabase/migrations/20261013000000_arena_do_filme.sql` ESCRITA
+- **Migration APLICADA em produção (13/10, a pedido do fundador)**: `supabase/migrations/20261013000000_arena_do_filme.sql`
   (coluna `partidas_filme.arena_aberta` + tabela `arena_tentativas`, RLS fechada, verificação no fim).
   Sem ela: assumir e ver o resultado funcionam; desafio aberto, ranking e lenda como agente esperam.
   O pedido do motor passa a ser guardado no `resumo` (jsonb) de cada plano emitido — só partidas
