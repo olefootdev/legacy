@@ -102,6 +102,8 @@
     "test:uma-verdade": "tsx scripts/test-uma-verdade.ts",
     "test:motor-posses": "python3 server/smartfield/test_motor_posses.py --n 1000",
     "test:prova-de-causa": "python3 server/smartfield/test_prova_de_causa.py --n 300",
+    "test:plano-salvo": "python3 server/smartfield/test_plano_salvo.py --n 1000",
+    "test:arena": "python3 server/smartfield/test_arena.py --n 300 && tsx server/src/lib/runArenaSelfTest.mts && tsx scripts/test-arena-filme.ts",
     "estudo:comandos": "python3 server/smartfield/estudo_comandos.py --n 1000",
     "estudo:fase0": "tsx scripts/estudo-fase0-equilibrio.ts",
     "test:match-consequences": "tsx scripts/test-match-consequences.ts",

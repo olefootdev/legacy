@@ -346,3 +346,14 @@ agir 0,12 + marcar 0,08 + conduzir 0,20; abate acima de 55 (÷300).
 
 ### Bateria (1.000 sintéticas + 333 reais + 500 iguais + 500 com 10 pontos)
 Ver `docs/PARTIDA-VIVA-PLANO.md` (Fase 1) — todos os intervalos travados dentro; p95 de CPU ~19 ms.
+
+## 9. Fase 4 (13/10) — o filme como arena, em cima do motor
+- `arena.py`: assumir o lance = dois `from_minute` a partir do mesmo estado e da mesma semente (com as
+  ordens de quem assumiu × banco calado). Herda as ordens do dono antes do minuto. Mesma comparação da
+  Prova de Causa nas 10 posses seguintes.
+- `decisivo.py`: `auto` = a opção mais escolhida pelo ATLETA da lenda (≥ 2 escolhas, sem empate). Não
+  mexe nos sorteios dos desfechos; só no que vale sem resposta (`escolhaAutomatica`).
+- `plano_salvo.py`: `plano_fora` = até 4 regras {depois, quando, estilo, grito} que viram comandos do
+  time de fora no primeiro minuto em que a situação do placar DELE bate. Mesma régua dos comandos da
+  casa (teto no DNA, duração e recarga do grito). Plano vazio = partida idêntica.
+- Detalhes, números e o que não foi visto: `docs/PARTIDA-VIVA-PLANO.md`, "Fase 4 — O filme como arena".

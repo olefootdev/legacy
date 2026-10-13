@@ -94,8 +94,16 @@ def momento_decisivo(
     actor: Dict[str, Any],
     home_lineup: List[Dict[str, Any]],
     away_lineup: List[Dict[str, Any]],
+    agentes: Optional[Dict[str, Dict[str, int]]] = None,
 ) -> Dict[str, Any]:
-    """O bloco `decisivo` de um gol natural: contexto, duelo e o desfecho de cada opção."""
+    """O bloco `decisivo` de um gol natural: contexto, duelo e o desfecho de cada opção.
+
+    `agentes` (Fase 4, LENDA COMO AGENTE): id → quantas vezes o ATLETA de verdade
+    escolheu cada opção quando assumiu os lances da lenda dele. Se o nosso jogador
+    do duelo tem preferência, ela vira `auto` — o que ele faz quando o técnico não
+    responde no prazo (a lenda decide como o atleta decidiria). Não mexe em
+    nenhum sorteio: só em qual desfecho já calculado vale sem escolha.
+    """
     ataque = kind == "goal_home"
     pool = CONTEXTOS_ATAQUE if ataque else CONTEXTOS_DEFESA
     r_ctx = random.Random(f"{seed}|decisivo|{minute}|{kind}|ctx")
@@ -115,7 +123,9 @@ def momento_decisivo(
         p = probabilidade(key == melhor, forca_no_duelo(n, d))
         sucesso = random.Random(f"{seed}|decisivo|{minute}|{kind}|{key}").random() < p
         desfechos[key] = sucesso if ataque else (not sucesso)
+    auto = preferencia_do_agente((agentes or {}).get(str((nosso or {}).get("id", ""))), opcoes)
     return {
+        **({"auto": auto} if auto else {}),
         "intent": "attack" if ataque else "defend",
         "contexto": contexto,
         "melhor": melhor,
@@ -128,6 +138,16 @@ def momento_decisivo(
         # True = o gol acontece (atacando: converteu; defendendo: não segurou).
         "opcoes": desfechos,
     }
+
+
+def preferencia_do_agente(contagem: Optional[Dict[str, Any]], opcoes: Tuple[str, ...]) -> Optional[str]:
+    """A opção mais escolhida pelo atleta entre as deste momento (mínimo 2 escolhas; empate = nenhuma)."""
+    if not isinstance(contagem, dict):
+        return None
+    votos = sorted(((int(contagem.get(k, 0) or 0), k) for k in opcoes), reverse=True)
+    if not votos or votos[0][0] < 2 or (len(votos) > 1 and votos[0][0] == votos[1][0]):
+        return None
+    return votos[0][1]
 
 
 def chance_de_penalti(finalizacao: int) -> float:

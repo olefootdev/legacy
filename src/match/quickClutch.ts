@@ -92,6 +92,18 @@ const CONTEXTO_TEXTO: Record<string, string> = {
   tabelam_na_entrada: L('Eles tabelam na entrada', 'They play a one-two at the edge'),
 };
 
+/** Texto do contexto (a prancheta da arena mostra o momento antes do desfecho). */
+export function textoDoContexto(chave: string, intent: ClutchIntent): string {
+  return CONTEXTO_TEXTO[chave] ?? (intent === 'attack' ? L('Chance clara', 'Clear chance') : L('Perigo na área', 'Danger in the box'));
+}
+
+/** Rótulo de uma opção e os atributos que ela põe frente a frente (nosso × deles). */
+export function rotuloDaOpcao(key: string): { rotulo: string; nosso: string; deles: string } {
+  const o = [...ATTACK_OPTIONS, ...DEFEND_OPTIONS].find((x) => x.key === key);
+  const par = CONFRONTO[key as ClutchKey];
+  return { rotulo: o?.label ?? key, nosso: par ? ROTULO_ATTR[par[0]] : '', deles: par ? ROTULO_ATTR[par[1]] : '' };
+}
+
 const ATTACK_KEYS = new Set<string>(['chutar', 'driblar', 'tocar']);
 const DEFEND_KEYS = new Set<string>(['cercar', 'carrinho', 'combate']);
 

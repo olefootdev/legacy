@@ -5,8 +5,9 @@
  *                           de outro manager, ele recebe a notificação.
  *   GET  /api/filmes      — os filmes da sessão: os que ela jogou e os que
  *                           jogaram CONTRA o time dela.
- *   GET  /api/filme/:id   — um filme (só pro dono, pro adversário ou pro atleta de
- *                           uma lenda que jogou nele — Fase 8).
+ *   GET  /api/filme/:id   — um filme (só pro dono, pro adversário, pro atleta de
+ *                           uma lenda que jogou nele — Fase 8 — ou pra qualquer
+ *                           manager se o dono o abriu como desafio da arena).
  *   GET  /api/filmes/lenda — PLAYERVIP: as partidas das lendas do atleta da sessão.
  *
  * A tabela `partidas_filme` é só do servidor (RLS fechada ao cliente).
@@ -25,7 +26,7 @@ export const filmesRoutes = new Hono();
 type Sb = NonNullable<ReturnType<typeof getSupabaseAdmin>>;
 
 /** Linhas de legacy_players pros ids das fichas (no elenco o id ganha 'legacy-' quando a linha não tem). */
-async function lendasPorFicha(sb: Sb, ids: string[]): Promise<Map<string, { nome: string; atleta: string | null }>> {
+export async function lendasPorFicha(sb: Sb, ids: string[]): Promise<Map<string, { nome: string; atleta: string | null }>> {
   const out = new Map<string, { nome: string; atleta: string | null }>();
   if (!ids.length) return out;
   const busca = [...new Set(ids.flatMap((id) => (id.startsWith('legacy-') ? [id, id.slice(7)] : [id])))];
@@ -151,10 +152,11 @@ filmesRoutes.get('/api/filme/:id', rateLimit(30), async (c) => {
   if (data.dono !== eu && data.adversario !== eu) {
     const lendas = await lendasPorFicha(sb, Array.isArray(data.lendas) ? (data.lendas as string[]) : []);
     seguir = [...lendas].find(([, l]) => l.atleta === eu)?.[0] ?? null;
-    // Quem não é dono, adversário nem atleta recebe "não existe" (não confirma que o id existe).
-    if (!seguir) return c.json({ ok: false, erro: 'não encontrado' }, 404);
+    // Fase 4 do Motor de Posses: filme aberto como DESAFIO da arena — qualquer manager logado assiste e assume.
+    // Quem não é dono, adversário, atleta nem desafiante recebe "não existe" (não confirma que o id existe).
+    if (!seguir && !(data as { arena_aberta?: boolean }).arena_aberta) return c.json({ ok: false, erro: 'não encontrado' }, 404);
   }
-  const papel = data.dono === eu ? 'dono' : data.adversario === eu ? 'adversario' : 'lenda';
+  const papel = data.dono === eu ? 'dono' : data.adversario === eu ? 'adversario' : seguir ? 'lenda' : 'desafio';
   if (papel === 'adversario' && !data.visto_em) {
     await sb.from('partidas_filme').update({ visto_em: new Date().toISOString() }).eq('id', id);
   }

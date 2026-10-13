@@ -38,6 +38,8 @@ export interface FilmeDaPartida {
   fichas: Ficha[];
   banco: Ficha[];
   trechos: Trecho[];
+  /** Fase 4 do Motor de Posses (arena): as escolhas da partida — o servidor reconta o placar pela custódia. */
+  escolhas?: { decisivos: Record<string, string>; penaltis: Record<string, string> };
 }
 
 export type ResumoDoFilme = Pick<FilmeDaPartida, 'id' | 'quando' | 'siglaCasa' | 'siglaFora' | 'nomeCasa' | 'nomeFora' | 'placarCasa' | 'placarFora'>;

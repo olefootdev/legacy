@@ -28,8 +28,8 @@ export function PartidasDaLenda() {
   return (
     <div className="flex min-w-0 flex-col gap-2">
       {partidas.map((p) => (
+        <div key={p.id} className="flex min-w-0 flex-col gap-1">
         <button
-          key={p.id}
           type="button"
           onClick={() => { ligarSom(); navigate(`/playervip/filme/${p.id}`); }}
           className="flex min-w-0 items-center gap-3 bg-concreto px-3 py-3 text-left transition-colors hover:bg-linha"
@@ -49,6 +49,15 @@ export function PartidasDaLenda() {
           )}
           <span aria-hidden className="shrink-0 font-impact text-[22px] text-ouro-27">▶</span>
         </button>
+        {/* Motor de Posses, Fase 4 — LENDA COMO AGENTE: você decide os lances da sua lenda; ela aprende. */}
+        <button
+          type="button"
+          onClick={() => { ligarSom(); navigate(`/playervip/arena/${p.id}`); }}
+          className="self-start px-3 py-1 font-prova text-[11px] text-ouro-27 underline"
+        >
+          {L('Assumir os lances da lenda', "Take over your legend's plays")}
+        </button>
+        </div>
       ))}
     </div>
   );

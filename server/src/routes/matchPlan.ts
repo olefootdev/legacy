@@ -17,6 +17,8 @@ import { donoDaSessao } from '../lib/sessao.js';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { estadoNoMinuto, resumirPlano, type ResumoDoPlano } from '../lib/smartProfile/custodia.js';
 import { lerEscolhas, type Escolhas } from '../lib/partida/placar.js';
+import { entradaDoMotor, somarPreferencias, type PlanoGuardado } from '../lib/arena.js';
+import { planoSalvoDaCustodia, type RegraDoPlano } from '../lib/planoSalvo.js';
 import {
   aplicarTracos, conferenciaVazia, conferirEscalacao, conferirFadiga, forcaDaEscalacao, impressaoDaEscalacao,
   type Conferencia, type FichaDoMotor,
@@ -185,7 +187,7 @@ const PYTHON_CMD = process.env.PYTHON_BIN ?? 'python3';
  *    3. smartfield/ (dev local com cwd = repo root)
  *    4. /app/smartfield/ (fallback container)
  */
-function resolveScriptPath(): string {
+export function resolveScriptPath(): string {
   const candidates = [
     path.resolve(process.cwd(), 'smartfield/match_simulator.py'),
     path.resolve(process.cwd(), '../smartfield/match_simulator.py'),
@@ -198,7 +200,7 @@ function resolveScriptPath(): string {
   return candidates[0]!; // fallback
 }
 
-function runPython(scriptPath: string, inputJson: string, timeoutMs = 5000): Promise<string> {
+export function runPython(scriptPath: string, inputJson: string, timeoutMs = 5000): Promise<string> {
   return new Promise((resolve, reject) => {
     const proc = spawn(PYTHON_CMD, [scriptPath], {
       cwd: path.dirname(scriptPath),
@@ -444,6 +446,8 @@ async function guardarCustodia(
         ...(body.mode === 'second_half' || body.mode === 'from_minute' ? { escolhasDeclaradas: estado.escolhas, estadoFonte: estado.fonte } : {}),
       }),
       conferencia,
+      // Fase 4 — o filme como arena: o pedido que foi ao motor (quem assumir o lance parte dele).
+      entrada: entradaDoMotor(body as unknown as Record<string, unknown>),
     };
     const { data, error } = await sb.from('quick_plans_emitidos')
       .insert({ owner_id: dono, seed: String(body.seed).slice(0, 200), modo: resumo.modo, resumo })
@@ -455,14 +459,71 @@ async function guardarCustodia(
   }
 }
 
+/**
+ * LENDA COMO AGENTE (Fase 4): as escolhas que o ATLETA de cada lenda em campo fez
+ * quando assumiu lances dela na arena (`arena_tentativas.escolhas_da_lenda`).
+ * Vai ao motor como `agentes`: no momento decisivo da lenda sem resposta do
+ * técnico, ela decide como o atleta decidiria. Sem a tabela (migration da
+ * Fase 4 pendente) ou sem lenda: nada muda.
+ */
+const agentesCache = new Map<string, { ts: number; agentes: Record<string, Record<string, number>> }>();
+async function agentesDasLendas(body: QuickPlanRequestBody): Promise<Record<string, Record<string, number>> | undefined> {
+  const ids = [...body.home_team.lineup, ...(body.home_team.banco ?? [])].map((p) => p.id).filter((id) => typeof id === 'string' && id.startsWith('legacy-'));
+  if (!ids.length) return undefined;
+  const chave = [...ids].sort().join(',');
+  const hit = agentesCache.get(chave);
+  if (hit && Date.now() - hit.ts < 5 * 60_000) return Object.keys(hit.agentes).length ? hit.agentes : undefined;
+  try {
+    const sb = getSupabaseAdmin();
+    if (!sb) return undefined;
+    const { data, error } = await sb.from('arena_tentativas').select('escolhas_da_lenda').overlaps('lendas', ids).limit(500);
+    if (error) return undefined;
+    const agentes = somarPreferencias((data ?? []).map((d) => d.escolhas_da_lenda as Record<string, Record<string, number>>), ids);
+    agentesCache.set(chave, { ts: Date.now(), agentes });
+    return Object.keys(agentes).length ? agentes : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** DNA do rival: do banco (dono do clube) ou, no Jogo da Fundação, o do fantasma (cliente, limpo). */
-async function resolverDnaDoRival(body: QuickPlanRequestBody, dono: string | null): Promise<void> {
+async function resolverDnaDoRival(body: QuickPlanRequestBody, dono: string | null): Promise<string | null> {
   if (body.fantasma === true) {
     body.away_team.dna = limparDna(body.away_team.dna);
-    return;
+    return null;
   }
   const donoRival = await donoDoClube(body.away_short);
   body.away_team.dna = donoRival && donoRival !== dono ? await dnaDoUsuario(donoRival) : undefined;
+  return donoRival && donoRival !== dono ? donoRival : null;
+}
+
+/**
+ * O ADVERSÁRIO AUSENTE JOGA PELO PLANO SALVO (Fase 4): as decisões que o dono
+ * do time de fora tomou na última partida LEGACY dele (custódia), presas à
+ * situação do placar. Vai ao motor como `plano_fora`. Sem partida com comando
+ * guardada: nada (o time dele joga pelo DNA, como antes).
+ */
+const planoSalvoCache = new Map<string, { ts: number; regras: RegraDoPlano[] }>();
+async function planoSalvoDoRival(donoRival: string | null): Promise<RegraDoPlano[] | undefined> {
+  if (!donoRival) return undefined;
+  const hit = planoSalvoCache.get(donoRival);
+  if (hit && Date.now() - hit.ts < 10 * 60_000) return hit.regras.length ? hit.regras : undefined;
+  try {
+    const sb = getSupabaseAdmin();
+    if (!sb) return undefined;
+    const { data, error } = await sb.from('quick_plans_emitidos')
+      .select('seed, modo, resumo, criado_em').eq('owner_id', donoRival).order('criado_em', { ascending: false }).limit(60);
+    if (error) return undefined;
+    // A última partida em que ele DEU comando (replan de comando = from_minute com o pedido guardado).
+    const linhas = data ?? [];
+    const seed = linhas.find((l) => l.modo === 'from_minute' && (l.resumo as PlanoGuardado | null)?.entrada)?.seed as string | undefined;
+    const planos = seed ? linhas.filter((l) => l.seed === seed).reverse().map((l) => l.resumo as PlanoGuardado) : [];
+    const regras = planoSalvoDaCustodia(planos);
+    planoSalvoCache.set(donoRival, { ts: Date.now(), regras });
+    return regras.length ? regras : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export const matchPlanRoutes = new Hono();
@@ -539,11 +600,17 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
   // Nunca o próprio DNA dos dois lados (amistoso contra si mesmo).
   const dnaCasaBanco = dono ? await dnaDoUsuario(dono) : undefined;
   body.home_team.dna = dnaCasaBanco ?? limparDna(body.home_team.dna);
-  await resolverDnaDoRival(body, dono);
+  const donoRival = await resolverDnaDoRival(body, dono);
+  // Fase 4: o adversário ausente joga pelo plano salvo dele (o que ele decidiu na última partida).
+  const planoFora = await planoSalvoDoRival(donoRival);
+  (body as QuickPlanRequestBody & { plano_fora?: RegraDoPlano[] }).plano_fora = planoFora;
   const conferencia = await conferirContraAsFichas(dono, body);
   // UMA VERDADE SÓ: o estado do replan vem da cadeia de planos + escolhas (não do celular).
   const estado = await estadoDaCustodia(dono, body);
   if (estado.recusa) return c.json({ ok: false, error: estado.recusa }, 409);
+  // Fase 4 — LENDA COMO AGENTE: as lendas em campo decidem como os atletas delas (sem resposta do técnico).
+  const agentes = await agentesDasLendas(body);
+  (body as QuickPlanRequestBody & { agentes?: Record<string, Record<string, number>> }).agentes = agentes;
 
   const cacheKey = JSON.stringify({
     lg: body.lang,
@@ -560,6 +627,8 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     // LEGACY (Fase 4b): replan do meio do jogo — minuto, estado e comandos entram na chave.
     fm: body.mode === 'from_minute' ? Number(body.from_minute) : '',
     est: body.estado ? `${body.estado.home_score}-${body.estado.away_score}-${body.estado.momentum_end ?? 50}-${body.estado.sent_off_home ?? 0}-${body.estado.sent_off_away ?? 0}-${(body.estado.expulsos ?? []).join('.')}-${(body.estado.amarelados ?? []).join('.')}` : '',
+    ag: agentes ? JSON.stringify(agentes).slice(0, 2000) : '',
+    pf: planoFora ? JSON.stringify(planoFora) : '',
     pc: body.prova_de_causa ? JSON.stringify(body.prova_de_causa).slice(0, 200) : '',
     cmd: Array.isArray(body.comandos) ? JSON.stringify(body.comandos).slice(0, 4000) : '',
     fh: body.first_half

@@ -25,6 +25,8 @@ export interface DecisivoDoLance {
   melhor?: string;
   /** Atributo nosso × deles por opção — decide a escolha automática (prazo esgotado). */
   duelo?: { por_opcao?: Record<string, [number, number]> };
+  /** Fase 4 — LENDA COMO AGENTE: o que o atleta de verdade escolheria (vale sem resposta, antes do duelo). */
+  auto?: string;
 }
 
 export interface PenaltiDoLance {
@@ -97,11 +99,14 @@ export function costurar(planos: readonly PlanoDaVerdade[]): { lances: LanceDaVe
 
 /**
  * A escolha do jogador quando o manager não decide a tempo (LEGACY, prazo de
- * 10 s): a opção com a maior vantagem no duelo; empate, a primeira. Sem duelo,
+ * 10 s): a do atleta, se for uma lenda com preferência (`auto`, Fase 4); senão
+ * a opção com a maior vantagem no duelo; empate, a primeira. Sem duelo,
  * a primeira opção. É regra, não sorteio — e vale igual no aparelho e aqui.
  */
 export function escolhaAutomatica(d: DecisivoDoLance): string {
   const opcoes = Object.keys(d.opcoes);
+  // A lenda decide como o atleta dela decidiria (o motor só manda `auto` com preferência clara).
+  if (d.auto && opcoes.includes(d.auto)) return d.auto;
   let melhor = opcoes[0] ?? '';
   let vantagem = -Infinity;
   for (const k of opcoes) {
@@ -207,7 +212,8 @@ export function lanceDoEvento(e: {
   const d = e.decisivo as DecisivoDoLance | undefined;
   if (base === 'goal' && d && d.opcoes && typeof d.opcoes === 'object') {
     lance.decisivo = { opcoes: { ...d.opcoes }, ...(d.melhor ? { melhor: d.melhor } : {}),
-      ...(d.duelo?.por_opcao ? { duelo: { por_opcao: { ...d.duelo.por_opcao } } } : {}) };
+      ...(d.duelo?.por_opcao ? { duelo: { por_opcao: { ...d.duelo.por_opcao } } } : {}),
+      ...(typeof d.auto === 'string' && d.auto in d.opcoes ? { auto: d.auto } : {}) };
   }
   const p = e.penalti as PenaltiDoLance | undefined;
   if (base === 'penalty' && p && typeof p === 'object') {

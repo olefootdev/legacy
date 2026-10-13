@@ -1302,6 +1302,11 @@ def main():
     if input_data.get("analise_identidade"):
         sys.stdout.write(json.dumps(analisar_identidade(input_data, input_data["analise_identidade"]), ensure_ascii=False))
         return
+    if isinstance(input_data.get("arena"), dict):
+        # Fase 4 — o filme como arena: assumir o lance (arena.py).
+        from arena import assumir
+        sys.stdout.write(json.dumps(assumir(input_data), ensure_ascii=False))
+        return
     plan = simulate(input_data)
     sys.stdout.write(json.dumps(plan, ensure_ascii=False))
 

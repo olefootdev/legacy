@@ -27,6 +27,18 @@ function ListaDeFilmes() {
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-3 px-4 py-6 text-papel">
       <h1 className="font-impact text-[34px] leading-none">{L('Filmes', 'Films')}</h1>
+      {/* Motor de Posses, Fase 4 — o filme como arena */}
+      <button
+        type="button"
+        onClick={() => { ligarSom(); navigate('/match/arena'); }}
+        className="flex min-h-[56px] items-center justify-between bg-rua px-3 text-left text-asfalto-27"
+      >
+        <span>
+          <span className="block font-impact text-[20px] uppercase leading-none">{L('Arena: assuma o lance', 'Arena: take over')}</span>
+          <span className="mt-1 block font-prova text-[11px]">{L('Pegue o jogo de outro manager num minuto. Você faz melhor?', "Take another manager's game at any minute. Can you do better?")}</span>
+        </span>
+        <span aria-hidden className="font-impact text-[22px]">▶</span>
+      </button>
       {contraVoce.length > 0 && (
         <>
           <h2 className="mt-1 font-impact text-[20px] leading-none text-rua">{L('Jogaram contra o seu time', 'They played your team')}</h2>

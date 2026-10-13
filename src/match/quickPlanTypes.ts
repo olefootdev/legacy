@@ -160,6 +160,8 @@ export interface DecisivoDoMotor {
   };
   /** opção → o gol acontece? */
   opcoes: Record<string, boolean>;
+  /** Fase 4 — LENDA COMO AGENTE: a opção que o atleta de verdade escolheria (vale sem resposta). */
+  auto?: string;
 }
 
 export interface MatchPlanEvent {
@@ -189,6 +191,8 @@ export interface MatchPlanEvent {
   assist_id?: string;
   /** Partida Viva (Fase 2): a jogada, toque a toque. */
   cadeia?: CadeiaDeLance;
+  /** Fase 4: narração do adversário ausente — a regra do plano salvo dele que disparou neste minuto. */
+  plano_salvo?: { depois: number; quando: string; estilo?: string; grito?: string };
   text: string;
 }
 

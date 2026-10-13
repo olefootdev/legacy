@@ -745,6 +745,8 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
         formacaoCasa: trechos[0]!.formacaoCasa, formacaoFora: '4-3-3',
         fichas: fichasAoVivo, banco: fichasDoBanco,
         trechos: trechos.map(({ comEntrada, roteiro, formacaoCasa }) => ({ comEntrada, roteiro, formacaoCasa })),
+        // Fase 4 (arena): quem assumir um lance deste filme é comparado com o que a custódia diz que você fez.
+        escolhas: r.escolhas,
       };
       if (salvarFilme(filme)) setFilmeId(id);
       // FASE 7 — sobe pro servidor; se o adversário é o time de outro manager, ele é avisado.

@@ -77,7 +77,7 @@ export async function listarFilmesDaLenda(): Promise<PartidaDaLenda[]> {
   }
 }
 
-export type PapelNoFilme = 'dono' | 'adversario' | 'lenda';
+export type PapelNoFilme = 'dono' | 'adversario' | 'lenda' | 'desafio';
 
 export async function abrirFilmeDaNuvem(id: string): Promise<{ filme: FilmeDaPartida; papel: PapelNoFilme; seguir: string | null } | null> {
   const t = await token();

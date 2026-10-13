@@ -40,6 +40,7 @@ from cadeia_lances import nomear_skills
 from comandos_ao_vivo import aplicar_ordens, dna_no_minuto, limpar_comandos, marcacoes
 from prova_de_causa import comparar, sem_a_causa
 from decisivo import momento_decisivo, penalti_da_casa, penalti_de_fora
+from plano_salvo import PlanoDoAusente, limpar_plano
 from matchup_matrix import ATTACK_CHANNELS, channel_reason, compute_matchup_matrix
 from narrative_weighter import classify_event_weight, detect_narrative_arc
 from xg_model import shot_outcome_weights
@@ -306,6 +307,29 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
     return plano
 
 
+_ACAO_DO_ESTILO = {
+    "defend": ("fecha o time", "shuts up shop"), "counter": ("joga no contra-ataque", "sits back to counter"),
+    "possession": ("pede a bola no pé", "asks to keep the ball"), "press": ("manda pressionar", "orders the press"),
+    "attack": ("manda o time pro ataque", "sends the team forward"),
+}
+_ACAO_DO_GRITO = {"incentivar": ("incentiva o time", "fires the team up"), "cobrar": ("cobra o time", "demands more"),
+                  "acalmar": ("pede calma", "calls for calm")}
+_SITUACAO = {"ganhando": ("ganhando", "winning"), "empatando": ("empatando", "level"), "perdendo": ("perdendo", "losing"),
+             "qualquer": ("como sempre", "as always")}
+
+
+def _evento_do_plano_salvo(minute: int, regra: Dict[str, Any], dele: int, outro: int) -> Dict[str, Any]:
+    """A narração do plano salvo disparando (o adversário ausente "comandando" pelo que fez de verdade)."""
+    from plano_salvo import situacao
+    i = 1 if idioma.en() else 0
+    acoes = [a[i] for a in (_ACAO_DO_ESTILO.get(regra.get("estilo", "")), _ACAO_DO_GRITO.get(regra.get("grito", ""))) if a]
+    sit = _SITUACAO[situacao(dele, outro)][i]
+    texto = (f"Plano salvo do técnico deles ({sit}): {' e '.join(acoes)}." if i == 0
+             else f"Their manager's saved plan ({sit}): {' and '.join(acoes)}.")
+    return {"minute": minute, "kind": "narrative", "actor_side": "away", "xg": 0, "weight_tier": "minor", "zone": "mid",
+            "text": texto, "plano_salvo": {k: regra[k] for k in ("depois", "quando", "estilo", "grito") if k in regra}}
+
+
 def _simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
     # Importa aqui pra não criar ciclo (match_simulator despacha pra cá).
     from match_simulator import event_text, fadiga_ate_o_replan, normalize_banco, normalize_lineup, read_dna, dz, team_strength
@@ -323,6 +347,10 @@ def _simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
     except (TypeError, ValueError):
         from_minute = 2
     sem_cadeia = bool(input_data.get("sem_cadeia"))
+    # Fase 4 — LENDA COMO AGENTE: id → contagem das escolhas do atleta (decisivo.py).
+    agentes = input_data.get("agentes") if isinstance(input_data.get("agentes"), dict) else None
+    # Fase 4 — o adversário AUSENTE joga pelo plano salvo (plano_salvo.py): regras por situação.
+    plano_fora = PlanoDoAusente(limpar_plano(input_data.get("plano_fora")))
 
     home_team = input_data.get("home_team", {})
     away_team = input_data.get("away_team", {})
@@ -441,6 +469,11 @@ def _simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
             home_dna = dna_no_minuto(home_dna_base, comandos, minute)
             dnas["home"] = home_dna
             aplicar_ordens(home_lineup, comandos, minute)
+        if plano_fora.regras:
+            for regra in plano_fora.no_minuto(minute, away_score, home_score):
+                events.append(_evento_do_plano_salvo(minute, regra, away_score, home_score))
+            if plano_fora.comandos:
+                dnas["away"] = dna_no_minuto(away_dna, plano_fora.comandos, minute)
         lado = proximo["lado"]
         outro = "away" if lado == "home" else "home"
         meu = lineups[lado]
@@ -692,7 +725,7 @@ def _simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
             # Assistência: o último passe pro autor.
             assist = next((a for a in reversed(acoes[:-1]) if a["t"] in ("passe", "lancamento", "cruzamento", "escanteio") and a["para"] is not None and a["para"]["id"] == quem["id"]), None)
             if is_goal:
-                ev["decisivo"] = momento_decisivo(seed, minute, kind, quem, home_lineup, away_lineup)
+                ev["decisivo"] = momento_decisivo(seed, minute, kind, quem, home_lineup, away_lineup, agentes)
                 if assist and assist["de"]["id"] != quem["id"]:
                     ev["assist_id"] = assist["de"]["id"]
                     ast = scorer_counts.setdefault(assist["de"]["id"], {"goals": 0, "assists": 0, "name": assist["de"]["name"]})

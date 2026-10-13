@@ -22,6 +22,7 @@ import { marketOffersRoutes } from './routes/marketOffers.js';
 import { squadMarketRoutes } from './routes/squadMarket.js';
 import { filmesRoutes } from './routes/filmes.js';
 import { legacyLeagueRoutes } from './routes/legacyLeague.js';
+import { arenaRoutes } from './routes/arena.js';
 import { playerProfilesRoutes } from './routes/playerProfiles.js';
 import { academyRoutes } from './routes/academy.js';
 import { academyAdminRoutes } from './routes/academyAdmin.js';
@@ -158,6 +159,7 @@ app.route('/', squadMarketRoutes);  // mercado de elenco em OLEFOOT (sessão do 
 app.route('/', playerProfilesRoutes); // SMART-PROFILE: fichas e memória do jogador (sessão do jogador)
 app.route('/', filmesRoutes); // PARTIDA VIVA Fase 7 — o filme pro adversário
 app.route('/', legacyLeagueRoutes); // LEGACY LEAGUE — a liga da Partida Viva
+app.route('/', arenaRoutes); // Motor de Posses Fase 4 — o filme como arena (assumir o lance)
 app.route('/', solanaWalletRoutes);
 app.route('/', earningsRoutes);    // regras de Vault, Produção e Stake (públicas)
 app.route('/', vaultRoutes);       // leitura do Vault (sessão do jogador)

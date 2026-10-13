@@ -740,6 +740,9 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     } else if (e.kind === 'red_away') {
       cardsRef.current.sentOffAway += 1;
       pushFeed({ id: `r-${idx}`, minute: e.minute, kind: 'red', text: e.text, side: 'away', actorId: e.actor_id });
+    } else if (e.kind === 'narrative' && e.plano_salvo) {
+      // Fase 4: o adversário AUSENTE comandando pelo plano salvo dele (o que ele decidiu de verdade).
+      pushFeed({ id: `ps-${idx}`, minute: e.minute, kind: 'insight', text: e.text, side: 'away' });
     } else if (base === 'save' || base === 'chance' || base === 'woodwork' || base === 'counter') {
       // Momentos dramáticos de construção entram no feed (contam a história).
       pushFeed({ id: `m-${idx}`, minute: e.minute, kind: base as 'save' | 'chance' | 'woodwork' | 'counter', text: e.text, side: e.actor_side, actorId: e.actor_id });
@@ -1191,7 +1194,9 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       const key = d ? escolhaAutomatica(d) : c.moment.options[0]?.key;
       const escolha = c.moment.options.find((o) => o.key === key) ?? c.moment.options[0];
       if (!escolha) return;
-      pushFeed({ id: `clutch-auto-${c.idx}`, minute: c.moment.minute, kind: 'insight', text: L(`Sem ordem do técnico: ${c.moment.actorName} decidiu sozinho — ${escolha.label}.`, `No call from the bench: ${c.moment.actorName} decided alone — ${escolha.label}.`) });
+      pushFeed({ id: `clutch-auto-${c.idx}`, minute: c.moment.minute, kind: 'insight', text: d?.auto
+        ? L(`Sem ordem do técnico: ${c.moment.actorName} decidiu como o atleta de verdade decide — ${escolha.label}.`, `No call from the bench: ${c.moment.actorName} decided like the real athlete does — ${escolha.label}.`)
+        : L(`Sem ordem do técnico: ${c.moment.actorName} decidiu sozinho — ${escolha.label}.`, `No call from the bench: ${c.moment.actorName} decided alone — ${escolha.label}.`) });
       resolverClutchRef.current(escolha.key);
     }, PRAZO_DECISIVO_MS);
     return () => window.clearTimeout(t);

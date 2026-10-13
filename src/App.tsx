@@ -158,6 +158,7 @@ const ExtractTab = lazy(() => import('./pages/wallet/ExtractTab').then((m) => ({
 const LiveMatch = lazy(() => import('./pages/LiveMatch').then((m) => ({ default: m.LiveMatch })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
 const FilmeDaPartida = lazy(() => import('./pages/FilmeDaPartida'));
+const ArenaDoLance = lazy(() => import('./pages/ArenaDoLance'));
 const LegacyLeague = lazy(() => import('./pages/LegacyLeague'));
 const FilmeDaLenda = lazy(() => import('./pages/FilmeDaPartida').then((m) => ({ default: m.FilmeDaLenda })));
 const MatchAoVivo = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchAoVivo })));
@@ -580,6 +581,16 @@ as a nice MVP. Let's Play Together! ⚽
               </Suspense>
             }
           />
+          {/* Motor de Posses, Fase 4 — LENDA COMO AGENTE: o atleta assume os lances da lenda
+              (as escolhas dele viram as da lenda). Fora do RequireRegistration, como o filme. */}
+          <Route
+            path="/playervip/arena/:idNuvem"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <ArenaDoLance />
+              </Suspense>
+            }
+          />
           {/* PLAYERVIP VERIFY — link mágico no NOSSO domínio (antes da vitrine:
               /playervip/verify não pode ser lido como handle). Pessoal e uso único. */}
           <Route
@@ -750,6 +761,9 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/match/filme" element={<FilmeDaPartida />} />
             <Route path="/match/filme/:id" element={<FilmeDaPartida />} />
             <Route path="/match/filme/s/:idNuvem" element={<FilmeDaPartida />} />
+            {/* Motor de Posses, Fase 4 — o filme como arena: assumir o lance */}
+            <Route path="/match/arena" element={<ArenaDoLance />} />
+            <Route path="/match/arena/:idNuvem" element={<ArenaDoLance />} />
             <Route path="/match/quick-plan-preview" element={<QuickPlanPreview />} />
             <Route path="/liga-ole" element={<LigaOle />} />
             <Route path="/match/penalty" element={<MatchPenaltyV2 />} />

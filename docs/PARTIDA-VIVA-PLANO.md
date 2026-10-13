@@ -891,6 +891,58 @@ tiro de meta e impedimento eram sorteados no aparelho. Agora:
 - **Não visto rodando**: o Mundo Paralelo e o card da prova numa partida real (sem login no navegador
   local não há elenco pra montar o campo). Celular não visto.
 
+### Fase 4 — O filme como arena (13/10; sem push; migration ESCRITA, não aplicada)
+- **Assumir o lance** (`server/smartfield/arena.py` + `server/src/lib/arena.ts` +
+  `server/src/routes/arena.ts` + `src/pages/ArenaDoLance.tsx`, rota `/match/arena/:id`): você pega o
+  filme de outro manager (ou o seu), escolhe o minuto, dá ordens (estilo, grito, marcação individual)
+  e decide os momentos decisivos e o batedor **sem ver o desfecho** — o aparelho recebe os momentos
+  sem nenhum booleano. Ao fechar, o servidor refaz a MESMA simulação (determinística), conta três
+  placares e devolve o plano pro campo tocar: **ele fez** (o dono, pela custódia: planos emitidos +
+  as escolhas que o filme agora carrega — filme que não bate com a custódia não vira arena),
+  **você fez** (o seu plano + as suas escolhas) e **parado** (o banco calado, escolha automática).
+  "Você fez 2×1 onde ele fez 1×1" + quanto as suas ordens valeram contra ficar parado + a Prova de
+  Causa das 10 posses. As ordens do dono ANTES do minuto continuam valendo (você herda o jogo como
+  estava); as dele depois não entram. Você comanda o time da casa do filme.
+  Propriedade conhecida: o desfecho de cada opção é sorteado por minuto e opção, então quem estudou o
+  filme sabe como terminou a opção que o DONO escolheu num momento que se repete no mesmo minuto — é
+  estudar o tape; as outras opções seguem escondidas.
+- **O filme da arena** (`src/partidaViva/arena.ts` `roteiroDaArena`): o plano + as suas escolhas
+  viram um roteiro que o MESMO palco do LEGACY toca; cada gol passa por `golDoLance` (a mesma porta do
+  jogo ao vivo e da custódia); a escolha que não deu vira defesa/bola fora com a mesma jogada.
+- **Desafio assíncrono e ranking semanal**: o dono abre o filme como desafio (`POST /api/arena/abrir`
+  — só se a arena consegue jogá-lo); qualquer manager logado vê os abertos em `/match/arena`. Um tiro
+  por filme (jogar de novo mostra, mas não conta). Ranking da semana (mesma semana da LEGACY League):
+  soma do saldo positivo sobre o dono do filme; o dono jogando o próprio filme não pontua.
+- **Lenda como agente**: o atleta de uma lenda assume os lances dela pelo PLAYERVIP
+  (`/playervip/arena/:id`); as escolhas dele nos momentos da lenda são guardadas e, nas partidas de
+  todo mundo, quando o técnico não responde no prazo, a lenda decide como o atleta decidiria
+  (`decisivo.auto` no motor; `escolhaAutomatica` respeita — cliente e custódia iguais). Precisa de
+  pelo menos 2 escolhas e preferência clara; não mexe em nenhum sorteio, só em qual desfecho já
+  calculado vale sem resposta.
+- **O adversário ausente joga pelo plano salvo** (`server/smartfield/plano_salvo.py` +
+  `server/src/lib/planoSalvo.ts`): o time de fora de outro manager real deixa de jogar só pelo DNA. O
+  plano salvo são as decisões que ELE tomou na última partida LEGACY com comando (custódia), presas à
+  situação do placar ("perdendo, depois dos 60', foi pro ataque e cobrou"); até 4 regras, cada uma
+  dispara uma vez, com a régua dos comandos da casa. A narração avisa quando o plano dispara.
+- **Sem migration aplicada**: `supabase/migrations/20261013000000_arena_do_filme.sql` ESCRITA
+  (coluna `partidas_filme.arena_aberta` + tabela `arena_tentativas`, RLS fechada, verificação no fim).
+  Sem ela: assumir e ver o resultado funcionam; desafio aberto, ranking e lenda como agente esperam.
+  O pedido do motor passa a ser guardado no `resumo` (jsonb) de cada plano emitido — só partidas
+  jogadas DEPOIS deste código podem ser assumidas; o filme passa a levar as escolhas.
+- **Portões**: `npm run test:arena` (Python 300: banco calado = parado 300/300, nada antes do minuto,
+  herança do dono, ordens pesam, lenda decide como o atleta sem mexer em desfecho, p95 26 ms; conta
+  com partidas reais: custódia, momentos sem desfecho, veredito determinístico, ler o lance certo dá
+  saldo 42 × 6 do automático; filme da arena 150/150 com placar do filme = placar do servidor, sem
+  NaN nem bola parada), `npm run test:plano-salvo` (1.000 partidas: plano vazio = partida idêntica
+  300/300; 638 disparos, nenhum fora de hora; "perdendo depois dos 60' → ataque + cobrar" leva as
+  finalizações deles de 3,43 a 3,59; vitória da casa 40,6% → 41,1%, gols 2,59 → 2,62 — personalidade,
+  não bônus), bateria, cadeias, prova,
+  uma-verdade, custódia, estresse, lint.
+- **Visto no navegador**: o filme de uma arena real tocando no palco do 55' em diante (escanteio,
+  chute com faixa de cinema, o gol do 72' com o placar 0×1 do servidor) e a página `/match/arena` no
+  desktop e no celular (375 px). **Não visto**: a prancheta, os momentos e o veredito com uma conta
+  logada (precisa de filme na nuvem gravado com este código e da sessão).
+
 ## 10. Regras de ouro
 1. **Uma verdade só.** O placar sai do plano no servidor. O visual nunca decide.
 2. **Tela primeiro, profundidade depois.** Fatia feia de ponta a ponta > motor perfeito sem tela.
