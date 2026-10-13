@@ -287,11 +287,13 @@ function digitsOnly(s: string): string {
   return s.replace(/\D/g, '');
 }
 
-function buildPhoneE164(dialDigits: string, ddd: string, local: string): string {
+/** DDD só é obrigatório no Brasil; fora (Gana, Nigéria…) o número já vem completo. */
+function buildPhoneE164(dialDigits: string, ddd: string, local: string, dddObrigatorio: boolean): string {
   const a = digitsOnly(ddd);
   const n = digitsOnly(local);
-  if (!dialDigits || !a || !n) return '';
-  return `+${dialDigits}${a}${n}`;
+  if (!dialDigits || !n || (dddObrigatorio && !a)) return '';
+  // Zero de tronco (Gana "024…", Nigéria "080…") não entra no formato internacional.
+  return `+${dialDigits}${`${a}${n}`.replace(/^0+/, '')}`;
 }
 
 function simpleEmailOk(email: string): boolean {
@@ -403,7 +405,7 @@ export function Cadastro() {
     return digitsOnly(dialOption.dial);
   }, [dialOption, customDialDigits]);
 
-  const phoneE164 = useMemo(() => buildPhoneE164(dialDigits, ddd, localPhone), [dialDigits, ddd, localPhone]);
+  const phoneE164 = useMemo(() => buildPhoneE164(dialDigits, ddd, localPhone, dialOption.iso2 === 'BR'), [dialDigits, ddd, localPhone, dialOption.iso2]);
 
   const step1Valid =
     firstName.trim().length > 0 &&
@@ -734,11 +736,11 @@ export function Cadastro() {
                       </select>
                     </div>
                   ) : dialOption.iso2 !== 'OTHER' ? (
-                    <div className="w-24">
-                      <label className="mb-1 block text-[10.5px] text-mudo">{L('DDD', 'Area code')}</label>
+                    <div className="w-28">
+                      <label className="mb-1 block text-[10.5px] text-mudo">{L('Código de área (opcional)', 'Area code (optional)')}</label>
                       <input
                         className={inputClass}
-                        placeholder={L('DDD', 'Area code')}
+                        placeholder={L('Opcional', 'Optional')}
                         value={ddd}
                         onChange={(e) => setDdd(e.target.value)}
                         inputMode="numeric"

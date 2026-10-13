@@ -62,7 +62,7 @@ const PASSOS = [
 type PassoId = (typeof PASSOS)[number]['id'];
 
 const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
-const PAISES = ['Brasil', 'Portugal', 'Argentina', 'Estados Unidos', 'Angola', 'Moçambique', 'Outro'];
+const PAISES = ['Brasil', 'Portugal', 'Argentina', 'Estados Unidos', 'Angola', 'Moçambique', 'Gana', 'Nigéria', 'Outro'];
 const FORMACOES: FormationSchemeId[] = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1', '5-3-2', '3-4-3'];
 
 const ATRIBUTO_INFO: Record<AtributoDeJogo, { nome: string; desc: string }> = {
