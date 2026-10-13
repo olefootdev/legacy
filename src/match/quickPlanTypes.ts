@@ -189,6 +189,25 @@ export interface MatchPlanEvent {
   text: string;
 }
 
+/**
+ * PARTIDA VIVA (Fase 2 do Motor de Posses) — a posse de UM minuto, como o
+ * motor a decidiu: o campo encena isto entre os lances, sem inventar nada.
+ * `ok: 0` = a ação falhou ali (passe interceptado, drible perdido…).
+ */
+export interface AcaoDaJogada extends AcaoDeLance { ok?: 0 }
+export type ReinicioDaJogada = 'saida' | 'normal' | 'roubada' | 'tiro_meta' | 'lateral' | 'impedimento' | 'falta' | 'escanteio';
+export interface JogadaDoPlano {
+  m: number;
+  lado: 'h' | 'a';
+  /** Como a posse começou (o reinício que aconteceu de fato). */
+  inicio: ReinicioDaJogada;
+  acoes: AcaoDaJogada[];
+  fim: 'gol' | 'defesa' | 'fora' | 'escanteio' | 'falta' | 'perda' | 'lateral' | 'impedimento' | 'continua';
+  reinicio: ReinicioDaJogada;
+  /** Posse sem ação (raro): quem segura a bola e onde. */
+  portador?: { id: string; x: number; z: number };
+}
+
 export interface MatchPlanMvp {
   player_id: string;
   name: string;
@@ -226,6 +245,10 @@ export interface MatchPlan {
    * tem a bola), terço ('def'|'mid'|'att'), 1 se acabou de roubar, id de quem carrega].
    */
   fluxo?: [number, 'h' | 'a', 'def' | 'mid' | 'att', 0 | 1, string][];
+  /** Partida Viva (Fase 2 do Motor de Posses): a posse de cada minuto, toque a toque. */
+  jogadas?: JogadaDoPlano[];
+  /** Fôlego dos 22 a cada 5 minutos: [minuto, {id: fadiga 0–100}]. */
+  folego?: [number, Record<string, number>][];
   narrative_arc: NarrativeArc;
   generated_at_ms: number;
   duration_ms: number;

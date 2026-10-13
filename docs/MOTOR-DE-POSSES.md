@@ -315,11 +315,11 @@ pedido ou `OLEFOOT_MOTOR=minutos` no ambiente volta ao motor por minutos sem red
 | no papel (§) | no código | por quê |
 |---|---|---|
 | ~95 posses de duração variável (§1.1) | **uma posse por minuto** (90), cada uma com até 7 ações e ~55 s de bola em jogo | mantém `fluxo` 1:1 com o minuto, os dados por minuto da Fase 0 (`seed|minuto`) e o replan emendando no minuto; 90 cabe no intervalo 88–104 |
-| classe do SMART-PROFILE desloca a ocupação (§1.3) | ocupação só por posição/função (`pos`/`role`) e DNA | a classe não chega ao Python hoje (é calculada na rota TS); entra na Fase 1b |
-| `goleiro` atributo próprio (§2.5) | derivado: 0,55·marcação + 0,25·velocidade + 0,20·confiança | a ficha ainda não tem o atributo |
+| classe do SMART-PROFILE desloca a ocupação (§1.3) | **feito na Fase 1b**: a rota manda a classe; `CLASSE_OCUPA` e `CLASSE_DECIDE` em `motor_posses.py` | — |
+| `goleiro` atributo próprio (§2.5) | lido da linha quando vier (`goleiro`); senão derivado: 0,55·marcação + 0,25·velocidade + 0,20·confiança | a ficha ainda não tem o atributo (Fase 1b leu o campo; a ficha é outra frente) |
 | falta só no duelo perdido pelo defensor (§2.3) | falta em todo duelo físico (condução/drible), ganho ou perdido (×0,7), e no passe interceptado sob pressão (0,20) | com a regra do papel saíam 4 faltas por jogo; o real é 18–30 |
 | mando = +2 confiança + 0,04 nos pesos (§2.5) | + **+4,5 em todo duelo** da casa e **+9% no xG** | o papel dava 35% de vitória no confronto igual; o alvo é 42–48% |
-| lesão sai do mapa (§6) | lesão como no motor antigo (rara, só a casa, sem efeito no motor) | o aparelho resolve a troca; Fase 1b |
+| lesão sai do mapa (§6) | **feito na Fase 1b**: o lesionado sai até o replan da troca; só a casa | o adversário não tem banco |
 | `replan sem comando == plano inteiro da posse em diante` (§5) | não vale: o replan parte do estado resumido (placar, momento, cartões) | pressão, fadiga e célula não viajam no estado; o `estudo_comandos` confere que o replan vazio fica perto de 0 |
 
 ### Como as cadeias saem (o aparelho não mudou uma linha)

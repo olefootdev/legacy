@@ -5,7 +5,7 @@
  * o `QuadroAoVivo` que o `QuickPlanPlayer` emite (o lance JÁ resolvido — com
  * estilo, buff de lenda, formação e momento decisivo aplicados) e desenha.
  */
-import type { CadeiaDeLance, MatchPlanEvent } from '@/match/quickPlanTypes';
+import type { CadeiaDeLance, JogadaDoPlano, MatchPlanEvent } from '@/match/quickPlanTypes';
 
 /** Números da partida até agora (casa × fora). */
 export interface NumerosAoVivo { posse: number; chutes: [number, number]; noGol: [number, number]; xg: [number, number]; escanteios: [number, number]; faltas: [number, number] }
@@ -44,6 +44,10 @@ export interface QuadroAoVivo {
   subsRestantes?: number;
   /** Fase 12: a posse DESTE minuto, do plano (quem tem a bola, em que terço, quem carrega). */
   posse?: { lado: 'home' | 'away'; zona: 'def' | 'mid' | 'att'; roubou: boolean; ator: string } | null;
+  /** Fase 2 do Motor de Posses: a posse deste minuto, toque a toque — o campo encena ela (nada inventado). */
+  jogada?: JogadaDoPlano | null;
+  /** Fôlego do servidor (só nos minutos em que muda): id → fadiga 0–100. O anel e o passo seguem isto. */
+  folego?: Record<string, number>;
   /** Fase 12: os números ao vivo (até este minuto). */
   numeros?: NumerosAoVivo;
   /** Fase 12: acréscimos — minutos além do 45/90 que estão correndo (0 = sem). */

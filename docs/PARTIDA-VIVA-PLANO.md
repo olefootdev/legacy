@@ -825,6 +825,40 @@ volta ao motor por minutos (chave de retorno sem redeploy). Desenho e desvios: `
   Python), lesão que sai do mapa, atributo `goleiro` na ficha, Prova de Causa e Mundo Paralelo
   (Fase 3 do desenho), o campo encenando as posses sem chute (Fase 2). Mobile não visto.
 
+### Fase 1b — classe, lesão e goleiro (13/10, servidor; sem push)
+- **A classe vira comportamento**: a rota manda a classe oficial (`classesDaPartida`) ao motor. Ela
+  muda ONDE o jogador pesa na grade (regista recua um terço, falso 9 vem ao meio, box-to-box cobre
+  as duas áreas, lateral apoiador sobe…) e O QUE ele prefere com a bola. Em 120 partidas, com a
+  classe: regista 113 → 285 lançamentos, ponta driblador 164 → 351 dribles, matador 233 → 345
+  chutes, velocista 44 → 73 conduções (intervalo novo na bateria: "classe vira comportamento").
+- **Lesão sai do mapa**: o lesionado deixa de jogar e de aparecer em cadeia até o replan da troca
+  trazer quem entra; cansado se machuca mais; goleiro não. (Só a casa: o adversário não tem banco.)
+- **Goleiro com atributo próprio** quando a ficha trouxer `goleiro`; senão, o derivado (§2.5).
+- Bateria de 1.333 + 500 + 500: todos os intervalos dentro (2,75 gols, casa 46,4% no igual,
+  10 pontos pior vence 22,6%, p95 21 ms).
+
+### Fase 2 — O campo encena a verdade (13/10; sem push)
+O jogo entre os lances era inventado: todo passe acertava, a pressão nunca desarmava, e lateral,
+tiro de meta e impedimento eram sorteados no aparelho. Agora:
+- **Servidor**: o plano traz `jogadas` — a posse de cada minuto em metros (como começou, as ações
+  com `ok: 0` onde falharam, como acabou, como a próxima recomeça; ~31 KB) — e `folego` (os 22 a
+  cada 5 minutos). Reinícios que acontecem de fato: bola errada no corredor sai pela LATERAL;
+  lançamento errado pro ataque às vezes é IMPEDIMENTO. A posse que segue no minuto seguinte fica
+  nos mesmos pés. Ações herdadas da posse anterior (contexto do lance) não entram na jogada.
+- **Campo** (`src/partidaViva/jogadaReal.ts`): entre os lances, toca a jogada do minuto — passe que
+  chega em quem a jogada diz, passe interceptado que o rival corta ali, drible perdido que o marcador
+  rouba, desarme, falta com apito. **Comprime** quando o minuto é curto (modo Lances): toca o FIM da
+  posse, mantendo a roubada do começo. **Reinício só quando aconteceu** (lateral, tiro de meta,
+  impedimento, falta). O fôlego do servidor chega no anel e no passo de cada ficha. O jogo ambiente
+  (`jogoAmbiente.ts`) só serve plano antigo (motor por minutos).
+- **Portões**: `test:partida-viva` (novas conferências: bola termina em quem a jogada diz; passe
+  errado muda a posse ali; reinício só quando aconteceu; drible perdido; desarme + lançamento;
+  nenhum toque inventado; fôlego do servidor; mesmo filme; compressão sem perder o fio),
+  estresse do campo com as jogadas reais (40, dois ritmos), `test:uma-verdade`, `test:filme`, lint.
+- **Visto no navegador** (servidor e front locais; filme gerado de um plano real do motor de posses,
+  tocado no palco de verdade): a construção, o chute com faixas de cinema, a reposição do goleiro, a
+  falta cruzada na área que virou o gol do 7' e a saída do meio-campo. Celular não visto.
+
 ## 10. Regras de ouro
 1. **Uma verdade só.** O placar sai do plano no servidor. O visual nunca decide.
 2. **Tela primeiro, profundidade depois.** Fatia feia de ponta a ponta > motor perfeito sem tela.

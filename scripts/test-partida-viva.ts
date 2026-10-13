@@ -601,5 +601,52 @@ confere(a.hist.some((v, i) => v !== outra.hist[i]), 'outra seed → outro filme'
   confere(decidirToque(c3, so), 'cansado isolado: toca no mais perto (não trava)');
 }
 
+// ── Motor de Posses, Fase 2: o campo encena a VERDADE entre os lances ───────
+{
+  type J = import('../src/match/quickPlanTypes').JogadaDoPlano;
+  const jog = (m: number, lado: 'h' | 'a', inicio: J['inicio'], acoes: J['acoes'], fim: J['fim'] = 'perda'): J => ({ m, lado, inicio, acoes, fim, reinicio: 'roubada' });
+  const roteiro: J[] = [
+    jog(1, 'h', 'saida', [{ t: 'passe', de: 'home-9', para: 'home-6', x: 45, z: 34 }, { t: 'passe', de: 'home-6', para: 'home-3', x: 30, z: 10 }], 'continua'),
+    jog(2, 'h', 'normal', [{ t: 'conducao', de: 'home-3', para: null, x: 48, z: 8 }, { t: 'passe', de: 'home-3', para: 'home-8', x: 66, z: 9, ok: 0 }]),
+    jog(3, 'a', 'lateral', [{ t: 'passe', de: 'away-3', para: 'away-6', x: 40, z: 20 }], 'continua'),
+    jog(4, 'a', 'normal', [{ t: 'drible', de: 'away-6', para: 'home-6', x: 48, z: 24, ok: 0 }]),
+    jog(5, 'h', 'roubada', [{ t: 'desarme', de: 'home-6', para: 'away-6', x: 48, z: 24 }, { t: 'lancamento', de: 'home-6', para: 'home-9', x: 85, z: 30 }], 'continua'),
+  ];
+  const rodarJogadas = (seg: number) => {
+    const co = new Coreografo(fichas, '4-3-3', '4-3-3', 'jogadas');
+    for (let i = 0; i < 20; i++) co.passo();
+    const log: { m: number; dono: string | null; posse: string; fitas: string[]; passes: number }[] = [];
+    let passes = 0;
+    for (const j of roteiro) {
+      co.receber({ ...quadro(j.m), jogada: j, folego: j.m === 5 ? { 'home-6': 77 } : undefined });
+      const fitas = new Set<string>();
+      for (let i = 0; i < seg / DT; i++) {
+        co.passo();
+        for (const f of co.quadro(1).fitas) fitas.add(f.texto);
+        passes += co.consumirSons().filter((x) => x === 'passe').length;
+      }
+      log.push({ m: j.m, dono: co.dono?.f.id ?? null, posse: co.posse, fitas: [...fitas], passes });
+    }
+    return { co, log };
+  };
+  const { co, log } = rodarJogadas(4);
+  confere(log[0]!.dono === 'home-3', `a bola termina em quem a jogada diz (1': ${log[0]!.dono})`);
+  confere(log[1]!.dono?.startsWith('away-') === true && log[1]!.posse === 'away', `passe errado: o rival corta e a posse muda ali (2': ${log[1]!.dono})`);
+  confere(log[2]!.fitas.some((f) => /LATERAL|THROW/.test(f)) && !log.filter((_, i) => i !== 2).some((l) => l.fitas.some((f) => /LATERAL|THROW|TIRO DE META|GOAL KICK|IMPEDIMENTO|OFFSIDE/.test(f))),
+    'reinício só quando aconteceu: lateral no 3\', nenhum lateral/tiro de meta/impedimento inventado nos outros');
+  confere(log[3]!.dono === 'home-6', `drible perdido: o marcador fica com a bola (4': ${log[3]!.dono})`);
+  confere(log[4]!.dono === 'home-9', `desarme + lançamento: a bola chega em quem a jogada diz (5': ${log[4]!.dono})`);
+  confere(log[4]!.passes <= 6, `nenhum toque inventado entre as jogadas (${log[4]!.passes} passes pra 5 da jogada + pontes)`);
+  confere(co.corpos.find((c) => c.f.id === 'home-6')!.f.fadiga === 77, 'o fôlego do servidor chega na ficha (anel e passo)');
+  const b = rodarJogadas(4);
+  confere(JSON.stringify(b.co.corpos.map((c) => [c.x.toFixed(3), c.z.toFixed(3)])) === JSON.stringify(co.corpos.map((c) => [c.x.toFixed(3), c.z.toFixed(3)])), 'mesmas jogadas, mesmos passos = mesmo campo (o filme)');
+  // Minuto curto (modo Lances): comprime — toca o fim da posse, o dono final é o mesmo.
+  const curto = rodarJogadas(1.1);
+  confere(curto.log[0]!.dono === 'home-3' || curto.log[0]!.dono === 'home-6', `minuto curto: a jogada é comprimida sem perder o fio (1': ${curto.log[0]!.dono})`);
+  // A bola do último lançamento pode estar no ar quando o minuto acaba: ela pousa no seguinte.
+  for (let i = 0; i < 20; i++) curto.co.passo();
+  confere(curto.co.dono?.f.id === 'home-9', `minuto curto: a roubada e o lançamento ainda contam — a bola pousa em quem a jogada diz (${curto.co.dono?.f.id})`);
+}
+
 if (falhas) { console.error(`\n${falhas} falha(s)`); process.exit(1); }
 console.log('\nPartida Viva: coreógrafo ok');

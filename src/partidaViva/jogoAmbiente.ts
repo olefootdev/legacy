@@ -11,6 +11,10 @@
  *      lançamento, o velocista recebe em profundidade, o cansado toca curto.
  *
  * Tudo determinístico (rnd do coreógrafo) — o filme continua idêntico.
+ *
+ * MOTOR DE POSSES, Fase 2: com `plan.jogadas` (motor novo) este módulo SÓ serve
+ * plano antigo. O campo toca a posse real (`jogadaReal.ts`); `lateral` e
+ * `tiroDeMeta` daqui são reusados quando o motor diz que aconteceram.
  */
 import { C, L, lim, type Corpo } from './fisica';
 import { profundidade } from './forma';
@@ -62,7 +66,7 @@ function roubada(co: Coreografo, lado: 'home' | 'away', ator: string): void {
   co.proxToque = co.t + 1.6;
 }
 
-function lateral(co: Coreografo, lado: 'home' | 'away'): void {
+export function lateral(co: Coreografo, lado: 'home' | 'away'): void {
   const ponto = { x: lim(co.bola.x, 4, C - 4), z: co.bola.z < L / 2 ? 0.3 : L - 0.3 };
   co.voo = { x0: co.bola.x, z0: co.bola.z, x1: ponto.x, z1: ponto.z, t: 0, dur: 0.6, altura: 0.4, para: null, fixo: true };
   co.dono = null;
@@ -83,7 +87,7 @@ function lateral(co: Coreografo, lado: 'home' | 'away'): void {
   });
 }
 
-function tiroDeMeta(co: Coreografo, lado: 'home' | 'away'): void {
+export function tiroDeMeta(co: Coreografo, lado: 'home' | 'away'): void {
   const linha = lado === 'home' ? 0.3 : C - 0.3;
   co.voo = { x0: co.bola.x, z0: co.bola.z, x1: linha, z1: lim(co.bola.z, L / 2 - 18, L / 2 + 18), t: 0, dur: 0.7, altura: 0.8, para: null, fixo: true };
   co.dono = null;

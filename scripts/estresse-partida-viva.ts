@@ -105,10 +105,15 @@ for (const [n, e] of partidas.entries()) {
       minuto, fase: 'playing', placarCasa: 0, placarFora: 0, momento: e.plan.momentum_curve[Math.max(0, minuto - 1)] ?? 50,
       lance: null, gol: null, narracao: [],
       posse: f ? { lado: f[1] === 'h' ? 'home' : 'away', zona: f[2], roubou: f[3] === 1, ator: f[4] } : null,
+      // Motor de Posses, Fase 2: a posse real do minuto e o fôlego do servidor (com a troca do 12' aplicada).
+      jogada: (() => { const j = jogadas.get(minuto); return j ? trocado(j as never) as unknown as typeof j : null; })(),
+      folego: folego.get(minuto),
       emCampo,
       ...extra,
     };
   };
+  const jogadas = new Map((e.plan.jogadas ?? []).map((j) => [j.m, j] as const));
+  const folego = new Map((e.plan.folego ?? []).map((f) => [f[0], f[1]] as const));
   // Pré-apito
   for (let i = 0; i < 300 && !co.consumirApito(); i++) passo();
   // Substituição no 12' (reserva SEM número de fôlego — o caso que virava NaN) e

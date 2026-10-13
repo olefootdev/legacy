@@ -510,8 +510,13 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   const momentumRef = useRef<number[]>([...plan.momentum_curve]);
   /** Fase 12: o fluxo do plano por minuto (o replan reescreve do minuto dele em diante). */
   const fluxoRef = useRef(new Map((plan.fluxo ?? []).map((f) => [f[0], f] as const)));
+  /** Fase 2 do Motor de Posses: a jogada de cada minuto e o fôlego do servidor (o replan reescreve do minuto dele). */
+  const jogadasRef = useRef(new Map((plan.jogadas ?? []).map((j) => [j.m, j] as const)));
+  const folegoRef = useRef(new Map((plan.folego ?? []).map((f) => [f[0], f[1]] as const)));
   const emendarFluxo = (novo: MatchPlan, desde: number) => {
     for (const f of novo.fluxo ?? []) if (f[0] >= desde) fluxoRef.current.set(f[0], f);
+    for (const j of novo.jogadas ?? []) if (j.m >= desde) jogadasRef.current.set(j.m, j);
+    for (const f of novo.folego ?? []) if (f[0] >= desde) folegoRef.current.set(f[0], f[1]);
   };
   /**
    * Fase 12 — CONSEQUÊNCIA VISÍVEL: 10' depois de um comando (grito, ordem, troca,
@@ -1571,6 +1576,8 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       gol: celebration ? { chave: celebration.key, nome: celebration.name, lado: celebration.side, actorId: golDoFeed?.actorId, cadeia: cadeiaDoGol, xg: eventoDoGol?.xg } : null,
       narracao: [...feed].reverse().slice(0, 6).map((f) => ({ id: f.id, minuto: f.minute, texto: f.text })),
       posse: posseDoMinuto(minute),
+      jogada: jogadasRef.current.get(minute) ?? null,
+      folego: folegoRef.current.get(minute),
       acrescimo: modoCampo ? acrescimo : undefined,
       numeros: modoCampo ? numerosAte(minute) : undefined,
     });

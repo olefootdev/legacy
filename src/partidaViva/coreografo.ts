@@ -21,6 +21,7 @@ import { L as T } from '@/i18n/L';
 import { ajustarPorEstilo, ajustarPorGrito, alvoNaForma, CLASSES_QUE_PRESSIONAM, formaDe, intencaoDoTime, profundidade, type Forma } from './forma';
 import { encenarGol, encenarLance, entrarEmCampo } from './encenacao';
 import { aplicarPosse, decidirToque, xDaZona, type PosseDoPlano } from './jogoAmbiente';
+import { tocarJogada } from './jogadaReal';
 import { soltarBolaParada } from './bolaParada';
 import type { EventoDeSom } from './som';
 import type { SkillEmCampo } from './skills';
@@ -108,6 +109,16 @@ export class Coreografo {
   /** Até quando um LANCE do plano está em cena: a posse do minuto não atropela a jogada (escanteio montado, cruzamento no ar). */
   encenandoAte = -1;
   private posseMinuto = -1;
+  /** Motor de Posses, Fase 2: o plano traz a posse de cada minuto — o campo não inventa jogo. */
+  temJogadas = false;
+  /** A jogada em curso (cada nova invalida os passos pendentes da anterior). */
+  jogadaSeq = 0;
+  /** Quem a jogada pôs correndo pra um ponto (solto quando a próxima chega). */
+  jogadaAlvos = new Set<Corpo>();
+  /** Quando chegou a última jogada e quanto dura um minuto na tela (orçamento da compressão). */
+  jogadaChegouEm = -1;
+  minutoNaTela = -1;
+  jogadaAte = -1;
   /** Bola parada: quem está posicionado (escanteio, barreira, pênalti) — o fim da jogada solta. */
   posicionados = new Set<Corpo>();
   /** Pré-apito: todos já na posição de saída; o apito sai no fim da contagem (3, 2, 1). */
@@ -164,6 +175,7 @@ export class Coreografo {
     this.momento = q.momento;
     this.estiloCasa = q.estilo;
     this.ouvirComandos(q);
+    if (q.folego) this.aplicarFolego(q.folego);
     if (this.t < this.entradaAte) return; // a entrada em campo termina primeiro
     // Gol em cena: o quadro não encena mais nada (repetido ou não) — senão
     // o mesmo quadro entregue duas vezes encenaria o lance na 2ª (e o filme diverge).
@@ -180,11 +192,21 @@ export class Coreografo {
     if (q.lance && chaveDoLance(q.lance) !== (this.ultimoLance && chaveDoLance(this.ultimoLance))) {
       this.ultimoLance = q.lance;
       encenarLance(this, q.lance);
+      // A posse deste minuto JÁ foi encenada pelo lance: a jogada dele não toca de novo.
+      if (q.jogada) this.posseMinuto = q.minuto;
     } else if (!q.lance) {
       this.ultimoLance = null;
       if (this.fila.length === 0) this.envolvidos = null;
-      // Fase 12: a posse vem do plano, minuto a minuto (plano antigo: pelo momento).
-      if (q.posse) {
+      // Motor de Posses, Fase 2: a POSSE DE VERDADE do minuto, toque a toque.
+      if (q.jogada) {
+        this.temJogadas = true;
+        if (q.minuto !== this.posseMinuto) {
+          this.posseMinuto = q.minuto;
+          if (q.posse) { this.posseDoPlano = q.posse; this.carregadorDoMinuto = null; }
+          tocarJogada(this, q.jogada);
+        }
+      } else if (q.posse) {
+        // Fase 12 (plano antigo): a posse vem do fluxo e o jogo entre os lances é ambiente.
         if (q.minuto !== this.posseMinuto) { this.posseMinuto = q.minuto; aplicarPosse(this, q.posse); }
       } else if (q.momento >= 54) this.posse = 'home';
       else if (q.momento <= 46) this.posse = 'away';
@@ -412,6 +434,8 @@ export class Coreografo {
    */
   limparCena(): void {
     this.fila = [];
+    this.jogadaSeq++;
+    this.jogadaAlvos.clear();
     this.voo = null;
     for (const c of this.corpos) { c.alvo = null; c.vmax = vmaxDe(c.f); }
     this.posicionados.clear();
@@ -441,7 +465,23 @@ export class Coreografo {
     return xDaZona(this, lado);
   }
 
+  /**
+   * Fôlego do servidor (Fase 2): o anel de cada ficha e o passo dela seguem o
+   * cansaço que o motor contou — quem correu o jogo todo chega mais devagar.
+   */
+  aplicarFolego(folego: Record<string, number>): void {
+    for (const c of this.corpos) {
+      const f = folego[c.f.id];
+      if (typeof f !== 'number' || !Number.isFinite(f) || f === c.f.fadiga) continue;
+      c.f = { ...c.f, fadiga: lim(f, 0, 100) };
+      if (!c.alvo) c.vmax = vmaxDe(c.f);
+    }
+  }
+
   private toqueAmbiente(): void {
+    // Com as jogadas do motor, o campo não inventa toque: quem está com a bola segura
+    // até a próxima posse (que já diz o que ele fez com ela).
+    if (this.temJogadas) { this.proxToque = this.t + 1; return; }
     const lado = this.posse;
     const outro = lado === 'home' ? 'away' : 'home';
     const daVez = this.dono && this.dono.f.lado === lado ? this.dono : this.maisPerto(lado, this.bola.x, this.bola.z, false);

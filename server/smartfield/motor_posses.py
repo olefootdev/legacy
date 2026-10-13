@@ -765,10 +765,12 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
             fim_info.update({"cell": onde})
 
         # ── a bola parada que começa esta posse ──────────────────────────────
+        herdadas = 0  # ações da posse anterior repetidas como contexto do lance (não entram na jogada)
         if tipo_inicio == "escanteio":
             cobrador = max((p for p in meu if p["id"] not in fora[lado] and p.get("role") != "gk"), key=lambda p: p.get("bola_parada", 55)) if meu else portador
             # a jogada que deu o escanteio (da posse anterior) entra na cadeia
             acoes.extend(proximo.get("origem") or [])
+            herdadas = len(acoes)
             canto = tuple(proximo["cell"])
             cell = (2, 1)
             cabecear(cobrador, "escanteio", canto, "bola_parada")  # type: ignore[arg-type]
@@ -779,6 +781,7 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
             posses["acoes"] += 2
         elif tipo_inicio == "falta" and cell[0] == 2:
             acoes.extend(proximo.get("origem") or [])
+            herdadas = len(acoes)
             cobrador = max((p for p in meu if p["id"] not in fora[lado] and p.get("role") != "gk"), key=lambda p: max(p.get("bola_parada", 55), p.get("finalizacao", 60) - 6)) if meu else portador
             direta = cell[1] == 1 and max(_efetivo(cobrador, "bola_parada", 55), _efetivo(cobrador, "finalizacao")) >= 62 and rng.random() < 0.45
             if direta:
@@ -1090,7 +1093,7 @@ def simular(input_data: Dict[str, Any]) -> Dict[str, Any]:
         # Fluxo do minuto: quem teve a bola, em que terço, se roubou, quem carregou.
         fluxo.append([minute, "h" if lado == "home" else "a", ("def", "mid", "att")[terco_max], 1 if roubou else 0, (acoes[0]["de"] if acoes else portador)["id"]])
         # FASE 2 — a posse inteira deste minuto, pro campo encenar o que aconteceu de verdade.
-        jogadas_brutas.append({"m": minute, "lado": lado, "acoes": list(acoes), "fim": fim, "inicio": tipo_inicio,
+        jogadas_brutas.append({"m": minute, "lado": lado, "acoes": acoes[herdadas:], "fim": fim, "inicio": tipo_inicio,
                                "portador": portador, "cell": cell, "reinicio": proximo["tipo"]})
         if minute % 5 == 0 or minute == 90:
             folego.append([minute, {p["id"]: int(round(p["fatigue"])) for p in home_lineup + away_lineup}])
