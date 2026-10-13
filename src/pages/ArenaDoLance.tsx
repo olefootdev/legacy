@@ -352,7 +352,7 @@ function Assumir({ id, voltar }: { id: string; voltar: string }) {
               return (
                 <div key={k} className="bg-concreto p-3">
                   <p className="font-impact text-[20px] leading-none">{mo.m}' · {L('Pênalti pra nós', 'Penalty to us')}</p>
-                  <select value={atual} onChange={(e) => setEscolhas({ ...escolhas, penaltis: { ...escolhas.penaltis, [k]: e.target.value } })} className="mt-2 min-h-[44px] w-full border border-linha bg-asfalto-27 px-2 font-sans text-[14px] text-papel">
+                  <select value={atual} onChange={(e) => { const v = e.target.value; setEscolhas((x) => ({ ...x, penaltis: { ...x.penaltis, [k]: v } })); }} className="mt-2 min-h-[44px] w-full border border-linha bg-asfalto-27 px-2 font-sans text-[14px] text-papel">
                     {mo.batedores.map((b) => <option key={b} value={b}>{nome(b)}{b === mo.sugerido ? L(' (sugerido)', ' (suggested)') : ''}</option>)}
                   </select>
                 </div>
@@ -371,7 +371,7 @@ function Assumir({ id, voltar }: { id: string; voltar: string }) {
                     const r = rotuloDaOpcao(op);
                     const par = mo.duelo.por_opcao[op];
                     return (
-                      <Botao key={op} ativo={atual === op} onClick={() => setEscolhas({ ...escolhas, decisivos: { ...escolhas.decisivos, [k]: op } })}>
+                      <Botao key={op} ativo={atual === op} onClick={() => setEscolhas((x) => ({ ...x, decisivos: { ...x.decisivos, [k]: op } }))}>
                         <span className="block">{r.rotulo}</span>
                         {par && <span className="block font-prova text-[10px] font-normal opacity-80 tabular-nums">{Math.round(par[0])} × {Math.round(par[1])}</span>}
                       </Botao>
