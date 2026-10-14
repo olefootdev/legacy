@@ -42,6 +42,8 @@ export interface QuadroAoVivo {
   /** Fase 4c: reservas disponíveis (só no LEGACY) e trocas que ainda cabem. */
   banco?: { id: string; nome: string; pos: string; ovr: number; fadiga: number }[];
   subsRestantes?: number;
+  /** Comando de voz (protótipo): lendas que ainda podem ser ativadas. */
+  lendas?: { id: string; nome: string }[];
   /** Fase 12: a posse DESTE minuto, do plano (quem tem a bola, em que terço, quem carrega). */
   posse?: { lado: 'home' | 'away'; zona: 'def' | 'mid' | 'att'; roubou: boolean; ator: string } | null;
   /** Fase 3: a última PROVA DE CAUSA com um momento que só existiu sem o comando — o campo oferece o Mundo Paralelo. */

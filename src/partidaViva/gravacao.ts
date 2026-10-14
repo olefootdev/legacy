@@ -73,8 +73,8 @@ export function entregarQuadro(co: Coreografo, q: QuadroAoVivo, banco: readonly 
  * recarga, pausa). A decisão vira só o desenho do Analista (corredores).
  */
 export function enxugarQuadro(q: QuadroAoVivo): QuadroAoVivo {
-  const { decisao, banco: _b, subsRestantes: _s, pausado: _p, gritoLivreEm: _g, paralelo: _m, narracao, ...resto } = q;
-  void _b; void _s; void _p; void _g; void _m;
+  const { decisao, banco: _b, subsRestantes: _s, pausado: _p, gritoLivreEm: _g, paralelo: _m, lendas: _l, narracao, ...resto } = q;
+  void _b; void _s; void _p; void _g; void _m; void _l;
   return {
     ...resto,
     narracao: narracao.slice(0, 3),

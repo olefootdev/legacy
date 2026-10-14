@@ -52,6 +52,7 @@ import {
 import { SpiritRng } from '../../shared/gamespirit/SpiritRng';
 import { montarDecisivo, dueloDoDecisivo, textoDoDesfecho, type AtributoDoDuelo, type ClutchMoment, type ClutchKey, type Duelo } from './quickClutch';
 import { comprimirEventos } from '@/partidaViva/compressao';
+import { FORMATIONS } from './formacoes';
 import { emendarEventos, escolhaAutomatica, escolhasVazias, estadoAte, golDoLance, lanceDe, type Escolhas } from './placarAoVivo';
 import type { ComandoAoVivo } from './quickPlanClient';
 import { fraseDaProva, leituraDasProvas, type CausaDoReplan, type ProvaDeCausa } from './provaDeCausa';
@@ -426,7 +427,6 @@ const STYLE_CHIPS: { id: TacticalIntensityLevel; label: string }[] = [
 ];
 
 /** Formações que o seletor ao vivo cicla + viés territorial (afeta o momento). */
-const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2', '3-4-3'];
 const FORMATION_TILT: Record<string, number> = {
   '3-4-3': 5, '4-3-3': 2, '4-2-3-1': 1, '4-4-2': 0, '3-5-2': 0, '5-3-2': -5,
 };
@@ -691,7 +691,11 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
    *  o motor refaz o futuro com os papéis novos (matchup matrix nova). */
   const cycleFormation = () => {
     const idx = FORMATIONS.indexOf(formation);
-    const next = FORMATIONS[(idx + 1) % FORMATIONS.length] ?? '4-3-3';
+    aplicarFormacao(FORMATIONS[(idx + 1) % FORMATIONS.length] ?? '4-3-3');
+  };
+  /** Troca pra uma formação ESPECÍFICA (botão cicla; a voz diz qual). */
+  const aplicarFormacao = (next: string) => {
+    if (!FORMATIONS.includes(next) || next === formationRef.current) return;
     formationRef.current = next;
     setFormation(next);
     onFormationChange?.(next);
@@ -1654,6 +1658,8 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       emCampo: field.map((c) => c.id),
       banco: modoCampo ? benchPool.map((b) => ({ id: b.id, nome: b.name, pos: b.pos, ovr: b.ovr, fadiga: b.fatigue })) : undefined,
       subsRestantes: modoCampo ? Math.max(0, MAX_SUBS - subsUsed) : undefined,
+      // Voz (protótipo): as lendas que ainda podem ser chamadas ("ativa a lenda").
+      lendas: modoCampo && !legacyActive ? availableBoosters.map((b) => ({ id: b.id, nome: b.name })) : undefined,
       pausado: modoCampo ? pausado : undefined,
       decisao,
       fase: phase,
@@ -1670,7 +1676,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       acrescimo: modoCampo ? acrescimo : undefined,
       numeros: modoCampo ? numerosAte(minute) : undefined,
     });
-  }, [minute, phase, homeScore, awayScore, highlight, celebration, feed, style, activeBeat, leadIn, leadInReactable, clutch, forced, benchPool, gritoAtivo, ordens, field, subsUsed, pausado, acrescimo, batedores, modoCampo, paralelo]);
+  }, [minute, phase, homeScore, awayScore, highlight, celebration, feed, style, activeBeat, leadIn, leadInReactable, clutch, forced, benchPool, gritoAtivo, ordens, field, subsUsed, pausado, acrescimo, batedores, modoCampo, paralelo, liveBoosters, legacyUsedIds, legacyActive]);
 
   // PARTIDA VIVA (Fase 4) — respostas vindas do campo caem nas mesmas funções dos botões.
   const responderRef = useRef<(id: string) => void>(() => {});
@@ -1680,6 +1686,21 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     if (id.startsWith('grito:')) {
       const g = id.slice('grito:'.length);
       if (g === 'incentivar' || g === 'cobrar' || g === 'acalmar') comandar({ tipo: g });
+      return;
+    }
+    // COMANDO DE VOZ (protótipo 14/10): marcar UM rival escolhido, formação dita, lenda dita.
+    if (id.startsWith('marcar:')) {
+      const [jogador, alvo] = id.slice('marcar:'.length).split('|');
+      if (jogador && alvo) comandar({ tipo: 'ordem', ordem: 'marcar', jogador, alvo });
+      return;
+    }
+    if (id.startsWith('formacao:')) {
+      if (modoCampo && (phase === 'playing' || phase === 'leadin')) aplicarFormacao(id.slice('formacao:'.length));
+      return;
+    }
+    if (id.startsWith('lenda:')) {
+      const b = availableBoosters.find((x) => x.id === id.slice('lenda:'.length));
+      if (b) activateLegacy(b);
       return;
     }
     if (id.startsWith('ordem:')) {

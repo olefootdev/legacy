@@ -970,6 +970,28 @@ tiro de meta e impedimento eram sorteados no aparelho. Agora:
   escanteio sem cobrador a 9 m; corrigido com o corte proporcional). Visto no campo (filme gerado do motor):
   o escanteio compacto do 48' sai da bandeirinha com a área armada.
 
+### Comando de voz — protótipo (14/10, "o manager fala, o time entende e executa")
+- Botão "🎙 Voz" no trilho direito do campo LEGACY (só ao vivo). Toque → fala uma frase → a faixa
+  mostra "Entendi: …" → o comando cai no MESMO canal dos botões (`canal.responder`), com as mesmas
+  regras (recarga do grito, limite de 5 trocas). O capitão responde em voz com o Som ligado.
+- `src/partidaViva/voz/entender.ts` (puro, `npm run test:voz`, 45 frases): troca ("sai o Caio, entra o
+  Endrick", "tira o mais cansado e coloca um zagueiro", "Endrick no lugar do Gabriel", "sai o 9…"),
+  marcação com alvo ("Lucas marca o Adriano", "Thiago, gruda no 10"), atacar o espaço / segurar, estilo
+  ("ataque total", "fecha a casinha"), grito ("vamo!", "acorda!", "calma"), formação ("vamos de 3-5-2",
+  "três zagueiros"), lenda ("ativa a lenda") e as decisões abertas (momento decisivo "chuta!/dribla!/
+  carrinho!", batedor do pênalti, quem entra na lesão, analista/reação pelo rótulo). Inglês básico.
+  Nome por qualquer parte, camisa clássica por posição ("o 10" = meia-armador), posição falada,
+  "o mais cansado". Ambíguo → pergunta; não entendeu → diz, sem inventar.
+- Troca confirma sozinha em 2,5 s com "Cancelar" (não se desfaz). Portas novas no QuickPlanPlayer:
+  `marcar:<nosso>|<rival>`, `formacao:<f>`, `lenda:<id>`.
+- `voz/microfone.ts`: reconhecimento do navegador (Chrome/Safari, pt-BR/en). Quem transcreve é o serviço
+  do navegador; o jogo não grava áudio. Sem reconhecimento (alguns navegadores de computador): campo
+  pra digitar o comando, o mesmo caminho.
+- Visto rodando (front e servidor locais, time de teste no navegador): "ataque total" virou o estilo,
+  "vamos de 3-5-2" virou a formação, "tira o mais cansado e coloca um zagueiro" mostrou o card da troca e
+  gastou 1 das 5 trocas, frase solta deu "Não entendi". **Não visto**: o microfone de verdade num
+  celular (o teste foi digitando) e o capitão falando.
+
 ## 10. Regras de ouro
 1. **Uma verdade só.** O placar sai do plano no servidor. O visual nunca decide.
 2. **Tela primeiro, profundidade depois.** Fatia feia de ponta a ponta > motor perfeito sem tela.

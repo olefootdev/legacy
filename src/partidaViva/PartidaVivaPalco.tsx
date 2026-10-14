@@ -25,6 +25,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { createPortal } from 'react-dom';
 import { L } from '@/i18n/L';
 import { track } from '@/analytics/track';
+import { BotaoDeVoz } from './voz/BotaoDeVoz';
 import { chaveDoLance, Coreografo, DT } from './coreografo';
 import { PalcoPixi } from './palco';
 import { deitarTela, ehIOS, ladoDoEntalhe, levantarTela, podeTelaCheia, pontoLocal, semBarras } from './orientacao';
@@ -693,6 +694,10 @@ export function PartidaVivaPalco(p: Props) {
             <Botao ativo={pausado} onClick={() => canal.responder(pausado ? 'retomar' : 'pausar')} rotulo={L('Prancheta', 'Tactics board')}>
               {pausado ? L('▶ Jogo', '▶ Play') : L('Prancheta', 'Board')}
             </Botao>
+          )}
+          {/* COMANDO DE VOZ (protótipo 14/10): só na partida ao vivo do LEGACY (não no filme). */}
+          {!noFilme && quadro?.subsRestantes !== undefined && (
+            <BotaoDeVoz canal={canal} quadro={quadro} corpos={() => coreoRef.current?.corpos.map((c) => c.f) ?? fichas} som={som} />
           )}
           {ofereceTelaCheia && (
             <Botao ativo={painel === 'telaCheia'} onClick={pedirTelaCheia} rotulo={L('Tela cheia', 'Full screen')}>
