@@ -51,6 +51,7 @@ import {
 } from './quickBeatDirector';
 import { SpiritRng } from '../../shared/gamespirit/SpiritRng';
 import { montarDecisivo, dueloDoDecisivo, textoDoDesfecho, type AtributoDoDuelo, type ClutchMoment, type ClutchKey, type Duelo } from './quickClutch';
+import { comprimirEventos } from '@/partidaViva/compressao';
 import { emendarEventos, escolhaAutomatica, escolhasVazias, estadoAte, golDoLance, lanceDe, type Escolhas } from './placarAoVivo';
 import type { ComandoAoVivo } from './quickPlanClient';
 import { fraseDaProva, leituraDasProvas, type CausaDoReplan, type ProvaDeCausa } from './provaDeCausa';
@@ -448,6 +449,8 @@ const FEED_STYLE: Record<QuickPlanFeedItem['kind'], string> = {
 
 /** Tempo real por minuto de jogo CORRIDO (relógio 1,2,3…). 90 min ≈ 22s. */
 const CLOCK_MS = 240;
+/** LEGACY: minuto que abre com lance encenado — o relógio só pisca e o lance entra. */
+export const MINUTO_COM_LANCE_MS = 200;
 /** Duração da CHAMADA de transição antes de um lance de alto sinal (contexto). */
 export const LEADIN_MS = 1300;
 /** Janela maior quando a chamada tem 3 opções de reação (ler + escolher). */
@@ -524,7 +527,9 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
 
   // UMA VERDADE SÓ: os lances são os do plano do servidor, e só eles (cartão,
   // lesão e expulsão também — o aparelho não semeia nada).
-  const eventsRef = useRef<MatchPlanEvent[]>([...plan.events]);
+  // LEGACY: lances de baixa tensão comprimidos (só o visual; ver src/partidaViva/compressao.ts).
+  const naTela = (evs: readonly MatchPlanEvent[]) => (modoCampo ? comprimirEventos(evs) : [...evs]);
+  const eventsRef = useRef<MatchPlanEvent[]>(naTela(plan.events));
   /** As escolhas do manager (momento decisivo por minuto, batedor por minuto) — vão no relato. */
   const escolhasRef = useRef<Escolhas>(escolhasVazias());
   const beatsQueueRef = useRef<AnalystBeat[]>([...(plan.analyst_beats ?? [])]);
@@ -861,7 +866,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
       const emenda = h2 && Array.isArray(h2.events) ? emendarEventos(eventsRef.current, eventIdxRef.current, minuteRef.current, h2) : null;
       if (h2 && emenda) {
         replannedRef.current = true;
-        eventsRef.current = emenda.events;
+        eventsRef.current = naTela(emenda.events);
         beatsQueueRef.current = (h2.analyst_beats ?? []).filter((b) => b.minute >= emenda.inicio);
         momentumRef.current = [...momentumRef.current.slice(0, emenda.inicio - 1), ...h2.momentum_curve];
         emendarFluxo(h2, emenda.inicio);
@@ -1135,7 +1140,11 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
     minuteRef.current = nm;
     setMinute(nm);
     setHighlight(null);
-    scheduleNext(relogioMs ?? CLOCK_MS);
+    // LEGACY ("comprime!", 14/10): minuto com lance encenado vai direto ao lance — a posse
+    // do minuto É o lance; tocá-la antes por 1,1 s mostrava a mesma jogada duas vezes.
+    const prox = eventsRef.current[eventIdxRef.current];
+    const lanceJa = modoCampo && !!prox && prox.minute === nm && !!prox.cadeia?.acoes.length;
+    scheduleNext(lanceJa ? MINUTO_COM_LANCE_MS : relogioMs ?? CLOCK_MS);
   };
   tickRef.current = tick;
 
@@ -1417,7 +1426,7 @@ export function QuickPlanPlayer({ plan, resultadoExp, onComplete, speedMultiplie
   const emendarReplan = (novo: MatchPlan) => {
     const emenda = emendarEventos(eventsRef.current, eventIdxRef.current, minuteRef.current, novo);
     if (!emenda) return; // chegou tarde (o pedido já tinha sido abandonado): o plano na tela segue
-    eventsRef.current = emenda.events;
+    eventsRef.current = naTela(emenda.events);
     const inicio = emenda.inicio;
     beatsQueueRef.current = [
       ...beatsQueueRef.current.filter((b) => b.minute < inicio),

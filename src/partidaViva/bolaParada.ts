@@ -38,10 +38,12 @@ function ir(co: Coreografo, c: Corpo | null | undefined, x: number, z: number): 
  * CORTE (como na TV): quem vai cobrar e está longe demais pra chegar na
  * preparação aparece a `perto` metros da bola — e corre o resto, à vista.
  */
-function aproximar(c: Corpo | null, ponto: { x: number; z: number }, perto: number): void {
+function aproximar(c: Corpo | null, ponto: { x: number; z: number }, perto0: number): void {
   if (!c) return;
+  // Bola parada COMPACTA (lance de baixa tensão): a preparação é curta, então o corte deixa todo mundo mais perto.
+  const perto = Math.max(1.5, perto0 * corteAtual);
   const d = Math.hypot(c.x - ponto.x, c.z - ponto.z);
-  if (d <= perto + 2) return;
+  if (d <= perto + 2 * corteAtual) return;
   const k = perto / d;
   c.x = c.px = ponto.x + (c.x - ponto.x) * k;
   c.z = c.pz = ponto.z + (c.z - ponto.z) * k;
@@ -74,7 +76,26 @@ function marcar(co: Coreografo, atacantes: { c: Corpo; x: number; z: number }[],
  * Monta a bola parada que a ação `i` vai cobrar. `lado` = quem cobra (ataca).
  * Devolve onde a bola fica parada.
  */
+/** Fração da distância do corte de TV (1 = normal; menor na bola parada compacta). */
+let corteAtual = 1;
+
+/**
+ * Monta a bola parada. `corte` < 1 (lance compacto, src/partidaViva/compressao.ts):
+ * a preparação é mais curta, então quem está longe aparece mais perto do seu lugar.
+ */
 export function montarBolaParada(
+  co: Coreografo, tipo: TipoDeBolaParada, acoes: readonly AcaoDeLance[], i: number, lado: 'home' | 'away',
+  por: (id: string | null) => Corpo | null, corte = 1,
+): { x: number; z: number } {
+  corteAtual = corte;
+  try {
+    return montar(co, tipo, acoes, i, lado, por);
+  } finally {
+    corteAtual = 1;
+  }
+}
+
+function montar(
   co: Coreografo, tipo: TipoDeBolaParada, acoes: readonly AcaoDeLance[], i: number, lado: 'home' | 'away',
   por: (id: string | null) => Corpo | null,
 ): { x: number; z: number } {

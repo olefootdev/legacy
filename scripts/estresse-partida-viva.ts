@@ -17,6 +17,7 @@ import { Coreografo, DT } from '../src/partidaViva/coreografo';
 import { montarFichas } from '../src/partidaViva/escalacao';
 import { cronogramaDaCadeia, msParaMostrar } from '../src/partidaViva/cronograma';
 import { entregarQuadro } from '../src/partidaViva/gravacao';
+import { comprimirEventos } from '../src/partidaViva/compressao';
 import type { QuadroAoVivo } from '../src/partidaViva/tipos';
 import type { MatchPlan } from '../src/match/quickPlanTypes';
 
@@ -130,7 +131,8 @@ for (const [n, e] of partidas.entries()) {
       if (!feitas.length) achados.push(`12': a substituição não entrou`);
     }
     entregarQuadro(co, quadro({}), []);
-    for (const ev of e.plan.events.filter((x) => x.minute === minuto).map(trocado)) {
+    // Como o LEGACY mostra: lances de baixa tensão comprimidos (bola parada curta, só o final da jogada).
+    for (const ev of comprimirEventos(e.plan.events.filter((x) => x.minute === minuto).map(trocado))) {
       if (ev.kind.startsWith('goal_') && ev.cadeia) {
         filaDesde = -1; cobrancas.length = 0;
         entregarQuadro(co, quadro({ gol: { chave: `g-${minuto}-${ev.actor_id}`, nome: 'x', lado: ev.actor_side, actorId: ev.actor_id, cadeia: ev.cadeia, xg: ev.xg } }), []);

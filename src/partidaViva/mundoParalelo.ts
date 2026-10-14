@@ -11,6 +11,7 @@
 import type { JogadaDoPlano, MatchPlanEvent } from '@/match/quickPlanTypes';
 import type { MomentoDaJanela, ProvaDeCausa } from '@/match/provaDeCausa';
 import { Coreografo, DT, type QuadroDoFilme, type QuadroDoPalco } from './coreografo';
+import { comprimirEventos } from './compressao';
 import { msParaMostrar } from './cronograma';
 import type { Ficha, QuadroAoVivo } from './tipos';
 
@@ -32,7 +33,7 @@ export function encenarParalelo(fichas: Ficha[], formacaoCasa: string, formacaoF
   const foco = focoDoParalelo(p);
   if (!foco) return null;
   const jogadas = new Map(((p.jogadas_sem ?? []) as JogadaDoPlano[]).map((j) => [j.m, j] as const));
-  const eventos = (p.eventos_sem ?? []) as MatchPlanEvent[];
+  const eventos = comprimirEventos((p.eventos_sem ?? []) as MatchPlanEvent[]);
   const co = new Coreografo(fichas, formacaoCasa, formacaoFora, `${seed}|paralelo|${foco.m}`);
   for (let i = 0; i < 12; i++) co.passo(); // os times se ajeitam na forma
   co.gravando = true;

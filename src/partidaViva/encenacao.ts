@@ -12,7 +12,7 @@
  *   faixas de cinema nos lances grandes, linha do passe, assinaturas por classe.
  */
 import type { CadeiaDeLance, MatchPlanEvent } from '@/match/quickPlanTypes';
-import { bolaParadaDe, cronogramaDaCadeia, VEL_CONDUCAO } from './cronograma';
+import { bolaParadaDe, cronogramaDaCadeia, PREP_COMPACTA, VEL_CONDUCAO } from './cronograma';
 import { montarBolaParada, soltarBolaParada } from './bolaParada';
 import { C, L, lim, type Corpo } from './fisica';
 import type { Coreografo } from './coreografo';
@@ -166,7 +166,8 @@ function encenarCadeia(co: Coreografo, cad: CadeiaDeLance, lado: 'home' | 'away'
     const t = tempos[i];
     if (!tipo || !t) return;
     co.depois(Math.max(0, t.ini - t.prep * escala), () => {
-      const ponto = montarBolaParada(co, tipo, cad.acoes, i, lado, por);
+      // Compacta: a câmera volta com a bola parada quase armada (corte curto, cada um a ~1,5 m do seu lugar).
+      const ponto = montarBolaParada(co, tipo, cad.acoes, i, lado, por, cad.compacta ? PREP_COMPACTA / 2 : 1);
       for (const c of co.posicionados) envolvidos.add(c);
       co.fita(nomeDaBolaParada[tipo], ponto.x, ponto.z, 1.6, true);
     });

@@ -949,13 +949,26 @@ tiro de meta e impedimento eram sorteados no aparelho. Agora:
 | Placar realista (1.000 partidas) | 2,4–3,0 gols; posse 38–62%; 0 gol de expulso; o 10 pts pior vence ~20% | bateria travada da Fase 1 (`npm run test:motor-posses`) | ✅ dentro |
 | Gols com comando ativo nas 10 posses anteriores | 35%–50% | **22,4%** (1.000 partidas no ritmo REAL dos managers: 3,4 comandos/partida; 8 comandos → 39,8%; 1 comando → 13,1%) — `npm run estudo:gol-com-comando` | ❌ fora — o comando pesa, mas os managers comandam pouco |
 | Replanejamento | < 150 ms | p95 ~35 ms de CPU com a prova (Fase 3) | ✅ dentro |
-| Partida no modo Lances | ≤ 4 min de tela | **6min13s** (mediana, manager típico, 1×; p90 7min01s). Em 2×: 3min38s, 81% até 4 min. O peso são os ~39 lances encenados (~5,1 s cada = 3min19s) — `npm run estudo:tempo-de-tela` | ❌ fora em 1×; ✅ em 2× |
+| Partida no modo Lances | ≤ 4 min de tela | 13/10: 6min13s. **14/10, depois da compressão: 3min56s** (mediana, manager típico, 1×; p90 4min30s; ágil 3min31s). Em 2×: 2min31s, 100% até 4 min — `npm run estudo:tempo-de-tela` | ✅ dentro (mediana) |
 | Retorno D1 e semana de quem usou o Mundo Paralelo × quem não usou | maior em quem usou | eventos `mundo_paralelo_oferecido`/`_visto` (+ `arena_*`) ligados em 13/10; consulta em `scripts/estudo-retorno-mundo-paralelo.sql` (só leitura) | ⏳ precisa de ≥ 1 semana de dados depois do deploy |
 
 - Os dois "fora" são decisões de produto, não defeitos: (1) mais gols com comando = o jogo puxar o
   manager a comandar mais (ex.: o Analista oferecer a ordem certa no momento) ou rever a meta; (2) caber
-  em 4 min em 1× = encenar só os lances de alta tensão por inteiro e comprimir os demais (a Fase 2 do
-  raio-x já previa "comprimindo as de baixa tensão"), ou fazer 2× o padrão.
+  em 4 min em 1× — o fundador escolheu COMPRIMIR (14/10), feito abaixo.
+
+### Compressão dos lances de baixa tensão (14/10, "comprime!")
+- `src/partidaViva/compressao.ts`: ALTA TENSÃO encena inteira (gol, pênalti, trave, contra-ataque, peso
+  alto, e chute/chance/defesa com xG ≥ 0,20). BAIXA TENSÃO mostra só o final (as duas últimas ações —
+  nunca começando numa falta) e a bola parada é COMPACTA: a preparação cai a 30% e o corte de TV deixa
+  cada um perto do seu lugar (`montarBolaParada(..., corte)`), sem respiro no início e com folga curta.
+- O minuto que abre com lance encenado vai direto ao lance (`MINUTO_COM_LANCE_MS` = 0,2 s): a posse do
+  minuto É o lance — antes ela tocava 1,1 s e o lance mostrava a mesma jogada de novo.
+- Só visual e só no LEGACY: placar, autor e desfecho iguais; o filme grava o lance já comprimido; a arena e
+  o Mundo Paralelo usam a mesma compressão.
+- Antes → depois (1.000 partidas, típico, 1×): 6min13s → 3min56s; lances 3min19s → 1min39s; relógio
+  1min46s → 1min09s. Estresse (40 partidas, dois ritmos) passa COM os lances comprimidos (o 1º teste pegou
+  escanteio sem cobrador a 9 m; corrigido com o corte proporcional). Visto no campo (filme gerado do motor):
+  o escanteio compacto do 48' sai da bandeirinha com a área armada.
 
 ## 10. Regras de ouro
 1. **Uma verdade só.** O placar sai do plano no servidor. O visual nunca decide.

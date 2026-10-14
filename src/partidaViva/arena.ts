@@ -22,6 +22,7 @@ import type { CadeiaDeLance, MatchPlan, MatchPlanEvent } from '@/match/quickPlan
 import type { ProvaDeCausa } from '@/match/provaDeCausa';
 import { Coreografo, DT } from './coreografo';
 import { msParaMostrar } from './cronograma';
+import { comprimirEventos } from './compressao';
 import { entregarQuadro, type Entrega } from './gravacao';
 import type { Ficha, QuadroAoVivo } from './tipos';
 
@@ -143,6 +144,8 @@ export function roteiroDaArena(
   const jogadas = new Map((plano.jogadas ?? []).map((j) => [j.m, j] as const));
   const folego = new Map((plano.folego ?? []).map((f) => [f[0], f[1]] as const));
   const fluxo = new Map((plano.fluxo ?? []).map((f) => [f[0], f] as const));
+  // Os mesmos lances comprimidos do LEGACY ao vivo (baixa tensão mostra só o final).
+  const eventos = comprimirEventos(plano.events);
   let minuto = inicio;
   const quadro = (extra: Partial<QuadroAoVivo>): QuadroAoVivo => {
     const f = fluxo.get(minuto);
@@ -159,7 +162,7 @@ export function roteiroDaArena(
   const narrar = (texto: string, chave: string) => { narracao.unshift({ id: chave, minuto, texto }); };
 
   for (; minuto <= 90; minuto++) {
-    const lances = plano.events.filter((e) => e.minute === minuto);
+    const lances = eventos.filter((e) => e.minute === minuto);
     let teveLance = false;
     for (const [i, ev] of lances.entries()) {
       const chave = `arena-${minuto}-${i}`;

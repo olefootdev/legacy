@@ -7,7 +7,8 @@
  * O relógio da Partida Rápida no LEGACY é determinístico, a não ser pelo tempo
  * que o MANAGER leva pra decidir. Então o estudo toca 1.000 planos do motor
  * novo pelas MESMAS regras e números do aparelho (importados, não copiados):
- *   - minuto sem lance: 1,1 s (LEGACY contínuo, velocidade 1×) + acréscimos;
+ *   - minuto sem lance: 1,1 s (LEGACY contínuo, velocidade 1×) + acréscimos; minuto que abre com
+ *     lance encenado: 0,2 s e o lance entra (a posse do minuto é o próprio lance);
  *   - lance: o maior entre a leitura (HOLD_MS) e a encenação no campo (msParaMostrar);
  *   - chamada antes de lance de alto sinal (classifyTransition): 1,3 s, ou a janela
  *     de reação de 2,8 s;
@@ -18,9 +19,10 @@
  */
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { acrescimoDaEtapa, HOLD_MS, LEADIN_MS, LEADIN_REACT_MS, PRAZO_DECISIVO_MS } from '../src/match/QuickPlanPlayer';
+import { acrescimoDaEtapa, HOLD_MS, LEADIN_MS, LEADIN_REACT_MS, MINUTO_COM_LANCE_MS, PRAZO_DECISIVO_MS } from '../src/match/QuickPlanPlayer';
 import { classifyTransition } from '../src/match/quickBeatDirector';
 import { msParaMostrar } from '../src/partidaViva/cronograma';
+import { comprimirEventos } from '../src/partidaViva/compressao';
 import { ESPERA_ANTES_MS, GIZ_MS, REPLAY_MS } from '../src/partidaViva/filme';
 import { escolhaAutomatica } from '../src/match/placarAoVivo';
 import type { MatchPlan, MatchPlanEvent } from '../src/match/quickPlanTypes';
@@ -50,7 +52,9 @@ for i in range(${N}):
 print(json.dumps(out))
 `], { cwd: SMART, encoding: 'utf8', maxBuffer: 1 << 30 });
 if (r.status !== 0) { console.error(r.stderr); process.exit(1); }
-const planos = JSON.parse(r.stdout) as Pick<MatchPlan, 'events' | 'momentum_curve'>[];
+const crus = JSON.parse(r.stdout) as Pick<MatchPlan, 'events' | 'momentum_curve'>[];
+// O LEGACY mostra os lances de baixa tensão comprimidos (src/partidaViva/compressao.ts). SEM_COMPRESSAO=1 mede o antes.
+const planos = process.env.SEM_COMPRESSAO ? crus : crus.map((p) => ({ ...p, events: comprimirEventos(p.events) }));
 
 const golDoFilme = (cad: MatchPlanEvent['cadeia'], vel = 1) => msParaMostrar(cad) / vel + ESPERA_ANTES_MS + REPLAY_MS + GIZ_MS;
 
@@ -83,7 +87,9 @@ function tempoDaPartida(p: Pick<MatchPlan, 'events' | 'momentum_curve'>, f: Perf
     }
   }
   const acrescimos = acrescimoDaEtapa(ev, 1) + acrescimoDaEtapa(ev, 2, 2);
-  return t + (90 + acrescimos) * MINUTO_MS / vel;
+  // Minuto que abre com lance encenado: o relógio só pisca (MINUTO_COM_LANCE_MS) e o lance entra.
+  const comLance = new Set(ev.filter((e) => e.cadeia?.acoes.length).map((e) => e.minute)).size;
+  return t + ((90 + acrescimos - comLance) * MINUTO_MS + comLance * MINUTO_COM_LANCE_MS) / vel;
 }
 
 const q = (xs: number[], p: number) => [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(p * xs.length))]!;
@@ -108,7 +114,8 @@ console.log(`\n  lances encenados por partida: média ${(comCadeia.reduce((a, b)
   let minutos = 0, lances = 0, gols = 0, decisoes = 0;
   for (const p of planos) {
     const ev = p.events;
-    minutos += (90 + acrescimoDaEtapa(ev, 1) + acrescimoDaEtapa(ev, 2, 2)) * MINUTO_MS;
+    const comLance = new Set(ev.filter((e) => e.cadeia?.acoes.length).map((e) => e.minute)).size;
+    minutos += (90 + acrescimoDaEtapa(ev, 1) + acrescimoDaEtapa(ev, 2, 2) - comLance) * MINUTO_MS + comLance * MINUTO_COM_LANCE_MS;
     for (const e of ev) {
       if ((e.kind === 'goal_home' || e.kind === 'goal_away') && e.decisivo) {
         decisoes += f.decisao;

@@ -37,12 +37,22 @@ export function bolaParadaDe(acoes: readonly AcaoDeLance[], i: number): 'escante
 }
 const PREP = { escanteio: PREP_ESCANTEIO, falta: PREP_FALTA, penalti: PREP_PENALTI } as const;
 
+/**
+ * Lance COMPACTO (baixa tensão, "comprime!" do fundador 14/10): a bola parada ainda
+ * para o jogo e posiciona os times, mas em menos da metade do tempo; sem o respiro
+ * do começo nem a folga do fim. As ações em si (passe, condução) não aceleram.
+ */
+export const PREP_COMPACTA = 0.3;
+const RESPIRO_COMPACTO = 0.15;
+const FOLGA = 0.8;
+const FOLGA_COMPACTA = 0.15;
+
 export function cronogramaDaCadeia(cad: CadeiaDeLance): { tempos: TempoDaAcao[]; total: number } {
-  let t = RESPIRO_INICIAL;
+  let t = cad.compacta ? RESPIRO_COMPACTO : RESPIRO_INICIAL;
   let ant = cad.inicio;
   const tempos = cad.acoes.map((ac, i) => {
     const bp = bolaParadaDe(cad.acoes, i);
-    const prep = bp ? PREP[bp] : 0;
+    const prep = bp ? PREP[bp] * (cad.compacta ? PREP_COMPACTA : 1) : 0;
     t += prep;
     const dist = Math.hypot(ac.x - ant.x, ac.z - ant.z);
     let dur: number;
@@ -62,5 +72,5 @@ export function cronogramaDaCadeia(cad: CadeiaDeLance): { tempos: TempoDaAcao[];
 
 /** Milissegundos que a Partida Rápida deve segurar um lance com cadeia. */
 export function msParaMostrar(cad: CadeiaDeLance | undefined): number {
-  return cad?.acoes.length ? Math.round((cronogramaDaCadeia(cad).total + 0.8) * 1000) : 0;
+  return cad?.acoes.length ? Math.round((cronogramaDaCadeia(cad).total + (cad.compacta ? FOLGA_COMPACTA : FOLGA)) * 1000) : 0;
 }

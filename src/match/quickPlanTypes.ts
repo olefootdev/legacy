@@ -142,6 +142,8 @@ export interface CadeiaDeLance {
   inicio: { x: number; z: number };
   acoes: AcaoDeLance[];
   finalizacao: 'chute' | 'cabeceio' | 'cobranca' | null;
+  /** Lance de BAIXA TENSÃO comprimido no aparelho (src/partidaViva/compressao.ts): bola parada rápida, sem respiro. Só visual. */
+  compacta?: boolean;
 }
 
 /** O momento decisivo como o motor o emite (server/smartfield/decisivo.py). */
