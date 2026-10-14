@@ -21,8 +21,9 @@ import { track } from '@/analytics/track';
 import { L } from '@/i18n/L';
 import { cn } from '@/lib/utils';
 import { FitaRua, MarcaRua, SecaoRua } from '@/components/ui/Rua';
+import { CriadorDeUniforme } from '@/components/uniforme/CriadorDeUniforme';
 import { PranchetaViva } from '@/components/fundacao/PranchetaViva';
-import { CamisaSVG, CORES_DE_CAMISA, EscudoSVG, PADROES_DE_CAMISA } from '@/components/fundacao/Camisa';
+import { EscudoSVG } from '@/components/fundacao/Camisa';
 import { LEAGUE_BUCKETS } from '@/settings/worldClubs';
 import { BarraAcao, BotaoBarra, useAlturaComoVariavel } from '@/components/ui/BarraAcao';
 import type { FavoriteRealTeamRef } from '@/game/types';
@@ -42,7 +43,6 @@ import {
   type DisponibilidadeDoManager,
   type EstiloDeJogo,
   type IdentidadeDoClube,
-  type PadraoDeCamisa,
   type PontosDeJogo,
   type TreinoDoClube,
 } from '@/club/identidade';
@@ -555,51 +555,8 @@ export default function Fundacao() {
           {P.id === 'camisa' && (
             <>
               <Cabecalho rotulo={L('Ato 3 · a cara do clube', "Act 3 · the club's face")} titulo={L('Veste', 'Wear')} destaque={L('a camisa.', 'the shirt.')} />
-              <div className="flex items-center justify-center gap-5 bg-concreto px-3 py-5">
-                <EscudoSVG primaria={camisa.primaria} secundaria={camisa.secundaria} iniciais={iniciais} largura={86} />
-                <CamisaSVG {...camisa} iniciais={iniciais} largura={150} rotulo={L(`Camisa e calção do ${club.name}`, `${club.name} shirt and shorts`)} />
-              </div>
-              <div className="flex flex-col gap-2.5">
-                <SecaoRua label={L('Padrão', 'Pattern')} />
-                <div className="grid grid-cols-4 gap-2">
-                  {PADROES_DE_CAMISA.map(({ k, nome }) => (
-                    <button
-                      key={k}
-                      type="button"
-                      aria-pressed={camisa.padrao === k}
-                      onClick={() => setCamisa({ ...camisa, padrao: k as PadraoDeCamisa })}
-                      className={cn('flex min-w-0 flex-col items-center gap-0.5 border-[3px] bg-concreto px-1 pb-1 pt-1.5', camisa.padrao === k ? 'border-rua' : 'border-transparent')}
-                    >
-                      <CamisaSVG {...camisa} padrao={k} largura={48} />
-                      <span className="font-prova text-[9.5px] font-bold uppercase tracking-[0.08em] text-mudo">{nome}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {(
-                [
-                  ['primaria', L('Cor principal', 'Main colour')],
-                  ['secundaria', L('Cor do detalhe', 'Detail colour')],
-                  ['calcao', L('Calção', 'Shorts')],
-                ] as const
-              ).map(([campo, nome]) => (
-                <div key={campo} className="flex flex-col gap-2.5">
-                  <SecaoRua label={nome} />
-                  <div className="flex flex-wrap gap-2">
-                    {CORES_DE_CAMISA.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        aria-pressed={camisa[campo] === c}
-                        aria-label={`${nome} ${c}`}
-                        onClick={() => setCamisa({ ...camisa, [campo]: c })}
-                        className={cn('h-10 w-10 border-2 border-linha', camisa[campo] === c && 'outline outline-[3px] outline-offset-2 outline-rua')}
-                        style={{ background: c }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
+              {/* Uniforme em peças (14/10): o mesmo criador do Clube — dá pra mudar depois. */}
+              <CriadorDeUniforme camisa={camisa} onChange={setCamisa} iniciais={iniciais} />
             </>
           )}
 

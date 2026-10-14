@@ -27,6 +27,7 @@ import {
 } from '@/partidaViva/arena';
 import { ligarSom } from '@/partidaViva/som';
 import { track } from '@/analytics/track';
+import { normalizarCamisa } from '@/club/camisa';
 
 const ROTULO = 'font-prova text-[11px] font-bold uppercase tracking-[0.18em]';
 const ESTILOS: TacticalIntensityLevel[] = ['defend', 'counter', 'possession', 'press', 'attack'];
@@ -243,6 +244,7 @@ function Assumir({ id, voltar }: { id: string; voltar: string }) {
         canal={canal}
         fichas={filme.fichas}
         banco={filme.banco}
+        camisaCasa={filme.camisa ? normalizarCamisa(filme.camisa) : undefined}
         formacaoCasa={filme.formacaoCasa}
         formacaoFora={filme.formacaoFora}
         seed={`${filme.seed}|arena|${fechado.veredito.minuto}`}

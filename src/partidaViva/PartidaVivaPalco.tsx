@@ -26,6 +26,7 @@ import { createPortal } from 'react-dom';
 import { L } from '@/i18n/L';
 import { track } from '@/analytics/track';
 import { BotaoDeVoz } from './voz/BotaoDeVoz';
+import { camisaDoGoleiro, type CamisaDoClube } from '@/club/camisa';
 import { chaveDoLance, Coreografo, DT } from './coreografo';
 import { PalcoPixi } from './palco';
 import { deitarTela, ehIOS, ladoDoEntalhe, levantarTela, podeTelaCheia, pontoLocal, semBarras } from './orientacao';
@@ -64,6 +65,8 @@ interface Props {
   banco?: Ficha[];
   /** Fase 6: grava cada entrega (montagem do palco, passo, quadro) pro filme. */
   gravar?: (montagem: { id: number; comEntrada: boolean }, passo: number, q: QuadroAoVivo) => void;
+  /** Uniforme do time da casa (14/10): as fichas vestem a camisa do clube. */
+  camisaCasa?: CamisaDoClube;
   /** Fase 6: toca um filme — entrega estes quadros nos passos gravados. */
   roteiro?: Entrega[];
   onFimDoFilme?: () => void;
@@ -230,6 +233,8 @@ export function PartidaVivaPalco(p: Props) {
       const co = coreoRef.current!;
       // Quem está em campo AGORA (alguém pode ter entrado antes do PixiJS ficar pronto).
       palco.destaque = p.ladoDeQuemAssiste ?? 'home';
+      // Uniforme do clube (14/10): as fichas da casa vestem a camisa.
+      if (p.camisaCasa) palco.kitCasa = { primaria: p.camisaCasa.primaria, secundaria: p.camisaCasa.secundaria, goleiro: camisaDoGoleiro(p.camisaCasa) };
       palco.montarFichas(co.corpos.map((c) => c.f));
       // FILME: entrega o roteiro nos passos gravados; trechos parados (intervalo,
       // pênaltis) passam direto; "Pular" vai ao próximo lance.

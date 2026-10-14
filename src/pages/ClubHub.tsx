@@ -27,6 +27,12 @@ const quickActions: Array<{
     href: '/clube/elenco',
   },
   {
+    tag: L('#camisa', '#kit'),
+    title: L('Uniforme', 'Kit'),
+    description: L('Camisa, calção e meião', 'Shirt, shorts and socks'),
+    href: '/clube/uniforme',
+  },
+  {
     tag: L('#mercado', '#market'),
     title: L('Valores', 'Values'),
     description: L('Preço vivo e vendas', 'Live price and sales'),

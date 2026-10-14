@@ -792,6 +792,7 @@ export type GameAction =
   | { type: 'VENDER_PARA_VARZEA'; playerId: string; agoraMs?: number }
   /** Fundação do clube: grava a identidade e alinha a formação do manager a ela. */
   | { type: 'SET_CLUB_IDENTIDADE'; identidade: import('@/club/identidade').IdentidadeDoClube }
+  | { type: 'SET_CLUB_CAMISA'; camisa: import('@/club/camisa').CamisaDoClube }
   /** Simula depósito fiat→BRO no SPOT (ledger FIAT_DEPOSIT + crédito SPOT). */
   /** Match Global: Define o estado da liga global */
   | { type: 'SET_GLOBAL_LEAGUE_STATE'; payload: import('@/match/globalMatch').GlobalLeagueState }

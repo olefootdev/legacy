@@ -292,6 +292,8 @@ export interface ClubEntity {
    * motor da Partida Rápida. Ausente = clube fundado antes de 2026-10 (DNA neutro).
    */
   identidade?: import('@/club/identidade').IdentidadeDoClube;
+  /** A camisa editada no Clube (14/10): vence a da Fundação. Ver `camisaDoClube` (club/camisa.ts). */
+  camisa?: import('@/club/camisa').CamisaDoClube;
 }
 
 export interface ClubLogisticsState {

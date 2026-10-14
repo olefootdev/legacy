@@ -19,7 +19,9 @@ import { track } from '@/analytics/track';
 import { L } from '@/i18n/L';
 import { cn } from '@/lib/utils';
 import { BotaoRua, FitaRua, MarcaRua, SecaoRua, SeloRua } from '@/components/ui/Rua';
-import { CamisaSVG, EscudoSVG } from '@/components/fundacao/Camisa';
+import { EscudoSVG } from '@/components/fundacao/Camisa';
+import { UniformeSVG } from '@/components/uniforme/UniformeSVG';
+import { normalizarCamisa } from '@/club/camisa';
 import { BarraAcao, BotaoBarra, BotaoBarraSecundario } from '@/components/ui/BarraAcao';
 import { fetchAnaliseDeIdentidade, fetchQuickPlan } from '@/match/quickPlanClient';
 import type { MatchPlan, MatchPlanEvent } from '@/match/quickPlanTypes';
@@ -343,14 +345,7 @@ export default function FundacaoEstreia() {
                 <ItemAta rotulo={L('Fidelidade', 'Fidelity')} valor={relatorio ? `${relatorio.fidelidade}%` : '—'} />
               </dl>
               <div className="flex items-end justify-between gap-3">
-                <CamisaSVG
-                  padrao={identidade.camisa.padrao}
-                  primaria={identidade.camisa.primaria}
-                  secundaria={identidade.camisa.secundaria}
-                  calcao={identidade.camisa.calcao}
-                  iniciais={iniciais}
-                  largura={92}
-                />
+                <UniformeSVG camisa={normalizarCamisa(identidade.camisa)} iniciais={iniciais} largura={92} />
                 <blockquote className="flex-1 border-l-[5px] border-asfalto-27 pl-3 font-voz text-[22px] leading-[1.05]">“{identidade.frase}”</blockquote>
               </div>
               <div className="border-t-2 border-dashed border-asfalto-27 pt-2 font-prova text-[11px] uppercase tracking-[0.14em]">

@@ -104,6 +104,7 @@
     "test:prova-de-causa": "python3 server/smartfield/test_prova_de_causa.py --n 300",
     "estudo:gol-com-comando": "python3 server/smartfield/estudo_gol_com_comando.py --n 1000",
     "estudo:tempo-de-tela": "tsx scripts/estudo-tempo-de-tela.ts",
+    "test:uniforme": "tsx scripts/test-uniforme.ts",
     "test:voz": "tsx scripts/test-voz.ts",
     "test:plano-salvo": "python3 server/smartfield/test_plano_salvo.py --n 1000",
     "test:arena": "python3 server/smartfield/test_arena.py --n 300 && tsx server/src/lib/runArenaSelfTest.mts && tsx scripts/test-arena-filme.ts",

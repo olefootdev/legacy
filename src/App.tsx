@@ -120,6 +120,7 @@ const Fundacao = lazy(() => import('./pages/Fundacao'));
 const FundacaoElenco = lazy(() => import('./pages/FundacaoElenco'));
 const FundacaoEstreia = lazy(() => import('./pages/FundacaoEstreia'));
 const ClubHub = lazy(() => import('./pages/ClubHub').then((m) => ({ default: m.ClubHub })));
+const ClubeUniforme = lazy(() => import('./pages/ClubeUniforme'));
 const CompetitionHub = lazy(() => import('./pages/CompetitionHub').then((m) => ({ default: m.CompetitionHub })));
 const MarketHub = lazy(() => import('./pages/MarketHub').then((m) => ({ default: m.MarketHub })));
 const HelpHub = lazy(() => import('./pages/HelpHub').then((m) => ({ default: m.HelpHub })));
@@ -638,6 +639,7 @@ as a nice MVP. Let's Play Together! ⚽
 
             {/* Clube subpages */}
             <Route path="/clube/elenco" element={<Team />} />
+            <Route path="/clube/uniforme" element={<ClubeUniforme />} />
             <Route path="/clube/valores" element={<TeamValores />} />
             <Route path="/clube/treino" element={<TeamTraining />} />
             <Route path="/clube/staff" element={<TeamStaff />} />

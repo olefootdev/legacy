@@ -21,6 +21,10 @@ export interface Leituras {
   corredores?: { nosso: Espaco | null; perigo: Espaco | null };
 }
 import { L as T } from '@/i18n/L';
+import { distanciaDeCor } from '@/club/camisa';
+
+/** Camisa escura demais pra o adversário continuar de anel escuro. */
+const escuraDemais = (hex: string) => distanciaDeCor(hex, '#0D0D0C') < 220;
 
 const C = 105;
 const L = 68;
@@ -50,6 +54,8 @@ export class PalcoPixi {
   private alvoDaTroca: string | null = null;
   /** Fase 7: o time de quem assiste (anel amarelo). No filme do adversário é o de fora. */
   destaque: 'home' | 'away' = 'home';
+  /** Uniforme do time da casa (14/10): o anel da ficha na cor da camisa; o goleiro com a dele. */
+  kitCasa: { primaria: string; secundaria: string; goleiro: { primaria: string; secundaria: string } } | null = null;
   private selecionada: string | null = null;
   /** Etiquetas reaproveitadas (fitas no campo, números e nomes do giz). */
   private camadaEtiquetas = new Container();
@@ -106,9 +112,17 @@ export class PalcoPixi {
     // Identidade forte dos times: casa = anel amarelo; adversário = anel escuro
     // com contorno creme (os retratos do Genesis têm fundo amarelo).
     const nosso = f.lado === this.destaque;
-    const anel = nosso
-      ? new Graphics().circle(0, 0, 13).fill(COR.rua).stroke({ width: 1, color: COR.asfalto })
-      : new Graphics().circle(0, 0, 13).fill(COR.asfalto).stroke({ width: 1.5, color: COR.cal });
+    const hex = (h: string) => parseInt(h.replace('#', ''), 16);
+    const kit = this.kitCasa;
+    // Uniforme (14/10): a casa veste a camisa do clube (anel = cor principal, filete = detalhe);
+    // o adversário escuro vira claro quando a nossa camisa é escura demais (não confundir os times).
+    const anel = kit && f.lado === 'home'
+      ? (() => { const k = f.slot === 'gol' ? kit.goleiro : kit; return new Graphics().circle(0, 0, 13).fill(hex(k.primaria)).stroke({ width: 2.4, color: hex(k.secundaria) }); })()
+      : kit && f.lado === 'away' && !nosso && escuraDemais(kit.primaria)
+        ? new Graphics().circle(0, 0, 13).fill(COR.cal).stroke({ width: 1.5, color: COR.asfalto })
+        : nosso
+          ? new Graphics().circle(0, 0, 13).fill(COR.rua).stroke({ width: 1, color: COR.asfalto })
+          : new Graphics().circle(0, 0, 13).fill(COR.asfalto).stroke({ width: 1.5, color: COR.cal });
     const miolo = new Graphics().circle(0, 0, 10).fill(nosso ? COR.cal : COR.concreto);
     const ini = new Text({
       text: f.iniciais,

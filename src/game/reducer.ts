@@ -4017,6 +4017,15 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         manager: { ...state.manager, formationScheme: action.identidade.formacao },
       };
     }
+    case 'SET_CLUB_CAMISA': {
+      // A camisa editada no Clube: a do clube e, se houver Fundação, a da identidade também
+      // (sem mexer em formação nem DNA — a camisa não chega ao motor).
+      const camisa = { ...action.camisa, editadaEm: new Date().toISOString() };
+      return {
+        ...state,
+        club: { ...state.club, camisa, ...(state.club.identidade ? { identidade: { ...state.club.identidade, camisa } } : {}) },
+      };
+    }
     case 'SET_GLOBAL_LEAGUE_STATE': {
       return {
         ...state,

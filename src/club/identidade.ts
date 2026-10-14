@@ -19,7 +19,8 @@ export type PontosDeJogo = Record<AtributoDeJogo, number>;
 export type EstiloDeJogo = 'posse' | 'reativo' | 'pressao' | 'longos' | 'defensivo' | 'liberdade';
 export type TreinoDoClube = 'rigido' | 'flexivel' | 'tranquilo';
 export type DisponibilidadeDoManager = 'diario' | 'semana3' | 'semana1';
-export type PadraoDeCamisa = 'lisa' | 'listras' | 'horiz' | 'diagonal' | 'meio' | 'peito' | 'mangas' | 'gola';
+export type { PadraoDeCamisa } from './camisa';
+import type { CamisaDoClube } from './camisa';
 
 /** Eixos do DNA, todos em 0–1; 0.5 = neutro (o motor não mexe em nada). */
 export type EixoDna = 'posse' | 'pressao' | 'vertical' | 'criatividade' | 'solidez' | 'disciplina' | 'intensidade';
@@ -46,7 +47,8 @@ export interface IdentidadeDoClube {
   historico: { time: string; temporada: string } | null;
   treino: TreinoDoClube;
   disponibilidade: DisponibilidadeDoManager;
-  camisa: { padrao: PadraoDeCamisa; primaria: string; secundaria: string; calcao: string };
+  /** A camisa da Fundação (a editada depois no Clube mora em `club.camisa` e vence — ver club/camisa.ts). */
+  camisa: CamisaDoClube;
   /** Frase de guerra (até 100 caracteres) — aparece no túnel. */
   frase: string;
   /** Jogo da Fundação (Ato 5): o que o motor entregou contra o fantasma do time histórico. */

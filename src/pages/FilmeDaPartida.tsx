@@ -17,6 +17,7 @@ import { criarCanalAoVivo } from '@/partidaViva/canal';
 import { abrirFilme, listarFilmes, type FilmeDaPartida as Filme } from '@/partidaViva/gravacao';
 import { abrirFilmeDaNuvem, listarFilmesDaNuvem, type FilmeNaNuvem, type PapelNoFilme } from '@/partidaViva/filmeServidor';
 import { ligarSom } from '@/partidaViva/som';
+import { normalizarCamisa } from '@/club/camisa';
 
 function ListaDeFilmes() {
   const filmes = useMemo(() => listarFilmes(), []);
@@ -130,6 +131,7 @@ export function TocarFilme({ id, daNuvem, aoSair }: { id: string; daNuvem?: bool
       canal={canal}
       fichas={filme.fichas}
       banco={filme.banco}
+      camisaCasa={filme.camisa ? normalizarCamisa(filme.camisa) : undefined}
       formacaoCasa={t.formacaoCasa ?? filme.formacaoCasa}
       formacaoFora={filme.formacaoFora}
       seed={filme.seed}

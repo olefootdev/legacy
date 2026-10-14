@@ -40,6 +40,8 @@ export interface FilmeDaPartida {
   trechos: Trecho[];
   /** Fase 4 do Motor de Posses (arena): as escolhas da partida — o servidor reconta o placar pela custódia. */
   escolhas?: { decisivos: Record<string, string>; penaltis: Record<string, string> };
+  /** Uniforme do time da casa (14/10): o filme toca com a camisa do clube. */
+  camisa?: import('@/club/camisa').CamisaDoClube;
 }
 
 export type ResumoDoFilme = Pick<FilmeDaPartida, 'id' | 'quando' | 'siglaCasa' | 'siglaFora' | 'nomeCasa' | 'nomeFora' | 'placarCasa' | 'placarFora'>;

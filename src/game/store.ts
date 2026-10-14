@@ -7,6 +7,7 @@ import { insertMatch } from '@/supabase/matchPersistence';
 import { isSupabaseConfigured } from '@/supabase/client';
 import { persistManagerSquad } from '@/supabase/managerSquad';
 import { persistManagerGameState, type ManagerGameStateSnapshot } from '@/supabase/managerGameState';
+import { camisaMaisRecente, normalizarCamisa } from '@/club/camisa';
 // OLEFOOT PYTHON MODE — sync com tabelas dedicadas
 import {
   persistConsequencesBatch,
@@ -41,6 +42,8 @@ const GAME_STATE_PERSIST_ACTIONS = new Set<GameAction['type']>([
   // cerimônia não reabrir após logout.
   'GRANT_ONBOARDING_PACKAGE',
   'SET_USER_SETTINGS',
+  // A camisa editada no Clube (14/10) vale em todo aparelho.
+  'SET_CLUB_CAMISA',
 ]);
 
 type Listener = () => void;
@@ -219,6 +222,8 @@ export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
     club: {
       ...local.club,
       identidade: maisRecente(local.club?.identidade, remote.onboardingFlags?.clubIdentidade),
+      // A camisa editada: vence a editada por último (a de outro aparelho chega aqui).
+      camisa: camisaMaisRecente(local.club?.camisa, remote.onboardingFlags?.clubCamisa ? normalizarCamisa(remote.onboardingFlags.clubCamisa) : null),
     },
   };
   saveGameState(state);
@@ -227,6 +232,7 @@ export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
   emit();
 }
 
+// (camisa: club/camisa.ts)
 function maisRecente(
   a: import('@/club/identidade').IdentidadeDoClube | null | undefined,
   b: import('@/club/identidade').IdentidadeDoClube | null | undefined,

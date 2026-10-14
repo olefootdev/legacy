@@ -35,7 +35,7 @@ export interface ManagerGameStateSnapshot {
    * `clubIdentidade`: a fundação do clube (DNA, camisa, frase) mora aqui — é o
    * onboarding novo, e a coluna já é jsonb (sem migration).
    */
-  onboardingFlags:          { hasDoneOnboarding?: boolean; clubIdentidade?: import('@/club/identidade').IdentidadeDoClube | null } | null;
+  onboardingFlags:          { hasDoneOnboarding?: boolean; clubIdentidade?: import('@/club/identidade').IdentidadeDoClube | null; clubCamisa?: import('@/club/camisa').CamisaDoClube | null } | null;
   /** Saldo do manager (ole, broCents, expLifetimeEarned, etc) — sem isto, logout zera tudo. */
   finance:                  OlefootGameState['finance'] | null;
 }
@@ -101,6 +101,8 @@ export async function persistManagerGameState(s: OlefootGameState): Promise<void
       onboarding_flags:            {
         hasDoneOnboarding: hasDone,
         clubIdentidade: s.club?.identidade ?? null,
+        // A camisa editada no Clube (14/10): mora aqui também (jsonb, sem migration).
+        clubCamisa: s.club?.camisa ?? null,
       },
       finance:                     s.finance ?? null,
     },

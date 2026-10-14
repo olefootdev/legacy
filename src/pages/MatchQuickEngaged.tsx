@@ -71,6 +71,7 @@ import type { AgentEchoTrait } from '@/match/quickAgentEcho';
 import { L, emIngles } from '@/i18n/L';
 import { posLabel } from '@/components/matchquick/posLabel';
 import { dnaDoClubeParaMotor } from '@/club/identidade';
+import { camisaDoClube } from '@/club/camisa';
 import { criarCanalAoVivo } from '@/partidaViva/canal';
 import { montarFichas } from '@/partidaViva/escalacao';
 import { deitarTela, levantarTela } from '@/partidaViva/orientacao';
@@ -747,6 +748,8 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
         trechos: trechos.map(({ comEntrada, roteiro, formacaoCasa }) => ({ comEntrada, roteiro, formacaoCasa })),
         // Fase 4 (arena): quem assumir um lance deste filme é comparado com o que a custódia diz que você fez.
         escolhas: r.escolhas,
+        // Uniforme (14/10): o filme toca com a camisa do clube.
+        camisa: camisaDoClube(club),
       };
       if (salvarFilme(filme)) setFilmeId(id);
       // FASE 7 — sobe pro servidor; se o adversário é o time de outro manager, ele é avisado.
@@ -978,6 +981,7 @@ export default function MatchQuickEngaged({ aoVivoInicial = false, ligaPartida }
           <Suspense fallback={null}>
             <PartidaVivaPalco
               canal={canalRef.current}
+              camisaCasa={camisaDoClube(club)}
               fichas={fichasAoVivo}
               formacaoCasa={formationRef.current}
               formacaoFora="4-3-3"
